@@ -1,7 +1,20 @@
 # Change Log
 
 ## [Unreleased]
-[Unreleased]: https://github.com/cashapp/redwood/compare/0.16.0...HEAD
+[Unreleased]: https://github.com/cashapp/redwood/compare/0.17.0...HEAD
+
+New:
+- Nothing yet!
+
+Changed:
+- Nothing yet!
+
+Fixed:
+- Nothing yet!
+
+
+## [0.17.0] - 2025-01-30
+[0.17.0]: https://github.com/cashapp/redwood/releases/tag/0.17.0
 
 Breaking:
 - Treehouse hosts running Redwood 0.11.0 or older are not longer actively supported. They will continue to work, but they will experience indefinite memory leaks of native widgets.
@@ -12,9 +25,6 @@ New:
 - `ConsumeInsets {}` composable consumes insets. Most applications should call this in their root composable function.
 - Add `TestRedwoodComposition.setContentAndSnapshot` function which is a fused version of `setContent` and `awaitSnapshot`, except that it guarantees the returned snapshot is the result of the initial composition of the content without any additional frames sent.
 
-Changed:
-- Nothing yet!
-
 Fixed:
 - Fix inconsistency in margin application between `ComposeUiBox` and `ViewBox`.
 - Add support for the Height modifier in `ComposeUiBox`.
@@ -22,6 +32,7 @@ Fixed:
 - Call `DisposableEffect` when a screen is unbound. We were only calling these when the effect was removed from the composition.
 - Support `movableContentOf` in Treehouse (and generally in the Redwood protocol). Note: this requires the host be running version 0.17.0 or newer.
 - Fix case where `Column` and `Row` would not update their intrinsic size on iOS if they are not a child of another `Column` or `Row`.
+
 
 ## [0.16.0] - 2024-11-19
 [0.16.0]: https://github.com/cashapp/redwood/releases/tag/0.16.0
