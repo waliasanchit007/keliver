@@ -561,6 +561,7 @@ private fun FirContext.parseWidget(
     documentation = documentation,
     deprecation = deprecation,
     traits = traits,
+    internalComposable = annotation.internalComposable,
   )
 }
 
@@ -732,13 +733,22 @@ private fun FirContext.findWidgetAnnotation(
       (it as FirLiteralExpression).valueAsInt()
     }
 
-  return WidgetAnnotation(tagExpression.valueAsInt(), reservedProperties, reservedChildren)
+  val internalComposableExpression = annotation.argumentMapping
+    .mapping[Name.identifier("internalComposable")] as FirLiteralExpression?
+
+  return WidgetAnnotation(
+    tag = tagExpression.valueAsInt(),
+    reservedProperties = reservedProperties,
+    reservedChildren = reservedChildren,
+    internalComposable = internalComposableExpression?.valueAsBoolean() == true,
+  )
 }
 
 private data class WidgetAnnotation(
   val tag: Int,
   val reservedProperties: List<Int>,
   val reservedChildren: List<Int>,
+  val internalComposable: Boolean,
 )
 
 private fun FirContext.findPropertyAnnotation(
@@ -886,6 +896,7 @@ private fun ConeTypeProjection.toFqType(): FqType {
 }
 
 private fun FirLiteralExpression.valueAsInt() = (value as Long).toInt()
+private fun FirLiteralExpression.valueAsBoolean() = value as Boolean
 
 private fun ClassId.toFqType() = FqType(
   buildList {
