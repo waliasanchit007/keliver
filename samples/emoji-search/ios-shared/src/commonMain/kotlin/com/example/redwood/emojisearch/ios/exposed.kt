@@ -18,27 +18,27 @@
 package com.example.redwood.emojisearch.ios
 
 import app.cash.redwood.Modifier
-import app.cash.redwood.basic.protocol.host.RedwoodBasicProtocolFactory
-import app.cash.redwood.basic.uiview.UIViewRedwoodBasicWidgetSystem
 import app.cash.redwood.treehouse.AppService
 import app.cash.redwood.treehouse.Content
 import app.cash.redwood.treehouse.TreehouseUIView
 import app.cash.redwood.treehouse.TreehouseView
 import app.cash.redwood.treehouse.TreehouseView.WidgetSystem
 import app.cash.redwood.treehouse.bindWhenReady
+import app.cash.redwood.ui.basic.protocol.host.RedwoodUiBasicProtocolFactory
+import app.cash.redwood.ui.basic.uiview.UIViewRedwoodUiBasicWidgetSystem
 import okio.Closeable
 
 // Used to export types to Objective-C / Swift.
 fun exposedTypes(
   emojiSearchLauncher: EmojiSearchLauncher,
-  protocolFactory: RedwoodBasicProtocolFactory<*>,
+  protocolFactory: RedwoodUiBasicProtocolFactory<*>,
   treehouseUIView: TreehouseUIView,
   treehouseWidgetSystem: WidgetSystem<*>,
 ) {
   throw AssertionError()
 }
 
-fun basicWidgetSystem() = UIViewRedwoodBasicWidgetSystem()
+fun basicWidgetSystem() = UIViewRedwoodUiBasicWidgetSystem()
 
 fun modifier(): Modifier = Modifier
 

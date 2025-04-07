@@ -20,8 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.cash.burst.Burst
 import app.cash.redwood.Modifier
-import app.cash.redwood.basic.compose.Text
-import app.cash.redwood.basic.testing.RedwoodBasicTestingWidgetFactory
 import app.cash.redwood.layout.testing.RedwoodLayoutTestingWidgetFactory
 import app.cash.redwood.lazylayout.testing.RedwoodLazyLayoutTestingWidgetFactory
 import app.cash.redwood.leaks.LeakDetector
@@ -31,6 +29,8 @@ import app.cash.redwood.protocol.host.HostProtocolAdapter
 import app.cash.redwood.protocol.host.hostRedwoodVersion
 import app.cash.redwood.testing.TestRedwoodComposition
 import app.cash.redwood.testing.WidgetValue
+import app.cash.redwood.ui.basic.compose.Text
+import app.cash.redwood.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import app.cash.redwood.widget.MutableListChildren
 import assertk.assertThat
 import assertk.assertions.containsExactly
@@ -115,7 +115,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun Button() = button
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )
@@ -138,7 +138,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun Button() = button
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )
@@ -162,7 +162,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun Button() = button
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )
@@ -187,7 +187,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun Button() = button
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )
@@ -214,7 +214,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun TestRow() = row
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )
@@ -243,7 +243,7 @@ class ChangeListenerTest(
       TestSchema = object : TestSchemaWidgetFactory<WidgetValue> by TestSchemaTestingWidgetFactory() {
         override fun TestRow() = row
       },
-      RedwoodBasic = RedwoodBasicTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
       RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
       RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
     )

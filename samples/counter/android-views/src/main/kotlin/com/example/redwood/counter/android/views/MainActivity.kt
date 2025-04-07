@@ -17,9 +17,9 @@ package com.example.redwood.counter.android.views
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import app.cash.redwood.basic.view.ViewRedwoodBasicWidgetSystem
 import app.cash.redwood.compose.AndroidUiDispatcher
 import app.cash.redwood.compose.RedwoodComposition
+import app.cash.redwood.ui.basic.view.ViewRedwoodUiBasicWidgetSystem
 import app.cash.redwood.widget.RedwoodLayout
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     val composition = RedwoodComposition(
       scope = scope,
       view = redwoodView,
-      widgetSystem = ViewRedwoodBasicWidgetSystem(this, imageLoader),
+      widgetSystem = ViewRedwoodUiBasicWidgetSystem(this, imageLoader),
     )
     composition.setContent {
       Counter()

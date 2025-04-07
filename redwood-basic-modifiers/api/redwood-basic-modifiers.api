@@ -1,3 +1,0 @@
-public abstract interface class app/cash/redwood/basic/modifier/Reuse : app/cash/redwood/Modifier$UnscopedElement {
-}
-

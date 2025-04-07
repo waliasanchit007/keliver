@@ -11,13 +11,13 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api(projects.redwoodBasicWidget)
+        api(projects.redwoodUiBasicWidget)
       }
     }
   }
 }
 
 redwoodSchema {
-  source = projects.redwoodBasicSchema
-  type = 'app.cash.redwood.basic.RedwoodBasic'
+  source = projects.redwoodUiBasicSchema
+  type = 'app.cash.redwood.ui.basic.RedwoodUiBasic'
 }
