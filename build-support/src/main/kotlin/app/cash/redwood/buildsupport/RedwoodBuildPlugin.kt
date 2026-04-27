@@ -71,10 +71,10 @@ import org.jetbrains.kotlin.gradle.tasks.FatFrameworkTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-private const val REDWOOD_GROUP_ID = "app.cash.redwood"
+private const val KONDUIT_GROUP_ID = "dev.konduit"
 
 // HEY! If you change the major version update release.yaml doc folder.
-private const val REDWOOD_VERSION = "0.18.0"
+private const val KONDUIT_VERSION = "1.0.0-caliclan.1"
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
@@ -83,8 +83,8 @@ class RedwoodBuildPlugin : Plugin<Project> {
   private lateinit var libs: LibrariesForLibs
 
   override fun apply(target: Project) {
-    target.group = REDWOOD_GROUP_ID
-    target.version = REDWOOD_VERSION
+    target.group = KONDUIT_GROUP_ID
+    target.version = KONDUIT_VERSION
 
     libs = target.extensions.getByName("libs") as LibrariesForLibs
 
@@ -455,7 +455,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         signAllPublications()
       }
 
-      coordinates(REDWOOD_GROUP_ID, project.name, REDWOOD_VERSION)
+      coordinates(KONDUIT_GROUP_ID, project.name, KONDUIT_VERSION)
 
       pom { pom ->
         pom.name.set(project.name)
