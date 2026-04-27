@@ -23,7 +23,7 @@ import com.github.ajalt.clikt.core.subcommands
 import java.nio.file.FileSystems
 
 public fun main(vararg args: String) {
-  NoOpCliktCommand(name = "redwood-lint")
+  NoOpCliktCommand(name = "konduit-lint")
     .subcommands(
       ApiMergeCommand(FileSystems.getDefault()),
       LintCommand(),

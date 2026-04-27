@@ -72,12 +72,12 @@ public abstract class RedwoodGeneratorPlugin(
     internal val dependencyArtifactId: String,
     internal vararg val implementationDependencies: String,
   ) {
-    Compose("--compose", "redwood-compose"),
-    Modifiers("--modifier", "redwood-runtime"),
-    ProtocolGuest("--protocol-guest", "redwood-protocol-guest"),
-    ProtocolHost("--protocol-host", "redwood-protocol-host", androidxCollectionCoordinates),
-    Testing("--testing", "redwood-testing"),
-    Widget("--widget", "redwood-widget"),
+    Compose("--compose", "konduit-compose"),
+    Modifiers("--modifier", "konduit-runtime"),
+    ProtocolGuest("--protocol-guest", "konduit-protocol-guest"),
+    ProtocolHost("--protocol-host", "konduit-protocol-host", androidxCollectionCoordinates),
+    Testing("--testing", "konduit-testing"),
+    Widget("--widget", "konduit-widget"),
   }
 
   override fun apply(project: Project) {
@@ -97,7 +97,7 @@ public abstract class RedwoodGeneratorPlugin(
       it.isCanBeConsumed = false
       it.isVisible = false
     }
-    project.dependencies.add(toolingConfiguration.name, project.redwoodDependency("redwood-tooling-codegen"))
+    project.dependencies.add(toolingConfiguration.name, project.redwoodDependency("konduit-tooling-codegen"))
 
     val schemaConfiguration = project.configurations.register("redwoodSchema") {
       it.isCanBeConsumed = false

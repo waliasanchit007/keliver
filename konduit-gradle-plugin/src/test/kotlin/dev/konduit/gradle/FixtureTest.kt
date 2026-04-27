@@ -59,8 +59,8 @@ class FixtureTest {
     val fixtureDir = File("src/test/fixture/schema-api-dirty")
 
     // Ensure we have the original dirty file as the test will overwrite it.
-    fixtureDir.resolve("redwood-api.xml.original")
-      .copyTo(fixtureDir.resolve("redwood-api.xml"), overwrite = true)
+    fixtureDir.resolve("konduit-api.xml.original")
+      .copyTo(fixtureDir.resolve("konduit-api.xml"), overwrite = true)
 
     fixtureGradleRunner(fixtureDir, "clean", "check").buildAndFail().let { result ->
       val redwoodApiCheck = result.task(":redwoodApiCheck")!!
@@ -86,14 +86,14 @@ class FixtureTest {
     val fixtureDir = File("src/test/fixture/schema-api-missing")
 
     // Ensure we do not have this file. It may be left over from a previous run/failure.
-    fixtureDir.resolve("redwood-api.xml").delete()
+    fixtureDir.resolve("konduit-api.xml").delete()
 
     fixtureGradleRunner(fixtureDir, "clean", "check").buildAndFail().let { result ->
       val redwoodApiCheck = result.task(":redwoodApiCheck")!!
       assertThat(redwoodApiCheck).prop(BuildTask::getOutcome).isEqualTo(FAILED)
       assertThat(result.output).contains(
         """
-        |API file redwood-api.xml missing!
+        |API file konduit-api.xml missing!
         |
         |Run 'redwoodApiGenerate' to generate this file.
         |

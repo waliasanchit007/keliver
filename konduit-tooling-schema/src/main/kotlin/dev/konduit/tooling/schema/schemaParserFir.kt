@@ -162,7 +162,7 @@ public fun parseProtocolSchema(
 
   @OptIn(LegacyK2CliPipeline::class)
   val input = ModuleCompilerInput(
-    targetId = TargetId(DEFAULT_MODULE_NAME, "redwood-parser"),
+    targetId = TargetId(DEFAULT_MODULE_NAME, "konduit-parser"),
     groupedSources = GroupedKtSources(
       platformSources = sourceFiles,
       commonSources = emptyList(),

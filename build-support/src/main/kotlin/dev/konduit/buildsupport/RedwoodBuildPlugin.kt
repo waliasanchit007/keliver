@@ -109,7 +109,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
       // target its sources rather than duplicating the Spotless setup in multiple places.
       if (path == ":") {
         java {
-          it.target("build-support/redwood-settings/src/**/*.java")
+          it.target("build-support/konduit-settings/src/**/*.java")
           it.googleJavaFormat(libs.googleJavaFormat.get().version)
           it.licenseHeaderFile(licenseHeaderFile)
         }
@@ -410,7 +410,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
   }
 
   override fun publishing() {
-    val isBom = project.path == ":redwood-bom"
+    val isBom = project.path == ":konduit-bom"
 
     project.plugins.apply("com.vanniktech.maven.publish")
 

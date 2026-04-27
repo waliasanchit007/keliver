@@ -49,7 +49,7 @@ public class RedwoodSchemaPlugin : Plugin<Project> {
       it.isCanBeConsumed = false
       it.isVisible = false
     }
-    project.dependencies.add(toolingConfiguration.name, project.redwoodDependency("redwood-tooling-schema"))
+    project.dependencies.add(toolingConfiguration.name, project.redwoodDependency("konduit-tooling-schema"))
 
     val kotlin = project.extensions.getByType(KotlinJvmProjectExtension::class.java)
     val compilation = kotlin.target.compilations.getByName(MAIN_COMPILATION_NAME)
@@ -71,7 +71,7 @@ public class RedwoodSchemaPlugin : Plugin<Project> {
     // Wait for build script to run before checking if API tracking is still enabled.
     project.afterEvaluate {
       if (extension.apiTracking.get()) {
-        val apiFile = project.layout.projectDirectory.file("redwood-api.xml")
+        val apiFile = project.layout.projectDirectory.file("konduit-api.xml")
 
         project.tasks.register(REDWOOD_API_GENERATE_TASK_NAME, RedwoodSchemaApiGenerateTask::class.java) {
           it.group = BUILD_GROUP
@@ -105,7 +105,7 @@ public class RedwoodSchemaPlugin : Plugin<Project> {
     }
 
     compilation.defaultSourceSet.dependencies {
-      api(project.redwoodDependency("redwood-schema"))
+      api(project.redwoodDependency("konduit-schema"))
     }
   }
 }

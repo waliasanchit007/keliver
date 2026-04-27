@@ -207,7 +207,7 @@ private fun Project.createRedwoodLintTask(
   sourceDirs: () -> Collection<File>,
   classpath: () -> Configuration,
 ): TaskProvider<out Task> {
-  dependencies.add(configuration.name, project.redwoodDependency("redwood-tooling-lint"))
+  dependencies.add(configuration.name, project.redwoodDependency("konduit-tooling-lint"))
 
   return tasks.register(name, RedwoodLintTask::class.java) { task ->
     task.group = VERIFICATION_GROUP

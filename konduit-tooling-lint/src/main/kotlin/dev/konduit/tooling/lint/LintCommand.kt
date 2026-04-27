@@ -143,7 +143,7 @@ private class RedwoodLintClient(
   private val uastEnvironment: UastEnvironment,
   private val projectDir: File,
   private val sourceFiles: List<File>,
-) : LintClient("redwood-lint") {
+) : LintClient("konduit-lint") {
   private var run = false
   private val incidents = mutableListOf<Incident>()
 
