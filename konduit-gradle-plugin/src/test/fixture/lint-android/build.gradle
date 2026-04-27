@@ -1,0 +1,32 @@
+buildscript {
+  dependencies {
+    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath libs.kotlin.gradlePlugin
+    classpath libs.androidGradlePlugin
+  }
+
+  repositories {
+    maven {
+      url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+    }
+    mavenCentral()
+    google()
+  }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'dev.konduit.lint'
+
+android {
+  namespace 'example.android'
+  compileSdk 33
+}
+
+repositories {
+  maven {
+    url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+  }
+  mavenCentral()
+  google()
+}

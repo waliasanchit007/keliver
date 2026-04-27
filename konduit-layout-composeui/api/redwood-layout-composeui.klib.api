@@ -1,0 +1,48 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-layout-composeui>
+final class dev.konduit.layout.composeui/BoxMeasurePolicy : androidx.compose.ui.layout/MeasurePolicy { // dev.konduit.layout.composeui/BoxMeasurePolicy|null[0]
+    constructor <init>(kotlin.collections/List<dev.konduit.layout.composeui/BoxChildLayoutInfo>, kotlin/Boolean) // dev.konduit.layout.composeui/BoxMeasurePolicy.<init>|<init>(kotlin.collections.List<dev.konduit.layout.composeui.BoxChildLayoutInfo>;kotlin.Boolean){}[0]
+
+    final fun (androidx.compose.ui.layout/MeasureScope).measure(kotlin.collections/List<androidx.compose.ui.layout/Measurable>, androidx.compose.ui.unit/Constraints): androidx.compose.ui.layout/MeasureResult // dev.konduit.layout.composeui/BoxMeasurePolicy.measure|measure@androidx.compose.ui.layout.MeasureScope(kotlin.collections.List<androidx.compose.ui.layout.Measurable>;androidx.compose.ui.unit.Constraints){}[0]
+    final fun copy(kotlin.collections/List<dev.konduit.layout.composeui/BoxChildLayoutInfo> = ..., kotlin/Boolean = ...): dev.konduit.layout.composeui/BoxMeasurePolicy // dev.konduit.layout.composeui/BoxMeasurePolicy.copy|copy(kotlin.collections.List<dev.konduit.layout.composeui.BoxChildLayoutInfo>;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.layout.composeui/BoxMeasurePolicy.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.layout.composeui/BoxMeasurePolicy.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.layout.composeui/BoxMeasurePolicy.toString|toString(){}[0]
+}
+
+final class dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory : dev.konduit.layout.widget/RedwoodLayoutWidgetFactory<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> { // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory|null[0]
+    constructor <init>() // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory.<init>|<init>(){}[0]
+
+    final fun Box(): dev.konduit.layout.widget/Box<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory.Box|Box(){}[0]
+    final fun Column(): dev.konduit.layout.widget/Column<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory.Column|Column(){}[0]
+    final fun Row(): dev.konduit.layout.widget/Row<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory.Row|Row(){}[0]
+    final fun Spacer(): dev.konduit.layout.widget/Spacer<kotlin/Function3<androidx.compose.ui/Modifier, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>> // dev.konduit.layout.composeui/ComposeUiRedwoodLayoutWidgetFactory.Spacer|Spacer(){}[0]
+}
+
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop|#static{}app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop|#static{}app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop|#static{}app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiBox$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiBox$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiBox$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRow$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRow$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiRow$stableprop[0]
+final val dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop|#static{}app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop[0]
+
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop_getter|app_cash_redwood_layout_composeui_BoxChildLayoutInfo$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop_getter|app_cash_redwood_layout_composeui_BoxChildrenLayoutInfo$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop_getter|app_cash_redwood_layout_composeui_BoxMeasurePolicy$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop_getter|app_cash_redwood_layout_composeui_ComposeMeasureCallback$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiBox$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiBox$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiBox$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiColumn$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiFlexContainer$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiRedwoodLayoutWidgetFactory$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRow$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiRow$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiRow$stableprop_getter(){}[0]
+final fun dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop_getter(): kotlin/Int // dev.konduit.layout.composeui/app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop_getter|app_cash_redwood_layout_composeui_ComposeUiSpacer$stableprop_getter(){}[0]

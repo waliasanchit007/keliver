@@ -10,9 +10,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.redwoodUiBasicWidget
-        api projects.redwoodLayoutWidget
-        api projects.redwoodLazylayoutWidget
+        api projects.konduitUiBasicWidget
+        api projects.konduitLayoutWidget
+        api projects.konduitLazylayoutWidget
         api projects.testApp.schema.modifiers
       }
     }

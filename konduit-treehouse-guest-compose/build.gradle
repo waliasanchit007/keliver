@@ -1,0 +1,19 @@
+import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitProtocolGuest
+        api libs.jetbrains.compose.runtime
+      }
+    }
+  }
+}

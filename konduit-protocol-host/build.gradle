@@ -1,0 +1,46 @@
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'com.github.gmazzo.buildconfig'
+apply plugin: 'dev.drewhamilton.poko'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.protocol.host'))
+      dependencies {
+        api projects.konduitProtocol
+        api projects.konduitWidget
+        api projects.konduitLeakDetector
+        implementation libs.jetbrains.compose.collection
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.assertk
+        implementation projects.testApp.schema.compose
+        implementation projects.testApp.schema.testing
+        implementation projects.testApp.schema.protocolHost
+      }
+    }
+  }
+}
+
+buildConfig {
+  useKotlinOutput {
+    topLevelConstants = true
+  }
+
+  className("Version")
+  packageName('dev.konduit.protocol.host')
+  buildConfigField(
+    "dev.konduit.protocol.RedwoodVersion",
+    "hostRedwoodVersion",
+    "RedwoodVersion(\"${project.version}\")",
+  )
+}

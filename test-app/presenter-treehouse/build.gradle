@@ -24,13 +24,13 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.redwoodTreehouse
+        api projects.konduitTreehouse
       }
     }
 
     jsMain {
       dependencies {
-        api projects.redwoodTreehouseGuest
+        api projects.konduitTreehouseGuest
         api projects.testApp.presenter
         implementation projects.testApp.schema.protocolGuest
       }

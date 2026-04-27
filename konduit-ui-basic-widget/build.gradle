@@ -1,0 +1,27 @@
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.konduit.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitUiBasicApi
+        api projects.konduitUiBasicModifiers
+        api projects.konduitLayoutWidget
+        api projects.konduitLazylayoutWidget
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.konduitUiBasicSchema
+  type = 'dev.konduit.ui.basic.RedwoodUiBasic'
+}

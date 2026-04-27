@@ -13,9 +13,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.redwoodUiBasicCompose
-        api projects.redwoodLayoutCompose
-        api projects.redwoodLazylayoutCompose
+        api projects.konduitUiBasicCompose
+        api projects.konduitLayoutCompose
+        api projects.konduitLazylayoutCompose
         api projects.testApp.schema.widget
         api projects.testApp.schema.modifiers
       }

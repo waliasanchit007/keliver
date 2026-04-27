@@ -13,13 +13,13 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api(projects.redwoodUiBasicWidget)
+        api(projects.konduitUiBasicWidget)
       }
     }
   }
 }
 
 redwoodSchema {
-  source = projects.redwoodUiBasicSchema
+  source = projects.konduitUiBasicSchema
   type = 'dev.konduit.ui.basic.RedwoodUiBasic'
 }

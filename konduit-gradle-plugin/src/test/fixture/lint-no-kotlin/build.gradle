@@ -1,0 +1,14 @@
+buildscript {
+  dependencies {
+    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+  }
+
+  repositories {
+    maven {
+      url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+    }
+    mavenCentral()
+  }
+}
+
+apply plugin: 'dev.konduit.lint'

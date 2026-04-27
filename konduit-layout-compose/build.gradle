@@ -1,0 +1,29 @@
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'dev.konduit.generator.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitLayoutModifiers
+        api projects.konduitLayoutWidget
+      }
+    }
+    commonTest {
+      dependencies {
+        api libs.kotlin.test
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.konduitLayoutSchema
+  type = 'dev.konduit.layout.RedwoodLayout'
+}

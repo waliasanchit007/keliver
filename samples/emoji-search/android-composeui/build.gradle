@@ -27,16 +27,16 @@ dependencies {
   implementation projects.samples.emojiSearch.launcher
   implementation projects.samples.emojiSearch.presenterTreehouse
   implementation projects.samples.emojiSearch.schemaProtocolHost
-  implementation projects.redwoodUiBasicComposeui
+  implementation projects.konduitUiBasicComposeui
   implementation libs.androidx.activity.compose
   implementation libs.androidx.appCompat
   implementation libs.androidx.core
   implementation libs.jetbrains.compose.material
   implementation libs.jetbrains.compose.ui
   debugImplementation libs.jetbrains.compose.ui.tooling
-  implementation projects.redwoodTreehouseHost
-  implementation projects.redwoodTreehouseHostComposeui
-  implementation projects.redwoodWidgetComposeui
+  implementation projects.konduitTreehouseHost
+  implementation projects.konduitTreehouseHostComposeui
+  implementation projects.konduitWidgetComposeui
   implementation libs.okio.assetfilesystem
 
   androidTestImplementation libs.androidx.test.runner

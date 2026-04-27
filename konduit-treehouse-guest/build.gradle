@@ -1,0 +1,33 @@
+import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.jetbrains.compose.runtime
+        api libs.kotlinx.coroutines.core
+        api libs.okio
+        api libs.zipline
+        api projects.konduitProtocol
+        api projects.konduitProtocolGuest
+        api projects.konduitTreehouse
+        api projects.konduitTreehouseGuestCompose
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.assertk
+        implementation libs.kotlin.test
+        implementation projects.testApp.schema.protocolGuest
+      }
+    }
+  }
+}

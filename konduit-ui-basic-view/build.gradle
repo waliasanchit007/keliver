@@ -1,0 +1,19 @@
+import static dev.konduit.buildsupport.TargetGroup.ToolkitAndroid
+
+redwoodBuild {
+  targets(ToolkitAndroid)
+  publishing()
+}
+
+dependencies {
+  api projects.konduitUiBasicWidget
+  api libs.coil.core
+  implementation projects.konduitLayoutView
+  implementation projects.konduitLazylayoutView
+  implementation libs.androidx.core
+  implementation libs.google.material
+}
+
+android {
+  namespace 'dev.konduit.ui.basic.view'
+}

@@ -168,10 +168,10 @@ New:
 - Added a basic DOM-based `LazyList` implementation.
 -`TreehouseApp.close()` stops the app and prevents it from being started again later.
 - Added `UiConfiguration.layoutDirection` to support reading the host's layout direction.
-- New `redwood-bom` artifact can be used to ensure all Redwood artifacts use the same version. See [Gradle's documentation](https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import) on how to use the BOM in your build.
+- New `konduit-bom` artifact can be used to ensure all Redwood artifacts use the same version. See [Gradle's documentation](https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import) on how to use the BOM in your build.
 
 Changed:
-- The `dev.konduit` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `redwood-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
+- The `dev.konduit` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `konduit-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
 - Removed deprecated `typealias`es for generated `-WidgetFactories` type which was renamed to `-WidgetSystem` in 0.10.0.
 - Removed deprecated `Modifier.flex` extension function which is now supported natively by `Row` and `Column` since 0.8.0.
 - Removed deprecated `TreehouseWidgetView` and `TreehouseUIKitView` type aliases for `TreehouseLayout` and `TreehouseUIView` which were renamed in 0.7.0.
@@ -288,8 +288,8 @@ New:
 Changed:
 - Disable klib signature clash checks for JS compilations. These occasionally occur as a result of Compose compiler behavior, and are safe to disable (the first-party JetBrains Compose Gradle plugin also disables them).
 - `onModifierChanged` callback in `Widget.Children` now receives the index and the `Widget` instance affected by the change.
-- The package of 'redwood-protocol-host' changed to `dev.konduit.protocol.host`. This should not affect end-users as its types are mostly for internal use.
-- The entire `redwood-yoga` artifact's public API has been annotated with an opt-in annotation indicating that it's only for Redwood internal use and is not stable.
+- The package of 'konduit-protocol-host' changed to `dev.konduit.protocol.host`. This should not affect end-users as its types are mostly for internal use.
+- The entire `konduit-yoga` artifact's public API has been annotated with an opt-in annotation indicating that it's only for Redwood internal use and is not stable.
 - Revert: Don't block touch events to non-subviews below a `Row`, `Column`, or `Box` in the iOS `UIView` implementation. This matches the behavior of the Android View and Compose UI implementations.
 - The generated "widget factories" type (e.g., `MySchemaWidgetFactories`) is now called a "widget system" (e.g., `MySchemaWidgetSystem`). Sometimes it was also referred to as a "provider" in parameter names. A `@Deprecated typealias` is generated for now, but will be removed in the future.
 - The package names of some generated code has changed. Deprecated `typealias`es are generated in the old locations for public types and functions, but those will be removed in the next release.
@@ -297,7 +297,7 @@ Changed:
   - Protocol guest code is now under `your.package.protocol.guest`.
   - Protocol host code is now under `your.package.protocol.host`.
 - The 'dev.konduit.generator.compose.protocol' and 'dev.konduit.generator.widget.protocol' Gradle plugins are now deprecated and will be removed in the next release. Use 'dev.konduit.generator.protocol.guest' and 'dev.konduit.generator.protocol.host', respectively.
-- The 'redwood-tooling-codegen' CLI flags for protocol codegen have changed from `--compose-protocol` and `--widget-protocol` to `--protocol-guest` and `--protocol-host`, respectively.
+- The 'konduit-tooling-codegen' CLI flags for protocol codegen have changed from `--compose-protocol` and `--widget-protocol` to `--protocol-guest` and `--protocol-host`, respectively.
 - Entrypoints to the protocol on the host-side and guest-side now require supplying the version of Redwood in use on the other side in order to ensure compatibility and work around any bugs in older versions. This uses a new `RedwoodVersion` type, and will be automatically wired if using our Treehouse artifacts.
 
 Fixed:
@@ -497,7 +497,7 @@ Changes:
 - Composables running in Treehouse now run on a background thread on iOS. Previously they were
   running on the main thread. Interactions with UIKit still occur on the main thread.
 - `RedwoodContent` function for hosting a Redwood composable within Compose UI has moved into a new
-  `redwood-composeui` artifact as it will soon require a Compose UI dependency.
+  `konduit-composeui` artifact as it will soon require a Compose UI dependency.
 - The generated testing function now returns the value which was returned from the testing lambda.
 
   Before:
@@ -546,7 +546,7 @@ Changes:
   layout modifiers are set, and then it is added to its parent. Additionally, widgets are added to
   their parents in a bottom-up manner. Code like `Row { Column { Text } }` will see `Text` be added
   to `Column` before `Column` is added to `Row.
-- 'redwood-treehouse' module has been split into '-shared', '-guest', and '-host' modules to
+- 'konduit-treehouse' module has been split into '-shared', '-guest', and '-host' modules to
   more cleanly delineate where each is used. "Host" is the native application and "guess" is code
   running inside the Zipline JS VM.
 - Schema dependencies are not longer parsed when loading a schema. Instead, a JSON representation
@@ -576,7 +576,7 @@ Changed:
   `Column` display when the container is not scrollable (the default). Use a `FrameLayout` instead.
 
 Fixed:
-- Actually publish the `redwood-treehouse-composeui` artifact.
+- Actually publish the `konduit-treehouse-composeui` artifact.
 
 This version only works with Kotlin 1.7.20.
 
@@ -585,7 +585,7 @@ This version only works with Kotlin 1.7.20.
 [0.2.0]: https://github.com/cashapp/redwood/releases/tag/0.2.0
 
 New:
-- `redwood-layout-dom` module provides HTML implementations of `Row` and `Column`.
+- `konduit-layout-dom` module provides HTML implementations of `Row` and `Column`.
 - Lazy layout's schema artifacts are now published and can be used by other projects.
 - Expose `concurrentDownloads` parameter for `TreehouseApp.Factory`. The default is 8.
 - Add `moduleLoadStart` and `moduleLoadEnd` events to Treehouse's `EventListener`.

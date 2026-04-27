@@ -1,0 +1,46 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+buildscript {
+  dependencies {
+    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath libs.androidGradlePlugin
+    classpath libs.kotlin.gradlePlugin
+  }
+
+  repositories {
+    maven {
+      url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+    }
+    mavenCentral()
+    google()
+  }
+}
+
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'dev.konduit.schema'
+
+dependencies {
+  api "dev.konduit:konduit-schema:$redwoodVersion"
+}
+
+redwoodSchema {
+  type = 'example.counter.Counter'
+}
+
+repositories {
+  maven {
+    url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+  }
+  mavenCentral()
+  google()
+}
+
+tasks.withType(JavaCompile).configureEach {
+  sourceCompatibility = JavaVersion.VERSION_11.toString()
+  targetCompatibility = JavaVersion.VERSION_11.toString()
+}
+
+tasks.withType(KotlinJvmCompile).configureEach {
+  compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
+}

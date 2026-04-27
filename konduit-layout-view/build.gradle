@@ -1,0 +1,46 @@
+import static dev.konduit.buildsupport.TargetGroup.ToolkitAndroid
+
+redwoodBuild {
+  targets(ToolkitAndroid)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.burst'
+apply plugin: 'app.cash.paparazzi'
+
+dependencies {
+  api projects.konduitLayoutWidget
+  implementation projects.konduitYoga
+  implementation libs.androidx.core
+  testImplementation libs.burst
+  testImplementation projects.konduitLayoutSharedTest
+  testImplementation projects.konduitSnapshotTesting
+}
+
+android {
+  namespace 'dev.konduit.layout.view'
+
+  def composeHelpers = redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.layout.view').get()
+  def flexboxHelpers = redwoodBuild.generateFlexboxHelpers(tasks, 'dev.konduit.layout.view').get()
+  // TODO Should be able to do `sourceSets.main.kotlin.srcDir(helpers)`.
+  //  https://issuetracker.google.com/issues/249468390
+  libraryVariants.all { variant ->
+    variant.registerJavaGeneratingTask(composeHelpers, composeHelpers.outputDirectory.get().asFile)
+    variant.registerJavaGeneratingTask(flexboxHelpers, flexboxHelpers.outputDirectory.get().asFile)
+  }
+
+  buildFeatures {
+    // For Paparazzi, which internally uses resources to set itself up.
+    androidResources = true
+  }
+}
+
+spotless {
+  kotlin {
+    targetExclude(
+      // MIT-licensed files from Meta.
+      "src/main/kotlin/dev/konduit/layout/view/YogaLayout.kt",
+    )
+  }
+}

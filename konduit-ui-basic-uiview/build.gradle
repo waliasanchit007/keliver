@@ -1,0 +1,18 @@
+import static dev.konduit.buildsupport.TargetGroup.ToolkitIos
+
+redwoodBuild {
+  targets(ToolkitIos)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitUiBasicWidget
+        implementation projects.konduitLayoutUiview
+        implementation projects.konduitLazylayoutUiview
+      }
+    }
+  }
+}

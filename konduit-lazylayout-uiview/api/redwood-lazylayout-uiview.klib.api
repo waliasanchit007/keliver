@@ -1,0 +1,14 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-lazylayout-uiview>
+final class dev.konduit.lazylayout.uiview/UIViewRedwoodLazyLayoutWidgetFactory : dev.konduit.lazylayout.widget/RedwoodLazyLayoutWidgetFactory<platform.UIKit/UIView> { // dev.konduit.lazylayout.uiview/UIViewRedwoodLazyLayoutWidgetFactory|null[0]
+    constructor <init>() // dev.konduit.lazylayout.uiview/UIViewRedwoodLazyLayoutWidgetFactory.<init>|<init>(){}[0]
+
+    final fun LazyList(): dev.konduit.lazylayout.widget/LazyList<platform.UIKit/UIView> // dev.konduit.lazylayout.uiview/UIViewRedwoodLazyLayoutWidgetFactory.LazyList|LazyList(){}[0]
+    final fun RefreshableLazyList(): dev.konduit.lazylayout.widget/RefreshableLazyList<platform.UIKit/UIView> // dev.konduit.lazylayout.uiview/UIViewRedwoodLazyLayoutWidgetFactory.RefreshableLazyList|RefreshableLazyList(){}[0]
+}

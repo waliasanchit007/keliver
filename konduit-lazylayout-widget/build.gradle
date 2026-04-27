@@ -1,0 +1,31 @@
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'dev.konduit.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.lazylayout.widget'))
+      dependencies {
+        api projects.konduitLayoutModifiers
+        api projects.konduitLazylayoutApi
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.assertk
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.konduitLazylayoutSchema
+  type = 'dev.konduit.lazylayout.RedwoodLazyLayout'
+}

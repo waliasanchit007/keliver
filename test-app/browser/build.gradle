@@ -21,13 +21,13 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        implementation projects.redwoodCompose
+        implementation projects.konduitCompose
         implementation projects.testApp.schema.modifiers
         implementation projects.testApp.schema.widget
         implementation projects.testApp.presenter
-        implementation projects.redwoodUiBasicDom
-        implementation projects.redwoodLayoutDom
-        implementation projects.redwoodLazylayoutDom
+        implementation projects.konduitUiBasicDom
+        implementation projects.konduitLayoutDom
+        implementation projects.konduitLazylayoutDom
         implementation libs.kotlinx.coroutines.core
       }
     }

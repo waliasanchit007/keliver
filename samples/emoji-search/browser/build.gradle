@@ -21,10 +21,10 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        implementation projects.redwoodUiBasicDom
+        implementation projects.konduitUiBasicDom
         implementation projects.samples.emojiSearch.presenter
-        implementation projects.redwoodLayoutDom
-        implementation projects.redwoodLazylayoutDom
+        implementation projects.konduitLayoutDom
+        implementation projects.konduitLazylayoutDom
         implementation libs.kotlinx.coroutines.core
       }
     }

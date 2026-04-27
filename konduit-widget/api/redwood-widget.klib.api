@@ -1,0 +1,157 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Alias: ios => [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-widget>
+abstract interface <#A: kotlin/Any> dev.konduit.widget/RedwoodView { // dev.konduit.widget/RedwoodView|null[0]
+    abstract val children // dev.konduit.widget/RedwoodView.children|{}children[0]
+        abstract fun <get-children>(): dev.konduit.widget/Widget.Children<#A> // dev.konduit.widget/RedwoodView.children.<get-children>|<get-children>(){}[0]
+    abstract val onBackPressedDispatcher // dev.konduit.widget/RedwoodView.onBackPressedDispatcher|{}onBackPressedDispatcher[0]
+        abstract fun <get-onBackPressedDispatcher>(): dev.konduit.ui/OnBackPressedDispatcher // dev.konduit.widget/RedwoodView.onBackPressedDispatcher.<get-onBackPressedDispatcher>|<get-onBackPressedDispatcher>(){}[0]
+    abstract val savedStateRegistry // dev.konduit.widget/RedwoodView.savedStateRegistry|{}savedStateRegistry[0]
+        abstract fun <get-savedStateRegistry>(): dev.konduit.widget/SavedStateRegistry? // dev.konduit.widget/RedwoodView.savedStateRegistry.<get-savedStateRegistry>|<get-savedStateRegistry>(){}[0]
+    abstract val uiConfiguration // dev.konduit.widget/RedwoodView.uiConfiguration|{}uiConfiguration[0]
+        abstract fun <get-uiConfiguration>(): kotlinx.coroutines.flow/StateFlow<dev.konduit.ui/UiConfiguration> // dev.konduit.widget/RedwoodView.uiConfiguration.<get-uiConfiguration>|<get-uiConfiguration>(){}[0]
+    abstract val value // dev.konduit.widget/RedwoodView.value|{}value[0]
+        abstract fun <get-value>(): #A // dev.konduit.widget/RedwoodView.value.<get-value>|<get-value>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.konduit.widget/Widget { // dev.konduit.widget/Widget|null[0]
+    abstract val value // dev.konduit.widget/Widget.value|{}value[0]
+        abstract fun <get-value>(): #A // dev.konduit.widget/Widget.value.<get-value>|<get-value>(){}[0]
+
+    abstract var modifier // dev.konduit.widget/Widget.modifier|{}modifier[0]
+        abstract fun <get-modifier>(): dev.konduit/Modifier // dev.konduit.widget/Widget.modifier.<get-modifier>|<get-modifier>(){}[0]
+        abstract fun <set-modifier>(dev.konduit/Modifier) // dev.konduit.widget/Widget.modifier.<set-modifier>|<set-modifier>(dev.konduit.Modifier){}[0]
+
+    abstract interface <#A1: kotlin/Any> Children { // dev.konduit.widget/Widget.Children|null[0]
+        abstract val widgets // dev.konduit.widget/Widget.Children.widgets|{}widgets[0]
+            abstract fun <get-widgets>(): kotlin.collections/List<dev.konduit.widget/Widget<#A1>> // dev.konduit.widget/Widget.Children.widgets.<get-widgets>|<get-widgets>(){}[0]
+
+        abstract fun detach() // dev.konduit.widget/Widget.Children.detach|detach(){}[0]
+        abstract fun insert(kotlin/Int, dev.konduit.widget/Widget<#A1>) // dev.konduit.widget/Widget.Children.insert|insert(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+        abstract fun move(kotlin/Int, kotlin/Int, kotlin/Int) // dev.konduit.widget/Widget.Children.move|move(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+        abstract fun onModifierUpdated(kotlin/Int, dev.konduit.widget/Widget<#A1>) // dev.konduit.widget/Widget.Children.onModifierUpdated|onModifierUpdated(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+        abstract fun remove(kotlin/Int, kotlin/Int) // dev.konduit.widget/Widget.Children.remove|remove(kotlin.Int;kotlin.Int){}[0]
+    }
+}
+
+abstract interface <#A: kotlin/Any> dev.konduit.widget/WidgetSystem { // dev.konduit.widget/WidgetSystem|null[0]
+    abstract fun apply(#A, dev.konduit/Modifier.UnscopedElement) // dev.konduit.widget/WidgetSystem.apply|apply(1:0;dev.konduit.Modifier.UnscopedElement){}[0]
+}
+
+abstract interface dev.konduit.widget/ChangeListener { // dev.konduit.widget/ChangeListener|null[0]
+    abstract fun onEndChanges() // dev.konduit.widget/ChangeListener.onEndChanges|onEndChanges(){}[0]
+}
+
+abstract interface dev.konduit.widget/SavedStateRegistry { // dev.konduit.widget/SavedStateRegistry|null[0]
+    abstract fun canBeSaved(kotlin/Any): kotlin/Boolean // dev.konduit.widget/SavedStateRegistry.canBeSaved|canBeSaved(kotlin.Any){}[0]
+    abstract fun consumeRestoredState(): kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/Any?>>? // dev.konduit.widget/SavedStateRegistry.consumeRestoredState|consumeRestoredState(){}[0]
+    abstract fun registerSavedStateProvider(kotlin/Function0<kotlin.collections/Map<kotlin/String, kotlin.collections/List<kotlin/Any?>>>) // dev.konduit.widget/SavedStateRegistry.registerSavedStateProvider|registerSavedStateProvider(kotlin.Function0<kotlin.collections.Map<kotlin.String,kotlin.collections.List<kotlin.Any?>>>){}[0]
+    abstract fun unregisterSavedStateProvider() // dev.konduit.widget/SavedStateRegistry.unregisterSavedStateProvider|unregisterSavedStateProvider(){}[0]
+}
+
+final class <#A: kotlin/Any> dev.konduit.widget/MutableListChildren : dev.konduit.widget/Widget.Children<#A>, kotlin.collections/MutableList<dev.konduit.widget/Widget<#A>> { // dev.konduit.widget/MutableListChildren|null[0]
+    constructor <init>(kotlin.collections/MutableList<dev.konduit.widget/Widget<#A>> = ..., kotlin/Function0<kotlin/Unit> = ...) // dev.konduit.widget/MutableListChildren.<init>|<init>(kotlin.collections.MutableList<dev.konduit.widget.Widget<1:0>>;kotlin.Function0<kotlin.Unit>){}[0]
+
+    final val size // dev.konduit.widget/MutableListChildren.size|{}size[0]
+        final fun <get-size>(): kotlin/Int // dev.konduit.widget/MutableListChildren.size.<get-size>|<get-size>(){}[0]
+    final val widgets // dev.konduit.widget/MutableListChildren.widgets|{}widgets[0]
+        final fun <get-widgets>(): kotlin.collections/MutableList<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.widgets.<get-widgets>|<get-widgets>(){}[0]
+
+    final fun add(dev.konduit.widget/Widget<#A>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.add|add(dev.konduit.widget.Widget<1:0>){}[0]
+    final fun add(kotlin/Int, dev.konduit.widget/Widget<#A>) // dev.konduit.widget/MutableListChildren.add|add(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+    final fun addAll(kotlin.collections/Collection<dev.konduit.widget/Widget<#A>>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.addAll|addAll(kotlin.collections.Collection<dev.konduit.widget.Widget<1:0>>){}[0]
+    final fun addAll(kotlin/Int, kotlin.collections/Collection<dev.konduit.widget/Widget<#A>>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.addAll|addAll(kotlin.Int;kotlin.collections.Collection<dev.konduit.widget.Widget<1:0>>){}[0]
+    final fun clear() // dev.konduit.widget/MutableListChildren.clear|clear(){}[0]
+    final fun contains(dev.konduit.widget/Widget<#A>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.contains|contains(dev.konduit.widget.Widget<1:0>){}[0]
+    final fun containsAll(kotlin.collections/Collection<dev.konduit.widget/Widget<#A>>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.containsAll|containsAll(kotlin.collections.Collection<dev.konduit.widget.Widget<1:0>>){}[0]
+    final fun detach() // dev.konduit.widget/MutableListChildren.detach|detach(){}[0]
+    final fun get(kotlin/Int): dev.konduit.widget/Widget<#A> // dev.konduit.widget/MutableListChildren.get|get(kotlin.Int){}[0]
+    final fun indexOf(dev.konduit.widget/Widget<#A>): kotlin/Int // dev.konduit.widget/MutableListChildren.indexOf|indexOf(dev.konduit.widget.Widget<1:0>){}[0]
+    final fun insert(kotlin/Int, dev.konduit.widget/Widget<#A>) // dev.konduit.widget/MutableListChildren.insert|insert(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+    final fun isEmpty(): kotlin/Boolean // dev.konduit.widget/MutableListChildren.isEmpty|isEmpty(){}[0]
+    final fun iterator(): kotlin.collections/MutableIterator<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.iterator|iterator(){}[0]
+    final fun lastIndexOf(dev.konduit.widget/Widget<#A>): kotlin/Int // dev.konduit.widget/MutableListChildren.lastIndexOf|lastIndexOf(dev.konduit.widget.Widget<1:0>){}[0]
+    final fun listIterator(): kotlin.collections/MutableListIterator<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.listIterator|listIterator(){}[0]
+    final fun listIterator(kotlin/Int): kotlin.collections/MutableListIterator<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.listIterator|listIterator(kotlin.Int){}[0]
+    final fun move(kotlin/Int, kotlin/Int, kotlin/Int) // dev.konduit.widget/MutableListChildren.move|move(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun onModifierUpdated(kotlin/Int, dev.konduit.widget/Widget<#A>) // dev.konduit.widget/MutableListChildren.onModifierUpdated|onModifierUpdated(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+    final fun remove(dev.konduit.widget/Widget<#A>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.remove|remove(dev.konduit.widget.Widget<1:0>){}[0]
+    final fun remove(kotlin/Int, kotlin/Int) // dev.konduit.widget/MutableListChildren.remove|remove(kotlin.Int;kotlin.Int){}[0]
+    final fun removeAll(kotlin.collections/Collection<dev.konduit.widget/Widget<#A>>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.removeAll|removeAll(kotlin.collections.Collection<dev.konduit.widget.Widget<1:0>>){}[0]
+    final fun removeAt(kotlin/Int): dev.konduit.widget/Widget<#A> // dev.konduit.widget/MutableListChildren.removeAt|removeAt(kotlin.Int){}[0]
+    final fun retainAll(kotlin.collections/Collection<dev.konduit.widget/Widget<#A>>): kotlin/Boolean // dev.konduit.widget/MutableListChildren.retainAll|retainAll(kotlin.collections.Collection<dev.konduit.widget.Widget<1:0>>){}[0]
+    final fun set(kotlin/Int, dev.konduit.widget/Widget<#A>): dev.konduit.widget/Widget<#A> // dev.konduit.widget/MutableListChildren.set|set(kotlin.Int;dev.konduit.widget.Widget<1:0>){}[0]
+    final fun subList(kotlin/Int, kotlin/Int): kotlin.collections/MutableList<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.subList|subList(kotlin.Int;kotlin.Int){}[0]
+
+    // Targets: [js]
+    final fun asJsArrayView(): kotlin.js.collections/JsArray<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.asJsArrayView|asJsArrayView(){}[0]
+
+    // Targets: [js]
+    final fun asJsReadonlyArrayView(): kotlin.js.collections/JsReadonlyArray<dev.konduit.widget/Widget<#A>> // dev.konduit.widget/MutableListChildren.asJsReadonlyArrayView|asJsReadonlyArrayView(){}[0]
+}
+
+// Targets: [ios]
+abstract interface <#A: kotlin/Any> dev.konduit.widget/ResizableWidget : dev.konduit.widget/Widget<#A> { // dev.konduit.widget/ResizableWidget|null[0]
+    abstract var sizeListener // dev.konduit.widget/ResizableWidget.sizeListener|{}sizeListener[0]
+        abstract fun <get-sizeListener>(): dev.konduit.widget/ResizableWidget.SizeListener? // dev.konduit.widget/ResizableWidget.sizeListener.<get-sizeListener>|<get-sizeListener>(){}[0]
+        abstract fun <set-sizeListener>(dev.konduit.widget/ResizableWidget.SizeListener?) // dev.konduit.widget/ResizableWidget.sizeListener.<set-sizeListener>|<set-sizeListener>(dev.konduit.widget.ResizableWidget.SizeListener?){}[0]
+
+    abstract interface SizeListener { // dev.konduit.widget/ResizableWidget.SizeListener|null[0]
+        abstract fun invalidateSize() // dev.konduit.widget/ResizableWidget.SizeListener.invalidateSize|invalidateSize(){}[0]
+    }
+}
+
+// Targets: [ios]
+final class dev.konduit.widget/UIViewChildren : dev.konduit.widget/Widget.Children<platform.UIKit/UIView> { // dev.konduit.widget/UIViewChildren|null[0]
+    constructor <init>(platform.UIKit/UIView, kotlin/Function2<kotlin/Int, dev.konduit.widget/Widget<platform.UIKit/UIView>, kotlin/Unit> = ..., kotlin/Function2<kotlin/Int, kotlin/Int, kotlin/Unit> = ..., kotlin/Function0<kotlin/Unit> = ..., kotlin/Function2<kotlin/Int, dev.konduit.widget/Widget<platform.UIKit/UIView>, kotlin/Unit> = ...) // dev.konduit.widget/UIViewChildren.<init>|<init>(platform.UIKit.UIView;kotlin.Function2<kotlin.Int,dev.konduit.widget.Widget<platform.UIKit.UIView>,kotlin.Unit>;kotlin.Function2<kotlin.Int,kotlin.Int,kotlin.Unit>;kotlin.Function0<kotlin.Unit>;kotlin.Function2<kotlin.Int,dev.konduit.widget.Widget<platform.UIKit.UIView>,kotlin.Unit>){}[0]
+
+    final val widgets // dev.konduit.widget/UIViewChildren.widgets|{}widgets[0]
+        final fun <get-widgets>(): kotlin.collections/List<dev.konduit.widget/Widget<platform.UIKit/UIView>> // dev.konduit.widget/UIViewChildren.widgets.<get-widgets>|<get-widgets>(){}[0]
+
+    final fun detach() // dev.konduit.widget/UIViewChildren.detach|detach(){}[0]
+    final fun insert(kotlin/Int, dev.konduit.widget/Widget<platform.UIKit/UIView>) // dev.konduit.widget/UIViewChildren.insert|insert(kotlin.Int;dev.konduit.widget.Widget<platform.UIKit.UIView>){}[0]
+    final fun move(kotlin/Int, kotlin/Int, kotlin/Int) // dev.konduit.widget/UIViewChildren.move|move(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun onModifierUpdated(kotlin/Int, dev.konduit.widget/Widget<platform.UIKit/UIView>) // dev.konduit.widget/UIViewChildren.onModifierUpdated|onModifierUpdated(kotlin.Int;dev.konduit.widget.Widget<platform.UIKit.UIView>){}[0]
+    final fun remove(kotlin/Int, kotlin/Int) // dev.konduit.widget/UIViewChildren.remove|remove(kotlin.Int;kotlin.Int){}[0]
+}
+
+// Targets: [ios]
+open class dev.konduit.widget/RedwoodUIView : dev.konduit.widget/RedwoodView<platform.UIKit/UIView> { // dev.konduit.widget/RedwoodUIView|null[0]
+    constructor <init>() // dev.konduit.widget/RedwoodUIView.<init>|<init>(){}[0]
+
+    open val children // dev.konduit.widget/RedwoodUIView.children|{}children[0]
+        open fun <get-children>(): dev.konduit.widget/Widget.Children<platform.UIKit/UIView> // dev.konduit.widget/RedwoodUIView.children.<get-children>|<get-children>(){}[0]
+    open val onBackPressedDispatcher // dev.konduit.widget/RedwoodUIView.onBackPressedDispatcher|{}onBackPressedDispatcher[0]
+        open fun <get-onBackPressedDispatcher>(): dev.konduit.ui/OnBackPressedDispatcher // dev.konduit.widget/RedwoodUIView.onBackPressedDispatcher.<get-onBackPressedDispatcher>|<get-onBackPressedDispatcher>(){}[0]
+    open val savedStateRegistry // dev.konduit.widget/RedwoodUIView.savedStateRegistry|{}savedStateRegistry[0]
+        open fun <get-savedStateRegistry>(): dev.konduit.widget/SavedStateRegistry? // dev.konduit.widget/RedwoodUIView.savedStateRegistry.<get-savedStateRegistry>|<get-savedStateRegistry>(){}[0]
+    open val uiConfiguration // dev.konduit.widget/RedwoodUIView.uiConfiguration|{}uiConfiguration[0]
+        open fun <get-uiConfiguration>(): kotlinx.coroutines.flow/StateFlow<dev.konduit.ui/UiConfiguration> // dev.konduit.widget/RedwoodUIView.uiConfiguration.<get-uiConfiguration>|<get-uiConfiguration>(){}[0]
+    open val value // dev.konduit.widget/RedwoodUIView.value|{}value[0]
+        open fun <get-value>(): platform.UIKit/UIView // dev.konduit.widget/RedwoodUIView.value.<get-value>|<get-value>(){}[0]
+
+    open fun superviewChanged() // dev.konduit.widget/RedwoodUIView.superviewChanged|superviewChanged(){}[0]
+}
+
+// Targets: [js]
+final class dev.konduit.widget/HTMLElementChildren : dev.konduit.widget/Widget.Children<org.w3c.dom/HTMLElement> { // dev.konduit.widget/HTMLElementChildren|null[0]
+    constructor <init>(org.w3c.dom/HTMLElement) // dev.konduit.widget/HTMLElementChildren.<init>|<init>(org.w3c.dom.HTMLElement){}[0]
+
+    final val widgets // dev.konduit.widget/HTMLElementChildren.widgets|{}widgets[0]
+        final fun <get-widgets>(): kotlin.collections/List<dev.konduit.widget/Widget<org.w3c.dom/HTMLElement>> // dev.konduit.widget/HTMLElementChildren.widgets.<get-widgets>|<get-widgets>(){}[0]
+
+    final fun detach() // dev.konduit.widget/HTMLElementChildren.detach|detach(){}[0]
+    final fun insert(kotlin/Int, dev.konduit.widget/Widget<org.w3c.dom/HTMLElement>) // dev.konduit.widget/HTMLElementChildren.insert|insert(kotlin.Int;dev.konduit.widget.Widget<org.w3c.dom.HTMLElement>){}[0]
+    final fun move(kotlin/Int, kotlin/Int, kotlin/Int) // dev.konduit.widget/HTMLElementChildren.move|move(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun onModifierUpdated(kotlin/Int, dev.konduit.widget/Widget<org.w3c.dom/HTMLElement>) // dev.konduit.widget/HTMLElementChildren.onModifierUpdated|onModifierUpdated(kotlin.Int;dev.konduit.widget.Widget<org.w3c.dom.HTMLElement>){}[0]
+    final fun remove(kotlin/Int, kotlin/Int) // dev.konduit.widget/HTMLElementChildren.remove|remove(kotlin.Int;kotlin.Int){}[0]
+}
+
+// Targets: [js]
+final fun (org.w3c.dom/HTMLElement).dev.konduit.widget/asRedwoodView(): dev.konduit.widget/RedwoodView<org.w3c.dom/HTMLElement> // dev.konduit.widget/asRedwoodView|asRedwoodView@org.w3c.dom.HTMLElement(){}[0]

@@ -15,7 +15,7 @@ kotlin {
     commonMain {
       dependencies {
         implementation projects.samples.emojiSearch.presenterTreehouse
-        api projects.redwoodTreehouseHost
+        api projects.konduitTreehouseHost
         api libs.zipline.loader
       }
     }

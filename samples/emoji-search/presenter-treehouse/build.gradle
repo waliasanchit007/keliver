@@ -23,13 +23,13 @@ kotlin {
     commonMain {
       dependencies {
         api libs.okio
-        api projects.redwoodTreehouse
+        api projects.konduitTreehouse
       }
     }
 
     jsMain {
       dependencies {
-        api projects.redwoodTreehouseGuest
+        api projects.konduitTreehouseGuest
         api projects.samples.emojiSearch.presenter
         implementation projects.samples.emojiSearch.schemaProtocolGuest
       }

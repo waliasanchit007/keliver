@@ -1,0 +1,16 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-ui-basic-compose>
+final val dev.konduit.ui.basic.compose/app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop // dev.konduit.ui.basic.compose/app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop|#static{}app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop[0]
+
+final fun (dev.konduit/Modifier).dev.konduit.ui.basic.compose/reuse(): dev.konduit/Modifier // dev.konduit.ui.basic.compose/reuse|reuse@dev.konduit.Modifier(){}[0]
+final fun dev.konduit.ui.basic.compose/Button(kotlin/String?, kotlin/Boolean, kotlin/Function0<kotlin/Unit>?, dev.konduit/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.konduit.ui.basic.compose/Button|Button(kotlin.String?;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?;dev.konduit.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.konduit.ui.basic.compose/Image(kotlin/String, kotlin/Function0<kotlin/Unit>?, dev.konduit/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.konduit.ui.basic.compose/Image|Image(kotlin.String;kotlin.Function0<kotlin.Unit>?;dev.konduit.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.konduit.ui.basic.compose/Text(kotlin/String, dev.konduit/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.konduit.ui.basic.compose/Text|Text(kotlin.String;dev.konduit.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.konduit.ui.basic.compose/TextInput(dev.konduit.ui.basic.api/TextFieldState?, kotlin/String?, kotlin/Function1<dev.konduit.ui.basic.api/TextFieldState, kotlin/Unit>?, dev.konduit/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.konduit.ui.basic.compose/TextInput|TextInput(dev.konduit.ui.basic.api.TextFieldState?;kotlin.String?;kotlin.Function1<dev.konduit.ui.basic.api.TextFieldState,kotlin.Unit>?;dev.konduit.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun dev.konduit.ui.basic.compose/app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop_getter(): kotlin/Int // dev.konduit.ui.basic.compose/app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop_getter|app_cash_redwood_ui_basic_compose_ReuseImpl$stableprop_getter(){}[0]

@@ -11,9 +11,9 @@ kotlin {
     commonMain {
       dependencies {
         api libs.okio
-        api projects.redwoodUiBasicCompose
-        api projects.redwoodTreehouse
-        api projects.redwoodTreehouseGuestCompose
+        api projects.konduitUiBasicCompose
+        api projects.konduitTreehouse
+        api projects.konduitTreehouseGuestCompose
       }
     }
     commonTest {
@@ -21,8 +21,8 @@ kotlin {
         implementation libs.kotlin.test
         implementation libs.assertk
         implementation libs.kotlinx.coroutines.test
-        implementation projects.redwoodTesting
-        implementation projects.redwoodUiBasicTesting
+        implementation projects.konduitTesting
+        implementation projects.konduitUiBasicTesting
       }
     }
   }

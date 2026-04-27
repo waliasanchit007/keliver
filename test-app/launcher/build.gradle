@@ -13,7 +13,7 @@ kotlin {
     commonMain {
       dependencies {
         implementation projects.testApp.presenterTreehouse
-        api projects.redwoodTreehouseHost
+        api projects.konduitTreehouseHost
         api libs.zipline.loader
       }
     }

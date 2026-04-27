@@ -1,0 +1,125 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-layout-api>
+final value class dev.konduit.layout.api/Constraint { // dev.konduit.layout.api/Constraint|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.layout.api/Constraint.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.layout.api/Constraint.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.layout.api/Constraint.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.layout.api/Constraint> { // dev.konduit.layout.api/Constraint.$serializer|null[0]
+        final val descriptor // dev.konduit.layout.api/Constraint.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.layout.api/Constraint.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.layout.api/Constraint.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.layout.api/Constraint // dev.konduit.layout.api/Constraint.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.layout.api/Constraint) // dev.konduit.layout.api/Constraint.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.layout.api.Constraint){}[0]
+    }
+
+    final object Companion { // dev.konduit.layout.api/Constraint.Companion|null[0]
+        final val Fill // dev.konduit.layout.api/Constraint.Companion.Fill|{}Fill[0]
+            final fun <get-Fill>(): dev.konduit.layout.api/Constraint // dev.konduit.layout.api/Constraint.Companion.Fill.<get-Fill>|<get-Fill>(){}[0]
+        final val Wrap // dev.konduit.layout.api/Constraint.Companion.Wrap|{}Wrap[0]
+            final fun <get-Wrap>(): dev.konduit.layout.api/Constraint // dev.konduit.layout.api/Constraint.Companion.Wrap.<get-Wrap>|<get-Wrap>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.layout.api/Constraint> // dev.konduit.layout.api/Constraint.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.layout.api/CrossAxisAlignment { // dev.konduit.layout.api/CrossAxisAlignment|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.layout.api/CrossAxisAlignment.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.layout.api/CrossAxisAlignment.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.layout.api/CrossAxisAlignment.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.layout.api/CrossAxisAlignment> { // dev.konduit.layout.api/CrossAxisAlignment.$serializer|null[0]
+        final val descriptor // dev.konduit.layout.api/CrossAxisAlignment.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.layout.api/CrossAxisAlignment.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.layout.api/CrossAxisAlignment.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.layout.api/CrossAxisAlignment // dev.konduit.layout.api/CrossAxisAlignment.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.layout.api/CrossAxisAlignment) // dev.konduit.layout.api/CrossAxisAlignment.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.layout.api.CrossAxisAlignment){}[0]
+    }
+
+    final object Companion { // dev.konduit.layout.api/CrossAxisAlignment.Companion|null[0]
+        final val Center // dev.konduit.layout.api/CrossAxisAlignment.Companion.Center|{}Center[0]
+            final fun <get-Center>(): dev.konduit.layout.api/CrossAxisAlignment // dev.konduit.layout.api/CrossAxisAlignment.Companion.Center.<get-Center>|<get-Center>(){}[0]
+        final val End // dev.konduit.layout.api/CrossAxisAlignment.Companion.End|{}End[0]
+            final fun <get-End>(): dev.konduit.layout.api/CrossAxisAlignment // dev.konduit.layout.api/CrossAxisAlignment.Companion.End.<get-End>|<get-End>(){}[0]
+        final val Start // dev.konduit.layout.api/CrossAxisAlignment.Companion.Start|{}Start[0]
+            final fun <get-Start>(): dev.konduit.layout.api/CrossAxisAlignment // dev.konduit.layout.api/CrossAxisAlignment.Companion.Start.<get-Start>|<get-Start>(){}[0]
+        final val Stretch // dev.konduit.layout.api/CrossAxisAlignment.Companion.Stretch|{}Stretch[0]
+            final fun <get-Stretch>(): dev.konduit.layout.api/CrossAxisAlignment // dev.konduit.layout.api/CrossAxisAlignment.Companion.Stretch.<get-Stretch>|<get-Stretch>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.layout.api/CrossAxisAlignment> // dev.konduit.layout.api/CrossAxisAlignment.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.layout.api/MainAxisAlignment { // dev.konduit.layout.api/MainAxisAlignment|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.layout.api/MainAxisAlignment.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.layout.api/MainAxisAlignment.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.layout.api/MainAxisAlignment.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.layout.api/MainAxisAlignment> { // dev.konduit.layout.api/MainAxisAlignment.$serializer|null[0]
+        final val descriptor // dev.konduit.layout.api/MainAxisAlignment.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.layout.api/MainAxisAlignment.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.layout.api/MainAxisAlignment.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.layout.api/MainAxisAlignment) // dev.konduit.layout.api/MainAxisAlignment.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.layout.api.MainAxisAlignment){}[0]
+    }
+
+    final object Companion { // dev.konduit.layout.api/MainAxisAlignment.Companion|null[0]
+        final val Center // dev.konduit.layout.api/MainAxisAlignment.Companion.Center|{}Center[0]
+            final fun <get-Center>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.Center.<get-Center>|<get-Center>(){}[0]
+        final val End // dev.konduit.layout.api/MainAxisAlignment.Companion.End|{}End[0]
+            final fun <get-End>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.End.<get-End>|<get-End>(){}[0]
+        final val SpaceAround // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceAround|{}SpaceAround[0]
+            final fun <get-SpaceAround>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceAround.<get-SpaceAround>|<get-SpaceAround>(){}[0]
+        final val SpaceBetween // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceBetween|{}SpaceBetween[0]
+            final fun <get-SpaceBetween>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceBetween.<get-SpaceBetween>|<get-SpaceBetween>(){}[0]
+        final val SpaceEvenly // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceEvenly|{}SpaceEvenly[0]
+            final fun <get-SpaceEvenly>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.SpaceEvenly.<get-SpaceEvenly>|<get-SpaceEvenly>(){}[0]
+        final val Start // dev.konduit.layout.api/MainAxisAlignment.Companion.Start|{}Start[0]
+            final fun <get-Start>(): dev.konduit.layout.api/MainAxisAlignment // dev.konduit.layout.api/MainAxisAlignment.Companion.Start.<get-Start>|<get-Start>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.layout.api/MainAxisAlignment> // dev.konduit.layout.api/MainAxisAlignment.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.layout.api/Overflow { // dev.konduit.layout.api/Overflow|null[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.layout.api/Overflow.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.layout.api/Overflow.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.layout.api/Overflow.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.layout.api/Overflow> { // dev.konduit.layout.api/Overflow.$serializer|null[0]
+        final val descriptor // dev.konduit.layout.api/Overflow.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.layout.api/Overflow.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.layout.api/Overflow.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.layout.api/Overflow // dev.konduit.layout.api/Overflow.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.layout.api/Overflow) // dev.konduit.layout.api/Overflow.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.layout.api.Overflow){}[0]
+    }
+
+    final object Companion { // dev.konduit.layout.api/Overflow.Companion|null[0]
+        final val Clip // dev.konduit.layout.api/Overflow.Companion.Clip|{}Clip[0]
+            final fun <get-Clip>(): dev.konduit.layout.api/Overflow // dev.konduit.layout.api/Overflow.Companion.Clip.<get-Clip>|<get-Clip>(){}[0]
+        final val Scroll // dev.konduit.layout.api/Overflow.Companion.Scroll|{}Scroll[0]
+            final fun <get-Scroll>(): dev.konduit.layout.api/Overflow // dev.konduit.layout.api/Overflow.Companion.Scroll.<get-Scroll>|<get-Scroll>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.layout.api/Overflow> // dev.konduit.layout.api/Overflow.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final val dev.konduit.layout.api/app_cash_redwood_layout_api_Constraint_$serializer$stableprop // dev.konduit.layout.api/app_cash_redwood_layout_api_Constraint_$serializer$stableprop|#static{}app_cash_redwood_layout_api_Constraint_$serializer$stableprop[0]
+final val dev.konduit.layout.api/app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop // dev.konduit.layout.api/app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop|#static{}app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop[0]
+final val dev.konduit.layout.api/app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop // dev.konduit.layout.api/app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop|#static{}app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop[0]
+final val dev.konduit.layout.api/app_cash_redwood_layout_api_Overflow_$serializer$stableprop // dev.konduit.layout.api/app_cash_redwood_layout_api_Overflow_$serializer$stableprop|#static{}app_cash_redwood_layout_api_Overflow_$serializer$stableprop[0]
+
+final fun dev.konduit.layout.api/app_cash_redwood_layout_api_Constraint_$serializer$stableprop_getter(): kotlin/Int // dev.konduit.layout.api/app_cash_redwood_layout_api_Constraint_$serializer$stableprop_getter|app_cash_redwood_layout_api_Constraint_$serializer$stableprop_getter(){}[0]
+final fun dev.konduit.layout.api/app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop_getter(): kotlin/Int // dev.konduit.layout.api/app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop_getter|app_cash_redwood_layout_api_CrossAxisAlignment_$serializer$stableprop_getter(){}[0]
+final fun dev.konduit.layout.api/app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop_getter(): kotlin/Int // dev.konduit.layout.api/app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop_getter|app_cash_redwood_layout_api_MainAxisAlignment_$serializer$stableprop_getter(){}[0]
+final fun dev.konduit.layout.api/app_cash_redwood_layout_api_Overflow_$serializer$stableprop_getter(): kotlin/Int // dev.konduit.layout.api/app_cash_redwood_layout_api_Overflow_$serializer$stableprop_getter|app_cash_redwood_layout_api_Overflow_$serializer$stableprop_getter(){}[0]

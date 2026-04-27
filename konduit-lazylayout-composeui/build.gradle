@@ -1,0 +1,40 @@
+import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  targets(ToolkitComposeUi)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.burst'
+apply plugin: 'app.cash.paparazzi'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitLazylayoutWidget
+        implementation projects.konduitWidgetComposeui
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.material
+      }
+    }
+
+    androidUnitTest {
+      dependencies {
+        implementation projects.konduitLayoutComposeui
+        implementation projects.konduitLayoutSharedTest
+        implementation projects.konduitSnapshotTesting
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.konduit.lazylayout.composeui'
+
+  buildFeatures {
+    // For Paparazzi, which internally uses resources to set itself up.
+    androidResources = true
+  }
+}

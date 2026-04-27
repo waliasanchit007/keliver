@@ -1,0 +1,104 @@
+import static dev.konduit.buildsupport.TargetGroup.TreehouseHost
+
+redwoodBuild {
+  targets(TreehouseHost)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.kotlinx.coroutines.core
+        api libs.kotlinx.serialization.json
+        api libs.okio
+        api libs.zipline
+        api libs.zipline.loader
+        api projects.konduitProtocol
+        api projects.konduitProtocolHost
+        api projects.konduitTreehouse
+      }
+    }
+
+    androidMain {
+      dependencies {
+        api libs.okhttp
+        implementation libs.androidx.activity
+      }
+    }
+
+    commonTest {
+      dependencies {
+        implementation libs.assertk
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.okio
+        implementation libs.turbine
+        implementation libs.jetbrains.compose.collection
+        implementation projects.konduitLayoutTesting
+        implementation projects.konduitLazylayoutTesting
+        implementation projects.konduitWidget
+        implementation projects.testApp.schema.protocolHost
+        implementation projects.testApp.schema.testing
+      }
+    }
+    androidUnitTest {
+      dependencies {
+        implementation libs.robolectric
+      }
+    }
+    jvmTest {
+      if (!rootProject.hasProperty('konduitNoApps')) {
+        kotlin.srcDir('src/appsJvmTest/kotlin')
+        dependencies {
+          implementation projects.testApp.presenterTreehouse
+        }
+      }
+    }
+  }
+}
+
+dependencies {
+  androidTestImplementation libs.junit
+  androidTestImplementation libs.turbine
+  androidTestImplementation libs.androidx.test.runner
+  androidTestImplementation libs.kotlinx.coroutines.test
+  androidTestImplementation libs.assertk
+  androidTestImplementation projects.konduitLayoutTesting
+  androidTestImplementation projects.konduitLazylayoutTesting
+  androidTestImplementation projects.testApp.schema.protocolHost
+  androidTestImplementation projects.testApp.schema.testing
+
+  // The kotlin.test library provides JVM variants for multiple testing frameworks. The Kotlin
+  // plugin does not apply the capability to configurations created by the Android plugin.
+  androidTestImplementation libs.kotlin.test.junit
+}
+
+android {
+  namespace 'app.cash.treehouse.host'
+
+  sourceSets {
+    androidTest {
+      java.srcDir('src/commonTest/kotlin')
+    }
+  }
+
+  defaultConfig {
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+  }
+
+  buildFeatures {
+    // Needed for unit tests which use ViewCompat whose static fields reference `R.id`s.
+    androidResources = true
+  }
+}
+
+// TreehouseTester expects to load our test application.
+if (!rootProject.hasProperty('konduitNoApps')) {
+  tasks.withType(Test.class).configureEach {
+    it.dependsOn(":test-app:presenter-treehouse:compileDevelopmentExecutableKotlinJsZipline")
+  }
+}

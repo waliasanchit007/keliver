@@ -1,0 +1,16 @@
+import static dev.konduit.buildsupport.TargetGroup.ToolkitHtml
+
+redwoodBuild {
+  targets(ToolkitHtml)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitLazylayoutWidget
+      }
+    }
+  }
+}

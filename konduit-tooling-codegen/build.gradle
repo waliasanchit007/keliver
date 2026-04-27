@@ -1,0 +1,21 @@
+import static dev.konduit.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  publishing()
+  cliApplication('konduit-codegen', 'dev.konduit.tooling.codegen.Main')
+}
+
+apply plugin: 'app.cash.burst'
+
+dependencies {
+  api projects.konduitToolingSchema
+  implementation libs.kotlinPoet
+  implementation libs.clikt
+
+  testImplementation testFixtures(projects.konduitToolingSchema)
+  testImplementation projects.testApp.schema
+  testImplementation projects.testApp.schema.compose
+  testImplementation libs.junit
+  testImplementation libs.assertk
+}
