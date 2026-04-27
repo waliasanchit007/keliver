@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath "app.cash.redwood:redwood-gradle-plugin:$redwoodVersion"
+    classpath "dev.konduit:redwood-gradle-plugin:$redwoodVersion"
     classpath libs.kotlin.gradlePlugin
     classpath libs.androidGradlePlugin
   }
@@ -16,7 +16,7 @@ buildscript {
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'com.android.library'
-apply plugin: 'app.cash.redwood.lint'
+apply plugin: 'dev.konduit.lint'
 
 kotlin {
   androidTarget()

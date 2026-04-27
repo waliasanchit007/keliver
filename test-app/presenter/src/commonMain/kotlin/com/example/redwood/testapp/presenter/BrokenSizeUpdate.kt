@@ -21,11 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import app.cash.redwood.Modifier
-import app.cash.redwood.layout.api.Constraint.Companion.Fill
-import app.cash.redwood.layout.compose.Column
-import app.cash.redwood.ui.basic.compose.Text
-import app.cash.redwood.ui.dp
+import dev.konduit.Modifier
+import dev.konduit.layout.api.Constraint.Companion.Fill
+import dev.konduit.layout.compose.Column
+import dev.konduit.ui.basic.compose.Text
+import dev.konduit.ui.dp
 import com.example.redwood.testapp.compose.backgroundColor
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay

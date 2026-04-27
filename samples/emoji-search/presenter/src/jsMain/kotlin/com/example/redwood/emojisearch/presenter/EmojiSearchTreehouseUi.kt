@@ -16,8 +16,8 @@
 package com.example.redwood.emojisearch.presenter
 
 import androidx.compose.runtime.Composable
-import app.cash.redwood.compose.ConsumeInsets
-import app.cash.redwood.treehouse.TreehouseUi
+import dev.konduit.compose.ConsumeInsets
+import dev.konduit.treehouse.TreehouseUi
 
 class EmojiSearchTreehouseUi(
   private val httpClient: HttpClient,

@@ -1,16 +1,16 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Tooling
+import static dev.konduit.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
 }
 
-apply plugin: 'app.cash.redwood.schema'
+apply plugin: 'dev.konduit.schema'
 
 dependencies {
   api projects.redwoodLayoutApi
 }
 
 redwoodSchema {
-  type = 'app.cash.redwood.layout.RedwoodLayout'
+  type = 'dev.konduit.layout.RedwoodLayout'
 }

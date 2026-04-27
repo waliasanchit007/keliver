@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitIos
+import static dev.konduit.buildsupport.TargetGroup.ToolkitIos
 import static org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.common
 
 redwoodBuild {
@@ -18,8 +18,8 @@ kotlin {
 
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'app.cash.redwood.layout.uiview'))
-      kotlin.srcDir(redwoodBuild.generateFlexboxHelpers(tasks, 'app.cash.redwood.layout.uiview'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.layout.uiview'))
+      kotlin.srcDir(redwoodBuild.generateFlexboxHelpers(tasks, 'dev.konduit.layout.uiview'))
       dependencies {
         api projects.redwoodLayoutWidget
         implementation projects.redwoodYoga
@@ -40,7 +40,7 @@ spotless {
   kotlin {
     targetExclude(
       // MIT-licensed files from Meta.
-      "src/commonMain/kotlin/app/cash/redwood/layout/uiview/YogaUIView.kt",
+      "src/commonMain/kotlin/dev/konduit/layout/uiview/YogaUIView.kt",
     )
   }
 }

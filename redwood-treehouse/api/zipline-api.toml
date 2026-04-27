@@ -1,4 +1,4 @@
-[app.cash.redwood.treehouse.AppLifecycle]
+[dev.konduit.treehouse.AppLifecycle]
 
 functions = [
   # fun close(): kotlin.Unit
@@ -7,14 +7,14 @@ functions = [
   # fun sendFrame(kotlin.Long): kotlin.Unit
   "5nQA0rL/",
 
-  # fun start(app.cash.redwood.treehouse.AppLifecycle.Host): kotlin.Unit
+  # fun start(dev.konduit.treehouse.AppLifecycle.Host): kotlin.Unit
   "Xd61ecfL",
 
-  # val guestProtocolVersion: app.cash.redwood.protocol.RedwoodVersion
+  # val guestProtocolVersion: dev.konduit.protocol.RedwoodVersion
   "0iFPbldz",
 ]
 
-[app.cash.redwood.treehouse.AppLifecycle.Host]
+[dev.konduit.treehouse.AppLifecycle.Host]
 
 functions = [
   # fun close(): kotlin.Unit
@@ -23,30 +23,30 @@ functions = [
   # fun handleUncaughtException(kotlin.Throwable): kotlin.Unit
   "Hls+uhG7",
 
-  # fun onUnknownEvent(app.cash.redwood.protocol.WidgetTag, app.cash.redwood.protocol.EventTag): kotlin.Unit
+  # fun onUnknownEvent(dev.konduit.protocol.WidgetTag, dev.konduit.protocol.EventTag): kotlin.Unit
   "jmKreoSS",
 
-  # fun onUnknownEventNode(app.cash.redwood.protocol.Id, app.cash.redwood.protocol.EventTag): kotlin.Unit
+  # fun onUnknownEventNode(dev.konduit.protocol.Id, dev.konduit.protocol.EventTag): kotlin.Unit
   "fm35ryMh",
 
   # fun requestFrame(): kotlin.Unit
   "/TkBiP/u",
 
-  # val hostProtocolVersion: app.cash.redwood.protocol.RedwoodVersion
+  # val hostProtocolVersion: dev.konduit.protocol.RedwoodVersion
   "4ifoT9Ua",
 ]
 
-[app.cash.redwood.treehouse.AppService]
+[dev.konduit.treehouse.AppService]
 
 functions = [
   # fun close(): kotlin.Unit
   "moYx+T3e",
 
-  # val appLifecycle: app.cash.redwood.treehouse.AppLifecycle
+  # val appLifecycle: dev.konduit.treehouse.AppLifecycle
   "odhmO/d6",
 ]
 
-[app.cash.redwood.treehouse.CancellableService]
+[dev.konduit.treehouse.CancellableService]
 
 functions = [
   # fun cancel(): kotlin.Unit
@@ -56,7 +56,7 @@ functions = [
   "moYx+T3e",
 ]
 
-[app.cash.redwood.treehouse.ChangesSinkService]
+[dev.konduit.treehouse.ChangesSinkService]
 
 functions = [
   # fun close(): kotlin.Unit
@@ -66,7 +66,7 @@ functions = [
   "W8qOuU0t",
 ]
 
-[app.cash.redwood.treehouse.OnBackPressedCallbackService]
+[dev.konduit.treehouse.OnBackPressedCallbackService]
 
 functions = [
   # fun close(): kotlin.Unit
@@ -79,36 +79,36 @@ functions = [
   "TAJYS/cz",
 ]
 
-[app.cash.redwood.treehouse.OnBackPressedDispatcherService]
+[dev.konduit.treehouse.OnBackPressedDispatcherService]
 
 functions = [
-  # fun addCallback(app.cash.redwood.treehouse.OnBackPressedCallbackService): app.cash.redwood.treehouse.CancellableService
+  # fun addCallback(dev.konduit.treehouse.OnBackPressedCallbackService): dev.konduit.treehouse.CancellableService
   "F7ShXQYg",
 
   # fun close(): kotlin.Unit
   "moYx+T3e",
 ]
 
-[app.cash.redwood.treehouse.ZiplineTreehouseUi]
+[dev.konduit.treehouse.ZiplineTreehouseUi]
 
 functions = [
   # fun close(): kotlin.Unit
   "moYx+T3e",
 
-  # fun sendEvent(app.cash.redwood.protocol.Event): kotlin.Unit
+  # fun sendEvent(dev.konduit.protocol.Event): kotlin.Unit
   "NSFL6TSu",
 
-  # fun snapshotState(): app.cash.redwood.treehouse.StateSnapshot
+  # fun snapshotState(): dev.konduit.treehouse.StateSnapshot
   "mPBGCHFl",
 
-  # fun start(app.cash.redwood.treehouse.ZiplineTreehouseUi.Host): kotlin.Unit
+  # fun start(dev.konduit.treehouse.ZiplineTreehouseUi.Host): kotlin.Unit
   "h9yZr91W",
 ]
 
-[app.cash.redwood.treehouse.ZiplineTreehouseUi.Host]
+[dev.konduit.treehouse.ZiplineTreehouseUi.Host]
 
 functions = [
-  # fun addOnBackPressedCallback(app.cash.redwood.treehouse.OnBackPressedCallbackService): app.cash.redwood.treehouse.CancellableService
+  # fun addOnBackPressedCallback(dev.konduit.treehouse.OnBackPressedCallbackService): dev.konduit.treehouse.CancellableService
   "2nRsPBzK",
 
   # fun close(): kotlin.Unit
@@ -117,9 +117,9 @@ functions = [
   # fun sendChanges(kotlin.collections.List): kotlin.Unit
   "W8qOuU0t",
 
-  # val stateSnapshot: app.cash.redwood.treehouse.StateSnapshot
+  # val stateSnapshot: dev.konduit.treehouse.StateSnapshot
   "hIDyr4lf",
 
-  # val uiConfigurations: kotlinx.coroutines.flow.StateFlow<app.cash.redwood.ui.UiConfiguration>
+  # val uiConfigurations: kotlinx.coroutines.flow.StateFlow<dev.konduit.ui.UiConfiguration>
   "iAkCX7gg",
 ]

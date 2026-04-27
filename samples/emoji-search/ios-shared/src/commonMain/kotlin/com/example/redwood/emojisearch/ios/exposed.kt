@@ -17,15 +17,15 @@
 
 package com.example.redwood.emojisearch.ios
 
-import app.cash.redwood.Modifier
-import app.cash.redwood.treehouse.AppService
-import app.cash.redwood.treehouse.Content
-import app.cash.redwood.treehouse.TreehouseUIView
-import app.cash.redwood.treehouse.TreehouseView
-import app.cash.redwood.treehouse.bindWhenReady
-import app.cash.redwood.ui.basic.protocol.host.RedwoodUiBasicHostProtocol
-import app.cash.redwood.ui.basic.uiview.UIViewRedwoodUiBasicWidgetSystem
-import app.cash.redwood.widget.WidgetSystem
+import dev.konduit.Modifier
+import dev.konduit.treehouse.AppService
+import dev.konduit.treehouse.Content
+import dev.konduit.treehouse.TreehouseUIView
+import dev.konduit.treehouse.TreehouseView
+import dev.konduit.treehouse.bindWhenReady
+import dev.konduit.ui.basic.protocol.host.RedwoodUiBasicHostProtocol
+import dev.konduit.ui.basic.uiview.UIViewRedwoodUiBasicWidgetSystem
+import dev.konduit.widget.WidgetSystem
 import okio.Closeable
 
 // Used to export types to Objective-C / Swift.

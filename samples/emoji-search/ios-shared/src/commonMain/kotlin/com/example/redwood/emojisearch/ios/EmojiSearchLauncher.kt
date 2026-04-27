@@ -15,11 +15,11 @@
  */
 package com.example.redwood.emojisearch.ios
 
-import app.cash.redwood.leaks.LeakDetector
-import app.cash.redwood.treehouse.EventListener
-import app.cash.redwood.treehouse.TreehouseApp
-import app.cash.redwood.treehouse.TreehouseAppFactory
-import app.cash.redwood.ui.basic.protocol.host.RedwoodUiBasicHostProtocol
+import dev.konduit.leaks.LeakDetector
+import dev.konduit.treehouse.EventListener
+import dev.konduit.treehouse.TreehouseApp
+import dev.konduit.treehouse.TreehouseAppFactory
+import dev.konduit.ui.basic.protocol.host.RedwoodUiBasicHostProtocol
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier

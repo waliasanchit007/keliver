@@ -15,6 +15,6 @@
  */
 package com.example.redwood.emojisearch.treehouse
 
-import app.cash.redwood.treehouse.SaveableStateSerializersModule
+import dev.konduit.treehouse.SaveableStateSerializersModule
 
 val emojiSearchSerializersModule = SaveableStateSerializersModule

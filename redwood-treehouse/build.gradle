@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.TreehouseCommon
+import static dev.konduit.buildsupport.TargetGroup.TreehouseCommon
 
 redwoodBuild {
   targets(TreehouseCommon)

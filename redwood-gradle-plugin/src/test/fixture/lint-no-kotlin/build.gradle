@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath "app.cash.redwood:redwood-gradle-plugin:$redwoodVersion"
+    classpath "dev.konduit:redwood-gradle-plugin:$redwoodVersion"
   }
 
   repositories {
@@ -11,4 +11,4 @@ buildscript {
   }
 }
 
-apply plugin: 'app.cash.redwood.lint'
+apply plugin: 'dev.konduit.lint'

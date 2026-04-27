@@ -17,7 +17,7 @@ package com.example.redwood.testapp.android.views
 
 import android.view.View
 import android.widget.Button as WidgetButton
-import app.cash.redwood.Modifier
+import dev.konduit.Modifier
 import com.example.redwood.testapp.widget.Button
 
 internal class ViewButton(

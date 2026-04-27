@@ -5,12 +5,12 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <app.cash.redwood:redwood-layout-uiview>
-final class app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory : app.cash.redwood.layout.widget/RedwoodLayoutWidgetFactory<platform.UIKit/UIView> { // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory|null[0]
-    constructor <init>() // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory.<init>|<init>(){}[0]
+// Library unique name: <dev.konduit:redwood-layout-uiview>
+final class dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory : dev.konduit.layout.widget/RedwoodLayoutWidgetFactory<platform.UIKit/UIView> { // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory|null[0]
+    constructor <init>() // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory.<init>|<init>(){}[0]
 
-    final fun Box(): app.cash.redwood.layout.widget/Box<platform.UIKit/UIView> // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Box|Box(){}[0]
-    final fun Column(): app.cash.redwood.layout.widget/Column<platform.UIKit/UIView> // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Column|Column(){}[0]
-    final fun Row(): app.cash.redwood.layout.widget/Row<platform.UIKit/UIView> // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Row|Row(){}[0]
-    final fun Spacer(): app.cash.redwood.layout.widget/Spacer<platform.UIKit/UIView> // app.cash.redwood.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Spacer|Spacer(){}[0]
+    final fun Box(): dev.konduit.layout.widget/Box<platform.UIKit/UIView> // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Box|Box(){}[0]
+    final fun Column(): dev.konduit.layout.widget/Column<platform.UIKit/UIView> // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Column|Column(){}[0]
+    final fun Row(): dev.konduit.layout.widget/Row<platform.UIKit/UIView> // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Row|Row(){}[0]
+    final fun Spacer(): dev.konduit.layout.widget/Spacer<platform.UIKit/UIView> // dev.konduit.layout.uiview/UIViewRedwoodLayoutWidgetFactory.Spacer|Spacer(){}[0]
 }

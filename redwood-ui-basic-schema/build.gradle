@@ -1,11 +1,11 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Tooling
+import static dev.konduit.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
 }
 
-apply plugin: 'app.cash.redwood.schema'
+apply plugin: 'dev.konduit.schema'
 
 dependencies {
   api projects.redwoodUiBasicApi
@@ -14,5 +14,5 @@ dependencies {
 }
 
 redwoodSchema {
-  type = 'app.cash.redwood.ui.basic.RedwoodUiBasic'
+  type = 'dev.konduit.ui.basic.RedwoodUiBasic'
 }

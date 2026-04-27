@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitAndroid
+import static dev.konduit.buildsupport.TargetGroup.ToolkitAndroid
 
 redwoodBuild {
   targets(ToolkitAndroid)
@@ -15,5 +15,5 @@ dependencies {
 }
 
 android {
-  namespace 'app.cash.redwood.ui.basic.view'
+  namespace 'dev.konduit.ui.basic.view'
 }

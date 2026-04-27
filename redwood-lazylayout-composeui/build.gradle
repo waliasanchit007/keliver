@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitComposeUi
+import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
   targets(ToolkitComposeUi)
@@ -31,7 +31,7 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.lazylayout.composeui'
+  namespace 'dev.konduit.lazylayout.composeui'
 
   buildFeatures {
     // For Paparazzi, which internally uses resources to set itself up.

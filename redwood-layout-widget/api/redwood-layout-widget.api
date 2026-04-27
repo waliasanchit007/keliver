@@ -1,53 +1,53 @@
-public abstract interface class app/cash/redwood/layout/widget/Box : app/cash/redwood/widget/Widget {
-	public abstract fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
+public abstract interface class dev/konduit/layout/widget/Box : dev/konduit/widget/Widget {
+	public abstract fun getChildren ()Ldev/konduit/widget/Widget$Children;
 	public abstract fun height-DyLkt4w (I)V
 	public abstract fun horizontalAlignment-njEs0f8 (I)V
-	public abstract fun margin (Lapp/cash/redwood/ui/Margin;)V
+	public abstract fun margin (Ldev/konduit/ui/Margin;)V
 	public abstract fun verticalAlignment-njEs0f8 (I)V
 	public abstract fun width-DyLkt4w (I)V
 }
 
-public abstract interface class app/cash/redwood/layout/widget/Column : app/cash/redwood/widget/Widget {
-	public abstract fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
+public abstract interface class dev/konduit/layout/widget/Column : dev/konduit/widget/Widget {
+	public abstract fun getChildren ()Ldev/konduit/widget/Widget$Children;
 	public abstract fun height-DyLkt4w (I)V
 	public abstract fun horizontalAlignment-njEs0f8 (I)V
-	public abstract fun margin (Lapp/cash/redwood/ui/Margin;)V
+	public abstract fun margin (Ldev/konduit/ui/Margin;)V
 	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun overflow-OcAJ2MY (I)V
 	public abstract fun verticalAlignment-6exqka8 (I)V
 	public abstract fun width-DyLkt4w (I)V
 }
 
-public abstract interface class app/cash/redwood/layout/widget/RedwoodLayoutWidgetFactory {
-	public abstract fun Box ()Lapp/cash/redwood/layout/widget/Box;
-	public abstract fun Column ()Lapp/cash/redwood/layout/widget/Column;
-	public abstract fun Row ()Lapp/cash/redwood/layout/widget/Row;
-	public abstract fun Spacer ()Lapp/cash/redwood/layout/widget/Spacer;
+public abstract interface class dev/konduit/layout/widget/RedwoodLayoutWidgetFactory {
+	public abstract fun Box ()Ldev/konduit/layout/widget/Box;
+	public abstract fun Column ()Ldev/konduit/layout/widget/Column;
+	public abstract fun Row ()Ldev/konduit/layout/widget/Row;
+	public abstract fun Spacer ()Ldev/konduit/layout/widget/Spacer;
 }
 
-public final class app/cash/redwood/layout/widget/RedwoodLayoutWidgetSystem : app/cash/redwood/layout/widget/RedwoodLayoutWidgetFactoryOwner, app/cash/redwood/widget/WidgetSystem {
-	public static final field Companion Lapp/cash/redwood/layout/widget/RedwoodLayoutWidgetSystem$Companion;
-	public fun <init> (Lapp/cash/redwood/layout/widget/RedwoodLayoutWidgetFactory;)V
-	public fun apply (Ljava/lang/Object;Lapp/cash/redwood/Modifier$UnscopedElement;)V
-	public fun getRedwoodLayout ()Lapp/cash/redwood/layout/widget/RedwoodLayoutWidgetFactory;
+public final class dev/konduit/layout/widget/RedwoodLayoutWidgetSystem : dev/konduit/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/konduit/widget/WidgetSystem {
+	public static final field Companion Ldev/konduit/layout/widget/RedwoodLayoutWidgetSystem$Companion;
+	public fun <init> (Ldev/konduit/layout/widget/RedwoodLayoutWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/konduit/Modifier$UnscopedElement;)V
+	public fun getRedwoodLayout ()Ldev/konduit/layout/widget/RedwoodLayoutWidgetFactory;
 }
 
-public final class app/cash/redwood/layout/widget/RedwoodLayoutWidgetSystem$Companion {
-	public final fun allChildren (Lapp/cash/redwood/widget/Widget;)Ljava/util/List;
+public final class dev/konduit/layout/widget/RedwoodLayoutWidgetSystem$Companion {
+	public final fun allChildren (Ldev/konduit/widget/Widget;)Ljava/util/List;
 }
 
-public abstract interface class app/cash/redwood/layout/widget/Row : app/cash/redwood/widget/Widget {
-	public abstract fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
+public abstract interface class dev/konduit/layout/widget/Row : dev/konduit/widget/Widget {
+	public abstract fun getChildren ()Ldev/konduit/widget/Widget$Children;
 	public abstract fun height-DyLkt4w (I)V
 	public abstract fun horizontalAlignment-6exqka8 (I)V
-	public abstract fun margin (Lapp/cash/redwood/ui/Margin;)V
+	public abstract fun margin (Ldev/konduit/ui/Margin;)V
 	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun overflow-OcAJ2MY (I)V
 	public abstract fun verticalAlignment-njEs0f8 (I)V
 	public abstract fun width-DyLkt4w (I)V
 }
 
-public abstract interface class app/cash/redwood/layout/widget/Spacer : app/cash/redwood/widget/Widget {
+public abstract interface class dev/konduit/layout/widget/Spacer : dev/konduit/widget/Widget {
 	public abstract fun height-mnpKzHI (D)V
 	public abstract fun width-mnpKzHI (D)V
 }

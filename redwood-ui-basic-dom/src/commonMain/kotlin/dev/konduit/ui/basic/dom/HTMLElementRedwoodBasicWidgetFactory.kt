@@ -1,0 +1,153 @@
+/*
+ * Copyright (C) 2025 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.konduit.ui.basic.dom
+
+import dev.konduit.Modifier
+import dev.konduit.layout.dom.HTMLElementRedwoodLayoutWidgetFactory
+import dev.konduit.lazylayout.dom.HTMLElementRedwoodLazyLayoutWidgetFactory
+import dev.konduit.ui.basic.api.TextFieldState
+import dev.konduit.ui.basic.modifier.Reuse
+import dev.konduit.ui.basic.widget.Button
+import dev.konduit.ui.basic.widget.Image
+import dev.konduit.ui.basic.widget.RedwoodUiBasicWidgetFactory
+import dev.konduit.ui.basic.widget.RedwoodUiBasicWidgetSystem
+import dev.konduit.ui.basic.widget.Text
+import dev.konduit.ui.basic.widget.TextInput
+import org.w3c.dom.Document
+import org.w3c.dom.HTMLButtonElement
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLImageElement
+import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLSpanElement
+
+public class HTMLElementRedwoodUiBasicWidgetFactory(
+  private val document: Document,
+) : RedwoodUiBasicWidgetFactory<HTMLElement> {
+  override fun TextInput(): TextInput<HTMLElement> = HtmlTextInput(document.createElement("input") as HTMLInputElement)
+  override fun Text(): Text<HTMLElement> = HtmlText(document.createElement("span") as HTMLSpanElement)
+  override fun Image(): Image<HTMLElement> = HtmlImage(document.createElement("img") as HTMLImageElement)
+  override fun Button(): Button<HTMLElement> = HtmlButton(document.createElement("button") as HTMLButtonElement)
+  override fun Reuse(value: HTMLElement, modifier: Reuse) {
+  }
+}
+
+@Suppress("FunctionName") // Acting like a type.
+public fun HTMLElementRedwoodUiBasicWidgetSystem(
+  document: Document,
+): RedwoodUiBasicWidgetSystem<HTMLElement> {
+  return RedwoodUiBasicWidgetSystem(
+    RedwoodUiBasic = HTMLElementRedwoodUiBasicWidgetFactory(document),
+    RedwoodLayout = HTMLElementRedwoodLayoutWidgetFactory(document),
+    RedwoodLazyLayout = HTMLElementRedwoodLazyLayoutWidgetFactory(document),
+  )
+}
+
+private class HtmlTextInput(
+  override val value: HTMLInputElement,
+) : TextInput<HTMLElement> {
+  private var onChange: ((TextFieldState) -> Unit)? = null
+  private var state = TextFieldState()
+  private var updating = false
+
+  init {
+    value.oninput = { stateChanged() }
+    value.addEventListener("selectionchange", { stateChanged() })
+  }
+
+  private fun stateChanged() {
+    if (updating) return
+
+    val newState = state.userEdit(
+      text = value.value,
+      selectionStart = value.selectionStart ?: 0,
+      selectionEnd = value.selectionEnd ?: 0,
+    )
+    if (!state.contentEquals(newState)) {
+      state = newState
+      onChange?.invoke(newState)
+    }
+  }
+
+  override fun onChange(onChange: ((TextFieldState) -> Unit)?) {
+    this.onChange = onChange
+  }
+
+  override fun state(state: TextFieldState) {
+    if (state.userEditCount < this.state.userEditCount) return
+
+    if (!updating) {
+      updating = true
+      try {
+        value.value = state.text
+        value.selectionStart = state.selectionStart
+        value.selectionEnd = state.selectionEnd
+      } finally {
+        updating = false
+      }
+    }
+  }
+
+  override fun hint(hint: String) {
+    value.placeholder = hint
+  }
+
+  override var modifier: Modifier = Modifier
+}
+
+private class HtmlText(
+  override val value: HTMLSpanElement,
+) : Text<HTMLElement> {
+  override var modifier: Modifier = Modifier
+
+  override fun text(text: String) {
+    value.textContent = text
+  }
+}
+
+private class HtmlImage(
+  override val value: HTMLImageElement,
+) : Image<HTMLElement> {
+  override var modifier: Modifier = Modifier
+  override fun url(url: String) {
+    value.src = url
+  }
+
+  override fun onClick(onClick: (() -> Unit)?) {
+    value.onclick = { onClick?.invoke() }
+  }
+}
+
+internal class HtmlButton(
+  override val value: HTMLButtonElement,
+) : Button<HTMLElement> {
+  override var modifier: Modifier = Modifier
+
+  override fun text(text: String?) {
+    value.textContent = text
+  }
+
+  override fun enabled(enabled: Boolean) {
+    value.disabled = !enabled
+  }
+
+  override fun onClick(onClick: (() -> Unit)?) {
+    value.onclick = if (onClick != null) {
+      { onClick() }
+    } else {
+      null
+    }
+  }
+}

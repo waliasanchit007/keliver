@@ -1,9 +1,9 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Tooling
+import static dev.konduit.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
-  cliApplication('redwood-schema', 'app.cash.redwood.tooling.schema.Main')
+  cliApplication('redwood-schema', 'dev.konduit.tooling.schema.Main')
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'

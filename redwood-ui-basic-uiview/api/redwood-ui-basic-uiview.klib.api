@@ -5,15 +5,15 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <app.cash.redwood:redwood-ui-basic-uiview>
-final class app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory : app.cash.redwood.ui.basic.widget/RedwoodUiBasicWidgetFactory<platform.UIKit/UIView> { // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory|null[0]
-    constructor <init>() // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.<init>|<init>(){}[0]
+// Library unique name: <dev.konduit:redwood-ui-basic-uiview>
+final class dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory : dev.konduit.ui.basic.widget/RedwoodUiBasicWidgetFactory<platform.UIKit/UIView> { // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory|null[0]
+    constructor <init>() // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.<init>|<init>(){}[0]
 
-    final fun Button(): app.cash.redwood.ui.basic.widget/Button<platform.UIKit/UIView> // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Button|Button(){}[0]
-    final fun Image(): app.cash.redwood.ui.basic.widget/Image<platform.UIKit/UIView> // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Image|Image(){}[0]
-    final fun Reuse(platform.UIKit/UIView, app.cash.redwood.ui.basic.modifier/Reuse) // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Reuse|Reuse(platform.UIKit.UIView;app.cash.redwood.ui.basic.modifier.Reuse){}[0]
-    final fun Text(): app.cash.redwood.ui.basic.widget/Text<platform.UIKit/UIView> // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Text|Text(){}[0]
-    final fun TextInput(): app.cash.redwood.ui.basic.widget/TextInput<platform.UIKit/UIView> // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.TextInput|TextInput(){}[0]
+    final fun Button(): dev.konduit.ui.basic.widget/Button<platform.UIKit/UIView> // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Button|Button(){}[0]
+    final fun Image(): dev.konduit.ui.basic.widget/Image<platform.UIKit/UIView> // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Image|Image(){}[0]
+    final fun Reuse(platform.UIKit/UIView, dev.konduit.ui.basic.modifier/Reuse) // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Reuse|Reuse(platform.UIKit.UIView;dev.konduit.ui.basic.modifier.Reuse){}[0]
+    final fun Text(): dev.konduit.ui.basic.widget/Text<platform.UIKit/UIView> // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.Text|Text(){}[0]
+    final fun TextInput(): dev.konduit.ui.basic.widget/TextInput<platform.UIKit/UIView> // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetFactory.TextInput|TextInput(){}[0]
 }
 
-final fun app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetSystem(): app.cash.redwood.ui.basic.widget/RedwoodUiBasicWidgetSystem<platform.UIKit/UIView> // app.cash.redwood.ui.basic.uiview/UIViewRedwoodUiBasicWidgetSystem|UIViewRedwoodUiBasicWidgetSystem(){}[0]
+final fun dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetSystem(): dev.konduit.ui.basic.widget/RedwoodUiBasicWidgetSystem<platform.UIKit/UIView> // dev.konduit.ui.basic.uiview/UIViewRedwoodUiBasicWidgetSystem|UIViewRedwoodUiBasicWidgetSystem(){}[0]

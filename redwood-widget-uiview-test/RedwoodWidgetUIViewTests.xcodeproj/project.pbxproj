@@ -327,7 +327,7 @@
 					"-framework",
 					RedwoodWidgetUIViewTestKt,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.cash.redwood.widget.uiview.testing;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.konduit.widget.uiview.testing;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "RedwoodWidgetUIViewTests/RedwoodWidgetUIViewTests-Bridging-Header.h";
@@ -365,7 +365,7 @@
 					"-framework",
 					RedwoodWidgetUIViewTestKt,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.cash.redwood.widget.uiview.testing;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.konduit.widget.uiview.testing;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_OBJC_BRIDGING_HEADER = "RedwoodWidgetUIViewTests/RedwoodWidgetUIViewTests-Bridging-Header.h";

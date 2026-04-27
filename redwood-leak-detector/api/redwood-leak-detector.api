@@ -1,19 +1,19 @@
-public abstract interface class app/cash/redwood/leaks/LeakDetector : java/lang/AutoCloseable {
-	public static final field Companion Lapp/cash/redwood/leaks/LeakDetector$Companion;
+public abstract interface class dev/konduit/leaks/LeakDetector : java/lang/AutoCloseable {
+	public static final field Companion Ldev/konduit/leaks/LeakDetector$Companion;
 	public abstract fun awaitClose (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun close ()V
 	public abstract fun watchReference (Ljava/lang/Object;Ljava/lang/String;)V
 }
 
-public abstract interface class app/cash/redwood/leaks/LeakDetector$Callback {
+public abstract interface class dev/konduit/leaks/LeakDetector$Callback {
 	public abstract fun onReferenceLeaked (Ljava/lang/Object;Ljava/lang/String;)V
 }
 
-public final class app/cash/redwood/leaks/LeakDetector$Companion {
-	public final fun none ()Lapp/cash/redwood/leaks/LeakDetector;
-	public final fun timeBasedIn-exY8QGI (Lkotlinx/coroutines/CoroutineScope;Lkotlin/time/TimeSource;JLapp/cash/redwood/leaks/LeakDetector$Callback;)Lapp/cash/redwood/leaks/LeakDetector;
+public final class dev/konduit/leaks/LeakDetector$Companion {
+	public final fun none ()Ldev/konduit/leaks/LeakDetector;
+	public final fun timeBasedIn-exY8QGI (Lkotlinx/coroutines/CoroutineScope;Lkotlin/time/TimeSource;JLdev/konduit/leaks/LeakDetector$Callback;)Ldev/konduit/leaks/LeakDetector;
 }
 
-public abstract interface annotation class app/cash/redwood/leaks/RedwoodLeakApi : java/lang/annotation/Annotation {
+public abstract interface annotation class dev/konduit/leaks/RedwoodLeakApi : java/lang/annotation/Annotation {
 }
 

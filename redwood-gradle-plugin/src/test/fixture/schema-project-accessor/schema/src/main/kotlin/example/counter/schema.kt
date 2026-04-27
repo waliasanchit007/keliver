@@ -15,10 +15,10 @@
  */
 package example.counter
 
-import app.cash.redwood.schema.Children
-import app.cash.redwood.schema.Property
-import app.cash.redwood.schema.Schema
-import app.cash.redwood.schema.Widget
+import dev.konduit.schema.Children
+import dev.konduit.schema.Property
+import dev.konduit.schema.Schema
+import dev.konduit.schema.Widget
 
 @Schema(
   [

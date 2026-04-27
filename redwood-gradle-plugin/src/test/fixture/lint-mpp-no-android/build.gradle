@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath "app.cash.redwood:redwood-gradle-plugin:$redwoodVersion"
+    classpath "dev.konduit:redwood-gradle-plugin:$redwoodVersion"
     classpath libs.kotlin.gradlePlugin
   }
 
@@ -13,7 +13,7 @@ buildscript {
 }
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'app.cash.redwood.lint'
+apply plugin: 'dev.konduit.lint'
 
 kotlin {
   jvm()

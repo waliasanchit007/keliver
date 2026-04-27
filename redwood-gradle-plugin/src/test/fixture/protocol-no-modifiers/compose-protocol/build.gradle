@@ -1,6 +1,6 @@
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
-apply plugin: 'app.cash.redwood.generator.protocol.guest'
+apply plugin: 'dev.konduit.generator.protocol.guest'
 
 kotlin {
   jvm()

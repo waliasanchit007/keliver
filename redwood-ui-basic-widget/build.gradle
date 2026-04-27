@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Common
+import static dev.konduit.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
@@ -6,7 +6,7 @@ redwoodBuild {
 }
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'app.cash.redwood.generator.widget'
+apply plugin: 'dev.konduit.generator.widget'
 
 kotlin {
   sourceSets {
@@ -23,5 +23,5 @@ kotlin {
 
 redwoodSchema {
   source = projects.redwoodUiBasicSchema
-  type = 'app.cash.redwood.ui.basic.RedwoodUiBasic'
+  type = 'dev.konduit.ui.basic.RedwoodUiBasic'
 }

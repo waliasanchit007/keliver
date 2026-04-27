@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Common
+import static dev.konduit.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
@@ -11,7 +11,7 @@ apply plugin: 'dev.drewhamilton.poko'
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'app.cash.redwood.protocol.host'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.protocol.host'))
       dependencies {
         api projects.redwoodProtocol
         api projects.redwoodWidget
@@ -37,9 +37,9 @@ buildConfig {
   }
 
   className("Version")
-  packageName('app.cash.redwood.protocol.host')
+  packageName('dev.konduit.protocol.host')
   buildConfigField(
-    "app.cash.redwood.protocol.RedwoodVersion",
+    "dev.konduit.protocol.RedwoodVersion",
     "hostRedwoodVersion",
     "RedwoodVersion(\"${project.version}\")",
   )

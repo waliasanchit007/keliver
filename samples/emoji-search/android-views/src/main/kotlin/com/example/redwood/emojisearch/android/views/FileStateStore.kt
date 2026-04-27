@@ -15,8 +15,8 @@
  */
 package com.example.redwood.emojisearch.android.views
 
-import app.cash.redwood.treehouse.StateSnapshot
-import app.cash.redwood.treehouse.StateStore
+import dev.konduit.treehouse.StateSnapshot
+import dev.konduit.treehouse.StateStore
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

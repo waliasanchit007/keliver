@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitAndroid
+import static dev.konduit.buildsupport.TargetGroup.ToolkitAndroid
 
 redwoodBuild {
   targets(ToolkitAndroid)
@@ -23,7 +23,7 @@ dependencies {
 }
 
 android {
-  namespace 'app.cash.redwood.lazylayout.view'
+  namespace 'dev.konduit.lazylayout.view'
 
   buildFeatures {
     // For Paparazzi, which internally uses resources to set itself up.

@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitIos
+import static dev.konduit.buildsupport.TargetGroup.ToolkitIos
 
 redwoodBuild {
   targets(ToolkitIos)

@@ -24,10 +24,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import app.cash.redwood.Modifier as RedwoodModifier
-import app.cash.redwood.treehouse.Crashed
-import app.cash.redwood.treehouse.DynamicContentWidgetFactory
-import app.cash.redwood.treehouse.Loading
+import dev.konduit.Modifier as RedwoodModifier
+import dev.konduit.treehouse.Crashed
+import dev.konduit.treehouse.DynamicContentWidgetFactory
+import dev.konduit.treehouse.Loading
 
 internal class EmojiSearchDynamicContentWidgetFactory : DynamicContentWidgetFactory<@Composable (Modifier) -> Unit> {
 

@@ -17,10 +17,10 @@ package com.example.redwood.counter.android.views
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import app.cash.redwood.compose.AndroidUiDispatcher
-import app.cash.redwood.compose.RedwoodComposition
-import app.cash.redwood.ui.basic.view.ViewRedwoodUiBasicWidgetSystem
-import app.cash.redwood.widget.RedwoodLayout
+import dev.konduit.compose.AndroidUiDispatcher
+import dev.konduit.compose.RedwoodComposition
+import dev.konduit.ui.basic.view.ViewRedwoodUiBasicWidgetSystem
+import dev.konduit.widget.RedwoodLayout
 import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.serviceLoaderEnabled

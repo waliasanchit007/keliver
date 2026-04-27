@@ -15,10 +15,10 @@
  */
 package com.example.redwood.counter.browser
 
-import app.cash.redwood.compose.RedwoodComposition
-import app.cash.redwood.compose.WindowAnimationFrameClock
-import app.cash.redwood.ui.basic.dom.HTMLElementRedwoodUiBasicWidgetSystem
-import app.cash.redwood.widget.asRedwoodView
+import dev.konduit.compose.RedwoodComposition
+import dev.konduit.compose.WindowAnimationFrameClock
+import dev.konduit.ui.basic.dom.HTMLElementRedwoodUiBasicWidgetSystem
+import dev.konduit.widget.asRedwoodView
 import com.example.redwood.counter.presenter.Counter
 import kotlinx.browser.document
 import kotlinx.coroutines.DelicateCoroutinesApi

@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Common
+import static dev.konduit.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
@@ -11,7 +11,7 @@ apply plugin: 'com.github.gmazzo.buildconfig'
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'app.cash.redwood.protocol.guest'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.protocol.guest'))
       dependencies {
         api projects.redwoodProtocol
         api projects.redwoodCompose
@@ -37,9 +37,9 @@ buildConfig {
   }
 
   className("Version")
-  packageName('app.cash.redwood.protocol.guest')
+  packageName('dev.konduit.protocol.guest')
   buildConfigField(
-    "app.cash.redwood.protocol.RedwoodVersion",
+    "dev.konduit.protocol.RedwoodVersion",
     "guestRedwoodVersion",
     "RedwoodVersion(\"${project.version}\")",
   )

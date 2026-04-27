@@ -5,5 +5,5 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <app.cash.redwood:redwood-ui-basic-modifiers>
-abstract interface app.cash.redwood.ui.basic.modifier/Reuse : app.cash.redwood/Modifier.UnscopedElement // app.cash.redwood.ui.basic.modifier/Reuse|null[0]
+// Library unique name: <dev.konduit:redwood-ui-basic-modifiers>
+abstract interface dev.konduit.ui.basic.modifier/Reuse : dev.konduit/Modifier.UnscopedElement // dev.konduit.ui.basic.modifier/Reuse|null[0]

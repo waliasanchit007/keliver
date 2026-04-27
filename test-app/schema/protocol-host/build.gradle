@@ -1,10 +1,10 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Common
+import static dev.konduit.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
 }
 
-apply plugin: 'app.cash.redwood.generator.protocol.host'
+apply plugin: 'dev.konduit.generator.protocol.host'
 
 kotlin {
   // Ensure our codegen correctly works in explicit API mode.

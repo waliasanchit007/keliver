@@ -1,53 +1,53 @@
-public abstract interface class app/cash/redwood/protocol/host/HostProtocol {
+public abstract interface class dev/konduit/protocol/host/HostProtocol {
 	public abstract fun getJson ()Lkotlinx/serialization/json/Json;
-	public abstract fun getMismatchHandler ()Lapp/cash/redwood/protocol/host/ProtocolMismatchHandler;
+	public abstract fun getMismatchHandler ()Ldev/konduit/protocol/host/ProtocolMismatchHandler;
 }
 
-public abstract interface class app/cash/redwood/protocol/host/HostProtocol$Factory {
-	public abstract fun create (Lkotlinx/serialization/json/Json;Lapp/cash/redwood/protocol/host/ProtocolMismatchHandler;)Lapp/cash/redwood/protocol/host/HostProtocol;
-	public static synthetic fun create$default (Lapp/cash/redwood/protocol/host/HostProtocol$Factory;Lkotlinx/serialization/json/Json;Lapp/cash/redwood/protocol/host/ProtocolMismatchHandler;ILjava/lang/Object;)Lapp/cash/redwood/protocol/host/HostProtocol;
+public abstract interface class dev/konduit/protocol/host/HostProtocol$Factory {
+	public abstract fun create (Lkotlinx/serialization/json/Json;Ldev/konduit/protocol/host/ProtocolMismatchHandler;)Ldev/konduit/protocol/host/HostProtocol;
+	public static synthetic fun create$default (Ldev/konduit/protocol/host/HostProtocol$Factory;Lkotlinx/serialization/json/Json;Ldev/konduit/protocol/host/ProtocolMismatchHandler;ILjava/lang/Object;)Ldev/konduit/protocol/host/HostProtocol;
 }
 
-public final class app/cash/redwood/protocol/host/HostProtocolAdapter : app/cash/redwood/protocol/host/UiChangesSink {
-	public synthetic fun <init> (Ljava/lang/String;Lapp/cash/redwood/widget/Widget$Children;Lapp/cash/redwood/protocol/host/HostProtocol;Lapp/cash/redwood/widget/WidgetSystem;Lapp/cash/redwood/protocol/host/UiEventSink;Lapp/cash/redwood/leaks/LeakDetector;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+public final class dev/konduit/protocol/host/HostProtocolAdapter : dev/konduit/protocol/host/UiChangesSink {
+	public synthetic fun <init> (Ljava/lang/String;Ldev/konduit/widget/Widget$Children;Ldev/konduit/protocol/host/HostProtocol;Ldev/konduit/widget/WidgetSystem;Ldev/konduit/protocol/host/UiEventSink;Ldev/konduit/leaks/LeakDetector;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun close ()V
 	public fun sendChanges (Ljava/util/List;)V
 }
 
-public abstract interface class app/cash/redwood/protocol/host/ProtocolMismatchHandler {
-	public static final field Companion Lapp/cash/redwood/protocol/host/ProtocolMismatchHandler$Companion;
-	public static final field Throwing Lapp/cash/redwood/protocol/host/ProtocolMismatchHandler;
+public abstract interface class dev/konduit/protocol/host/ProtocolMismatchHandler {
+	public static final field Companion Ldev/konduit/protocol/host/ProtocolMismatchHandler$Companion;
+	public static final field Throwing Ldev/konduit/protocol/host/ProtocolMismatchHandler;
 	public abstract fun onUnknownChildren-iETOA3M (II)V
 	public abstract fun onUnknownModifier-nx0wl1g (I)V
 	public abstract fun onUnknownProperty-LKUuuww (II)V
 	public abstract fun onUnknownWidget-WCEpcRY (I)V
 }
 
-public final class app/cash/redwood/protocol/host/ProtocolMismatchHandler$Companion {
+public final class dev/konduit/protocol/host/ProtocolMismatchHandler$Companion {
 }
 
-public abstract interface class app/cash/redwood/protocol/host/UiChange {
-	public static final field Companion Lapp/cash/redwood/protocol/host/UiChange$Companion;
+public abstract interface class dev/konduit/protocol/host/UiChange {
+	public static final field Companion Ldev/konduit/protocol/host/UiChange$Companion;
 	public abstract fun getId-0HhLjSo ()I
 }
 
-public final class app/cash/redwood/protocol/host/UiChange$Companion {
-	public final fun fromProtocol (Lapp/cash/redwood/protocol/host/HostProtocol;Lapp/cash/redwood/protocol/Change;)Lapp/cash/redwood/protocol/host/UiChange;
+public final class dev/konduit/protocol/host/UiChange$Companion {
+	public final fun fromProtocol (Ldev/konduit/protocol/host/HostProtocol;Ldev/konduit/protocol/Change;)Ldev/konduit/protocol/host/UiChange;
 }
 
-public abstract interface class app/cash/redwood/protocol/host/UiChangesSink {
+public abstract interface class dev/konduit/protocol/host/UiChangesSink {
 	public abstract fun sendChanges (Ljava/util/List;)V
 }
 
-public abstract interface class app/cash/redwood/protocol/host/UiEvent {
-	public abstract fun toProtocol ()Lapp/cash/redwood/protocol/Event;
+public abstract interface class dev/konduit/protocol/host/UiEvent {
+	public abstract fun toProtocol ()Ldev/konduit/protocol/Event;
 }
 
-public abstract interface class app/cash/redwood/protocol/host/UiEventSink {
-	public abstract fun sendEvent (Lapp/cash/redwood/protocol/host/UiEvent;)V
+public abstract interface class dev/konduit/protocol/host/UiEventSink {
+	public abstract fun sendEvent (Ldev/konduit/protocol/host/UiEvent;)V
 }
 
-public final class app/cash/redwood/protocol/host/VersionKt {
+public final class dev/konduit/protocol/host/VersionKt {
 	public static final fun getHostRedwoodVersion ()Ljava/lang/String;
 }
 

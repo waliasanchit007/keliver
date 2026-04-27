@@ -15,8 +15,8 @@
  */
 package com.example.redwood.testapp.android.views
 
-import app.cash.redwood.treehouse.StateSnapshot
-import app.cash.redwood.treehouse.StateStore
+import dev.konduit.treehouse.StateSnapshot
+import dev.konduit.treehouse.StateStore
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okio.FileNotFoundException

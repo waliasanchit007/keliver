@@ -1,4 +1,4 @@
-public final class app/cash/redwood/widget/compose/ComposeWidgetChildren : app/cash/redwood/widget/Widget$Children {
+public final class dev/konduit/widget/compose/ComposeWidgetChildren : dev/konduit/widget/Widget$Children {
 	public static final field $stable I
 	public fun <init> ()V
 	public fun <init> (Lkotlin/jvm/functions/Function0;)V
@@ -6,9 +6,9 @@ public final class app/cash/redwood/widget/compose/ComposeWidgetChildren : app/c
 	public final fun Render (Landroidx/compose/runtime/Composer;I)V
 	public fun detach ()V
 	public fun getWidgets ()Ljava/util/List;
-	public fun insert (ILapp/cash/redwood/widget/Widget;)V
+	public fun insert (ILdev/konduit/widget/Widget;)V
 	public fun move (III)V
-	public fun onModifierUpdated (ILapp/cash/redwood/widget/Widget;)V
+	public fun onModifierUpdated (ILdev/konduit/widget/Widget;)V
 	public fun remove (II)V
 }
 

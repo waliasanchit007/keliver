@@ -15,15 +15,15 @@
  */
 package com.example.redwood.testapp
 
-import app.cash.redwood.layout.RedwoodLayout
-import app.cash.redwood.lazylayout.RedwoodLazyLayout
-import app.cash.redwood.schema.Children
-import app.cash.redwood.schema.Modifier
-import app.cash.redwood.schema.Property
-import app.cash.redwood.schema.Schema
-import app.cash.redwood.schema.Schema.Dependency
-import app.cash.redwood.schema.Widget
-import app.cash.redwood.ui.basic.RedwoodUiBasic
+import dev.konduit.layout.RedwoodLayout
+import dev.konduit.lazylayout.RedwoodLazyLayout
+import dev.konduit.schema.Children
+import dev.konduit.schema.Modifier
+import dev.konduit.schema.Property
+import dev.konduit.schema.Schema
+import dev.konduit.schema.Schema.Dependency
+import dev.konduit.schema.Widget
+import dev.konduit.ui.basic.RedwoodUiBasic
 import kotlin.time.Duration
 
 @Schema(

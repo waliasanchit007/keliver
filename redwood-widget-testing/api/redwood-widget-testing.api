@@ -1,7 +1,7 @@
-public abstract class app/cash/redwood/widget/testing/AbstractWidgetChildrenTest {
+public abstract class dev/konduit/widget/testing/AbstractWidgetChildrenTest {
 	public fun <init> ()V
 	public final fun childrenInstanceDoesNotChange ()V
-	public abstract fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
+	public abstract fun getChildren ()Ldev/konduit/widget/Widget$Children;
 	public final fun insertAppend ()V
 	public final fun insertPrepend ()V
 	public final fun insertRandom ()V

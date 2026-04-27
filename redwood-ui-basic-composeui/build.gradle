@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitComposeUi
+import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
   targets(ToolkitComposeUi)
@@ -24,5 +24,5 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.ui.basic.composeui'
+  namespace 'dev.konduit.ui.basic.composeui'
 }

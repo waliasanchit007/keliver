@@ -1,8 +1,8 @@
-public final class app/cash/redwood/layout/view/ViewRedwoodLayoutWidgetFactory : app/cash/redwood/layout/widget/RedwoodLayoutWidgetFactory {
+public final class dev/konduit/layout/view/ViewRedwoodLayoutWidgetFactory : dev/konduit/layout/widget/RedwoodLayoutWidgetFactory {
 	public fun <init> (Landroid/content/Context;)V
-	public fun Box ()Lapp/cash/redwood/layout/widget/Box;
-	public fun Column ()Lapp/cash/redwood/layout/widget/Column;
-	public fun Row ()Lapp/cash/redwood/layout/widget/Row;
-	public fun Spacer ()Lapp/cash/redwood/layout/widget/Spacer;
+	public fun Box ()Ldev/konduit/layout/widget/Box;
+	public fun Column ()Ldev/konduit/layout/widget/Column;
+	public fun Row ()Ldev/konduit/layout/widget/Row;
+	public fun Spacer ()Ldev/konduit/layout/widget/Spacer;
 }
 

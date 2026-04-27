@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
 
 redwoodBuild {
   targets(CommonWithAndroid)
@@ -27,14 +27,14 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.runtime'
+  namespace 'dev.konduit.runtime'
 }
 
 spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/commonMain/kotlin/app/cash/redwood/Modifier.kt",
+      "src/commonMain/kotlin/dev/konduit/Modifier.kt",
     )
   }
 }

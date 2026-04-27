@@ -15,9 +15,9 @@
  */
 package com.example.redwood.testapp.treehouse
 
-import app.cash.redwood.treehouse.StandardAppLifecycle
-import app.cash.redwood.treehouse.ZiplineTreehouseUi
-import app.cash.redwood.treehouse.asZiplineTreehouseUi
+import dev.konduit.treehouse.StandardAppLifecycle
+import dev.konduit.treehouse.ZiplineTreehouseUi
+import dev.konduit.treehouse.asZiplineTreehouseUi
 import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
 import kotlinx.serialization.json.Json
 

@@ -47,64 +47,64 @@ dependencies {
 gradlePlugin {
   plugins {
     redwoodLint {
-      id = "app.cash.redwood.lint"
+      id = "dev.konduit.lint"
       displayName = "Redwood lint"
       description = "Redwood lint Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodLintPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodLintPlugin"
     }
     redwoodSchema {
-      id = "app.cash.redwood.schema"
+      id = "dev.konduit.schema"
       displayName = "Redwood schema"
       description = "Redwood Schema Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodSchemaPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodSchemaPlugin"
     }
     redwoodComposeGenerator {
-      id = "app.cash.redwood.generator.compose"
+      id = "dev.konduit.generator.compose"
       displayName = "Redwood generator (Compose)"
       description = "Redwood schema Compose code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodComposeGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodComposeGeneratorPlugin"
     }
     redwoodComposeProtocolGenerator {
-      id = "app.cash.redwood.generator.compose.protocol"
+      id = "dev.konduit.generator.compose.protocol"
       displayName = "Redwood generator (Compose protocol)"
       description = "Redwood schema Compose protocol code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodComposeProtocolGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodComposeProtocolGeneratorPlugin"
     }
     redwoodModifierGeneratorPlugin {
-      id = "app.cash.redwood.generator.modifiers"
+      id = "dev.konduit.generator.modifiers"
       displayName = "Redwood generator (layout modifiers)"
       description = "Redwood schema layout modifier code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodModifiersGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodModifiersGeneratorPlugin"
     }
     redwoodProtocolGuestGenerator {
-      id = "app.cash.redwood.generator.protocol.guest"
+      id = "dev.konduit.generator.protocol.guest"
       displayName = "Redwood generator (guest protocol)"
       description = "Redwood schema guest protocol code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodProtocolGuestGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodProtocolGuestGeneratorPlugin"
     }
     redwoodProtocolHostGenerator {
-      id = "app.cash.redwood.generator.protocol.host"
+      id = "dev.konduit.generator.protocol.host"
       displayName = "Redwood generator (host protocol)"
       description = "Redwood schema host protocol code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodProtocolHostGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodProtocolHostGeneratorPlugin"
     }
     redwoodTestingGenerator {
-      id = "app.cash.redwood.generator.testing"
+      id = "dev.konduit.generator.testing"
       displayName = "Redwood generator (testing)"
       description = "Redwood schema testing code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodTestingGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodTestingGeneratorPlugin"
     }
     redwoodWidgetGenerator {
-      id = "app.cash.redwood.generator.widget"
+      id = "dev.konduit.generator.widget"
       displayName = "Redwood generator (widget)"
       description = "Redwood schema widget code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodWidgetGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodWidgetGeneratorPlugin"
     }
     redwoodWidgetProtocolGenerator {
-      id = "app.cash.redwood.generator.widget.protocol"
+      id = "dev.konduit.generator.widget.protocol"
       displayName = "Redwood generator (widget protocol)"
       description = "Redwood schema widget protocol code generation Gradle plugin"
-      implementationClass = "app.cash.redwood.gradle.RedwoodWidgetProtocolGeneratorPlugin"
+      implementationClass = "dev.konduit.gradle.RedwoodWidgetProtocolGeneratorPlugin"
     }
   }
 }
@@ -133,7 +133,7 @@ buildConfig {
     topLevelConstants = true
   }
 
-  packageName('app.cash.redwood.gradle')
+  packageName('dev.konduit.gradle')
   buildConfigField("String", "redwoodVersion", "\"${project.version}\"")
   buildConfigField("String", "androidxCollectionCoordinates", "\"${libs.jetbrains.compose.collection.get()}\"")
 }

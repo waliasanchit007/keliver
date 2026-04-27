@@ -1,46 +1,46 @@
-public abstract interface class app/cash/redwood/widget/ChangeListener {
+public abstract interface class dev/konduit/widget/ChangeListener {
 	public abstract fun onEndChanges ()V
 }
 
-public final class app/cash/redwood/widget/MutableListChildren : app/cash/redwood/widget/Widget$Children, java/util/List, kotlin/jvm/internal/markers/KMutableList {
+public final class dev/konduit/widget/MutableListChildren : dev/konduit/widget/Widget$Children, java/util/List, kotlin/jvm/internal/markers/KMutableList {
 	public fun <init> ()V
 	public fun <init> (Ljava/util/List;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/util/List;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun add (ILapp/cash/redwood/widget/Widget;)V
+	public fun add (ILdev/konduit/widget/Widget;)V
 	public synthetic fun add (ILjava/lang/Object;)V
-	public fun add (Lapp/cash/redwood/widget/Widget;)Z
+	public fun add (Ldev/konduit/widget/Widget;)Z
 	public synthetic fun add (Ljava/lang/Object;)Z
 	public fun addAll (ILjava/util/Collection;)Z
 	public fun addAll (Ljava/util/Collection;)Z
 	public fun clear ()V
-	public fun contains (Lapp/cash/redwood/widget/Widget;)Z
+	public fun contains (Ldev/konduit/widget/Widget;)Z
 	public final fun contains (Ljava/lang/Object;)Z
 	public fun containsAll (Ljava/util/Collection;)Z
 	public fun detach ()V
-	public fun get (I)Lapp/cash/redwood/widget/Widget;
+	public fun get (I)Ldev/konduit/widget/Widget;
 	public synthetic fun get (I)Ljava/lang/Object;
 	public fun getSize ()I
 	public fun getWidgets ()Ljava/util/List;
-	public fun indexOf (Lapp/cash/redwood/widget/Widget;)I
+	public fun indexOf (Ldev/konduit/widget/Widget;)I
 	public final fun indexOf (Ljava/lang/Object;)I
-	public fun insert (ILapp/cash/redwood/widget/Widget;)V
+	public fun insert (ILdev/konduit/widget/Widget;)V
 	public fun isEmpty ()Z
 	public fun iterator ()Ljava/util/Iterator;
-	public fun lastIndexOf (Lapp/cash/redwood/widget/Widget;)I
+	public fun lastIndexOf (Ldev/konduit/widget/Widget;)I
 	public final fun lastIndexOf (Ljava/lang/Object;)I
 	public fun listIterator ()Ljava/util/ListIterator;
 	public fun listIterator (I)Ljava/util/ListIterator;
 	public fun move (III)V
-	public fun onModifierUpdated (ILapp/cash/redwood/widget/Widget;)V
-	public final fun remove (I)Lapp/cash/redwood/widget/Widget;
+	public fun onModifierUpdated (ILdev/konduit/widget/Widget;)V
+	public final fun remove (I)Ldev/konduit/widget/Widget;
 	public synthetic fun remove (I)Ljava/lang/Object;
 	public fun remove (II)V
-	public fun remove (Lapp/cash/redwood/widget/Widget;)Z
+	public fun remove (Ldev/konduit/widget/Widget;)Z
 	public final fun remove (Ljava/lang/Object;)Z
 	public fun removeAll (Ljava/util/Collection;)Z
-	public fun removeAt (I)Lapp/cash/redwood/widget/Widget;
+	public fun removeAt (I)Ldev/konduit/widget/Widget;
 	public fun retainAll (Ljava/util/Collection;)Z
-	public fun set (ILapp/cash/redwood/widget/Widget;)Lapp/cash/redwood/widget/Widget;
+	public fun set (ILdev/konduit/widget/Widget;)Ldev/konduit/widget/Widget;
 	public synthetic fun set (ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun size ()I
 	public fun subList (II)Ljava/util/List;
@@ -48,11 +48,11 @@ public final class app/cash/redwood/widget/MutableListChildren : app/cash/redwoo
 	public fun toArray ([Ljava/lang/Object;)[Ljava/lang/Object;
 }
 
-public class app/cash/redwood/widget/RedwoodLayout : android/view/ViewGroup, app/cash/redwood/widget/RedwoodView {
+public class dev/konduit/widget/RedwoodLayout : android/view/ViewGroup, dev/konduit/widget/RedwoodView {
 	public fun <init> (Landroid/content/Context;Landroidx/activity/OnBackPressedDispatcher;)V
-	public final fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
-	public fun getOnBackPressedDispatcher ()Lapp/cash/redwood/ui/OnBackPressedDispatcher;
-	public fun getSavedStateRegistry ()Lapp/cash/redwood/widget/SavedStateRegistry;
+	public final fun getChildren ()Ldev/konduit/widget/Widget$Children;
+	public fun getOnBackPressedDispatcher ()Ldev/konduit/ui/OnBackPressedDispatcher;
+	public fun getSavedStateRegistry ()Ldev/konduit/widget/SavedStateRegistry;
 	public fun getUiConfiguration ()Lkotlinx/coroutines/flow/StateFlow;
 	public final fun getValue ()Landroid/view/View;
 	public synthetic fun getValue ()Ljava/lang/Object;
@@ -61,48 +61,48 @@ public class app/cash/redwood/widget/RedwoodLayout : android/view/ViewGroup, app
 	protected fun onMeasure (II)V
 }
 
-public abstract interface class app/cash/redwood/widget/RedwoodView {
-	public abstract fun getChildren ()Lapp/cash/redwood/widget/Widget$Children;
-	public abstract fun getOnBackPressedDispatcher ()Lapp/cash/redwood/ui/OnBackPressedDispatcher;
-	public abstract fun getSavedStateRegistry ()Lapp/cash/redwood/widget/SavedStateRegistry;
+public abstract interface class dev/konduit/widget/RedwoodView {
+	public abstract fun getChildren ()Ldev/konduit/widget/Widget$Children;
+	public abstract fun getOnBackPressedDispatcher ()Ldev/konduit/ui/OnBackPressedDispatcher;
+	public abstract fun getSavedStateRegistry ()Ldev/konduit/widget/SavedStateRegistry;
 	public abstract fun getUiConfiguration ()Lkotlinx/coroutines/flow/StateFlow;
 	public abstract fun getValue ()Ljava/lang/Object;
 }
 
-public abstract interface class app/cash/redwood/widget/SavedStateRegistry {
+public abstract interface class dev/konduit/widget/SavedStateRegistry {
 	public abstract fun canBeSaved (Ljava/lang/Object;)Z
 	public abstract fun consumeRestoredState ()Ljava/util/Map;
 	public abstract fun registerSavedStateProvider (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun unregisterSavedStateProvider ()V
 }
 
-public final class app/cash/redwood/widget/ViewGroupChildren : app/cash/redwood/widget/Widget$Children {
+public final class dev/konduit/widget/ViewGroupChildren : dev/konduit/widget/Widget$Children {
 	public fun <init> (Landroid/view/ViewGroup;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;)V
 	public synthetic fun <init> (Landroid/view/ViewGroup;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun detach ()V
 	public fun getWidgets ()Ljava/util/List;
-	public fun insert (ILapp/cash/redwood/widget/Widget;)V
+	public fun insert (ILdev/konduit/widget/Widget;)V
 	public fun move (III)V
-	public fun onModifierUpdated (ILapp/cash/redwood/widget/Widget;)V
+	public fun onModifierUpdated (ILdev/konduit/widget/Widget;)V
 	public fun remove (II)V
 }
 
-public abstract interface class app/cash/redwood/widget/Widget {
-	public abstract fun getModifier ()Lapp/cash/redwood/Modifier;
+public abstract interface class dev/konduit/widget/Widget {
+	public abstract fun getModifier ()Ldev/konduit/Modifier;
 	public abstract fun getValue ()Ljava/lang/Object;
-	public abstract fun setModifier (Lapp/cash/redwood/Modifier;)V
+	public abstract fun setModifier (Ldev/konduit/Modifier;)V
 }
 
-public abstract interface class app/cash/redwood/widget/Widget$Children {
+public abstract interface class dev/konduit/widget/Widget$Children {
 	public abstract fun detach ()V
 	public abstract fun getWidgets ()Ljava/util/List;
-	public abstract fun insert (ILapp/cash/redwood/widget/Widget;)V
+	public abstract fun insert (ILdev/konduit/widget/Widget;)V
 	public abstract fun move (III)V
-	public abstract fun onModifierUpdated (ILapp/cash/redwood/widget/Widget;)V
+	public abstract fun onModifierUpdated (ILdev/konduit/widget/Widget;)V
 	public abstract fun remove (II)V
 }
 
-public abstract interface class app/cash/redwood/widget/WidgetSystem {
-	public abstract fun apply (Ljava/lang/Object;Lapp/cash/redwood/Modifier$UnscopedElement;)V
+public abstract interface class dev/konduit/widget/WidgetSystem {
+	public abstract fun apply (Ljava/lang/Object;Ldev/konduit/Modifier$UnscopedElement;)V
 }
 

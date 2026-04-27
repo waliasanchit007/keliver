@@ -19,11 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
-import app.cash.redwood.Modifier
-import app.cash.redwood.layout.api.Constraint.Companion.Fill
-import app.cash.redwood.layout.api.CrossAxisAlignment.Companion.Stretch
-import app.cash.redwood.layout.compose.Column
-import app.cash.redwood.layout.compose.Row
+import dev.konduit.Modifier
+import dev.konduit.layout.api.Constraint.Companion.Fill
+import dev.konduit.layout.api.CrossAxisAlignment.Companion.Stretch
+import dev.konduit.layout.compose.Column
+import dev.konduit.layout.compose.Row
 import com.example.redwood.testapp.compose.Button
 import com.example.redwood.testapp.compose.backgroundColor
 import kotlin.random.Random

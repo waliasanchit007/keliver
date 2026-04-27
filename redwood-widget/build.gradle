@@ -1,6 +1,6 @@
-import app.cash.redwood.buildsupport.JsTests
+import dev.konduit.buildsupport.JsTests
 
-import static app.cash.redwood.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
 
 redwoodBuild {
   targets(CommonWithAndroid + JsTests.Browser)
@@ -10,7 +10,7 @@ redwoodBuild {
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'app.cash.redwood.widget'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.widget'))
       dependencies {
         api libs.kotlinx.coroutines.core
         api projects.redwoodRuntime
@@ -39,7 +39,7 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.widget'
+  namespace 'dev.konduit.widget'
 
   buildFeatures {
     // Has default ID for RedwoodLayout.
@@ -51,7 +51,7 @@ spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/androidMain/kotlin/app/cash/redwood/widget/SavedStateRegistry.kt",
+      "src/androidMain/kotlin/dev/konduit/widget/SavedStateRegistry.kt",
     )
   }
 }

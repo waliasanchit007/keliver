@@ -15,7 +15,7 @@
  */
 package com.example.redwood.testapp.launcher
 
-import app.cash.redwood.treehouse.TreehouseApp
+import dev.konduit.treehouse.TreehouseApp
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.FreshnessChecker

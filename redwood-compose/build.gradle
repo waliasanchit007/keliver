@@ -1,6 +1,6 @@
-import app.cash.redwood.buildsupport.JsTests
+import dev.konduit.buildsupport.JsTests
 
-import static app.cash.redwood.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
 
 redwoodBuild {
   targets(CommonWithAndroid + JsTests.Browser)
@@ -50,7 +50,7 @@ kotlin {
       }
     }
     nonJsMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'app.cash.redwood.compose'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.compose'))
       dependencies {
         implementation libs.jetbrains.compose.collection
       }
@@ -66,7 +66,7 @@ dependencies {
 }
 
 android {
-  namespace 'app.cash.redwood.compose'
+  namespace 'dev.konduit.compose'
 
   defaultConfig {
     testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -81,8 +81,8 @@ spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/androidMain/kotlin/app/cash/redwood/compose/AndroidUiDispatcher.kt",
-      "src/androidMain/kotlin/app/cash/redwood/compose/AndroidUiFrameClock.kt",
+      "src/androidMain/kotlin/dev/konduit/compose/AndroidUiDispatcher.kt",
+      "src/androidMain/kotlin/dev/konduit/compose/AndroidUiFrameClock.kt",
     )
   }
 }

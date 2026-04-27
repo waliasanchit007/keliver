@@ -1,5 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'app.cash.redwood.generator.widget'
+apply plugin: 'dev.konduit.generator.widget'
 
 kotlin {
   jvm()

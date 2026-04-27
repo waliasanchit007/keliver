@@ -23,8 +23,8 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import androidx.appcompat.view.ContextThemeWrapper
-import app.cash.redwood.Modifier
-import app.cash.redwood.treehouse.Loading
+import dev.konduit.Modifier
+import dev.konduit.treehouse.Loading
 
 @SuppressLint("ViewConstructor")
 internal class LoadingView(

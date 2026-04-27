@@ -1,11 +1,11 @@
-import static app.cash.redwood.buildsupport.TargetGroup.Common
+import static dev.konduit.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
   publishing()
 }
 
-apply plugin: 'app.cash.redwood.generator.widget'
+apply plugin: 'dev.konduit.generator.widget'
 
 kotlin {
   sourceSets {
@@ -19,5 +19,5 @@ kotlin {
 
 redwoodSchema {
   source = projects.redwoodLayoutSchema
-  type = 'app.cash.redwood.layout.RedwoodLayout'
+  type = 'dev.konduit.layout.RedwoodLayout'
 }

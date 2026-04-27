@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.ToolkitComposeUi
+import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
   targets(ToolkitComposeUi)
@@ -37,7 +37,7 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.composeui'
+  namespace 'dev.konduit.composeui'
 
   testOptions {
     unitTests.includeAndroidResources = true  // Required by Robolectric.

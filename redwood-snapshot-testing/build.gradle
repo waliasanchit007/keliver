@@ -1,4 +1,4 @@
-import static app.cash.redwood.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
 
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
@@ -26,5 +26,5 @@ kotlin {
 }
 
 android {
-  namespace 'app.cash.redwood.snapshot.testing'
+  namespace 'dev.konduit.snapshot.testing'
 }

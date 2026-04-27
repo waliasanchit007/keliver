@@ -15,12 +15,12 @@
  */
 package com.example.redwood.counter.presenter
 
-import app.cash.redwood.testing.TestRedwoodComposition
-import app.cash.redwood.testing.WidgetValue
-import app.cash.redwood.testing.flatten
-import app.cash.redwood.ui.basic.testing.ButtonValue
-import app.cash.redwood.ui.basic.testing.RedwoodUiBasicTester
-import app.cash.redwood.ui.basic.testing.TextValue
+import dev.konduit.testing.TestRedwoodComposition
+import dev.konduit.testing.WidgetValue
+import dev.konduit.testing.flatten
+import dev.konduit.ui.basic.testing.ButtonValue
+import dev.konduit.ui.basic.testing.RedwoodUiBasicTester
+import dev.konduit.ui.basic.testing.TextValue
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import kotlin.test.Test

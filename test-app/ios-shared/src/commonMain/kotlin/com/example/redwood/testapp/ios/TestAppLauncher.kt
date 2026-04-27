@@ -15,10 +15,10 @@
  */
 package com.example.redwood.testapp.ios
 
-import app.cash.redwood.protocol.host.HostProtocol
-import app.cash.redwood.treehouse.EventListener
-import app.cash.redwood.treehouse.TreehouseApp
-import app.cash.redwood.treehouse.TreehouseAppFactory
+import dev.konduit.protocol.host.HostProtocol
+import dev.konduit.treehouse.EventListener
+import dev.konduit.treehouse.TreehouseApp
+import dev.konduit.treehouse.TreehouseAppFactory
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier.Companion.NO_SIGNATURE_CHECKS

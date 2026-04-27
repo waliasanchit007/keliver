@@ -171,7 +171,7 @@ New:
 - New `redwood-bom` artifact can be used to ensure all Redwood artifacts use the same version. See [Gradle's documentation](https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import) on how to use the BOM in your build.
 
 Changed:
-- The `app.cash.redwood` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `redwood-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
+- The `dev.konduit` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `redwood-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
 - Removed deprecated `typealias`es for generated `-WidgetFactories` type which was renamed to `-WidgetSystem` in 0.10.0.
 - Removed deprecated `Modifier.flex` extension function which is now supported natively by `Row` and `Column` since 0.8.0.
 - Removed deprecated `TreehouseWidgetView` and `TreehouseUIKitView` type aliases for `TreehouseLayout` and `TreehouseUIView` which were renamed in 0.7.0.
@@ -199,7 +199,7 @@ Upgraded:
 ### Gradle plugin removed
 
 This version of Redwood removes the custom Gradle plugin in favor of [the official JetBrains Compose compiler plugin](https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compiler.html) which ships as part of Kotlin itself.
-Each module in which you had previously applied the `app.cash.redwood` plugin should be changed to apply `org.jetbrains.kotlin.plugin.compose` instead.
+Each module in which you had previously applied the `dev.konduit` plugin should be changed to apply `org.jetbrains.kotlin.plugin.compose` instead.
 The Redwood dependencies will no longer be added as a result of the plugin change, and so any module which references Redwoods APIs should add those dependencies explicitly.
 
 For posterity, the Kotlin version compatibility table and compiler version customization for our old Redwood Gradle plugin will be archived here:
@@ -288,7 +288,7 @@ New:
 Changed:
 - Disable klib signature clash checks for JS compilations. These occasionally occur as a result of Compose compiler behavior, and are safe to disable (the first-party JetBrains Compose Gradle plugin also disables them).
 - `onModifierChanged` callback in `Widget.Children` now receives the index and the `Widget` instance affected by the change.
-- The package of 'redwood-protocol-host' changed to `app.cash.redwood.protocol.host`. This should not affect end-users as its types are mostly for internal use.
+- The package of 'redwood-protocol-host' changed to `dev.konduit.protocol.host`. This should not affect end-users as its types are mostly for internal use.
 - The entire `redwood-yoga` artifact's public API has been annotated with an opt-in annotation indicating that it's only for Redwood internal use and is not stable.
 - Revert: Don't block touch events to non-subviews below a `Row`, `Column`, or `Box` in the iOS `UIView` implementation. This matches the behavior of the Android View and Compose UI implementations.
 - The generated "widget factories" type (e.g., `MySchemaWidgetFactories`) is now called a "widget system" (e.g., `MySchemaWidgetSystem`). Sometimes it was also referred to as a "provider" in parameter names. A `@Deprecated typealias` is generated for now, but will be removed in the future.
@@ -296,7 +296,7 @@ Changed:
   - Testing code is now under `your.package.testing`.
   - Protocol guest code is now under `your.package.protocol.guest`.
   - Protocol host code is now under `your.package.protocol.host`.
-- The 'app.cash.redwood.generator.compose.protocol' and 'app.cash.redwood.generator.widget.protocol' Gradle plugins are now deprecated and will be removed in the next release. Use 'app.cash.redwood.generator.protocol.guest' and 'app.cash.redwood.generator.protocol.host', respectively.
+- The 'dev.konduit.generator.compose.protocol' and 'dev.konduit.generator.widget.protocol' Gradle plugins are now deprecated and will be removed in the next release. Use 'dev.konduit.generator.protocol.guest' and 'dev.konduit.generator.protocol.host', respectively.
 - The 'redwood-tooling-codegen' CLI flags for protocol codegen have changed from `--compose-protocol` and `--widget-protocol` to `--protocol-guest` and `--protocol-host`, respectively.
 - Entrypoints to the protocol on the host-side and guest-side now require supplying the version of Redwood in use on the other side in order to ensure compatibility and work around any bugs in older versions. This uses a new `RedwoodVersion` type, and will be automatically wired if using our Treehouse artifacts.
 
@@ -491,9 +491,9 @@ New:
 Changes:
 - `LayoutModifier` has been renamed to `Modifier`.
 - UI primitives like `Dp`, `Density`, and `Margin` have moved from Treehouse into the Redwood
-  runtime (in the `app.cash.redwood.ui` package).
+  runtime (in the `dev.konduit.ui` package).
 - `HostConfiguration` has moved from Treehouse into the Redwood runtime (in the
-  `app.cash.redwood.ui` package) and is now called `UiConfiguration`.
+  `dev.konduit.ui` package) and is now called `UiConfiguration`.
 - Composables running in Treehouse now run on a background thread on iOS. Previously they were
   running on the main thread. Interactions with UIKit still occur on the main thread.
 - `RedwoodContent` function for hosting a Redwood composable within Compose UI has moved into a new
@@ -528,7 +528,7 @@ This version only works with Kotlin 1.8.20.
 New:
 
 - Support for testing Composables with new test-specific code generation. Use the
-  'app.cash.redwood.generator.testing' plugin to generate a lambda-accepting entrypoint function
+  'dev.konduit.generator.testing' plugin to generate a lambda-accepting entrypoint function
   (such as `ExampleTester()`). Inside the lambda you can await snapshots of the values which
   would be bound to the UI widgets at that time.
 - Redwood Layout now contains a `Spacer` which can be used to create negative space separately
@@ -551,7 +551,7 @@ Changes:
   running inside the Zipline JS VM.
 - Schema dependencies are not longer parsed when loading a schema. Instead, a JSON representation
   is loaded from the classpath which contains the parsed structure of the dependency. As a result,
-  the module which contains the schema files must apply the 'app.cash.redwood.schema' plugin in
+  the module which contains the schema files must apply the 'dev.konduit.schema' plugin in
   order to create this JSON.
 - Redwood Layout's `Padding` type is now called `Margin`.
 - Both Redwood's own API as well as code generated from your schema is now annotated with

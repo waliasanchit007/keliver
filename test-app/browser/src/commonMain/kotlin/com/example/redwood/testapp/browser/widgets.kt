@@ -15,7 +15,7 @@
  */
 package com.example.redwood.testapp.browser
 
-import app.cash.redwood.Modifier
+import dev.konduit.Modifier
 import com.example.redwood.testapp.widget.Button
 import org.w3c.dom.HTMLButtonElement
 import org.w3c.dom.HTMLElement

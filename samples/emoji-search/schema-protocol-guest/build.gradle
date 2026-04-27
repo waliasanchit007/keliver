@@ -1,5 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'app.cash.redwood.generator.protocol.guest'
+apply plugin: 'dev.konduit.generator.protocol.guest'
 
 base {
   archivesName = 'schema-protocol-guest'
@@ -21,5 +21,5 @@ kotlin {
 
 redwoodSchema {
   source = projects.redwoodUiBasicSchema
-  type = 'app.cash.redwood.ui.basic.RedwoodUiBasic'
+  type = 'dev.konduit.ui.basic.RedwoodUiBasic'
 }

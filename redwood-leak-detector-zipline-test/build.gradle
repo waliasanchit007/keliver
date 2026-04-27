@@ -1,4 +1,4 @@
-import app.cash.redwood.buildsupport.ZiplineAppEmbedTask
+import dev.konduit.buildsupport.ZiplineAppEmbedTask
 
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'app.cash.zipline'

@@ -5,10 +5,10 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <app.cash.redwood:redwood-treehouse-guest-compose>
-abstract interface app.cash.redwood.treehouse/TreehouseUi { // app.cash.redwood.treehouse/TreehouseUi|null[0]
-    abstract fun Show(androidx.compose.runtime/Composer?, kotlin/Int) // app.cash.redwood.treehouse/TreehouseUi.Show|Show(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun close() // app.cash.redwood.treehouse/TreehouseUi.close|close(){}[0]
+// Library unique name: <dev.konduit:redwood-treehouse-guest-compose>
+abstract interface dev.konduit.treehouse/TreehouseUi { // dev.konduit.treehouse/TreehouseUi|null[0]
+    abstract fun Show(androidx.compose.runtime/Composer?, kotlin/Int) // dev.konduit.treehouse/TreehouseUi.Show|Show(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun close() // dev.konduit.treehouse/TreehouseUi.close|close(){}[0]
 }
 
-final fun (app.cash.redwood.compose/RedwoodComposition).app.cash.redwood.treehouse/bind(app.cash.redwood.treehouse/TreehouseUi) // app.cash.redwood.treehouse/bind|bind@app.cash.redwood.compose.RedwoodComposition(app.cash.redwood.treehouse.TreehouseUi){}[0]
+final fun (dev.konduit.compose/RedwoodComposition).dev.konduit.treehouse/bind(dev.konduit.treehouse/TreehouseUi) // dev.konduit.treehouse/bind|bind@dev.konduit.compose.RedwoodComposition(dev.konduit.treehouse.TreehouseUi){}[0]
