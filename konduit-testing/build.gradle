@@ -23,10 +23,6 @@ kotlin {
         implementation libs.kotlinx.coroutines.test
         implementation projects.konduitUiBasicCompose
         implementation projects.konduitUiBasicTesting
-        implementation projects.testApp.schema.compose
-        implementation projects.testApp.schema.protocolGuest
-        implementation projects.testApp.schema.protocolHost
-        implementation projects.testApp.schema.testing
       }
     }
   }

@@ -41,8 +41,6 @@ kotlin {
         implementation projects.konduitLayoutTesting
         implementation projects.konduitLazylayoutTesting
         implementation projects.konduitWidget
-        implementation projects.testApp.schema.protocolHost
-        implementation projects.testApp.schema.testing
       }
     }
     androidUnitTest {
@@ -54,7 +52,6 @@ kotlin {
       if (!rootProject.hasProperty('konduitNoApps')) {
         kotlin.srcDir('src/appsJvmTest/kotlin')
         dependencies {
-          implementation projects.testApp.presenterTreehouse
         }
       }
     }
@@ -69,8 +66,6 @@ dependencies {
   androidTestImplementation libs.assertk
   androidTestImplementation projects.konduitLayoutTesting
   androidTestImplementation projects.konduitLazylayoutTesting
-  androidTestImplementation projects.testApp.schema.protocolHost
-  androidTestImplementation projects.testApp.schema.testing
 
   // The kotlin.test library provides JVM variants for multiple testing frameworks. The Kotlin
   // plugin does not apply the capability to configurations created by the Android plugin.

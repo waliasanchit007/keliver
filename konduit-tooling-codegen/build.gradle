@@ -14,8 +14,6 @@ dependencies {
   implementation libs.clikt
 
   testImplementation testFixtures(projects.konduitToolingSchema)
-  testImplementation projects.testApp.schema
-  testImplementation projects.testApp.schema.compose
   testImplementation libs.junit
   testImplementation libs.assertk
 }

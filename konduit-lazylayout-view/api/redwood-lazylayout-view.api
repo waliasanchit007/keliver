@@ -1,6 +1,0 @@
-public final class dev/konduit/lazylayout/view/ViewRedwoodLazyLayoutWidgetFactory : dev/konduit/lazylayout/widget/RedwoodLazyLayoutWidgetFactory {
-	public fun <init> (Landroid/content/Context;)V
-	public fun LazyList ()Ldev/konduit/lazylayout/widget/LazyList;
-	public fun RefreshableLazyList ()Ldev/konduit/lazylayout/widget/RefreshableLazyList;
-}
-

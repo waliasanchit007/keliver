@@ -23,9 +23,6 @@ kotlin {
       dependencies {
         implementation libs.kotlin.test
         implementation libs.assertk
-        implementation projects.testApp.schema.compose
-        implementation projects.testApp.schema.testing
-        implementation projects.testApp.schema.protocolHost
       }
     }
   }
