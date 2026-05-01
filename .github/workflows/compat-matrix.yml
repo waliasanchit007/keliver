@@ -1,0 +1,57 @@
+name: Kotlin Compatibility Matrix
+
+# Weekly informational job: try building Konduit against multiple Kotlin
+# versions to catch IR/FIR plugin breakage early. Failures are NOT blocking.
+# When this fails, file an issue and document in docs/UPGRADING_KOTLIN.md.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Mondays 09:00 UTC
+  workflow_dispatch: {}
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
+
+jobs:
+  compat:
+    name: Kotlin ${{ matrix.kotlin }}
+    runs-on: ubuntu-latest
+    continue-on-error: true  # informational only
+    strategy:
+      fail-fast: false
+      matrix:
+        kotlin:
+          - "2.1.0"   # current pin (sanity check)
+          - "2.1.20"
+          - "2.2.0"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The version override mechanism is wired into the konduit settings
+      # plugin. -PkotlinVersion=X overrides libs.versions.toml's "kotlin"
+      # entry for this build only.
+      - name: Build (Kotlin ${{ matrix.kotlin }})
+        run: >
+          ./gradlew
+          publishToMavenLocal
+          -x test
+          -x allTests
+          -x iosSimulatorArm64Test
+          -x iosX64Test
+          -x iosArm64Test
+          -x linkDebugFrameworkIosArm64
+          -x linkDebugFrameworkIosX64
+          -x linkDebugFrameworkIosSimulatorArm64
+          -x linkReleaseFrameworkIosArm64
+          -x linkReleaseFrameworkIosX64
+          -x linkReleaseFrameworkIosSimulatorArm64
+          -DRELEASE_SIGNING_ENABLED=false
+          -PkotlinVersion=${{ matrix.kotlin }}

@@ -1,16 +1,55 @@
 # Change Log
 
+> Konduit's history begins with a fork from CashApp Redwood `0.18.0`.
+> Entries below `0.18.0` are from upstream Redwood. Konduit-only entries
+> use the `1.0.0-caliclan.N` versioning scheme — see
+> `docs/KONDUIT_PLAN.md` (in the Caliclan repo) for the full versioning
+> and wire-format compatibility policy.
+
 ## [Unreleased]
-[Unreleased]: https://github.com/cashapp/redwood/compare/0.18.0...HEAD
 
 New:
-- Nothing yet!
+- Nothing yet.
 
 Changed:
-- Nothing yet!
+- Nothing yet.
 
 Fixed:
-- Nothing yet!
+- Nothing yet.
+
+
+## [1.0.0-caliclan.2] - 2026-04-30
+
+Phase 1.5 cleanup. Konduit now ships only Compose Multiplatform-relevant
+modules.
+
+Removed:
+- `konduit-layout-{view,uiview,dom}`
+- `konduit-lazylayout-{view,uiview,dom}`
+- `konduit-ui-basic-{view,uiview,dom}`
+- `konduit-widget-{view-test,uiview-test}`
+- `konduit-dom-testing`
+- `konduit-leak-detector-zipline-test`
+- Upstream `test-app/` integration tests
+- Upstream `samples/` (Counter, EmojiSearch demo apps)
+
+Module count: 60 → 47. Wire format unchanged from `caliclan.1`;
+consumers can upgrade transparently.
+
+
+## [1.0.0-caliclan.1] - 2026-04-29
+
+Initial Konduit fork from CashApp Redwood `0.18.0`. No functional
+changes from upstream — only renames + group/version reset.
+
+Changed:
+- Maven group `app.cash.redwood` → `dev.konduit`
+- Module names `redwood-*` → `konduit-*`
+- Package paths `app.cash.redwood.*` → `dev.konduit.*`
+- Version reset to `1.0.0-caliclan.1`
+
+Wire format identical to upstream `0.18.0` — Caliclan migration
+verified end-to-end on Android + iOS with no behavior changes.
 
 
 ## [0.18.0] - 2025-08-01

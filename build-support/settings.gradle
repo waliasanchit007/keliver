@@ -7,6 +7,13 @@ dependencyResolutionManagement {
   versionCatalogs {
     libs {
       from(files('../gradle/libs.versions.toml'))
+      // Phase 2: optional Kotlin version override for the compat-matrix workflow.
+      // Pass `-PkotlinVersion=2.2.0` to override libs.versions.toml's `kotlin` entry
+      // for this build only. If unset, the catalog's pinned version is used.
+      def kotlinOverride = providers.gradleProperty('kotlinVersion')
+      if (kotlinOverride.present) {
+        version('kotlin', kotlinOverride.get())
+      }
     }
   }
 }

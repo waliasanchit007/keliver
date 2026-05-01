@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags-ignore: ['**']
+  workflow_dispatch: {}
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
+
+# Cancel older runs on the same ref when a new push lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast, cheap PR validator. Runs on every PR + every push.
+  # Builds JVM/Android/JS portions; skips iOS targets (those need macOS).
+  build-linux:
+    name: Build (Linux, no iOS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Build everything except iOS-specific link/test tasks.
+      # publishToMavenLocal is the canonical full-graph build target.
+      - name: Build + publishToMavenLocal (no signing, no tests)
+        run: >
+          ./gradlew
+          publishToMavenLocal
+          -x test
+          -x allTests
+          -x iosSimulatorArm64Test
+          -x iosX64Test
+          -x iosArm64Test
+          -x linkDebugFrameworkIosArm64
+          -x linkDebugFrameworkIosX64
+          -x linkDebugFrameworkIosSimulatorArm64
+          -x linkReleaseFrameworkIosArm64
+          -x linkReleaseFrameworkIosX64
+          -x linkReleaseFrameworkIosSimulatorArm64
+          -DRELEASE_SIGNING_ENABLED=false
+
+  # Full validator including iOS framework links.
+  # Runs only on push to main (NOT on PRs) to keep macOS minutes low.
+  build-macos:
+    name: Build (macOS, full incl. iOS)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build + publishToMavenLocal (full incl. iOS)
+        run: >
+          ./gradlew
+          publishToMavenLocal
+          -x test
+          -x allTests
+          -DRELEASE_SIGNING_ENABLED=false

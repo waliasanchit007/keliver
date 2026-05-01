@@ -1,0 +1,72 @@
+name: Publish
+
+# Publishes Konduit artifacts to GitHub Packages on tag push.
+#
+# Tag format: v1.0.0-caliclan.N (the leading "v" is stripped from the
+# version coordinate). The version inside the build is set by
+# build-support/RedwoodBuildPlugin.kt's KONDUIT_VERSION constant — bump
+# it BEFORE creating the release tag.
+#
+# Trigger:
+#   git tag v1.0.0-caliclan.3
+#   git push origin v1.0.0-caliclan.3
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or commit to publish (use a tag for canonical releases)"
+        required: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
+
+jobs:
+  publish:
+    name: Publish to GitHub Packages
+    runs-on: macos-latest  # macOS needed to publish iOS klibs
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version-file: .github/workflows/.java-version
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Verify the tag matches the build's KONDUIT_VERSION before publishing.
+      # (Quick sanity check — saves us from publishing v1.0.0-caliclan.3 with
+      # a build that still says 1.0.0-caliclan.2 internally.)
+      - name: Verify tag matches build version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag_version="${GITHUB_REF#refs/tags/v}"
+          build_version=$(grep 'KONDUIT_VERSION' build-support/src/main/kotlin/dev/konduit/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Tag version:   $tag_version"
+          echo "Build version: $build_version"
+          if [ "$tag_version" != "$build_version" ]; then
+            echo "::error::Tag $tag_version doesn't match KONDUIT_VERSION $build_version. Bump the constant before tagging."
+            exit 1
+          fi
+
+      - name: Publish to GitHub Packages
+        run: >
+          ./gradlew
+          publishAllPublicationsToInternalRepository
+          -x test
+          -DRELEASE_SIGNING_ENABLED=false
+        env:
+          # Build-support's "internal" repo definition reads these as project
+          # properties (ORG_GRADLE_PROJECT_X is auto-mapped to project property X).
+          ORG_GRADLE_PROJECT_internalUrl: https://maven.pkg.github.com/${{ github.repository }}
+          ORG_GRADLE_PROJECT_internalUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_internalPassword: ${{ secrets.GITHUB_TOKEN }}
