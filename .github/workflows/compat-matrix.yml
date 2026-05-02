@@ -44,14 +44,8 @@ jobs:
           publishToMavenLocal
           -x test
           -x allTests
-          -x iosSimulatorArm64Test
-          -x iosX64Test
-          -x iosArm64Test
-          -x linkDebugFrameworkIosArm64
-          -x linkDebugFrameworkIosX64
-          -x linkDebugFrameworkIosSimulatorArm64
-          -x linkReleaseFrameworkIosArm64
-          -x linkReleaseFrameworkIosX64
-          -x linkReleaseFrameworkIosSimulatorArm64
+          -x jvmTest
+          -x jsBrowserTest
+          -x jsNodeTest
           -DRELEASE_SIGNING_ENABLED=false
           -PkotlinVersion=${{ matrix.kotlin }}

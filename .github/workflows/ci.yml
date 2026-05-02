@@ -32,23 +32,18 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      # Build everything except iOS-specific link/test tasks.
-      # publishToMavenLocal is the canonical full-graph build target.
+      # On Linux, Kotlin Multiplatform doesn't register iOS targets at all,
+      # so there's nothing to exclude — we just skip JVM/JS tests.
+      # The full iOS build runs in build-macos below.
       - name: Build + publishToMavenLocal (no signing, no tests)
         run: >
           ./gradlew
           publishToMavenLocal
           -x test
           -x allTests
-          -x iosSimulatorArm64Test
-          -x iosX64Test
-          -x iosArm64Test
-          -x linkDebugFrameworkIosArm64
-          -x linkDebugFrameworkIosX64
-          -x linkDebugFrameworkIosSimulatorArm64
-          -x linkReleaseFrameworkIosArm64
-          -x linkReleaseFrameworkIosX64
-          -x linkReleaseFrameworkIosSimulatorArm64
+          -x jvmTest
+          -x jsBrowserTest
+          -x jsNodeTest
           -DRELEASE_SIGNING_ENABLED=false
 
   # Full validator including iOS framework links.
