@@ -17,41 +17,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Fast, cheap PR validator. Runs on every PR + every push.
-  # Builds JVM/Android/JS portions; skips iOS targets (those need macOS).
-  build-linux:
-    name: Build (Linux, no iOS)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version-file: .github/workflows/.java-version
-      - uses: gradle/actions/setup-gradle@v4
-
-      # On Linux, Kotlin Multiplatform doesn't register iOS targets at all,
-      # so there's nothing to exclude — we just skip JVM/JS tests.
-      # The full iOS build runs in build-macos below.
-      - name: Build + publishToMavenLocal (no signing, no tests)
-        run: >
-          ./gradlew
-          publishToMavenLocal
-          -x test
-          -x allTests
-          -x jvmTest
-          -x jsBrowserTest
-          -x jsNodeTest
-          -DRELEASE_SIGNING_ENABLED=false
-
-  # Full validator including iOS framework links.
-  # Runs only on push to main (NOT on PRs) to keep macOS minutes low.
-  build-macos:
-    name: Build (macOS, full incl. iOS)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # Single full-graph validator on macOS (covers JVM/Android/JS/iOS).
+  # Why no Linux: cheap-PR Linux runs hung at 58m on the cache restore step,
+  # consistently. macOS already builds everything; one source of truth is
+  # cheaper to maintain than a flaky two-runner setup.
+  build:
+    name: Build (full graph, incl. iOS)
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,7 +35,7 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build + publishToMavenLocal (full incl. iOS)
+      - name: Build + publishToMavenLocal (no signing, no tests)
         run: >
           ./gradlew
           publishToMavenLocal
