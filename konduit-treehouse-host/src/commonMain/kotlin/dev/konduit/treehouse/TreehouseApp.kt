@@ -114,6 +114,27 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
    * Configuration and code to launch a Treehouse application.
    */
   public abstract class Spec<A : AppService> {
+    /**
+     * Strong references to services bound via [bindRetained]. Zipline
+     * itself only keeps weak references to bound services, so inline
+     * anonymous service implementations would otherwise be GC-eligible
+     * the moment [bindServices] returns — the first guest call would
+     * then error with `"no such service (service closed?)"`. Holding
+     * them in this list keeps them alive for the lifetime of this Spec
+     * (which is the lifetime of the [TreehouseApp]).
+     *
+     * Exposed via [retainedServices] for tests / diagnostics; integrators
+     * should not need to touch it directly.
+     */
+    @PublishedApi
+    internal val _retainedServices: MutableList<Any> = mutableListOf()
+
+    /**
+     * Read-only view of services currently retained by this Spec. Useful
+     * for diagnostics or tests; not part of the integrator-facing API.
+     */
+    public val retainedServices: List<Any> get() = _retainedServices
+
     public abstract val name: String
 
     /**
@@ -148,11 +169,55 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
     /**
      * Make services available to guest application on [zipline], typically by making one or more
      * calls to [Zipline.bind].
+     *
+     * For inline anonymous service implementations (e.g. `object : HostConsole { … }`) wrap the
+     * instance in [retain] before passing it to [Zipline.bind]:
+     *
+     * ```kotlin
+     * zipline.bind<HostConsole>("console", retain(object : HostConsole { … }))
+     * ```
+     *
+     * Zipline holds only weak references to bound services; anonymous instances become
+     * GC-eligible the moment this method returns, and the first guest call will then error
+     * with "no such service (service closed?)". [retain] keeps a strong reference inside this
+     * Spec for its lifetime, eliminating that pitfall.
      */
     public abstract suspend fun bindServices(
       treehouseApp: TreehouseApp<A>,
       zipline: Zipline,
     )
+
+    /**
+     * Retain a strong reference to [service] for the lifetime of this [Spec], then return
+     * [service] unchanged. Wrap inline anonymous service implementations with this before
+     * passing them to [Zipline.bind] — Zipline holds only weak references internally, so an
+     * inline `object : MyService { … }` is GC-eligible the moment [bindServices] returns and
+     * the first guest call then errors with "no such service (service closed?)". Retaining the
+     * instance here keeps it reachable as long as the [TreehouseApp] is alive.
+     *
+     * Usage:
+     * ```kotlin
+     * override suspend fun bindServices(treehouseApp, zipline) {
+     *     zipline.bind<HostConsole>("console", retain(object : HostConsole {
+     *         override fun log(message: String) = println(message)
+     *     }))
+     * }
+     * ```
+     *
+     * Note: [retain] is a non-inline pass-through (returns [service] as-is). It does NOT call
+     * [Zipline.bind] itself — that has to stay a direct call because Zipline's compiler plugin
+     * generates code at the `bind<ConcreteInterface>` site and can't see through an inline
+     * wrapper.
+     *
+     * Holding the service as a `val`/`lateinit var` field of the Spec produces the same
+     * outcome — both keep the instance reachable for the [TreehouseApp]'s lifetime.
+     * [retain] just removes the requirement to remember the pattern when you'd otherwise be
+     * tempted to inline an anonymous service object.
+     */
+    public fun <T : Any> retain(service: T): T {
+      _retainedServices += service
+      return service
+    }
 
     public abstract fun create(zipline: Zipline): A
   }

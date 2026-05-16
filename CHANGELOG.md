@@ -9,7 +9,18 @@
 ## [Unreleased]
 
 New:
-- Nothing yet.
+- `TreehouseApp.Spec.retain(service)` — strong-ref pass-through helper that
+  keeps the given service reachable for the lifetime of the Spec (the
+  lifetime of the TreehouseApp). Use this when binding inline anonymous
+  service implementations: `zipline.bind<HostFoo>("foo", retain(object :
+  HostFoo { … }))`. Zipline holds only weak references internally, so
+  inline anon objects were previously GC-eligible the moment `bindServices`
+  returned, causing the first guest call to throw "no such service
+  (service closed?)". `retain()` removes the requirement to remember the
+  `val`-field pattern. Closes integration bug U7 in the ServerDrivenUI
+  reference repo.
+- `Spec.retainedServices: List<Any>` — read-only view of services
+  currently retained, for diagnostics or tests.
 
 Changed:
 - Nothing yet.
