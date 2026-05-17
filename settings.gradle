@@ -113,6 +113,11 @@ include ':konduit-treehouse-host-composeui'
 // lifetime. Re-exported from `:konduit-guest`. See issue #6.
 include ':konduit-vm'
 
+// Key/value persistence shim — HostStorage ZiplineService +
+// KonduitStorage typed wrapper. Re-exported from both facades. See
+// issue #10.
+include ':konduit-storage'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

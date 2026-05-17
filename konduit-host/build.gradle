@@ -46,6 +46,12 @@ kotlin {
         // wrapper. Host wires this with their existing HttpClient. See
         // issue #7.
         api projects.konduitHttp
+
+        // Key/value persistence shim — `HostStorage` interface +
+        // `KonduitStorage` typed wrapper. Host implements with
+        // DataStore / NSUserDefaults / whatever; guest reads / writes
+        // any @Serializable type. See issue #10.
+        api projects.konduitStorage
       }
     }
   }

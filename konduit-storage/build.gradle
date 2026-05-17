@@ -1,0 +1,33 @@
+// Key/value persistence shim — guest can read and write strings via
+// HostStorage (a ZiplineService) bound by the host to its own
+// DataStore / NSUserDefaults / file backend. KonduitStorage wraps it
+// with typed `get<T>` / `set<T>` helpers using kotlinx-serialization.
+// See issue #10.
+
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.zipline
+        api libs.kotlinx.coroutines.core
+        api libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
