@@ -19,6 +19,7 @@ Changed:
   Closes #11.
 
 New:
+<<<<<<< HEAD
 - `docs/MIGRATION_FROM_REDWOOD.md` — migration guide for teams moving
   from upstream Cash App Redwood (any version up to `0.18.0`) to
   Konduit. Covers what's identical (wire format, runtime semantics,
@@ -27,6 +28,21 @@ New:
   module trim), what's added (production-hardening helpers, facades,
   vm/http/storage shims), a `sed` script handling 90%+ of the rename
   surface, and a step-by-step migration checklist. Closes #13.
+=======
+- `dev.konduit:konduit-http` — HTTP shim. `HostHttpProvider :
+  ZiplineService` is a generic HTTP proxy the host implements once with
+  its existing `HttpClient` (Ktor / Retrofit / OkHttp / etc.).
+  `KonduitHttp` is the guest-side typed wrapper exposing `get<Res>`,
+  `post<Req, Res>`, `put<Req, Res>`, `delete<Res>`, and `requestRaw`
+  helpers built on inline + reified kotlinx-serialization. Non-2xx
+  responses raise `KonduitHttpException(status, body)`. Adopters replace
+  N per-endpoint `HostXxxProvider` services with one host binding plus a
+  typed API class per backend. Wire types (`HttpRequest`,
+  `HttpResponse`) are wire-additive — all fields default-valued so
+  future additions (binary bodies, cache policy, streaming) can append
+  without breaking older clients. Re-exported through both facades. See
+  issue #7, `docs/USAGE.md` "API calls from the guest".
+>>>>>>> 174a7bba7 (docs: USAGE + CHANGELOG for konduit-http)
 
 - `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +

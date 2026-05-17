@@ -940,6 +940,125 @@ Cross-tab persistence (state surviving the tab being unmounted) is a
 separate concern — see the heart-save pattern in
 `docs/KNOWN_BUGS.md` and DevoStatus's `HostExploreSaver`.
 
+### API calls from the guest
+
+QuickJS is sandboxed — the guest can't reach the network directly. Every
+HTTP call has to route through a `ZiplineService` on the host side. To
+avoid the per-endpoint boilerplate of writing N `HostXxxProvider`
+services, Konduit ships `konduit-http`: a generic
+`HostHttpProvider : ZiplineService` you wire ONCE with your existing
+`HttpClient`, plus a `KonduitHttp` typed wrapper your guest screens use.
+
+Re-exported through both facades (`dev.konduit:konduit-host` and
+`dev.konduit:konduit-guest`), so adopters on the facade get it
+transparently.
+
+#### Host side — wire your existing HttpClient once
+
+Pick whichever client library you already use (Ktor / Retrofit / OkHttp).
+Reference adapter for Ktor:
+
+```kotlin
+import dev.konduit.http.HostHttpProvider
+import dev.konduit.http.HttpRequest
+import dev.konduit.http.HttpResponse
+
+class KtorHostHttpProvider(
+    private val client: HttpClient,
+    private val baseUrl: String,
+) : HostHttpProvider {
+    override suspend fun execute(request: HttpRequest): HttpResponse {
+        val rs = client.request(baseUrl + request.path) {
+            method = HttpMethod.parse(request.method)
+            request.query.forEach { (k, v) -> parameter(k, v) }
+            request.headers.forEach { (k, v) -> header(k, v) }
+            request.body?.let { setBody(it) }
+        }
+        return HttpResponse(
+            status = rs.status.value,
+            body = rs.bodyAsText(),
+            headers = rs.headers.entries().associate { (k, v) -> k to v.joinToString(",") },
+        )
+    }
+}
+```
+
+Bind it in your `TreehouseApp.Spec.bindServices`:
+
+```kotlin
+bindWithTimeout {
+    zipline.bind<HostHttpProvider>(
+        "http",
+        retain(KtorHostHttpProvider(httpClient, "https://api.example.com")),
+    )
+}
+```
+
+**Auth, retries, timeouts, base URL** stay on your `HttpClient` (Ktor's
+`install(Auth)`, `install(HttpRequestRetry)`, etc.). The `konduit-http`
+wire types deliberately don't model these — your existing interceptors
+apply to every guest-originated call for free.
+
+#### Guest side — typed calls through KonduitHttp
+
+```kotlin
+import dev.konduit.http.KonduitHttp
+
+class QuotesApi(private val http: KonduitHttp) {
+    suspend fun list(filter: String?): List<Quote> =
+        http.get("/quotes", mapOf("filter" to (filter ?: "")))
+    suspend fun create(quote: NewQuote): Quote =
+        http.post("/quotes", quote)
+}
+
+class QuotesViewModel(
+    private val api: QuotesApi,
+) : KonduitViewModel() {
+    val state = MutableStateFlow<List<Quote>>(emptyList())
+    init {
+        viewModelScope.launch {
+            state.value = api.list(filter = null)
+        }
+    }
+}
+
+@Composable
+override fun Content(navigator: Navigator) {
+    val http = remember { KonduitHttp(HostHttpProviderBridge.instance!!) }
+    val vm = konduitViewModel { QuotesViewModel(QuotesApi(http)) }
+    val quotes by vm.state.collectAsState()
+    LazyColumn { quotes.forEach { LazyItem { QuoteCard(it) } } }
+}
+```
+
+Bridge the host service to a guest singleton the same way you bridge other
+host services (see the `HostQuotesProviderBridge.instance` pattern in
+Step 4½ below). The bridge is a one-line wrapper.
+
+#### Error handling
+
+`KonduitHttp` typed helpers raise `KonduitHttpException(status, body)`
+for non-2xx responses. Adopters who want to inspect 4xx / 5xx without
+exceptions can use `http.requestRaw(HttpRequest(...))` which returns the
+raw `HttpResponse` with the status code visible.
+
+Network errors (DNS failure, connection refused, timeout) propagate as
+Kotlin exceptions through Zipline.
+
+#### When to write a per-endpoint `HostXxxProvider` instead
+
+Stick with `KonduitHttp` for ordinary REST calls. Reach for a dedicated
+`HostXxxProvider : ZiplineService` when:
+
+- The host has to do work that *isn't* a network call (read from a local
+  database, request a runtime permission, save a bitmap to MediaStore).
+- The host wants to expose a `Flow<T>` for reactive updates without
+  re-polling.
+- The call has business-logic shape that doesn't fit "request URL → JSON
+  response" (file picker results, complex pagination state, etc.).
+
+Step 4½ below covers that pattern in full.
+
 ---
 
 ## Step 4½ — Data services (Provider + Navigator + Observer)
