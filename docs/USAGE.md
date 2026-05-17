@@ -50,8 +50,14 @@ Production-readiness reality check before you commit to this path:
 - **Android**: solid. End-to-end verified, hot reload works.
 - **iOS**: solid as of 2026-05-13 (gotcha #12 fixed, dispatcher pattern
   enforced via constructor). Verified on iPhone 17 Pro sim.
-- **Library distribution**: not yet on Maven Central. Git submodule is your only option today.
-- **Compose Facade**: deferred. You'll import from 6+ modules (`shared`, `shared-widget`, `shared-protocol-host`, etc.). Lives with this for now.
+- **Library distribution**: GitHub Packages today; Maven Central tracked
+  in [MAVEN_CENTRAL_SETUP.md](./MAVEN_CENTRAL_SETUP.md). Git submodule
+  vendoring is still supported during early adoption.
+- **Compose Facade**: landed in `1.0.0-caliclan.4`. Adopters depend on
+  a single `dev.konduit:konduit-host` artifact (host modules) and a
+  single `dev.konduit:konduit-guest` artifact (guest modules) instead
+  of wiring the 8+ underlying modules manually. The old multi-module
+  setup still works for projects that want stricter dep control.
 - **Production load**: only showcase-level traffic tested. No 60 Hz Flow / large-list stress runs yet.
 
 ---
@@ -510,18 +516,19 @@ to compile:
 
 ```kotlin
 dependencies {
-    // Konduit modules from the submodule
+    // Konduit framework — single facade artifact pulls in all the
+    // host-side runtime (TreehouseApp, Spec, dispatchers,
+    // TreehouseContent, widget interfaces, the modifier base, the
+    // protocol modules, plus Zipline + zipline-loader).
+    implementation(libs.konduit.host)
+
+    // ServerDrivenUI reference modules from the submodule — these are
+    // application-specific (your schema, your HostConsole / HostSnackbar
+    // impls). External adopters writing their own schema replace these
+    // with their own equivalents.
     implementation(project(":composeApp"))             // M3 widget facade + helpers
     implementation(project(":shared"))                 // HostConsole, HostSnackbar, RealHostSnackbar
     implementation(project(":shared-protocol-host"))   // SduiSchemaHostProtocol.Factory
-
-    // Treehouse — note that :composeApp uses `implementation` (not
-    // `api`) for `redwood.treehouse.host.composeui`, so the
-    // TreehouseContent composable does NOT propagate transitively.
-    // Declare it here directly.
-    implementation(libs.redwood.treehouse.host)
-    implementation(libs.redwood.treehouse.host.composeui)
-    implementation(libs.zipline.loader)
 
     // Android
     implementation(libs.androidx.activity.compose)
@@ -533,6 +540,27 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.ui)
 }
+```
+
+The `libs.konduit.host` reference assumes a version catalog entry:
+
+```toml
+# gradle/libs.versions.toml
+[versions]
+konduit = "1.0.0-caliclan.4"
+
+[libraries]
+konduit-host  = { module = "dev.konduit:konduit-host",  version.ref = "konduit" }
+konduit-guest = { module = "dev.konduit:konduit-guest", version.ref = "konduit" }
+```
+
+Migration from the pre-facade setup: replace
+`libs.redwood.treehouse.host`, `libs.redwood.treehouse.host.composeui`,
+`libs.redwood.compose`, `libs.redwood.widget`, `libs.redwood.treehouse`,
+`libs.redwood.protocol.host`, `libs.redwood.protocol`,
+`libs.zipline.loader`, and `libs.zipline` (host side) with the single
+`libs.konduit.host` line. The pre-facade `libs.redwood.*` catalog
+entries still work — the facade is additive.
 ```
 
 ### ⚠️ If you use AsyncImage: register a Coil 3 ImageLoader yourself
@@ -711,11 +739,13 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.redwood.compose)
-            implementation(libs.redwood.widget)
-            implementation(libs.redwood.treehouse)
-            implementation(libs.redwood.treehouse.guest)
-            implementation(libs.zipline)
+            // Konduit framework — single facade pulls in compose
+            // runtime, widget interfaces, treehouse-guest /
+            // -guest-compose, protocol-guest, and Zipline.
+            implementation(libs.konduit.guest)
+
+            // ServerDrivenUI reference modules — replace with your
+            // own schema definitions when adopting Konduit standalone.
             implementation(project(":shared"))
         }
         val jsMain by getting {
@@ -727,6 +757,11 @@ kotlin {
     }
 }
 ```
+
+Migration from the pre-facade setup: the five guest-side
+`libs.redwood.*` + `libs.zipline` entries collapse into the single
+`libs.konduit.guest` line. The pre-facade `libs.redwood.*` catalog
+entries still work — the facade is additive.
 
 The `redwood.generator.compose` plugin + `redwoodSchema { source =
 project(":schema") }` are load-bearing — they generate the

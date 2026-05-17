@@ -9,7 +9,19 @@
 ## [Unreleased]
 
 New:
-- Nothing yet.
+- `dev.konduit:konduit-host` and `dev.konduit:konduit-guest` —
+  facade modules that aggregate the public adopter-facing surface
+  through `api` dependencies. A host module can drop its 8-line
+  Konduit dependency block (`konduit-treehouse-host`,
+  `konduit-treehouse-host-composeui`, `konduit-compose`,
+  `konduit-widget`, `konduit-runtime`, `konduit-protocol`,
+  `konduit-protocol-host`, `konduit-treehouse`, plus `zipline` and
+  `zipline-loader`) in favor of `implementation(libs.konduit.host)`;
+  a guest module collapses its 7-line equivalent into
+  `implementation(libs.konduit.guest)`. The pre-facade per-module
+  imports continue to work — the facade is additive. See
+  PUBLIC_LAUNCH_ROADMAP.md Phase 2 and `docs/USAGE.md` for the
+  adoption snippets.
 
 Changed:
 - Nothing yet.
