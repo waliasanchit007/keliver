@@ -1,0 +1,689 @@
+# Known Konduit / Zipline bugs
+
+> This document was originally written in the
+> [ServerDrivenUI](https://github.com/waliasanchit007/ServerDrivenUI)
+> reference integration. It now lives in the Konduit fork so docs
+> travel with the artifact. Cross-references to "the integration" or
+> "DevoStatus" point back to that reference repo and the production
+> app it drives.
+
+Surfaced by the DevoStatus integration (real Android Compose app
+consuming Konduit as a Maven library + git submodule during early
+adoption). Each entry lists symptom, reproduction, current workaround,
+and what an upstream fix would look like.
+
+Entries are split into two sections:
+
+- **Upstream-only** — the fix has to land in the Konduit fork
+  (`waliasanchit007/konduit`, this repo) or in Zipline itself. The
+  integration ships a workaround; the doc keeps a record so future
+  readers understand *why* the workaround is there.
+- **Actionable in the integration** — anything that could be fixed
+  in a downstream consumer (schema definitions, host wiring, guest
+  composables). When fixed there it moves to ServerDrivenUI's
+  `docs/CHANGELOG.md`.
+
+Resolved bugs live in two places:
+- **Konduit-side fixes** — this fork's [`CHANGELOG.md`](../CHANGELOG.md)
+  (release notes for `1.0.0-caliclan.N`).
+- **Integration-side fixes** — ServerDrivenUI's
+  [`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/konduit-main/docs/CHANGELOG.md).
+
+> Treat this file as the punch list. When a bug becomes fixed, move it
+> to `CHANGELOG.md` with the fixing commit.
+
+---
+
+## Upstream-only
+
+These cannot be fixed without modifying Konduit (the
+`waliasanchit007/konduit` fork that this repo consumes as a Maven
+dependency) or Zipline. Workarounds are in place; documenting the
+shape so a future upstream PR can pick them up.
+
+### U1. `suspend` `ZiplineService` methods returning `List<@Serializable T>` hang `bind<>()`
+
+**Severity:** high (silent failure mode; integrators give up before
+finding the workaround).
+**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+`Spec.bindWithTimeout { … }` turns the silent hang into a clear
+`ZiplineBindTimeoutException` after 30s (default — configurable). The
+exception message names the suspect signature shape and points at this
+KNOWN_BUGS entry, so an integrator sees an actionable error instead of
+giving up on a frozen build. The root cause still lives upstream in
+Zipline's compiler plugin.
+
+**Symptom.** Declaring a `ZiplineService` method as
+`suspend fun foo(...): List<MySerializable>` causes the host's
+`zipline.bind<MyService>("name", impl)` call to hang indefinitely. No
+exception is thrown, no log line is emitted. The hang happens *before*
+the guest ever calls the method — it's a bind-time problem.
+
+**Reproduce.**
+```kotlin
+// shared/Protocol.kt
+@Serializable
+data class Quote(val id: String, val text: String)
+
+interface HostQuotesProvider : ZiplineService {
+    suspend fun getQuotes(filter: String?): List<Quote>  // ← hangs
+}
+
+// host
+override suspend fun bindServices(treehouseApp: ..., zipline: Zipline) {
+    zipline.bind<HostQuotesProvider>("quotes", impl)
+    Log.d("…", "bound")  // ← never logged
+}
+```
+
+Removing `suspend` (`fun getQuotes(...): List<Quote>`) resolves the
+hang immediately.
+
+**Empirically reproduced** on Konduit / Zipline 1.26 (commit
+`0d18809` in this repo). Not investigated for whether the issue is in
+Zipline's compiler plugin codegen or the host-side proxy construction.
+
+**Workaround in place.** Keep `getQuotes` non-suspend; have the host
+pre-cache the data before binding. See `HostQuotesProvider`'s kdoc and
+Step 4½ in `USAGE.md`. Used throughout shared/Protocol.kt.
+
+**Diagnostic shipped (Konduit `1.0.0-caliclan.3`):** wrap suspect
+`bind`/`take` calls in `Spec.bindWithTimeout { … }`. When the hang
+triggers, the timeout fires after 30s with `ZiplineBindTimeoutException`
+whose message names the suspect signature shape. Strictly an upgrade
+over "build hangs forever, no log." DevoStatus's `KonduitDemoScreen.kt`
+uses this pattern; `KonduitQuotesScreen.kt` and `KonduitExploreScreen.kt`
+can adopt it incrementally.
+
+**Upstream fix.** Investigate the Zipline 1.26 compiler-plugin codegen
+for `suspend fun … : List<@Serializable T>` signatures. A workaround
+inside Zipline could be: detect the offending shape and either
+(a) compile through it correctly, or (b) emit a build-time error so
+integrators see a clear "this shape is unsupported" message instead of
+a silent runtime hang.
+
+**Workaround code paths to revert** once fixed:
+- `shared/Protocol.kt#HostQuotesProvider.getQuotes`
+- `presenter/screens/QuotesScreen.kt` (the snapshot-based fetch pattern)
+- DevoStatus's `KonduitQuotesScreen.kt` load-gate (the
+  `if (nativeQuotes.isEmpty()) { spinner } else { konduit }` wrapper)
+
+---
+
+### U2. Zipline Gradle plugin is mandatory on every module that calls `bind`/`take`, silently hangs otherwise
+
+**Severity:** high (silent failure; same "give up" outcome).
+**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+`Spec.bindWithTimeout { … }` catches U2's hang shape too (same surface
+as U1). The `ZiplineBindTimeoutException` message lists both U1 and U2
+as candidates so the integrator knows to check the `plugins {}` block
+in addition to the suspect-signature shape. `take` already throws a
+clear "is the Zipline plugin configured?" error — only `bind` was
+silent before.
+
+**Symptom.** A module that calls `zipline.bind<Foo>(...)` or
+`zipline.take<Foo>(...)` but doesn't apply the
+`app.cash.zipline` Gradle plugin compiles successfully and links
+successfully. At runtime, `bind` hangs forever and `take` throws
+`"unexpected call to Zipline.take: is the Zipline plugin configured?"`.
+
+**Reproduce.** New host module that depends on `:shared` but doesn't
+add `alias(libs.plugins.zipline)` to its `plugins {}` block. Call
+`zipline.bind<HostConsole>(...)` — never returns.
+
+**Workaround in place.** Always apply the plugin in every module that
+touches `bind`/`take`:
+
+```kotlin
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.zipline)  // ← mandatory anywhere bind/take is called
+}
+```
+
+Documented in `USAGE.md` Step 2 "⚠️ MANDATORY".
+
+**Upstream fix.** The Zipline runtime could detect missing-plugin state
+(no codegen artifacts on the classpath for the requested service) and
+throw on `bind` instead of hanging. A lint/Detekt rule would also catch
+this at compile time.
+
+---
+
+### U3. `kotlinx-serialization` plugin required on every module defining `@Serializable` wire types used by a `ZiplineService`
+
+**Severity:** medium (runtime error has good message, but error fires
+late in integration).
+**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+`Spec.requireSerializerOf<T>()` is a bind-time pre-flight check that
+throws `MissingSerializerException` with a clear diagnostic when a
+`@Serializable` wire type's serializer can't be resolved. Move the
+failure point from "first guest call" to "bind time" by calling
+`requireSerializerOf<Quote>()` etc. at the top of `bindServices`.
+DevoStatus's `KonduitQuotesScreen.kt` shows the pattern.
+
+**Symptom.** Defining `@Serializable data class Quote(...)` in a module
+that doesn't apply `org.jetbrains.kotlin.plugin.serialization` compiles
+OK, but `zipline.take<HostQuotesProvider>("quotes")` (or the
+corresponding `bind` on the host) throws at runtime:
+
+```
+Serializer for class 'Quote' is not found.
+Please ensure that class is marked as '@Serializable' and that the
+serialization compiler plugin is applied.
+```
+
+**Reproduce.** Add `@Serializable` to a data class in a module that has
+only `alias(libs.plugins.kotlinMultiplatform)` — no `kotlinSerialization`.
+
+**Workaround in place.** Apply the plugin in every module with wire
+types:
+
+```kotlin
+plugins {
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.zipline)
+    alias(libs.plugins.kotlinSerialization)  // ← required for @Serializable wire types
+}
+```
+
+DevoStatus hit this in `:shared` initially — fixed in upstream commit
+`c73b04c` (see also the comment at the top of `shared/build.gradle.kts`).
+
+**Upstream fix.** The Zipline Gradle plugin could check whether
+`@Serializable` types appear in the module's classfiles and warn if the
+kotlinSerialization plugin isn't also applied.
+
+---
+
+### U5. Coil 3's singleton `ImageLoader` has no network fetcher by default
+
+**Severity:** low (already documented in USAGE.md), but listing here
+because the failure mode is silent.
+**Documentation strengthened:** USAGE.md now has a top-level
+"Silent-failure cheat sheet" table that surfaces U5 (and the other four
+silent-failure shapes) at-a-glance with symptom → cause → fix. The
+detailed Coil setup section lower in the doc is now cross-linked from
+the cheat sheet. We deliberately did not auto-install a default
+ImageLoader from Konduit — production integrators want to configure
+their own (custom cache, interceptors, telemetry).
+
+**Symptom.** A schema `AsyncImage` with an `http://…` URL renders blank.
+No exception, no log line. Looks like the schema widget is broken.
+
+**Cause.** Coil 3 ships with an empty default `ImageLoader`. The
+`coil-network-okhttp` (or `coil-network-ktor3` / `coil-network-ktor2`)
+artifact adds a network fetcher, but the integrator has to call
+`setSingletonImageLoaderFactory { … }` before any `AsyncImage` is
+composed.
+
+**Workaround in place.** See `USAGE.md` "⚠️ If you use AsyncImage"
+callout. This repo's `:composeApp` `App.kt` calls
+`setSingletonImageLoaderFactory` with the right platform fetcher; each
+DevoStatus screen (`KonduitDemoScreen`, `KonduitQuotesScreen`,
+`KonduitExploreScreen`) does the same.
+
+**Upstream fix.** Konduit could supply a default
+`setSingletonImageLoaderFactory` call from within
+`TreehouseApp`'s composeui wrapper, with an `okhttp` fetcher when the
+integrator's classpath has OkHttp (detect at build time, or fall back
+to a no-op + clear warning). Or document this in a way that's
+impossible to miss — a startup-time println if the singleton hasn't
+been initialized would help.
+
+---
+
+### U6. ~~Konduit codegen emits invalid Kotlin for lambda-typed `@Modifier` properties on Kotlin/JS~~ — FIXED in Konduit `1.0.0-caliclan.3`
+
+**Status:** Fixed. Konduit's schema parser now rejects function-typed
+`@Modifier` properties at build time with a clear error message that
+points integrators at the canonical workaround (put click handlers on
+widgets, not modifiers). The cryptic "expecting class body" error in
+generated `:shared-protocol-guest:compileKotlinJs` output can no longer
+happen — the bad shape is caught at `:schema:redwoodJsonGenerate` time
+with a message like:
+
+```
+@Modifier com.example.MyMod#onClick cannot be a function type.
+Konduit codegen for lambda-typed modifier properties is broken on
+Kotlin/JS — the generated `ContextualSerializer(Function0<Unit>::class)`
+is invalid Kotlin syntax and breaks `:shared-protocol-guest:compileKotlinJs`.
+Move the handler onto the widget as a regular `@Property` instead
+(see Konduit's `Button.onClick` / `Box.onClick` for the canonical shape).
+```
+
+Historical entry preserved below for context.
+
+<details>
+<summary>Original entry</summary>
+
+**Severity:** high (the build silently produces uncompilable codegen
+output if you happen to add a `() -> Unit` field on a `@Modifier`).
+**Origin:** HANDOVER.md gotcha #8.
+
+**Symptom.** Declaring a function-typed property on a `@Modifier` data
+class compiles fine on JVM but produces invalid Kotlin in the JS code-
+gen output — `ContextualSerializer(Function0<Unit>::class)`, which is
+not legal Kotlin syntax (class literal not allowed on a generic
+parameterized type). The `:shared-protocol-guest:compileKotlinJs` task
+fails with a cryptic "expecting class body" error pointing at generated
+code the integrator didn't write.
+
+**Reproduce.** Add this to the schema:
+```kotlin
+@Modifier(N)
+data class Clickable(
+    val onClick: () -> Unit,   // ← codegen breaks on JS
+)
+```
+
+`compileKotlinJvm` succeeds. `:shared-protocol-guest:compileKotlinJs`
+fails with an error on a generated file.
+
+**Workaround in place.** Click handlers / lambdas live on the *widget*
+that needs them, not on a modifier. Every Tier 1 / Tier 2 widget that
+needs a click handler declares `onClick: (() -> Unit)?` as a regular
+`@Property` (Button, IconButton, FAB, Box, Card all follow this). The
+schema's `Box` and `Card` widgets carry `onClick` directly rather than
+relying on a `Modifier.clickable {}` chain.
+
+**Upstream fix.** Konduit's `dev.konduit.generator.modifiers` plugin
+should special-case function-typed properties on `@Modifier` — either
+generate a `ZiplineService`-backed proxy (matching the U11 fix pattern)
+or emit a compile-time error so integrators see the rejection upfront
+rather than discover it through a broken JS codegen output.
+
+</details>
+
+---
+
+### U10. ~~Konduit codegen emits `ContextualSerializer(MyEnum::class)` for enum fields on `@Modifier` classes — silent white screen~~ — FIXED in Konduit `1.0.0-caliclan.3`
+
+**Status:** Fixed in Konduit commit `79a314004`
+(`konduit-tooling-codegen` protocol-guest generator). Modifier
+serializer codegen now emits the `.serializer(), emptyArray()` fallback
+for every non-parameterized `ClassName` typed property; the
+`ContextualSerializer` falls through to the auto-generated `.serializer()`
+companion so the white screen can no longer happen for `@Serializable
+enum` modifier fields.
+
+The `SduiSerializersModule` workaround in `:schema-types` is now
+redundant but kept (the contextual registration is harmless when the
+fallback already works; removing it has no observable effect).
+
+Types that aren't `@Serializable` now produce a compile-time error
+pointing at the missing `.serializer()` companion instead of a silent
+runtime white screen — strictly better failure mode.
+
+Historical entry preserved below for context.
+
+<details>
+<summary>Original entry</summary>
+
+**Severity:** critical (worst documented failure mode — completely
+silent, looks like the schema widget didn't render at all).
+**Origin:** HANDOVER.md gotcha #10.
+
+**Symptom.** With `@Modifier(N) data class Background(val color:
+SchemaColor)`, the generated `BackgroundTagAndSerializer` includes
+`ContextualSerializer(SchemaColor::class)`. At runtime the encode call
+throws `SerializationException("Class 'SchemaColor' is not registered
+for polymorphic serialization in the scope of 'Modifier'")`. Konduit's
+protocol path swallows the exception silently; the batch of widget
+updates never reaches the host; the host renders an empty
+`TreehouseContent`; **the screen stays blank with zero logs**.
+
+The signature of this failure: guest's compose composition runs to
+completion (you can `println` from inside lambdas and see them) but
+ZERO `factory.X()` calls happen on the host side.
+
+**Reproduce.** Add an enum-typed property to any `@Modifier` data
+class. Do NOT register a contextual serializer for that enum. Run the
+guest. Host TreehouseContent stays blank, no exception in any log.
+
+**Workaround in place.** Define a shared
+`SerializersModule` (`SduiSerializersModule` in `:schema-types`) that
+registers each enum used in a `@Modifier` as a contextual serializer:
+
+```kotlin
+public val SduiSerializersModule: SerializersModule = SerializersModule {
+    contextual(SchemaColor::class, SchemaColor.serializer())
+    // Add more contextuals as new enums get used in @Modifier fields.
+}
+```
+
+Then wire it into both sides:
+- Host: every `TreehouseApp.Spec` overrides
+  `val serializersModule = SduiSerializersModule`.
+- Guest: `StandardAppLifecycle(json = Json { serializersModule = SduiSerializersModule })`.
+
+Enums used only as widget `@Property` (not modifier fields) work fine —
+codegen calls `MyEnum.serializer()` directly there. Only modifier
+fields trigger the contextual codegen.
+
+> **Cost:** new enums added to a `@Modifier` need to be remembered to
+> register in `SduiSerializersModule`. Forgetting reproduces the white
+> screen for that one new modifier — fix-by-omission is silent. This is
+> the highest-risk knowledge-debt on the integration.
+
+**Upstream fix.** Two options:
+1. **Change codegen** — Konduit's modifier generator could detect
+   `@Serializable enum` types and emit `MyEnum.serializer()` directly,
+   matching the @Property codegen. Removes the need for the
+   contextual-registration dance entirely.
+2. **Ship a baseline serializers module** — Konduit publishes a
+   `KonduitDefaultSerializers` module covering all schema-types enums
+   it ships, integrators add it to their own module. Reduces friction
+   but still requires integrators to register their own additions.
+
+Option (1) is the right fix.
+
+</details>
+
+---
+
+### U11. `ZiplineService` methods with `(T) -> Unit` lambda parameters silently fail at runtime
+
+**Severity:** high (build succeeds, `zipline.take<T>` returns
+non-null-but-broken proxy, every method call is a silent no-op).
+**Origin:** HANDOVER.md gotcha #11.
+**Mitigation shipped:** `:shared:validateZiplineServiceShapes` Gradle
+task scans `shared/Protocol.kt` for ZiplineService interfaces with
+function-typed parameters and fails the build with a clear message
+pointing at this entry. Wired into `:shared:check` so it runs as part
+of the normal verification flow. Adopters consuming Konduit can copy
+the same task into their own protocol module — see `shared/build.gradle.kts`.
+
+The root cause is still upstream in Zipline's compiler plugin (which
+accepts the bad signature shape but produces a runtime-broken proxy);
+this lint just prevents the bad shape from ever reaching that code
+path.
+
+**Symptom.** Defining a `ZiplineService` interface method with a
+function-typed parameter compiles fine. The host's `bind<T>` succeeds.
+The guest's `take<T>(name)` doesn't throw — it returns a non-null proxy.
+But the proxy's first method call silently no-ops; the host method body
+never runs. Subsequent calls fail the same way. There's no exception
+visible to the guest (the actual proxy-construction failure happens
+before the host-console polyfill is installed, so the error println
+goes to a dropped Zipline stdout).
+
+**Reproduce.**
+```kotlin
+interface HostSnackbar : ZiplineService {
+    fun showWithResult(message: String, onResult: (Boolean) -> Unit)
+    //                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    //                                  function-typed param → silent proxy
+}
+```
+
+Host implements + binds normally. Guest calls
+`HostSnackbarBridge.instance?.showWithResult("Saved", { ok -> … })`.
+Host body doesn't fire. No log line.
+
+**Cause.** Zipline marshals values across the QuickJS boundary in
+exactly two flavors:
+1. `@Serializable` values, or
+2. `ZiplineService` proxies.
+
+A raw function type is neither. Build succeeds because the Kotlin
+compiler accepts the signature; the Zipline runtime proxy construction
+fails before the guest's first call but the failure is unobservable.
+
+**Workaround in place.** Replace the lambda parameter with a dedicated
+`ZiplineService` callback type:
+
+```kotlin
+interface SnackbarResultCallback : ZiplineService {
+    fun onResult(actionPerformed: Boolean)
+}
+
+interface HostSnackbar : ZiplineService {
+    fun showWithResult(
+        message: String,
+        callback: SnackbarResultCallback,  // ← ZiplineService, not lambda
+    )
+}
+```
+
+The guest wraps the user's lambda in an anonymous `SnackbarResultCallback`
+impl. The host calls `callback.onResult(...)` then `callback.close()`
+exactly once (or the proxy leaks — `serviceLeaked` warning surfaces).
+
+See `RealHostSnackbar` in `composeApp/Protocol.kt` for the canonical
+shape.
+
+**Upstream fix.** Zipline's compiler plugin should detect function-typed
+parameters / returns on a `@interface ZiplineService` and either
+(a) auto-generate the callback service wrapping at the boundary, or
+(b) emit a build-time error so integrators see the rejection upfront
+rather than discover it through a silent runtime no-op.
+
+---
+
+### U7. ~~`TreehouseApp.Spec` services held as anonymous inline references get GC'd~~ — FIXED in Konduit `1.0.0-caliclan.3`
+
+**Status:** Fixed in commit `<TBD-konduit-hash>` via
+`TreehouseApp.Spec.retain()`. The `val`/`lateinit var` workaround
+documented previously still works; `retain()` is just the cleaner
+shape when the service is an inline anonymous object.
+
+**Use:**
+```kotlin
+val spec = object : TreehouseApp.Spec<…>() {
+    override suspend fun bindServices(treehouseApp, zipline) {
+        zipline.bind<HostConsole>("console", retain(object : HostConsole {
+            override fun log(message: String) = println(message)
+        }))
+    }
+}
+```
+
+`retain(service)` returns the service unchanged but adds it to an
+internal strong-ref list on the Spec. Equivalent semantics to holding
+the service as a `val` field of the Spec, but easier to remember when
+you're tempted to inline an anon object.
+
+Historical entry preserved below for context.
+
+<details>
+<summary>Original entry</summary>
+
+**Severity:** medium (documented in code as "gotcha #6", but trips
+every new integrator on the first try).
+
+**Symptom.** Inline `bind` such as
+`zipline.bind<HostConsole>("console", object : HostConsole { … })`
+binds successfully, then the first guest call to the service errors
+with `no such service (service closed?)`.
+
+**Cause.** Konduit's leak detector logs `serviceLeaked` events
+("invoked when a service is garbage collected without being closed").
+The anonymous instance becomes GC-eligible the moment `bindServices`
+returns; the host's underlying weak reference gets cleared before the
+guest's first call.
+
+**Workaround (still valid).** Hold each service as a `val` or
+`lateinit var` property of the `Spec` (its lifetime survives the GC
+pressure that anon instances don't):
+
+```kotlin
+val spec = object : TreehouseApp.Spec<…>() {
+    private val hostConsole = MyHostConsole()   // ← strong ref
+    private lateinit var hostSnackbar: RealHostSnackbar
+
+    override suspend fun bindServices(...) {
+        zipline.bind<HostConsole>("console", hostConsole)
+        hostSnackbar = RealHostSnackbar(...)
+        zipline.bind<HostSnackbar>("snackbar", hostSnackbar)
+    }
+}
+```
+</details>
+
+---
+
+### U8. Host `ZiplineService` method bodies execute on the Zipline dispatcher, not Main — UI touches silently no-op
+
+**Severity:** high (silent failure on Android, possible crash on iOS K/N).
+**Counterpart to gotcha #12** in `docs/HANDOVER.md`, which documents the
+*outbound* direction. This entry covers the *inbound* direction.
+
+**Symptom.** A guest call to a host `ZiplineService` method routes correctly
+(host log line fires with the expected arguments) but the host-side side
+effect — `NavController.navigate(...)`, `viewModel.someState = ...`, etc. —
+never takes effect. The UI just doesn't react. There's no exception, no
+warning. The handler runs to completion and exits silently.
+
+**Reproduce.** Define any guest→host service whose method body touches the
+UI or Compose state:
+
+```kotlin
+interface HostNavigator : ZiplineService {
+    fun onItemSelected(id: String)
+}
+
+private class RealHostNavigator(
+    private val navController: NavController,
+) : HostNavigator {
+    override fun onItemSelected(id: String) {
+        Log.d("MyApp", "onItemSelected($id)")  // ← fires
+        navController.navigate("detail/$id")    // ← silent no-op
+    }
+}
+```
+
+The log line appears. The navigation doesn't happen. The user sees nothing.
+
+**Cause.** Zipline runs the host method body on its own thread-confined
+dispatcher (the QuickJS thread, `treehouseApp.dispatchers.zipline`).
+`NavController.navigate` requires the Main thread, as does any Compose
+`MutableState` mutation. Calling them off-Main is a known Android
+silent-failure pattern.
+
+JVM-backed Zipline (Android) tolerates the wrong-thread state mutation
+quietly. iOS Kotlin/Native may crash (we haven't reproduced this one on
+iOS yet, but the symmetric outbound case in gotcha #12 does).
+
+**Workaround in place.** Take a `CoroutineScope` AND the UI dispatcher
+in the service's constructor, launch the side effect onto UI:
+
+```kotlin
+private class RealHostNavigator(
+    private val scope: CoroutineScope,
+    private val uiDispatcher: CoroutineDispatcher,  // ← TreehouseApp.dispatchers.ui
+    private val navController: NavController,
+) : HostNavigator {
+    override fun onItemSelected(id: String) {
+        Log.d("MyApp", "onItemSelected($id)")
+        scope.launch(uiDispatcher) {
+            navController.navigate("detail/$id")
+        }
+    }
+}
+```
+
+Pass `activity.lifecycleScope` (Android) or a Main-dispatcher scope
+(iOS) for `scope`, plus `treehouseApp.dispatchers.ui` for the
+`uiDispatcher`. This is the *symmetric pair* to gotcha #12: the inbound
+host method needs UI, the outbound guest-proxy call needs the Zipline
+dispatcher.
+
+> **Tip.** Prefer `treehouseApp.dispatchers.ui` over reaching for
+> `Dispatchers.Main` directly. On Android JVM the two are equivalent,
+> but on iOS K/N `dispatchers.ui` is the platform's UI dispatcher
+> wrapped in a way that plays nicely with Konduit's threading model.
+> See `TreehouseDispatchers` in konduit-treehouse-host — `ui` is
+> already public API.
+
+Because the dispatcher only exists after `bindServices` is called with
+a `treehouseApp` reference, services that need it have to be
+constructed inside `bindServices` (or capture the dispatcher later via
+`lateinit var`). DevoStatus's `RealHostQuoteNavigator` +
+`RealHostExploreNavigator` show the lateinit-var-in-Spec pattern.
+
+**Upstream fix options.** Two ranked by impact:
+
+1. **`@MainThread` annotation honored by Zipline codegen** — let the
+   integrator mark a service method as needing UI, and the generated
+   host stub does the dispatch hop. Lowest-friction; integrator never
+   has to remember the threading rule.
+2. **Doc + lint** — at minimum, surface this in `USAGE.md` next to
+   gotcha #12 so the two directions appear as a pair. (`dispatchers.ui`
+   exposure was option 2 from a previous version of this entry — it's
+   already shipped in Konduit `1.0.0-caliclan.2`; the original entry
+   was written before `TreehouseDispatchers.ui` was discovered.)
+
+**Real-world incidence.** Bit DevoStatus's "Tap to create status"
+button on the Quotes tab — `HostQuoteNavigator.onQuoteSelected` fired
+on every tap, the host's callback received the right ID, but
+`navController.navigate(...)` did nothing. Took a logcat audit to
+confirm the call was reaching the host before realizing it was a
+threading bug rather than a wiring bug.
+
+---
+
+## Actionable here
+
+No outstanding actionable bugs at the moment — the punch list is
+empty. When a new bug surfaces, add it here; when fixed, move it to
+`CHANGELOG.md`.
+
+---
+
+## Recently resolved
+
+These were resolved in this repo or in the Konduit fork. Full entries
+with commit references live in this fork's [`CHANGELOG.md`](../CHANGELOG.md)
+and (for integration-side fixes) in ServerDrivenUI's
+[`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/konduit-main/docs/CHANGELOG.md):
+
+- **#4** Schema lacks alpha/offset/border/custom-font modifiers —
+  Alpha (modifier 11), Border (modifier 12), Offset (modifier 18),
+  `SchemaFontFamily` enum all shipped. See CHANGELOG.
+- **#6** `coil-network-ktor2` conflicts with Ktor-3-using consumer
+  apps — composeApp now uses `coil-network-okhttp` on Android. See
+  CHANGELOG.
+- **#9** `lateinit var` services inside `bindServices` skip 2nd
+  TreehouseApp mount — not actually a Konduit bug; root cause was
+  integrator's unstable `remember` keys. Resolution + canonical
+  `rememberKonduitApp` helper documented. See CHANGELOG.
+- **U7** Anonymous service GC'd — `TreehouseApp.Spec.retain()` helper
+  shipped in Konduit `1.0.0-caliclan.3`. See CHANGELOG.
+- **U8 part 2** (dispatcher exposure) — `TreehouseDispatchers.ui`
+  has been public API since `1.0.0-caliclan.2`; KNOWN_BUGS doc
+  previously listed it as an unshipped fix. Corrected, with all
+  DevoStatus host services migrated to `treehouseApp.dispatchers.ui`
+  from `Dispatchers.Main`.
+- **U10** Modifier serializer codegen white-screen — Konduit
+  `1.0.0-caliclan.3` protocol-guest generator now emits `.serializer()`
+  fallback for every non-parameterized `ClassName` modifier property.
+  `ContextualSerializer` falls through to the auto-generated companion
+  so the white screen can no longer happen. The `SduiSerializersModule`
+  workaround is now redundant but kept (harmless when fallback works).
+  See CHANGELOG.
+- **U6** Lambda-on-modifier JS codegen broken — Konduit
+  `1.0.0-caliclan.3` schema parser now rejects function-typed
+  `@Modifier` properties at parse time with a clear error message
+  instead of producing invalid Kotlin/JS codegen output that breaks
+  `:shared-protocol-guest:compileKotlinJs` with a cryptic error in
+  generated code the integrator never wrote.
+- **U11** ZiplineService lambda-param silent failure — `:shared` ships
+  a `validateZiplineServiceShapes` Gradle task that rejects the bad
+  shape at build time (wired into `:shared:check`). Doesn't fix the
+  Zipline-upstream root cause, but prevents the silent runtime no-op
+  from ever shipping. Adopters can copy the same task into their
+  protocol modules.
+
+---
+
+## Process
+
+When you fix one of these:
+
+1. Write a regression test in `:shared` (or wherever the bug surfaces)
+   that fails on master and passes with the fix.
+2. Move the section to `docs/CHANGELOG.md` under the next-released
+   version with the fixing commit hash.
+3. Open a corresponding GitHub issue + link to the commit so external
+   integrators can find it via search.
