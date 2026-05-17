@@ -24,14 +24,30 @@ New:
 - `Spec.bindWithTimeout(timeoutMillis = 30_000L) { block }` — wraps a
   `zipline.bind`/`zipline.take` call with a deadline. Throws
   `ZiplineBindTimeoutException` with a diagnostic message if the bind
-  doesn't return in time. Turns the silent-hang failure mode (KNOWN_BUGS
-  U1: `suspend fun X(...): List<@Serializable T>` makes bind block
-  forever) into an actionable exception that names the most common
-  cause. Healthy binds return in milliseconds, so the timeout never
-  fires in normal operation.
-- `ZiplineBindTimeoutException` — public exception class, thrown by
+  doesn't return in time. Turns two silent-hang failure modes into one
+  actionable exception:
+  - KNOWN_BUGS U1: `suspend fun X(...): List<@Serializable T>` makes
+    bind block forever on Zipline 1.26.
+  - KNOWN_BUGS U2: Zipline Gradle plugin not applied to the module
+    calling `bind`.
+
+  Healthy binds return in milliseconds, so the timeout never fires in
+  normal operation.
+- `ZiplineBindTimeoutException` — public exception class thrown by
   `bindWithTimeout`. Carries the underlying
-  `TimeoutCancellationException` as `cause`.
+  `TimeoutCancellationException` as `cause`. Message names both U1 and
+  U2 as candidates plus the workaround for each.
+- `Spec.requireSerializerOf<T>()` — bind-time pre-flight check that
+  resolves a `KSerializer<T>` from `serializersModule` and throws
+  `MissingSerializerException` with a clear diagnostic if it can't.
+  Catches U3 (kotlinx-serialization plugin missing on the module
+  declaring a `@Serializable` type) at bind time rather than at first-
+  call time. Optional helper — call once per wire type at the top of
+  `bindServices` for the strongest diagnostics.
+- `MissingSerializerException` — public exception class thrown by
+  `requireSerializerOf`. Names the type that couldn't be resolved plus
+  the two known causes (missing `@Serializable` annotation, missing
+  kotlinx-serialization plugin).
 
 Changed:
 - Nothing yet.
