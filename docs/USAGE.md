@@ -869,6 +869,56 @@ console proxy — live in `third_party/konduit/presenter/src/jsMain/`
 (`Main.kt` + `Navigator.kt`). They're not part of any library;
 copy-paste whichever helpers you need into your guest module.
 
+### ViewModel-like patterns in the guest
+
+Konduit ships a `KonduitViewModel` base class + `konduitViewModel { ... }`
+Compose entry point that mirror native Android's `ViewModel` API for the
+ergonomics that port across to the QuickJS guest.
+
+Re-exported through `dev.konduit:konduit-guest`, so adopters on the facade
+get it transparently. What you get:
+
+- **`viewModelScope`** — a `CoroutineScope` defaulting to
+  `Dispatchers.Main` (= Zipline dispatcher in the guest). Cancels when the
+  hosting `@Composable` leaves the tree.
+- **`onCleared()`** — override for cleanup; always call `super.onCleared()`.
+- **Same instance across recomposition** — guaranteed by `remember`.
+
+What you don't get (and why): no configuration-change survival (guest
+re-runs the whole bundle), no `NavBackStackEntry`-scoped lifetime (the
+guest's `Navigator` is opaque today), no DI integration (Kotlin/JS;
+adopters pass deps through the factory lambda).
+
+```kotlin
+import dev.konduit.vm.KonduitViewModel
+import dev.konduit.vm.konduitViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+
+class QuotesViewModel(
+    private val quotes: HostQuotesProvider,
+) : KonduitViewModel() {
+    val state = MutableStateFlow<List<Quote>>(emptyList())
+    init {
+        viewModelScope.launch {
+            state.value = quotes.getQuotes(filter = null)
+        }
+    }
+}
+
+@Composable
+override fun Content(navigator: Navigator) {
+    val vm = konduitViewModel {
+        QuotesViewModel(HostQuotesProviderBridge.instance!!)
+    }
+    val quotes by vm.state.collectAsState()  // from kotlinx-coroutines-compose
+    LazyColumn { quotes.forEach { LazyItem { QuoteCard(it) } } }
+}
+```
+
+Cross-tab persistence (state surviving the tab being unmounted) is a
+separate concern — see the heart-save pattern in
+`docs/KNOWN_BUGS.md` and DevoStatus's `HostExploreSaver`.
+
 ---
 
 ## Step 4½ — Data services (Provider + Navigator + Observer)
