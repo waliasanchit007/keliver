@@ -64,6 +64,15 @@ include ':konduit-bom'
 include ':konduit-compose'
 include ':konduit-composeui'
 include ':konduit-gradle-plugin'
+
+// Public facade modules — the single-import entry points for adopters.
+// `konduit-host` aggregates the host-side surface (TreehouseApp, Spec,
+// TreehouseContent, dispatchers); `konduit-guest` aggregates the
+// guest-side surface (Screen, Navigator, @Composable runtime). See
+// PUBLIC_LAUNCH_ROADMAP.md Phase 2.
+include ':konduit-guest'
+include ':konduit-host'
+
 include ':konduit-layout-api'
 include ':konduit-layout-compose'
 include ':konduit-layout-composeui'

@@ -1,0 +1,44 @@
+// Guest-side facade module — re-exports the public Konduit API surface
+// that every Zipline guest module needs so adopters can depend on a
+// single `dev.konduit:konduit-guest` artifact instead of wiring the
+// generator + runtime modules manually. See PUBLIC_LAUNCH_ROADMAP.md
+// Phase 2.
+//
+// Targets: JS (TreehouseGuest — Kotlin/JS for QuickJS execution, plus
+// JVM-for-test). The host-side facade lives in `:konduit-host`.
+
+import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        // Zipline runtime — needed for `ZiplineService` types and host
+        // service handles.
+        api libs.zipline
+
+        // Compose runtime (@Composable) + widget interfaces. The guest
+        // builds widget trees that the host renders.
+        api projects.konduitCompose
+        api projects.konduitWidget
+
+        // Protocol primitives. `konduit-protocol-guest` is what
+        // codegen'd guest factories depend on at runtime.
+        api projects.konduitProtocol
+        api projects.konduitProtocolGuest
+
+        // The treehouse stack. `konduit-treehouse-guest` provides the
+        // entry-point types; `-guest-compose` brings the Compose-aware
+        // `Screen` / `Navigator` interfaces guests implement.
+        api projects.konduitTreehouse
+        api projects.konduitTreehouseGuest
+        api projects.konduitTreehouseGuestCompose
+      }
+    }
+  }
+}
