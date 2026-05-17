@@ -86,21 +86,37 @@ External adopters need a runnable reference. DevoStatus is private, so a
 ## Phase 5 — Maven Central publishing (user-action gated)
 
 GitHub Packages requires consumers to authenticate with a PAT. Maven Central
-is the standard for OSS. Once on Maven Central, `implementation("dev.konduit:konduit:1.0.0-...")`
+is the standard for OSS. Once on Maven Central,
+`implementation("io.github.waliasanchit007:konduit-host:1.0.0-...")`
 just works for anyone.
 
+**Namespace decision:** publishing under
+`io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — no domain
+required). The previously-considered `dev.konduit` namespace would
+have required owning `konduit.dev` which is taken. Package names
+inside JARs stay `dev.konduit.*` — only the Maven coordinate's
+groupId changes. Full walkthrough in
+[`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md).
+
 - [ ] **USER ACTION**: Create a Sonatype Central account at
-      [central.sonatype.com](https://central.sonatype.com), claim the
-      `dev.konduit` namespace (DNS TXT verification or whatever Sonatype's
-      flow is in 2026).
+      [central.sonatype.com](https://central.sonatype.com) (sign in
+      with GitHub), claim the `io.github.waliasanchit007` namespace
+      via GitHub-vanity verification (~2 min, one throwaway public repo).
 - [ ] **USER ACTION**: Generate a GPG signing key and add to keyserver.
       Add the private key + passphrase as GitHub repo secrets.
+- [ ] **Implementation**: replace the inherited Cash App Redwood POM
+      metadata (`<url>`, `<scm>`, `<developers>`) with Konduit /
+      waliasanchit007 values — Maven Central rejects POMs that don't
+      match the publishing namespace.
 - [ ] Update `publish.yml` GHA workflow to target Maven Central in addition
-      to (or instead of) GitHub Packages.
+      to (or instead of) GitHub Packages. Configure groupId
+      `io.github.waliasanchit007`; artifactIds stay as
+      `konduit-host`, `konduit-guest`, etc.
 - [ ] First test release: cut `1.0.0-caliclan.4` to Maven Central, verify
       consumers can resolve without auth.
 - [ ] Update USAGE.md adoption instructions: drop the
-      `gpr.user`/`gpr.token` step, replace with vanilla `mavenCentral()`.
+      `gpr.user`/`gpr.token` step, replace with vanilla `mavenCentral()`;
+      update version-catalog entries to the new groupId.
 
 ## Phase 6 — Public visibility (user-action gated)
 

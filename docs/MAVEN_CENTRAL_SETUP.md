@@ -5,40 +5,61 @@ Tracks the user-action steps to move Konduit from **GitHub Packages
 Phase 5 of [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md).
 
 Once this is done, downstream consumers can drop
-`implementation("dev.konduit:konduit:1.0.0-...")` into a Gradle build
-with `mavenCentral()` configured and just have it work — no
-`gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
+`implementation("io.github.waliasanchit007:konduit-host:1.0.0-...")`
+into a Gradle build with `mavenCentral()` configured and just have it
+work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
 This is gated on **two manual steps the user has to do**: claim the
 namespace at Sonatype, and generate a GPG signing key. The rest can
 be wired up by the implementation team once those two artifacts exist.
 
+## Namespace decision
+
+The project is publishing under the **`io.github.waliasanchit007`**
+Sonatype namespace (GitHub-vanity flow — no domain required).
+Artifacts go from `dev.konduit:konduit-*` (GitHub Packages, current)
+to `io.github.waliasanchit007:konduit-*` (Maven Central, target).
+
+Package names inside the JARs stay `dev.konduit.*` — adopters' Kotlin
+`import` statements don't change. Only the Gradle coordinate string
+changes. (Sonatype enforces groupId against the namespace; it does
+not check internal package names.)
+
+If a `konduit.<tld>` domain is ever acquired later, the project can
+re-publish under the matching reverse-DNS namespace
+(e.g. `run.konduit`) and the GitHub-vanity coordinates become a
+legacy alias. Until then, `io.github.waliasanchit007` is the path
+forward.
+
 ---
 
-## Step 1 — Claim the `dev.konduit` namespace at Sonatype Central
+## Step 1 — Claim the `io.github.waliasanchit007` namespace at Sonatype Central
 
-Modern Sonatype Central (2024+) flow — no Jira tickets anymore.
+Modern Sonatype Central (2024+) flow — GitHub-based verification, no
+DNS, no Jira tickets.
 
 1. Go to [central.sonatype.com](https://central.sonatype.com) and
-   sign up. The account is what publishes; pick an email that's
-   monitored long-term.
+   sign in **with GitHub** (use the `waliasanchit007` account — the
+   namespace ownership is bound to the OAuth-linked GitHub account).
 2. Open the **Namespaces** page, click **Add Namespace**, enter
-   `dev.konduit`.
-3. Sonatype offers two verification paths:
-   - **Domain TXT record** (preferred — owns the namespace for good):
-     buy `konduit.dev` from any registrar, add a TXT record at the
-     apex with the verification token Sonatype provides. ~1–2 hour
-     DNS propagation, then click "verify."
-   - **Use your GitHub username as a vanity namespace**: requires no
-     DNS but locks you into `io.github.<username>` — not what we
-     want for a real project namespace. Skip.
-4. Once verified, the namespace shows as "Verified" in the
-   Namespaces table. You can now publish under
-   `dev.konduit:*` coordinates.
+   `io.github.waliasanchit007`.
+3. Sonatype detects the `io.github.<user>` shape and offers
+   **GitHub verification**:
+   - Sonatype displays a verification code (a short string like
+     `abc12345`).
+   - Create a *public* empty GitHub repo at
+     `https://github.com/waliasanchit007/<verification-code>` (the
+     repo name IS the code).
+   - Back in Sonatype, click **Verify**. Sonatype checks that the
+     repo exists under your username; verification is immediate.
+   - Once verified, the namespace shows as "Verified" in the
+     Namespaces table. You can delete the verification repo
+     afterwards — Sonatype caches the result.
+4. You can now publish under `io.github.waliasanchit007:*`
+   coordinates.
 
-**Lead time:** the *verification* is instant once DNS propagates. The
-domain purchase + DNS edit is the slow part — budget ~1 day if you
-don't already own `konduit.dev`.
+**Lead time:** ~2 minutes end-to-end (vs ~1 day for DNS verification).
+The only manual step is creating one throwaway public repo.
 
 ## Step 2 — Generate a GPG signing key
 
@@ -73,8 +94,8 @@ add these four:
 
 | Secret name | Value |
 |---|---|
-| `SONATYPE_USERNAME` | Sonatype Central username from Step 1 |
-| `SONATYPE_PASSWORD` | Sonatype Central password (or a user-token if you generate one in the portal — recommended over the raw password) |
+| `SONATYPE_USERNAME` | Sonatype Central user-token username (generate in the portal — recommended over the raw login) |
+| `SONATYPE_PASSWORD` | Sonatype Central user-token password |
 | `SIGNING_KEY` | Full contents of `konduit-signing.key` (the armored private key from Step 2) |
 | `SIGNING_PASSWORD` | The passphrase from Step 2 |
 
@@ -88,18 +109,28 @@ The migration:
    plugin to the build-support module (it handles Sonatype Central
    uploads + signing in one place). Or alternatively wire
    `signing` + `publishing` blocks directly per module.
-2. Configure publishing coordinates: `groupId = "dev.konduit"`,
-   `artifactId = <module name>`, version from
-   `RedwoodBuildPlugin.KONDUIT_VERSION`.
+2. Configure publishing coordinates:
+   - `groupId = "io.github.waliasanchit007"`
+   - `artifactId = <module name>` (unchanged — `konduit-host`,
+     `konduit-guest`, etc.)
+   - version from `RedwoodBuildPlugin.KONDUIT_VERSION`
 3. Add POM metadata: `name`, `description`, `url`, `licenses`,
    `developers`, `scm`. Maven Central rejects POMs missing any of
-   these.
+   these. **Currently the POMs still inherit Cash App Redwood
+   metadata** (`<url>cashapp/redwood</url>`, `<developer>cashapp`,
+   etc.) — this MUST be replaced with Konduit / waliasanchit007
+   values before the first Maven Central release.
 4. Update `publish.yml` to pass `SIGNING_KEY` /
    `SIGNING_PASSWORD` / `SONATYPE_USERNAME` /
    `SONATYPE_PASSWORD` as Gradle properties.
-5. First test release: cut `1.0.0-caliclan.4` and watch the
-   GHA run. Failures usually surface as POM validation errors at
-   the Sonatype side — they're legible.
+5. **Option:** keep the existing GitHub Packages publish step too —
+   double-publishing means existing private consumers of
+   `dev.konduit:*` keep working unchanged while new public consumers
+   pick up `io.github.waliasanchit007:*`. Drop the GitHub Packages
+   step when the migration is complete.
+6. First test release: cut `1.0.0-caliclan.4` and watch the GHA run.
+   Failures usually surface as POM validation errors at the
+   Sonatype side — they're legible.
 
 ## Step 5 — Update USAGE.md adoption instructions
 
@@ -109,22 +140,28 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
    `docs/USAGE.md`.
 2. Replace the `maven { url = ... }` GitHub Packages block with
    `mavenCentral()` (which most projects already have).
-3. Update the README's "Status" banner from "private fork" to
+3. Update the version-catalog snippet:
+   ```toml
+   konduit-host  = { module = "io.github.waliasanchit007:konduit-host",  version.ref = "konduit" }
+   konduit-guest = { module = "io.github.waliasanchit007:konduit-guest", version.ref = "konduit" }
+   ```
+4. Update the README's "Status" banner from "private fork" to
    "public OSS — `1.0.0-caliclan.N` on Maven Central."
 
 ## What can go wrong
 
-- **Namespace claim takes > 1 day**: Sonatype's DNS verification is
-  instant once propagated, but the propagation itself can take longer
-  than you'd expect on a fresh domain. Buy the domain first, do
-  everything else in parallel.
+- **GitHub-vanity verification repo conflict**: if a repo with the
+  exact verification-code name already exists under `waliasanchit007`
+  (unlikely — Sonatype's codes are random), delete or rename it
+  first.
 - **GPG key uploaded to wrong keyserver**: Maven Central polls
   `keyserver.ubuntu.com`, `keys.openpgp.org`, and a few others.
   Belt-and-braces it to at least two.
 - **Missing POM metadata**: every artifact's POM must have name +
   description + url + license + developer + scm. The `vanniktech`
   plugin makes this easy; manual `publishing {}` blocks are
-  error-prone.
+  error-prone. The current POMs inheriting Cash App Redwood metadata
+  will be rejected — Step 4 #3 is mandatory, not optional.
 - **First release shows up but is "staged"**: Sonatype Central's
   default flow is **automatic publishing** now (no manual "release"
   button), but if you opted into the old flow you may need to click
@@ -133,3 +170,10 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   separate Snapshots repository on Sonatype Central, not the main
   index. Adopters need `https://central.sonatype.com/repository/maven-snapshots/`
   in their repos block to pull snapshots. The plugin handles routing.
+- **Switching namespace later**: if you ever acquire a `konduit.<tld>`
+  domain and want to switch from `io.github.waliasanchit007` to
+  e.g. `run.konduit`, the path is: claim the new namespace at
+  Sonatype, publish a new version line under the new coordinates,
+  keep the GitHub-vanity coordinates published for at least one
+  major version as a redirect alias. Adopters update their version
+  catalog at their leisure.
