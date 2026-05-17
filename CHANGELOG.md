@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+Changed:
+- POM metadata for every published artifact now reflects the Konduit fork
+  rather than the upstream Cash App Redwood project. Adopters inspecting
+  published artifacts (or any consumers using Maven's POM-driven tooling)
+  see Konduit-branded `<name>`, `<description>`, `<url>`, `<developers>`,
+  and `<scm>` instead of inherited `cashapp/redwood` values. License stays
+  Apache-2.0. Required cleanup before Maven Central publishing (Phase 5);
+  also removes a real source of confusion on GitHub Packages today.
+  Closes #11.
+
 New:
 - `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
