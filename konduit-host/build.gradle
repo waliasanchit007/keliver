@@ -1,0 +1,51 @@
+// Host-side facade module — re-exports the public Konduit API surface
+// that every host adopter needs so consumers can depend on a single
+// `dev.konduit:konduit-host` artifact instead of wiring 8 modules
+// manually. See PUBLIC_LAUNCH_ROADMAP.md Phase 2.
+//
+// Targets: Android, JVM, iOS (TreehouseHost). The guest-side facade
+// lives in `:konduit-guest`.
+
+import static dev.konduit.buildsupport.TargetGroup.TreehouseHost
+
+redwoodBuild {
+  targets(TreehouseHost)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        // Zipline runtime + bundle loader (api so host code can declare
+        // `ZiplineService` types and call `bind` / `take`).
+        api libs.zipline
+        api libs.zipline.loader
+
+        // Compose runtime + widget interfaces — needed because the host
+        // composes guest screens via `TreehouseContent`.
+        api projects.konduitCompose
+        api projects.konduitWidget
+
+        // Modifier base types + protocol primitives.
+        api projects.konduitRuntime
+        api projects.konduitProtocol
+        api projects.konduitProtocolHost
+
+        // The treehouse stack. `konduit-treehouse-host` is where
+        // `TreehouseApp`, `TreehouseApp.Spec`, `Spec.retain`,
+        // `Spec.bindWithTimeout`, `Spec.requireSerializerOf`, and the
+        // dispatchers live. `konduit-treehouse-host-composeui` provides
+        // the `TreehouseContent` composable that mounts a guest screen
+        // into a host Compose tree.
+        api projects.konduitTreehouse
+        api projects.konduitTreehouseHost
+        api projects.konduitTreehouseHostComposeui
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.konduit.host'
+}
