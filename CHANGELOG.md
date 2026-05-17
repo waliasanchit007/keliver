@@ -53,6 +53,16 @@ Changed:
 - Nothing yet.
 
 Fixed:
+- **Schema parser rejects function-typed `@Modifier` properties at build time.**
+  Previously, declaring a property like `val onClick: () -> Unit` on a
+  `@Modifier` data class compiled on JVM but produced invalid Kotlin in the
+  protocol-guest JS codegen output (`ContextualSerializer(Function0<Unit>::class)`
+  — class literals aren't allowed on parameterized types). The integrator
+  saw a cryptic "expecting class body" error in generated code they didn't
+  write. The parser now rejects this shape with a clear message pointing
+  at the canonical workaround (put click handlers on widgets as a regular
+  `@Property` — see `Button.onClick` / `Box.onClick`). Closes integration
+  bug U6 in the ServerDrivenUI reference repo.
 - **Modifier serializer codegen no longer white-screens on enum properties.**
   Previously the protocol-guest generator emitted
   `ContextualSerializer(MyEnum::class)` without the fallback constructor
