@@ -42,6 +42,12 @@ kotlin {
         // ViewModel helper — `KonduitViewModel` base + `konduitViewModel { }`
         // Compose entry point. See issue #6.
         api projects.konduitVm
+
+        // HTTP shim — KonduitHttp typed wrapper + HostHttpProvider
+        // ZiplineService interface. Guest calls REST endpoints through
+        // a single host-bound service instead of N per-endpoint
+        // services. See issue #7.
+        api projects.konduitHttp
       }
     }
   }

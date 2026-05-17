@@ -41,6 +41,11 @@ kotlin {
         api projects.konduitTreehouse
         api projects.konduitTreehouseHost
         api projects.konduitTreehouseHostComposeui
+
+        // HTTP shim — HostHttpProvider ZiplineService + KonduitHttp
+        // wrapper. Host wires this with their existing HttpClient. See
+        // issue #7.
+        api projects.konduitHttp
       }
     }
   }
