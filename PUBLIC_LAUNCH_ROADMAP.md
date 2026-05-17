@@ -34,21 +34,27 @@ or GitHub-org changes.
 - [ ] `.github/PULL_REQUEST_TEMPLATE.md`.
 - [ ] Update GitHub repo description + topics + homepage URL.
 
-## Phase 2 — Compose Facade (one-PR API surface reduction)
+## Phase 2 — Compose Facade (one-PR API surface reduction) — ✅ landed
 
-Adopters today import from 7+ modules (`:shared`, `:shared-widget`,
-`:shared-protocol-host`, `:schema`, `:schema-types`, `:shared-modifier`,
-`:shared-protocol-guest`). This is friction for first-time adopters. Phase 4
-of the original plan (deferred) consolidates this into a single facade module.
+Adopters previously imported from 8+ Konduit modules (`konduit-treehouse-host`,
+`konduit-treehouse-host-composeui`, `konduit-compose`, `konduit-widget`,
+`konduit-runtime`, `konduit-protocol`, `konduit-protocol-host`,
+`konduit-treehouse`) plus the two Zipline artifacts. This is friction
+for first-time adopters.
 
-- [ ] Design `konduit` facade module: re-exports the public types every
-      adopter needs (`TreehouseApp`, `TreehouseApp.Spec`,
-      `TreehouseContent`, `Spec.retain` / `bindWithTimeout` /
-      `requireSerializerOf`, common widget types).
-- [ ] Update USAGE.md to lead with `implementation("dev.konduit:konduit-bom")`
-      + `implementation("dev.konduit:konduit")` instead of the 7-module list.
-- [ ] Migration note for existing adopters who already wire the 7 modules
-      manually.
+Shipped in `1.0.0-caliclan.4` as two facade modules instead of one
+(`konduit-host` for adopter host modules, `konduit-guest` for guest
+modules — matches the existing host/guest split in
+`konduit-treehouse-host` vs `konduit-treehouse-guest`).
+
+- [x] `dev.konduit:konduit-host` facade — TreehouseHost target group,
+      `api`-exposes all host-side modules + Zipline.
+- [x] `dev.konduit:konduit-guest` facade — TreehouseGuest target group,
+      `api`-exposes all guest-side modules + Zipline.
+- [x] USAGE.md updated to lead with `libs.konduit.host` and
+      `libs.konduit.guest` catalog references.
+- [x] Migration note included in USAGE.md (the pre-facade per-module
+      imports continue to work; the facade is additive).
 
 ## Phase 3 — iOS demo validation (the production-readiness gap)
 
