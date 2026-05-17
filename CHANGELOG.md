@@ -9,6 +9,18 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
+  `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
+  `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;
+  the `konduitViewModel { factory() }` `@Composable` entry point
+  constructs the VM on first composition, returns the same instance
+  across recompositions, and cancels the scope when the hosting
+  `@Composable` leaves the tree. Closes the cosmetic gap with native
+  Compose-Android ViewModel ergonomics for the parts that port (scope,
+  recomposition survival, lifecycle hook). Re-exported through
+  `dev.konduit:konduit-guest`. See issue #6 and `docs/USAGE.md` —
+  "ViewModel-like patterns in the guest".
+
 - `dev.konduit:konduit-host` and `dev.konduit:konduit-guest` —
   facade modules that aggregate the public adopter-facing surface
   through `api` dependencies. A host module can drop its 8-line
