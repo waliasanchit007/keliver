@@ -104,6 +104,11 @@ include ':konduit-treehouse-guest'
 include ':konduit-treehouse-guest-compose'
 include ':konduit-treehouse-host'
 include ':konduit-treehouse-host-composeui'
+
+// Guest-side ViewModel helper — scope + onCleared tied to @Composable
+// lifetime. Re-exported from `:konduit-guest`. See issue #6.
+include ':konduit-vm'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

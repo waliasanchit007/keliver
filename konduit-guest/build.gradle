@@ -38,6 +38,10 @@ kotlin {
         api projects.konduitTreehouse
         api projects.konduitTreehouseGuest
         api projects.konduitTreehouseGuestCompose
+
+        // ViewModel helper — `KonduitViewModel` base + `konduitViewModel { }`
+        // Compose entry point. See issue #6.
+        api projects.konduitVm
       }
     }
   }
