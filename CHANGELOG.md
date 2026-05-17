@@ -26,7 +26,21 @@ Changed:
 - Nothing yet.
 
 Fixed:
-- Nothing yet.
+- **Modifier serializer codegen no longer white-screens on enum properties.**
+  Previously the protocol-guest generator emitted
+  `ContextualSerializer(MyEnum::class)` without the fallback constructor
+  args for any enum field on a `@Modifier` whose `@Serializable`
+  annotation the FIR parser couldn't detect (cross-module enum types
+  are the common case). At runtime the encode call threw
+  `SerializationException`, which the protocol path swallowed silently,
+  resulting in a blank `TreehouseContent` with zero logs — the worst
+  documented failure shape in the integration. The codegen now emits the
+  `MyEnum.serializer(), emptyArray()` fallback for every non-parameterized
+  `ClassName` typed property; `ContextualSerializer` then falls through
+  to the auto-generated `.serializer()` companion. Types that aren't
+  `@Serializable` produce a clear compile error referencing the missing
+  `.serializer()` companion instead of a silent runtime white screen.
+  Closes integration bug U10 in the ServerDrivenUI reference repo.
 
 
 ## [1.0.0-caliclan.2] - 2026-04-30
