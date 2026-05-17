@@ -21,6 +21,17 @@ New:
   reference repo.
 - `Spec.retainedServices: List<Any>` — read-only view of services
   currently retained, for diagnostics or tests.
+- `Spec.bindWithTimeout(timeoutMillis = 30_000L) { block }` — wraps a
+  `zipline.bind`/`zipline.take` call with a deadline. Throws
+  `ZiplineBindTimeoutException` with a diagnostic message if the bind
+  doesn't return in time. Turns the silent-hang failure mode (KNOWN_BUGS
+  U1: `suspend fun X(...): List<@Serializable T>` makes bind block
+  forever) into an actionable exception that names the most common
+  cause. Healthy binds return in milliseconds, so the timeout never
+  fires in normal operation.
+- `ZiplineBindTimeoutException` — public exception class, thrown by
+  `bindWithTimeout`. Carries the underlying
+  `TimeoutCancellationException` as `cause`.
 
 Changed:
 - Nothing yet.

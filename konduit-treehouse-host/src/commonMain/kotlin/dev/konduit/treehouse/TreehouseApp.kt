@@ -20,10 +20,39 @@ import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import kotlin.native.ObjCName
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
+
+/**
+ * Thrown by [TreehouseApp.Spec.bindWithTimeout] when a wrapped
+ * `Zipline.bind`/`Zipline.take` call doesn't return within the
+ * deadline. Carries a diagnostic message that points integrators at
+ * the most common cause — `suspend fun X(...): List<@Serializable T>`
+ * signatures, which make Zipline's bind hang indefinitely with no log
+ * (see ServerDrivenUI/docs/KNOWN_BUGS.md U1).
+ *
+ * The exception's `cause` is the underlying
+ * [TimeoutCancellationException] from `kotlinx.coroutines.withTimeout`.
+ */
+public class ZiplineBindTimeoutException internal constructor(
+  timeoutMillis: Long,
+  cause: TimeoutCancellationException,
+) : RuntimeException(
+  buildString {
+    append("Zipline.bind/take did not return within ${timeoutMillis}ms.\n")
+    append("Known cause: ZiplineService method signature ")
+    append("`suspend fun X(...): List<@Serializable T>` makes bind hang ")
+    append("indefinitely with no log line on Zipline 1.26 (see KNOWN_BUGS.md U1).\n")
+    append("Workaround: drop the `suspend` modifier — the method runs on ")
+    append("the Zipline dispatcher anyway, so blocking work is already on ")
+    append("the right thread for synchronous return.")
+  },
+  cause,
+)
 
 /**
  * Manages the [Zipline] runtimes that run the code to power on-screen views.
@@ -186,6 +215,49 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
       treehouseApp: TreehouseApp<A>,
       zipline: Zipline,
     )
+
+    /**
+     * Run [block] (typically a `zipline.bind<...>(...)` or `zipline.take<...>(...)` call) with a
+     * deadline. Throws [ZiplineBindTimeoutException] if [block] doesn't return within
+     * [timeoutMillis], rather than hanging forever.
+     *
+     * Why: certain `ZiplineService` method signatures — most notably
+     * `suspend fun X(...): List<@Serializable T>` (see
+     * `ServerDrivenUI/docs/KNOWN_BUGS.md` U1) — make `Zipline.bind` hang indefinitely with no
+     * log line on Zipline 1.26. The hang is opaque to integrators: no exception, no
+     * diagnostic, the host's `bindServices` simply never returns and downstream code never
+     * runs. Wrapping the bind in this helper turns the silent hang into an actionable
+     * exception that names the most common cause.
+     *
+     * Usage:
+     * ```kotlin
+     * override suspend fun bindServices(treehouseApp, zipline) {
+     *     bindWithTimeout {
+     *         zipline.bind<HostConsole>("console", hostConsole)
+     *     }
+     *     bindWithTimeout {
+     *         zipline.bind<HostQuotesProvider>("quotes", quotesProvider)
+     *     }
+     * }
+     * ```
+     *
+     * Why a block + lambda instead of an inline `bind` wrapper: Zipline's compiler plugin
+     * generates code at the `bind<ConcreteInterface>` call site and can't see through an
+     * `inline reified` wrapper, so the bind has to stay a direct call. Wrapping a non-inline
+     * lambda preserves the codegen behavior while still letting us add the timeout.
+     *
+     * Default 30s is generous — a healthy `bind` returns in milliseconds.
+     */
+    public suspend fun bindWithTimeout(
+      timeoutMillis: Long = 30_000L,
+      block: suspend () -> Unit,
+    ) {
+      try {
+        withTimeout(timeoutMillis) { block() }
+      } catch (e: TimeoutCancellationException) {
+        throw ZiplineBindTimeoutException(timeoutMillis, e)
+      }
+    }
 
     /**
      * Retain a strong reference to [service] for the lifetime of this [Spec], then return
