@@ -612,7 +612,36 @@ internal fun generateProtocolModifierSerializers(
                   .addModifiers(PRIVATE)
                   .apply {
                     val parameters = mutableListOf(CodeBlock.of("%T::class", typeName))
-                    if (typeName in serializables) {
+                    // Emit the .serializer() fallback for any non-parameterized
+                    // type. This is broader than the schema-parser's
+                    // `isSerializable` flag because the FIR parser's annotation
+                    // detection misses cross-module @Serializable enums (the
+                    // resolved type symbol doesn't preserve declaration-site
+                    // annotations for cross-module types). Without the fallback,
+                    // `ContextualSerializer(SchemaColor::class)` throws a
+                    // SerializationException at encode time, the protocol path
+                    // swallows it silently, and the host renders a white screen
+                    // with zero logs. With the fallback, the encode falls
+                    // through to MyEnum.serializer() which always exists for
+                    // @Serializable enum/data classes. If the type isn't
+                    // @Serializable, the codegen output references a
+                    // non-existent .serializer() companion → compile error
+                    // with a clear "this type needs @Serializable" message,
+                    // which is strictly better than the silent runtime
+                    // white-screen failure.
+                    //
+                    // Parameterized types (List<T>, Map<K,V>, etc.) still gate
+                    // on the parser-provided isSerializable flag because their
+                    // .serializer() shape requires per-type-argument serializer
+                    // composition that we can't synthesize generically here.
+                    // See ServerDrivenUI/docs/KNOWN_BUGS.md U10 for the full
+                    // historical context.
+                    val emitFallback = if (typeName is ClassName) {
+                      true
+                    } else {
+                      typeName in serializables
+                    }
+                    if (emitFallback) {
                       parameters += CodeBlock.of("%T.serializer()", typeName)
                       parameters += CodeBlock.of("emptyArray()")
                     }

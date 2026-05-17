@@ -74,7 +74,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 private const val KONDUIT_GROUP_ID = "dev.konduit"
 
 // HEY! If you change the major version update release.yaml doc folder.
-private const val KONDUIT_VERSION = "1.0.0-caliclan.2"
+private const val KONDUIT_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 

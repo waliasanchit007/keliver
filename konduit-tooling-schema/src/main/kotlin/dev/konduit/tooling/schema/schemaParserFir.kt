@@ -610,7 +610,33 @@ private fun FirContext.parseModifier(
   } else if (firClass.isData) {
     firClass.primaryConstructorIfAny(firSession)!!.valueParameterSymbols.map { parameter ->
       val name = parameter.name.identifier
-      val parameterType = parameter.resolvedReturnType.toFqType()
+      val resolvedType = parameter.resolvedReturnType
+
+      // Reject function-typed @Modifier properties at parse time. The
+      // protocol-guest codegen emits `ContextualSerializer(Function0<Unit>::class)`
+      // for these — invalid Kotlin syntax (class literals aren't allowed
+      // on parameterized types), which fails the JS compile on
+      // generated code the integrator didn't write. The cryptic error
+      // surfaces far from the cause (in `:shared-protocol-guest:compileKotlinJs`
+      // pointing at a file under `build/generated/`), which is much
+      // worse than a clean rejection here.
+      //
+      // The right shape for an event-like modifier is to put the click
+      // handler on the WIDGET as a regular `@Property`, not on a
+      // modifier. Every `Button` / `Card` / `Box` follows this pattern.
+      // See ServerDrivenUI/docs/KNOWN_BUGS.md U6 for the historical
+      // workaround.
+      require(!resolvedType.isBasicFunctionType(firSession)) {
+        "@Modifier $memberType#$name cannot be a function type. " +
+          "Konduit codegen for lambda-typed modifier properties is broken " +
+          "on Kotlin/JS — the generated `ContextualSerializer(Function0<Unit>::class)` " +
+          "is invalid Kotlin syntax and breaks `:shared-protocol-guest:compileKotlinJs`. " +
+          "Move the handler onto the widget as a regular `@Property` instead " +
+          "(see Konduit's `Button.onClick` / `Box.onClick` for the canonical " +
+          "shape). KNOWN_BUGS.md U6."
+      }
+
+      val parameterType = resolvedType.toFqType()
       val property = firClass.symbol.declaredProperties(firSession).single { it.name == parameter.name }
 
       val defaultExpression = findDefaultExpression(parameter)
@@ -618,7 +644,7 @@ private fun FirContext.parseModifier(
         ?.toDeprecation { "$memberType.$name" }
       val documentation = parameter.source?.findAndParseKDoc()
 
-      val isSerializable = parameter.resolvedReturnType
+      val isSerializable = resolvedType
         .toSymbol(firSession)
         ?.annotations.orEmpty()
         .any { it.fqName(firSession) == FqNames.Serializable }

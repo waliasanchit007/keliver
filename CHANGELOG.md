@@ -18,6 +18,86 @@ Fixed:
 - Nothing yet.
 
 
+## [1.0.0-caliclan.3] - 2026-05-17
+
+Production-hardening release. Mitigations + outright fixes for the
+silent-failure shapes the ServerDrivenUI / DevoStatus integration
+surfaced over the prior weeks. See `docs/KNOWN_BUGS.md` in the
+ServerDrivenUI reference repo for the full historical context per
+entry.
+
+New:
+- `TreehouseApp.Spec.retain(service)` — strong-ref pass-through helper that
+  keeps the given service reachable for the lifetime of the Spec (the
+  lifetime of the TreehouseApp). Use this when binding inline anonymous
+  service implementations: `zipline.bind<HostFoo>("foo", retain(object :
+  HostFoo { … }))`. Zipline holds only weak references internally, so
+  inline anon objects were previously GC-eligible the moment `bindServices`
+  returned, causing the first guest call to throw "no such service
+  (service closed?)". `retain()` removes the requirement to remember the
+  `val`-field pattern. Closes integration bug U7 in the ServerDrivenUI
+  reference repo.
+- `Spec.retainedServices: List<Any>` — read-only view of services
+  currently retained, for diagnostics or tests.
+- `Spec.bindWithTimeout(timeoutMillis = 30_000L) { block }` — wraps a
+  `zipline.bind`/`zipline.take` call with a deadline. Throws
+  `ZiplineBindTimeoutException` with a diagnostic message if the bind
+  doesn't return in time. Turns two silent-hang failure modes into one
+  actionable exception:
+  - KNOWN_BUGS U1: `suspend fun X(...): List<@Serializable T>` makes
+    bind block forever on Zipline 1.26.
+  - KNOWN_BUGS U2: Zipline Gradle plugin not applied to the module
+    calling `bind`.
+
+  Healthy binds return in milliseconds, so the timeout never fires in
+  normal operation.
+- `ZiplineBindTimeoutException` — public exception class thrown by
+  `bindWithTimeout`. Carries the underlying
+  `TimeoutCancellationException` as `cause`. Message names both U1 and
+  U2 as candidates plus the workaround for each.
+- `Spec.requireSerializerOf<T>()` — bind-time pre-flight check that
+  resolves a `KSerializer<T>` from `serializersModule` and throws
+  `MissingSerializerException` with a clear diagnostic if it can't.
+  Catches U3 (kotlinx-serialization plugin missing on the module
+  declaring a `@Serializable` type) at bind time rather than at first-
+  call time. Optional helper — call once per wire type at the top of
+  `bindServices` for the strongest diagnostics.
+- `MissingSerializerException` — public exception class thrown by
+  `requireSerializerOf`. Names the type that couldn't be resolved plus
+  the two known causes (missing `@Serializable` annotation, missing
+  kotlinx-serialization plugin).
+
+Changed:
+- Nothing yet.
+
+Fixed:
+- **Schema parser rejects function-typed `@Modifier` properties at build time.**
+  Previously, declaring a property like `val onClick: () -> Unit` on a
+  `@Modifier` data class compiled on JVM but produced invalid Kotlin in the
+  protocol-guest JS codegen output (`ContextualSerializer(Function0<Unit>::class)`
+  — class literals aren't allowed on parameterized types). The integrator
+  saw a cryptic "expecting class body" error in generated code they didn't
+  write. The parser now rejects this shape with a clear message pointing
+  at the canonical workaround (put click handlers on widgets as a regular
+  `@Property` — see `Button.onClick` / `Box.onClick`). Closes integration
+  bug U6 in the ServerDrivenUI reference repo.
+- **Modifier serializer codegen no longer white-screens on enum properties.**
+  Previously the protocol-guest generator emitted
+  `ContextualSerializer(MyEnum::class)` without the fallback constructor
+  args for any enum field on a `@Modifier` whose `@Serializable`
+  annotation the FIR parser couldn't detect (cross-module enum types
+  are the common case). At runtime the encode call threw
+  `SerializationException`, which the protocol path swallowed silently,
+  resulting in a blank `TreehouseContent` with zero logs — the worst
+  documented failure shape in the integration. The codegen now emits the
+  `MyEnum.serializer(), emptyArray()` fallback for every non-parameterized
+  `ClassName` typed property; `ContextualSerializer` then falls through
+  to the auto-generated `.serializer()` companion. Types that aren't
+  `@Serializable` produce a clear compile error referencing the missing
+  `.serializer()` companion instead of a silent runtime white screen.
+  Closes integration bug U10 in the ServerDrivenUI reference repo.
+
+
 ## [1.0.0-caliclan.2] - 2026-04-30
 
 Phase 1.5 cleanup. Konduit now ships only Compose Multiplatform-relevant
