@@ -1,0 +1,29 @@
+// Guest-side ViewModel helper — scope + onCleared, tied to @Composable lifetime.
+// Closes the cosmetic gap between native Compose-Android ViewModel ergonomics
+// and Konduit guest development. See issue #6 / PUBLIC_LAUNCH_ROADMAP.
+
+import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.kotlinx.coroutines.core
+        api libs.jetbrains.compose.runtime
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
