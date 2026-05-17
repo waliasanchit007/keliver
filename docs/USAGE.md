@@ -1081,6 +1081,100 @@ Stick with `KonduitHttp` for ordinary REST calls. Reach for a dedicated
 
 Step 4½ below covers that pattern in full.
 
+### Key/value persistence from the guest
+
+QuickJS guests can't reach disk directly — same sandbox constraint as
+the network case. Konduit ships `konduit-storage`: a generic
+`HostStorage : ZiplineService` you wire ONCE with whatever key/value
+backend you prefer (`DataStore<Preferences>` on Android,
+`NSUserDefaults` on iOS, an SQLite key/value table, a file-backed
+JSON blob), plus a `KonduitStorage` typed wrapper for the guest.
+
+Re-exported through both facades (`dev.konduit:konduit-host`,
+`dev.konduit:konduit-guest`).
+
+#### Host side — wire your preferred backend once
+
+Reference adapter for Android `DataStore<Preferences>`:
+
+```kotlin
+import dev.konduit.storage.HostStorage
+
+class DataStoreHostStorage(
+    private val store: DataStore<Preferences>,
+) : HostStorage {
+    override suspend fun get(key: String): String? =
+        store.data.first()[stringPreferencesKey(key)]
+
+    override suspend fun set(key: String, value: String?) {
+        store.edit { prefs ->
+            val pk = stringPreferencesKey(key)
+            if (value == null) prefs.remove(pk) else prefs[pk] = value
+        }
+    }
+
+    override suspend fun keys(prefix: String): List<String> =
+        store.data.first().asMap().keys
+            .map { it.name }
+            .filter { it.startsWith(prefix) }
+}
+```
+
+Bind in your `Spec.bindServices`:
+
+```kotlin
+zipline.bind<HostStorage>("storage", retain(DataStoreHostStorage(dataStore)))
+```
+
+iOS adopters: same pattern with `NSUserDefaults.standard`. Encryption,
+migrations, and key-namespacing all stay in the host adapter — the
+wire surface is deliberately minimal.
+
+#### Guest side — typed persistence through KonduitStorage
+
+```kotlin
+import dev.konduit.storage.KonduitStorage
+
+@Composable
+override fun Content(navigator: Navigator) {
+    val storage = remember { KonduitStorage(HostStorageBridge.instance!!) }
+    val vm = konduitViewModel { QuotesViewModel(storage) }
+    // …
+}
+
+class QuotesViewModel(
+    private val storage: KonduitStorage,
+) : KonduitViewModel() {
+    val saved = MutableStateFlow<List<Quote>>(emptyList())
+    init {
+        viewModelScope.launch {
+            saved.value = storage.get<List<Quote>>("savedQuotes") ?: emptyList()
+        }
+    }
+
+    suspend fun save(quote: Quote) {
+        val next = saved.value + quote
+        saved.value = next
+        storage.set("savedQuotes", next)
+    }
+}
+```
+
+`KonduitStorage` accepts any `@Serializable` Kotlin type. `set(key, null)`
+removes the entry; equivalently `remove(key)` for readability.
+
+#### When NOT to use KonduitStorage
+
+- **Sensitive data** — encrypt at the host adapter (Android Keystore /
+  iOS Keychain), the wire string the guest sees is still plaintext
+  inside the QuickJS sandbox.
+- **Large blobs** (images, audio) — the JSON-string envelope isn't
+  ideal. Use a dedicated `HostXxxStore : ZiplineService` with file paths
+  or content URIs.
+- **Reactive observation** — `KonduitStorage` is read/write only. If
+  you need a `Flow<T>` that emits when a key changes, write a dedicated
+  service.
+
 ---
 
 ## Step 4½ — Data services (Provider + Navigator + Observer)

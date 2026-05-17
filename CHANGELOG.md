@@ -35,6 +35,19 @@ New:
   through both facades. See issues #7 + #28, `docs/USAGE.md`
   "API calls from the guest".
 
+- `dev.konduit:konduit-storage` — key/value persistence shim.
+  `HostStorage : ZiplineService` is a minimal `get` / `set` / `keys`
+  contract the host implements once with its backend of choice
+  (`DataStore<Preferences>` on Android, `NSUserDefaults` on iOS, a
+  file-backed JSON blob, an SQLite KV table). `KonduitStorage` is the
+  guest-side typed wrapper: `suspend inline fun <reified T> get(key)`
+  / `set(key, value)` / `remove(key)` / `keys(prefix)`, with values
+  round-tripping through kotlinx-serialization. Closes the common need
+  for cross-mount persistence without forcing adopters to write a new
+  `HostXxxProvider` per saved-state shape. Re-exported through both
+  facades. See issue #10, `docs/USAGE.md` "Key/value persistence from
+  the guest".
+
 - `docs/MIGRATION_FROM_REDWOOD.md` — migration guide for teams moving
   from upstream Cash App Redwood (any version up to `0.18.0`) to
   Konduit. Covers what's identical (wire format, runtime semantics,
