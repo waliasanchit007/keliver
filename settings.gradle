@@ -73,6 +73,10 @@ include ':konduit-gradle-plugin'
 include ':konduit-guest'
 include ':konduit-host'
 
+// HTTP shim: HostHttpProvider ZiplineService + KonduitHttp typed
+// wrapper. Re-exported from both facades. See issue #7.
+include ':konduit-http'
+
 include ':konduit-layout-api'
 include ':konduit-layout-compose'
 include ':konduit-layout-composeui'
