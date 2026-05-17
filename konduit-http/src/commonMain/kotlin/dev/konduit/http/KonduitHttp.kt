@@ -67,10 +67,15 @@ public class KonduitHttp(
     ).body,
   )
 
-  /** Execute a POST with [body] JSON-encoded; parse the response as [Res]. */
+  /**
+   * Execute a POST with [body] JSON-encoded; parse the response as [Res].
+   * Sets `Content-Type: application/json` by default; pass a `Content-Type`
+   * entry in [headers] to override.
+   */
   public suspend inline fun <reified Req, reified Res> post(
     path: String,
     body: Req,
+    query: Map<String, String> = emptyMap(),
     headers: Map<String, String> = emptyMap(),
   ): Res = json.decodeFromString(
     unwrap(
@@ -78,17 +83,23 @@ public class KonduitHttp(
         HttpRequest(
           method = "POST",
           path = path,
-          headers = headers,
+          query = query,
+          headers = JSON_CONTENT_TYPE + headers,
           body = json.encodeToString(body),
         ),
       ),
     ).body,
   )
 
-  /** Execute a PUT with [body] JSON-encoded; parse the response as [Res]. */
+  /**
+   * Execute a PUT with [body] JSON-encoded; parse the response as [Res].
+   * Sets `Content-Type: application/json` by default; pass a `Content-Type`
+   * entry in [headers] to override.
+   */
   public suspend inline fun <reified Req, reified Res> put(
     path: String,
     body: Req,
+    query: Map<String, String> = emptyMap(),
     headers: Map<String, String> = emptyMap(),
   ): Res = json.decodeFromString(
     unwrap(
@@ -96,7 +107,8 @@ public class KonduitHttp(
         HttpRequest(
           method = "PUT",
           path = path,
-          headers = headers,
+          query = query,
+          headers = JSON_CONTENT_TYPE + headers,
           body = json.encodeToString(body),
         ),
       ),
@@ -123,4 +135,15 @@ public class KonduitHttp(
    */
   public suspend fun requestRaw(request: HttpRequest): HttpResponse =
     provider.execute(request)
+
+  @PublishedApi
+  internal companion object {
+    /**
+     * Default header map prepended (with adopter override priority) to POST
+     * and PUT requests that send a JSON-encoded body.
+     */
+    @PublishedApi
+    internal val JSON_CONTENT_TYPE: Map<String, String> =
+      mapOf("Content-Type" to "application/json")
+  }
 }

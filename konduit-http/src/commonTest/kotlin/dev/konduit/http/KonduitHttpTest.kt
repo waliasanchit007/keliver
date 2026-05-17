@@ -68,6 +68,58 @@ class KonduitHttpTest {
   }
 
   @Test
+  fun post_sets_application_json_content_type_by_default() = runTest {
+    val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    http.post<NewQuote, Quote>("/quotes", NewQuote("x"))
+
+    assertEquals("application/json", stub.lastRequest?.headers?.get("Content-Type"))
+  }
+
+  @Test
+  fun post_allows_adopter_to_override_content_type() = runTest {
+    val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    http.post<NewQuote, Quote>(
+      "/quotes",
+      NewQuote("x"),
+      headers = mapOf("Content-Type" to "application/vnd.example+json"),
+    )
+
+    assertEquals(
+      "application/vnd.example+json",
+      stub.lastRequest?.headers?.get("Content-Type"),
+    )
+  }
+
+  @Test
+  fun post_passes_query_parameters_through() = runTest {
+    val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    http.post<NewQuote, Quote>(
+      "/quotes",
+      NewQuote("x"),
+      query = mapOf("notify" to "true"),
+    )
+
+    assertEquals(mapOf("notify" to "true"), stub.lastRequest?.query)
+  }
+
+  @Test
+  fun put_sets_application_json_content_type_by_default() = runTest {
+    val stub = StubProvider(HttpResponse(200, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    http.put<NewQuote, Quote>("/quotes/1", NewQuote("x"))
+
+    assertEquals("PUT", stub.lastRequest?.method)
+    assertEquals("application/json", stub.lastRequest?.headers?.get("Content-Type"))
+  }
+
+  @Test
   fun non_2xx_throws_KonduitHttpException_with_status_and_body() = runTest {
     val stub = StubProvider(HttpResponse(404, "Not found"))
     val http = KonduitHttp(stub)
