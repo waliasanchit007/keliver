@@ -48,6 +48,10 @@ kotlin {
         // a single host-bound service instead of N per-endpoint
         // services. See issue #7.
         api projects.konduitHttp
+
+        // Key/value persistence shim — `KonduitStorage` typed wrapper +
+        // `HostStorage` ZiplineService interface. See issue #10.
+        api projects.konduitStorage
       }
     }
   }
