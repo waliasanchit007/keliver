@@ -459,9 +459,16 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
 
       pom { pom ->
         pom.name.set(project.name)
-        pom.description.set("Multiplatform reactive UI using Kotlin and Jetpack Compose")
-        pom.inceptionYear.set("2020")
-        pom.url.set("https://github.com/cashapp/redwood/")
+        pom.description.set(
+          "Server-driven UI for Compose Multiplatform — a production-hardened " +
+            "fork of Cash App Redwood. Render Kotlin Compose UI on Android and iOS " +
+            "from JavaScript bundles delivered over the network.",
+        )
+        // Inception year of the Konduit fork (the upstream Cash App Redwood
+        // project's inception is preserved in the credit / licensing copy
+        // of the README and LICENSE).
+        pom.inceptionYear.set("2026")
+        pom.url.set("https://github.com/waliasanchit007/konduit")
 
         pom.licenses {
           it.license { license ->
@@ -473,16 +480,16 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
 
         pom.developers {
           it.developer { developer ->
-            developer.id.set("cashapp")
-            developer.name.set("CashApp")
-            developer.url.set("https://github.com/cashapp")
+            developer.id.set("waliasanchit007")
+            developer.name.set("Sanchit Walia")
+            developer.url.set("https://github.com/waliasanchit007")
           }
         }
 
         pom.scm { scm ->
-          scm.url.set("https://github.com/cashapp/redwood/")
-          scm.connection.set("scm:git:git://github.com/cashapp/redwood.git")
-          scm.developerConnection.set("scm:git:ssh://git@github.com/cashapp/redwood.git")
+          scm.url.set("https://github.com/waliasanchit007/konduit")
+          scm.connection.set("scm:git:git://github.com/waliasanchit007/konduit.git")
+          scm.developerConnection.set("scm:git:ssh://git@github.com/waliasanchit007/konduit.git")
         }
       }
     }
