@@ -9,6 +9,24 @@
 ## [Unreleased]
 
 New:
+- Nothing yet.
+
+Changed:
+- Nothing yet.
+
+Fixed:
+- Nothing yet.
+
+
+## [1.0.0-caliclan.3] - 2026-05-17
+
+Production-hardening release. Mitigations + outright fixes for the
+silent-failure shapes the ServerDrivenUI / DevoStatus integration
+surfaced over the prior weeks. See `docs/KNOWN_BUGS.md` in the
+ServerDrivenUI reference repo for the full historical context per
+entry.
+
+New:
 - `TreehouseApp.Spec.retain(service)` — strong-ref pass-through helper that
   keeps the given service reachable for the lifetime of the Spec (the
   lifetime of the TreehouseApp). Use this when binding inline anonymous
