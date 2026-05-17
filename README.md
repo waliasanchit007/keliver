@@ -1,161 +1,166 @@
-# Redwood
+# Konduit
 
-Redwood is a library for building reactive Android, iOS, and web UIs using Kotlin.
+Server-driven UI for Compose Multiplatform. Render Kotlin Compose UI on
+Android and iOS from JavaScript bundles delivered over the network —
+ship UI updates without an app-store release.
 
-### Reactive UIs
+> **Status:** `1.0.0-caliclan.3` shipped. Currently a private fork
+> consumed via GitHub Packages by Caliclan's own apps. Public OSS
+> launch tracked in [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md).
+> Wire format is committed for the `1.0.x` major.
 
-Android and iOS UI frameworks model the user interface as a ‘mutable view tree’ or document object
-model (DOM). To build an application using the mutable view tree abstraction, the programmer
-performs two discrete steps:
+---
 
- * **Build the static view tree.** In Android the conventional tool for this is layout XML, though
-   we've done some cool work with [Contour][contour] to build view trees with Kotlin lambdas.
+## What it is
 
- * **Make it dance.** The view tree should change in response to user actions (like pushing buttons)
-   and external events (like data loading). The program mutates the view tree to represent the
-   current application state. Some mutations change the on-screen UI instantly; others animate
-   smoothly from the old state to the new state.
+Konduit is a [Cash App Redwood](https://github.com/cashapp/redwood) fork.
+Upstream Redwood is great but is no longer being actively developed by
+Cash App. Konduit picks up the foundation — `redwood-runtime`,
+`redwood-compose`, `redwood-treehouse`, `redwood-treehouse-host`,
+`redwood-treehouse-host-composeui` — and ships it under the `dev.konduit`
+namespace with:
 
-[React][react_js] popularized a new programming model, reactive UIs. With reactive UIs, the
-programmer writes a `render()` function that accepts the application state and returns a view tree.
-The framework calls this function with the initial application state and again each time the
-application state changes. The framework analyzes the differences between pairs of view trees and
-updates the display, including animating transitions where appropriate.
+- **Production-hardening fixes** for the silent-failure shapes that hit
+  every new integrator. See [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md)
+  for the full list — 11 of 12 documented gotchas now have a Konduit-side
+  mitigation as of `1.0.0-caliclan.3`.
+- **A focused module set.** Phase 1.5 dropped 13 upstream modules that
+  aren't relevant to Compose Multiplatform (View/UIView/DOM widgets, the
+  test-app harness, etc.). Module count went from 60 → 47.
+- **Continued maintenance.** Active integration with at least one
+  production Compose Multiplatform app ([DevoStatus](https://github.com/waliasanchit007/DevoStatus),
+  private) drives the gotcha backlog. Bugs surface in real adoption and
+  get fixed; the changelog is honest about what's still broken.
 
-In React the view tree returned by the render function is called a _virtual DOM_, and it has an
-on-screen counterpart called the _real DOM_. The virtual DOM is a tree of simple JavaScript value
-objects; the real DOM is a tree of live browser HTML components. Creating and traversing thousands
-of virtual DOM objects is fast; creating thousands of HTML components is not! Therefore, the virtual
-DOM optimization is the magic that makes React work.
+## What it gives you
 
+You write Kotlin Compose UI in a separate guest module. That code
+compiles to JavaScript via Kotlin/JS and gets bundled into a
+`.zipline` file. Your host app downloads the bundle at runtime,
+executes it in [Zipline](https://github.com/cashapp/zipline) (a
+QuickJS wrapper), and Konduit's protocol translates the guest's
+widget tree into real Compose widgets on the host platform —
+Android (Jetpack Compose), iOS (Compose Multiplatform), or anywhere
+CMP runs.
 
-### Compose
+The result: **change a screen, push a new bundle, every user has it
+in seconds without an app-store cycle.**
 
-[Jetpack Compose][compose] is an implementation of the reactive UI model for Android. It uses an
-implementation trick to further optimize the reactive programming model. It is implemented in two
-complementary modules:
-
- * **The Compose compiler** is a Kotlin compiler plugin that supports partial re-evaluation of a
-   function. The programmer still writes render functions to transform application state into a view
-   tree. The compiler rewrites this function to track which inputs yield which outputs. When the
-   input application state changes, it evaluates only what is necessary to generate the
-   corresponding view tree changes.
-
- * **Compose UI** is a new set of Android UI components designed to work with the Compose compiler.
-   It addresses longstanding technical debt with Android's view system.
-
-A Kotlin function that is rewritten by the Compose compiler is called a _composable function_.
-Partial re-evaluation of a composable function is called _recomposing_.
-
-Note that the Compose compiler can be used without Compose UI. For example, [compose-server-side]
-renders HTML components on a server that are sent to a browser over a WebSocket.
-
-
-### Design Systems
-
-In Cash App we use a design system. It specifies our UI in detail and names its elements:
-
- * Names for our standard colors, fonts, icons, dimensions
- * Named text blocks, specified using the names above
- * Named controls, such as our standard checkboxes, buttons, and dialogs
-
-The design system helps with collaboration between programmers and designers. It also increases
-uniformity within the application and across platforms.
-
-
-### What Is Redwood?
-
-Redwood integrates the Compose compiler, a design system, and a set of platform-specific displays.
-Each Redwood project is implemented in three parts:
-
- * **A design system.** Redwood includes a sample design system called ‘Sunspot’. Most
-   applications should customize this to match their product needs.
-
- * **Displays for UI platforms.** The display draws the pixels of the design system on-screen.
-   Displays can be implemented for any UI platform. Redwood includes sample displays for Sunspot
-   for Android, iOS, and web.
-
- * **Composable Functions.** This is client logic that accepts application state and returns
-   elements of the design system. These have similar responsibilities to presenters in an MVP
-   system.
-
-
-### Why Redwood?
-
-We're eager to start writing reactive UIs! But we're reluctant to continue duplicating code across
-iOS, Android, and web platforms. In particular, we don't like how supporting multiple platforms
-reduces our overall agility.
-
-We'd like to shortcut the slow native UI development process. Iterating on UIs for Android requires
-a slow compile step and a slow `adb install` step. With Redwood, we hope to use the web as our
-development target while we iterate on composable function changes.
-
-We want the option to change application behavior without waiting for users to update their apps.
-With Kotlin/JS we may be able to update our composable functions at application launch time, and run
-them in a JavaScript VM. We may even be able to use [WebAssembly][webassembly] to accomplish this
-with little performance penalty.
-
-
-**Redwood is a library, not a framework.** It is designed to be adopted incrementally, and to
-be low-risk to integrate in an existing Android project. Using Redwood in an iOS or web
-application is riskier! We've had good experiences with [Kotlin Multiplatform Mobile][kmm], and
-expect a similar outcome with Redwood.
-
-
-### Code Sample
-
-We start by expressing our design system as a set of Kotlin data classes. Redwood will use these
-classes to generate type-safe APIs for the displays and composable functions.
+A typical guest screen looks like normal Compose:
 
 ```kotlin
-@Widget(1)
-data class Text(
-  @Property(1) val text: String?,
-  @Property(2) @Default("\"black\"") val color: String,
-)
+class QuotesScreen : Screen {
+    @Composable override fun Content(navigator: Navigator) {
+        val provider = HostQuotesProviderBridge.instance
+        var quotes by remember { mutableStateOf<List<Quote>?>(null) }
 
-@Widget(2)
-data class Button(
-  @Property(1) val text: String?,
-  @Property(2) @Default("true") val enabled: Boolean,
-  @Property(3) val onClick: () -> Unit,
-)
-```
+        LaunchedEffect(provider) {
+            quotes = provider?.getQuotes(filter = null) ?: emptyList()
+        }
 
-Displays implement the design system using native UI components.
-
-```kotlin
-class AndroidText(
-  override val value: TextView,
-) : Text<View> {
-  override fun text(text: String?) {
-    value.text = text
-  }
-
-  override fun color(color: String) {
-    value.setTextColor(Color.parseColor(color))
-  }
+        Column(modifier = Modifier.fillMaxSize().padding(16, 16, 16, 16)) {
+            Text("Select Quote", style = SchemaTextStyle.TitleLarge)
+            LazyColumn {
+                quotes.orEmpty().forEach { q ->
+                    LazyItem { QuoteCard(q) }
+                }
+            }
+        }
+    }
 }
 ```
 
-Composable functions render application state into the design system. These will make use of Compose
-API features like `remember()`.
+The host wires services that the guest can call via Zipline RPC:
 
 ```kotlin
-@Composable
-fun Counter(value: Int = 0) {
-  var count by remember { mutableStateOf(value) }
+class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
+    override val name = "quotes"
+    override val manifestUrl = quotesManifestUrlFlow.asStateFlow()
+    override val serializersModule = SduiSerializersModule
 
-  Button("-1", onClick = { count-- })
-  Text(count.toString())
-  Button("+1", onClick = { count++ })
+    private lateinit var quotesProvider: RealHostQuotesProvider
+    private lateinit var quoteNavigator: RealHostQuoteNavigator
+
+    override suspend fun bindServices(treehouseApp, zipline) {
+        // bindWithTimeout turns the silent bind-hang failure shape into
+        // an actionable timeout — see KNOWN_BUGS.md U1.
+        bindWithTimeout {
+            zipline.bind<HostConsole>("console", retain(StatusCraftHostConsole()))
+        }
+
+        requireSerializerOf<Quote>()  // bind-time pre-flight — KNOWN_BUGS U3.
+
+        quotesProvider = RealHostQuotesProvider(
+            source = quotesSource,
+            scope = appScope,
+            ziplineDispatcher = treehouseApp.dispatchers.zipline,
+        )
+        bindWithTimeout {
+            zipline.bind<HostQuotesProvider>("quotes", quotesProvider)
+        }
+
+        quoteNavigator = RealHostQuoteNavigator(
+            scope = appScope,
+            uiDispatcher = treehouseApp.dispatchers.ui,  // KNOWN_BUGS U8.
+            callback = onQuoteSelected,
+        )
+        zipline.bind<HostQuoteNavigator>("quote-nav", quoteNavigator)
+    }
+
+    override fun create(zipline: Zipline) = zipline.take<SduiAppService>("app")
 }
 ```
 
+## When to use it
 
-[compose-server-side]: https://github.com/ShikaSD/compose-server-side
-[compose]: https://developer.android.com/jetpack/compose
-[contour]: https://github.com/cashapp/contour
-[kmm]: https://kotlinlang.org/lp/mobile/
-[react_js]: https://reactjs.org/
-[webassembly]: https://webassembly.org/
+**Good fit:**
+- Frequently-updated content surfaces (feeds, banners, festival cards)
+- A/B-testable layouts where iteration speed matters
+- Settings / info / FAQ pages where pixel-perfect native isn't required
+- Experimental screens you don't want to ship via app-store cycles
+
+**Less good fit:**
+- Hero screens with brand-critical pixel-perfect UX
+- Performance-sensitive surfaces (the Zipline indirection adds startup
+  + per-frame overhead — measure for your case)
+- Anything that needs platform APIs the schema doesn't expose
+  (Bitmap manipulation, MediaStore, Camera, etc.) — these need an
+  RPC service designed per capability
+
+A typical app uses Konduit for a slice of its surface area, not the
+whole app. The [DevoStatus integration](https://github.com/waliasanchit007/DevoStatus)
+uses it for two screens out of ~10.
+
+## Getting started
+
+For now: read [`docs/USAGE.md`](./docs/USAGE.md). It's a thorough
+walkthrough of vendoring Konduit into a Compose Multiplatform host,
+defining a guest screen, wiring host services, and the silent-failure
+shapes to watch for.
+
+When the public OSS launch lands (see [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md))
+a proper docs site will replace the long USAGE.md.
+
+## Known limitations + open bugs
+
+[`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) is the punch list. As of
+`1.0.0-caliclan.3`:
+
+- ✅ U1, U2, U3, U6, U7, U10 fixed or mitigated in Konduit
+- ✅ U4, U5, U8 part 2, U9, U11 fixed or documented at the integration
+  layer (see ServerDrivenUI's KNOWN_BUGS for fix details)
+- 🎯 **U8 part 1** (`@MainThread` codegen) — only entry without a
+  Konduit-side fix; root cause is in Zipline's compiler plugin, tracked
+  at [cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825).
+  Workaround pattern is well-established.
+
+## License
+
+Apache 2.0 — same as upstream Cash App Redwood. See [`LICENSE.txt`](./LICENSE.txt).
+
+## Credits
+
+Konduit is built on [Cash App Redwood](https://github.com/cashapp/redwood)
+and [Zipline](https://github.com/cashapp/zipline). The original Redwood
+team did the hard architectural work; this fork picks up maintenance and
+adds the production-hardening that surfaces in real-world integrations.
