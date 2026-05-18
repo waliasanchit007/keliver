@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+Fixed:
+- Schema parser rejects `@Composable` lambdas as `@Property`. Adopters
+  who naively reach for `@Property val content: @Composable () -> Unit`
+  to model a composition slot got a silent runtime no-op — the codegen
+  saw a function-typed property, generated RPC-callback wiring, and
+  the @Composable annotation got dropped at the proxy boundary. The
+  schema parser FIR check now rejects the shape at build time with a
+  clear message pointing at the canonical `@Children` workaround.
+  Closes issue #31.
+
 New:
 - `dev.konduit.zipline-shapes` Gradle plugin
   (`konduit-gradle-plugin`) — build-time lint that rejects

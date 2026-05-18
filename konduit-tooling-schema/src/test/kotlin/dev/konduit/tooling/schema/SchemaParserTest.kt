@@ -605,6 +605,38 @@ class SchemaParserTest {
       .hasMessage("@Property dev.konduit.tooling.schema.SchemaParserTest.InvalidEventLambdaReturnTypeWidget#event lambda must return 'Unit'")
   }
 
+  // --- @Composable @Property rejection (issue #31) ---
+  // @Composable lambdas on @Property compile cleanly today but the
+  // codegen treats them as events (RPC callbacks), so the slot
+  // silently no-ops at render time. The right shape for a composable
+  // slot is @Children. The parser rejects this with a clear message.
+
+  @Schema(
+    [
+      ComposablePropertyLambdaWidget::class,
+    ],
+  )
+  interface ComposablePropertyLambdaSchema
+
+  @Widget(1)
+  data class ComposablePropertyLambdaWidget(
+    @Property(1) val content: @androidx.compose.runtime.Composable () -> Unit,
+  )
+
+  @Test fun composablePropertyLambdaRejected() {
+    assertFailure {
+      parseTestSchema(ComposablePropertyLambdaSchema::class)
+    }.isInstanceOf<IllegalArgumentException>()
+      .hasMessage(
+        "@Property dev.konduit.tooling.schema.SchemaParserTest." +
+          "ComposablePropertyLambdaWidget#content has a @Composable lambda type. " +
+          "@Property models event callbacks (`onClick: () -> Unit`, etc.) " +
+          "that the host invokes through RPC. A @Composable lambda is a " +
+          "composition slot — model it with @Children instead: " +
+          "`@Children(<tag>) val content: () -> Unit`.",
+      )
+  }
+
   @Schema(
     [
       EventArgumentsWidget::class,
