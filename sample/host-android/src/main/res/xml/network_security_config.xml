@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dev-only cleartext allowance for the emulator's loopback host and a
+  laptop on the same Wi-Fi as the device. Drop both entries (or this
+  whole file) before shipping to production; the guest manifest URL
+  should be HTTPS in any non-dev environment.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>
