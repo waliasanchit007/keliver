@@ -915,6 +915,27 @@ override fun Content(navigator: Navigator) {
 }
 ```
 
+`konduitViewModel { ... }` accepts an optional `key: Any? = null`
+parameter — when it changes between recompositions, the existing
+VM's `onCleared` runs and the factory builds a fresh instance.
+Useful for screens parameterized by an upstream value (a `userId`,
+a list filter) that should produce a clean VM when the value
+changes:
+
+```kotlin
+@Composable
+override fun Content(navigator: Navigator, userId: String) {
+    val vm = konduitViewModel(key = userId) {
+        QuotesViewModel(userId, HostQuotesProviderBridge.instance!!)
+    }
+    // VM rebuilds + the old viewModelScope cancels when userId changes
+}
+```
+
+`onCleared` is `protected` — only the framework should invoke it.
+Adopters override the callback for cleanup (always calling
+`super.onCleared()` to preserve scope cancellation).
+
 Cross-tab persistence (state surviving the tab being unmounted) is a
 separate concern — see the heart-save pattern in
 `docs/KNOWN_BUGS.md` and DevoStatus's `HostExploreSaver`.

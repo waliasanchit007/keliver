@@ -57,27 +57,48 @@ public abstract class KonduitViewModel {
   public val viewModelScope: CoroutineScope = CoroutineScope(supervisor + Dispatchers.Main)
 
   /**
-   * Called when the hosting `@Composable` leaves the tree. Cancels
+   * Callback invoked by the framework when the hosting `@Composable` leaves
+   * the tree (or when an upstream `key` change triggers VM rebuild). Cancels
    * [viewModelScope]. Override to add cleanup; always call `super.onCleared()`.
+   *
+   * `protected` so adopters don't accidentally cancel a VM's scope from
+   * outside the class — the [konduitViewModel] helper calls through the
+   * [clearInternal] trampoline instead.
    */
-  public open fun onCleared() {
+  protected open fun onCleared() {
     supervisor.cancel()
+  }
+
+  /**
+   * Framework-internal trampoline so the inline [konduitViewModel] helper can
+   * trigger [onCleared] without violating the `protected` visibility contract.
+   * Not part of the public API; do not call directly.
+   */
+  @PublishedApi
+  internal fun clearInternal() {
+    onCleared()
   }
 }
 
 /**
  * Compose entry point. Constructs the view model on first call, returns the
  * same instance across recompositions, and runs [KonduitViewModel.onCleared]
- * when the hosting `@Composable` leaves the tree.
+ * when the hosting `@Composable` leaves the tree (or when [key] changes).
  *
  * The factory lambda is the dependency-wiring point — pass host service
  * handles, your `KonduitHttp` instance, etc.
  *
+ * [key] is an optional cache-buster: when it changes between recompositions
+ * the existing VM is `onCleared`'d and the [factory] runs again. Useful for
+ * screens parameterized by an upstream value (a `userId`, a list filter, etc.)
+ * that should produce a fresh VM when the value changes.
+ *
  * ```
  * @Composable
- * override fun Content(navigator: Navigator) {
- *     val vm = konduitViewModel {
- *         QuotesViewModel(HostQuotesProviderBridge.instance!!)
+ * override fun Content(navigator: Navigator, userId: String) {
+ *     // VM rebuilds when userId changes
+ *     val vm = konduitViewModel(key = userId) {
+ *         QuotesViewModel(userId, HostQuotesProviderBridge.instance!!)
  *     }
  *     val quotes by vm.state.collectAsState()
  *     // …
@@ -86,11 +107,12 @@ public abstract class KonduitViewModel {
  */
 @Composable
 public inline fun <reified VM : KonduitViewModel> konduitViewModel(
+  key: Any? = null,
   crossinline factory: () -> VM,
 ): VM {
-  val vm = remember(VM::class) { factory() }
+  val vm = remember(VM::class, key) { factory() }
   DisposableEffect(vm) {
-    onDispose { vm.onCleared() }
+    onDispose { vm.clearInternal() }
   }
   return vm
 }

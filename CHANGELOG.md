@@ -55,7 +55,21 @@ New:
   adoption snippets.
 
 Changed:
-- Nothing yet.
+- `KonduitViewModel.onCleared()` visibility narrowed from `public open`
+  to `protected open`. The Compose helper invokes it through a
+  framework-internal trampoline (`@PublishedApi internal
+  clearInternal()`), matching the encapsulation pattern Android's
+  `ViewModel` uses (`clear` internal → `onCleared` protected).
+  Adopters can still override `onCleared` for cleanup; the only break
+  is calling `vm.onCleared()` from outside the VM class, which had no
+  legitimate use case. Safe pre-1.0-release polish.
+- `konduitViewModel { ... }` accepts an optional `key: Any? = null`
+  parameter. When `key` changes between recompositions, the current
+  VM's `onCleared` runs and the factory builds a fresh instance.
+  Mirrors Android's `viewModel(key = ...)` pattern. Useful for
+  screens parameterized by an upstream value (`userId`, list filter,
+  navigator entry id) that should produce a clean VM when the value
+  changes. Existing call sites (no key) keep their current behavior.
 
 Fixed:
 - Nothing yet.
