@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+Docs:
+- USAGE.md § "Reactive data — `Flow<T>` vs Observer callbacks": new
+  section explaining when to use Zipline's native `Flow<T>` wire
+  type vs the Observer-callback pattern ServerDrivenUI currently
+  uses. Includes a side-by-side decision table, the U1 / dispatcher
+  caveats, and the recommendation for new providers on caliclan.3+
+  to prefer `Flow<T>` returns.
+- KNOWN_BUGS U1: clarifies that the suspend-bind hang is specific to
+  `suspend fun X(...): List<@Serializable T>` shapes — a non-suspend
+  method returning `Flow<T>` is wire-safe because Zipline's
+  `FlowSerializer` marshals it as a service proxy rather than an
+  inline collection.
+
 New:
 - `Spec.requireSerializersOf(vararg types: KType)` — bulk-validate
   that every wire type used across a host's `ZiplineService`
