@@ -25,14 +25,14 @@ class KonduitViewModelTest {
   }
 
   @Test
-  fun onCleared_cancelsScope() {
+  fun clearInternal_cancelsScope() {
     val vm = TestVM()
-    vm.onCleared()
+    vm.clearInternal()
     assertFalse(vm.viewModelScope.isActive)
   }
 
   @Test
-  fun launchedCoroutine_cancelsOnCleared() = runTest {
+  fun launchedCoroutine_cancelsOnClear() = runTest {
     val vm = TestVM()
     val cancelled = CompletableDeferred<Unit>()
     val job = vm.viewModelScope.launch(Dispatchers.Unconfined) {
@@ -43,7 +43,7 @@ class KonduitViewModelTest {
       }
     }
     assertTrue(job.isActive)
-    vm.onCleared()
+    vm.clearInternal()
     withContext(Dispatchers.Unconfined) {
       cancelled.await()
     }
@@ -51,7 +51,7 @@ class KonduitViewModelTest {
   }
 
   @Test
-  fun subclass_canOverride_onCleared() {
+  fun subclass_canOverride_onCleared_and_super_still_cancels() {
     var subclassCalled = false
     val vm = object : KonduitViewModel() {
       override fun onCleared() {
@@ -59,8 +59,28 @@ class KonduitViewModelTest {
         super.onCleared()
       }
     }
-    vm.onCleared()
-    assertTrue(subclassCalled, "subclass onCleared should run")
-    assertFalse(vm.viewModelScope.isActive, "super.onCleared should still cancel scope")
+    vm.clearInternal()
+    assertTrue(subclassCalled, "subclass onCleared should run via the trampoline")
+    assertFalse(vm.viewModelScope.isActive, "super.onCleared should still cancel the scope")
+  }
+
+  @Test
+  fun subclass_can_skip_super_to_keep_scope_active() {
+    // Edge case: subclass overrides without calling super. Documented as
+    // bad practice but the framework shouldn't crash; verify the scope
+    // stays active (which is the natural consequence of not cancelling).
+    var subclassCalled = false
+    val vm = object : KonduitViewModel() {
+      override fun onCleared() {
+        subclassCalled = true
+        // Deliberately not calling super.onCleared()
+      }
+    }
+    vm.clearInternal()
+    assertTrue(subclassCalled)
+    assertTrue(
+      vm.viewModelScope.isActive,
+      "without super.onCleared the supervisor stays active — adopter chose not to cancel",
+    )
   }
 }
