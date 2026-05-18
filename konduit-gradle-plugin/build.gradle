@@ -52,6 +52,12 @@ gradlePlugin {
       description = "Redwood lint Gradle plugin"
       implementationClass = "dev.konduit.gradle.RedwoodLintPlugin"
     }
+    ziplineShapes {
+      id = "dev.konduit.zipline-shapes"
+      displayName = "Konduit ZiplineService shape lint"
+      description = "Reject ZiplineService methods with function-typed parameters (KNOWN_BUGS U11)"
+      implementationClass = "dev.konduit.gradle.ZiplineShapesPlugin"
+    }
     redwoodSchema {
       id = "dev.konduit.schema"
       displayName = "Redwood schema"

@@ -393,12 +393,23 @@ Option (1) is the right fix.
 **Severity:** high (build succeeds, `zipline.take<T>` returns
 non-null-but-broken proxy, every method call is a silent no-op).
 **Origin:** HANDOVER.md gotcha #11.
-**Mitigation shipped:** `:shared:validateZiplineServiceShapes` Gradle
-task scans `shared/Protocol.kt` for ZiplineService interfaces with
-function-typed parameters and fails the build with a clear message
-pointing at this entry. Wired into `:shared:check` so it runs as part
-of the normal verification flow. Adopters consuming Konduit can copy
-the same task into their own protocol module — see `shared/build.gradle.kts`.
+**Mitigation shipped in Konduit `1.0.0-caliclan.4`:** the
+`dev.konduit.zipline-shapes` Gradle plugin (in
+`konduit-gradle-plugin`). Adopters apply it to any module that
+declares `ZiplineService` interfaces:
+
+```kotlin
+plugins {
+    id("dev.konduit.zipline-shapes")
+}
+```
+
+The plugin auto-registers a `validateZiplineServiceShapes` task that
+scans every `.kt` file under `src/`, fails the build with a clear
+message pointing at this entry, and hooks into the `check`
+lifecycle so it runs on every CI pass. Replaces the per-app inline
+Gradle task that ServerDrivenUI used to ship — adopters now get the
+check for free, no copy/paste.
 
 The root cause is still upstream in Zipline's compiler plugin (which
 accepts the bad signature shape but produces a runtime-broken proxy);

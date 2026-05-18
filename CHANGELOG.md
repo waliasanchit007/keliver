@@ -9,6 +9,29 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit.zipline-shapes` Gradle plugin
+  (`konduit-gradle-plugin`) — build-time lint that rejects
+  `ZiplineService` interface methods with function-typed parameters
+  (`(T) -> Unit`, `((A) -> B)?`, etc). The bad signature compiles
+  silently today but produces a runtime-broken proxy on `take<T>()`
+  in the guest, with every method call no-oping silently —
+  KNOWN_BUGS U11. Apply the plugin in any module that declares
+  `ZiplineService` interfaces:
+
+  ```kotlin
+  plugins {
+      id("dev.konduit.zipline-shapes")
+  }
+  ```
+
+  The plugin auto-registers a `validateZiplineServiceShapes` task,
+  scans every `.kt` under `src/`, fails the build with the offending
+  interface name + parameter snippet + canonical workaround (a
+  callback `ZiplineService` like `SnackbarResultCallback`), and
+  hooks into the `check` lifecycle. Replaces the inline Gradle
+  task ServerDrivenUI used to ship — adopters get the lint for
+  free now. See issue #29, `docs/KNOWN_BUGS.md` U11.
+
 - `dev.konduit:konduit-nav` — guest-side typed navigation. Replaces
   the per-app `HostNavigator` RPC-per-route pattern with a
   guest-owned back stack and a `KonduitNavController<R>` API that
