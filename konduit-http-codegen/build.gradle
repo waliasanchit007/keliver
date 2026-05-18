@@ -37,6 +37,16 @@ dependencies {
 
   testImplementation libs.junit
   testImplementation libs.assertk
+  testImplementation libs.kotlinCompileTesting.ksp
+  // The compile-testing fixtures need konduit-http-annotations on the
+  // test classpath so the @KonduitApi etc. references in the fixture
+  // sources resolve.
+  testImplementation projects.konduitHttpAnnotations
+  // konduit-http for KonduitHttp; the generated impl classes call into
+  // it (http.get / http.post / etc.). Plus kotlinx-serialization-json
+  // for the @Serializable wire types used by fixture sources.
+  testImplementation projects.konduitHttp
+  testImplementation libs.kotlinx.serialization.json
 }
 
 tasks.withType(JavaCompile).configureEach {

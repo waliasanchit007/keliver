@@ -12,9 +12,9 @@ New:
 - `dev.konduit:konduit-http-codegen` — KSP processor that reads
   `@KonduitApi`-annotated interfaces from `konduit-http-annotations`
   (Phase 1) and emits a companion `*Impl(KonduitHttp)` class per
-  interface. Phase 2 of issue #18; ships the codegen MVP covering
-  `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, and
-  `@Header`. Adopter integration:
+  interface. Phases 2 + 3 of issue #18; ships the codegen MVP covering
+  `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`,
+  `@Header`, and `@HeaderMap`. Adopter integration:
 
   ```kotlin
   plugins {
@@ -36,6 +36,13 @@ New:
   - Every `{name}` placeholder in the path template has a matching
     `@Path("name")` parameter (and vice versa — orphan `@Path`
     parameters fail the build)
+  - `@HeaderMap` parameter must be `Map<String, String>` or
+    `Map<String, String?>` (other shapes rejected)
+
+  `@HeaderMap` codegen spreads via `putAll(headers)` for non-nullable
+  value maps; for `Map<String, String?>`, emits a `forEach` filter
+  that drops null values before insertion — keeps the wire-level
+  `Map<String, String>` invariant on `HttpRequest.headers`.
 
   Generated code uses inline + reified KonduitHttp helpers
   (`http.get<Res>(path, query, headers)`, `http.post(path, body, ...)`
@@ -44,9 +51,13 @@ New:
   registration via `dev.zacsweers.autoservice:auto-service-ksp` — no
   manual META-INF/services entry needed.
 
-  `@HeaderMap`, integration test fixtures, and processor diagnostic
-  polish are queued as Phase 3 — see
-  `docs/HTTP_API_CODEGEN_DESIGN.md`.
+  Test coverage: 11 fixture tests via `dev.zacsweers.kctfork:ksp`
+  (kotlin-compile-testing fork) — 5 happy-path generated-source
+  assertions covering each HTTP verb + `@Path` substitution + both
+  `@HeaderMap` shapes, plus 6 validation-diagnostic assertions
+  covering each rejected misuse. Tests compile real Kotlin fixture
+  sources with the processor installed and assert on either exit
+  code or the generated `*Impl.kt` content.
 
 - `dev.konduit.gradle.BundleSizeBudgetTask` — Gradle task that fails
   the build if the sum of `.zipline` bundle module sizes exceeds a

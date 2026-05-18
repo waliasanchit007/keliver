@@ -246,6 +246,7 @@ public class KonduitHttpCodegen(
     val pathExpr = buildPathExpression(pathTemplate, params)
     val queryParams = params.filter { it.kind is ParamKind.Query }
     val headerParams = params.filter { it.kind is ParamKind.Header }
+    val headerMapParam = params.firstOrNull { it.kind is ParamKind.HeaderMap }
     val bodyParam = params.firstOrNull { it.kind is ParamKind.Body }
 
     val isUnit = returnType.toString() == "kotlin.Unit"
@@ -272,15 +273,50 @@ public class KonduitHttpCodegen(
       builder.add(buildStringMapLiteral(queryParams) { name, p -> "put(%S, %N.toString())" to listOf(name, p) })
       builder.add(",\n")
     }
-    if (headerParams.isNotEmpty()) {
+    if (headerParams.isNotEmpty() || headerMapParam != null) {
       builder.add("headers = ")
-      builder.add(buildStringMapLiteral(headerParams) { name, p -> "put(%S, %N.toString())" to listOf(name, p) })
+      builder.add(buildHeadersMapLiteral(headerParams, headerMapParam))
       builder.add(",\n")
     }
     builder.unindent()
     builder.add(")\n")
 
     return builder.build()
+  }
+
+  /**
+   * Build a `buildMap<String, String> { … }` literal that combines
+   * single [singles] (`@Header` parameters) and an optional [spread]
+   * (`@HeaderMap` parameter). The spread's nullable-value entries are
+   * filtered.
+   */
+  private fun buildHeadersMapLiteral(
+    singles: List<Param>,
+    spread: Param?,
+  ): CodeBlock {
+    val b = CodeBlock.builder()
+    b.add("buildMap<%T, %T> {\n", String::class, String::class)
+    b.indent()
+    singles.forEach { p ->
+      val k = p.kind as ParamKind.Header
+      if (p.isNullable) b.add("if (%N != null) ", p.name)
+      b.add("put(%S, %N.toString())\n", k.name, p.name)
+    }
+    if (spread != null) {
+      if (spread.isNullableValueMap) {
+        // Map<String, String?> — putAll a filtered view to avoid
+        // ever stashing a null in the wire envelope.
+        b.add(
+          "%N.forEach·{·(k,·v)·->·if·(v·!=·null)·put(k,·v)·}\n",
+          spread.name,
+        )
+      } else {
+        b.add("putAll(%N)\n", spread.name)
+      }
+    }
+    b.unindent()
+    b.add("}")
+    return b.build()
   }
 
   // --- helpers ---
@@ -317,20 +353,40 @@ public class KonduitHttpCodegen(
       else -> error("unreachable — annCount guard above")
     }
 
+    val resolvedType = ksParam.type.resolve()
+    var isNullableValueMap = false
+
     if (kind is ParamKind.HeaderMap) {
-      throw ProcessingException(
-        "@HeaderMap parameter handling is not implemented yet. Use multiple @Header " +
-          "parameters in the meantime, or fall back to KonduitHttp.execute for fully " +
-          "dynamic header maps. Tracked as Phase 3 work in " +
-          "docs/HTTP_API_CODEGEN_DESIGN.md.",
-        ksParam,
-      )
+      // Validate the parameter type is Map<String, String> or
+      // Map<String, String?>. Anything else fails the build with a
+      // pointer at the canonical shape.
+      val classFqn = resolvedType.declaration.qualifiedName?.asString()
+      val typeArgs = resolvedType.arguments
+      val keyType = typeArgs.getOrNull(0)?.type?.resolve()
+      val valueType = typeArgs.getOrNull(1)?.type?.resolve()
+      val keyFqn = keyType?.declaration?.qualifiedName?.asString()
+      val valueFqn = valueType?.declaration?.qualifiedName?.asString()
+      val mapClasses = setOf("kotlin.collections.Map", "kotlin.collections.MutableMap")
+      val isMap = classFqn in mapClasses
+      val isStringKey = keyFqn == "kotlin.String" && keyType?.isMarkedNullable == false
+      val isStringValue = valueFqn == "kotlin.String"
+      if (!isMap || !isStringKey || !isStringValue) {
+        throw ProcessingException(
+          "@HeaderMap parameter `$name` on " +
+            "`${iface.qualifiedName?.asString()}.${fn.simpleName.asString()}` " +
+            "must be of type `Map<String, String>` or `Map<String, String?>`. " +
+            "Found: ${resolvedType}.",
+          ksParam,
+        )
+      }
+      isNullableValueMap = valueType.isMarkedNullable
     }
 
     return Param(
       name = name,
-      ksType = ksParam.type.resolve(),
-      isNullable = ksParam.type.resolve().isMarkedNullable,
+      ksType = resolvedType,
+      isNullable = resolvedType.isMarkedNullable,
+      isNullableValueMap = isNullableValueMap,
       kind = kind,
     )
   }
@@ -392,6 +448,12 @@ public class KonduitHttpCodegen(
     val name: String,
     val ksType: com.google.devtools.ksp.symbol.KSType,
     val isNullable: Boolean,
+    /**
+     * `true` if this parameter is a `Map<String, String?>` — the
+     * codegen emits a `forEach { (k, v) -> if (v != null) put(k, v) }`
+     * spread instead of `putAll(map)`.
+     */
+    val isNullableValueMap: Boolean,
     val kind: ParamKind,
   )
 
