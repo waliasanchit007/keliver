@@ -67,6 +67,20 @@ New:
   or whatever your app uses. Re-exported through `konduit-host`. See
   issue #27, `docs/USAGE.md` Step 2.
 
+- `dev.konduit:konduit-image` — one-line Coil 3 setup. Closes the
+  long-standing KNOWN_BUGS U5 silent-failure shape (blank AsyncImage
+  with no exception). `KonduitImage.installSingleton()` registers a
+  platform-appropriate Coil 3 `ImageLoader` singleton with a default
+  network fetcher: OkHttp on Android / JVM (zero new transitive
+  weight — OkHttp ships with Zipline anyway), Ktor 3 + Darwin engine
+  on iOS. Adopters call it once near the top of their root
+  `@Composable`; `AsyncImage` then renders correctly. Configurable
+  via `crossfade`, `fetcher`, and `additional` parameters to override
+  the default fetcher or tune the `ImageLoader.Builder` (cache size,
+  interceptors, custom mappers). Re-exported through the
+  `konduit-host` facade. See issue #26, `docs/USAGE.md` "If you use
+  AsyncImage", `docs/KNOWN_BUGS.md` U5.
+
 - `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
   `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;

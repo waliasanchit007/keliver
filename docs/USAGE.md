@@ -74,13 +74,15 @@ and jump straight to the fix.
 | `bindServices` hangs forever, no log | **U1** — `suspend fun X(...): List<@Serializable T>` | Drop `suspend` from the method; wrap suspect binds in `bindWithTimeout { … }` so you see a clear `ZiplineBindTimeoutException` after 30s instead of a frozen build. |
 | `bindServices` hangs forever, no log | **U2** — Zipline Gradle plugin missing on this module | Add `alias(libs.plugins.zipline)` to `plugins {}`. `bindWithTimeout` catches this too — message names both U1 and U2 as candidates. |
 | First guest call fails with `Serializer for class 'X' is not found` | **U3** — kotlinx-serialization plugin missing on the module declaring `X` | Add `alias(libs.plugins.kotlinSerialization)` to that module. Or call `requireSerializerOf<X>()` at the top of `bindServices` to catch the same failure at bind time instead. |
-| `AsyncImage` with HTTP URL renders blank, no exception | **U5** — Coil 3 default ImageLoader has no network fetcher | Call `setSingletonImageLoaderFactory { … }` at host startup with a platform-appropriate fetcher. See [§"⚠️ If you use AsyncImage" below](#-if-you-use-asyncimage-register-a-coil-3-imageloader-yourself). |
+| `AsyncImage` with HTTP URL renders blank, no exception | **U5** — Coil 3 default ImageLoader has no network fetcher | Call `KonduitImage.installSingleton()` at the top of your root `@Composable`. Ships in `konduit-image`, re-exported via `konduit-host`. See [§"If you use AsyncImage" below](#if-you-use-asyncimage-call-konduitimageinstallsingleton). |
 | Host service callback runs (log fires) but the UI doesn't react | **U8** — host service body runs on the Zipline dispatcher, not the UI thread | Take `uiDispatcher = treehouseApp.dispatchers.ui` as a constructor param; `scope.launch(uiDispatcher) { … }` around `NavController.navigate` / Compose state mutations. |
 
 Production-readiness note: U1, U2, U3 ship with mitigations as of
 Konduit `1.0.0-caliclan.3` (the `Spec.bindWithTimeout` /
-`Spec.requireSerializerOf` helpers). U5 is still doc-level. U8 is
-already actionable via `dispatchers.ui`.
+`Spec.requireSerializerOf` helpers). U5 is mitigated in
+`1.0.0-caliclan.4` by `KonduitImage.installSingleton()` from the
+`konduit-image` module. U8 is already actionable via
+`dispatchers.ui`.
 
 ---
 
@@ -572,53 +574,51 @@ Migration from the pre-facade setup: replace
 entries still work — the facade is additive.
 ```
 
-### ⚠️ If you use AsyncImage: register a Coil 3 ImageLoader yourself
+### If you use AsyncImage: call `KonduitImage.installSingleton()`
 
-Konduit's `AsyncImage` widget is backed by **Coil 3**. Coil 3's
-default singleton ImageLoader has **no network fetcher** — `AsyncImage`
-with an HTTP URL silently fails (no exception, just an empty image
-slot). Konduit's own `App()` composable registers one via
-`setSingletonImageLoaderFactory`. If you skip `App()` and call
-`TreehouseContent` directly, you must do this yourself:
+Konduit's `AsyncImage` widget is backed by **Coil 3**. Coil 3's default
+singleton ImageLoader has **no network fetcher** — `AsyncImage` with an
+HTTP URL silently fails (empty slot, no exception). The
+`konduit-image` module ships a one-line helper that wires the
+platform-appropriate fetcher (OkHttp on Android/JVM, Ktor 3 + Darwin
+engine on iOS).
+
+Re-exported through `dev.konduit:konduit-host`, so adopters on the
+facade get it transparently.
 
 ```kotlin
 @Composable
-fun YourKonduitScreen(...) {
-    setSingletonImageLoaderFactory { ctx ->
-        ImageLoader.Builder(ctx)
-            .components { add(OkHttpNetworkFetcherFactory()) }
-            .crossfade(true)
-            .build()
-    }
-    // ... then TreehouseContent(...)
+fun App(treehouseApp: TreehouseApp<MyAppService>?) {
+    KonduitImage.installSingleton()
+    MaterialTheme { /* … your host UI … */ }
 }
 ```
 
-#### Pick the right Coil network fetcher for your app
-
-Konduit's `App()` uses `coil-network-ktor2`. **That breaks if your host
-app pulls in Ktor 3** (e.g. via Supabase 3.x, modern Ktor server, etc.)
-because Coil's ktor2 fetcher imports Ktor 2 classes that aren't on the
-classpath when Ktor 3 wins resolution:
-
-```
-java.lang.NoClassDefFoundError: Failed resolution of:
-Lio/ktor/utils/io/jvm/nio/WritingKt;
-```
-
-For a host with Ktor 3, register `coil-network-okhttp` instead (no Ktor
-dependency at all):
+Customize the underlying `ImageLoader.Builder` via the `additional`
+block — adopter sets disk cache size, custom mappers, headers, etc.:
 
 ```kotlin
-dependencies {
-    implementation(libs.coil.compose)
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
-    // NOT coil-network-ktor2 in a Ktor-3 host
-}
+KonduitImage.installSingleton(
+    crossfade = true,
+    additional = {
+        diskCachePolicy(CachePolicy.ENABLED)
+        memoryCacheKeyExtras(mapOf("variant" to "dark"))
+    },
+)
 ```
 
-…and use `OkHttpNetworkFetcherFactory()` in the ImageLoader builder
-shown above. OkHttp is already on the classpath via Zipline's loader.
+Or replace the default network fetcher entirely (e.g. you already
+have an `HttpClient` you want Coil to share):
+
+```kotlin
+KonduitImage.installSingleton(
+    fetcher = {
+        add(KtorNetworkFetcherFactory(httpClient = myExistingHttpClient))
+    },
+)
+```
+
+Closes the long-standing KNOWN_BUGS U5 silent-failure shape.
 
 ### Step 2b — Host boilerplate (iOS)
 
