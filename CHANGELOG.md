@@ -19,6 +19,15 @@ Changed:
   Closes #11.
 
 New:
+- `docs/MIGRATION_FROM_REDWOOD.md` — migration guide for teams moving
+  from upstream Cash App Redwood (any version up to `0.18.0`) to
+  Konduit. Covers what's identical (wire format, runtime semantics,
+  type names), what's renamed (Maven coordinates, Gradle plugin IDs,
+  package paths), what's removed (Phase 1.5 View / UIView / DOM
+  module trim), what's added (production-hardening helpers, facades,
+  vm/http/storage shims), a `sed` script handling 90%+ of the rename
+  surface, and a step-by-step migration checklist. Closes #13.
+
 - `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
   `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;

@@ -20,6 +20,11 @@ Cash App. Konduit picks up the foundation — `redwood-runtime`,
 `redwood-treehouse-host-composeui` — and ships it under the `dev.konduit`
 namespace with:
 
+> Already running on upstream Redwood? See
+> [`docs/MIGRATION_FROM_REDWOOD.md`](./docs/MIGRATION_FROM_REDWOOD.md)
+> — the migration is mostly a scripted rename.
+
+
 - **Production-hardening fixes** for the silent-failure shapes that hit
   every new integrator. See [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md)
   for the full list — 11 of 12 documented gotchas now have a Konduit-side
