@@ -9,6 +9,25 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit.gradle.BundleSizeBudgetTask` — Gradle task that fails
+  the build if the sum of `.zipline` bundle module sizes exceeds a
+  configurable budget. Adopters register it on their guest module:
+
+  ```kotlin
+  tasks.register<dev.konduit.gradle.BundleSizeBudgetTask>("checkBundleSize") {
+      bundleFiles.from(fileTree("build/zipline") { include("*.zipline") })
+      maxBytes.set(500_000L)
+      warnAtBytes.set(400_000L)   // optional soft threshold
+  }
+  tasks.named("check") { dependsOn("checkBundleSize") }
+  ```
+
+  Error output ranks files by size so size-regression diagnosis
+  is one log read: the largest file is usually the regression. Soft
+  warn threshold is optional. 6/6 unit tests via `ProjectBuilder`.
+  Shipped from `konduit-gradle-plugin` — no new plugin id, register
+  the task type directly.
+
 - `dev.konduit:konduit-http-annotations` — Retrofit-style HTTP API
   annotations (`@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`,
   `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap`). Phase 1 of
