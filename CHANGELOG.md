@@ -8,6 +8,19 @@
 
 ## [Unreleased]
 
+New:
+- `dev.konduit:konduit-http-annotations` — Retrofit-style HTTP API
+  annotations (`@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`,
+  `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap`). Phase 1 of
+  the codegen workstream from issue #18; ships the annotation API
+  surface so adopters can preview the shape and start drafting
+  `@KonduitApi` interfaces today. All annotations are `SOURCE`
+  retention — zero runtime weight. The KSP processor that consumes
+  them and generates `*Impl(http: KonduitHttp)` classes is queued
+  for the next development cycle — full multi-phase design is in
+  `docs/HTTP_API_CODEGEN_DESIGN.md`. Re-exported through
+  `dev.konduit:konduit-guest`.
+
 Docs:
 - USAGE.md § "Reactive data — `Flow<T>` vs Observer callbacks": new
   section explaining when to use Zipline's native `Flow<T>` wire

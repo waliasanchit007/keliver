@@ -58,6 +58,13 @@ kotlin {
         // `HostNavigator` RPC-per-route pattern with a guest-owned typed
         // back stack. See issue #25.
         api projects.konduitNav
+
+        // HTTP API annotations — @KonduitApi, @GET, @POST, etc. Phase 1
+        // of the Retrofit-style codegen workstream (issue #18). The KSP
+        // processor that consumes these is queued for the next dev
+        // cycle; the annotations themselves are committed and adopters
+        // can start drafting `@KonduitApi` interfaces today.
+        api projects.konduitHttpAnnotations
       }
     }
   }
