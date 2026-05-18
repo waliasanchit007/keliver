@@ -129,6 +129,55 @@ public class KonduitHttp(
   )
 
   /**
+   * Execute a DELETE; ignore the response body (treat any 2xx as success,
+   * throw [KonduitHttpException] on non-2xx). Use for endpoints that return
+   * `204 No Content` or other empty success responses — the typed
+   * [delete] would fail trying to deserialize an empty body.
+   */
+  public suspend fun deleteUnit(
+    path: String,
+    query: Map<String, String> = emptyMap(),
+    headers: Map<String, String> = emptyMap(),
+  ) {
+    unwrap(
+      provider.execute(
+        HttpRequest(method = "DELETE", path = path, query = query, headers = headers),
+      ),
+    )
+  }
+
+  /**
+   * Execute a POST with no request body; parse the response as [Res]. For
+   * endpoints that don't expect a body (e.g. "create from a query parameter"
+   * or fire-and-forget actions). No `Content-Type` header is set since
+   * there's no body to describe.
+   */
+  public suspend inline fun <reified Res> postEmpty(
+    path: String,
+    query: Map<String, String> = emptyMap(),
+    headers: Map<String, String> = emptyMap(),
+  ): Res = json.decodeFromString(
+    unwrap(
+      provider.execute(
+        HttpRequest(method = "POST", path = path, query = query, headers = headers, body = null),
+      ),
+    ).body,
+  )
+
+  /** Execute a PUT with no request body; parse the response as [Res]. */
+  public suspend inline fun <reified Res> putEmpty(
+    path: String,
+    query: Map<String, String> = emptyMap(),
+    headers: Map<String, String> = emptyMap(),
+  ): Res = json.decodeFromString(
+    unwrap(
+      provider.execute(
+        HttpRequest(method = "PUT", path = path, query = query, headers = headers, body = null),
+      ),
+    ).body,
+  )
+
+  /**
    * Raw execute — returns the full [HttpResponse] without status-code mapping
    * or body deserialization. Use this when you need to inspect non-2xx
    * responses without try/catch, or when the body isn't JSON.

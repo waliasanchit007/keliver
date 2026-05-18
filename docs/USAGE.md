@@ -1035,6 +1035,28 @@ Bridge the host service to a guest singleton the same way you bridge other
 host services (see the `HostQuotesProviderBridge.instance` pattern in
 Step 4½ below). The bridge is a one-line wrapper.
 
+#### Empty-body endpoints
+
+REST endpoints that return `204 No Content`, or that don't accept a
+request body, need explicit helpers — the typed `get` / `post` / `put`
+/ `delete` would fail trying to deserialize an empty response body or
+serialize a missing request body.
+
+```kotlin
+// DELETE that returns 204 No Content
+http.deleteUnit("/quotes/1")
+
+// POST with no request body (server reads query params or path only)
+val result: Quote = http.postEmpty("/quotes/regenerate")
+
+// PUT with no request body (touch / bump / heartbeat patterns)
+val updated: Quote = http.putEmpty("/quotes/1/touch")
+```
+
+`deleteUnit` returns nothing on success; the typed `postEmpty<Res>` and
+`putEmpty<Res>` still parse a typed response body. All three throw
+`KonduitHttpException` on non-2xx, same as the body-having variants.
+
 #### Error handling
 
 `KonduitHttp` typed helpers raise `KonduitHttpException(status, body)`
