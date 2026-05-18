@@ -20,6 +20,7 @@ import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import kotlin.native.ObjCName
 import kotlin.reflect.KClass
+import kotlin.reflect.KType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
@@ -64,11 +65,11 @@ import kotlinx.serialization.modules.SerializersModule
  * waiting until the first call sends the type across the wire.
  */
 public class MissingSerializerException @PublishedApi internal constructor(
-  type: KClass<*>,
+  typeDisplayName: String,
   cause: SerializationException,
 ) : RuntimeException(
   buildString {
-    append("No serializer found for type `${type.simpleName ?: type}`.\n")
+    append("No serializer found for type `$typeDisplayName`.\n")
     append("Two known causes:\n")
     append("  1. The type isn't annotated `@kotlinx.serialization.Serializable`. ")
     append("Add the annotation to the data class / enum.\n")
@@ -80,7 +81,17 @@ public class MissingSerializerException @PublishedApi internal constructor(
     append("`plugins {}` block.")
   },
   cause,
-)
+) {
+  /**
+   * Convenience constructor used by [TreehouseApp.Spec.requireSerializerOf] —
+   * accepts a `KClass<*>` and renders its short name in the message. Kept
+   * separate from the [KType]-friendly primary constructor so the existing
+   * single-type call site stays unchanged.
+   */
+  @PublishedApi
+  internal constructor(type: KClass<*>, cause: SerializationException) :
+    this(type.simpleName ?: type.toString(), cause)
+}
 
 public class ZiplineBindTimeoutException internal constructor(
   timeoutMillis: Long,
@@ -341,6 +352,66 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
         serializersModule.serializer<T>()
       } catch (e: SerializationException) {
         throw MissingSerializerException(T::class, e)
+      }
+    }
+
+    /**
+     * Bulk-validate that every [type] has a registered [KSerializer] in
+     * [serializersModule]. Adopters call this once at the top of
+     * [bindServices] with every wire type used across their
+     * `ZiplineService` interfaces; missing serializers throw
+     * [MissingSerializerException] at bind time rather than at first-call
+     * time.
+     *
+     * Equivalent to calling [requireSerializerOf] N times, but the bulk
+     * form is more discoverable and shorter at each integration site:
+     *
+     * ```kotlin
+     * import kotlin.reflect.typeOf
+     *
+     * override suspend fun bindServices(treehouseApp, zipline) {
+     *     requireSerializersOf(
+     *         typeOf<Quote>(),
+     *         typeOf<Wallpaper>(),
+     *         typeOf<SavedCardKey>(),
+     *         typeOf<List<Quote>>(),   // verifies Quote transitively
+     *     )
+     *     bindWithTimeout {
+     *         zipline.bind<HostQuotesProvider>("quotes", impl)
+     *     }
+     * }
+     * ```
+     *
+     * Catches U3 (kotlinx-serialization plugin missing on the module
+     * declaring the type) plus the U4-adjacent silent-failure shape: a
+     * `SerializationException` thrown inside a `ZiplineService`
+     * callback's response handler gets swallowed by the protocol path,
+     * leaving the guest with no response, no error, no log. Validating
+     * every wire type at bind time forces the failure into the
+     * actionable surface instead.
+     *
+     * Multiplatform: works in any Konduit host (Android, iOS, JVM).
+     *
+     * Trade-off vs. an auto-walking helper: adopters list each wire type
+     * explicitly. A reflection-based auto-walker would need
+     * `kotlin-reflect` (3MB, JVM-only) and couple this module to a
+     * JVM-only dependency. The explicit list keeps the API
+     * multiplatform and gives integrators control over exactly which
+     * types are validated — useful when some wire types are routed
+     * through services the integrator doesn't directly bind here.
+     *
+     * Returns the resolved serializers in the same order as [types] so
+     * callers who want to memoize them can.
+     *
+     * Closes issue #30 (U4-adjacent serialization-failure surface).
+     */
+    public fun requireSerializersOf(vararg types: KType): List<KSerializer<*>> {
+      return types.map { type ->
+        try {
+          serializersModule.serializer(type)
+        } catch (e: SerializationException) {
+          throw MissingSerializerException(type.toString(), e)
+        }
       }
     }
 
