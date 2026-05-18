@@ -133,6 +133,11 @@ include ':konduit-image'
 // from `:konduit-guest`. See issue #25.
 include ':konduit-nav'
 
+// HTTP API annotations (@KonduitApi, @GET, @POST, …). Phase 1 of the
+// Retrofit-style codegen — annotations only, processor queued. See
+// docs/HTTP_API_CODEGEN_DESIGN.md / issue #18.
+include ':konduit-http-annotations'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'
