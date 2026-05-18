@@ -21,9 +21,15 @@ jobs:
   # Why no Linux: cheap-PR Linux runs hung at 58m on the cache restore step,
   # consistently. macOS already builds everything; one source of truth is
   # cheaper to maintain than a flaky two-runner setup.
+  #
+  # Runner selection is configurable via the `CI_RUNNER` repo variable
+  # (Settings → Secrets and variables → Actions → Variables). Set it to
+  # `self-hosted` to route runs to a self-hosted Mac and bypass GitHub
+  # Actions billing — see docs/CI_RUNNER_SETUP.md. Default is `macos-latest`
+  # (cloud) so the workflow keeps working on forks / contributor PRs.
   build:
     name: Build (full graph, incl. iOS)
-    runs-on: macos-latest
+    runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

@@ -27,7 +27,10 @@ env:
 jobs:
   publish:
     name: Publish to GitHub Packages
-    runs-on: macos-latest  # macOS needed to publish iOS klibs
+    # macOS needed to publish iOS klibs. Falls back to cloud `macos-latest`
+    # if no `CI_RUNNER` repo variable is set. Self-hosted runs avoid GHA
+    # billing — see `docs/CI_RUNNER_SETUP.md`.
+    runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
     permissions:
       contents: read
       packages: write
