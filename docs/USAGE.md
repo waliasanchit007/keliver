@@ -1184,6 +1184,110 @@ removes the entry; equivalently `remove(key)` for readability.
   you need a `Flow<T>` that emits when a key changes, write a dedicated
   service.
 
+### Typed navigation in the guest
+
+Konduit ships `konduit-nav` for guest-owned typed navigation — back
+stack, push / pop / replaceAll, per-entry `rememberSaveable` state
+preservation, all without per-route RPC boilerplate. Re-exported
+through `dev.konduit:konduit-guest`.
+
+Define your routes as a sealed interface (args inline, type-checked
+at the call site):
+
+```kotlin
+import dev.konduit.nav.*
+import kotlinx.serialization.Serializable
+
+@Serializable sealed interface Route {
+    @Serializable data object Home : Route
+    @Serializable data class QuoteDetail(val id: String) : Route
+    @Serializable data class Search(val initialQuery: String? = null) : Route
+}
+```
+
+Wire `KonduitNavHost` once at the top of your guest's root
+`@Composable`:
+
+```kotlin
+@Composable
+override fun Content(navigator: Navigator) {
+    val nav = rememberKonduitNavController<Route>(start = Route.Home)
+    KonduitNavHost(nav) { route ->
+        when (route) {
+            is Route.Home        -> HomeScreen()
+            is Route.QuoteDetail -> QuoteDetailScreen(route.id)
+            is Route.Search      -> SearchScreen(initialQuery = route.initialQuery)
+        }
+    }
+}
+```
+
+Nested screens read the controller via `currentKonduitNavController<R>()`:
+
+```kotlin
+@Composable
+fun HomeScreen() {
+    val nav = currentKonduitNavController<Route>()
+    Button(onClick = { nav.navigate(Route.QuoteDetail("42")) }) {
+        Text("Open 42")
+    }
+}
+
+@Composable
+fun QuoteDetailScreen(id: String) {
+    val nav = currentKonduitNavController<Route>()
+    Button(onClick = { nav.pop() }) { Text("Back") }
+    Text("Quote $id")
+}
+```
+
+API surface on `KonduitNavController<R>`:
+
+| Member | What |
+|---|---|
+| `current: R` | The top of the stack — what `KonduitNavHost` is rendering |
+| `backstack: List<R>` | Read-only view, root first, current last |
+| `canPop: Boolean` | `true` when there's more than one entry — wire to back-button enabled state |
+| `navigate(route)` | Push |
+| `pop(): Boolean` | Pop the top; `false` if at root |
+| `popUntil { … }: Boolean` | Pop while the predicate is `false` for the new top, or until root |
+| `replaceAll(route)` | Replace the entire stack with a single new root |
+
+#### State preservation across navigate-back
+
+Each stack entry is wrapped in its own `SaveableStateHolder` slot, so
+a screen's `rememberSaveable` state survives a navigate-away-and-back
+round-trip. Pop the entry permanently and its state is cleared.
+
+```kotlin
+@Composable
+fun SearchScreen(initialQuery: String?) {
+    var query by rememberSaveable { mutableStateOf(initialQuery ?: "") }
+    // Navigate away to QuoteDetail, then pop back —
+    // `query` still holds whatever the user had typed.
+}
+```
+
+`KonduitViewModel`s tied to a screen via `konduitViewModel { … }` get
+`onCleared` when their screen is **popped** (the entry leaves the
+stack permanently). VMs intentionally do NOT survive a navigate-away
+in v1 — if you need a VM that outlives a single screen, lift it up
+to a parent route or pass it through host services.
+
+#### What's NOT in v1
+
+- **Host-aware back stack.** v1 keeps the stack entirely in the guest.
+  System-back integration on Android wires `BackHandler(enabled = nav.canPop) { nav.pop() }`
+  in the host. Deep linking from a notification tap → guest route is a
+  v2 feature (separate `HostNavTrigger : ZiplineService`).
+- **Animated transitions.** `KonduitNavHost` renders the top route
+  directly; no animated-content wrapper yet. Will be added as an
+  additive `transition: ...` parameter without breaking existing
+  call sites.
+- **NavGraph DSL.** Adopters use a `when` block over the sealed route
+  type today. A `navGraph { composable<Route.Foo> { … } }` DSL would
+  be syntactic sugar on top — deferred until adopters ask.
+
 ---
 
 ## Step 4½ — Data services (Provider + Navigator + Observer)

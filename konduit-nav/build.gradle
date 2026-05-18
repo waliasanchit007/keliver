@@ -1,0 +1,29 @@
+// Typed guest-side navigation — KonduitNavController + KonduitNavHost
+// + LocalKonduitNavController. Replaces the per-app HostNavigator
+// RPC-per-route boilerplate with a guest-owned typed back stack that
+// mirrors Compose Navigation ergonomics. See issue #25.
+
+import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.jetbrains.compose.runtime
+        api libs.jetbrains.compose.runtime.saveable
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
