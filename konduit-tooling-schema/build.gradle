@@ -21,6 +21,10 @@ dependencies {
   testImplementation libs.junit
   testImplementation libs.assertk
   testImplementation libs.jimfs
+  // For the @Composable annotation used in the schema-parser-FIR
+  // rejection test (#31). Test-only — production parsing reads the
+  // annotation's fully-qualified name and doesn't need the symbol.
+  testImplementation libs.jetbrains.compose.runtime
 }
 
 tasks.named('test', Test) {

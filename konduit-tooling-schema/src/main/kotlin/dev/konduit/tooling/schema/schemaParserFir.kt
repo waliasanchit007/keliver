@@ -84,6 +84,7 @@ import org.jetbrains.kotlin.fir.types.ConeStarProjection
 import org.jetbrains.kotlin.fir.types.ConeTypeParameterType
 import org.jetbrains.kotlin.fir.types.ConeTypeProjection
 import org.jetbrains.kotlin.fir.types.classId
+import org.jetbrains.kotlin.fir.types.customAnnotations
 import org.jetbrains.kotlin.fir.types.isBasicFunctionType
 import org.jetbrains.kotlin.fir.types.isMarkedNullable
 import org.jetbrains.kotlin.fir.types.parameterName
@@ -445,6 +446,20 @@ private fun FirContext.parseWidget(
 
       if (propertyAnnotation != null) {
         if (type.isBasicFunctionType(firSession)) {
+          // Reject @Composable lambdas as @Property — the right shape for
+          // a composable slot is @Children, not @Property. Without this
+          // check, the codegen would treat the slot as an event (RPC
+          // callback), which silently no-ops at render time because
+          // composable lambdas aren't callable as RPC. See issue #31.
+          require(
+            type.customAnnotations.none { it.fqName(firSession) == FqNames.Composable },
+          ) {
+            "@Property $memberType#$name has a @Composable lambda type. " +
+              "@Property models event callbacks (`onClick: () -> Unit`, etc.) " +
+              "that the host invokes through RPC. A @Composable lambda is a " +
+              "composition slot — model it with @Children instead: " +
+              "`@Children(<tag>) val content: () -> Unit`."
+          }
           val typeArguments = type.typeArguments
           val lastArgument = typeArguments.lastOrNull()?.type?.classId?.asSingleFqName()
           require(lastArgument == FqNames.Unit) {
@@ -963,6 +978,7 @@ private fun ClassId.toFqType() = FqType(
 
 private object FqNames {
   val Children = FqName("dev.konduit.schema.Children")
+  val Composable = FqName("androidx.compose.runtime.Composable")
   val Deprecated = FqName("kotlin.Deprecated")
   val Modifier = FqName("dev.konduit.schema.Modifier")
   val Property = FqName("dev.konduit.schema.Property")
