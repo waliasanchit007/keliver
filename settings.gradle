@@ -128,6 +128,11 @@ include ':konduit-console'
 // `:konduit-host`. See issue #26.
 include ':konduit-image'
 
+// Typed guest-side navigation — KonduitNavController + KonduitNavHost.
+// Replaces per-app HostNavigator RPC-per-route boilerplate. Re-exported
+// from `:konduit-guest`. See issue #25.
+include ':konduit-nav'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

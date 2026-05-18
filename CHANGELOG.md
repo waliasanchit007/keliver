@@ -8,6 +8,31 @@
 
 ## [Unreleased]
 
+New:
+- `dev.konduit:konduit-nav` — guest-side typed navigation. Replaces
+  the per-app `HostNavigator` RPC-per-route pattern with a
+  guest-owned back stack and a `KonduitNavController<R>` API that
+  mirrors Compose Navigation ergonomics.
+
+  Adopters define routes as a sealed interface (args inline,
+  type-checked at the call site); `rememberKonduitNavController<R>(start)`
+  + `KonduitNavHost(controller) { route -> when … }` is the entire
+  setup. Nested screens read the controller via
+  `currentKonduitNavController<R>()`.
+
+  Each stack entry is wrapped in its own `SaveableStateHolder` slot,
+  so a screen's `rememberSaveable` state survives a navigate-away-
+  and-back round-trip; popped entries get their state cleared.
+
+  Controller API: `current`, `backstack`, `canPop`, `navigate`,
+  `pop`, `popUntil { … }`, `replaceAll`. v1 is pure guest — host-aware
+  back stack, deep linking from the host, and animated transitions
+  are queued as additive future work and won't break the existing
+  call shape when they land.
+
+  Re-exported through `dev.konduit:konduit-guest`. See issue #25,
+  `docs/USAGE.md` "Typed navigation in the guest".
+
 Changed:
 - POM metadata for every published artifact now reflects the Konduit fork
   rather than the upstream Cash App Redwood project. Adopters inspecting
