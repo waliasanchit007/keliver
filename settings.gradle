@@ -118,6 +118,11 @@ include ':konduit-vm'
 // issue #10.
 include ':konduit-storage'
 
+// Host-bound logging service — KonduitConsole interface + a
+// no-frills DefaultKonduitConsole. Re-exported from `:konduit-host`.
+// See issue #27.
+include ':konduit-console'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

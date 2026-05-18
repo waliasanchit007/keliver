@@ -57,6 +57,16 @@ New:
   vm/http/storage shims), a `sed` script handling 90%+ of the rename
   surface, and a step-by-step migration checklist. Closes #13.
 
+- `dev.konduit:konduit-console` — standard host-bound logging service.
+  `KonduitConsole : ZiplineService` is the canonical `fun log(level,
+  message)` contract every adopter previously rewrote from scratch.
+  `DefaultKonduitConsole(tag)` ships as a reference impl that emits
+  `"[$tag/$level] $message"` via `println` (lands on Logcat on Android,
+  the Xcode console on iOS, stdout on JVM). Subclass and override
+  `output(line)` to route through `android.util.Log`, `os_log`, SLF4J,
+  or whatever your app uses. Re-exported through `konduit-host`. See
+  issue #27, `docs/USAGE.md` Step 2.
+
 - `dev.konduit:konduit-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
   `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;

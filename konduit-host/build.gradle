@@ -52,6 +52,12 @@ kotlin {
         // DataStore / NSUserDefaults / whatever; guest reads / writes
         // any @Serializable type. See issue #10.
         api projects.konduitStorage
+
+        // Logging service — `KonduitConsole` interface + reference
+        // `DefaultKonduitConsole` implementation. Standard adopter
+        // pattern: bind one instance of DefaultKonduitConsole (or a
+        // platform-routing subclass) at startup. See issue #27.
+        api projects.konduitConsole
       }
     }
   }
