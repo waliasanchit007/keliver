@@ -305,7 +305,8 @@ import com.example.serverdrivenui.TreehouseHelper                      // Java h
 import com.example.serverdrivenui.schema.SduiSerializersModule
 import com.example.serverdrivenui.schema.protocol.host.SduiSchemaHostProtocol
 import com.example.serverdrivenui.schema.widget.SduiSchemaWidgetSystem
-import com.example.serverdrivenui.shared.HostConsole
+import dev.konduit.console.DefaultKonduitConsole
+import dev.konduit.console.KonduitConsole
 import com.example.serverdrivenui.shared.HostSnackbar
 import com.example.serverdrivenui.shared.RealHostSnackbar
 import com.example.serverdrivenui.shared.SduiAppService
@@ -356,18 +357,26 @@ class MainActivity : ComponentActivity() {
             // it inside bindServices guarantees correct wiring before any
             // guest call can fire. (See HANDOVER gotcha #12.)
             //
-            // `AndroidRealHostConsole` is NOT exported from a Konduit
-            // module — copy the 5-line class from this repo's
-            // `MainActivity.kt` or write your own `: HostConsole` that
-            // routes to your logger.
-            private val hostConsole = AndroidRealHostConsole()
+            // `DefaultKonduitConsole` ships in `konduit-console` (and is
+            // re-exported through the `konduit-host` facade). It writes
+            // `[Konduit/<level>] <message>` via `println`, which lands
+            // on Logcat on Android, the Xcode console on iOS, and
+            // stdout on the JVM. Subclass `DefaultKonduitConsole` and
+            // override `output(line)` to route to `android.util.Log` /
+            // SLF4J / NSLog / your preferred logger.
+            //
+            // (The ServerDrivenUI reference repo's `AndroidRealHostConsole`
+            // is its own custom impl predating the konduit-console
+            // module — adopters writing fresh code should reach for
+            // `DefaultKonduitConsole` first.)
+            private val hostConsole = DefaultKonduitConsole(tag = "MyApp")
             private lateinit var hostSnackbar: RealHostSnackbar
 
             override suspend fun bindServices(
                 treehouseApp: TreehouseApp<SduiAppService>,
                 zipline: Zipline,
             ) {
-                zipline.bind<HostConsole>("console", hostConsole)
+                zipline.bind<KonduitConsole>("console", hostConsole)
                 hostSnackbar = RealHostSnackbar(
                     ziplineDispatcher = treehouseApp.dispatchers.zipline,
                 )
