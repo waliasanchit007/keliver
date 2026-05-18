@@ -160,6 +160,12 @@ a proper docs site will replace the long USAGE.md.
   at [cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825).
   Workaround pattern is well-established.
 
+## What's planned
+
+[`ROADMAP.md`](./ROADMAP.md) — adopter-facing forward-looking plan.
+Distinct from [`PUBLIC_LAUNCH_ROADMAP.md`](./PUBLIC_LAUNCH_ROADMAP.md)
+which tracks the one-time work to take this repo public.
+
 ## License
 
 Apache 2.0 — same as upstream Cash App Redwood. See [`LICENSE.txt`](./LICENSE.txt).
