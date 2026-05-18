@@ -1,0 +1,54 @@
+// One-line Coil 3 ImageLoader setup for host adopters using
+// AsyncImage in their schema. Replaces the per-app
+// `setSingletonImageLoaderFactory { ... }` boilerplate and ships a
+// platform-appropriate network fetcher: OkHttp on Android/JVM
+// (already in the Konduit dep cone via Zipline), Ktor 3 + Darwin
+// engine on iOS. Closes KNOWN_BUGS U5. See issue #26.
+
+import static dev.konduit.buildsupport.TargetGroup.TreehouseHost
+
+redwoodBuild {
+  targets(TreehouseHost)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        // Full coil-compose (with setSingletonImageLoaderFactory); the
+        // legacy `coil-compose` catalog alias maps to coil-compose-core.
+        api libs.coil.compose.full
+        api libs.coil.core
+        api libs.jetbrains.compose.runtime
+      }
+    }
+    androidMain {
+      dependencies {
+        api libs.coil.network.okhttp
+      }
+    }
+    jvmMain {
+      dependencies {
+        api libs.coil.network.okhttp
+      }
+    }
+    iosMain {
+      dependencies {
+        api libs.coil.network.ktor3
+        api libs.ktor.client.darwin
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.konduit.image'
+}

@@ -58,6 +58,13 @@ kotlin {
         // pattern: bind one instance of DefaultKonduitConsole (or a
         // platform-routing subclass) at startup. See issue #27.
         api projects.konduitConsole
+
+        // One-line Coil 3 ImageLoader setup —
+        // `KonduitImage.installSingleton()` wires the platform-
+        // appropriate network fetcher (OkHttp on Android/JVM,
+        // Ktor 3 + Darwin on iOS). Closes KNOWN_BUGS U5. See
+        // issue #26.
+        api projects.konduitImage
       }
     }
   }

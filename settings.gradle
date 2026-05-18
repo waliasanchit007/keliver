@@ -123,6 +123,11 @@ include ':konduit-storage'
 // See issue #27.
 include ':konduit-console'
 
+// One-line Coil 3 ImageLoader setup — KonduitImage.installSingleton().
+// Closes KNOWN_BUGS U5 (the blank-AsyncImage trap). Re-exported from
+// `:konduit-host`. See issue #26.
+include ':konduit-image'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

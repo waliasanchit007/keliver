@@ -198,15 +198,21 @@ kotlinSerialization plugin isn't also applied.
 
 ### U5. Coil 3's singleton `ImageLoader` has no network fetcher by default
 
-**Severity:** low (already documented in USAGE.md), but listing here
-because the failure mode is silent.
-**Documentation strengthened:** USAGE.md now has a top-level
-"Silent-failure cheat sheet" table that surfaces U5 (and the other four
-silent-failure shapes) at-a-glance with symptom → cause → fix. The
-detailed Coil setup section lower in the doc is now cross-linked from
-the cheat sheet. We deliberately did not auto-install a default
-ImageLoader from Konduit — production integrators want to configure
-their own (custom cache, interceptors, telemetry).
+**Severity:** low (was: already documented), now mitigated.
+**Mitigation shipped in Konduit `1.0.0-caliclan.4`:**
+`KonduitImage.installSingleton()` from the new `konduit-image` module
+(re-exported through `konduit-host`) wires the platform-appropriate
+network fetcher in one call — OkHttp on Android / JVM, Ktor 3 + the
+Darwin engine on iOS. Adopters call it once near the top of their
+root `@Composable` and `AsyncImage` works.
+
+The earlier USAGE.md cheat sheet still applies as the symptom
+reference. Adopters who want full control over the ImageLoader
+configuration can pass `fetcher = { ... }` and `additional = { ... }`
+blocks to override the default fetcher and tune cache policy,
+interceptors, telemetry — the helper is opinionated about the
+"works out of the box" path but not opinionated about everything
+beyond that.
 
 **Symptom.** A schema `AsyncImage` with an `http://…` URL renders blank.
 No exception, no log line. Looks like the schema widget is broken.

@@ -151,8 +151,9 @@ a proper docs site will replace the long USAGE.md.
 [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) is the punch list. As of
 `1.0.0-caliclan.3`:
 
-- ✅ U1, U2, U3, U6, U7, U10 fixed or mitigated in Konduit
-- ✅ U4, U5, U8 part 2, U9, U11 fixed or documented at the integration
+- ✅ U1, U2, U3, U5, U6, U7, U10 fixed or mitigated in Konduit (U5
+  mitigated in `1.0.0-caliclan.4` via `konduit-image`).
+- ✅ U4, U8 part 2, U9, U11 fixed or documented at the integration
   layer (see ServerDrivenUI's KNOWN_BUGS for fix details)
 - 🎯 **U8 part 1** (`@MainThread` codegen) — only entry without a
   Konduit-side fix; root cause is in Zipline's compiler plugin, tracked
