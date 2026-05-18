@@ -9,6 +9,22 @@
 ## [Unreleased]
 
 New:
+- `sample/` — standalone Gradle build that's the smallest faithful
+  Konduit setup adopters can copy. Covers every required moving
+  part: a 2-widget custom `@Schema` (`Box`, `Text`), the four
+  codegen modules (widget / modifier / protocol-host /
+  protocol-guest), a Kotlin/JS `:guest` bundle, a Compose
+  Multiplatform `:host-compose` module producing a
+  `KonduitSampleHost.framework` for iOS, and a thin
+  `:host-android` Android application shell. The whole thing
+  renders one `Text` widget reading "Hello, Konduit!" — minimal
+  but end-to-end. Adopters point their Swift app at
+  `MainKt.MainViewController()` for iOS; the Android side is a
+  standard `MainActivity` + `TreehouseAppFactory(...)`. Folds in
+  the iOS-host-validation work that was tracked separately in
+  the roadmap. See [`sample/README.md`](sample/README.md) for the
+  runbook + adoption walkthrough.
+
 - `dev.konduit:konduit-http-codegen` — KSP processor that reads
   `@KonduitApi`-annotated interfaces from `konduit-http-annotations`
   (Phase 1) and emits a companion `*Impl(KonduitHttp)` class per

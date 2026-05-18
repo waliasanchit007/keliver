@@ -82,19 +82,23 @@ already committed; the processor is the meat. Full spec in
 Estimate: 4–6 hours of focused build + tests via
 `kotlin-compile-testing-ksp`.
 
-### 2. Konduit-only sample app
-Extract a minimal 1–2 screen sample from the
-[ServerDrivenUI](https://github.com/waliasanchit007/ServerDrivenUI)
-reference integration into a public `sample/` subdir of this repo.
-Adopters get a runnable reference that uses the facade modules end-to-end,
-without the production-app noise that DevoStatus carries.
+### 2. Konduit-only sample app  ✅ *landed*
+Minimal end-to-end sample now lives at [`sample/`](./sample/) — a
+standalone Gradle build with its own custom schema (`Box` + `Text`),
+codegen pipeline (widget / modifier / protocol-host / protocol-guest),
+Kotlin/JS guest bundle, Android host shell, and iOS Kotlin
+`MainViewController`. Folds in the iOS-host validation that was
+queued separately. Build verified: Android APK assembles, iOS
+simulator framework links, Zipline bundle compiles. See
+[`sample/README.md`](./sample/README.md) for the runbook.
 
-### 3. iOS host validation
-DevoStatus has no iOS UI yet — "iOS works" is currently backed only by
-`compileKotlinIosSimulatorArm64` passing. Wire an iOS app shell
-through DevoStatus's existing `KonduitIosHost` so the same Quotes /
-Explore tabs render on the iPhone simulator, then document anything
-that surfaces.
+### 3. iOS host validation  ✅ *folded into #2*
+The sample's `host-compose` module produces a `KonduitSampleHost`
+framework for both `iosArm64` and `iosSimulatorArm64`, and ships a
+`MainViewController()` entry point with the `NSURLSession`-backed
+Zipline HTTP client. Adopters wire their Swift `@main`
+`UIViewControllerRepresentable` to this. See sample/README.md
+§"Run it on iOS".
 
 ### 4. Performance benchmarks
 Cold-start (host → first widget renders), warm-mount (tab switch →
