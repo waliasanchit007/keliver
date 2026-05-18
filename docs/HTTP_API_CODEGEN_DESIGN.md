@@ -177,11 +177,11 @@ without breaking the generated code from v1:
 
 | Phase | Scope | Status |
 |---|---|---|
-| **1** | `konduit-http-annotations` module + this design doc | **landed** |
-| **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@Path` + `@Query` + `@Body` | next session |
-| **3** | `@PUT` + `@DELETE` + `@Header` + `@HeaderMap` | follow-up to Phase 2 |
-| **4** | Error handling, response wrappers, processor diagnostics polish | follow-up |
-| **5** | `dev.konduit.http-api` umbrella Gradle plugin | follow-up |
+| **1** | `konduit-http-annotations` module + this design doc | **landed (caliclan.4)** |
+| **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
+| **3** | `@HeaderMap` + `kotlin-compile-testing-ksp` end-to-end test fixtures + processor diagnostic polish (line numbers, suggested fixes) | next |
+| **4** | Error handling, response wrappers (Result<T> envelope, etc.) | follow-up |
+| **5** | `dev.konduit.http-api` umbrella Gradle plugin that auto-applies KSP + the codegen dep | follow-up |
 
 Phases 2 and 3 are the meaty bits — KSP processor implementation,
 KotlinPoet-based code generation, processor tests via

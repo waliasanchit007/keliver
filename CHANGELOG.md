@@ -9,6 +9,45 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit:konduit-http-codegen` — KSP processor that reads
+  `@KonduitApi`-annotated interfaces from `konduit-http-annotations`
+  (Phase 1) and emits a companion `*Impl(KonduitHttp)` class per
+  interface. Phase 2 of issue #18; ships the codegen MVP covering
+  `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, and
+  `@Header`. Adopter integration:
+
+  ```kotlin
+  plugins {
+      id("com.google.devtools.ksp")
+  }
+
+  dependencies {
+      implementation(libs.konduit.guest)   // pulls konduit-http-annotations transitively
+      ksp("dev.konduit:konduit-http-codegen:1.0.0-caliclan.4-SNAPSHOT")
+  }
+  ```
+
+  The processor validates:
+  - `@KonduitApi` only on interfaces (rejects classes)
+  - All methods must be `suspend`
+  - Exactly one HTTP-method annotation per method
+  - `@Body` only on `@POST` / `@PUT`; rejected on `@GET` / `@DELETE`
+  - Exactly one parameter annotation per parameter
+  - Every `{name}` placeholder in the path template has a matching
+    `@Path("name")` parameter (and vice versa — orphan `@Path`
+    parameters fail the build)
+
+  Generated code uses inline + reified KonduitHttp helpers
+  (`http.get<Res>(path, query, headers)`, `http.post(path, body, ...)`
+  etc.), so JSON serialization picks up the adopter's
+  `KonduitHttp.json` configuration without extra wiring. Auto-service
+  registration via `dev.zacsweers.autoservice:auto-service-ksp` — no
+  manual META-INF/services entry needed.
+
+  `@HeaderMap`, integration test fixtures, and processor diagnostic
+  polish are queued as Phase 3 — see
+  `docs/HTTP_API_CODEGEN_DESIGN.md`.
+
 - `dev.konduit.gradle.BundleSizeBudgetTask` — Gradle task that fails
   the build if the sum of `.zipline` bundle module sizes exceeds a
   configurable budget. Adopters register it on their guest module:

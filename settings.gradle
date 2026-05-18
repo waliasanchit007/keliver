@@ -138,6 +138,12 @@ include ':konduit-nav'
 // docs/HTTP_API_CODEGEN_DESIGN.md / issue #18.
 include ':konduit-http-annotations'
 
+// HTTP API KSP processor — reads @KonduitApi interfaces and emits
+// `*Impl(KonduitHttp)` classes. Phase 2 of issue #18. Adopters add
+// this as `ksp(libs.konduit.http.codegen)`; not on the runtime
+// classpath.
+include ':konduit-http-codegen'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'
