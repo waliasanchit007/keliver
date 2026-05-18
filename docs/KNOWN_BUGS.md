@@ -108,6 +108,22 @@ a silent runtime hang.
 - DevoStatus's `KonduitQuotesScreen.kt` load-gate (the
   `if (nativeQuotes.isEmpty()) { spinner } else { konduit }` wrapper)
 
+**What about `Flow<T>` return types?** Zipline natively serializes
+`kotlinx.coroutines.flow.Flow<T>` via its `FlowSerializer`, so a
+**non-suspend** method that returns a `Flow<T>` does NOT trip this hang:
+
+```kotlin
+// Safe shape on Zipline 1.26 — non-suspend, Flow return.
+fun observe(filter: String?): Flow<List<Quote>>
+```
+
+The bad shape is specifically `suspend fun` returning a collection —
+not the `Flow<T>` envelope itself. The Flow alternative to the
+Observer-callback pattern is documented in `USAGE.md` § "Reactive
+data — Flow<T> vs Observer callbacks". `suspend fun observe():
+Flow<T>` is closer to U1's hang shape and should be wrapped in
+`Spec.bindWithTimeout { … }`.
+
 ---
 
 ### U2. Zipline Gradle plugin is mandatory on every module that calls `bind`/`take`, silently hangs otherwise

@@ -1453,6 +1453,58 @@ with different `bindServices(...)` impls.
   Provider as a new method is wire-additive (per the rationale on
   `HostSnackbar.showWithResult`).
 
+### Reactive data — `Flow<T>` vs Observer callbacks
+
+Zipline natively serializes `kotlinx.coroutines.flow.Flow<T>` as a wire
+type. A `ZiplineService` method can return `Flow<T>` directly and the
+guest receives a real Flow that emits values pushed from the host:
+
+```kotlin
+// shared/Protocol.kt — Flow-style alternative to the Observer pattern
+interface HostQuotesProvider : ZiplineService {
+    fun snapshot(filter: String?): List<Quote>       // synchronous fetch
+    fun observe(filter: String?): Flow<List<Quote>>  // reactive stream
+}
+
+// guest screen
+val quotes by HostQuotesProviderBridge.instance!!
+    .observe(filter = null)
+    .collectAsState(initial = emptyList())
+```
+
+When to pick which:
+
+| Use the **Observer-callback** pattern (current ServerDrivenUI default) when… | Use **`Flow<T>` return type** (recommended for new providers) when… |
+|---|---|
+| Cross-boundary signalling needs to flow guest → host (the guest registers a callback service, the host invokes it). The callback shape is more flexible for one-shot results, multi-method observers, etc. | Data flows host → guest only and the consumer is happy with collect semantics. |
+| You need a single observer registration that drives multiple host-side data shapes. | The observer's life is tied to a single guest collect block — re-collect resubscribes. |
+| You're bounded by KNOWN_BUGS U1 — pre-`bindWithTimeout` Konduit (caliclan ≤ .2) had the suspend-bind hang for `suspend fun X(...): List<T>` shapes. The observer dodges that by being a non-suspend method on the *guest* interface. | You're on caliclan.3+ with `bindWithTimeout` and have verified the specific signature in your stack. |
+
+**Caveat on U1.** The `suspend fun X(...): List<@Serializable T>` shape
+hangs `zipline.bind<>()` indefinitely on Zipline 1.26 (KNOWN_BUGS U1).
+The hang triggers at bind time, before any guest call — so the
+`Flow<T>` alternative is only safe when the method itself is
+**non-suspend** and the Flow is the return type. `suspend fun
+observe(): Flow<T>` is closer to the U1 shape and should be wrapped
+in `bindWithTimeout { … }` so a hang becomes a 30-second
+`ZiplineBindTimeoutException` rather than a frozen build.
+
+**Dispatcher note (Konduit gotcha #12 / U8).** Outbound calls on
+guest-supplied service proxies (the callback case) need the host code
+path to hop onto `treehouseApp.dispatchers.zipline` before invoking
+the proxy. For the Flow return case, Zipline's own serializer handles
+the dispatcher correctness internally — the host just emits onto its
+own scope and Zipline routes emissions onto the QuickJS thread. Both
+patterns are safe when wired correctly; the Flow case has less
+boilerplate.
+
+DevoStatus today uses the Observer-callback pattern across
+`HostQuotesProvider`, `HostWallpapersProvider`, and `HostExploreSaver`
+because it pre-dates `bindWithTimeout` and was built defensively
+against U1. New integrations on caliclan.3+ should prefer
+`Flow<T>` return types for the reactive-stream shape unless one of
+the observer-specific use cases above applies.
+
 ---
 
 ## Step 5 — Dev loop
