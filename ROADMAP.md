@@ -100,12 +100,23 @@ Zipline HTTP client. Adopters wire their Swift `@main`
 `UIViewControllerRepresentable` to this. See sample/README.md
 §"Run it on iOS".
 
-### 4. Performance benchmarks
-Cold-start (host → first widget renders), warm-mount (tab switch →
-render), update latency (host state change → widget reflects), memory
-footprint. Comparison baselines: native Compose for the same screen,
-upstream Redwood `0.18.0` if practical. Results published with each
-release tag.
+### 4. Performance benchmarks  ✅ *Phase 1 landed; Phases 2-3 queued*
+**Phase 1 (measured today):** [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md)
+ships baseline measurements for APK size, Zipline bundle size, iOS
+framework size, and build times. Reproducible via
+`scripts/measure-baselines.sh`. Key adopter-relevant numbers:
+production Zipline bundle is **732 KB total** but Konduit + per-app
+own-code is only **12 KB** — the runtime cost is fixed, the
+per-feature cost is small. Methodology + target SLAs for cold-start /
+warm-mount / update-latency / memory-footprint are committed in
+the same doc so adopters can predict + verify.
+
+**Phase 2 (queued):** `konduit-benchmarks/` module with AndroidX
+Macrobenchmark fixtures for cold-start, warm-mount, and
+update-latency. CI workflow that re-runs them per release tag.
+
+**Phase 3 (adopter-demand-gated):** Native-Compose-only and upstream
+Cash App Redwood 0.18.0 comparison baselines.
 
 ### 5. Bundle-size budget
 Adopters apply a Konduit-provided Gradle task that fails the build

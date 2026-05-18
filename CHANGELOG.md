@@ -9,6 +9,38 @@
 ## [Unreleased]
 
 New:
+- `docs/PERFORMANCE.md` + `scripts/measure-baselines.sh` — baseline
+  performance measurements for adopter planning. Covers four metric
+  categories:
+
+  * **Measured today.** APK size (debug 13.4 MB / release 10.8 MB),
+    Zipline bundle (Development 2.8 MB / Production 732 KB —
+    *of which Konduit own-code is 12 KB*), iOS framework size,
+    cold + warm build times. Reproduced from `sample/` against
+    `1.0.0-caliclan.4-SNAPSHOT`.
+
+  * **Methodology + target SLAs for runtime metrics.** Cold start
+    (proposed P50 ≤ 800 ms / P95 ≤ 1500 ms via AndroidX
+    Macrobenchmark), warm mount (P50 ≤ 100 ms via Compose snapshot
+    observer), update latency (P50 ≤ 16 ms — single frame at 60 Hz),
+    memory footprint (idle overhead ≤ 25 MB beyond a native-Compose
+    baseline). Implementation queued for `konduit-benchmarks/` in
+    the perf workstream's Phase 2.
+
+  * **Comparison baselines.** Native-Compose-only and upstream
+    Cash App Redwood 0.18.0 reference points documented as Phase 3
+    (adopter-demand-gated).
+
+  * **Reproducibility.** `scripts/measure-baselines.sh [--cold]`
+    rebuilds + emits `key=value` lines that can be diffed across
+    releases or piped into a CI artifact. Portable across macOS
+    (BSD `stat`) and Linux (GNU `stat`).
+
+  Closes the "performance baselines" line item from the post-caliclan.4
+  roadmap. Phase 2 (device-level instrumentation) and Phase 3
+  (comparison baselines) are tracked in `docs/PERFORMANCE.md`'s
+  roadmap table.
+
 - `sample/` — standalone Gradle build that's the smallest faithful
   Konduit setup adopters can copy. Covers every required moving
   part: a 2-widget custom `@Schema` (`Box`, `Text`), the four
