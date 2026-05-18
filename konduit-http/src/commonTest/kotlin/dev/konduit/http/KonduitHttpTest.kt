@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KonduitHttpTest {
@@ -117,6 +118,53 @@ class KonduitHttpTest {
 
     assertEquals("PUT", stub.lastRequest?.method)
     assertEquals("application/json", stub.lastRequest?.headers?.get("Content-Type"))
+  }
+
+  @Test
+  fun deleteUnit_succeeds_on_2xx_with_empty_body() = runTest {
+    val stub = StubProvider(HttpResponse(204, ""))
+    val http = KonduitHttp(stub)
+
+    http.deleteUnit("/quotes/1")
+
+    assertEquals("DELETE", stub.lastRequest?.method)
+    assertEquals("/quotes/1", stub.lastRequest?.path)
+  }
+
+  @Test
+  fun deleteUnit_throws_on_4xx() = runTest {
+    val stub = StubProvider(HttpResponse(403, "Forbidden"))
+    val http = KonduitHttp(stub)
+
+    val ex = assertFailsWith<KonduitHttpException> {
+      http.deleteUnit("/quotes/1")
+    }
+    assertEquals(403, ex.status)
+    assertEquals("Forbidden", ex.body)
+  }
+
+  @Test
+  fun postEmpty_sends_no_body_and_parses_typed_response() = runTest {
+    val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    val result: Quote = http.postEmpty("/quotes/regenerate")
+
+    assertEquals(Quote(1, "x"), result)
+    assertEquals("POST", stub.lastRequest?.method)
+    assertNull(stub.lastRequest?.body)
+  }
+
+  @Test
+  fun putEmpty_sends_no_body_and_parses_typed_response() = runTest {
+    val stub = StubProvider(HttpResponse(200, """{"id":1,"text":"x"}"""))
+    val http = KonduitHttp(stub)
+
+    val result: Quote = http.putEmpty("/quotes/1/touch")
+
+    assertEquals(Quote(1, "x"), result)
+    assertEquals("PUT", stub.lastRequest?.method)
+    assertNull(stub.lastRequest?.body)
   }
 
   @Test
