@@ -36,12 +36,20 @@ package dev.konduit.gradle
 internal object ZiplineShapeScanner {
 
   /**
-   * Matches the signature `interface <Name> : ZiplineService { … }`.
-   * Captures the interface name (group 1) so we can attribute findings
-   * to a specific declaration.
+   * Matches `interface <Name> : ZiplineService { … }` and also
+   * `interface <Name> : app.cash.zipline.ZiplineService { … }`
+   * (fully-qualified reference, used when the adopter chooses not
+   * to import `ZiplineService`). Captures the interface name (group 1)
+   * so we can attribute findings to a specific declaration.
+   *
+   * The optional `(?:[\w.]+\.)?` consumes any qualifier before
+   * `ZiplineService`. Implementations / extra `: SomethingElse, ZiplineService`
+   * forms aren't matched on purpose — interfaces with multiple
+   * superinterfaces are rare in this codebase and the regex would
+   * get hairy fast.
    */
   private val INTERFACE_HEADER = Regex(
-    """interface\s+(\w+)\s*:\s*ZiplineService\s*\{""",
+    """interface\s+(\w+)\s*:\s*(?:[\w.]+\.)?ZiplineService\s*\{""",
   )
 
   /**

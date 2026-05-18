@@ -119,6 +119,36 @@ class ZiplineShapeScannerTest {
   }
 
   @Test
+  fun catches_fully_qualified_zipline_service_reference() {
+    // Adopters who don't import ZiplineService (or who use the FQN
+    // for disambiguation) used to slip past the regex. The qualified
+    // form is now matched.
+    val source = """
+      interface HostBad : app.cash.zipline.ZiplineService {
+          fun action(cb: (Int) -> Unit)
+      }
+    """.trimIndent()
+
+    val findings = ZiplineShapeScanner.scan(source)
+
+    assertThat(findings).hasSize(1)
+    assertThat(findings[0].interfaceName).isEqualTo("HostBad")
+  }
+
+  @Test
+  fun still_catches_short_zipline_service_reference() {
+    // Sanity check that adding the optional qualifier didn't break
+    // the canonical short form.
+    val source = """
+      interface HostBad : ZiplineService {
+          fun action(cb: (Int) -> Unit)
+      }
+    """.trimIndent()
+
+    assertThat(ZiplineShapeScanner.scan(source)).hasSize(1)
+  }
+
+  @Test
   fun formatError_names_findings_and_references_known_bugs() {
     val findings = listOf(
       ZiplineShapeScanner.Finding(
