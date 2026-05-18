@@ -8,6 +8,44 @@
 
 ## [Unreleased]
 
+New:
+- `Spec.requireSerializersOf(vararg types: KType)` — bulk-validate
+  that every wire type used across a host's `ZiplineService`
+  interfaces has a registered `KSerializer` in the spec's
+  `serializersModule`. Equivalent to calling
+  `requireSerializerOf<T>()` N times, but the bulk form is more
+  discoverable and shorter at each call site:
+
+  ```kotlin
+  override suspend fun bindServices(treehouseApp, zipline) {
+      requireSerializersOf(
+          typeOf<Quote>(),
+          typeOf<Wallpaper>(),
+          typeOf<SavedCardKey>(),
+          typeOf<List<Quote>>(),   // verifies Quote transitively
+      )
+      bindWithTimeout {
+          zipline.bind<HostQuotesProvider>("quotes", impl)
+      }
+  }
+  ```
+
+  Catches U3 (kotlinx-serialization plugin missing on the module
+  declaring the type) plus the U4-adjacent silent-failure shape: a
+  `SerializationException` thrown inside a `ZiplineService`
+  callback's response handler gets swallowed by the protocol path,
+  leaving the guest with no response, no error, no log. Validating
+  every wire type at bind time forces the failure into the
+  actionable surface instead. Multiplatform — works on Android,
+  iOS, and JVM hosts. Returns the resolved `KSerializer<*>` list
+  in input order. Closes issue #30 (bind-time approach; runtime
+  instrumentation is queued as a separate safety-net follow-up).
+
+- `MissingSerializerException` now exposes a public-by-default
+  string-named constructor (`@PublishedApi internal`) plus the
+  existing `KClass<*>` overload, so the bulk helper can use a
+  human-readable type display for generics like `List<Quote>`.
+
 Fixed:
 - Schema parser rejects `@Composable` lambdas as `@Property`. Adopters
   who naively reach for `@Property val content: @Composable () -> Unit`
