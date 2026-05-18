@@ -63,7 +63,7 @@ generation. Required on every interface processed.
 | `@Query("name")` | Append to the query string | Nullable parameters are omitted when `null`; the wire envelope (`HttpRequest.query`) is a `Map<String, String>`. |
 | `@Body` | JSON-encode + send as the request body | Valid only on `@POST` / `@PUT` methods. Serialized with the adopter-supplied `KonduitHttp.json`. |
 | `@Header("name")` | One header | Nullable parameters are omitted when `null`. Non-`String` values get `.toString()`. |
-| `@HeaderMap` | Spread a `Map<String, String>` of headers | Accepts `Map<String, String>` or `Map<String, String?>` (filter nulls). Other shapes fail the build. |
+| `@HeaderMap` | Spread a `Map<String, String>` of headers | Accepts `Map<String, String>` (emit `putAll`) or `Map<String, String?>` (emit `forEach` with null-value filter). Other shapes fail the build. |
 
 ### Method shape requirements
 - Must be `suspend`. Non-suspend functions are rejected with a clear
@@ -179,7 +179,7 @@ without breaking the generated code from v1:
 |---|---|---|
 | **1** | `konduit-http-annotations` module + this design doc | **landed (caliclan.4)** |
 | **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
-| **3** | `@HeaderMap` + `kotlin-compile-testing-ksp` end-to-end test fixtures + processor diagnostic polish (line numbers, suggested fixes) | next |
+| **3** | `@HeaderMap` + `dev.zacsweers.kctfork:ksp` end-to-end test fixtures (11 tests: 5 happy-path codegen assertions, 6 validation-diagnostic assertions) | **landed (caliclan.4)** |
 | **4** | Error handling, response wrappers (Result<T> envelope, etc.) | follow-up |
 | **5** | `dev.konduit.http-api` umbrella Gradle plugin that auto-applies KSP + the codegen dep | follow-up |
 
