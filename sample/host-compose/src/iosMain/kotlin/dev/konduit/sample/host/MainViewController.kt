@@ -8,11 +8,14 @@ package dev.konduit.sample.host
 
 import androidx.compose.ui.window.ComposeUIViewController
 import app.cash.zipline.Zipline
+import app.cash.zipline.ZiplineManifest
+import app.cash.zipline.ZiplineService
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import dev.konduit.leaks.LeakDetector
 import dev.konduit.sample.schema.protocol.host.SampleSchemaHostProtocol
 import dev.konduit.sample.shared.SampleAppService
+import dev.konduit.treehouse.EventListener
 import dev.konduit.treehouse.MemoryStateStore
 import dev.konduit.treehouse.TreehouseApp
 import dev.konduit.treehouse.TreehouseAppFactory
@@ -108,9 +111,67 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
       zipline.take("app")
   }
 
-  val app = factory.create(appScope = appScope, spec = spec)
+  val app = factory.create(
+    appScope = appScope,
+    spec = spec,
+    eventListenerFactory = LoggingEventListenerFactory,
+  )
   cachedApp = app
   return app
+}
+
+/**
+ * iOS-side `EventListener` for parity with the Android sample's
+ * `MainActivity`. Routes Zipline lifecycle events through `NSLog`
+ * so they surface in Xcode's console and `xcrun simctl spawn …
+ * log show --predicate 'eventMessage CONTAINS "KonduitSample"'`.
+ *
+ * Without this listener, every iOS-side guest failure
+ * (codeLoadFailed, manifestParseFailed, uncaughtException) is
+ * SILENT — Kotlin's `println(...)` does not surface in the
+ * simulator's unified log subsystem on its own.
+ */
+private object LoggingEventListenerFactory : EventListener.Factory {
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
+    LoggingEventListener
+  override fun close() {}
+}
+
+private object LoggingEventListener : EventListener() {
+  // Use Kotlin's `println` rather than `NSLog`. Kotlin/Native's
+  // varargs ↔ ObjC bridge for `NSLog(format, ...)` crashes the app
+  // with EXC_BAD_ACCESS at launch when a Kotlin `String` is passed
+  // as a `%@` argument — observed during sample testing on Xcode
+  // 26.3 + iOS sim 26.3. `println` is the K/N-idiomatic choice and
+  // surfaces to Xcode's debug console; if you need entries to show
+  // in `xcrun simctl spawn … log show`, wrap with `os_log` via a
+  // properly-typed C wrapper (see Konduit's docs/KNOWN_BUGS.md).
+  private fun log(message: String) = println(message)
+
+  override fun ziplineCreated(zipline: Zipline) =
+    log("KonduitSample: ziplineCreated")
+  override fun bindService(name: String, service: ZiplineService) =
+    log("KonduitSample: bindService name=$name")
+  override fun takeService(name: String, service: ZiplineService) =
+    log("KonduitSample: takeService name=$name")
+  override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) =
+    log("KonduitSample: codeLoadSuccess modules=${manifest.modules.keys.size}")
+  override fun codeLoadFailed(exception: Exception, startValue: Any?) =
+    log("KonduitSample: codeLoadFailed: ${exception.message ?: "<no message>"}")
+  override fun manifestReady(manifest: ZiplineManifest) =
+    log("KonduitSample: manifestReady modules=${manifest.modules.keys.size}")
+  override fun manifestParseFailed(exception: Exception) =
+    log("KonduitSample: manifestParseFailed: ${exception.message ?: "<no message>"}")
+  override fun mainFunctionStart(applicationName: String): Any? {
+    log("KonduitSample: mainFunctionStart app=$applicationName")
+    return null
+  }
+  override fun mainFunctionEnd(applicationName: String, startValue: Any?) =
+    log("KonduitSample: mainFunctionEnd app=$applicationName")
+  override fun uncaughtException(exception: Throwable) =
+    log("KonduitSample: uncaughtException: ${exception.message ?: "<no message>"}")
+  override fun serviceLeaked(name: String) =
+    log("KonduitSample: serviceLeaked name=$name")
 }
 
 /**

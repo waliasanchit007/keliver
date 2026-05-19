@@ -1,3 +1,16 @@
 local.properties
 build/
 .gradle/
+
+# Xcode-generated user state + derived data. The `iosApp.xcodeproj`
+# directory's `project.pbxproj` is checked in; the per-user state
+# files (xcuserdata) and any local `derivedDataPath build/` results
+# are not.
+iosApp/build/
+iosApp/iosApp.xcodeproj/xcuserdata/
+iosApp/iosApp.xcodeproj/project.xcworkspace/xcuserdata/
+iosApp/iosApp.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+iosApp/Configuration/Config.local.xcconfig
+
+# macOS Finder noise.
+.DS_Store
