@@ -9,6 +9,26 @@
 ## [Unreleased]
 
 New:
+- `docs/KNOWN_BUGS.md` U12 — codifies the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
+  manual-adapter requirement that every Konduit `AppService`
+  subinterface hits. Documents the symptom (`Constructor 'Adapter.<init>'
+  can not be called` at QuickJS load), the root cause (Zipline IR
+  plugin can't generate adapters for interfaces that transitively
+  extend `ZiplineService` via `AppService`), the ~95-line manual
+  workaround, and two possible Konduit-side fix approaches.
+  Surfaced during the sample app's first end-to-end test run
+  ([`sample/TESTING.md`](sample/TESTING.md)).
+
+- `sample/` — **end-to-end tested** against a Pixel 9 emulator
+  (API 37). First emulator run surfaced 5 latent bugs/gaps between
+  the README and what shipped: (1) Zipline IR plugin missing from
+  every module with `take`/`bind` calls, (2) `kotlinSerialization`
+  missing from `:shared`, (3) `Adapter.<init>` IrLinkageError per
+  U12, (4) silent failures with no `EventListener` wired, (5)
+  README referenced a nonexistent `serveDevelopmentZipline` Gradle
+  task. All five fixed in tree; full debugging log in
+  `sample/TESTING.md`.
+
 - `docs/PERFORMANCE.md` + `scripts/measure-baselines.sh` — baseline
   performance measurements for adopter planning. Covers four metric
   categories:

@@ -556,6 +556,135 @@ val spec = object : TreehouseApp.Spec<…>() {
 
 ---
 
+### U12. `AppService` subinterfaces need a hand-rolled `Adapter` — Zipline IR plugin can't generate one
+
+**Symptom.** First-launch of any Konduit app crashes at QuickJS
+load time with:
+
+```
+codeLoadFailed: Constructor 'Adapter.<init>' can not be called:
+  No constructor found for symbol 'your.pkg/YourAppService.Companion.Adapter
+    .<init>|<init>(kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;
+    kotlin.String){}[0]'
+```
+
+The error fires on `Spec.create { zipline.take("app") }` even though
+the Zipline + kotlinSerialization plugins are correctly applied to
+the module that defines the service interface. Bundle download,
+parse, and `mainFunctionStart`/`End` all succeed; the failure is
+at the `take` step where the host expects to find a generated
+adapter class on `YourAppService.Companion`.
+
+**Root cause.** [Zipline issue #765](https://github.com/cashapp/zipline/issues/765).
+The Zipline IR plugin **cannot** auto-generate `ZiplineServiceAdapter`
+classes for interfaces that transitively extend `ZiplineService`
+through Konduit's `AppService`. The class doesn't get emitted with
+the constructor shape that Zipline's loader expects at link time;
+the IR linker rejects it.
+
+The `AppService.kt` source ([konduit-treehouse](https://github.com/waliasanchit007/konduit/blob/main/konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/AppService.kt))
+even calls this out:
+
+> Note that due to a Zipline limitation it's necessary for
+> implementing classes to declare a direct dependency on
+> [ZiplineService]. https://github.com/cashapp/zipline/issues/765
+
+But that comment understates the impact — both the *interface
+declaration* and the *consuming host's take site* hit this. The
+interface needs a manual `Adapter`, not just the impl.
+
+**Workaround.** Hand-roll the adapter. The pattern, from
+`sample/shared/.../ManualSampleAppServiceAdapter.kt`:
+
+```kotlin
+@file:Suppress(
+  "INVISIBLE_MEMBER", "INVISIBLE_REFERENCE",
+  "CANNOT_OVERRIDE_INVISIBLE_MEMBER", "EXPOSED_SUPER_CLASS",
+  "EXPOSED_PARAMETER_TYPE", "EXPOSED_FUNCTION_RETURN_TYPE",
+)
+package your.pkg
+
+import app.cash.zipline.internal.bridge.OutboundCallHandler
+import app.cash.zipline.internal.bridge.OutboundService
+import app.cash.zipline.internal.bridge.ReturningZiplineFunction
+import app.cash.zipline.internal.bridge.ZiplineServiceAdapter
+import app.cash.zipline.ziplineServiceSerializer
+// ...
+
+internal open class ManualYourAppServiceAdapter(
+  override val serializers: List<KSerializer<*>>,
+  override val serialName: String = "your.pkg.YourAppService",
+) : ZiplineServiceAdapter<YourAppService>() {
+  override val simpleName: String = "YourAppService"
+
+  override fun ziplineFunctions(
+    serializersModule: SerializersModule,
+  ): List<ZiplineFunction<YourAppService>> {
+    // One ReturningZiplineFunction per method on the interface.
+    // Function ids are positional — match the order in outboundService below.
+    // ...
+  }
+
+  override fun outboundService(callHandler: OutboundCallHandler): YourAppService {
+    return object : YourAppService, OutboundService {
+      override val callHandler: OutboundCallHandler = callHandler
+      // override every method with `callHandler.call(this, N)` where N matches
+      // the position in ziplineFunctions() above.
+    }
+  }
+}
+```
+
+Then on the interface itself:
+
+```kotlin
+interface YourAppService : AppService {
+  fun launch(): ZiplineTreehouseUi
+  // ... your other methods
+
+  companion object {
+    internal class Adapter(
+      serializers: List<KSerializer<*>>,
+      serialName: String,
+    ) : ManualYourAppServiceAdapter(serializers, serialName)
+  }
+}
+```
+
+When you add a new method to `YourAppService`, add a matching
+`ReturningZiplineFunction` block in `ziplineFunctions(...)` AND a
+delegating override in `outboundService(...)`. The call-id-to-position
+mapping must match between the two.
+
+**Real-world examples.**
+
+- [`konduit/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/konduit/sample/shared/ManualSampleAppServiceAdapter.kt)
+  — minimum-viable: three methods (`launch`, `appLifecycle`,
+  `close`), ~95 LoC.
+- ServerDrivenUI's `ManualSduiAppServiceAdapter` — same pattern,
+  same surface (because `SduiAppService` doesn't add methods
+  beyond what AppService requires).
+
+**Cost to adopters.** Every adopter writing a custom
+`AppService` subinterface needs this ~95-line file. There's
+nothing in Konduit's public API that hides this — until either
+upstream Zipline ships #765 or Konduit adds a wrapper module, the
+boilerplate is unavoidable.
+
+**Possible Konduit-side fix.** A `konduit-treehouse` helper that
+either (a) ships a code-gen plugin to emit the adapter from
+`@KonduitAppService`-annotated interfaces, or (b) provides a
+reflective `BaseAppServiceAdapter` that uses kotlinx-serialization
+to discover method shapes at runtime. Both have trade-offs (a)
+adds a new processor for every adopter to wire, (b) costs a small
+amount of JS-side performance. Filed as follow-up.
+
+**Owner.** Konduit. Filed as [#TBD](https://github.com/waliasanchit007/konduit/issues).
+Blocked on resolving the trade-off between (a) and (b) above; the
+manual workaround is sufficient for now.
+
+---
+
 ### U8. Host `ZiplineService` method bodies execute on the Zipline dispatcher, not Main — UI touches silently no-op
 
 **Severity:** high (silent failure on Android, possible crash on iOS K/N).
