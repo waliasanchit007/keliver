@@ -4,7 +4,11 @@ android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.10.1"
+androidx-benchmark = "1.3.4"
 androidx-core = "1.16.0"
+androidx-profileinstaller = "1.4.1"
+androidx-test-ext-junit = "1.2.1"
+androidx-uiautomator = "2.3.0"
 composeMultiplatform = "1.8.2"
 # MUST match the Kotlin version that the consumed konduit-* artifacts
 # were built with. Mismatches surface at QuickJS load time as
@@ -21,7 +25,13 @@ okhttp = "4.12.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "androidx-benchmark" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "androidx-profileinstaller" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext-junit" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.6.2" }
+androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "androidx-uiautomator" }
+junit = { module = "junit:junit", version = "4.13.2" }
 konduit-compose = { module = "dev.konduit:konduit-compose", version.ref = "konduit" }
 konduit-widget = { module = "dev.konduit:konduit-widget", version.ref = "konduit" }
 konduit-widget-composeui = { module = "dev.konduit:konduit-widget-composeui", version.ref = "konduit" }
@@ -40,6 +50,7 @@ zipline-loader = { module = "app.cash.zipline:zipline-loader", version.ref = "zi
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidTest = { id = "com.android.test", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
