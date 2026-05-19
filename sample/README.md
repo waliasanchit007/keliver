@@ -130,51 +130,72 @@ name=app`.
 
 ## Run it on iOS
 
-`host-compose` produces a framework named `KonduitSampleHost`. The
-build outputs land under:
-
-```
-host-compose/build/bin/iosArm64/debugFramework/KonduitSampleHost.framework
-host-compose/build/bin/iosSimulatorArm64/debugFramework/KonduitSampleHost.framework
-```
-
-Build the simulator framework with:
+The sample ships a ready-made Xcode project at
+[`iosApp/`](iosApp/) that links against the
+`KonduitSampleHost.framework` produced by `:host-compose`. The
+Run Script Build Phase in the Xcode project invokes
+`./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`
+automatically — you don't build the framework manually.
 
 ```sh
-./gradlew :host-compose:linkDebugFrameworkIosSimulatorArm64
+cd sample
+
+# 1. Build the guest bundle. Same step as Android.
+./gradlew :guest:compileDevelopmentZipline
+
+# 2. Serve. The iOS simulator reaches `localhost` directly (no
+#    10.0.2.2 alias needed). For a physical device, edit
+#    IosDevConfig.manifestUrl in MainViewController.kt to your
+#    laptop's LAN IP.
+(cd guest/build/zipline/Development && python3 -m http.server 8080) &
+
+# 3. Boot a simulator (pick any iPhone from `xcrun simctl list`).
+SIM_UDID=$(xcrun simctl list devices iPhone 2>&1 | grep "iPhone 17" | head -1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+xcrun simctl boot "$SIM_UDID"
+open -a Simulator
+
+# 4. Build the iOS app (the Run Script will compile the framework).
+cd iosApp
+xcodebuild \
+  -project iosApp.xcodeproj -scheme iosApp \
+  -configuration Debug -sdk iphonesimulator \
+  -destination "platform=iOS Simulator,id=$SIM_UDID" \
+  -derivedDataPath build/ \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO build
+
+# 5. Install + launch with --console to capture EventListener output.
+xcrun simctl install "$SIM_UDID" \
+  build/Build/Products/Debug-iphonesimulator/KonduitSample.app
+xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample
 ```
 
-Then in your Xcode iOS project:
+You'll see "Hello, Konduit!" render in the simulator and the same
+`manifestReady` → `ziplineCreated` → `mainFunctionStart` →
+`codeLoadSuccess` → `takeService name=app` sequence in the
+console.
 
-1. Add the produced `KonduitSampleHost.framework` to your target
-   (Build Phases → Link Binary With Libraries → drag the
-   `.framework` from the path above; mark "Embed & Sign").
-2. In Swift, host the Compose view controller via
-   `UIViewControllerRepresentable`:
+> **Tested working** against an iPhone 17 Pro simulator (iOS 26.3.1,
+> Xcode 26.3). The first iOS run surfaced 3 additional bugs/gaps;
+> all fixed in tree. See [TESTING.md § iOS case study](TESTING.md#ios-case-study).
 
-   ```swift
-   import SwiftUI
-   import KonduitSampleHost
+### iOS adopter notes
 
-   @main
-   struct KonduitSampleApp: App {
-     var body: some Scene {
-       WindowGroup { KonduitHostView() }
-     }
-   }
+If you're integrating Konduit into your own Xcode project rather
+than using the bundled `iosApp/`:
 
-   struct KonduitHostView: UIViewControllerRepresentable {
-     func makeUIViewController(context: Context) -> UIViewController {
-       MainKt.MainViewController()
-     }
-     func updateUIViewController(_ vc: UIViewController, context: Context) {}
-   }
-   ```
-
-3. Make sure the same guest dev server is running. The simulator
-   reaches `http://localhost:8080` directly (no `10.0.2.2` alias
-   needed); for a physical device, change `IosDevConfig.manifestUrl`
-   in `MainViewController.kt` to your laptop's LAN IP.
+1. **Run Script Build Phase**: add a "Compile Kotlin Framework"
+   Run Script that does
+   `cd "$SRCROOT/../path-to-konduit-host-module" && ./gradlew :your-module:embedAndSignAppleFrameworkForXcode`.
+2. **Bundle ID**: your Swift target's bundle ID is independent
+   of the framework. The framework just exposes
+   `MainKt.MainViewController()`.
+3. **Stdout capture**: `xcrun simctl launch --console <UDID> <bundle-id>`
+   to see Kotlin's `println` output. `os_log` queries via
+   `simctl log show` don't pick up plain `println`.
+4. **NSLog format strings**: avoid `NSLog("%@", kotlinString)` in
+   Kotlin/Native code — it crashes the app with `EXC_BAD_ACCESS`
+   on Xcode 26.3. Use `println` or wrap NSLog through a Swift
+   helper. Details in TESTING.md § iOS-#3.
 
 ## What to copy when you adopt Konduit
 

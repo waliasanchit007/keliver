@@ -43,10 +43,24 @@ kotlin {
 
   // Konduit's iOS host code ships as a static .klib that we expose to
   // Swift via a single Kotlin framework named "KonduitSampleHost".
-  listOf(iosArm64(), iosSimulatorArm64()).forEach {
-    it.binaries.framework {
+  // The Xcode-side `embedAndSignAppleFrameworkForXcode` Gradle task
+  // bundles this into the iosApp/ Xcode build automatically.
+  listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
+    iosTarget.binaries.framework {
       baseName = "KonduitSampleHost"
       isStatic = true
+      // Must match an iOS-valid reverse-DNS bundle ID. K/N uses this
+      // for the framework's Info.plist CFBundleIdentifier.
+      binaryOption("bundleId", "dev.konduit.sample.host")
+      // Expose the sample's own types to Swift so adopter Swift code
+      // can reach `SampleAppService` etc. — without these, only
+      // symbols declared in this module would be visible.
+      export(project(":shared"))
+      export(project(":shared-widget"))
+      // Required for Zipline's SQLite-backed bundle cache on iOS.
+      // Without it, the Xcode link step fails with
+      // "Undefined symbols: sqlite3_*".
+      linkerOpts("-lsqlite3")
     }
   }
 

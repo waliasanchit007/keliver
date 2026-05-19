@@ -262,3 +262,193 @@ Status going forward:
 The right long-term fix for #3 is a `konduit-treehouse` helper
 that hides the adapter boilerplate behind a single API. Filed as
 follow-up.
+
+---
+
+# iOS case study
+
+After the Android pass landed, we mirrored the same exercise on
+iOS — built the `KonduitSampleHost.framework`, wired it into a
+minimal Xcode project under [`iosApp/`](iosApp/), and ran on an
+**iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3)**. Final state:
+the same `Hello, Konduit!` widget paints at top-start, with the
+same full Zipline RPC sequence visible in `xcrun simctl launch
+--console`. Three iOS-specific findings surfaced; all fixed.
+
+## iOS test setup
+
+```sh
+# 1. Build the guest bundle (one-time per source change).
+cd /path/to/konduit/sample
+./gradlew :guest:compileDevelopmentZipline
+
+# 2. Serve the bundle. The iOS simulator routes localhost directly
+#    to the host's loopback, so no 10.0.2.2 alias is needed.
+(cd guest/build/zipline/Development && python3 -m http.server 8080) &
+
+# 3. Boot a simulator.
+xcrun simctl list devices iPhone | grep iPhone\ 17    # pick one
+SIM_UDID=BA6BDD1C-520F-429C-8388-086D3C59FEEB           # iPhone 17 Pro
+xcrun simctl boot "$SIM_UDID"
+open -a Simulator
+
+# 4. Build the Xcode app. The "Compile Kotlin Framework" Run Script
+#    Build Phase invokes `./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`
+#    automatically — but it needs `sample/gradlew` to exist (see
+#    Finding iOS-#1 below).
+cd iosApp
+xcodebuild \
+  -project iosApp.xcodeproj \
+  -scheme iosApp \
+  -configuration Debug \
+  -sdk iphonesimulator \
+  -destination "platform=iOS Simulator,id=$SIM_UDID" \
+  -derivedDataPath build/ \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO \
+  build
+
+# 5. Install + launch with --console to capture EventListener output.
+xcrun simctl install "$SIM_UDID" \
+  build/Build/Products/Debug-iphonesimulator/KonduitSample.app
+xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample &
+sleep 12
+xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
+```
+
+Expected `--console` output, in order:
+
+```
+KonduitSample: manifestReady modules=30
+KonduitSample: takeService name=zipline/guest
+KonduitSample: bindService name=zipline/host
+KonduitSample: ziplineCreated
+KonduitSample: mainFunctionStart app=konduit-sample
+KonduitSample: mainFunctionEnd app=konduit-sample
+KonduitSample: codeLoadSuccess modules=30
+KonduitSample: takeService name=app
+KonduitSample: takeService name=zipline/guest-1
+KonduitSample: bindService name=zipline/host-1
+…
+```
+
+## iOS findings
+
+### iOS-#1 — Run Script expected `./gradlew` in `$SRCROOT/..` but `sample/` had none
+
+**Symptom.** First `xcodebuild` attempt died at the "Compile Kotlin
+Framework" Run Script Build Phase:
+
+```
+.../iosApp.build/Script-AF619752845E2E179AFFEA63.sh: line 7:
+  ./gradlew: No such file or directory
+Command PhaseScriptExecution failed with a nonzero exit code
+```
+
+**Root cause.** The Xcode template's Run Script does
+`cd "$SRCROOT/.." && ./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`.
+`$SRCROOT` is `iosApp/`, so `$SRCROOT/..` is `sample/`. But the
+sample was originally designed as a sub-build that uses the parent
+Konduit repo's gradlew wrapper (`../gradlew` from inside `sample/`).
+No wrapper existed at `sample/gradlew`.
+
+**Fix.** Copied `gradlew`, `gradlew.bat`, and
+`gradle/wrapper/{gradle-wrapper.jar,gradle-wrapper.properties}`
+from the Konduit root into `sample/`. Sample now has its own
+working wrapper that the Run Script can resolve. The duplication
+costs ~60 KB (a wrapper jar + the shell script) and removes a
+fragile cross-directory assumption.
+
+This is also a net win for adopter UX — anyone who clones a
+released Konduit and `cd`s into the sample directly can now run
+`./gradlew :host-android:installDebug` without `cd ..` first.
+
+### iOS-#2 — No `EventListener` wired on iOS host either
+
+**Symptom.** Identical to Android Finding #2: blank screen on
+first iOS launch, no clue what went wrong. Same root cause: the
+sample's `MainViewController.kt` called `factory.create(appScope,
+spec)` without an `eventListenerFactory`, so every Treehouse
+lifecycle event was silent on iOS too.
+
+**Fix.** Mirrored the Android pattern — added a
+`LoggingEventListenerFactory` to `MainViewController.kt` that logs
+every event under the `KonduitSample` tag. iOS adopters get the
+same debug baseline as Android, surfaced via `--console` (see
+Finding iOS-#3 for the println-vs-NSLog choice).
+
+### iOS-#3 — `NSLog("%@", kotlinString)` crashes with EXC_BAD_ACCESS at launch
+
+**Symptom.** After wiring the iOS `LoggingEventListener` using the
+ObjC-idiomatic shape
+
+```kotlin
+NSLog("KonduitSample: takeService name=%@", name)
+```
+
+…the app crashed at launch (~1 s after splash) with no Kotlin
+stack trace. The native crash report at
+`~/Library/Logs/DiagnosticReports/KonduitSample-….ips` showed:
+
+```
+EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at
+  0x00746975646e6f66 (possible pointer authentication failure)
+```
+
+The 8-byte address `0x00746975646e6f66` decodes as ASCII
+`"\0konduit"` (little-endian) — a Kotlin `String`'s heap data was
+being treated as a pointer.
+
+**Root cause.** Kotlin/Native's varargs ↔ ObjC bridge for
+`NSLog(format: String, vararg args: Any?)` does not auto-bridge a
+Kotlin `String` to an `NSString*` for the `%@` format specifier.
+The C-side `va_arg(NSString*)` reads the Kotlin string's heap
+pointer as a C pointer, which is unrelated to a valid `id`. K/N
++ Xcode 26.3 enables pointer-authentication on ARM64, which turns
+the bad-read into an immediate crash instead of a silent
+mis-format.
+
+**Fix.** Routed all listener output through Kotlin's `println(...)`
+instead of `NSLog`. `println` on K/N goes to stdout; `xcrun simctl
+launch --console` captures it. The trade-off is that `println`
+output doesn't surface in `xcrun simctl spawn … log show
+--predicate '…'` queries the way `os_log`-routed messages do —
+adopters running CI on iOS will need to capture launch console
+output instead of querying the unified log retroactively.
+
+**Recommendation.** If you need messages in the unified log
+(searchable, post-hoc), write a small Swift-side helper that
+takes an `NSString` and calls `os_log("%{public}@", …)`, then
+call that from Kotlin via a `kotlinx.cinterop` interop binding.
+Plain `NSLog` from K/N is unsafe with format strings.
+
+### iOS-#4 (positive) — All five Android-side fixes carry over
+
+The five Android findings — Zipline plugin on every module with
+`take`/`bind`, kotlinSerialization on `:shared`, the manual
+`ZiplineServiceAdapter`, `EventListener` wiring, and the bundle
+serving via `python3 -m http.server` — all apply unchanged on
+iOS. Same fixes, same code, two platforms.
+
+This confirms the cross-platform parity assumption that the
+sample was built on: a single `:shared` module + `:host-compose`
+multiplatform module covers both Android and iOS, with only
+platform-specific HTTP-client wiring (OkHttp vs `NSURLSession`)
+differing per host. If a finding affects one platform, it almost
+always affects the other.
+
+## iOS adopter-impact summary
+
+| # | Finding | Resolution |
+|---|---|---|
+| iOS-#1 | Run Script can't find `sample/gradlew` | Copied wrapper into `sample/` |
+| iOS-#2 | Silent failures with no iOS `EventListener` | Sample now ships `LoggingEventListenerFactory` in `MainViewController.kt` |
+| iOS-#3 | `NSLog("%@", kotlinString)` → SIGSEGV | All listener output routed through `println` |
+| iOS-#4 | All Android-side fixes apply to iOS unchanged | Cross-platform parity confirmed |
+
+iOS surfaced **three** distinct bugs vs Android's **five**, but
+two of the three are subtler (pointer-authentication crash;
+build-script dependency on a wrapper script in a parent directory)
+and could have wasted hours of an adopter's time. The fixes are
+all small. Net cost of the iOS validation pass: ~2 hours including
+the Xcode project scaffolding work that's now a permanent part of
+the sample.
