@@ -11,9 +11,12 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import app.cash.zipline.Zipline
+import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
 import dev.konduit.leaks.LeakDetector
+import dev.konduit.treehouse.EventListener
+import dev.konduit.treehouse.TreehouseApp as KTreehouseApp
 import dev.konduit.sample.schema.protocol.host.SampleSchemaHostProtocol
 import dev.konduit.sample.shared.SampleAppService
 import dev.konduit.treehouse.MemoryStateStore
@@ -96,6 +99,7 @@ class MainActivity : ComponentActivity() {
     val app = factory.create(
       appScope = lifecycleScope,
       spec = spec,
+      eventListenerFactory = LoggingEventListenerFactory,
     )
 
     setContent {
@@ -119,6 +123,50 @@ class MainActivity : ComponentActivity() {
  *     swap to `ManifestVerifier.SignatureChecks(...)` with the
  *     production verifying key.
  */
+private object LoggingEventListenerFactory : EventListener.Factory {
+  override fun create(app: KTreehouseApp<*>, manifestUrl: String?): EventListener =
+    LoggingEventListener
+  override fun close() {}
+}
+
+private object LoggingEventListener : EventListener() {
+  override fun ziplineCreated(zipline: Zipline) {
+    Log.d(TAG, "ziplineCreated")
+  }
+  override fun bindService(name: String, service: app.cash.zipline.ZiplineService) {
+    Log.d(TAG, "bindService name=$name")
+  }
+  override fun takeService(name: String, service: app.cash.zipline.ZiplineService) {
+    Log.d(TAG, "takeService name=$name")
+  }
+  override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
+    Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size}")
+  }
+  override fun codeLoadFailed(exception: Exception, startValue: Any?) {
+    Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
+  }
+  override fun manifestReady(manifest: ZiplineManifest) {
+    Log.d(TAG, "manifestReady modules=${manifest.modules.keys.size}")
+  }
+  override fun manifestParseFailed(exception: Exception) {
+    Log.e(TAG, "manifestParseFailed: ${exception.message}", exception)
+  }
+  override fun mainFunctionStart(applicationName: String): Any? {
+    Log.d(TAG, "mainFunctionStart app=$applicationName")
+    return null
+  }
+  override fun mainFunctionEnd(applicationName: String, startValue: Any?) {
+    Log.d(TAG, "mainFunctionEnd app=$applicationName")
+  }
+  override fun uncaughtException(exception: Throwable) {
+    Log.e(TAG, "uncaughtException: ${exception.message}", exception)
+  }
+  override fun serviceLeaked(name: String) {
+    Log.w(TAG, "serviceLeaked name=$name")
+  }
+  private const val TAG = "KonduitSample"
+}
+
 object DevConfig {
   // 10.0.2.2 is the emulator alias for the host machine's localhost.
   // For physical devices on the same Wi-Fi, replace with your laptop's

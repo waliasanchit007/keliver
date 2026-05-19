@@ -96,22 +96,37 @@ same `SampleHostApp` composable.
 ```sh
 cd sample
 
-# 1. Build the guest bundle. This compiles the Kotlin/JS source and
-#    packages it into manifest.zipline.json + a set of .zipline
-#    module files under guest/build/zipline/Development/.
-./gradlew :guest:compileDevelopmentExecutableKotlinJs :guest:serveDevelopmentZipline &
+# 1. Build the guest bundle.
+./gradlew :guest:compileDevelopmentZipline
 
-# 2. Install the Android host on an emulator (the 10.0.2.2 manifest
-#    URL in DevConfig points at the dev server above; for a physical
-#    device, edit DevConfig.MANIFEST_URL to your laptop's LAN IP).
+# 2. Serve the bundle. Konduit + Zipline don't ship a built-in
+#    `serveDevelopmentZipline` Gradle task in this version; Python's
+#    stdlib http.server is the smallest workaround. Run in another
+#    terminal (or `&`-detach):
+(cd guest/build/zipline/Development && python3 -m http.server 8080) &
+
+# 3. Install the Android host on an emulator. The 10.0.2.2 manifest
+#    URL in `DevConfig.MANIFEST_URL` points at the emulator-side
+#    alias for the host machine's localhost. For a physical device,
+#    edit it to your laptop's LAN IP.
 ./gradlew :host-android:installDebug
 
-# 3. Launch:
+# 4. Launch:
 adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
 ```
 
-You should see a centered "Hello, Konduit!" — the guest's
-`@Composable fun Show() { Box { Text(...) } }` rendered on Android.
+You should see "Hello, Konduit!" rendered at top-start — the
+guest's `@Composable fun Show() { Box { Text("Hello, Konduit!") } }`
+made it through Zipline and the host's `CmpWidgetFactory` painted
+it. Verify in `adb logcat` under the `KonduitSample` tag — the
+expected sequence is `manifestReady` → `ziplineCreated` →
+`mainFunctionStart`/`End` → `codeLoadSuccess` → `takeService
+name=app`.
+
+> **Tested working** against a Pixel 9 emulator (API 37). The
+> sample's first end-to-end run surfaced 5 latent bugs/gaps between
+> the README and what actually shipped; full debugging log is in
+> [TESTING.md](TESTING.md). All five are fixed in tree.
 
 ## Run it on iOS
 
@@ -192,6 +207,46 @@ into a real product:
    `ManifestVerifier.NO_SIGNATURE_CHECKS` for a real
    `SignatureChecks(...)` instance keyed off your production
    verifying key.
+
+## Gotchas you'll hit on day one
+
+These five caught us during the sample's first end-to-end run and
+matter to any adopter writing their own Konduit project. Full
+debugging log lives in [TESTING.md](TESTING.md).
+
+1. **Apply the Zipline plugin to every module with `take`/`bind`
+   calls** — not just the service-defining module. The IR plugin
+   rewrites call sites; without it you get
+   `IllegalStateException: unexpected call to Zipline.take`. The
+   sample applies it to `:shared`, `:guest`, `:host-android`, and
+   `:host-compose`.
+
+2. **`:shared` also needs the `kotlinSerialization` plugin** for
+   Zipline's adapter codegen to emit working `.serializer()`
+   lookups. Without it: `Serializer for class 'X' is not found`.
+
+3. **Interfaces that extend `AppService` need a manual
+   `Adapter`** — see [Zipline #765](https://github.com/cashapp/zipline/issues/765).
+   The sample's `ManualSampleAppServiceAdapter.kt` shows the
+   pattern. Symptom of skipping it:
+   `codeLoadFailed: Constructor 'Adapter.<init>' can not be called`.
+   When you add a new method to `SampleAppService`, add a matching
+   `ReturningZiplineFunction` block AND a delegating override in
+   the `outboundService(...)` anonymous object, keeping call IDs
+   stable across host + guest.
+
+4. **Always wire an `EventListener`** in `TreehouseAppFactory.create(...)`,
+   even just a logging one. Without it, every Zipline failure
+   (`codeLoadFailed`, `uncaughtException`, `manifestParseFailed`)
+   is silent — blank screen, no clue in logcat. The sample's
+   `LoggingEventListenerFactory` in `MainActivity.kt` is the
+   minimum useful baseline.
+
+5. **No `serveDevelopmentZipline` Gradle task exists** in this
+   Zipline plugin version. Use `python3 -m http.server 8080` from
+   `guest/build/zipline/Development/`, or wire up your own
+   serving (Ktor, nginx, etc.). The dev server is intentionally
+   out of scope for the sample.
 
 ## What's intentionally missing
 
