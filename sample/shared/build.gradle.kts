@@ -8,6 +8,21 @@
  */
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
+  // Zipline's IR plugin generates `Adapter` classes for every
+  // interface that extends `ZiplineService` (or `AppService`,
+  // transitively). WITHOUT this plugin applied here, the host
+  // sees a `Adapter` whose constructor doesn't match what Zipline's
+  // loader expects, and `codeLoadFailed: Constructor 'Adapter.<init>'
+  // can not be called` fires at QuickJS load time. Must be applied
+  // to every module that DEFINES a ZiplineService — not just the
+  // module that takes/binds it.
+  alias(libs.plugins.zipline)
+  // Required by Zipline's Adapter codegen — it generates
+  // `KSerializer<*>` arguments and reads `.serializer()` lookups
+  // for every method param/return type. Without this plugin those
+  // lookups fail at QuickJS load time with `Serializer for class 'X'
+  // is not found`.
+  alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {

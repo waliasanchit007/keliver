@@ -12,6 +12,14 @@ plugins {
   alias(libs.plugins.kotlinAndroid)
   alias(libs.plugins.composeCompiler)
   alias(libs.plugins.composeMultiplatform)
+  // The Zipline IR plugin rewrites `zipline.take<T>` / `zipline.bind<T>`
+  // call sites to use the generated Adapter. Without this here, the
+  // host's `Spec.create { zipline.take("app") }` throws
+  //   IllegalStateException: unexpected call to Zipline.take: is the
+  //   Zipline plugin configured?
+  // at runtime. Must be applied to EVERY module that contains a
+  // take/bind call — host shell, host renderer, and the guest.
+  alias(libs.plugins.zipline)
 }
 
 android {

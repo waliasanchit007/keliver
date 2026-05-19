@@ -26,6 +26,12 @@ plugins {
   alias(libs.plugins.androidLibrary)
   alias(libs.plugins.composeMultiplatform)
   alias(libs.plugins.composeCompiler)
+  // Required because `MainViewController.kt`'s iOS-side
+  // `Spec.create { zipline.take(...) }` block calls into the
+  // Zipline IR-plugin-rewritten functions. Without this the iOS
+  // framework would compile but fail at runtime with
+  // "unexpected call to Zipline.take" — same shape as host-android.
+  alias(libs.plugins.zipline)
 }
 
 kotlin {
