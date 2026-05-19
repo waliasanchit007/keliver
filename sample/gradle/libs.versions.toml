@@ -10,6 +10,7 @@ androidx-profileinstaller = "1.4.1"
 androidx-test-ext-junit = "1.2.1"
 androidx-uiautomator = "2.3.0"
 composeMultiplatform = "1.8.2"
+ksp = "2.2.0-2.0.2"
 # MUST match the Kotlin version that the consumed konduit-* artifacts
 # were built with. Mismatches surface at QuickJS load time as
 # `IrLinkageError` on the generated `Adapter.<init>` constructor.
@@ -39,6 +40,7 @@ konduit-schema = { module = "dev.konduit:konduit-schema", version.ref = "konduit
 konduit-treehouse = { module = "dev.konduit:konduit-treehouse", version.ref = "konduit" }
 konduit-treehouse-guest = { module = "dev.konduit:konduit-treehouse-guest", version.ref = "konduit" }
 konduit-treehouse-host = { module = "dev.konduit:konduit-treehouse-host", version.ref = "konduit" }
+konduit-treehouse-codegen = { module = "dev.konduit:konduit-treehouse-codegen", version.ref = "konduit" }
 konduit-treehouse-host-composeui = { module = "dev.konduit:konduit-treehouse-host-composeui", version.ref = "konduit" }
 konduit-protocol = { module = "dev.konduit:konduit-protocol", version.ref = "konduit" }
 konduit-protocol-host = { module = "dev.konduit:konduit-protocol-host", version.ref = "konduit" }
@@ -64,3 +66,4 @@ konduit-generator-modifiers = { id = "dev.konduit.generator.modifiers", version.
 konduit-generator-protocol-host = { id = "dev.konduit.generator.protocol.host", version.ref = "konduit" }
 konduit-generator-protocol-guest = { id = "dev.konduit.generator.protocol.guest", version.ref = "konduit" }
 zipline = { id = "app.cash.zipline", version.ref = "zipline" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

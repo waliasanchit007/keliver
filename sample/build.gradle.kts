@@ -17,6 +17,7 @@ plugins {
   alias(libs.plugins.composeMultiplatform) apply false
   alias(libs.plugins.composeCompiler) apply false
   alias(libs.plugins.zipline) apply false
+  alias(libs.plugins.ksp) apply false
   alias(libs.plugins.konduit.schema) apply false
   alias(libs.plugins.konduit.generator.compose) apply false
   alias(libs.plugins.konduit.generator.widget) apply false

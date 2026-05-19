@@ -146,24 +146,30 @@ Adopters apply a Konduit-provided Gradle task that fails the build
 if the produced `.zipline` artifact grows beyond a configurable
 threshold. Catches accidental size regressions in CI.
 
-### 6. `konduit-treehouse` adapter helper — eliminate the U12 boilerplate
-Every adopter writing a new `AppService` subinterface today copies
-the same ~95-line `ManualXxxServiceAdapter.kt` workaround for
-[Zipline #765](https://github.com/cashapp/zipline/issues/765).
-Documented as [`U12`](./docs/KNOWN_BUGS.md#u12-appservice-subinterfaces-need-a-hand-rolled-adapter--zipline-ir-plugin-cant-generate-one).
-Two possible Konduit-side fix shapes:
+### 6. `konduit-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
+**Both halves landed in caliclan.5:**
 
-- **(a) Code-gen plugin** — a small KSP processor that scans
-  `@KonduitAppService`-annotated interfaces and emits the
-  adapter automatically. Adopters add a single annotation.
-- **(b) Reflective base adapter** — a `BaseAppServiceAdapter` that
-  uses kotlinx-serialization's reflective lookup to discover
-  method shapes at runtime. Adopters extend one class.
+- **Runtime helper** ([PR #58](https://github.com/waliasanchit007/konduit/pull/58)) —
+  `KonduitAppServiceAdapter<T>` base class +
+  `konduitReturningFunction()` helper. Cuts the manual adapter
+  from ~95 LoC + 7-entry `@file:Suppress` to ~70 LoC + 2-entry
+  `@file:Suppress`. For adopters who prefer the hand-rolled
+  shape.
 
-Each has trade-offs: (a) adds a new processor for every adopter
-to wire (similar to `konduit-http-codegen`'s position), (b) costs
-a small amount of JS-side runtime. The right pick is the one that
-hides the most boilerplate with the least surface-area expansion.
+- **KSP processor** ([PR #TBD](https://github.com/waliasanchit007/konduit/pull/60)) —
+  `@KonduitAppService` annotation + `konduit-treehouse-codegen`
+  module. Generates `Generated<Name>Adapter` at compile time.
+  Cuts adopter cost to ~5 LoC + zero `@file:Suppress` (just a
+  companion-object wrapper that Zipline IR can find at code-load
+  time). 4 fixture tests cover happy-path + validation.
+
+Sample migrated to use the KSP path (single annotation + 5-line
+companion wrapper). End-to-end verified on Pixel 9 emulator.
+
+Long-term work: upstream resolution of
+[Zipline #765](https://github.com/cashapp/zipline/issues/765)
+would let Konduit deprecate the codegen module entirely. Not
+on Konduit's critical path; adopter pain is already eliminated.
 
 ---
 

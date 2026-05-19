@@ -144,6 +144,12 @@ include ':konduit-http-annotations'
 // classpath.
 include ':konduit-http-codegen'
 
+// AppService adapter KSP processor — reads @KonduitAppService
+// interfaces and emits Generated<Name>Adapter open classes that
+// implement the Zipline #765 manual-adapter workaround. Closes the
+// second half of KNOWN_BUGS U12.
+include ':konduit-treehouse-codegen'
+
 include ':konduit-widget'
 include ':konduit-widget-composeui'
 include ':konduit-widget-shared-test'

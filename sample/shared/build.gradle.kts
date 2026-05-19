@@ -23,6 +23,11 @@ plugins {
   // lookups fail at QuickJS load time with `Serializer for class 'X'
   // is not found`.
   alias(libs.plugins.kotlinSerialization)
+  // KSP runs the `konduit-treehouse-codegen` processor that emits
+  // `Generated<Name>Adapter` for `@KonduitAppService`-annotated
+  // interfaces. Drops the ~70-line manual adapter file to a
+  // ~5-line companion-object stub on the interface itself.
+  alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -44,4 +49,32 @@ kotlin {
       }
     }
   }
+}
+
+// Run the @KonduitAppService processor against commonMain. KSP for
+// multiplatform projects needs an explicit target-per-source-set
+// configuration; the `kspCommonMainMetadata` config below feeds the
+// generator output into every target's compilation. Mirrors what
+// adopters using the codegen on a multiplatform module need to
+// write themselves.
+dependencies {
+  add("kspCommonMainMetadata", libs.konduit.treehouse.codegen)
+}
+
+// Workaround for https://github.com/google/ksp/issues/1318 — make
+// every target's compileKotlin task depend on the metadata KSP
+// task so the generated sources are visible everywhere.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().all {
+  if (name != "kspCommonMainKotlinMetadata") {
+    dependsOn("kspCommonMainKotlinMetadata")
+  }
+}
+
+// Tell every commonMain-derived source set to also include the
+// metadata KSP output. Without this, only `commonMain` itself
+// sees the generated sources; jvm/js/iOS targets compile against
+// the un-generated source set and fail to resolve the generated
+// class name.
+kotlin.sourceSets.commonMain.configure {
+  kotlin.srcDir("${layout.buildDirectory.get()}/generated/ksp/metadata/commonMain/kotlin")
 }
