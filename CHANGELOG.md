@@ -9,6 +9,34 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit:konduit-treehouse-codegen` — KSP processor that
+  emits `Generated<Name>Adapter` open classes for
+  `@KonduitAppService`-annotated interfaces. Closes the second
+  half of U12; adopter cost drops to **~5 LoC + zero
+  `@file:Suppress`** (a companion-object wrapper on the
+  interface itself). The 5 lines are unavoidable: Zipline IR
+  looks up `<Interface>.Companion.Adapter` by name at code-load
+  time, and KSP can't inject members into an existing companion
+  object. Generated class is `internal` so the public API stays
+  clean.
+
+  4 fixture tests via `dev.zacsweers.kctfork:ksp` cover the
+  happy path (correct generated source for an interface + its
+  inherited `AppService` members), serial-name propagation, and
+  the validation diagnostics (rejects classes, rejects
+  interfaces that don't extend `AppService`).
+
+  Sample migrated as a proof of API: `SampleAppService.kt`
+  drops from ~30 LoC + `ManualSampleAppServiceAdapter.kt`
+  (~70 LoC) to a single `@KonduitAppService`-annotated
+  interface with the 5-line companion wrapper. End-to-end
+  verified on Pixel 9 emulator (API 37): same Zipline RPC
+  sequence, same "Hello, Konduit!" rendered.
+
+- `@KonduitAppService` source-retention annotation in
+  `konduit-treehouse` — marker that the codegen processor
+  picks up. Zero runtime weight (SOURCE retention).
+
 - `sample/benchmarks/` — Performance Phase 2 scaffolding.
   AndroidX Macrobenchmark `ColdStartBenchmark` (cold + warm
   variants) for measuring the sample's startup latency. Includes

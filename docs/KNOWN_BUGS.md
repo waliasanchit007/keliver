@@ -666,14 +666,48 @@ mapping must match between the two.
   beyond what AppService requires).
 
 **Cost to adopters.** Down from ~95 LoC + 7-entry `@file:Suppress`
-to ~70 LoC + 2-entry `@file:Suppress` as of Konduit caliclan.5
-via [`KonduitAppServiceAdapter`](../konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/KonduitAppServiceAdapter.kt).
+to **~5 LoC + zero `@file:Suppress`** as of Konduit caliclan.5 via
+the [`konduit-treehouse-codegen`](../konduit-treehouse-codegen/)
+KSP processor + [`@KonduitAppService`](../konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/KonduitAppService.kt)
+annotation. Adopter writes a single companion-object wrapper:
 
-**Konduit-side helper (shipped).** As of caliclan.5,
-`dev.konduit.treehouse.KonduitAppServiceAdapter<T>` +
-`konduitReturningFunction()` helper +
-`KonduitOutboundCallHandler` / `KonduitOutboundService` aliases
-cover most of the boilerplate. Adopter code drops to:
+```kotlin
+@KonduitAppService
+interface MyAppService : AppService {
+  fun launch(): ZiplineTreehouseUi
+
+  companion object {
+    internal class Adapter(
+      serializers: List<KSerializer<*>>,
+      serialName: String,
+    ) : GeneratedMyAppServiceAdapter(serializers, serialName)
+  }
+}
+```
+
+The 5-line companion wrapper is the only piece KSP can't generate
+— Zipline IR looks up `<Interface>.Companion.Adapter` by name at
+code-load time, and KSP can't inject members into an existing
+companion. The full ~70-line adapter body (function table +
+outbound proxy + serializer routing) lives in
+`GeneratedMyAppServiceAdapter`, generated automatically.
+
+**Konduit-side helper (shipped).** Two complementary pieces:
+
+1. **`KonduitAppServiceAdapter<T>` runtime helper** (caliclan.5,
+   in `konduit-treehouse`) — base class + helper functions that
+   cut the manual workaround from ~95 to ~70 LoC for adopters
+   who want to hand-roll the adapter. Documented below.
+
+2. **`@KonduitAppService` + `konduit-treehouse-codegen` KSP
+   processor** (caliclan.5) — emits `Generated<Name>Adapter`
+   automatically. Adopter writes ~5 lines instead of ~70.
+
+**Reference snippet (manual variant, for context).** Adopters
+typically don't need this anymore — use the KSP processor above.
+The manual shape stays documented because the KSP processor's
+generated output is itself a `KonduitAppServiceAdapter<T>` subclass,
+so adopters reading the generated source see exactly this pattern:
 
 ```kotlin
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
@@ -720,12 +754,15 @@ file-level Suppress can't be hoisted into the alias itself). This
 is the smallest possible adopter footprint until Zipline #765
 ships upstream.
 
-**Future work.** A KSP processor that emits the adapter from a
-`@KonduitAppService` annotation, hiding even the ~70 LoC. Tracked
-in `docs/U12_KSP_DESIGN.md` (queued; current helper is sufficient).
+**Future work.** Upstream resolution of [Zipline #765](https://github.com/cashapp/zipline/issues/765) —
+once Zipline's IR plugin generates adapters for `AppService`
+subinterfaces directly, the `@KonduitAppService` annotation +
+companion wrapper become redundant. Konduit can then deprecate
+the codegen module without breaking adopter code (the annotation
+becomes a no-op).
 
-**Owner.** Konduit. Helper shipped in caliclan.5; full elimination
-gated on either upstream Zipline #765 or the KSP follow-up.
+**Owner.** Konduit. Helper + KSP processor shipped in caliclan.5;
+adopter pain effectively eliminated.
 
 ---
 
