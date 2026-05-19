@@ -124,9 +124,19 @@ per-feature cost is small. Methodology + target SLAs for cold-start /
 warm-mount / update-latency / memory-footprint are committed in
 the same doc so adopters can predict + verify.
 
-**Phase 2 (queued):** `konduit-benchmarks/` module with AndroidX
-Macrobenchmark fixtures for cold-start, warm-mount, and
-update-latency. CI workflow that re-runs them per release tag.
+**Phase 2 (scaffolded):** [`sample/benchmarks/`](./sample/benchmarks/)
+ships a working AndroidX Macrobenchmark module with `coldStartup`
++ `warmStartup` fixtures, a `benchmark` build type on
+`:host-android` (non-debuggable + profileable + signed with the
+debug key), and the matching wiring on `:benchmarks` itself. Runs
+via `./gradlew :benchmarks:connectedBenchmarkAndroidTest`. Known
+limitation: the activity-launch detection times out on Android
+emulators because `dumpsys gfxinfo … framestats` is slow to
+populate post-launch on AVD — physical-device runs are
+recommended for publishable numbers. See
+[`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md) § "Phase 2 known
+limitation" for the full writeup. CI workflow that re-runs
+benchmarks per release tag is the next sub-task.
 
 **Phase 3 (adopter-demand-gated):** Native-Compose-only and upstream
 Cash App Redwood 0.18.0 comparison baselines.

@@ -9,6 +9,38 @@
 ## [Unreleased]
 
 New:
+- `sample/benchmarks/` — Performance Phase 2 scaffolding.
+  AndroidX Macrobenchmark `ColdStartBenchmark` (cold + warm
+  variants) for measuring the sample's startup latency. Includes
+  a new `benchmark` build type on `:host-android` configured to
+  satisfy Macrobenchmark's safety checks: `isDebuggable = false`,
+  debug-key signed (so adb-install works without a release
+  keystore), `<profileable android:shell="true">` in the
+  manifest, `androidx.profileinstaller` baked in. Runs via
+  `./gradlew :benchmarks:connectedBenchmarkAndroidTest`.
+
+  Known limitation: emulator `dumpsys gfxinfo … framestats` is
+  slow to populate post-launch, which trips Macrobenchmark's
+  activity-launch detection. Physical-device runs work; emulator
+  runs need
+  `testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"]
+  = "EMULATOR"` (already set) and may still hit the underlying
+  upstream issue. See `docs/PERFORMANCE.md` § "Phase 2 known
+  limitation" for the full writeup.
+
+- `dev.konduit.treehouse.KonduitAppServiceAdapter<T>` +
+  `konduitReturningFunction()` helper + Konduit-blessed
+  typealiases for `OutboundCallHandler` / `OutboundService` —
+  cuts the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
+  manual-adapter boilerplate from ~95 LoC + 7-entry
+  `@file:Suppress` to ~70 LoC + 2-entry `@file:Suppress`.
+  Adopter imports come from `dev.konduit.treehouse` instead of
+  `app.cash.zipline.internal.bridge.*`. Sample's
+  `ManualSampleAppServiceAdapter.kt` migrated to the helper as a
+  proof of API + ongoing usage example. Closes part of ROADMAP
+  item #6; the KSP-based annotation-driven follow-up (full
+  elimination of the boilerplate) is queued.
+
 - `docs/KNOWN_BUGS.md` U12 — codifies the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
   manual-adapter requirement that every Konduit `AppService`
   subinterface hits. Documents the symptom (`Constructor 'Adapter.<init>'

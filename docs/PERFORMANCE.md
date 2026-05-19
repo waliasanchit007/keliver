@@ -281,7 +281,43 @@ status of each metric:
 | Native-Compose comparison | planned — Phase 3 |
 | Redwood 0.18.0 comparison | planned — Phase 3 (adopter-demand-gated) |
 
-**Phase 2** lands the `konduit-benchmarks/` module — Macrobenchmark
-fixtures + a CI workflow that re-runs them per release tag, with
-deltas posted to the PR. **Phase 3** is the comparison work and
-depends on Phase 2's harness existing.
+**Phase 2 scaffolding (now landed).** A working
+[`sample/benchmarks/`](../sample/benchmarks/) Gradle module with
+AndroidX Macrobenchmark `ColdStartBenchmark` + `warmStartup`
+fixtures, a `benchmark` build type on `:host-android` configured
+to satisfy Macrobenchmark's safety checks (`isDebuggable = false`,
+debug-key signed, `<profileable android:shell="true">` in the
+manifest, `androidx.profileinstaller` baked in), and a matching
+`benchmark` build type on the `:benchmarks` module itself with
+`matchingFallbacks += "release"` so the project-dep resolver finds
+`:host-compose`'s release variant. Run with:
+
+```sh
+./gradlew :benchmarks:connectedBenchmarkAndroidTest
+```
+
+**Phase 2 known limitation — emulator framestats flakiness.**
+Running the cold-start fixture against an Android emulator (any
+recent API level) trips Macrobenchmark's `Unable to confirm
+activity launch completion` check — the emulator's
+`dumpsys gfxinfo … framestats` table is slow to populate after
+activity launch, and Macrobenchmark times out before the first
+frame's stats land. Same symptom on bare Pixel emulator AVDs as
+on the higher-API ones. The fixture is correct (the sample DOES
+launch + render — verified independently by running
+`adb shell am start …` + `screencap`), only the activity-launch
+detector is unreliable on emulator.
+
+**Recommended adopter workflow.** Run benchmarks against a real
+device (USB-attached or `adb connect`). Emulator runs are useful
+for verifying the harness compiles + installs, but the actual
+numbers should always be measured on hardware. The
+`testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"`
+in `:benchmarks/build.gradle.kts` lets emulator runs at least
+*attempt* the measurement, but the framestats issue is upstream
+and not fixable in Konduit's harness.
+
+**Phase 3** is the comparison work — native-Compose-only and
+upstream Redwood 0.18.0 baselines — and depends on Phase 2 numbers
+being captured on a hardware reference device first. Adopter-demand
+gated.

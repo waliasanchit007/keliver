@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest for the Macrobenchmark module. The target app
+  (`:host-android`) has its own manifest; this one only declares
+  the test runner's own metadata.
+
+  The benchmark module installs as a separate APK from the
+  target app; the JUnit runner orchestrates the cold-start
+  measurement by launching the target via ActivityManager.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application />
+</manifest>
