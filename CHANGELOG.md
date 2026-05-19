@@ -19,15 +19,32 @@ New:
   Surfaced during the sample app's first end-to-end test run
   ([`sample/TESTING.md`](sample/TESTING.md)).
 
-- `sample/` — **end-to-end tested** against a Pixel 9 emulator
-  (API 37). First emulator run surfaced 5 latent bugs/gaps between
-  the README and what shipped: (1) Zipline IR plugin missing from
-  every module with `take`/`bind` calls, (2) `kotlinSerialization`
-  missing from `:shared`, (3) `Adapter.<init>` IrLinkageError per
-  U12, (4) silent failures with no `EventListener` wired, (5)
-  README referenced a nonexistent `serveDevelopmentZipline` Gradle
-  task. All five fixed in tree; full debugging log in
-  `sample/TESTING.md`.
+- `sample/` — **end-to-end tested on both Android and iOS.** The
+  Android pass on a Pixel 9 emulator (API 37) surfaced 5 latent
+  bugs/gaps between the README and what shipped: (1) Zipline IR
+  plugin missing from every module with `take`/`bind` calls, (2)
+  `kotlinSerialization` missing from `:shared`, (3)
+  `Adapter.<init>` IrLinkageError per U12, (4) silent failures
+  with no `EventListener` wired, (5) README referenced a
+  nonexistent `serveDevelopmentZipline` Gradle task.
+
+  The iOS pass on an iPhone 17 Pro simulator (iOS 26.3.1, Xcode
+  26.3) surfaced 3 additional bugs/gaps: (iOS-#1) Xcode Run Script
+  couldn't find `sample/gradlew`, (iOS-#2) no iOS-side
+  `EventListener` (parity with Android #4), (iOS-#3)
+  `NSLog("%@", kotlinString)` crashes with `EXC_BAD_ACCESS` on
+  Xcode 26.3's pointer-authentication when called from
+  Kotlin/Native. All 8 findings fixed in tree.
+
+  Cross-platform parity confirmed: the five Android-side fixes
+  apply unchanged on iOS, and only the three iOS-platform-specific
+  findings (build-script, NSLog crash) are new. Full debugging log
+  in [`sample/TESTING.md`](sample/TESTING.md) with separate
+  Android and iOS case studies.
+
+  Ready-made Xcode project at [`sample/iosApp/`](sample/iosApp/)
+  links the `KonduitSampleHost.framework` and runs against the
+  same `python3 -m http.server`-served bundle as the Android side.
 
 - `docs/PERFORMANCE.md` + `scripts/measure-baselines.sh` — baseline
   performance measurements for adopter planning. Covers four metric
