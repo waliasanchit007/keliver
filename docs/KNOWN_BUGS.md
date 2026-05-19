@@ -703,6 +703,16 @@ outbound proxy + serializer routing) lives in
    processor** (caliclan.5) — emits `Generated<Name>Adapter`
    automatically. Adopter writes ~5 lines instead of ~70.
 
+   **Required adopter config — KSP must be on the `-2.0.x` API
+   line.** The codegen module is built against KSP 2.0. Using a
+   `-1.0.x` KSP version triggers the misleading config-time
+   error `ksp-<v>-1.0.x is too old for kotlin-2.3.10`. Known
+   working: `2.1.20-2.0.1` (against Kotlin 2.1.x),
+   `2.2.0-2.0.2` (against Kotlin 2.2.x). DevoStatus migration
+   to this processor surfaced this requirement; without
+   matching the API line the adopter sees the misleading
+   error message rather than the actual incompatibility.
+
 **Reference snippet (manual variant, for context).** Adopters
 typically don't need this anymore — use the KSP processor above.
 The manual shape stays documented because the KSP processor's
