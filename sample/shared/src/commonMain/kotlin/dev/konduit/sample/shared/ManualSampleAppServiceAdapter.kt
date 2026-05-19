@@ -5,109 +5,96 @@
  * Manual `ZiplineServiceAdapter` for [SampleAppService]. Required
  * because Zipline's IR plugin cannot auto-generate adapters for
  * interfaces that transitively extend `ZiplineService` through
- * `AppService` — see https://github.com/cashapp/zipline/issues/765.
+ * `AppService` — see https://github.com/cashapp/zipline/issues/765
+ * and Konduit's `docs/KNOWN_BUGS.md` U12 entry.
  *
- * Symptom of NOT having this file (or the matching companion-object
- * `Adapter` subclass on `SampleAppService`): the host's
- * `EventListener.codeLoadFailed` fires at QuickJS load with
+ * Uses Konduit's [KonduitAppServiceAdapter] base class +
+ * [konduitReturningFunction] helper so the imports come from
+ * `dev.konduit.treehouse` (Konduit-blessed) instead of
+ * `app.cash.zipline.internal.bridge.*` (Zipline internals).
  *
- *   QuickJsException: Constructor 'Adapter.<init>' can not be called:
- *   No constructor found for symbol '…SampleAppService.Companion.Adapter…
- *     <init>(kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;
- *     kotlin.String)'
+ * Adopter cost reduces from ~95 LoC + 7-entry @file:Suppress to
+ * ~70 LoC + 2-entry @file:Suppress. Most of the per-method
+ * boilerplate disappears into the helper functions. The
+ * `INVISIBLE_*` suppressions stay because Kotlin checks visibility
+ * at every use site — typealiases don't change that. Until Zipline
+ * #765 ships, this is the smallest possible surface.
  *
- * If you add new methods to `SampleAppService`, add a matching
- * `ReturningZiplineFunction` block in `ziplineFunctions(...)` AND a
- * delegating override in `outboundService(...)`'s anonymous object,
- * keeping the function ids stable across host + guest.
+ * When you add a new method to `SampleAppService`: append a matching
+ * [konduitReturningFunction] block in `ziplineFunctions(...)` AND
+ * a delegating override in `outboundService(...)`'s anonymous
+ * object. The function-id-to-position mapping must match between
+ * the two.
  */
-@file:Suppress(
-  "INVISIBLE_MEMBER",
-  "INVISIBLE_REFERENCE",
-  "CANNOT_OVERRIDE_INVISIBLE_MEMBER",
-  "EXPOSED_PARAMETER_TYPE",
-  "EXPOSED_SUPER_CLASS",
-  "EXPOSED_FUNCTION_RETURN_TYPE",
-  "EXPOSED_PROPERTY_TYPE",
-)
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 
 package dev.konduit.sample.shared
 
 import app.cash.zipline.ZiplineFunction
-import app.cash.zipline.internal.bridge.OutboundCallHandler
-import app.cash.zipline.internal.bridge.OutboundService
-import app.cash.zipline.internal.bridge.ReturningZiplineFunction
-import app.cash.zipline.internal.bridge.ZiplineServiceAdapter
 import app.cash.zipline.ziplineServiceSerializer
 import dev.konduit.treehouse.AppLifecycle
+import dev.konduit.treehouse.KonduitAppServiceAdapter
+import dev.konduit.treehouse.KonduitOutboundCallHandler
+import dev.konduit.treehouse.KonduitOutboundService
 import dev.konduit.treehouse.ZiplineTreehouseUi
+import dev.konduit.treehouse.konduitReturningFunction
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 
 internal open class ManualSampleAppServiceAdapter(
-  override val serializers: List<KSerializer<*>>,
-  override val serialName: String = "dev.konduit.sample.shared.SampleAppService",
-) : ZiplineServiceAdapter<SampleAppService>() {
+  serializers: List<KSerializer<*>>,
+  serialName: String = "dev.konduit.sample.shared.SampleAppService",
+) : KonduitAppServiceAdapter<SampleAppService>(serializers, serialName) {
 
   override val simpleName: String = "SampleAppService"
 
   override fun ziplineFunctions(
     serializersModule: SerializersModule,
   ): List<ZiplineFunction<SampleAppService>> {
-    val launchFunction = object : ReturningZiplineFunction<SampleAppService>(
-      id = "launch",
-      signature = "fun launch(): dev.konduit.treehouse.ZiplineTreehouseUi",
-      argSerializers = emptyList(),
-      resultSerializer = ziplineServiceSerializer<ZiplineTreehouseUi>(),
-    ) {
-      override fun call(service: SampleAppService, args: List<*>): Any? = service.launch()
-    }
-    val appLifecycleFunction = object : ReturningZiplineFunction<SampleAppService>(
-      id = "appLifecycle",
-      signature = "fun appLifecycle(): dev.konduit.treehouse.AppLifecycle",
-      argSerializers = emptyList(),
-      resultSerializer = ziplineServiceSerializer<AppLifecycle>(),
-    ) {
-      override fun call(service: SampleAppService, args: List<*>): Any? = service.appLifecycle
-    }
-    val closeFunction = object : ReturningZiplineFunction<SampleAppService>(
-      id = "close",
-      signature = "fun close(): kotlin.Unit",
-      argSerializers = emptyList(),
-      resultSerializer = serializersModule.serializer<Unit>(),
-    ) {
-      override fun call(service: SampleAppService, args: List<*>): Any? {
-        service.close()
-        return Unit
-      }
-    }
-    // Use a mutable list + .add(...) instead of listOf(...) — the
-    // vararg `listOf` infers the element type from `ReturningZiplineFunction`,
-    // an `INVISIBLE_REFERENCE` Zipline internal, which Kotlin rejects
-    // at the call site even with the file-level Suppress.
     val out = mutableListOf<ZiplineFunction<SampleAppService>>()
-    out.add(launchFunction)
-    out.add(appLifecycleFunction)
-    out.add(closeFunction)
+    out.add(
+      konduitReturningFunction<SampleAppService>(
+        id = "launch",
+        signature = "fun launch(): dev.konduit.treehouse.ZiplineTreehouseUi",
+        resultSerializer = ziplineServiceSerializer<ZiplineTreehouseUi>(),
+        call = { it.launch() },
+      ),
+    )
+    out.add(
+      konduitReturningFunction<SampleAppService>(
+        id = "appLifecycle",
+        signature = "fun appLifecycle(): dev.konduit.treehouse.AppLifecycle",
+        resultSerializer = ziplineServiceSerializer<AppLifecycle>(),
+        call = { it.appLifecycle },
+      ),
+    )
+    out.add(
+      konduitReturningFunction<SampleAppService>(
+        id = "close",
+        signature = "fun close(): kotlin.Unit",
+        resultSerializer = serializersModule.serializer<Unit>(),
+        call = { it.close(); Unit },
+      ),
+    )
     return out
   }
 
-  override fun outboundService(callHandler: OutboundCallHandler): SampleAppService {
-    return object : SampleAppService, OutboundService {
-      override val callHandler: OutboundCallHandler = callHandler
+  override fun outboundService(
+    callHandler: KonduitOutboundCallHandler,
+  ): SampleAppService = object : SampleAppService, KonduitOutboundService {
+    override val callHandler: KonduitOutboundCallHandler = callHandler
 
-      // call IDs must match the position of each function in
-      // `ziplineFunctions()` above. Re-order at your peril.
-      override fun launch(): ZiplineTreehouseUi =
-        callHandler.call(this, 0) as ZiplineTreehouseUi
+    // call IDs must match the position of each function in
+    // `ziplineFunctions()` above. Re-order at your peril.
+    override fun launch(): ZiplineTreehouseUi =
+      callHandler.call(this, 0) as ZiplineTreehouseUi
 
-      override val appLifecycle: AppLifecycle
-        get() = callHandler.call(this, 1) as AppLifecycle
+    override val appLifecycle: AppLifecycle
+      get() = callHandler.call(this, 1) as AppLifecycle
 
-      override fun close() {
-        callHandler.call(this, 2)
-      }
+    override fun close() {
+      callHandler.call(this, 2)
     }
   }
 }
