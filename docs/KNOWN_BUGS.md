@@ -665,23 +665,67 @@ mapping must match between the two.
   same surface (because `SduiAppService` doesn't add methods
   beyond what AppService requires).
 
-**Cost to adopters.** Every adopter writing a custom
-`AppService` subinterface needs this ~95-line file. There's
-nothing in Konduit's public API that hides this — until either
-upstream Zipline ships #765 or Konduit adds a wrapper module, the
-boilerplate is unavoidable.
+**Cost to adopters.** Down from ~95 LoC + 7-entry `@file:Suppress`
+to ~70 LoC + 2-entry `@file:Suppress` as of Konduit caliclan.5
+via [`KonduitAppServiceAdapter`](../konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/KonduitAppServiceAdapter.kt).
 
-**Possible Konduit-side fix.** A `konduit-treehouse` helper that
-either (a) ships a code-gen plugin to emit the adapter from
-`@KonduitAppService`-annotated interfaces, or (b) provides a
-reflective `BaseAppServiceAdapter` that uses kotlinx-serialization
-to discover method shapes at runtime. Both have trade-offs (a)
-adds a new processor for every adopter to wire, (b) costs a small
-amount of JS-side performance. Filed as follow-up.
+**Konduit-side helper (shipped).** As of caliclan.5,
+`dev.konduit.treehouse.KonduitAppServiceAdapter<T>` +
+`konduitReturningFunction()` helper +
+`KonduitOutboundCallHandler` / `KonduitOutboundService` aliases
+cover most of the boilerplate. Adopter code drops to:
 
-**Owner.** Konduit. Filed as [#TBD](https://github.com/waliasanchit007/konduit/issues).
-Blocked on resolving the trade-off between (a) and (b) above; the
-manual workaround is sufficient for now.
+```kotlin
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+package your.pkg
+
+import dev.konduit.treehouse.KonduitAppServiceAdapter
+import dev.konduit.treehouse.KonduitOutboundCallHandler
+import dev.konduit.treehouse.KonduitOutboundService
+import dev.konduit.treehouse.konduitReturningFunction
+
+internal open class MyAppServiceAdapter(
+  serializers: List<KSerializer<*>>,
+  serialName: String = "your.pkg.MyAppService",
+) : KonduitAppServiceAdapter<MyAppService>(serializers, serialName) {
+  override val simpleName = "MyAppService"
+
+  override fun ziplineFunctions(
+    serializersModule: SerializersModule,
+  ): List<ZiplineFunction<MyAppService>> = listOf(
+    konduitReturningFunction<MyAppService>(
+      id = "launch",
+      signature = "fun launch(): dev.konduit.treehouse.ZiplineTreehouseUi",
+      resultSerializer = ziplineServiceSerializer<ZiplineTreehouseUi>(),
+      call = { it.launch() },
+    ),
+    // ...one konduitReturningFunction(...) per method on the interface
+  )
+
+  override fun outboundService(
+    callHandler: KonduitOutboundCallHandler,
+  ) = object : MyAppService, KonduitOutboundService {
+    override val callHandler: KonduitOutboundCallHandler = callHandler
+    override fun launch() = callHandler.call(this, 0) as ZiplineTreehouseUi
+    // ...one override per method on the interface; call IDs are positional
+  }
+}
+```
+
+The remaining two `@file:Suppress` entries cover Kotlin's
+visibility check at the use sites for `KonduitOutboundCallHandler`
+and `KonduitOutboundService` — those typealias to Zipline's
+`internal` types, which Kotlin checks at every reference (the
+file-level Suppress can't be hoisted into the alias itself). This
+is the smallest possible adopter footprint until Zipline #765
+ships upstream.
+
+**Future work.** A KSP processor that emits the adapter from a
+`@KonduitAppService` annotation, hiding even the ~70 LoC. Tracked
+in `docs/U12_KSP_DESIGN.md` (queued; current helper is sufficient).
+
+**Owner.** Konduit. Helper shipped in caliclan.5; full elimination
+gated on either upstream Zipline #765 or the KSP follow-up.
 
 ---
 
