@@ -82,23 +82,36 @@ already committed; the processor is the meat. Full spec in
 Estimate: 4–6 hours of focused build + tests via
 `kotlin-compile-testing-ksp`.
 
-### 2. Konduit-only sample app  ✅ *landed*
-Minimal end-to-end sample now lives at [`sample/`](./sample/) — a
+### 2. Konduit-only sample app  ✅ *landed + tested on both platforms*
+Minimal end-to-end sample lives at [`sample/`](./sample/) — a
 standalone Gradle build with its own custom schema (`Box` + `Text`),
 codegen pipeline (widget / modifier / protocol-host / protocol-guest),
-Kotlin/JS guest bundle, Android host shell, and iOS Kotlin
-`MainViewController`. Folds in the iOS-host validation that was
-queued separately. Build verified: Android APK assembles, iOS
-simulator framework links, Zipline bundle compiles. See
-[`sample/README.md`](./sample/README.md) for the runbook.
+Kotlin/JS guest bundle, Compose-MP host renderer, Android app
+shell, and iOS Xcode project.
 
-### 3. iOS host validation  ✅ *folded into #2*
+**Validated end-to-end:**
+- Android: Pixel 9 emulator (API 37) — renders "Hello, Konduit!"
+  ([PR #54](https://github.com/waliasanchit007/konduit/pull/54)).
+- iOS: iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3) — same
+  widget renders, same full Zipline RPC sequence visible via
+  `simctl launch --console`
+  ([PR #56](https://github.com/waliasanchit007/konduit/pull/56)).
+
+Testing surfaced 8 adopter-facing bugs (5 Android + 3 iOS-specific);
+all fixed in tree, all written up in
+[`sample/TESTING.md`](./sample/TESTING.md). See
+[`sample/README.md`](./sample/README.md) for the runbook +
+"Gotchas you'll hit on day one".
+
+### 3. iOS host validation  ✅ *complete*
 The sample's `host-compose` module produces a `KonduitSampleHost`
-framework for both `iosArm64` and `iosSimulatorArm64`, and ships a
-`MainViewController()` entry point with the `NSURLSession`-backed
-Zipline HTTP client. Adopters wire their Swift `@main`
-`UIViewControllerRepresentable` to this. See sample/README.md
-§"Run it on iOS".
+framework for both `iosArm64` and `iosSimulatorArm64`. The
+ready-made Xcode project at [`sample/iosApp/`](./sample/iosApp/)
+demonstrates the Swift integration:
+`UIViewControllerRepresentable` wrapping `MainKt.MainViewController()`
+from Kotlin/Native. Adopters can either copy the iosApp template
+or follow the integration notes in
+[`sample/README.md` § iOS adopter notes](./sample/README.md).
 
 ### 4. Performance benchmarks  ✅ *Phase 1 landed; Phases 2-3 queued*
 **Phase 1 (measured today):** [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md)
@@ -122,6 +135,25 @@ Cash App Redwood 0.18.0 comparison baselines.
 Adopters apply a Konduit-provided Gradle task that fails the build
 if the produced `.zipline` artifact grows beyond a configurable
 threshold. Catches accidental size regressions in CI.
+
+### 6. `konduit-treehouse` adapter helper — eliminate the U12 boilerplate
+Every adopter writing a new `AppService` subinterface today copies
+the same ~95-line `ManualXxxServiceAdapter.kt` workaround for
+[Zipline #765](https://github.com/cashapp/zipline/issues/765).
+Documented as [`U12`](./docs/KNOWN_BUGS.md#u12-appservice-subinterfaces-need-a-hand-rolled-adapter--zipline-ir-plugin-cant-generate-one).
+Two possible Konduit-side fix shapes:
+
+- **(a) Code-gen plugin** — a small KSP processor that scans
+  `@KonduitAppService`-annotated interfaces and emits the
+  adapter automatically. Adopters add a single annotation.
+- **(b) Reflective base adapter** — a `BaseAppServiceAdapter` that
+  uses kotlinx-serialization's reflective lookup to discover
+  method shapes at runtime. Adopters extend one class.
+
+Each has trade-offs: (a) adds a new processor for every adopter
+to wire (similar to `konduit-http-codegen`'s position), (b) costs
+a small amount of JS-side runtime. The right pick is the one that
+hides the most boilerplate with the least surface-area expansion.
 
 ---
 
