@@ -9,6 +9,22 @@
 ## [Unreleased]
 
 New:
+- `dev.konduit:konduit-treehouse-codegen` — **validated against
+  DevoStatus (~120-widget schema, 7+ host services)**. First
+  real-world adopter migration: replaced the production
+  `ManualSduiAppServiceAdapter.kt` (~95 LoC) with the
+  `@KonduitAppService` annotation + 5-line companion wrapper.
+  End-to-end verified on Pixel 9 emulator: same Zipline RPC
+  sequence, all widget categories render, chip-tap recompose
+  works. Confirms the processor + runtime helper are
+  production-ready, not just sample-correct.
+
+  Surfaced one adopter prerequisite — KSP must be on the
+  `-2.0.x` API line (codegen built against KSP 2.0). Using a
+  `-1.0.x` version trips the misleading
+  `ksp-<v>-1.0.x is too old for kotlin-2.3.10` config error.
+  Documented in U12.
+
 - `dev.konduit:konduit-treehouse-codegen` — KSP processor that
   emits `Generated<Name>Adapter` open classes for
   `@KonduitAppService`-annotated interfaces. Closes the second
