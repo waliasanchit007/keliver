@@ -69,18 +69,62 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 
 ---
 
-## Up next — in scope for 1.0.0-caliclan.5
+## Up next — in scope for 1.0.0-caliclan.6
 
-In rough priority order:
+The caliclan.5 list below is **fully shipped** (codegen, sample +
+iOS, perf Phase 1, bundle-size budget, U12 helper) — plus an
+unplanned but high-value **test-suite hardening** pass: CI now runs
+`test` + `apiCheck`, and the 22 inherited Redwood tests are revived +
+gated (`-PkonduitWithTestApp`). Retrospective + lessons in
+[`docs/HARDENING_RETROSPECTIVE.md`](./docs/HARDENING_RETROSPECTIVE.md).
 
-### 1. `konduit-http-codegen` — Phase 2 of issue #18 (KSP processor)
+Next cycle, in rough priority order (impact-first, informed by the
+"adopter friction is invisible from inside" lesson):
+
+### A. Maven Central publishing  ← highest adopter impact
+Today every adopter needs a GitHub PAT with `read:packages` to
+resolve `dev.konduit:*`. That's a day-one papercut on every fresh
+machine (we felt it building `sample/`). Publishing to Maven Central
+deletes the entire `gpr.user`/`gpr.token` setup from adopter projects.
+Steps are in [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md);
+gated on the Sonatype namespace claim + GPG signing key. Mostly
+release-infra work, but removes the single biggest onboarding barrier.
+
+### B. Performance Phase 2 — execute the device benchmarks
+The AndroidX Macrobenchmark module (`sample/benchmarks/`) is
+scaffolded with `coldStartup`/`warmStartup` fixtures. What's missing
+is *running* it on a device/CI runner to capture real cold-start,
+warm-mount, and update-latency numbers and publish them against the
+SLAs in [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md). Needs a
+hardware-backed runner (or a configured emulator in CI).
+
+### C. Signed-manifest validation
+The one untested production code path. `sample/` + the Production
+bundle test both use `ManifestVerifier.NO_SIGNATURE_CHECKS`; real
+deployments use `SignatureChecks(...)`. Generate a keypair, sign the
+sample's manifest, verify end-to-end. Tracked in
+[`sample/TESTING.md`](../sample/TESTING.md) § Production. Small but
+closes the last "untested ship path" gap.
+
+### D. Hot-reload validation in `sample/`
+Hot reload (WebSocket-driven manifest refetch) is the dev-loop
+feature, but it only exists in DevoStatus — the minimal sample omits
+it. Validate it end-to-end against the sample so adopters have a
+runnable reference for the feature they'll use most during
+development.
+
+---
+
+## Released — 1.0.0-caliclan.5
+
+Everything below shipped this cycle.
+
+### 1. `konduit-http-codegen` — issue #18 (KSP processor)  ✅ *shipped*
 KSP `SymbolProcessor` that walks `@KonduitApi`-annotated interfaces
-and emits `*Impl(KonduitHttp)` classes. Phase 1 annotations are
-already committed; the processor is the meat. Full spec in
+and emits `*Impl(KonduitHttp)` classes. Phases 2 + 3 landed (all
+verbs + `@Path`/`@Query`/`@Body`/`@Header`/`@HeaderMap`), with 11
+`kctfork`-based fixture tests. Full spec in
 [`docs/HTTP_API_CODEGEN_DESIGN.md`](./docs/HTTP_API_CODEGEN_DESIGN.md).
-
-Estimate: 4–6 hours of focused build + tests via
-`kotlin-compile-testing-ksp`.
 
 ### 2. Konduit-only sample app  ✅ *landed + tested on both platforms*
 Minimal end-to-end sample lives at [`sample/`](./sample/) — a
@@ -141,10 +185,11 @@ benchmarks per release tag is the next sub-task.
 **Phase 3 (adopter-demand-gated):** Native-Compose-only and upstream
 Cash App Redwood 0.18.0 comparison baselines.
 
-### 5. Bundle-size budget
-Adopters apply a Konduit-provided Gradle task that fails the build
-if the produced `.zipline` artifact grows beyond a configurable
-threshold. Catches accidental size regressions in CI.
+### 5. Bundle-size budget  ✅ *shipped*
+`dev.konduit.gradle.BundleSizeBudgetTask` — adopters register it to
+fail the build if the `.zipline` bundle exceeds a configurable
+threshold (with an optional soft-warn). Catches accidental size
+regressions in CI. 6/6 unit tests via `ProjectBuilder`.
 
 ### 6. `konduit-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
 **Both halves landed in caliclan.5:**
