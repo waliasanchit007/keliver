@@ -1,0 +1,32 @@
+import static dev.konduit.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+}
+
+apply plugin: 'dev.konduit.generator.modifiers'
+
+kotlin {
+  // Ensure our codegen correctly works in explicit API mode.
+  explicitApi()
+
+  targets.configureEach {
+    compilations.configureEach {
+      kotlinOptions {
+        // Ensure our codegen does not produce any warnings.
+        allWarningsAsErrors = true
+
+        freeCompilerArgs += [
+          // Ensure our codegen can handle the latest language semantics.
+          // https://kotlinlang.org/docs/compiler-reference.html#progressive
+          '-progressive'
+        ]
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.testApp.schema
+  type = 'com.example.redwood.testapp.TestSchema'
+}

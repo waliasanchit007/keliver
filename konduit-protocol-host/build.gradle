@@ -27,6 +27,11 @@ kotlin {
       // Restoring is tracked in docs/KNOWN_BUGS.md U13.
       if (rootProject.hasProperty('konduitWithTestApp')) {
         kotlin.srcDir('src/appsCommonTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.compose
+          implementation projects.testApp.schema.testing
+          implementation projects.testApp.schema.protocolHost
+        }
       }
       dependencies {
         implementation libs.kotlin.test

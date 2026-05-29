@@ -30,4 +30,8 @@ if (rootProject.hasProperty('konduitWithTestApp')) {
       java.srcDir('src/appsTest/kotlin')
     }
   }
+  dependencies {
+    testImplementation projects.testApp.schema
+    testImplementation projects.testApp.schema.compose
+  }
 }
