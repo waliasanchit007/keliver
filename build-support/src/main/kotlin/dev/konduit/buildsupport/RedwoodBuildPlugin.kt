@@ -71,7 +71,17 @@ import org.jetbrains.kotlin.gradle.tasks.FatFrameworkTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
+// Default Gradle coordinate group. Overridable via the `konduitGroupId`
+// Gradle property so a Maven Central release can publish under the
+// GitHub-vanity namespace (`io.github.waliasanchit007`) — which needs
+// no domain ownership — while existing GitHub Packages consumers keep
+// resolving `dev.konduit:*`. The Kotlin package names inside the
+// artifacts are always `dev.konduit.*` regardless; only the coordinate
+// string changes. See docs/MAVEN_CENTRAL_SETUP.md.
 private const val KONDUIT_GROUP_ID = "dev.konduit"
+
+private fun Project.konduitGroupId(): String =
+  providers.gradleProperty("konduitGroupId").getOrElse(KONDUIT_GROUP_ID)
 
 // HEY! If you change the major version update release.yaml doc folder.
 private const val KONDUIT_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
@@ -83,7 +93,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
   private lateinit var libs: LibrariesForLibs
 
   override fun apply(target: Project) {
-    target.group = KONDUIT_GROUP_ID
+    target.group = target.konduitGroupId()
     target.version = KONDUIT_VERSION
 
     libs = target.extensions.getByName("libs") as LibrariesForLibs
@@ -455,7 +465,10 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         signAllPublications()
       }
 
-      coordinates(KONDUIT_GROUP_ID, project.name, KONDUIT_VERSION)
+      // `project.group` is set from `konduitGroupId()` in apply(), so the
+      // coordinate honors a `-PkonduitGroupId=` override (e.g. the
+      // io.github.* vanity namespace for a Maven Central release).
+      coordinates(project.group.toString(), project.name, KONDUIT_VERSION)
 
       pom { pom ->
         pom.name.set(project.name)

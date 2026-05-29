@@ -9,9 +9,13 @@ Once this is done, downstream consumers can drop
 into a Gradle build with `mavenCentral()` configured and just have it
 work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
-This is gated on **two manual steps the user has to do**: claim the
-namespace at Sonatype, and generate a GPG signing key. The rest can
-be wired up by the implementation team once those two artifacts exist.
+**The in-repo build wiring is done** (vanniktech plugin, Central
+coordinates with an overridable groupId, Konduit-correct POMs, gated
+signing, and a manual `publish-maven-central.yml` workflow — see
+Steps 4 / 4b). What remains is **three external steps only the
+maintainer can do**: claim the namespace at Sonatype, generate a GPG
+signing key, and add the four repo secrets. After that, releasing is
+a single manual workflow run.
 
 ## Namespace decision
 
@@ -99,38 +103,75 @@ add these four:
 | `SIGNING_KEY` | Full contents of `konduit-signing.key` (the armored private key from Step 2) |
 | `SIGNING_PASSWORD` | The passphrase from Step 2 |
 
-## Step 4 — Update `publish.yml` (this is the implementation work)
+## Step 4 — Build wiring (DONE — no action needed)
 
-Currently `.github/workflows/publish.yml` targets GitHub Packages.
-The migration:
+> **Status:** the in-repo build wiring below is already complete on
+> `main`. This section is now a description of what exists, not a
+> to-do list. The only things still pending are the three external
+> steps above (namespace, GPG key, secrets) and then running the
+> publish workflow (Step 4b).
 
-1. Add the
+1. **vanniktech plugin — applied.** `build-support`'s
+   `RedwoodBuildPlugin.kt` applies
    [`com.vanniktech.maven.publish`](https://github.com/vanniktech/gradle-maven-publish-plugin)
-   plugin to the build-support module (it handles Sonatype Central
-   uploads + signing in one place). Or alternatively wire
-   `signing` + `publishing` blocks directly per module.
-2. Configure publishing coordinates:
-   - `groupId = "io.github.waliasanchit007"`
-   - `artifactId = <module name>` (unchanged — `konduit-host`,
-     `konduit-guest`, etc.)
-   - version from `RedwoodBuildPlugin.KONDUIT_VERSION`
-3. Add POM metadata: `name`, `description`, `url`, `licenses`,
-   `developers`, `scm`. Maven Central rejects POMs missing any of
-   these. **Currently the POMs still inherit Cash App Redwood
-   metadata** (`<url>cashapp/redwood</url>`, `<developer>cashapp`,
-   etc.) — this MUST be replaced with Konduit / waliasanchit007
-   values before the first Maven Central release.
-4. Update `publish.yml` to pass `SIGNING_KEY` /
-   `SIGNING_PASSWORD` / `SONATYPE_USERNAME` /
-   `SONATYPE_PASSWORD` as Gradle properties.
-5. **Option:** keep the existing GitHub Packages publish step too —
-   double-publishing means existing private consumers of
-   `dev.konduit:*` keep working unchanged while new public consumers
-   pick up `io.github.waliasanchit007:*`. Drop the GitHub Packages
-   step when the migration is complete.
-6. First test release: cut `1.0.0-caliclan.4` and watch the GHA run.
-   Failures usually surface as POM validation errors at the
-   Sonatype side — they're legible.
+   (`0.34.0`) to every published module. It calls
+   `publishToMavenCentral(automaticRelease = true)` (uploads a single
+   deployment bundle and auto-releases) and `signAllPublications()`,
+   gated behind the `RELEASE_SIGNING_ENABLED` system property
+   (default `true`; CI's GitHub-Packages job turns it off).
+2. **Coordinates — configured, with an overridable groupId.** The
+   plugin sets `coordinates(project.group, project.name,
+   KONDUIT_VERSION)`. `project.group` comes from a `konduitGroupId()`
+   helper that defaults to `dev.konduit` but is **overridable** with
+   `-PkonduitGroupId=io.github.waliasanchit007`. So:
+   - default builds + the GitHub Packages release keep `dev.konduit:*`
+     (existing private consumers unaffected),
+   - the Maven Central workflow passes the override to publish
+     `io.github.waliasanchit007:*`.
+
+   The override propagates to **inter-module dependencies** too — a
+   `dev.konduit` artifact's POM references sibling modules by the same
+   overridden group, so the Central artifacts are internally
+   consistent (verified by inspecting the generated POM).
+3. **POM metadata — Konduit-correct.** Every POM already carries
+   `name`, `description`, `url`
+   (`github.com/waliasanchit007/konduit`), Apache-2.0 `licenses`,
+   `developers` (`waliasanchit007`), and `scm` — the full set Maven
+   Central requires. (The old Cash App Redwood metadata was replaced
+   during the fork; an earlier draft of this doc warned otherwise —
+   that warning is obsolete.)
+
+## Step 4b — Run the publish workflow (after Steps 1-3)
+
+A dedicated, **manual** workflow does the release:
+`.github/workflows/publish-maven-central.yml`.
+
+- It is `workflow_dispatch`-only and **separate** from `publish.yml`
+  (which keeps pushing `dev.konduit:*` to GitHub Packages on `v*`
+  tags). The two channels co-exist; nothing about the private flow is
+  blocked on Central credentials.
+- It starts with a **preflight guard** that fails fast with a legible
+  message if any of the four secrets from Step 3 are missing — so a
+  premature run won't produce a confusing Gradle error.
+- It passes `-PkonduitGroupId=io.github.waliasanchit007` and maps the
+  four secrets onto the property names vanniktech expects
+  (`mavenCentralUsername`/`Password`, `signingInMemoryKey`/`Password`).
+
+To release once Steps 1-3 are done:
+
+1. Bump `KONDUIT_VERSION` in `RedwoodBuildPlugin.kt` if needed and tag.
+2. GitHub → Actions → **Publish to Maven Central** → **Run workflow**,
+   passing the tag (or a commit ref) as the input.
+3. Watch the run. POM/signature failures surface at the Sonatype side
+   and are legible. First release of a new namespace can take a few
+   minutes to index.
+
+> **Caveat:** the workflow's wiring is verified locally only against
+> `publishToMavenLocal` (coordinates, POM, signing-gate all correct).
+> It has **not** been run end-to-end against the real Sonatype Central
+> endpoint — that needs the credentials from Steps 1-3. Treat the
+> first real run as the integration test, and expect to iterate on
+> Sonatype-side validation messages.
 
 ## Step 5 — Update USAGE.md adoption instructions
 
@@ -159,9 +200,10 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   Belt-and-braces it to at least two.
 - **Missing POM metadata**: every artifact's POM must have name +
   description + url + license + developer + scm. The `vanniktech`
-  plugin makes this easy; manual `publishing {}` blocks are
-  error-prone. The current POMs inheriting Cash App Redwood metadata
-  will be rejected — Step 4 #3 is mandatory, not optional.
+  plugin handles this and the POMs already carry the full Konduit set
+  (see Step 4 #3), so this should be a non-issue — but it's the most
+  common Central rejection, so eyeball the first generated POM if a
+  run fails validation.
 - **First release shows up but is "staged"**: Sonatype Central's
   default flow is **automatic publishing** now (no manual "release"
   button), but if you opted into the old flow you may need to click
