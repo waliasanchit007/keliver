@@ -9,6 +9,18 @@
 ## [Unreleased]
 
 Fixed / infrastructure:
+- **U13 fully resolved — all 22 inherited Redwood tests revived.**
+  Recovered the upstream `test-app` fixture (schema + 6 codegen
+  modules + presenter + presenter-treehouse guest bundle) from git
+  history, gated behind `-PkonduitWithTestApp`, and re-enabled the
+  complete inherited protocol/codegen/treehouse-integration suite
+  (CI runs it). Surfaced + fixed three latent fork-era bugs along the
+  way: (1) the stdlib-custom-type serializer codegen bug (PR #64);
+  (2) a stripped `FakeTreehouseView` test fixture; (3) `JvmHeap.kt`'s
+  leak-walker allowlist missing `dev.konduit` (a package-rename
+  migration miss). The presenter guest bundle compiled against
+  caliclan.5 with no AppService/treehouse drift. See KNOWN_BUGS U13.
+
 - **Test suite is now green + CI-enforced.** A test-completeness
   audit found that `./gradlew test` failed on a clean checkout and
   that *no CI workflow ran tests* (all passed `-x test`). Root

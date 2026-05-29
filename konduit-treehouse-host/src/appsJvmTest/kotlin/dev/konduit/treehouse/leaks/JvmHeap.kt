@@ -97,6 +97,13 @@ internal object JvmHeap : Heap {
 
       // Explore everything else by reflecting on its fields.
       javaPackageName.isDescendant(
+        // `dev.konduit` covers this fork's own classes — upstream
+        // Redwood used `app.cash.redwood`, renamed to `dev.konduit`
+        // during the fork. This string-literal allowlist lived in the
+        // stripped test-app and so missed that rename; without
+        // `dev.konduit` the walker hits `else -> error` on e.g.
+        // `dev.konduit.treehouse.TreehouseTester$spec$1` (U13 Phase 2).
+        "dev.konduit",
         "app.cash",
         "com.example",
         "kotlin",

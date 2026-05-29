@@ -926,27 +926,45 @@ non-resolving `.serializer()` for stdlib custom-types
 `kotlinx.serialization.builtins`. See the `tooling-codegen` fix
 (PR #64).
 
-With the fixture in place, **14 of the 22 tests are revived**
-(the "category-1" schema/codegen tests in
-`konduit-protocol-host` / `-guest` / `konduit-testing` /
-`konduit-compose` / `konduit-tooling-codegen`). They compile +
-pass on JVM with `-PkonduitWithTestApp`, and CI runs them.
+**RESOLVED (caliclan.5).** All 22 tests are revived and CI runs
+them under `-PkonduitWithTestApp`:
 
-**Still open (8 tests — "category-2", Phase 2).** The
-`konduit-treehouse-host` `appsJvmTest` integration tests
-(GuestLifecycleTest, LeaksTest, TreehouseTesterTest, …) load a
-live Zipline guest bundle via `TreehouseTester`. That needs the
-`test-app:presenter` + `presenter-treehouse` modules recovered +
-modernized against caliclan.5's treehouse/AppService surface
-(which changed with the U12 adapter work) + the Kotlin/JS
-`kotlin-js-store/yarn.lock` regenerated for the gated JS modules.
-This is a bounded but separate workstream; deferred. Run locally
-(once recovered) with
-`./gradlew :konduit-treehouse-host:test -PkonduitWithTestApp`.
+- **Category-1 (14 tests)** — schema/codegen tests in
+  `konduit-protocol-host` / `-guest` / `konduit-testing` /
+  `konduit-compose` / `konduit-tooling-codegen`.
+- **Category-2 (8 tests)** — `konduit-treehouse-host` `appsJvmTest`
+  integration tests (GuestLifecycleTest, LeaksTest,
+  TreehouseTesterTest, FindCycleTest, JvmHeapTest) that load a
+  live Zipline guest bundle via `TreehouseTester`, plus
+  `konduit-treehouse-guest`'s `jsTest`.
 
-Konduit's own authored code (ergonomics modules, codegen
-processors, host runtime unit tests) remains covered + green
-independent of all this.
+Phase 2 recovered `test-app:presenter` + `presenter-treehouse`
+(the guest bundle) and surfaced two more fork-era misses, both
+fixed:
+1. `FakeTreehouseView.kt` (a testapp-coupled commonTest fixture)
+   was stripped; recovered into `appsJvmTest`.
+2. `leaks/JvmHeap.kt`'s heap-walker reflection allowlist still
+   listed `app.cash` but not `dev.konduit` — a package-rename
+   migration miss that made the leak tests error on
+   `dev.konduit.treehouse.TreehouseTester$spec$1`. Added
+   `dev.konduit`.
+
+The presenter modules compiled against caliclan.5 with **no**
+AppService/treehouse drift (the feared U12-adapter interaction
+didn't materialize — the guest bundle uses the standard
+`AppService` surface). The Kotlin/JS `yarn.lock` concern was a
+non-issue for targeted `:module:jvmTest`/`:jsTest` tasks (only
+the `build`/`check` aggregate triggers `kotlinStoreYarnLock`), so
+CI runs targeted tasks.
+
+Run the full inherited suite locally with:
+```
+./gradlew -PkonduitWithTestApp \
+  :konduit-protocol-host:jvmTest :konduit-protocol-guest:jvmTest \
+  :konduit-testing:jvmTest :konduit-compose:jvmTest \
+  :konduit-tooling-codegen:test :konduit-treehouse-host:jvmTest \
+  :konduit-treehouse-guest:jsTest
+```
 
 **Also:** the gradle-plugin lint fixture tests
 (`FixtureTest > lintMpp*`) require `ANDROID_HOME` (or the fixture's
@@ -954,8 +972,9 @@ independent of all this.
 Android module. CI macOS runners provide it; local runs need it
 exported. Not a code defect.
 
-**Owner.** Konduit. Quarantine + CI enforcement shipped in
-caliclan.5; fixture restoration is a tracked follow-up.
+**Owner.** Konduit. Fully resolved in caliclan.5 — fixture
+recovered, all 22 inherited tests revived + CI-enforced, and the
+underlying stdlib-serializer codegen bug fixed (PR #64).
 
 ---
 
