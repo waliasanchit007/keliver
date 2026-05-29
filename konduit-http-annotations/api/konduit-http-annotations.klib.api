@@ -1,0 +1,68 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-http-annotations>
+open annotation class dev.konduit.http.api/Body : kotlin/Annotation { // dev.konduit.http.api/Body|null[0]
+    constructor <init>() // dev.konduit.http.api/Body.<init>|<init>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/DELETE : kotlin/Annotation { // dev.konduit.http.api/DELETE|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/DELETE.<init>|<init>(kotlin.String){}[0]
+
+    final val path // dev.konduit.http.api/DELETE.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.konduit.http.api/DELETE.path.<get-path>|<get-path>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/GET : kotlin/Annotation { // dev.konduit.http.api/GET|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/GET.<init>|<init>(kotlin.String){}[0]
+
+    final val path // dev.konduit.http.api/GET.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.konduit.http.api/GET.path.<get-path>|<get-path>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/Header : kotlin/Annotation { // dev.konduit.http.api/Header|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/Header.<init>|<init>(kotlin.String){}[0]
+
+    final val name // dev.konduit.http.api/Header.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.konduit.http.api/Header.name.<get-name>|<get-name>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/HeaderMap : kotlin/Annotation { // dev.konduit.http.api/HeaderMap|null[0]
+    constructor <init>() // dev.konduit.http.api/HeaderMap.<init>|<init>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/KonduitApi : kotlin/Annotation { // dev.konduit.http.api/KonduitApi|null[0]
+    constructor <init>() // dev.konduit.http.api/KonduitApi.<init>|<init>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/POST : kotlin/Annotation { // dev.konduit.http.api/POST|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/POST.<init>|<init>(kotlin.String){}[0]
+
+    final val path // dev.konduit.http.api/POST.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.konduit.http.api/POST.path.<get-path>|<get-path>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/PUT : kotlin/Annotation { // dev.konduit.http.api/PUT|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/PUT.<init>|<init>(kotlin.String){}[0]
+
+    final val path // dev.konduit.http.api/PUT.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.konduit.http.api/PUT.path.<get-path>|<get-path>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/Path : kotlin/Annotation { // dev.konduit.http.api/Path|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/Path.<init>|<init>(kotlin.String){}[0]
+
+    final val name // dev.konduit.http.api/Path.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.konduit.http.api/Path.name.<get-name>|<get-name>(){}[0]
+}
+
+open annotation class dev.konduit.http.api/Query : kotlin/Annotation { // dev.konduit.http.api/Query|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.http.api/Query.<init>|<init>(kotlin.String){}[0]
+
+    final val name // dev.konduit.http.api/Query.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.konduit.http.api/Query.name.<get-name>|<get-name>(){}[0]
+}

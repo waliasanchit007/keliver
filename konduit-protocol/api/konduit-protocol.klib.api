@@ -1,0 +1,455 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-protocol>
+abstract fun interface dev.konduit.protocol/ChangesSink { // dev.konduit.protocol/ChangesSink|null[0]
+    abstract fun sendChanges(kotlin.collections/List<dev.konduit.protocol/Change>) // dev.konduit.protocol/ChangesSink.sendChanges|sendChanges(kotlin.collections.List<dev.konduit.protocol.Change>){}[0]
+}
+
+abstract fun interface dev.konduit.protocol/EventSink { // dev.konduit.protocol/EventSink|null[0]
+    abstract fun sendEvent(dev.konduit.protocol/Event) // dev.konduit.protocol/EventSink.sendEvent|sendEvent(dev.konduit.protocol.Event){}[0]
+}
+
+sealed interface dev.konduit.protocol/Change { // dev.konduit.protocol/Change|null[0]
+    abstract val id // dev.konduit.protocol/Change.id|{}id[0]
+        abstract fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/Change.id.<get-id>|<get-id>(){}[0]
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.konduit.protocol/Change.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/Change> // dev.konduit.protocol/Change.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.konduit.protocol/Change.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.konduit.protocol/ChildrenChange : dev.konduit.protocol/Change { // dev.konduit.protocol/ChildrenChange|null[0]
+    abstract val tag // dev.konduit.protocol/ChildrenChange.tag|{}tag[0]
+        abstract fun <get-tag>(): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenChange.tag.<get-tag>|<get-tag>(){}[0]
+
+    final class Add : dev.konduit.protocol/ChildrenChange { // dev.konduit.protocol/ChildrenChange.Add|null[0]
+        final val childId // dev.konduit.protocol/ChildrenChange.Add.childId|{}childId[0]
+            final fun <get-childId>(): dev.konduit.protocol/Id // dev.konduit.protocol/ChildrenChange.Add.childId.<get-childId>|<get-childId>(){}[0]
+        final val id // dev.konduit.protocol/ChildrenChange.Add.id|{}id[0]
+            final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/ChildrenChange.Add.id.<get-id>|<get-id>(){}[0]
+        final val index // dev.konduit.protocol/ChildrenChange.Add.index|{}index[0]
+            final fun <get-index>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Add.index.<get-index>|<get-index>(){}[0]
+        final val tag // dev.konduit.protocol/ChildrenChange.Add.tag|{}tag[0]
+            final fun <get-tag>(): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenChange.Add.tag.<get-tag>|<get-tag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ChildrenChange.Add.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Add.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.konduit.protocol/ChildrenChange.Add.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ChildrenChange.Add> { // dev.konduit.protocol/ChildrenChange.Add.$serializer|null[0]
+            final val descriptor // dev.konduit.protocol/ChildrenChange.Add.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ChildrenChange.Add.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ChildrenChange.Add.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ChildrenChange.Add // dev.konduit.protocol/ChildrenChange.Add.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ChildrenChange.Add) // dev.konduit.protocol/ChildrenChange.Add.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ChildrenChange.Add){}[0]
+        }
+
+        final object Companion { // dev.konduit.protocol/ChildrenChange.Add.Companion|null[0]
+            final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, dev.konduit.protocol/Id, kotlin/Int): dev.konduit.protocol/ChildrenChange.Add // dev.konduit.protocol/ChildrenChange.Add.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;dev.konduit.protocol.Id;kotlin.Int){}[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ChildrenChange.Add> // dev.konduit.protocol/ChildrenChange.Add.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class Move : dev.konduit.protocol/ChildrenChange { // dev.konduit.protocol/ChildrenChange.Move|null[0]
+        final val count // dev.konduit.protocol/ChildrenChange.Move.count|{}count[0]
+            final fun <get-count>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Move.count.<get-count>|<get-count>(){}[0]
+        final val fromIndex // dev.konduit.protocol/ChildrenChange.Move.fromIndex|{}fromIndex[0]
+            final fun <get-fromIndex>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Move.fromIndex.<get-fromIndex>|<get-fromIndex>(){}[0]
+        final val id // dev.konduit.protocol/ChildrenChange.Move.id|{}id[0]
+            final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/ChildrenChange.Move.id.<get-id>|<get-id>(){}[0]
+        final val tag // dev.konduit.protocol/ChildrenChange.Move.tag|{}tag[0]
+            final fun <get-tag>(): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenChange.Move.tag.<get-tag>|<get-tag>(){}[0]
+        final val toIndex // dev.konduit.protocol/ChildrenChange.Move.toIndex|{}toIndex[0]
+            final fun <get-toIndex>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Move.toIndex.<get-toIndex>|<get-toIndex>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ChildrenChange.Move.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Move.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.konduit.protocol/ChildrenChange.Move.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ChildrenChange.Move> { // dev.konduit.protocol/ChildrenChange.Move.$serializer|null[0]
+            final val descriptor // dev.konduit.protocol/ChildrenChange.Move.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ChildrenChange.Move.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ChildrenChange.Move.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ChildrenChange.Move // dev.konduit.protocol/ChildrenChange.Move.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ChildrenChange.Move) // dev.konduit.protocol/ChildrenChange.Move.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ChildrenChange.Move){}[0]
+        }
+
+        final object Companion { // dev.konduit.protocol/ChildrenChange.Move.Companion|null[0]
+            final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, kotlin/Int, kotlin/Int, kotlin/Int): dev.konduit.protocol/ChildrenChange.Move // dev.konduit.protocol/ChildrenChange.Move.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ChildrenChange.Move> // dev.konduit.protocol/ChildrenChange.Move.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class Remove : dev.konduit.protocol/ChildrenChange { // dev.konduit.protocol/ChildrenChange.Remove|null[0]
+        final val count // dev.konduit.protocol/ChildrenChange.Remove.count|{}count[0]
+            final fun <get-count>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Remove.count.<get-count>|<get-count>(){}[0]
+        final val detach // dev.konduit.protocol/ChildrenChange.Remove.detach|{}detach[0]
+            final fun <get-detach>(): kotlin/Boolean // dev.konduit.protocol/ChildrenChange.Remove.detach.<get-detach>|<get-detach>(){}[0]
+        final val id // dev.konduit.protocol/ChildrenChange.Remove.id|{}id[0]
+            final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/ChildrenChange.Remove.id.<get-id>|<get-id>(){}[0]
+        final val index // dev.konduit.protocol/ChildrenChange.Remove.index|{}index[0]
+            final fun <get-index>(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Remove.index.<get-index>|<get-index>(){}[0]
+        final val tag // dev.konduit.protocol/ChildrenChange.Remove.tag|{}tag[0]
+            final fun <get-tag>(): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenChange.Remove.tag.<get-tag>|<get-tag>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ChildrenChange.Remove.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.konduit.protocol/ChildrenChange.Remove.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.konduit.protocol/ChildrenChange.Remove.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ChildrenChange.Remove> { // dev.konduit.protocol/ChildrenChange.Remove.$serializer|null[0]
+            final val descriptor // dev.konduit.protocol/ChildrenChange.Remove.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ChildrenChange.Remove.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ChildrenChange.Remove.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ChildrenChange.Remove // dev.konduit.protocol/ChildrenChange.Remove.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ChildrenChange.Remove) // dev.konduit.protocol/ChildrenChange.Remove.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ChildrenChange.Remove){}[0]
+        }
+
+        final object Companion { // dev.konduit.protocol/ChildrenChange.Remove.Companion|null[0]
+            final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, kotlin/Int, kotlin/Boolean): dev.konduit.protocol/ChildrenChange.Remove // dev.konduit.protocol/ChildrenChange.Remove.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;kotlin.Int;kotlin.Boolean){}[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ChildrenChange.Remove> // dev.konduit.protocol/ChildrenChange.Remove.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.konduit.protocol/ChildrenChange.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ChildrenChange> // dev.konduit.protocol/ChildrenChange.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.konduit.protocol/ChildrenChange.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.konduit.protocol/ValueChange : dev.konduit.protocol/Change // dev.konduit.protocol/ValueChange|null[0]
+
+final class dev.konduit.protocol/Create : dev.konduit.protocol/Change { // dev.konduit.protocol/Create|null[0]
+    final val id // dev.konduit.protocol/Create.id|{}id[0]
+        final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/Create.id.<get-id>|<get-id>(){}[0]
+    final val tag // dev.konduit.protocol/Create.tag|{}tag[0]
+        final fun <get-tag>(): dev.konduit.protocol/WidgetTag // dev.konduit.protocol/Create.tag.<get-tag>|<get-tag>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/Create.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/Create.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/Create.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/Create> { // dev.konduit.protocol/Create.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/Create.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/Create.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/Create.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/Create // dev.konduit.protocol/Create.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/Create) // dev.konduit.protocol/Create.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.Create){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/Create.Companion|null[0]
+        final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag): dev.konduit.protocol/Create // dev.konduit.protocol/Create.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag){}[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/Create> // dev.konduit.protocol/Create.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.konduit.protocol/Event { // dev.konduit.protocol/Event|null[0]
+    final val args // dev.konduit.protocol/Event.args|{}args[0]
+        final fun <get-args>(): kotlin.collections/List<kotlinx.serialization.json/JsonElement> // dev.konduit.protocol/Event.args.<get-args>|<get-args>(){}[0]
+    final val id // dev.konduit.protocol/Event.id|{}id[0]
+        final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/Event.id.<get-id>|<get-id>(){}[0]
+    final val tag // dev.konduit.protocol/Event.tag|{}tag[0]
+        final fun <get-tag>(): dev.konduit.protocol/EventTag // dev.konduit.protocol/Event.tag.<get-tag>|<get-tag>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/Event.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/Event.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/Event.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/Event> { // dev.konduit.protocol/Event.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/Event.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/Event.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/Event.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/Event // dev.konduit.protocol/Event.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/Event) // dev.konduit.protocol/Event.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.Event){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/Event.Companion|null[0]
+        final val $childSerializers // dev.konduit.protocol/Event.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/EventTag, kotlin.collections/List<kotlinx.serialization.json/JsonElement> = ...): dev.konduit.protocol/Event // dev.konduit.protocol/Event.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.EventTag;kotlin.collections.List<kotlinx.serialization.json.JsonElement>){}[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/Event> // dev.konduit.protocol/Event.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.konduit.protocol/ModifierChange : dev.konduit.protocol/ValueChange { // dev.konduit.protocol/ModifierChange|null[0]
+    final val elements // dev.konduit.protocol/ModifierChange.elements|{}elements[0]
+        final fun <get-elements>(): kotlin.collections/List<dev.konduit.protocol/ModifierElement> // dev.konduit.protocol/ModifierChange.elements.<get-elements>|<get-elements>(){}[0]
+    final val id // dev.konduit.protocol/ModifierChange.id|{}id[0]
+        final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/ModifierChange.id.<get-id>|<get-id>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ModifierChange.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/ModifierChange.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/ModifierChange.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ModifierChange> { // dev.konduit.protocol/ModifierChange.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/ModifierChange.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ModifierChange.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ModifierChange.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ModifierChange // dev.konduit.protocol/ModifierChange.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ModifierChange) // dev.konduit.protocol/ModifierChange.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ModifierChange){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/ModifierChange.Companion|null[0]
+        final val $childSerializers // dev.konduit.protocol/ModifierChange.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun invoke(dev.konduit.protocol/Id, kotlin.collections/List<dev.konduit.protocol/ModifierElement> = ...): dev.konduit.protocol/ModifierChange // dev.konduit.protocol/ModifierChange.Companion.invoke|invoke(dev.konduit.protocol.Id;kotlin.collections.List<dev.konduit.protocol.ModifierElement>){}[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ModifierChange> // dev.konduit.protocol/ModifierChange.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.konduit.protocol/ModifierElement { // dev.konduit.protocol/ModifierElement|null[0]
+    constructor <init>(dev.konduit.protocol/ModifierTag, kotlinx.serialization.json/JsonElement = ...) // dev.konduit.protocol/ModifierElement.<init>|<init>(dev.konduit.protocol.ModifierTag;kotlinx.serialization.json.JsonElement){}[0]
+
+    final val tag // dev.konduit.protocol/ModifierElement.tag|{}tag[0]
+        final fun <get-tag>(): dev.konduit.protocol/ModifierTag // dev.konduit.protocol/ModifierElement.tag.<get-tag>|<get-tag>(){}[0]
+    final val value // dev.konduit.protocol/ModifierElement.value|{}value[0]
+        final fun <get-value>(): kotlinx.serialization.json/JsonElement // dev.konduit.protocol/ModifierElement.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ModifierElement.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/ModifierElement.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/ModifierElement.toString|toString(){}[0]
+}
+
+final class dev.konduit.protocol/PropertyChange : dev.konduit.protocol/ValueChange { // dev.konduit.protocol/PropertyChange|null[0]
+    final val id // dev.konduit.protocol/PropertyChange.id|{}id[0]
+        final fun <get-id>(): dev.konduit.protocol/Id // dev.konduit.protocol/PropertyChange.id.<get-id>|<get-id>(){}[0]
+    final val propertyTag // dev.konduit.protocol/PropertyChange.propertyTag|{}propertyTag[0]
+        final fun <get-propertyTag>(): dev.konduit.protocol/PropertyTag // dev.konduit.protocol/PropertyChange.propertyTag.<get-propertyTag>|<get-propertyTag>(){}[0]
+    final val value // dev.konduit.protocol/PropertyChange.value|{}value[0]
+        final fun <get-value>(): kotlinx.serialization.json/JsonElement // dev.konduit.protocol/PropertyChange.value.<get-value>|<get-value>(){}[0]
+    final val widgetTag // dev.konduit.protocol/PropertyChange.widgetTag|{}widgetTag[0]
+        final fun <get-widgetTag>(): dev.konduit.protocol/WidgetTag // dev.konduit.protocol/PropertyChange.widgetTag.<get-widgetTag>|<get-widgetTag>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/PropertyChange.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/PropertyChange.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/PropertyChange.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/PropertyChange> { // dev.konduit.protocol/PropertyChange.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/PropertyChange.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/PropertyChange.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/PropertyChange.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/PropertyChange // dev.konduit.protocol/PropertyChange.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/PropertyChange) // dev.konduit.protocol/PropertyChange.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.PropertyChange){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/PropertyChange.Companion|null[0]
+        final fun invoke(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag, dev.konduit.protocol/PropertyTag, kotlinx.serialization.json/JsonElement = ...): dev.konduit.protocol/PropertyChange // dev.konduit.protocol/PropertyChange.Companion.invoke|invoke(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag;dev.konduit.protocol.PropertyTag;kotlinx.serialization.json.JsonElement){}[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/PropertyChange> // dev.konduit.protocol/PropertyChange.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/ChildrenTag { // dev.konduit.protocol/ChildrenTag|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/ChildrenTag.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/ChildrenTag.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/ChildrenTag.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ChildrenTag.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/ChildrenTag.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/ChildrenTag.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ChildrenTag> { // dev.konduit.protocol/ChildrenTag.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/ChildrenTag.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ChildrenTag.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ChildrenTag.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenTag.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ChildrenTag) // dev.konduit.protocol/ChildrenTag.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ChildrenTag){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/ChildrenTag.Companion|null[0]
+        final val Root // dev.konduit.protocol/ChildrenTag.Companion.Root|{}Root[0]
+            final fun <get-Root>(): dev.konduit.protocol/ChildrenTag // dev.konduit.protocol/ChildrenTag.Companion.Root.<get-Root>|<get-Root>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ChildrenTag> // dev.konduit.protocol/ChildrenTag.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/EventTag { // dev.konduit.protocol/EventTag|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/EventTag.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/EventTag.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/EventTag.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/EventTag.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/EventTag.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/EventTag.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/EventTag> { // dev.konduit.protocol/EventTag.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/EventTag.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/EventTag.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/EventTag.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/EventTag // dev.konduit.protocol/EventTag.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/EventTag) // dev.konduit.protocol/EventTag.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.EventTag){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/EventTag.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/EventTag> // dev.konduit.protocol/EventTag.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/Id { // dev.konduit.protocol/Id|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/Id.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/Id.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/Id.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/Id.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/Id.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/Id.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/Id> { // dev.konduit.protocol/Id.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/Id.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/Id.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/Id.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/Id // dev.konduit.protocol/Id.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/Id) // dev.konduit.protocol/Id.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.Id){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/Id.Companion|null[0]
+        final val Root // dev.konduit.protocol/Id.Companion.Root|{}Root[0]
+            final fun <get-Root>(): dev.konduit.protocol/Id // dev.konduit.protocol/Id.Companion.Root.<get-Root>|<get-Root>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/Id> // dev.konduit.protocol/Id.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/ModifierTag { // dev.konduit.protocol/ModifierTag|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/ModifierTag.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/ModifierTag.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/ModifierTag.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/ModifierTag.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/ModifierTag.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/ModifierTag.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/ModifierTag> { // dev.konduit.protocol/ModifierTag.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/ModifierTag.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/ModifierTag.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/ModifierTag.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/ModifierTag // dev.konduit.protocol/ModifierTag.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/ModifierTag) // dev.konduit.protocol/ModifierTag.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.ModifierTag){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/ModifierTag.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/ModifierTag> // dev.konduit.protocol/ModifierTag.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/PropertyTag { // dev.konduit.protocol/PropertyTag|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/PropertyTag.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/PropertyTag.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/PropertyTag.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/PropertyTag.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/PropertyTag.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/PropertyTag.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/PropertyTag> { // dev.konduit.protocol/PropertyTag.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/PropertyTag.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/PropertyTag.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/PropertyTag.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/PropertyTag // dev.konduit.protocol/PropertyTag.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/PropertyTag) // dev.konduit.protocol/PropertyTag.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.PropertyTag){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/PropertyTag.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/PropertyTag> // dev.konduit.protocol/PropertyTag.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/RedwoodVersion : kotlin/Comparable<dev.konduit.protocol/RedwoodVersion> { // dev.konduit.protocol/RedwoodVersion|null[0]
+    constructor <init>(kotlin/String) // dev.konduit.protocol/RedwoodVersion.<init>|<init>(kotlin.String){}[0]
+
+    final val value // dev.konduit.protocol/RedwoodVersion.value|{}value[0]
+        final fun <get-value>(): kotlin/String // dev.konduit.protocol/RedwoodVersion.value.<get-value>|<get-value>(){}[0]
+
+    final fun compareTo(dev.konduit.protocol/RedwoodVersion): kotlin/Int // dev.konduit.protocol/RedwoodVersion.compareTo|compareTo(dev.konduit.protocol.RedwoodVersion){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/RedwoodVersion.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/RedwoodVersion.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/RedwoodVersion.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/RedwoodVersion> { // dev.konduit.protocol/RedwoodVersion.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/RedwoodVersion.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/RedwoodVersion.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/RedwoodVersion.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/RedwoodVersion // dev.konduit.protocol/RedwoodVersion.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/RedwoodVersion) // dev.konduit.protocol/RedwoodVersion.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.RedwoodVersion){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/RedwoodVersion.Companion|null[0]
+        final val Unknown // dev.konduit.protocol/RedwoodVersion.Companion.Unknown|{}Unknown[0]
+            final fun <get-Unknown>(): dev.konduit.protocol/RedwoodVersion // dev.konduit.protocol/RedwoodVersion.Companion.Unknown.<get-Unknown>|<get-Unknown>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/RedwoodVersion> // dev.konduit.protocol/RedwoodVersion.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/SnapshotChangeList { // dev.konduit.protocol/SnapshotChangeList|null[0]
+    constructor <init>(kotlin.collections/List<dev.konduit.protocol/Change>) // dev.konduit.protocol/SnapshotChangeList.<init>|<init>(kotlin.collections.List<dev.konduit.protocol.Change>){}[0]
+
+    final val changes // dev.konduit.protocol/SnapshotChangeList.changes|{}changes[0]
+        final fun <get-changes>(): kotlin.collections/List<dev.konduit.protocol/Change> // dev.konduit.protocol/SnapshotChangeList.changes.<get-changes>|<get-changes>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/SnapshotChangeList.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/SnapshotChangeList.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/SnapshotChangeList.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/SnapshotChangeList> { // dev.konduit.protocol/SnapshotChangeList.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/SnapshotChangeList.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/SnapshotChangeList.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/SnapshotChangeList.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/SnapshotChangeList // dev.konduit.protocol/SnapshotChangeList.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/SnapshotChangeList) // dev.konduit.protocol/SnapshotChangeList.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.SnapshotChangeList){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/SnapshotChangeList.Companion|null[0]
+        final val $childSerializers // dev.konduit.protocol/SnapshotChangeList.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/SnapshotChangeList> // dev.konduit.protocol/SnapshotChangeList.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.konduit.protocol/WidgetTag { // dev.konduit.protocol/WidgetTag|null[0]
+    constructor <init>(kotlin/Int) // dev.konduit.protocol/WidgetTag.<init>|<init>(kotlin.Int){}[0]
+
+    final val value // dev.konduit.protocol/WidgetTag.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.konduit.protocol/WidgetTag.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.protocol/WidgetTag.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.konduit.protocol/WidgetTag.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.konduit.protocol/WidgetTag.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.konduit.protocol/WidgetTag> { // dev.konduit.protocol/WidgetTag.$serializer|null[0]
+        final val descriptor // dev.konduit.protocol/WidgetTag.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.konduit.protocol/WidgetTag.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.konduit.protocol/WidgetTag.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.konduit.protocol/WidgetTag // dev.konduit.protocol/WidgetTag.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.konduit.protocol/WidgetTag) // dev.konduit.protocol/WidgetTag.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.konduit.protocol.WidgetTag){}[0]
+    }
+
+    final object Companion { // dev.konduit.protocol/WidgetTag.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.konduit.protocol/WidgetTag> // dev.konduit.protocol/WidgetTag.Companion.serializer|serializer(){}[0]
+    }
+}

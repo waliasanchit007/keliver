@@ -1,0 +1,30 @@
+public final class dev/konduit/tooling/codegen/CodegenKt {
+	public static final fun generate (Ldev/konduit/tooling/schema/SchemaSet;Ldev/konduit/tooling/codegen/CodegenType;Ljava/nio/file/Path;)V
+}
+
+public final class dev/konduit/tooling/codegen/CodegenType : java/lang/Enum {
+	public static final field Compose Ldev/konduit/tooling/codegen/CodegenType;
+	public static final field Modifiers Ldev/konduit/tooling/codegen/CodegenType;
+	public static final field Testing Ldev/konduit/tooling/codegen/CodegenType;
+	public static final field Widget Ldev/konduit/tooling/codegen/CodegenType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/konduit/tooling/codegen/CodegenType;
+	public static fun values ()[Ldev/konduit/tooling/codegen/CodegenType;
+}
+
+public final class dev/konduit/tooling/codegen/Main {
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public final class dev/konduit/tooling/codegen/ProtocolCodegenKt {
+	public static final fun generate (Ldev/konduit/tooling/schema/ProtocolSchemaSet;Ldev/konduit/tooling/codegen/ProtocolCodegenType;Ljava/nio/file/Path;)V
+}
+
+public final class dev/konduit/tooling/codegen/ProtocolCodegenType : java/lang/Enum {
+	public static final field Guest Ldev/konduit/tooling/codegen/ProtocolCodegenType;
+	public static final field Host Ldev/konduit/tooling/codegen/ProtocolCodegenType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/konduit/tooling/codegen/ProtocolCodegenType;
+	public static fun values ()[Ldev/konduit/tooling/codegen/ProtocolCodegenType;
+}
+

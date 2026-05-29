@@ -1,0 +1,71 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-protocol-guest>
+abstract interface dev.konduit.protocol.guest/ProtocolMismatchHandler { // dev.konduit.protocol.guest/ProtocolMismatchHandler|null[0]
+    abstract fun onUnknownEvent(dev.konduit.protocol/WidgetTag, dev.konduit.protocol/EventTag) // dev.konduit.protocol.guest/ProtocolMismatchHandler.onUnknownEvent|onUnknownEvent(dev.konduit.protocol.WidgetTag;dev.konduit.protocol.EventTag){}[0]
+    abstract fun onUnknownEventNode(dev.konduit.protocol/Id, dev.konduit.protocol/EventTag) // dev.konduit.protocol.guest/ProtocolMismatchHandler.onUnknownEventNode|onUnknownEventNode(dev.konduit.protocol.Id;dev.konduit.protocol.EventTag){}[0]
+
+    final object Companion { // dev.konduit.protocol.guest/ProtocolMismatchHandler.Companion|null[0]
+        final val Throwing // dev.konduit.protocol.guest/ProtocolMismatchHandler.Companion.Throwing|{}Throwing[0]
+            final fun <get-Throwing>(): dev.konduit.protocol.guest/ProtocolMismatchHandler // dev.konduit.protocol.guest/ProtocolMismatchHandler.Companion.Throwing.<get-Throwing>|<get-Throwing>(){}[0]
+    }
+}
+
+abstract interface dev.konduit.protocol.guest/ProtocolWidgetSystemFactory { // dev.konduit.protocol.guest/ProtocolWidgetSystemFactory|null[0]
+    abstract fun create(dev.konduit.protocol.guest/GuestProtocolAdapter, dev.konduit.protocol.guest/ProtocolMismatchHandler = ...): dev.konduit.widget/WidgetSystem<kotlin/Unit> // dev.konduit.protocol.guest/ProtocolWidgetSystemFactory.create|create(dev.konduit.protocol.guest.GuestProtocolAdapter;dev.konduit.protocol.guest.ProtocolMismatchHandler){}[0]
+}
+
+abstract class dev.konduit.protocol.guest/GuestProtocolAdapter : dev.konduit.protocol/EventSink { // dev.konduit.protocol.guest/GuestProtocolAdapter|null[0]
+    constructor <init>(dev.konduit.protocol/RedwoodVersion) // dev.konduit.protocol.guest/GuestProtocolAdapter.<init>|<init>(dev.konduit.protocol.RedwoodVersion){}[0]
+
+    abstract val root // dev.konduit.protocol.guest/GuestProtocolAdapter.root|{}root[0]
+        abstract fun <get-root>(): dev.konduit.widget/Widget.Children<kotlin/Unit> // dev.konduit.protocol.guest/GuestProtocolAdapter.root.<get-root>|<get-root>(){}[0]
+    abstract val widgetSystem // dev.konduit.protocol.guest/GuestProtocolAdapter.widgetSystem|{}widgetSystem[0]
+        abstract fun <get-widgetSystem>(): dev.konduit.widget/WidgetSystem<kotlin/Unit> // dev.konduit.protocol.guest/GuestProtocolAdapter.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+    final val hostVersion // dev.konduit.protocol.guest/GuestProtocolAdapter.hostVersion|{}hostVersion[0]
+        final fun <get-hostVersion>(): dev.konduit.protocol/RedwoodVersion // dev.konduit.protocol.guest/GuestProtocolAdapter.hostVersion.<get-hostVersion>|<get-hostVersion>(){}[0]
+
+    abstract fun emitChanges() // dev.konduit.protocol.guest/GuestProtocolAdapter.emitChanges|emitChanges(){}[0]
+    abstract fun initChangesSink(dev.konduit.protocol/ChangesSink) // dev.konduit.protocol.guest/GuestProtocolAdapter.initChangesSink|initChangesSink(dev.konduit.protocol.ChangesSink){}[0]
+}
+
+final class dev.konduit.protocol.guest/DefaultGuestProtocolAdapter : dev.konduit.protocol.guest/GuestProtocolAdapter { // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter|null[0]
+    constructor <init>(kotlinx.serialization.json/Json = ..., dev.konduit.protocol/RedwoodVersion, dev.konduit.protocol.guest/ProtocolWidgetSystemFactory, dev.konduit.protocol.guest/ProtocolMismatchHandler = ...) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.<init>|<init>(kotlinx.serialization.json.Json;dev.konduit.protocol.RedwoodVersion;dev.konduit.protocol.guest.ProtocolWidgetSystemFactory;dev.konduit.protocol.guest.ProtocolMismatchHandler){}[0]
+
+    final val json // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.json.<get-json>|<get-json>(){}[0]
+    final val root // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.root|{}root[0]
+        final fun <get-root>(): dev.konduit.widget/Widget.Children<kotlin/Unit> // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.root.<get-root>|<get-root>(){}[0]
+    final val widgetSystem // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.widgetSystem|{}widgetSystem[0]
+        final fun <get-widgetSystem>(): dev.konduit.widget/WidgetSystem<kotlin/Unit> // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+
+    final fun <#A1: kotlin/Any?> appendPropertyChange(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag, dev.konduit.protocol/PropertyTag, kotlinx.serialization/KSerializer<#A1>, #A1) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag;dev.konduit.protocol.PropertyTag;kotlinx.serialization.KSerializer<0:0>;0:0){0§<kotlin.Any?>}[0]
+    final fun appendAdd(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, kotlin/Int, dev.konduit.protocol.guest/ProtocolWidget) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendAdd|appendAdd(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;kotlin.Int;dev.konduit.protocol.guest.ProtocolWidget){}[0]
+    final fun appendCreate(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendCreate|appendCreate(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag){}[0]
+    final fun appendModifierChange(dev.konduit.protocol/Id, dev.konduit/Modifier) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendModifierChange|appendModifierChange(dev.konduit.protocol.Id;dev.konduit.Modifier){}[0]
+    final fun appendMove(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, kotlin/Int, kotlin/Int, kotlin/Int) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendMove|appendMove(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun appendPropertyChange(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag, dev.konduit.protocol/PropertyTag, kotlin/Boolean) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag;dev.konduit.protocol.PropertyTag;kotlin.Boolean){}[0]
+    final fun appendPropertyChange(dev.konduit.protocol/Id, dev.konduit.protocol/WidgetTag, dev.konduit.protocol/PropertyTag, kotlin/UInt) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.konduit.protocol.Id;dev.konduit.protocol.WidgetTag;dev.konduit.protocol.PropertyTag;kotlin.UInt){}[0]
+    final fun appendRemove(dev.konduit.protocol/Id, dev.konduit.protocol/ChildrenTag, kotlin/Int, dev.konduit.protocol.guest/ProtocolWidget) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.appendRemove|appendRemove(dev.konduit.protocol.Id;dev.konduit.protocol.ChildrenTag;kotlin.Int;dev.konduit.protocol.guest.ProtocolWidget){}[0]
+    final fun emitChanges() // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.emitChanges|emitChanges(){}[0]
+    final fun initChangesSink(dev.konduit.protocol/ChangesSink) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.initChangesSink|initChangesSink(dev.konduit.protocol.ChangesSink){}[0]
+    final fun nextId(): dev.konduit.protocol/Id // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.nextId|nextId(){}[0]
+    final fun sendEvent(dev.konduit.protocol/Event) // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.sendEvent|sendEvent(dev.konduit.protocol.Event){}[0]
+    final fun takeChanges(): kotlin.collections/List<dev.konduit.protocol/Change> // dev.konduit.protocol.guest/DefaultGuestProtocolAdapter.takeChanges|takeChanges(){}[0]
+}
+
+final val dev.konduit.protocol.guest/dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop // dev.konduit.protocol.guest/dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop|#static{}dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop[0]
+final val dev.konduit.protocol.guest/dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop // dev.konduit.protocol.guest/dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop|#static{}dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop[0]
+final val dev.konduit.protocol.guest/dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop // dev.konduit.protocol.guest/dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop|#static{}dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop[0]
+final val dev.konduit.protocol.guest/guestRedwoodVersion // dev.konduit.protocol.guest/guestRedwoodVersion|{}guestRedwoodVersion[0]
+    final fun <get-guestRedwoodVersion>(): dev.konduit.protocol/RedwoodVersion // dev.konduit.protocol.guest/guestRedwoodVersion.<get-guestRedwoodVersion>|<get-guestRedwoodVersion>(){}[0]
+
+final fun dev.konduit.protocol.guest/ProtocolRedwoodComposition(kotlinx.coroutines/CoroutineScope, dev.konduit.protocol.guest/GuestProtocolAdapter, kotlin/UInt, dev.konduit.ui/OnBackPressedDispatcher, androidx.compose.runtime.saveable/SaveableStateRegistry?, kotlinx.coroutines.flow/StateFlow<dev.konduit.ui/UiConfiguration>): dev.konduit.compose/RedwoodComposition // dev.konduit.protocol.guest/ProtocolRedwoodComposition|ProtocolRedwoodComposition(kotlinx.coroutines.CoroutineScope;dev.konduit.protocol.guest.GuestProtocolAdapter;kotlin.UInt;dev.konduit.ui.OnBackPressedDispatcher;androidx.compose.runtime.saveable.SaveableStateRegistry?;kotlinx.coroutines.flow.StateFlow<dev.konduit.ui.UiConfiguration>){}[0]
+final fun dev.konduit.protocol.guest/dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter(): kotlin/Int // dev.konduit.protocol.guest/dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter|dev_konduit_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter(){}[0]
+final fun dev.konduit.protocol.guest/dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop_getter(): kotlin/Int // dev.konduit.protocol.guest/dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop_getter|dev_konduit_protocol_guest_GuestProtocolAdapter$stableprop_getter(){}[0]
+final fun dev.konduit.protocol.guest/dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop_getter(): kotlin/Int // dev.konduit.protocol.guest/dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop_getter|dev_konduit_protocol_guest_ProtocolWidgetChildren$stableprop_getter(){}[0]

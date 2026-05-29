@@ -28,5 +28,13 @@ kotlin {
         implementation libs.kotlin.test
       }
     }
+    jsTest {
+      // FastGuestProtocolAdapterTest depends on the upstream Redwood
+      // `test-app` fixture (removed in the Phase 1.5 strip), so it's
+      // opt-in behind -PkonduitWithTestApp. See docs/KNOWN_BUGS.md U13.
+      if (rootProject.hasProperty('konduitWithTestApp')) {
+        kotlin.srcDir('src/appsJsTest/kotlin')
+      }
+    }
   }
 }

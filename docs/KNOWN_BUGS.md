@@ -878,9 +878,63 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-No outstanding actionable bugs at the moment — the punch list is
-empty. When a new bug surfaces, add it here; when fixed, move it to
-`CHANGELOG.md`.
+### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
+
+**What.** A May-2026 test-completeness audit found that `./gradlew
+test` failed on a clean checkout, and that **no CI job ran tests at
+all** (`ci.yml`, `compat-matrix.yml`, `publish.yml` all pass
+`-x test`). Root cause: the Phase 1.5 fork strip removed upstream
+Redwood's shared `test-app` fixture (which generates the
+`com.example.redwood.testapp.*` schema), but ~22 inherited test
+files across 7 modules still import it. They've been
+non-compiling — and therefore providing zero coverage — since the
+strip, hidden because CI never ran them.
+
+**Affected modules + files (quarantined under `apps*Test` source
+sets, opt-in behind `-PkonduitWithTestApp`):**
+- `konduit-treehouse-host` — `appsJvmTest` (GuestLifecycleTest,
+  LeaksTest, TreehouseTesterTest, leak/heap utils) — needs a live
+  guest bundle via `TreehouseTester` (hardcoded `../test-app/...`
+  path).
+- `konduit-tooling-codegen` — `appsTest` (ModifierGenerationTest,
+  WidgetProtocolGenerationTest).
+- `konduit-testing`, `konduit-protocol-host`,
+  `konduit-protocol-guest`, `konduit-compose` — `appsCommonTest`.
+- `konduit-treehouse-guest` — `appsJsTest`.
+
+**What was fixed in the audit (caliclan.5):**
+1. Quarantined the 22 fixture-dependent files into gated
+   `apps*Test` source dirs. This **recovered** the sibling tests
+   that share those source sets (they couldn't compile while the
+   broken files sat alongside them) — e.g. konduit-protocol-host's
+   6 inline-schema tests, konduit-compose's 6, etc. now run.
+2. Removed the dangling `:test-app:presenter-treehouse` task
+   dependency that made `./gradlew test` fail outright.
+3. Generated the 9 missing API baselines so `apiCheck` passes.
+4. Wired `test` + `apiCheck` into `ci.yml` so this can't silently
+   rot again.
+
+**Still open (the restoration).** Re-enabling the 22 quarantined
+tests requires a guest-bundle fixture. Two options:
+- **(a)** Port a minimal `test-app` (schema + presenter) into the
+  konduit build graph as a test fixture.
+- **(b)** Repoint `TreehouseTester` + the codegen tests at the
+  `sample/guest` bundle we now ship (cross-build wiring; fiddly).
+Until then, run them locally with
+`./gradlew :konduit-treehouse-host:test -PkonduitWithTestApp`
+*after* providing the fixture. Tracked; not blocking — these are
+inherited Redwood-internals tests, and Konduit's own authored code
+(ergonomics modules, codegen processors, host runtime unit tests)
+is covered and green.
+
+**Also:** the gradle-plugin lint fixture tests
+(`FixtureTest > lintMpp*`) require `ANDROID_HOME` (or the fixture's
+`local.properties`) to be set — they spin up a sub-build with an
+Android module. CI macOS runners provide it; local runs need it
+exported. Not a code defect.
+
+**Owner.** Konduit. Quarantine + CI enforcement shipped in
+caliclan.5; fixture restoration is a tracked follow-up.
 
 ---
 

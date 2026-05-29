@@ -1,0 +1,29 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-storage>
+abstract interface dev.konduit.storage/HostStorage : app.cash.zipline/ZiplineService { // dev.konduit.storage/HostStorage|null[0]
+    abstract suspend fun get(kotlin/String): kotlin/String? // dev.konduit.storage/HostStorage.get|get(kotlin.String){}[0]
+    abstract suspend fun keys(kotlin/String = ...): kotlin.collections/List<kotlin/String> // dev.konduit.storage/HostStorage.keys|keys(kotlin.String){}[0]
+    abstract suspend fun set(kotlin/String, kotlin/String?) // dev.konduit.storage/HostStorage.set|set(kotlin.String;kotlin.String?){}[0]
+
+    final object Companion // dev.konduit.storage/HostStorage.Companion|null[0]
+}
+
+final class dev.konduit.storage/KonduitStorage { // dev.konduit.storage/KonduitStorage|null[0]
+    constructor <init>(dev.konduit.storage/HostStorage, kotlinx.serialization.json/Json = ...) // dev.konduit.storage/KonduitStorage.<init>|<init>(dev.konduit.storage.HostStorage;kotlinx.serialization.json.Json){}[0]
+
+    final val json // dev.konduit.storage/KonduitStorage.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.konduit.storage/KonduitStorage.json.<get-json>|<get-json>(){}[0]
+    final val provider // dev.konduit.storage/KonduitStorage.provider|{}provider[0]
+        final fun <get-provider>(): dev.konduit.storage/HostStorage // dev.konduit.storage/KonduitStorage.provider.<get-provider>|<get-provider>(){}[0]
+
+    final suspend fun keys(kotlin/String = ...): kotlin.collections/List<kotlin/String> // dev.konduit.storage/KonduitStorage.keys|keys(kotlin.String){}[0]
+    final suspend fun remove(kotlin/String) // dev.konduit.storage/KonduitStorage.remove|remove(kotlin.String){}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> get(kotlin/String): #A1? // dev.konduit.storage/KonduitStorage.get|get(kotlin.String){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> set(kotlin/String, #A1?) // dev.konduit.storage/KonduitStorage.set|set(kotlin.String;0:0?){0§<kotlin.Any?>}[0]
+}

@@ -1,0 +1,55 @@
+public final class dev/konduit/protocol/guest/DefaultGuestProtocolAdapter : dev/konduit/protocol/guest/GuestProtocolAdapter {
+	public static final field $stable I
+	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/konduit/protocol/guest/ProtocolWidgetSystemFactory;Ldev/konduit/protocol/guest/ProtocolMismatchHandler;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/konduit/protocol/guest/ProtocolWidgetSystemFactory;Ldev/konduit/protocol/guest/ProtocolMismatchHandler;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun appendAdd-VoVfJ64 (IIILdev/konduit/protocol/guest/ProtocolWidget;)V
+	public fun appendCreate-09krAZM (II)V
+	public fun appendModifierChange-HmOnUN4 (ILdev/konduit/Modifier;)V
+	public fun appendMove-uCYSahY (IIIII)V
+	public fun appendPropertyChange-UQXh3P0 (IIII)V
+	public fun appendPropertyChange-_9Bgozk (IIIZ)V
+	public fun appendPropertyChange-hsni8PA (IIILkotlinx/serialization/KSerializer;Ljava/lang/Object;)V
+	public fun appendRemove-VoVfJ64 (IIILdev/konduit/protocol/guest/ProtocolWidget;)V
+	public fun emitChanges ()V
+	public fun getJson ()Lkotlinx/serialization/json/Json;
+	public fun getRoot ()Ldev/konduit/widget/Widget$Children;
+	public fun getWidgetSystem ()Ldev/konduit/widget/WidgetSystem;
+	public fun initChangesSink (Ldev/konduit/protocol/ChangesSink;)V
+	public fun nextId-DZnD9GA ()I
+	public fun sendEvent (Ldev/konduit/protocol/Event;)V
+	public final fun takeChanges ()Ljava/util/List;
+}
+
+public abstract class dev/konduit/protocol/guest/GuestProtocolAdapter : dev/konduit/protocol/EventSink {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public abstract fun emitChanges ()V
+	protected final fun getHostVersion-kmgvz8s ()Ljava/lang/String;
+	public abstract fun getRoot ()Ldev/konduit/widget/Widget$Children;
+	public abstract fun getWidgetSystem ()Ldev/konduit/widget/WidgetSystem;
+	public abstract fun initChangesSink (Ldev/konduit/protocol/ChangesSink;)V
+}
+
+public abstract interface class dev/konduit/protocol/guest/ProtocolMismatchHandler {
+	public static final field Companion Ldev/konduit/protocol/guest/ProtocolMismatchHandler$Companion;
+	public static final field Throwing Ldev/konduit/protocol/guest/ProtocolMismatchHandler;
+	public abstract fun onUnknownEvent-1u5SAos (II)V
+	public abstract fun onUnknownEventNode-WORXqi0 (II)V
+}
+
+public final class dev/konduit/protocol/guest/ProtocolMismatchHandler$Companion {
+}
+
+public final class dev/konduit/protocol/guest/ProtocolRedwoodCompositionKt {
+	public static final fun ProtocolRedwoodComposition-9-Eitbk (Lkotlinx/coroutines/CoroutineScope;Ldev/konduit/protocol/guest/GuestProtocolAdapter;ILdev/konduit/ui/OnBackPressedDispatcher;Landroidx/compose/runtime/saveable/SaveableStateRegistry;Lkotlinx/coroutines/flow/StateFlow;)Ldev/konduit/compose/RedwoodComposition;
+}
+
+public abstract interface class dev/konduit/protocol/guest/ProtocolWidgetSystemFactory {
+	public abstract fun create (Ldev/konduit/protocol/guest/GuestProtocolAdapter;Ldev/konduit/protocol/guest/ProtocolMismatchHandler;)Ldev/konduit/widget/WidgetSystem;
+	public static synthetic fun create$default (Ldev/konduit/protocol/guest/ProtocolWidgetSystemFactory;Ldev/konduit/protocol/guest/GuestProtocolAdapter;Ldev/konduit/protocol/guest/ProtocolMismatchHandler;ILjava/lang/Object;)Ldev/konduit/widget/WidgetSystem;
+}
+
+public final class dev/konduit/protocol/guest/VersionKt {
+	public static final fun getGuestRedwoodVersion ()Ljava/lang/String;
+}
+

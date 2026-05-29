@@ -41,10 +41,28 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build + publishToMavenLocal (no signing, no tests)
+      - name: Build + publishToMavenLocal (no signing)
         run: >
           ./gradlew
           publishToMavenLocal
           -x test
           -x allTests
+          -DRELEASE_SIGNING_ENABLED=false
+
+      # Enforce the test suite + API binary-compatibility surface.
+      # Previously skipped (-x test), which let a stripped test
+      # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.
+      # `apiCheck` guards the published API against accidental drift;
+      # the per-module `.api` baselines under `*/api/` are the source
+      # of truth (regenerate with `./gradlew apiDump` when you
+      # intentionally change public API).
+      #
+      # ANDROID_HOME is pre-set on GitHub macOS runners; the gradle-
+      # plugin lint fixtures (FixtureTest > lintMpp*) spin up a
+      # sub-build with an Android module and need it.
+      - name: Test + API check
+        run: >
+          ./gradlew
+          test
+          apiCheck
           -DRELEASE_SIGNING_ENABLED=false
