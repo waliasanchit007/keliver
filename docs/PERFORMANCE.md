@@ -144,6 +144,45 @@ zipline cache, P95 ≤ 1500 ms. Caveat: the network fetch of the
 manifest dominates the cold case — adopters who embed the manifest
 in assets will see substantially lower numbers.
 
+**Executed (emulator — 2026-05-29).** Ran
+`./gradlew :benchmarks:connectedBenchmarkAndroidTest` against a
+`Pixel_9` AVD (Android 17 / API 37, `arm64-v8a`, Apple-Silicon host),
+with the dev manifest server live. The result has two parts:
+
+- *Macrobenchmark `StartupTimingMetric` — blocked, exactly as
+  predicted.* Both `coldStartup` and `warmStartup` built, installed,
+  and launched (`Starting 2 tests on Pixel_9`), then failed with
+  `IllegalStateException: Unable to confirm activity launch
+  completion … dumpsys gfxinfo … framestats`. This is a clean
+  reproduction of the documented emulator limitation (see the Phase 2
+  note at the bottom) — the harness is correct; the emulator's
+  framestats table is the problem, not Konduit.
+- *Supplementary `am start -W` — measured.* Because `am start -W`
+  reports ActivityManager's own launch timing (process start → first
+  frame "displayed") and does **not** depend on the flaky gfxinfo
+  path, it gives a real number where Macrobenchmark can't. Same
+  `benchmark`-variant APK (`dev.konduit.sample`, R8-shaped,
+  profileinstaller baked in):
+
+  | Launch type | TotalTime |
+  |---|---|
+  | Cache-cold (after `pm clear` — forces bundle re-fetch) | **296 ms** |
+  | Process-cold ×5 (cache warm): 190 / 155 / 146 / 139 / 163 | **median 155 ms** |
+
+  Guest render confirmed on every launch — logcat shows
+  `KonduitSample: codeLoadSuccess modules=30` and the screen reads
+  "Hello, Konduit!" (not a blank/error surface), so the launches
+  measured a real render path.
+
+  **Caveats — treat as a sanity-check lower bound, not a publishable
+  baseline.** `am start -W` TotalTime approximates but is not
+  identical to the trace-based `StartupTimingMetric`; an
+  Apple-Silicon emulator has a fast host CPU, so these numbers are
+  optimistic versus mid-range hardware; and n is small. The takeaway
+  is directional: cold start sits comfortably inside the P50 ≤ 800 ms
+  SLA with wide headroom. Canonical per-release-tag numbers still
+  require a real device (see "Recommended adopter workflow" below).
+
 **How to measure (iOS).** Wrap the `MainViewController()` call site
 in `mach_absolute_time()` deltas and post the result via
 `os_signpost`. Capture in Instruments → Logging.
@@ -274,7 +313,7 @@ status of each metric:
 | Zipline bundle size (Development + Production) | **measured** |
 | iOS framework size (debug) | **measured** |
 | Build time (cold + warm) | **measured** |
-| Cold start latency | planned — Phase 2 |
+| Cold start latency | **executed on emulator** (2026-05-29) — Macrobenchmark blocked by emulator framestats; `am start -W` fallback ≈155 ms median process-cold. Real-device baseline still pending |
 | Warm mount latency | planned — Phase 2 |
 | Update latency | planned — Phase 2 |
 | Idle memory footprint | planned — Phase 2 |
@@ -296,17 +335,21 @@ manifest, `androidx.profileinstaller` baked in), and a matching
 ./gradlew :benchmarks:connectedBenchmarkAndroidTest
 ```
 
-**Phase 2 known limitation — emulator framestats flakiness.**
-Running the cold-start fixture against an Android emulator (any
-recent API level) trips Macrobenchmark's `Unable to confirm
-activity launch completion` check — the emulator's
-`dumpsys gfxinfo … framestats` table is slow to populate after
-activity launch, and Macrobenchmark times out before the first
-frame's stats land. Same symptom on bare Pixel emulator AVDs as
-on the higher-API ones. The fixture is correct (the sample DOES
-launch + render — verified independently by running
-`adb shell am start …` + `screencap`), only the activity-launch
-detector is unreliable on emulator.
+**Phase 2 known limitation — emulator framestats flakiness
+(CONFIRMED by a 2026-05-29 run).** Running the cold-start fixture
+against an Android emulator (any recent API level) trips
+Macrobenchmark's `Unable to confirm activity launch completion`
+check — the emulator's `dumpsys gfxinfo … framestats` table is slow
+to populate after activity launch, and Macrobenchmark times out
+before the first frame's stats land. This was reproduced directly on
+a `Pixel_9` AVD (API 37): both `coldStartup` and `warmStartup` built,
+installed, and launched, then failed with that exact
+`IllegalStateException`. The fixture is correct — the sample DOES
+launch + render, verified independently in the same session via
+`adb shell am start -W` (≈155 ms median process-cold) + `screencap`
+("Hello, Konduit!") + logcat (`codeLoadSuccess modules=30`). Only the
+activity-launch detector is unreliable on emulator; the numbers above
+came from the `am start -W` fallback.
 
 **Recommended adopter workflow.** Run benchmarks against a real
 device (USB-attached or `adb connect`). Emulator runs are useful
