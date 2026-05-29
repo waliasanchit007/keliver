@@ -139,6 +139,14 @@ internal object KotlinxSerialization {
   val SerializationStrategy = ClassName("kotlinx.serialization", "SerializationStrategy")
   val serializer = MemberName("kotlinx.serialization", "serializer")
 
+  // The `.serializer()` extension on builtin/stdlib companions
+  // (UInt, Duration, …) lives in kotlinx.serialization.builtins —
+  // it's a library function, NOT the compiler-plugin-generated
+  // companion accessor that user @Serializable types get. Emitting
+  // `Type.serializer()` for a stdlib type without this import fails
+  // with `Unresolved reference 'serializer'` (KNOWN_BUGS U13).
+  val builtinsSerializer = MemberName("kotlinx.serialization.builtins", "serializer")
+
   val SerialDescriptor = ClassName("kotlinx.serialization.descriptors", "SerialDescriptor")
   val buildClassSerialDescriptor = MemberName("kotlinx.serialization.descriptors", "buildClassSerialDescriptor")
   val element = MemberName("kotlinx.serialization.descriptors", "element")
@@ -153,3 +161,16 @@ internal object KotlinxSerialization {
 internal object KotlinxCoroutines {
   val coroutineScope = MemberName("kotlinx.coroutines", "coroutineScope")
 }
+
+/**
+ * True for stdlib `kotlin.*` types (e.g. kotlin.time.Duration,
+ * kotlin.UInt) used as schema custom-types. Their `.serializer()`
+ * comes from `kotlinx.serialization.builtins` (a library extension),
+ * not the compiler-plugin-generated companion accessor that user
+ * `@Serializable` types get — so the codegen must reference the
+ * builtins extension (with its import) for them. User types live in
+ * non-kotlin packages and keep the companion `.serializer()` (the
+ * U10 fallback). See KNOWN_BUGS U13.
+ */
+internal fun ClassName.isStdlibSerializableType(): Boolean =
+  packageName == "kotlin" || packageName.startsWith("kotlin.")
