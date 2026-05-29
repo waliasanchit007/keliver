@@ -914,18 +914,39 @@ sets, opt-in behind `-PkonduitWithTestApp`):**
 4. Wired `test` + `apiCheck` into `ci.yml` so this can't silently
    rot again.
 
-**Still open (the restoration).** Re-enabling the 22 quarantined
-tests requires a guest-bundle fixture. Two options:
-- **(a)** Port a minimal `test-app` (schema + presenter) into the
-  konduit build graph as a test fixture.
-- **(b)** Repoint `TreehouseTester` + the codegen tests at the
-  `sample/guest` bundle we now ship (cross-build wiring; fiddly).
-Until then, run them locally with
-`./gradlew :konduit-treehouse-host:test -PkonduitWithTestApp`
-*after* providing the fixture. Tracked; not blocking — these are
-inherited Redwood-internals tests, and Konduit's own authored code
-(ergonomics modules, codegen processors, host runtime unit tests)
-is covered and green.
+**Restoration progress (caliclan.5, second pass).** The
+`test-app:schema` fixture + its 6 codegen modules
+(compose/widget/modifiers/protocol-host/protocol-guest/testing)
+were recovered from git history (`8aaeb8898^`) and now build
+against caliclan.5, gated behind `-PkonduitWithTestApp` in
+`settings.gradle`. Recovering them surfaced + fixed a real latent
+codegen bug — the modifier-serializer generator emitted a
+non-resolving `.serializer()` for stdlib custom-types
+(`kotlin.time.Duration`, `kotlin.UInt`); now routed through
+`kotlinx.serialization.builtins`. See the `tooling-codegen` fix
+(PR #64).
+
+With the fixture in place, **14 of the 22 tests are revived**
+(the "category-1" schema/codegen tests in
+`konduit-protocol-host` / `-guest` / `konduit-testing` /
+`konduit-compose` / `konduit-tooling-codegen`). They compile +
+pass on JVM with `-PkonduitWithTestApp`, and CI runs them.
+
+**Still open (8 tests — "category-2", Phase 2).** The
+`konduit-treehouse-host` `appsJvmTest` integration tests
+(GuestLifecycleTest, LeaksTest, TreehouseTesterTest, …) load a
+live Zipline guest bundle via `TreehouseTester`. That needs the
+`test-app:presenter` + `presenter-treehouse` modules recovered +
+modernized against caliclan.5's treehouse/AppService surface
+(which changed with the U12 adapter work) + the Kotlin/JS
+`kotlin-js-store/yarn.lock` regenerated for the gated JS modules.
+This is a bounded but separate workstream; deferred. Run locally
+(once recovered) with
+`./gradlew :konduit-treehouse-host:test -PkonduitWithTestApp`.
+
+Konduit's own authored code (ergonomics modules, codegen
+processors, host runtime unit tests) remains covered + green
+independent of all this.
 
 **Also:** the gradle-plugin lint fixture tests
 (`FixtureTest > lintMpp*`) require `ANDROID_HOME` (or the fixture's

@@ -66,3 +66,20 @@ jobs:
           test
           apiCheck
           -DRELEASE_SIGNING_ENABLED=false
+
+      # Inherited Redwood schema/codegen tests that assert against the
+      # recovered `test-app` fixture (gated behind -PkonduitWithTestApp;
+      # see docs/KNOWN_BUGS.md U13). JVM-targeted to avoid the Kotlin/JS
+      # yarn.lock regeneration the gated JS modules would otherwise need.
+      # The treehouse-host integration tests (category-2) still need the
+      # presenter guest bundle and are NOT run here yet — tracked in U13.
+      - name: Test (recovered test-app fixture, JVM)
+        run: >
+          ./gradlew
+          -PkonduitWithTestApp
+          :konduit-protocol-host:jvmTest
+          :konduit-protocol-guest:jvmTest
+          :konduit-testing:jvmTest
+          :konduit-compose:jvmTest
+          :konduit-tooling-codegen:test
+          -DRELEASE_SIGNING_ENABLED=false

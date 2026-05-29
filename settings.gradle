@@ -163,3 +163,18 @@ include ':konduit-ui-basic-modifiers'
 include ':konduit-ui-basic-schema'
 include ':konduit-ui-basic-testing'
 include ':konduit-ui-basic-widget'
+
+// Test-only fixture: the upstream Redwood `test-app` schema + its codegen
+// outputs (com.example.redwood.testapp.*). Provides the shared TestSchema
+// that ~22 inherited protocol/codegen/treehouse tests assert against.
+// Gated behind -PkonduitWithTestApp so default builds stay lean; CI passes
+// the flag to run the full inherited suite. See docs/KNOWN_BUGS.md U13.
+if (hasProperty('konduitWithTestApp')) {
+  include ':test-app:schema'
+  include ':test-app:schema:compose'
+  include ':test-app:schema:modifiers'
+  include ':test-app:schema:protocol-guest'
+  include ':test-app:schema:protocol-host'
+  include ':test-app:schema:testing'
+  include ':test-app:schema:widget'
+}

@@ -21,6 +21,12 @@ kotlin {
       // matching comment in konduit-protocol-host/build.gradle.
       if (rootProject.hasProperty('konduitWithTestApp')) {
         kotlin.srcDir('src/appsCommonTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.compose
+          implementation projects.testApp.schema.protocolGuest
+          implementation projects.testApp.schema.protocolHost
+          implementation projects.testApp.schema.testing
+        }
       }
       dependencies {
         implementation libs.kotlin.test
