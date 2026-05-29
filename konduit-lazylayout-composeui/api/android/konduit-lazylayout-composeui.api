@@ -1,0 +1,7 @@
+public final class dev/konduit/lazylayout/composeui/ComposeUiRedwoodLazyLayoutWidgetFactory : dev/konduit/lazylayout/widget/RedwoodLazyLayoutWidgetFactory {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun LazyList ()Ldev/konduit/lazylayout/widget/LazyList;
+	public fun RefreshableLazyList ()Ldev/konduit/lazylayout/widget/RefreshableLazyList;
+}
+

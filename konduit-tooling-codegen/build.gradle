@@ -17,3 +17,17 @@ dependencies {
   testImplementation libs.junit
   testImplementation libs.assertk
 }
+
+// Codegen tests that assert against the upstream Redwood `test-app`
+// generated schema (com.example.redwood.testapp.*) live under
+// src/appsTest and are OPT-IN behind -PkonduitWithTestApp. The fork
+// removed that fixture (Phase 1.5 strip); the sibling tests in
+// src/test use inline @Schema definitions and run by default.
+// Restoring the testapp-based ones is tracked in docs/KNOWN_BUGS.md U13.
+if (rootProject.hasProperty('konduitWithTestApp')) {
+  sourceSets {
+    test {
+      java.srcDir('src/appsTest/kotlin')
+    }
+  }
+}

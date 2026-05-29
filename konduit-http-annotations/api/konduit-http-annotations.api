@@ -1,0 +1,37 @@
+public abstract interface annotation class dev/konduit/http/api/Body : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/konduit/http/api/DELETE : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/GET : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/Header : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/HeaderMap : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/konduit/http/api/KonduitApi : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/konduit/http/api/POST : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/PUT : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/Path : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/konduit/http/api/Query : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+

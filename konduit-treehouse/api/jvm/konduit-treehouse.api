@@ -1,0 +1,237 @@
+public abstract interface class dev/konduit/treehouse/AppLifecycle : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/konduit/treehouse/AppLifecycle$Companion;
+	public abstract fun getGuestProtocolVersion-kmgvz8s ()Ljava/lang/String;
+	public abstract fun sendFrame (J)V
+	public abstract fun start (Ldev/konduit/treehouse/AppLifecycle$Host;)V
+}
+
+public final class dev/konduit/treehouse/AppLifecycle$Companion {
+}
+
+public final class dev/konduit/treehouse/AppLifecycle$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/AppLifecycle;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/AppLifecycle$Host : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/konduit/treehouse/AppLifecycle$Host$Companion;
+	public abstract fun getHostProtocolVersion-kmgvz8s ()Ljava/lang/String;
+	public abstract fun handleUncaughtException (Ljava/lang/Throwable;)V
+	public abstract fun onUnknownEvent-1u5SAos (II)V
+	public abstract fun onUnknownEventNode-WORXqi0 (II)V
+	public abstract fun requestFrame ()V
+}
+
+public final class dev/konduit/treehouse/AppLifecycle$Host$Companion {
+}
+
+public final class dev/konduit/treehouse/AppLifecycle$Host$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/AppLifecycle$Host;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/AppService : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/konduit/treehouse/AppService$Companion;
+	public abstract fun getAppLifecycle ()Ldev/konduit/treehouse/AppLifecycle;
+}
+
+public final class dev/konduit/treehouse/AppService$Companion {
+}
+
+public final class dev/konduit/treehouse/AppService$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/AppService;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/CancellableService : app/cash/zipline/ZiplineService, dev/konduit/ui/Cancellable {
+	public static final field Companion Ldev/konduit/treehouse/CancellableService$Companion;
+}
+
+public final class dev/konduit/treehouse/CancellableService$Companion {
+}
+
+public final class dev/konduit/treehouse/CancellableService$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/CancellableService;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/ChangesSinkService : app/cash/zipline/ZiplineService, dev/konduit/protocol/ChangesSink {
+	public static final field Companion Ldev/konduit/treehouse/ChangesSinkService$Companion;
+}
+
+public final class dev/konduit/treehouse/ChangesSinkService$Companion {
+}
+
+public final class dev/konduit/treehouse/ChangesSinkService$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/ChangesSinkService;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface annotation class dev/konduit/treehouse/KonduitAppService : java/lang/annotation/Annotation {
+}
+
+public abstract class dev/konduit/treehouse/KonduitAppServiceAdapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+}
+
+public final class dev/konduit/treehouse/KonduitAppServiceAdapterKt {
+	public static final fun konduitReturningFunction (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function1;)Lapp/cash/zipline/ZiplineFunction;
+	public static synthetic fun konduitReturningFunction$default (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lapp/cash/zipline/ZiplineFunction;
+}
+
+public abstract interface class dev/konduit/treehouse/OnBackPressedCallbackService : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/konduit/treehouse/OnBackPressedCallbackService$Companion;
+	public abstract fun handleOnBackPressed ()V
+	public abstract fun isEnabled ()Lkotlinx/coroutines/flow/StateFlow;
+}
+
+public final class dev/konduit/treehouse/OnBackPressedCallbackService$Companion {
+}
+
+public final class dev/konduit/treehouse/OnBackPressedCallbackService$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/OnBackPressedCallbackService;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/OnBackPressedDispatcherService : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/konduit/treehouse/OnBackPressedDispatcherService$Companion;
+	public abstract fun addCallback (Ldev/konduit/treehouse/OnBackPressedCallbackService;)Ldev/konduit/treehouse/CancellableService;
+}
+
+public final class dev/konduit/treehouse/OnBackPressedDispatcherService$Companion {
+}
+
+public final class dev/konduit/treehouse/OnBackPressedDispatcherService$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/OnBackPressedDispatcherService;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public final class dev/konduit/treehouse/StateSnapshot {
+	public static final field Companion Ldev/konduit/treehouse/StateSnapshot$Companion;
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getContent ()Ljava/util/Map;
+}
+
+public final synthetic class dev/konduit/treehouse/StateSnapshot$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/konduit/treehouse/StateSnapshot$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/konduit/treehouse/StateSnapshot;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/konduit/treehouse/StateSnapshot;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/konduit/treehouse/StateSnapshot$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/konduit/treehouse/StateSnapshot$Id {
+	public static final field Companion Ldev/konduit/treehouse/StateSnapshot$Id$Companion;
+	public static final synthetic fun box-impl (Ljava/lang/String;)Ldev/konduit/treehouse/StateSnapshot$Id;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final synthetic class dev/konduit/treehouse/StateSnapshot$Id$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/konduit/treehouse/StateSnapshot$Id$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-hGDl_1U (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/String;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-bw3jWhM (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/String;)V
+}
+
+public final class dev/konduit/treehouse/StateSnapshot$Id$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/konduit/treehouse/StateSnapshotKt {
+	public static final fun getSaveableStateSerializersModule ()Lkotlinx/serialization/modules/SerializersModule;
+}
+
+public abstract interface class dev/konduit/treehouse/ZiplineTreehouseUi : app/cash/zipline/ZiplineService, dev/konduit/protocol/EventSink {
+	public static final field Companion Ldev/konduit/treehouse/ZiplineTreehouseUi$Companion;
+	public fun snapshotState ()Ldev/konduit/treehouse/StateSnapshot;
+	public abstract fun start (Ldev/konduit/treehouse/ZiplineTreehouseUi$Host;)V
+}
+
+public final class dev/konduit/treehouse/ZiplineTreehouseUi$Companion {
+}
+
+public final class dev/konduit/treehouse/ZiplineTreehouseUi$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/ZiplineTreehouseUi;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/treehouse/ZiplineTreehouseUi$Host : app/cash/zipline/ZiplineService, dev/konduit/treehouse/ChangesSinkService {
+	public static final field Companion Ldev/konduit/treehouse/ZiplineTreehouseUi$Host$Companion;
+	public abstract fun addOnBackPressedCallback (Ldev/konduit/treehouse/OnBackPressedCallbackService;)Ldev/konduit/treehouse/CancellableService;
+	public abstract fun getStateSnapshot ()Ldev/konduit/treehouse/StateSnapshot;
+	public abstract fun getUiConfigurations ()Lkotlinx/coroutines/flow/StateFlow;
+}
+
+public final class dev/konduit/treehouse/ZiplineTreehouseUi$Host$Companion {
+}
+
+public final class dev/konduit/treehouse/ZiplineTreehouseUi$Host$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/konduit/treehouse/ZiplineTreehouseUi$Host;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+

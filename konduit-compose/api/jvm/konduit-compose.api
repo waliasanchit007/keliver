@@ -1,0 +1,30 @@
+public final class dev/konduit/compose/BackHandlerKt {
+	public static final fun BackHandler (ZLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)V
+	public static final fun getCurrent (Ldev/konduit/ui/OnBackPressedDispatcher$Companion;Landroidx/compose/runtime/Composer;I)Ldev/konduit/ui/OnBackPressedDispatcher;
+	public static final fun getLocalOnBackPressedDispatcher ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public abstract interface class dev/konduit/compose/RedwoodComposition {
+	public abstract fun cancel ()V
+	public abstract fun setContent (Lkotlin/jvm/functions/Function2;)V
+}
+
+public final class dev/konduit/compose/RedwoodCompositionKt {
+	public static final fun RedwoodComposition (Lkotlinx/coroutines/CoroutineScope;Ldev/konduit/widget/RedwoodView;Ldev/konduit/widget/WidgetSystem;Lkotlin/jvm/functions/Function0;)Ldev/konduit/compose/RedwoodComposition;
+	public static final fun RedwoodComposition (Lkotlinx/coroutines/CoroutineScope;Ldev/konduit/widget/Widget$Children;Ldev/konduit/ui/OnBackPressedDispatcher;Landroidx/compose/runtime/saveable/SaveableStateRegistry;Lkotlinx/coroutines/flow/StateFlow;Ldev/konduit/widget/WidgetSystem;Lkotlin/jvm/functions/Function0;)Ldev/konduit/compose/RedwoodComposition;
+	public static synthetic fun RedwoodComposition$default (Lkotlinx/coroutines/CoroutineScope;Ldev/konduit/widget/RedwoodView;Ldev/konduit/widget/WidgetSystem;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/konduit/compose/RedwoodComposition;
+	public static synthetic fun RedwoodComposition$default (Lkotlinx/coroutines/CoroutineScope;Ldev/konduit/widget/Widget$Children;Ldev/konduit/ui/OnBackPressedDispatcher;Landroidx/compose/runtime/saveable/SaveableStateRegistry;Lkotlinx/coroutines/flow/StateFlow;Ldev/konduit/widget/WidgetSystem;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/konduit/compose/RedwoodComposition;
+}
+
+public final class dev/konduit/compose/UiConfigurationKt {
+	public static final fun ConsumeInsets (Ldev/konduit/ui/Margin;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun getCurrent (Ldev/konduit/ui/UiConfiguration$Companion;Landroidx/compose/runtime/Composer;I)Ldev/konduit/ui/UiConfiguration;
+	public static final fun getLocalUiConfiguration ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getLocalViewInsets ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class dev/konduit/compose/WidgetVersionKt {
+	public static final fun getLocalWidgetVersion ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+	public static final fun getWidgetVersion (Landroidx/compose/runtime/Composer;I)I
+}
+

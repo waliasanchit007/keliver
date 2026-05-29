@@ -49,10 +49,16 @@ kotlin {
       }
     }
     jvmTest {
-      if (!rootProject.hasProperty('konduitNoApps')) {
+      // The `appsJvmTest` source set holds integration tests that load a
+      // real Zipline guest bundle via TreehouseTester (GuestLifecycleTest,
+      // LeaksTest, etc.). They depend on the upstream Redwood `test-app`
+      // fixture, which this fork removed during the Phase 1.5 strip — so
+      // they're OPT-IN behind `-PkonduitWithTestApp`, not default. Without
+      // the fixture they can't compile. Restoring them is tracked as a
+      // follow-up (port test-app / repoint at sample/guest). See
+      // docs/KNOWN_BUGS.md U13.
+      if (rootProject.hasProperty('konduitWithTestApp')) {
         kotlin.srcDir('src/appsJvmTest/kotlin')
-        dependencies {
-        }
       }
     }
   }
@@ -91,8 +97,13 @@ android {
   }
 }
 
-// TreehouseTester expects to load our test application.
-if (!rootProject.hasProperty('konduitNoApps')) {
+// TreehouseTester loads a real guest bundle from the upstream Redwood
+// `test-app` fixture. That module isn't part of this fork, so the
+// dependency is wired ONLY when the integration tests are explicitly
+// opted in via `-PkonduitWithTestApp` (paired with the appsJvmTest
+// srcDir above). On a default `./gradlew test` this stays off, so the
+// build no longer fails resolving a non-existent task. See U13.
+if (rootProject.hasProperty('konduitWithTestApp')) {
   tasks.withType(Test.class).configureEach {
     it.dependsOn(":test-app:presenter-treehouse:compileDevelopmentExecutableKotlinJsZipline")
   }

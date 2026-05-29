@@ -1,0 +1,236 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-treehouse-host>
+abstract fun interface <#A: dev.konduit.treehouse/AppService> dev.konduit.treehouse/TreehouseContentSource { // dev.konduit.treehouse/TreehouseContentSource|null[0]
+    abstract fun get(#A): dev.konduit.treehouse/ZiplineTreehouseUi // dev.konduit.treehouse/TreehouseContentSource.get|get(1:0){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.konduit.treehouse/Crashed : dev.konduit.widget/Widget<#A> { // dev.konduit.treehouse/Crashed|null[0]
+    abstract fun restart(kotlin/Function0<kotlin/Unit>) // dev.konduit.treehouse/Crashed.restart|restart(kotlin.Function0<kotlin.Unit>){}[0]
+    abstract fun uncaughtException(kotlin/Throwable) // dev.konduit.treehouse/Crashed.uncaughtException|uncaughtException(kotlin.Throwable){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.konduit.treehouse/DynamicContentWidgetFactory { // dev.konduit.treehouse/DynamicContentWidgetFactory|null[0]
+    abstract fun Crashed(): dev.konduit.treehouse/Crashed<#A> // dev.konduit.treehouse/DynamicContentWidgetFactory.Crashed|Crashed(){}[0]
+    abstract fun Loading(): dev.konduit.treehouse/Loading<#A> // dev.konduit.treehouse/DynamicContentWidgetFactory.Loading|Loading(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.konduit.treehouse/Loading : dev.konduit.widget/Widget<#A> // dev.konduit.treehouse/Loading|null[0]
+
+abstract interface <#A: kotlin/Any> dev.konduit.treehouse/TreehouseView : dev.konduit.widget/RedwoodView<#A> { // dev.konduit.treehouse/TreehouseView|null[0]
+    abstract val dynamicContentWidgetFactory // dev.konduit.treehouse/TreehouseView.dynamicContentWidgetFactory|{}dynamicContentWidgetFactory[0]
+        abstract fun <get-dynamicContentWidgetFactory>(): dev.konduit.treehouse/DynamicContentWidgetFactory<#A> // dev.konduit.treehouse/TreehouseView.dynamicContentWidgetFactory.<get-dynamicContentWidgetFactory>|<get-dynamicContentWidgetFactory>(){}[0]
+    abstract val readyForContent // dev.konduit.treehouse/TreehouseView.readyForContent|{}readyForContent[0]
+        abstract fun <get-readyForContent>(): kotlin/Boolean // dev.konduit.treehouse/TreehouseView.readyForContent.<get-readyForContent>|<get-readyForContent>(){}[0]
+    abstract val stateSnapshotId // dev.konduit.treehouse/TreehouseView.stateSnapshotId|{}stateSnapshotId[0]
+        abstract fun <get-stateSnapshotId>(): dev.konduit.treehouse/StateSnapshot.Id // dev.konduit.treehouse/TreehouseView.stateSnapshotId.<get-stateSnapshotId>|<get-stateSnapshotId>(){}[0]
+    abstract val widgetSystem // dev.konduit.treehouse/TreehouseView.widgetSystem|{}widgetSystem[0]
+        abstract fun <get-widgetSystem>(): dev.konduit.widget/WidgetSystem<#A> // dev.konduit.treehouse/TreehouseView.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+
+    abstract var readyForContentChangeListener // dev.konduit.treehouse/TreehouseView.readyForContentChangeListener|{}readyForContentChangeListener[0]
+        abstract fun <get-readyForContentChangeListener>(): dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener<#A>? // dev.konduit.treehouse/TreehouseView.readyForContentChangeListener.<get-readyForContentChangeListener>|<get-readyForContentChangeListener>(){}[0]
+        abstract fun <set-readyForContentChangeListener>(dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener<#A>?) // dev.konduit.treehouse/TreehouseView.readyForContentChangeListener.<set-readyForContentChangeListener>|<set-readyForContentChangeListener>(dev.konduit.treehouse.TreehouseView.ReadyForContentChangeListener<1:0>?){}[0]
+    abstract var saveCallback // dev.konduit.treehouse/TreehouseView.saveCallback|{}saveCallback[0]
+        abstract fun <get-saveCallback>(): dev.konduit.treehouse/TreehouseView.SaveCallback? // dev.konduit.treehouse/TreehouseView.saveCallback.<get-saveCallback>|<get-saveCallback>(){}[0]
+        abstract fun <set-saveCallback>(dev.konduit.treehouse/TreehouseView.SaveCallback?) // dev.konduit.treehouse/TreehouseView.saveCallback.<set-saveCallback>|<set-saveCallback>(dev.konduit.treehouse.TreehouseView.SaveCallback?){}[0]
+
+    abstract fun interface <#A1: kotlin/Any> ReadyForContentChangeListener { // dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener|null[0]
+        abstract fun onReadyForContentChanged(dev.konduit.treehouse/TreehouseView<#A1>) // dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener.onReadyForContentChanged|onReadyForContentChanged(dev.konduit.treehouse.TreehouseView<1:0>){}[0]
+    }
+
+    abstract interface SaveCallback { // dev.konduit.treehouse/TreehouseView.SaveCallback|null[0]
+        abstract fun performSave(kotlin/String) // dev.konduit.treehouse/TreehouseView.SaveCallback.performSave|performSave(kotlin.String){}[0]
+    }
+}
+
+abstract interface dev.konduit.treehouse/Content { // dev.konduit.treehouse/Content|null[0]
+    abstract val state // dev.konduit.treehouse/Content.state|{}state[0]
+        abstract fun <get-state>(): kotlinx.coroutines.flow/StateFlow<dev.konduit.treehouse/Content.State> // dev.konduit.treehouse/Content.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun bind(dev.konduit.treehouse/TreehouseView<*>) // dev.konduit.treehouse/Content.bind|bind(dev.konduit.treehouse.TreehouseView<*>){}[0]
+    abstract fun preload(dev.konduit.ui/OnBackPressedDispatcher, kotlinx.coroutines.flow/StateFlow<dev.konduit.ui/UiConfiguration>) // dev.konduit.treehouse/Content.preload|preload(dev.konduit.ui.OnBackPressedDispatcher;kotlinx.coroutines.flow.StateFlow<dev.konduit.ui.UiConfiguration>){}[0]
+    abstract fun unbind() // dev.konduit.treehouse/Content.unbind|unbind(){}[0]
+
+    final class State { // dev.konduit.treehouse/Content.State|null[0]
+        constructor <init>(kotlin/Int, kotlin/Boolean, kotlin/Int, kotlin/Throwable? = ...) // dev.konduit.treehouse/Content.State.<init>|<init>(kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Throwable?){}[0]
+
+        final val attached // dev.konduit.treehouse/Content.State.attached|{}attached[0]
+            final fun <get-attached>(): kotlin/Boolean // dev.konduit.treehouse/Content.State.attached.<get-attached>|<get-attached>(){}[0]
+        final val deliveredChangeCount // dev.konduit.treehouse/Content.State.deliveredChangeCount|{}deliveredChangeCount[0]
+            final fun <get-deliveredChangeCount>(): kotlin/Int // dev.konduit.treehouse/Content.State.deliveredChangeCount.<get-deliveredChangeCount>|<get-deliveredChangeCount>(){}[0]
+        final val loadCount // dev.konduit.treehouse/Content.State.loadCount|{}loadCount[0]
+            final fun <get-loadCount>(): kotlin/Int // dev.konduit.treehouse/Content.State.loadCount.<get-loadCount>|<get-loadCount>(){}[0]
+        final val uncaughtException // dev.konduit.treehouse/Content.State.uncaughtException|{}uncaughtException[0]
+            final fun <get-uncaughtException>(): kotlin/Throwable? // dev.konduit.treehouse/Content.State.uncaughtException.<get-uncaughtException>|<get-uncaughtException>(){}[0]
+
+        final fun component1(): kotlin/Int // dev.konduit.treehouse/Content.State.component1|component1(){}[0]
+        final fun component2(): kotlin/Boolean // dev.konduit.treehouse/Content.State.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // dev.konduit.treehouse/Content.State.component3|component3(){}[0]
+        final fun component4(): kotlin/Throwable? // dev.konduit.treehouse/Content.State.component4|component4(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Throwable? = ...): dev.konduit.treehouse/Content.State // dev.konduit.treehouse/Content.State.copy|copy(kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Throwable?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.konduit.treehouse/Content.State.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.konduit.treehouse/Content.State.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.konduit.treehouse/Content.State.toString|toString(){}[0]
+    }
+}
+
+abstract interface dev.konduit.treehouse/StateStore { // dev.konduit.treehouse/StateStore|null[0]
+    abstract suspend fun get(kotlin/String): dev.konduit.treehouse/StateSnapshot? // dev.konduit.treehouse/StateStore.get|get(kotlin.String){}[0]
+    abstract suspend fun put(kotlin/String, dev.konduit.treehouse/StateSnapshot) // dev.konduit.treehouse/StateStore.put|put(kotlin.String;dev.konduit.treehouse.StateSnapshot){}[0]
+}
+
+abstract interface dev.konduit.treehouse/TreehouseDispatchers : kotlin/AutoCloseable { // dev.konduit.treehouse/TreehouseDispatchers|null[0]
+    abstract val ui // dev.konduit.treehouse/TreehouseDispatchers.ui|{}ui[0]
+        abstract fun <get-ui>(): kotlinx.coroutines/CoroutineDispatcher // dev.konduit.treehouse/TreehouseDispatchers.ui.<get-ui>|<get-ui>(){}[0]
+    abstract val zipline // dev.konduit.treehouse/TreehouseDispatchers.zipline|{}zipline[0]
+        abstract fun <get-zipline>(): kotlinx.coroutines/CoroutineDispatcher // dev.konduit.treehouse/TreehouseDispatchers.zipline.<get-zipline>|<get-zipline>(){}[0]
+
+    abstract fun checkUi() // dev.konduit.treehouse/TreehouseDispatchers.checkUi|checkUi(){}[0]
+    abstract fun checkZipline() // dev.konduit.treehouse/TreehouseDispatchers.checkZipline|checkZipline(){}[0]
+    abstract fun close() // dev.konduit.treehouse/TreehouseDispatchers.close|close(){}[0]
+}
+
+abstract class <#A: dev.konduit.treehouse/AppService> dev.konduit.treehouse/TreehouseApp : kotlin/AutoCloseable { // dev.konduit.treehouse/TreehouseApp|null[0]
+    constructor <init>() // dev.konduit.treehouse/TreehouseApp.<init>|<init>(){}[0]
+
+    abstract val dispatchers // dev.konduit.treehouse/TreehouseApp.dispatchers|{}dispatchers[0]
+        abstract fun <get-dispatchers>(): dev.konduit.treehouse/TreehouseDispatchers // dev.konduit.treehouse/TreehouseApp.dispatchers.<get-dispatchers>|<get-dispatchers>(){}[0]
+    abstract val name // dev.konduit.treehouse/TreehouseApp.name|{}name[0]
+        abstract fun <get-name>(): kotlin/String // dev.konduit.treehouse/TreehouseApp.name.<get-name>|<get-name>(){}[0]
+    abstract val zipline // dev.konduit.treehouse/TreehouseApp.zipline|{}zipline[0]
+        abstract fun <get-zipline>(): kotlinx.coroutines.flow/StateFlow<app.cash.zipline/Zipline?> // dev.konduit.treehouse/TreehouseApp.zipline.<get-zipline>|<get-zipline>(){}[0]
+
+    abstract fun close() // dev.konduit.treehouse/TreehouseApp.close|close(){}[0]
+    abstract fun createContent(dev.konduit.treehouse/TreehouseContentSource<#A>): dev.konduit.treehouse/Content // dev.konduit.treehouse/TreehouseApp.createContent|createContent(dev.konduit.treehouse.TreehouseContentSource<1:0>){}[0]
+    abstract fun restart() // dev.konduit.treehouse/TreehouseApp.restart|restart(){}[0]
+    abstract fun start() // dev.konduit.treehouse/TreehouseApp.start|start(){}[0]
+    abstract fun stop() // dev.konduit.treehouse/TreehouseApp.stop|stop(){}[0]
+
+    abstract interface Factory : kotlin/AutoCloseable { // dev.konduit.treehouse/TreehouseApp.Factory|null[0]
+        abstract fun <#A2: dev.konduit.treehouse/AppService> create(kotlinx.coroutines/CoroutineScope, dev.konduit.treehouse/TreehouseApp.Spec<#A2>, dev.konduit.treehouse/EventListener.Factory = ...): dev.konduit.treehouse/TreehouseApp<#A2> // dev.konduit.treehouse/TreehouseApp.Factory.create|create(kotlinx.coroutines.CoroutineScope;dev.konduit.treehouse.TreehouseApp.Spec<0:0>;dev.konduit.treehouse.EventListener.Factory){0§<dev.konduit.treehouse.AppService>}[0]
+    }
+
+    abstract class <#A1: dev.konduit.treehouse/AppService> Spec { // dev.konduit.treehouse/TreehouseApp.Spec|null[0]
+        constructor <init>() // dev.konduit.treehouse/TreehouseApp.Spec.<init>|<init>(){}[0]
+
+        abstract val manifestUrl // dev.konduit.treehouse/TreehouseApp.Spec.manifestUrl|{}manifestUrl[0]
+            abstract fun <get-manifestUrl>(): kotlinx.coroutines.flow/Flow<kotlin/String> // dev.konduit.treehouse/TreehouseApp.Spec.manifestUrl.<get-manifestUrl>|<get-manifestUrl>(){}[0]
+        abstract val name // dev.konduit.treehouse/TreehouseApp.Spec.name|{}name[0]
+            abstract fun <get-name>(): kotlin/String // dev.konduit.treehouse/TreehouseApp.Spec.name.<get-name>|<get-name>(){}[0]
+        final val _retainedServices // dev.konduit.treehouse/TreehouseApp.Spec._retainedServices|{}_retainedServices[0]
+            final fun <get-_retainedServices>(): kotlin.collections/MutableList<kotlin/Any> // dev.konduit.treehouse/TreehouseApp.Spec._retainedServices.<get-_retainedServices>|<get-_retainedServices>(){}[0]
+        final val retainedServices // dev.konduit.treehouse/TreehouseApp.Spec.retainedServices|{}retainedServices[0]
+            final fun <get-retainedServices>(): kotlin.collections/List<kotlin/Any> // dev.konduit.treehouse/TreehouseApp.Spec.retainedServices.<get-retainedServices>|<get-retainedServices>(){}[0]
+        open val freshnessChecker // dev.konduit.treehouse/TreehouseApp.Spec.freshnessChecker|{}freshnessChecker[0]
+            open fun <get-freshnessChecker>(): app.cash.zipline.loader/FreshnessChecker // dev.konduit.treehouse/TreehouseApp.Spec.freshnessChecker.<get-freshnessChecker>|<get-freshnessChecker>(){}[0]
+        open val loadCodeFromNetworkOnly // dev.konduit.treehouse/TreehouseApp.Spec.loadCodeFromNetworkOnly|{}loadCodeFromNetworkOnly[0]
+            open fun <get-loadCodeFromNetworkOnly>(): kotlin/Boolean // dev.konduit.treehouse/TreehouseApp.Spec.loadCodeFromNetworkOnly.<get-loadCodeFromNetworkOnly>|<get-loadCodeFromNetworkOnly>(){}[0]
+        open val serializersModule // dev.konduit.treehouse/TreehouseApp.Spec.serializersModule|{}serializersModule[0]
+            open fun <get-serializersModule>(): kotlinx.serialization.modules/SerializersModule // dev.konduit.treehouse/TreehouseApp.Spec.serializersModule.<get-serializersModule>|<get-serializersModule>(){}[0]
+
+        abstract fun create(app.cash.zipline/Zipline): #A1 // dev.konduit.treehouse/TreehouseApp.Spec.create|create(app.cash.zipline.Zipline){}[0]
+        abstract suspend fun bindServices(dev.konduit.treehouse/TreehouseApp<#A1>, app.cash.zipline/Zipline) // dev.konduit.treehouse/TreehouseApp.Spec.bindServices|bindServices(dev.konduit.treehouse.TreehouseApp<1:0>;app.cash.zipline.Zipline){}[0]
+        final fun <#A2: kotlin/Any> retain(#A2): #A2 // dev.konduit.treehouse/TreehouseApp.Spec.retain|retain(0:0){0§<kotlin.Any>}[0]
+        final fun requireSerializersOf(kotlin/Array<out kotlin.reflect/KType>...): kotlin.collections/List<kotlinx.serialization/KSerializer<*>> // dev.konduit.treehouse/TreehouseApp.Spec.requireSerializersOf|requireSerializersOf(kotlin.Array<out|kotlin.reflect.KType>...){}[0]
+        final inline fun <#A2: reified kotlin/Any> requireSerializerOf(): kotlinx.serialization/KSerializer<#A2> // dev.konduit.treehouse/TreehouseApp.Spec.requireSerializerOf|requireSerializerOf(){0§<kotlin.Any>}[0]
+        final suspend fun bindWithTimeout(kotlin/Long = ..., kotlin.coroutines/SuspendFunction0<kotlin/Unit>) // dev.konduit.treehouse/TreehouseApp.Spec.bindWithTimeout|bindWithTimeout(kotlin.Long;kotlin.coroutines.SuspendFunction0<kotlin.Unit>){}[0]
+    }
+}
+
+final class <#A: kotlin/Any> dev.konduit.treehouse/ChangeListRenderer { // dev.konduit.treehouse/ChangeListRenderer|null[0]
+    constructor <init>(dev.konduit.protocol.host/HostProtocol) // dev.konduit.treehouse/ChangeListRenderer.<init>|<init>(dev.konduit.protocol.host.HostProtocol){}[0]
+
+    final fun render(dev.konduit.treehouse/TreehouseView<#A>, dev.konduit.protocol/SnapshotChangeList) // dev.konduit.treehouse/ChangeListRenderer.render|render(dev.konduit.treehouse.TreehouseView<1:0>;dev.konduit.protocol.SnapshotChangeList){}[0]
+}
+
+final class dev.konduit.treehouse/MemoryStateStore : dev.konduit.treehouse/StateStore { // dev.konduit.treehouse/MemoryStateStore|null[0]
+    constructor <init>() // dev.konduit.treehouse/MemoryStateStore.<init>|<init>(){}[0]
+
+    final suspend fun get(kotlin/String): dev.konduit.treehouse/StateSnapshot? // dev.konduit.treehouse/MemoryStateStore.get|get(kotlin.String){}[0]
+    final suspend fun put(kotlin/String, dev.konduit.treehouse/StateSnapshot) // dev.konduit.treehouse/MemoryStateStore.put|put(kotlin.String;dev.konduit.treehouse.StateSnapshot){}[0]
+}
+
+final class dev.konduit.treehouse/MissingSerializerException : kotlin/RuntimeException { // dev.konduit.treehouse/MissingSerializerException|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlinx.serialization/SerializationException) // dev.konduit.treehouse/MissingSerializerException.<init>|<init>(kotlin.reflect.KClass<*>;kotlinx.serialization.SerializationException){}[0]
+    constructor <init>(kotlin/String, kotlinx.serialization/SerializationException) // dev.konduit.treehouse/MissingSerializerException.<init>|<init>(kotlin.String;kotlinx.serialization.SerializationException){}[0]
+}
+
+final class dev.konduit.treehouse/ZiplineBindTimeoutException : kotlin/RuntimeException // dev.konduit.treehouse/ZiplineBindTimeoutException|null[0]
+
+open class dev.konduit.treehouse/EventListener { // dev.konduit.treehouse/EventListener|null[0]
+    constructor <init>() // dev.konduit.treehouse/EventListener.<init>|<init>(){}[0]
+
+    open fun bindService(kotlin/String, app.cash.zipline/ZiplineService) // dev.konduit.treehouse/EventListener.bindService|bindService(kotlin.String;app.cash.zipline.ZiplineService){}[0]
+    open fun callEnd(app.cash.zipline/Call, app.cash.zipline/CallResult, kotlin/Any?) // dev.konduit.treehouse/EventListener.callEnd|callEnd(app.cash.zipline.Call;app.cash.zipline.CallResult;kotlin.Any?){}[0]
+    open fun callStart(app.cash.zipline/Call): kotlin/Any? // dev.konduit.treehouse/EventListener.callStart|callStart(app.cash.zipline.Call){}[0]
+    open fun codeLoadFailed(kotlin/Exception, kotlin/Any?) // dev.konduit.treehouse/EventListener.codeLoadFailed|codeLoadFailed(kotlin.Exception;kotlin.Any?){}[0]
+    open fun codeLoadSkipped(kotlin/Any?) // dev.konduit.treehouse/EventListener.codeLoadSkipped|codeLoadSkipped(kotlin.Any?){}[0]
+    open fun codeLoadSkippedNotFresh(kotlin/Any?) // dev.konduit.treehouse/EventListener.codeLoadSkippedNotFresh|codeLoadSkippedNotFresh(kotlin.Any?){}[0]
+    open fun codeLoadStart(): kotlin/Any? // dev.konduit.treehouse/EventListener.codeLoadStart|codeLoadStart(){}[0]
+    open fun codeLoadSuccess(app.cash.zipline/ZiplineManifest, app.cash.zipline/Zipline, kotlin/Any?) // dev.konduit.treehouse/EventListener.codeLoadSuccess|codeLoadSuccess(app.cash.zipline.ZiplineManifest;app.cash.zipline.Zipline;kotlin.Any?){}[0]
+    open fun codeUnloaded() // dev.konduit.treehouse/EventListener.codeUnloaded|codeUnloaded(){}[0]
+    open fun downloadFailed(kotlin/String, kotlin/Exception, kotlin/Any?) // dev.konduit.treehouse/EventListener.downloadFailed|downloadFailed(kotlin.String;kotlin.Exception;kotlin.Any?){}[0]
+    open fun downloadStart(kotlin/String): kotlin/Any? // dev.konduit.treehouse/EventListener.downloadStart|downloadStart(kotlin.String){}[0]
+    open fun downloadSuccess(kotlin/String, kotlin/Any?) // dev.konduit.treehouse/EventListener.downloadSuccess|downloadSuccess(kotlin.String;kotlin.Any?){}[0]
+    open fun initializerEnd(kotlin/String, kotlin/Any?) // dev.konduit.treehouse/EventListener.initializerEnd|initializerEnd(kotlin.String;kotlin.Any?){}[0]
+    open fun initializerStart(kotlin/String): kotlin/Any? // dev.konduit.treehouse/EventListener.initializerStart|initializerStart(kotlin.String){}[0]
+    open fun mainFunctionEnd(kotlin/String, kotlin/Any?) // dev.konduit.treehouse/EventListener.mainFunctionEnd|mainFunctionEnd(kotlin.String;kotlin.Any?){}[0]
+    open fun mainFunctionStart(kotlin/String): kotlin/Any? // dev.konduit.treehouse/EventListener.mainFunctionStart|mainFunctionStart(kotlin.String){}[0]
+    open fun manifestParseFailed(kotlin/Exception) // dev.konduit.treehouse/EventListener.manifestParseFailed|manifestParseFailed(kotlin.Exception){}[0]
+    open fun manifestReady(app.cash.zipline/ZiplineManifest) // dev.konduit.treehouse/EventListener.manifestReady|manifestReady(app.cash.zipline.ZiplineManifest){}[0]
+    open fun manifestVerified(app.cash.zipline/ZiplineManifest, kotlin/String) // dev.konduit.treehouse/EventListener.manifestVerified|manifestVerified(app.cash.zipline.ZiplineManifest;kotlin.String){}[0]
+    open fun moduleLoadEnd(kotlin/String, kotlin/Any?) // dev.konduit.treehouse/EventListener.moduleLoadEnd|moduleLoadEnd(kotlin.String;kotlin.Any?){}[0]
+    open fun moduleLoadStart(kotlin/String): kotlin/Any? // dev.konduit.treehouse/EventListener.moduleLoadStart|moduleLoadStart(kotlin.String){}[0]
+    open fun serviceLeaked(kotlin/String) // dev.konduit.treehouse/EventListener.serviceLeaked|serviceLeaked(kotlin.String){}[0]
+    open fun takeService(kotlin/String, app.cash.zipline/ZiplineService) // dev.konduit.treehouse/EventListener.takeService|takeService(kotlin.String;app.cash.zipline.ZiplineService){}[0]
+    open fun uncaughtException(kotlin/Throwable) // dev.konduit.treehouse/EventListener.uncaughtException|uncaughtException(kotlin.Throwable){}[0]
+    open fun unknownChildren(dev.konduit.protocol/WidgetTag, dev.konduit.protocol/ChildrenTag) // dev.konduit.treehouse/EventListener.unknownChildren|unknownChildren(dev.konduit.protocol.WidgetTag;dev.konduit.protocol.ChildrenTag){}[0]
+    open fun unknownEvent(dev.konduit.protocol/WidgetTag, dev.konduit.protocol/EventTag) // dev.konduit.treehouse/EventListener.unknownEvent|unknownEvent(dev.konduit.protocol.WidgetTag;dev.konduit.protocol.EventTag){}[0]
+    open fun unknownEventNode(dev.konduit.protocol/Id, dev.konduit.protocol/EventTag) // dev.konduit.treehouse/EventListener.unknownEventNode|unknownEventNode(dev.konduit.protocol.Id;dev.konduit.protocol.EventTag){}[0]
+    open fun unknownModifier(dev.konduit.protocol/ModifierTag) // dev.konduit.treehouse/EventListener.unknownModifier|unknownModifier(dev.konduit.protocol.ModifierTag){}[0]
+    open fun unknownProperty(dev.konduit.protocol/WidgetTag, dev.konduit.protocol/PropertyTag) // dev.konduit.treehouse/EventListener.unknownProperty|unknownProperty(dev.konduit.protocol.WidgetTag;dev.konduit.protocol.PropertyTag){}[0]
+    open fun unknownWidget(dev.konduit.protocol/WidgetTag) // dev.konduit.treehouse/EventListener.unknownWidget|unknownWidget(dev.konduit.protocol.WidgetTag){}[0]
+    open fun ziplineCreated(app.cash.zipline/Zipline) // dev.konduit.treehouse/EventListener.ziplineCreated|ziplineCreated(app.cash.zipline.Zipline){}[0]
+
+    abstract interface Factory : kotlin/AutoCloseable { // dev.konduit.treehouse/EventListener.Factory|null[0]
+        abstract fun create(dev.konduit.treehouse/TreehouseApp<*>, kotlin/String?): dev.konduit.treehouse/EventListener // dev.konduit.treehouse/EventListener.Factory.create|create(dev.konduit.treehouse.TreehouseApp<*>;kotlin.String?){}[0]
+    }
+
+    final object Companion { // dev.konduit.treehouse/EventListener.Companion|null[0]
+        final val NONE // dev.konduit.treehouse/EventListener.Companion.NONE|{}NONE[0]
+            final fun <get-NONE>(): dev.konduit.treehouse/EventListener.Factory // dev.konduit.treehouse/EventListener.Companion.NONE.<get-NONE>|<get-NONE>(){}[0]
+    }
+}
+
+open class dev.konduit.treehouse/TreehouseUIView : dev.konduit.treehouse/TreehouseView<platform.UIKit/UIView>, dev.konduit.widget/RedwoodUIView { // dev.konduit.treehouse/TreehouseUIView|null[0]
+    constructor <init>(dev.konduit.widget/WidgetSystem<platform.UIKit/UIView>) // dev.konduit.treehouse/TreehouseUIView.<init>|<init>(dev.konduit.widget.WidgetSystem<platform.UIKit.UIView>){}[0]
+    constructor <init>(dev.konduit.widget/WidgetSystem<platform.UIKit/UIView>, dev.konduit.treehouse/DynamicContentWidgetFactory<platform.UIKit/UIView>) // dev.konduit.treehouse/TreehouseUIView.<init>|<init>(dev.konduit.widget.WidgetSystem<platform.UIKit.UIView>;dev.konduit.treehouse.DynamicContentWidgetFactory<platform.UIKit.UIView>){}[0]
+
+    open val dynamicContentWidgetFactory // dev.konduit.treehouse/TreehouseUIView.dynamicContentWidgetFactory|{}dynamicContentWidgetFactory[0]
+        open fun <get-dynamicContentWidgetFactory>(): dev.konduit.treehouse/DynamicContentWidgetFactory<platform.UIKit/UIView> // dev.konduit.treehouse/TreehouseUIView.dynamicContentWidgetFactory.<get-dynamicContentWidgetFactory>|<get-dynamicContentWidgetFactory>(){}[0]
+    open val readyForContent // dev.konduit.treehouse/TreehouseUIView.readyForContent|{}readyForContent[0]
+        open fun <get-readyForContent>(): kotlin/Boolean // dev.konduit.treehouse/TreehouseUIView.readyForContent.<get-readyForContent>|<get-readyForContent>(){}[0]
+    open val widgetSystem // dev.konduit.treehouse/TreehouseUIView.widgetSystem|{}widgetSystem[0]
+        open fun <get-widgetSystem>(): dev.konduit.widget/WidgetSystem<platform.UIKit/UIView> // dev.konduit.treehouse/TreehouseUIView.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+
+    open var readyForContentChangeListener // dev.konduit.treehouse/TreehouseUIView.readyForContentChangeListener|{}readyForContentChangeListener[0]
+        open fun <get-readyForContentChangeListener>(): dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener<platform.UIKit/UIView>? // dev.konduit.treehouse/TreehouseUIView.readyForContentChangeListener.<get-readyForContentChangeListener>|<get-readyForContentChangeListener>(){}[0]
+        open fun <set-readyForContentChangeListener>(dev.konduit.treehouse/TreehouseView.ReadyForContentChangeListener<platform.UIKit/UIView>?) // dev.konduit.treehouse/TreehouseUIView.readyForContentChangeListener.<set-readyForContentChangeListener>|<set-readyForContentChangeListener>(dev.konduit.treehouse.TreehouseView.ReadyForContentChangeListener<platform.UIKit.UIView>?){}[0]
+    open var saveCallback // dev.konduit.treehouse/TreehouseUIView.saveCallback|{}saveCallback[0]
+        open fun <get-saveCallback>(): dev.konduit.treehouse/TreehouseView.SaveCallback? // dev.konduit.treehouse/TreehouseUIView.saveCallback.<get-saveCallback>|<get-saveCallback>(){}[0]
+        open fun <set-saveCallback>(dev.konduit.treehouse/TreehouseView.SaveCallback?) // dev.konduit.treehouse/TreehouseUIView.saveCallback.<set-saveCallback>|<set-saveCallback>(dev.konduit.treehouse.TreehouseView.SaveCallback?){}[0]
+    open var stateSnapshotId // dev.konduit.treehouse/TreehouseUIView.stateSnapshotId|{}stateSnapshotId[0]
+        open fun <get-stateSnapshotId>(): dev.konduit.treehouse/StateSnapshot.Id // dev.konduit.treehouse/TreehouseUIView.stateSnapshotId.<get-stateSnapshotId>|<get-stateSnapshotId>(){}[0]
+        open fun <set-stateSnapshotId>(dev.konduit.treehouse/StateSnapshot.Id) // dev.konduit.treehouse/TreehouseUIView.stateSnapshotId.<set-stateSnapshotId>|<set-stateSnapshotId>(dev.konduit.treehouse.StateSnapshot.Id){}[0]
+
+    open fun superviewChanged() // dev.konduit.treehouse/TreehouseUIView.superviewChanged|superviewChanged(){}[0]
+}
+
+final fun <#A: dev.konduit.treehouse/AppService, #B: kotlin/Any> (dev.konduit.treehouse/TreehouseContentSource<#A>).dev.konduit.treehouse/bindWhenReady(dev.konduit.treehouse/TreehouseView<#B>, dev.konduit.treehouse/TreehouseApp<#A>): okio/Closeable // dev.konduit.treehouse/bindWhenReady|bindWhenReady@dev.konduit.treehouse.TreehouseContentSource<0:0>(dev.konduit.treehouse.TreehouseView<0:1>;dev.konduit.treehouse.TreehouseApp<0:0>){0§<dev.konduit.treehouse.AppService>;1§<kotlin.Any>}[0]
+final fun <#A: kotlin/Any> (dev.konduit.treehouse/Content).dev.konduit.treehouse/bindWhenReady(dev.konduit.treehouse/TreehouseView<#A>): okio/Closeable // dev.konduit.treehouse/bindWhenReady|bindWhenReady@dev.konduit.treehouse.Content(dev.konduit.treehouse.TreehouseView<0:0>){0§<kotlin.Any>}[0]
+final fun dev.konduit.treehouse/TreehouseAppFactory(app.cash.zipline.loader/ZiplineHttpClient, app.cash.zipline.loader/ManifestVerifier, okio/FileSystem? = ..., okio/Path? = ..., kotlin/String = ..., kotlin/Long = ..., kotlin/Int = ..., app.cash.zipline.loader/LoaderEventListener = ..., dev.konduit.treehouse/StateStore = ..., dev.konduit.leaks/LeakDetector = ..., dev.konduit.protocol.host/HostProtocol.Factory): dev.konduit.treehouse/TreehouseApp.Factory // dev.konduit.treehouse/TreehouseAppFactory|TreehouseAppFactory(app.cash.zipline.loader.ZiplineHttpClient;app.cash.zipline.loader.ManifestVerifier;okio.FileSystem?;okio.Path?;kotlin.String;kotlin.Long;kotlin.Int;app.cash.zipline.loader.LoaderEventListener;dev.konduit.treehouse.StateStore;dev.konduit.leaks.LeakDetector;dev.konduit.protocol.host.HostProtocol.Factory){}[0]

@@ -1,0 +1,187 @@
+public abstract interface class dev/konduit/tooling/schema/Deprecation {
+	public abstract fun getLevel ()Ldev/konduit/tooling/schema/Deprecation$Level;
+	public abstract fun getMessage ()Ljava/lang/String;
+}
+
+public final class dev/konduit/tooling/schema/Deprecation$Level : java/lang/Enum {
+	public static final field ERROR Ldev/konduit/tooling/schema/Deprecation$Level;
+	public static final field WARNING Ldev/konduit/tooling/schema/Deprecation$Level;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/konduit/tooling/schema/Deprecation$Level;
+	public static fun values ()[Ldev/konduit/tooling/schema/Deprecation$Level;
+}
+
+public final class dev/konduit/tooling/schema/EmbeddedSchema {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/konduit/tooling/schema/EmbeddedSchema;
+	public static synthetic fun copy$default (Ldev/konduit/tooling/schema/EmbeddedSchema;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/konduit/tooling/schema/EmbeddedSchema;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getJson ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/konduit/tooling/schema/FqType {
+	public static final field Companion Ldev/konduit/tooling/schema/FqType$Companion;
+	public fun <init> (Ljava/util/List;Ldev/konduit/tooling/schema/FqType$Variance;Ljava/util/List;Z)V
+	public synthetic fun <init> (Ljava/util/List;Ldev/konduit/tooling/schema/FqType$Variance;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ldev/konduit/tooling/schema/FqType$Variance;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Z
+	public final fun copy (Ljava/util/List;Ldev/konduit/tooling/schema/FqType$Variance;Ljava/util/List;Z)Ldev/konduit/tooling/schema/FqType;
+	public static synthetic fun copy$default (Ldev/konduit/tooling/schema/FqType;Ljava/util/List;Ldev/konduit/tooling/schema/FqType$Variance;Ljava/util/List;ZILjava/lang/Object;)Ldev/konduit/tooling/schema/FqType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getNames ()Ljava/util/List;
+	public final fun getNullable ()Z
+	public final fun getParameterTypes ()Ljava/util/List;
+	public final fun getVariance ()Ldev/konduit/tooling/schema/FqType$Variance;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/konduit/tooling/schema/FqType$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/konduit/tooling/schema/FqType$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/konduit/tooling/schema/FqType;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/konduit/tooling/schema/FqType;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/konduit/tooling/schema/FqType$Companion {
+	public final fun bestGuess (Ljava/lang/String;)Ldev/konduit/tooling/schema/FqType;
+	public final fun getStar ()Ldev/konduit/tooling/schema/FqType;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/konduit/tooling/schema/FqType$Variance : java/lang/Enum {
+	public static final field In Ldev/konduit/tooling/schema/FqType$Variance;
+	public static final field Invariant Ldev/konduit/tooling/schema/FqType$Variance;
+	public static final field Out Ldev/konduit/tooling/schema/FqType$Variance;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/konduit/tooling/schema/FqType$Variance;
+	public static fun values ()[Ldev/konduit/tooling/schema/FqType$Variance;
+}
+
+public final class dev/konduit/tooling/schema/Main {
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public abstract interface class dev/konduit/tooling/schema/Modifier {
+	public abstract fun getDeprecation ()Ldev/konduit/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getProperties ()Ljava/util/List;
+	public abstract fun getScopes ()Ljava/util/List;
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Modifier$Property {
+	public abstract fun getDefaultExpression ()Ljava/lang/String;
+	public abstract fun getDeprecation ()Ldev/konduit/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+	public abstract fun isSerializable ()Z
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolModifier : dev/konduit/tooling/schema/Modifier {
+	public abstract fun getTag ()I
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolSchema : dev/konduit/tooling/schema/Schema {
+	public fun getDependencies ()Ljava/util/List;
+	public abstract fun getModifiers ()Ljava/util/List;
+	public abstract fun getTaggedDependencies ()Ljava/util/Map;
+	public abstract fun getWidgets ()Ljava/util/List;
+	public abstract fun toEmbeddedSchema ()Ldev/konduit/tooling/schema/EmbeddedSchema;
+	public abstract fun withTagOffset (I)Ldev/konduit/tooling/schema/ProtocolSchema;
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolSchemaSet : dev/konduit/tooling/schema/SchemaSet {
+	public static final field Companion Ldev/konduit/tooling/schema/ProtocolSchemaSet$Companion;
+	public fun getAll ()Ljava/util/List;
+	public abstract fun getDependencies ()Ljava/util/Map;
+	public abstract fun getSchema ()Ldev/konduit/tooling/schema/ProtocolSchema;
+}
+
+public final class dev/konduit/tooling/schema/ProtocolSchemaSet$Companion {
+	public final fun load (Ldev/konduit/tooling/schema/FqType;Ljava/lang/ClassLoader;)Ldev/konduit/tooling/schema/ProtocolSchemaSet;
+	public final fun load (Lkotlin/reflect/KClass;)Ldev/konduit/tooling/schema/ProtocolSchemaSet;
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolWidget : dev/konduit/tooling/schema/Widget {
+	public abstract fun getTag ()I
+	public abstract fun getTraits ()Ljava/util/List;
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolWidget$ProtocolChildren : dev/konduit/tooling/schema/ProtocolWidget$ProtocolTrait, dev/konduit/tooling/schema/Widget$Children {
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolWidget$ProtocolEvent : dev/konduit/tooling/schema/ProtocolWidget$ProtocolTrait, dev/konduit/tooling/schema/Widget$Event {
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolWidget$ProtocolProperty : dev/konduit/tooling/schema/ProtocolWidget$ProtocolTrait, dev/konduit/tooling/schema/Widget$Property {
+}
+
+public abstract interface class dev/konduit/tooling/schema/ProtocolWidget$ProtocolTrait : dev/konduit/tooling/schema/Widget$Trait {
+	public abstract fun getTag ()I
+}
+
+public abstract interface class dev/konduit/tooling/schema/Schema {
+	public abstract fun getDependencies ()Ljava/util/List;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getModifiers ()Ljava/util/List;
+	public abstract fun getScopes ()Ljava/util/List;
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+	public abstract fun getWidgets ()Ljava/util/List;
+}
+
+public final class dev/konduit/tooling/schema/SchemaParserFirKt {
+	public static final fun parseProtocolSchema (Ljava/io/File;Ljava/util/Collection;Ljava/util/Collection;Ldev/konduit/tooling/schema/FqType;)Ldev/konduit/tooling/schema/ProtocolSchemaSet;
+	public static final fun parseSchema (Ljava/io/File;Ljava/util/Collection;Ljava/util/Collection;Ldev/konduit/tooling/schema/FqType;)Ldev/konduit/tooling/schema/SchemaSet;
+}
+
+public abstract interface class dev/konduit/tooling/schema/SchemaSet {
+	public fun getAll ()Ljava/util/List;
+	public abstract fun getDependencies ()Ljava/util/Map;
+	public abstract fun getSchema ()Ldev/konduit/tooling/schema/Schema;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget {
+	public abstract fun getDeprecation ()Ldev/konduit/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getInternalComposable ()Z
+	public abstract fun getTraits ()Ljava/util/List;
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget$Children : dev/konduit/tooling/schema/Widget$Trait {
+	public abstract fun getScope ()Ldev/konduit/tooling/schema/FqType;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget$Event : dev/konduit/tooling/schema/Widget$Trait {
+	public abstract fun getParameters ()Ljava/util/List;
+	public abstract fun isNullable ()Z
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget$Event$Parameter {
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget$Property : dev/konduit/tooling/schema/Widget$Trait {
+	public abstract fun getType ()Ldev/konduit/tooling/schema/FqType;
+}
+
+public abstract interface class dev/konduit/tooling/schema/Widget$Trait {
+	public abstract fun getDefaultExpression ()Ljava/lang/String;
+	public abstract fun getDeprecation ()Ldev/konduit/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getName ()Ljava/lang/String;
+}
+

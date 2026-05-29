@@ -1,0 +1,15 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-image>
+final object dev.konduit.image/KonduitImage { // dev.konduit.image/KonduitImage|null[0]
+    final fun installSingleton(kotlin/Boolean, kotlin/Function1<coil3/ComponentRegistry.Builder, kotlin/Unit>?, kotlin/Function1<coil3/ImageLoader.Builder, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.konduit.image/KonduitImage.installSingleton|installSingleton(kotlin.Boolean;kotlin.Function1<coil3.ComponentRegistry.Builder,kotlin.Unit>?;kotlin.Function1<coil3.ImageLoader.Builder,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+}
+
+final val dev.konduit.image/dev_konduit_image_KonduitImage$stableprop // dev.konduit.image/dev_konduit_image_KonduitImage$stableprop|#static{}dev_konduit_image_KonduitImage$stableprop[0]
+
+final fun dev.konduit.image/dev_konduit_image_KonduitImage$stableprop_getter(): kotlin/Int // dev.konduit.image/dev_konduit_image_KonduitImage$stableprop_getter|dev_konduit_image_KonduitImage$stableprop_getter(){}[0]

@@ -1,0 +1,32 @@
+// Klib ABI Dump
+// Targets: [js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.konduit:konduit-nav>
+final class <#A: kotlin/Any> dev.konduit.nav/KonduitNavController { // dev.konduit.nav/KonduitNavController|null[0]
+    final val backstack // dev.konduit.nav/KonduitNavController.backstack|{}backstack[0]
+        final fun <get-backstack>(): kotlin.collections/List<#A> // dev.konduit.nav/KonduitNavController.backstack.<get-backstack>|<get-backstack>(){}[0]
+    final val canPop // dev.konduit.nav/KonduitNavController.canPop|{}canPop[0]
+        final fun <get-canPop>(): kotlin/Boolean // dev.konduit.nav/KonduitNavController.canPop.<get-canPop>|<get-canPop>(){}[0]
+    final val current // dev.konduit.nav/KonduitNavController.current|{}current[0]
+        final fun <get-current>(): #A // dev.konduit.nav/KonduitNavController.current.<get-current>|<get-current>(){}[0]
+
+    final fun navigate(#A) // dev.konduit.nav/KonduitNavController.navigate|navigate(1:0){}[0]
+    final fun pop(): kotlin/Boolean // dev.konduit.nav/KonduitNavController.pop|pop(){}[0]
+    final fun popUntil(kotlin/Function1<#A, kotlin/Boolean>): kotlin/Boolean // dev.konduit.nav/KonduitNavController.popUntil|popUntil(kotlin.Function1<1:0,kotlin.Boolean>){}[0]
+    final fun replaceAll(#A) // dev.konduit.nav/KonduitNavController.replaceAll|replaceAll(1:0){}[0]
+}
+
+final val dev.konduit.nav/LocalKonduitNavController // dev.konduit.nav/LocalKonduitNavController|{}LocalKonduitNavController[0]
+    final fun <get-LocalKonduitNavController>(): androidx.compose.runtime/ProvidableCompositionLocal<dev.konduit.nav/KonduitNavController<*>?> // dev.konduit.nav/LocalKonduitNavController.<get-LocalKonduitNavController>|<get-LocalKonduitNavController>(){}[0]
+final val dev.konduit.nav/dev_konduit_nav_KonduitNavController$stableprop // dev.konduit.nav/dev_konduit_nav_KonduitNavController$stableprop|#static{}dev_konduit_nav_KonduitNavController$stableprop[0]
+final val dev.konduit.nav/dev_konduit_nav_NavEntry$stableprop // dev.konduit.nav/dev_konduit_nav_NavEntry$stableprop|#static{}dev_konduit_nav_NavEntry$stableprop[0]
+
+final fun <#A: kotlin/Any> dev.konduit.nav/KonduitNavHost(dev.konduit.nav/KonduitNavController<#A>, kotlin/Function3<#A, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.konduit.nav/KonduitNavHost|KonduitNavHost(dev.konduit.nav.KonduitNavController<0:0>;kotlin.Function3<0:0,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
+final fun <#A: kotlin/Any> dev.konduit.nav/rememberKonduitNavController(#A, androidx.compose.runtime/Composer?, kotlin/Int): dev.konduit.nav/KonduitNavController<#A> // dev.konduit.nav/rememberKonduitNavController|rememberKonduitNavController(0:0;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]
+final fun dev.konduit.nav/dev_konduit_nav_KonduitNavController$stableprop_getter(): kotlin/Int // dev.konduit.nav/dev_konduit_nav_KonduitNavController$stableprop_getter|dev_konduit_nav_KonduitNavController$stableprop_getter(){}[0]
+final fun dev.konduit.nav/dev_konduit_nav_NavEntry$stableprop_getter(): kotlin/Int // dev.konduit.nav/dev_konduit_nav_NavEntry$stableprop_getter|dev_konduit_nav_NavEntry$stableprop_getter(){}[0]
+final inline fun <#A: reified kotlin/Any> dev.konduit.nav/currentKonduitNavController(androidx.compose.runtime/Composer?, kotlin/Int): dev.konduit.nav/KonduitNavController<#A> // dev.konduit.nav/currentKonduitNavController|currentKonduitNavController(androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any>}[0]

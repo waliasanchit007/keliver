@@ -17,6 +17,11 @@ kotlin {
       }
     }
     commonTest {
+      // testapp-fixture-dependent tests are opt-in — see U13 / the
+      // matching comment in konduit-protocol-host/build.gradle.
+      if (rootProject.hasProperty('konduitWithTestApp')) {
+        kotlin.srcDir('src/appsCommonTest/kotlin')
+      }
       dependencies {
         implementation libs.kotlin.test
         implementation libs.assertk

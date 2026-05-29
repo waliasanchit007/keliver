@@ -8,6 +8,31 @@
 
 ## [Unreleased]
 
+Fixed / infrastructure:
+- **Test suite is now green + CI-enforced.** A test-completeness
+  audit found that `./gradlew test` failed on a clean checkout and
+  that *no CI workflow ran tests* (all passed `-x test`). Root
+  cause: the Phase 1.5 fork strip removed upstream Redwood's shared
+  `test-app` fixture, but ~22 inherited test files across 7 modules
+  still imported its `com.example.redwood.testapp.*` schema — so
+  they'd been non-compiling (zero coverage) and undetected. Changes:
+  - Quarantined the 22 fixture-dependent files into gated
+    `apps*Test` source sets (opt-in via `-PkonduitWithTestApp`).
+    This **recovered** the ~25 sibling tests that shared those
+    source sets and couldn't compile while the broken files sat
+    alongside them.
+  - Removed the dangling `:test-app:presenter-treehouse` task
+    dependency that made `./gradlew test` fail at configuration.
+  - Generated the **9 missing API baselines** (`apiDump`) for
+    konduit-vm/nav/storage/console/http/http-annotations/
+    http-codegen/image/treehouse-codegen + klib baselines for
+    compose/composeui, so `apiCheck` passes.
+  - Wired `test` + `apiCheck` into `ci.yml` (was build-only).
+  - Full background + restoration path documented in
+    `docs/KNOWN_BUGS.md` U13. The quarantined inherited tests
+    (Redwood protocol/codegen internals) await a `test-app`
+    fixture port — tracked, non-blocking.
+
 New:
 - `sample/` — **Production-mode bundle validated**. Prior testing
   ran only the Development (unminified) Zipline bundle; the

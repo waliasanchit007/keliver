@@ -20,6 +20,14 @@ kotlin {
       }
     }
     commonTest {
+      // Tests depending on the upstream Redwood `test-app` fixture
+      // (com.example.redwood.testapp.*) live under appsCommonTest and
+      // are OPT-IN behind -PkonduitWithTestApp. The fork removed that
+      // fixture (Phase 1.5 strip), so they can't compile by default.
+      // Restoring is tracked in docs/KNOWN_BUGS.md U13.
+      if (rootProject.hasProperty('konduitWithTestApp')) {
+        kotlin.srcDir('src/appsCommonTest/kotlin')
+      }
       dependencies {
         implementation libs.kotlin.test
         implementation libs.assertk

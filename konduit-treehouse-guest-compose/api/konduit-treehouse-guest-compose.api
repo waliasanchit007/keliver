@@ -1,0 +1,9 @@
+public final class dev/konduit/treehouse/CompositionKt {
+	public static final fun bind (Ldev/konduit/compose/RedwoodComposition;Ldev/konduit/treehouse/TreehouseUi;)V
+}
+
+public abstract interface class dev/konduit/treehouse/TreehouseUi {
+	public abstract fun Show (Landroidx/compose/runtime/Composer;I)V
+	public fun close ()V
+}
+

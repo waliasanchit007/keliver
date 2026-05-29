@@ -31,6 +31,14 @@ import org.junit.Test
 
 @Burst
 class DeprecatedGenerationTest {
+  // Local modifier-scope marker. Previously referenced
+  // `ModifierGenerationTest.ModifierScope`, but that test was
+  // quarantined to appsTest (it depends on the stripped test-app
+  // fixture — see docs/KNOWN_BUGS.md U13). This test is otherwise
+  // testapp-clean, so it carries its own scope marker to stay in
+  // the default-runnable source set.
+  object ModifierScope
+
   @Suppress("DEPRECATION")
   @Schema(
     [
@@ -54,7 +62,7 @@ class DeprecatedGenerationTest {
     val children: () -> Unit,
   )
 
-  @Modifier(1, ModifierGenerationTest.ModifierScope::class)
+  @Modifier(1, ModifierScope::class)
   @Deprecated("Hey")
   data class DeprecatedModifier(
     @Deprecated("Hello", level = ERROR)
