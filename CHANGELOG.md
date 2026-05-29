@@ -9,6 +9,18 @@
 ## [Unreleased]
 
 New:
+- `sample/` — **Production-mode bundle validated**. Prior testing
+  ran only the Development (unminified) Zipline bundle; the
+  Production pass exercises the R8/DCE-minified ship path on a
+  Pixel 9 emulator (API 37). 0 bugs found. Specifically confirms
+  Kotlin/JS DCE does **not** strip the reflectively-loaded
+  `@KonduitAppService` `Companion.Adapter` (Zipline's IR plugin
+  pins it as a retained root) and minification preserves the
+  name-based adapter lookup — the highest-risk failure mode for
+  the new codegen path in Production. Signed-manifest verification
+  (`ManifestVerifier.SignatureChecks`) remains a documented
+  follow-up. Full case study in `sample/TESTING.md`.
+
 - `dev.konduit:konduit-treehouse-codegen` — **validated against
   DevoStatus (~120-widget schema, 7+ host services)**. First
   real-world adopter migration: replaced the production

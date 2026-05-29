@@ -123,10 +123,14 @@ expected sequence is `manifestReady` → `ziplineCreated` →
 `mainFunctionStart`/`End` → `codeLoadSuccess` → `takeService
 name=app`.
 
-> **Tested working** against a Pixel 9 emulator (API 37). The
+> **Tested working** against a Pixel 9 emulator (API 37), in both
+> Development and **Production** (R8/DCE-minified) bundle modes. The
 > sample's first end-to-end run surfaced 5 latent bugs/gaps between
-> the README and what actually shipped; full debugging log is in
-> [TESTING.md](TESTING.md). All five are fixed in tree.
+> the README and what actually shipped; the Production-mode pass
+> found 0 additional bugs (it specifically confirms DCE doesn't
+> strip the reflectively-loaded `@KonduitAppService` adapter). Full
+> debugging log + the Production case study are in
+> [TESTING.md](TESTING.md).
 
 ## Run it on iOS
 
