@@ -1,0 +1,46 @@
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+redwoodBuild {
+  ziplineApplication('test-app')
+}
+
+kotlin {
+  iosArm64()
+  iosX64()
+  iosSimulatorArm64()
+
+  jvm()
+
+  js {
+    // The name of the JS module which needs to be unique within the repo.
+    outputModuleName = 'test-app-presenter-treehouse'
+    browser()
+    binaries.executable()
+  }
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.konduitTreehouse
+      }
+    }
+
+    jsMain {
+      dependencies {
+        api projects.konduitTreehouseGuest
+        api projects.testApp.presenter
+        implementation projects.testApp.schema.protocolGuest
+      }
+    }
+  }
+}
+
+zipline {
+  mainFunction = 'com.example.redwood.testapp.treehouse.preparePresenters'
+
+  // Private, test-only module. It does not need to be stable.
+  apiTracking = false
+}

@@ -177,4 +177,8 @@ if (hasProperty('konduitWithTestApp')) {
   include ':test-app:schema:protocol-host'
   include ':test-app:schema:testing'
   include ':test-app:schema:widget'
+  // Phase 2 (U13): the presenter + treehouse guest bundle that the
+  // konduit-treehouse-host integration tests load via TreehouseTester.
+  include ':test-app:presenter'
+  include ':test-app:presenter-treehouse'
 }

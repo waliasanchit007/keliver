@@ -59,6 +59,12 @@ kotlin {
       // docs/KNOWN_BUGS.md U13.
       if (rootProject.hasProperty('konduitWithTestApp')) {
         kotlin.srcDir('src/appsJvmTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.protocolHost
+          implementation projects.testApp.schema.testing
+          implementation projects.testApp.schema.widget
+          implementation projects.testApp.presenterTreehouse
+        }
       }
     }
   }
