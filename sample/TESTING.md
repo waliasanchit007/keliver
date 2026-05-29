@@ -534,18 +534,15 @@ Logcat sequence was identical to the Development runs:
 `takeService name=app` → the `zipline/guest-N` ↔ `zipline/host-N`
 service pairs.
 
-## Documented gap (not tested here)
+## Documented gap (now CLOSED — see the signed-manifest case study below)
 
 Real Production deployments also swap `ManifestVerifier.NO_SIGNATURE_CHECKS`
-for `ManifestVerifier.SignatureChecks(...)` keyed off a production
-verifying key. This case study used `NO_SIGNATURE_CHECKS` (the
-sample's default for both Development and Production), so the
-**signed-manifest path remains unvalidated**. That's a distinct
-concern from bundle minification — it exercises Zipline's manifest
-signature verification, not the JS codegen — and is worth a
-separate validation pass when signing infra is wired up. Tracked
-as a follow-up; not blocking, since signature verification is
-additive over an already-working load path.
+for a signature-checking verifier keyed off a production verifying
+key. This case study used `NO_SIGNATURE_CHECKS`, so at the time the
+**signed-manifest path was unvalidated**. That gap is now closed —
+the sample signs its manifest with an Ed25519 key and both hosts
+verify it. See the [signed-manifest case study](#signed-manifest-case-study)
+below for the positive + negative (tamper-rejection) evidence.
 
 ## Production-mode adopter-impact summary
 
@@ -556,9 +553,106 @@ additive over an already-working load path.
 | Minification preserves name-based adapter lookup | ✅ |
 | Renders identically to Development | ✅ |
 | Full Zipline RPC handshake | ✅ |
-| Signed-manifest path (`SignatureChecks`) | ⏳ not tested — documented follow-up |
+| Signed-manifest path (Ed25519 verifier) | ✅ validated — see signed-manifest case study |
 
 Net: the Production code path — the one that actually ships to
 users — is validated end-to-end for the `@KonduitAppService`
-codegen. The one remaining unknown (signed manifests) is scoped
-and documented.
+codegen, and (as of the signed-manifest case study below) for
+signature verification too.
+
+---
+
+# Signed-manifest case study
+
+The prior case studies all ran with
+`ManifestVerifier.NO_SIGNATURE_CHECKS` — the host runs *whatever
+bytes the manifest URL returns*. That's fine for local dev, but in
+production it means anyone who can MITM the manifest endpoint (or
+compromise the CDN) can serve arbitrary guest code into the app.
+Zipline's answer is manifest signing: the build signs the manifest
+with a private key, and the host verifies that signature against an
+embedded public key before running a single line of guest code.
+This case study wires that up in the sample and validates both that
+a good signature loads **and** that a tampered bundle is rejected.
+
+**Final state**: the guest manifest is Ed25519-signed; both hosts
+(`host-android`, `host-compose`/iOS) verify it. A correct signature
+loads and renders `Hello, Konduit!`; a tampered manifest is refused
+with `codeLoadFailed: manifest signature … did not verify!`.
+
+## How it's wired
+
+- **Key pair (Ed25519).** Generated with Zipline's own primitive so
+  the encoding matches exactly — no hand-rolled crypto:
+  ```sh
+  # public class, on the zipline-loader classpath:
+  app.cash.zipline.loader.internal.InternalJvmKt.generateEd25519KeyPair()
+  #   -> KeyPair { publicKey: ByteString, privateKey: ByteString }
+  # (equivalently: the `zipline-cli generate-key-pair` command)
+  ```
+  A real app keeps the private key in a secret and injects it at
+  build time; the sample commits a **demo** key so it runs out of
+  the box (called out loudly in `guest/build.gradle.kts`).
+- **Guest signs (`sample/guest/build.gradle.kts`).**
+  ```kotlin
+  zipline {
+    signingKeys {
+      create("konduit-sample-ed25519") {
+        algorithmId.set(SignatureAlgorithmId.Ed25519)
+        privateKeyHex.set("2d69a8f0…")   // demo private key
+      }
+    }
+  }
+  ```
+  The signature lands in the manifest under
+  `unsigned.signatures["konduit-sample-ed25519"]` (it lives in the
+  `unsigned` block because a signature can't cover itself).
+- **Hosts verify** (`host-android` `MainActivity`, iOS
+  `MainViewController`):
+  ```kotlin
+  manifestVerifier = ManifestVerifier.Builder()
+    .addEd25519("konduit-sample-ed25519", PUBLIC_KEY_HEX.decodeHex())
+    .build()
+  ```
+  The key **name** must match on both sides.
+
+## Evidence — positive (correct key)
+
+Built + installed `host-android`, served the signed Development
+bundle, `pm clear` to force a fresh fetch + verify, launched:
+
+```
+D KonduitSample: manifestReady modules=30
+D KonduitSample: codeLoadSuccess modules=30
+```
+Screen renders `Hello, Konduit!`. The signature verified and the
+guest ran.
+
+## Evidence — negative (tampered manifest)
+
+To prove the check isn't a no-op, flipped one hex char in the first
+module's `sha256` in the served `manifest.zipline.json` (leaving the
+now-stale signature in place), then `pm clear` + relaunch:
+
+```
+E KonduitSample: codeLoadFailed: manifest signature for key konduit-sample-ed25519 did not verify!
+```
+The host **refused to load** the bundle — exactly the MITM/tamper
+protection signing exists for. Restored the good manifest afterward.
+
+## Validation scope
+
+| Check | Result |
+|---|---|
+| Guest manifest is Ed25519-signed (`unsigned.signatures`) | ✅ |
+| Android host: correct key → `codeLoadSuccess` + renders | ✅ runtime (Pixel_9 emulator, API 37) |
+| Android host: tampered manifest → `codeLoadFailed` | ✅ runtime |
+| iOS host: same verifier wired (`MainViewController`) | ✅ compiles (`compileKotlinIosSimulatorArm64`); runtime parity not re-run this pass |
+
+**Caveat / honesty.** The demo key is committed for reproducibility
+— that is *not* a production pattern. The negative test exercised
+content tampering (a changed module hash invalidates the signature);
+a forged-signature or wrong-key path would fail at the same
+`ManifestVerifier` gate. iOS was compile-verified only this pass; it
+uses the identical multiplatform Zipline API as Android, which was
+runtime-validated.

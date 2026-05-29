@@ -14,6 +14,7 @@ import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
+import okio.ByteString.Companion.decodeHex
 import dev.konduit.leaks.LeakDetector
 import dev.konduit.treehouse.EventListener
 import dev.konduit.treehouse.TreehouseApp as KTreehouseApp
@@ -61,7 +62,17 @@ class MainActivity : ComponentActivity() {
     val factory = TreehouseAppFactory(
       context = applicationContext,
       httpClient = httpClient.asZiplineHttpClient(),
-      manifestVerifier = ManifestVerifier.NO_SIGNATURE_CHECKS,
+      // Verify the guest manifest's Ed25519 signature before running any
+      // guest code. The matching PRIVATE key signs the bundle in
+      // guest/build.gradle.kts; the key NAME must match on both sides.
+      // If the signature is missing or forged, Zipline refuses to load
+      // the bundle and the EventListener reports codeLoadFailed.
+      manifestVerifier = ManifestVerifier.Builder()
+        .addEd25519(
+          name = "konduit-sample-ed25519",
+          trustedKey = SAMPLE_SIGNING_PUBLIC_KEY.decodeHex(),
+        )
+        .build(),
       embeddedFileSystem = null,
       embeddedDir = null,
       cacheName = "konduit-sample-zipline",
@@ -109,6 +120,12 @@ class MainActivity : ComponentActivity() {
 
   private companion object {
     const val TAG = "KonduitSample"
+
+    // Ed25519 PUBLIC key matching the PRIVATE signing key in
+    // guest/build.gradle.kts. Public keys are safe to embed in the app.
+    // To rotate: generate a new pair, update both sides + the key name.
+    const val SAMPLE_SIGNING_PUBLIC_KEY =
+      "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
   }
 }
 
@@ -119,9 +136,10 @@ class MainActivity : ComponentActivity() {
  *     and run `./gradlew :guest:serveDevelopmentZipline` to serve the
  *     bundle from disk.
  *
- *   - For released builds: bake an HTTPS URL pointing at a CDN +
- *     swap to `ManifestVerifier.SignatureChecks(...)` with the
- *     production verifying key.
+ *   - For released builds: bake an HTTPS URL pointing at a CDN. The
+ *     manifest is already Ed25519-verified above (see the
+ *     `ManifestVerifier.Builder()` wiring); for production, swap the
+ *     committed demo key for a real key injected from a secret.
  */
 private object LoggingEventListenerFactory : EventListener.Factory {
   override fun create(app: KTreehouseApp<*>, manifestUrl: String?): EventListener =
