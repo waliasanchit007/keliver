@@ -642,7 +642,16 @@ internal fun generateProtocolModifierSerializers(
                       typeName in serializables
                     }
                     if (emitFallback) {
-                      parameters += CodeBlock.of("%T.serializer()", typeName)
+                      // Stdlib types (UInt, Duration, …) get their
+                      // serializer from kotlinx.serialization.builtins;
+                      // user @Serializable types use the plugin-generated
+                      // companion accessor. See KNOWN_BUGS U13 (the bug)
+                      // and U10 (why the fallback exists at all).
+                      if (typeName is ClassName && typeName.isStdlibSerializableType()) {
+                        parameters += CodeBlock.of("%T.%M()", typeName, KotlinxSerialization.builtinsSerializer)
+                      } else {
+                        parameters += CodeBlock.of("%T.serializer()", typeName)
+                      }
                       parameters += CodeBlock.of("emptyArray()")
                     }
 
