@@ -4,10 +4,11 @@ Server-driven UI for Compose Multiplatform. Render Kotlin Compose UI on
 Android and iOS from JavaScript bundles delivered over the network —
 ship UI updates without an app-store release.
 
-> **Status:** `1.0.0-caliclan.3` shipped. Currently a private fork
-> consumed via GitHub Packages by Caliclan's own apps. Public OSS
-> launch tracked in [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md).
-> Wire format is committed for the `1.0.x` major.
+> **Status: public on Maven Central — `0.1.0`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.1.0` (host) /
+> `dev.keliver:keliver-guest:0.1.0` (guest) — no GitHub PAT, no extra repo.
+> See [`docs/USAGE.md`](./docs/USAGE.md). `0.1.x` is the first public line
+> (pre-`1.0`, API may still evolve); the wire format is stable within it.
 
 ---
 

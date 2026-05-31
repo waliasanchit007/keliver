@@ -21,24 +21,19 @@ consumer.
 ## TL;DR
 
 ```bash
-# 1. Vendor Keliver as a git submodule in your project root
-git submodule add https://github.com/waliasanchit007/ServerDrivenUI third_party/keliver
+# 1. Add mavenCentral() to your settings.gradle.kts repositories
+#    (most projects already have it). No git submodule, no GitHub PAT.
 
-# 2. In your top-level settings.gradle.kts, include the modules with explicit
-#    projectDir (see Step 1 — `includeBuild` does NOT work here because the
-#    Keliver modules don't publish to Maven coordinates).
+# 2. Depend on the single-import facades in your module build.gradle.kts:
+#      implementation("dev.keliver:keliver-host:0.1.0")    // host side
+#      implementation("dev.keliver:keliver-guest:0.1.0")   // guest module
 
-# 3. Put gpr.user + gpr.token in ~/.gradle/gradle.properties (classic PAT
-#    with read:packages scope). NOTE: KELIVER_READ_TOKEN is only the CI
-#    secret *name* — locally the gradle property must be `gpr.token`.
-#    See §"GitHub Packages auth" below.
+# 3. If you build for iOS, add kotlin.native.cacheKind=none to your
+#    gradle.properties (CMP-8845 workaround).
 
-# 4. Merge the required keys from Keliver's gradle.properties into yours
-#    (kotlin.native.cacheKind=none in particular — CMP-8845 workaround).
+# 4. Set up a TreehouseApp.Spec in your activity / view controller (Step 2).
 
-# 5. Set up a TreehouseApp.Spec in your activity / view controller (Step 2).
-
-# 6. Write a guest .kt file that extends `Screen` using the schema widgets
+# 5. Write a guest .kt file that extends `Screen` using the schema widgets
 #    (Step 4).
 ```
 
@@ -209,82 +204,32 @@ android.nonTransitiveRClass=true
 android.useAndroidX=true
 ```
 
-### GitHub Packages auth (this is the #1 first-build failure)
+### Maven Central (no auth)
 
-The host modules pull `dev.keliver:keliver-*` artifacts from GitHub
-Packages in the private `waliasanchit007/keliver` repo. The submodule's
-`settings.gradle.kts` reads credentials from these four sources, in this
-order:
-
-1. Gradle property `gpr.user`  (local — `~/.gradle/gradle.properties`)
-2. Env var `GITHUB_ACTOR`      (CI fallback)
-3. Gradle property `gpr.token` (local)
-4. Env var `GITHUB_TOKEN`      (CI fallback)
-
-You need a **classic** GitHub PAT (fine-grained PATs do NOT work — GitHub
-Packages Maven only accepts classic) with `read:packages` scope.
-
-**Local setup (CLI builds)** — put this in `~/.gradle/gradle.properties`
-(NOT your project's `gradle.properties`, and NOT named
-`KELIVER_READ_TOKEN`):
-```
-gpr.user=your-github-username
-gpr.token=ghp_your_classic_pat_here
-```
-Then `chmod 600 ~/.gradle/gradle.properties` so the token isn't world-
-readable.
-
-**Local setup (Android Studio only)** — AS lets you set env vars per-run
-via Run > Edit Configurations > Environment variables. Setting
-`GITHUB_ACTOR` + `GITHUB_TOKEN` there works for IDE-driven builds, but
-the values won't be visible to `./gradlew` invocations from your
-Terminal (or from CI, or from this doc's reader who's likely using
-CLI builds). For headless integration testing, you still need the
-`~/.gradle/gradle.properties` entries above.
-
-**CI** — `KELIVER_READ_TOKEN` is just the secret name we happen to use in
-GitHub Actions; the workflow exports it as `GITHUB_TOKEN`. From
-`.github/workflows/ci.yml`:
-```yaml
-env:
-  GITHUB_ACTOR: ${{ github.actor }}
-  GITHUB_TOKEN: ${{ secrets.KELIVER_READ_TOKEN }}
-```
-
-**Symptom of missing token**: Gradle's dependency resolution will 401
-against `maven.pkg.github.com` with a stack trace that buries the auth
-failure several frames deep. If your first `./gradlew help` shows
-`Received status code 401 from server: Unauthorized`, this is the cause.
-
-### Mandatory: restrict the Keliver Maven repo to dev.keliver
-
-When you declare the Keliver Maven repo in `dependencyResolutionManagement`,
-add a `content {}` filter so Gradle only queries it for `dev.keliver.*`
-artifacts. Without this, Gradle will hit GH Packages for *every*
-transitive dep (androidx, kotlin, kotlinx, etc.) — and GH Packages
-responds slowly enough to non-existent paths that the build hangs for
-minutes before falling through to google()/mavenCentral():
+Keliver `0.1.0` is published to **Maven Central** under `dev.keliver:keliver-*`.
+If your build already has `mavenCentral()` in `dependencyResolutionManagement`
+(most do), there's **nothing to set up** — no GitHub PAT, no `gpr.user`/
+`gpr.token`, no private repo, and no content-filter workaround:
 
 ```kotlin
-maven {
-    url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
-    credentials {
-        username = (providers.gradleProperty("gpr.user").orNull
-            ?: System.getenv("GITHUB_ACTOR")).orEmpty()
-        password = (providers.gradleProperty("gpr.token").orNull
-            ?: System.getenv("GITHUB_TOKEN")).orEmpty()
-    }
-    content {                                       // ← required
-        includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.keliver\\..*")
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        google()
     }
 }
 ```
 
-Keliver's own builds don't hit this because their Gradle caches already
-have every androidx/kotlin coordinate they'll ever ask for. A fresh
-integrator project doesn't have those caches and will see 10+ minute
-build hangs that look like network errors. Add the filter from day one.
+Then depend on the single-import facades:
+
+```kotlin
+implementation("dev.keliver:keliver-host:0.1.0")    // host side
+implementation("dev.keliver:keliver-guest:0.1.0")   // guest module
+```
+
+(`0.1.x` is the first public line — pre-`1.0`, so the API may still evolve;
+the Zipline wire format is stable within the line. Kotlin package names stay
+`dev.keliver.*`, so `import` statements don't change.)
 
 ---
 
@@ -558,7 +503,7 @@ The `libs.keliver.host` reference assumes a version catalog entry:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-keliver = "1.0.0-caliclan.4"
+keliver = "0.1.0"
 
 [libraries]
 keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
