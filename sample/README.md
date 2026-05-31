@@ -1,9 +1,20 @@
 # Keliver sample
 
-Minimal end-to-end Keliver setup. The whole thing renders a single
-`Text` widget reading **"Hello, Keliver!"** inside a `Box`, with the
-guest tree authored in Kotlin/JS and the host rendering on both
-Android and iOS.
+Minimal end-to-end Keliver setup. The guest tree is authored in
+Kotlin/JS using a small **Compose-like widget set** — `Column`, `Row`,
+`Box`, `Card`, styled `Text`, `Button`, `Spacer` — and the host renders
+it natively on both Android and iOS. Writing a screen reads almost
+exactly like Compose, down to `remember { mutableStateOf }` state and a
+`Button` whose `onClick` round-trips over the Zipline bridge:
+
+```kotlin
+var count by remember { mutableStateOf(0) }
+Column {
+  Text(text = "Hello, Keliver!", fontSize = 24, bold = true)
+  Card { Text(text = "Inside a Card") }
+  Button(text = "Tapped $count times", onClick = { count++ })
+}
+```
 
 It's deliberately small. The goal is to be the smallest faithful
 demonstration of every required moving part: schema, codegen,
@@ -14,7 +25,7 @@ point. If you're new to Keliver, this is the file tree to copy.
 
 ```
 sample/
-├── schema/                  # @Schema definition (Box + Text)
+├── schema/                  # @Schema: Box, Text, Column, Row, Button, Spacer, Card
 ├── shared-modifier/         # Codegen: layout modifiers (empty here)
 ├── shared-widget/           # Codegen: host + guest widget interfaces
 ├── shared-protocol-host/    # Codegen: host-side protocol adapters
@@ -99,11 +110,13 @@ cd sample
 # 1. Build the guest bundle.
 ./gradlew :guest:compileDevelopmentZipline
 
-# 2. Serve the bundle. Keliver + Zipline don't ship a built-in
-#    `serveDevelopmentZipline` Gradle task in this version; Python's
-#    stdlib http.server is the smallest workaround. Run in another
-#    terminal (or `&`-detach):
-(cd guest/build/zipline/Development && python3 -m http.server 8080) &
+# 2. Serve the bundle. The Zipline plugin's serve task exposes both
+#    HTTP and the WebSocket the hot-reload push needs — run it
+#    `--continuous` so guest edits rebuild + reload the app live:
+./gradlew :guest:serveDevelopmentZipline --continuous &
+#    (A plain `python3 -m http.server 8080` from
+#    guest/build/zipline/Development/ also works for a one-shot run,
+#    but has no WebSocket, so no hot reload.)
 
 # 3. Install the Android host on an emulator. The 10.0.2.2 manifest
 #    URL in `DevConfig.MANIFEST_URL` points at the emulator-side
@@ -267,11 +280,13 @@ debugging log lives in [TESTING.md](TESTING.md).
    `LoggingEventListenerFactory` in `MainActivity.kt` is the
    minimum useful baseline.
 
-5. **No `serveDevelopmentZipline` Gradle task exists** in this
-   Zipline plugin version. Use `python3 -m http.server 8080` from
-   `guest/build/zipline/Development/`, or wire up your own
-   serving (Ktor, nginx, etc.). The dev server is intentionally
-   out of scope for the sample.
+5. **Hot reload needs the WebSocket-capable dev server.**
+   `./gradlew :guest:serveDevelopmentZipline --continuous` serves the
+   bundle over HTTP *and* exposes the WebSocket that
+   `withDevelopmentServerPush` (host side) listens on, so guest edits
+   reload the running app live (verified on Android + iOS). A plain
+   `python3 -m http.server 8080` from `guest/build/zipline/Development/`
+   works for a static run but has no push channel.
 
 ## What's intentionally missing
 
