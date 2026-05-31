@@ -12,10 +12,12 @@ import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
 import dev.keliver.sample.schema.compose.Button
 import dev.keliver.sample.schema.compose.Card
+import dev.keliver.sample.schema.compose.Checkbox
 import dev.keliver.sample.schema.compose.Column
 import dev.keliver.sample.schema.compose.Row
 import dev.keliver.sample.schema.compose.Spacer
 import dev.keliver.sample.schema.compose.Text
+import dev.keliver.sample.schema.compose.TextField
 import dev.keliver.sample.schema.protocol.guest.SampleSchemaProtocolWidgetSystemFactory
 import dev.keliver.sample.shared.SampleAppService
 import dev.keliver.treehouse.StandardAppLifecycle
@@ -71,6 +73,8 @@ private class SampleAppServiceImpl : SampleAppService {
         // state via remember { mutableStateOf }, and a Button whose
         // onClick recomposes the label across the Zipline bridge.
         var count by remember { mutableStateOf(0) }
+        var name by remember { mutableStateOf("") }
+        var agreed by remember { mutableStateOf(false) }
         Column {
           Text(text = "Hello, Keliver!", fontSize = 24, bold = true)
           Spacer(height = 12)
@@ -83,6 +87,17 @@ private class SampleAppServiceImpl : SampleAppService {
                 Text(text = "Compose-like widgets")
               }
             }
+          }
+          Spacer(height = 12)
+          // Text input writes back into guest state — Compose's
+          // TextField(value, onValueChange) contract over the wire.
+          TextField(value = name, placeholder = "Your name", onValueChange = { name = it })
+          Spacer(height = 4)
+          Text(text = if (name.isEmpty()) "Type your name above" else "Hello, $name!")
+          Spacer(height = 12)
+          Row {
+            Checkbox(checked = agreed, onCheckedChange = { agreed = it })
+            Text(text = if (agreed) "Agreed" else "Tap the checkbox")
           }
           Spacer(height = 12)
           Button(text = "Tapped $count times", onClick = { count++ })

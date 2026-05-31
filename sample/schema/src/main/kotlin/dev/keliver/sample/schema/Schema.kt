@@ -58,6 +58,8 @@ import dev.keliver.schema.Widget
     Button::class,
     Spacer::class,
     Card::class,
+    TextField::class,
+    Checkbox::class,
   ],
 )
 public interface SampleSchema
@@ -109,4 +111,24 @@ public data class Spacer(
 @Widget(7)
 public data class Card(
   @Children(1) val children: () -> Unit,
+)
+
+/**
+ * Single-line text input. [value] is host-owned editing state; each
+ * keystroke fires [onValueChange] so the guest can react and write back
+ * the new [value] — exactly the Compose `TextField(value, onValueChange)`
+ * contract.
+ */
+@Widget(8)
+public data class TextField(
+  @Property(1) val value: String,
+  @Property(2) val placeholder: String = "",
+  @Property(3) val onValueChange: ((String) -> Unit)? = null,
+)
+
+/** Two-state checkbox; [onCheckedChange] fires on toggle. */
+@Widget(9)
+public data class Checkbox(
+  @Property(1) val checked: Boolean,
+  @Property(2) val onCheckedChange: ((Boolean) -> Unit)? = null,
 )

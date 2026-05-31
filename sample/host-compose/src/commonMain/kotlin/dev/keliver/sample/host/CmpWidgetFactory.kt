@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.Spacer as ComposeSpacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.Button as ComposeButton
 import androidx.compose.material.Card as ComposeCard
+import androidx.compose.material.Checkbox as ComposeCheckbox
 import androidx.compose.material.Text as ComposeText
+import androidx.compose.material.TextField as ComposeTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,11 +25,13 @@ import androidx.compose.ui.unit.sp
 import dev.keliver.sample.schema.widget.Box
 import dev.keliver.sample.schema.widget.Button
 import dev.keliver.sample.schema.widget.Card
+import dev.keliver.sample.schema.widget.Checkbox
 import dev.keliver.sample.schema.widget.Column
 import dev.keliver.sample.schema.widget.Row
 import dev.keliver.sample.schema.widget.SampleSchemaWidgetFactory
 import dev.keliver.sample.schema.widget.Spacer
 import dev.keliver.sample.schema.widget.Text
+import dev.keliver.sample.schema.widget.TextField
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
 
@@ -56,6 +60,8 @@ public object CmpWidgetFactory : SampleSchemaWidgetFactory<CmpRender> {
   override fun Button(): Button<CmpRender> = CmpButton()
   override fun Spacer(): Spacer<CmpRender> = CmpSpacer()
   override fun Card(): Card<CmpRender> = CmpCard()
+  override fun TextField(): TextField<CmpRender> = CmpTextField()
+  override fun Checkbox(): Checkbox<CmpRender> = CmpCheckbox()
 }
 
 /**
@@ -180,5 +186,62 @@ private class CmpCard : Card<CmpRender> {
     ComposeCard(modifier = incoming) {
       (children as ComposeWidgetChildren).Render()
     }
+  }
+}
+
+/**
+ * `TextField` impl. `value`/`placeholder` are properties; `onValueChange`
+ * is a parameterized event — the host fires it with the new text on each
+ * keystroke and Keliver routes the value back to the guest.
+ */
+private class CmpTextField : TextField<CmpRender> {
+  private var valueState by mutableStateOf("")
+  private var placeholderState by mutableStateOf("")
+  private var onValueChangeValue by mutableStateOf<((String) -> Unit)?>(null)
+  override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+
+  override val value: CmpRender = { incoming ->
+    ComposeTextField(
+      value = valueState,
+      onValueChange = { onValueChangeValue?.invoke(it) },
+      placeholder = { ComposeText(text = placeholderState) },
+      singleLine = true,
+      modifier = incoming,
+    )
+  }
+
+  override fun value(value: String) {
+    valueState = value
+  }
+
+  override fun placeholder(placeholder: String) {
+    placeholderState = placeholder
+  }
+
+  override fun onValueChange(onValueChange: ((String) -> Unit)?) {
+    onValueChangeValue = onValueChange
+  }
+}
+
+/** `Checkbox` impl — `onCheckedChange` fires with the new state on toggle. */
+private class CmpCheckbox : Checkbox<CmpRender> {
+  private var checkedState by mutableStateOf(false)
+  private var onCheckedChangeValue by mutableStateOf<((Boolean) -> Unit)?>(null)
+  override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+
+  override val value: CmpRender = { incoming ->
+    ComposeCheckbox(
+      checked = checkedState,
+      onCheckedChange = { onCheckedChangeValue?.invoke(it) },
+      modifier = incoming,
+    )
+  }
+
+  override fun checked(checked: Boolean) {
+    checkedState = checked
+  }
+
+  override fun onCheckedChange(onCheckedChange: ((Boolean) -> Unit)?) {
+    onCheckedChangeValue = onCheckedChange
   }
 }
