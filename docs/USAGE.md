@@ -38,7 +38,8 @@ consumer.
 ```
 
 Prerequisites: **JDK 21** (matches CI), **Xcode 16+** for iOS, Android SDK
-with API 36, Kotlin 2.1.0+ compatible AGP.
+with API 36, **Kotlin 2.2.0+** (keliver's metadata floor — see the Toolchain
+section below; note Zipline 1.26.0 floats you to Kotlin 2.3.10), AGP **8.12+**.
 
 Production-readiness reality check before you commit to this path:
 
@@ -230,6 +231,43 @@ implementation("dev.keliver:keliver-guest:0.1.0")   // guest module
 (`0.1.x` is the first public line — pre-`1.0`, so the API may still evolve;
 the Zipline wire format is stable within the line. Kotlin package names stay
 `dev.keliver.*`, so `import` statements don't change.)
+
+### Optional: the keliver BOM
+
+Keliver publishes a Bill-of-Materials that pins every `keliver-*` artifact to one
+version. Import it as a `platform` and omit versions on the individual deps:
+
+```kotlin
+implementation(platform("dev.keliver:keliver-bom:0.1.0"))
+
+implementation("dev.keliver:keliver-host")            // version comes from the BOM
+implementation("dev.keliver:keliver-treehouse-host")
+implementation("dev.keliver:keliver-guest")
+```
+
+Keliver's modules are only guaranteed to work together at the **same** version, so
+the BOM (one coordinate to bump) is the recommended way to keep them in lock-step.
+
+### Toolchain — what your build must use
+
+Keliver `0.1.0` is compiled with **Kotlin 2.2.0** (KSP `2.2.0-2.0.2`, Coroutines
+`1.10.2`, Serialization `1.9.0`, AGP `8.12`). Kotlin's metadata rule means a
+consumer on an **older** Kotlin than 2.2.0 can't read keliver's classes — the
+symptom is `Cannot access class '…' — missing or conflicting dependencies` — so
+treat **Kotlin 2.2.0 as the floor**.
+
+⚠️ **Zipline sets the real Kotlin version, not your catalog.** Keliver guests
+require the Zipline Gradle plugin, and `app.cash.zipline:zipline-gradle-plugin:1.26.0`
+depends on `kotlin-gradle-plugin:2.3.10` — so once you apply it, your build's
+Kotlin compiler floats to **2.3.10** regardless of what your version catalog pins.
+Consequences:
+
+- Use a **KSP release on the matching `2.3.10-…` line**. A lower KSP (even the
+  `2.2.0-2.0.2` keliver itself ships) only prints a non-fatal
+  `ksp … is too old for kotlin-2.3.10` warning — builds still succeed — but the
+  matching line keeps your log clean.
+- Compose Multiplatform **1.8.0** and AGP **8.12+** are known-good with this combo
+  (verified building a real multi-module consumer APK against `0.1.0`).
 
 ---
 
