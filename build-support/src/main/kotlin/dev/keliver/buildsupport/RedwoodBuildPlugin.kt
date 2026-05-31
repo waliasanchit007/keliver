@@ -86,10 +86,10 @@ private fun Project.keliverGroupId(): String =
 
 // HEY! If you change the major version update release.yaml doc folder.
 // Overridable via the `keliverVersion` Gradle property — e.g. a Maven
-// Central release passes `-PkeliverVersion=1.0.0-caliclan.4` (no
-// `-SNAPSHOT`) because the Central *deployment* flow only accepts release
-// versions; the default keeps `-SNAPSHOT` for the GitHub Packages dev flow.
-private const val KELIVER_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
+// Central release passes `-PkeliverVersion=0.1.0` (no `-SNAPSHOT`) because
+// the Central *deployment* flow only accepts release versions; the default
+// keeps `-SNAPSHOT` for ongoing development after the 0.1.0 release.
+private const val KELIVER_VERSION = "0.1.1-SNAPSHOT"
 
 private fun Project.keliverVersion(): String =
   providers.gradleProperty("keliverVersion").getOrElse(KELIVER_VERSION)
