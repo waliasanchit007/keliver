@@ -84,7 +84,14 @@ private fun Project.konduitGroupId(): String =
   providers.gradleProperty("konduitGroupId").getOrElse(KONDUIT_GROUP_ID)
 
 // HEY! If you change the major version update release.yaml doc folder.
+// Overridable via the `konduitVersion` Gradle property — e.g. a Maven
+// Central release passes `-PkonduitVersion=1.0.0-caliclan.4` (no
+// `-SNAPSHOT`) because the Central *deployment* flow only accepts release
+// versions; the default keeps `-SNAPSHOT` for the GitHub Packages dev flow.
 private const val KONDUIT_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
+
+private fun Project.konduitVersion(): String =
+  providers.gradleProperty("konduitVersion").getOrElse(KONDUIT_VERSION)
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
@@ -94,7 +101,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
 
   override fun apply(target: Project) {
     target.group = target.konduitGroupId()
-    target.version = KONDUIT_VERSION
+    target.version = target.konduitVersion()
 
     libs = target.extensions.getByName("libs") as LibrariesForLibs
 
@@ -460,15 +467,24 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
 
     val mavenPublishing = project.extensions.getByName("mavenPublishing") as MavenPublishBaseExtension
     mavenPublishing.apply {
-      publishToMavenCentral(automaticRelease = true)
+      // Auto-publish the Central deployment once it validates (default).
+      // Pass `-PkonduitAutoRelease=false` to upload in "review" mode: the
+      // deployment lands in the Sonatype portal as VALIDATED-but-unpublished
+      // so a human can inspect it and click Publish (or Drop). Useful for a
+      // first release / dry run before committing to an immutable publish.
+      val autoRelease = project.providers.gradleProperty("konduitAutoRelease")
+        .map { it.toBoolean() }.getOrElse(true)
+      publishToMavenCentral(automaticRelease = autoRelease)
       if (project.providers.systemProperty("RELEASE_SIGNING_ENABLED").getOrElse("true").toBoolean()) {
         signAllPublications()
       }
 
-      // `project.group` is set from `konduitGroupId()` in apply(), so the
-      // coordinate honors a `-PkonduitGroupId=` override (e.g. the
-      // io.github.* vanity namespace for a Maven Central release).
-      coordinates(project.group.toString(), project.name, KONDUIT_VERSION)
+      // `project.group` / `project.version` are set from `konduitGroupId()`
+      // / `konduitVersion()` in apply(), so the coordinate honors the
+      // `-PkonduitGroupId=` and `-PkonduitVersion=` overrides (e.g. the
+      // io.github.* vanity namespace + a non-SNAPSHOT version for a Maven
+      // Central release).
+      coordinates(project.group.toString(), project.name, project.version.toString())
 
       pom { pom ->
         pom.name.set(project.name)
