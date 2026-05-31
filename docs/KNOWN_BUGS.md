@@ -978,6 +978,41 @@ underlying stdlib-serializer codegen bug fixed (PR #64).
 
 ---
 
+### U14. `movableContentOf` reuse across different parents recreates nodes (2 quarantined ProtocolTest)
+
+**Symptom.** When `movableContentOf` content moves between *different* parent
+appliers (e.g. `Row` → `Column`), the moved widget is **recreated**
+(`Create` + `Remove(detach=false)`) instead of **moved**
+(`Remove(detach=true)` + re-`Add` of the same widget id). Two inherited Redwood
+tests in `dev.keliver.protocol.guest.ProtocolTest` assert the reuse path and
+fail: `movableContentSameRecomposition`, `multipleMovableContentButOnlyOneReused`.
+They are `@Ignore`-quarantined so CI stays green; see task #45.
+
+**First surfaced 2026-05-31**, when CI first actually executed the gated
+`-PkeliverWithTestApp` suite — the cloud runner never ran it (Actions billing),
+so the self-hosted-runner shift is what exposed it. Reproduces deterministically.
+
+**Root cause (narrowed).** NOT a toolchain skew: keliver's build is a consistent
+Kotlin 2.2.0 / compose-compiler 2.2.0 / JetBrains Compose 1.8.2 (confirmed via
+`buildEnvironment`; the Kotlin-2.3.10 float only affects the *unpinned consumer*
+build). `DefaultGuestProtocolAdapter.appendAdd` upgrades a prior `Remove` to
+`detach=true` only when the re-added child is the *same* `ProtocolWidget`
+instance (`removeIndex` set). JetBrains Compose runtime **1.8.2** creates a new
+node for the moved content instead of reusing the existing one, so that signal
+never fires — diverging from the compose-runtime version upstream Redwood used.
+
+**Severity: low-to-moderate.** The UI still renders correctly; the only loss is
+node *identity* (and any host-side widget state bound to it) on
+`movableContentOf` moves between parents — an edge case.
+
+**Fix path (open-ended).** Bisect/align the compose-runtime version against what
+restores reuse, which may cascade (Compose 1.9.x wants Kotlin 2.3.x,
+reintroducing the float keliver pins away). Tracked as task #45.
+
+**Owner.** Keliver.
+
+---
+
 ## Recently resolved
 
 These were resolved in this repo or in the Keliver fork. Full entries
