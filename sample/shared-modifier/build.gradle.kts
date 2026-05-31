@@ -8,7 +8,7 @@
  */
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
-  alias(libs.plugins.konduit.generator.modifiers)
+  alias(libs.plugins.keliver.generator.modifiers)
 }
 
 redwoodSchema {
@@ -27,7 +27,7 @@ kotlin {
   sourceSets {
     val commonMain by getting {
       dependencies {
-        api(libs.konduit.widget)
+        api(libs.keliver.widget)
       }
     }
   }

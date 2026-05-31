@@ -10,7 +10,7 @@ buildscript {
     classpath libs.poko.gradlePlugin
     classpath libs.jetbrains.compose.gradlePlugin
     classpath 'dev.keliver.build:gradle-plugin'
-    classpath 'dev.keliver:konduit-gradle-plugin'
+    classpath 'dev.keliver:keliver-gradle-plugin'
   }
   repositories {
     mavenCentral()

@@ -19,8 +19,8 @@ The short version:
 
 > **Status:** Konduit is currently a private GitHub Packages fork while
 > the integration validation work (issues
-> [#8 iOS](https://github.com/waliasanchit007/konduit/issues/8),
-> [#9 sample app](https://github.com/waliasanchit007/konduit/issues/9))
+> [#8 iOS](https://github.com/waliasanchit007/keliver/issues/8),
+> [#9 sample app](https://github.com/waliasanchit007/keliver/issues/9))
 > finishes. Maven Central publishing is tracked in Phase 5 of
 > [`PUBLIC_LAUNCH_ROADMAP.md`](../PUBLIC_LAUNCH_ROADMAP.md). If you're
 > evaluating now, read this guide first — then talk to the maintainer
@@ -47,10 +47,10 @@ that left off:
 3. **Compose-Multiplatform focus.** Phase 1.5 dropped 13 upstream
    modules that aren't relevant to CMP (Android Views, iOS UIView,
    Web DOM, the test-app harness). Module count went 60 → 47.
-4. **Ergonomic shims** — `konduit-host` / `konduit-guest` facades
-   collapse the 8-module adopter dep block into one line; `konduit-vm`
-   gives you a guest-side ViewModel equivalent; `konduit-http` /
-   `konduit-storage` are generic network and persistence services
+4. **Ergonomic shims** — `keliver-host` / `keliver-guest` facades
+   collapse the 8-module adopter dep block into one line; `keliver-vm`
+   gives you a guest-side ViewModel equivalent; `keliver-http` /
+   `keliver-storage` are generic network and persistence services
    adopters wire once and use everywhere.
 
 ## What's identical
@@ -79,26 +79,26 @@ Every rename is mechanical — no semantic change.
 
 | Upstream Redwood | Konduit |
 |---|---|
-| `app.cash.redwood:redwood-runtime` | `dev.keliver:konduit-runtime` |
-| `app.cash.redwood:redwood-compose` | `dev.keliver:konduit-compose` |
-| `app.cash.redwood:redwood-widget` | `dev.keliver:konduit-widget` |
-| `app.cash.redwood:redwood-protocol` | `dev.keliver:konduit-protocol` |
-| `app.cash.redwood:redwood-protocol-host` | `dev.keliver:konduit-protocol-host` |
-| `app.cash.redwood:redwood-protocol-guest` | `dev.keliver:konduit-protocol-guest` |
-| `app.cash.redwood:redwood-treehouse` | `dev.keliver:konduit-treehouse` |
-| `app.cash.redwood:redwood-treehouse-host` | `dev.keliver:konduit-treehouse-host` |
-| `app.cash.redwood:redwood-treehouse-host-composeui` | `dev.keliver:konduit-treehouse-host-composeui` |
-| `app.cash.redwood:redwood-treehouse-guest` | `dev.keliver:konduit-treehouse-guest` |
-| `app.cash.redwood:redwood-treehouse-guest-compose` | `dev.keliver:konduit-treehouse-guest-compose` |
-| `app.cash.redwood:redwood-schema` | `dev.keliver:konduit-schema` |
+| `app.cash.redwood:redwood-runtime` | `dev.keliver:keliver-runtime` |
+| `app.cash.redwood:redwood-compose` | `dev.keliver:keliver-compose` |
+| `app.cash.redwood:redwood-widget` | `dev.keliver:keliver-widget` |
+| `app.cash.redwood:redwood-protocol` | `dev.keliver:keliver-protocol` |
+| `app.cash.redwood:redwood-protocol-host` | `dev.keliver:keliver-protocol-host` |
+| `app.cash.redwood:redwood-protocol-guest` | `dev.keliver:keliver-protocol-guest` |
+| `app.cash.redwood:redwood-treehouse` | `dev.keliver:keliver-treehouse` |
+| `app.cash.redwood:redwood-treehouse-host` | `dev.keliver:keliver-treehouse-host` |
+| `app.cash.redwood:redwood-treehouse-host-composeui` | `dev.keliver:keliver-treehouse-host-composeui` |
+| `app.cash.redwood:redwood-treehouse-guest` | `dev.keliver:keliver-treehouse-guest` |
+| `app.cash.redwood:redwood-treehouse-guest-compose` | `dev.keliver:keliver-treehouse-guest-compose` |
+| `app.cash.redwood:redwood-schema` | `dev.keliver:keliver-schema` |
 
 For most adopters the entire upper block collapses into:
 
 ```kotlin
 // host module
-implementation("dev.keliver:konduit-host:1.0.0-caliclan.4")
+implementation("dev.keliver:keliver-host:1.0.0-caliclan.4")
 // guest module
-implementation("dev.keliver:konduit-guest:1.0.0-caliclan.4")
+implementation("dev.keliver:keliver-guest:1.0.0-caliclan.4")
 ```
 
 See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
@@ -123,7 +123,7 @@ plugins {
     alias(libs.plugins.redwood.generator.compose)
 
     // after
-    alias(libs.plugins.konduit.generator.compose)
+    alias(libs.plugins.keliver.generator.compose)
 }
 ```
 
@@ -154,18 +154,18 @@ find . -type f \( \
 \) -not -path '*/build/*' -not -path '*/.gradle/*' \
 | xargs sed -i '' \
     -e 's|app\.cash\.redwood|dev.keliver|g' \
-    -e 's|redwood-runtime|konduit-runtime|g' \
-    -e 's|redwood-compose|konduit-compose|g' \
-    -e 's|redwood-widget|konduit-widget|g' \
-    -e 's|redwood-protocol|konduit-protocol|g' \
-    -e 's|redwood-protocol-host|konduit-protocol-host|g' \
-    -e 's|redwood-protocol-guest|konduit-protocol-guest|g' \
-    -e 's|redwood-treehouse|konduit-treehouse|g' \
-    -e 's|redwood-treehouse-host|konduit-treehouse-host|g' \
-    -e 's|redwood-treehouse-host-composeui|konduit-treehouse-host-composeui|g' \
-    -e 's|redwood-treehouse-guest|konduit-treehouse-guest|g' \
-    -e 's|redwood-treehouse-guest-compose|konduit-treehouse-guest-compose|g' \
-    -e 's|redwood-schema|konduit-schema|g'
+    -e 's|redwood-runtime|keliver-runtime|g' \
+    -e 's|redwood-compose|keliver-compose|g' \
+    -e 's|redwood-widget|keliver-widget|g' \
+    -e 's|redwood-protocol|keliver-protocol|g' \
+    -e 's|redwood-protocol-host|keliver-protocol-host|g' \
+    -e 's|redwood-protocol-guest|keliver-protocol-guest|g' \
+    -e 's|redwood-treehouse|keliver-treehouse|g' \
+    -e 's|redwood-treehouse-host|keliver-treehouse-host|g' \
+    -e 's|redwood-treehouse-host-composeui|keliver-treehouse-host-composeui|g' \
+    -e 's|redwood-treehouse-guest|keliver-treehouse-guest|g' \
+    -e 's|redwood-treehouse-guest-compose|keliver-treehouse-guest-compose|g' \
+    -e 's|redwood-schema|keliver-schema|g'
 
 # 2. Replace Gradle plugin IDs (if you used the `app.cash.redwood.*` IDs)
 find . -type f \( -name '*.kt' -o -name '*.kts' -o -name '*.toml' \) \
@@ -205,7 +205,7 @@ Module count went from 60 → 47. CMP-only adopters lose nothing.
 These have no upstream-Redwood equivalent — they exist only in the
 fork. Adopt incrementally; none of them are mandatory.
 
-### Production-hardening helpers (in `konduit-treehouse-host`)
+### Production-hardening helpers (in `keliver-treehouse-host`)
 
 - **`Spec.retain(service)`** — strong-ref pass-through that keeps a
   service reachable for the Spec's lifetime. Use when binding inline
@@ -227,23 +227,23 @@ fork. Adopt incrementally; none of them are mandatory.
 See [`docs/KNOWN_BUGS.md`](./KNOWN_BUGS.md) U1–U11 for the full silent-
 failure catalog these helpers mitigate.
 
-### Compose Facade (`konduit-host`, `konduit-guest`)
+### Compose Facade (`keliver-host`, `keliver-guest`)
 
 Single-import meta-modules that re-export every type a typical adopter
 needs. Replace the 8-line dep block with one line per side.
 
 ### Guest-side helpers
 
-- **`konduit-vm`** — `KonduitViewModel` base + `konduitViewModel { }`
+- **`keliver-vm`** — `KonduitViewModel` base + `keliverViewModel { }`
   Compose entry point. Mirrors native Android `ViewModel` ergonomics
   for the parts that port to the QuickJS guest. See
   [`docs/USAGE.md`](./USAGE.md) "ViewModel-like patterns in the guest".
-- **`konduit-http`** — `HostHttpProvider` ZiplineService + `KonduitHttp`
+- **`keliver-http`** — `HostHttpProvider` ZiplineService + `KonduitHttp`
   typed wrapper. Adopters wire their Ktor / Retrofit / OkHttp client
   ONCE; guest screens get typed `get<T>` / `post<Req, Res>` / etc.
   without per-endpoint `HostXxxProvider` services. See "API calls from
   the guest".
-- **`konduit-storage`** — `HostStorage` ZiplineService + `KonduitStorage`
+- **`keliver-storage`** — `HostStorage` ZiplineService + `KonduitStorage`
   typed wrapper. Adopters wire any KV backend (`DataStore`,
   `NSUserDefaults`, file blob); guest persists any `@Serializable` type
   with `set<T>` / `get<T>`. See "Key/value persistence from the guest".
@@ -340,9 +340,9 @@ Upgrading the guest screen to use Konduit's new shims is optional:
 ```kotlin
 class QuotesScreen : Screen {
     @Composable override fun Content(navigator: Navigator) {
-        // konduit-vm + konduit-http
+        // keliver-vm + keliver-http
         val http = remember { KonduitHttp(HostHttpProviderBridge.instance!!) }
-        val vm = konduitViewModel { QuotesViewModel(http) }
+        val vm = keliverViewModel { QuotesViewModel(http) }
         val quotes by vm.state.collectAsState()
 
         Column {
@@ -361,19 +361,19 @@ class QuotesScreen : Screen {
 
    ```toml
    [versions]
-   konduit = "1.0.0-caliclan.4"
+   keliver = "1.0.0-caliclan.4"
 
    [libraries]
-   konduit-host  = { module = "dev.keliver:konduit-host",  version.ref = "konduit" }
-   konduit-guest = { module = "dev.keliver:konduit-guest", version.ref = "konduit" }
+   keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
+   keliver-guest = { module = "dev.keliver:keliver-guest", version.ref = "keliver" }
 
    [plugins]
-   konduit-schema             = { id = "dev.keliver.schema",             version.ref = "konduit" }
-   konduit-generator-compose  = { id = "dev.keliver.generator.compose",  version.ref = "konduit" }
-   konduit-generator-widget   = { id = "dev.keliver.generator.widget",   version.ref = "konduit" }
-   konduit-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host",  version.ref = "konduit" }
-   konduit-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "konduit" }
-   konduit-generator-modifiers      = { id = "dev.keliver.generator.modifiers",      version.ref = "konduit" }
+   keliver-schema             = { id = "dev.keliver.schema",             version.ref = "keliver" }
+   keliver-generator-compose  = { id = "dev.keliver.generator.compose",  version.ref = "keliver" }
+   keliver-generator-widget   = { id = "dev.keliver.generator.widget",   version.ref = "keliver" }
+   keliver-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host",  version.ref = "keliver" }
+   keliver-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "keliver" }
+   keliver-generator-modifiers      = { id = "dev.keliver.generator.modifiers",      version.ref = "keliver" }
    ```
 
 2. Add the Konduit repository while we're still on GitHub Packages
@@ -385,7 +385,7 @@ class QuotesScreen : Screen {
    dependencyResolutionManagement {
        repositories {
            maven {
-               url = uri("https://maven.pkg.github.com/waliasanchit007/konduit")
+               url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
                credentials {
                    username = providers.gradleProperty("gpr.user").get()
                    password = providers.gradleProperty("gpr.token").get()
@@ -412,7 +412,7 @@ class QuotesScreen : Screen {
    timeout never fires in healthy operation but turns the silent
    bind-hang failure modes into clear exceptions.
 
-8. (Optional) Adopt `konduit-vm` / `konduit-http` / `konduit-storage`
+8. (Optional) Adopt `keliver-vm` / `keliver-http` / `keliver-storage`
    as ergonomic upgrades over the bare-Zipline service pattern. None
    are mandatory; they're orthogonal to the migration.
 
@@ -449,7 +449,7 @@ package paths in the JARs stay `dev.keliver.*` — only your Gradle
 dep coordinate string changes.
 
 **Where do I report issues?**
-[`waliasanchit007/konduit`](https://github.com/waliasanchit007/konduit/issues/new/choose)
+[`waliasanchit007/keliver`](https://github.com/waliasanchit007/keliver/issues/new/choose)
 issue templates cover bug reports, feature requests, and integration
 help. The integration-help template directs you to KNOWN_BUGS.md first
 — most adoption pain is one of the documented silent-failure shapes.

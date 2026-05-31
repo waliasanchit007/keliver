@@ -53,7 +53,7 @@ interface TestSchema
 
 /**
  * A trivial row-like type for testing purposes only.
- * Use konduit-layout for any real views in the test app.
+ * Use keliver-layout for any real views in the test app.
  */
 @Widget(1)
 data class TestRow(
@@ -64,7 +64,7 @@ object TestRowScope
 
 /**
  * A trivial row-like type with a scope for testing purposes only.
- * Use konduit-layout for any real views in the test app.
+ * Use keliver-layout for any real views in the test app.
  */
 @Widget(2)
 data class ScopedTestRow(

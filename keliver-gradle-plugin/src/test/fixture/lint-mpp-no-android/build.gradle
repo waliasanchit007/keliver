@@ -1,0 +1,29 @@
+buildscript {
+  dependencies {
+    classpath "dev.keliver:keliver-gradle-plugin:$redwoodVersion"
+    classpath libs.kotlin.gradlePlugin
+  }
+
+  repositories {
+    maven {
+      url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+    }
+    mavenCentral()
+  }
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.lint'
+
+kotlin {
+  jvm()
+  js()
+}
+
+repositories {
+  maven {
+    url "file://${rootDir.absolutePath}/../../../../../build/localMaven"
+  }
+  mavenCentral()
+  google()
+}

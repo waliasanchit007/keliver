@@ -1,0 +1,17 @@
+import static dev.keliver.buildsupport.TargetGroup.Tooling
+
+redwoodBuild {
+  targets(Tooling)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.schema'
+
+dependencies {
+  api projects.keliverLayoutApi
+  api projects.keliverLazylayoutApi
+}
+
+redwoodSchema {
+  type = 'dev.keliver.lazylayout.RedwoodLazyLayout'
+}

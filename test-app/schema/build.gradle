@@ -2,7 +2,7 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 apply plugin: 'dev.keliver.schema'
 
 dependencies {
-  api projects.konduitUiBasicSchema
+  api projects.keliverUiBasicSchema
 }
 
 redwoodSchema {

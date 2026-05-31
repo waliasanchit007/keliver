@@ -12,7 +12,7 @@ Fixed / infrastructure:
 - **U13 fully resolved — all 22 inherited Redwood tests revived.**
   Recovered the upstream `test-app` fixture (schema + 6 codegen
   modules + presenter + presenter-treehouse guest bundle) from git
-  history, gated behind `-PkonduitWithTestApp`, and re-enabled the
+  history, gated behind `-PkeliverWithTestApp`, and re-enabled the
   complete inherited protocol/codegen/treehouse-integration suite
   (CI runs it). Surfaced + fixed three latent fork-era bugs along the
   way: (1) the stdlib-custom-type serializer codegen bug (PR #64);
@@ -29,14 +29,14 @@ Fixed / infrastructure:
   still imported its `com.example.redwood.testapp.*` schema — so
   they'd been non-compiling (zero coverage) and undetected. Changes:
   - Quarantined the 22 fixture-dependent files into gated
-    `apps*Test` source sets (opt-in via `-PkonduitWithTestApp`).
+    `apps*Test` source sets (opt-in via `-PkeliverWithTestApp`).
     This **recovered** the ~25 sibling tests that shared those
     source sets and couldn't compile while the broken files sat
     alongside them.
   - Removed the dangling `:test-app:presenter-treehouse` task
     dependency that made `./gradlew test` fail at configuration.
   - Generated the **9 missing API baselines** (`apiDump`) for
-    konduit-vm/nav/storage/console/http/http-annotations/
+    keliver-vm/nav/storage/console/http/http-annotations/
     http-codegen/image/treehouse-codegen + klib baselines for
     compose/composeui, so `apiCheck` passes.
   - Wired `test` + `apiCheck` into `ci.yml` (was build-only).
@@ -58,7 +58,7 @@ New:
   (`ManifestVerifier.SignatureChecks`) remains a documented
   follow-up. Full case study in `sample/TESTING.md`.
 
-- `dev.keliver:konduit-treehouse-codegen` — **validated against
+- `dev.keliver:keliver-treehouse-codegen` — **validated against
   DevoStatus (~120-widget schema, 7+ host services)**. First
   real-world adopter migration: replaced the production
   `ManualSduiAppServiceAdapter.kt` (~95 LoC) with the
@@ -74,7 +74,7 @@ New:
   `ksp-<v>-1.0.x is too old for kotlin-2.3.10` config error.
   Documented in U12.
 
-- `dev.keliver:konduit-treehouse-codegen` — KSP processor that
+- `dev.keliver:keliver-treehouse-codegen` — KSP processor that
   emits `Generated<Name>Adapter` open classes for
   `@KonduitAppService`-annotated interfaces. Closes the second
   half of U12; adopter cost drops to **~5 LoC + zero
@@ -99,7 +99,7 @@ New:
   sequence, same "Hello, Konduit!" rendered.
 
 - `@KonduitAppService` source-retention annotation in
-  `konduit-treehouse` — marker that the codegen processor
+  `keliver-treehouse` — marker that the codegen processor
   picks up. Zero runtime weight (SOURCE retention).
 
 - `sample/benchmarks/` — Performance Phase 2 scaffolding.
@@ -122,7 +122,7 @@ New:
   limitation" for the full writeup.
 
 - `dev.keliver.treehouse.KonduitAppServiceAdapter<T>` +
-  `konduitReturningFunction()` helper + Konduit-blessed
+  `keliverReturningFunction()` helper + Konduit-blessed
   typealiases for `OutboundCallHandler` / `OutboundService` —
   cuts the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
   manual-adapter boilerplate from ~95 LoC + 7-entry
@@ -186,7 +186,7 @@ New:
     Macrobenchmark), warm mount (P50 ≤ 100 ms via Compose snapshot
     observer), update latency (P50 ≤ 16 ms — single frame at 60 Hz),
     memory footprint (idle overhead ≤ 25 MB beyond a native-Compose
-    baseline). Implementation queued for `konduit-benchmarks/` in
+    baseline). Implementation queued for `keliver-benchmarks/` in
     the perf workstream's Phase 2.
 
   * **Comparison baselines.** Native-Compose-only and upstream
@@ -219,8 +219,8 @@ New:
   the roadmap. See [`sample/README.md`](sample/README.md) for the
   runbook + adoption walkthrough.
 
-- `dev.keliver:konduit-http-codegen` — KSP processor that reads
-  `@KonduitApi`-annotated interfaces from `konduit-http-annotations`
+- `dev.keliver:keliver-http-codegen` — KSP processor that reads
+  `@KonduitApi`-annotated interfaces from `keliver-http-annotations`
   (Phase 1) and emits a companion `*Impl(KonduitHttp)` class per
   interface. Phases 2 + 3 of issue #18; ships the codegen MVP covering
   `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`,
@@ -232,8 +232,8 @@ New:
   }
 
   dependencies {
-      implementation(libs.konduit.guest)   // pulls konduit-http-annotations transitively
-      ksp("dev.keliver:konduit-http-codegen:1.0.0-caliclan.4-SNAPSHOT")
+      implementation(libs.keliver.guest)   // pulls keliver-http-annotations transitively
+      ksp("dev.keliver:keliver-http-codegen:1.0.0-caliclan.4-SNAPSHOT")
   }
   ```
 
@@ -285,10 +285,10 @@ New:
   Error output ranks files by size so size-regression diagnosis
   is one log read: the largest file is usually the regression. Soft
   warn threshold is optional. 6/6 unit tests via `ProjectBuilder`.
-  Shipped from `konduit-gradle-plugin` — no new plugin id, register
+  Shipped from `keliver-gradle-plugin` — no new plugin id, register
   the task type directly.
 
-- `dev.keliver:konduit-http-annotations` — Retrofit-style HTTP API
+- `dev.keliver:keliver-http-annotations` — Retrofit-style HTTP API
   annotations (`@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`,
   `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap`). Phase 1 of
   the codegen workstream from issue #18; ships the annotation API
@@ -298,7 +298,7 @@ New:
   them and generates `*Impl(http: KonduitHttp)` classes is queued
   for the next development cycle — full multi-phase design is in
   `docs/HTTP_API_CODEGEN_DESIGN.md`. Re-exported through
-  `dev.keliver:konduit-guest`.
+  `dev.keliver:keliver-guest`.
 
 Docs:
 - USAGE.md § "Reactive data — `Flow<T>` vs Observer callbacks": new
@@ -363,7 +363,7 @@ Fixed:
 
 New:
 - `dev.keliver.zipline-shapes` Gradle plugin
-  (`konduit-gradle-plugin`) — build-time lint that rejects
+  (`keliver-gradle-plugin`) — build-time lint that rejects
   `ZiplineService` interface methods with function-typed parameters
   (`(T) -> Unit`, `((A) -> B)?`, etc). The bad signature compiles
   silently today but produces a runtime-broken proxy on `take<T>()`
@@ -385,7 +385,7 @@ New:
   task ServerDrivenUI used to ship — adopters get the lint for
   free now. See issue #29, `docs/KNOWN_BUGS.md` U11.
 
-- `dev.keliver:konduit-nav` — guest-side typed navigation. Replaces
+- `dev.keliver:keliver-nav` — guest-side typed navigation. Replaces
   the per-app `HostNavigator` RPC-per-route pattern with a
   guest-owned back stack and a `KonduitNavController<R>` API that
   mirrors Compose Navigation ergonomics.
@@ -406,7 +406,7 @@ New:
   are queued as additive future work and won't break the existing
   call shape when they land.
 
-  Re-exported through `dev.keliver:konduit-guest`. See issue #25,
+  Re-exported through `dev.keliver:keliver-guest`. See issue #25,
   `docs/USAGE.md` "Typed navigation in the guest".
 
 Changed:
@@ -420,7 +420,7 @@ Changed:
   Closes #11.
 
 New:
-- `dev.keliver:konduit-http` — HTTP shim. `HostHttpProvider :
+- `dev.keliver:keliver-http` — HTTP shim. `HostHttpProvider :
   ZiplineService` is a generic HTTP proxy the host implements once with
   its existing `HttpClient` (Ktor / Retrofit / OkHttp / etc.).
   `KonduitHttp` is the guest-side typed wrapper exposing `get<Res>`,
@@ -436,7 +436,7 @@ New:
   through both facades. See issues #7 + #28, `docs/USAGE.md`
   "API calls from the guest".
 
-- `dev.keliver:konduit-storage` — key/value persistence shim.
+- `dev.keliver:keliver-storage` — key/value persistence shim.
   `HostStorage : ZiplineService` is a minimal `get` / `set` / `keys`
   contract the host implements once with its backend of choice
   (`DataStore<Preferences>` on Android, `NSUserDefaults` on iOS, a
@@ -458,17 +458,17 @@ New:
   vm/http/storage shims), a `sed` script handling 90%+ of the rename
   surface, and a step-by-step migration checklist. Closes #13.
 
-- `dev.keliver:konduit-console` — standard host-bound logging service.
+- `dev.keliver:keliver-console` — standard host-bound logging service.
   `KonduitConsole : ZiplineService` is the canonical `fun log(level,
   message)` contract every adopter previously rewrote from scratch.
   `DefaultKonduitConsole(tag)` ships as a reference impl that emits
   `"[$tag/$level] $message"` via `println` (lands on Logcat on Android,
   the Xcode console on iOS, stdout on JVM). Subclass and override
   `output(line)` to route through `android.util.Log`, `os_log`, SLF4J,
-  or whatever your app uses. Re-exported through `konduit-host`. See
+  or whatever your app uses. Re-exported through `keliver-host`. See
   issue #27, `docs/USAGE.md` Step 2.
 
-- `dev.keliver:konduit-image` — one-line Coil 3 setup. Closes the
+- `dev.keliver:keliver-image` — one-line Coil 3 setup. Closes the
   long-standing KNOWN_BUGS U5 silent-failure shape (blank AsyncImage
   with no exception). `KonduitImage.installSingleton()` registers a
   platform-appropriate Coil 3 `ImageLoader` singleton with a default
@@ -479,31 +479,31 @@ New:
   via `crossfade`, `fetcher`, and `additional` parameters to override
   the default fetcher or tune the `ImageLoader.Builder` (cache size,
   interceptors, custom mappers). Re-exported through the
-  `konduit-host` facade. See issue #26, `docs/USAGE.md` "If you use
+  `keliver-host` facade. See issue #26, `docs/USAGE.md` "If you use
   AsyncImage", `docs/KNOWN_BUGS.md` U5.
 
-- `dev.keliver:konduit-vm` — guest-side ViewModel helper module.
+- `dev.keliver:keliver-vm` — guest-side ViewModel helper module.
   `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
   `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;
-  the `konduitViewModel { factory() }` `@Composable` entry point
+  the `keliverViewModel { factory() }` `@Composable` entry point
   constructs the VM on first composition, returns the same instance
   across recompositions, and cancels the scope when the hosting
   `@Composable` leaves the tree. Closes the cosmetic gap with native
   Compose-Android ViewModel ergonomics for the parts that port (scope,
   recomposition survival, lifecycle hook). Re-exported through
-  `dev.keliver:konduit-guest`. See issue #6 and `docs/USAGE.md` —
+  `dev.keliver:keliver-guest`. See issue #6 and `docs/USAGE.md` —
   "ViewModel-like patterns in the guest".
 
-- `dev.keliver:konduit-host` and `dev.keliver:konduit-guest` —
+- `dev.keliver:keliver-host` and `dev.keliver:keliver-guest` —
   facade modules that aggregate the public adopter-facing surface
   through `api` dependencies. A host module can drop its 8-line
-  Konduit dependency block (`konduit-treehouse-host`,
-  `konduit-treehouse-host-composeui`, `konduit-compose`,
-  `konduit-widget`, `konduit-runtime`, `konduit-protocol`,
-  `konduit-protocol-host`, `konduit-treehouse`, plus `zipline` and
-  `zipline-loader`) in favor of `implementation(libs.konduit.host)`;
+  Konduit dependency block (`keliver-treehouse-host`,
+  `keliver-treehouse-host-composeui`, `keliver-compose`,
+  `keliver-widget`, `keliver-runtime`, `keliver-protocol`,
+  `keliver-protocol-host`, `keliver-treehouse`, plus `zipline` and
+  `zipline-loader`) in favor of `implementation(libs.keliver.host)`;
   a guest module collapses its 7-line equivalent into
-  `implementation(libs.konduit.guest)`. The pre-facade per-module
+  `implementation(libs.keliver.guest)`. The pre-facade per-module
   imports continue to work — the facade is additive. See
   PUBLIC_LAUNCH_ROADMAP.md Phase 2 and `docs/USAGE.md` for the
   adoption snippets.
@@ -517,7 +517,7 @@ Changed:
   Adopters can still override `onCleared` for cleanup; the only break
   is calling `vm.onCleared()` from outside the VM class, which had no
   legitimate use case. Safe pre-1.0-release polish.
-- `konduitViewModel { ... }` accepts an optional `key: Any? = null`
+- `keliverViewModel { ... }` accepts an optional `key: Any? = null`
   parameter. When `key` changes between recompositions, the current
   VM's `onCleared` runs and the factory builds a fresh instance.
   Mirrors Android's `viewModel(key = ...)` pattern. Useful for
@@ -615,12 +615,12 @@ Phase 1.5 cleanup. Konduit now ships only Compose Multiplatform-relevant
 modules.
 
 Removed:
-- `konduit-layout-{view,uiview,dom}`
-- `konduit-lazylayout-{view,uiview,dom}`
-- `konduit-ui-basic-{view,uiview,dom}`
-- `konduit-widget-{view-test,uiview-test}`
-- `konduit-dom-testing`
-- `konduit-leak-detector-zipline-test`
+- `keliver-layout-{view,uiview,dom}`
+- `keliver-lazylayout-{view,uiview,dom}`
+- `keliver-ui-basic-{view,uiview,dom}`
+- `keliver-widget-{view-test,uiview-test}`
+- `keliver-dom-testing`
+- `keliver-leak-detector-zipline-test`
 - Upstream `test-app/` integration tests
 - Upstream `samples/` (Counter, EmojiSearch demo apps)
 
@@ -635,7 +635,7 @@ changes from upstream — only renames + group/version reset.
 
 Changed:
 - Maven group `app.cash.redwood` → `dev.keliver`
-- Module names `redwood-*` → `konduit-*`
+- Module names `redwood-*` → `keliver-*`
 - Package paths `app.cash.redwood.*` → `dev.keliver.*`
 - Version reset to `1.0.0-caliclan.1`
 
@@ -798,10 +798,10 @@ New:
 - Added a basic DOM-based `LazyList` implementation.
 -`TreehouseApp.close()` stops the app and prevents it from being started again later.
 - Added `UiConfiguration.layoutDirection` to support reading the host's layout direction.
-- New `konduit-bom` artifact can be used to ensure all Redwood artifacts use the same version. See [Gradle's documentation](https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import) on how to use the BOM in your build.
+- New `keliver-bom` artifact can be used to ensure all Redwood artifacts use the same version. See [Gradle's documentation](https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import) on how to use the BOM in your build.
 
 Changed:
-- The `dev.keliver` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `konduit-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
+- The `dev.keliver` Gradle plugin has been removed. This plugin did two things: apply the Compose compiler and add a dependency on the `keliver-compose` artifact. The Compose compiler can now be added by applying the `org.jetbrains.kotlin.plugin.compose` Gradle plugin. Dependencies on Redwood artifacts can be added manually.
 - Removed deprecated `typealias`es for generated `-WidgetFactories` type which was renamed to `-WidgetSystem` in 0.10.0.
 - Removed deprecated `Modifier.flex` extension function which is now supported natively by `Row` and `Column` since 0.8.0.
 - Removed deprecated `TreehouseWidgetView` and `TreehouseUIKitView` type aliases for `TreehouseLayout` and `TreehouseUIView` which were renamed in 0.7.0.
@@ -918,8 +918,8 @@ New:
 Changed:
 - Disable klib signature clash checks for JS compilations. These occasionally occur as a result of Compose compiler behavior, and are safe to disable (the first-party JetBrains Compose Gradle plugin also disables them).
 - `onModifierChanged` callback in `Widget.Children` now receives the index and the `Widget` instance affected by the change.
-- The package of 'konduit-protocol-host' changed to `dev.keliver.protocol.host`. This should not affect end-users as its types are mostly for internal use.
-- The entire `konduit-yoga` artifact's public API has been annotated with an opt-in annotation indicating that it's only for Redwood internal use and is not stable.
+- The package of 'keliver-protocol-host' changed to `dev.keliver.protocol.host`. This should not affect end-users as its types are mostly for internal use.
+- The entire `keliver-yoga` artifact's public API has been annotated with an opt-in annotation indicating that it's only for Redwood internal use and is not stable.
 - Revert: Don't block touch events to non-subviews below a `Row`, `Column`, or `Box` in the iOS `UIView` implementation. This matches the behavior of the Android View and Compose UI implementations.
 - The generated "widget factories" type (e.g., `MySchemaWidgetFactories`) is now called a "widget system" (e.g., `MySchemaWidgetSystem`). Sometimes it was also referred to as a "provider" in parameter names. A `@Deprecated typealias` is generated for now, but will be removed in the future.
 - The package names of some generated code has changed. Deprecated `typealias`es are generated in the old locations for public types and functions, but those will be removed in the next release.
@@ -927,7 +927,7 @@ Changed:
   - Protocol guest code is now under `your.package.protocol.guest`.
   - Protocol host code is now under `your.package.protocol.host`.
 - The 'dev.keliver.generator.compose.protocol' and 'dev.keliver.generator.widget.protocol' Gradle plugins are now deprecated and will be removed in the next release. Use 'dev.keliver.generator.protocol.guest' and 'dev.keliver.generator.protocol.host', respectively.
-- The 'konduit-tooling-codegen' CLI flags for protocol codegen have changed from `--compose-protocol` and `--widget-protocol` to `--protocol-guest` and `--protocol-host`, respectively.
+- The 'keliver-tooling-codegen' CLI flags for protocol codegen have changed from `--compose-protocol` and `--widget-protocol` to `--protocol-guest` and `--protocol-host`, respectively.
 - Entrypoints to the protocol on the host-side and guest-side now require supplying the version of Redwood in use on the other side in order to ensure compatibility and work around any bugs in older versions. This uses a new `RedwoodVersion` type, and will be automatically wired if using our Treehouse artifacts.
 
 Fixed:
@@ -1127,7 +1127,7 @@ Changes:
 - Composables running in Treehouse now run on a background thread on iOS. Previously they were
   running on the main thread. Interactions with UIKit still occur on the main thread.
 - `RedwoodContent` function for hosting a Redwood composable within Compose UI has moved into a new
-  `konduit-composeui` artifact as it will soon require a Compose UI dependency.
+  `keliver-composeui` artifact as it will soon require a Compose UI dependency.
 - The generated testing function now returns the value which was returned from the testing lambda.
 
   Before:
@@ -1176,7 +1176,7 @@ Changes:
   layout modifiers are set, and then it is added to its parent. Additionally, widgets are added to
   their parents in a bottom-up manner. Code like `Row { Column { Text } }` will see `Text` be added
   to `Column` before `Column` is added to `Row.
-- 'konduit-treehouse' module has been split into '-shared', '-guest', and '-host' modules to
+- 'keliver-treehouse' module has been split into '-shared', '-guest', and '-host' modules to
   more cleanly delineate where each is used. "Host" is the native application and "guess" is code
   running inside the Zipline JS VM.
 - Schema dependencies are not longer parsed when loading a schema. Instead, a JSON representation
@@ -1206,7 +1206,7 @@ Changed:
   `Column` display when the container is not scrollable (the default). Use a `FrameLayout` instead.
 
 Fixed:
-- Actually publish the `konduit-treehouse-composeui` artifact.
+- Actually publish the `keliver-treehouse-composeui` artifact.
 
 This version only works with Kotlin 1.7.20.
 
@@ -1215,7 +1215,7 @@ This version only works with Kotlin 1.7.20.
 [0.2.0]: https://github.com/cashapp/redwood/releases/tag/0.2.0
 
 New:
-- `konduit-layout-dom` module provides HTML implementations of `Row` and `Column`.
+- `keliver-layout-dom` module provides HTML implementations of `Row` and `Column`.
 - Lazy layout's schema artifacts are now published and can be used by other projects.
 - Expose `concurrentDownloads` parameter for `TreehouseApp.Factory`. The default is 8.
 - Add `moduleLoadStart` and `moduleLoadEnd` events to Treehouse's `EventListener`.

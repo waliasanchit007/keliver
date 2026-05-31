@@ -56,12 +56,12 @@ Per-module breakdown of the Production bundle (largest first):
 | `kotlinx-coroutines-core` | 120,000 | `suspend` machinery |
 | `kotlinx-serialization-json` | 80,000 | JSON impl |
 | `zipline-root-zipline` | 80,000 | Zipline runtime |
-| `konduit-treehouse-guest` | 3,734 | Lifecycle + protocol glue |
-| `konduit-sample-guest` | 3,272 | The sample's own `main()` |
-| `konduit-sample-shared-protocol-guest` | 1,031 | Codegen output |
-| `konduit-konduit-runtime` | 760 | Konduit Compose binding |
-| `konduit-konduit-compose` | 635 | Compose-Konduit bridge |
-| All other `konduit-*` | <500 each | Individual schemas / widgets |
+| `keliver-treehouse-guest` | 3,734 | Lifecycle + protocol glue |
+| `keliver-sample-guest` | 3,272 | The sample's own `main()` |
+| `keliver-sample-shared-protocol-guest` | 1,031 | Codegen output |
+| `keliver-keliver-runtime` | 760 | Konduit Compose binding |
+| `keliver-keliver-compose` | 635 | Compose-Konduit bridge |
+| All other `keliver-*` | <500 each | Individual schemas / widgets |
 
 The takeaway: **once you've shipped Konduit at all, adding new
 widgets or screens costs single-digit KB per addition.** The
@@ -159,7 +159,7 @@ tree paints. The Zipline runtime is already alive; this is the
 **How to measure.** Compose `Snapshot` observer counting
 recompositions, paired with `Choreographer.FrameCallback` to capture
 the frame deadline the new tree first met. Land both as a
-test-only fixture under `konduit-benchmarks/` so they can run in
+test-only fixture under `keliver-benchmarks/` so they can run in
 CI on emulators.
 
 **Target SLA (proposed).** P50 ≤ 100 ms, P95 ≤ 250 ms — matching
@@ -239,7 +239,7 @@ Konduit-side measurements above, so the deltas are apples-to-apples.
 All "measured" sections above run from a clean clone of this repo:
 
 ```sh
-git clone https://github.com/waliasanchit007/konduit && cd konduit/sample
+git clone https://github.com/waliasanchit007/keliver && cd keliver/sample
 # Set up GH Packages auth — see sample/README.md
 ./gradlew --stop
 rm -rf */build .gradle
@@ -259,7 +259,7 @@ Cold-start / warm-mount / update-latency / memory-footprint
 reproductions require the device-level instrumentation
 (macrobenchmark, Instruments) described in their respective
 methodology sections above. The benchmarking fixtures themselves
-are queued for `konduit-benchmarks/`.
+are queued for `keliver-benchmarks/`.
 
 ---
 

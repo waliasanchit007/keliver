@@ -20,24 +20,24 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 `1.0.0-caliclan.4-SNAPSHOT` (in flight)
 
 **Adopter ergonomics**
-- `dev.keliver:konduit-host` / `dev.keliver:konduit-guest` — single-import
+- `dev.keliver:keliver-host` / `dev.keliver:keliver-guest` — single-import
   facade modules. Replaces the 7-module hand-wired host-side dep
   block.
-- `dev.keliver:konduit-vm` — `KonduitViewModel` + `konduitViewModel { }`
+- `dev.keliver:keliver-vm` — `KonduitViewModel` + `keliverViewModel { }`
   Compose helper. Closes the cosmetic gap with native
   Compose-Android ViewModel ergonomics.
-- `dev.keliver:konduit-nav` — typed guest-side navigation
+- `dev.keliver:keliver-nav` — typed guest-side navigation
   (`KonduitNavController` + `KonduitNavHost`), per-entry
   `rememberSaveable` state preservation.
-- `dev.keliver:konduit-http` — `KonduitHttp` typed wrapper +
+- `dev.keliver:keliver-http` — `KonduitHttp` typed wrapper +
   `HostHttpProvider` generic shim. Replaces N per-endpoint
   `HostXxxProvider` services with one host binding.
-- `dev.keliver:konduit-storage` — `KonduitStorage` key/value shim.
-- `dev.keliver:konduit-console` — standardized `KonduitConsole`
+- `dev.keliver:keliver-storage` — `KonduitStorage` key/value shim.
+- `dev.keliver:keliver-console` — standardized `KonduitConsole`
   logging service + reference `DefaultKonduitConsole`.
-- `dev.keliver:konduit-image` — `KonduitImage.installSingleton()`
+- `dev.keliver:keliver-image` — `KonduitImage.installSingleton()`
   one-liner for Coil 3 setup. Closes KNOWN_BUGS U5.
-- `dev.keliver:konduit-http-annotations` — Retrofit-style annotation
+- `dev.keliver:keliver-http-annotations` — Retrofit-style annotation
   surface (`@KonduitApi`, `@GET`, `@POST`, `@Path`, `@Query`, `@Body`,
   `@Header`, `@HeaderMap`). Phase 1 of the codegen workstream
   (issue #18); processor in [`docs/HTTP_API_CODEGEN_DESIGN.md`](./docs/HTTP_API_CODEGEN_DESIGN.md).
@@ -75,7 +75,7 @@ The caliclan.5 list below is **fully shipped** (codegen, sample +
 iOS, perf Phase 1, bundle-size budget, U12 helper) — plus an
 unplanned but high-value **test-suite hardening** pass: CI now runs
 `test` + `apiCheck`, and the 22 inherited Redwood tests are revived +
-gated (`-PkonduitWithTestApp`). Retrospective + lessons in
+gated (`-PkeliverWithTestApp`). Retrospective + lessons in
 [`docs/HARDENING_RETROSPECTIVE.md`](./docs/HARDENING_RETROSPECTIVE.md).
 
 Next cycle, in rough priority order (impact-first, informed by the
@@ -119,7 +119,7 @@ development.
 
 Everything below shipped this cycle.
 
-### 1. `konduit-http-codegen` — issue #18 (KSP processor)  ✅ *shipped*
+### 1. `keliver-http-codegen` — issue #18 (KSP processor)  ✅ *shipped*
 KSP `SymbolProcessor` that walks `@KonduitApi`-annotated interfaces
 and emits `*Impl(KonduitHttp)` classes. Phases 2 + 3 landed (all
 verbs + `@Path`/`@Query`/`@Body`/`@Header`/`@HeaderMap`), with 11
@@ -135,11 +135,11 @@ shell, and iOS Xcode project.
 
 **Validated end-to-end:**
 - Android: Pixel 9 emulator (API 37) — renders "Hello, Konduit!"
-  ([PR #54](https://github.com/waliasanchit007/konduit/pull/54)).
+  ([PR #54](https://github.com/waliasanchit007/keliver/pull/54)).
 - iOS: iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3) — same
   widget renders, same full Zipline RPC sequence visible via
   `simctl launch --console`
-  ([PR #56](https://github.com/waliasanchit007/konduit/pull/56)).
+  ([PR #56](https://github.com/waliasanchit007/keliver/pull/56)).
 
 Testing surfaced 8 adopter-facing bugs (5 Android + 3 iOS-specific);
 all fixed in tree, all written up in
@@ -191,18 +191,18 @@ fail the build if the `.zipline` bundle exceeds a configurable
 threshold (with an optional soft-warn). Catches accidental size
 regressions in CI. 6/6 unit tests via `ProjectBuilder`.
 
-### 6. `konduit-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
+### 6. `keliver-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
 **Both halves landed in caliclan.5:**
 
-- **Runtime helper** ([PR #58](https://github.com/waliasanchit007/konduit/pull/58)) —
+- **Runtime helper** ([PR #58](https://github.com/waliasanchit007/keliver/pull/58)) —
   `KonduitAppServiceAdapter<T>` base class +
-  `konduitReturningFunction()` helper. Cuts the manual adapter
+  `keliverReturningFunction()` helper. Cuts the manual adapter
   from ~95 LoC + 7-entry `@file:Suppress` to ~70 LoC + 2-entry
   `@file:Suppress`. For adopters who prefer the hand-rolled
   shape.
 
-- **KSP processor** ([PR #TBD](https://github.com/waliasanchit007/konduit/pull/60)) —
-  `@KonduitAppService` annotation + `konduit-treehouse-codegen`
+- **KSP processor** ([PR #TBD](https://github.com/waliasanchit007/keliver/pull/60)) —
+  `@KonduitAppService` annotation + `keliver-treehouse-codegen`
   module. Generates `Generated<Name>Adapter` at compile time.
   Cuts adopter cost to ~5 LoC + zero `@file:Suppress` (just a
   companion-object wrapper that Zipline IR can find at code-load
@@ -246,7 +246,7 @@ need adopter signal before they're worth building.
   helper module could ship `HostStateFlowProvider` that wraps a
   `StateFlow<T>` with correct dispatcher routing for adopters
   who'd rather not roll their own.
-- **`konduit-room`-style persistence shim** — `KonduitStorage`
+- **`keliver-room`-style persistence shim** — `KonduitStorage`
   covers key/value today; a structured-query variant (SQL-like,
   schema-typed) is an open design question. Wait for adopter signal.
 - **Retrofit-style codegen Phase 3+ work** —
@@ -265,8 +265,8 @@ need adopter signal before they're worth building.
 - **Snapshot publishing on merge-to-main** — adopters who want to
   pin `1.0.0-caliclan.N-SNAPSHOT` from `main` HEAD can't today;
   only tagged releases publish. Add the GHA workflow trigger.
-- **Module-level READMEs** — `konduit-http/README.md`,
-  `konduit-vm/README.md`, etc. Each module's GitHub page shows
+- **Module-level READMEs** — `keliver-http/README.md`,
+  `keliver-vm/README.md`, etc. Each module's GitHub page shows
   `build.gradle` today; a one-line README per module dramatically
   improves first-impression discoverability.
 

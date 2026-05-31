@@ -1,0 +1,145 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'java-gradle-plugin'
+apply plugin: 'com.github.gmazzo.buildconfig'
+apply plugin: 'com.android.lint'
+
+// This module is included in two projects:
+// - In the root project where it's released as one of our artifacts
+// - In build-support project where we can use it for the test-app and samples.
+//
+// We only want to publish when it's being built in the root project.
+if (rootProject.name == 'keliver') {
+  redwoodBuild {
+    publishing()
+  }
+} else {
+  // Move the build directory when included in build-support so as to not poison the real build.
+  // If we don't there's a chance incorrect build config values (configured below) will be used.
+  layout.buildDirectory = new File(rootDir, "build/keliver-gradle-plugin")
+}
+
+tasks.withType(JavaCompile).configureEach {
+  sourceCompatibility = JavaVersion.VERSION_11.toString()
+  targetCompatibility = JavaVersion.VERSION_11.toString()
+}
+
+tasks.withType(KotlinJvmCompile).configureEach {
+  compilerOptions {
+    jvmTarget.set(JvmTarget.JVM_11)
+  }
+}
+
+dependencies {
+  compileOnly gradleApi()
+  compileOnly libs.kotlin.gradlePlugin
+  compileOnly libs.androidGradlePlugin
+
+  testImplementation libs.junit
+  testImplementation libs.assertk
+  testImplementation gradleTestKit()
+
+  lintChecks libs.androidx.gradlePluginLints
+}
+
+gradlePlugin {
+  plugins {
+    redwoodLint {
+      id = "dev.keliver.lint"
+      displayName = "Redwood lint"
+      description = "Redwood lint Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodLintPlugin"
+    }
+    ziplineShapes {
+      id = "dev.keliver.zipline-shapes"
+      displayName = "Konduit ZiplineService shape lint"
+      description = "Reject ZiplineService methods with function-typed parameters (KNOWN_BUGS U11)"
+      implementationClass = "dev.keliver.gradle.ZiplineShapesPlugin"
+    }
+    redwoodSchema {
+      id = "dev.keliver.schema"
+      displayName = "Redwood schema"
+      description = "Redwood Schema Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodSchemaPlugin"
+    }
+    redwoodComposeGenerator {
+      id = "dev.keliver.generator.compose"
+      displayName = "Redwood generator (Compose)"
+      description = "Redwood schema Compose code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodComposeGeneratorPlugin"
+    }
+    redwoodComposeProtocolGenerator {
+      id = "dev.keliver.generator.compose.protocol"
+      displayName = "Redwood generator (Compose protocol)"
+      description = "Redwood schema Compose protocol code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodComposeProtocolGeneratorPlugin"
+    }
+    redwoodModifierGeneratorPlugin {
+      id = "dev.keliver.generator.modifiers"
+      displayName = "Redwood generator (layout modifiers)"
+      description = "Redwood schema layout modifier code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodModifiersGeneratorPlugin"
+    }
+    redwoodProtocolGuestGenerator {
+      id = "dev.keliver.generator.protocol.guest"
+      displayName = "Redwood generator (guest protocol)"
+      description = "Redwood schema guest protocol code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodProtocolGuestGeneratorPlugin"
+    }
+    redwoodProtocolHostGenerator {
+      id = "dev.keliver.generator.protocol.host"
+      displayName = "Redwood generator (host protocol)"
+      description = "Redwood schema host protocol code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodProtocolHostGeneratorPlugin"
+    }
+    redwoodTestingGenerator {
+      id = "dev.keliver.generator.testing"
+      displayName = "Redwood generator (testing)"
+      description = "Redwood schema testing code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodTestingGeneratorPlugin"
+    }
+    redwoodWidgetGenerator {
+      id = "dev.keliver.generator.widget"
+      displayName = "Redwood generator (widget)"
+      description = "Redwood schema widget code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodWidgetGeneratorPlugin"
+    }
+    redwoodWidgetProtocolGenerator {
+      id = "dev.keliver.generator.widget.protocol"
+      displayName = "Redwood generator (widget protocol)"
+      description = "Redwood schema widget protocol code generation Gradle plugin"
+      implementationClass = "dev.keliver.gradle.RedwoodWidgetProtocolGeneratorPlugin"
+    }
+  }
+}
+
+test {
+  dependsOn(':keliver-compose:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-gradle-plugin:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-leak-detector:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-protocol:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-protocol-guest:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-protocol-host:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-runtime:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-schema:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-tooling-codegen:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-tooling-lint:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-tooling-schema:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-widget:publishAllPublicationsToLocalMavenRepository')
+  dependsOn(':keliver-widget-composeui:publishAllPublicationsToLocalMavenRepository')
+
+  inputs.dir(project.file('src/test/fixture'))
+}
+
+buildConfig {
+  useKotlinOutput {
+    internalVisibility = true
+    topLevelConstants = true
+  }
+
+  packageName('dev.keliver.gradle')
+  buildConfigField("String", "redwoodVersion", "\"${project.version}\"")
+  buildConfigField("String", "androidxCollectionCoordinates", "\"${libs.jetbrains.compose.collection.get()}\"")
+}

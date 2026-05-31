@@ -1,5 +1,5 @@
 pluginManagement {
-  includeBuild('build-support/konduit-settings')
+  includeBuild('build-support/keliver-settings')
 
   repositories {
     mavenCentral()
@@ -46,13 +46,13 @@ develocity {
 includeBuild('build-support') {
   dependencySubstitution {
     substitute module('dev.keliver.build:gradle-plugin') using project(':')
-    substitute module('dev.keliver:konduit-gradle-plugin') using project(':konduit-gradle-plugin')
+    substitute module('dev.keliver:keliver-gradle-plugin') using project(':keliver-gradle-plugin')
   }
 }
 
 enableFeaturePreview('TYPESAFE_PROJECT_ACCESSORS')
 
-rootProject.name = 'konduit'
+rootProject.name = 'keliver'
 
 // Phase 1.5 cleanup: stripped non-CMP modules (Android Views, iOS UIKit,
 // Web DOM) since Caliclan is full Compose Multiplatform. Also stripped
@@ -60,116 +60,116 @@ rootProject.name = 'konduit'
 // History preserved on the upstream remote if needed.
 
 include ':build-support-ksp-processor'
-include ':konduit-bom'
-include ':konduit-compose'
-include ':konduit-composeui'
-include ':konduit-gradle-plugin'
+include ':keliver-bom'
+include ':keliver-compose'
+include ':keliver-composeui'
+include ':keliver-gradle-plugin'
 
 // Public facade modules — the single-import entry points for adopters.
-// `konduit-host` aggregates the host-side surface (TreehouseApp, Spec,
-// TreehouseContent, dispatchers); `konduit-guest` aggregates the
+// `keliver-host` aggregates the host-side surface (TreehouseApp, Spec,
+// TreehouseContent, dispatchers); `keliver-guest` aggregates the
 // guest-side surface (Screen, Navigator, @Composable runtime). See
 // PUBLIC_LAUNCH_ROADMAP.md Phase 2.
-include ':konduit-guest'
-include ':konduit-host'
+include ':keliver-guest'
+include ':keliver-host'
 
 // HTTP shim: HostHttpProvider ZiplineService + KonduitHttp typed
 // wrapper. Re-exported from both facades. See issue #7.
-include ':konduit-http'
+include ':keliver-http'
 
-include ':konduit-layout-api'
-include ':konduit-layout-compose'
-include ':konduit-layout-composeui'
-include ':konduit-layout-modifiers'
-include ':konduit-layout-schema'
-include ':konduit-layout-shared-test'
-include ':konduit-layout-testing'
-include ':konduit-layout-widget'
-include ':konduit-lazylayout-api'
-include ':konduit-lazylayout-compose'
-include ':konduit-lazylayout-composeui'
-include ':konduit-lazylayout-schema'
-include ':konduit-lazylayout-shared-test'
-include ':konduit-lazylayout-testing'
-include ':konduit-lazylayout-widget'
-include ':konduit-leak-detector'
-include ':konduit-protocol'
-include ':konduit-protocol-guest'
-include ':konduit-protocol-host'
-include ':konduit-runtime'
-include ':konduit-schema'
-include ':konduit-snapshot-testing'
-include ':konduit-testing'
-include ':konduit-tooling-codegen'
-include ':konduit-tooling-lint'
-include ':konduit-tooling-schema'
-include ':konduit-treehouse'
-include ':konduit-treehouse-guest'
-include ':konduit-treehouse-guest-compose'
-include ':konduit-treehouse-host'
-include ':konduit-treehouse-host-composeui'
+include ':keliver-layout-api'
+include ':keliver-layout-compose'
+include ':keliver-layout-composeui'
+include ':keliver-layout-modifiers'
+include ':keliver-layout-schema'
+include ':keliver-layout-shared-test'
+include ':keliver-layout-testing'
+include ':keliver-layout-widget'
+include ':keliver-lazylayout-api'
+include ':keliver-lazylayout-compose'
+include ':keliver-lazylayout-composeui'
+include ':keliver-lazylayout-schema'
+include ':keliver-lazylayout-shared-test'
+include ':keliver-lazylayout-testing'
+include ':keliver-lazylayout-widget'
+include ':keliver-leak-detector'
+include ':keliver-protocol'
+include ':keliver-protocol-guest'
+include ':keliver-protocol-host'
+include ':keliver-runtime'
+include ':keliver-schema'
+include ':keliver-snapshot-testing'
+include ':keliver-testing'
+include ':keliver-tooling-codegen'
+include ':keliver-tooling-lint'
+include ':keliver-tooling-schema'
+include ':keliver-treehouse'
+include ':keliver-treehouse-guest'
+include ':keliver-treehouse-guest-compose'
+include ':keliver-treehouse-host'
+include ':keliver-treehouse-host-composeui'
 
 // Guest-side ViewModel helper — scope + onCleared tied to @Composable
-// lifetime. Re-exported from `:konduit-guest`. See issue #6.
-include ':konduit-vm'
+// lifetime. Re-exported from `:keliver-guest`. See issue #6.
+include ':keliver-vm'
 
 // Key/value persistence shim — HostStorage ZiplineService +
 // KonduitStorage typed wrapper. Re-exported from both facades. See
 // issue #10.
-include ':konduit-storage'
+include ':keliver-storage'
 
 // Host-bound logging service — KonduitConsole interface + a
-// no-frills DefaultKonduitConsole. Re-exported from `:konduit-host`.
+// no-frills DefaultKonduitConsole. Re-exported from `:keliver-host`.
 // See issue #27.
-include ':konduit-console'
+include ':keliver-console'
 
 // One-line Coil 3 ImageLoader setup — KonduitImage.installSingleton().
 // Closes KNOWN_BUGS U5 (the blank-AsyncImage trap). Re-exported from
-// `:konduit-host`. See issue #26.
-include ':konduit-image'
+// `:keliver-host`. See issue #26.
+include ':keliver-image'
 
 // Typed guest-side navigation — KonduitNavController + KonduitNavHost.
 // Replaces per-app HostNavigator RPC-per-route boilerplate. Re-exported
-// from `:konduit-guest`. See issue #25.
-include ':konduit-nav'
+// from `:keliver-guest`. See issue #25.
+include ':keliver-nav'
 
 // HTTP API annotations (@KonduitApi, @GET, @POST, …). Phase 1 of the
 // Retrofit-style codegen — annotations only, processor queued. See
 // docs/HTTP_API_CODEGEN_DESIGN.md / issue #18.
-include ':konduit-http-annotations'
+include ':keliver-http-annotations'
 
 // HTTP API KSP processor — reads @KonduitApi interfaces and emits
 // `*Impl(KonduitHttp)` classes. Phase 2 of issue #18. Adopters add
-// this as `ksp(libs.konduit.http.codegen)`; not on the runtime
+// this as `ksp(libs.keliver.http.codegen)`; not on the runtime
 // classpath.
-include ':konduit-http-codegen'
+include ':keliver-http-codegen'
 
 // AppService adapter KSP processor — reads @KonduitAppService
 // interfaces and emits Generated<Name>Adapter open classes that
 // implement the Zipline #765 manual-adapter workaround. Closes the
 // second half of KNOWN_BUGS U12.
-include ':konduit-treehouse-codegen'
+include ':keliver-treehouse-codegen'
 
-include ':konduit-widget'
-include ':konduit-widget-composeui'
-include ':konduit-widget-shared-test'
-include ':konduit-widget-testing'
-include ':konduit-yoga'
+include ':keliver-widget'
+include ':keliver-widget-composeui'
+include ':keliver-widget-shared-test'
+include ':keliver-widget-testing'
+include ':keliver-yoga'
 
-include ':konduit-ui-basic-api'
-include ':konduit-ui-basic-compose'
-include ':konduit-ui-basic-composeui'
-include ':konduit-ui-basic-modifiers'
-include ':konduit-ui-basic-schema'
-include ':konduit-ui-basic-testing'
-include ':konduit-ui-basic-widget'
+include ':keliver-ui-basic-api'
+include ':keliver-ui-basic-compose'
+include ':keliver-ui-basic-composeui'
+include ':keliver-ui-basic-modifiers'
+include ':keliver-ui-basic-schema'
+include ':keliver-ui-basic-testing'
+include ':keliver-ui-basic-widget'
 
 // Test-only fixture: the upstream Redwood `test-app` schema + its codegen
 // outputs (com.example.redwood.testapp.*). Provides the shared TestSchema
 // that ~22 inherited protocol/codegen/treehouse tests assert against.
-// Gated behind -PkonduitWithTestApp so default builds stay lean; CI passes
+// Gated behind -PkeliverWithTestApp so default builds stay lean; CI passes
 // the flag to run the full inherited suite. See docs/KNOWN_BUGS.md U13.
-if (hasProperty('konduitWithTestApp')) {
+if (hasProperty('keliverWithTestApp')) {
   include ':test-app:schema'
   include ':test-app:schema:compose'
   include ':test-app:schema:modifiers'
@@ -178,7 +178,7 @@ if (hasProperty('konduitWithTestApp')) {
   include ':test-app:schema:testing'
   include ':test-app:schema:widget'
   // Phase 2 (U13): the presenter + treehouse guest bundle that the
-  // konduit-treehouse-host integration tests load via TreehouseTester.
+  // keliver-treehouse-host integration tests load via TreehouseTester.
   include ':test-app:presenter'
   include ':test-app:presenter-treehouse'
 }

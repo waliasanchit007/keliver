@@ -1,0 +1,37 @@
+public abstract interface annotation class dev/keliver/http/api/Body : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/keliver/http/api/DELETE : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/GET : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/Header : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/HeaderMap : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/keliver/http/api/KonduitApi : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class dev/keliver/http/api/POST : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/PUT : java/lang/annotation/Annotation {
+	public abstract fun path ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/Path : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public abstract interface annotation class dev/keliver/http/api/Query : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+

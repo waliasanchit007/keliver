@@ -10,7 +10,7 @@
  * scope. See sample/README.md for the full setup walkthrough.
  */
 
-rootProject.name = "konduit-sample"
+rootProject.name = "keliver-sample"
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
@@ -18,7 +18,7 @@ pluginManagement {
   repositories {
     mavenLocal()
     maven {
-      url = uri("https://maven.pkg.github.com/waliasanchit007/konduit")
+      url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
       credentials {
         username = (providers.gradleProperty("gpr.user").orNull
           ?: System.getenv("GITHUB_ACTOR")).orEmpty()
@@ -28,10 +28,10 @@ pluginManagement {
       // Restrict to dev.keliver.* — without this, Gradle queries GH
       // Packages for every transitive dep (kotlin, androidx, etc.) and
       // first builds hang for ~10 min before falling through. Same fix
-      // as documented in `konduit/docs/USAGE.md`.
+      // as documented in `keliver/docs/USAGE.md`.
       content {
         includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.konduit\\..*")
+        includeGroupByRegex("dev\\.keliver\\..*")
       }
     }
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
@@ -58,7 +58,7 @@ dependencyResolutionManagement {
   repositories {
     mavenLocal()
     maven {
-      url = uri("https://maven.pkg.github.com/waliasanchit007/konduit")
+      url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
       credentials {
         username = (providers.gradleProperty("gpr.user").orNull
           ?: System.getenv("GITHUB_ACTOR")).orEmpty()
@@ -67,7 +67,7 @@ dependencyResolutionManagement {
       }
       content {
         includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.konduit\\..*")
+        includeGroupByRegex("dev\\.keliver\\..*")
       }
     }
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")

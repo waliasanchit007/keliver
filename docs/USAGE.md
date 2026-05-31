@@ -22,7 +22,7 @@ consumer.
 
 ```bash
 # 1. Vendor Konduit as a git submodule in your project root
-git submodule add https://github.com/waliasanchit007/ServerDrivenUI third_party/konduit
+git submodule add https://github.com/waliasanchit007/ServerDrivenUI third_party/keliver
 
 # 2. In your top-level settings.gradle.kts, include the modules with explicit
 #    projectDir (see Step 1 — `includeBuild` does NOT work here because the
@@ -54,8 +54,8 @@ Production-readiness reality check before you commit to this path:
   in [MAVEN_CENTRAL_SETUP.md](./MAVEN_CENTRAL_SETUP.md). Git submodule
   vendoring is still supported during early adoption.
 - **Compose Facade**: landed in `1.0.0-caliclan.4`. Adopters depend on
-  a single `dev.keliver:konduit-host` artifact (host modules) and a
-  single `dev.keliver:konduit-guest` artifact (guest modules) instead
+  a single `dev.keliver:keliver-host` artifact (host modules) and a
+  single `dev.keliver:keliver-guest` artifact (guest modules) instead
   of wiring the 8+ underlying modules manually. The old multi-module
   setup still works for projects that want stricter dep control.
 - **Production load**: only showcase-level traffic tested. No 60 Hz Flow / large-list stress runs yet.
@@ -74,14 +74,14 @@ and jump straight to the fix.
 | `bindServices` hangs forever, no log | **U1** — `suspend fun X(...): List<@Serializable T>` | Drop `suspend` from the method; wrap suspect binds in `bindWithTimeout { … }` so you see a clear `ZiplineBindTimeoutException` after 30s instead of a frozen build. |
 | `bindServices` hangs forever, no log | **U2** — Zipline Gradle plugin missing on this module | Add `alias(libs.plugins.zipline)` to `plugins {}`. `bindWithTimeout` catches this too — message names both U1 and U2 as candidates. |
 | First guest call fails with `Serializer for class 'X' is not found` | **U3** — kotlinx-serialization plugin missing on the module declaring `X` | Add `alias(libs.plugins.kotlinSerialization)` to that module. Or call `requireSerializerOf<X>()` at the top of `bindServices` to catch the same failure at bind time instead. |
-| `AsyncImage` with HTTP URL renders blank, no exception | **U5** — Coil 3 default ImageLoader has no network fetcher | Call `KonduitImage.installSingleton()` at the top of your root `@Composable`. Ships in `konduit-image`, re-exported via `konduit-host`. See [§"If you use AsyncImage" below](#if-you-use-asyncimage-call-konduitimageinstallsingleton). |
+| `AsyncImage` with HTTP URL renders blank, no exception | **U5** — Coil 3 default ImageLoader has no network fetcher | Call `KonduitImage.installSingleton()` at the top of your root `@Composable`. Ships in `keliver-image`, re-exported via `keliver-host`. See [§"If you use AsyncImage" below](#if-you-use-asyncimage-call-keliverimageinstallsingleton). |
 | Host service callback runs (log fires) but the UI doesn't react | **U8** — host service body runs on the Zipline dispatcher, not the UI thread | Take `uiDispatcher = treehouseApp.dispatchers.ui` as a constructor param; `scope.launch(uiDispatcher) { … }` around `NavController.navigate` / Compose state mutations. |
 
 Production-readiness note: U1, U2, U3 ship with mitigations as of
 Konduit `1.0.0-caliclan.3` (the `Spec.bindWithTimeout` /
 `Spec.requireSerializerOf` helpers). U5 is mitigated in
 `1.0.0-caliclan.4` by `KonduitImage.installSingleton()` from the
-`konduit-image` module. U8 is already actionable via
+`keliver-image` module. U8 is already actionable via
 `dispatchers.ui`.
 
 ---
@@ -119,7 +119,7 @@ modules.
 Add it as a git submodule:
 
 ```bash
-git submodule add https://github.com/waliasanchit007/ServerDrivenUI third_party/konduit
+git submodule add https://github.com/waliasanchit007/ServerDrivenUI third_party/keliver
 git submodule update --init --recursive
 ```
 
@@ -130,33 +130,33 @@ Maven coordinates to substitute.)
 
 ```kotlin
 include(":shared")
-project(":shared").projectDir = file("third_party/konduit/shared")
+project(":shared").projectDir = file("third_party/keliver/shared")
 
 include(":shared-widget")
-project(":shared-widget").projectDir = file("third_party/konduit/shared-widget")
+project(":shared-widget").projectDir = file("third_party/keliver/shared-widget")
 
 include(":shared-modifier")
-project(":shared-modifier").projectDir = file("third_party/konduit/shared-modifier")
+project(":shared-modifier").projectDir = file("third_party/keliver/shared-modifier")
 
 include(":shared-protocol-host")
-project(":shared-protocol-host").projectDir = file("third_party/konduit/shared-protocol-host")
+project(":shared-protocol-host").projectDir = file("third_party/keliver/shared-protocol-host")
 
 include(":shared-protocol-guest")
-project(":shared-protocol-guest").projectDir = file("third_party/konduit/shared-protocol-guest")
+project(":shared-protocol-guest").projectDir = file("third_party/keliver/shared-protocol-guest")
 
 include(":schema")
-project(":schema").projectDir = file("third_party/konduit/schema")
+project(":schema").projectDir = file("third_party/keliver/schema")
 
 include(":schema-types")
-project(":schema-types").projectDir = file("third_party/konduit/schema-types")
+project(":schema-types").projectDir = file("third_party/keliver/schema-types")
 
 include(":presenter")
-project(":presenter").projectDir = file("third_party/konduit/presenter")
+project(":presenter").projectDir = file("third_party/keliver/presenter")
 ```
 
 You will also need to copy the `pluginManagement {}` and
 `dependencyResolutionManagement {}` blocks from
-`third_party/konduit/settings.gradle.kts` (or merge them with yours) — they
+`third_party/keliver/settings.gradle.kts` (or merge them with yours) — they
 declare the Konduit Maven repo and the Compose dev repo that the modules
 expect.
 
@@ -211,8 +211,8 @@ android.useAndroidX=true
 
 ### GitHub Packages auth (this is the #1 first-build failure)
 
-The host modules pull `dev.keliver:konduit-*` artifacts from GitHub
-Packages in the private `waliasanchit007/konduit` repo. The submodule's
+The host modules pull `dev.keliver:keliver-*` artifacts from GitHub
+Packages in the private `waliasanchit007/keliver` repo. The submodule's
 `settings.gradle.kts` reads credentials from these four sources, in this
 order:
 
@@ -267,7 +267,7 @@ minutes before falling through to google()/mavenCentral():
 
 ```kotlin
 maven {
-    url = uri("https://maven.pkg.github.com/waliasanchit007/konduit")
+    url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
     credentials {
         username = (providers.gradleProperty("gpr.user").orNull
             ?: System.getenv("GITHUB_ACTOR")).orEmpty()
@@ -276,7 +276,7 @@ maven {
     }
     content {                                       // ← required
         includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.konduit\\..*")
+        includeGroupByRegex("dev\\.keliver\\..*")
     }
 }
 ```
@@ -359,8 +359,8 @@ class MainActivity : ComponentActivity() {
             // it inside bindServices guarantees correct wiring before any
             // guest call can fire. (See HANDOVER gotcha #12.)
             //
-            // `DefaultKonduitConsole` ships in `konduit-console` (and is
-            // re-exported through the `konduit-host` facade). It writes
+            // `DefaultKonduitConsole` ships in `keliver-console` (and is
+            // re-exported through the `keliver-host` facade). It writes
             // `[Konduit/<level>] <message>` via `println`, which lands
             // on Logcat on Android, the Xcode console on iOS, and
             // stdout on the JVM. Subclass `DefaultKonduitConsole` and
@@ -368,7 +368,7 @@ class MainActivity : ComponentActivity() {
             // SLF4J / NSLog / your preferred logger.
             //
             // (The ServerDrivenUI reference repo's `AndroidRealHostConsole`
-            // is its own custom impl predating the konduit-console
+            // is its own custom impl predating the keliver-console
             // module — adopters writing fresh code should reach for
             // `DefaultKonduitConsole` first.)
             private val hostConsole = DefaultKonduitConsole(tag = "MyApp")
@@ -531,7 +531,7 @@ dependencies {
     // host-side runtime (TreehouseApp, Spec, dispatchers,
     // TreehouseContent, widget interfaces, the modifier base, the
     // protocol modules, plus Zipline + zipline-loader).
-    implementation(libs.konduit.host)
+    implementation(libs.keliver.host)
 
     // ServerDrivenUI reference modules from the submodule — these are
     // application-specific (your schema, your HostConsole / HostSnackbar
@@ -553,16 +553,16 @@ dependencies {
 }
 ```
 
-The `libs.konduit.host` reference assumes a version catalog entry:
+The `libs.keliver.host` reference assumes a version catalog entry:
 
 ```toml
 # gradle/libs.versions.toml
 [versions]
-konduit = "1.0.0-caliclan.4"
+keliver = "1.0.0-caliclan.4"
 
 [libraries]
-konduit-host  = { module = "dev.keliver:konduit-host",  version.ref = "konduit" }
-konduit-guest = { module = "dev.keliver:konduit-guest", version.ref = "konduit" }
+keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
+keliver-guest = { module = "dev.keliver:keliver-guest", version.ref = "keliver" }
 ```
 
 Migration from the pre-facade setup: replace
@@ -570,7 +570,7 @@ Migration from the pre-facade setup: replace
 `libs.redwood.compose`, `libs.redwood.widget`, `libs.redwood.treehouse`,
 `libs.redwood.protocol.host`, `libs.redwood.protocol`,
 `libs.zipline.loader`, and `libs.zipline` (host side) with the single
-`libs.konduit.host` line. The pre-facade `libs.redwood.*` catalog
+`libs.keliver.host` line. The pre-facade `libs.redwood.*` catalog
 entries still work — the facade is additive.
 ```
 
@@ -579,11 +579,11 @@ entries still work — the facade is additive.
 Konduit's `AsyncImage` widget is backed by **Coil 3**. Coil 3's default
 singleton ImageLoader has **no network fetcher** — `AsyncImage` with an
 HTTP URL silently fails (empty slot, no exception). The
-`konduit-image` module ships a one-line helper that wires the
+`keliver-image` module ships a one-line helper that wires the
 platform-appropriate fetcher (OkHttp on Android/JVM, Ktor 3 + Darwin
 engine on iOS).
 
-Re-exported through `dev.keliver:konduit-host`, so adopters on the
+Re-exported through `dev.keliver:keliver-host`, so adopters on the
 facade get it transparently.
 
 ```kotlin
@@ -723,7 +723,7 @@ for a new integrator is a 3-file scaffold:
 
 ### 4a. The module's build.gradle.kts
 
-Copy `third_party/konduit/presenter/build.gradle.kts` essentially
+Copy `third_party/keliver/presenter/build.gradle.kts` essentially
 verbatim and just rename the package paths:
 
 ```kotlin
@@ -751,7 +751,7 @@ kotlin {
             // Konduit framework — single facade pulls in compose
             // runtime, widget interfaces, treehouse-guest /
             // -guest-compose, protocol-guest, and Zipline.
-            implementation(libs.konduit.guest)
+            implementation(libs.keliver.guest)
 
             // ServerDrivenUI reference modules — replace with your
             // own schema definitions when adopting Konduit standalone.
@@ -769,7 +769,7 @@ kotlin {
 
 Migration from the pre-facade setup: the five guest-side
 `libs.redwood.*` + `libs.zipline` entries collapse into the single
-`libs.konduit.guest` line. The pre-facade `libs.redwood.*` catalog
+`libs.keliver.guest` line. The pre-facade `libs.redwood.*` catalog
 entries still work — the facade is additive.
 
 The `redwood.generator.compose` plugin + `redwoodSchema { source =
@@ -874,17 +874,17 @@ property — there's no workaround inside the schema today.
 ### Guest-side helpers (showHostSnackbar, navigation)
 
 The fancier guest-side ergonomics — host snackbar bridge, navigator,
-console proxy — live in `third_party/konduit/presenter/src/jsMain/`
+console proxy — live in `third_party/keliver/presenter/src/jsMain/`
 (`Main.kt` + `Navigator.kt`). They're not part of any library;
 copy-paste whichever helpers you need into your guest module.
 
 ### ViewModel-like patterns in the guest
 
-Konduit ships a `KonduitViewModel` base class + `konduitViewModel { ... }`
+Konduit ships a `KonduitViewModel` base class + `keliverViewModel { ... }`
 Compose entry point that mirror native Android's `ViewModel` API for the
 ergonomics that port across to the QuickJS guest.
 
-Re-exported through `dev.keliver:konduit-guest`, so adopters on the facade
+Re-exported through `dev.keliver:keliver-guest`, so adopters on the facade
 get it transparently. What you get:
 
 - **`viewModelScope`** — a `CoroutineScope` defaulting to
@@ -900,7 +900,7 @@ adopters pass deps through the factory lambda).
 
 ```kotlin
 import dev.keliver.vm.KonduitViewModel
-import dev.keliver.vm.konduitViewModel
+import dev.keliver.vm.keliverViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class QuotesViewModel(
@@ -916,7 +916,7 @@ class QuotesViewModel(
 
 @Composable
 override fun Content(navigator: Navigator) {
-    val vm = konduitViewModel {
+    val vm = keliverViewModel {
         QuotesViewModel(HostQuotesProviderBridge.instance!!)
     }
     val quotes by vm.state.collectAsState()  // from kotlinx-coroutines-compose
@@ -924,7 +924,7 @@ override fun Content(navigator: Navigator) {
 }
 ```
 
-`konduitViewModel { ... }` accepts an optional `key: Any? = null`
+`keliverViewModel { ... }` accepts an optional `key: Any? = null`
 parameter — when it changes between recompositions, the existing
 VM's `onCleared` runs and the factory builds a fresh instance.
 Useful for screens parameterized by an upstream value (a `userId`,
@@ -934,7 +934,7 @@ changes:
 ```kotlin
 @Composable
 override fun Content(navigator: Navigator, userId: String) {
-    val vm = konduitViewModel(key = userId) {
+    val vm = keliverViewModel(key = userId) {
         QuotesViewModel(userId, HostQuotesProviderBridge.instance!!)
     }
     // VM rebuilds + the old viewModelScope cancels when userId changes
@@ -954,12 +954,12 @@ separate concern — see the heart-save pattern in
 QuickJS is sandboxed — the guest can't reach the network directly. Every
 HTTP call has to route through a `ZiplineService` on the host side. To
 avoid the per-endpoint boilerplate of writing N `HostXxxProvider`
-services, Konduit ships `konduit-http`: a generic
+services, Konduit ships `keliver-http`: a generic
 `HostHttpProvider : ZiplineService` you wire ONCE with your existing
 `HttpClient`, plus a `KonduitHttp` typed wrapper your guest screens use.
 
-Re-exported through both facades (`dev.keliver:konduit-host` and
-`dev.keliver:konduit-guest`), so adopters on the facade get it
+Re-exported through both facades (`dev.keliver:keliver-host` and
+`dev.keliver:keliver-guest`), so adopters on the facade get it
 transparently.
 
 #### Host side — wire your existing HttpClient once
@@ -1004,7 +1004,7 @@ bindWithTimeout {
 ```
 
 **Auth, retries, timeouts, base URL** stay on your `HttpClient` (Ktor's
-`install(Auth)`, `install(HttpRequestRetry)`, etc.). The `konduit-http`
+`install(Auth)`, `install(HttpRequestRetry)`, etc.). The `keliver-http`
 wire types deliberately don't model these — your existing interceptors
 apply to every guest-originated call for free.
 
@@ -1034,7 +1034,7 @@ class QuotesViewModel(
 @Composable
 override fun Content(navigator: Navigator) {
     val http = remember { KonduitHttp(HostHttpProviderBridge.instance!!) }
-    val vm = konduitViewModel { QuotesViewModel(QuotesApi(http)) }
+    val vm = keliverViewModel { QuotesViewModel(QuotesApi(http)) }
     val quotes by vm.state.collectAsState()
     LazyColumn { quotes.forEach { LazyItem { QuoteCard(it) } } }
 }
@@ -1093,14 +1093,14 @@ Step 4½ below covers that pattern in full.
 ### Key/value persistence from the guest
 
 QuickJS guests can't reach disk directly — same sandbox constraint as
-the network case. Konduit ships `konduit-storage`: a generic
+the network case. Konduit ships `keliver-storage`: a generic
 `HostStorage : ZiplineService` you wire ONCE with whatever key/value
 backend you prefer (`DataStore<Preferences>` on Android,
 `NSUserDefaults` on iOS, an SQLite key/value table, a file-backed
 JSON blob), plus a `KonduitStorage` typed wrapper for the guest.
 
-Re-exported through both facades (`dev.keliver:konduit-host`,
-`dev.keliver:konduit-guest`).
+Re-exported through both facades (`dev.keliver:keliver-host`,
+`dev.keliver:keliver-guest`).
 
 #### Host side — wire your preferred backend once
 
@@ -1147,7 +1147,7 @@ import dev.keliver.storage.KonduitStorage
 @Composable
 override fun Content(navigator: Navigator) {
     val storage = remember { KonduitStorage(HostStorageBridge.instance!!) }
-    val vm = konduitViewModel { QuotesViewModel(storage) }
+    val vm = keliverViewModel { QuotesViewModel(storage) }
     // …
 }
 
@@ -1186,10 +1186,10 @@ removes the entry; equivalently `remove(key)` for readability.
 
 ### Typed navigation in the guest
 
-Konduit ships `konduit-nav` for guest-owned typed navigation — back
+Konduit ships `keliver-nav` for guest-owned typed navigation — back
 stack, push / pop / replaceAll, per-entry `rememberSaveable` state
 preservation, all without per-route RPC boilerplate. Re-exported
-through `dev.keliver:konduit-guest`.
+through `dev.keliver:keliver-guest`.
 
 Define your routes as a sealed interface (args inline, type-checked
 at the call site):
@@ -1268,7 +1268,7 @@ fun SearchScreen(initialQuery: String?) {
 }
 ```
 
-`KonduitViewModel`s tied to a screen via `konduitViewModel { … }` get
+`KonduitViewModel`s tied to a screen via `keliverViewModel { … }` get
 `onCleared` when their screen is **popped** (the entry leaves the
 stack permanently). VMs intentionally do NOT survive a navigate-away
 in v1 — if you need a VM that outlives a single screen, lift it up
@@ -1434,7 +1434,7 @@ val firstScreen = when {
 ```
 
 This way the same guest bundle can serve multiple screens depending on
-which services the host binds. DevoStatus's `:konduit-host` uses this
+which services the host binds. DevoStatus's `:keliver-host` uses this
 trick — its Quotes tab and its Demo tab both ship the same bundle, just
 with different `bindServices(...)` impls.
 
@@ -1515,7 +1515,7 @@ bundle and pushes hot-reload notifications. To run:
 ```bash
 ./gradlew :dev-server:run
 # or, for the full one-shot dev experience:
-./gradlew konduitDev
+./gradlew keliverDev
 ```
 
 Your host app's `manifestUrl` should point at the dev server:
@@ -1598,7 +1598,7 @@ them:
 
 - **No Compose Facade**: you import from 6+ modules. Tracked as Phase 2
   in [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md) — collapses
-  the multi-module wiring into a single `dev.keliver:konduit` import.
+  the multi-module wiring into a single `dev.keliver:keliver` import.
 - **No Maven Central publishing**: submodule only for now.
 - **No production load testing**: only showcase-level traffic verified.
 - **iOS verified only on sim**: physical iOS devices not yet tested

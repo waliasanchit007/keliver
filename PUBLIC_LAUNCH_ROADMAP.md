@@ -36,23 +36,23 @@ or GitHub-org changes.
 
 ## Phase 2 — Compose Facade (one-PR API surface reduction) — ✅ landed
 
-Adopters previously imported from 8+ Konduit modules (`konduit-treehouse-host`,
-`konduit-treehouse-host-composeui`, `konduit-compose`, `konduit-widget`,
-`konduit-runtime`, `konduit-protocol`, `konduit-protocol-host`,
-`konduit-treehouse`) plus the two Zipline artifacts. This is friction
+Adopters previously imported from 8+ Konduit modules (`keliver-treehouse-host`,
+`keliver-treehouse-host-composeui`, `keliver-compose`, `keliver-widget`,
+`keliver-runtime`, `keliver-protocol`, `keliver-protocol-host`,
+`keliver-treehouse`) plus the two Zipline artifacts. This is friction
 for first-time adopters.
 
 Shipped in `1.0.0-caliclan.4` as two facade modules instead of one
-(`konduit-host` for adopter host modules, `konduit-guest` for guest
+(`keliver-host` for adopter host modules, `keliver-guest` for guest
 modules — matches the existing host/guest split in
-`konduit-treehouse-host` vs `konduit-treehouse-guest`).
+`keliver-treehouse-host` vs `keliver-treehouse-guest`).
 
-- [x] `dev.keliver:konduit-host` facade — TreehouseHost target group,
+- [x] `dev.keliver:keliver-host` facade — TreehouseHost target group,
       `api`-exposes all host-side modules + Zipline.
-- [x] `dev.keliver:konduit-guest` facade — TreehouseGuest target group,
+- [x] `dev.keliver:keliver-guest` facade — TreehouseGuest target group,
       `api`-exposes all guest-side modules + Zipline.
-- [x] USAGE.md updated to lead with `libs.konduit.host` and
-      `libs.konduit.guest` catalog references.
+- [x] USAGE.md updated to lead with `libs.keliver.host` and
+      `libs.keliver.guest` catalog references.
 - [x] Migration note included in USAGE.md (the pre-facade per-module
       imports continue to work; the facade is additive).
 
@@ -63,7 +63,7 @@ DevoStatus currently has no iOS UI. "iOS works" is backed only by
 first external adopter targeting iOS will hit something.
 
 - [ ] Wire DevoStatus's iOS host: `KonduitIosHost.kt` already exists in
-      `konduit-host/src/iosMain` but doesn't have a SwiftUI / UIKit entry
+      `keliver-host/src/iosMain` but doesn't have a SwiftUI / UIKit entry
       point. Add a minimal iOS app that mounts at least the Quotes tab.
 - [ ] Verify the full host-service stack on iPhone simulator: HostConsole,
       HostSnackbar, HostQuotesProvider, HostWallpapersProvider,
@@ -77,7 +77,7 @@ External adopters need a runnable reference. DevoStatus is private, so a
 **public** Konduit-Sample needs to exist.
 
 - [ ] Extract a 1–2 screen sample from DevoStatus into a new public repo
-      (`waliasanchit007/konduit-sample`) OR commit it inside the Konduit
+      (`waliasanchit007/keliver-sample`) OR commit it inside the Konduit
       repo under `sample/`. Latter is simpler for discoverability.
 - [ ] Sample covers: host setup (Android + iOS), `HostConsole`, one provider
       service, one navigator callback, one screen with widgets.
@@ -87,13 +87,13 @@ External adopters need a runnable reference. DevoStatus is private, so a
 
 GitHub Packages requires consumers to authenticate with a PAT. Maven Central
 is the standard for OSS. Once on Maven Central,
-`implementation("io.github.waliasanchit007:konduit-host:1.0.0-...")`
+`implementation("io.github.waliasanchit007:keliver-host:1.0.0-...")`
 just works for anyone.
 
 **Namespace decision:** publishing under
 `io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — no domain
 required). The previously-considered `dev.keliver` namespace would
-have required owning `konduit.dev` which is taken. Package names
+have required owning `keliver.dev` which is taken. Package names
 inside JARs stay `dev.keliver.*` — only the Maven coordinate's
 groupId changes. Full walkthrough in
 [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md).
@@ -111,7 +111,7 @@ groupId changes. Full walkthrough in
 - [ ] Update `publish.yml` GHA workflow to target Maven Central in addition
       to (or instead of) GitHub Packages. Configure groupId
       `io.github.waliasanchit007`; artifactIds stay as
-      `konduit-host`, `konduit-guest`, etc.
+      `keliver-host`, `keliver-guest`, etc.
 - [ ] First test release: cut `1.0.0-caliclan.4` to Maven Central, verify
       consumers can resolve without auth.
 - [ ] Update USAGE.md adoption instructions: drop the

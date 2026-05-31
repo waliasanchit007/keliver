@@ -10,9 +10,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.konduitUiBasicTesting
-        api projects.konduitLayoutTesting
-        api projects.konduitLazylayoutTesting
+        api projects.keliverUiBasicTesting
+        api projects.keliverLayoutTesting
+        api projects.keliverLazylayoutTesting
         api projects.testApp.schema.widget
       }
     }

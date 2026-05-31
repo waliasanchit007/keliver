@@ -23,7 +23,7 @@ plugins {
   // lookups fail at QuickJS load time with `Serializer for class 'X'
   // is not found`.
   alias(libs.plugins.kotlinSerialization)
-  // KSP runs the `konduit-treehouse-codegen` processor that emits
+  // KSP runs the `keliver-treehouse-codegen` processor that emits
   // `Generated<Name>Adapter` for `@KonduitAppService`-annotated
   // interfaces. Drops the ~70-line manual adapter file to a
   // ~5-line companion-object stub on the interface itself.
@@ -43,9 +43,9 @@ kotlin {
       dependencies {
         api(project(":shared-widget"))
         api(libs.zipline)
-        api(libs.konduit.treehouse)
-        implementation(libs.konduit.protocol)
-        implementation(libs.konduit.protocol.host)
+        api(libs.keliver.treehouse)
+        implementation(libs.keliver.protocol)
+        implementation(libs.keliver.protocol.host)
       }
     }
   }
@@ -58,7 +58,7 @@ kotlin {
 // adopters using the codegen on a multiplatform module need to
 // write themselves.
 dependencies {
-  add("kspCommonMainMetadata", libs.konduit.treehouse.codegen)
+  add("kspCommonMainMetadata", libs.keliver.treehouse.codegen)
 }
 
 // Workaround for https://github.com/google/ksp/issues/1318 — make

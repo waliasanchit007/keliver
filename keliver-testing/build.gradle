@@ -1,0 +1,40 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.jetbrains.compose.runtime
+        api libs.kotlinx.coroutines.core
+        api projects.keliverProtocolGuest
+      }
+    }
+    commonTest {
+      // testapp-fixture-dependent tests are opt-in — see U13 / the
+      // matching comment in keliver-protocol-host/build.gradle.
+      if (rootProject.hasProperty('keliverWithTestApp')) {
+        kotlin.srcDir('src/appsCommonTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.compose
+          implementation projects.testApp.schema.protocolGuest
+          implementation projects.testApp.schema.protocolHost
+          implementation projects.testApp.schema.testing
+        }
+      }
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.assertk
+        implementation libs.kotlinx.coroutines.test
+        implementation projects.keliverUiBasicCompose
+        implementation projects.keliverUiBasicTesting
+      }
+    }
+  }
+}

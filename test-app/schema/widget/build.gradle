@@ -10,9 +10,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.konduitUiBasicWidget
-        api projects.konduitLayoutWidget
-        api projects.konduitLazylayoutWidget
+        api projects.keliverUiBasicWidget
+        api projects.keliverLayoutWidget
+        api projects.keliverLazylayoutWidget
         api projects.testApp.schema.modifiers
       }
     }

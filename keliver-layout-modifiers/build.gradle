@@ -1,0 +1,23 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.generator.modifiers'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverLayoutApi
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverLayoutSchema
+  type = 'dev.keliver.layout.RedwoodLayout'
+}

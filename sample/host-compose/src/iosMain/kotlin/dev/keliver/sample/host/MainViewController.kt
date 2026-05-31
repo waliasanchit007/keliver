@@ -87,7 +87,7 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
     manifestVerifier = ManifestVerifier.NO_SIGNATURE_CHECKS,
     embeddedFileSystem = null,
     embeddedDir = null,
-    cacheName = "konduit-sample-zipline",
+    cacheName = "keliver-sample-zipline",
     cacheMaxSizeInBytes = 50L * 1024L * 1024L,
     concurrentDownloads = 4,
     stateStore = MemoryStateStore(),
@@ -96,7 +96,7 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
   )
 
   val spec = object : TreehouseApp.Spec<SampleAppService>() {
-    override val name = "konduit-sample"
+    override val name = "keliver-sample"
     override val manifestUrl = manifestUrlFlow.asStateFlow()
     override val serializersModule = EmptySerializersModule()
 

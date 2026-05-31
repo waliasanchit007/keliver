@@ -29,7 +29,7 @@ Any change to @Widget / @Modifier / serialized service types?
 
 - [ ] CHANGELOG.md `[Unreleased]` section updated (short summary +
       issue / KNOWN_BUGS reference).
-- [ ] `./gradlew :konduit-tooling-codegen:test` passes (if codegen
+- [ ] `./gradlew :keliver-tooling-codegen:test` passes (if codegen
       touched — added a fixture demonstrating the new behavior).
 - [ ] `./gradlew compileKotlinJvm compileKotlinIosSimulatorArm64`
       passes locally.

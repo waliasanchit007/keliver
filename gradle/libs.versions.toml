@@ -76,7 +76,7 @@ jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-t
 coil-compose = { module = "io.coil-kt.coil3:coil-compose-core", version.ref = "coil" }
 # Full coil-compose (incl. AsyncImage widget + setSingletonImageLoaderFactory).
 # Distinct from the legacy `coil-compose` alias above which maps to
-# `coil-compose-core`. Used by `:konduit-image`.
+# `coil-compose-core`. Used by `:keliver-image`.
 coil-compose-full = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-core = { module = "io.coil-kt.coil3:coil-core", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
@@ -90,7 +90,7 @@ kotlinPoet = { module = "com.squareup:kotlinpoet", version = "2.2.0" }
 kotlinPoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version = "2.2.0" }
 # Maintained fork of `com.github.tschuchortdev:kotlin-compile-testing` —
 # used to write fixture tests for KSP processors (see
-# `konduit-http-codegen`).
+# `keliver-http-codegen`).
 kotlinCompileTesting-ksp = "dev.zacsweers.kctfork:ksp:0.12.1"
 clikt = "com.github.ajalt.clikt:clikt:5.0.3"
 junit = { module = "junit:junit", version = "4.13.2" }

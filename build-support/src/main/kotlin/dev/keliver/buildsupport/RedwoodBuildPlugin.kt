@@ -71,7 +71,7 @@ import org.jetbrains.kotlin.gradle.tasks.FatFrameworkTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-// Default Gradle coordinate group. Overridable via the `konduitGroupId`
+// Default Gradle coordinate group. Overridable via the `keliverGroupId`
 // Gradle property so a Maven Central release can publish under the
 // GitHub-vanity namespace (`io.github.waliasanchit007`) — which needs
 // no domain ownership — while existing GitHub Packages consumers keep
@@ -80,18 +80,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 // string changes. See docs/MAVEN_CENTRAL_SETUP.md.
 private const val KONDUIT_GROUP_ID = "dev.keliver"
 
-private fun Project.konduitGroupId(): String =
-  providers.gradleProperty("konduitGroupId").getOrElse(KONDUIT_GROUP_ID)
+private fun Project.keliverGroupId(): String =
+  providers.gradleProperty("keliverGroupId").getOrElse(KONDUIT_GROUP_ID)
 
 // HEY! If you change the major version update release.yaml doc folder.
-// Overridable via the `konduitVersion` Gradle property — e.g. a Maven
-// Central release passes `-PkonduitVersion=1.0.0-caliclan.4` (no
+// Overridable via the `keliverVersion` Gradle property — e.g. a Maven
+// Central release passes `-PkeliverVersion=1.0.0-caliclan.4` (no
 // `-SNAPSHOT`) because the Central *deployment* flow only accepts release
 // versions; the default keeps `-SNAPSHOT` for the GitHub Packages dev flow.
 private const val KONDUIT_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
 
-private fun Project.konduitVersion(): String =
-  providers.gradleProperty("konduitVersion").getOrElse(KONDUIT_VERSION)
+private fun Project.keliverVersion(): String =
+  providers.gradleProperty("keliverVersion").getOrElse(KONDUIT_VERSION)
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
@@ -100,8 +100,8 @@ class RedwoodBuildPlugin : Plugin<Project> {
   private lateinit var libs: LibrariesForLibs
 
   override fun apply(target: Project) {
-    target.group = target.konduitGroupId()
-    target.version = target.konduitVersion()
+    target.group = target.keliverGroupId()
+    target.version = target.keliverVersion()
 
     libs = target.extensions.getByName("libs") as LibrariesForLibs
 
@@ -126,7 +126,7 @@ class RedwoodBuildPlugin : Plugin<Project> {
       // target its sources rather than duplicating the Spotless setup in multiple places.
       if (path == ":") {
         java {
-          it.target("build-support/konduit-settings/src/**/*.java")
+          it.target("build-support/keliver-settings/src/**/*.java")
           it.googleJavaFormat(libs.googleJavaFormat.get().version)
           it.licenseHeaderFile(licenseHeaderFile)
         }
@@ -427,7 +427,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
   }
 
   override fun publishing() {
-    val isBom = project.path == ":konduit-bom"
+    val isBom = project.path == ":keliver-bom"
 
     project.plugins.apply("com.vanniktech.maven.publish")
 
@@ -468,20 +468,20 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
     val mavenPublishing = project.extensions.getByName("mavenPublishing") as MavenPublishBaseExtension
     mavenPublishing.apply {
       // Auto-publish the Central deployment once it validates (default).
-      // Pass `-PkonduitAutoRelease=false` to upload in "review" mode: the
+      // Pass `-PkeliverAutoRelease=false` to upload in "review" mode: the
       // deployment lands in the Sonatype portal as VALIDATED-but-unpublished
       // so a human can inspect it and click Publish (or Drop). Useful for a
       // first release / dry run before committing to an immutable publish.
-      val autoRelease = project.providers.gradleProperty("konduitAutoRelease")
+      val autoRelease = project.providers.gradleProperty("keliverAutoRelease")
         .map { it.toBoolean() }.getOrElse(true)
       publishToMavenCentral(automaticRelease = autoRelease)
       if (project.providers.systemProperty("RELEASE_SIGNING_ENABLED").getOrElse("true").toBoolean()) {
         signAllPublications()
       }
 
-      // `project.group` / `project.version` are set from `konduitGroupId()`
-      // / `konduitVersion()` in apply(), so the coordinate honors the
-      // `-PkonduitGroupId=` and `-PkonduitVersion=` overrides (e.g. the
+      // `project.group` / `project.version` are set from `keliverGroupId()`
+      // / `keliverVersion()` in apply(), so the coordinate honors the
+      // `-PkeliverGroupId=` and `-PkeliverVersion=` overrides (e.g. the
       // io.github.* vanity namespace + a non-SNAPSHOT version for a Maven
       // Central release).
       coordinates(project.group.toString(), project.name, project.version.toString())
@@ -497,7 +497,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         // project's inception is preserved in the credit / licensing copy
         // of the README and LICENSE).
         pom.inceptionYear.set("2026")
-        pom.url.set("https://github.com/waliasanchit007/konduit")
+        pom.url.set("https://github.com/waliasanchit007/keliver")
 
         pom.licenses {
           it.license { license ->
@@ -516,9 +516,9 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         }
 
         pom.scm { scm ->
-          scm.url.set("https://github.com/waliasanchit007/konduit")
-          scm.connection.set("scm:git:git://github.com/waliasanchit007/konduit.git")
-          scm.developerConnection.set("scm:git:ssh://git@github.com/waliasanchit007/konduit.git")
+          scm.url.set("https://github.com/waliasanchit007/keliver")
+          scm.connection.set("scm:git:git://github.com/waliasanchit007/keliver.git")
+          scm.developerConnection.set("scm:git:ssh://git@github.com/waliasanchit007/keliver.git")
         }
       }
     }

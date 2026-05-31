@@ -1,0 +1,6 @@
+public final class dev/keliver/image/KonduitImage {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/image/KonduitImage;
+	public final fun installSingleton (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+}
+

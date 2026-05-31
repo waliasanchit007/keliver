@@ -1,0 +1,33 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-widget-testing>
+abstract class <#A: kotlin/Any> dev.keliver.widget.testing/AbstractWidgetChildrenTest { // dev.keliver.widget.testing/AbstractWidgetChildrenTest|null[0]
+    constructor <init>() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.<init>|<init>(){}[0]
+
+    abstract val children // dev.keliver.widget.testing/AbstractWidgetChildrenTest.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.widget.testing/AbstractWidgetChildrenTest.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun names(): kotlin.collections/List<kotlin/String> // dev.keliver.widget.testing/AbstractWidgetChildrenTest.names|names(){}[0]
+    abstract fun widget(kotlin/String): #A // dev.keliver.widget.testing/AbstractWidgetChildrenTest.widget|widget(kotlin.String){}[0]
+    final fun childrenInstanceDoesNotChange() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.childrenInstanceDoesNotChange|childrenInstanceDoesNotChange(){}[0]
+    final fun insertAppend() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.insertAppend|insertAppend(){}[0]
+    final fun insertPrepend() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.insertPrepend|insertPrepend(){}[0]
+    final fun insertRandom() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.insertRandom|insertRandom(){}[0]
+    final fun moveMultipleBackward() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveMultipleBackward|moveMultipleBackward(){}[0]
+    final fun moveMultipleForward() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveMultipleForward|moveMultipleForward(){}[0]
+    final fun moveSingleBackward() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveSingleBackward|moveSingleBackward(){}[0]
+    final fun moveSingleComposeApplierDocumentation() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveSingleComposeApplierDocumentation|moveSingleComposeApplierDocumentation(){}[0]
+    final fun moveSingleForward() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveSingleForward|moveSingleForward(){}[0]
+    final fun moveZero() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.moveZero|moveZero(){}[0]
+    final fun removeMultipleEnd() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.removeMultipleEnd|removeMultipleEnd(){}[0]
+    final fun removeMultipleStart() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.removeMultipleStart|removeMultipleStart(){}[0]
+    final fun removeSingleEnd() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.removeSingleEnd|removeSingleEnd(){}[0]
+    final fun removeSingleStart() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.removeSingleStart|removeSingleStart(){}[0]
+    final fun removeZero() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.removeZero|removeZero(){}[0]
+    final fun replace() // dev.keliver.widget.testing/AbstractWidgetChildrenTest.replace|replace(){}[0]
+}

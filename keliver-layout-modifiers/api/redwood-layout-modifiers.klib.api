@@ -1,0 +1,54 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-layout-modifiers>
+abstract interface dev.keliver.layout.modifier/Flex : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Flex|null[0]
+    abstract val value // dev.keliver.layout.modifier/Flex.value|{}value[0]
+        abstract fun <get-value>(): kotlin/Double // dev.keliver.layout.modifier/Flex.value.<get-value>|<get-value>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Grow : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Grow|null[0]
+    abstract val value // dev.keliver.layout.modifier/Grow.value|{}value[0]
+        abstract fun <get-value>(): kotlin/Double // dev.keliver.layout.modifier/Grow.value.<get-value>|<get-value>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Height : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Height|null[0]
+    abstract val height // dev.keliver.layout.modifier/Height.height|{}height[0]
+        abstract fun <get-height>(): dev.keliver.ui/Dp // dev.keliver.layout.modifier/Height.height.<get-height>|<get-height>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/HorizontalAlignment : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/HorizontalAlignment|null[0]
+    abstract val alignment // dev.keliver.layout.modifier/HorizontalAlignment.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.layout.api/CrossAxisAlignment // dev.keliver.layout.modifier/HorizontalAlignment.alignment.<get-alignment>|<get-alignment>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Margin : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Margin|null[0]
+    abstract val margin // dev.keliver.layout.modifier/Margin.margin|{}margin[0]
+        abstract fun <get-margin>(): dev.keliver.ui/Margin // dev.keliver.layout.modifier/Margin.margin.<get-margin>|<get-margin>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Shrink : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Shrink|null[0]
+    abstract val value // dev.keliver.layout.modifier/Shrink.value|{}value[0]
+        abstract fun <get-value>(): kotlin/Double // dev.keliver.layout.modifier/Shrink.value.<get-value>|<get-value>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Size : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Size|null[0]
+    abstract val height // dev.keliver.layout.modifier/Size.height|{}height[0]
+        abstract fun <get-height>(): dev.keliver.ui/Dp // dev.keliver.layout.modifier/Size.height.<get-height>|<get-height>(){}[0]
+    abstract val width // dev.keliver.layout.modifier/Size.width|{}width[0]
+        abstract fun <get-width>(): dev.keliver.ui/Dp // dev.keliver.layout.modifier/Size.width.<get-width>|<get-width>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/VerticalAlignment : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/VerticalAlignment|null[0]
+    abstract val alignment // dev.keliver.layout.modifier/VerticalAlignment.alignment|{}alignment[0]
+        abstract fun <get-alignment>(): dev.keliver.layout.api/CrossAxisAlignment // dev.keliver.layout.modifier/VerticalAlignment.alignment.<get-alignment>|<get-alignment>(){}[0]
+}
+
+abstract interface dev.keliver.layout.modifier/Width : dev.keliver/Modifier.ScopedElement { // dev.keliver.layout.modifier/Width|null[0]
+    abstract val width // dev.keliver.layout.modifier/Width.width|{}width[0]
+        abstract fun <get-width>(): dev.keliver.ui/Dp // dev.keliver.layout.modifier/Width.width.<get-width>|<get-width>(){}[0]
+}

@@ -1,0 +1,43 @@
+import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.jetbrains.compose.runtime
+        api libs.kotlinx.coroutines.core
+        api libs.okio
+        api libs.zipline
+        api projects.keliverProtocol
+        api projects.keliverProtocolGuest
+        api projects.keliverTreehouse
+        api projects.keliverTreehouseGuestCompose
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.assertk
+        implementation libs.kotlin.test
+      }
+    }
+    jsTest {
+      // FastGuestProtocolAdapterTest depends on the upstream Redwood
+      // `test-app` fixture (removed in the Phase 1.5 strip), so it's
+      // opt-in behind -PkeliverWithTestApp. See docs/KNOWN_BUGS.md U13.
+      if (rootProject.hasProperty('keliverWithTestApp')) {
+        kotlin.srcDir('src/appsJsTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.protocolGuest
+        }
+      }
+    }
+  }
+}

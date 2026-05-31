@@ -65,7 +65,7 @@ wiring — the compiler won't flag those.
 ### 4. Latent bugs hide behind features your own code doesn't use.
 The schema codegen emitted a non-resolving `.serializer()` for stdlib
 custom-type modifiers (`kotlin.time.Duration`, `kotlin.UInt`). It was
-invisible because **konduit's own schemas don't use stdlib
+invisible because **keliver's own schemas don't use stdlib
 custom-types** — only the comprehensive upstream `test-app` schema
 did. Any adopter using a `Duration` modifier value would have hit it.
 
@@ -111,7 +111,7 @@ safe.
 ## What changed because of this
 
 - CI now runs `test` + `apiCheck` on every PR (was build-only).
-- A gated, comprehensive inherited suite (`-PkonduitWithTestApp`,
+- A gated, comprehensive inherited suite (`-PkeliverWithTestApp`,
   22 tests) runs in CI while keeping default builds lean.
 - API binary-compatibility is baselined + enforced across all modules.
 - `sample/` + DevoStatus are the standing dogfood of the adopter path,

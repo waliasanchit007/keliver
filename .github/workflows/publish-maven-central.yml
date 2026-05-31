@@ -16,7 +16,7 @@ name: Publish to Maven Central
 # private-consumer flow (`dev.keliver:*`) is never blocked on Central
 # credentials, and the two channels can co-exist during migration.
 #
-# Coordinates: the `-PkonduitGroupId=io.github.waliasanchit007` override
+# Coordinates: the `-PkeliverGroupId=io.github.waliasanchit007` override
 # flips the Gradle group for this build only; published Kotlin package
 # names stay `dev.keliver.*`. The version comes from
 # build-support/RedwoodBuildPlugin.kt's KONDUIT_VERSION — bump it before
@@ -97,7 +97,7 @@ jobs:
         run: >
           ./gradlew
           publishToMavenCentral
-          -PkonduitGroupId=${{ env.KONDUIT_GROUP_ID }}
+          -PkeliverGroupId=${{ env.KONDUIT_GROUP_ID }}
           -x test
         env:
           # vanniktech maven-publish reads these project properties (Gradle

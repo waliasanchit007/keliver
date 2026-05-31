@@ -24,20 +24,20 @@ in `adb logcat` under the `KonduitSample` tag.
 ## Test setup (reproducible)
 
 ```sh
-# 1. Publish konduit to mavenLocal (the sample resolves from there
+# 1. Publish keliver to mavenLocal (the sample resolves from there
 #    first, falling back to GH Packages only when something isn't
 #    locally available).
-cd /path/to/konduit
+cd /path/to/keliver
 ./gradlew publishToMavenLocal -x test -x dokkaJavadocJar \
     -x signMavenPublication \
-    -x :konduit-http-codegen:publishMavenPublicationToMavenLocal
+    -x :keliver-http-codegen:publishMavenPublicationToMavenLocal
 # 17 minutes cold; 5-10 min if the source set is unchanged.
 
 # 2. Build + serve the guest bundle. Konduit + Zipline don't ship a
 #    `serveDevelopmentZipline` Gradle task (the README's reference
 #    was wrong); Python's stdlib http.server is the smallest
 #    workaround. See Finding #1.
-cd /path/to/konduit/sample
+cd /path/to/keliver/sample
 ./gradlew :guest:compileDevelopmentZipline
 (cd guest/build/zipline/Development && python3 -m http.server 8080) &
 
@@ -65,8 +65,8 @@ KonduitSample: manifestReady modules=30
 KonduitSample: takeService name=zipline/guest
 KonduitSample: bindService name=zipline/host
 KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=konduit-sample
-KonduitSample: mainFunctionEnd app=konduit-sample
+KonduitSample: mainFunctionStart app=keliver-sample
+KonduitSample: mainFunctionEnd app=keliver-sample
 KonduitSample: codeLoadSuccess modules=30
 KonduitSample: takeService name=app
 …
@@ -117,7 +117,7 @@ swap this for their own production listener (or drop it in release
 builds), but at least the sample now ships a working debug
 baseline.
 
-This is **U1/U2/U3 of `konduit/docs/KNOWN_BUGS.md`** — the silent-
+This is **U1/U2/U3 of `keliver/docs/KNOWN_BUGS.md`** — the silent-
 failure shape Konduit's hardening work has been chipping away at.
 The sample now ships an explicit example of how to escape it.
 
@@ -142,7 +142,7 @@ that no matching constructor existed.
 **False leads tried before finding the real fix:**
 
 1. *Zipline version mismatch* — bumped the sample from 1.26.0 down
-   to 1.22.0 (matching `konduit/gradle/libs.versions.toml`). No
+   to 1.22.0 (matching `keliver/gradle/libs.versions.toml`). No
    change.
 2. *Kotlin version mismatch* — tried both Kotlin 2.1.0 + Zipline
    1.26.0 (matching ServerDrivenUI's stack) and Kotlin 2.2.0 +
@@ -176,7 +176,7 @@ adapter touches three `INVISIBLE_REFERENCE` Zipline internals
 This is significant adopter-onboarding friction. Until Zipline
 #765 is fixed upstream, every Konduit adopter writing a new
 `AppService` subinterface needs to hand-roll this same ~60 lines
-of adapter glue. It belongs in `konduit-treehouse` as a helper
+of adapter glue. It belongs in `keliver-treehouse` as a helper
 (future work).
 
 ### #4 — `:shared` was missing the Zipline + kotlinSerialization plugins
@@ -204,7 +204,7 @@ generated adapter calls for every method's param/return types.
 appeared in the log, but the app crashed immediately after:
 
 ```
-FATAL EXCEPTION: Treehouse konduit-sample
+FATAL EXCEPTION: Treehouse keliver-sample
 java.lang.IllegalStateException: unexpected call to Zipline.take:
   is the Zipline plugin configured?
     at app.cash.zipline.Zipline.take(Zipline.kt:122)
@@ -267,7 +267,7 @@ Status going forward:
 | 4 | `:shared` missing Zipline + serialization plugins | Both added to `:shared/build.gradle.kts` |
 | 5 | Host modules missing Zipline plugin | Added to `:host-android` + `:host-compose` |
 
-The right long-term fix for #3 is a `konduit-treehouse` helper
+The right long-term fix for #3 is a `keliver-treehouse` helper
 that hides the adapter boilerplate behind a single API. Filed as
 follow-up.
 
@@ -287,7 +287,7 @@ same full Zipline RPC sequence visible in `xcrun simctl launch
 
 ```sh
 # 1. Build the guest bundle (one-time per source change).
-cd /path/to/konduit/sample
+cd /path/to/keliver/sample
 ./gradlew :guest:compileDevelopmentZipline
 
 # 2. Serve the bundle. The iOS simulator routes localhost directly
@@ -330,8 +330,8 @@ KonduitSample: manifestReady modules=30
 KonduitSample: takeService name=zipline/guest
 KonduitSample: bindService name=zipline/host
 KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=konduit-sample
-KonduitSample: mainFunctionEnd app=konduit-sample
+KonduitSample: mainFunctionStart app=keliver-sample
+KonduitSample: mainFunctionEnd app=keliver-sample
 KonduitSample: codeLoadSuccess modules=30
 KonduitSample: takeService name=app
 KonduitSample: takeService name=zipline/guest-1
@@ -403,7 +403,7 @@ EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at
 ```
 
 The 8-byte address `0x00746975646e6f66` decodes as ASCII
-`"\0konduit"` (little-endian) — a Kotlin `String`'s heap data was
+`"\0keliver"` (little-endian) — a Kotlin `String`'s heap data was
 being treated as a pointer.
 
 **Root cause.** Kotlin/Native's varargs ↔ ObjC bridge for
@@ -521,7 +521,7 @@ Production bytes (vs a stale Development cache) were what loaded:
 1. **Dev-server access log** — 32 GETs, all from the
    `guest/build/zipline/Production/` directory the server was
    rooted in.
-2. **Byte-size delta** — `konduit-sample-guest.zipline` was
+2. **Byte-size delta** — `keliver-sample-guest.zipline` was
    11,481 B in Production vs 12,517 B in Development. Different
    bytes ⇒ genuinely the minified build, not a Development
    replay. (The delta is modest for this tiny sample because the

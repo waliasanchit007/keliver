@@ -152,7 +152,7 @@ a proper docs site will replace the long USAGE.md.
 `1.0.0-caliclan.3`:
 
 - ✅ U1, U2, U3, U5, U6, U7, U10 fixed or mitigated in Konduit (U5
-  mitigated in `1.0.0-caliclan.4` via `konduit-image`).
+  mitigated in `1.0.0-caliclan.4` via `keliver-image`).
 - ✅ U4, U8 part 2, U9, U11 fixed or documented at the integration
   layer (see ServerDrivenUI's KNOWN_BUGS for fix details)
 - 🎯 **U8 part 1** (`@MainThread` codegen) — only entry without a

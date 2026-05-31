@@ -1,0 +1,57 @@
+public abstract interface annotation class dev/keliver/lazylayout/compose/ExperimentalRedwoodLazyLayoutApi : java/lang/annotation/Annotation {
+}
+
+public final class dev/keliver/lazylayout/compose/LazyDslKt {
+	public static final fun LazyColumn-PyNIZtk (Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Ldev/keliver/lazylayout/compose/LazyListState;IILdev/keliver/ui/Margin;ILkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+	public static final fun LazyColumn-VQ0Nr1E (ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Ldev/keliver/lazylayout/compose/LazyListState;IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;III)V
+	public static final fun LazyRow-PyNIZtk (Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Ldev/keliver/lazylayout/compose/LazyListState;IILdev/keliver/ui/Margin;ILkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+	public static final fun LazyRow-VQ0Nr1E (ZLkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function2;Ldev/keliver/Modifier;Ldev/keliver/lazylayout/compose/LazyListState;IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;III)V
+	public static final fun items (Ldev/keliver/lazylayout/compose/LazyListScope;Ljava/util/List;Lkotlin/jvm/functions/Function3;)V
+	public static final fun items (Ldev/keliver/lazylayout/compose/LazyListScope;[Ljava/lang/Object;Lkotlin/jvm/functions/Function3;)V
+	public static final fun itemsIndexed (Ldev/keliver/lazylayout/compose/LazyListScope;Ljava/util/List;Lkotlin/jvm/functions/Function4;)V
+	public static final fun itemsIndexed (Ldev/keliver/lazylayout/compose/LazyListScope;[Ljava/lang/Object;Lkotlin/jvm/functions/Function4;)V
+}
+
+public abstract interface class dev/keliver/lazylayout/compose/LazyListScope {
+	public abstract fun item (Lkotlin/jvm/functions/Function2;)V
+	public abstract fun items (ILkotlin/jvm/functions/Function3;)V
+}
+
+public class dev/keliver/lazylayout/compose/LazyListState {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/lazylayout/compose/LoadingStrategy;)V
+	public synthetic fun <init> (Ldev/keliver/lazylayout/compose/LoadingStrategy;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getProgrammaticScrollIndex ()Ldev/keliver/lazylayout/api/ScrollItemIndex;
+	public final fun getStrategy ()Ldev/keliver/lazylayout/compose/LoadingStrategy;
+	public final fun loadRange (I)Lkotlin/ranges/IntRange;
+	public final fun onUserScroll (II)V
+	public final fun programmaticScroll (IZZ)V
+	public static synthetic fun programmaticScroll$default (Ldev/keliver/lazylayout/compose/LazyListState;IZZILjava/lang/Object;)V
+}
+
+public final class dev/keliver/lazylayout/compose/LazyListStateKt {
+	public static final fun rememberLazyListState (Ldev/keliver/lazylayout/compose/LoadingStrategy;Landroidx/compose/runtime/Composer;II)Ldev/keliver/lazylayout/compose/LazyListState;
+}
+
+public abstract interface class dev/keliver/lazylayout/compose/LoadingStrategy {
+	public abstract fun getFirstVisibleIndex ()I
+	public abstract fun getLastVisibleIndex ()I
+	public abstract fun loadRange (I)Lkotlin/ranges/IntRange;
+	public abstract fun onUserScroll (II)V
+	public abstract fun scrollTo (I)V
+}
+
+public final class dev/keliver/lazylayout/compose/ScrollOptimizedLoadingStrategy : dev/keliver/lazylayout/compose/LoadingStrategy {
+	public static final field $stable I
+	public fun <init> ()V
+	public fun <init> (IIII)V
+	public synthetic fun <init> (IIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getFirstVisibleIndex ()I
+	public fun getLastVisibleIndex ()I
+	public final fun getProgrammaticScrollIndex ()Ldev/keliver/lazylayout/api/ScrollItemIndex;
+	public fun loadRange (I)Lkotlin/ranges/IntRange;
+	public fun onUserScroll (II)V
+	public fun scrollTo (I)V
+}
+

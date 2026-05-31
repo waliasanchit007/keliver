@@ -1,0 +1,95 @@
+import dev.keliver.buildsupport.JsTests
+
+import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
+
+redwoodBuild {
+  targets(CommonWithAndroid + JsTests.Browser)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.burst'
+
+kotlin {
+  applyDefaultHierarchyTemplate {
+    it.group("common") {
+      it.group("nonJs") {
+        it.group("ios") {}
+        it.withAndroidTarget()
+        it.withJvm()
+      }
+    }
+  }
+
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.kotlinx.coroutines.core
+        api projects.keliverRuntime
+        api projects.keliverWidget
+        api libs.jetbrains.compose.runtime
+        api libs.jetbrains.compose.runtime.saveable
+      }
+    }
+    commonTest {
+      // testapp-fixture-dependent tests are opt-in — see U13 / the
+      // matching comment in keliver-protocol-host/build.gradle.
+      if (rootProject.hasProperty('keliverWithTestApp')) {
+        kotlin.srcDir('src/appsCommonTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.compose
+          implementation projects.testApp.schema.protocolGuest
+          implementation projects.testApp.schema.protocolHost
+          implementation projects.testApp.schema.testing
+        }
+      }
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+        implementation libs.assertk
+        implementation projects.keliverUiBasicCompose
+        implementation projects.keliverUiBasicTesting
+      }
+    }
+    androidMain {
+      dependencies {
+        implementation libs.androidx.core
+      }
+    }
+    nonJsMain {
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.keliver.compose'))
+      dependencies {
+        implementation libs.jetbrains.compose.collection
+      }
+    }
+  }
+}
+
+dependencies {
+  androidTestImplementation libs.junit
+  androidTestImplementation libs.androidx.test.runner
+  androidTestImplementation libs.kotlinx.coroutines.test
+  androidTestImplementation libs.assertk
+}
+
+android {
+  namespace 'dev.keliver.compose'
+
+  defaultConfig {
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+  }
+
+  testOptions {
+    unitTests.returnDefaultValues = true
+  }
+}
+
+spotless {
+  kotlin {
+    targetExclude(
+      // Apache 2-licensed files from AOSP.
+      "src/androidMain/kotlin/dev/keliver/compose/AndroidUiDispatcher.kt",
+      "src/androidMain/kotlin/dev/keliver/compose/AndroidUiFrameClock.kt",
+    )
+  }
+}

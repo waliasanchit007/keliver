@@ -1,6 +1,6 @@
 # Retrofit-style HTTP API codegen — design
 
-Tracks the multi-phase design for issue [#18](https://github.com/waliasanchit007/konduit/issues/18).
+Tracks the multi-phase design for issue [#18](https://github.com/waliasanchit007/keliver/issues/18).
 Adopters today write one `KonduitHttp` call per endpoint manually:
 
 ```kotlin
@@ -32,14 +32,14 @@ built without further design churn.
 
 | Module | Target group | Ships | Status |
 |---|---|---|---|
-| `konduit-http-annotations` | Common (JVM + iOS + JS) | `@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap` — all `SOURCE`-retention | **landed** (this PR) |
-| `konduit-http-codegen` | Tooling (JVM-only) | KSP `SymbolProcessor` + companion Gradle plugin descriptor; depends on `konduit-http-annotations` for the FqName lookups | **next session** |
-| `konduit-gradle-plugin` | (existing) | New plugin id `dev.keliver.http-api` that auto-applies the KSP plugin + adds the codegen processor as a `ksp` configuration dep | **next session** |
+| `keliver-http-annotations` | Common (JVM + iOS + JS) | `@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap` — all `SOURCE`-retention | **landed** (this PR) |
+| `keliver-http-codegen` | Tooling (JVM-only) | KSP `SymbolProcessor` + companion Gradle plugin descriptor; depends on `keliver-http-annotations` for the FqName lookups | **next session** |
+| `keliver-gradle-plugin` | (existing) | New plugin id `dev.keliver.http-api` that auto-applies the KSP plugin + adds the codegen processor as a `ksp` configuration dep | **next session** |
 
 The annotations are intentionally split into their own module so the
 KSP processor module (JVM-only, Tooling target) doesn't pollute the
 adopter's runtime classpath — guests on Kotlin/JS pull in
-`konduit-http-annotations` (~10 lines of public surface, no
+`keliver-http-annotations` (~10 lines of public surface, no
 dependencies) and nothing else from the codegen path.
 
 ## API surface (committed)
@@ -133,8 +133,8 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.konduit.guest)  // pulls konduit-http transitively
-    // Note: konduit-http-annotations is pulled in by the plugin.
+    implementation(libs.keliver.guest)  // pulls keliver-http transitively
+    // Note: keliver-http-annotations is pulled in by the plugin.
 }
 ```
 
@@ -147,8 +147,8 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.keliver:konduit-http-annotations:$VERSION")
-    ksp("dev.keliver:konduit-http-codegen:$VERSION")
+    implementation("dev.keliver:keliver-http-annotations:$VERSION")
+    ksp("dev.keliver:keliver-http-codegen:$VERSION")
 }
 ```
 
@@ -177,7 +177,7 @@ without breaking the generated code from v1:
 
 | Phase | Scope | Status |
 |---|---|---|
-| **1** | `konduit-http-annotations` module + this design doc | **landed (caliclan.4)** |
+| **1** | `keliver-http-annotations` module + this design doc | **landed (caliclan.4)** |
 | **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
 | **3** | `@HeaderMap` + `dev.zacsweers.kctfork:ksp` end-to-end test fixtures (11 tests: 5 happy-path codegen assertions, 6 validation-diagnostic assertions) | **landed (caliclan.4)** |
 | **4** | Error handling, response wrappers (Result<T> envelope, etc.) | follow-up |

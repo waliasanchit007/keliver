@@ -13,9 +13,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.konduitUiBasicCompose
-        api projects.konduitLayoutCompose
-        api projects.konduitLazylayoutCompose
+        api projects.keliverUiBasicCompose
+        api projects.keliverLayoutCompose
+        api projects.keliverLazylayoutCompose
         api projects.testApp.schema.widget
         api projects.testApp.schema.modifiers
       }

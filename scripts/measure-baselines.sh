@@ -89,13 +89,13 @@ fi
 if [[ -d "$zipline_prod" ]]; then
   emit zipline.production.total.bytes "$(dir_bytes "$zipline_prod")"
 
-  # konduit-only modules (konduit-konduit-* runtime + konduit-sample-* domain)
-  konduit_total=$(find "$zipline_prod" \
-      \( -name 'konduit-konduit-*.zipline' -o -name 'konduit-sample-*.zipline' \) \
+  # keliver-only modules (keliver-keliver-* runtime + keliver-sample-* domain)
+  keliver_total=$(find "$zipline_prod" \
+      \( -name 'keliver-keliver-*.zipline' -o -name 'keliver-sample-*.zipline' \) \
       -type f -print0 \
     | xargs -0 wc -c 2>/dev/null \
     | awk 'END{print $1+0}')
-  emit zipline.production.konduit_owncode.bytes "${konduit_total:-0}"
+  emit zipline.production.keliver_owncode.bytes "${keliver_total:-0}"
 fi
 
 if [[ -d "$ios_framework" ]]; then

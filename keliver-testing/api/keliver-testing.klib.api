@@ -1,0 +1,43 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-testing>
+abstract interface <#A: kotlin/Any?> dev.keliver.testing/TestRedwoodComposition : dev.keliver.compose/RedwoodComposition { // dev.keliver.testing/TestRedwoodComposition|null[0]
+    abstract val uiConfigurations // dev.keliver.testing/TestRedwoodComposition.uiConfigurations|{}uiConfigurations[0]
+        abstract fun <get-uiConfigurations>(): kotlinx.coroutines.flow/MutableStateFlow<dev.keliver.ui/UiConfiguration> // dev.keliver.testing/TestRedwoodComposition.uiConfigurations.<get-uiConfigurations>|<get-uiConfigurations>(){}[0]
+
+    abstract fun saveState(): dev.keliver.testing/TestSavedState // dev.keliver.testing/TestRedwoodComposition.saveState|saveState(){}[0]
+    abstract fun setContentAndSnapshot(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>): #A // dev.keliver.testing/TestRedwoodComposition.setContentAndSnapshot|setContentAndSnapshot(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>){}[0]
+    abstract suspend fun awaitSnapshot(kotlin.time/Duration = ...): #A // dev.keliver.testing/TestRedwoodComposition.awaitSnapshot|awaitSnapshot(kotlin.time.Duration){}[0]
+}
+
+abstract interface dev.keliver.testing/WidgetValue { // dev.keliver.testing/WidgetValue|null[0]
+    abstract val modifier // dev.keliver.testing/WidgetValue.modifier|{}modifier[0]
+        abstract fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.testing/WidgetValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    open val childrenLists // dev.keliver.testing/WidgetValue.childrenLists|{}childrenLists[0]
+        open fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.testing/WidgetValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+
+    abstract fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.testing/WidgetValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    abstract fun toDebugString(): kotlin/String // dev.keliver.testing/WidgetValue.toDebugString|toDebugString(){}[0]
+}
+
+sealed class dev.keliver.testing/TestSavedState // dev.keliver.testing/TestSavedState|null[0]
+
+final object dev.keliver.testing/NoOpOnBackPressedDispatcher : dev.keliver.ui/OnBackPressedDispatcher { // dev.keliver.testing/NoOpOnBackPressedDispatcher|null[0]
+    final fun addCallback(dev.keliver.ui/OnBackPressedCallback): dev.keliver.ui/Cancellable // dev.keliver.testing/NoOpOnBackPressedDispatcher.addCallback|addCallback(dev.keliver.ui.OnBackPressedCallback){}[0]
+}
+
+final val dev.keliver.testing/dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop // dev.keliver.testing/dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop|#static{}dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop[0]
+final val dev.keliver.testing/dev_keliver_testing_TestSavedState$stableprop // dev.keliver.testing/dev_keliver_testing_TestSavedState$stableprop|#static{}dev_keliver_testing_TestSavedState$stableprop[0]
+
+final fun (dev.keliver.testing/WidgetValue).dev.keliver.testing/toChangeList(dev.keliver.protocol.guest/ProtocolWidgetSystemFactory, kotlinx.serialization.json/Json = ...): dev.keliver.protocol/SnapshotChangeList // dev.keliver.testing/toChangeList|toChangeList@dev.keliver.testing.WidgetValue(dev.keliver.protocol.guest.ProtocolWidgetSystemFactory;kotlinx.serialization.json.Json){}[0]
+final fun (kotlin.collections/List<dev.keliver.testing/WidgetValue>).dev.keliver.testing/flatten(): kotlin.sequences/Sequence<dev.keliver.testing/WidgetValue> // dev.keliver.testing/flatten|flatten@kotlin.collections.List<dev.keliver.testing.WidgetValue>(){}[0]
+final fun (kotlin.collections/List<dev.keliver.testing/WidgetValue>).dev.keliver.testing/toChangeList(dev.keliver.protocol.guest/ProtocolWidgetSystemFactory, kotlinx.serialization.json/Json = ...): dev.keliver.protocol/SnapshotChangeList // dev.keliver.testing/toChangeList|toChangeList@kotlin.collections.List<dev.keliver.testing.WidgetValue>(dev.keliver.protocol.guest.ProtocolWidgetSystemFactory;kotlinx.serialization.json.Json){}[0]
+final fun (kotlin.collections/List<dev.keliver.testing/WidgetValue>).dev.keliver.testing/toDebugString(): kotlin/String // dev.keliver.testing/toDebugString|toDebugString@kotlin.collections.List<dev.keliver.testing.WidgetValue>(){}[0]
+final fun <#A: kotlin/Any, #B: kotlin/Any?> dev.keliver.testing/TestRedwoodComposition(kotlinx.coroutines/CoroutineScope, dev.keliver.widget/WidgetSystem<#A>, dev.keliver.widget/Widget.Children<#A>, dev.keliver.ui/OnBackPressedDispatcher = ..., dev.keliver.testing/TestSavedState? = ..., dev.keliver.ui/UiConfiguration = ..., kotlin/Function0<#B>): dev.keliver.testing/TestRedwoodComposition<#B> // dev.keliver.testing/TestRedwoodComposition|TestRedwoodComposition(kotlinx.coroutines.CoroutineScope;dev.keliver.widget.WidgetSystem<0:0>;dev.keliver.widget.Widget.Children<0:0>;dev.keliver.ui.OnBackPressedDispatcher;dev.keliver.testing.TestSavedState?;dev.keliver.ui.UiConfiguration;kotlin.Function0<0:1>){0§<kotlin.Any>;1§<kotlin.Any?>}[0]
+final fun dev.keliver.testing/dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop_getter(): kotlin/Int // dev.keliver.testing/dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop_getter|dev_keliver_testing_NoOpOnBackPressedDispatcher$stableprop_getter(){}[0]
+final fun dev.keliver.testing/dev_keliver_testing_TestSavedState$stableprop_getter(): kotlin/Int // dev.keliver.testing/dev_keliver_testing_TestSavedState$stableprop_getter|dev_keliver_testing_TestSavedState$stableprop_getter(){}[0]

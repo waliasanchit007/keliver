@@ -1,0 +1,15 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-image>
+final object dev.keliver.image/KonduitImage { // dev.keliver.image/KonduitImage|null[0]
+    final fun installSingleton(kotlin/Boolean, kotlin/Function1<coil3/ComponentRegistry.Builder, kotlin/Unit>?, kotlin/Function1<coil3/ImageLoader.Builder, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // dev.keliver.image/KonduitImage.installSingleton|installSingleton(kotlin.Boolean;kotlin.Function1<coil3.ComponentRegistry.Builder,kotlin.Unit>?;kotlin.Function1<coil3.ImageLoader.Builder,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+}
+
+final val dev.keliver.image/dev_keliver_image_KonduitImage$stableprop // dev.keliver.image/dev_keliver_image_KonduitImage$stableprop|#static{}dev_keliver_image_KonduitImage$stableprop[0]
+
+final fun dev.keliver.image/dev_keliver_image_KonduitImage$stableprop_getter(): kotlin/Int // dev.keliver.image/dev_keliver_image_KonduitImage$stableprop_getter|dev_keliver_image_KonduitImage$stableprop_getter(){}[0]

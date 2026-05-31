@@ -4,7 +4,7 @@
  *
  * Two plugins matter for the codegen / Konduit side: the standard
  * Compose compiler (so `setContent { ... }` works) and Konduit's
- * `konduit-treehouse-host-composeui` runtime dep, which provides the
+ * `keliver-treehouse-host-composeui` runtime dep, which provides the
  * `TreehouseContent` composable used in `SampleHostApp.kt`.
  */
 plugins {
@@ -78,7 +78,7 @@ android {
 
 dependencies {
   // The :host-compose KMP module pulls in :shared, :shared-protocol-host,
-  // konduit-treehouse-host, konduit-treehouse-host-composeui, etc. via
+  // keliver-treehouse-host, keliver-treehouse-host-composeui, etc. via
   // `api` dependencies — keeping `:host-android` thin (just the Android
   // entry shell + HTTP client glue).
   implementation(project(":host-compose"))

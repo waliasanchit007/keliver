@@ -35,7 +35,7 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      # The version override mechanism is wired into the konduit settings
+      # The version override mechanism is wired into the keliver settings
       # plugin. -PkotlinVersion=X overrides libs.versions.toml's "kotlin"
       # entry for this build only.
       - name: Build (Kotlin ${{ matrix.kotlin }})

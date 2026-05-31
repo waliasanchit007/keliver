@@ -20,7 +20,7 @@ import kotlinx.serialization.KSerializer
  * `TreehouseContent` mount point inside the host's Compose tree.
  *
  * The [`@KonduitAppService`][KonduitAppService] annotation drives
- * the `konduit-treehouse-codegen` KSP processor — it emits
+ * the `keliver-treehouse-codegen` KSP processor — it emits
  * `GeneratedSampleAppServiceAdapter` in this same package at build
  * time, which the companion-object [Companion.Adapter] wrapper
  * below extends.

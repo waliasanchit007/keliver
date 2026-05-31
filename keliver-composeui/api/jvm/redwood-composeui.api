@@ -1,0 +1,8 @@
+public final class dev/keliver/composeui/RedwoodContentKt {
+	public static final fun RedwoodContent (Ldev/keliver/widget/WidgetSystem;Landroidx/compose/ui/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/composeui/insetsJvm {
+	public static final fun safeAreaInsets (Landroidx/compose/runtime/Composer;I)Ldev/keliver/ui/Margin;
+}
+

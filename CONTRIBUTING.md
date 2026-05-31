@@ -30,7 +30,7 @@ Most "I have a problem with X" reports fall into one of these categories:
 ./gradlew publishToMavenLocal
 
 # Run the codegen test suite
-./gradlew :konduit-tooling-codegen:test
+./gradlew :keliver-tooling-codegen:test
 ```
 
 For changes that touch schema / codegen:
@@ -44,7 +44,7 @@ cd ../ServerDrivenUI
 
 ## PR expectations
 
-- **Tests for codegen changes.** `konduit-tooling-codegen/src/test/` has
+- **Tests for codegen changes.** `keliver-tooling-codegen/src/test/` has
   fixture-based tests. Add a fixture that demonstrates the new behavior;
   golden-file the expected output.
 - **CHANGELOG entry.** Every PR adds a line under `[Unreleased]` in
@@ -76,8 +76,8 @@ See [RELEASING.md](./RELEASING.md) for the canonical steps. Roughly:
 
 ## What lives where
 
-Konduit's schema parser + codegen live in this repo (`konduit-tooling-schema`,
-`konduit-tooling-codegen`). The downstream **schema definitions** for
+Konduit's schema parser + codegen live in this repo (`keliver-tooling-schema`,
+`keliver-tooling-codegen`). The downstream **schema definitions** for
 Caliclan-specific widgets and the **reference integration** live in
 [`waliasanchit007/ServerDrivenUI`](https://github.com/waliasanchit007/ServerDrivenUI).
 The **production app** consuming both is [DevoStatus](https://github.com/waliasanchit007/DevoStatus).

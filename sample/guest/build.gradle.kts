@@ -13,7 +13,7 @@ plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.composeCompiler)
   alias(libs.plugins.zipline)
-  alias(libs.plugins.konduit.generator.compose)
+  alias(libs.plugins.keliver.generator.compose)
   alias(libs.plugins.composeMultiplatform)
 }
 
@@ -31,10 +31,10 @@ kotlin {
   sourceSets {
     val commonMain by getting {
       dependencies {
-        implementation(libs.konduit.compose)
-        implementation(libs.konduit.widget)
-        implementation(libs.konduit.treehouse)
-        implementation(libs.konduit.treehouse.guest)
+        implementation(libs.keliver.compose)
+        implementation(libs.keliver.widget)
+        implementation(libs.keliver.treehouse)
+        implementation(libs.keliver.treehouse.guest)
         implementation(libs.zipline)
         implementation(project(":shared"))
       }

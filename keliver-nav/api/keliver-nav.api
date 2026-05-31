@@ -1,0 +1,20 @@
+public final class dev/keliver/nav/KonduitNavController {
+	public static final field $stable I
+	public final fun getBackstack ()Ljava/util/List;
+	public final fun getCanPop ()Z
+	public final fun getCurrent ()Ljava/lang/Object;
+	public final fun navigate (Ljava/lang/Object;)V
+	public final fun pop ()Z
+	public final fun popUntil (Lkotlin/jvm/functions/Function1;)Z
+	public final fun replaceAll (Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/nav/KonduitNavControllerKt {
+	public static final fun rememberKonduitNavController (Ljava/lang/Object;Landroidx/compose/runtime/Composer;I)Ldev/keliver/nav/KonduitNavController;
+}
+
+public final class dev/keliver/nav/KonduitNavHostKt {
+	public static final fun KonduitNavHost (Ldev/keliver/nav/KonduitNavController;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+	public static final fun getLocalKonduitNavController ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+

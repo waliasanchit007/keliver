@@ -6,11 +6,11 @@
  */
 plugins {
   alias(libs.plugins.kotlinJvm)
-  alias(libs.plugins.konduit.schema)
+  alias(libs.plugins.keliver.schema)
 }
 
 dependencies {
-  implementation(libs.konduit.schema)
+  implementation(libs.keliver.schema)
 }
 
 redwoodSchema {

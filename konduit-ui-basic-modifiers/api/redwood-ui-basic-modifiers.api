@@ -1,3 +1,0 @@
-public abstract interface class dev/konduit/ui/basic/modifier/Reuse : dev/konduit/Modifier$UnscopedElement {
-}
-

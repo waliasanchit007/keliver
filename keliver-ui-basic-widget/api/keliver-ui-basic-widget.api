@@ -1,0 +1,42 @@
+public abstract interface class dev/keliver/ui/basic/widget/Button : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/ui/basic/widget/Image : dev/keliver/widget/Widget {
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun url (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/ui/basic/widget/RedwoodUiBasicWidgetFactory {
+	public abstract fun Button ()Ldev/keliver/ui/basic/widget/Button;
+	public abstract fun Image ()Ldev/keliver/ui/basic/widget/Image;
+	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/ui/basic/modifier/Reuse;)V
+	public abstract fun Text ()Ldev/keliver/ui/basic/widget/Text;
+	public abstract fun TextInput ()Ldev/keliver/ui/basic/widget/TextInput;
+}
+
+public final class dev/keliver/ui/basic/widget/RedwoodUiBasicWidgetSystem : dev/keliver/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactoryOwner, dev/keliver/ui/basic/widget/RedwoodUiBasicWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/ui/basic/widget/RedwoodUiBasicWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/ui/basic/widget/RedwoodUiBasicWidgetFactory;Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;Ldev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getRedwoodLayout ()Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;
+	public fun getRedwoodLazyLayout ()Ldev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactory;
+	public fun getRedwoodUiBasic ()Ldev/keliver/ui/basic/widget/RedwoodUiBasicWidgetFactory;
+}
+
+public final class dev/keliver/ui/basic/widget/RedwoodUiBasicWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/ui/basic/widget/Text : dev/keliver/widget/Widget {
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/ui/basic/widget/TextInput : dev/keliver/widget/Widget {
+	public abstract fun hint (Ljava/lang/String;)V
+	public abstract fun onChange (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun state (Ldev/keliver/ui/basic/api/TextFieldState;)V
+}
+

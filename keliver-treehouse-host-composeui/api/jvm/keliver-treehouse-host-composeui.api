@@ -1,0 +1,11 @@
+public final class dev/keliver/treehouse/composeui/ComposableSingletons$EmptyDynamicContentWidgetFactoryKt {
+	public static final field INSTANCE Ldev/keliver/treehouse/composeui/ComposableSingletons$EmptyDynamicContentWidgetFactoryKt;
+	public fun <init> ()V
+	public final fun getLambda$-1975032586$keliver_treehouse_host_composeui ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$1658365100$keliver_treehouse_host_composeui ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class dev/keliver/treehouse/composeui/TreehouseContentKt {
+	public static final fun TreehouseContent (Ldev/keliver/treehouse/TreehouseApp;Ldev/keliver/widget/WidgetSystem;Ldev/keliver/treehouse/TreehouseContentSource;Landroidx/compose/ui/Modifier;Ldev/keliver/treehouse/DynamicContentWidgetFactory;Landroidx/compose/runtime/Composer;II)V
+}
+

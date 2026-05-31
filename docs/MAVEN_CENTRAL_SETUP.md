@@ -5,7 +5,7 @@ Tracks the user-action steps to move Konduit from **GitHub Packages
 Phase 5 of [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md).
 
 Once this is done, downstream consumers can drop
-`implementation("io.github.waliasanchit007:konduit-host:1.0.0-...")`
+`implementation("io.github.waliasanchit007:keliver-host:1.0.0-...")`
 into a Gradle build with `mavenCentral()` configured and just have it
 work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
@@ -21,17 +21,17 @@ a single manual workflow run.
 
 The project is publishing under the **`io.github.waliasanchit007`**
 Sonatype namespace (GitHub-vanity flow — no domain required).
-Artifacts go from `dev.keliver:konduit-*` (GitHub Packages, current)
-to `io.github.waliasanchit007:konduit-*` (Maven Central, target).
+Artifacts go from `dev.keliver:keliver-*` (GitHub Packages, current)
+to `io.github.waliasanchit007:keliver-*` (Maven Central, target).
 
 Package names inside the JARs stay `dev.keliver.*` — adopters' Kotlin
 `import` statements don't change. Only the Gradle coordinate string
 changes. (Sonatype enforces groupId against the namespace; it does
 not check internal package names.)
 
-If a `konduit.<tld>` domain is ever acquired later, the project can
+If a `keliver.<tld>` domain is ever acquired later, the project can
 re-publish under the matching reverse-DNS namespace
-(e.g. `run.konduit`) and the GitHub-vanity coordinates become a
+(e.g. `run.keliver`) and the GitHub-vanity coordinates become a
 legacy alias. Until then, `io.github.waliasanchit007` is the path
 forward.
 
@@ -88,19 +88,19 @@ gpg --keyserver keyserver.ubuntu.com --send-keys XXXXXXXXXXXXXXXX
 gpg --keyserver keys.openpgp.org    --send-keys XXXXXXXXXXXXXXXX
 
 # Export the private key (for CI). KEEP THIS FILE SAFE — it's a secret.
-gpg --export-secret-keys --armor XXXXXXXXXXXXXXXX > konduit-signing.key
+gpg --export-secret-keys --armor XXXXXXXXXXXXXXXX > keliver-signing.key
 ```
 
 ## Step 3 — Configure GitHub repo secrets
 
-In `https://github.com/waliasanchit007/konduit/settings/secrets/actions`,
+In `https://github.com/waliasanchit007/keliver/settings/secrets/actions`,
 add these four:
 
 | Secret name | Value |
 |---|---|
 | `SONATYPE_USERNAME` | Sonatype Central user-token username (generate in the portal — recommended over the raw login) |
 | `SONATYPE_PASSWORD` | Sonatype Central user-token password |
-| `SIGNING_KEY` | Full contents of `konduit-signing.key` (the armored private key from Step 2) |
+| `SIGNING_KEY` | Full contents of `keliver-signing.key` (the armored private key from Step 2) |
 | `SIGNING_PASSWORD` | The passphrase from Step 2 |
 
 ## Step 4 — Build wiring (DONE — no action needed)
@@ -121,9 +121,9 @@ add these four:
    (default `true`; CI's GitHub-Packages job turns it off).
 2. **Coordinates — configured, with an overridable groupId.** The
    plugin sets `coordinates(project.group, project.name,
-   KONDUIT_VERSION)`. `project.group` comes from a `konduitGroupId()`
+   KONDUIT_VERSION)`. `project.group` comes from a `keliverGroupId()`
    helper that defaults to `dev.keliver` but is **overridable** with
-   `-PkonduitGroupId=io.github.waliasanchit007`. So:
+   `-PkeliverGroupId=io.github.waliasanchit007`. So:
    - default builds + the GitHub Packages release keep `dev.keliver:*`
      (existing private consumers unaffected),
    - the Maven Central workflow passes the override to publish
@@ -135,7 +135,7 @@ add these four:
    consistent (verified by inspecting the generated POM).
 3. **POM metadata — Konduit-correct.** Every POM already carries
    `name`, `description`, `url`
-   (`github.com/waliasanchit007/konduit`), Apache-2.0 `licenses`,
+   (`github.com/waliasanchit007/keliver`), Apache-2.0 `licenses`,
    `developers` (`waliasanchit007`), and `scm` — the full set Maven
    Central requires. (The old Cash App Redwood metadata was replaced
    during the fork; an earlier draft of this doc warned otherwise —
@@ -153,7 +153,7 @@ A dedicated, **manual** workflow does the release:
 - It starts with a **preflight guard** that fails fast with a legible
   message if any of the four secrets from Step 3 are missing — so a
   premature run won't produce a confusing Gradle error.
-- It passes `-PkonduitGroupId=io.github.waliasanchit007` and maps the
+- It passes `-PkeliverGroupId=io.github.waliasanchit007` and maps the
   four secrets onto the property names vanniktech expects
   (`mavenCentralUsername`/`Password`, `signingInMemoryKey`/`Password`).
 
@@ -183,8 +183,8 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
    `mavenCentral()` (which most projects already have).
 3. Update the version-catalog snippet:
    ```toml
-   konduit-host  = { module = "io.github.waliasanchit007:konduit-host",  version.ref = "konduit" }
-   konduit-guest = { module = "io.github.waliasanchit007:konduit-guest", version.ref = "konduit" }
+   keliver-host  = { module = "io.github.waliasanchit007:keliver-host",  version.ref = "keliver" }
+   keliver-guest = { module = "io.github.waliasanchit007:keliver-guest", version.ref = "keliver" }
    ```
 4. Update the README's "Status" banner from "private fork" to
    "public OSS — `1.0.0-caliclan.N` on Maven Central."
@@ -212,9 +212,9 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   separate Snapshots repository on Sonatype Central, not the main
   index. Adopters need `https://central.sonatype.com/repository/maven-snapshots/`
   in their repos block to pull snapshots. The plugin handles routing.
-- **Switching namespace later**: if you ever acquire a `konduit.<tld>`
+- **Switching namespace later**: if you ever acquire a `keliver.<tld>`
   domain and want to switch from `io.github.waliasanchit007` to
-  e.g. `run.konduit`, the path is: claim the new namespace at
+  e.g. `run.keliver`, the path is: claim the new namespace at
   Sonatype, publish a new version line under the new coordinates,
   keep the GitHub-vanity coordinates published for at least one
   major version as a redirect alias. Adopters update their version

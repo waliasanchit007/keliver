@@ -70,7 +70,7 @@ same `SampleHostApp` composable.
 2. **Android SDK** (`ANDROID_HOME` set) for `:host-android`.
 3. **GitHub Packages credentials** to resolve Konduit artifacts.
    The pre-release Konduit Maven repo
-   (`maven.pkg.github.com/waliasanchit007/konduit`) requires a GitHub
+   (`maven.pkg.github.com/waliasanchit007/keliver`) requires a GitHub
    token with `read:packages` scope. Two ways to provide it:
 
    - **gradle.properties** (recommended for dev):
@@ -189,7 +189,7 @@ than using the bundled `iosApp/`:
 
 1. **Run Script Build Phase**: add a "Compile Kotlin Framework"
    Run Script that does
-   `cd "$SRCROOT/../path-to-konduit-host-module" && ./gradlew :your-module:embedAndSignAppleFrameworkForXcode`.
+   `cd "$SRCROOT/../path-to-keliver-host-module" && ./gradlew :your-module:embedAndSignAppleFrameworkForXcode`.
 2. **Bundle ID**: your Swift target's bundle ID is independent
    of the framework. The framework just exposes
    `MainKt.MainViewController()`.
@@ -280,13 +280,13 @@ documented in the main Konduit repo under `docs/` if you need them:
 
 - **Hot reload** (WebSocket-driven manifest refetch). See
   ServerDrivenUI's `HotReloadManager` for the reference impl;
-  pairs with `dev.keliver:konduit-dev-server` artifact.
+  pairs with `dev.keliver:keliver-dev-server` artifact.
 - **Dev overlay** (error fallback, retry buttons, etc.). See
   `KonduitDevController` / `KonduitDevOverlay` in ServerDrivenUI.
 - **Host-side services** (HostConsole, HostSnackbar, HostHttp).
-  All bundled in `dev.keliver:konduit-host` — add the dep and bind
+  All bundled in `dev.keliver:keliver-host` — add the dep and bind
   them in `Spec.bindServices`.
-- **Image loading** (`konduit-image` + Coil). The schema doesn't
+- **Image loading** (`keliver-image` + Coil). The schema doesn't
   declare an `@Widget(N) Image` here; if you add one, plug in the
   matching `CmpImage` impl.
 

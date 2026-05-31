@@ -1,0 +1,26 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api(projects.keliverUiBasicWidget)
+        api(projects.keliverLayoutCompose)
+        api(projects.keliverLazylayoutCompose)
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverUiBasicSchema
+  type = 'dev.keliver.ui.basic.RedwoodUiBasic'
+}
