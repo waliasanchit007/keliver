@@ -15,10 +15,10 @@
  */
 package dev.keliver.tooling.codegen
 
+import com.squareup.kotlinpoet.FileSpec
 import dev.keliver.tooling.codegen.ProtocolCodegenType.Guest
 import dev.keliver.tooling.codegen.ProtocolCodegenType.Host
 import dev.keliver.tooling.schema.ProtocolSchemaSet
-import com.squareup.kotlinpoet.FileSpec
 import java.nio.file.Path
 
 public enum class ProtocolCodegenType {

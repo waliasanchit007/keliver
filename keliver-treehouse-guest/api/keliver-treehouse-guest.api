@@ -1,7 +1,7 @@
 public final class dev/keliver/treehouse/StandardAppLifecycle : dev/keliver/treehouse/AppLifecycle {
 	public synthetic fun <init> (Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Lkotlinx/serialization/json/Json;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getFrameClock ()Landroidx/compose/runtime/MonotonicFrameClock;
-	public fun getGuestProtocolVersion-kmgvz8s ()Ljava/lang/String;
+	public fun getGuestProtocolVersion-NUkljko ()Ljava/lang/String;
 	public fun sendFrame (J)V
 	public fun start (Ldev/keliver/treehouse/AppLifecycle$Host;)V
 }

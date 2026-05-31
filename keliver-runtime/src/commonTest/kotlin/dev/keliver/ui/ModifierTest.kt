@@ -15,12 +15,12 @@
  */
 package dev.keliver.ui
 
-import dev.keliver.Modifier
 import assertk.assertThat
 import assertk.assertions.hashCodeFun
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameInstanceAs
 import assertk.assertions.toStringFun
+import dev.keliver.Modifier
 import kotlin.test.Test
 import kotlin.test.fail
 

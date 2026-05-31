@@ -15,14 +15,14 @@
  */
 package dev.keliver.widget
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.ui.Default
 import dev.keliver.ui.Density
 import dev.keliver.ui.Margin
 import dev.keliver.ui.dp
-import assertk.assertThat
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
 import kotlin.test.Test
 import kotlinx.cinterop.CValue
 import kotlinx.cinterop.cValue

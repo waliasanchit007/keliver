@@ -15,14 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.ProtocolWidget
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.SchemaSet
-import dev.keliver.tooling.schema.Widget
-import dev.keliver.tooling.schema.Widget.Children
-import dev.keliver.tooling.schema.Widget.Event
-import dev.keliver.tooling.schema.Widget.Property
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
@@ -35,6 +27,14 @@ import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
+import dev.keliver.tooling.schema.ProtocolWidget
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.SchemaSet
+import dev.keliver.tooling.schema.Widget
+import dev.keliver.tooling.schema.Widget.Children
+import dev.keliver.tooling.schema.Widget.Event
+import dev.keliver.tooling.schema.Widget.Property
 
 /*
 @OptIn(RedwoodCodegenApi::class)

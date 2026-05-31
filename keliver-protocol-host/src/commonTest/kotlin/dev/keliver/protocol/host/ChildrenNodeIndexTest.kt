@@ -15,6 +15,8 @@
  */
 package dev.keliver.protocol.host
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.protocol.ChildrenTag
@@ -22,8 +24,6 @@ import dev.keliver.protocol.Id
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.widget.MutableListChildren
 import dev.keliver.widget.Widget
-import assertk.assertThat
-import assertk.assertions.isEqualTo
 import kotlin.test.Test
 
 /**

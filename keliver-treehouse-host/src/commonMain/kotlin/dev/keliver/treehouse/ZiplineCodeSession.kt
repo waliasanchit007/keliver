@@ -15,13 +15,13 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.leaks.LeakDetector
-import dev.keliver.protocol.RedwoodVersion
-import dev.keliver.protocol.host.HostProtocol
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineApiMismatchException
 import app.cash.zipline.ZiplineScope
 import app.cash.zipline.withScope
+import dev.keliver.leaks.LeakDetector
+import dev.keliver.protocol.RedwoodVersion
+import dev.keliver.protocol.host.HostProtocol
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 

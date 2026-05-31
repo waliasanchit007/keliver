@@ -15,14 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.FqType
-import dev.keliver.tooling.schema.Modifier
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.Widget
-import dev.keliver.tooling.schema.Widget.Children
-import dev.keliver.tooling.schema.Widget.Event
-import dev.keliver.tooling.schema.Widget.Property
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
@@ -36,6 +28,14 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.joinToCode
+import dev.keliver.tooling.schema.FqType
+import dev.keliver.tooling.schema.Modifier
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.Widget
+import dev.keliver.tooling.schema.Widget.Children
+import dev.keliver.tooling.schema.Widget.Event
+import dev.keliver.tooling.schema.Widget.Property
 
 /*
 @Composable

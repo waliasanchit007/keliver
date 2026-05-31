@@ -15,11 +15,11 @@
  */
 package dev.keliver.lazylayout.widget
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.lazylayout.widget.FakeUpdateProcessor.StringContent
 import dev.keliver.widget.Widget
-import assertk.assertThat
-import assertk.assertions.isEqualTo
 import kotlin.test.Test
 
 class LazyListUpdateProcessorTest {

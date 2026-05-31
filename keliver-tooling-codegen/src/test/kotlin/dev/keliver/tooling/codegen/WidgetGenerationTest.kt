@@ -15,13 +15,13 @@
  */
 package dev.keliver.tooling.codegen
 
+import assertk.all
+import assertk.assertThat
+import assertk.assertions.contains
 import dev.keliver.schema.Property
 import dev.keliver.schema.Schema
 import dev.keliver.schema.Widget
 import dev.keliver.tooling.schema.parseTestSchema
-import assertk.all
-import assertk.assertThat
-import assertk.assertions.contains
 import org.junit.Test
 
 class WidgetGenerationTest {

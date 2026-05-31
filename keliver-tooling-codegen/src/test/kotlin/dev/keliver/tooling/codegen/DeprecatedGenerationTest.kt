@@ -16,16 +16,16 @@
 package dev.keliver.tooling.codegen
 
 import app.cash.burst.Burst
+import assertk.all
+import assertk.assertAll
+import assertk.assertThat
+import assertk.assertions.contains
 import dev.keliver.schema.Children
 import dev.keliver.schema.Modifier
 import dev.keliver.schema.Property
 import dev.keliver.schema.Schema
 import dev.keliver.schema.Widget
 import dev.keliver.tooling.schema.parseTestSchema
-import assertk.all
-import assertk.assertAll
-import assertk.assertThat
-import assertk.assertions.contains
 import kotlin.DeprecationLevel.ERROR
 import org.junit.Test
 

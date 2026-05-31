@@ -15,14 +15,14 @@
  */
 package dev.keliver.lazylayout.compose
 
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.lazylayout.testing.LazyListValue
 import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTester
 import dev.keliver.ui.basic.testing.TextValue
-import assertk.assertThat
-import assertk.assertions.isEmpty
-import assertk.assertions.isEqualTo
 import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
 

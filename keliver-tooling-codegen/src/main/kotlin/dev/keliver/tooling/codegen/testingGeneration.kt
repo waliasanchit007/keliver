@@ -15,13 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.SchemaSet
-import dev.keliver.tooling.schema.Widget
-import dev.keliver.tooling.schema.Widget.Children
-import dev.keliver.tooling.schema.Widget.Event
-import dev.keliver.tooling.schema.Widget.Property
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
@@ -42,6 +35,13 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.joinToCode
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolTrait
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.SchemaSet
+import dev.keliver.tooling.schema.Widget
+import dev.keliver.tooling.schema.Widget.Children
+import dev.keliver.tooling.schema.Widget.Event
+import dev.keliver.tooling.schema.Widget.Property
 
 /*
 suspend fun <R> ExampleTester(

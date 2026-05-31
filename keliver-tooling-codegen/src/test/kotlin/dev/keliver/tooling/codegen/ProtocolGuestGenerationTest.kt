@@ -15,14 +15,14 @@
  */
 package dev.keliver.tooling.codegen
 
+import assertk.assertThat
+import assertk.assertions.contains
+import assertk.assertions.doesNotContain
 import dev.keliver.schema.Modifier
 import dev.keliver.schema.Property
 import dev.keliver.schema.Schema
 import dev.keliver.schema.Widget
 import dev.keliver.tooling.schema.parseTestSchema
-import assertk.assertThat
-import assertk.assertions.contains
-import assertk.assertions.doesNotContain
 import kotlin.time.Duration
 import org.junit.Test
 

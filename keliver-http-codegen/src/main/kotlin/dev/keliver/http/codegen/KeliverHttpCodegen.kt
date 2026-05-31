@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.http.codegen
 
@@ -17,8 +28,6 @@ import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.validate
-import com.squareup.kotlinpoet.AnnotationSpec
-import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
@@ -375,7 +384,7 @@ public class KeliverHttpCodegen(
           "@HeaderMap parameter `$name` on " +
             "`${iface.qualifiedName?.asString()}.${fn.simpleName.asString()}` " +
             "must be of type `Map<String, String>` or `Map<String, String?>`. " +
-            "Found: ${resolvedType}.",
+            "Found: $resolvedType.",
           ksParam,
         )
       }
@@ -493,7 +502,9 @@ public class KeliverHttpCodegen(
     /** Read the first positional argument of an annotation as a `String`. */
     fun KSAnnotation.firstStringArgument(): String =
       arguments.firstOrNull()?.value as? String
-        ?: error("expected first string argument on @${shortName.asString()}, " +
-          "got ${arguments.firstOrNull()?.value?.javaClass}")
+        ?: error(
+          "expected first string argument on @${shortName.asString()}, " +
+            "got ${arguments.firstOrNull()?.value?.javaClass}",
+        )
   }
 }

@@ -21,6 +21,13 @@ import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.compose.Button
+import com.example.redwood.testapp.compose.Button2
+import com.example.redwood.testapp.compose.TestRow
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
 import dev.keliver.compose.WidgetVersion
 import dev.keliver.layout.compose.Box
 import dev.keliver.layout.compose.Column
@@ -44,13 +51,6 @@ import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
 import dev.keliver.ui.basic.compose.Text
-import assertk.assertThat
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.compose.Button
-import com.example.redwood.testapp.compose.Button2
-import com.example.redwood.testapp.compose.TestRow
-import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
 import kotlin.test.Test
 import kotlin.test.fail
 import kotlinx.coroutines.flow.MutableStateFlow

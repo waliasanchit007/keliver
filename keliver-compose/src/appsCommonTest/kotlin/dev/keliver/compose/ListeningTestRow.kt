@@ -15,12 +15,12 @@
  */
 package dev.keliver.compose
 
+import com.example.redwood.testapp.testing.TestRowValue
+import com.example.redwood.testapp.widget.TestRow
 import dev.keliver.Modifier
 import dev.keliver.testing.WidgetValue
 import dev.keliver.widget.ChangeListener
 import dev.keliver.widget.Widget
-import com.example.redwood.testapp.testing.TestRowValue
-import com.example.redwood.testapp.widget.TestRow
 
 class ListeningTestRow :
   TestRow<WidgetValue>,

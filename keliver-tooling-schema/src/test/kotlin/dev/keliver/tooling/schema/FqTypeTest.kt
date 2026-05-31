@@ -16,13 +16,13 @@
 package dev.keliver.tooling.schema
 
 import DefaultPackage
-import dev.keliver.tooling.schema.FqType.Variance.In
-import dev.keliver.tooling.schema.FqType.Variance.Out
 import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.hasMessage
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
+import dev.keliver.tooling.schema.FqType.Variance.In
+import dev.keliver.tooling.schema.FqType.Variance.Out
 import java.util.PrimitiveIterator
 import kotlin.reflect.typeOf
 import org.junit.Test

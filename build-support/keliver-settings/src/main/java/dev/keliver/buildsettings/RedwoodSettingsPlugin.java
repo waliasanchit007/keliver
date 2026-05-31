@@ -24,8 +24,7 @@ import org.gradle.api.initialization.Settings;
 public class RedwoodSettingsPlugin implements Plugin<Settings> {
   @Override
   public void apply(Settings target) {
-    Action<Project> applyRedwoodPlugin =
-        project -> project.getPlugins().apply("dev.keliver.build");
+    Action<Project> applyRedwoodPlugin = project -> project.getPlugins().apply("dev.keliver.build");
 
     target
         .getGradle()

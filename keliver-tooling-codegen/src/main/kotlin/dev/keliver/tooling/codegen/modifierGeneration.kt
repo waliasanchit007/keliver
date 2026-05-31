@@ -15,12 +15,12 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.Modifier
-import dev.keliver.tooling.schema.Schema
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeSpec
+import dev.keliver.tooling.schema.Modifier
+import dev.keliver.tooling.schema.Schema
 
 internal fun generateModifierInterface(schema: Schema, modifier: Modifier): FileSpec {
   val type = schema.modifierType(modifier)

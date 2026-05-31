@@ -1,47 +1,47 @@
 public final class dev/keliver/layout/compose/BoxKt {
-	public static final fun Box-XVYhwxI (IILdev/keliver/ui/Margin;IILdev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Box-8ARk8gk (IILdev/keliver/ui/Margin;IILdev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
 }
 
 public abstract interface class dev/keliver/layout/compose/BoxScope {
-	public fun height-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun horizontalAlignment-KF7usAc (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public fun height-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun horizontalAlignment-X16Uvog (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public fun margin (Ldev/keliver/Modifier;Ldev/keliver/ui/Margin;)Ldev/keliver/Modifier;
-	public fun size-vdZ8KdQ (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
-	public fun verticalAlignment-KF7usAc (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
-	public fun width-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun size-gBin374 (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
+	public fun verticalAlignment-X16Uvog (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public fun width-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 }
 
 public final class dev/keliver/layout/compose/ColumnKt {
-	public static final fun Column-R-tMEqQ (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Column-S41yg-A (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
 }
 
 public abstract interface class dev/keliver/layout/compose/ColumnScope {
 	public fun flex (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 	public fun grow (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun height-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun horizontalAlignment-KF7usAc (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public fun height-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun horizontalAlignment-X16Uvog (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public fun margin (Ldev/keliver/Modifier;Ldev/keliver/ui/Margin;)Ldev/keliver/Modifier;
 	public fun shrink (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun size-vdZ8KdQ (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
-	public fun width-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun size-gBin374 (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
+	public fun width-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 }
 
 public final class dev/keliver/layout/compose/RowKt {
-	public static final fun Row-WVH4bVI (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Row-XSN3iy4 (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;II)V
 }
 
 public abstract interface class dev/keliver/layout/compose/RowScope {
 	public fun flex (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 	public fun grow (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun height-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun height-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 	public fun margin (Ldev/keliver/Modifier;Ldev/keliver/ui/Margin;)Ldev/keliver/Modifier;
 	public fun shrink (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
-	public fun size-vdZ8KdQ (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
-	public fun verticalAlignment-KF7usAc (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
-	public fun width-dkYmdII (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
+	public fun size-gBin374 (Ldev/keliver/Modifier;DD)Ldev/keliver/Modifier;
+	public fun verticalAlignment-X16Uvog (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public fun width-Ah_PoKM (Ldev/keliver/Modifier;D)Ldev/keliver/Modifier;
 }
 
 public final class dev/keliver/layout/compose/SpacerKt {
-	public static final fun Spacer-pSNSv4c (DDLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Spacer-DsCVWuE (DDLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 

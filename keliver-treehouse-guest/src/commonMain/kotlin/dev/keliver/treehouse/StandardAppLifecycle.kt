@@ -17,6 +17,7 @@ package dev.keliver.treehouse
 
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.MonotonicFrameClock
+import app.cash.zipline.ZiplineApiMismatchException
 import dev.keliver.protocol.EventTag
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.RedwoodVersion
@@ -25,7 +26,6 @@ import dev.keliver.protocol.guest.ProtocolMismatchHandler
 import dev.keliver.protocol.guest.ProtocolWidgetSystemFactory
 import dev.keliver.protocol.guest.guestRedwoodVersion
 import dev.keliver.treehouse.AppLifecycle.Host
-import app.cash.zipline.ZiplineApiMismatchException
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope

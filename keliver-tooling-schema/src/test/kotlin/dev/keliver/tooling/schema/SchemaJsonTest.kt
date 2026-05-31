@@ -15,11 +15,11 @@
  */
 package dev.keliver.tooling.schema
 
-import dev.keliver.schema.Schema
-import dev.keliver.schema.Widget
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
+import dev.keliver.schema.Schema
+import dev.keliver.schema.Widget
 import org.junit.Test
 
 class SchemaJsonTest {

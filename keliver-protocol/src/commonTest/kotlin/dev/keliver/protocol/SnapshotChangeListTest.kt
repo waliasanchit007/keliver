@@ -15,13 +15,13 @@
  */
 package dev.keliver.protocol
 
-import dev.keliver.protocol.ChildrenChange.Add
-import dev.keliver.protocol.ChildrenChange.Move
-import dev.keliver.protocol.ChildrenChange.Remove
 import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.hasMessage
 import assertk.assertions.isEqualTo
+import dev.keliver.protocol.ChildrenChange.Add
+import dev.keliver.protocol.ChildrenChange.Move
+import dev.keliver.protocol.ChildrenChange.Remove
 import kotlin.test.Test
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive

@@ -17,6 +17,7 @@ package dev.keliver.ui.basic.composeui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import coil3.ImageLoader
 import dev.keliver.layout.composeui.ComposeUiRedwoodLayoutWidgetFactory
 import dev.keliver.lazylayout.composeui.ComposeUiRedwoodLazyLayoutWidgetFactory
 import dev.keliver.ui.basic.modifier.Reuse
@@ -26,7 +27,6 @@ import dev.keliver.ui.basic.widget.RedwoodUiBasicWidgetFactory
 import dev.keliver.ui.basic.widget.RedwoodUiBasicWidgetSystem
 import dev.keliver.ui.basic.widget.Text
 import dev.keliver.ui.basic.widget.TextInput
-import coil3.ImageLoader
 
 public class ComposeUiRedwoodUiBasicWidgetFactory(
   private val imageLoader: ImageLoader,

@@ -15,10 +15,10 @@
  */
 package dev.keliver.lazylayout.widget
 
-import dev.keliver.lazylayout.api.ScrollItemIndex
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
+import dev.keliver.lazylayout.api.ScrollItemIndex
 import kotlin.test.Test
 
 class LazyListScrollProcessorTest {

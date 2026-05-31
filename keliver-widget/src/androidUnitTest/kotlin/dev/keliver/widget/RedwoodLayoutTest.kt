@@ -16,9 +16,9 @@
 package dev.keliver.widget
 
 import androidx.activity.ComponentActivity
-import dev.keliver.ui.OnBackPressedCallback
 import assertk.assertThat
 import assertk.assertions.hasSize
+import dev.keliver.ui.OnBackPressedCallback
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric

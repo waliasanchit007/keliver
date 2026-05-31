@@ -15,9 +15,6 @@
  */
 package dev.keliver.tooling.schema
 
-import dev.keliver.tooling.schema.ValidationMode.Check
-import dev.keliver.tooling.schema.ValidationMode.Generate
-import dev.keliver.tooling.schema.ValidationResult.Failure
 import assertk.Assert
 import assertk.assertThat
 import assertk.assertions.isEqualTo
@@ -26,6 +23,9 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import dev.keliver.tooling.schema.ValidationMode.Check
+import dev.keliver.tooling.schema.ValidationMode.Generate
+import dev.keliver.tooling.schema.ValidationResult.Failure
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.readText

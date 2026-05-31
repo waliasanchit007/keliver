@@ -15,6 +15,7 @@
  */
 package dev.keliver.treehouse
 
+import app.cash.zipline.ZiplineScope
 import dev.keliver.leaks.LeakDetector
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.EventSink
@@ -26,7 +27,6 @@ import dev.keliver.treehouse.Content.State
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
-import app.cash.zipline.ZiplineScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart

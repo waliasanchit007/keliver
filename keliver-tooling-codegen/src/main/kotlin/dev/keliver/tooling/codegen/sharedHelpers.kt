@@ -15,17 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.Deprecation
-import dev.keliver.tooling.schema.Deprecation.Level.ERROR
-import dev.keliver.tooling.schema.Deprecation.Level.WARNING
-import dev.keliver.tooling.schema.FqType
-import dev.keliver.tooling.schema.Modifier
-import dev.keliver.tooling.schema.ProtocolModifier
-import dev.keliver.tooling.schema.ProtocolSchema
-import dev.keliver.tooling.schema.ProtocolSchemaSet
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.Widget
-import dev.keliver.tooling.schema.Widget.Event
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.Annotatable
 import com.squareup.kotlinpoet.AnnotationSpec
@@ -44,6 +33,17 @@ import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.joinToCode
+import dev.keliver.tooling.schema.Deprecation
+import dev.keliver.tooling.schema.Deprecation.Level.ERROR
+import dev.keliver.tooling.schema.Deprecation.Level.WARNING
+import dev.keliver.tooling.schema.FqType
+import dev.keliver.tooling.schema.Modifier
+import dev.keliver.tooling.schema.ProtocolModifier
+import dev.keliver.tooling.schema.ProtocolSchema
+import dev.keliver.tooling.schema.ProtocolSchemaSet
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.Widget
+import dev.keliver.tooling.schema.Widget.Event
 
 /**
  * Returns a single string that is likely to be unique within a schema, like `MapEntry` or

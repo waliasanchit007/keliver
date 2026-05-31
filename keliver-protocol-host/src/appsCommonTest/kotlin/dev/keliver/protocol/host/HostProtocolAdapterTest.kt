@@ -15,6 +15,17 @@
  */
 package dev.keliver.protocol.host
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.message
+import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
+import com.example.redwood.testapp.testing.TestRowValue
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
@@ -31,17 +42,6 @@ import dev.keliver.testing.WidgetValue
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import dev.keliver.ui.basic.testing.TextValue
 import dev.keliver.widget.MutableListChildren
-import assertk.assertFailure
-import assertk.assertThat
-import assertk.assertions.hasMessage
-import assertk.assertions.hasSize
-import assertk.assertions.isEqualTo
-import assertk.assertions.isInstanceOf
-import assertk.assertions.message
-import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
-import com.example.redwood.testapp.testing.TestRowValue
-import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 

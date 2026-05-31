@@ -28,9 +28,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.serializer
 import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.serializer
 
 /**
  * Thrown by [TreehouseApp.Spec.bindWithTimeout] when a wrapped
@@ -216,6 +216,10 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
      * Exposed via [retainedServices] for tests / diagnostics; integrators
      * should not need to touch it directly.
      */
+    // Backing property is intentionally `@PublishedApi internal` (not private)
+    // so the inline retain() helper + tests can reach it; exposed read-only
+    // via [retainedServices].
+    @Suppress("ktlint:standard:backing-property-naming")
     @PublishedApi
     internal val _retainedServices: MutableList<Any> = mutableListOf()
 

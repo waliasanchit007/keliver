@@ -15,7 +15,6 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.leaks.LeakDetector
 import app.cash.zipline.Zipline
 import app.cash.zipline.loader.LoaderEventListener
 import app.cash.zipline.loader.ManifestVerifier
@@ -23,6 +22,7 @@ import app.cash.zipline.loader.ZiplineHttpClient
 import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
 import com.example.redwood.testapp.treehouse.HostApi
 import com.example.redwood.testapp.treehouse.TestAppPresenter
+import dev.keliver.leaks.LeakDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow

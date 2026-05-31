@@ -15,6 +15,12 @@
  */
 package dev.keliver.treehouse
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.compose.TestScope
+import com.example.redwood.testapp.compose.backgroundColor
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.protocol.Change
@@ -22,12 +28,6 @@ import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
 import dev.keliver.protocol.guest.ProtocolMismatchHandler
 import dev.keliver.protocol.guest.guestRedwoodVersion
 import dev.keliver.widget.Widget
-import assertk.assertThat
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.compose.TestScope
-import com.example.redwood.testapp.compose.backgroundColor
-import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlin.test.Test
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds

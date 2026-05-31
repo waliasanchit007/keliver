@@ -20,11 +20,11 @@ import androidx.compose.ui.Modifier
 import app.cash.burst.Burst
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.android.resources.LayoutDirection
 import dev.keliver.layout.AbstractBoxTest
 import dev.keliver.layout.widget.Box
 import dev.keliver.snapshot.testing.ComposeSnapshotter
 import dev.keliver.snapshot.testing.ComposeUiTestWidgetFactory
-import com.android.resources.LayoutDirection
 import org.junit.Rule
 
 @Burst

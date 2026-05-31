@@ -15,8 +15,8 @@
  */
 package dev.keliver.yoga
 
-import dev.keliver.yoga.internal.Yoga
 import dev.drewhamilton.poko.Poko
+import dev.keliver.yoga.internal.Yoga
 import kotlin.jvm.JvmInline
 
 @RedwoodYogaApi

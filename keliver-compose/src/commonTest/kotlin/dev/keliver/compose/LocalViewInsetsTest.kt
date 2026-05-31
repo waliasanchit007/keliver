@@ -15,13 +15,13 @@
  */
 package dev.keliver.compose
 
+import assertk.assertThat
+import assertk.assertions.containsExactly
 import dev.keliver.ui.Margin
 import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTester
 import dev.keliver.ui.basic.testing.TextValue
 import dev.keliver.ui.dp
-import assertk.assertThat
-import assertk.assertions.containsExactly
 import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
 

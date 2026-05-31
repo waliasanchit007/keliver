@@ -15,22 +15,6 @@
  */
 package dev.keliver.tooling.schema
 
-import dev.keliver.layout.RedwoodLayout
-import dev.keliver.layout.Row
-import dev.keliver.lazylayout.RedwoodLazyLayout
-import dev.keliver.schema.Children
-import dev.keliver.schema.Modifier
-import dev.keliver.schema.Property
-import dev.keliver.schema.Schema
-import dev.keliver.schema.Schema.Dependency
-import dev.keliver.schema.Widget
-import dev.keliver.tooling.schema.Deprecation.Level
-import dev.keliver.tooling.schema.FqType.Variance.Out
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
-import dev.keliver.tooling.schema.Widget.Children as ChildrenTrait
-import dev.keliver.tooling.schema.Widget.Event
-import dev.keliver.tooling.schema.Widget.Property as PropertyTrait
-import dev.keliver.ui.basic.RedwoodUiBasic
 import assertk.all
 import assertk.assertAll
 import assertk.assertFailure
@@ -48,6 +32,22 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import assertk.assertions.message
 import assertk.assertions.prop
+import dev.keliver.layout.RedwoodLayout
+import dev.keliver.layout.Row
+import dev.keliver.lazylayout.RedwoodLazyLayout
+import dev.keliver.schema.Children
+import dev.keliver.schema.Modifier
+import dev.keliver.schema.Property
+import dev.keliver.schema.Schema
+import dev.keliver.schema.Schema.Dependency
+import dev.keliver.schema.Widget
+import dev.keliver.tooling.schema.Deprecation.Level
+import dev.keliver.tooling.schema.FqType.Variance.Out
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
+import dev.keliver.tooling.schema.Widget.Children as ChildrenTrait
+import dev.keliver.tooling.schema.Widget.Event
+import dev.keliver.tooling.schema.Widget.Property as PropertyTrait
+import dev.keliver.ui.basic.RedwoodUiBasic
 import kotlin.DeprecationLevel.ERROR
 import kotlin.DeprecationLevel.HIDDEN
 import kotlinx.serialization.Serializable

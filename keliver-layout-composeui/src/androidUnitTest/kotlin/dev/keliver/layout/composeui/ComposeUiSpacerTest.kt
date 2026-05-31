@@ -22,11 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.android.ide.common.rendering.api.SessionParams
 import dev.keliver.layout.AbstractSpacerTest
 import dev.keliver.layout.widget.Spacer
 import dev.keliver.snapshot.testing.ComposeSnapshotter
 import dev.keliver.widget.Widget
-import com.android.ide.common.rendering.api.SessionParams
 import org.junit.Rule
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4

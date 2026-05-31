@@ -15,10 +15,10 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.treehouse.LayoutTester.Constraint
-import dev.keliver.treehouse.LayoutTester.Subject
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import dev.keliver.treehouse.LayoutTester.Constraint
+import dev.keliver.treehouse.LayoutTester.Subject
 import kotlin.test.Test
 
 class TreehouseUIViewLayoutTest {

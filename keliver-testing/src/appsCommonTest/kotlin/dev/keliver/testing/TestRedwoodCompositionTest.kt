@@ -22,6 +22,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.testing.TestSchemaTester
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.layout.compose.Column
 import dev.keliver.layout.compose.Row
 import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
@@ -30,11 +35,6 @@ import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import dev.keliver.ui.basic.testing.TextValue
 import dev.keliver.widget.MutableListChildren
-import assertk.assertThat
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.testing.TestSchemaTester
-import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay

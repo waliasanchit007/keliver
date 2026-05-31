@@ -15,9 +15,9 @@
  */
 package dev.keliver.treehouse
 
+import app.cash.zipline.ZiplineService
 import dev.keliver.protocol.EventSink
 import dev.keliver.ui.UiConfiguration
-import app.cash.zipline.ZiplineService
 import kotlin.native.ObjCName
 import kotlinx.coroutines.flow.StateFlow
 

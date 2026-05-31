@@ -15,6 +15,8 @@
  */
 package dev.keliver.treehouse
 
+import app.cash.zipline.asDynamicFunction
+import app.cash.zipline.sourceType
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.protocol.Change
@@ -32,8 +34,6 @@ import dev.keliver.protocol.guest.ProtocolWidget.Companion.INVALID_INDEX
 import dev.keliver.protocol.guest.ProtocolWidgetChildren
 import dev.keliver.protocol.guest.ProtocolWidgetSystemFactory
 import dev.keliver.widget.WidgetSystem
-import app.cash.zipline.asDynamicFunction
-import app.cash.zipline.sourceType
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json

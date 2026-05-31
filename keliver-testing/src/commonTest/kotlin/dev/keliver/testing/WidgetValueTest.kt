@@ -15,12 +15,12 @@
  */
 package dev.keliver.testing
 
-import dev.keliver.Modifier
-import dev.keliver.widget.Widget
-import dev.keliver.widget.WidgetSystem
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
+import dev.keliver.Modifier
+import dev.keliver.widget.Widget
+import dev.keliver.widget.WidgetSystem
 import kotlin.test.Test
 
 class WidgetValueTest {

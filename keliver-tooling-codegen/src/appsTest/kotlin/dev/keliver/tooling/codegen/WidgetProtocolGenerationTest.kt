@@ -15,11 +15,11 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.ProtocolSchemaSet
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.contains
 import com.example.redwood.testapp.TestSchema
+import dev.keliver.tooling.schema.ProtocolSchemaSet
 import org.junit.Test
 
 class WidgetProtocolGenerationTest {

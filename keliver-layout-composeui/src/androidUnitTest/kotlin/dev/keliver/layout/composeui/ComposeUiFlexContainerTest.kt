@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import app.cash.burst.Burst
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import com.android.resources.LayoutDirection
 import dev.keliver.layout.AbstractFlexContainerTest
 import dev.keliver.layout.TestFlexContainer
 import dev.keliver.layout.api.Constraint
@@ -33,7 +34,6 @@ import dev.keliver.snapshot.testing.ComposeSnapshotter
 import dev.keliver.snapshot.testing.ComposeUiTestWidgetFactory
 import dev.keliver.ui.Px
 import dev.keliver.yoga.FlexDirection
-import com.android.resources.LayoutDirection
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 

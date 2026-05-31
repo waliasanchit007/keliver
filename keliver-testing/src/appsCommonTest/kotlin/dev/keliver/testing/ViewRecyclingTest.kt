@@ -18,6 +18,17 @@ package dev.keliver.testing
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotSameInstanceAs
+import assertk.assertions.isSameInstanceAs
+import com.example.redwood.testapp.compose.Button
+import com.example.redwood.testapp.compose.Split
+import com.example.redwood.testapp.testing.ButtonValue
+import com.example.redwood.testapp.testing.SplitValue
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.layout.compose.Box
@@ -31,17 +42,6 @@ import dev.keliver.protocol.host.HostProtocolAdapter
 import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.compose.reuse
 import dev.keliver.ui.basic.testing.TextValue
-import assertk.assertThat
-import assertk.assertions.containsExactly
-import assertk.assertions.hasSize
-import assertk.assertions.isEmpty
-import assertk.assertions.isEqualTo
-import assertk.assertions.isNotSameInstanceAs
-import assertk.assertions.isSameInstanceAs
-import com.example.redwood.testapp.compose.Button
-import com.example.redwood.testapp.compose.Split
-import com.example.redwood.testapp.testing.ButtonValue
-import com.example.redwood.testapp.testing.SplitValue
 import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
 

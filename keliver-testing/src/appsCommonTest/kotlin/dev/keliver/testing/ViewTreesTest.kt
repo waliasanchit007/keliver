@@ -17,6 +17,16 @@ package dev.keliver.testing
 
 import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.compose.Split
+import com.example.redwood.testapp.compose.TestRow
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
+import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
+import com.example.redwood.testapp.testing.TestSchemaTester
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.compose.current
 import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
@@ -44,16 +54,6 @@ import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import dev.keliver.ui.basic.testing.TextValue
 import dev.keliver.widget.MutableListChildren
-import assertk.assertThat
-import assertk.assertions.containsExactly
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.compose.Split
-import com.example.redwood.testapp.compose.TestRow
-import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
-import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
-import com.example.redwood.testapp.testing.TestSchemaTester
-import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlin.test.Test
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.plus

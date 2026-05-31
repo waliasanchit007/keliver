@@ -17,10 +17,10 @@ public final class dev/keliver/protocol/host/HostProtocolAdapter : dev/keliver/p
 public abstract interface class dev/keliver/protocol/host/ProtocolMismatchHandler {
 	public static final field Companion Ldev/keliver/protocol/host/ProtocolMismatchHandler$Companion;
 	public static final field Throwing Ldev/keliver/protocol/host/ProtocolMismatchHandler;
-	public abstract fun onUnknownChildren-kxpi6rE (II)V
-	public abstract fun onUnknownModifier-uaRitGA (I)V
-	public abstract fun onUnknownProperty-GiUhoAU (II)V
-	public abstract fun onUnknownWidget-WWnQ4AA (I)V
+	public abstract fun onUnknownChildren-ZMJHPBg (II)V
+	public abstract fun onUnknownModifier-0yZiZ74 (I)V
+	public abstract fun onUnknownProperty-oT7FoZY (II)V
+	public abstract fun onUnknownWidget-BcInUtQ (I)V
 }
 
 public final class dev/keliver/protocol/host/ProtocolMismatchHandler$Companion {
@@ -28,7 +28,7 @@ public final class dev/keliver/protocol/host/ProtocolMismatchHandler$Companion {
 
 public abstract interface class dev/keliver/protocol/host/UiChange {
 	public static final field Companion Ldev/keliver/protocol/host/UiChange$Companion;
-	public abstract fun getId-DZnD9GA ()I
+	public abstract fun getId-dcWScHk ()I
 }
 
 public final class dev/keliver/protocol/host/UiChange$Companion {

@@ -15,6 +15,12 @@
  */
 package dev.keliver.protocol.guest
 
+import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.compose.TestScope
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.protocol.Create
@@ -27,12 +33,6 @@ import dev.keliver.protocol.ModifierTag
 import dev.keliver.protocol.PropertyChange
 import dev.keliver.protocol.PropertyTag
 import dev.keliver.protocol.WidgetTag
-import assertk.assertThat
-import assertk.assertions.hasMessage
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.compose.TestScope
-import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.time.Duration

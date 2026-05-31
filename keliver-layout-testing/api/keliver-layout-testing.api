@@ -4,12 +4,12 @@ public final class dev/keliver/layout/testing/BoxValue : dev/keliver/testing/Wid
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
-	public final fun getHeight-Fn7dJy8 ()I
-	public final fun getHorizontalAlignment-STZ78Zs ()I
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-Bn2Qxbw ()I
 	public final fun getMargin ()Ldev/keliver/ui/Margin;
 	public fun getModifier ()Ldev/keliver/Modifier;
-	public final fun getVerticalAlignment-STZ78Zs ()I
-	public final fun getWidth-Fn7dJy8 ()I
+	public final fun getVerticalAlignment-Bn2Qxbw ()I
+	public final fun getWidth-eZWH6Mc ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -22,14 +22,14 @@ public final class dev/keliver/layout/testing/ColumnValue : dev/keliver/testing/
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
-	public final fun getHeight-Fn7dJy8 ()I
-	public final fun getHorizontalAlignment-STZ78Zs ()I
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-Bn2Qxbw ()I
 	public final fun getMargin ()Ldev/keliver/ui/Margin;
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnScroll ()Lkotlin/jvm/functions/Function1;
-	public final fun getOverflow-z7BaHh8 ()I
-	public final fun getVerticalAlignment-P1yEH1U ()I
-	public final fun getWidth-Fn7dJy8 ()I
+	public final fun getOverflow-iOP-GSE ()I
+	public final fun getVerticalAlignment-FM-STKE ()I
+	public final fun getWidth-eZWH6Mc ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -55,14 +55,14 @@ public final class dev/keliver/layout/testing/RowValue : dev/keliver/testing/Wid
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
-	public final fun getHeight-Fn7dJy8 ()I
-	public final fun getHorizontalAlignment-P1yEH1U ()I
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-FM-STKE ()I
 	public final fun getMargin ()Ldev/keliver/ui/Margin;
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnScroll ()Lkotlin/jvm/functions/Function1;
-	public final fun getOverflow-z7BaHh8 ()I
-	public final fun getVerticalAlignment-STZ78Zs ()I
-	public final fun getWidth-Fn7dJy8 ()I
+	public final fun getOverflow-iOP-GSE ()I
+	public final fun getVerticalAlignment-Bn2Qxbw ()I
+	public final fun getWidth-eZWH6Mc ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -74,9 +74,9 @@ public final class dev/keliver/layout/testing/SpacerValue : dev/keliver/testing/
 	public synthetic fun <init> (Ldev/keliver/Modifier;DDLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getChildrenLists ()Ljava/util/List;
-	public final fun getHeight-jR8ZOms ()D
+	public final fun getHeight-T8gvEZc ()D
 	public fun getModifier ()Ldev/keliver/Modifier;
-	public final fun getWidth-jR8ZOms ()D
+	public final fun getWidth-T8gvEZc ()D
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

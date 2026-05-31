@@ -15,17 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.codegen.Protocol.Id
-import dev.keliver.tooling.codegen.Protocol.WidgetTag
-import dev.keliver.tooling.schema.ProtocolModifier
-import dev.keliver.tooling.schema.ProtocolSchema
-import dev.keliver.tooling.schema.ProtocolSchemaSet
-import dev.keliver.tooling.schema.ProtocolWidget
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolChildren
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolEvent
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.Widget
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
@@ -47,6 +36,17 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.buildCodeBlock
 import com.squareup.kotlinpoet.joinToCode
 import com.squareup.kotlinpoet.jvm.jvmField
+import dev.keliver.tooling.codegen.Protocol.Id
+import dev.keliver.tooling.codegen.Protocol.WidgetTag
+import dev.keliver.tooling.schema.ProtocolModifier
+import dev.keliver.tooling.schema.ProtocolSchema
+import dev.keliver.tooling.schema.ProtocolSchemaSet
+import dev.keliver.tooling.schema.ProtocolWidget
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolChildren
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolEvent
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.Widget
 
 /*
 @ObjCName("ExampleProtocolFactory", exact = true)

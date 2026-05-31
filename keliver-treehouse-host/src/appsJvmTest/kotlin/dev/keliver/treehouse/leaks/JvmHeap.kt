@@ -17,8 +17,8 @@ package dev.keliver.treehouse.leaks
 
 import androidx.collection.IntObjectMap
 import androidx.collection.ScatterSet
-import dev.keliver.treehouse.EventLog
 import com.example.redwood.testapp.treehouse.HostApi
+import dev.keliver.treehouse.EventLog
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater

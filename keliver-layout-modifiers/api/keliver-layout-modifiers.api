@@ -7,11 +7,11 @@ public abstract interface class dev/keliver/layout/modifier/Grow : dev/keliver/M
 }
 
 public abstract interface class dev/keliver/layout/modifier/Height : dev/keliver/Modifier$ScopedElement {
-	public abstract fun getHeight-jR8ZOms ()D
+	public abstract fun getHeight-T8gvEZc ()D
 }
 
 public abstract interface class dev/keliver/layout/modifier/HorizontalAlignment : dev/keliver/Modifier$ScopedElement {
-	public abstract fun getAlignment-STZ78Zs ()I
+	public abstract fun getAlignment-Bn2Qxbw ()I
 }
 
 public abstract interface class dev/keliver/layout/modifier/Margin : dev/keliver/Modifier$ScopedElement {
@@ -23,15 +23,15 @@ public abstract interface class dev/keliver/layout/modifier/Shrink : dev/keliver
 }
 
 public abstract interface class dev/keliver/layout/modifier/Size : dev/keliver/Modifier$ScopedElement {
-	public abstract fun getHeight-jR8ZOms ()D
-	public abstract fun getWidth-jR8ZOms ()D
+	public abstract fun getHeight-T8gvEZc ()D
+	public abstract fun getWidth-T8gvEZc ()D
 }
 
 public abstract interface class dev/keliver/layout/modifier/VerticalAlignment : dev/keliver/Modifier$ScopedElement {
-	public abstract fun getAlignment-STZ78Zs ()I
+	public abstract fun getAlignment-Bn2Qxbw ()I
 }
 
 public abstract interface class dev/keliver/layout/modifier/Width : dev/keliver/Modifier$ScopedElement {
-	public abstract fun getWidth-jR8ZOms ()D
+	public abstract fun getWidth-T8gvEZc ()D
 }
 

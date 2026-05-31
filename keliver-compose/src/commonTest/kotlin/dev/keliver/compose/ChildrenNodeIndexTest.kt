@@ -15,12 +15,12 @@
  */
 package dev.keliver.compose
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.widget.MutableListChildren
 import dev.keliver.widget.Widget
-import assertk.assertThat
-import assertk.assertions.isEqualTo
 import kotlin.test.Test
 
 /**

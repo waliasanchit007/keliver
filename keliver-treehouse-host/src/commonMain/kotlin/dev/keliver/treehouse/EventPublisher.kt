@@ -15,11 +15,11 @@
  */
 package dev.keliver.treehouse
 
+import app.cash.zipline.EventListener as ZiplineEventListener
 import dev.keliver.protocol.EventTag
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.WidgetTag
 import dev.keliver.protocol.host.ProtocolMismatchHandler
-import app.cash.zipline.EventListener as ZiplineEventListener
 
 internal interface EventPublisher {
   val ziplineEventListener: ZiplineEventListener

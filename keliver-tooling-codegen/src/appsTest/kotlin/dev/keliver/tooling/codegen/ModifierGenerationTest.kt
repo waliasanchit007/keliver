@@ -15,13 +15,13 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.schema.Modifier
-import dev.keliver.schema.Schema
-import dev.keliver.tooling.schema.parseTestSchema
 import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import com.example.redwood.testapp.compose.TestScope
+import dev.keliver.schema.Modifier
+import dev.keliver.schema.Schema
+import dev.keliver.tooling.schema.parseTestSchema
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import org.junit.Test

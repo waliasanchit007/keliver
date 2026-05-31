@@ -1,21 +1,21 @@
 public abstract interface class dev/keliver/layout/widget/Box : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
-	public abstract fun height-uSBpa8Q (I)V
-	public abstract fun horizontalAlignment-R4T7gaY (I)V
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-S2oW1hs (I)V
 	public abstract fun margin (Ldev/keliver/ui/Margin;)V
-	public abstract fun verticalAlignment-R4T7gaY (I)V
-	public abstract fun width-uSBpa8Q (I)V
+	public abstract fun verticalAlignment-S2oW1hs (I)V
+	public abstract fun width-zm9Su64 (I)V
 }
 
 public abstract interface class dev/keliver/layout/widget/Column : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
-	public abstract fun height-uSBpa8Q (I)V
-	public abstract fun horizontalAlignment-R4T7gaY (I)V
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-S2oW1hs (I)V
 	public abstract fun margin (Ldev/keliver/ui/Margin;)V
 	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
-	public abstract fun overflow-BezBi9c (I)V
-	public abstract fun verticalAlignment-R-Uc2cg (I)V
-	public abstract fun width-uSBpa8Q (I)V
+	public abstract fun overflow-oLBX6zQ (I)V
+	public abstract fun verticalAlignment-P80CwyE (I)V
+	public abstract fun width-zm9Su64 (I)V
 }
 
 public abstract interface class dev/keliver/layout/widget/RedwoodLayoutWidgetFactory {
@@ -38,17 +38,17 @@ public final class dev/keliver/layout/widget/RedwoodLayoutWidgetSystem$Companion
 
 public abstract interface class dev/keliver/layout/widget/Row : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
-	public abstract fun height-uSBpa8Q (I)V
-	public abstract fun horizontalAlignment-R-Uc2cg (I)V
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-P80CwyE (I)V
 	public abstract fun margin (Ldev/keliver/ui/Margin;)V
 	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
-	public abstract fun overflow-BezBi9c (I)V
-	public abstract fun verticalAlignment-R4T7gaY (I)V
-	public abstract fun width-uSBpa8Q (I)V
+	public abstract fun overflow-oLBX6zQ (I)V
+	public abstract fun verticalAlignment-S2oW1hs (I)V
+	public abstract fun width-zm9Su64 (I)V
 }
 
 public abstract interface class dev/keliver/layout/widget/Spacer : dev/keliver/widget/Widget {
-	public abstract fun height-JIKxhTk (D)V
-	public abstract fun width-JIKxhTk (D)V
+	public abstract fun height-fAabCVM (D)V
+	public abstract fun width-fAabCVM (D)V
 }
 

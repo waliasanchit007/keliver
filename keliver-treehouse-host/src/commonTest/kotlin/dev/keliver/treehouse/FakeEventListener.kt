@@ -15,10 +15,10 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.protocol.EventTag
-import dev.keliver.protocol.WidgetTag
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
+import dev.keliver.protocol.EventTag
+import dev.keliver.protocol.WidgetTag
 
 class FakeEventListener(
   private val eventLog: EventLog,

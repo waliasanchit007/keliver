@@ -17,9 +17,9 @@ package dev.keliver.composeui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import dev.keliver.ui.OnBackPressedCallback
 import assertk.assertThat
 import assertk.assertions.hasSize
+import dev.keliver.ui.OnBackPressedCallback
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

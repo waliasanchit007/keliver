@@ -15,10 +15,6 @@
  */
 package dev.keliver.tooling.schema
 
-import dev.keliver.tooling.schema.ValidationMode.Check
-import dev.keliver.tooling.schema.ValidationMode.Generate
-import dev.keliver.tooling.schema.ValidationResult.Failure
-import dev.keliver.tooling.schema.ValidationResult.Success
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.default
@@ -27,6 +23,10 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.path
+import dev.keliver.tooling.schema.ValidationMode.Check
+import dev.keliver.tooling.schema.ValidationMode.Generate
+import dev.keliver.tooling.schema.ValidationResult.Failure
+import dev.keliver.tooling.schema.ValidationResult.Success
 
 internal class ApiCommand : AbstractSchemaCommand("api") {
   override fun help(context: Context) =

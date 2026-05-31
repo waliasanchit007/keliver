@@ -15,15 +15,15 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.FqType
-import dev.keliver.tooling.schema.FqType.Variance.In
-import dev.keliver.tooling.schema.FqType.Variance.Invariant
-import dev.keliver.tooling.schema.FqType.Variance.Out
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.STAR
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.WildcardTypeName
+import dev.keliver.tooling.schema.FqType
+import dev.keliver.tooling.schema.FqType.Variance.In
+import dev.keliver.tooling.schema.FqType.Variance.Invariant
+import dev.keliver.tooling.schema.FqType.Variance.Out
 
 internal fun FqType.asTypeName(): TypeName {
   if (this == FqType.Star) {

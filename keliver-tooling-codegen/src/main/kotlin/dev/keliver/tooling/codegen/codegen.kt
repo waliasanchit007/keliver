@@ -15,12 +15,12 @@
  */
 package dev.keliver.tooling.codegen
 
+import com.squareup.kotlinpoet.FileSpec
 import dev.keliver.tooling.codegen.CodegenType.Compose
 import dev.keliver.tooling.codegen.CodegenType.Modifiers
 import dev.keliver.tooling.codegen.CodegenType.Testing
 import dev.keliver.tooling.codegen.CodegenType.Widget
 import dev.keliver.tooling.schema.SchemaSet
-import com.squareup.kotlinpoet.FileSpec
 import java.nio.file.Path
 
 public enum class CodegenType {

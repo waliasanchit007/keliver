@@ -19,6 +19,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import assertk.assertThat
+import assertk.assertions.containsExactlyInAnyOrder
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
+import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
+import com.example.redwood.testapp.testing.TestSchemaTester
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
 import dev.keliver.lazylayout.testing.RedwoodLazyLayoutTestingWidgetFactory
 import dev.keliver.leaks.LeakDetector
@@ -31,15 +40,6 @@ import dev.keliver.protocol.host.hostRedwoodVersion
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import dev.keliver.widget.MutableListChildren
 import dev.keliver.widget.Widget
-import assertk.assertThat
-import assertk.assertions.containsExactlyInAnyOrder
-import assertk.assertions.isEmpty
-import assertk.assertions.isEqualTo
-import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
-import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
-import com.example.redwood.testapp.testing.TestSchemaTester
-import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 

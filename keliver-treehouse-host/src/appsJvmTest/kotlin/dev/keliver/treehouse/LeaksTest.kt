@@ -15,8 +15,6 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.testing.WidgetValue
-import dev.keliver.treehouse.leaks.LeakWatcher
 import app.cash.zipline.Zipline
 import assertk.assertThat
 import assertk.assertions.isEmpty
@@ -24,6 +22,8 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import com.example.redwood.testapp.testing.TextInputValue
 import com.example.redwood.testapp.treehouse.TestAppPresenter
+import dev.keliver.testing.WidgetValue
+import dev.keliver.treehouse.leaks.LeakWatcher
 import kotlin.test.Test
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow

@@ -23,10 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.keliver.Modifier as RedwoodModifier
-import dev.keliver.ui.basic.widget.Image
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import dev.keliver.Modifier as RedwoodModifier
+import dev.keliver.ui.basic.widget.Image
 
 internal class ComposeUiImage(
   private val imageLoader: ImageLoader,

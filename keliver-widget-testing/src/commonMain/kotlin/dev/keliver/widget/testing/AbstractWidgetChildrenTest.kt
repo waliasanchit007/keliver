@@ -15,11 +15,11 @@
  */
 package dev.keliver.widget.testing
 
-import dev.keliver.Modifier
-import dev.keliver.widget.Widget
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isSameInstanceAs
+import dev.keliver.Modifier
+import dev.keliver.widget.Widget
 import kotlin.test.Test
 
 /** A set of conformance tests for [Widget.Children] implementations. */

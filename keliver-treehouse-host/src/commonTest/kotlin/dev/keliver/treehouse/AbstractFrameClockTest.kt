@@ -15,12 +15,12 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.protocol.RedwoodVersion
-import dev.keliver.treehouse.AppLifecycle.Host
 import assertk.all
 import assertk.assertThat
 import assertk.assertions.isLessThan
 import assertk.assertions.isPositive
+import dev.keliver.protocol.RedwoodVersion
+import dev.keliver.treehouse.AppLifecycle.Host
 import kotlin.test.Test
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel

@@ -1,6 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
- * Licensed under the Apache License, Version 2.0.
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.treehouse.codegen
 
@@ -20,7 +31,6 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.validate
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
@@ -297,7 +307,8 @@ public class KeliverAppServiceCodegen(
       // only via resultSerializer's `%T`-formatted block, but kept
       // here so future maintainers can extend the codegen with
       // additional per-return-type logic without re-walking KSP.
-      @Suppress("UNUSED_EXPRESSION") returnType
+      @Suppress("UNUSED_EXPRESSION")
+      returnType
     }
     ziplineFnsBody.addStatement("return out")
 
@@ -401,12 +412,16 @@ public class KeliverAppServiceCodegen(
         return if (isUnit) {
           CodeBlock.of(
             "override fun %N() { callHandler.call(this, %L) }\n",
-            name, positionalId,
+            name,
+            positionalId,
           )
         } else {
           CodeBlock.of(
             "override fun %N(): %T = callHandler.call(this, %L) as %T\n",
-            name, returnTypeName, positionalId, returnTypeName,
+            name,
+            returnTypeName,
+            positionalId,
+            returnTypeName,
           )
         }
       }
@@ -433,7 +448,10 @@ public class KeliverAppServiceCodegen(
         val typeName = returnTypeName(host = prop.parentDeclaration as KSClassDeclaration)
         return CodeBlock.of(
           "override val %N: %T\n  get() = callHandler.call(this, %L) as %T\n",
-          prop.simpleName.asString(), typeName, positionalId, typeName,
+          prop.simpleName.asString(),
+          typeName,
+          positionalId,
+          typeName,
         )
       }
     }
@@ -454,9 +472,11 @@ public class KeliverAppServiceCodegen(
      */
     fun resolveSerializerExpr(returnType: KSType?, typeName: TypeName): CodeBlock {
       if (returnType == null) {
-        return CodeBlock.of("serializersModule.%M<%T>()",
+        return CodeBlock.of(
+          "serializersModule.%M<%T>()",
           com.squareup.kotlinpoet.MemberName(FqNames.serializer.packageName, FqNames.serializer.simpleName),
-          UNIT)
+          UNIT,
+        )
       }
       val classDecl = returnType.declaration as? KSClassDeclaration
       val isZiplineService = classDecl?.getAllSuperTypes()?.any { st ->

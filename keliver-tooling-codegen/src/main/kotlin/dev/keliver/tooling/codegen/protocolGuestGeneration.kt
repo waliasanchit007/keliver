@@ -15,15 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.Modifier
-import dev.keliver.tooling.schema.ProtocolSchema
-import dev.keliver.tooling.schema.ProtocolSchemaSet
-import dev.keliver.tooling.schema.ProtocolWidget
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolChildren
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolEvent
-import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
-import dev.keliver.tooling.schema.Schema
-import dev.keliver.tooling.schema.Widget
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.BYTE
@@ -51,6 +42,15 @@ import com.squareup.kotlinpoet.TypeVariableName
 import com.squareup.kotlinpoet.UNIT
 import com.squareup.kotlinpoet.U_INT
 import com.squareup.kotlinpoet.joinToCode
+import dev.keliver.tooling.schema.Modifier
+import dev.keliver.tooling.schema.ProtocolSchema
+import dev.keliver.tooling.schema.ProtocolSchemaSet
+import dev.keliver.tooling.schema.ProtocolWidget
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolChildren
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolEvent
+import dev.keliver.tooling.schema.ProtocolWidget.ProtocolProperty
+import dev.keliver.tooling.schema.Schema
+import dev.keliver.tooling.schema.Widget
 
 private val protocolViewType = UNIT
 

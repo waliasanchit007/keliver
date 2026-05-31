@@ -1,11 +1,17 @@
 /*
- * Copyright (C) 2026 Keliver contributors.
+ * Copyright (C) 2026 Square, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package dev.keliver.gradle
 
@@ -52,7 +58,7 @@ class BundleSizeBudgetTaskTest {
       max = 1_000L,
     )
 
-    t.run()  // does not throw
+    t.run() // does not throw
   }
 
   @Test
@@ -78,7 +84,7 @@ class BundleSizeBudgetTaskTest {
     val phantom = File(tempFolder.root, "missing.zipline")
     val t = task(files = listOf(real, phantom), max = 1_000L)
 
-    t.run()  // doesn't fail despite phantom not existing
+    t.run() // doesn't fail despite phantom not existing
   }
 
   @Test
@@ -89,7 +95,7 @@ class BundleSizeBudgetTaskTest {
       warn = 800L,
     )
 
-    t.run()  // 850 >= 800 → warning, but not exception
+    t.run() // 850 >= 800 → warning, but not exception
   }
 
   @Test
@@ -112,6 +118,6 @@ class BundleSizeBudgetTaskTest {
   @Test
   fun empty_bundle_files_passes() {
     val t = task(files = emptyList(), max = 1_000L)
-    t.run()  // 0 bytes < budget — passes
+    t.run() // 0 bytes < budget — passes
   }
 }

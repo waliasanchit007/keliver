@@ -15,8 +15,6 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.leaks.LeakDetector
-import dev.keliver.protocol.host.HostProtocol
 import app.cash.zipline.EventListener as ZiplineEventListener
 import app.cash.zipline.Zipline
 import app.cash.zipline.loader.LoadResult
@@ -24,6 +22,8 @@ import app.cash.zipline.loader.LoaderEventListener
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
 import app.cash.zipline.loader.ZiplineLoader
+import dev.keliver.leaks.LeakDetector
+import dev.keliver.protocol.host.HostProtocol
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow

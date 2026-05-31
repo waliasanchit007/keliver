@@ -15,11 +15,11 @@
  */
 package dev.keliver.compose
 
+import com.example.redwood.testapp.testing.ButtonValue
+import com.example.redwood.testapp.widget.Button
 import dev.keliver.Modifier
 import dev.keliver.testing.WidgetValue
 import dev.keliver.widget.ChangeListener
-import com.example.redwood.testapp.testing.ButtonValue
-import com.example.redwood.testapp.widget.Button
 
 class ListeningButton :
   Button<WidgetValue>,

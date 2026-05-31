@@ -15,8 +15,8 @@
  */
 package dev.keliver.treehouse
 
-import dev.keliver.protocol.ChangesSink
 import app.cash.zipline.ZiplineService
+import dev.keliver.protocol.ChangesSink
 import kotlin.native.ObjCName
 
 /** Redwood's [ChangesSink] but implementing [ZiplineService]. */

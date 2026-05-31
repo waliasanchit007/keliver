@@ -15,11 +15,11 @@
  */
 package dev.keliver.protocol.guest
 
+import assertk.assertThat
+import assertk.assertions.hasMessage
 import dev.keliver.protocol.EventTag
 import dev.keliver.protocol.Id
 import dev.keliver.protocol.WidgetTag
-import assertk.assertThat
-import assertk.assertions.hasMessage
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 

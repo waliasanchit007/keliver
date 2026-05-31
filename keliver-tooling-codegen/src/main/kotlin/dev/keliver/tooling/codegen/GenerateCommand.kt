@@ -15,8 +15,6 @@
  */
 package dev.keliver.tooling.codegen
 
-import dev.keliver.tooling.schema.FqType
-import dev.keliver.tooling.schema.ProtocolSchemaSet
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.convert
@@ -28,6 +26,8 @@ import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.options.switch
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.path
+import dev.keliver.tooling.schema.FqType
+import dev.keliver.tooling.schema.ProtocolSchemaSet
 import java.io.File
 import java.net.URLClassLoader
 

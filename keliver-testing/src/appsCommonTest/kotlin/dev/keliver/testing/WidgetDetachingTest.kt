@@ -18,6 +18,11 @@ package dev.keliver.testing
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
+import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.isNotNull
+import assertk.assertions.isSameInstanceAs
+import com.example.redwood.testapp.compose.TestRow
 import dev.keliver.Modifier
 import dev.keliver.RedwoodCodegenApi
 import dev.keliver.layout.compose.Box
@@ -27,11 +32,6 @@ import dev.keliver.protocol.host.HostProtocolAdapter
 import dev.keliver.protocol.host.ProtocolNode
 import dev.keliver.ui.basic.compose.Text
 import dev.keliver.ui.basic.compose.reuse
-import assertk.assertThat
-import assertk.assertions.hasMessage
-import assertk.assertions.isNotNull
-import assertk.assertions.isSameInstanceAs
-import com.example.redwood.testapp.compose.TestRow
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.test.runTest

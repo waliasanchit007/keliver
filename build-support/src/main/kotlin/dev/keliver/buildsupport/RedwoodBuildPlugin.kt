@@ -15,6 +15,10 @@
  */
 package dev.keliver.buildsupport
 
+import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.gradle.BaseExtension
+import com.diffplug.gradle.spotless.SpotlessExtension
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import dev.keliver.buildsupport.JsTests.NodeJs
 import dev.keliver.buildsupport.TargetGroup.Common
 import dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
@@ -27,10 +31,6 @@ import dev.keliver.buildsupport.TargetGroup.ToolkitIos
 import dev.keliver.buildsupport.TargetGroup.TreehouseCommon
 import dev.keliver.buildsupport.TargetGroup.TreehouseGuest
 import dev.keliver.buildsupport.TargetGroup.TreehouseHost
-import com.android.build.api.variant.AndroidComponentsExtension
-import com.android.build.gradle.BaseExtension
-import com.diffplug.gradle.spotless.SpotlessExtension
-import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import java.io.File
 import kotlinx.validation.ApiValidationExtension
 import kotlinx.validation.ExperimentalBCVApi

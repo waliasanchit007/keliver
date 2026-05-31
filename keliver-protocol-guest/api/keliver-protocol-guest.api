@@ -2,20 +2,20 @@ public final class dev/keliver/protocol/guest/DefaultGuestProtocolAdapter : dev/
 	public static final field $stable I
 	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public fun appendAdd-VoVfJ64 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
-	public fun appendCreate-09krAZM (II)V
-	public fun appendModifierChange-HmOnUN4 (ILdev/keliver/Modifier;)V
-	public fun appendMove-uCYSahY (IIIII)V
-	public fun appendPropertyChange-UQXh3P0 (IIII)V
-	public fun appendPropertyChange-_9Bgozk (IIIZ)V
-	public fun appendPropertyChange-hsni8PA (IIILkotlinx/serialization/KSerializer;Ljava/lang/Object;)V
-	public fun appendRemove-VoVfJ64 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
+	public fun appendAdd-EjU3nZ4 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
+	public fun appendCreate-V8dW06k (II)V
+	public fun appendModifierChange-AWy5b-E (ILdev/keliver/Modifier;)V
+	public fun appendMove-uYEeHbw (IIIII)V
+	public fun appendPropertyChange-FajnOLE (IIILkotlinx/serialization/KSerializer;Ljava/lang/Object;)V
+	public fun appendPropertyChange-niTPXWg (IIIZ)V
+	public fun appendPropertyChange-sdyxu9c (IIII)V
+	public fun appendRemove-EjU3nZ4 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
 	public fun emitChanges ()V
 	public fun getJson ()Lkotlinx/serialization/json/Json;
 	public fun getRoot ()Ldev/keliver/widget/Widget$Children;
 	public fun getWidgetSystem ()Ldev/keliver/widget/WidgetSystem;
 	public fun initChangesSink (Ldev/keliver/protocol/ChangesSink;)V
-	public fun nextId-DZnD9GA ()I
+	public fun nextId-dcWScHk ()I
 	public fun sendEvent (Ldev/keliver/protocol/Event;)V
 	public final fun takeChanges ()Ljava/util/List;
 }
@@ -24,7 +24,7 @@ public abstract class dev/keliver/protocol/guest/GuestProtocolAdapter : dev/keli
 	public static final field $stable I
 	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public abstract fun emitChanges ()V
-	protected final fun getHostVersion-kmgvz8s ()Ljava/lang/String;
+	protected final fun getHostVersion-NUkljko ()Ljava/lang/String;
 	public abstract fun getRoot ()Ldev/keliver/widget/Widget$Children;
 	public abstract fun getWidgetSystem ()Ldev/keliver/widget/WidgetSystem;
 	public abstract fun initChangesSink (Ldev/keliver/protocol/ChangesSink;)V
@@ -33,8 +33,8 @@ public abstract class dev/keliver/protocol/guest/GuestProtocolAdapter : dev/keli
 public abstract interface class dev/keliver/protocol/guest/ProtocolMismatchHandler {
 	public static final field Companion Ldev/keliver/protocol/guest/ProtocolMismatchHandler$Companion;
 	public static final field Throwing Ldev/keliver/protocol/guest/ProtocolMismatchHandler;
-	public abstract fun onUnknownEvent-1u5SAos (II)V
-	public abstract fun onUnknownEventNode-WORXqi0 (II)V
+	public abstract fun onUnknownEvent-prRJ51g (II)V
+	public abstract fun onUnknownEventNode-RzICAS0 (II)V
 }
 
 public final class dev/keliver/protocol/guest/ProtocolMismatchHandler$Companion {

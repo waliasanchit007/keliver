@@ -15,6 +15,8 @@
  */
 package dev.keliver.treehouse
 
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
 import dev.keliver.lazylayout.testing.RedwoodLazyLayoutTestingWidgetFactory
 import dev.keliver.testing.WidgetValue
@@ -24,8 +26,6 @@ import dev.keliver.ui.UiConfiguration
 import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
 import dev.keliver.widget.MutableListChildren
 import dev.keliver.widget.SavedStateRegistry
-import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
-import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
