@@ -57,6 +57,7 @@ import dev.keliver.schema.Widget
     Row::class,
     Button::class,
     Spacer::class,
+    Card::class,
   ],
 )
 public interface SampleSchema
@@ -69,6 +70,10 @@ public data class Box(
 @Widget(2)
 public data class Text(
   @Property(1) val text: String,
+  /** Font size in sp (Compose `fontSize`). */
+  @Property(2) val fontSize: Int = 14,
+  /** Bold weight when true (Compose `fontWeight = Bold`). */
+  @Property(3) val bold: Boolean = false,
 )
 
 /** Vertical layout — children stack top-to-bottom (Compose `Column`). */
@@ -98,4 +103,10 @@ public data class Button(
 @Widget(6)
 public data class Spacer(
   @Property(1) val height: Int,
+)
+
+/** A Material card container — children render inside, with elevation. */
+@Widget(7)
+public data class Card(
+  @Children(1) val children: () -> Unit,
 )

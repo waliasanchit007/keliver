@@ -10,15 +10,19 @@ import androidx.compose.foundation.layout.Row as ComposeRow
 import androidx.compose.foundation.layout.Spacer as ComposeSpacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.Button as ComposeButton
+import androidx.compose.material.Card as ComposeCard
 import androidx.compose.material.Text as ComposeText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier as ComposeModifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.keliver.sample.schema.widget.Box
 import dev.keliver.sample.schema.widget.Button
+import dev.keliver.sample.schema.widget.Card
 import dev.keliver.sample.schema.widget.Column
 import dev.keliver.sample.schema.widget.Row
 import dev.keliver.sample.schema.widget.SampleSchemaWidgetFactory
@@ -51,6 +55,7 @@ public object CmpWidgetFactory : SampleSchemaWidgetFactory<CmpRender> {
   override fun Row(): Row<CmpRender> = CmpRow()
   override fun Button(): Button<CmpRender> = CmpButton()
   override fun Spacer(): Spacer<CmpRender> = CmpSpacer()
+  override fun Card(): Card<CmpRender> = CmpCard()
 }
 
 /**
@@ -101,14 +106,29 @@ private class CmpRow : Row<CmpRender> {
  */
 private class CmpText : Text<CmpRender> {
   private var textValue by mutableStateOf("")
+  private var fontSizeValue by mutableStateOf(14)
+  private var boldValue by mutableStateOf(false)
   override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
 
   override val value: CmpRender = { incoming ->
-    ComposeText(text = textValue, modifier = incoming)
+    ComposeText(
+      text = textValue,
+      fontSize = fontSizeValue.sp,
+      fontWeight = if (boldValue) FontWeight.Bold else FontWeight.Normal,
+      modifier = incoming,
+    )
   }
 
   override fun text(text: String) {
     textValue = text
+  }
+
+  override fun fontSize(fontSize: Int) {
+    fontSizeValue = fontSize
+  }
+
+  override fun bold(bold: Boolean) {
+    boldValue = bold
   }
 }
 
@@ -148,5 +168,17 @@ private class CmpSpacer : Spacer<CmpRender> {
 
   override fun height(height: Int) {
     heightValue = height
+  }
+}
+
+/** `Card` impl — children render inside a Material Card. */
+private class CmpCard : Card<CmpRender> {
+  override val children: Widget.Children<CmpRender> = ComposeWidgetChildren()
+  override var modifier: dev.keliver.Modifier = dev.keliver.Modifier
+
+  override val value: CmpRender = { incoming ->
+    ComposeCard(modifier = incoming) {
+      (children as ComposeWidgetChildren).Render()
+    }
   }
 }

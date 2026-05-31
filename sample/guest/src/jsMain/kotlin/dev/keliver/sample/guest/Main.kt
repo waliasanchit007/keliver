@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
 import dev.keliver.sample.schema.compose.Button
+import dev.keliver.sample.schema.compose.Card
 import dev.keliver.sample.schema.compose.Column
 import dev.keliver.sample.schema.compose.Row
 import dev.keliver.sample.schema.compose.Spacer
@@ -71,11 +72,17 @@ private class SampleAppServiceImpl : SampleAppService {
         // onClick recomposes the label across the Zipline bridge.
         var count by remember { mutableStateOf(0) }
         Column {
-          Text(text = "Hello, Keliver!")
+          Text(text = "Hello, Keliver!", fontSize = 24, bold = true)
           Spacer(height = 12)
-          Row {
-            Text(text = "Built with ")
-            Text(text = "Compose-like widgets")
+          Card {
+            Column {
+              Text(text = "Inside a Card", bold = true)
+              Spacer(height = 4)
+              Row {
+                Text(text = "Built with ")
+                Text(text = "Compose-like widgets")
+              }
+            }
           }
           Spacer(height = 12)
           Button(text = "Tapped $count times", onClick = { count++ })
