@@ -353,28 +353,33 @@ KeliverSample: bindService name=zipline/host-1
 
 ## iOS hot reload (parity with Android case study D)
 
-iOS now mirrors the Android hot-reload wiring: `MainViewController.kt` re-emits
-the manifest URL on each guest rebuild via
+iOS mirrors the Android hot-reload wiring: `MainViewController.kt` re-emits the
+manifest URL on each guest rebuild via
 `flowOf(manifestUrl).withDevelopmentServerPush(ziplineHttpClient)`, backed by an
 `NSURLSessionWebSocketTask` implementation of
 `ZiplineHttpClient.openDevelopmentServerWebSocket` (the base class's default is an
-empty flow — no push — so the override is what makes iOS push work). It is gated
-on `IosDevConfig.HOT_RELOAD`, **default `false`**.
+empty flow — no push — so the override is what makes iOS push work). Gated on
+`IosDevConfig.HOT_RELOAD`, **default `true`** (it degrades to a single manifest
+emit when no dev server is reachable, so on-by-default is safe).
 
-Status: **compile-validated** — `./gradlew :host-compose:compileKotlinIosSimulatorArm64`
-is green, so the Kotlin/Native + NSURLSession cinterop is sound — but **not yet
-runtime-verified on a device/simulator**, hence the default-off flag. To test it:
+Status: **verified end-to-end.** `compileKotlinIosSimulatorArm64` is green
+(cinterop sound) and it was runtime-verified on an **iPhone 16 Pro simulator
+(iOS 26.3, Xcode 26.3)**: with the continuous dev server running, editing the
+guest `Text(...)` label and saving pushed the rebuilt bundle to the
+**already-running** app — the label updated live with no reinstall, and a second
+`codeLoadSuccess` fired in the `--console` stream. Repro:
 
 ```sh
-# Serve over the Zipline dev server — NOT `python3 -m http.server`. Only the
-# Zipline serve task exposes the WebSocket the push channel needs (see
-# Finding #1's correction); plain http.server has no push channel.
-./gradlew :guest:serveDevelopmentZipline   # ws + http on :8080
-```
+# 1. Serve over the Zipline dev server in continuous mode — NOT
+#    `python3 -m http.server`. Only the Zipline serve task exposes the WebSocket
+#    the push channel needs (see Finding #1's correction); --continuous rebuilds
+#    the bundle on each guest edit.
+./gradlew :guest:serveDevelopmentZipline --continuous   # ws + http on :8080
 
-Then set `IosDevConfig.HOT_RELOAD = true`, rebuild the framework, edit a guest
-screen, and confirm the running app reloads with no reinstall. If it works, flip
-the default to `true` for full Android/iOS dev-loop parity.
+# 2. Build + install + launch (steps above), then edit a guest screen
+#    (e.g. sample/guest/.../Main.kt's Text(...)) and save — the running app
+#    reloads with no reinstall.
+```
 
 ## iOS findings
 

@@ -82,13 +82,15 @@ public object IosDevConfig {
   public val manifestUrl: String = "http://localhost:8080/manifest.zipline.json"
 
   /**
-   * Parity with host-android `DevConfig.HOT_RELOAD`. Default **false**: the iOS
-   * `NSURLSessionWebSocketTask` push path (see
-   * [IosZiplineHttpClient.openDevelopmentServerWebSocket]) is implemented but
-   * not yet verified on a device/simulator. Flip to `true` to test hot reload,
-   * with the bundle served by `./gradlew :guest:serveDevelopmentZipline`.
+   * Parity with host-android `DevConfig.HOT_RELOAD`. **Verified end-to-end** on
+   * an iPhone 16 Pro simulator (iOS 26.3): a guest edit served by
+   * `./gradlew :guest:serveDevelopmentZipline --continuous` hot-reloads the
+   * running app via [IosZiplineHttpClient.openDevelopmentServerWebSocket] with
+   * no reinstall (a second `codeLoadSuccess` fires). Degrades gracefully to a
+   * single manifest emit when no dev server is reachable, so it is safe to
+   * leave on by default.
    */
-  public const val HOT_RELOAD: Boolean = false
+  public const val HOT_RELOAD: Boolean = true
 }
 
 // Ed25519 PUBLIC key matching the PRIVATE signing key in
