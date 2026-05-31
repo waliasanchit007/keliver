@@ -71,13 +71,14 @@ import org.jetbrains.kotlin.gradle.tasks.FatFrameworkTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-// Default Gradle coordinate group. Overridable via the `keliverGroupId`
-// Gradle property so a Maven Central release can publish under the
-// GitHub-vanity namespace (`io.github.waliasanchit007`) — which needs
-// no domain ownership — while existing GitHub Packages consumers keep
-// resolving `dev.keliver:*`. The Kotlin package names inside the
-// artifacts are always `dev.keliver.*` regardless; only the coordinate
-// string changes. See docs/MAVEN_CENTRAL_SETUP.md.
+// Default Gradle coordinate group. `dev.keliver` is the project's own
+// reverse-DNS namespace, verified on Maven Central via the keliver.dev
+// domain — so both GitHub Packages and Central publish under it directly,
+// no override needed. Because the Gradle plugin IDs are also `dev.keliver.*`,
+// their marker artifacts fall under this owned namespace too (which is what
+// lets the Gradle plugin publish to Central at all). The `keliverGroupId`
+// property remains a general escape hatch for forks that need different
+// coordinates. See docs/MAVEN_CENTRAL_SETUP.md.
 private const val KELIVER_GROUP_ID = "dev.keliver"
 
 private fun Project.keliverGroupId(): String =

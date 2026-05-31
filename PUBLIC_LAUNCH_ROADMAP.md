@@ -87,11 +87,11 @@ External adopters need a runnable reference. DevoStatus is private, so a
 
 GitHub Packages requires consumers to authenticate with a PAT. Maven Central
 is the standard for OSS. Once on Maven Central,
-`implementation("io.github.waliasanchit007:keliver-host:1.0.0-...")`
+`implementation("dev.keliver:keliver-host:1.0.0-...")`
 just works for anyone.
 
 **Namespace decision:** publishing under
-`io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — no domain
+`dev.keliver` (Sonatype's GitHub-vanity flow — no domain
 required). The previously-considered `dev.keliver` namespace would
 have required owning `keliver.dev` which is taken. Package names
 inside JARs stay `dev.keliver.*` — only the Maven coordinate's
@@ -100,7 +100,7 @@ groupId changes. Full walkthrough in
 
 - [ ] **USER ACTION**: Create a Sonatype Central account at
       [central.sonatype.com](https://central.sonatype.com) (sign in
-      with GitHub), claim the `io.github.waliasanchit007` namespace
+      with GitHub), claim the `dev.keliver` namespace
       via GitHub-vanity verification (~2 min, one throwaway public repo).
 - [ ] **USER ACTION**: Generate a GPG signing key and add to keyserver.
       Add the private key + passphrase as GitHub repo secrets.
@@ -110,7 +110,7 @@ groupId changes. Full walkthrough in
       match the publishing namespace.
 - [ ] Update `publish.yml` GHA workflow to target Maven Central in addition
       to (or instead of) GitHub Packages. Configure groupId
-      `io.github.waliasanchit007`; artifactIds stay as
+      `dev.keliver`; artifactIds stay as
       `keliver-host`, `keliver-guest`, etc.
 - [ ] First test release: cut `1.0.0-caliclan.4` to Maven Central, verify
       consumers can resolve without auth.

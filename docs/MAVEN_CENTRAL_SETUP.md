@@ -5,7 +5,7 @@ Tracks the user-action steps to move Keliver from **GitHub Packages
 Phase 5 of [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md).
 
 Once this is done, downstream consumers can drop
-`implementation("io.github.waliasanchit007:keliver-host:1.0.0-...")`
+`implementation("dev.keliver:keliver-host:1.0.0-...")`
 into a Gradle build with `mavenCentral()` configured and just have it
 work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
@@ -19,51 +19,52 @@ a single manual workflow run.
 
 ## Namespace decision
 
-The project is publishing under the **`io.github.waliasanchit007`**
-Sonatype namespace (GitHub-vanity flow — no domain required).
-Artifacts go from `dev.keliver:keliver-*` (GitHub Packages, current)
-to `io.github.waliasanchit007:keliver-*` (Maven Central, target).
+The project publishes under its own reverse-DNS namespace
+**`dev.keliver`**, backed by the **keliver.dev** domain. The *same*
+coordinate is used for both GitHub Packages and Maven Central — no
+vanity namespace and no per-channel groupId override.
 
-Package names inside the JARs stay `dev.keliver.*` — adopters' Kotlin
-`import` statements don't change. Only the Gradle coordinate string
-changes. (Sonatype enforces groupId against the namespace; it does
-not check internal package names.)
+Crucially, the Gradle group **and** the plugin IDs are both
+`dev.keliver.*`, so *every* artifact — including the Gradle plugin
+marker publications
+(`dev.keliver.schema:dev.keliver.schema.gradle.plugin`, etc.) — falls
+under this one owned namespace.
 
-If a `keliver.<tld>` domain is ever acquired later, the project can
-re-publish under the matching reverse-DNS namespace
-(e.g. `run.keliver`) and the GitHub-vanity coordinates become a
-legacy alias. Until then, `io.github.waliasanchit007` is the path
-forward.
+> **Why a real domain, not the GitHub-vanity namespace.** An earlier
+> plan used `io.github.waliasanchit007` (no domain required). It worked
+> for the library modules, but a deployment containing the Gradle plugin
+> markers would have been **rejected**: a marker's coordinate is fixed by
+> its plugin ID (`dev.keliver.*`), not by the publishing group, so it
+> could never sit under `io.github.*`. Owning `dev.keliver` via keliver.dev
+> removes that constraint — the whole project, plugin included, publishes
+> cleanly under one namespace.
 
 ---
 
-## Step 1 — Claim the `io.github.waliasanchit007` namespace at Sonatype Central
+## Step 1 — Claim + verify the `dev.keliver` namespace at Sonatype Central
 
-Modern Sonatype Central (2024+) flow — GitHub-based verification, no
-DNS, no Jira tickets.
+DNS-based verification (you own **keliver.dev**):
 
-1. Go to [central.sonatype.com](https://central.sonatype.com) and
-   sign in **with GitHub** (use the `waliasanchit007` account — the
-   namespace ownership is bound to the OAuth-linked GitHub account).
+1. Go to [central.sonatype.com](https://central.sonatype.com) and sign in.
 2. Open the **Namespaces** page, click **Add Namespace**, enter
-   `io.github.waliasanchit007`.
-3. Sonatype detects the `io.github.<user>` shape and offers
-   **GitHub verification**:
-   - Sonatype displays a verification code (a short string like
-     `abc12345`).
-   - Create a *public* empty GitHub repo at
-     `https://github.com/waliasanchit007/<verification-code>` (the
-     repo name IS the code).
-   - Back in Sonatype, click **Verify**. Sonatype checks that the
-     repo exists under your username; verification is immediate.
-   - Once verified, the namespace shows as "Verified" in the
-     Namespaces table. You can delete the verification repo
-     afterwards — Sonatype caches the result.
-4. You can now publish under `io.github.waliasanchit007:*`
-   coordinates.
+   `dev.keliver`.
+3. Sonatype shows a **verification key** (a token string). Add it as a
+   **TXT record** on the apex of `keliver.dev` at your DNS provider:
 
-**Lead time:** ~2 minutes end-to-end (vs ~1 day for DNS verification).
-The only manual step is creating one throwaway public repo.
+   ```
+   keliver.dev.   TXT   "<verification-key-from-sonatype>"
+   ```
+
+   Use a low TTL so it propagates quickly.
+4. Back in Sonatype, click **Verify**. Once DNS propagates (usually
+   minutes, up to ~1 hour), the namespace shows **Verified**. You can
+   delete the TXT record afterwards — Sonatype caches the result.
+5. You can now publish `dev.keliver:*` to Central.
+
+**Reusable from the earlier setup:** the GPG signing key and the four
+repo secrets (Steps 2-3) are **already provisioned** and need no change —
+a Sonatype user token works for any namespace the account owns, so it
+covers `dev.keliver` once verified.
 
 ## Step 2 — Generate a GPG signing key
 
@@ -119,20 +120,14 @@ add these four:
    deployment bundle and auto-releases) and `signAllPublications()`,
    gated behind the `RELEASE_SIGNING_ENABLED` system property
    (default `true`; CI's GitHub-Packages job turns it off).
-2. **Coordinates — configured, with an overridable groupId.** The
-   plugin sets `coordinates(project.group, project.name,
-   KELIVER_VERSION)`. `project.group` comes from a `keliverGroupId()`
-   helper that defaults to `dev.keliver` but is **overridable** with
-   `-PkeliverGroupId=io.github.waliasanchit007`. So:
-   - default builds + the GitHub Packages release keep `dev.keliver:*`
-     (existing private consumers unaffected),
-   - the Maven Central workflow passes the override to publish
-     `io.github.waliasanchit007:*`.
-
-   The override propagates to **inter-module dependencies** too — a
-   `dev.keliver` artifact's POM references sibling modules by the same
-   overridden group, so the Central artifacts are internally
-   consistent (verified by inspecting the generated POM).
+2. **Coordinates — `dev.keliver` everywhere.** The plugin sets
+   `coordinates(project.group, project.name, KELIVER_VERSION)` and
+   `project.group` defaults to `dev.keliver`. Both GitHub Packages and
+   Maven Central publish under that one group — no per-channel override.
+   (A `keliverGroupId` Gradle property still exists as a general escape
+   hatch for forks, but the release path doesn't use it.) Inter-module
+   dependency POMs reference siblings by the same `dev.keliver` group, so
+   the artifact set is internally consistent.
 3. **POM metadata — Keliver-correct.** Every POM already carries
    `name`, `description`, `url`
    (`github.com/waliasanchit007/keliver`), Apache-2.0 `licenses`,
@@ -153,8 +148,8 @@ A dedicated, **manual** workflow does the release:
 - It starts with a **preflight guard** that fails fast with a legible
   message if any of the four secrets from Step 3 are missing — so a
   premature run won't produce a confusing Gradle error.
-- It passes `-PkeliverGroupId=io.github.waliasanchit007` and maps the
-  four secrets onto the property names vanniktech expects
+- It publishes under the default `dev.keliver` group (no override) and
+  maps the four secrets onto the property names vanniktech expects
   (`mavenCentralUsername`/`Password`, `signingInMemoryKey`/`Password`).
 
 To release once Steps 1-3 are done:
@@ -183,8 +178,8 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
    `mavenCentral()` (which most projects already have).
 3. Update the version-catalog snippet:
    ```toml
-   keliver-host  = { module = "io.github.waliasanchit007:keliver-host",  version.ref = "keliver" }
-   keliver-guest = { module = "io.github.waliasanchit007:keliver-guest", version.ref = "keliver" }
+   keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
+   keliver-guest = { module = "dev.keliver:keliver-guest", version.ref = "keliver" }
    ```
 4. Update the README's "Status" banner from "private fork" to
    "public OSS — `1.0.0-caliclan.N` on Maven Central."
@@ -212,10 +207,8 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   separate Snapshots repository on Sonatype Central, not the main
   index. Adopters need `https://central.sonatype.com/repository/maven-snapshots/`
   in their repos block to pull snapshots. The plugin handles routing.
-- **Switching namespace later**: if you ever acquire a `keliver.<tld>`
-  domain and want to switch from `io.github.waliasanchit007` to
-  e.g. `run.keliver`, the path is: claim the new namespace at
-  Sonatype, publish a new version line under the new coordinates,
-  keep the GitHub-vanity coordinates published for at least one
-  major version as a redirect alias. Adopters update their version
-  catalog at their leisure.
+- **DNS TXT record removed too early**: leave the verification TXT
+  record on `keliver.dev` in place until Sonatype shows the namespace
+  **Verified**. Removing it before verification completes (DNS can take
+  up to ~1 hour to propagate) makes the check fail; just re-add it and
+  retry. Once Verified, Sonatype caches the result and the record can go.

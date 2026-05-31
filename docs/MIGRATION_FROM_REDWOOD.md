@@ -443,7 +443,7 @@ project has multiple host modules, do them one at a time.
 
 **Will the namespace change again when Maven Central goes live?**
 The Maven coordinate `groupId` will likely shift from `dev.keliver` to
-`io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — see
+`dev.keliver` (Sonatype's GitHub-vanity flow — see
 [`MAVEN_CENTRAL_SETUP.md`](./MAVEN_CENTRAL_SETUP.md)). The Kotlin
 package paths in the JARs stay `dev.keliver.*` — only your Gradle
 dep coordinate string changes.
