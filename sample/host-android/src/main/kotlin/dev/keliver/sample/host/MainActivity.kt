@@ -14,6 +14,7 @@ import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
+import app.cash.zipline.loader.withDevelopmentServerPush
 import okio.ByteString.Companion.decodeHex
 import dev.keliver.leaks.LeakDetector
 import dev.keliver.treehouse.EventListener
@@ -23,8 +24,10 @@ import dev.keliver.sample.shared.SampleAppService
 import dev.keliver.treehouse.MemoryStateStore
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.serialization.modules.EmptySerializersModule
 import okhttp3.OkHttpClient
 import androidx.lifecycle.lifecycleScope
@@ -56,12 +59,13 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     Log.d(TAG, "onCreate — manifest URL: ${DevConfig.MANIFEST_URL}")
 
-    val httpClient = OkHttpClient()
-    val manifestUrlFlow = MutableStateFlow(DevConfig.MANIFEST_URL)
+    // Hoisted so the same Zipline HTTP client backs both the bundle
+    // fetch and the hot-reload WebSocket below.
+    val ziplineHttpClient = OkHttpClient().asZiplineHttpClient()
 
     val factory = TreehouseAppFactory(
       context = applicationContext,
-      httpClient = httpClient.asZiplineHttpClient(),
+      httpClient = ziplineHttpClient,
       // Verify the guest manifest's Ed25519 signature before running any
       // guest code. The matching PRIVATE key signs the bundle in
       // guest/build.gradle.kts; the key NAME must match on both sides.
@@ -85,7 +89,20 @@ class MainActivity : ComponentActivity() {
 
     val spec = object : TreehouseApp.Spec<SampleAppService>() {
       override val name = "keliver-sample"
-      override val manifestUrl = manifestUrlFlow.asStateFlow()
+
+      // Hot reload: `withDevelopmentServerPush` opens a WebSocket to the
+      // Zipline dev server (`./gradlew :guest:serveDevelopmentZipline`)
+      // and re-emits the manifest URL each time the server rebuilds the
+      // bundle — Treehouse then reloads the guest live, no host reinstall.
+      // It re-emits only on a real code update (not on a timer), so there's
+      // no reload flicker. Falls back to a single emit when disabled (the
+      // plain `python3 -m http.server` flow has no WebSocket to push from).
+      override val manifestUrl: Flow<String> =
+        if (DevConfig.HOT_RELOAD) {
+          flowOf(DevConfig.MANIFEST_URL).withDevelopmentServerPush(ziplineHttpClient)
+        } else {
+          MutableStateFlow(DevConfig.MANIFEST_URL).asStateFlow()
+        }
       override val serializersModule = EmptySerializersModule()
 
       // Spec instance is rooted by the returned TreehouseApp, so any
@@ -190,4 +207,12 @@ object DevConfig {
   // For physical devices on the same Wi-Fi, replace with your laptop's
   // LAN IP.
   const val MANIFEST_URL: String = "http://10.0.2.2:8080/manifest.zipline.json"
+
+  // When true, the manifest flow subscribes to the Zipline dev server's
+  // WebSocket and hot-reloads the guest on every rebuild. Requires the
+  // bundle to be served by `./gradlew :guest:serveDevelopmentZipline`
+  // (which exposes that WebSocket); a plain `python3 -m http.server`
+  // has no push channel, so set this false for that flow. See
+  // sample/TESTING.md (hot-reload case study).
+  const val HOT_RELOAD: Boolean = true
 }

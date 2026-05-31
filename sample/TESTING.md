@@ -7,13 +7,16 @@ finding with the symptom, the root cause, and the fix, so the next
 person running the sample (or the next adopter copying it) doesn't
 hit the same dead ends.
 
-This file now holds **four** case studies:
+This file now holds these case studies:
 1. **Android** (Development bundle) — 5 bugs found + fixed.
 2. **iOS** (Development bundle) — 3 bugs found + fixed.
 3. *(implicit)* `@KeliverAppService` migration — see the Keliver
    repo's U12 entry; validated against DevoStatus.
 4. **Production bundle** — 0 bugs; validates the R8/DCE-minified
    ship path that the first two case studies didn't exercise.
+5. **Hot reload** — `serveDevelopmentZipline --continuous` +
+   `withDevelopmentServerPush`; guest edits reach the running app in
+   ~2 s, no reinstall.
 
 **Final state**: `./gradlew :host-android:installDebug` against a
 Pixel 9 emulator, with `python3 -m http.server 8080` serving
@@ -95,6 +98,15 @@ that adopters integrate with their own dev-server tooling.
 from `guest/build/zipline/Development/`. ServerDrivenUI runs its
 own bespoke `:dev-server` Ktor module for the same purpose; that's
 overkill for the sample.
+
+> **Correction (hot-reload case study, 2026-05-29).** This finding's
+> premise was wrong: `serveDevelopmentZipline` **does** exist in
+> Zipline 1.22.0 — `./gradlew :guest:tasks --all` lists it
+> ("Serves Zipline files"), alongside `generateZiplineManifestKeyPair{Ed25519,EcdsaP256}`.
+> The original audit overlooked it. `python3 -m http.server` is still
+> the zero-dependency option and stays the README default, **but**
+> the Zipline serve task is what enables WebSocket hot reload (python
+> has no push channel). See the hot-reload case study below.
 
 ### #2 — Sample silently failed because no `EventListener` was wired
 
@@ -656,3 +668,87 @@ a forged-signature or wrong-key path would fail at the same
 `ManifestVerifier` gate. iOS was compile-verified only this pass; it
 uses the identical multiplatform Zipline API as Android, which was
 runtime-validated.
+
+---
+
+# Hot-reload case study
+
+Server-driven UI's biggest dev-loop win is supposed to be **hot
+reload**: edit guest UI, see it on the device in seconds, no APK
+reinstall. This case study wires that up in the sample and confirms
+it works end to end on the emulator.
+
+**Final state**: with `./gradlew :guest:serveDevelopmentZipline
+--continuous` running, editing the guest's `Text(...)` and saving
+updates the running app in **~2 s**, no reinstall — verified by a
+second `codeLoadSuccess` in logcat and the new string on screen.
+
+## How it works (the three pieces)
+
+1. **Dev server with a push channel.** `serveDevelopmentZipline`
+   (Zipline 1.22.0) serves the bundle over HTTP **and** exposes a
+   WebSocket that signals "code updated." (Note: this contradicts
+   Finding #1 — the task exists; see the correction there.) A plain
+   `python3 -m http.server` can serve the bundle but has no push
+   channel, so it can't drive hot reload.
+2. **Continuous rebuild.** Running the serve task with `--continuous`
+   makes Gradle watch the guest source; on save it recompiles the
+   `.zipline` bundle in-process and the server pushes the update.
+3. **Client subscribes** (`host-android/MainActivity.kt`): the
+   `Spec.manifestUrl` flow is wrapped with
+   `flowOf(MANIFEST_URL).withDevelopmentServerPush(ziplineHttpClient)`.
+   `withDevelopmentServerPush` (from `app.cash.zipline.loader`) opens
+   the dev-server WebSocket and re-emits the URL each time the server
+   signals an update; Treehouse reloads the guest on each emit. It
+   re-emits **only** on a real update (not a timer), so there's no
+   reload flicker. Gated behind `DevConfig.HOT_RELOAD` (default
+   `true`); flip it off for the plain python-server flow.
+
+   Important: `withDevelopmentServerPush` needs the OkHttp-backed
+   `ZiplineHttpClient` (the same one already used for the bundle
+   fetch). The sample hoists it so both share one client.
+
+## Test loop + evidence
+
+```sh
+cd sample
+# 1. Serve + watch source in one process (this is the key — a
+#    separate `compileDevelopmentZipline` in another daemon does NOT
+#    trigger the push; the serve process must own the rebuild).
+./gradlew :guest:serveDevelopmentZipline --continuous &
+# 2. Install + launch the host (HOT_RELOAD defaults true).
+./gradlew :host-android:installDebug
+adb shell am start -n dev.keliver.sample/.host.MainActivity
+# 3. Edit guest/src/jsMain/.../Main.kt: change the Text(...) string, save.
+```
+
+Observed on a Pixel_9 emulator (API 37):
+
+| Step | Evidence |
+|---|---|
+| v1 loads | logcat `codeLoadSuccess modules=30` (#1); screen reads "Hello, Keliver!" |
+| edit `Text("Hello, Keliver!")` → `"… (hot reloaded)"`, save | `serveDevelopmentZipline --continuous` rebuilds + re-serves in ~2 s (served `.zipline` now contains the new string) |
+| **app updates live** | a **second** `codeLoadSuccess modules=30` (#2) ~18 s later, **no reinstall / restart**; screen now reads "Hello, Keliver! (hot reloaded)" |
+
+## Gotcha worth recording
+
+The first attempt failed: I ran a **non-`--continuous`** serve and
+recompiled in a **separate** `./gradlew` invocation. The served
+bundle updated, but the app never reloaded — the push fires only
+when the **serve process itself** rebuilds. The fix is the canonical
+single-process `serveDevelopmentZipline --continuous`. Documenting it
+because it's a non-obvious dead end.
+
+## Hot-reload adopter-impact summary
+
+| Check | Result |
+|---|---|
+| `serveDevelopmentZipline` exists + serves (corrects Finding #1) | ✅ |
+| `withDevelopmentServerPush` wired on the host | ✅ compiles + runs |
+| Live reload on guest edit (no reinstall) | ✅ runtime (Pixel_9, API 37) — 2nd `codeLoadSuccess` + new UI |
+| iOS hot reload | ⏳ not wired this pass — Android-only; iOS uses `NSURLSession`, and `withDevelopmentServerPush` needs an OkHttp-backed client, so iOS needs a different WS bridge. Documented follow-up |
+
+Net: hot reload works for the Android host with the stock Zipline
+dev server — the headline server-driven dev-loop benefit is real and
+validated. iOS hot reload is a scoped follow-up (different HTTP
+stack).
