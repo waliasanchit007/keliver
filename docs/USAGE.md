@@ -269,6 +269,47 @@ Consequences:
 - Compose Multiplatform **1.8.0** and AGP **8.12+** are known-good with this combo
   (verified building a real multi-module consumer APK against `0.1.0`).
 
+### Copy-paste version catalog
+
+This `gradle/libs.versions.toml` is the exact toolchain that built a real
+multi-module Compose Multiplatform consumer against keliver `0.1.0` end-to-end
+(Android APK + iOS framework). Paste it and trim what you don't use:
+
+```toml
+[versions]
+keliver = "0.1.0"
+kotlin = "2.2.0"            # keliver's metadata floor; see the Toolchain note
+ksp = "2.2.0-2.0.2"         # bump to a 2.3.10-line KSP for a warning-free log
+zipline = "1.26.0"          # NOTE: floats the build's Kotlin compiler to 2.3.10
+composeMultiplatform = "1.8.0"
+agp = "8.12.0"
+
+[libraries]
+# Single-facade artifacts — pull in the host/guest runtime + Zipline.
+keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
+keliver-guest = { module = "dev.keliver:keliver-guest", version.ref = "keliver" }
+# ...or pin the whole keliver-* set with the BOM (then drop the version.ref above):
+# keliver-bom = { module = "dev.keliver:keliver-bom", version.ref = "keliver" }
+
+[plugins]
+kotlinMultiplatform  = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinAndroid        = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+composeCompiler      = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+ksp                  = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+zipline              = { id = "app.cash.zipline", version.ref = "zipline" }
+androidApplication   = { id = "com.android.application", version.ref = "agp" }
+androidLibrary       = { id = "com.android.library", version.ref = "agp" }
+
+# Keliver schema + codegen Gradle plugins — only if you define your own schema.
+keliver-schema                   = { id = "dev.keliver.schema", version.ref = "keliver" }
+keliver-generator-compose        = { id = "dev.keliver.generator.compose", version.ref = "keliver" }
+keliver-generator-widget         = { id = "dev.keliver.generator.widget", version.ref = "keliver" }
+keliver-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host", version.ref = "keliver" }
+keliver-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "keliver" }
+keliver-generator-modifiers      = { id = "dev.keliver.generator.modifiers", version.ref = "keliver" }
+```
+
 ---
 
 ## Step 2 — Host boilerplate (Android)
