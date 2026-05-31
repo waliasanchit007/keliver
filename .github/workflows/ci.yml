@@ -75,17 +75,23 @@ jobs:
       #   - treehouse-host integration tests that load a live Zipline
       #     guest bundle via TreehouseTester (presenter-treehouse)
       #   - the guest-side jsTest
-      # Targeted test tasks (not the `test` aggregate) so we don't trip
-      # `kotlinStoreYarnLock` on the gated JS modules.
+      # Targeted test tasks (not the `test` aggregate). The gated test-app JS
+      # modules resolve a SUPERSET of npm deps (presenter-treehouse's dev server
+      # pulls express/body-parser/etc.), so the committed kotlin-js-store/yarn.lock
+      # — which matches, and is strictly checked by, the normal build above —
+      # cannot also match this config. Regenerate the lock for THIS configuration
+      # first (kotlinUpgradeYarnLock); the normal build keeps its strict
+      # kotlinStoreYarnLock check, so real dependency drift is still caught there.
       - name: Test (recovered test-app fixture)
-        run: >
-          ./gradlew
-          -PkeliverWithTestApp
-          :keliver-protocol-host:jvmTest
-          :keliver-protocol-guest:jvmTest
-          :keliver-testing:jvmTest
-          :keliver-compose:jvmTest
-          :keliver-tooling-codegen:test
-          :keliver-treehouse-host:jvmTest
-          :keliver-treehouse-guest:jsTest
-          -DRELEASE_SIGNING_ENABLED=false
+        run: |
+          ./gradlew -PkeliverWithTestApp kotlinUpgradeYarnLock -DRELEASE_SIGNING_ENABLED=false
+          ./gradlew \
+            -PkeliverWithTestApp \
+            :keliver-protocol-host:jvmTest \
+            :keliver-protocol-guest:jvmTest \
+            :keliver-testing:jvmTest \
+            :keliver-compose:jvmTest \
+            :keliver-tooling-codegen:test \
+            :keliver-treehouse-host:jvmTest \
+            :keliver-treehouse-guest:jsTest \
+            -DRELEASE_SIGNING_ENABLED=false
