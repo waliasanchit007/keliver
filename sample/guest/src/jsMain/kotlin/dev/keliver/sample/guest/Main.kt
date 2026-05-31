@@ -5,8 +5,16 @@
 package dev.keliver.sample.guest
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
-import dev.keliver.sample.schema.compose.Box
+import dev.keliver.sample.schema.compose.Button
+import dev.keliver.sample.schema.compose.Card
+import dev.keliver.sample.schema.compose.Column
+import dev.keliver.sample.schema.compose.Row
+import dev.keliver.sample.schema.compose.Spacer
 import dev.keliver.sample.schema.compose.Text
 import dev.keliver.sample.schema.protocol.guest.SampleSchemaProtocolWidgetSystemFactory
 import dev.keliver.sample.shared.SampleAppService
@@ -59,8 +67,25 @@ private class SampleAppServiceImpl : SampleAppService {
     val ui = object : TreehouseUi {
       @Composable
       override fun Show() {
-        Box {
-          Text(text = "Hello, Keliver!")
+        // Reads almost exactly like Compose: a Column of widgets, local
+        // state via remember { mutableStateOf }, and a Button whose
+        // onClick recomposes the label across the Zipline bridge.
+        var count by remember { mutableStateOf(0) }
+        Column {
+          Text(text = "Hello, Keliver!", fontSize = 24, bold = true)
+          Spacer(height = 12)
+          Card {
+            Column {
+              Text(text = "Inside a Card", bold = true)
+              Spacer(height = 4)
+              Row {
+                Text(text = "Built with ")
+                Text(text = "Compose-like widgets")
+              }
+            }
+          }
+          Spacer(height = 12)
+          Button(text = "Tapped $count times", onClick = { count++ })
         }
       }
     }

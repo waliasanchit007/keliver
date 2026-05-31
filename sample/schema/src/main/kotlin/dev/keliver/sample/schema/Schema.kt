@@ -10,33 +10,54 @@ import dev.keliver.schema.Schema
 import dev.keliver.schema.Widget
 
 /**
- * Minimal schema for the sample app — exactly two widgets:
+ * A small, Compose-like widget set for the sample app. The goal is that
+ * writing a guest screen reads almost exactly like writing Compose:
  *
- *  - `Box`: a single-child container. Children slot 1 receives one
- *    child widget (the guest composes one `Text` into it).
- *  - `Text`: a leaf widget with a single `text` property.
+ * ```kotlin
+ * Column {
+ *   Text(text = "Hello, Keliver!")
+ *   Spacer(height = 16)
+ *   Row {
+ *     Text(text = "Left"); Text(text = "Right")
+ *   }
+ *   Button(text = "Tap", onClick = { count++ })
+ * }
+ * ```
+ *
+ * Widgets:
+ *
+ *  - `Box`    : single-slot container (children stack on the z-axis).
+ *  - `Column` : vertical layout (children top-to-bottom).
+ *  - `Row`    : horizontal layout (children left-to-right).
+ *  - `Text`   : a leaf with a `text` property.
+ *  - `Button` : a clickable leaf with a `text` label + an `onClick`
+ *               event routed back to the guest over Zipline.
+ *  - `Spacer` : a fixed vertical gap of `height` dp.
  *
  * The schema codegen plugins consume this declaration and produce:
  *
- *  - `:shared-widget`  → host- and guest-side widget interfaces
- *  - `:shared-modifier` → layout modifier types (empty here — we
- *    declare no `@Modifier` types)
- *  - `:shared-protocol-host` → host-side protocol adapters that
- *    decode Redwood protocol messages into widget mutations
- *  - `:shared-protocol-guest` → guest-side widget system factory
- *    that the guest uses to compose the tree
+ *  - `:shared-widget`        → host- and guest-side widget interfaces
+ *  - `:shared-modifier`      → layout modifier types (empty here)
+ *  - `:shared-protocol-host` → host-side protocol adapters
+ *  - `:shared-protocol-guest`→ guest-side widget system factory
  *
- * Widget IDs are wire-stable — once assigned and shipped, never
- * renumbered. Tag 1 / tag 2 are forever Box / Text in this sample.
+ * For each widget, the guest gets a generated `@Composable fun Foo(...)`
+ * and the host implements `Foo<R>` in `CmpWidgetFactory`.
  *
- * To add a new widget, append `Foo::class` to `members` AND assign
- * the next free tag in `@Widget(...)`. To remove one, leave the slot
- * empty (don't reuse the tag) and bump the major version.
+ * Widget IDs (the `@Widget(n)` tag) are wire-stable — once shipped,
+ * never renumber. To add a widget, append `Foo::class` to `members`
+ * AND give it the next free tag. To remove one, retire the tag (never
+ * reuse it) and bump the major version.
  */
 @Schema(
   members = [
     Box::class,
     Text::class,
+    Column::class,
+    Row::class,
+    Button::class,
+    Spacer::class,
+    Card::class,
   ],
 )
 public interface SampleSchema
@@ -49,4 +70,43 @@ public data class Box(
 @Widget(2)
 public data class Text(
   @Property(1) val text: String,
+  /** Font size in sp (Compose `fontSize`). */
+  @Property(2) val fontSize: Int = 14,
+  /** Bold weight when true (Compose `fontWeight = Bold`). */
+  @Property(3) val bold: Boolean = false,
+)
+
+/** Vertical layout — children stack top-to-bottom (Compose `Column`). */
+@Widget(3)
+public data class Column(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Horizontal layout — children sit left-to-right (Compose `Row`). */
+@Widget(4)
+public data class Row(
+  @Children(1) val children: () -> Unit,
+)
+
+/**
+ * A clickable button with a text label. [onClick] is an event: the host
+ * invokes it on tap and Keliver routes the call back over the Zipline
+ * bridge to the guest's lambda. Nullable so the guest may omit it.
+ */
+@Widget(5)
+public data class Button(
+  @Property(1) val text: String,
+  @Property(2) val onClick: (() -> Unit)?,
+)
+
+/** A fixed vertical gap of [height] dp (Compose `Spacer`). */
+@Widget(6)
+public data class Spacer(
+  @Property(1) val height: Int,
+)
+
+/** A Material card container — children render inside, with elevation. */
+@Widget(7)
+public data class Card(
+  @Children(1) val children: () -> Unit,
 )
