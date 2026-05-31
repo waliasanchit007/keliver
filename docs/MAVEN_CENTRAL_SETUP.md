@@ -1,65 +1,70 @@
 # Maven Central setup checklist (Phase 5)
 
-Tracks the user-action steps to move Konduit from **GitHub Packages
+Tracks the user-action steps to move Keliver from **GitHub Packages
 (private, requires PAT)** to **Maven Central (public, no auth)**.
 Phase 5 of [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md).
 
 Once this is done, downstream consumers can drop
-`implementation("io.github.waliasanchit007:konduit-host:1.0.0-...")`
+`implementation("dev.keliver:keliver-host:1.0.0-...")`
 into a Gradle build with `mavenCentral()` configured and just have it
 work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
-This is gated on **two manual steps the user has to do**: claim the
-namespace at Sonatype, and generate a GPG signing key. The rest can
-be wired up by the implementation team once those two artifacts exist.
+**The in-repo build wiring is done** (vanniktech plugin, Central
+coordinates with an overridable groupId, Keliver-correct POMs, gated
+signing, and a manual `publish-maven-central.yml` workflow — see
+Steps 4 / 4b). What remains is **three external steps only the
+maintainer can do**: claim the namespace at Sonatype, generate a GPG
+signing key, and add the four repo secrets. After that, releasing is
+a single manual workflow run.
 
 ## Namespace decision
 
-The project is publishing under the **`io.github.waliasanchit007`**
-Sonatype namespace (GitHub-vanity flow — no domain required).
-Artifacts go from `dev.konduit:konduit-*` (GitHub Packages, current)
-to `io.github.waliasanchit007:konduit-*` (Maven Central, target).
+The project publishes under its own reverse-DNS namespace
+**`dev.keliver`**, backed by the **keliver.dev** domain. The *same*
+coordinate is used for both GitHub Packages and Maven Central — no
+vanity namespace and no per-channel groupId override.
 
-Package names inside the JARs stay `dev.konduit.*` — adopters' Kotlin
-`import` statements don't change. Only the Gradle coordinate string
-changes. (Sonatype enforces groupId against the namespace; it does
-not check internal package names.)
+Crucially, the Gradle group **and** the plugin IDs are both
+`dev.keliver.*`, so *every* artifact — including the Gradle plugin
+marker publications
+(`dev.keliver.schema:dev.keliver.schema.gradle.plugin`, etc.) — falls
+under this one owned namespace.
 
-If a `konduit.<tld>` domain is ever acquired later, the project can
-re-publish under the matching reverse-DNS namespace
-(e.g. `run.konduit`) and the GitHub-vanity coordinates become a
-legacy alias. Until then, `io.github.waliasanchit007` is the path
-forward.
+> **Why a real domain, not the GitHub-vanity namespace.** An earlier
+> plan used `io.github.waliasanchit007` (no domain required). It worked
+> for the library modules, but a deployment containing the Gradle plugin
+> markers would have been **rejected**: a marker's coordinate is fixed by
+> its plugin ID (`dev.keliver.*`), not by the publishing group, so it
+> could never sit under `io.github.*`. Owning `dev.keliver` via keliver.dev
+> removes that constraint — the whole project, plugin included, publishes
+> cleanly under one namespace.
 
 ---
 
-## Step 1 — Claim the `io.github.waliasanchit007` namespace at Sonatype Central
+## Step 1 — Claim + verify the `dev.keliver` namespace at Sonatype Central
 
-Modern Sonatype Central (2024+) flow — GitHub-based verification, no
-DNS, no Jira tickets.
+DNS-based verification (you own **keliver.dev**):
 
-1. Go to [central.sonatype.com](https://central.sonatype.com) and
-   sign in **with GitHub** (use the `waliasanchit007` account — the
-   namespace ownership is bound to the OAuth-linked GitHub account).
+1. Go to [central.sonatype.com](https://central.sonatype.com) and sign in.
 2. Open the **Namespaces** page, click **Add Namespace**, enter
-   `io.github.waliasanchit007`.
-3. Sonatype detects the `io.github.<user>` shape and offers
-   **GitHub verification**:
-   - Sonatype displays a verification code (a short string like
-     `abc12345`).
-   - Create a *public* empty GitHub repo at
-     `https://github.com/waliasanchit007/<verification-code>` (the
-     repo name IS the code).
-   - Back in Sonatype, click **Verify**. Sonatype checks that the
-     repo exists under your username; verification is immediate.
-   - Once verified, the namespace shows as "Verified" in the
-     Namespaces table. You can delete the verification repo
-     afterwards — Sonatype caches the result.
-4. You can now publish under `io.github.waliasanchit007:*`
-   coordinates.
+   `dev.keliver`.
+3. Sonatype shows a **verification key** (a token string). Add it as a
+   **TXT record** on the apex of `keliver.dev` at your DNS provider:
 
-**Lead time:** ~2 minutes end-to-end (vs ~1 day for DNS verification).
-The only manual step is creating one throwaway public repo.
+   ```
+   keliver.dev.   TXT   "<verification-key-from-sonatype>"
+   ```
+
+   Use a low TTL so it propagates quickly.
+4. Back in Sonatype, click **Verify**. Once DNS propagates (usually
+   minutes, up to ~1 hour), the namespace shows **Verified**. You can
+   delete the TXT record afterwards — Sonatype caches the result.
+5. You can now publish `dev.keliver:*` to Central.
+
+**Reusable from the earlier setup:** the GPG signing key and the four
+repo secrets (Steps 2-3) are **already provisioned** and need no change —
+a Sonatype user token works for any namespace the account owns, so it
+covers `dev.keliver` once verified.
 
 ## Step 2 — Generate a GPG signing key
 
@@ -84,53 +89,84 @@ gpg --keyserver keyserver.ubuntu.com --send-keys XXXXXXXXXXXXXXXX
 gpg --keyserver keys.openpgp.org    --send-keys XXXXXXXXXXXXXXXX
 
 # Export the private key (for CI). KEEP THIS FILE SAFE — it's a secret.
-gpg --export-secret-keys --armor XXXXXXXXXXXXXXXX > konduit-signing.key
+gpg --export-secret-keys --armor XXXXXXXXXXXXXXXX > keliver-signing.key
 ```
 
 ## Step 3 — Configure GitHub repo secrets
 
-In `https://github.com/waliasanchit007/konduit/settings/secrets/actions`,
+In `https://github.com/waliasanchit007/keliver/settings/secrets/actions`,
 add these four:
 
 | Secret name | Value |
 |---|---|
 | `SONATYPE_USERNAME` | Sonatype Central user-token username (generate in the portal — recommended over the raw login) |
 | `SONATYPE_PASSWORD` | Sonatype Central user-token password |
-| `SIGNING_KEY` | Full contents of `konduit-signing.key` (the armored private key from Step 2) |
+| `SIGNING_KEY` | Full contents of `keliver-signing.key` (the armored private key from Step 2) |
 | `SIGNING_PASSWORD` | The passphrase from Step 2 |
 
-## Step 4 — Update `publish.yml` (this is the implementation work)
+## Step 4 — Build wiring (DONE — no action needed)
 
-Currently `.github/workflows/publish.yml` targets GitHub Packages.
-The migration:
+> **Status:** the in-repo build wiring below is already complete on
+> `main`. This section is now a description of what exists, not a
+> to-do list. The only things still pending are the three external
+> steps above (namespace, GPG key, secrets) and then running the
+> publish workflow (Step 4b).
 
-1. Add the
+1. **vanniktech plugin — applied.** `build-support`'s
+   `RedwoodBuildPlugin.kt` applies
    [`com.vanniktech.maven.publish`](https://github.com/vanniktech/gradle-maven-publish-plugin)
-   plugin to the build-support module (it handles Sonatype Central
-   uploads + signing in one place). Or alternatively wire
-   `signing` + `publishing` blocks directly per module.
-2. Configure publishing coordinates:
-   - `groupId = "io.github.waliasanchit007"`
-   - `artifactId = <module name>` (unchanged — `konduit-host`,
-     `konduit-guest`, etc.)
-   - version from `RedwoodBuildPlugin.KONDUIT_VERSION`
-3. Add POM metadata: `name`, `description`, `url`, `licenses`,
-   `developers`, `scm`. Maven Central rejects POMs missing any of
-   these. **Currently the POMs still inherit Cash App Redwood
-   metadata** (`<url>cashapp/redwood</url>`, `<developer>cashapp`,
-   etc.) — this MUST be replaced with Konduit / waliasanchit007
-   values before the first Maven Central release.
-4. Update `publish.yml` to pass `SIGNING_KEY` /
-   `SIGNING_PASSWORD` / `SONATYPE_USERNAME` /
-   `SONATYPE_PASSWORD` as Gradle properties.
-5. **Option:** keep the existing GitHub Packages publish step too —
-   double-publishing means existing private consumers of
-   `dev.konduit:*` keep working unchanged while new public consumers
-   pick up `io.github.waliasanchit007:*`. Drop the GitHub Packages
-   step when the migration is complete.
-6. First test release: cut `1.0.0-caliclan.4` and watch the GHA run.
-   Failures usually surface as POM validation errors at the
-   Sonatype side — they're legible.
+   (`0.34.0`) to every published module. It calls
+   `publishToMavenCentral(automaticRelease = true)` (uploads a single
+   deployment bundle and auto-releases) and `signAllPublications()`,
+   gated behind the `RELEASE_SIGNING_ENABLED` system property
+   (default `true`; CI's GitHub-Packages job turns it off).
+2. **Coordinates — `dev.keliver` everywhere.** The plugin sets
+   `coordinates(project.group, project.name, KELIVER_VERSION)` and
+   `project.group` defaults to `dev.keliver`. Both GitHub Packages and
+   Maven Central publish under that one group — no per-channel override.
+   (A `keliverGroupId` Gradle property still exists as a general escape
+   hatch for forks, but the release path doesn't use it.) Inter-module
+   dependency POMs reference siblings by the same `dev.keliver` group, so
+   the artifact set is internally consistent.
+3. **POM metadata — Keliver-correct.** Every POM already carries
+   `name`, `description`, `url`
+   (`github.com/waliasanchit007/keliver`), Apache-2.0 `licenses`,
+   `developers` (`waliasanchit007`), and `scm` — the full set Maven
+   Central requires. (The old Cash App Redwood metadata was replaced
+   during the fork; an earlier draft of this doc warned otherwise —
+   that warning is obsolete.)
+
+## Step 4b — Run the publish workflow (after Steps 1-3)
+
+A dedicated, **manual** workflow does the release:
+`.github/workflows/publish-maven-central.yml`.
+
+- It is `workflow_dispatch`-only and **separate** from `publish.yml`
+  (which keeps pushing `dev.keliver:*` to GitHub Packages on `v*`
+  tags). The two channels co-exist; nothing about the private flow is
+  blocked on Central credentials.
+- It starts with a **preflight guard** that fails fast with a legible
+  message if any of the four secrets from Step 3 are missing — so a
+  premature run won't produce a confusing Gradle error.
+- It publishes under the default `dev.keliver` group (no override) and
+  maps the four secrets onto the property names vanniktech expects
+  (`mavenCentralUsername`/`Password`, `signingInMemoryKey`/`Password`).
+
+To release once Steps 1-3 are done:
+
+1. Bump `KELIVER_VERSION` in `RedwoodBuildPlugin.kt` if needed and tag.
+2. GitHub → Actions → **Publish to Maven Central** → **Run workflow**,
+   passing the tag (or a commit ref) as the input.
+3. Watch the run. POM/signature failures surface at the Sonatype side
+   and are legible. First release of a new namespace can take a few
+   minutes to index.
+
+> **Caveat:** the workflow's wiring is verified locally only against
+> `publishToMavenLocal` (coordinates, POM, signing-gate all correct).
+> It has **not** been run end-to-end against the real Sonatype Central
+> endpoint — that needs the credentials from Steps 1-3. Treat the
+> first real run as the integration test, and expect to iterate on
+> Sonatype-side validation messages.
 
 ## Step 5 — Update USAGE.md adoption instructions
 
@@ -142,8 +178,8 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
    `mavenCentral()` (which most projects already have).
 3. Update the version-catalog snippet:
    ```toml
-   konduit-host  = { module = "io.github.waliasanchit007:konduit-host",  version.ref = "konduit" }
-   konduit-guest = { module = "io.github.waliasanchit007:konduit-guest", version.ref = "konduit" }
+   keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
+   keliver-guest = { module = "dev.keliver:keliver-guest", version.ref = "keliver" }
    ```
 4. Update the README's "Status" banner from "private fork" to
    "public OSS — `1.0.0-caliclan.N` on Maven Central."
@@ -159,9 +195,10 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   Belt-and-braces it to at least two.
 - **Missing POM metadata**: every artifact's POM must have name +
   description + url + license + developer + scm. The `vanniktech`
-  plugin makes this easy; manual `publishing {}` blocks are
-  error-prone. The current POMs inheriting Cash App Redwood metadata
-  will be rejected — Step 4 #3 is mandatory, not optional.
+  plugin handles this and the POMs already carry the full Keliver set
+  (see Step 4 #3), so this should be a non-issue — but it's the most
+  common Central rejection, so eyeball the first generated POM if a
+  run fails validation.
 - **First release shows up but is "staged"**: Sonatype Central's
   default flow is **automatic publishing** now (no manual "release"
   button), but if you opted into the old flow you may need to click
@@ -170,10 +207,8 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   separate Snapshots repository on Sonatype Central, not the main
   index. Adopters need `https://central.sonatype.com/repository/maven-snapshots/`
   in their repos block to pull snapshots. The plugin handles routing.
-- **Switching namespace later**: if you ever acquire a `konduit.<tld>`
-  domain and want to switch from `io.github.waliasanchit007` to
-  e.g. `run.konduit`, the path is: claim the new namespace at
-  Sonatype, publish a new version line under the new coordinates,
-  keep the GitHub-vanity coordinates published for at least one
-  major version as a redirect alias. Adopters update their version
-  catalog at their leisure.
+- **DNS TXT record removed too early**: leave the verification TXT
+  record on `keliver.dev` in place until Sonatype shows the namespace
+  **Verified**. Removing it before verification completes (DNS can take
+  up to ~1 hour to propagate) makes the check fail; just re-add it and
+  retry. Once Verified, Sonatype caches the result and the record can go.

@@ -1,0 +1,15 @@
+[dev.keliver.storage.HostStorage]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun get(kotlin.String): kotlin.String
+  "60Uxjr31",
+
+  # suspend fun keys(kotlin.String): kotlin.collections.List<kotlin.String>
+  "gaEpoXLt",
+
+  # suspend fun set(kotlin.String, kotlin.String): kotlin.Unit
+  "KGRizk0u",
+]

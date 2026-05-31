@@ -1,0 +1,14 @@
+// Klib ABI Dump
+// Targets: [js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-treehouse-guest-compose>
+abstract interface dev.keliver.treehouse/TreehouseUi { // dev.keliver.treehouse/TreehouseUi|null[0]
+    abstract fun Show(androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.treehouse/TreehouseUi.Show|Show(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun close() // dev.keliver.treehouse/TreehouseUi.close|close(){}[0]
+}
+
+final fun (dev.keliver.compose/RedwoodComposition).dev.keliver.treehouse/bind(dev.keliver.treehouse/TreehouseUi) // dev.keliver.treehouse/bind|bind@dev.keliver.compose.RedwoodComposition(dev.keliver.treehouse.TreehouseUi){}[0]

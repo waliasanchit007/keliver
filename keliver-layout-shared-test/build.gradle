@@ -1,0 +1,34 @@
+import static dev.keliver.buildsupport.TargetGroup.ToolkitAllWithoutAndroid
+
+redwoodBuild {
+  targets(ToolkitAllWithoutAndroid)
+  sharedSnapshotTests()
+}
+
+apply plugin: 'app.cash.burst'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverLayoutApi
+        api projects.keliverLayoutModifiers
+        api projects.keliverLayoutWidget
+        api projects.keliverRuntime
+        api projects.keliverSnapshotTesting
+        api projects.keliverWidget
+        api projects.keliverYoga
+        api libs.kotlin.test
+        implementation libs.burst
+      }
+    }
+    jvmMain {
+      dependencies {
+        // The kotlin.test library provides JVM variants for multiple testing frameworks. When used
+        // as a test dependency this selection is transparent. But since we are publishing a library
+        // we need to select one ourselves at compilation time.
+        api libs.kotlin.test.junit
+      }
+    }
+  }
+}

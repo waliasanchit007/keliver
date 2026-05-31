@@ -3,8 +3,8 @@
 // builds do not require a TEAM_ID.
 TEAM_ID=
 
-PRODUCT_NAME=KonduitSample
-PRODUCT_BUNDLE_IDENTIFIER=dev.konduit.sample.KonduitSample$(TEAM_ID)
+PRODUCT_NAME=KeliverSample
+PRODUCT_BUNDLE_IDENTIFIER=dev.keliver.sample.KeliverSample$(TEAM_ID)
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0

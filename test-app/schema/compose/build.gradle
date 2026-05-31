@@ -1,10 +1,10 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
 }
 
-apply plugin: 'dev.konduit.generator.compose'
+apply plugin: 'dev.keliver.generator.compose'
 
 kotlin {
   // Ensure our codegen correctly works in explicit API mode.
@@ -13,9 +13,9 @@ kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.konduitUiBasicCompose
-        api projects.konduitLayoutCompose
-        api projects.konduitLazylayoutCompose
+        api projects.keliverUiBasicCompose
+        api projects.keliverLayoutCompose
+        api projects.keliverLazylayoutCompose
         api projects.testApp.schema.widget
         api projects.testApp.schema.modifiers
       }

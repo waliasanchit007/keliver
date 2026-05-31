@@ -8,12 +8,12 @@
  */
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
-  alias(libs.plugins.konduit.generator.protocol.guest)
+  alias(libs.plugins.keliver.generator.protocol.guest)
 }
 
 redwoodSchema {
   source = project(":schema")
-  type = "dev.konduit.sample.schema.SampleSchema"
+  type = "dev.keliver.sample.schema.SampleSchema"
 }
 
 kotlin {
@@ -25,7 +25,7 @@ kotlin {
     val commonMain by getting {
       dependencies {
         implementation(project(":shared-widget"))
-        implementation(libs.konduit.protocol.guest)
+        implementation(libs.keliver.protocol.guest)
       }
     }
   }

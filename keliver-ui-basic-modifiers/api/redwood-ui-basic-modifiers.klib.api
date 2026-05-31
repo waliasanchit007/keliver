@@ -1,0 +1,9 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-ui-basic-modifiers>
+abstract interface dev.keliver.ui.basic.modifier/Reuse : dev.keliver/Modifier.UnscopedElement // dev.keliver.ui.basic.modifier/Reuse|null[0]

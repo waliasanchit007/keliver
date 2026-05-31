@@ -1,0 +1,55 @@
+public final class dev/keliver/protocol/guest/DefaultGuestProtocolAdapter : dev/keliver/protocol/guest/GuestProtocolAdapter {
+	public static final field $stable I
+	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ljava/lang/String;Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun appendAdd-EjU3nZ4 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
+	public fun appendCreate-V8dW06k (II)V
+	public fun appendModifierChange-AWy5b-E (ILdev/keliver/Modifier;)V
+	public fun appendMove-uYEeHbw (IIIII)V
+	public fun appendPropertyChange-FajnOLE (IIILkotlinx/serialization/KSerializer;Ljava/lang/Object;)V
+	public fun appendPropertyChange-niTPXWg (IIIZ)V
+	public fun appendPropertyChange-sdyxu9c (IIII)V
+	public fun appendRemove-EjU3nZ4 (IIILdev/keliver/protocol/guest/ProtocolWidget;)V
+	public fun emitChanges ()V
+	public fun getJson ()Lkotlinx/serialization/json/Json;
+	public fun getRoot ()Ldev/keliver/widget/Widget$Children;
+	public fun getWidgetSystem ()Ldev/keliver/widget/WidgetSystem;
+	public fun initChangesSink (Ldev/keliver/protocol/ChangesSink;)V
+	public fun nextId-dcWScHk ()I
+	public fun sendEvent (Ldev/keliver/protocol/Event;)V
+	public final fun takeChanges ()Ljava/util/List;
+}
+
+public abstract class dev/keliver/protocol/guest/GuestProtocolAdapter : dev/keliver/protocol/EventSink {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public abstract fun emitChanges ()V
+	protected final fun getHostVersion-NUkljko ()Ljava/lang/String;
+	public abstract fun getRoot ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun getWidgetSystem ()Ldev/keliver/widget/WidgetSystem;
+	public abstract fun initChangesSink (Ldev/keliver/protocol/ChangesSink;)V
+}
+
+public abstract interface class dev/keliver/protocol/guest/ProtocolMismatchHandler {
+	public static final field Companion Ldev/keliver/protocol/guest/ProtocolMismatchHandler$Companion;
+	public static final field Throwing Ldev/keliver/protocol/guest/ProtocolMismatchHandler;
+	public abstract fun onUnknownEvent-prRJ51g (II)V
+	public abstract fun onUnknownEventNode-RzICAS0 (II)V
+}
+
+public final class dev/keliver/protocol/guest/ProtocolMismatchHandler$Companion {
+}
+
+public final class dev/keliver/protocol/guest/ProtocolRedwoodCompositionKt {
+	public static final fun ProtocolRedwoodComposition-9-Eitbk (Lkotlinx/coroutines/CoroutineScope;Ldev/keliver/protocol/guest/GuestProtocolAdapter;ILdev/keliver/ui/OnBackPressedDispatcher;Landroidx/compose/runtime/saveable/SaveableStateRegistry;Lkotlinx/coroutines/flow/StateFlow;)Ldev/keliver/compose/RedwoodComposition;
+}
+
+public abstract interface class dev/keliver/protocol/guest/ProtocolWidgetSystemFactory {
+	public abstract fun create (Ldev/keliver/protocol/guest/GuestProtocolAdapter;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;)Ldev/keliver/widget/WidgetSystem;
+	public static synthetic fun create$default (Ldev/keliver/protocol/guest/ProtocolWidgetSystemFactory;Ldev/keliver/protocol/guest/GuestProtocolAdapter;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;ILjava/lang/Object;)Ldev/keliver/widget/WidgetSystem;
+}
+
+public final class dev/keliver/protocol/guest/VersionKt {
+	public static final fun getGuestRedwoodVersion ()Ljava/lang/String;
+}
+

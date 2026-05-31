@@ -1,21 +1,21 @@
-# Known Konduit / Zipline bugs
+# Known Keliver / Zipline bugs
 
 > This document was originally written in the
 > [ServerDrivenUI](https://github.com/waliasanchit007/ServerDrivenUI)
-> reference integration. It now lives in the Konduit fork so docs
+> reference integration. It now lives in the Keliver fork so docs
 > travel with the artifact. Cross-references to "the integration" or
 > "DevoStatus" point back to that reference repo and the production
 > app it drives.
 
 Surfaced by the DevoStatus integration (real Android Compose app
-consuming Konduit as a Maven library + git submodule during early
+consuming Keliver as a Maven library + git submodule during early
 adoption). Each entry lists symptom, reproduction, current workaround,
 and what an upstream fix would look like.
 
 Entries are split into two sections:
 
-- **Upstream-only** — the fix has to land in the Konduit fork
-  (`waliasanchit007/konduit`, this repo) or in Zipline itself. The
+- **Upstream-only** — the fix has to land in the Keliver fork
+  (`waliasanchit007/keliver`, this repo) or in Zipline itself. The
   integration ships a workaround; the doc keeps a record so future
   readers understand *why* the workaround is there.
 - **Actionable in the integration** — anything that could be fixed
@@ -24,10 +24,10 @@ Entries are split into two sections:
   `docs/CHANGELOG.md`.
 
 Resolved bugs live in two places:
-- **Konduit-side fixes** — this fork's [`CHANGELOG.md`](../CHANGELOG.md)
+- **Keliver-side fixes** — this fork's [`CHANGELOG.md`](../CHANGELOG.md)
   (release notes for `1.0.0-caliclan.N`).
 - **Integration-side fixes** — ServerDrivenUI's
-  [`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/konduit-main/docs/CHANGELOG.md).
+  [`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/keliver-main/docs/CHANGELOG.md).
 
 > Treat this file as the punch list. When a bug becomes fixed, move it
 > to `CHANGELOG.md` with the fixing commit.
@@ -36,8 +36,8 @@ Resolved bugs live in two places:
 
 ## Upstream-only
 
-These cannot be fixed without modifying Konduit (the
-`waliasanchit007/konduit` fork that this repo consumes as a Maven
+These cannot be fixed without modifying Keliver (the
+`waliasanchit007/keliver` fork that this repo consumes as a Maven
 dependency) or Zipline. Workarounds are in place; documenting the
 shape so a future upstream PR can pick them up.
 
@@ -45,7 +45,7 @@ shape so a future upstream PR can pick them up.
 
 **Severity:** high (silent failure mode; integrators give up before
 finding the workaround).
-**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+**Mitigation shipped in Keliver `1.0.0-caliclan.3`:**
 `Spec.bindWithTimeout { … }` turns the silent hang into a clear
 `ZiplineBindTimeoutException` after 30s (default — configurable). The
 exception message names the suspect signature shape and points at this
@@ -79,7 +79,7 @@ override suspend fun bindServices(treehouseApp: ..., zipline: Zipline) {
 Removing `suspend` (`fun getQuotes(...): List<Quote>`) resolves the
 hang immediately.
 
-**Empirically reproduced** on Konduit / Zipline 1.26 (commit
+**Empirically reproduced** on Keliver / Zipline 1.26 (commit
 `0d18809` in this repo). Not investigated for whether the issue is in
 Zipline's compiler plugin codegen or the host-side proxy construction.
 
@@ -87,12 +87,12 @@ Zipline's compiler plugin codegen or the host-side proxy construction.
 pre-cache the data before binding. See `HostQuotesProvider`'s kdoc and
 Step 4½ in `USAGE.md`. Used throughout shared/Protocol.kt.
 
-**Diagnostic shipped (Konduit `1.0.0-caliclan.3`):** wrap suspect
+**Diagnostic shipped (Keliver `1.0.0-caliclan.3`):** wrap suspect
 `bind`/`take` calls in `Spec.bindWithTimeout { … }`. When the hang
 triggers, the timeout fires after 30s with `ZiplineBindTimeoutException`
 whose message names the suspect signature shape. Strictly an upgrade
-over "build hangs forever, no log." DevoStatus's `KonduitDemoScreen.kt`
-uses this pattern; `KonduitQuotesScreen.kt` and `KonduitExploreScreen.kt`
+over "build hangs forever, no log." DevoStatus's `KeliverDemoScreen.kt`
+uses this pattern; `KeliverQuotesScreen.kt` and `KeliverExploreScreen.kt`
 can adopt it incrementally.
 
 **Upstream fix.** Investigate the Zipline 1.26 compiler-plugin codegen
@@ -105,8 +105,8 @@ a silent runtime hang.
 **Workaround code paths to revert** once fixed:
 - `shared/Protocol.kt#HostQuotesProvider.getQuotes`
 - `presenter/screens/QuotesScreen.kt` (the snapshot-based fetch pattern)
-- DevoStatus's `KonduitQuotesScreen.kt` load-gate (the
-  `if (nativeQuotes.isEmpty()) { spinner } else { konduit }` wrapper)
+- DevoStatus's `KeliverQuotesScreen.kt` load-gate (the
+  `if (nativeQuotes.isEmpty()) { spinner } else { keliver }` wrapper)
 
 **What about `Flow<T>` return types?** Zipline natively serializes
 `kotlinx.coroutines.flow.Flow<T>` via its `FlowSerializer`, so a
@@ -129,7 +129,7 @@ Flow<T>` is closer to U1's hang shape and should be wrapped in
 ### U2. Zipline Gradle plugin is mandatory on every module that calls `bind`/`take`, silently hangs otherwise
 
 **Severity:** high (silent failure; same "give up" outcome).
-**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+**Mitigation shipped in Keliver `1.0.0-caliclan.3`:**
 `Spec.bindWithTimeout { … }` catches U2's hang shape too (same surface
 as U1). The `ZiplineBindTimeoutException` message lists both U1 and U2
 as candidates so the integrator knows to check the `plugins {}` block
@@ -170,13 +170,13 @@ this at compile time.
 
 **Severity:** medium (runtime error has good message, but error fires
 late in integration).
-**Mitigation shipped in Konduit `1.0.0-caliclan.3`:**
+**Mitigation shipped in Keliver `1.0.0-caliclan.3`:**
 `Spec.requireSerializerOf<T>()` is a bind-time pre-flight check that
 throws `MissingSerializerException` with a clear diagnostic when a
 `@Serializable` wire type's serializer can't be resolved. Move the
 failure point from "first guest call" to "bind time" by calling
 `requireSerializerOf<Quote>()` etc. at the top of `bindServices`.
-DevoStatus's `KonduitQuotesScreen.kt` shows the pattern.
+DevoStatus's `KeliverQuotesScreen.kt` shows the pattern.
 
 **Symptom.** Defining `@Serializable data class Quote(...)` in a module
 that doesn't apply `org.jetbrains.kotlin.plugin.serialization` compiles
@@ -215,9 +215,9 @@ kotlinSerialization plugin isn't also applied.
 ### U5. Coil 3's singleton `ImageLoader` has no network fetcher by default
 
 **Severity:** low (was: already documented), now mitigated.
-**Mitigation shipped in Konduit `1.0.0-caliclan.4`:**
-`KonduitImage.installSingleton()` from the new `konduit-image` module
-(re-exported through `konduit-host`) wires the platform-appropriate
+**Mitigation shipped in Keliver `1.0.0-caliclan.4`:**
+`KeliverImage.installSingleton()` from the new `keliver-image` module
+(re-exported through `keliver-host`) wires the platform-appropriate
 network fetcher in one call — OkHttp on Android / JVM, Ktor 3 + the
 Darwin engine on iOS. Adopters call it once near the top of their
 root `@Composable` and `AsyncImage` works.
@@ -242,10 +242,10 @@ composed.
 **Workaround in place.** See `USAGE.md` "⚠️ If you use AsyncImage"
 callout. This repo's `:composeApp` `App.kt` calls
 `setSingletonImageLoaderFactory` with the right platform fetcher; each
-DevoStatus screen (`KonduitDemoScreen`, `KonduitQuotesScreen`,
-`KonduitExploreScreen`) does the same.
+DevoStatus screen (`KeliverDemoScreen`, `KeliverQuotesScreen`,
+`KeliverExploreScreen`) does the same.
 
-**Upstream fix.** Konduit could supply a default
+**Upstream fix.** Keliver could supply a default
 `setSingletonImageLoaderFactory` call from within
 `TreehouseApp`'s composeui wrapper, with an `okhttp` fetcher when the
 integrator's classpath has OkHttp (detect at build time, or fall back
@@ -255,9 +255,9 @@ been initialized would help.
 
 ---
 
-### U6. ~~Konduit codegen emits invalid Kotlin for lambda-typed `@Modifier` properties on Kotlin/JS~~ — FIXED in Konduit `1.0.0-caliclan.3`
+### U6. ~~Keliver codegen emits invalid Kotlin for lambda-typed `@Modifier` properties on Kotlin/JS~~ — FIXED in Keliver `1.0.0-caliclan.3`
 
-**Status:** Fixed. Konduit's schema parser now rejects function-typed
+**Status:** Fixed. Keliver's schema parser now rejects function-typed
 `@Modifier` properties at build time with a clear error message that
 points integrators at the canonical workaround (put click handlers on
 widgets, not modifiers). The cryptic "expecting class body" error in
@@ -267,11 +267,11 @@ with a message like:
 
 ```
 @Modifier com.example.MyMod#onClick cannot be a function type.
-Konduit codegen for lambda-typed modifier properties is broken on
+Keliver codegen for lambda-typed modifier properties is broken on
 Kotlin/JS — the generated `ContextualSerializer(Function0<Unit>::class)`
 is invalid Kotlin syntax and breaks `:shared-protocol-guest:compileKotlinJs`.
 Move the handler onto the widget as a regular `@Property` instead
-(see Konduit's `Button.onClick` / `Box.onClick` for the canonical shape).
+(see Keliver's `Button.onClick` / `Box.onClick` for the canonical shape).
 ```
 
 Historical entry preserved below for context.
@@ -309,7 +309,7 @@ needs a click handler declares `onClick: (() -> Unit)?` as a regular
 schema's `Box` and `Card` widgets carry `onClick` directly rather than
 relying on a `Modifier.clickable {}` chain.
 
-**Upstream fix.** Konduit's `dev.konduit.generator.modifiers` plugin
+**Upstream fix.** Keliver's `dev.keliver.generator.modifiers` plugin
 should special-case function-typed properties on `@Modifier` — either
 generate a `ZiplineService`-backed proxy (matching the U11 fix pattern)
 or emit a compile-time error so integrators see the rejection upfront
@@ -319,10 +319,10 @@ rather than discover it through a broken JS codegen output.
 
 ---
 
-### U10. ~~Konduit codegen emits `ContextualSerializer(MyEnum::class)` for enum fields on `@Modifier` classes — silent white screen~~ — FIXED in Konduit `1.0.0-caliclan.3`
+### U10. ~~Keliver codegen emits `ContextualSerializer(MyEnum::class)` for enum fields on `@Modifier` classes — silent white screen~~ — FIXED in Keliver `1.0.0-caliclan.3`
 
-**Status:** Fixed in Konduit commit `79a314004`
-(`konduit-tooling-codegen` protocol-guest generator). Modifier
+**Status:** Fixed in Keliver commit `79a314004`
+(`keliver-tooling-codegen` protocol-guest generator). Modifier
 serializer codegen now emits the `.serializer(), emptyArray()` fallback
 for every non-parameterized `ClassName` typed property; the
 `ContextualSerializer` falls through to the auto-generated `.serializer()`
@@ -350,7 +350,7 @@ silent, looks like the schema widget didn't render at all).
 SchemaColor)`, the generated `BackgroundTagAndSerializer` includes
 `ContextualSerializer(SchemaColor::class)`. At runtime the encode call
 throws `SerializationException("Class 'SchemaColor' is not registered
-for polymorphic serialization in the scope of 'Modifier'")`. Konduit's
+for polymorphic serialization in the scope of 'Modifier'")`. Keliver's
 protocol path swallows the exception silently; the batch of widget
 updates never reaches the host; the host renders an empty
 `TreehouseContent`; **the screen stays blank with zero logs**.
@@ -389,12 +389,12 @@ fields trigger the contextual codegen.
 > the highest-risk knowledge-debt on the integration.
 
 **Upstream fix.** Two options:
-1. **Change codegen** — Konduit's modifier generator could detect
+1. **Change codegen** — Keliver's modifier generator could detect
    `@Serializable enum` types and emit `MyEnum.serializer()` directly,
    matching the @Property codegen. Removes the need for the
    contextual-registration dance entirely.
-2. **Ship a baseline serializers module** — Konduit publishes a
-   `KonduitDefaultSerializers` module covering all schema-types enums
+2. **Ship a baseline serializers module** — Keliver publishes a
+   `KeliverDefaultSerializers` module covering all schema-types enums
    it ships, integrators add it to their own module. Reduces friction
    but still requires integrators to register their own additions.
 
@@ -409,14 +409,14 @@ Option (1) is the right fix.
 **Severity:** high (build succeeds, `zipline.take<T>` returns
 non-null-but-broken proxy, every method call is a silent no-op).
 **Origin:** HANDOVER.md gotcha #11.
-**Mitigation shipped in Konduit `1.0.0-caliclan.4`:** the
-`dev.konduit.zipline-shapes` Gradle plugin (in
-`konduit-gradle-plugin`). Adopters apply it to any module that
+**Mitigation shipped in Keliver `1.0.0-caliclan.4`:** the
+`dev.keliver.zipline-shapes` Gradle plugin (in
+`keliver-gradle-plugin`). Adopters apply it to any module that
 declares `ZiplineService` interfaces:
 
 ```kotlin
 plugins {
-    id("dev.konduit.zipline-shapes")
+    id("dev.keliver.zipline-shapes")
 }
 ```
 
@@ -494,9 +494,9 @@ rather than discover it through a silent runtime no-op.
 
 ---
 
-### U7. ~~`TreehouseApp.Spec` services held as anonymous inline references get GC'd~~ — FIXED in Konduit `1.0.0-caliclan.3`
+### U7. ~~`TreehouseApp.Spec` services held as anonymous inline references get GC'd~~ — FIXED in Keliver `1.0.0-caliclan.3`
 
-**Status:** Fixed in commit `<TBD-konduit-hash>` via
+**Status:** Fixed in commit `<TBD-keliver-hash>` via
 `TreehouseApp.Spec.retain()`. The `val`/`lateinit var` workaround
 documented previously still works; `retain()` is just the cleaner
 shape when the service is an inline anonymous object.
@@ -530,7 +530,7 @@ every new integrator on the first try).
 binds successfully, then the first guest call to the service errors
 with `no such service (service closed?)`.
 
-**Cause.** Konduit's leak detector logs `serviceLeaked` events
+**Cause.** Keliver's leak detector logs `serviceLeaked` events
 ("invoked when a service is garbage collected without being closed").
 The anonymous instance becomes GC-eligible the moment `bindServices`
 returns; the host's underlying weak reference gets cleared before the
@@ -558,7 +558,7 @@ val spec = object : TreehouseApp.Spec<…>() {
 
 ### U12. `AppService` subinterfaces need a hand-rolled `Adapter` — Zipline IR plugin can't generate one
 
-**Symptom.** First-launch of any Konduit app crashes at QuickJS
+**Symptom.** First-launch of any Keliver app crashes at QuickJS
 load time with:
 
 ```
@@ -578,11 +578,11 @@ adapter class on `YourAppService.Companion`.
 **Root cause.** [Zipline issue #765](https://github.com/cashapp/zipline/issues/765).
 The Zipline IR plugin **cannot** auto-generate `ZiplineServiceAdapter`
 classes for interfaces that transitively extend `ZiplineService`
-through Konduit's `AppService`. The class doesn't get emitted with
+through Keliver's `AppService`. The class doesn't get emitted with
 the constructor shape that Zipline's loader expects at link time;
 the IR linker rejects it.
 
-The `AppService.kt` source ([konduit-treehouse](https://github.com/waliasanchit007/konduit/blob/main/konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/AppService.kt))
+The `AppService.kt` source ([keliver-treehouse](https://github.com/waliasanchit007/keliver/blob/main/keliver-treehouse/src/commonMain/kotlin/dev/keliver/treehouse/AppService.kt))
 even calls this out:
 
 > Note that due to a Zipline limitation it's necessary for
@@ -658,7 +658,7 @@ mapping must match between the two.
 
 **Real-world examples.**
 
-- [`konduit/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/konduit/sample/shared/ManualSampleAppServiceAdapter.kt)
+- [`keliver/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/keliver/sample/shared/ManualSampleAppServiceAdapter.kt)
   — minimum-viable: three methods (`launch`, `appLifecycle`,
   `close`), ~95 LoC.
 - ServerDrivenUI's `ManualSduiAppServiceAdapter` — same pattern,
@@ -666,13 +666,13 @@ mapping must match between the two.
   beyond what AppService requires).
 
 **Cost to adopters.** Down from ~95 LoC + 7-entry `@file:Suppress`
-to **~5 LoC + zero `@file:Suppress`** as of Konduit caliclan.5 via
-the [`konduit-treehouse-codegen`](../konduit-treehouse-codegen/)
-KSP processor + [`@KonduitAppService`](../konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/KonduitAppService.kt)
+to **~5 LoC + zero `@file:Suppress`** as of Keliver caliclan.5 via
+the [`keliver-treehouse-codegen`](../keliver-treehouse-codegen/)
+KSP processor + [`@KeliverAppService`](../keliver-treehouse/src/commonMain/kotlin/dev/keliver/treehouse/KeliverAppService.kt)
 annotation. Adopter writes a single companion-object wrapper:
 
 ```kotlin
-@KonduitAppService
+@KeliverAppService
 interface MyAppService : AppService {
   fun launch(): ZiplineTreehouseUi
 
@@ -692,14 +692,14 @@ companion. The full ~70-line adapter body (function table +
 outbound proxy + serializer routing) lives in
 `GeneratedMyAppServiceAdapter`, generated automatically.
 
-**Konduit-side helper (shipped).** Two complementary pieces:
+**Keliver-side helper (shipped).** Two complementary pieces:
 
-1. **`KonduitAppServiceAdapter<T>` runtime helper** (caliclan.5,
-   in `konduit-treehouse`) — base class + helper functions that
+1. **`KeliverAppServiceAdapter<T>` runtime helper** (caliclan.5,
+   in `keliver-treehouse`) — base class + helper functions that
    cut the manual workaround from ~95 to ~70 LoC for adopters
    who want to hand-roll the adapter. Documented below.
 
-2. **`@KonduitAppService` + `konduit-treehouse-codegen` KSP
+2. **`@KeliverAppService` + `keliver-treehouse-codegen` KSP
    processor** (caliclan.5) — emits `Generated<Name>Adapter`
    automatically. Adopter writes ~5 lines instead of ~70.
 
@@ -716,40 +716,40 @@ outbound proxy + serializer routing) lives in
 **Reference snippet (manual variant, for context).** Adopters
 typically don't need this anymore — use the KSP processor above.
 The manual shape stays documented because the KSP processor's
-generated output is itself a `KonduitAppServiceAdapter<T>` subclass,
+generated output is itself a `KeliverAppServiceAdapter<T>` subclass,
 so adopters reading the generated source see exactly this pattern:
 
 ```kotlin
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 package your.pkg
 
-import dev.konduit.treehouse.KonduitAppServiceAdapter
-import dev.konduit.treehouse.KonduitOutboundCallHandler
-import dev.konduit.treehouse.KonduitOutboundService
-import dev.konduit.treehouse.konduitReturningFunction
+import dev.keliver.treehouse.KeliverAppServiceAdapter
+import dev.keliver.treehouse.KeliverOutboundCallHandler
+import dev.keliver.treehouse.KeliverOutboundService
+import dev.keliver.treehouse.keliverReturningFunction
 
 internal open class MyAppServiceAdapter(
   serializers: List<KSerializer<*>>,
   serialName: String = "your.pkg.MyAppService",
-) : KonduitAppServiceAdapter<MyAppService>(serializers, serialName) {
+) : KeliverAppServiceAdapter<MyAppService>(serializers, serialName) {
   override val simpleName = "MyAppService"
 
   override fun ziplineFunctions(
     serializersModule: SerializersModule,
   ): List<ZiplineFunction<MyAppService>> = listOf(
-    konduitReturningFunction<MyAppService>(
+    keliverReturningFunction<MyAppService>(
       id = "launch",
-      signature = "fun launch(): dev.konduit.treehouse.ZiplineTreehouseUi",
+      signature = "fun launch(): dev.keliver.treehouse.ZiplineTreehouseUi",
       resultSerializer = ziplineServiceSerializer<ZiplineTreehouseUi>(),
       call = { it.launch() },
     ),
-    // ...one konduitReturningFunction(...) per method on the interface
+    // ...one keliverReturningFunction(...) per method on the interface
   )
 
   override fun outboundService(
-    callHandler: KonduitOutboundCallHandler,
-  ) = object : MyAppService, KonduitOutboundService {
-    override val callHandler: KonduitOutboundCallHandler = callHandler
+    callHandler: KeliverOutboundCallHandler,
+  ) = object : MyAppService, KeliverOutboundService {
+    override val callHandler: KeliverOutboundCallHandler = callHandler
     override fun launch() = callHandler.call(this, 0) as ZiplineTreehouseUi
     // ...one override per method on the interface; call IDs are positional
   }
@@ -757,8 +757,8 @@ internal open class MyAppServiceAdapter(
 ```
 
 The remaining two `@file:Suppress` entries cover Kotlin's
-visibility check at the use sites for `KonduitOutboundCallHandler`
-and `KonduitOutboundService` — those typealias to Zipline's
+visibility check at the use sites for `KeliverOutboundCallHandler`
+and `KeliverOutboundService` — those typealias to Zipline's
 `internal` types, which Kotlin checks at every reference (the
 file-level Suppress can't be hoisted into the alias itself). This
 is the smallest possible adopter footprint until Zipline #765
@@ -766,12 +766,12 @@ ships upstream.
 
 **Future work.** Upstream resolution of [Zipline #765](https://github.com/cashapp/zipline/issues/765) —
 once Zipline's IR plugin generates adapters for `AppService`
-subinterfaces directly, the `@KonduitAppService` annotation +
-companion wrapper become redundant. Konduit can then deprecate
+subinterfaces directly, the `@KeliverAppService` annotation +
+companion wrapper become redundant. Keliver can then deprecate
 the codegen module without breaking adopter code (the annotation
 becomes a no-op).
 
-**Owner.** Konduit. Helper + KSP processor shipped in caliclan.5;
+**Owner.** Keliver. Helper + KSP processor shipped in caliclan.5;
 adopter pain effectively eliminated.
 
 ---
@@ -845,8 +845,8 @@ dispatcher.
 > **Tip.** Prefer `treehouseApp.dispatchers.ui` over reaching for
 > `Dispatchers.Main` directly. On Android JVM the two are equivalent,
 > but on iOS K/N `dispatchers.ui` is the platform's UI dispatcher
-> wrapped in a way that plays nicely with Konduit's threading model.
-> See `TreehouseDispatchers` in konduit-treehouse-host — `ui` is
+> wrapped in a way that plays nicely with Keliver's threading model.
+> See `TreehouseDispatchers` in keliver-treehouse-host — `ui` is
 > already public API.
 
 Because the dispatcher only exists after `bindServices` is called with
@@ -864,7 +864,7 @@ constructed inside `bindServices` (or capture the dispatcher later via
 2. **Doc + lint** — at minimum, surface this in `USAGE.md` next to
    gotcha #12 so the two directions appear as a pair. (`dispatchers.ui`
    exposure was option 2 from a previous version of this entry — it's
-   already shipped in Konduit `1.0.0-caliclan.2`; the original entry
+   already shipped in Keliver `1.0.0-caliclan.2`; the original entry
    was written before `TreehouseDispatchers.ui` was discovered.)
 
 **Real-world incidence.** Bit DevoStatus's "Tap to create status"
@@ -891,23 +891,23 @@ non-compiling — and therefore providing zero coverage — since the
 strip, hidden because CI never ran them.
 
 **Affected modules + files (quarantined under `apps*Test` source
-sets, opt-in behind `-PkonduitWithTestApp`):**
-- `konduit-treehouse-host` — `appsJvmTest` (GuestLifecycleTest,
+sets, opt-in behind `-PkeliverWithTestApp`):**
+- `keliver-treehouse-host` — `appsJvmTest` (GuestLifecycleTest,
   LeaksTest, TreehouseTesterTest, leak/heap utils) — needs a live
   guest bundle via `TreehouseTester` (hardcoded `../test-app/...`
   path).
-- `konduit-tooling-codegen` — `appsTest` (ModifierGenerationTest,
+- `keliver-tooling-codegen` — `appsTest` (ModifierGenerationTest,
   WidgetProtocolGenerationTest).
-- `konduit-testing`, `konduit-protocol-host`,
-  `konduit-protocol-guest`, `konduit-compose` — `appsCommonTest`.
-- `konduit-treehouse-guest` — `appsJsTest`.
+- `keliver-testing`, `keliver-protocol-host`,
+  `keliver-protocol-guest`, `keliver-compose` — `appsCommonTest`.
+- `keliver-treehouse-guest` — `appsJsTest`.
 
 **What was fixed in the audit (caliclan.5):**
 1. Quarantined the 22 fixture-dependent files into gated
    `apps*Test` source dirs. This **recovered** the sibling tests
    that share those source sets (they couldn't compile while the
-   broken files sat alongside them) — e.g. konduit-protocol-host's
-   6 inline-schema tests, konduit-compose's 6, etc. now run.
+   broken files sat alongside them) — e.g. keliver-protocol-host's
+   6 inline-schema tests, keliver-compose's 6, etc. now run.
 2. Removed the dangling `:test-app:presenter-treehouse` task
    dependency that made `./gradlew test` fail outright.
 3. Generated the 9 missing API baselines so `apiCheck` passes.
@@ -918,7 +918,7 @@ sets, opt-in behind `-PkonduitWithTestApp`):**
 `test-app:schema` fixture + its 6 codegen modules
 (compose/widget/modifiers/protocol-host/protocol-guest/testing)
 were recovered from git history (`8aaeb8898^`) and now build
-against caliclan.5, gated behind `-PkonduitWithTestApp` in
+against caliclan.5, gated behind `-PkeliverWithTestApp` in
 `settings.gradle`. Recovering them surfaced + fixed a real latent
 codegen bug — the modifier-serializer generator emitted a
 non-resolving `.serializer()` for stdlib custom-types
@@ -927,16 +927,16 @@ non-resolving `.serializer()` for stdlib custom-types
 (PR #64).
 
 **RESOLVED (caliclan.5).** All 22 tests are revived and CI runs
-them under `-PkonduitWithTestApp`:
+them under `-PkeliverWithTestApp`:
 
 - **Category-1 (14 tests)** — schema/codegen tests in
-  `konduit-protocol-host` / `-guest` / `konduit-testing` /
-  `konduit-compose` / `konduit-tooling-codegen`.
-- **Category-2 (8 tests)** — `konduit-treehouse-host` `appsJvmTest`
+  `keliver-protocol-host` / `-guest` / `keliver-testing` /
+  `keliver-compose` / `keliver-tooling-codegen`.
+- **Category-2 (8 tests)** — `keliver-treehouse-host` `appsJvmTest`
   integration tests (GuestLifecycleTest, LeaksTest,
   TreehouseTesterTest, FindCycleTest, JvmHeapTest) that load a
   live Zipline guest bundle via `TreehouseTester`, plus
-  `konduit-treehouse-guest`'s `jsTest`.
+  `keliver-treehouse-guest`'s `jsTest`.
 
 Phase 2 recovered `test-app:presenter` + `presenter-treehouse`
 (the guest bundle) and surfaced two more fork-era misses, both
@@ -944,10 +944,10 @@ fixed:
 1. `FakeTreehouseView.kt` (a testapp-coupled commonTest fixture)
    was stripped; recovered into `appsJvmTest`.
 2. `leaks/JvmHeap.kt`'s heap-walker reflection allowlist still
-   listed `app.cash` but not `dev.konduit` — a package-rename
+   listed `app.cash` but not `dev.keliver` — a package-rename
    migration miss that made the leak tests error on
-   `dev.konduit.treehouse.TreehouseTester$spec$1`. Added
-   `dev.konduit`.
+   `dev.keliver.treehouse.TreehouseTester$spec$1`. Added
+   `dev.keliver`.
 
 The presenter modules compiled against caliclan.5 with **no**
 AppService/treehouse drift (the feared U12-adapter interaction
@@ -959,11 +959,11 @@ CI runs targeted tasks.
 
 Run the full inherited suite locally with:
 ```
-./gradlew -PkonduitWithTestApp \
-  :konduit-protocol-host:jvmTest :konduit-protocol-guest:jvmTest \
-  :konduit-testing:jvmTest :konduit-compose:jvmTest \
-  :konduit-tooling-codegen:test :konduit-treehouse-host:jvmTest \
-  :konduit-treehouse-guest:jsTest
+./gradlew -PkeliverWithTestApp \
+  :keliver-protocol-host:jvmTest :keliver-protocol-guest:jvmTest \
+  :keliver-testing:jvmTest :keliver-compose:jvmTest \
+  :keliver-tooling-codegen:test :keliver-treehouse-host:jvmTest \
+  :keliver-treehouse-guest:jsTest
 ```
 
 **Also:** the gradle-plugin lint fixture tests
@@ -972,7 +972,7 @@ Run the full inherited suite locally with:
 Android module. CI macOS runners provide it; local runs need it
 exported. Not a code defect.
 
-**Owner.** Konduit. Fully resolved in caliclan.5 — fixture
+**Owner.** Keliver. Fully resolved in caliclan.5 — fixture
 recovered, all 22 inherited tests revived + CI-enforced, and the
 underlying stdlib-serializer codegen bug fixed (PR #64).
 
@@ -980,10 +980,10 @@ underlying stdlib-serializer codegen bug fixed (PR #64).
 
 ## Recently resolved
 
-These were resolved in this repo or in the Konduit fork. Full entries
+These were resolved in this repo or in the Keliver fork. Full entries
 with commit references live in this fork's [`CHANGELOG.md`](../CHANGELOG.md)
 and (for integration-side fixes) in ServerDrivenUI's
-[`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/konduit-main/docs/CHANGELOG.md):
+[`docs/CHANGELOG.md`](https://github.com/waliasanchit007/ServerDrivenUI/blob/keliver-main/docs/CHANGELOG.md):
 
 - **#4** Schema lacks alpha/offset/border/custom-font modifiers —
   Alpha (modifier 11), Border (modifier 12), Offset (modifier 18),
@@ -992,24 +992,24 @@ and (for integration-side fixes) in ServerDrivenUI's
   apps — composeApp now uses `coil-network-okhttp` on Android. See
   CHANGELOG.
 - **#9** `lateinit var` services inside `bindServices` skip 2nd
-  TreehouseApp mount — not actually a Konduit bug; root cause was
+  TreehouseApp mount — not actually a Keliver bug; root cause was
   integrator's unstable `remember` keys. Resolution + canonical
-  `rememberKonduitApp` helper documented. See CHANGELOG.
+  `rememberKeliverApp` helper documented. See CHANGELOG.
 - **U7** Anonymous service GC'd — `TreehouseApp.Spec.retain()` helper
-  shipped in Konduit `1.0.0-caliclan.3`. See CHANGELOG.
+  shipped in Keliver `1.0.0-caliclan.3`. See CHANGELOG.
 - **U8 part 2** (dispatcher exposure) — `TreehouseDispatchers.ui`
   has been public API since `1.0.0-caliclan.2`; KNOWN_BUGS doc
   previously listed it as an unshipped fix. Corrected, with all
   DevoStatus host services migrated to `treehouseApp.dispatchers.ui`
   from `Dispatchers.Main`.
-- **U10** Modifier serializer codegen white-screen — Konduit
+- **U10** Modifier serializer codegen white-screen — Keliver
   `1.0.0-caliclan.3` protocol-guest generator now emits `.serializer()`
   fallback for every non-parameterized `ClassName` modifier property.
   `ContextualSerializer` falls through to the auto-generated companion
   so the white screen can no longer happen. The `SduiSerializersModule`
   workaround is now redundant but kept (harmless when fallback works).
   See CHANGELOG.
-- **U6** Lambda-on-modifier JS codegen broken — Konduit
+- **U6** Lambda-on-modifier JS codegen broken — Keliver
   `1.0.0-caliclan.3` schema parser now rejects function-typed
   `@Modifier` properties at parse time with a clear error message
   instead of producing invalid Kotlin/JS codegen output that breaks

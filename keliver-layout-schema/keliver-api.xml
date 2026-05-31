@@ -1,0 +1,62 @@
+<schema version="1" type="dev.keliver.layout.RedwoodLayout">
+  <widget tag="1" type="dev.keliver.layout.Row">
+    <property tag="1" name="width" type="dev.keliver.layout.api.Constraint" />
+    <property tag="2" name="height" type="dev.keliver.layout.api.Constraint" />
+    <property tag="3" name="margin" type="dev.keliver.ui.Margin" />
+    <property tag="4" name="overflow" type="dev.keliver.layout.api.Overflow" />
+    <property tag="5" name="horizontalAlignment" type="dev.keliver.layout.api.MainAxisAlignment" />
+    <property tag="6" name="verticalAlignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+    <event tag="7" name="onScroll" params="dev.keliver.ui.Px" nullable="true" />
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="2" type="dev.keliver.layout.Column">
+    <property tag="1" name="width" type="dev.keliver.layout.api.Constraint" />
+    <property tag="2" name="height" type="dev.keliver.layout.api.Constraint" />
+    <property tag="3" name="margin" type="dev.keliver.ui.Margin" />
+    <property tag="4" name="overflow" type="dev.keliver.layout.api.Overflow" />
+    <property tag="5" name="horizontalAlignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+    <property tag="6" name="verticalAlignment" type="dev.keliver.layout.api.MainAxisAlignment" />
+    <event tag="7" name="onScroll" params="dev.keliver.ui.Px" nullable="true" />
+    <children tag="1" name="children" />
+  </widget>
+  <widget tag="3" type="dev.keliver.layout.Spacer">
+    <property tag="1" name="width" type="dev.keliver.ui.Dp" />
+    <property tag="2" name="height" type="dev.keliver.ui.Dp" />
+  </widget>
+  <widget tag="4" type="dev.keliver.layout.Box">
+    <property tag="1" name="width" type="dev.keliver.layout.api.Constraint" />
+    <property tag="2" name="height" type="dev.keliver.layout.api.Constraint" />
+    <property tag="3" name="margin" type="dev.keliver.ui.Margin" />
+    <property tag="4" name="horizontalAlignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+    <property tag="5" name="verticalAlignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+    <children tag="1" name="children" />
+  </widget>
+  <modifier tag="1" type="dev.keliver.layout.Grow">
+    <property name="value" type="kotlin.Double" />
+  </modifier>
+  <modifier tag="2" type="dev.keliver.layout.Shrink">
+    <property name="value" type="kotlin.Double" />
+  </modifier>
+  <modifier tag="3" type="dev.keliver.layout.Margin">
+    <property name="margin" type="dev.keliver.ui.Margin" />
+  </modifier>
+  <modifier tag="4" type="dev.keliver.layout.HorizontalAlignment">
+    <property name="alignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+  </modifier>
+  <modifier tag="5" type="dev.keliver.layout.VerticalAlignment">
+    <property name="alignment" type="dev.keliver.layout.api.CrossAxisAlignment" />
+  </modifier>
+  <modifier tag="6" type="dev.keliver.layout.Width">
+    <property name="width" type="dev.keliver.ui.Dp" />
+  </modifier>
+  <modifier tag="7" type="dev.keliver.layout.Height">
+    <property name="height" type="dev.keliver.ui.Dp" />
+  </modifier>
+  <modifier tag="8" type="dev.keliver.layout.Size">
+    <property name="height" type="dev.keliver.ui.Dp" />
+    <property name="width" type="dev.keliver.ui.Dp" />
+  </modifier>
+  <modifier tag="9" type="dev.keliver.layout.Flex">
+    <property name="value" type="kotlin.Double" />
+  </modifier>
+</schema>

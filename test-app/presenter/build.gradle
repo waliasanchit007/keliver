@@ -17,7 +17,7 @@ kotlin {
     commonMain {
       dependencies {
         implementation projects.testApp.schema.compose
-        implementation projects.konduitLazylayoutCompose
+        implementation projects.keliverLazylayoutCompose
         implementation libs.paging.compose.common
         implementation libs.kotlinx.coroutines.core
         implementation libs.kotlinx.serialization.json

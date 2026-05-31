@@ -1,0 +1,11 @@
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  jvm()
+}
+
+redwoodSchema {
+  source = project(':schema')
+  type = 'example.counter.Counter'
+}

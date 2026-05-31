@@ -1,0 +1,53 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'com.github.gmazzo.buildconfig'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.keliver.protocol.guest'))
+      dependencies {
+        api projects.keliverProtocol
+        api projects.keliverCompose
+      }
+    }
+    commonTest {
+      // testapp-fixture-dependent tests are opt-in — see U13 / the
+      // matching comment in keliver-protocol-host/build.gradle.
+      if (rootProject.hasProperty('keliverWithTestApp')) {
+        kotlin.srcDir('src/appsCommonTest/kotlin')
+        dependencies {
+          implementation projects.testApp.schema.compose
+          implementation projects.testApp.schema.protocolGuest
+        }
+      }
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.assertk
+        implementation libs.kotlinx.coroutines.test
+        implementation projects.keliverLazylayoutCompose
+        implementation projects.keliverTesting
+      }
+    }
+  }
+}
+
+buildConfig {
+  useKotlinOutput {
+    topLevelConstants = true
+  }
+
+  className("Version")
+  packageName('dev.keliver.protocol.guest')
+  buildConfigField(
+    "dev.keliver.protocol.RedwoodVersion",
+    "guestRedwoodVersion",
+    "RedwoodVersion(\"${project.version}\")",
+  )
+}

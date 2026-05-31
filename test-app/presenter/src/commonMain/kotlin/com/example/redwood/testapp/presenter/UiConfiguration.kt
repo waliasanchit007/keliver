@@ -16,13 +16,13 @@
 package com.example.redwood.testapp.presenter
 
 import androidx.compose.runtime.Composable
-import dev.konduit.Modifier
-import dev.konduit.compose.current
-import dev.konduit.layout.compose.Column
-import dev.konduit.ui.Margin
-import dev.konduit.ui.UiConfiguration
-import dev.konduit.ui.basic.compose.Text
-import dev.konduit.ui.dp
+import dev.keliver.Modifier
+import dev.keliver.compose.current
+import dev.keliver.layout.compose.Column
+import dev.keliver.ui.Margin
+import dev.keliver.ui.UiConfiguration
+import dev.keliver.ui.basic.compose.Text
+import dev.keliver.ui.dp
 
 @Composable
 fun UiConfigurationValues(modifier: Modifier = Modifier) {

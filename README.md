@@ -1,23 +1,24 @@
-# Konduit
+# Keliver
 
 Server-driven UI for Compose Multiplatform. Render Kotlin Compose UI on
 Android and iOS from JavaScript bundles delivered over the network —
 ship UI updates without an app-store release.
 
-> **Status:** `1.0.0-caliclan.3` shipped. Currently a private fork
-> consumed via GitHub Packages by Caliclan's own apps. Public OSS
-> launch tracked in [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md).
-> Wire format is committed for the `1.0.x` major.
+> **Status: public on Maven Central — `0.1.0`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.1.0` (host) /
+> `dev.keliver:keliver-guest:0.1.0` (guest) — no GitHub PAT, no extra repo.
+> See [`docs/USAGE.md`](./docs/USAGE.md). `0.1.x` is the first public line
+> (pre-`1.0`, API may still evolve); the wire format is stable within it.
 
 ---
 
 ## What it is
 
-Konduit is a [Cash App Redwood](https://github.com/cashapp/redwood) fork.
+Keliver is a [Cash App Redwood](https://github.com/cashapp/redwood) fork.
 Upstream Redwood is great but is no longer being actively developed by
-Cash App. Konduit picks up the foundation — `redwood-runtime`,
+Cash App. Keliver picks up the foundation — `redwood-runtime`,
 `redwood-compose`, `redwood-treehouse`, `redwood-treehouse-host`,
-`redwood-treehouse-host-composeui` — and ships it under the `dev.konduit`
+`redwood-treehouse-host-composeui` — and ships it under the `dev.keliver`
 namespace with:
 
 > Already running on upstream Redwood? See
@@ -27,7 +28,7 @@ namespace with:
 
 - **Production-hardening fixes** for the silent-failure shapes that hit
   every new integrator. See [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md)
-  for the full list — 11 of 12 documented gotchas now have a Konduit-side
+  for the full list — 11 of 12 documented gotchas now have a Keliver-side
   mitigation as of `1.0.0-caliclan.3`.
 - **A focused module set.** Phase 1.5 dropped 13 upstream modules that
   aren't relevant to Compose Multiplatform (View/UIView/DOM widgets, the
@@ -43,7 +44,7 @@ You write Kotlin Compose UI in a separate guest module. That code
 compiles to JavaScript via Kotlin/JS and gets bundled into a
 `.zipline` file. Your host app downloads the bundle at runtime,
 executes it in [Zipline](https://github.com/cashapp/zipline) (a
-QuickJS wrapper), and Konduit's protocol translates the guest's
+QuickJS wrapper), and Keliver's protocol translates the guest's
 widget tree into real Compose widgets on the host platform —
 Android (Jetpack Compose), iOS (Compose Multiplatform), or anywhere
 CMP runs.
@@ -132,14 +133,14 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
   (Bitmap manipulation, MediaStore, Camera, etc.) — these need an
   RPC service designed per capability
 
-A typical app uses Konduit for a slice of its surface area, not the
+A typical app uses Keliver for a slice of its surface area, not the
 whole app. The [DevoStatus integration](https://github.com/waliasanchit007/DevoStatus)
 uses it for two screens out of ~10.
 
 ## Getting started
 
 For now: read [`docs/USAGE.md`](./docs/USAGE.md). It's a thorough
-walkthrough of vendoring Konduit into a Compose Multiplatform host,
+walkthrough of vendoring Keliver into a Compose Multiplatform host,
 defining a guest screen, wiring host services, and the silent-failure
 shapes to watch for.
 
@@ -151,12 +152,12 @@ a proper docs site will replace the long USAGE.md.
 [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) is the punch list. As of
 `1.0.0-caliclan.3`:
 
-- ✅ U1, U2, U3, U5, U6, U7, U10 fixed or mitigated in Konduit (U5
-  mitigated in `1.0.0-caliclan.4` via `konduit-image`).
+- ✅ U1, U2, U3, U5, U6, U7, U10 fixed or mitigated in Keliver (U5
+  mitigated in `1.0.0-caliclan.4` via `keliver-image`).
 - ✅ U4, U8 part 2, U9, U11 fixed or documented at the integration
   layer (see ServerDrivenUI's KNOWN_BUGS for fix details)
 - 🎯 **U8 part 1** (`@MainThread` codegen) — only entry without a
-  Konduit-side fix; root cause is in Zipline's compiler plugin, tracked
+  Keliver-side fix; root cause is in Zipline's compiler plugin, tracked
   at [cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825).
   Workaround pattern is well-established.
 
@@ -172,7 +173,7 @@ Apache 2.0 — same as upstream Cash App Redwood. See [`LICENSE.txt`](./LICENSE.
 
 ## Credits
 
-Konduit is built on [Cash App Redwood](https://github.com/cashapp/redwood)
+Keliver is built on [Cash App Redwood](https://github.com/cashapp/redwood)
 and [Zipline](https://github.com/cashapp/zipline). The original Redwood
 team did the hard architectural work; this fork picks up maintenance and
 adds the production-hardening that surfaces in real-world integrations.

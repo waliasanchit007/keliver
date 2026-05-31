@@ -1,11 +1,11 @@
 import UIKit
 import SwiftUI
-import KonduitSampleHost
+import KeliverSampleHost
 
 /**
  SwiftUI wrapper around the Kotlin-side `MainViewController()` factory.
 
- `KonduitSampleHost` is the framework baseName declared in
+ `KeliverSampleHost` is the framework baseName declared in
  `sample/host-compose/build.gradle.kts`. The Kotlin function lives at
  file level in `MainViewController.kt`, so K/N exports it on the
  `MainViewControllerKt` companion-object container.

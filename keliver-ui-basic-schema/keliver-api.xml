@@ -1,0 +1,20 @@
+<schema version="1" type="dev.keliver.ui.basic.RedwoodUiBasic">
+  <widget tag="1" type="dev.keliver.ui.basic.TextInput">
+    <property tag="1" name="state" type="dev.keliver.ui.basic.api.TextFieldState" />
+    <property tag="2" name="hint" type="kotlin.String" />
+    <event tag="3" name="onChange" params="dev.keliver.ui.basic.api.TextFieldState" nullable="true" />
+  </widget>
+  <widget tag="2" type="dev.keliver.ui.basic.Text">
+    <property tag="1" name="text" type="kotlin.String" />
+  </widget>
+  <widget tag="3" type="dev.keliver.ui.basic.Image">
+    <property tag="1" name="url" type="kotlin.String" />
+    <event tag="2" name="onClick" nullable="true" />
+  </widget>
+  <widget tag="4" type="dev.keliver.ui.basic.Button">
+    <property tag="1" name="text" type="kotlin.String?" />
+    <property tag="2" name="enabled" type="kotlin.Boolean" />
+    <event tag="3" name="onClick" nullable="true" />
+  </widget>
+  <modifier tag="-4543827" type="dev.keliver.ui.basic.Reuse" />
+</schema>

@@ -1,6 +1,6 @@
 ---
 name: Integration help
-about: I'm trying to adopt Konduit and something isn't working / I'm stuck.
+about: I'm trying to adopt Keliver and something isn't working / I'm stuck.
 title: '[help] '
 labels: question
 ---
@@ -51,6 +51,6 @@ TreehouseApp.Spec subclass + the relevant @Widget/service interface.
 
 ## Environment
 
-- Konduit version:
+- Keliver version:
 - Host platform (Android / iOS / both):
 - Kotlin version:

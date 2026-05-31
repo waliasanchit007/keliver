@@ -1,0 +1,237 @@
+/*
+ * Copyright (C) 2023 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.testing
+
+import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.Composable
+import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.isEqualTo
+import com.example.redwood.testapp.compose.Split
+import com.example.redwood.testapp.compose.TestRow
+import com.example.redwood.testapp.protocol.guest.TestSchemaProtocolWidgetSystemFactory
+import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
+import com.example.redwood.testapp.testing.TestSchemaTester
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
+import dev.keliver.RedwoodCodegenApi
+import dev.keliver.compose.current
+import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
+import dev.keliver.lazylayout.testing.RedwoodLazyLayoutTestingWidgetFactory
+import dev.keliver.leaks.LeakDetector
+import dev.keliver.protocol.ChildrenChange.Add
+import dev.keliver.protocol.ChildrenTag
+import dev.keliver.protocol.Create
+import dev.keliver.protocol.Id
+import dev.keliver.protocol.ModifierChange
+import dev.keliver.protocol.PropertyChange
+import dev.keliver.protocol.PropertyTag
+import dev.keliver.protocol.WidgetTag
+import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
+import dev.keliver.protocol.guest.ProtocolRedwoodComposition
+import dev.keliver.protocol.guest.guestRedwoodVersion
+import dev.keliver.protocol.host.HostProtocolAdapter
+import dev.keliver.protocol.host.UiChange
+import dev.keliver.protocol.host.hostRedwoodVersion
+import dev.keliver.ui.Cancellable
+import dev.keliver.ui.OnBackPressedCallback
+import dev.keliver.ui.OnBackPressedDispatcher
+import dev.keliver.ui.UiConfiguration
+import dev.keliver.ui.basic.compose.Text
+import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
+import dev.keliver.ui.basic.testing.TextValue
+import dev.keliver.widget.MutableListChildren
+import kotlin.test.Test
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.plus
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonPrimitive
+
+@OptIn(RedwoodCodegenApi::class)
+class ViewTreesTest {
+  @Test fun nested() = runTest {
+    val content = @Composable {
+      TestRow {
+        TestRow {
+          Text("One Fish")
+          Text("Two Fish")
+        }
+        TestRow {
+          Text("Red Fish")
+          Text("Blue Fish")
+        }
+      }
+    }
+
+    val snapshot = TestSchemaTester {
+      setContent(content)
+      awaitSnapshot()
+    }
+
+    val expected = listOf(
+      Create(Id(1), WidgetTag(1)),
+      ModifierChange(Id(1), emptyList()),
+      Create(Id(2), WidgetTag(1)),
+      ModifierChange(Id(2), emptyList()),
+      Create(Id(3), WidgetTag(1000002)),
+      PropertyChange(Id(3), WidgetTag(1000002), PropertyTag(1), JsonPrimitive("One Fish")),
+      ModifierChange(Id(3), emptyList()),
+      Add(Id(2), ChildrenTag(1), Id(3), 0),
+      Create(Id(4), WidgetTag(1000002)),
+      PropertyChange(Id(4), WidgetTag(1000002), PropertyTag(1), JsonPrimitive("Two Fish")),
+      ModifierChange(Id(4), emptyList()),
+      Add(Id(2), ChildrenTag(1), Id(4), 1),
+      Add(Id(1), ChildrenTag(1), Id(2), 0),
+      Create(Id(5), WidgetTag(1)),
+      ModifierChange(Id(5), emptyList()),
+      Create(Id(6), WidgetTag(1000002)),
+      PropertyChange(Id(6), WidgetTag(1000002), PropertyTag(1), JsonPrimitive("Red Fish")),
+      ModifierChange(Id(6), emptyList()),
+      Add(Id(5), ChildrenTag(1), Id(6), 0),
+      Create(Id(7), WidgetTag(1000002)),
+      PropertyChange(Id(7), WidgetTag(1000002), PropertyTag(1), JsonPrimitive("Blue Fish")),
+      ModifierChange(Id(7), emptyList()),
+      Add(Id(5), ChildrenTag(1), Id(7), 1),
+      Add(Id(1), ChildrenTag(1), Id(5), 1),
+      Add(Id.Root, ChildrenTag.Root, Id(1), 0),
+    )
+
+    // Ensure the normal view tree APIs produce the expected list of changes.
+    assertThat(snapshot.toChangeList(TestSchemaProtocolWidgetSystemFactory).changes)
+      .isEqualTo(expected)
+    assertThat(snapshot.single().toChangeList(TestSchemaProtocolWidgetSystemFactory).changes)
+      .isEqualTo(expected)
+
+    // Validate that the normal Compose protocol backend produces the same list of changes.
+    val guestAdapter = DefaultGuestProtocolAdapter(
+      hostVersion = hostRedwoodVersion,
+      widgetSystemFactory = TestSchemaProtocolWidgetSystemFactory,
+    )
+    val composition = ProtocolRedwoodComposition(
+      scope = this + BroadcastFrameClock(),
+      guestAdapter = guestAdapter,
+      widgetVersion = UInt.MAX_VALUE,
+      onBackPressedDispatcher = object : OnBackPressedDispatcher {
+        override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable {
+          return object : Cancellable {
+            override fun cancel() = Unit
+          }
+        }
+      },
+      saveableStateRegistry = null,
+      uiConfigurations = MutableStateFlow(UiConfiguration()),
+    )
+    composition.setContent(content)
+    composition.cancel()
+
+    assertThat(guestAdapter.takeChanges()).isEqualTo(expected)
+
+    // Ensure when the changes are applied with the widget protocol we get equivalent values.
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val widgetContainer = MutableListChildren<WidgetValue>()
+    val protocol = TestSchemaHostProtocol.create()
+    val hostAdapter = HostProtocolAdapter(
+      guestVersion = guestRedwoodVersion,
+      container = widgetContainer,
+      protocol = protocol,
+      widgetSystem = widgetSystem,
+      eventSink = { throw AssertionError() },
+      leakDetector = LeakDetector.none(),
+    )
+    val uiChanges = expected.mapNotNull { change ->
+      UiChange.fromProtocol(protocol, change)
+    }
+    hostAdapter.sendChanges(uiChanges)
+
+    assertThat(widgetContainer.map { it.value }).isEqualTo(snapshot)
+  }
+
+  @Test fun uiConfigurationWorks() = runTest {
+    TestSchemaTester {
+      setContent {
+        Text("Dark: ${UiConfiguration.current.darkMode}")
+      }
+
+      val first = awaitSnapshot()
+      assertThat(first).containsExactly(TextValue(text = "Dark: false"))
+
+      uiConfigurations.value = UiConfiguration(darkMode = true)
+
+      val second = awaitSnapshot()
+      assertThat(second).containsExactly(TextValue(text = "Dark: true"))
+    }
+  }
+
+  @Test fun debugString() = runTest {
+    TestSchemaTester {
+      setContent {
+        TestRow {
+          TestRow {
+            Text("One Fish")
+            Text("Two Fish")
+          }
+          Text("Red Fish")
+        }
+        TestRow { }
+        Split(
+          left = {
+            Text("Blue")
+            Text("Fish")
+          },
+          right = { },
+        )
+        TestRow { }
+      }
+
+      val snapshot = awaitSnapshot()
+      assertThat(snapshot.toDebugString()).isEqualTo(
+        """
+        |TestRow {
+        |  TestRow {
+        |    Text(
+        |      text = One Fish
+        |    )
+        |    Text(
+        |      text = Two Fish
+        |    )
+        |  }
+        |  Text(
+        |    text = Red Fish
+        |  )
+        |}
+        |TestRow { }
+        |Split(
+        |  left = {
+        |    Text(
+        |      text = Blue
+        |    )
+        |    Text(
+        |      text = Fish
+        |    )
+        |  }
+        |  right = { }
+        |)
+        |TestRow { }
+        """.trimMargin(),
+      )
+    }
+  }
+}

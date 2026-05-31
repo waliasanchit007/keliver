@@ -1,0 +1,62 @@
+/*
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.http
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Wire-level HTTP request envelope passed across the Zipline boundary from
+ * guest to host. The host translates this into a real network call using its
+ * own `HttpClient` (Ktor / Retrofit / OkHttp / whatever the adopter wired).
+ *
+ * Every field except [method] and [path] is default-valued; new fields are
+ * appended additively so older adopters' deserializers keep working.
+ */
+@Serializable
+public data class HttpRequest(
+  public val method: String,
+  public val path: String,
+  public val query: Map<String, String> = emptyMap(),
+  public val headers: Map<String, String> = emptyMap(),
+  public val body: String? = null,
+)
+
+/**
+ * Wire-level HTTP response envelope. The host adapter populates this from the
+ * underlying network call's result. Non-2xx status values do **not** raise an
+ * exception at this layer — adopters who want exception semantics use
+ * [KeliverHttp]'s typed helpers, which translate non-2xx into
+ * [KeliverHttpException].
+ *
+ * Every field except [status] and [body] is default-valued.
+ */
+@Serializable
+public data class HttpResponse(
+  public val status: Int,
+  public val body: String,
+  public val headers: Map<String, String> = emptyMap(),
+)
+
+/**
+ * Thrown by [KeliverHttp] typed helpers when the underlying HTTP call returned
+ * a status outside the 2xx range. Adopters who want to inspect 4xx / 5xx
+ * without exceptions can use [HostHttpProvider.execute] directly and read the
+ * [HttpResponse.status] field.
+ */
+public class KeliverHttpException(
+  public val status: Int,
+  public val body: String,
+) : Exception("HTTP $status: ${body.take(200)}")

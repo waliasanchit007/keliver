@@ -1,0 +1,9 @@
+[dev.keliver.http.HostHttpProvider]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # suspend fun execute(dev.keliver.http.HttpRequest): dev.keliver.http.HttpResponse
+  "lttQP8/c",
+]

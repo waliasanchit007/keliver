@@ -1,0 +1,6 @@
+public final class dev/keliver/image/KeliverImage {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/image/KeliverImage;
+	public final fun installSingleton (ZLkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;II)V
+}
+

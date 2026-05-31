@@ -15,15 +15,15 @@
  */
 package com.example.redwood.testapp
 
-import dev.konduit.layout.RedwoodLayout
-import dev.konduit.lazylayout.RedwoodLazyLayout
-import dev.konduit.schema.Children
-import dev.konduit.schema.Modifier
-import dev.konduit.schema.Property
-import dev.konduit.schema.Schema
-import dev.konduit.schema.Schema.Dependency
-import dev.konduit.schema.Widget
-import dev.konduit.ui.basic.RedwoodUiBasic
+import dev.keliver.layout.RedwoodLayout
+import dev.keliver.lazylayout.RedwoodLazyLayout
+import dev.keliver.schema.Children
+import dev.keliver.schema.Modifier
+import dev.keliver.schema.Property
+import dev.keliver.schema.Schema
+import dev.keliver.schema.Schema.Dependency
+import dev.keliver.schema.Widget
+import dev.keliver.ui.basic.RedwoodUiBasic
 import kotlin.time.Duration
 
 @Schema(
@@ -53,7 +53,7 @@ interface TestSchema
 
 /**
  * A trivial row-like type for testing purposes only.
- * Use konduit-layout for any real views in the test app.
+ * Use keliver-layout for any real views in the test app.
  */
 @Widget(1)
 data class TestRow(
@@ -64,7 +64,7 @@ object TestRowScope
 
 /**
  * A trivial row-like type with a scope for testing purposes only.
- * Use konduit-layout for any real views in the test app.
+ * Use keliver-layout for any real views in the test app.
  */
 @Widget(2)
 data class ScopedTestRow(

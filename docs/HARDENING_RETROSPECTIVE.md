@@ -1,6 +1,6 @@
 # Production-hardening retrospective
 
-What we learned taking Konduit from "compiles and ships to Caliclan's
+What we learned taking Keliver from "compiles and ships to Caliclan's
 own apps" to "demonstrably tested, CI-enforced, adopter-ready." This
 is a working retrospective — durable lessons + the concrete receipts
 that earned them. Read it before the next big push so we don't
@@ -54,9 +54,9 @@ cleanup) broke things far from the deletion:
 - A test fixture (`FakeTreehouseView`) vanished with no compile error
   until something referenced it.
 - Subtlest: the leak detector's heap-walker had a **string-literal**
-  allowlist (`"app.cash"`). The `app.cash.redwood → dev.konduit`
+  allowlist (`"app.cash"`). The `app.cash.redwood → dev.keliver`
   rename updated declarations and imports but not that data string,
-  so the walker errored on `dev.konduit.…$spec$1`.
+  so the walker errored on `dev.keliver.…$spec$1`.
 
 **Takeaway:** package renames and module strips need an audit of
 string literals, reflection allowlists, hardcoded paths, and test
@@ -65,7 +65,7 @@ wiring — the compiler won't flag those.
 ### 4. Latent bugs hide behind features your own code doesn't use.
 The schema codegen emitted a non-resolving `.serializer()` for stdlib
 custom-type modifiers (`kotlin.time.Duration`, `kotlin.UInt`). It was
-invisible because **konduit's own schemas don't use stdlib
+invisible because **keliver's own schemas don't use stdlib
 custom-types** — only the comprehensive upstream `test-app` schema
 did. Any adopter using a `Duration` modifier value would have hit it.
 
@@ -106,12 +106,12 @@ safe.
 | `apiCheck` failing, 9 modules unbaselined | Same audit | apiCheck not in CI |
 | Stdlib custom-type serializer codegen bug | Reviving the test-app fixture | Own schemas don't use the feature |
 | Stripped `FakeTreehouseView` fixture | Reviving integration tests | Only a reference error, not a compile error until used |
-| `JvmHeap` allowlist rename miss (`app.cash` vs `dev.konduit`) | Running leak tests | String literal, not an import |
+| `JvmHeap` allowlist rename miss (`app.cash` vs `dev.keliver`) | Running leak tests | String literal, not an import |
 
 ## What changed because of this
 
 - CI now runs `test` + `apiCheck` on every PR (was build-only).
-- A gated, comprehensive inherited suite (`-PkonduitWithTestApp`,
+- A gated, comprehensive inherited suite (`-PkeliverWithTestApp`,
   22 tests) runs in CI while keeping default builds lean.
 - API binary-compatibility is baselined + enforced across all modules.
 - `sample/` + DevoStatus are the standing dogfood of the adopter path,

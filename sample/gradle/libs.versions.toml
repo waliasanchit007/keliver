@@ -11,16 +11,16 @@ androidx-test-ext-junit = "1.2.1"
 androidx-uiautomator = "2.3.0"
 composeMultiplatform = "1.8.2"
 ksp = "2.2.0-2.0.2"
-# MUST match the Kotlin version that the consumed konduit-* artifacts
+# MUST match the Kotlin version that the consumed keliver-* artifacts
 # were built with. Mismatches surface at QuickJS load time as
 # `IrLinkageError` on the generated `Adapter.<init>` constructor.
-# Verify against `konduit/gradle/libs.versions.toml` after every
-# Konduit bump.
+# Verify against `keliver/gradle/libs.versions.toml` after every
+# Keliver bump.
 kotlin = "2.2.0"
-# Tracks the latest Konduit pre-release. Adopters point at a fixed
+# Tracks the latest Keliver pre-release. Adopters point at a fixed
 # released version (`1.0.0-caliclan.4` etc.) rather than `-SNAPSHOT`.
-konduit = "1.0.0-caliclan.4-SNAPSHOT"
-# MUST match the Zipline version in `konduit/gradle/libs.versions.toml`.
+keliver = "1.0.0-caliclan.4-SNAPSHOT"
+# MUST match the Zipline version in `keliver/gradle/libs.versions.toml`.
 zipline = "1.22.0"
 okhttp = "4.12.0"
 
@@ -33,18 +33,18 @@ androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "a
 androidx-test-runner = { module = "androidx.test:runner", version = "1.6.2" }
 androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "androidx-uiautomator" }
 junit = { module = "junit:junit", version = "4.13.2" }
-konduit-compose = { module = "dev.konduit:konduit-compose", version.ref = "konduit" }
-konduit-widget = { module = "dev.konduit:konduit-widget", version.ref = "konduit" }
-konduit-widget-composeui = { module = "dev.konduit:konduit-widget-composeui", version.ref = "konduit" }
-konduit-schema = { module = "dev.konduit:konduit-schema", version.ref = "konduit" }
-konduit-treehouse = { module = "dev.konduit:konduit-treehouse", version.ref = "konduit" }
-konduit-treehouse-guest = { module = "dev.konduit:konduit-treehouse-guest", version.ref = "konduit" }
-konduit-treehouse-host = { module = "dev.konduit:konduit-treehouse-host", version.ref = "konduit" }
-konduit-treehouse-codegen = { module = "dev.konduit:konduit-treehouse-codegen", version.ref = "konduit" }
-konduit-treehouse-host-composeui = { module = "dev.konduit:konduit-treehouse-host-composeui", version.ref = "konduit" }
-konduit-protocol = { module = "dev.konduit:konduit-protocol", version.ref = "konduit" }
-konduit-protocol-host = { module = "dev.konduit:konduit-protocol-host", version.ref = "konduit" }
-konduit-protocol-guest = { module = "dev.konduit:konduit-protocol-guest", version.ref = "konduit" }
+keliver-compose = { module = "dev.keliver:keliver-compose", version.ref = "keliver" }
+keliver-widget = { module = "dev.keliver:keliver-widget", version.ref = "keliver" }
+keliver-widget-composeui = { module = "dev.keliver:keliver-widget-composeui", version.ref = "keliver" }
+keliver-schema = { module = "dev.keliver:keliver-schema", version.ref = "keliver" }
+keliver-treehouse = { module = "dev.keliver:keliver-treehouse", version.ref = "keliver" }
+keliver-treehouse-guest = { module = "dev.keliver:keliver-treehouse-guest", version.ref = "keliver" }
+keliver-treehouse-host = { module = "dev.keliver:keliver-treehouse-host", version.ref = "keliver" }
+keliver-treehouse-codegen = { module = "dev.keliver:keliver-treehouse-codegen", version.ref = "keliver" }
+keliver-treehouse-host-composeui = { module = "dev.keliver:keliver-treehouse-host-composeui", version.ref = "keliver" }
+keliver-protocol = { module = "dev.keliver:keliver-protocol", version.ref = "keliver" }
+keliver-protocol-host = { module = "dev.keliver:keliver-protocol-host", version.ref = "keliver" }
+keliver-protocol-guest = { module = "dev.keliver:keliver-protocol-guest", version.ref = "keliver" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 zipline = { module = "app.cash.zipline:zipline", version.ref = "zipline" }
 zipline-loader = { module = "app.cash.zipline:zipline-loader", version.ref = "zipline" }
@@ -59,11 +59,11 @@ kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-konduit-schema = { id = "dev.konduit.schema", version.ref = "konduit" }
-konduit-generator-compose = { id = "dev.konduit.generator.compose", version.ref = "konduit" }
-konduit-generator-widget = { id = "dev.konduit.generator.widget", version.ref = "konduit" }
-konduit-generator-modifiers = { id = "dev.konduit.generator.modifiers", version.ref = "konduit" }
-konduit-generator-protocol-host = { id = "dev.konduit.generator.protocol.host", version.ref = "konduit" }
-konduit-generator-protocol-guest = { id = "dev.konduit.generator.protocol.guest", version.ref = "konduit" }
+keliver-schema = { id = "dev.keliver.schema", version.ref = "keliver" }
+keliver-generator-compose = { id = "dev.keliver.generator.compose", version.ref = "keliver" }
+keliver-generator-widget = { id = "dev.keliver.generator.widget", version.ref = "keliver" }
+keliver-generator-modifiers = { id = "dev.keliver.generator.modifiers", version.ref = "keliver" }
+keliver-generator-protocol-host = { id = "dev.keliver.generator.protocol.host", version.ref = "keliver" }
+keliver-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "keliver" }
 zipline = { id = "app.cash.zipline", version.ref = "zipline" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

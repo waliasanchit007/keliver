@@ -68,7 +68,7 @@ jobs:
           -DRELEASE_SIGNING_ENABLED=false
 
       # The full inherited Redwood test suite that asserts against the
-      # recovered `test-app` fixture (gated behind -PkonduitWithTestApp;
+      # recovered `test-app` fixture (gated behind -PkeliverWithTestApp;
       # see docs/KNOWN_BUGS.md U13). Both halves now run:
       #   - schema/codegen tests (protocol-host/-guest, testing, compose,
       #     tooling-codegen)
@@ -80,12 +80,12 @@ jobs:
       - name: Test (recovered test-app fixture)
         run: >
           ./gradlew
-          -PkonduitWithTestApp
-          :konduit-protocol-host:jvmTest
-          :konduit-protocol-guest:jvmTest
-          :konduit-testing:jvmTest
-          :konduit-compose:jvmTest
-          :konduit-tooling-codegen:test
-          :konduit-treehouse-host:jvmTest
-          :konduit-treehouse-guest:jsTest
+          -PkeliverWithTestApp
+          :keliver-protocol-host:jvmTest
+          :keliver-protocol-guest:jvmTest
+          :keliver-testing:jvmTest
+          :keliver-compose:jvmTest
+          :keliver-tooling-codegen:test
+          :keliver-treehouse-host:jvmTest
+          :keliver-treehouse-guest:jsTest
           -DRELEASE_SIGNING_ENABLED=false

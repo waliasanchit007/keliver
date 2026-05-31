@@ -1,14 +1,14 @@
-# Konduit sample
+# Keliver sample
 
-Minimal end-to-end Konduit setup. The whole thing renders a single
-`Text` widget reading **"Hello, Konduit!"** inside a `Box`, with the
+Minimal end-to-end Keliver setup. The whole thing renders a single
+`Text` widget reading **"Hello, Keliver!"** inside a `Box`, with the
 guest tree authored in Kotlin/JS and the host rendering on both
 Android and iOS.
 
 It's deliberately small. The goal is to be the smallest faithful
 demonstration of every required moving part: schema, codegen,
 guest bundle, host renderer, and the cross-platform Compose mount
-point. If you're new to Konduit, this is the file tree to copy.
+point. If you're new to Keliver, this is the file tree to copy.
 
 ## Module map
 
@@ -24,12 +24,12 @@ sample/
 ├── host-compose/            # Compose Multiplatform host code:
 │                            #   CmpWidgetFactory, SampleHostApp,
 │                            #   iOS MainViewController. Builds an
-│                            #   iOS framework named KonduitSampleHost.
+│                            #   iOS framework named KeliverSampleHost.
 └── host-android/            # Android application shell
 ```
 
 `schema/` is pure JVM. Everything in `shared-*/` is multiplatform
-codegen output — you don't write any source there, the Konduit
+codegen output — you don't write any source there, the Keliver
 Gradle plugins do. `guest/` is Kotlin/JS. `host-compose/` targets
 Android (`androidTarget`) and iOS (`iosArm64`, `iosSimulatorArm64`).
 `host-android/` is a plain `com.android.application` shell.
@@ -49,7 +49,7 @@ Android (`androidTarget`) and iOS (`iosArm64`, `iosSimulatorArm64`).
         ┌────────────────────────────────────┐       ┌─────────────────────────┐
         │ host-android/MainActivity          │       │ Swift app  (your Xcode  │
         │ ─ OkHttp client                    │       │ project, embeds         │
-        │ ─ TreehouseAppFactory(...)         │       │ KonduitSampleHost.framework)│
+        │ ─ TreehouseAppFactory(...)         │       │ KeliverSampleHost.framework)│
         │ ─ setContent { SampleHostApp }     │       │ ─ MainKt.MainViewController│
         └────────────────────────────────────┘       └─────────────────────────┘
                             │                                       │
@@ -68,9 +68,9 @@ same `SampleHostApp` composable.
 
 1. **JDK 17+** on your PATH.
 2. **Android SDK** (`ANDROID_HOME` set) for `:host-android`.
-3. **GitHub Packages credentials** to resolve Konduit artifacts.
-   The pre-release Konduit Maven repo
-   (`maven.pkg.github.com/waliasanchit007/konduit`) requires a GitHub
+3. **GitHub Packages credentials** to resolve Keliver artifacts.
+   The pre-release Keliver Maven repo
+   (`maven.pkg.github.com/waliasanchit007/keliver`) requires a GitHub
    token with `read:packages` scope. Two ways to provide it:
 
    - **gradle.properties** (recommended for dev):
@@ -99,7 +99,7 @@ cd sample
 # 1. Build the guest bundle.
 ./gradlew :guest:compileDevelopmentZipline
 
-# 2. Serve the bundle. Konduit + Zipline don't ship a built-in
+# 2. Serve the bundle. Keliver + Zipline don't ship a built-in
 #    `serveDevelopmentZipline` Gradle task in this version; Python's
 #    stdlib http.server is the smallest workaround. Run in another
 #    terminal (or `&`-detach):
@@ -112,13 +112,13 @@ cd sample
 ./gradlew :host-android:installDebug
 
 # 4. Launch:
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 ```
 
-You should see "Hello, Konduit!" rendered at top-start — the
-guest's `@Composable fun Show() { Box { Text("Hello, Konduit!") } }`
+You should see "Hello, Keliver!" rendered at top-start — the
+guest's `@Composable fun Show() { Box { Text("Hello, Keliver!") } }`
 made it through Zipline and the host's `CmpWidgetFactory` painted
-it. Verify in `adb logcat` under the `KonduitSample` tag — the
+it. Verify in `adb logcat` under the `KeliverSample` tag — the
 expected sequence is `manifestReady` → `ziplineCreated` →
 `mainFunctionStart`/`End` → `codeLoadSuccess` → `takeService
 name=app`.
@@ -128,7 +128,7 @@ name=app`.
 > sample's first end-to-end run surfaced 5 latent bugs/gaps between
 > the README and what actually shipped; the Production-mode pass
 > found 0 additional bugs (it specifically confirms DCE doesn't
-> strip the reflectively-loaded `@KonduitAppService` adapter). Full
+> strip the reflectively-loaded `@KeliverAppService` adapter). Full
 > debugging log + the Production case study are in
 > [TESTING.md](TESTING.md).
 
@@ -136,7 +136,7 @@ name=app`.
 
 The sample ships a ready-made Xcode project at
 [`iosApp/`](iosApp/) that links against the
-`KonduitSampleHost.framework` produced by `:host-compose`. The
+`KeliverSampleHost.framework` produced by `:host-compose`. The
 Run Script Build Phase in the Xcode project invokes
 `./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`
 automatically — you don't build the framework manually.
@@ -169,11 +169,11 @@ xcodebuild \
 
 # 5. Install + launch with --console to capture EventListener output.
 xcrun simctl install "$SIM_UDID" \
-  build/Build/Products/Debug-iphonesimulator/KonduitSample.app
-xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample
+  build/Build/Products/Debug-iphonesimulator/KeliverSample.app
+xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KeliverSample
 ```
 
-You'll see "Hello, Konduit!" render in the simulator and the same
+You'll see "Hello, Keliver!" render in the simulator and the same
 `manifestReady` → `ziplineCreated` → `mainFunctionStart` →
 `codeLoadSuccess` → `takeService name=app` sequence in the
 console.
@@ -184,12 +184,12 @@ console.
 
 ### iOS adopter notes
 
-If you're integrating Konduit into your own Xcode project rather
+If you're integrating Keliver into your own Xcode project rather
 than using the bundled `iosApp/`:
 
 1. **Run Script Build Phase**: add a "Compile Kotlin Framework"
    Run Script that does
-   `cd "$SRCROOT/../path-to-konduit-host-module" && ./gradlew :your-module:embedAndSignAppleFrameworkForXcode`.
+   `cd "$SRCROOT/../path-to-keliver-host-module" && ./gradlew :your-module:embedAndSignAppleFrameworkForXcode`.
 2. **Bundle ID**: your Swift target's bundle ID is independent
    of the framework. The framework just exposes
    `MainKt.MainViewController()`.
@@ -201,7 +201,7 @@ than using the bundled `iosApp/`:
    on Xcode 26.3. Use `println` or wrap NSLog through a Swift
    helper. Details in TESTING.md § iOS-#3.
 
-## What to copy when you adopt Konduit
+## What to copy when you adopt Keliver
 
 The five steps an adopter typically follows when forking this sample
 into a real product:
@@ -236,7 +236,7 @@ into a real product:
 ## Gotchas you'll hit on day one
 
 These five caught us during the sample's first end-to-end run and
-matter to any adopter writing their own Konduit project. Full
+matter to any adopter writing their own Keliver project. Full
 debugging log lives in [TESTING.md](TESTING.md).
 
 1. **Apply the Zipline plugin to every module with `take`/`bind`
@@ -276,28 +276,28 @@ debugging log lives in [TESTING.md](TESTING.md).
 ## What's intentionally missing
 
 To keep the sample focused, none of these are wired up — but each is
-documented in the main Konduit repo under `docs/` if you need them:
+documented in the main Keliver repo under `docs/` if you need them:
 
 - **Hot reload** (WebSocket-driven manifest refetch). See
   ServerDrivenUI's `HotReloadManager` for the reference impl;
-  pairs with `dev.konduit:konduit-dev-server` artifact.
+  pairs with `dev.keliver:keliver-dev-server` artifact.
 - **Dev overlay** (error fallback, retry buttons, etc.). See
-  `KonduitDevController` / `KonduitDevOverlay` in ServerDrivenUI.
+  `KeliverDevController` / `KeliverDevOverlay` in ServerDrivenUI.
 - **Host-side services** (HostConsole, HostSnackbar, HostHttp).
-  All bundled in `dev.konduit:konduit-host` — add the dep and bind
+  All bundled in `dev.keliver:keliver-host` — add the dep and bind
   them in `Spec.bindServices`.
-- **Image loading** (`konduit-image` + Coil). The schema doesn't
+- **Image loading** (`keliver-image` + Coil). The schema doesn't
   declare an `@Widget(N) Image` here; if you add one, plug in the
   matching `CmpImage` impl.
 
 ## Standalone vs. monorepo
 
-This sample is a standalone Gradle build inside the Konduit repo —
+This sample is a standalone Gradle build inside the Keliver repo —
 its `settings.gradle.kts` is independent of the parent. To work
-on it without publishing Konduit first, you can either:
+on it without publishing Keliver first, you can either:
 
-- Run `./gradlew publishToMavenLocal` from the Konduit root (one
-  level up) so the sample resolves `dev.konduit:*` from your local
+- Run `./gradlew publishToMavenLocal` from the Keliver root (one
+  level up) so the sample resolves `dev.keliver:*` from your local
   Maven cache.
 - Or rely on the live `1.0.0-caliclan.4-SNAPSHOT` artifacts in the
   GitHub Packages repo — that's what the `gpr.user / gpr.token`

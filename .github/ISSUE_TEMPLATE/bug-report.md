@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a defect in Konduit (runtime, codegen, schema parser, build).
+about: Report a defect in Keliver (runtime, codegen, schema parser, build).
 title: '[bug] '
 labels: bug
 ---
@@ -31,7 +31,7 @@ and the host wiring (or a link to it).
 
 ## Environment
 
-- Konduit version: `1.0.0-caliclan.?`
+- Keliver version: `1.0.0-caliclan.?`
 - Kotlin version:
 - AGP version:
 - Compose Multiplatform version:

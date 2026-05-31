@@ -1,0 +1,29 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'dev.keliver.generator.testing'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverUiBasicApi
+        api projects.keliverUiBasicWidget
+        api projects.keliverLayoutWidget
+        api projects.keliverLayoutTesting
+        api projects.keliverLazylayoutWidget
+        api projects.keliverLazylayoutTesting
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverUiBasicSchema
+  type = 'dev.keliver.ui.basic.RedwoodUiBasic'
+}

@@ -1,0 +1,31 @@
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'dev.keliver.generator.widget'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.keliver.lazylayout.widget'))
+      dependencies {
+        api projects.keliverLayoutModifiers
+        api projects.keliverLazylayoutApi
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.assertk
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverLazylayoutSchema
+  type = 'dev.keliver.lazylayout.RedwoodLazyLayout'
+}

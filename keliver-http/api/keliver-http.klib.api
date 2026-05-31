@@ -1,0 +1,120 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-http>
+abstract interface dev.keliver.http/HostHttpProvider : app.cash.zipline/ZiplineService { // dev.keliver.http/HostHttpProvider|null[0]
+    abstract suspend fun execute(dev.keliver.http/HttpRequest): dev.keliver.http/HttpResponse // dev.keliver.http/HostHttpProvider.execute|execute(dev.keliver.http.HttpRequest){}[0]
+
+    final object Companion // dev.keliver.http/HostHttpProvider.Companion|null[0]
+}
+
+final class dev.keliver.http/HttpRequest { // dev.keliver.http/HttpRequest|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...) // dev.keliver.http/HttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
+
+    final val body // dev.keliver.http/HttpRequest.body|{}body[0]
+        final fun <get-body>(): kotlin/String? // dev.keliver.http/HttpRequest.body.<get-body>|<get-body>(){}[0]
+    final val headers // dev.keliver.http/HttpRequest.headers|{}headers[0]
+        final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpRequest.headers.<get-headers>|<get-headers>(){}[0]
+    final val method // dev.keliver.http/HttpRequest.method|{}method[0]
+        final fun <get-method>(): kotlin/String // dev.keliver.http/HttpRequest.method.<get-method>|<get-method>(){}[0]
+    final val path // dev.keliver.http/HttpRequest.path|{}path[0]
+        final fun <get-path>(): kotlin/String // dev.keliver.http/HttpRequest.path.<get-path>|<get-path>(){}[0]
+    final val query // dev.keliver.http/HttpRequest.query|{}query[0]
+        final fun <get-query>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpRequest.query.<get-query>|<get-query>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.http/HttpRequest.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.http/HttpRequest.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpRequest.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpRequest.component4|component4(){}[0]
+    final fun component5(): kotlin/String? // dev.keliver.http/HttpRequest.component5|component5(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...): dev.keliver.http/HttpRequest // dev.keliver.http/HttpRequest.copy|copy(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http/HttpRequest.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http/HttpRequest.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http/HttpRequest.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.http/HttpRequest> { // dev.keliver.http/HttpRequest.$serializer|null[0]
+        final val descriptor // dev.keliver.http/HttpRequest.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.http/HttpRequest.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.http/HttpRequest.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.http/HttpRequest // dev.keliver.http/HttpRequest.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.http/HttpRequest) // dev.keliver.http/HttpRequest.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.http.HttpRequest){}[0]
+    }
+
+    final object Companion { // dev.keliver.http/HttpRequest.Companion|null[0]
+        final val $childSerializers // dev.keliver.http/HttpRequest.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.http/HttpRequest> // dev.keliver.http/HttpRequest.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.http/HttpResponse { // dev.keliver.http/HttpResponse|null[0]
+    constructor <init>(kotlin/Int, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.http/HttpResponse.<init>|<init>(kotlin.Int;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+    final val body // dev.keliver.http/HttpResponse.body|{}body[0]
+        final fun <get-body>(): kotlin/String // dev.keliver.http/HttpResponse.body.<get-body>|<get-body>(){}[0]
+    final val headers // dev.keliver.http/HttpResponse.headers|{}headers[0]
+        final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpResponse.headers.<get-headers>|<get-headers>(){}[0]
+    final val status // dev.keliver.http/HttpResponse.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // dev.keliver.http/HttpResponse.status.<get-status>|<get-status>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.keliver.http/HttpResponse.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.http/HttpResponse.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/HttpResponse.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.http/HttpResponse // dev.keliver.http/HttpResponse.copy|copy(kotlin.Int;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.http/HttpResponse.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.http/HttpResponse.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.http/HttpResponse.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.http/HttpResponse> { // dev.keliver.http/HttpResponse.$serializer|null[0]
+        final val descriptor // dev.keliver.http/HttpResponse.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.http/HttpResponse.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.http/HttpResponse.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.http/HttpResponse // dev.keliver.http/HttpResponse.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.http/HttpResponse) // dev.keliver.http/HttpResponse.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.http.HttpResponse){}[0]
+    }
+
+    final object Companion { // dev.keliver.http/HttpResponse.Companion|null[0]
+        final val $childSerializers // dev.keliver.http/HttpResponse.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.http/HttpResponse> // dev.keliver.http/HttpResponse.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.http/KeliverHttp { // dev.keliver.http/KeliverHttp|null[0]
+    constructor <init>(dev.keliver.http/HostHttpProvider, kotlinx.serialization.json/Json = ...) // dev.keliver.http/KeliverHttp.<init>|<init>(dev.keliver.http.HostHttpProvider;kotlinx.serialization.json.Json){}[0]
+
+    final val json // dev.keliver.http/KeliverHttp.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.http/KeliverHttp.json.<get-json>|<get-json>(){}[0]
+    final val provider // dev.keliver.http/KeliverHttp.provider|{}provider[0]
+        final fun <get-provider>(): dev.keliver.http/HostHttpProvider // dev.keliver.http/KeliverHttp.provider.<get-provider>|<get-provider>(){}[0]
+
+    final fun unwrap(dev.keliver.http/HttpResponse): dev.keliver.http/HttpResponse // dev.keliver.http/KeliverHttp.unwrap|unwrap(dev.keliver.http.HttpResponse){}[0]
+    final suspend fun deleteUnit(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.http/KeliverHttp.deleteUnit|deleteUnit(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final suspend fun requestRaw(dev.keliver.http/HttpRequest): dev.keliver.http/HttpResponse // dev.keliver.http/KeliverHttp.requestRaw|requestRaw(dev.keliver.http.HttpRequest){}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> post(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KeliverHttp.post|post(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> put(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KeliverHttp.put|put(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> delete(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.delete|delete(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> get(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.get|get(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> postEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.postEmpty|postEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> putEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.putEmpty|putEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+
+    final object Companion { // dev.keliver.http/KeliverHttp.Companion|null[0]
+        final val JSON_CONTENT_TYPE // dev.keliver.http/KeliverHttp.Companion.JSON_CONTENT_TYPE|{}JSON_CONTENT_TYPE[0]
+            final fun <get-JSON_CONTENT_TYPE>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/KeliverHttp.Companion.JSON_CONTENT_TYPE.<get-JSON_CONTENT_TYPE>|<get-JSON_CONTENT_TYPE>(){}[0]
+    }
+}
+
+final class dev.keliver.http/KeliverHttpException : kotlin/Exception { // dev.keliver.http/KeliverHttpException|null[0]
+    constructor <init>(kotlin/Int, kotlin/String) // dev.keliver.http/KeliverHttpException.<init>|<init>(kotlin.Int;kotlin.String){}[0]
+
+    final val body // dev.keliver.http/KeliverHttpException.body|{}body[0]
+        final fun <get-body>(): kotlin/String // dev.keliver.http/KeliverHttpException.body.<get-body>|<get-body>(){}[0]
+    final val status // dev.keliver.http/KeliverHttpException.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // dev.keliver.http/KeliverHttpException.status.<get-status>|<get-status>(){}[0]
+}

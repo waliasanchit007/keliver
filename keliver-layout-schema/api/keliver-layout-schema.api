@@ -1,0 +1,204 @@
+public final class dev/keliver/layout/Box {
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-eZWH6Mc ()I
+	public final fun component2-eZWH6Mc ()I
+	public final fun component3 ()Ldev/keliver/ui/Margin;
+	public final fun component4-Bn2Qxbw ()I
+	public final fun component5-Bn2Qxbw ()I
+	public final fun component6 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy-qmv1ZW8 (IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;)Ldev/keliver/layout/Box;
+	public static synthetic fun copy-qmv1ZW8$default (Ldev/keliver/layout/Box;IILdev/keliver/ui/Margin;IILkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/layout/Box;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function1;
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-Bn2Qxbw ()I
+	public final fun getMargin ()Ldev/keliver/ui/Margin;
+	public final fun getVerticalAlignment-Bn2Qxbw ()I
+	public final fun getWidth-eZWH6Mc ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/BoxScope {
+	public static final field INSTANCE Ldev/keliver/layout/BoxScope;
+}
+
+public final class dev/keliver/layout/Column {
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-eZWH6Mc ()I
+	public final fun component2-eZWH6Mc ()I
+	public final fun component3 ()Ldev/keliver/ui/Margin;
+	public final fun component4-iOP-GSE ()I
+	public final fun component5-Bn2Qxbw ()I
+	public final fun component6-FM-STKE ()I
+	public final fun component7 ()Lkotlin/jvm/functions/Function1;
+	public final fun component8 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy-v7P8smY (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ldev/keliver/layout/Column;
+	public static synthetic fun copy-v7P8smY$default (Ldev/keliver/layout/Column;IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/layout/Column;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function1;
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-Bn2Qxbw ()I
+	public final fun getMargin ()Ldev/keliver/ui/Margin;
+	public final fun getOnScroll ()Lkotlin/jvm/functions/Function1;
+	public final fun getOverflow-iOP-GSE ()I
+	public final fun getVerticalAlignment-FM-STKE ()I
+	public final fun getWidth-eZWH6Mc ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/ColumnScope {
+	public static final field INSTANCE Ldev/keliver/layout/ColumnScope;
+}
+
+public final class dev/keliver/layout/Flex {
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Ldev/keliver/layout/Flex;
+	public static synthetic fun copy$default (Ldev/keliver/layout/Flex;DILjava/lang/Object;)Ldev/keliver/layout/Flex;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Grow {
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Ldev/keliver/layout/Grow;
+	public static synthetic fun copy$default (Ldev/keliver/layout/Grow;DILjava/lang/Object;)Ldev/keliver/layout/Grow;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Height {
+	public synthetic fun <init> (DLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-T8gvEZc ()D
+	public final fun copy-fAabCVM (D)Ldev/keliver/layout/Height;
+	public static synthetic fun copy-fAabCVM$default (Ldev/keliver/layout/Height;DILjava/lang/Object;)Ldev/keliver/layout/Height;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight-T8gvEZc ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/HorizontalAlignment {
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-Bn2Qxbw ()I
+	public final fun copy-S2oW1hs (I)Ldev/keliver/layout/HorizontalAlignment;
+	public static synthetic fun copy-S2oW1hs$default (Ldev/keliver/layout/HorizontalAlignment;IILjava/lang/Object;)Ldev/keliver/layout/HorizontalAlignment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlignment-Bn2Qxbw ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Margin {
+	public fun <init> (Ldev/keliver/ui/Margin;)V
+	public final fun component1 ()Ldev/keliver/ui/Margin;
+	public final fun copy (Ldev/keliver/ui/Margin;)Ldev/keliver/layout/Margin;
+	public static synthetic fun copy$default (Ldev/keliver/layout/Margin;Ldev/keliver/ui/Margin;ILjava/lang/Object;)Ldev/keliver/layout/Margin;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMargin ()Ldev/keliver/ui/Margin;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/keliver/layout/RedwoodLayout {
+}
+
+public final class dev/keliver/layout/Row {
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-eZWH6Mc ()I
+	public final fun component2-eZWH6Mc ()I
+	public final fun component3 ()Ldev/keliver/ui/Margin;
+	public final fun component4-iOP-GSE ()I
+	public final fun component5-FM-STKE ()I
+	public final fun component6-Bn2Qxbw ()I
+	public final fun component7 ()Lkotlin/jvm/functions/Function1;
+	public final fun component8 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy-Q08GZEM (IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Ldev/keliver/layout/Row;
+	public static synthetic fun copy-Q08GZEM$default (Ldev/keliver/layout/Row;IILdev/keliver/ui/Margin;IIILkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/layout/Row;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function1;
+	public final fun getHeight-eZWH6Mc ()I
+	public final fun getHorizontalAlignment-FM-STKE ()I
+	public final fun getMargin ()Ldev/keliver/ui/Margin;
+	public final fun getOnScroll ()Lkotlin/jvm/functions/Function1;
+	public final fun getOverflow-iOP-GSE ()I
+	public final fun getVerticalAlignment-Bn2Qxbw ()I
+	public final fun getWidth-eZWH6Mc ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/RowScope {
+	public static final field INSTANCE Ldev/keliver/layout/RowScope;
+}
+
+public final class dev/keliver/layout/Shrink {
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Ldev/keliver/layout/Shrink;
+	public static synthetic fun copy$default (Ldev/keliver/layout/Shrink;DILjava/lang/Object;)Ldev/keliver/layout/Shrink;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Size {
+	public synthetic fun <init> (DDLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-T8gvEZc ()D
+	public final fun component2-T8gvEZc ()D
+	public final fun copy-zH_QbJk (DD)Ldev/keliver/layout/Size;
+	public static synthetic fun copy-zH_QbJk$default (Ldev/keliver/layout/Size;DDILjava/lang/Object;)Ldev/keliver/layout/Size;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight-T8gvEZc ()D
+	public final fun getWidth-T8gvEZc ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Spacer {
+	public synthetic fun <init> (DDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (DDLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-T8gvEZc ()D
+	public final fun component2-T8gvEZc ()D
+	public final fun copy-zH_QbJk (DD)Ldev/keliver/layout/Spacer;
+	public static synthetic fun copy-zH_QbJk$default (Ldev/keliver/layout/Spacer;DDILjava/lang/Object;)Ldev/keliver/layout/Spacer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight-T8gvEZc ()D
+	public final fun getWidth-T8gvEZc ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/VerticalAlignment {
+	public synthetic fun <init> (ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-Bn2Qxbw ()I
+	public final fun copy-S2oW1hs (I)Ldev/keliver/layout/VerticalAlignment;
+	public static synthetic fun copy-S2oW1hs$default (Ldev/keliver/layout/VerticalAlignment;IILjava/lang/Object;)Ldev/keliver/layout/VerticalAlignment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlignment-Bn2Qxbw ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/layout/Width {
+	public synthetic fun <init> (DLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-T8gvEZc ()D
+	public final fun copy-fAabCVM (D)Ldev/keliver/layout/Width;
+	public static synthetic fun copy-fAabCVM$default (Ldev/keliver/layout/Width;DILjava/lang/Object;)Ldev/keliver/layout/Width;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getWidth-T8gvEZc ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

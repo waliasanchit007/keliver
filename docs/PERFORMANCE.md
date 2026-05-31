@@ -1,7 +1,7 @@
-# Konduit performance — baseline measurements
+# Keliver performance — baseline measurements
 
 > **Reading guide.** This document is for adopters trying to predict
-> how much code, time, and memory Konduit will cost them. It tracks
+> how much code, time, and memory Keliver will cost them. It tracks
 > four metric categories — **artifact size**, **build time**,
 > **runtime latency**, and **memory footprint** — with as much
 > reproducibility as we can deliver, plus methodology for the metrics
@@ -13,7 +13,7 @@
 > for the perf workstream's Phase 2.
 
 All baseline numbers below come from the `sample/` reference app
-(`Box { Text("Hello, Konduit!") }`) built against
+(`Box { Text("Hello, Keliver!") }`) built against
 `1.0.0-caliclan.4-SNAPSHOT`. Re-running every measurement is a
 one-liner away — see ["How to reproduce"](#how-to-reproduce).
 
@@ -25,11 +25,11 @@ one-liner away — see ["How to reproduce"](#how-to-reproduce).
 
 | Variant | Size | Notes |
 |---|---|---|
-| Debug (unsigned) | **13.4 MB** | Full Compose runtime + Konduit + Zipline (incl. QuickJS native libs for arm64 + x86_64) |
-| Release (R8, unsigned) | **10.8 MB** | -19% from debug — R8 trims compose + Konduit reflection paths |
+| Debug (unsigned) | **13.4 MB** | Full Compose runtime + Keliver + Zipline (incl. QuickJS native libs for arm64 + x86_64) |
+| Release (R8, unsigned) | **10.8 MB** | -19% from debug — R8 trims compose + Keliver reflection paths |
 
 The dominant size contributor is **`libquickjs.so`** (the JS engine
-that runs the guest bundle) plus Compose runtime. Konduit's own
+that runs the guest bundle) plus Compose runtime. Keliver's own
 host-side code adds ~250 KB; the rest is dependencies.
 
 ### Zipline guest bundle
@@ -37,13 +37,13 @@ host-side code adds ~250 KB; the rest is dependencies.
 The guest bundle is what the host downloads at runtime. Two
 configurations matter:
 
-| Variant | Total | Konduit + sample own-code | Kotlin runtime |
+| Variant | Total | Keliver + sample own-code | Kotlin runtime |
 |---|---|---|---|
 | Development | **2.8 MB** | ~80 KB | 1.0 MB (stdlib + coroutines + serialization + Compose) |
 | Production | **732 KB** | **12 KB** | 532 KB |
 
-The "Konduit + sample own-code" column is the cost of *all*
-Konduit guest modules combined with the sample's domain code —
+The "Keliver + sample own-code" column is the cost of *all*
+Keliver guest modules combined with the sample's domain code —
 **12 KB in production mode**. Effectively every byte beyond that
 is the Kotlin/JS standard runtime that the JS engine needs anyway.
 
@@ -56,14 +56,14 @@ Per-module breakdown of the Production bundle (largest first):
 | `kotlinx-coroutines-core` | 120,000 | `suspend` machinery |
 | `kotlinx-serialization-json` | 80,000 | JSON impl |
 | `zipline-root-zipline` | 80,000 | Zipline runtime |
-| `konduit-treehouse-guest` | 3,734 | Lifecycle + protocol glue |
-| `konduit-sample-guest` | 3,272 | The sample's own `main()` |
-| `konduit-sample-shared-protocol-guest` | 1,031 | Codegen output |
-| `konduit-konduit-runtime` | 760 | Konduit Compose binding |
-| `konduit-konduit-compose` | 635 | Compose-Konduit bridge |
-| All other `konduit-*` | <500 each | Individual schemas / widgets |
+| `keliver-treehouse-guest` | 3,734 | Lifecycle + protocol glue |
+| `keliver-sample-guest` | 3,272 | The sample's own `main()` |
+| `keliver-sample-shared-protocol-guest` | 1,031 | Codegen output |
+| `keliver-keliver-runtime` | 760 | Keliver Compose binding |
+| `keliver-keliver-compose` | 635 | Compose-Keliver bridge |
+| All other `keliver-*` | <500 each | Individual schemas / widgets |
 
-The takeaway: **once you've shipped Konduit at all, adding new
+The takeaway: **once you've shipped Keliver at all, adding new
 widgets or screens costs single-digit KB per addition.** The
 runtime cost is fixed, the per-feature cost is small.
 
@@ -71,7 +71,7 @@ runtime cost is fixed, the per-feature cost is small.
 
 | Variant | Size | Notes |
 |---|---|---|
-| `KonduitSampleHost.framework` (debug, simulator-arm64) | **187 MB** | Static framework, debug symbols, full Kotlin Native stdlib |
+| `KeliverSampleHost.framework` (debug, simulator-arm64) | **187 MB** | Static framework, debug symbols, full Kotlin Native stdlib |
 
 iOS frameworks are large in debug because:
 1. They embed the entire Kotlin Native stdlib (since they're `isStatic = true`)
@@ -131,7 +131,7 @@ class ColdStartBenchmark {
   @get:Rule val rule = MacrobenchmarkRule()
 
   @Test fun coldStart() = rule.measureRepeated(
-    packageName = "dev.konduit.sample",
+    packageName = "dev.keliver.sample",
     metrics = listOf(StartupTimingMetric()),
     iterations = 5,
     startupMode = StartupMode.COLD,
@@ -143,6 +143,45 @@ class ColdStartBenchmark {
 zipline cache, P95 ≤ 1500 ms. Caveat: the network fetch of the
 manifest dominates the cold case — adopters who embed the manifest
 in assets will see substantially lower numbers.
+
+**Executed (emulator — 2026-05-29).** Ran
+`./gradlew :benchmarks:connectedBenchmarkAndroidTest` against a
+`Pixel_9` AVD (Android 17 / API 37, `arm64-v8a`, Apple-Silicon host),
+with the dev manifest server live. The result has two parts:
+
+- *Macrobenchmark `StartupTimingMetric` — blocked, exactly as
+  predicted.* Both `coldStartup` and `warmStartup` built, installed,
+  and launched (`Starting 2 tests on Pixel_9`), then failed with
+  `IllegalStateException: Unable to confirm activity launch
+  completion … dumpsys gfxinfo … framestats`. This is a clean
+  reproduction of the documented emulator limitation (see the Phase 2
+  note at the bottom) — the harness is correct; the emulator's
+  framestats table is the problem, not Keliver.
+- *Supplementary `am start -W` — measured.* Because `am start -W`
+  reports ActivityManager's own launch timing (process start → first
+  frame "displayed") and does **not** depend on the flaky gfxinfo
+  path, it gives a real number where Macrobenchmark can't. Same
+  `benchmark`-variant APK (`dev.keliver.sample`, R8-shaped,
+  profileinstaller baked in):
+
+  | Launch type | TotalTime |
+  |---|---|
+  | Cache-cold (after `pm clear` — forces bundle re-fetch) | **296 ms** |
+  | Process-cold ×5 (cache warm): 190 / 155 / 146 / 139 / 163 | **median 155 ms** |
+
+  Guest render confirmed on every launch — logcat shows
+  `KeliverSample: codeLoadSuccess modules=30` and the screen reads
+  "Hello, Keliver!" (not a blank/error surface), so the launches
+  measured a real render path.
+
+  **Caveats — treat as a sanity-check lower bound, not a publishable
+  baseline.** `am start -W` TotalTime approximates but is not
+  identical to the trace-based `StartupTimingMetric`; an
+  Apple-Silicon emulator has a fast host CPU, so these numbers are
+  optimistic versus mid-range hardware; and n is small. The takeaway
+  is directional: cold start sits comfortably inside the P50 ≤ 800 ms
+  SLA with wide headroom. Canonical per-release-tag numbers still
+  require a real device (see "Recommended adopter workflow" below).
 
 **How to measure (iOS).** Wrap the `MainViewController()` call site
 in `mach_absolute_time()` deltas and post the result via
@@ -159,7 +198,7 @@ tree paints. The Zipline runtime is already alive; this is the
 **How to measure.** Compose `Snapshot` observer counting
 recompositions, paired with `Choreographer.FrameCallback` to capture
 the frame deadline the new tree first met. Land both as a
-test-only fixture under `konduit-benchmarks/` so they can run in
+test-only fixture under `keliver-benchmarks/` so they can run in
 CI on emulators.
 
 **Target SLA (proposed).** P50 ≤ 100 ms, P95 ≤ 250 ms — matching
@@ -214,23 +253,23 @@ equivalent native-Compose-only app would use; per-screen delta
 
 Two reference points belong in any final perf report:
 
-1. **Native Compose-only.** The same `Box { Text("Hello, Konduit!") }`
-   rendered without the Konduit guest layer — pure Android Compose
-   + iOS Compose Multiplatform. This isolates the Konduit overhead
+1. **Native Compose-only.** The same `Box { Text("Hello, Keliver!") }`
+   rendered without the Keliver guest layer — pure Android Compose
+   + iOS Compose Multiplatform. This isolates the Keliver overhead
    from the underlying Compose runtime cost. Implementation: a
    sibling `:host-android-native` module in `sample/` that omits
    the `:guest` dependency.
 
-2. **Upstream Cash App Redwood 0.18.0.** Konduit forks from Redwood
+2. **Upstream Cash App Redwood 0.18.0.** Keliver forks from Redwood
    0.18.0; running the same widget through upstream Redwood
-   demonstrates whether Konduit has introduced perf regressions.
+   demonstrates whether Keliver has introduced perf regressions.
    Implementation: a `redwood-018-baseline/` sibling project
-   pinned to that version (no Konduit). Practical caveat — the
+   pinned to that version (no Keliver). Practical caveat — the
    namespaces diverge significantly so the comparison needs a
    schema port. Defer until adopter demand surfaces.
 
 Both comparisons run with **the same methodology** as the
-Konduit-side measurements above, so the deltas are apples-to-apples.
+Keliver-side measurements above, so the deltas are apples-to-apples.
 
 ---
 
@@ -239,7 +278,7 @@ Konduit-side measurements above, so the deltas are apples-to-apples.
 All "measured" sections above run from a clean clone of this repo:
 
 ```sh
-git clone https://github.com/waliasanchit007/konduit && cd konduit/sample
+git clone https://github.com/waliasanchit007/keliver && cd keliver/sample
 # Set up GH Packages auth — see sample/README.md
 ./gradlew --stop
 rm -rf */build .gradle
@@ -259,7 +298,7 @@ Cold-start / warm-mount / update-latency / memory-footprint
 reproductions require the device-level instrumentation
 (macrobenchmark, Instruments) described in their respective
 methodology sections above. The benchmarking fixtures themselves
-are queued for `konduit-benchmarks/`.
+are queued for `keliver-benchmarks/`.
 
 ---
 
@@ -274,7 +313,7 @@ status of each metric:
 | Zipline bundle size (Development + Production) | **measured** |
 | iOS framework size (debug) | **measured** |
 | Build time (cold + warm) | **measured** |
-| Cold start latency | planned — Phase 2 |
+| Cold start latency | **executed on emulator** (2026-05-29) — Macrobenchmark blocked by emulator framestats; `am start -W` fallback ≈155 ms median process-cold. Real-device baseline still pending |
 | Warm mount latency | planned — Phase 2 |
 | Update latency | planned — Phase 2 |
 | Idle memory footprint | planned — Phase 2 |
@@ -296,17 +335,21 @@ manifest, `androidx.profileinstaller` baked in), and a matching
 ./gradlew :benchmarks:connectedBenchmarkAndroidTest
 ```
 
-**Phase 2 known limitation — emulator framestats flakiness.**
-Running the cold-start fixture against an Android emulator (any
-recent API level) trips Macrobenchmark's `Unable to confirm
-activity launch completion` check — the emulator's
-`dumpsys gfxinfo … framestats` table is slow to populate after
-activity launch, and Macrobenchmark times out before the first
-frame's stats land. Same symptom on bare Pixel emulator AVDs as
-on the higher-API ones. The fixture is correct (the sample DOES
-launch + render — verified independently by running
-`adb shell am start …` + `screencap`), only the activity-launch
-detector is unreliable on emulator.
+**Phase 2 known limitation — emulator framestats flakiness
+(CONFIRMED by a 2026-05-29 run).** Running the cold-start fixture
+against an Android emulator (any recent API level) trips
+Macrobenchmark's `Unable to confirm activity launch completion`
+check — the emulator's `dumpsys gfxinfo … framestats` table is slow
+to populate after activity launch, and Macrobenchmark times out
+before the first frame's stats land. This was reproduced directly on
+a `Pixel_9` AVD (API 37): both `coldStartup` and `warmStartup` built,
+installed, and launched, then failed with that exact
+`IllegalStateException`. The fixture is correct — the sample DOES
+launch + render, verified independently in the same session via
+`adb shell am start -W` (≈155 ms median process-cold) + `screencap`
+("Hello, Keliver!") + logcat (`codeLoadSuccess modules=30`). Only the
+activity-launch detector is unreliable on emulator; the numbers above
+came from the `am start -W` fallback.
 
 **Recommended adopter workflow.** Run benchmarks against a real
 device (USB-attached or `adb connect`). Emulator runs are useful
@@ -315,7 +358,7 @@ numbers should always be measured on hardware. The
 `testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"`
 in `:benchmarks/build.gradle.kts` lets emulator runs at least
 *attempt* the measurement, but the framestats issue is upstream
-and not fixable in Konduit's harness.
+and not fixable in Keliver's harness.
 
 **Phase 3** is the comparison work — native-Compose-only and
 upstream Redwood 0.18.0 baselines — and depends on Phase 2 numbers

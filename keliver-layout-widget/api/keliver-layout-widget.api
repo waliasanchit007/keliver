@@ -1,0 +1,54 @@
+public abstract interface class dev/keliver/layout/widget/Box : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-S2oW1hs (I)V
+	public abstract fun margin (Ldev/keliver/ui/Margin;)V
+	public abstract fun verticalAlignment-S2oW1hs (I)V
+	public abstract fun width-zm9Su64 (I)V
+}
+
+public abstract interface class dev/keliver/layout/widget/Column : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-S2oW1hs (I)V
+	public abstract fun margin (Ldev/keliver/ui/Margin;)V
+	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun overflow-oLBX6zQ (I)V
+	public abstract fun verticalAlignment-P80CwyE (I)V
+	public abstract fun width-zm9Su64 (I)V
+}
+
+public abstract interface class dev/keliver/layout/widget/RedwoodLayoutWidgetFactory {
+	public abstract fun Box ()Ldev/keliver/layout/widget/Box;
+	public abstract fun Column ()Ldev/keliver/layout/widget/Column;
+	public abstract fun Row ()Ldev/keliver/layout/widget/Row;
+	public abstract fun Spacer ()Ldev/keliver/layout/widget/Spacer;
+}
+
+public final class dev/keliver/layout/widget/RedwoodLayoutWidgetSystem : dev/keliver/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/layout/widget/RedwoodLayoutWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getRedwoodLayout ()Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;
+}
+
+public final class dev/keliver/layout/widget/RedwoodLayoutWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/layout/widget/Row : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun height-zm9Su64 (I)V
+	public abstract fun horizontalAlignment-P80CwyE (I)V
+	public abstract fun margin (Ldev/keliver/ui/Margin;)V
+	public abstract fun onScroll (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun overflow-oLBX6zQ (I)V
+	public abstract fun verticalAlignment-S2oW1hs (I)V
+	public abstract fun width-zm9Su64 (I)V
+}
+
+public abstract interface class dev/keliver/layout/widget/Spacer : dev/keliver/widget/Widget {
+	public abstract fun height-fAabCVM (D)V
+	public abstract fun width-fAabCVM (D)V
+}
+

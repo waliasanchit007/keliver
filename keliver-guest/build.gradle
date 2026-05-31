@@ -1,0 +1,71 @@
+// Guest-side facade module — re-exports the public Keliver API surface
+// that every Zipline guest module needs so adopters can depend on a
+// single `dev.keliver:keliver-guest` artifact instead of wiring the
+// generator + runtime modules manually. See PUBLIC_LAUNCH_ROADMAP.md
+// Phase 2.
+//
+// Targets: JS (TreehouseGuest — Kotlin/JS for QuickJS execution, plus
+// JVM-for-test). The host-side facade lives in `:keliver-host`.
+
+import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
+
+redwoodBuild {
+  targets(TreehouseGuest)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        // Zipline runtime — needed for `ZiplineService` types and host
+        // service handles.
+        api libs.zipline
+
+        // Compose runtime (@Composable) + widget interfaces. The guest
+        // builds widget trees that the host renders.
+        api projects.keliverCompose
+        api projects.keliverWidget
+
+        // Protocol primitives. `keliver-protocol-guest` is what
+        // codegen'd guest factories depend on at runtime.
+        api projects.keliverProtocol
+        api projects.keliverProtocolGuest
+
+        // The treehouse stack. `keliver-treehouse-guest` provides the
+        // entry-point types; `-guest-compose` brings the Compose-aware
+        // `Screen` / `Navigator` interfaces guests implement.
+        api projects.keliverTreehouse
+        api projects.keliverTreehouseGuest
+        api projects.keliverTreehouseGuestCompose
+
+        // ViewModel helper — `KeliverViewModel` base + `keliverViewModel { }`
+        // Compose entry point. See issue #6.
+        api projects.keliverVm
+
+        // HTTP shim — KeliverHttp typed wrapper + HostHttpProvider
+        // ZiplineService interface. Guest calls REST endpoints through
+        // a single host-bound service instead of N per-endpoint
+        // services. See issue #7.
+        api projects.keliverHttp
+
+        // Key/value persistence shim — `KeliverStorage` typed wrapper +
+        // `HostStorage` ZiplineService interface. See issue #10.
+        api projects.keliverStorage
+
+        // Typed navigation — `KeliverNavController` + `KeliverNavHost` +
+        // `currentKeliverNavController`. Replaces the per-app
+        // `HostNavigator` RPC-per-route pattern with a guest-owned typed
+        // back stack. See issue #25.
+        api projects.keliverNav
+
+        // HTTP API annotations — @KeliverApi, @GET, @POST, etc. Phase 1
+        // of the Retrofit-style codegen workstream (issue #18). The KSP
+        // processor that consumes these is queued for the next dev
+        // cycle; the annotations themselves are committed and adopters
+        // can start drafting `@KeliverApi` interfaces today.
+        api projects.keliverHttpAnnotations
+      }
+    }
+  }
+}

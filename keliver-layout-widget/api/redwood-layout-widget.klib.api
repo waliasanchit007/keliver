@@ -1,0 +1,69 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-layout-widget>
+abstract interface <#A: kotlin/Any> dev.keliver.layout.widget/Box : dev.keliver.widget/Widget<#A> { // dev.keliver.layout.widget/Box|null[0]
+    abstract val children // dev.keliver.layout.widget/Box.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.layout.widget/Box.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun height(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Box.height|height(dev.keliver.layout.api.Constraint){}[0]
+    abstract fun horizontalAlignment(dev.keliver.layout.api/CrossAxisAlignment) // dev.keliver.layout.widget/Box.horizontalAlignment|horizontalAlignment(dev.keliver.layout.api.CrossAxisAlignment){}[0]
+    abstract fun margin(dev.keliver.ui/Margin) // dev.keliver.layout.widget/Box.margin|margin(dev.keliver.ui.Margin){}[0]
+    abstract fun verticalAlignment(dev.keliver.layout.api/CrossAxisAlignment) // dev.keliver.layout.widget/Box.verticalAlignment|verticalAlignment(dev.keliver.layout.api.CrossAxisAlignment){}[0]
+    abstract fun width(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Box.width|width(dev.keliver.layout.api.Constraint){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.layout.widget/Column : dev.keliver.widget/Widget<#A> { // dev.keliver.layout.widget/Column|null[0]
+    abstract val children // dev.keliver.layout.widget/Column.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.layout.widget/Column.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun height(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Column.height|height(dev.keliver.layout.api.Constraint){}[0]
+    abstract fun horizontalAlignment(dev.keliver.layout.api/CrossAxisAlignment) // dev.keliver.layout.widget/Column.horizontalAlignment|horizontalAlignment(dev.keliver.layout.api.CrossAxisAlignment){}[0]
+    abstract fun margin(dev.keliver.ui/Margin) // dev.keliver.layout.widget/Column.margin|margin(dev.keliver.ui.Margin){}[0]
+    abstract fun onScroll(kotlin/Function1<dev.keliver.ui/Px, kotlin/Unit>?) // dev.keliver.layout.widget/Column.onScroll|onScroll(kotlin.Function1<dev.keliver.ui.Px,kotlin.Unit>?){}[0]
+    abstract fun overflow(dev.keliver.layout.api/Overflow) // dev.keliver.layout.widget/Column.overflow|overflow(dev.keliver.layout.api.Overflow){}[0]
+    abstract fun verticalAlignment(dev.keliver.layout.api/MainAxisAlignment) // dev.keliver.layout.widget/Column.verticalAlignment|verticalAlignment(dev.keliver.layout.api.MainAxisAlignment){}[0]
+    abstract fun width(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Column.width|width(dev.keliver.layout.api.Constraint){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.layout.widget/RedwoodLayoutWidgetFactory { // dev.keliver.layout.widget/RedwoodLayoutWidgetFactory|null[0]
+    abstract fun Box(): dev.keliver.layout.widget/Box<#A> // dev.keliver.layout.widget/RedwoodLayoutWidgetFactory.Box|Box(){}[0]
+    abstract fun Column(): dev.keliver.layout.widget/Column<#A> // dev.keliver.layout.widget/RedwoodLayoutWidgetFactory.Column|Column(){}[0]
+    abstract fun Row(): dev.keliver.layout.widget/Row<#A> // dev.keliver.layout.widget/RedwoodLayoutWidgetFactory.Row|Row(){}[0]
+    abstract fun Spacer(): dev.keliver.layout.widget/Spacer<#A> // dev.keliver.layout.widget/RedwoodLayoutWidgetFactory.Spacer|Spacer(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.layout.widget/Row : dev.keliver.widget/Widget<#A> { // dev.keliver.layout.widget/Row|null[0]
+    abstract val children // dev.keliver.layout.widget/Row.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.layout.widget/Row.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun height(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Row.height|height(dev.keliver.layout.api.Constraint){}[0]
+    abstract fun horizontalAlignment(dev.keliver.layout.api/MainAxisAlignment) // dev.keliver.layout.widget/Row.horizontalAlignment|horizontalAlignment(dev.keliver.layout.api.MainAxisAlignment){}[0]
+    abstract fun margin(dev.keliver.ui/Margin) // dev.keliver.layout.widget/Row.margin|margin(dev.keliver.ui.Margin){}[0]
+    abstract fun onScroll(kotlin/Function1<dev.keliver.ui/Px, kotlin/Unit>?) // dev.keliver.layout.widget/Row.onScroll|onScroll(kotlin.Function1<dev.keliver.ui.Px,kotlin.Unit>?){}[0]
+    abstract fun overflow(dev.keliver.layout.api/Overflow) // dev.keliver.layout.widget/Row.overflow|overflow(dev.keliver.layout.api.Overflow){}[0]
+    abstract fun verticalAlignment(dev.keliver.layout.api/CrossAxisAlignment) // dev.keliver.layout.widget/Row.verticalAlignment|verticalAlignment(dev.keliver.layout.api.CrossAxisAlignment){}[0]
+    abstract fun width(dev.keliver.layout.api/Constraint) // dev.keliver.layout.widget/Row.width|width(dev.keliver.layout.api.Constraint){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.layout.widget/Spacer : dev.keliver.widget/Widget<#A> { // dev.keliver.layout.widget/Spacer|null[0]
+    abstract fun height(dev.keliver.ui/Dp) // dev.keliver.layout.widget/Spacer.height|height(dev.keliver.ui.Dp){}[0]
+    abstract fun width(dev.keliver.ui/Dp) // dev.keliver.layout.widget/Spacer.width|width(dev.keliver.ui.Dp){}[0]
+}
+
+final class <#A: kotlin/Any> dev.keliver.layout.widget/RedwoodLayoutWidgetSystem : dev.keliver.layout.widget/RedwoodLayoutWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem|null[0]
+    constructor <init>(dev.keliver.layout.widget/RedwoodLayoutWidgetFactory<#A>) // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.<init>|<init>(dev.keliver.layout.widget.RedwoodLayoutWidgetFactory<1:0>){}[0]
+
+    final val RedwoodLayout // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.RedwoodLayout|{}RedwoodLayout[0]
+        final fun <get-RedwoodLayout>(): dev.keliver.layout.widget/RedwoodLayoutWidgetFactory<#A> // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.RedwoodLayout.<get-RedwoodLayout>|<get-RedwoodLayout>(){}[0]
+
+    final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
+
+    final object Companion { // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.Companion|null[0]
+        final fun <#A2: kotlin/Any> allChildren(dev.keliver.widget/Widget<#A2>): kotlin.collections/List<dev.keliver.widget/Widget<#A2>> // dev.keliver.layout.widget/RedwoodLayoutWidgetSystem.Companion.allChildren|allChildren(dev.keliver.widget.Widget<0:0>){0§<kotlin.Any>}[0]
+    }
+}

@@ -7,37 +7,40 @@ finding with the symptom, the root cause, and the fix, so the next
 person running the sample (or the next adopter copying it) doesn't
 hit the same dead ends.
 
-This file now holds **four** case studies:
+This file now holds these case studies:
 1. **Android** (Development bundle) — 5 bugs found + fixed.
 2. **iOS** (Development bundle) — 3 bugs found + fixed.
-3. *(implicit)* `@KonduitAppService` migration — see the Konduit
+3. *(implicit)* `@KeliverAppService` migration — see the Keliver
    repo's U12 entry; validated against DevoStatus.
 4. **Production bundle** — 0 bugs; validates the R8/DCE-minified
    ship path that the first two case studies didn't exercise.
+5. **Hot reload** — `serveDevelopmentZipline --continuous` +
+   `withDevelopmentServerPush`; guest edits reach the running app in
+   ~2 s, no reinstall.
 
 **Final state**: `./gradlew :host-android:installDebug` against a
 Pixel 9 emulator, with `python3 -m http.server 8080` serving
 `guest/build/zipline/Development/`, renders `Box { Text("Hello,
-Konduit!") }` correctly. The full Zipline RPC handshake is visible
-in `adb logcat` under the `KonduitSample` tag.
+Keliver!") }` correctly. The full Zipline RPC handshake is visible
+in `adb logcat` under the `KeliverSample` tag.
 
 ## Test setup (reproducible)
 
 ```sh
-# 1. Publish konduit to mavenLocal (the sample resolves from there
+# 1. Publish keliver to mavenLocal (the sample resolves from there
 #    first, falling back to GH Packages only when something isn't
 #    locally available).
-cd /path/to/konduit
+cd /path/to/keliver
 ./gradlew publishToMavenLocal -x test -x dokkaJavadocJar \
     -x signMavenPublication \
-    -x :konduit-http-codegen:publishMavenPublicationToMavenLocal
+    -x :keliver-http-codegen:publishMavenPublicationToMavenLocal
 # 17 minutes cold; 5-10 min if the source set is unchanged.
 
-# 2. Build + serve the guest bundle. Konduit + Zipline don't ship a
+# 2. Build + serve the guest bundle. Keliver + Zipline don't ship a
 #    `serveDevelopmentZipline` Gradle task (the README's reference
 #    was wrong); Python's stdlib http.server is the smallest
 #    workaround. See Finding #1.
-cd /path/to/konduit/sample
+cd /path/to/keliver/sample
 ./gradlew :guest:compileDevelopmentZipline
 (cd guest/build/zipline/Development && python3 -m http.server 8080) &
 
@@ -50,25 +53,25 @@ until adb shell getprop sys.boot_completed 2>/dev/null | grep -q 1; do sleep 5; 
 
 # 4. Install + launch.
 ./gradlew :host-android:installDebug
-adb shell pm clear dev.konduit.sample
+adb shell pm clear dev.keliver.sample
 adb logcat -c
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 sleep 15
-adb logcat -d | grep -E "KonduitSample|FATAL|AndroidRuntime"
+adb logcat -d | grep -E "KeliverSample|FATAL|AndroidRuntime"
 ```
 
 The expected end-state log lines, in order, are:
 
 ```
-KonduitSample: onCreate — manifest URL: http://10.0.2.2:8080/manifest.zipline.json
-KonduitSample: manifestReady modules=30
-KonduitSample: takeService name=zipline/guest
-KonduitSample: bindService name=zipline/host
-KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=konduit-sample
-KonduitSample: mainFunctionEnd app=konduit-sample
-KonduitSample: codeLoadSuccess modules=30
-KonduitSample: takeService name=app
+KeliverSample: onCreate — manifest URL: http://10.0.2.2:8080/manifest.zipline.json
+KeliverSample: manifestReady modules=30
+KeliverSample: takeService name=zipline/guest
+KeliverSample: bindService name=zipline/host
+KeliverSample: ziplineCreated
+KeliverSample: mainFunctionStart app=keliver-sample
+KeliverSample: mainFunctionEnd app=keliver-sample
+KeliverSample: codeLoadSuccess modules=30
+KeliverSample: takeService name=app
 …
 ```
 
@@ -96,6 +99,15 @@ from `guest/build/zipline/Development/`. ServerDrivenUI runs its
 own bespoke `:dev-server` Ktor module for the same purpose; that's
 overkill for the sample.
 
+> **Correction (hot-reload case study, 2026-05-29).** This finding's
+> premise was wrong: `serveDevelopmentZipline` **does** exist in
+> Zipline 1.22.0 — `./gradlew :guest:tasks --all` lists it
+> ("Serves Zipline files"), alongside `generateZiplineManifestKeyPair{Ed25519,EcdsaP256}`.
+> The original audit overlooked it. `python3 -m http.server` is still
+> the zero-dependency option and stays the README default, **but**
+> the Zipline serve task is what enables WebSocket hot reload (python
+> has no push channel). See the hot-reload case study below.
+
 ### #2 — Sample silently failed because no `EventListener` was wired
 
 **Symptom.** First launch showed a blank white screen. No crash, no
@@ -105,20 +117,20 @@ Python server's access log) but nothing visible happened on the
 host side, and no logcat clue pointed at the cause.
 
 **Root cause.** The sample's `TreehouseAppFactory.create(...)` call
-omitted the `eventListenerFactory` argument. Konduit's Treehouse
+omitted the `eventListenerFactory` argument. Keliver's Treehouse
 events (`manifestReady`, `codeLoadSuccess`, `codeLoadFailed`,
 `uncaughtException`, etc.) are all delivered through that
 listener; with no listener wired, the host has no idea anything
 went wrong — guest exceptions don't surface, crashes are silent.
 
 **Fix.** Added a `LoggingEventListenerFactory` to `MainActivity.kt`
-that logs every event under the `KonduitSample` tag. Adopters can
+that logs every event under the `KeliverSample` tag. Adopters can
 swap this for their own production listener (or drop it in release
 builds), but at least the sample now ships a working debug
 baseline.
 
-This is **U1/U2/U3 of `konduit/docs/KNOWN_BUGS.md`** — the silent-
-failure shape Konduit's hardening work has been chipping away at.
+This is **U1/U2/U3 of `keliver/docs/KNOWN_BUGS.md`** — the silent-
+failure shape Keliver's hardening work has been chipping away at.
 The sample now ships an explicit example of how to escape it.
 
 ### #3 — `Adapter.<init>` IrLinkageError at QuickJS load time
@@ -128,7 +140,7 @@ surfaced:
 
 ```
 codeLoadFailed: Constructor 'Adapter.<init>' can not be called:
-  No constructor found for symbol 'dev.konduit.sample.shared/
+  No constructor found for symbol 'dev.keliver.sample.shared/
     SampleAppService.Companion.Adapter.<init>|<init>(
       kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;
       kotlin.String){}[0]'
@@ -142,12 +154,12 @@ that no matching constructor existed.
 **False leads tried before finding the real fix:**
 
 1. *Zipline version mismatch* — bumped the sample from 1.26.0 down
-   to 1.22.0 (matching `konduit/gradle/libs.versions.toml`). No
+   to 1.22.0 (matching `keliver/gradle/libs.versions.toml`). No
    change.
 2. *Kotlin version mismatch* — tried both Kotlin 2.1.0 + Zipline
    1.26.0 (matching ServerDrivenUI's stack) and Kotlin 2.2.0 +
-   Zipline 1.22.0 (matching Konduit's). No change.
-3. *Stale GH Packages artifacts* — published Konduit fresh to
+   Zipline 1.22.0 (matching Keliver's). No change.
+3. *Stale GH Packages artifacts* — published Keliver fresh to
    `mavenLocal` so the sample picked up the current working-tree
    build. No change.
 
@@ -156,7 +168,7 @@ None of those addressed the actual problem.
 **Root cause.** Zipline issue
 [#765](https://github.com/cashapp/zipline/issues/765) — the
 Zipline IR plugin **cannot auto-generate** an Adapter for an
-interface that transitively extends `ZiplineService` via Konduit's
+interface that transitively extends `ZiplineService` via Keliver's
 `AppService`. The class gets emitted with the wrong constructor
 shape, the linker rejects it.
 
@@ -174,9 +186,9 @@ adapter touches three `INVISIBLE_REFERENCE` Zipline internals
 `@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE", ...)`.
 
 This is significant adopter-onboarding friction. Until Zipline
-#765 is fixed upstream, every Konduit adopter writing a new
+#765 is fixed upstream, every Keliver adopter writing a new
 `AppService` subinterface needs to hand-roll this same ~60 lines
-of adapter glue. It belongs in `konduit-treehouse` as a helper
+of adapter glue. It belongs in `keliver-treehouse` as a helper
 (future work).
 
 ### #4 — `:shared` was missing the Zipline + kotlinSerialization plugins
@@ -204,7 +216,7 @@ generated adapter calls for every method's param/return types.
 appeared in the log, but the app crashed immediately after:
 
 ```
-FATAL EXCEPTION: Treehouse konduit-sample
+FATAL EXCEPTION: Treehouse keliver-sample
 java.lang.IllegalStateException: unexpected call to Zipline.take:
   is the Zipline plugin configured?
     at app.cash.zipline.Zipline.take(Zipline.kt:122)
@@ -236,15 +248,15 @@ then guest-1/2/3/4 ↔ host-1/2/3/4/5 service pairs as the protocol
 streams widget mutations across the boundary:
 
 ```
-KonduitSample: takeService name=app
-KonduitSample: takeService name=zipline/guest-1
-KonduitSample: bindService name=zipline/host-1
-KonduitSample: takeService name=zipline/guest-2
-KonduitSample: bindService name=zipline/host-2
+KeliverSample: takeService name=app
+KeliverSample: takeService name=zipline/guest-1
+KeliverSample: bindService name=zipline/host-1
+KeliverSample: takeService name=zipline/guest-2
+KeliverSample: bindService name=zipline/host-2
 …
 ```
 
-Screenshot confirms `Hello, Konduit!` painted at top-start of the
+Screenshot confirms `Hello, Keliver!` painted at top-start of the
 host's `Box`. The sample is now a true end-to-end working
 reference.
 
@@ -267,7 +279,7 @@ Status going forward:
 | 4 | `:shared` missing Zipline + serialization plugins | Both added to `:shared/build.gradle.kts` |
 | 5 | Host modules missing Zipline plugin | Added to `:host-android` + `:host-compose` |
 
-The right long-term fix for #3 is a `konduit-treehouse` helper
+The right long-term fix for #3 is a `keliver-treehouse` helper
 that hides the adapter boilerplate behind a single API. Filed as
 follow-up.
 
@@ -276,10 +288,10 @@ follow-up.
 # iOS case study
 
 After the Android pass landed, we mirrored the same exercise on
-iOS — built the `KonduitSampleHost.framework`, wired it into a
+iOS — built the `KeliverSampleHost.framework`, wired it into a
 minimal Xcode project under [`iosApp/`](iosApp/), and ran on an
 **iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3)**. Final state:
-the same `Hello, Konduit!` widget paints at top-start, with the
+the same `Hello, Keliver!` widget paints at top-start, with the
 same full Zipline RPC sequence visible in `xcrun simctl launch
 --console`. Three iOS-specific findings surfaced; all fixed.
 
@@ -287,7 +299,7 @@ same full Zipline RPC sequence visible in `xcrun simctl launch
 
 ```sh
 # 1. Build the guest bundle (one-time per source change).
-cd /path/to/konduit/sample
+cd /path/to/keliver/sample
 ./gradlew :guest:compileDevelopmentZipline
 
 # 2. Serve the bundle. The iOS simulator routes localhost directly
@@ -317,8 +329,8 @@ xcodebuild \
 
 # 5. Install + launch with --console to capture EventListener output.
 xcrun simctl install "$SIM_UDID" \
-  build/Build/Products/Debug-iphonesimulator/KonduitSample.app
-xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample &
+  build/Build/Products/Debug-iphonesimulator/KeliverSample.app
+xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KeliverSample &
 sleep 12
 xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
 ```
@@ -326,16 +338,16 @@ xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
 Expected `--console` output, in order:
 
 ```
-KonduitSample: manifestReady modules=30
-KonduitSample: takeService name=zipline/guest
-KonduitSample: bindService name=zipline/host
-KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=konduit-sample
-KonduitSample: mainFunctionEnd app=konduit-sample
-KonduitSample: codeLoadSuccess modules=30
-KonduitSample: takeService name=app
-KonduitSample: takeService name=zipline/guest-1
-KonduitSample: bindService name=zipline/host-1
+KeliverSample: manifestReady modules=30
+KeliverSample: takeService name=zipline/guest
+KeliverSample: bindService name=zipline/host
+KeliverSample: ziplineCreated
+KeliverSample: mainFunctionStart app=keliver-sample
+KeliverSample: mainFunctionEnd app=keliver-sample
+KeliverSample: codeLoadSuccess modules=30
+KeliverSample: takeService name=app
+KeliverSample: takeService name=zipline/guest-1
+KeliverSample: bindService name=zipline/host-1
 …
 ```
 
@@ -356,18 +368,18 @@ Command PhaseScriptExecution failed with a nonzero exit code
 `cd "$SRCROOT/.." && ./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`.
 `$SRCROOT` is `iosApp/`, so `$SRCROOT/..` is `sample/`. But the
 sample was originally designed as a sub-build that uses the parent
-Konduit repo's gradlew wrapper (`../gradlew` from inside `sample/`).
+Keliver repo's gradlew wrapper (`../gradlew` from inside `sample/`).
 No wrapper existed at `sample/gradlew`.
 
 **Fix.** Copied `gradlew`, `gradlew.bat`, and
 `gradle/wrapper/{gradle-wrapper.jar,gradle-wrapper.properties}`
-from the Konduit root into `sample/`. Sample now has its own
+from the Keliver root into `sample/`. Sample now has its own
 working wrapper that the Run Script can resolve. The duplication
 costs ~60 KB (a wrapper jar + the shell script) and removes a
 fragile cross-directory assumption.
 
 This is also a net win for adopter UX — anyone who clones a
-released Konduit and `cd`s into the sample directly can now run
+released Keliver and `cd`s into the sample directly can now run
 `./gradlew :host-android:installDebug` without `cd ..` first.
 
 ### iOS-#2 — No `EventListener` wired on iOS host either
@@ -380,7 +392,7 @@ lifecycle event was silent on iOS too.
 
 **Fix.** Mirrored the Android pattern — added a
 `LoggingEventListenerFactory` to `MainViewController.kt` that logs
-every event under the `KonduitSample` tag. iOS adopters get the
+every event under the `KeliverSample` tag. iOS adopters get the
 same debug baseline as Android, surfaced via `--console` (see
 Finding iOS-#3 for the println-vs-NSLog choice).
 
@@ -390,12 +402,12 @@ Finding iOS-#3 for the println-vs-NSLog choice).
 ObjC-idiomatic shape
 
 ```kotlin
-NSLog("KonduitSample: takeService name=%@", name)
+NSLog("KeliverSample: takeService name=%@", name)
 ```
 
 …the app crashed at launch (~1 s after splash) with no Kotlin
 stack trace. The native crash report at
-`~/Library/Logs/DiagnosticReports/KonduitSample-….ips` showed:
+`~/Library/Logs/DiagnosticReports/KeliverSample-….ips` showed:
 
 ```
 EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at
@@ -403,7 +415,7 @@ EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at
 ```
 
 The 8-byte address `0x00746975646e6f66` decodes as ASCII
-`"\0konduit"` (little-endian) — a Kotlin `String`'s heap data was
+`"\0keliver"` (little-endian) — a Kotlin `String`'s heap data was
 being treated as a pointer.
 
 **Root cause.** Kotlin/Native's varargs ↔ ObjC bridge for
@@ -472,7 +484,7 @@ R8-shrunk on the host APK side, and Kotlin/JS-DCE-minified on the
 guest side. Different compiler path, different risk surface. This
 case study closes that gap.
 
-**Final state**: the Production bundle renders `Hello, Konduit!`
+**Final state**: the Production bundle renders `Hello, Keliver!`
 identically to Development, with the same Zipline RPC handshake.
 **Zero bugs found** — but the validation is the point: an untested
 code path is an unknown code path, and this one is now known-good.
@@ -492,7 +504,7 @@ shipped the codegen as "working."
 
 It didn't happen. Zipline's IR plugin correctly marks the adapter
 as a retained root, so DCE keeps it and the name survives
-minification. **The `@KonduitAppService` codegen path is
+minification. **The `@KeliverAppService` codegen path is
 production-safe**, not just debug-correct.
 
 ## Test setup
@@ -508,9 +520,9 @@ cd sample
 
 # 3. Clear the app's Zipline cache so it re-fetches from the server
 #    rather than replaying a cached Development bundle, then launch.
-adb shell pm clear dev.konduit.sample
+adb shell pm clear dev.keliver.sample
 adb logcat -c
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 ```
 
 ## Evidence it was genuinely Production
@@ -521,7 +533,7 @@ Production bytes (vs a stale Development cache) were what loaded:
 1. **Dev-server access log** — 32 GETs, all from the
    `guest/build/zipline/Production/` directory the server was
    rooted in.
-2. **Byte-size delta** — `konduit-sample-guest.zipline` was
+2. **Byte-size delta** — `keliver-sample-guest.zipline` was
    11,481 B in Production vs 12,517 B in Development. Different
    bytes ⇒ genuinely the minified build, not a Development
    replay. (The delta is modest for this tiny sample because the
@@ -534,18 +546,15 @@ Logcat sequence was identical to the Development runs:
 `takeService name=app` → the `zipline/guest-N` ↔ `zipline/host-N`
 service pairs.
 
-## Documented gap (not tested here)
+## Documented gap (now CLOSED — see the signed-manifest case study below)
 
 Real Production deployments also swap `ManifestVerifier.NO_SIGNATURE_CHECKS`
-for `ManifestVerifier.SignatureChecks(...)` keyed off a production
-verifying key. This case study used `NO_SIGNATURE_CHECKS` (the
-sample's default for both Development and Production), so the
-**signed-manifest path remains unvalidated**. That's a distinct
-concern from bundle minification — it exercises Zipline's manifest
-signature verification, not the JS codegen — and is worth a
-separate validation pass when signing infra is wired up. Tracked
-as a follow-up; not blocking, since signature verification is
-additive over an already-working load path.
+for a signature-checking verifier keyed off a production verifying
+key. This case study used `NO_SIGNATURE_CHECKS`, so at the time the
+**signed-manifest path was unvalidated**. That gap is now closed —
+the sample signs its manifest with an Ed25519 key and both hosts
+verify it. See the [signed-manifest case study](#signed-manifest-case-study)
+below for the positive + negative (tamper-rejection) evidence.
 
 ## Production-mode adopter-impact summary
 
@@ -556,9 +565,190 @@ additive over an already-working load path.
 | Minification preserves name-based adapter lookup | ✅ |
 | Renders identically to Development | ✅ |
 | Full Zipline RPC handshake | ✅ |
-| Signed-manifest path (`SignatureChecks`) | ⏳ not tested — documented follow-up |
+| Signed-manifest path (Ed25519 verifier) | ✅ validated — see signed-manifest case study |
 
 Net: the Production code path — the one that actually ships to
-users — is validated end-to-end for the `@KonduitAppService`
-codegen. The one remaining unknown (signed manifests) is scoped
-and documented.
+users — is validated end-to-end for the `@KeliverAppService`
+codegen, and (as of the signed-manifest case study below) for
+signature verification too.
+
+---
+
+# Signed-manifest case study
+
+The prior case studies all ran with
+`ManifestVerifier.NO_SIGNATURE_CHECKS` — the host runs *whatever
+bytes the manifest URL returns*. That's fine for local dev, but in
+production it means anyone who can MITM the manifest endpoint (or
+compromise the CDN) can serve arbitrary guest code into the app.
+Zipline's answer is manifest signing: the build signs the manifest
+with a private key, and the host verifies that signature against an
+embedded public key before running a single line of guest code.
+This case study wires that up in the sample and validates both that
+a good signature loads **and** that a tampered bundle is rejected.
+
+**Final state**: the guest manifest is Ed25519-signed; both hosts
+(`host-android`, `host-compose`/iOS) verify it. A correct signature
+loads and renders `Hello, Keliver!`; a tampered manifest is refused
+with `codeLoadFailed: manifest signature … did not verify!`.
+
+## How it's wired
+
+- **Key pair (Ed25519).** Generated with Zipline's own primitive so
+  the encoding matches exactly — no hand-rolled crypto:
+  ```sh
+  # public class, on the zipline-loader classpath:
+  app.cash.zipline.loader.internal.InternalJvmKt.generateEd25519KeyPair()
+  #   -> KeyPair { publicKey: ByteString, privateKey: ByteString }
+  # (equivalently: the `zipline-cli generate-key-pair` command)
+  ```
+  A real app keeps the private key in a secret and injects it at
+  build time; the sample commits a **demo** key so it runs out of
+  the box (called out loudly in `guest/build.gradle.kts`).
+- **Guest signs (`sample/guest/build.gradle.kts`).**
+  ```kotlin
+  zipline {
+    signingKeys {
+      create("keliver-sample-ed25519") {
+        algorithmId.set(SignatureAlgorithmId.Ed25519)
+        privateKeyHex.set("2d69a8f0…")   // demo private key
+      }
+    }
+  }
+  ```
+  The signature lands in the manifest under
+  `unsigned.signatures["keliver-sample-ed25519"]` (it lives in the
+  `unsigned` block because a signature can't cover itself).
+- **Hosts verify** (`host-android` `MainActivity`, iOS
+  `MainViewController`):
+  ```kotlin
+  manifestVerifier = ManifestVerifier.Builder()
+    .addEd25519("keliver-sample-ed25519", PUBLIC_KEY_HEX.decodeHex())
+    .build()
+  ```
+  The key **name** must match on both sides.
+
+## Evidence — positive (correct key)
+
+Built + installed `host-android`, served the signed Development
+bundle, `pm clear` to force a fresh fetch + verify, launched:
+
+```
+D KeliverSample: manifestReady modules=30
+D KeliverSample: codeLoadSuccess modules=30
+```
+Screen renders `Hello, Keliver!`. The signature verified and the
+guest ran.
+
+## Evidence — negative (tampered manifest)
+
+To prove the check isn't a no-op, flipped one hex char in the first
+module's `sha256` in the served `manifest.zipline.json` (leaving the
+now-stale signature in place), then `pm clear` + relaunch:
+
+```
+E KeliverSample: codeLoadFailed: manifest signature for key keliver-sample-ed25519 did not verify!
+```
+The host **refused to load** the bundle — exactly the MITM/tamper
+protection signing exists for. Restored the good manifest afterward.
+
+## Validation scope
+
+| Check | Result |
+|---|---|
+| Guest manifest is Ed25519-signed (`unsigned.signatures`) | ✅ |
+| Android host: correct key → `codeLoadSuccess` + renders | ✅ runtime (Pixel_9 emulator, API 37) |
+| Android host: tampered manifest → `codeLoadFailed` | ✅ runtime |
+| iOS host: same verifier wired (`MainViewController`) | ✅ compiles (`compileKotlinIosSimulatorArm64`); runtime parity not re-run this pass |
+
+**Caveat / honesty.** The demo key is committed for reproducibility
+— that is *not* a production pattern. The negative test exercised
+content tampering (a changed module hash invalidates the signature);
+a forged-signature or wrong-key path would fail at the same
+`ManifestVerifier` gate. iOS was compile-verified only this pass; it
+uses the identical multiplatform Zipline API as Android, which was
+runtime-validated.
+
+---
+
+# Hot-reload case study
+
+Server-driven UI's biggest dev-loop win is supposed to be **hot
+reload**: edit guest UI, see it on the device in seconds, no APK
+reinstall. This case study wires that up in the sample and confirms
+it works end to end on the emulator.
+
+**Final state**: with `./gradlew :guest:serveDevelopmentZipline
+--continuous` running, editing the guest's `Text(...)` and saving
+updates the running app in **~2 s**, no reinstall — verified by a
+second `codeLoadSuccess` in logcat and the new string on screen.
+
+## How it works (the three pieces)
+
+1. **Dev server with a push channel.** `serveDevelopmentZipline`
+   (Zipline 1.22.0) serves the bundle over HTTP **and** exposes a
+   WebSocket that signals "code updated." (Note: this contradicts
+   Finding #1 — the task exists; see the correction there.) A plain
+   `python3 -m http.server` can serve the bundle but has no push
+   channel, so it can't drive hot reload.
+2. **Continuous rebuild.** Running the serve task with `--continuous`
+   makes Gradle watch the guest source; on save it recompiles the
+   `.zipline` bundle in-process and the server pushes the update.
+3. **Client subscribes** (`host-android/MainActivity.kt`): the
+   `Spec.manifestUrl` flow is wrapped with
+   `flowOf(MANIFEST_URL).withDevelopmentServerPush(ziplineHttpClient)`.
+   `withDevelopmentServerPush` (from `app.cash.zipline.loader`) opens
+   the dev-server WebSocket and re-emits the URL each time the server
+   signals an update; Treehouse reloads the guest on each emit. It
+   re-emits **only** on a real update (not a timer), so there's no
+   reload flicker. Gated behind `DevConfig.HOT_RELOAD` (default
+   `true`); flip it off for the plain python-server flow.
+
+   Important: `withDevelopmentServerPush` needs the OkHttp-backed
+   `ZiplineHttpClient` (the same one already used for the bundle
+   fetch). The sample hoists it so both share one client.
+
+## Test loop + evidence
+
+```sh
+cd sample
+# 1. Serve + watch source in one process (this is the key — a
+#    separate `compileDevelopmentZipline` in another daemon does NOT
+#    trigger the push; the serve process must own the rebuild).
+./gradlew :guest:serveDevelopmentZipline --continuous &
+# 2. Install + launch the host (HOT_RELOAD defaults true).
+./gradlew :host-android:installDebug
+adb shell am start -n dev.keliver.sample/.host.MainActivity
+# 3. Edit guest/src/jsMain/.../Main.kt: change the Text(...) string, save.
+```
+
+Observed on a Pixel_9 emulator (API 37):
+
+| Step | Evidence |
+|---|---|
+| v1 loads | logcat `codeLoadSuccess modules=30` (#1); screen reads "Hello, Keliver!" |
+| edit `Text("Hello, Keliver!")` → `"… (hot reloaded)"`, save | `serveDevelopmentZipline --continuous` rebuilds + re-serves in ~2 s (served `.zipline` now contains the new string) |
+| **app updates live** | a **second** `codeLoadSuccess modules=30` (#2) ~18 s later, **no reinstall / restart**; screen now reads "Hello, Keliver! (hot reloaded)" |
+
+## Gotcha worth recording
+
+The first attempt failed: I ran a **non-`--continuous`** serve and
+recompiled in a **separate** `./gradlew` invocation. The served
+bundle updated, but the app never reloaded — the push fires only
+when the **serve process itself** rebuilds. The fix is the canonical
+single-process `serveDevelopmentZipline --continuous`. Documenting it
+because it's a non-obvious dead end.
+
+## Hot-reload adopter-impact summary
+
+| Check | Result |
+|---|---|
+| `serveDevelopmentZipline` exists + serves (corrects Finding #1) | ✅ |
+| `withDevelopmentServerPush` wired on the host | ✅ compiles + runs |
+| Live reload on guest edit (no reinstall) | ✅ runtime (Pixel_9, API 37) — 2nd `codeLoadSuccess` + new UI |
+| iOS hot reload | ⏳ not wired this pass — Android-only; iOS uses `NSURLSession`, and `withDevelopmentServerPush` needs an OkHttp-backed client, so iOS needs a different WS bridge. Documented follow-up |
+
+Net: hot reload works for the Android host with the stock Zipline
+dev server — the headline server-driven dev-loop benefit is real and
+validated. iOS hot reload is a scoped follow-up (different HTTP
+stack).

@@ -1,0 +1,12 @@
+apply plugin: 'java-gradle-plugin'
+
+gradlePlugin {
+  plugins {
+    redwoodSettings {
+      id = "dev.keliver.settings"
+      displayName = "Redwood settings plugin"
+      description = "Gradle plugin for Redwood build settings"
+      implementationClass = "dev.keliver.buildsettings.RedwoodSettingsPlugin"
+    }
+  }
+}

@@ -2,9 +2,9 @@
  * Android host. Loads the guest bundle from a URL (DevConfig.MANIFEST_URL)
  * over OkHttp and mounts the resulting Compose tree inside `MainActivity`.
  *
- * Two plugins matter for the codegen / Konduit side: the standard
- * Compose compiler (so `setContent { ... }` works) and Konduit's
- * `konduit-treehouse-host-composeui` runtime dep, which provides the
+ * Two plugins matter for the codegen / Keliver side: the standard
+ * Compose compiler (so `setContent { ... }` works) and Keliver's
+ * `keliver-treehouse-host-composeui` runtime dep, which provides the
  * `TreehouseContent` composable used in `SampleHostApp.kt`.
  */
 plugins {
@@ -23,11 +23,11 @@ plugins {
 }
 
 android {
-  namespace = "dev.konduit.sample.host"
+  namespace = "dev.keliver.sample.host"
   compileSdk = libs.versions.android.compileSdk.get().toInt()
 
   defaultConfig {
-    applicationId = "dev.konduit.sample"
+    applicationId = "dev.keliver.sample"
     minSdk = libs.versions.android.minSdk.get().toInt()
     targetSdk = libs.versions.android.targetSdk.get().toInt()
     versionCode = 1
@@ -78,7 +78,7 @@ android {
 
 dependencies {
   // The :host-compose KMP module pulls in :shared, :shared-protocol-host,
-  // konduit-treehouse-host, konduit-treehouse-host-composeui, etc. via
+  // keliver-treehouse-host, keliver-treehouse-host-composeui, etc. via
   // `api` dependencies — keeping `:host-android` thin (just the Android
   // entry shell + HTTP client glue).
   implementation(project(":host-compose"))

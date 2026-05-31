@@ -1,0 +1,466 @@
+public abstract interface class dev/keliver/protocol/Change {
+	public static final field Companion Ldev/keliver/protocol/Change$Companion;
+	public abstract fun getId-dcWScHk ()I
+}
+
+public final class dev/keliver/protocol/Change$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/keliver/protocol/ChangesSink {
+	public abstract fun sendChanges (Ljava/util/List;)V
+}
+
+public abstract interface class dev/keliver/protocol/ChildrenChange : dev/keliver/protocol/Change {
+	public static final field Companion Ldev/keliver/protocol/ChildrenChange$Companion;
+	public abstract fun getTag-AYLLUqs ()I
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Add : dev/keliver/protocol/ChildrenChange {
+	public static final field Companion Ldev/keliver/protocol/ChildrenChange$Add$Companion;
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildId-dcWScHk ()I
+	public fun getId-dcWScHk ()I
+	public final fun getIndex ()I
+	public fun getTag-AYLLUqs ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/ChildrenChange$Add$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ChildrenChange$Add$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/ChildrenChange$Add;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/ChildrenChange$Add;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Add$Companion {
+	public final fun invoke-5Yyrb7c (IIII)Ldev/keliver/protocol/ChildrenChange$Add;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Move : dev/keliver/protocol/ChildrenChange {
+	public static final field Companion Ldev/keliver/protocol/ChildrenChange$Move$Companion;
+	public synthetic fun <init> (IIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getFromIndex ()I
+	public fun getId-dcWScHk ()I
+	public fun getTag-AYLLUqs ()I
+	public final fun getToIndex ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/ChildrenChange$Move$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ChildrenChange$Move$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/ChildrenChange$Move;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/ChildrenChange$Move;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Move$Companion {
+	public final fun invoke-uYEeHbw (IIIII)Ldev/keliver/protocol/ChildrenChange$Move;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Remove : dev/keliver/protocol/ChildrenChange {
+	public static final field Companion Ldev/keliver/protocol/ChildrenChange$Remove$Companion;
+	public synthetic fun <init> (IIIIZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getDetach ()Z
+	public fun getId-dcWScHk ()I
+	public final fun getIndex ()I
+	public fun getTag-AYLLUqs ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/ChildrenChange$Remove$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ChildrenChange$Remove$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/ChildrenChange$Remove;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/ChildrenChange$Remove;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/ChildrenChange$Remove$Companion {
+	public final fun invoke-EjU3nZ4 (IIIZ)Ldev/keliver/protocol/ChildrenChange$Remove;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ChildrenTag {
+	public static final field Companion Ldev/keliver/protocol/ChildrenTag$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/ChildrenTag;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/ChildrenTag$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ChildrenTag$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-CijgRS0 (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-usZ8_MY (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/ChildrenTag$Companion {
+	public final fun getRoot-AYLLUqs ()I
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/Create : dev/keliver/protocol/Change {
+	public static final field Companion Ldev/keliver/protocol/Create$Companion;
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getId-dcWScHk ()I
+	public final fun getTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/Create$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/Create$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/Create;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/Create;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/Create$Companion {
+	public final fun invoke-V8dW06k (II)Ldev/keliver/protocol/Create;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/Event {
+	public static final field Companion Ldev/keliver/protocol/Event$Companion;
+	public synthetic fun <init> (IILjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/List;
+	public final fun getId-dcWScHk ()I
+	public final fun getTag-R3885io ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/Event$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/Event$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/Event;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/Event;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/Event$Companion {
+	public final fun invoke-S99SpIU (IILjava/util/List;)Ldev/keliver/protocol/Event;
+	public static synthetic fun invoke-S99SpIU$default (Ldev/keliver/protocol/Event$Companion;IILjava/util/List;ILjava/lang/Object;)Ldev/keliver/protocol/Event;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/keliver/protocol/EventSink {
+	public abstract fun sendEvent (Ldev/keliver/protocol/Event;)V
+}
+
+public final class dev/keliver/protocol/EventTag {
+	public static final field Companion Ldev/keliver/protocol/EventTag$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/EventTag;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/EventTag$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/EventTag$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-DjOqKwM (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-ZRz6BTs (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/EventTag$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/Id {
+	public static final field Companion Ldev/keliver/protocol/Id$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/Id;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/Id$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/Id$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-QEracEM (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-ta-JhMU (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/Id$Companion {
+	public final fun getRoot-dcWScHk ()I
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ModifierChange : dev/keliver/protocol/ValueChange {
+	public static final field Companion Ldev/keliver/protocol/ModifierChange$Companion;
+	public synthetic fun <init> (ILjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getElements ()Ljava/util/List;
+	public fun getId-dcWScHk ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/ModifierChange$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ModifierChange$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/ModifierChange;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/ModifierChange;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/ModifierChange$Companion {
+	public final fun invoke-AWy5b-E (ILjava/util/List;)Ldev/keliver/protocol/ModifierChange;
+	public static synthetic fun invoke-AWy5b-E$default (Ldev/keliver/protocol/ModifierChange$Companion;ILjava/util/List;ILjava/lang/Object;)Ldev/keliver/protocol/ModifierChange;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/ModifierElement {
+	public synthetic fun <init> (ILkotlinx/serialization/json/JsonElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILkotlinx/serialization/json/JsonElement;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTag-ZQOBO0c ()I
+	public final fun getValue ()Lkotlinx/serialization/json/JsonElement;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/protocol/ModifierTag {
+	public static final field Companion Ldev/keliver/protocol/ModifierTag$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/ModifierTag;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/ModifierTag$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/ModifierTag$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-_Ez3kYs (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-5yktGqM (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/ModifierTag$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/PropertyChange : dev/keliver/protocol/ValueChange {
+	public static final field Companion Ldev/keliver/protocol/PropertyChange$Companion;
+	public synthetic fun <init> (IIILkotlinx/serialization/json/JsonElement;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getId-dcWScHk ()I
+	public final fun getPropertyTag-CVaCfG8 ()I
+	public final fun getValue ()Lkotlinx/serialization/json/JsonElement;
+	public final fun getWidgetTag-j4hTL_I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/PropertyChange$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/PropertyChange$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/protocol/PropertyChange;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/protocol/PropertyChange;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/protocol/PropertyChange$Companion {
+	public final fun invoke-niTPXWg (IIILkotlinx/serialization/json/JsonElement;)Ldev/keliver/protocol/PropertyChange;
+	public static synthetic fun invoke-niTPXWg$default (Ldev/keliver/protocol/PropertyChange$Companion;IIILkotlinx/serialization/json/JsonElement;ILjava/lang/Object;)Ldev/keliver/protocol/PropertyChange;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/PropertyTag {
+	public static final field Companion Ldev/keliver/protocol/PropertyTag$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/PropertyTag;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/PropertyTag$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/PropertyTag$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-dlU7cYk (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-f6YCOm0 (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/PropertyTag$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/RedwoodVersion : java/lang/Comparable {
+	public static final field Companion Ldev/keliver/protocol/RedwoodVersion$Companion;
+	public static final synthetic fun box-impl (Ljava/lang/String;)Ldev/keliver/protocol/RedwoodVersion;
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo-NF2meK8 (Ljava/lang/String;)I
+	public static fun compareTo-NF2meK8 (Ljava/lang/String;Ljava/lang/String;)I
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/protocol/RedwoodVersion$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/RedwoodVersion$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-xz0pqTI (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/String;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-C3isb6A (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/String;)V
+}
+
+public final class dev/keliver/protocol/RedwoodVersion$Companion {
+	public final fun getUnknown-NUkljko ()Ljava/lang/String;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/protocol/SnapshotChangeList {
+	public static final field Companion Ldev/keliver/protocol/SnapshotChangeList$Companion;
+	public static final synthetic fun box-impl (Ljava/util/List;)Ldev/keliver/protocol/SnapshotChangeList;
+	public static fun constructor-impl (Ljava/util/List;)Ljava/util/List;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/util/List;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/util/List;Ljava/util/List;)Z
+	public final fun getChanges ()Ljava/util/List;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/util/List;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/util/List;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/util/List;
+}
+
+public final synthetic class dev/keliver/protocol/SnapshotChangeList$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/SnapshotChangeList$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-PXlpXhc (Lkotlinx/serialization/encoding/Decoder;)Ljava/util/List;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-cdj8p0U (Lkotlinx/serialization/encoding/Encoder;Ljava/util/List;)V
+}
+
+public final class dev/keliver/protocol/SnapshotChangeList$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public abstract interface class dev/keliver/protocol/ValueChange : dev/keliver/protocol/Change {
+}
+
+public final class dev/keliver/protocol/WidgetTag {
+	public static final field Companion Ldev/keliver/protocol/WidgetTag$Companion;
+	public static final synthetic fun box-impl (I)Ldev/keliver/protocol/WidgetTag;
+	public static fun constructor-impl (I)I
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (ILjava/lang/Object;)Z
+	public static final fun equals-impl0 (II)Z
+	public final fun getValue ()I
+	public fun hashCode ()I
+	public static fun hashCode-impl (I)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (I)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()I
+}
+
+public final synthetic class dev/keliver/protocol/WidgetTag$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/protocol/WidgetTag$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-ioXDZt8 (Lkotlinx/serialization/encoding/Decoder;)I
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-C3fyyeU (Lkotlinx/serialization/encoding/Encoder;I)V
+}
+
+public final class dev/keliver/protocol/WidgetTag$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+

@@ -1,0 +1,71 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-protocol-guest>
+abstract interface dev.keliver.protocol.guest/ProtocolMismatchHandler { // dev.keliver.protocol.guest/ProtocolMismatchHandler|null[0]
+    abstract fun onUnknownEvent(dev.keliver.protocol/WidgetTag, dev.keliver.protocol/EventTag) // dev.keliver.protocol.guest/ProtocolMismatchHandler.onUnknownEvent|onUnknownEvent(dev.keliver.protocol.WidgetTag;dev.keliver.protocol.EventTag){}[0]
+    abstract fun onUnknownEventNode(dev.keliver.protocol/Id, dev.keliver.protocol/EventTag) // dev.keliver.protocol.guest/ProtocolMismatchHandler.onUnknownEventNode|onUnknownEventNode(dev.keliver.protocol.Id;dev.keliver.protocol.EventTag){}[0]
+
+    final object Companion { // dev.keliver.protocol.guest/ProtocolMismatchHandler.Companion|null[0]
+        final val Throwing // dev.keliver.protocol.guest/ProtocolMismatchHandler.Companion.Throwing|{}Throwing[0]
+            final fun <get-Throwing>(): dev.keliver.protocol.guest/ProtocolMismatchHandler // dev.keliver.protocol.guest/ProtocolMismatchHandler.Companion.Throwing.<get-Throwing>|<get-Throwing>(){}[0]
+    }
+}
+
+abstract interface dev.keliver.protocol.guest/ProtocolWidgetSystemFactory { // dev.keliver.protocol.guest/ProtocolWidgetSystemFactory|null[0]
+    abstract fun create(dev.keliver.protocol.guest/GuestProtocolAdapter, dev.keliver.protocol.guest/ProtocolMismatchHandler = ...): dev.keliver.widget/WidgetSystem<kotlin/Unit> // dev.keliver.protocol.guest/ProtocolWidgetSystemFactory.create|create(dev.keliver.protocol.guest.GuestProtocolAdapter;dev.keliver.protocol.guest.ProtocolMismatchHandler){}[0]
+}
+
+abstract class dev.keliver.protocol.guest/GuestProtocolAdapter : dev.keliver.protocol/EventSink { // dev.keliver.protocol.guest/GuestProtocolAdapter|null[0]
+    constructor <init>(dev.keliver.protocol/RedwoodVersion) // dev.keliver.protocol.guest/GuestProtocolAdapter.<init>|<init>(dev.keliver.protocol.RedwoodVersion){}[0]
+
+    abstract val root // dev.keliver.protocol.guest/GuestProtocolAdapter.root|{}root[0]
+        abstract fun <get-root>(): dev.keliver.widget/Widget.Children<kotlin/Unit> // dev.keliver.protocol.guest/GuestProtocolAdapter.root.<get-root>|<get-root>(){}[0]
+    abstract val widgetSystem // dev.keliver.protocol.guest/GuestProtocolAdapter.widgetSystem|{}widgetSystem[0]
+        abstract fun <get-widgetSystem>(): dev.keliver.widget/WidgetSystem<kotlin/Unit> // dev.keliver.protocol.guest/GuestProtocolAdapter.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+    final val hostVersion // dev.keliver.protocol.guest/GuestProtocolAdapter.hostVersion|{}hostVersion[0]
+        final fun <get-hostVersion>(): dev.keliver.protocol/RedwoodVersion // dev.keliver.protocol.guest/GuestProtocolAdapter.hostVersion.<get-hostVersion>|<get-hostVersion>(){}[0]
+
+    abstract fun emitChanges() // dev.keliver.protocol.guest/GuestProtocolAdapter.emitChanges|emitChanges(){}[0]
+    abstract fun initChangesSink(dev.keliver.protocol/ChangesSink) // dev.keliver.protocol.guest/GuestProtocolAdapter.initChangesSink|initChangesSink(dev.keliver.protocol.ChangesSink){}[0]
+}
+
+final class dev.keliver.protocol.guest/DefaultGuestProtocolAdapter : dev.keliver.protocol.guest/GuestProtocolAdapter { // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter|null[0]
+    constructor <init>(kotlinx.serialization.json/Json = ..., dev.keliver.protocol/RedwoodVersion, dev.keliver.protocol.guest/ProtocolWidgetSystemFactory, dev.keliver.protocol.guest/ProtocolMismatchHandler = ...) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.<init>|<init>(kotlinx.serialization.json.Json;dev.keliver.protocol.RedwoodVersion;dev.keliver.protocol.guest.ProtocolWidgetSystemFactory;dev.keliver.protocol.guest.ProtocolMismatchHandler){}[0]
+
+    final val json // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.json.<get-json>|<get-json>(){}[0]
+    final val root // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.root|{}root[0]
+        final fun <get-root>(): dev.keliver.widget/Widget.Children<kotlin/Unit> // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.root.<get-root>|<get-root>(){}[0]
+    final val widgetSystem // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.widgetSystem|{}widgetSystem[0]
+        final fun <get-widgetSystem>(): dev.keliver.widget/WidgetSystem<kotlin/Unit> // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.widgetSystem.<get-widgetSystem>|<get-widgetSystem>(){}[0]
+
+    final fun <#A1: kotlin/Any?> appendPropertyChange(dev.keliver.protocol/Id, dev.keliver.protocol/WidgetTag, dev.keliver.protocol/PropertyTag, kotlinx.serialization/KSerializer<#A1>, #A1) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.keliver.protocol.Id;dev.keliver.protocol.WidgetTag;dev.keliver.protocol.PropertyTag;kotlinx.serialization.KSerializer<0:0>;0:0){0§<kotlin.Any?>}[0]
+    final fun appendAdd(dev.keliver.protocol/Id, dev.keliver.protocol/ChildrenTag, kotlin/Int, dev.keliver.protocol.guest/ProtocolWidget) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendAdd|appendAdd(dev.keliver.protocol.Id;dev.keliver.protocol.ChildrenTag;kotlin.Int;dev.keliver.protocol.guest.ProtocolWidget){}[0]
+    final fun appendCreate(dev.keliver.protocol/Id, dev.keliver.protocol/WidgetTag) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendCreate|appendCreate(dev.keliver.protocol.Id;dev.keliver.protocol.WidgetTag){}[0]
+    final fun appendModifierChange(dev.keliver.protocol/Id, dev.keliver/Modifier) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendModifierChange|appendModifierChange(dev.keliver.protocol.Id;dev.keliver.Modifier){}[0]
+    final fun appendMove(dev.keliver.protocol/Id, dev.keliver.protocol/ChildrenTag, kotlin/Int, kotlin/Int, kotlin/Int) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendMove|appendMove(dev.keliver.protocol.Id;dev.keliver.protocol.ChildrenTag;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun appendPropertyChange(dev.keliver.protocol/Id, dev.keliver.protocol/WidgetTag, dev.keliver.protocol/PropertyTag, kotlin/Boolean) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.keliver.protocol.Id;dev.keliver.protocol.WidgetTag;dev.keliver.protocol.PropertyTag;kotlin.Boolean){}[0]
+    final fun appendPropertyChange(dev.keliver.protocol/Id, dev.keliver.protocol/WidgetTag, dev.keliver.protocol/PropertyTag, kotlin/UInt) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendPropertyChange|appendPropertyChange(dev.keliver.protocol.Id;dev.keliver.protocol.WidgetTag;dev.keliver.protocol.PropertyTag;kotlin.UInt){}[0]
+    final fun appendRemove(dev.keliver.protocol/Id, dev.keliver.protocol/ChildrenTag, kotlin/Int, dev.keliver.protocol.guest/ProtocolWidget) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.appendRemove|appendRemove(dev.keliver.protocol.Id;dev.keliver.protocol.ChildrenTag;kotlin.Int;dev.keliver.protocol.guest.ProtocolWidget){}[0]
+    final fun emitChanges() // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.emitChanges|emitChanges(){}[0]
+    final fun initChangesSink(dev.keliver.protocol/ChangesSink) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.initChangesSink|initChangesSink(dev.keliver.protocol.ChangesSink){}[0]
+    final fun nextId(): dev.keliver.protocol/Id // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.nextId|nextId(){}[0]
+    final fun sendEvent(dev.keliver.protocol/Event) // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.sendEvent|sendEvent(dev.keliver.protocol.Event){}[0]
+    final fun takeChanges(): kotlin.collections/List<dev.keliver.protocol/Change> // dev.keliver.protocol.guest/DefaultGuestProtocolAdapter.takeChanges|takeChanges(){}[0]
+}
+
+final val dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop|#static{}app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop[0]
+final val dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop|#static{}app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop[0]
+final val dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop|#static{}app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop[0]
+final val dev.keliver.protocol.guest/guestRedwoodVersion // dev.keliver.protocol.guest/guestRedwoodVersion|{}guestRedwoodVersion[0]
+    final fun <get-guestRedwoodVersion>(): dev.keliver.protocol/RedwoodVersion // dev.keliver.protocol.guest/guestRedwoodVersion.<get-guestRedwoodVersion>|<get-guestRedwoodVersion>(){}[0]
+
+final fun dev.keliver.protocol.guest/ProtocolRedwoodComposition(kotlinx.coroutines/CoroutineScope, dev.keliver.protocol.guest/GuestProtocolAdapter, kotlin/UInt, dev.keliver.ui/OnBackPressedDispatcher, androidx.compose.runtime.saveable/SaveableStateRegistry?, kotlinx.coroutines.flow/StateFlow<dev.keliver.ui/UiConfiguration>): dev.keliver.compose/RedwoodComposition // dev.keliver.protocol.guest/ProtocolRedwoodComposition|ProtocolRedwoodComposition(kotlinx.coroutines.CoroutineScope;dev.keliver.protocol.guest.GuestProtocolAdapter;kotlin.UInt;dev.keliver.ui.OnBackPressedDispatcher;androidx.compose.runtime.saveable.SaveableStateRegistry?;kotlinx.coroutines.flow.StateFlow<dev.keliver.ui.UiConfiguration>){}[0]
+final fun dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter(): kotlin/Int // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter|app_cash_redwood_protocol_guest_DefaultGuestProtocolAdapter$stableprop_getter(){}[0]
+final fun dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop_getter(): kotlin/Int // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop_getter|app_cash_redwood_protocol_guest_GuestProtocolAdapter$stableprop_getter(){}[0]
+final fun dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop_getter(): kotlin/Int // dev.keliver.protocol.guest/app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop_getter|app_cash_redwood_protocol_guest_ProtocolWidgetChildren$stableprop_getter(){}[0]

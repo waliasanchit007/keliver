@@ -1,0 +1,9 @@
+[dev.keliver.console.KeliverConsole]
+
+functions = [
+  # fun close(): kotlin.Unit
+  "moYx+T3e",
+
+  # fun log(kotlin.String, kotlin.String): kotlin.Unit
+  "nt00cM2P",
+]

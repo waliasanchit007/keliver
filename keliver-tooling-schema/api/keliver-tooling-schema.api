@@ -1,0 +1,187 @@
+public abstract interface class dev/keliver/tooling/schema/Deprecation {
+	public abstract fun getLevel ()Ldev/keliver/tooling/schema/Deprecation$Level;
+	public abstract fun getMessage ()Ljava/lang/String;
+}
+
+public final class dev/keliver/tooling/schema/Deprecation$Level : java/lang/Enum {
+	public static final field ERROR Ldev/keliver/tooling/schema/Deprecation$Level;
+	public static final field WARNING Ldev/keliver/tooling/schema/Deprecation$Level;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/tooling/schema/Deprecation$Level;
+	public static fun values ()[Ldev/keliver/tooling/schema/Deprecation$Level;
+}
+
+public final class dev/keliver/tooling/schema/EmbeddedSchema {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/tooling/schema/EmbeddedSchema;
+	public static synthetic fun copy$default (Ldev/keliver/tooling/schema/EmbeddedSchema;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/tooling/schema/EmbeddedSchema;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getJson ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/tooling/schema/FqType {
+	public static final field Companion Ldev/keliver/tooling/schema/FqType$Companion;
+	public fun <init> (Ljava/util/List;Ldev/keliver/tooling/schema/FqType$Variance;Ljava/util/List;Z)V
+	public synthetic fun <init> (Ljava/util/List;Ldev/keliver/tooling/schema/FqType$Variance;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ldev/keliver/tooling/schema/FqType$Variance;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Z
+	public final fun copy (Ljava/util/List;Ldev/keliver/tooling/schema/FqType$Variance;Ljava/util/List;Z)Ldev/keliver/tooling/schema/FqType;
+	public static synthetic fun copy$default (Ldev/keliver/tooling/schema/FqType;Ljava/util/List;Ldev/keliver/tooling/schema/FqType$Variance;Ljava/util/List;ZILjava/lang/Object;)Ldev/keliver/tooling/schema/FqType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getNames ()Ljava/util/List;
+	public final fun getNullable ()Z
+	public final fun getParameterTypes ()Ljava/util/List;
+	public final fun getVariance ()Ldev/keliver/tooling/schema/FqType$Variance;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/tooling/schema/FqType$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/tooling/schema/FqType$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/tooling/schema/FqType;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/tooling/schema/FqType;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/tooling/schema/FqType$Companion {
+	public final fun bestGuess (Ljava/lang/String;)Ldev/keliver/tooling/schema/FqType;
+	public final fun getStar ()Ldev/keliver/tooling/schema/FqType;
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/tooling/schema/FqType$Variance : java/lang/Enum {
+	public static final field In Ldev/keliver/tooling/schema/FqType$Variance;
+	public static final field Invariant Ldev/keliver/tooling/schema/FqType$Variance;
+	public static final field Out Ldev/keliver/tooling/schema/FqType$Variance;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/tooling/schema/FqType$Variance;
+	public static fun values ()[Ldev/keliver/tooling/schema/FqType$Variance;
+}
+
+public final class dev/keliver/tooling/schema/Main {
+	public static final fun main ([Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/tooling/schema/Modifier {
+	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getProperties ()Ljava/util/List;
+	public abstract fun getScopes ()Ljava/util/List;
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Modifier$Property {
+	public abstract fun getDefaultExpression ()Ljava/lang/String;
+	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+	public abstract fun isSerializable ()Z
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolModifier : dev/keliver/tooling/schema/Modifier {
+	public abstract fun getTag ()I
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolSchema : dev/keliver/tooling/schema/Schema {
+	public fun getDependencies ()Ljava/util/List;
+	public abstract fun getModifiers ()Ljava/util/List;
+	public abstract fun getTaggedDependencies ()Ljava/util/Map;
+	public abstract fun getWidgets ()Ljava/util/List;
+	public abstract fun toEmbeddedSchema ()Ldev/keliver/tooling/schema/EmbeddedSchema;
+	public abstract fun withTagOffset (I)Ldev/keliver/tooling/schema/ProtocolSchema;
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolSchemaSet : dev/keliver/tooling/schema/SchemaSet {
+	public static final field Companion Ldev/keliver/tooling/schema/ProtocolSchemaSet$Companion;
+	public fun getAll ()Ljava/util/List;
+	public abstract fun getDependencies ()Ljava/util/Map;
+	public abstract fun getSchema ()Ldev/keliver/tooling/schema/ProtocolSchema;
+}
+
+public final class dev/keliver/tooling/schema/ProtocolSchemaSet$Companion {
+	public final fun load (Ldev/keliver/tooling/schema/FqType;Ljava/lang/ClassLoader;)Ldev/keliver/tooling/schema/ProtocolSchemaSet;
+	public final fun load (Lkotlin/reflect/KClass;)Ldev/keliver/tooling/schema/ProtocolSchemaSet;
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolWidget : dev/keliver/tooling/schema/Widget {
+	public abstract fun getTag ()I
+	public abstract fun getTraits ()Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolWidget$ProtocolChildren : dev/keliver/tooling/schema/ProtocolWidget$ProtocolTrait, dev/keliver/tooling/schema/Widget$Children {
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolWidget$ProtocolEvent : dev/keliver/tooling/schema/ProtocolWidget$ProtocolTrait, dev/keliver/tooling/schema/Widget$Event {
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolWidget$ProtocolProperty : dev/keliver/tooling/schema/ProtocolWidget$ProtocolTrait, dev/keliver/tooling/schema/Widget$Property {
+}
+
+public abstract interface class dev/keliver/tooling/schema/ProtocolWidget$ProtocolTrait : dev/keliver/tooling/schema/Widget$Trait {
+	public abstract fun getTag ()I
+}
+
+public abstract interface class dev/keliver/tooling/schema/Schema {
+	public abstract fun getDependencies ()Ljava/util/List;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getModifiers ()Ljava/util/List;
+	public abstract fun getScopes ()Ljava/util/List;
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+	public abstract fun getWidgets ()Ljava/util/List;
+}
+
+public final class dev/keliver/tooling/schema/SchemaParserFirKt {
+	public static final fun parseProtocolSchema (Ljava/io/File;Ljava/util/Collection;Ljava/util/Collection;Ldev/keliver/tooling/schema/FqType;)Ldev/keliver/tooling/schema/ProtocolSchemaSet;
+	public static final fun parseSchema (Ljava/io/File;Ljava/util/Collection;Ljava/util/Collection;Ldev/keliver/tooling/schema/FqType;)Ldev/keliver/tooling/schema/SchemaSet;
+}
+
+public abstract interface class dev/keliver/tooling/schema/SchemaSet {
+	public fun getAll ()Ljava/util/List;
+	public abstract fun getDependencies ()Ljava/util/Map;
+	public abstract fun getSchema ()Ldev/keliver/tooling/schema/Schema;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget {
+	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getInternalComposable ()Z
+	public abstract fun getTraits ()Ljava/util/List;
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget$Children : dev/keliver/tooling/schema/Widget$Trait {
+	public abstract fun getScope ()Ldev/keliver/tooling/schema/FqType;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget$Event : dev/keliver/tooling/schema/Widget$Trait {
+	public abstract fun getParameters ()Ljava/util/List;
+	public abstract fun isNullable ()Z
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget$Event$Parameter {
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget$Property : dev/keliver/tooling/schema/Widget$Trait {
+	public abstract fun getType ()Ldev/keliver/tooling/schema/FqType;
+}
+
+public abstract interface class dev/keliver/tooling/schema/Widget$Trait {
+	public abstract fun getDefaultExpression ()Ljava/lang/String;
+	public abstract fun getDeprecation ()Ldev/keliver/tooling/schema/Deprecation;
+	public abstract fun getDocumentation ()Ljava/lang/String;
+	public abstract fun getName ()Ljava/lang/String;
+}
+

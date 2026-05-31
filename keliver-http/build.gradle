@@ -1,0 +1,33 @@
+// HTTP shim module — wire types + HostHttpProvider ZiplineService +
+// guest-side KeliverHttp typed wrapper. Adopters point KeliverHttp at
+// their own Ktor / Retrofit / OkHttp client wrapped as a
+// HostHttpProvider, and get typed HTTP calls from the guest without
+// writing N per-endpoint HostXxxProvider services. See issue #7.
+
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.zipline
+        api libs.kotlinx.coroutines.core
+        api libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}

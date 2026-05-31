@@ -1,6 +1,6 @@
 # Self-hosted GitHub Actions runner setup
 
-By default Konduit's CI runs on GitHub-provided `macos-latest` runners.
+By default Keliver's CI runs on GitHub-provided `macos-latest` runners.
 macOS minutes count against the GitHub Actions quota at a 10× multiplier
 on private repos, which the project hit during heavy adopter onboarding.
 
@@ -13,7 +13,7 @@ This document walks through the one-time setup. ~15 minutes.
 
 ## Why self-hosted, not Linux
 
-The Konduit build requires macOS to compile iOS targets (the `iosArm64`
+The Keliver build requires macOS to compile iOS targets (the `iosArm64`
 and `iosSimulatorArm64` klibs that ship in the published artifacts).
 Self-hosted Linux runners would fail at `compileKotlinIosSimulatorArm64`.
 
@@ -32,7 +32,7 @@ runs Linux containers with no working iOS toolchain.
 
 ## Step 1 — Register the runner in the repo
 
-1. Open `https://github.com/waliasanchit007/konduit/settings/actions/runners`
+1. Open `https://github.com/waliasanchit007/keliver/settings/actions/runners`
 2. Click **New self-hosted runner** → **macOS** → pick architecture
 3. GitHub displays a one-time registration token + the install commands.
    They look roughly like:
@@ -41,12 +41,12 @@ runs Linux containers with no working iOS toolchain.
    mkdir -p ~/actions-runner && cd ~/actions-runner
    curl -O -L https://github.com/actions/runner/releases/download/v2.319.0/actions-runner-osx-arm64-2.319.0.tar.gz
    tar xzf actions-runner-osx-arm64-2.319.0.tar.gz
-   ./config.sh --url https://github.com/waliasanchit007/konduit --token <TOKEN_FROM_GITHUB>
+   ./config.sh --url https://github.com/waliasanchit007/keliver --token <TOKEN_FROM_GITHUB>
    ```
 
 4. During `config.sh` it asks a few questions:
    - **Runner group:** Default
-   - **Runner name:** anything you'll recognize (e.g., `konduit-mac-mini`)
+   - **Runner name:** anything you'll recognize (e.g., `keliver-mac-mini`)
    - **Labels:** leave empty (the workflow doesn't filter on labels yet)
    - **Work folder:** Default (`_work`)
 
@@ -71,7 +71,7 @@ and watching the runner's terminal output.
 
 ## Step 3 — Flip the workflow to use it
 
-In the konduit repo: **Settings → Secrets and variables → Actions →
+In the keliver repo: **Settings → Secrets and variables → Actions →
 Variables → New repository variable**:
 
 - **Name:** `CI_RUNNER`
@@ -121,7 +121,7 @@ org.gradle.parallel=true
 
 ## Security note
 
-For now Konduit is a private repo with a single trusted maintainer, so
+For now Keliver is a private repo with a single trusted maintainer, so
 running PRs on a self-hosted runner is safe — there's no way for an
 untrusted contributor to land code that runs on your Mac.
 

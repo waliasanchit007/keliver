@@ -1,0 +1,21 @@
+// Klib ABI Dump
+// Targets: [js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-treehouse-guest>
+final class dev.keliver.treehouse/StandardAppLifecycle : dev.keliver.treehouse/AppLifecycle { // dev.keliver.treehouse/StandardAppLifecycle|null[0]
+    constructor <init>(dev.keliver.protocol.guest/ProtocolWidgetSystemFactory, kotlinx.serialization.json/Json, kotlin/UInt) // dev.keliver.treehouse/StandardAppLifecycle.<init>|<init>(dev.keliver.protocol.guest.ProtocolWidgetSystemFactory;kotlinx.serialization.json.Json;kotlin.UInt){}[0]
+
+    final val frameClock // dev.keliver.treehouse/StandardAppLifecycle.frameClock|{}frameClock[0]
+        final fun <get-frameClock>(): androidx.compose.runtime/MonotonicFrameClock // dev.keliver.treehouse/StandardAppLifecycle.frameClock.<get-frameClock>|<get-frameClock>(){}[0]
+    final val guestProtocolVersion // dev.keliver.treehouse/StandardAppLifecycle.guestProtocolVersion|{}guestProtocolVersion[0]
+        final fun <get-guestProtocolVersion>(): dev.keliver.protocol/RedwoodVersion // dev.keliver.treehouse/StandardAppLifecycle.guestProtocolVersion.<get-guestProtocolVersion>|<get-guestProtocolVersion>(){}[0]
+
+    final fun sendFrame(kotlin/Long) // dev.keliver.treehouse/StandardAppLifecycle.sendFrame|sendFrame(kotlin.Long){}[0]
+    final fun start(dev.keliver.treehouse/AppLifecycle.Host) // dev.keliver.treehouse/StandardAppLifecycle.start|start(dev.keliver.treehouse.AppLifecycle.Host){}[0]
+}
+
+final fun (dev.keliver.treehouse/TreehouseUi).dev.keliver.treehouse/asZiplineTreehouseUi(dev.keliver.treehouse/StandardAppLifecycle): dev.keliver.treehouse/ZiplineTreehouseUi // dev.keliver.treehouse/asZiplineTreehouseUi|asZiplineTreehouseUi@dev.keliver.treehouse.TreehouseUi(dev.keliver.treehouse.StandardAppLifecycle){}[0]

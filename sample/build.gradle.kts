@@ -1,5 +1,5 @@
 /*
- * Root build script for the standalone Konduit sample. Declares every
+ * Root build script for the standalone Keliver sample. Declares every
  * plugin the subprojects might use with `apply false` so Gradle can
  * resolve them ONCE from pluginManagement and hand the same classloader
  * to every subproject. Otherwise each subproject's `plugins { ... }`
@@ -18,10 +18,10 @@ plugins {
   alias(libs.plugins.composeCompiler) apply false
   alias(libs.plugins.zipline) apply false
   alias(libs.plugins.ksp) apply false
-  alias(libs.plugins.konduit.schema) apply false
-  alias(libs.plugins.konduit.generator.compose) apply false
-  alias(libs.plugins.konduit.generator.widget) apply false
-  alias(libs.plugins.konduit.generator.modifiers) apply false
-  alias(libs.plugins.konduit.generator.protocol.host) apply false
-  alias(libs.plugins.konduit.generator.protocol.guest) apply false
+  alias(libs.plugins.keliver.schema) apply false
+  alias(libs.plugins.keliver.generator.compose) apply false
+  alias(libs.plugins.keliver.generator.widget) apply false
+  alias(libs.plugins.keliver.generator.modifiers) apply false
+  alias(libs.plugins.keliver.generator.protocol.host) apply false
+  alias(libs.plugins.keliver.generator.protocol.guest) apply false
 }

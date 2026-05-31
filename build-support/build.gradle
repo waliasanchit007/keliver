@@ -45,10 +45,10 @@ dependencies {
 gradlePlugin {
   plugins {
     redwoodBuild {
-      id = "dev.konduit.build"
+      id = "dev.keliver.build"
       displayName = "Redwood Build plugin"
       description = "Gradle plugin for Redwood build things"
-      implementationClass = "dev.konduit.buildsupport.RedwoodBuildPlugin"
+      implementationClass = "dev.keliver.buildsupport.RedwoodBuildPlugin"
     }
   }
 }

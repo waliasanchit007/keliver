@@ -12,7 +12,7 @@
  *     Compose implementation in `commonMain`. This is the host's
  *     "renderer" — it owns how the guest's tree turns into pixels.
  *
- *   - `SampleHostApp`: the mount-point composable. Wraps Konduit's
+ *   - `SampleHostApp`: the mount-point composable. Wraps Keliver's
  *     `TreehouseContent` and is what both platforms call into.
  *
  *   - `MainViewController`: iOS entry. Returns a `UIViewController`
@@ -41,17 +41,17 @@ kotlin {
     }
   }
 
-  // Konduit's iOS host code ships as a static .klib that we expose to
-  // Swift via a single Kotlin framework named "KonduitSampleHost".
+  // Keliver's iOS host code ships as a static .klib that we expose to
+  // Swift via a single Kotlin framework named "KeliverSampleHost".
   // The Xcode-side `embedAndSignAppleFrameworkForXcode` Gradle task
   // bundles this into the iosApp/ Xcode build automatically.
   listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
     iosTarget.binaries.framework {
-      baseName = "KonduitSampleHost"
+      baseName = "KeliverSampleHost"
       isStatic = true
       // Must match an iOS-valid reverse-DNS bundle ID. K/N uses this
       // for the framework's Info.plist CFBundleIdentifier.
-      binaryOption("bundleId", "dev.konduit.sample.host")
+      binaryOption("bundleId", "dev.keliver.sample.host")
       // Expose the sample's own types to Swift so adopter Swift code
       // can reach `SampleAppService` etc. — without these, only
       // symbols declared in this module would be visible.
@@ -70,11 +70,11 @@ kotlin {
         api(project(":shared"))
         api(project(":shared-widget"))
         api(project(":shared-protocol-host"))
-        api(libs.konduit.treehouse)
-        api(libs.konduit.treehouse.host)
-        api(libs.konduit.treehouse.host.composeui)
-        api(libs.konduit.widget)
-        api(libs.konduit.widget.composeui)
+        api(libs.keliver.treehouse)
+        api(libs.keliver.treehouse.host)
+        api(libs.keliver.treehouse.host.composeui)
+        api(libs.keliver.widget)
+        api(libs.keliver.widget.composeui)
         api(libs.zipline)
         api(libs.zipline.loader)
         implementation(compose.runtime)
@@ -90,7 +90,7 @@ kotlin {
 }
 
 android {
-  namespace = "dev.konduit.sample.host.compose"
+  namespace = "dev.keliver.sample.host.compose"
   compileSdk = libs.versions.android.compileSdk.get().toInt()
   defaultConfig {
     minSdk = libs.versions.android.minSdk.get().toInt()

@@ -1,0 +1,60 @@
+/*
+ * Copyright (C) 2022 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.tooling.codegen
+
+import com.squareup.kotlinpoet.FileSpec
+import dev.keliver.tooling.codegen.ProtocolCodegenType.Guest
+import dev.keliver.tooling.codegen.ProtocolCodegenType.Host
+import dev.keliver.tooling.schema.ProtocolSchemaSet
+import java.nio.file.Path
+
+public enum class ProtocolCodegenType {
+  Guest,
+  Host,
+}
+
+public fun ProtocolSchemaSet.generate(type: ProtocolCodegenType, destination: Path) {
+  for (fileSpec in generateFileSpecs(type)) {
+    fileSpec.writeTo(destination)
+  }
+}
+
+internal fun ProtocolSchemaSet.generateFileSpecs(type: ProtocolCodegenType): List<FileSpec> {
+  return buildList {
+    when (type) {
+      Guest -> {
+        add(generateProtocolWidgetSystemFactory(this@generateFileSpecs))
+        for (dependency in all) {
+          add(generateProtocolWidgetFactory(schema, dependency))
+          generateProtocolModifierSerializers(schema, dependency)?.let { add(it) }
+          for (widget in dependency.widgets) {
+            add(generateProtocolWidget(schema, dependency, widget))
+          }
+        }
+      }
+
+      Host -> {
+        add(generateHostProtocol(this@generateFileSpecs))
+        for (dependency in all) {
+          generateProtocolModifierImpls(schema, dependency)?.let { add(it) }
+          for (widget in dependency.widgets) {
+            add(generateProtocolNode(schema, dependency, widget))
+          }
+        }
+      }
+    }
+  }
+}

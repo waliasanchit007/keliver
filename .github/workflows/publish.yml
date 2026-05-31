@@ -1,10 +1,10 @@
 name: Publish
 
-# Publishes Konduit artifacts to GitHub Packages on tag push.
+# Publishes Keliver artifacts to GitHub Packages on tag push.
 #
 # Tag format: v1.0.0-caliclan.N (the leading "v" is stripped from the
 # version coordinate). The version inside the build is set by
-# build-support/RedwoodBuildPlugin.kt's KONDUIT_VERSION constant — bump
+# build-support/RedwoodBuildPlugin.kt's KELIVER_VERSION constant — bump
 # it BEFORE creating the release tag.
 #
 # Trigger:
@@ -46,18 +46,18 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      # Verify the tag matches the build's KONDUIT_VERSION before publishing.
+      # Verify the tag matches the build's KELIVER_VERSION before publishing.
       # (Quick sanity check — saves us from publishing v1.0.0-caliclan.3 with
       # a build that still says 1.0.0-caliclan.2 internally.)
       - name: Verify tag matches build version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           tag_version="${GITHUB_REF#refs/tags/v}"
-          build_version=$(grep 'KONDUIT_VERSION' build-support/src/main/kotlin/dev/konduit/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          build_version=$(grep 'KELIVER_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Tag version:   $tag_version"
           echo "Build version: $build_version"
           if [ "$tag_version" != "$build_version" ]; then
-            echo "::error::Tag $tag_version doesn't match KONDUIT_VERSION $build_version. Bump the constant before tagging."
+            echo "::error::Tag $tag_version doesn't match KELIVER_VERSION $build_version. Bump the constant before tagging."
             exit 1
           fi
 

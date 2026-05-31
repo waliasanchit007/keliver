@@ -9,8 +9,8 @@ buildscript {
     classpath libs.paparazzi.gradlePlugin
     classpath libs.poko.gradlePlugin
     classpath libs.jetbrains.compose.gradlePlugin
-    classpath 'dev.konduit.build:gradle-plugin'
-    classpath 'dev.konduit:konduit-gradle-plugin'
+    classpath 'dev.keliver.build:gradle-plugin'
+    classpath 'dev.keliver:keliver-gradle-plugin'
   }
   repositories {
     mavenCentral()
@@ -26,7 +26,7 @@ afterEvaluate {
     kotlin {
       targetExclude(
         // Apache 2-licensed files from AOSP.
-        "build-support/src/main/resources/dev/konduit/buildsupport/composeHelpers.kt",
+        "build-support/src/main/resources/dev/keliver/buildsupport/composeHelpers.kt",
       )
     }
   }

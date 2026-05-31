@@ -1,18 +1,18 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
 }
 
-apply plugin: 'dev.konduit.generator.testing'
+apply plugin: 'dev.keliver.generator.testing'
 
 kotlin {
   sourceSets {
     commonMain {
       dependencies {
-        api projects.konduitUiBasicTesting
-        api projects.konduitLayoutTesting
-        api projects.konduitLazylayoutTesting
+        api projects.keliverUiBasicTesting
+        api projects.keliverLayoutTesting
+        api projects.keliverLazylayoutTesting
         api projects.testApp.schema.widget
       }
     }

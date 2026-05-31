@@ -1,0 +1,113 @@
+/*
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.nav
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.staticCompositionLocalOf
+
+/**
+ * Renders the top route of [controller]'s back stack. Each stack entry
+ * is wrapped in its own `SaveableStateHolder` slot, so a route's
+ * `rememberSaveable` state survives a navigate-away-and-back round-trip.
+ * State for popped or replaced entries is cleared on the next
+ * composition.
+ *
+ * Wraps the rendered route in a `CompositionLocalProvider` so nested
+ * screens can read the controller via [currentKeliverNavController].
+ *
+ * ```
+ * KeliverNavHost(nav) { route ->
+ *     when (route) {
+ *         is Route.Home        -> HomeScreen()
+ *         is Route.QuoteDetail -> QuoteDetailScreen(route.id)
+ *     }
+ * }
+ * ```
+ */
+@Composable
+public fun <R : Any> KeliverNavHost(
+  controller: KeliverNavController<R>,
+  content: @Composable (R) -> Unit,
+) {
+  val stateHolder = rememberSaveableStateHolder()
+
+  // Track which entry ids the host has provided state slots for; when
+  // an id leaves the stack (popped / replaced), reclaim its slot.
+  val seenIds = remember { mutableSetOf<Long>() }
+  val currentIds = controller.entries.map { it.id }.toSet()
+  DisposableEffect(currentIds) {
+    (seenIds - currentIds).forEach { stateHolder.removeState(it) }
+    seenIds.clear()
+    seenIds.addAll(currentIds)
+    onDispose { /* SaveableStateHolder cleans itself up when the host leaves the tree. */ }
+  }
+
+  val top = controller.entries.last()
+  CompositionLocalProvider(LocalKeliverNavController provides controller) {
+    stateHolder.SaveableStateProvider(top.id) {
+      content(top.route)
+    }
+  }
+}
+
+/**
+ * `CompositionLocal` carrying the current [KeliverNavController]. Type
+ * is erased to `KeliverNavController<*>?` because Compose
+ * `CompositionLocal`s don't carry a generic parameter; adopters should
+ * use the typed [currentKeliverNavController] accessor instead of
+ * reading `LocalKeliverNavController.current` directly.
+ *
+ * `@PublishedApi internal` because the typed accessor is inline +
+ * reified — adopters never reference this directly.
+ */
+@PublishedApi
+internal val LocalKeliverNavController: ProvidableCompositionLocal<KeliverNavController<*>?> =
+  staticCompositionLocalOf { null }
+
+/**
+ * Read the current [KeliverNavController] from the nearest enclosing
+ * [KeliverNavHost]. Type parameter [R] is the adopter's route type
+ * (typically a sealed interface).
+ *
+ * ```
+ * @Composable
+ * fun HomeScreen() {
+ *     val nav = currentKeliverNavController<Route>()
+ *     Button(onClick = { nav.navigate(Route.QuoteDetail("42")) }) {
+ *         Text("Open 42")
+ *     }
+ * }
+ * ```
+ *
+ * Throws an [IllegalStateException] if called outside a
+ * [KeliverNavHost]'s composition.
+ */
+@Composable
+@Suppress("UNCHECKED_CAST")
+public inline fun <reified R : Any> currentKeliverNavController(): KeliverNavController<R> {
+  val controller = LocalKeliverNavController.current
+    ?: error(
+      "No KeliverNavController in this composition. Wrap your screen " +
+        "tree in KeliverNavHost { … } at the top of the @Composable that " +
+        "owns navigation.",
+    )
+  return controller as KeliverNavController<R>
+}

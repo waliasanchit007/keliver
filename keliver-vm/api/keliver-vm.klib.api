@@ -1,0 +1,22 @@
+// Klib ABI Dump
+// Targets: [js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-vm>
+abstract class dev.keliver.vm/KeliverViewModel { // dev.keliver.vm/KeliverViewModel|null[0]
+    constructor <init>() // dev.keliver.vm/KeliverViewModel.<init>|<init>(){}[0]
+
+    final val viewModelScope // dev.keliver.vm/KeliverViewModel.viewModelScope|{}viewModelScope[0]
+        final fun <get-viewModelScope>(): kotlinx.coroutines/CoroutineScope // dev.keliver.vm/KeliverViewModel.viewModelScope.<get-viewModelScope>|<get-viewModelScope>(){}[0]
+
+    final fun clearInternal() // dev.keliver.vm/KeliverViewModel.clearInternal|clearInternal(){}[0]
+    open fun onCleared() // dev.keliver.vm/KeliverViewModel.onCleared|onCleared(){}[0]
+}
+
+final val dev.keliver.vm/dev_keliver_vm_KeliverViewModel$stableprop // dev.keliver.vm/dev_keliver_vm_KeliverViewModel$stableprop|#static{}dev_keliver_vm_KeliverViewModel$stableprop[0]
+
+final fun dev.keliver.vm/dev_keliver_vm_KeliverViewModel$stableprop_getter(): kotlin/Int // dev.keliver.vm/dev_keliver_vm_KeliverViewModel$stableprop_getter|dev_keliver_vm_KeliverViewModel$stableprop_getter(){}[0]
+final inline fun <#A: reified dev.keliver.vm/KeliverViewModel> dev.keliver.vm/keliverViewModel(kotlin/Any?, crossinline kotlin/Function0<#A>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): #A // dev.keliver.vm/keliverViewModel|keliverViewModel(kotlin.Any?;kotlin.Function0<0:0>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<dev.keliver.vm.KeliverViewModel>}[0]

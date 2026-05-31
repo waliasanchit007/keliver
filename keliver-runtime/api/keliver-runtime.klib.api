@@ -1,0 +1,292 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Alias: ios => [iosArm64, iosSimulatorArm64, iosX64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-runtime>
+open annotation class dev.keliver/LayoutScopeMarker : kotlin/Annotation { // dev.keliver/LayoutScopeMarker|null[0]
+    constructor <init>() // dev.keliver/LayoutScopeMarker.<init>|<init>(){}[0]
+}
+
+open annotation class dev.keliver/RedwoodCodegenApi : kotlin/Annotation { // dev.keliver/RedwoodCodegenApi|null[0]
+    constructor <init>() // dev.keliver/RedwoodCodegenApi.<init>|<init>(){}[0]
+}
+
+final enum class dev.keliver.ui/LayoutDirection : kotlin/Enum<dev.keliver.ui/LayoutDirection> { // dev.keliver.ui/LayoutDirection|null[0]
+    enum entry Auto // dev.keliver.ui/LayoutDirection.Auto|null[0]
+    enum entry Ltr // dev.keliver.ui/LayoutDirection.Ltr|null[0]
+    enum entry Rtl // dev.keliver.ui/LayoutDirection.Rtl|null[0]
+
+    final val entries // dev.keliver.ui/LayoutDirection.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.ui/LayoutDirection> // dev.keliver.ui/LayoutDirection.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.ui/LayoutDirection // dev.keliver.ui/LayoutDirection.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.ui/LayoutDirection> // dev.keliver.ui/LayoutDirection.values|values#static(){}[0]
+}
+
+abstract interface dev.keliver.ui/Cancellable { // dev.keliver.ui/Cancellable|null[0]
+    abstract fun cancel() // dev.keliver.ui/Cancellable.cancel|cancel(){}[0]
+}
+
+abstract interface dev.keliver.ui/OnBackPressedDispatcher { // dev.keliver.ui/OnBackPressedDispatcher|null[0]
+    abstract fun addCallback(dev.keliver.ui/OnBackPressedCallback): dev.keliver.ui/Cancellable // dev.keliver.ui/OnBackPressedDispatcher.addCallback|addCallback(dev.keliver.ui.OnBackPressedCallback){}[0]
+
+    final object Companion // dev.keliver.ui/OnBackPressedDispatcher.Companion|null[0]
+}
+
+abstract interface dev.keliver/Modifier { // dev.keliver/Modifier|null[0]
+    abstract fun forEach(kotlin/Function1<dev.keliver/Modifier.Element, kotlin/Unit>) // dev.keliver/Modifier.forEach|forEach(kotlin.Function1<dev.keliver.Modifier.Element,kotlin.Unit>){}[0]
+    abstract fun forEachScoped(kotlin/Function1<dev.keliver/Modifier.ScopedElement, kotlin/Unit>) // dev.keliver/Modifier.forEachScoped|forEachScoped(kotlin.Function1<dev.keliver.Modifier.ScopedElement,kotlin.Unit>){}[0]
+    abstract fun forEachUnscoped(kotlin/Function1<dev.keliver/Modifier.UnscopedElement, kotlin/Unit>) // dev.keliver/Modifier.forEachUnscoped|forEachUnscoped(kotlin.Function1<dev.keliver.Modifier.UnscopedElement,kotlin.Unit>){}[0]
+    open fun then(dev.keliver/Modifier): dev.keliver/Modifier // dev.keliver/Modifier.then|then(dev.keliver.Modifier){}[0]
+
+    abstract interface ScopedElement : dev.keliver/Modifier.Element { // dev.keliver/Modifier.ScopedElement|null[0]
+        open fun forEachScoped(kotlin/Function1<dev.keliver/Modifier.ScopedElement, kotlin/Unit>) // dev.keliver/Modifier.ScopedElement.forEachScoped|forEachScoped(kotlin.Function1<dev.keliver.Modifier.ScopedElement,kotlin.Unit>){}[0]
+        open fun forEachUnscoped(kotlin/Function1<dev.keliver/Modifier.UnscopedElement, kotlin/Unit>) // dev.keliver/Modifier.ScopedElement.forEachUnscoped|forEachUnscoped(kotlin.Function1<dev.keliver.Modifier.UnscopedElement,kotlin.Unit>){}[0]
+    }
+
+    abstract interface UnscopedElement : dev.keliver/Modifier.Element { // dev.keliver/Modifier.UnscopedElement|null[0]
+        open fun forEachScoped(kotlin/Function1<dev.keliver/Modifier.ScopedElement, kotlin/Unit>) // dev.keliver/Modifier.UnscopedElement.forEachScoped|forEachScoped(kotlin.Function1<dev.keliver.Modifier.ScopedElement,kotlin.Unit>){}[0]
+        open fun forEachUnscoped(kotlin/Function1<dev.keliver/Modifier.UnscopedElement, kotlin/Unit>) // dev.keliver/Modifier.UnscopedElement.forEachUnscoped|forEachUnscoped(kotlin.Function1<dev.keliver.Modifier.UnscopedElement,kotlin.Unit>){}[0]
+    }
+
+    sealed interface Element : dev.keliver/Modifier { // dev.keliver/Modifier.Element|null[0]
+        open fun forEach(kotlin/Function1<dev.keliver/Modifier.Element, kotlin/Unit>) // dev.keliver/Modifier.Element.forEach|forEach(kotlin.Function1<dev.keliver.Modifier.Element,kotlin.Unit>){}[0]
+    }
+
+    final object Companion : dev.keliver/Modifier { // dev.keliver/Modifier.Companion|null[0]
+        final fun forEach(kotlin/Function1<dev.keliver/Modifier.Element, kotlin/Unit>) // dev.keliver/Modifier.Companion.forEach|forEach(kotlin.Function1<dev.keliver.Modifier.Element,kotlin.Unit>){}[0]
+        final fun forEachScoped(kotlin/Function1<dev.keliver/Modifier.ScopedElement, kotlin/Unit>) // dev.keliver/Modifier.Companion.forEachScoped|forEachScoped(kotlin.Function1<dev.keliver.Modifier.ScopedElement,kotlin.Unit>){}[0]
+        final fun forEachUnscoped(kotlin/Function1<dev.keliver/Modifier.UnscopedElement, kotlin/Unit>) // dev.keliver/Modifier.Companion.forEachUnscoped|forEachUnscoped(kotlin.Function1<dev.keliver.Modifier.UnscopedElement,kotlin.Unit>){}[0]
+        final fun then(dev.keliver/Modifier): dev.keliver/Modifier // dev.keliver/Modifier.Companion.then|then(dev.keliver.Modifier){}[0]
+        final fun toString(): kotlin/String // dev.keliver/Modifier.Companion.toString|toString(){}[0]
+    }
+}
+
+abstract class dev.keliver.ui/OnBackPressedCallback { // dev.keliver.ui/OnBackPressedCallback|null[0]
+    constructor <init>(kotlin/Boolean) // dev.keliver.ui/OnBackPressedCallback.<init>|<init>(kotlin.Boolean){}[0]
+
+    final var enabledChangedCallback // dev.keliver.ui/OnBackPressedCallback.enabledChangedCallback|{}enabledChangedCallback[0]
+        final fun <get-enabledChangedCallback>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.ui/OnBackPressedCallback.enabledChangedCallback.<get-enabledChangedCallback>|<get-enabledChangedCallback>(){}[0]
+        final fun <set-enabledChangedCallback>(kotlin/Function0<kotlin/Unit>?) // dev.keliver.ui/OnBackPressedCallback.enabledChangedCallback.<set-enabledChangedCallback>|<set-enabledChangedCallback>(kotlin.Function0<kotlin.Unit>?){}[0]
+    final var isEnabled // dev.keliver.ui/OnBackPressedCallback.isEnabled|{}isEnabled[0]
+        final fun <get-isEnabled>(): kotlin/Boolean // dev.keliver.ui/OnBackPressedCallback.isEnabled.<get-isEnabled>|<get-isEnabled>(){}[0]
+        final fun <set-isEnabled>(kotlin/Boolean) // dev.keliver.ui/OnBackPressedCallback.isEnabled.<set-isEnabled>|<set-isEnabled>(kotlin.Boolean){}[0]
+
+    abstract fun handleOnBackPressed() // dev.keliver.ui/OnBackPressedCallback.handleOnBackPressed|handleOnBackPressed(){}[0]
+}
+
+final class dev.keliver.ui/Margin { // dev.keliver.ui/Margin|null[0]
+    constructor <init>(dev.keliver.ui/Dp = ..., dev.keliver.ui/Dp = ..., dev.keliver.ui/Dp = ..., dev.keliver.ui/Dp = ...) // dev.keliver.ui/Margin.<init>|<init>(dev.keliver.ui.Dp;dev.keliver.ui.Dp;dev.keliver.ui.Dp;dev.keliver.ui.Dp){}[0]
+
+    final val bottom // dev.keliver.ui/Margin.bottom|{}bottom[0]
+        final fun <get-bottom>(): dev.keliver.ui/Dp // dev.keliver.ui/Margin.bottom.<get-bottom>|<get-bottom>(){}[0]
+    final val end // dev.keliver.ui/Margin.end|{}end[0]
+        final fun <get-end>(): dev.keliver.ui/Dp // dev.keliver.ui/Margin.end.<get-end>|<get-end>(){}[0]
+    final val start // dev.keliver.ui/Margin.start|{}start[0]
+        final fun <get-start>(): dev.keliver.ui/Dp // dev.keliver.ui/Margin.start.<get-start>|<get-start>(){}[0]
+    final val top // dev.keliver.ui/Margin.top|{}top[0]
+        final fun <get-top>(): dev.keliver.ui/Dp // dev.keliver.ui/Margin.top.<get-top>|<get-top>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/Margin.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/Margin.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/Margin.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/Margin> { // dev.keliver.ui/Margin.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/Margin.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/Margin.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/Margin.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/Margin // dev.keliver.ui/Margin.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/Margin) // dev.keliver.ui/Margin.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.Margin){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/Margin.Companion|null[0]
+        final val Zero // dev.keliver.ui/Margin.Companion.Zero|{}Zero[0]
+            final fun <get-Zero>(): dev.keliver.ui/Margin // dev.keliver.ui/Margin.Companion.Zero.<get-Zero>|<get-Zero>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/Margin> // dev.keliver.ui/Margin.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.ui/Size { // dev.keliver.ui/Size|null[0]
+    constructor <init>(dev.keliver.ui/Dp, dev.keliver.ui/Dp) // dev.keliver.ui/Size.<init>|<init>(dev.keliver.ui.Dp;dev.keliver.ui.Dp){}[0]
+
+    final val height // dev.keliver.ui/Size.height|{}height[0]
+        final fun <get-height>(): dev.keliver.ui/Dp // dev.keliver.ui/Size.height.<get-height>|<get-height>(){}[0]
+    final val width // dev.keliver.ui/Size.width|{}width[0]
+        final fun <get-width>(): dev.keliver.ui/Dp // dev.keliver.ui/Size.width.<get-width>|<get-width>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/Size.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/Size.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/Size.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/Size> { // dev.keliver.ui/Size.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/Size.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/Size.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/Size.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/Size // dev.keliver.ui/Size.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/Size) // dev.keliver.ui/Size.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.Size){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/Size.Companion|null[0]
+        final val Zero // dev.keliver.ui/Size.Companion.Zero|{}Zero[0]
+            final fun <get-Zero>(): dev.keliver.ui/Size // dev.keliver.ui/Size.Companion.Zero.<get-Zero>|<get-Zero>(){}[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/Size> // dev.keliver.ui/Size.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.ui/UiConfiguration { // dev.keliver.ui/UiConfiguration|null[0]
+    constructor <init>(kotlin/Boolean = ..., dev.keliver.ui/Margin = ..., dev.keliver.ui/Margin = ..., dev.keliver.ui/Size? = ..., kotlin/Double = ..., dev.keliver.ui/LayoutDirection = ...) // dev.keliver.ui/UiConfiguration.<init>|<init>(kotlin.Boolean;dev.keliver.ui.Margin;dev.keliver.ui.Margin;dev.keliver.ui.Size?;kotlin.Double;dev.keliver.ui.LayoutDirection){}[0]
+
+    final val darkMode // dev.keliver.ui/UiConfiguration.darkMode|{}darkMode[0]
+        final fun <get-darkMode>(): kotlin/Boolean // dev.keliver.ui/UiConfiguration.darkMode.<get-darkMode>|<get-darkMode>(){}[0]
+    final val density // dev.keliver.ui/UiConfiguration.density|{}density[0]
+        final fun <get-density>(): kotlin/Double // dev.keliver.ui/UiConfiguration.density.<get-density>|<get-density>(){}[0]
+    final val layoutDirection // dev.keliver.ui/UiConfiguration.layoutDirection|{}layoutDirection[0]
+        final fun <get-layoutDirection>(): dev.keliver.ui/LayoutDirection // dev.keliver.ui/UiConfiguration.layoutDirection.<get-layoutDirection>|<get-layoutDirection>(){}[0]
+    final val safeAreaInsets // dev.keliver.ui/UiConfiguration.safeAreaInsets|{}safeAreaInsets[0]
+        final fun <get-safeAreaInsets>(): dev.keliver.ui/Margin // dev.keliver.ui/UiConfiguration.safeAreaInsets.<get-safeAreaInsets>|<get-safeAreaInsets>(){}[0]
+    final val viewInsets // dev.keliver.ui/UiConfiguration.viewInsets|{}viewInsets[0]
+        final fun <get-viewInsets>(): dev.keliver.ui/Margin // dev.keliver.ui/UiConfiguration.viewInsets.<get-viewInsets>|<get-viewInsets>(){}[0]
+    final val viewportSize // dev.keliver.ui/UiConfiguration.viewportSize|{}viewportSize[0]
+        final fun <get-viewportSize>(): dev.keliver.ui/Size? // dev.keliver.ui/UiConfiguration.viewportSize.<get-viewportSize>|<get-viewportSize>(){}[0]
+
+    final fun copy(kotlin/Boolean = ..., dev.keliver.ui/Margin = ..., dev.keliver.ui/Margin = ..., dev.keliver.ui/Size? = ..., kotlin/Double = ..., dev.keliver.ui/LayoutDirection = ...): dev.keliver.ui/UiConfiguration // dev.keliver.ui/UiConfiguration.copy|copy(kotlin.Boolean;dev.keliver.ui.Margin;dev.keliver.ui.Margin;dev.keliver.ui.Size?;kotlin.Double;dev.keliver.ui.LayoutDirection){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/UiConfiguration.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/UiConfiguration.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/UiConfiguration.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/UiConfiguration> { // dev.keliver.ui/UiConfiguration.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/UiConfiguration.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/UiConfiguration.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/UiConfiguration.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/UiConfiguration // dev.keliver.ui/UiConfiguration.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/UiConfiguration) // dev.keliver.ui/UiConfiguration.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.UiConfiguration){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/UiConfiguration.Companion|null[0]
+        final val $childSerializers // dev.keliver.ui/UiConfiguration.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/UiConfiguration> // dev.keliver.ui/UiConfiguration.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.keliver.ui/Density { // dev.keliver.ui/Density|null[0]
+    constructor <init>(kotlin/Double) // dev.keliver.ui/Density.<init>|<init>(kotlin.Double){}[0]
+
+    final val rawDensity // dev.keliver.ui/Density.rawDensity|{}rawDensity[0]
+        final fun <get-rawDensity>(): kotlin/Double // dev.keliver.ui/Density.rawDensity.<get-rawDensity>|<get-rawDensity>(){}[0]
+
+    final fun (dev.keliver.ui/Dp).toPx(): kotlin/Double // dev.keliver.ui/Density.toPx|toPx@dev.keliver.ui.Dp(){}[0]
+    final fun (dev.keliver.ui/Dp).toPxInt(): kotlin/Int // dev.keliver.ui/Density.toPxInt|toPxInt@dev.keliver.ui.Dp(){}[0]
+    final fun (kotlin/Double).toDp(): dev.keliver.ui/Dp // dev.keliver.ui/Density.toDp|toDp@kotlin.Double(){}[0]
+    final fun (kotlin/Float).toDp(): dev.keliver.ui/Dp // dev.keliver.ui/Density.toDp|toDp@kotlin.Float(){}[0]
+    final fun (kotlin/Int).toDp(): dev.keliver.ui/Dp // dev.keliver.ui/Density.toDp|toDp@kotlin.Int(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/Density.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/Density.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/Density.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/Density> { // dev.keliver.ui/Density.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/Density.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/Density.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/Density.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/Density // dev.keliver.ui/Density.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/Density) // dev.keliver.ui/Density.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.Density){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/Density.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/Density> // dev.keliver.ui/Density.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.keliver.ui/Dp { // dev.keliver.ui/Dp|null[0]
+    constructor <init>(kotlin/Double) // dev.keliver.ui/Dp.<init>|<init>(kotlin.Double){}[0]
+
+    final val value // dev.keliver.ui/Dp.value|{}value[0]
+        final fun <get-value>(): kotlin/Double // dev.keliver.ui/Dp.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/Dp.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/Dp.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/Dp.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/Dp> { // dev.keliver.ui/Dp.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/Dp.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/Dp.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/Dp.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/Dp // dev.keliver.ui/Dp.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/Dp) // dev.keliver.ui/Dp.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.Dp){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/Dp.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/Dp> // dev.keliver.ui/Dp.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.keliver.ui/Px { // dev.keliver.ui/Px|null[0]
+    constructor <init>(kotlin/Double) // dev.keliver.ui/Px.<init>|<init>(kotlin.Double){}[0]
+
+    final val value // dev.keliver.ui/Px.value|{}value[0]
+        final fun <get-value>(): kotlin/Double // dev.keliver.ui/Px.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.ui/Px.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.ui/Px.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.ui/Px.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.ui/Px> { // dev.keliver.ui/Px.$serializer|null[0]
+        final val descriptor // dev.keliver.ui/Px.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.ui/Px.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.ui/Px.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.ui/Px // dev.keliver.ui/Px.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.ui/Px) // dev.keliver.ui/Px.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.ui.Px){}[0]
+    }
+
+    final object Companion { // dev.keliver.ui/Px.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.ui/Px> // dev.keliver.ui/Px.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final val dev.keliver.ui/dev_keliver_ui_Density_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_Density_$serializer$stableprop|#static{}dev_keliver_ui_Density_$serializer$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Dp_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_Dp_$serializer$stableprop|#static{}dev_keliver_ui_Dp_$serializer$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Margin$stableprop // dev.keliver.ui/dev_keliver_ui_Margin$stableprop|#static{}dev_keliver_ui_Margin$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Margin_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_Margin_$serializer$stableprop|#static{}dev_keliver_ui_Margin_$serializer$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_OnBackPressedCallback$stableprop // dev.keliver.ui/dev_keliver_ui_OnBackPressedCallback$stableprop|#static{}dev_keliver_ui_OnBackPressedCallback$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Px_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_Px_$serializer$stableprop|#static{}dev_keliver_ui_Px_$serializer$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Size$stableprop // dev.keliver.ui/dev_keliver_ui_Size$stableprop|#static{}dev_keliver_ui_Size$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_Size_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_Size_$serializer$stableprop|#static{}dev_keliver_ui_Size_$serializer$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_UiConfiguration$stableprop // dev.keliver.ui/dev_keliver_ui_UiConfiguration$stableprop|#static{}dev_keliver_ui_UiConfiguration$stableprop[0]
+final val dev.keliver.ui/dev_keliver_ui_UiConfiguration_$serializer$stableprop // dev.keliver.ui/dev_keliver_ui_UiConfiguration_$serializer$stableprop|#static{}dev_keliver_ui_UiConfiguration_$serializer$stableprop[0]
+final val dev.keliver.ui/dp // dev.keliver.ui/dp|@kotlin.Double{}dp[0]
+    final inline fun (kotlin/Double).<get-dp>(): dev.keliver.ui/Dp // dev.keliver.ui/dp.<get-dp>|<get-dp>@kotlin.Double(){}[0]
+final val dev.keliver.ui/dp // dev.keliver.ui/dp|@kotlin.Float{}dp[0]
+    final inline fun (kotlin/Float).<get-dp>(): dev.keliver.ui/Dp // dev.keliver.ui/dp.<get-dp>|<get-dp>@kotlin.Float(){}[0]
+final val dev.keliver.ui/dp // dev.keliver.ui/dp|@kotlin.Int{}dp[0]
+    final inline fun (kotlin/Int).<get-dp>(): dev.keliver.ui/Dp // dev.keliver.ui/dp.<get-dp>|<get-dp>@kotlin.Int(){}[0]
+
+final fun (dev.keliver.ui/Dp).dev.keliver.ui/toPlatformDp(): kotlin/Double // dev.keliver.ui/toPlatformDp|toPlatformDp@dev.keliver.ui.Dp(){}[0]
+final fun (dev.keliver.ui/Dp.Companion).dev.keliver.ui/fromPlatformDp(kotlin/Double): dev.keliver.ui/Dp // dev.keliver.ui/fromPlatformDp|fromPlatformDp@dev.keliver.ui.Dp.Companion(kotlin.Double){}[0]
+final fun dev.keliver.ui/Margin(dev.keliver.ui/Dp = ...): dev.keliver.ui/Margin // dev.keliver.ui/Margin|Margin(dev.keliver.ui.Dp){}[0]
+final fun dev.keliver.ui/Margin(dev.keliver.ui/Dp = ..., dev.keliver.ui/Dp = ...): dev.keliver.ui/Margin // dev.keliver.ui/Margin|Margin(dev.keliver.ui.Dp;dev.keliver.ui.Dp){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Density_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Density_$serializer$stableprop_getter|dev_keliver_ui_Density_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Dp_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Dp_$serializer$stableprop_getter|dev_keliver_ui_Dp_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Margin$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Margin$stableprop_getter|dev_keliver_ui_Margin$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Margin_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Margin_$serializer$stableprop_getter|dev_keliver_ui_Margin_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_OnBackPressedCallback$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_OnBackPressedCallback$stableprop_getter|dev_keliver_ui_OnBackPressedCallback$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Px_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Px_$serializer$stableprop_getter|dev_keliver_ui_Px_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Size$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Size$stableprop_getter|dev_keliver_ui_Size$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_Size_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_Size_$serializer$stableprop_getter|dev_keliver_ui_Size_$serializer$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_UiConfiguration$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_UiConfiguration$stableprop_getter|dev_keliver_ui_UiConfiguration$stableprop_getter(){}[0]
+final fun dev.keliver.ui/dev_keliver_ui_UiConfiguration_$serializer$stableprop_getter(): kotlin/Int // dev.keliver.ui/dev_keliver_ui_UiConfiguration_$serializer$stableprop_getter|dev_keliver_ui_UiConfiguration_$serializer$stableprop_getter(){}[0]
+
+// Targets: [ios]
+final val dev.keliver.ui/Default // dev.keliver.ui/Default|@dev.keliver.ui.Density.Companion{}Default[0]
+    final fun (dev.keliver.ui/Density.Companion).<get-Default>(): dev.keliver.ui/Density // dev.keliver.ui/Default.<get-Default>|<get-Default>@dev.keliver.ui.Density.Companion(){}[0]

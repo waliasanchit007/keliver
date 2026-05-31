@@ -1,11 +1,11 @@
-# Konduit roadmap
+# Keliver roadmap
 
 Forward-looking. Adopter-facing. Distinct from
 [`PUBLIC_LAUNCH_ROADMAP.md`](./PUBLIC_LAUNCH_ROADMAP.md), which tracks
 the one-time work to take this repo from "private fork shipping to
 Caliclan's own apps" to "public OSS framework." That one is launch
 prep. **This document is the steady-state plan** — what adopters can
-expect from Konduit over the next two release cycles, what's
+expect from Keliver over the next two release cycles, what's
 deliberately out of scope, and what stability commitments come with
 each piece.
 
@@ -20,25 +20,25 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 `1.0.0-caliclan.4-SNAPSHOT` (in flight)
 
 **Adopter ergonomics**
-- `dev.konduit:konduit-host` / `dev.konduit:konduit-guest` — single-import
+- `dev.keliver:keliver-host` / `dev.keliver:keliver-guest` — single-import
   facade modules. Replaces the 7-module hand-wired host-side dep
   block.
-- `dev.konduit:konduit-vm` — `KonduitViewModel` + `konduitViewModel { }`
+- `dev.keliver:keliver-vm` — `KeliverViewModel` + `keliverViewModel { }`
   Compose helper. Closes the cosmetic gap with native
   Compose-Android ViewModel ergonomics.
-- `dev.konduit:konduit-nav` — typed guest-side navigation
-  (`KonduitNavController` + `KonduitNavHost`), per-entry
+- `dev.keliver:keliver-nav` — typed guest-side navigation
+  (`KeliverNavController` + `KeliverNavHost`), per-entry
   `rememberSaveable` state preservation.
-- `dev.konduit:konduit-http` — `KonduitHttp` typed wrapper +
+- `dev.keliver:keliver-http` — `KeliverHttp` typed wrapper +
   `HostHttpProvider` generic shim. Replaces N per-endpoint
   `HostXxxProvider` services with one host binding.
-- `dev.konduit:konduit-storage` — `KonduitStorage` key/value shim.
-- `dev.konduit:konduit-console` — standardized `KonduitConsole`
-  logging service + reference `DefaultKonduitConsole`.
-- `dev.konduit:konduit-image` — `KonduitImage.installSingleton()`
+- `dev.keliver:keliver-storage` — `KeliverStorage` key/value shim.
+- `dev.keliver:keliver-console` — standardized `KeliverConsole`
+  logging service + reference `DefaultKeliverConsole`.
+- `dev.keliver:keliver-image` — `KeliverImage.installSingleton()`
   one-liner for Coil 3 setup. Closes KNOWN_BUGS U5.
-- `dev.konduit:konduit-http-annotations` — Retrofit-style annotation
-  surface (`@KonduitApi`, `@GET`, `@POST`, `@Path`, `@Query`, `@Body`,
+- `dev.keliver:keliver-http-annotations` — Retrofit-style annotation
+  surface (`@KeliverApi`, `@GET`, `@POST`, `@Path`, `@Query`, `@Body`,
   `@Header`, `@HeaderMap`). Phase 1 of the codegen workstream
   (issue #18); processor in [`docs/HTTP_API_CODEGEN_DESIGN.md`](./docs/HTTP_API_CODEGEN_DESIGN.md).
 
@@ -53,7 +53,7 @@ This is a living document. Items move from "Up Next" → "In Progress" →
   swallow the failure.
 
 **Build-time lint surface**
-- `dev.konduit.zipline-shapes` Gradle plugin — rejects
+- `dev.keliver.zipline-shapes` Gradle plugin — rejects
   `ZiplineService` methods with function-typed parameters
   (KNOWN_BUGS U11). Auto-wires `check` lifecycle.
 - Schema parser rejects `@Composable` lambdas as `@Property` at
@@ -63,7 +63,7 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 
 **Distribution**
 - POM metadata cleaned up — published artifacts identify as
-  Konduit, not the inherited Cash App Redwood values.
+  Keliver, not the inherited Cash App Redwood values.
 - CI runner configurable via `vars.CI_RUNNER` — adopters
   self-hosting on a Mac can bypass GHA macOS minute billing.
 
@@ -75,7 +75,7 @@ The caliclan.5 list below is **fully shipped** (codegen, sample +
 iOS, perf Phase 1, bundle-size budget, U12 helper) — plus an
 unplanned but high-value **test-suite hardening** pass: CI now runs
 `test` + `apiCheck`, and the 22 inherited Redwood tests are revived +
-gated (`-PkonduitWithTestApp`). Retrospective + lessons in
+gated (`-PkeliverWithTestApp`). Retrospective + lessons in
 [`docs/HARDENING_RETROSPECTIVE.md`](./docs/HARDENING_RETROSPECTIVE.md).
 
 Next cycle, in rough priority order (impact-first, informed by the
@@ -83,7 +83,7 @@ Next cycle, in rough priority order (impact-first, informed by the
 
 ### A. Maven Central publishing  ← highest adopter impact
 Today every adopter needs a GitHub PAT with `read:packages` to
-resolve `dev.konduit:*`. That's a day-one papercut on every fresh
+resolve `dev.keliver:*`. That's a day-one papercut on every fresh
 machine (we felt it building `sample/`). Publishing to Maven Central
 deletes the entire `gpr.user`/`gpr.token` setup from adopter projects.
 Steps are in [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md);
@@ -119,14 +119,14 @@ development.
 
 Everything below shipped this cycle.
 
-### 1. `konduit-http-codegen` — issue #18 (KSP processor)  ✅ *shipped*
-KSP `SymbolProcessor` that walks `@KonduitApi`-annotated interfaces
-and emits `*Impl(KonduitHttp)` classes. Phases 2 + 3 landed (all
+### 1. `keliver-http-codegen` — issue #18 (KSP processor)  ✅ *shipped*
+KSP `SymbolProcessor` that walks `@KeliverApi`-annotated interfaces
+and emits `*Impl(KeliverHttp)` classes. Phases 2 + 3 landed (all
 verbs + `@Path`/`@Query`/`@Body`/`@Header`/`@HeaderMap`), with 11
 `kctfork`-based fixture tests. Full spec in
 [`docs/HTTP_API_CODEGEN_DESIGN.md`](./docs/HTTP_API_CODEGEN_DESIGN.md).
 
-### 2. Konduit-only sample app  ✅ *landed + tested on both platforms*
+### 2. Keliver-only sample app  ✅ *landed + tested on both platforms*
 Minimal end-to-end sample lives at [`sample/`](./sample/) — a
 standalone Gradle build with its own custom schema (`Box` + `Text`),
 codegen pipeline (widget / modifier / protocol-host / protocol-guest),
@@ -134,12 +134,12 @@ Kotlin/JS guest bundle, Compose-MP host renderer, Android app
 shell, and iOS Xcode project.
 
 **Validated end-to-end:**
-- Android: Pixel 9 emulator (API 37) — renders "Hello, Konduit!"
-  ([PR #54](https://github.com/waliasanchit007/konduit/pull/54)).
+- Android: Pixel 9 emulator (API 37) — renders "Hello, Keliver!"
+  ([PR #54](https://github.com/waliasanchit007/keliver/pull/54)).
 - iOS: iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3) — same
   widget renders, same full Zipline RPC sequence visible via
   `simctl launch --console`
-  ([PR #56](https://github.com/waliasanchit007/konduit/pull/56)).
+  ([PR #56](https://github.com/waliasanchit007/keliver/pull/56)).
 
 Testing surfaced 8 adopter-facing bugs (5 Android + 3 iOS-specific);
 all fixed in tree, all written up in
@@ -148,7 +148,7 @@ all fixed in tree, all written up in
 "Gotchas you'll hit on day one".
 
 ### 3. iOS host validation  ✅ *complete*
-The sample's `host-compose` module produces a `KonduitSampleHost`
+The sample's `host-compose` module produces a `KeliverSampleHost`
 framework for both `iosArm64` and `iosSimulatorArm64`. The
 ready-made Xcode project at [`sample/iosApp/`](./sample/iosApp/)
 demonstrates the Swift integration:
@@ -162,7 +162,7 @@ or follow the integration notes in
 ships baseline measurements for APK size, Zipline bundle size, iOS
 framework size, and build times. Reproducible via
 `scripts/measure-baselines.sh`. Key adopter-relevant numbers:
-production Zipline bundle is **732 KB total** but Konduit + per-app
+production Zipline bundle is **732 KB total** but Keliver + per-app
 own-code is only **12 KB** — the runtime cost is fixed, the
 per-feature cost is small. Methodology + target SLAs for cold-start /
 warm-mount / update-latency / memory-footprint are committed in
@@ -186,23 +186,23 @@ benchmarks per release tag is the next sub-task.
 Cash App Redwood 0.18.0 comparison baselines.
 
 ### 5. Bundle-size budget  ✅ *shipped*
-`dev.konduit.gradle.BundleSizeBudgetTask` — adopters register it to
+`dev.keliver.gradle.BundleSizeBudgetTask` — adopters register it to
 fail the build if the `.zipline` bundle exceeds a configurable
 threshold (with an optional soft-warn). Catches accidental size
 regressions in CI. 6/6 unit tests via `ProjectBuilder`.
 
-### 6. `konduit-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
+### 6. `keliver-treehouse` adapter helper — eliminate U12 boilerplate  ✅ *shipped*
 **Both halves landed in caliclan.5:**
 
-- **Runtime helper** ([PR #58](https://github.com/waliasanchit007/konduit/pull/58)) —
-  `KonduitAppServiceAdapter<T>` base class +
-  `konduitReturningFunction()` helper. Cuts the manual adapter
+- **Runtime helper** ([PR #58](https://github.com/waliasanchit007/keliver/pull/58)) —
+  `KeliverAppServiceAdapter<T>` base class +
+  `keliverReturningFunction()` helper. Cuts the manual adapter
   from ~95 LoC + 7-entry `@file:Suppress` to ~70 LoC + 2-entry
   `@file:Suppress`. For adopters who prefer the hand-rolled
   shape.
 
-- **KSP processor** ([PR #TBD](https://github.com/waliasanchit007/konduit/pull/60)) —
-  `@KonduitAppService` annotation + `konduit-treehouse-codegen`
+- **KSP processor** ([PR #TBD](https://github.com/waliasanchit007/keliver/pull/60)) —
+  `@KeliverAppService` annotation + `keliver-treehouse-codegen`
   module. Generates `Generated<Name>Adapter` at compile time.
   Cuts adopter cost to ~5 LoC + zero `@file:Suppress` (just a
   companion-object wrapper that Zipline IR can find at code-load
@@ -213,8 +213,8 @@ companion wrapper). End-to-end verified on Pixel 9 emulator.
 
 Long-term work: upstream resolution of
 [Zipline #765](https://github.com/cashapp/zipline/issues/765)
-would let Konduit deprecate the codegen module entirely. Not
-on Konduit's critical path; adopter pain is already eliminated.
+would let Keliver deprecate the codegen module entirely. Not
+on Keliver's critical path; adopter pain is already eliminated.
 
 ---
 
@@ -246,7 +246,7 @@ need adopter signal before they're worth building.
   helper module could ship `HostStateFlowProvider` that wraps a
   `StateFlow<T>` with correct dispatcher routing for adopters
   who'd rather not roll their own.
-- **`konduit-room`-style persistence shim** — `KonduitStorage`
+- **`keliver-room`-style persistence shim** — `KeliverStorage`
   covers key/value today; a structured-query variant (SQL-like,
   schema-typed) is an open design question. Wait for adopter signal.
 - **Retrofit-style codegen Phase 3+ work** —
@@ -265,14 +265,14 @@ need adopter signal before they're worth building.
 - **Snapshot publishing on merge-to-main** — adopters who want to
   pin `1.0.0-caliclan.N-SNAPSHOT` from `main` HEAD can't today;
   only tagged releases publish. Add the GHA workflow trigger.
-- **Module-level READMEs** — `konduit-http/README.md`,
-  `konduit-vm/README.md`, etc. Each module's GitHub page shows
+- **Module-level READMEs** — `keliver-http/README.md`,
+  `keliver-vm/README.md`, etc. Each module's GitHub page shows
   `build.gradle` today; a one-line README per module dramatically
   improves first-impression discoverability.
 
 ### Strategic positioning (when going public)
 
-- **`COMPARISON.md`** — Konduit vs upstream Redwood (sunsetted),
+- **`COMPARISON.md`** — Keliver vs upstream Redwood (sunsetted),
   vs Flutter, vs React Native. Each comparison 2–3 paragraphs.
 - **`API_STABILITY.md`** — explicit SemVer commitment,
   deprecation policy, LTS window.
@@ -285,23 +285,23 @@ need adopter signal before they're worth building.
 ## What's deliberately out of scope
 
 These come up in adopter conversations enough to warrant calling
-out — but Konduit is not the right place for them.
+out — but Keliver is not the right place for them.
 
-- **View / UIView / DOM widget systems.** Konduit shipped Phase 1.5
+- **View / UIView / DOM widget systems.** Keliver shipped Phase 1.5
   (`caliclan.2`) by dropping 13 upstream modules that aren't
   relevant to Compose Multiplatform. The fork is full CMP. If you
   need to render via Android Views, iOS UIKit, or the browser
   DOM, you want upstream
   [Cash App Redwood](https://github.com/cashapp/redwood) instead.
-- **The Zipline runtime itself.** Konduit consumes
+- **The Zipline runtime itself.** Keliver consumes
   [`app.cash.zipline`](https://github.com/cashapp/zipline) as a
   vendored dependency. Upstream Zipline ships the QuickJS bridge,
-  the Kotlin compiler plugin, the bundle loader. Konduit's value
+  the Kotlin compiler plugin, the bundle loader. Keliver's value
   is the protocol-on-top-of-Zipline + the production-hardening
   helpers, not the Zipline runtime. Bugs in QuickJS or the
   Zipline plugin (e.g. KNOWN_BUGS U8 part 1) get filed against
   Zipline.
-- **Application-specific schemas.** Konduit ships the framework
+- **Application-specific schemas.** Keliver ships the framework
   (runtime, codegen, lint, protocol). Your app's `@Widget`
   definitions, `HostXxxProvider` shapes, and routing belong in
   your own repo (see
@@ -309,7 +309,7 @@ out — but Konduit is not the right place for them.
   for the reference integration's schema layout).
 - **A.I.-generated UI.** The schema is a static contract between
   guest and host. Runtime-generated UI from a model that's never
-  seen the schema is a different problem; Konduit doesn't solve
+  seen the schema is a different problem; Keliver doesn't solve
   it.
 
 ---
@@ -320,6 +320,6 @@ For now, file an issue. Once public visibility lands, the same
 channel applies — adopter signal moves items between the "Up Next"
 and "Further Out" sections.
 
-For specific bug shapes Konduit's runtime + lint already mitigates,
+For specific bug shapes Keliver's runtime + lint already mitigates,
 see [`docs/KNOWN_BUGS.md`](./docs/KNOWN_BUGS.md) and the
 "Production hardening" section above.

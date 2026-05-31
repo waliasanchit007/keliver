@@ -1,0 +1,29 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-storage>
+abstract interface dev.keliver.storage/HostStorage : app.cash.zipline/ZiplineService { // dev.keliver.storage/HostStorage|null[0]
+    abstract suspend fun get(kotlin/String): kotlin/String? // dev.keliver.storage/HostStorage.get|get(kotlin.String){}[0]
+    abstract suspend fun keys(kotlin/String = ...): kotlin.collections/List<kotlin/String> // dev.keliver.storage/HostStorage.keys|keys(kotlin.String){}[0]
+    abstract suspend fun set(kotlin/String, kotlin/String?) // dev.keliver.storage/HostStorage.set|set(kotlin.String;kotlin.String?){}[0]
+
+    final object Companion // dev.keliver.storage/HostStorage.Companion|null[0]
+}
+
+final class dev.keliver.storage/KeliverStorage { // dev.keliver.storage/KeliverStorage|null[0]
+    constructor <init>(dev.keliver.storage/HostStorage, kotlinx.serialization.json/Json = ...) // dev.keliver.storage/KeliverStorage.<init>|<init>(dev.keliver.storage.HostStorage;kotlinx.serialization.json.Json){}[0]
+
+    final val json // dev.keliver.storage/KeliverStorage.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.storage/KeliverStorage.json.<get-json>|<get-json>(){}[0]
+    final val provider // dev.keliver.storage/KeliverStorage.provider|{}provider[0]
+        final fun <get-provider>(): dev.keliver.storage/HostStorage // dev.keliver.storage/KeliverStorage.provider.<get-provider>|<get-provider>(){}[0]
+
+    final suspend fun keys(kotlin/String = ...): kotlin.collections/List<kotlin/String> // dev.keliver.storage/KeliverStorage.keys|keys(kotlin.String){}[0]
+    final suspend fun remove(kotlin/String) // dev.keliver.storage/KeliverStorage.remove|remove(kotlin.String){}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> get(kotlin/String): #A1? // dev.keliver.storage/KeliverStorage.get|get(kotlin.String){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> set(kotlin/String, #A1?) // dev.keliver.storage/KeliverStorage.set|set(kotlin.String;0:0?){0§<kotlin.Any?>}[0]
+}
