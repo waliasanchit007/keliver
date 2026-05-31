@@ -1,0 +1,304 @@
+/*
+ * Copyright (C) 2022 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.protocol.host
+
+import dev.keliver.Modifier
+import dev.keliver.RedwoodCodegenApi
+import dev.keliver.layout.testing.RedwoodLayoutTestingWidgetFactory
+import dev.keliver.lazylayout.testing.RedwoodLazyLayoutTestingWidgetFactory
+import dev.keliver.protocol.ChildrenTag
+import dev.keliver.protocol.Event
+import dev.keliver.protocol.EventTag
+import dev.keliver.protocol.Id
+import dev.keliver.protocol.ModifierElement
+import dev.keliver.protocol.ModifierTag
+import dev.keliver.protocol.PropertyChange
+import dev.keliver.protocol.PropertyTag
+import dev.keliver.protocol.WidgetTag
+import dev.keliver.ui.basic.testing.RedwoodUiBasicTestingWidgetFactory
+import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import com.example.redwood.testapp.compose.TestScope
+import com.example.redwood.testapp.protocol.host.TestSchemaHostProtocol
+import com.example.redwood.testapp.testing.TestSchemaTestingWidgetFactory
+import com.example.redwood.testapp.testing.TextInputValue
+import com.example.redwood.testapp.widget.TestSchemaWidgetSystem
+import kotlin.test.Test
+import kotlin.test.assertFailsWith
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.modules.SerializersModule
+
+@OptIn(RedwoodCodegenApi::class)
+class HostProtocolTest {
+  @Test fun unknownWidgetThrowsDefault() {
+    val protocol = TestSchemaHostProtocol.create()
+
+    val t = assertFailsWith<IllegalArgumentException> {
+      protocol.widget(WidgetTag(345432))
+    }
+    assertThat(t).hasMessage("Unknown widget tag 345432")
+  }
+
+  @Test fun unknownWidgetCallsHandler() {
+    val handler = RecordingProtocolMismatchHandler()
+    val protocol = TestSchemaHostProtocol.create(
+      mismatchHandler = handler,
+    )
+
+    assertThat(protocol.widget(WidgetTag(345432))).isNull()
+    assertThat(handler.events.single()).isEqualTo("Unknown widget 345432")
+  }
+
+  @Test fun modifierUsesSerializerModule() {
+    val json = Json {
+      serializersModule = SerializersModule {
+        contextual(Duration::class, DurationIsoSerializer)
+      }
+    }
+    val protocol = TestSchemaHostProtocol.create(
+      json = json,
+    )
+
+    val modifier = protocol.createModifier(
+      ModifierElement(
+        tag = ModifierTag(3),
+        value = buildJsonObject {
+          put("customType", JsonPrimitive("PT10S"))
+        },
+      ),
+    )
+
+    with(object : TestScope {}) {
+      assertThat(modifier).isEqualTo(Modifier.customType(10.seconds))
+    }
+  }
+
+  @Test fun modifierDeserializationHonorsDefaultExpressions() {
+    val json = Json {
+      serializersModule = SerializersModule {
+        contextual(Duration::class, DurationIsoSerializer)
+      }
+    }
+    val protocol = TestSchemaHostProtocol.create(
+      json = json,
+    )
+
+    val modifier = protocol.createModifier(
+      ModifierElement(
+        tag = ModifierTag(5),
+        value = buildJsonObject {
+          put("customType", JsonPrimitive("PT10S"))
+        },
+      ),
+    )
+
+    with(object : TestScope {}) {
+      assertThat(modifier).isEqualTo(
+        Modifier.customTypeWithDefault(
+          10.seconds,
+          "sup",
+        ),
+      )
+    }
+  }
+
+  @Test fun unknownModifierThrowsDefault() {
+    val protocol = TestSchemaHostProtocol.create()
+
+    val t = assertFailsWith<IllegalArgumentException> {
+      protocol.createModifier(
+        ModifierElement(
+          tag = ModifierTag(345432),
+          value = JsonObject(mapOf()),
+        ),
+      )
+    }
+    assertThat(t).hasMessage("Unknown layout modifier tag 345432")
+  }
+
+  @Test fun unknownModifierCallsHandler() {
+    val json = Json {
+      serializersModule = SerializersModule {
+        contextual(Duration::class, DurationIsoSerializer)
+      }
+    }
+    val handler = RecordingProtocolMismatchHandler()
+    val protocol = TestSchemaHostProtocol.create(
+      json = json,
+      mismatchHandler = handler,
+    )
+
+    val modifier = protocol.createModifier(
+      ModifierElement(
+        tag = ModifierTag(345432),
+        value = buildJsonArray {
+          add(JsonPrimitive(345432))
+          add(JsonObject(mapOf()))
+        },
+      ),
+    ) then protocol.createModifier(
+      ModifierElement(
+        tag = ModifierTag(2),
+        value = buildJsonObject { put("value", JsonPrimitive("hi")) },
+      ),
+    )
+
+    assertThat(handler.events.single()).isEqualTo("Unknown layout modifier 345432")
+
+    // Ensure only the invalid Modifier was discarded and not all of them.
+    with(object : TestScope {}) {
+      assertThat(modifier).isEqualTo(
+        Modifier.accessibilityDescription(
+          "hi",
+        ),
+      )
+    }
+  }
+
+  @Test fun unknownChildrenThrowsDefault() {
+    val protocol = TestSchemaHostProtocol.create()
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val button = protocol.widget(WidgetTag(4))!!.createNode(Id(1), widgetSystem)
+
+    val t = assertFailsWith<IllegalArgumentException> {
+      button.children(ChildrenTag(345432))
+    }
+    assertThat(t).hasMessage("Unknown children tag 345432 for widget tag 4")
+  }
+
+  @Test fun unknownChildrenCallsHandler() {
+    val handler = RecordingProtocolMismatchHandler()
+    val protocol = TestSchemaHostProtocol.create(
+      mismatchHandler = handler,
+    )
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+
+    val button = protocol.widget(WidgetTag(4))!!.createNode(Id(1), widgetSystem)
+    assertThat(button.children(ChildrenTag(345432))).isNull()
+
+    assertThat(handler.events.single()).isEqualTo("Unknown children 345432 for 4")
+  }
+
+  @Test fun propertyUsesSerializersModule() {
+    val json = Json {
+      serializersModule = SerializersModule {
+        contextual(Duration::class, DurationIsoSerializer)
+      }
+    }
+    val protocol = TestSchemaHostProtocol.create(
+      json = json,
+    )
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val textInput = protocol.widget(WidgetTag(5))!!.createNode(Id(1), widgetSystem)
+
+    val throwingEventSink = UiEventSink { error(it) }
+
+    val change = PropertyChange(Id(1), WidgetTag(5), PropertyTag(2), JsonPrimitive("PT10S"))
+    val uiChange = UiChange.fromProtocol(protocol, change) as UiPropertyChange
+    textInput.apply(uiChange, throwingEventSink)
+
+    assertThat((textInput.widget.value as TextInputValue).customType).isEqualTo(10.seconds)
+  }
+
+  @Test fun unknownPropertyThrowsDefaults() {
+    val protocol = TestSchemaHostProtocol.create()
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val button = protocol.widget(WidgetTag(4))!!.createNode(Id(1), widgetSystem)
+
+    val change = UiPropertyChange(Id(1), PropertyTag(345432), "sup")
+    val eventSink = UiEventSink { throw UnsupportedOperationException() }
+    val t = assertFailsWith<IllegalArgumentException> {
+      button.apply(change, eventSink)
+    }
+    assertThat(t).hasMessage("Unknown property tag 345432 for widget tag 4")
+  }
+
+  @Test fun unknownPropertyCallsHandler() {
+    val handler = RecordingProtocolMismatchHandler()
+    val protocol = TestSchemaHostProtocol.create(
+      mismatchHandler = handler,
+    )
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val button = protocol.widget(WidgetTag(4))!!.createNode(Id(1), widgetSystem)
+
+    val change = UiPropertyChange(Id(1), PropertyTag(345432), "sup")
+
+    button.apply(change) { throw UnsupportedOperationException() }
+
+    assertThat(handler.events.single()).isEqualTo("Unknown property 345432 for 4")
+  }
+
+  @Test fun eventUsesSerializersModule() {
+    val json = Json {
+      serializersModule = SerializersModule {
+        contextual(Duration::class, DurationIsoSerializer)
+      }
+    }
+    val protocol = TestSchemaHostProtocol.create(
+      json = json,
+    )
+    val widgetSystem = TestSchemaWidgetSystem(
+      TestSchema = TestSchemaTestingWidgetFactory(),
+      RedwoodUiBasic = RedwoodUiBasicTestingWidgetFactory(),
+      RedwoodLayout = RedwoodLayoutTestingWidgetFactory(),
+      RedwoodLazyLayout = RedwoodLazyLayoutTestingWidgetFactory(),
+    )
+    val textInput = protocol.widget(WidgetTag(5))!!.createNode(Id(1), widgetSystem)
+
+    val eventSink = RecordingUiEventSink()
+    val change = PropertyChange(Id(1), WidgetTag(5), PropertyTag(4), JsonPrimitive(true))
+    val uiChange = UiChange.fromProtocol(protocol, change) as UiPropertyChange
+    textInput.apply(uiChange, eventSink)
+
+    (textInput.widget.value as TextInputValue).onChangeCustomType!!.invoke(10.seconds)
+
+    assertThat(eventSink.events.single().toProtocol())
+      .isEqualTo(Event(Id(1), EventTag(4), listOf(JsonPrimitive("PT10S"))))
+  }
+}

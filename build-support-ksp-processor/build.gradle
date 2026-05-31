@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-import static dev.konduit.buildsupport.TargetGroup.Tooling
+import static dev.keliver.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)

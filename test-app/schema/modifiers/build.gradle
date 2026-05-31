@@ -1,10 +1,10 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
 }
 
-apply plugin: 'dev.konduit.generator.modifiers'
+apply plugin: 'dev.keliver.generator.modifiers'
 
 kotlin {
   // Ensure our codegen correctly works in explicit API mode.

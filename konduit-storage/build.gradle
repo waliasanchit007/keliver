@@ -4,7 +4,7 @@
 // with typed `get<T>` / `set<T>` helpers using kotlinx-serialization.
 // See issue #10.
 
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)

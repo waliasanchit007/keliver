@@ -1,6 +1,6 @@
-import dev.konduit.buildsupport.JsTests
+import dev.keliver.buildsupport.JsTests
 
-import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
 
 redwoodBuild {
   targets(CommonWithAndroid + JsTests.Browser)
@@ -10,7 +10,7 @@ redwoodBuild {
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.widget'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.keliver.widget'))
       dependencies {
         api libs.kotlinx.coroutines.core
         api projects.konduitRuntime
@@ -39,7 +39,7 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.widget'
+  namespace 'dev.keliver.widget'
 
   buildFeatures {
     // Has default ID for RedwoodLayout.
@@ -51,7 +51,7 @@ spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/androidMain/kotlin/dev/konduit/widget/SavedStateRegistry.kt",
+      "src/androidMain/kotlin/dev/keliver/widget/SavedStateRegistry.kt",
     )
   }
 }

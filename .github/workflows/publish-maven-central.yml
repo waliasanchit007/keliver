@@ -13,12 +13,12 @@ name: Publish to Maven Central
 #
 # It is deliberately SEPARATE from publish.yml (which pushes to GitHub
 # Packages on every `v*` tag). Keeping them apart means the existing
-# private-consumer flow (`dev.konduit:*`) is never blocked on Central
+# private-consumer flow (`dev.keliver:*`) is never blocked on Central
 # credentials, and the two channels can co-exist during migration.
 #
 # Coordinates: the `-PkonduitGroupId=io.github.waliasanchit007` override
 # flips the Gradle group for this build only; published Kotlin package
-# names stay `dev.konduit.*`. The version comes from
+# names stay `dev.keliver.*`. The version comes from
 # build-support/RedwoodBuildPlugin.kt's KONDUIT_VERSION — bump it before
 # releasing. Note: `*-SNAPSHOT` versions route to the Central snapshots
 # repository, not the main index.
@@ -81,7 +81,7 @@ jobs:
         run: |
           tag_version="${{ inputs.ref }}"
           tag_version="${tag_version#v}"
-          build_version=$(grep 'KONDUIT_VERSION' build-support/src/main/kotlin/dev/konduit/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          build_version=$(grep 'KONDUIT_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Tag version:   $tag_version"
           echo "Build version: $build_version"
           if [ "$tag_version" != "$build_version" ]; then

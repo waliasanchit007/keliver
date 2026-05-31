@@ -16,7 +16,7 @@
 package com.example.redwood.testapp.treehouse
 
 import androidx.compose.runtime.Composable
-import dev.konduit.treehouse.TreehouseUi
+import dev.keliver.treehouse.TreehouseUi
 import com.example.redwood.testapp.presenter.HttpClient
 import com.example.redwood.testapp.presenter.TestApp
 import com.example.redwood.testapp.presenter.TestContext

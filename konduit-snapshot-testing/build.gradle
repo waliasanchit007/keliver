@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
 
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
@@ -26,5 +26,5 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.snapshot.testing'
+  namespace 'dev.keliver.snapshot.testing'
 }

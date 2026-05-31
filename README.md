@@ -17,7 +17,7 @@ Konduit is a [Cash App Redwood](https://github.com/cashapp/redwood) fork.
 Upstream Redwood is great but is no longer being actively developed by
 Cash App. Konduit picks up the foundation — `redwood-runtime`,
 `redwood-compose`, `redwood-treehouse`, `redwood-treehouse-host`,
-`redwood-treehouse-host-composeui` — and ships it under the `dev.konduit`
+`redwood-treehouse-host-composeui` — and ships it under the `dev.keliver`
 namespace with:
 
 > Already running on upstream Redwood? See

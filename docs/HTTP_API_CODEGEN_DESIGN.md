@@ -34,7 +34,7 @@ built without further design churn.
 |---|---|---|---|
 | `konduit-http-annotations` | Common (JVM + iOS + JS) | `@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap` — all `SOURCE`-retention | **landed** (this PR) |
 | `konduit-http-codegen` | Tooling (JVM-only) | KSP `SymbolProcessor` + companion Gradle plugin descriptor; depends on `konduit-http-annotations` for the FqName lookups | **next session** |
-| `konduit-gradle-plugin` | (existing) | New plugin id `dev.konduit.http-api` that auto-applies the KSP plugin + adds the codegen processor as a `ksp` configuration dep | **next session** |
+| `konduit-gradle-plugin` | (existing) | New plugin id `dev.keliver.http-api` that auto-applies the KSP plugin + adds the codegen processor as a `ksp` configuration dep | **next session** |
 
 The annotations are intentionally split into their own module so the
 KSP processor module (JVM-only, Tooling target) doesn't pollute the
@@ -84,7 +84,7 @@ For the running example above, the KSP processor would emit:
 // build/generated/ksp/.../com/example/QuotesApiImpl.kt
 package com.example
 
-import dev.konduit.http.KonduitHttp
+import dev.keliver.http.KonduitHttp
 
 public class QuotesApiImpl(private val http: KonduitHttp) : QuotesApi {
 
@@ -123,13 +123,13 @@ module that depends on the annotated interface's module.
 
 ## Adopter integration (planned)
 
-Phase 2 (KSP processor) ships with a `dev.konduit.http-api` Gradle
+Phase 2 (KSP processor) ships with a `dev.keliver.http-api` Gradle
 plugin so adoption is a single `plugins { id(…) }` block:
 
 ```kotlin
 // adopter's :shared (or :guest) build.gradle.kts:
 plugins {
-    id("dev.konduit.http-api")
+    id("dev.keliver.http-api")
 }
 
 dependencies {
@@ -147,8 +147,8 @@ plugins {
 }
 
 dependencies {
-    implementation("dev.konduit:konduit-http-annotations:$VERSION")
-    ksp("dev.konduit:konduit-http-codegen:$VERSION")
+    implementation("dev.keliver:konduit-http-annotations:$VERSION")
+    ksp("dev.keliver:konduit-http-codegen:$VERSION")
 }
 ```
 
@@ -181,7 +181,7 @@ without breaking the generated code from v1:
 | **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
 | **3** | `@HeaderMap` + `dev.zacsweers.kctfork:ksp` end-to-end test fixtures (11 tests: 5 happy-path codegen assertions, 6 validation-diagnostic assertions) | **landed (caliclan.4)** |
 | **4** | Error handling, response wrappers (Result<T> envelope, etc.) | follow-up |
-| **5** | `dev.konduit.http-api` umbrella Gradle plugin that auto-applies KSP + the codegen dep | follow-up |
+| **5** | `dev.keliver.http-api` umbrella Gradle plugin that auto-applies KSP + the codegen dep | follow-up |
 
 Phases 2 and 3 are the meaty bits — KSP processor implementation,
 KotlinPoet-based code generation, processor tests via
@@ -201,7 +201,7 @@ Splitting the annotations into their own ship-now module lets:
    risk breaking the wire format because the annotations are
    `SOURCE`-retention, never reaching the runtime.
 3. **The processor can be developed against a fixed target** — the
-   FqName lookups (`dev.konduit.http.api.GET`, etc.) won't shift.
+   FqName lookups (`dev.keliver.http.api.GET`, etc.) won't shift.
 
 If the v2-of-annotations decision later requires a wire-format-style
 change (unlikely — these are pure source-time markers), we can ship

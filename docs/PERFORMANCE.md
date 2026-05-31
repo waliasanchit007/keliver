@@ -131,7 +131,7 @@ class ColdStartBenchmark {
   @get:Rule val rule = MacrobenchmarkRule()
 
   @Test fun coldStart() = rule.measureRepeated(
-    packageName = "dev.konduit.sample",
+    packageName = "dev.keliver.sample",
     metrics = listOf(StartupTimingMetric()),
     iterations = 5,
     startupMode = StartupMode.COLD,

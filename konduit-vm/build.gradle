@@ -2,7 +2,7 @@
 // Closes the cosmetic gap between native Compose-Android ViewModel ergonomics
 // and Konduit guest development. See issue #6 / PUBLIC_LAUNCH_ROADMAP.
 
-import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
 
 redwoodBuild {
   targets(TreehouseGuest)

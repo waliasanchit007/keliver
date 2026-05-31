@@ -5,7 +5,7 @@
 // (already in the Konduit dep cone via Zipline), Ktor 3 + Darwin
 // engine on iOS. Closes KNOWN_BUGS U5. See issue #26.
 
-import static dev.konduit.buildsupport.TargetGroup.TreehouseHost
+import static dev.keliver.buildsupport.TargetGroup.TreehouseHost
 
 redwoodBuild {
   targets(TreehouseHost)
@@ -50,5 +50,5 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.image'
+  namespace 'dev.keliver.image'
 }

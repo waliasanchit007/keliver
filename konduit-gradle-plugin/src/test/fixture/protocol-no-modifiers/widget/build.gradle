@@ -1,5 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
-apply plugin: 'dev.konduit.generator.widget'
+apply plugin: 'dev.keliver.generator.widget'
 
 kotlin {
   jvm()

@@ -1,9 +1,9 @@
-import static dev.konduit.buildsupport.TargetGroup.Tooling
+import static dev.keliver.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
-  cliApplication('konduit-codegen', 'dev.konduit.tooling.codegen.Main')
+  cliApplication('konduit-codegen', 'dev.keliver.tooling.codegen.Main')
 }
 
 apply plugin: 'app.cash.burst'

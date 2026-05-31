@@ -1,13 +1,13 @@
 // Guest-side facade module — re-exports the public Konduit API surface
 // that every Zipline guest module needs so adopters can depend on a
-// single `dev.konduit:konduit-guest` artifact instead of wiring the
+// single `dev.keliver:konduit-guest` artifact instead of wiring the
 // generator + runtime modules manually. See PUBLIC_LAUNCH_ROADMAP.md
 // Phase 2.
 //
 // Targets: JS (TreehouseGuest — Kotlin/JS for QuickJS execution, plus
 // JVM-for-test). The host-side facade lives in `:konduit-host`.
 
-import static dev.konduit.buildsupport.TargetGroup.TreehouseGuest
+import static dev.keliver.buildsupport.TargetGroup.TreehouseGuest
 
 redwoodBuild {
   targets(TreehouseGuest)

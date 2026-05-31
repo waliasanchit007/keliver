@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 buildscript {
   dependencies {
-    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath "dev.keliver:konduit-gradle-plugin:$redwoodVersion"
     classpath libs.androidGradlePlugin
     classpath libs.kotlin.gradlePlugin
     classpath libs.kotlin.serializationPlugin
@@ -38,10 +38,10 @@ allprojects {
 }
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'dev.konduit.schema'
+apply plugin: 'dev.keliver.schema'
 
 dependencies {
-  api "dev.konduit:konduit-schema:$redwoodVersion"
+  api "dev.keliver:konduit-schema:$redwoodVersion"
 }
 
 redwoodSchema {

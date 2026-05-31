@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
-import static dev.konduit.buildsupport.TargetGroup.Tooling
+import static dev.keliver.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
-  cliApplication('konduit-lint', 'dev.konduit.tooling.lint.Main')
+  cliApplication('konduit-lint', 'dev.keliver.tooling.lint.Main')
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'

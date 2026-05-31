@@ -47,9 +47,9 @@ Shipped in `1.0.0-caliclan.4` as two facade modules instead of one
 modules — matches the existing host/guest split in
 `konduit-treehouse-host` vs `konduit-treehouse-guest`).
 
-- [x] `dev.konduit:konduit-host` facade — TreehouseHost target group,
+- [x] `dev.keliver:konduit-host` facade — TreehouseHost target group,
       `api`-exposes all host-side modules + Zipline.
-- [x] `dev.konduit:konduit-guest` facade — TreehouseGuest target group,
+- [x] `dev.keliver:konduit-guest` facade — TreehouseGuest target group,
       `api`-exposes all guest-side modules + Zipline.
 - [x] USAGE.md updated to lead with `libs.konduit.host` and
       `libs.konduit.guest` catalog references.
@@ -92,9 +92,9 @@ just works for anyone.
 
 **Namespace decision:** publishing under
 `io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — no domain
-required). The previously-considered `dev.konduit` namespace would
+required). The previously-considered `dev.keliver` namespace would
 have required owning `konduit.dev` which is taken. Package names
-inside JARs stay `dev.konduit.*` — only the Maven coordinate's
+inside JARs stay `dev.keliver.*` — only the Maven coordinate's
 groupId changes. Full walkthrough in
 [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md).
 
@@ -156,7 +156,7 @@ spelled out.
 
 - [ ] Cataloging of API differences between upstream Redwood `0.18.0` (the
       fork point) and Konduit `1.0.0-caliclan.3+`. Most are renames
-      (`app.cash.redwood.*` → `dev.konduit.*`); some are deliberate trims
+      (`app.cash.redwood.*` → `dev.keliver.*`); some are deliberate trims
       (removed View/UIView/DOM modules in `1.0.0-caliclan.2`).
 - [ ] A scripted rename helper for adopters with existing Redwood codebases.
 - [ ] Side-by-side examples for the 5 most common Redwood patterns.

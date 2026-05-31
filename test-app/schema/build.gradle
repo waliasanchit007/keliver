@@ -1,5 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'dev.konduit.schema'
+apply plugin: 'dev.keliver.schema'
 
 dependencies {
   api projects.konduitUiBasicSchema

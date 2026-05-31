@@ -4,7 +4,7 @@
 // HostHttpProvider, and get typed HTTP calls from the guest without
 // writing N per-endpoint HostXxxProvider services. See issue #7.
 
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)

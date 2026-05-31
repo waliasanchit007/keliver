@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
@@ -10,7 +10,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.konduit.widget.compose'))
+      kotlin.srcDir(redwoodBuild.generateComposeHelpers(tasks, 'dev.keliver.widget.compose'))
       dependencies {
         api projects.konduitWidget
         api libs.jetbrains.compose.ui

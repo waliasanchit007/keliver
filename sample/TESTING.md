@@ -50,9 +50,9 @@ until adb shell getprop sys.boot_completed 2>/dev/null | grep -q 1; do sleep 5; 
 
 # 4. Install + launch.
 ./gradlew :host-android:installDebug
-adb shell pm clear dev.konduit.sample
+adb shell pm clear dev.keliver.sample
 adb logcat -c
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 sleep 15
 adb logcat -d | grep -E "KonduitSample|FATAL|AndroidRuntime"
 ```
@@ -128,7 +128,7 @@ surfaced:
 
 ```
 codeLoadFailed: Constructor 'Adapter.<init>' can not be called:
-  No constructor found for symbol 'dev.konduit.sample.shared/
+  No constructor found for symbol 'dev.keliver.sample.shared/
     SampleAppService.Companion.Adapter.<init>|<init>(
       kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;
       kotlin.String){}[0]'
@@ -318,7 +318,7 @@ xcodebuild \
 # 5. Install + launch with --console to capture EventListener output.
 xcrun simctl install "$SIM_UDID" \
   build/Build/Products/Debug-iphonesimulator/KonduitSample.app
-xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample &
+xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KonduitSample &
 sleep 12
 xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
 ```
@@ -508,9 +508,9 @@ cd sample
 
 # 3. Clear the app's Zipline cache so it re-fetches from the server
 #    rather than replaying a cached Development bundle, then launch.
-adb shell pm clear dev.konduit.sample
+adb shell pm clear dev.keliver.sample
 adb logcat -c
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 ```
 
 ## Evidence it was genuinely Production

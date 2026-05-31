@@ -14,5 +14,5 @@ dependencies {
 }
 
 redwoodSchema {
-  type = "dev.konduit.sample.schema.SampleSchema"
+  type = "dev.keliver.sample.schema.SampleSchema"
 }

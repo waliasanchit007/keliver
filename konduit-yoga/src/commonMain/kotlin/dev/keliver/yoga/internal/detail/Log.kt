@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+package dev.keliver.yoga.internal.detail
+
+import dev.keliver.yoga.internal.YGConfig
+import dev.keliver.yoga.internal.YGNode
+import dev.keliver.yoga.internal.enums.YGLogLevel
+
+internal object Log {
+  fun log(
+    node: YGNode?,
+    level: YGLogLevel,
+    context: Any?,
+    format: String,
+    vararg args: Any?,
+  ) {
+    GlobalMembers.vlog(node?.config, node, level, context, format, *args)
+  }
+
+  fun log(
+    config: YGConfig?,
+    level: YGLogLevel,
+    context: Any?,
+    format: String,
+    vararg args: Any?,
+  ) {
+    GlobalMembers.vlog(config, null, level, context, format, *args)
+  }
+}

@@ -15,8 +15,8 @@
  */
 package com.example.redwood.testapp.treehouse
 
-import dev.konduit.treehouse.AppService
-import dev.konduit.treehouse.ZiplineTreehouseUi
+import dev.keliver.treehouse.AppService
+import dev.keliver.treehouse.ZiplineTreehouseUi
 import app.cash.zipline.ZiplineService
 import kotlin.native.ObjCName
 

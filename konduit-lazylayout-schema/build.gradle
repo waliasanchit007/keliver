@@ -1,11 +1,11 @@
-import static dev.konduit.buildsupport.TargetGroup.Tooling
+import static dev.keliver.buildsupport.TargetGroup.Tooling
 
 redwoodBuild {
   targets(Tooling)
   publishing()
 }
 
-apply plugin: 'dev.konduit.schema'
+apply plugin: 'dev.keliver.schema'
 
 dependencies {
   api projects.konduitLayoutApi
@@ -13,5 +13,5 @@ dependencies {
 }
 
 redwoodSchema {
-  type = 'dev.konduit.lazylayout.RedwoodLazyLayout'
+  type = 'dev.keliver.lazylayout.RedwoodLazyLayout'
 }

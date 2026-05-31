@@ -10,7 +10,7 @@ pluginManagement {
 
 plugins {
   id "com.gradle.develocity" version "4.1"
-  id 'dev.konduit.settings'
+  id 'dev.keliver.settings'
 }
 
 dependencyResolutionManagement {
@@ -45,8 +45,8 @@ develocity {
 
 includeBuild('build-support') {
   dependencySubstitution {
-    substitute module('dev.konduit.build:gradle-plugin') using project(':')
-    substitute module('dev.konduit:konduit-gradle-plugin') using project(':konduit-gradle-plugin')
+    substitute module('dev.keliver.build:gradle-plugin') using project(':')
+    substitute module('dev.keliver:konduit-gradle-plugin') using project(':konduit-gradle-plugin')
   }
 }
 

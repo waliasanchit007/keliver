@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 buildscript {
   dependencies {
-    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath "dev.keliver:konduit-gradle-plugin:$redwoodVersion"
     classpath libs.androidGradlePlugin
     classpath libs.kotlin.gradlePlugin
   }

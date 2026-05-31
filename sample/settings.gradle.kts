@@ -25,12 +25,12 @@ pluginManagement {
         password = (providers.gradleProperty("gpr.token").orNull
           ?: System.getenv("GITHUB_TOKEN")).orEmpty()
       }
-      // Restrict to dev.konduit.* — without this, Gradle queries GH
+      // Restrict to dev.keliver.* — without this, Gradle queries GH
       // Packages for every transitive dep (kotlin, androidx, etc.) and
       // first builds hang for ~10 min before falling through. Same fix
       // as documented in `konduit/docs/USAGE.md`.
       content {
-        includeGroup("dev.konduit")
+        includeGroup("dev.keliver")
         includeGroupByRegex("dev\\.konduit\\..*")
       }
     }
@@ -66,7 +66,7 @@ dependencyResolutionManagement {
           ?: System.getenv("GITHUB_TOKEN")).orEmpty()
       }
       content {
-        includeGroup("dev.konduit")
+        includeGroup("dev.keliver")
         includeGroupByRegex("dev\\.konduit\\..*")
       }
     }

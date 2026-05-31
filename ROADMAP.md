@@ -20,24 +20,24 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 `1.0.0-caliclan.4-SNAPSHOT` (in flight)
 
 **Adopter ergonomics**
-- `dev.konduit:konduit-host` / `dev.konduit:konduit-guest` — single-import
+- `dev.keliver:konduit-host` / `dev.keliver:konduit-guest` — single-import
   facade modules. Replaces the 7-module hand-wired host-side dep
   block.
-- `dev.konduit:konduit-vm` — `KonduitViewModel` + `konduitViewModel { }`
+- `dev.keliver:konduit-vm` — `KonduitViewModel` + `konduitViewModel { }`
   Compose helper. Closes the cosmetic gap with native
   Compose-Android ViewModel ergonomics.
-- `dev.konduit:konduit-nav` — typed guest-side navigation
+- `dev.keliver:konduit-nav` — typed guest-side navigation
   (`KonduitNavController` + `KonduitNavHost`), per-entry
   `rememberSaveable` state preservation.
-- `dev.konduit:konduit-http` — `KonduitHttp` typed wrapper +
+- `dev.keliver:konduit-http` — `KonduitHttp` typed wrapper +
   `HostHttpProvider` generic shim. Replaces N per-endpoint
   `HostXxxProvider` services with one host binding.
-- `dev.konduit:konduit-storage` — `KonduitStorage` key/value shim.
-- `dev.konduit:konduit-console` — standardized `KonduitConsole`
+- `dev.keliver:konduit-storage` — `KonduitStorage` key/value shim.
+- `dev.keliver:konduit-console` — standardized `KonduitConsole`
   logging service + reference `DefaultKonduitConsole`.
-- `dev.konduit:konduit-image` — `KonduitImage.installSingleton()`
+- `dev.keliver:konduit-image` — `KonduitImage.installSingleton()`
   one-liner for Coil 3 setup. Closes KNOWN_BUGS U5.
-- `dev.konduit:konduit-http-annotations` — Retrofit-style annotation
+- `dev.keliver:konduit-http-annotations` — Retrofit-style annotation
   surface (`@KonduitApi`, `@GET`, `@POST`, `@Path`, `@Query`, `@Body`,
   `@Header`, `@HeaderMap`). Phase 1 of the codegen workstream
   (issue #18); processor in [`docs/HTTP_API_CODEGEN_DESIGN.md`](./docs/HTTP_API_CODEGEN_DESIGN.md).
@@ -53,7 +53,7 @@ This is a living document. Items move from "Up Next" → "In Progress" →
   swallow the failure.
 
 **Build-time lint surface**
-- `dev.konduit.zipline-shapes` Gradle plugin — rejects
+- `dev.keliver.zipline-shapes` Gradle plugin — rejects
   `ZiplineService` methods with function-typed parameters
   (KNOWN_BUGS U11). Auto-wires `check` lifecycle.
 - Schema parser rejects `@Composable` lambdas as `@Property` at
@@ -83,7 +83,7 @@ Next cycle, in rough priority order (impact-first, informed by the
 
 ### A. Maven Central publishing  ← highest adopter impact
 Today every adopter needs a GitHub PAT with `read:packages` to
-resolve `dev.konduit:*`. That's a day-one papercut on every fresh
+resolve `dev.keliver:*`. That's a day-one papercut on every fresh
 machine (we felt it building `sample/`). Publishing to Maven Central
 deletes the entire `gpr.user`/`gpr.token` setup from adopter projects.
 Steps are in [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md);
@@ -186,7 +186,7 @@ benchmarks per release tag is the next sub-task.
 Cash App Redwood 0.18.0 comparison baselines.
 
 ### 5. Bundle-size budget  ✅ *shipped*
-`dev.konduit.gradle.BundleSizeBudgetTask` — adopters register it to
+`dev.keliver.gradle.BundleSizeBudgetTask` — adopters register it to
 fail the build if the `.zipline` bundle exceeds a configurable
 threshold (with an optional soft-warn). Catches accidental size
 regressions in CI. 6/6 unit tests via `ProjectBuilder`.

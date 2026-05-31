@@ -21,10 +21,10 @@ a single manual workflow run.
 
 The project is publishing under the **`io.github.waliasanchit007`**
 Sonatype namespace (GitHub-vanity flow — no domain required).
-Artifacts go from `dev.konduit:konduit-*` (GitHub Packages, current)
+Artifacts go from `dev.keliver:konduit-*` (GitHub Packages, current)
 to `io.github.waliasanchit007:konduit-*` (Maven Central, target).
 
-Package names inside the JARs stay `dev.konduit.*` — adopters' Kotlin
+Package names inside the JARs stay `dev.keliver.*` — adopters' Kotlin
 `import` statements don't change. Only the Gradle coordinate string
 changes. (Sonatype enforces groupId against the namespace; it does
 not check internal package names.)
@@ -122,15 +122,15 @@ add these four:
 2. **Coordinates — configured, with an overridable groupId.** The
    plugin sets `coordinates(project.group, project.name,
    KONDUIT_VERSION)`. `project.group` comes from a `konduitGroupId()`
-   helper that defaults to `dev.konduit` but is **overridable** with
+   helper that defaults to `dev.keliver` but is **overridable** with
    `-PkonduitGroupId=io.github.waliasanchit007`. So:
-   - default builds + the GitHub Packages release keep `dev.konduit:*`
+   - default builds + the GitHub Packages release keep `dev.keliver:*`
      (existing private consumers unaffected),
    - the Maven Central workflow passes the override to publish
      `io.github.waliasanchit007:*`.
 
    The override propagates to **inter-module dependencies** too — a
-   `dev.konduit` artifact's POM references sibling modules by the same
+   `dev.keliver` artifact's POM references sibling modules by the same
    overridden group, so the Central artifacts are internally
    consistent (verified by inspecting the generated POM).
 3. **POM metadata — Konduit-correct.** Every POM already carries
@@ -147,7 +147,7 @@ A dedicated, **manual** workflow does the release:
 `.github/workflows/publish-maven-central.yml`.
 
 - It is `workflow_dispatch`-only and **separate** from `publish.yml`
-  (which keeps pushing `dev.konduit:*` to GitHub Packages on `v*`
+  (which keeps pushing `dev.keliver:*` to GitHub Packages on `v*`
   tags). The two channels co-exist; nothing about the private flow is
   blocked on Central credentials.
 - It starts with a **preflight guard** that fails fast with a legible

@@ -54,9 +54,9 @@ cleanup) broke things far from the deletion:
 - A test fixture (`FakeTreehouseView`) vanished with no compile error
   until something referenced it.
 - Subtlest: the leak detector's heap-walker had a **string-literal**
-  allowlist (`"app.cash"`). The `app.cash.redwood → dev.konduit`
+  allowlist (`"app.cash"`). The `app.cash.redwood → dev.keliver`
   rename updated declarations and imports but not that data string,
-  so the walker errored on `dev.konduit.…$spec$1`.
+  so the walker errored on `dev.keliver.…$spec$1`.
 
 **Takeaway:** package renames and module strips need an audit of
 string literals, reflection allowlists, hardcoded paths, and test
@@ -106,7 +106,7 @@ safe.
 | `apiCheck` failing, 9 modules unbaselined | Same audit | apiCheck not in CI |
 | Stdlib custom-type serializer codegen bug | Reviving the test-app fixture | Own schemas don't use the feature |
 | Stripped `FakeTreehouseView` fixture | Reviving integration tests | Only a reference error, not a compile error until used |
-| `JvmHeap` allowlist rename miss (`app.cash` vs `dev.konduit`) | Running leak tests | String literal, not an import |
+| `JvmHeap` allowlist rename miss (`app.cash` vs `dev.keliver`) | Running leak tests | String literal, not an import |
 
 ## What changed because of this
 

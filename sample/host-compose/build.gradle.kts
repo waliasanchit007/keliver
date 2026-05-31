@@ -51,7 +51,7 @@ kotlin {
       isStatic = true
       // Must match an iOS-valid reverse-DNS bundle ID. K/N uses this
       // for the framework's Info.plist CFBundleIdentifier.
-      binaryOption("bundleId", "dev.konduit.sample.host")
+      binaryOption("bundleId", "dev.keliver.sample.host")
       // Expose the sample's own types to Swift so adopter Swift code
       // can reach `SampleAppService` etc. — without these, only
       // symbols declared in this module would be visible.
@@ -90,7 +90,7 @@ kotlin {
 }
 
 android {
-  namespace = "dev.konduit.sample.host.compose"
+  namespace = "dev.keliver.sample.host.compose"
   compileSdk = libs.versions.android.compileSdk.get().toInt()
   defaultConfig {
     minSdk = libs.versions.android.minSdk.get().toInt()

@@ -20,7 +20,7 @@ plugins {
 }
 
 android {
-  namespace = "dev.konduit.sample.benchmarks"
+  namespace = "dev.keliver.sample.benchmarks"
   compileSdk = libs.versions.android.compileSdk.get().toInt()
 
   defaultConfig {

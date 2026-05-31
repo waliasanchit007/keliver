@@ -112,7 +112,7 @@ cd sample
 ./gradlew :host-android:installDebug
 
 # 4. Launch:
-adb shell am start -n dev.konduit.sample/dev.konduit.sample.host.MainActivity
+adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 ```
 
 You should see "Hello, Konduit!" rendered at top-start — the
@@ -170,7 +170,7 @@ xcodebuild \
 # 5. Install + launch with --console to capture EventListener output.
 xcrun simctl install "$SIM_UDID" \
   build/Build/Products/Debug-iphonesimulator/KonduitSample.app
-xcrun simctl launch --console "$SIM_UDID" dev.konduit.sample.KonduitSample
+xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KonduitSample
 ```
 
 You'll see "Hello, Konduit!" render in the simulator and the same
@@ -280,11 +280,11 @@ documented in the main Konduit repo under `docs/` if you need them:
 
 - **Hot reload** (WebSocket-driven manifest refetch). See
   ServerDrivenUI's `HotReloadManager` for the reference impl;
-  pairs with `dev.konduit:konduit-dev-server` artifact.
+  pairs with `dev.keliver:konduit-dev-server` artifact.
 - **Dev overlay** (error fallback, retry buttons, etc.). See
   `KonduitDevController` / `KonduitDevOverlay` in ServerDrivenUI.
 - **Host-side services** (HostConsole, HostSnackbar, HostHttp).
-  All bundled in `dev.konduit:konduit-host` — add the dep and bind
+  All bundled in `dev.keliver:konduit-host` — add the dep and bind
   them in `Spec.bindServices`.
 - **Image loading** (`konduit-image` + Coil). The schema doesn't
   declare an `@Widget(N) Image` here; if you add one, plug in the
@@ -297,7 +297,7 @@ its `settings.gradle.kts` is independent of the parent. To work
 on it without publishing Konduit first, you can either:
 
 - Run `./gradlew publishToMavenLocal` from the Konduit root (one
-  level up) so the sample resolves `dev.konduit:*` from your local
+  level up) so the sample resolves `dev.keliver:*` from your local
   Maven cache.
 - Or rely on the live `1.0.0-caliclan.4-SNAPSHOT` artifacts in the
   GitHub Packages repo — that's what the `gpr.user / gpr.token`

@@ -3,10 +3,10 @@ apply plugin: 'java-gradle-plugin'
 gradlePlugin {
   plugins {
     redwoodSettings {
-      id = "dev.konduit.settings"
+      id = "dev.keliver.settings"
       displayName = "Redwood settings plugin"
       description = "Gradle plugin for Redwood build settings"
-      implementationClass = "dev.konduit.buildsettings.RedwoodSettingsPlugin"
+      implementationClass = "dev.keliver.buildsettings.RedwoodSettingsPlugin"
     }
   }
 }

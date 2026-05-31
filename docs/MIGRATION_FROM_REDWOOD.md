@@ -79,26 +79,26 @@ Every rename is mechanical — no semantic change.
 
 | Upstream Redwood | Konduit |
 |---|---|
-| `app.cash.redwood:redwood-runtime` | `dev.konduit:konduit-runtime` |
-| `app.cash.redwood:redwood-compose` | `dev.konduit:konduit-compose` |
-| `app.cash.redwood:redwood-widget` | `dev.konduit:konduit-widget` |
-| `app.cash.redwood:redwood-protocol` | `dev.konduit:konduit-protocol` |
-| `app.cash.redwood:redwood-protocol-host` | `dev.konduit:konduit-protocol-host` |
-| `app.cash.redwood:redwood-protocol-guest` | `dev.konduit:konduit-protocol-guest` |
-| `app.cash.redwood:redwood-treehouse` | `dev.konduit:konduit-treehouse` |
-| `app.cash.redwood:redwood-treehouse-host` | `dev.konduit:konduit-treehouse-host` |
-| `app.cash.redwood:redwood-treehouse-host-composeui` | `dev.konduit:konduit-treehouse-host-composeui` |
-| `app.cash.redwood:redwood-treehouse-guest` | `dev.konduit:konduit-treehouse-guest` |
-| `app.cash.redwood:redwood-treehouse-guest-compose` | `dev.konduit:konduit-treehouse-guest-compose` |
-| `app.cash.redwood:redwood-schema` | `dev.konduit:konduit-schema` |
+| `app.cash.redwood:redwood-runtime` | `dev.keliver:konduit-runtime` |
+| `app.cash.redwood:redwood-compose` | `dev.keliver:konduit-compose` |
+| `app.cash.redwood:redwood-widget` | `dev.keliver:konduit-widget` |
+| `app.cash.redwood:redwood-protocol` | `dev.keliver:konduit-protocol` |
+| `app.cash.redwood:redwood-protocol-host` | `dev.keliver:konduit-protocol-host` |
+| `app.cash.redwood:redwood-protocol-guest` | `dev.keliver:konduit-protocol-guest` |
+| `app.cash.redwood:redwood-treehouse` | `dev.keliver:konduit-treehouse` |
+| `app.cash.redwood:redwood-treehouse-host` | `dev.keliver:konduit-treehouse-host` |
+| `app.cash.redwood:redwood-treehouse-host-composeui` | `dev.keliver:konduit-treehouse-host-composeui` |
+| `app.cash.redwood:redwood-treehouse-guest` | `dev.keliver:konduit-treehouse-guest` |
+| `app.cash.redwood:redwood-treehouse-guest-compose` | `dev.keliver:konduit-treehouse-guest-compose` |
+| `app.cash.redwood:redwood-schema` | `dev.keliver:konduit-schema` |
 
 For most adopters the entire upper block collapses into:
 
 ```kotlin
 // host module
-implementation("dev.konduit:konduit-host:1.0.0-caliclan.4")
+implementation("dev.keliver:konduit-host:1.0.0-caliclan.4")
 // guest module
-implementation("dev.konduit:konduit-guest:1.0.0-caliclan.4")
+implementation("dev.keliver:konduit-guest:1.0.0-caliclan.4")
 ```
 
 See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
@@ -108,12 +108,12 @@ See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
 
 | Upstream Redwood | Konduit |
 |---|---|
-| `app.cash.redwood.schema` | `dev.konduit.schema` |
-| `app.cash.redwood.generator.compose` | `dev.konduit.generator.compose` |
-| `app.cash.redwood.generator.widget` | `dev.konduit.generator.widget` |
-| `app.cash.redwood.generator.protocol.host` | `dev.konduit.generator.protocol.host` |
-| `app.cash.redwood.generator.protocol.guest` | `dev.konduit.generator.protocol.guest` |
-| `app.cash.redwood.generator.modifiers` | `dev.konduit.generator.modifiers` |
+| `app.cash.redwood.schema` | `dev.keliver.schema` |
+| `app.cash.redwood.generator.compose` | `dev.keliver.generator.compose` |
+| `app.cash.redwood.generator.widget` | `dev.keliver.generator.widget` |
+| `app.cash.redwood.generator.protocol.host` | `dev.keliver.generator.protocol.host` |
+| `app.cash.redwood.generator.protocol.guest` | `dev.keliver.generator.protocol.guest` |
+| `app.cash.redwood.generator.modifiers` | `dev.keliver.generator.modifiers` |
 
 In a typical `build.gradle.kts`:
 
@@ -131,11 +131,11 @@ plugins {
 
 | Upstream Redwood prefix | Konduit prefix |
 |---|---|
-| `app.cash.redwood.*` | `dev.konduit.*` |
-| `app.cash.redwood.compose.*` | `dev.konduit.compose.*` |
-| `app.cash.redwood.widget.*` | `dev.konduit.widget.*` |
-| `app.cash.redwood.protocol.*` | `dev.konduit.protocol.*` |
-| `app.cash.redwood.treehouse.*` | `dev.konduit.treehouse.*` |
+| `app.cash.redwood.*` | `dev.keliver.*` |
+| `app.cash.redwood.compose.*` | `dev.keliver.compose.*` |
+| `app.cash.redwood.widget.*` | `dev.keliver.widget.*` |
+| `app.cash.redwood.protocol.*` | `dev.keliver.protocol.*` |
+| `app.cash.redwood.treehouse.*` | `dev.keliver.treehouse.*` |
 
 Public type names (`TreehouseApp`, `TreehouseApp.Spec`, `TreehouseContent`,
 `Modifier`, `LayoutModifier`, `Widget`, `WidgetSystem`, `ZiplineService`,
@@ -153,7 +153,7 @@ find . -type f \( \
   -name '*.gradle.kts' -o -name '*.toml' -o -name '*.properties' \
 \) -not -path '*/build/*' -not -path '*/.gradle/*' \
 | xargs sed -i '' \
-    -e 's|app\.cash\.redwood|dev.konduit|g' \
+    -e 's|app\.cash\.redwood|dev.keliver|g' \
     -e 's|redwood-runtime|konduit-runtime|g' \
     -e 's|redwood-compose|konduit-compose|g' \
     -e 's|redwood-widget|konduit-widget|g' \
@@ -171,8 +171,8 @@ find . -type f \( \
 find . -type f \( -name '*.kt' -o -name '*.kts' -o -name '*.toml' \) \
   -not -path '*/build/*' \
 | xargs sed -i '' \
-    -e 's|app\.cash\.redwood\.schema|dev.konduit.schema|g' \
-    -e 's|app\.cash\.redwood\.generator|dev.konduit.generator|g'
+    -e 's|app\.cash\.redwood\.schema|dev.keliver.schema|g' \
+    -e 's|app\.cash\.redwood\.generator|dev.keliver.generator|g'
 ```
 
 (GNU `sed` users: drop the `''` after `-i`.)
@@ -276,8 +276,8 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
 ### Same Spec — Konduit
 
 ```kotlin
-// dev.konduit imports — package paths renamed, types and shapes identical
-import dev.konduit.treehouse.TreehouseApp
+// dev.keliver imports — package paths renamed, types and shapes identical
+import dev.keliver.treehouse.TreehouseApp
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
 
@@ -364,16 +364,16 @@ class QuotesScreen : Screen {
    konduit = "1.0.0-caliclan.4"
 
    [libraries]
-   konduit-host  = { module = "dev.konduit:konduit-host",  version.ref = "konduit" }
-   konduit-guest = { module = "dev.konduit:konduit-guest", version.ref = "konduit" }
+   konduit-host  = { module = "dev.keliver:konduit-host",  version.ref = "konduit" }
+   konduit-guest = { module = "dev.keliver:konduit-guest", version.ref = "konduit" }
 
    [plugins]
-   konduit-schema             = { id = "dev.konduit.schema",             version.ref = "konduit" }
-   konduit-generator-compose  = { id = "dev.konduit.generator.compose",  version.ref = "konduit" }
-   konduit-generator-widget   = { id = "dev.konduit.generator.widget",   version.ref = "konduit" }
-   konduit-generator-protocol-host  = { id = "dev.konduit.generator.protocol.host",  version.ref = "konduit" }
-   konduit-generator-protocol-guest = { id = "dev.konduit.generator.protocol.guest", version.ref = "konduit" }
-   konduit-generator-modifiers      = { id = "dev.konduit.generator.modifiers",      version.ref = "konduit" }
+   konduit-schema             = { id = "dev.keliver.schema",             version.ref = "konduit" }
+   konduit-generator-compose  = { id = "dev.keliver.generator.compose",  version.ref = "konduit" }
+   konduit-generator-widget   = { id = "dev.keliver.generator.widget",   version.ref = "konduit" }
+   konduit-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host",  version.ref = "konduit" }
+   konduit-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "konduit" }
+   konduit-generator-modifiers      = { id = "dev.keliver.generator.modifiers",      version.ref = "konduit" }
    ```
 
 2. Add the Konduit repository while we're still on GitHub Packages
@@ -442,10 +442,10 @@ the same time. Do the migration in one shot per module. If your
 project has multiple host modules, do them one at a time.
 
 **Will the namespace change again when Maven Central goes live?**
-The Maven coordinate `groupId` will likely shift from `dev.konduit` to
+The Maven coordinate `groupId` will likely shift from `dev.keliver` to
 `io.github.waliasanchit007` (Sonatype's GitHub-vanity flow — see
 [`MAVEN_CENTRAL_SETUP.md`](./MAVEN_CENTRAL_SETUP.md)). The Kotlin
-package paths in the JARs stay `dev.konduit.*` — only your Gradle
+package paths in the JARs stay `dev.keliver.*` — only your Gradle
 dep coordinate string changes.
 
 **Where do I report issues?**

@@ -23,11 +23,11 @@ plugins {
 }
 
 android {
-  namespace = "dev.konduit.sample.host"
+  namespace = "dev.keliver.sample.host"
   compileSdk = libs.versions.android.compileSdk.get().toInt()
 
   defaultConfig {
-    applicationId = "dev.konduit.sample"
+    applicationId = "dev.keliver.sample"
     minSdk = libs.versions.android.minSdk.get().toInt()
     targetSdk = libs.versions.android.targetSdk.get().toInt()
     versionCode = 1

@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
   targets(ToolkitComposeUi)
@@ -13,7 +13,7 @@ apply plugin: 'app.cash.paparazzi'
 kotlin {
   sourceSets {
     commonMain {
-      kotlin.srcDir(redwoodBuild.generateFlexboxHelpers(tasks, 'dev.konduit.layout.composeui'))
+      kotlin.srcDir(redwoodBuild.generateFlexboxHelpers(tasks, 'dev.keliver.layout.composeui'))
       dependencies {
         api projects.konduitLayoutWidget
         implementation projects.konduitWidgetComposeui
@@ -32,7 +32,7 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.layout.composeui'
+  namespace 'dev.keliver.layout.composeui'
 
   buildFeatures {
     // For Paparazzi, which internally uses resources to set itself up.
@@ -45,7 +45,7 @@ afterEvaluate {
     kotlin {
       targetExclude(
         // Apache 2-licensed file from AOSP.
-        "src/commonMain/kotlin/dev/konduit/layout/composeui/Box.kt",
+        "src/commonMain/kotlin/dev/keliver/layout/composeui/Box.kt",
       )
     }
   }

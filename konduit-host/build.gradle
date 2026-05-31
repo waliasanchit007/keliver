@@ -1,12 +1,12 @@
 // Host-side facade module — re-exports the public Konduit API surface
 // that every host adopter needs so consumers can depend on a single
-// `dev.konduit:konduit-host` artifact instead of wiring 8 modules
+// `dev.keliver:konduit-host` artifact instead of wiring 8 modules
 // manually. See PUBLIC_LAUNCH_ROADMAP.md Phase 2.
 //
 // Targets: Android, JVM, iOS (TreehouseHost). The guest-side facade
 // lives in `:konduit-guest`.
 
-import static dev.konduit.buildsupport.TargetGroup.TreehouseHost
+import static dev.keliver.buildsupport.TargetGroup.TreehouseHost
 
 redwoodBuild {
   targets(TreehouseHost)
@@ -71,5 +71,5 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.host'
+  namespace 'dev.keliver.host'
 }

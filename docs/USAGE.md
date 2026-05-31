@@ -54,8 +54,8 @@ Production-readiness reality check before you commit to this path:
   in [MAVEN_CENTRAL_SETUP.md](./MAVEN_CENTRAL_SETUP.md). Git submodule
   vendoring is still supported during early adoption.
 - **Compose Facade**: landed in `1.0.0-caliclan.4`. Adopters depend on
-  a single `dev.konduit:konduit-host` artifact (host modules) and a
-  single `dev.konduit:konduit-guest` artifact (guest modules) instead
+  a single `dev.keliver:konduit-host` artifact (host modules) and a
+  single `dev.keliver:konduit-guest` artifact (guest modules) instead
   of wiring the 8+ underlying modules manually. The old multi-module
   setup still works for projects that want stricter dep control.
 - **Production load**: only showcase-level traffic tested. No 60 Hz Flow / large-list stress runs yet.
@@ -211,7 +211,7 @@ android.useAndroidX=true
 
 ### GitHub Packages auth (this is the #1 first-build failure)
 
-The host modules pull `dev.konduit:konduit-*` artifacts from GitHub
+The host modules pull `dev.keliver:konduit-*` artifacts from GitHub
 Packages in the private `waliasanchit007/konduit` repo. The submodule's
 `settings.gradle.kts` reads credentials from these four sources, in this
 order:
@@ -256,10 +256,10 @@ against `maven.pkg.github.com` with a stack trace that buries the auth
 failure several frames deep. If your first `./gradlew help` shows
 `Received status code 401 from server: Unauthorized`, this is the cause.
 
-### Mandatory: restrict the Konduit Maven repo to dev.konduit
+### Mandatory: restrict the Konduit Maven repo to dev.keliver
 
 When you declare the Konduit Maven repo in `dependencyResolutionManagement`,
-add a `content {}` filter so Gradle only queries it for `dev.konduit.*`
+add a `content {}` filter so Gradle only queries it for `dev.keliver.*`
 artifacts. Without this, Gradle will hit GH Packages for *every*
 transitive dep (androidx, kotlin, kotlinx, etc.) — and GH Packages
 responds slowly enough to non-existent paths that the build hangs for
@@ -275,7 +275,7 @@ maven {
             ?: System.getenv("GITHUB_TOKEN")).orEmpty()
     }
     content {                                       // ← required
-        includeGroup("dev.konduit")
+        includeGroup("dev.keliver")
         includeGroupByRegex("dev\\.konduit\\..*")
     }
 }
@@ -307,13 +307,13 @@ import com.example.serverdrivenui.TreehouseHelper                      // Java h
 import com.example.serverdrivenui.schema.SduiSerializersModule
 import com.example.serverdrivenui.schema.protocol.host.SduiSchemaHostProtocol
 import com.example.serverdrivenui.schema.widget.SduiSchemaWidgetSystem
-import dev.konduit.console.DefaultKonduitConsole
-import dev.konduit.console.KonduitConsole
+import dev.keliver.console.DefaultKonduitConsole
+import dev.keliver.console.KonduitConsole
 import com.example.serverdrivenui.shared.HostSnackbar
 import com.example.serverdrivenui.shared.RealHostSnackbar
 import com.example.serverdrivenui.shared.SduiAppService
-import dev.konduit.treehouse.TreehouseApp
-import dev.konduit.treehouse.composeui.TreehouseContent
+import dev.keliver.treehouse.TreehouseApp
+import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.OkHttpClient
@@ -561,8 +561,8 @@ The `libs.konduit.host` reference assumes a version catalog entry:
 konduit = "1.0.0-caliclan.4"
 
 [libraries]
-konduit-host  = { module = "dev.konduit:konduit-host",  version.ref = "konduit" }
-konduit-guest = { module = "dev.konduit:konduit-guest", version.ref = "konduit" }
+konduit-host  = { module = "dev.keliver:konduit-host",  version.ref = "konduit" }
+konduit-guest = { module = "dev.keliver:konduit-guest", version.ref = "konduit" }
 ```
 
 Migration from the pre-facade setup: replace
@@ -583,7 +583,7 @@ HTTP URL silently fails (empty slot, no exception). The
 platform-appropriate fetcher (OkHttp on Android/JVM, Ktor 3 + Darwin
 engine on iOS).
 
-Re-exported through `dev.konduit:konduit-host`, so adopters on the
+Re-exported through `dev.keliver:konduit-host`, so adopters on the
 facade get it transparently.
 
 ```kotlin
@@ -640,7 +640,7 @@ iOS-only differences:
   to route to your logger.
 - **`TreehouseAppFactory` constructor**: iOS uses the pure-Kotlin
   constructor directly (no Context). Requires
-  `@OptIn(dev.konduit.leaks.RedwoodLeakApi::class)` at file or call
+  `@OptIn(dev.keliver.leaks.RedwoodLeakApi::class)` at file or call
   site.
 
 ### iOS framework wiring (Xcode side)
@@ -685,7 +685,7 @@ import com.example.serverdrivenui.schema.widget.SduiSchemaWidgetSystem
 import com.example.serverdrivenui.shared.CmpWidgetFactory
 import com.example.serverdrivenui.shared.SduiContentSource
 import com.example.serverdrivenui.shared.SnackbarHub
-import dev.konduit.treehouse.composeui.TreehouseContent
+import dev.keliver.treehouse.composeui.TreehouseContent
 
 @Composable
 fun App(treehouseApp: TreehouseApp<SduiAppService>) {
@@ -788,10 +788,10 @@ import app.cash.zipline.Zipline
 import com.example.serverdrivenui.schema.SduiSerializersModule
 import com.example.serverdrivenui.schema.protocol.guest.SduiSchemaProtocolWidgetSystemFactory
 import com.example.serverdrivenui.shared.SduiAppService
-import dev.konduit.treehouse.StandardAppLifecycle
-import dev.konduit.treehouse.TreehouseUi
-import dev.konduit.treehouse.ZiplineTreehouseUi
-import dev.konduit.treehouse.asZiplineTreehouseUi
+import dev.keliver.treehouse.StandardAppLifecycle
+import dev.keliver.treehouse.TreehouseUi
+import dev.keliver.treehouse.ZiplineTreehouseUi
+import dev.keliver.treehouse.asZiplineTreehouseUi
 import kotlinx.serialization.json.Json
 
 class YourAppService : SduiAppService {
@@ -884,7 +884,7 @@ Konduit ships a `KonduitViewModel` base class + `konduitViewModel { ... }`
 Compose entry point that mirror native Android's `ViewModel` API for the
 ergonomics that port across to the QuickJS guest.
 
-Re-exported through `dev.konduit:konduit-guest`, so adopters on the facade
+Re-exported through `dev.keliver:konduit-guest`, so adopters on the facade
 get it transparently. What you get:
 
 - **`viewModelScope`** — a `CoroutineScope` defaulting to
@@ -899,8 +899,8 @@ guest's `Navigator` is opaque today), no DI integration (Kotlin/JS;
 adopters pass deps through the factory lambda).
 
 ```kotlin
-import dev.konduit.vm.KonduitViewModel
-import dev.konduit.vm.konduitViewModel
+import dev.keliver.vm.KonduitViewModel
+import dev.keliver.vm.konduitViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class QuotesViewModel(
@@ -958,8 +958,8 @@ services, Konduit ships `konduit-http`: a generic
 `HostHttpProvider : ZiplineService` you wire ONCE with your existing
 `HttpClient`, plus a `KonduitHttp` typed wrapper your guest screens use.
 
-Re-exported through both facades (`dev.konduit:konduit-host` and
-`dev.konduit:konduit-guest`), so adopters on the facade get it
+Re-exported through both facades (`dev.keliver:konduit-host` and
+`dev.keliver:konduit-guest`), so adopters on the facade get it
 transparently.
 
 #### Host side — wire your existing HttpClient once
@@ -968,9 +968,9 @@ Pick whichever client library you already use (Ktor / Retrofit / OkHttp).
 Reference adapter for Ktor:
 
 ```kotlin
-import dev.konduit.http.HostHttpProvider
-import dev.konduit.http.HttpRequest
-import dev.konduit.http.HttpResponse
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.HttpRequest
+import dev.keliver.http.HttpResponse
 
 class KtorHostHttpProvider(
     private val client: HttpClient,
@@ -1011,7 +1011,7 @@ apply to every guest-originated call for free.
 #### Guest side — typed calls through KonduitHttp
 
 ```kotlin
-import dev.konduit.http.KonduitHttp
+import dev.keliver.http.KonduitHttp
 
 class QuotesApi(private val http: KonduitHttp) {
     suspend fun list(filter: String?): List<Quote> =
@@ -1099,15 +1099,15 @@ backend you prefer (`DataStore<Preferences>` on Android,
 `NSUserDefaults` on iOS, an SQLite key/value table, a file-backed
 JSON blob), plus a `KonduitStorage` typed wrapper for the guest.
 
-Re-exported through both facades (`dev.konduit:konduit-host`,
-`dev.konduit:konduit-guest`).
+Re-exported through both facades (`dev.keliver:konduit-host`,
+`dev.keliver:konduit-guest`).
 
 #### Host side — wire your preferred backend once
 
 Reference adapter for Android `DataStore<Preferences>`:
 
 ```kotlin
-import dev.konduit.storage.HostStorage
+import dev.keliver.storage.HostStorage
 
 class DataStoreHostStorage(
     private val store: DataStore<Preferences>,
@@ -1142,7 +1142,7 @@ wire surface is deliberately minimal.
 #### Guest side — typed persistence through KonduitStorage
 
 ```kotlin
-import dev.konduit.storage.KonduitStorage
+import dev.keliver.storage.KonduitStorage
 
 @Composable
 override fun Content(navigator: Navigator) {
@@ -1189,13 +1189,13 @@ removes the entry; equivalently `remove(key)` for readability.
 Konduit ships `konduit-nav` for guest-owned typed navigation — back
 stack, push / pop / replaceAll, per-entry `rememberSaveable` state
 preservation, all without per-route RPC boilerplate. Re-exported
-through `dev.konduit:konduit-guest`.
+through `dev.keliver:konduit-guest`.
 
 Define your routes as a sealed interface (args inline, type-checked
 at the call site):
 
 ```kotlin
-import dev.konduit.nav.*
+import dev.keliver.nav.*
 import kotlinx.serialization.Serializable
 
 @Serializable sealed interface Route {
@@ -1598,7 +1598,7 @@ them:
 
 - **No Compose Facade**: you import from 6+ modules. Tracked as Phase 2
   in [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md) — collapses
-  the multi-module wiring into a single `dev.konduit:konduit` import.
+  the multi-module wiring into a single `dev.keliver:konduit` import.
 - **No Maven Central publishing**: submodule only for now.
 - **No production load testing**: only showcase-level traffic verified.
 - **iOS verified only on sim**: physical iOS devices not yet tested

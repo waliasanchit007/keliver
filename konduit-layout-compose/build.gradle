@@ -1,11 +1,11 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
   publishing()
 }
 
-apply plugin: 'dev.konduit.generator.compose'
+apply plugin: 'dev.keliver.generator.compose'
 
 kotlin {
   sourceSets {
@@ -25,5 +25,5 @@ kotlin {
 
 redwoodSchema {
   source = projects.konduitLayoutSchema
-  type = 'dev.konduit.layout.RedwoodLayout'
+  type = 'dev.keliver.layout.RedwoodLayout'
 }

@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.CommonWithAndroid
+import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
 
 redwoodBuild {
   targets(CommonWithAndroid)
@@ -27,14 +27,14 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.runtime'
+  namespace 'dev.keliver.runtime'
 }
 
 spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/commonMain/kotlin/dev/konduit/Modifier.kt",
+      "src/commonMain/kotlin/dev/keliver/Modifier.kt",
     )
   }
 }

@@ -47,70 +47,70 @@ dependencies {
 gradlePlugin {
   plugins {
     redwoodLint {
-      id = "dev.konduit.lint"
+      id = "dev.keliver.lint"
       displayName = "Redwood lint"
       description = "Redwood lint Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodLintPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodLintPlugin"
     }
     ziplineShapes {
-      id = "dev.konduit.zipline-shapes"
+      id = "dev.keliver.zipline-shapes"
       displayName = "Konduit ZiplineService shape lint"
       description = "Reject ZiplineService methods with function-typed parameters (KNOWN_BUGS U11)"
-      implementationClass = "dev.konduit.gradle.ZiplineShapesPlugin"
+      implementationClass = "dev.keliver.gradle.ZiplineShapesPlugin"
     }
     redwoodSchema {
-      id = "dev.konduit.schema"
+      id = "dev.keliver.schema"
       displayName = "Redwood schema"
       description = "Redwood Schema Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodSchemaPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodSchemaPlugin"
     }
     redwoodComposeGenerator {
-      id = "dev.konduit.generator.compose"
+      id = "dev.keliver.generator.compose"
       displayName = "Redwood generator (Compose)"
       description = "Redwood schema Compose code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodComposeGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodComposeGeneratorPlugin"
     }
     redwoodComposeProtocolGenerator {
-      id = "dev.konduit.generator.compose.protocol"
+      id = "dev.keliver.generator.compose.protocol"
       displayName = "Redwood generator (Compose protocol)"
       description = "Redwood schema Compose protocol code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodComposeProtocolGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodComposeProtocolGeneratorPlugin"
     }
     redwoodModifierGeneratorPlugin {
-      id = "dev.konduit.generator.modifiers"
+      id = "dev.keliver.generator.modifiers"
       displayName = "Redwood generator (layout modifiers)"
       description = "Redwood schema layout modifier code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodModifiersGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodModifiersGeneratorPlugin"
     }
     redwoodProtocolGuestGenerator {
-      id = "dev.konduit.generator.protocol.guest"
+      id = "dev.keliver.generator.protocol.guest"
       displayName = "Redwood generator (guest protocol)"
       description = "Redwood schema guest protocol code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodProtocolGuestGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodProtocolGuestGeneratorPlugin"
     }
     redwoodProtocolHostGenerator {
-      id = "dev.konduit.generator.protocol.host"
+      id = "dev.keliver.generator.protocol.host"
       displayName = "Redwood generator (host protocol)"
       description = "Redwood schema host protocol code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodProtocolHostGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodProtocolHostGeneratorPlugin"
     }
     redwoodTestingGenerator {
-      id = "dev.konduit.generator.testing"
+      id = "dev.keliver.generator.testing"
       displayName = "Redwood generator (testing)"
       description = "Redwood schema testing code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodTestingGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodTestingGeneratorPlugin"
     }
     redwoodWidgetGenerator {
-      id = "dev.konduit.generator.widget"
+      id = "dev.keliver.generator.widget"
       displayName = "Redwood generator (widget)"
       description = "Redwood schema widget code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodWidgetGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodWidgetGeneratorPlugin"
     }
     redwoodWidgetProtocolGenerator {
-      id = "dev.konduit.generator.widget.protocol"
+      id = "dev.keliver.generator.widget.protocol"
       displayName = "Redwood generator (widget protocol)"
       description = "Redwood schema widget protocol code generation Gradle plugin"
-      implementationClass = "dev.konduit.gradle.RedwoodWidgetProtocolGeneratorPlugin"
+      implementationClass = "dev.keliver.gradle.RedwoodWidgetProtocolGeneratorPlugin"
     }
   }
 }
@@ -139,7 +139,7 @@ buildConfig {
     topLevelConstants = true
   }
 
-  packageName('dev.konduit.gradle')
+  packageName('dev.keliver.gradle')
   buildConfigField("String", "redwoodVersion", "\"${project.version}\"")
   buildConfigField("String", "androidxCollectionCoordinates", "\"${libs.jetbrains.compose.collection.get()}\"")
 }

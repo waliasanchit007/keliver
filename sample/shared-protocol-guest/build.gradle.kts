@@ -13,7 +13,7 @@ plugins {
 
 redwoodSchema {
   source = project(":schema")
-  type = "dev.konduit.sample.schema.SampleSchema"
+  type = "dev.keliver.sample.schema.SampleSchema"
 }
 
 kotlin {

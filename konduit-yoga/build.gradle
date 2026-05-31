@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.ToolkitAllWithoutAndroid
+import static dev.keliver.buildsupport.TargetGroup.ToolkitAllWithoutAndroid
 
 redwoodBuild {
   targets(ToolkitAllWithoutAndroid)
@@ -21,7 +21,7 @@ kotlin {
 spotless {
   kotlin {
     // Internal MIT-licensed files from Meta.
-    targetExclude("src/**/kotlin/dev/konduit/yoga/internal/**")
+    targetExclude("src/**/kotlin/dev/keliver/yoga/internal/**")
   }
 }
 

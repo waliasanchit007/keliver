@@ -1,11 +1,11 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
   publishing()
 }
 
-apply plugin: 'dev.konduit.generator.compose'
+apply plugin: 'dev.keliver.generator.compose'
 
 kotlin {
   sourceSets {
@@ -28,18 +28,18 @@ kotlin {
 
 redwoodSchema {
   source = projects.konduitLazylayoutSchema
-  type = 'dev.konduit.lazylayout.RedwoodLazyLayout'
+  type = 'dev.keliver.lazylayout.RedwoodLazyLayout'
 }
 
 spotless {
   kotlin {
     targetExclude(
       // Apache 2-licensed files from AOSP.
-      "src/commonMain/kotlin/dev/konduit/lazylayout/compose/LazyListIntervalContent.kt",
-      "src/commonMain/kotlin/dev/konduit/lazylayout/compose/LazyListItemProvider.kt",
-      "src/commonMain/kotlin/dev/konduit/lazylayout/compose/layout/IntervalList.kt",
-      "src/commonMain/kotlin/dev/konduit/lazylayout/compose/layout/LazyLayoutIntervalContent.kt",
-      "src/commonMain/kotlin/dev/konduit/lazylayout/compose/layout/LazyLayoutItemProvider.kt",
+      "src/commonMain/kotlin/dev/keliver/lazylayout/compose/LazyListIntervalContent.kt",
+      "src/commonMain/kotlin/dev/keliver/lazylayout/compose/LazyListItemProvider.kt",
+      "src/commonMain/kotlin/dev/keliver/lazylayout/compose/layout/IntervalList.kt",
+      "src/commonMain/kotlin/dev/keliver/lazylayout/compose/layout/LazyLayoutIntervalContent.kt",
+      "src/commonMain/kotlin/dev/keliver/lazylayout/compose/layout/LazyLayoutItemProvider.kt",
     )
   }
 }

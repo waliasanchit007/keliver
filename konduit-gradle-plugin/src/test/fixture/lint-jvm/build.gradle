@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath "dev.keliver:konduit-gradle-plugin:$redwoodVersion"
     classpath libs.kotlin.gradlePlugin
   }
 
@@ -13,7 +13,7 @@ buildscript {
 }
 
 apply plugin: 'org.jetbrains.kotlin.jvm'
-apply plugin: 'dev.konduit.lint'
+apply plugin: 'dev.keliver.lint'
 
 repositories {
   maven {

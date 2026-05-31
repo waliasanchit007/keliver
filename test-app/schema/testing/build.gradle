@@ -1,10 +1,10 @@
-import static dev.konduit.buildsupport.TargetGroup.Common
+import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
   targets(Common)
 }
 
-apply plugin: 'dev.konduit.generator.testing'
+apply plugin: 'dev.keliver.generator.testing'
 
 kotlin {
   sourceSets {

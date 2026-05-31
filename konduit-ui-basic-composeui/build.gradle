@@ -1,4 +1,4 @@
-import static dev.konduit.buildsupport.TargetGroup.ToolkitComposeUi
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
 
 redwoodBuild {
   targets(ToolkitComposeUi)
@@ -24,5 +24,5 @@ kotlin {
 }
 
 android {
-  namespace 'dev.konduit.ui.basic.composeui'
+  namespace 'dev.keliver.ui.basic.composeui'
 }

@@ -1,0 +1,210 @@
+/*
+ * Copyright (C) 2024 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package dev.keliver.protocol.guest
+
+import dev.keliver.Modifier
+import dev.keliver.RedwoodCodegenApi
+import dev.keliver.protocol.Change
+import dev.keliver.protocol.ChangesSink
+import dev.keliver.protocol.ChildrenChange
+import dev.keliver.protocol.ChildrenTag
+import dev.keliver.protocol.Create
+import dev.keliver.protocol.Event
+import dev.keliver.protocol.Id
+import dev.keliver.protocol.ModifierChange
+import dev.keliver.protocol.ModifierElement
+import dev.keliver.protocol.PropertyChange
+import dev.keliver.protocol.PropertyTag
+import dev.keliver.protocol.RedwoodVersion
+import dev.keliver.protocol.WidgetTag
+import dev.keliver.protocol.guest.ProtocolWidget.Companion.INVALID_INDEX
+import dev.keliver.widget.Widget
+import dev.keliver.widget.WidgetSystem
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+
+/** @suppress For generated code use only. */
+@OptIn(RedwoodCodegenApi::class)
+public class DefaultGuestProtocolAdapter(
+  public override val json: Json = Json.Default,
+  hostVersion: RedwoodVersion,
+  private val widgetSystemFactory: ProtocolWidgetSystemFactory,
+  private val mismatchHandler: ProtocolMismatchHandler = ProtocolMismatchHandler.Throwing,
+) : GuestProtocolAdapter(hostVersion) {
+  private var nextValue = Id.Root.value + 1
+  private val widgets = mutableMapOf<Int, ProtocolWidget>()
+  private val removed = mutableSetOf<Int>()
+  private val changes = mutableListOf<Change>()
+  private lateinit var changesSink: ChangesSink
+
+  public override val widgetSystem: WidgetSystem<Unit> =
+    widgetSystemFactory.create(this, mismatchHandler)
+
+  public override val root: Widget.Children<Unit> =
+    ProtocolWidgetChildren(Id.Root, ChildrenTag.Root, this)
+
+  override fun sendEvent(event: Event) {
+    val node = widgets[event.id.value]
+    if (node != null) {
+      node.sendEvent(event)
+    } else {
+      mismatchHandler.onUnknownEventNode(event.id, event.tag)
+    }
+  }
+
+  override fun initChangesSink(changesSink: ChangesSink) {
+    this.changesSink = changesSink
+  }
+
+  public override fun nextId(): Id {
+    val value = nextValue
+    nextValue = value + 1
+    return Id(value)
+  }
+
+  public override fun appendCreate(
+    id: Id,
+    tag: WidgetTag,
+  ) {
+    val id = id
+    val tag = tag
+    changes.add(Create(id, tag))
+  }
+
+  public override fun <T> appendPropertyChange(
+    id: Id,
+    widgetTag: WidgetTag,
+    propertyTag: PropertyTag,
+    serializer: KSerializer<T>,
+    value: T,
+  ) {
+    changes.add(PropertyChange(id, widgetTag, propertyTag, json.encodeToJsonElement(serializer, value)))
+  }
+
+  public override fun appendPropertyChange(
+    id: Id,
+    widgetTag: WidgetTag,
+    propertyTag: PropertyTag,
+    value: Boolean,
+  ) {
+    changes.add(PropertyChange(id, widgetTag, propertyTag, JsonPrimitive(value)))
+  }
+
+  @OptIn(ExperimentalSerializationApi::class)
+  override fun appendPropertyChange(
+    id: Id,
+    widgetTag: WidgetTag,
+    propertyTag: PropertyTag,
+    value: UInt,
+  ) {
+    changes.add(PropertyChange(id, widgetTag, propertyTag, JsonPrimitive(value)))
+  }
+
+  override fun appendModifierChange(id: Id, value: Modifier) {
+    val elements = mutableListOf<ModifierElement>()
+
+    value.forEach { element ->
+      elements += modifierElement(element)
+    }
+
+    changes.add(ModifierChange(id, elements))
+  }
+
+  private fun <T : Modifier.Element> modifierElement(element: T): ModifierElement {
+    val (tag, serializer) = widgetSystemFactory.modifierTagAndSerializationStrategy(element)
+    if (serializer == null) return ModifierElement(tag)
+    return ModifierElement(tag, json.encodeToJsonElement(serializer, element))
+  }
+
+  public override fun appendAdd(
+    id: Id,
+    tag: ChildrenTag,
+    index: Int,
+    child: ProtocolWidget,
+  ) {
+    val childId = child.id.value
+    if (child.removeIndex != INVALID_INDEX) {
+      check(hostSupportsRemoveDetach) { "Host v$hostVersion does not support widget re-attach" }
+      check(childId in widgets) { "Attempted to re-attach unknown widget with ID $childId" }
+      removed.remove(childId)
+
+      // Update the remove change to indicate it's only a detach.
+      val remove = changes[child.removeIndex] as ChildrenChange.Remove
+      changes[child.removeIndex] = ChildrenChange.Remove(remove.id, remove.tag, remove.index, detach = true)
+    } else {
+      val replaced = widgets.put(childId, child)
+      check(replaced == null) { "Attempted to add widget with existing ID $childId" }
+    }
+    changes.add(ChildrenChange.Add(id, tag, child.id, index))
+  }
+
+  public override fun appendMove(
+    id: Id,
+    tag: ChildrenTag,
+    fromIndex: Int,
+    toIndex: Int,
+    count: Int,
+  ) {
+    changes.add(ChildrenChange.Move(id, tag, fromIndex, toIndex, count))
+  }
+
+  public override fun appendRemove(
+    id: Id,
+    tag: ChildrenTag,
+    index: Int,
+    child: ProtocolWidget,
+  ) {
+    removed += child.id.value
+    child.removeIndex = changes.size
+    changes.add(ChildrenChange.Remove(id, tag, index, detach = false))
+  }
+
+  /** Returns the changes accumulated since the last call to this function. */
+  public fun takeChanges(): List<Change> {
+    val result = changes.toList()
+    this.changes.clear()
+
+    for (id in removed) {
+      val widget = widgets.remove(id)
+        ?: throw IllegalStateException("Removed widget not present in map: $id")
+      widget.depthFirstWalk(childrenRemover)
+    }
+    removed.clear()
+
+    return result
+  }
+
+  override fun emitChanges() {
+    if (changes.isNotEmpty()) {
+      changesSink.sendChanges(takeChanges())
+    }
+  }
+
+  private val childrenRemover: ProtocolWidget.ChildrenVisitor =
+    object : ProtocolWidget.ChildrenVisitor {
+      override fun visit(
+        parent: ProtocolWidget,
+        childrenTag: ChildrenTag,
+        children: ProtocolWidgetChildren,
+      ) {
+        for (childWidget in children.widgets) {
+          widgets.remove(childWidget.id.value)
+        }
+      }
+    }
+}

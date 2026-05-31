@@ -21,11 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import dev.konduit.Modifier
-import dev.konduit.layout.api.Constraint.Companion.Fill
-import dev.konduit.layout.compose.Column
-import dev.konduit.ui.basic.compose.Text
-import dev.konduit.ui.dp
+import dev.keliver.Modifier
+import dev.keliver.layout.api.Constraint.Companion.Fill
+import dev.keliver.layout.compose.Column
+import dev.keliver.ui.basic.compose.Text
+import dev.keliver.ui.dp
 import com.example.redwood.testapp.compose.backgroundColor
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay

@@ -309,7 +309,7 @@ needs a click handler declares `onClick: (() -> Unit)?` as a regular
 schema's `Box` and `Card` widgets carry `onClick` directly rather than
 relying on a `Modifier.clickable {}` chain.
 
-**Upstream fix.** Konduit's `dev.konduit.generator.modifiers` plugin
+**Upstream fix.** Konduit's `dev.keliver.generator.modifiers` plugin
 should special-case function-typed properties on `@Modifier` — either
 generate a `ZiplineService`-backed proxy (matching the U11 fix pattern)
 or emit a compile-time error so integrators see the rejection upfront
@@ -410,13 +410,13 @@ Option (1) is the right fix.
 non-null-but-broken proxy, every method call is a silent no-op).
 **Origin:** HANDOVER.md gotcha #11.
 **Mitigation shipped in Konduit `1.0.0-caliclan.4`:** the
-`dev.konduit.zipline-shapes` Gradle plugin (in
+`dev.keliver.zipline-shapes` Gradle plugin (in
 `konduit-gradle-plugin`). Adopters apply it to any module that
 declares `ZiplineService` interfaces:
 
 ```kotlin
 plugins {
-    id("dev.konduit.zipline-shapes")
+    id("dev.keliver.zipline-shapes")
 }
 ```
 
@@ -582,7 +582,7 @@ through Konduit's `AppService`. The class doesn't get emitted with
 the constructor shape that Zipline's loader expects at link time;
 the IR linker rejects it.
 
-The `AppService.kt` source ([konduit-treehouse](https://github.com/waliasanchit007/konduit/blob/main/konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/AppService.kt))
+The `AppService.kt` source ([konduit-treehouse](https://github.com/waliasanchit007/konduit/blob/main/konduit-treehouse/src/commonMain/kotlin/dev/keliver/treehouse/AppService.kt))
 even calls this out:
 
 > Note that due to a Zipline limitation it's necessary for
@@ -658,7 +658,7 @@ mapping must match between the two.
 
 **Real-world examples.**
 
-- [`konduit/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/konduit/sample/shared/ManualSampleAppServiceAdapter.kt)
+- [`konduit/sample/shared/.../ManualSampleAppServiceAdapter.kt`](../sample/shared/src/commonMain/kotlin/dev/keliver/sample/shared/ManualSampleAppServiceAdapter.kt)
   — minimum-viable: three methods (`launch`, `appLifecycle`,
   `close`), ~95 LoC.
 - ServerDrivenUI's `ManualSduiAppServiceAdapter` — same pattern,
@@ -668,7 +668,7 @@ mapping must match between the two.
 **Cost to adopters.** Down from ~95 LoC + 7-entry `@file:Suppress`
 to **~5 LoC + zero `@file:Suppress`** as of Konduit caliclan.5 via
 the [`konduit-treehouse-codegen`](../konduit-treehouse-codegen/)
-KSP processor + [`@KonduitAppService`](../konduit-treehouse/src/commonMain/kotlin/dev/konduit/treehouse/KonduitAppService.kt)
+KSP processor + [`@KonduitAppService`](../konduit-treehouse/src/commonMain/kotlin/dev/keliver/treehouse/KonduitAppService.kt)
 annotation. Adopter writes a single companion-object wrapper:
 
 ```kotlin
@@ -723,10 +723,10 @@ so adopters reading the generated source see exactly this pattern:
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 package your.pkg
 
-import dev.konduit.treehouse.KonduitAppServiceAdapter
-import dev.konduit.treehouse.KonduitOutboundCallHandler
-import dev.konduit.treehouse.KonduitOutboundService
-import dev.konduit.treehouse.konduitReturningFunction
+import dev.keliver.treehouse.KonduitAppServiceAdapter
+import dev.keliver.treehouse.KonduitOutboundCallHandler
+import dev.keliver.treehouse.KonduitOutboundService
+import dev.keliver.treehouse.konduitReturningFunction
 
 internal open class MyAppServiceAdapter(
   serializers: List<KSerializer<*>>,
@@ -739,7 +739,7 @@ internal open class MyAppServiceAdapter(
   ): List<ZiplineFunction<MyAppService>> = listOf(
     konduitReturningFunction<MyAppService>(
       id = "launch",
-      signature = "fun launch(): dev.konduit.treehouse.ZiplineTreehouseUi",
+      signature = "fun launch(): dev.keliver.treehouse.ZiplineTreehouseUi",
       resultSerializer = ziplineServiceSerializer<ZiplineTreehouseUi>(),
       call = { it.launch() },
     ),
@@ -944,10 +944,10 @@ fixed:
 1. `FakeTreehouseView.kt` (a testapp-coupled commonTest fixture)
    was stripped; recovered into `appsJvmTest`.
 2. `leaks/JvmHeap.kt`'s heap-walker reflection allowlist still
-   listed `app.cash` but not `dev.konduit` — a package-rename
+   listed `app.cash` but not `dev.keliver` — a package-rename
    migration miss that made the leak tests error on
-   `dev.konduit.treehouse.TreehouseTester$spec$1`. Added
-   `dev.konduit`.
+   `dev.keliver.treehouse.TreehouseTester$spec$1`. Added
+   `dev.keliver`.
 
 The presenter modules compiled against caliclan.5 with **no**
 AppService/treehouse drift (the feared U12-adapter interaction

@@ -1,6 +1,6 @@
 buildscript {
   dependencies {
-    classpath "dev.konduit:konduit-gradle-plugin:$redwoodVersion"
+    classpath "dev.keliver:konduit-gradle-plugin:$redwoodVersion"
     classpath libs.kotlin.gradlePlugin
     classpath libs.androidGradlePlugin
   }
@@ -15,7 +15,7 @@ buildscript {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'dev.konduit.lint'
+apply plugin: 'dev.keliver.lint'
 
 android {
   namespace 'example.android'

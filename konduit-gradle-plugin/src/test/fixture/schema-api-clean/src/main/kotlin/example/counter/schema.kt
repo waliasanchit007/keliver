@@ -15,10 +15,10 @@
  */
 package example.counter
 
-import dev.konduit.schema.Children
-import dev.konduit.schema.Property
-import dev.konduit.schema.Schema
-import dev.konduit.schema.Widget
+import dev.keliver.schema.Children
+import dev.keliver.schema.Property
+import dev.keliver.schema.Schema
+import dev.keliver.schema.Widget
 
 @Schema(
   [
