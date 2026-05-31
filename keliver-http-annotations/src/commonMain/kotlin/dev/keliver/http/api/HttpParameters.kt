@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http.api
@@ -54,7 +54,7 @@ public annotation class Query(public val name: String)
  * ```
  *
  * Serialization uses the adopter-supplied
- * [dev.keliver.http.KonduitHttp.json] instance, so contextual
+ * [dev.keliver.http.KeliverHttp.json] instance, so contextual
  * serializers and lenient parsing settings are honored.
  */
 @Target(AnnotationTarget.VALUE_PARAMETER)

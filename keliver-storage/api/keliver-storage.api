@@ -19,13 +19,13 @@ public final class dev/keliver/storage/HostStorage$Companion$Adapter : app/cash/
 	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
 }
 
-public final class dev/keliver/storage/KonduitStorage {
+public final class dev/keliver/storage/KeliverStorage {
 	public fun <init> (Ldev/keliver/storage/HostStorage;Lkotlinx/serialization/json/Json;)V
 	public synthetic fun <init> (Ldev/keliver/storage/HostStorage;Lkotlinx/serialization/json/Json;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getJson ()Lkotlinx/serialization/json/Json;
 	public final fun getProvider ()Ldev/keliver/storage/HostStorage;
 	public final fun keys (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun keys$default (Ldev/keliver/storage/KonduitStorage;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun keys$default (Ldev/keliver/storage/KeliverStorage;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 

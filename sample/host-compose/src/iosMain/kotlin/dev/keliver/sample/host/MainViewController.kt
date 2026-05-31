@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
@@ -46,11 +46,11 @@ import kotlin.coroutines.resumeWithException
 
 /**
  * iOS entry point. The Swift side (in your Xcode project) calls this
- * to obtain a `UIViewController` that hosts the Konduit-rendered
+ * to obtain a `UIViewController` that hosts the Keliver-rendered
  * guest tree:
  *
  * ```swift
- * import KonduitSampleHost
+ * import KeliverSampleHost
  *
  * struct ContentView: UIViewControllerRepresentable {
  *   func makeUIViewController(context: Context) -> UIViewController {
@@ -60,7 +60,7 @@ import kotlin.coroutines.resumeWithException
  * }
  * ```
  *
- * The framework name (`KonduitSampleHost`) is what `host-compose`'s
+ * The framework name (`KeliverSampleHost`) is what `host-compose`'s
  * build.gradle.kts declares via `binaries.framework { baseName = "..." }`.
  */
 public fun MainViewController() = ComposeUIViewController {
@@ -124,7 +124,7 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
  * iOS-side `EventListener` for parity with the Android sample's
  * `MainActivity`. Routes Zipline lifecycle events through `NSLog`
  * so they surface in Xcode's console and `xcrun simctl spawn …
- * log show --predicate 'eventMessage CONTAINS "KonduitSample"'`.
+ * log show --predicate 'eventMessage CONTAINS "KeliverSample"'`.
  *
  * Without this listener, every iOS-side guest failure
  * (codeLoadFailed, manifestParseFailed, uncaughtException) is
@@ -145,37 +145,37 @@ private object LoggingEventListener : EventListener() {
   // 26.3 + iOS sim 26.3. `println` is the K/N-idiomatic choice and
   // surfaces to Xcode's debug console; if you need entries to show
   // in `xcrun simctl spawn … log show`, wrap with `os_log` via a
-  // properly-typed C wrapper (see Konduit's docs/KNOWN_BUGS.md).
+  // properly-typed C wrapper (see Keliver's docs/KNOWN_BUGS.md).
   private fun log(message: String) = println(message)
 
   override fun ziplineCreated(zipline: Zipline) =
-    log("KonduitSample: ziplineCreated")
+    log("KeliverSample: ziplineCreated")
   override fun bindService(name: String, service: ZiplineService) =
-    log("KonduitSample: bindService name=$name")
+    log("KeliverSample: bindService name=$name")
   override fun takeService(name: String, service: ZiplineService) =
-    log("KonduitSample: takeService name=$name")
+    log("KeliverSample: takeService name=$name")
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) =
-    log("KonduitSample: codeLoadSuccess modules=${manifest.modules.keys.size}")
+    log("KeliverSample: codeLoadSuccess modules=${manifest.modules.keys.size}")
   override fun codeLoadFailed(exception: Exception, startValue: Any?) =
-    log("KonduitSample: codeLoadFailed: ${exception.message ?: "<no message>"}")
+    log("KeliverSample: codeLoadFailed: ${exception.message ?: "<no message>"}")
   override fun manifestReady(manifest: ZiplineManifest) =
-    log("KonduitSample: manifestReady modules=${manifest.modules.keys.size}")
+    log("KeliverSample: manifestReady modules=${manifest.modules.keys.size}")
   override fun manifestParseFailed(exception: Exception) =
-    log("KonduitSample: manifestParseFailed: ${exception.message ?: "<no message>"}")
+    log("KeliverSample: manifestParseFailed: ${exception.message ?: "<no message>"}")
   override fun mainFunctionStart(applicationName: String): Any? {
-    log("KonduitSample: mainFunctionStart app=$applicationName")
+    log("KeliverSample: mainFunctionStart app=$applicationName")
     return null
   }
   override fun mainFunctionEnd(applicationName: String, startValue: Any?) =
-    log("KonduitSample: mainFunctionEnd app=$applicationName")
+    log("KeliverSample: mainFunctionEnd app=$applicationName")
   override fun uncaughtException(exception: Throwable) =
-    log("KonduitSample: uncaughtException: ${exception.message ?: "<no message>"}")
+    log("KeliverSample: uncaughtException: ${exception.message ?: "<no message>"}")
   override fun serviceLeaked(name: String) =
-    log("KonduitSample: serviceLeaked name=$name")
+    log("KeliverSample: serviceLeaked name=$name")
 }
 
 /**
- * `NSURLSession`-backed Zipline HTTP client. Konduit ships an
+ * `NSURLSession`-backed Zipline HTTP client. Keliver ships an
  * OkHttp adapter for Android via `okhttp.asZiplineHttpClient()`,
  * but iOS doesn't have a comparable single-line bridge — the
  * Foundation API is what we use.

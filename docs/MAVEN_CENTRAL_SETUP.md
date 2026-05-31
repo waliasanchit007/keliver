@@ -1,6 +1,6 @@
 # Maven Central setup checklist (Phase 5)
 
-Tracks the user-action steps to move Konduit from **GitHub Packages
+Tracks the user-action steps to move Keliver from **GitHub Packages
 (private, requires PAT)** to **Maven Central (public, no auth)**.
 Phase 5 of [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md).
 
@@ -10,7 +10,7 @@ into a Gradle build with `mavenCentral()` configured and just have it
 work — no `gpr.user` / `gpr.token` step, no GitHub Personal Access Token.
 
 **The in-repo build wiring is done** (vanniktech plugin, Central
-coordinates with an overridable groupId, Konduit-correct POMs, gated
+coordinates with an overridable groupId, Keliver-correct POMs, gated
 signing, and a manual `publish-maven-central.yml` workflow — see
 Steps 4 / 4b). What remains is **three external steps only the
 maintainer can do**: claim the namespace at Sonatype, generate a GPG
@@ -121,7 +121,7 @@ add these four:
    (default `true`; CI's GitHub-Packages job turns it off).
 2. **Coordinates — configured, with an overridable groupId.** The
    plugin sets `coordinates(project.group, project.name,
-   KONDUIT_VERSION)`. `project.group` comes from a `keliverGroupId()`
+   KELIVER_VERSION)`. `project.group` comes from a `keliverGroupId()`
    helper that defaults to `dev.keliver` but is **overridable** with
    `-PkeliverGroupId=io.github.waliasanchit007`. So:
    - default builds + the GitHub Packages release keep `dev.keliver:*`
@@ -133,7 +133,7 @@ add these four:
    `dev.keliver` artifact's POM references sibling modules by the same
    overridden group, so the Central artifacts are internally
    consistent (verified by inspecting the generated POM).
-3. **POM metadata — Konduit-correct.** Every POM already carries
+3. **POM metadata — Keliver-correct.** Every POM already carries
    `name`, `description`, `url`
    (`github.com/waliasanchit007/keliver`), Apache-2.0 `licenses`,
    `developers` (`waliasanchit007`), and `scm` — the full set Maven
@@ -159,7 +159,7 @@ A dedicated, **manual** workflow does the release:
 
 To release once Steps 1-3 are done:
 
-1. Bump `KONDUIT_VERSION` in `RedwoodBuildPlugin.kt` if needed and tag.
+1. Bump `KELIVER_VERSION` in `RedwoodBuildPlugin.kt` if needed and tag.
 2. GitHub → Actions → **Publish to Maven Central** → **Run workflow**,
    passing the tag (or a commit ref) as the input.
 3. Watch the run. POM/signature failures surface at the Sonatype side
@@ -200,7 +200,7 @@ Once `1.0.0-caliclan.4` is live on Maven Central:
   Belt-and-braces it to at least two.
 - **Missing POM metadata**: every artifact's POM must have name +
   description + url + license + developer + scm. The `vanniktech`
-  plugin handles this and the POMs already carry the full Konduit set
+  plugin handles this and the POMs already carry the full Keliver set
   (see Step 4 #3), so this should be a non-issue — but it's the most
   common Central rejection, so eyeball the first generated POM if a
   run fails validation.

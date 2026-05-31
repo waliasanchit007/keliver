@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http.codegen
@@ -9,13 +9,13 @@ import com.squareup.kotlinpoet.ClassName
 /**
  * Fully-qualified names the processor recognizes. Kept centralized so
  * a future annotation rename touches one place instead of being
- * scattered across [KonduitHttpCodegen]'s symbol-resolution paths.
+ * scattered across [KeliverHttpCodegen]'s symbol-resolution paths.
  *
  * Mirrors `dev.keliver.http.api.*` from `keliver-http-annotations`.
  */
 internal object FqNames {
   // Class-level marker.
-  const val KONDUIT_API = "dev.keliver.http.api.KonduitApi"
+  const val KELIVER_API = "dev.keliver.http.api.KeliverApi"
 
   // Method annotations.
   const val GET = "dev.keliver.http.api.GET"
@@ -31,6 +31,6 @@ internal object FqNames {
   const val HEADER_MAP = "dev.keliver.http.api.HeaderMap"
 
   // Runtime targets — the generated code emits calls to these.
-  val KONDUIT_HTTP = ClassName("dev.keliver.http", "KonduitHttp")
+  val KELIVER_HTTP = ClassName("dev.keliver.http", "KeliverHttp")
   val UNIT = ClassName("kotlin", "Unit")
 }

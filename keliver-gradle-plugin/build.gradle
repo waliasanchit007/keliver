@@ -54,7 +54,7 @@ gradlePlugin {
     }
     ziplineShapes {
       id = "dev.keliver.zipline-shapes"
-      displayName = "Konduit ZiplineService shape lint"
+      displayName = "Keliver ZiplineService shape lint"
       description = "Reject ZiplineService methods with function-typed parameters (KNOWN_BUGS U11)"
       implementationClass = "dev.keliver.gradle.ZiplineShapesPlugin"
     }

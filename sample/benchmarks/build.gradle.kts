@@ -9,7 +9,7 @@
  * Targets a separate, real (or emulated) Android device; the test
  * framework launches + measures + reports.
  *
- * Phase 2 of the Konduit performance workstream — Phase 1
+ * Phase 2 of the Keliver performance workstream — Phase 1
  * (artifact sizes + build times) lives in `docs/PERFORMANCE.md`.
  * Methodology + target SLAs for the metrics measured here are
  * committed in the same doc.

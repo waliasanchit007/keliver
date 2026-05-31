@@ -73,7 +73,7 @@ include ':keliver-gradle-plugin'
 include ':keliver-guest'
 include ':keliver-host'
 
-// HTTP shim: HostHttpProvider ZiplineService + KonduitHttp typed
+// HTTP shim: HostHttpProvider ZiplineService + KeliverHttp typed
 // wrapper. Re-exported from both facades. See issue #7.
 include ':keliver-http'
 
@@ -114,37 +114,37 @@ include ':keliver-treehouse-host-composeui'
 include ':keliver-vm'
 
 // Key/value persistence shim — HostStorage ZiplineService +
-// KonduitStorage typed wrapper. Re-exported from both facades. See
+// KeliverStorage typed wrapper. Re-exported from both facades. See
 // issue #10.
 include ':keliver-storage'
 
-// Host-bound logging service — KonduitConsole interface + a
-// no-frills DefaultKonduitConsole. Re-exported from `:keliver-host`.
+// Host-bound logging service — KeliverConsole interface + a
+// no-frills DefaultKeliverConsole. Re-exported from `:keliver-host`.
 // See issue #27.
 include ':keliver-console'
 
-// One-line Coil 3 ImageLoader setup — KonduitImage.installSingleton().
+// One-line Coil 3 ImageLoader setup — KeliverImage.installSingleton().
 // Closes KNOWN_BUGS U5 (the blank-AsyncImage trap). Re-exported from
 // `:keliver-host`. See issue #26.
 include ':keliver-image'
 
-// Typed guest-side navigation — KonduitNavController + KonduitNavHost.
+// Typed guest-side navigation — KeliverNavController + KeliverNavHost.
 // Replaces per-app HostNavigator RPC-per-route boilerplate. Re-exported
 // from `:keliver-guest`. See issue #25.
 include ':keliver-nav'
 
-// HTTP API annotations (@KonduitApi, @GET, @POST, …). Phase 1 of the
+// HTTP API annotations (@KeliverApi, @GET, @POST, …). Phase 1 of the
 // Retrofit-style codegen — annotations only, processor queued. See
 // docs/HTTP_API_CODEGEN_DESIGN.md / issue #18.
 include ':keliver-http-annotations'
 
-// HTTP API KSP processor — reads @KonduitApi interfaces and emits
-// `*Impl(KonduitHttp)` classes. Phase 2 of issue #18. Adopters add
+// HTTP API KSP processor — reads @KeliverApi interfaces and emits
+// `*Impl(KeliverHttp)` classes. Phase 2 of issue #18. Adopters add
 // this as `ksp(libs.keliver.http.codegen)`; not on the runtime
 // classpath.
 include ':keliver-http-codegen'
 
-// AppService adapter KSP processor — reads @KonduitAppService
+// AppService adapter KSP processor — reads @KeliverAppService
 // interfaces and emits Generated<Name>Adapter open classes that
 // implement the Zipline #765 manual-adapter workaround. Closes the
 // second half of KNOWN_BUGS U12.

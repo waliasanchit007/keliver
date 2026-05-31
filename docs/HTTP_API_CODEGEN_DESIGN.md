@@ -1,7 +1,7 @@
 # Retrofit-style HTTP API codegen — design
 
 Tracks the multi-phase design for issue [#18](https://github.com/waliasanchit007/keliver/issues/18).
-Adopters today write one `KonduitHttp` call per endpoint manually:
+Adopters today write one `KeliverHttp` call per endpoint manually:
 
 ```kotlin
 suspend fun list(filter: String?): List<Quote> =
@@ -12,7 +12,7 @@ The end-state is a Retrofit-shaped annotation API where a KSP processor
 generates the implementation from a typed Kotlin interface:
 
 ```kotlin
-@KonduitApi
+@KeliverApi
 interface QuotesApi {
     @GET("/quotes")
     suspend fun list(@Query("filter") filter: String?): List<Quote>
@@ -22,7 +22,7 @@ interface QuotesApi {
 }
 
 // Generated:
-//   class QuotesApiImpl(private val http: KonduitHttp) : QuotesApi
+//   class QuotesApiImpl(private val http: KeliverHttp) : QuotesApi
 ```
 
 This doc captures the locked-in design so the KSP processor can be
@@ -32,7 +32,7 @@ built without further design churn.
 
 | Module | Target group | Ships | Status |
 |---|---|---|---|
-| `keliver-http-annotations` | Common (JVM + iOS + JS) | `@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap` — all `SOURCE`-retention | **landed** (this PR) |
+| `keliver-http-annotations` | Common (JVM + iOS + JS) | `@KeliverApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap` — all `SOURCE`-retention | **landed** (this PR) |
 | `keliver-http-codegen` | Tooling (JVM-only) | KSP `SymbolProcessor` + companion Gradle plugin descriptor; depends on `keliver-http-annotations` for the FqName lookups | **next session** |
 | `keliver-gradle-plugin` | (existing) | New plugin id `dev.keliver.http-api` that auto-applies the KSP plugin + adds the codegen processor as a `ksp` configuration dep | **next session** |
 
@@ -44,7 +44,7 @@ dependencies) and nothing else from the codegen path.
 
 ## API surface (committed)
 
-### `@KonduitApi`
+### `@KeliverApi`
 Class-level annotation marking an interface as a candidate for
 generation. Required on every interface processed.
 
@@ -61,20 +61,20 @@ generation. Required on every interface processed.
 |---|---|---|
 | `@Path("name")` | Substitute `{name}` in the URL template | Required-presence check: every `{x}` in the template must have a matching `@Path("x")`; every `@Path` must reference an actual `{x}`. |
 | `@Query("name")` | Append to the query string | Nullable parameters are omitted when `null`; the wire envelope (`HttpRequest.query`) is a `Map<String, String>`. |
-| `@Body` | JSON-encode + send as the request body | Valid only on `@POST` / `@PUT` methods. Serialized with the adopter-supplied `KonduitHttp.json`. |
+| `@Body` | JSON-encode + send as the request body | Valid only on `@POST` / `@PUT` methods. Serialized with the adopter-supplied `KeliverHttp.json`. |
 | `@Header("name")` | One header | Nullable parameters are omitted when `null`. Non-`String` values get `.toString()`. |
 | `@HeaderMap` | Spread a `Map<String, String>` of headers | Accepts `Map<String, String>` (emit `putAll`) or `Map<String, String?>` (emit `forEach` with null-value filter). Other shapes fail the build. |
 
 ### Method shape requirements
 - Must be `suspend`. Non-suspend functions are rejected with a clear
-  message pointing at the `KonduitHttp.execute` non-suspend
+  message pointing at the `KeliverHttp.execute` non-suspend
   alternative.
 - Return type must be a `KSerializer`-resolvable type. The processor
   emits a `requireSerializerOf<ReturnType>()` pre-flight check at
   generation time (mirroring `Spec.requireSerializerOf` semantics)
   and surfaces a clear diagnostic if the serializer chain breaks.
 - `Unit` return is special-cased — routes through
-  `KonduitHttp.deleteUnit` / `KonduitHttp.postEmpty<Unit>` etc.
+  `KeliverHttp.deleteUnit` / `KeliverHttp.postEmpty<Unit>` etc.
 
 ## Generated code shape
 
@@ -84,9 +84,9 @@ For the running example above, the KSP processor would emit:
 // build/generated/ksp/.../com/example/QuotesApiImpl.kt
 package com.example
 
-import dev.keliver.http.KonduitHttp
+import dev.keliver.http.KeliverHttp
 
-public class QuotesApiImpl(private val http: KonduitHttp) : QuotesApi {
+public class QuotesApiImpl(private val http: KeliverHttp) : QuotesApi {
 
     override suspend fun list(filter: String?): List<Quote> =
         http.get(
@@ -105,8 +105,8 @@ public class QuotesApiImpl(private val http: KonduitHttp) : QuotesApi {
 ```
 
 Key generation details:
-- Constructor takes a single `KonduitHttp` parameter — no DI assumptions.
-- Each method maps one-to-one with a `KonduitHttp` typed helper
+- Constructor takes a single `KeliverHttp` parameter — no DI assumptions.
+- Each method maps one-to-one with a `KeliverHttp` typed helper
   (`get<Res>`, `post<Req, Res>`, `put<Req, Res>`, `delete<Res>` or
   `deleteUnit`).
 - `@Query` and `@Header` collection happens inline via `buildMap { … }`
@@ -159,7 +159,7 @@ and prevent feature creep. Each could land as an additive follow-up
 without breaking the generated code from v1:
 
 - **Form-urlencoded bodies** (`application/x-www-form-urlencoded`) —
-  adopters use raw `KonduitHttp.execute` for now.
+  adopters use raw `KeliverHttp.execute` for now.
 - **Multipart uploads** — same.
 - **Streaming responses** (SSE, chunked) — requires the streaming
   addition to `HostHttpProvider` documented in issue #7's "out of
@@ -178,7 +178,7 @@ without breaking the generated code from v1:
 | Phase | Scope | Status |
 |---|---|---|
 | **1** | `keliver-http-annotations` module + this design doc | **landed (caliclan.4)** |
-| **2** | KSP processor: `@KonduitApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
+| **2** | KSP processor: `@KeliverApi` + `@GET` + `@POST` + `@PUT` + `@DELETE` + `@Path` + `@Query` + `@Body` + `@Header` | **landed (caliclan.4)** — MVP scope; integration tests + `@HeaderMap` deferred to Phase 3 |
 | **3** | `@HeaderMap` + `dev.zacsweers.kctfork:ksp` end-to-end test fixtures (11 tests: 5 happy-path codegen assertions, 6 validation-diagnostic assertions) | **landed (caliclan.4)** |
 | **4** | Error handling, response wrappers (Result<T> envelope, etc.) | follow-up |
 | **5** | `dev.keliver.http-api` umbrella Gradle plugin that auto-applies KSP + the codegen dep | follow-up |
@@ -194,8 +194,8 @@ plus tests.
 Splitting the annotations into their own ship-now module lets:
 
 1. **Adopters preview** the API and start drafting their
-   `@KonduitApi` interfaces today. Manual implementations against
-   `KonduitHttp` still work in the meantime; switching to the
+   `@KeliverApi` interfaces today. Manual implementations against
+   `KeliverHttp` still work in the meantime; switching to the
    generated impl will be a single import change once Phase 2 ships.
 2. **The annotation API stays stable** — the processor work doesn't
    risk breaking the wire format because the annotations are

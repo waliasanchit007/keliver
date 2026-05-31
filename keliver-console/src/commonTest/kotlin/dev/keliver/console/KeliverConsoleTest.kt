@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.console
@@ -7,13 +7,13 @@ package dev.keliver.console
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class KonduitConsoleTest {
+class KeliverConsoleTest {
   /**
    * Recording subclass — captures lines instead of printing. Doubles as
    * the canonical test-double pattern adopters can copy for their own
    * tests.
    */
-  private class RecordingConsole(tag: String = "Konduit") : DefaultKonduitConsole(tag) {
+  private class RecordingConsole(tag: String = "Keliver") : DefaultKeliverConsole(tag) {
     val lines: MutableList<String> = mutableListOf()
     override fun output(line: String) {
       lines += line
@@ -33,7 +33,7 @@ class KonduitConsoleTest {
     val console = RecordingConsole()
     console.log(level = "WARN", message = "x")
 
-    assertEquals(listOf("[Konduit/WARN] x"), console.lines)
+    assertEquals(listOf("[Keliver/WARN] x"), console.lines)
   }
 
   @Test
@@ -41,7 +41,7 @@ class KonduitConsoleTest {
     val console = RecordingConsole()
     console.log(level = "CUSTOM_LEVEL_42", message = "y")
 
-    assertEquals(listOf("[Konduit/CUSTOM_LEVEL_42] y"), console.lines)
+    assertEquals(listOf("[Keliver/CUSTOM_LEVEL_42] y"), console.lines)
   }
 
   @Test
@@ -53,9 +53,9 @@ class KonduitConsoleTest {
 
     assertEquals(
       listOf(
-        "[Konduit/INFO] first",
-        "[Konduit/INFO] second",
-        "[Konduit/ERROR] third",
+        "[Keliver/INFO] first",
+        "[Keliver/INFO] second",
+        "[Keliver/ERROR] third",
       ),
       console.lines,
     )
@@ -68,7 +68,7 @@ class KonduitConsoleTest {
     // gives full control.
     val errors = mutableListOf<String>()
     val info = mutableListOf<String>()
-    val console = object : DefaultKonduitConsole("App") {
+    val console = object : DefaultKeliverConsole("App") {
       override fun output(line: String) {
         when {
           line.contains("ERROR") || line.contains("WARN") -> errors += line

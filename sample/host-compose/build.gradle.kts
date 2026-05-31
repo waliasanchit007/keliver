@@ -12,7 +12,7 @@
  *     Compose implementation in `commonMain`. This is the host's
  *     "renderer" — it owns how the guest's tree turns into pixels.
  *
- *   - `SampleHostApp`: the mount-point composable. Wraps Konduit's
+ *   - `SampleHostApp`: the mount-point composable. Wraps Keliver's
  *     `TreehouseContent` and is what both platforms call into.
  *
  *   - `MainViewController`: iOS entry. Returns a `UIViewController`
@@ -41,13 +41,13 @@ kotlin {
     }
   }
 
-  // Konduit's iOS host code ships as a static .klib that we expose to
-  // Swift via a single Kotlin framework named "KonduitSampleHost".
+  // Keliver's iOS host code ships as a static .klib that we expose to
+  // Swift via a single Kotlin framework named "KeliverSampleHost".
   // The Xcode-side `embedAndSignAppleFrameworkForXcode` Gradle task
   // bundles this into the iosApp/ Xcode build automatically.
   listOf(iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
     iosTarget.binaries.framework {
-      baseName = "KonduitSampleHost"
+      baseName = "KeliverSampleHost"
       isStatic = true
       // Must match an iOS-valid reverse-DNS bundle ID. K/N uses this
       // for the framework's Info.plist CFBundleIdentifier.

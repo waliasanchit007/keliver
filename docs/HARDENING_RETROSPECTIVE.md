@@ -1,6 +1,6 @@
 # Production-hardening retrospective
 
-What we learned taking Konduit from "compiles and ships to Caliclan's
+What we learned taking Keliver from "compiles and ships to Caliclan's
 own apps" to "demonstrably tested, CI-enforced, adopter-ready." This
 is a working retrospective — durable lessons + the concrete receipts
 that earned them. Read it before the next big push so we don't

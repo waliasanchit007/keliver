@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.treehouse
 
 /**
  * Marks an [AppService] subinterface as the source for a generated
- * [KonduitAppServiceAdapter] subclass. The `keliver-treehouse-codegen`
- * KSP processor scans the build for `@KonduitAppService`-annotated
+ * [KeliverAppServiceAdapter] subclass. The `keliver-treehouse-codegen`
+ * KSP processor scans the build for `@KeliverAppService`-annotated
  * interfaces and emits a `Generated<Name>Adapter` open class
  * implementing the full [Zipline #765](https://github.com/cashapp/zipline/issues/765)
  * workaround.
@@ -16,7 +16,7 @@ package dev.keliver.treehouse
  * to a tiny companion-object stub on the interface itself:
  *
  * ```kotlin
- * @KonduitAppService
+ * @KeliverAppService
  * interface MyAppService : AppService {
  *   fun launch(): ZiplineTreehouseUi
  *
@@ -54,4 +54,4 @@ package dev.keliver.treehouse
  */
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)
-public annotation class KonduitAppService
+public annotation class KeliverAppService

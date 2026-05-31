@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public class ZiplineShapesPlugin : Plugin<Project> {
     ) { task ->
       task.group = VERIFICATION_GROUP
       task.description =
-        "Reject ZiplineService methods with function-typed parameters (Konduit KNOWN_BUGS U11)."
+        "Reject ZiplineService methods with function-typed parameters (Keliver KNOWN_BUGS U11)."
       // Default: every .kt file under src/ — covers commonMain,
       // commonTest, platform source sets. The task's body skips files
       // that don't mention ZiplineService at all, so the wide net is

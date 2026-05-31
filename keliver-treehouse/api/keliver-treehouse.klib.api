@@ -6,8 +6,8 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-treehouse>
-open annotation class dev.keliver.treehouse/KonduitAppService : kotlin/Annotation { // dev.keliver.treehouse/KonduitAppService|null[0]
-    constructor <init>() // dev.keliver.treehouse/KonduitAppService.<init>|<init>(){}[0]
+open annotation class dev.keliver.treehouse/KeliverAppService : kotlin/Annotation { // dev.keliver.treehouse/KeliverAppService|null[0]
+    constructor <init>() // dev.keliver.treehouse/KeliverAppService.<init>|<init>(){}[0]
 }
 
 abstract interface dev.keliver.treehouse/AppLifecycle : app.cash.zipline/ZiplineService { // dev.keliver.treehouse/AppLifecycle|null[0]
@@ -80,13 +80,13 @@ abstract interface dev.keliver.treehouse/ZiplineTreehouseUi : app.cash.zipline/Z
     final object Companion // dev.keliver.treehouse/ZiplineTreehouseUi.Companion|null[0]
 }
 
-abstract class <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/KonduitAppServiceAdapter : app.cash.zipline.internal.bridge/ZiplineServiceAdapter<#A> { // dev.keliver.treehouse/KonduitAppServiceAdapter|null[0]
-    constructor <init>(kotlin.collections/List<kotlinx.serialization/KSerializer<*>>, kotlin/String) // dev.keliver.treehouse/KonduitAppServiceAdapter.<init>|<init>(kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;kotlin.String){}[0]
+abstract class <#A: dev.keliver.treehouse/AppService> dev.keliver.treehouse/KeliverAppServiceAdapter : app.cash.zipline.internal.bridge/ZiplineServiceAdapter<#A> { // dev.keliver.treehouse/KeliverAppServiceAdapter|null[0]
+    constructor <init>(kotlin.collections/List<kotlinx.serialization/KSerializer<*>>, kotlin/String) // dev.keliver.treehouse/KeliverAppServiceAdapter.<init>|<init>(kotlin.collections.List<kotlinx.serialization.KSerializer<*>>;kotlin.String){}[0]
 
-    final val serialName // dev.keliver.treehouse/KonduitAppServiceAdapter.serialName|{}serialName[0]
-        final fun <get-serialName>(): kotlin/String // dev.keliver.treehouse/KonduitAppServiceAdapter.serialName.<get-serialName>|<get-serialName>(){}[0]
-    final val serializers // dev.keliver.treehouse/KonduitAppServiceAdapter.serializers|{}serializers[0]
-        final fun <get-serializers>(): kotlin.collections/List<kotlinx.serialization/KSerializer<*>> // dev.keliver.treehouse/KonduitAppServiceAdapter.serializers.<get-serializers>|<get-serializers>(){}[0]
+    final val serialName // dev.keliver.treehouse/KeliverAppServiceAdapter.serialName|{}serialName[0]
+        final fun <get-serialName>(): kotlin/String // dev.keliver.treehouse/KeliverAppServiceAdapter.serialName.<get-serialName>|<get-serialName>(){}[0]
+    final val serializers // dev.keliver.treehouse/KeliverAppServiceAdapter.serializers|{}serializers[0]
+        final fun <get-serializers>(): kotlin.collections/List<kotlinx.serialization/KSerializer<*>> // dev.keliver.treehouse/KeliverAppServiceAdapter.serializers.<get-serializers>|<get-serializers>(){}[0]
 }
 
 final class dev.keliver.treehouse/StateSnapshot { // dev.keliver.treehouse/StateSnapshot|null[0]

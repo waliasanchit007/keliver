@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import kotlinx.coroutines.SupervisorJob
  * automatically when the hosting `@Composable` leaves the tree).
  *
  * Mental model: matches Android's `ViewModel` API surface as closely as the
- * Konduit guest environment allows. The differences vs. Android:
+ * Keliver guest environment allows. The differences vs. Android:
  *
  *  - No configuration-change survival — the guest re-runs the whole bundle.
  *  - No `NavBackStackEntry`-scoped lifetime — the scope is tied to the
@@ -36,7 +36,7 @@ import kotlinx.coroutines.SupervisorJob
  * ```
  * class QuotesViewModel(
  *     private val quotes: HostQuotesProvider,
- * ) : KonduitViewModel() {
+ * ) : KeliverViewModel() {
  *     val state = MutableStateFlow<List<Quote>>(emptyList())
  *     init {
  *         viewModelScope.launch {
@@ -46,12 +46,12 @@ import kotlinx.coroutines.SupervisorJob
  * }
  * ```
  */
-public abstract class KonduitViewModel {
+public abstract class KeliverViewModel {
   private val supervisor: Job = SupervisorJob()
 
   /**
    * Coroutine scope that survives recomposition and cancels when [onCleared]
-   * runs. Default dispatcher is [Dispatchers.Main], which in the Konduit guest
+   * runs. Default dispatcher is [Dispatchers.Main], which in the Keliver guest
    * maps to the Zipline dispatcher (QuickJS thread).
    */
   public val viewModelScope: CoroutineScope = CoroutineScope(supervisor + Dispatchers.Main)
@@ -82,11 +82,11 @@ public abstract class KonduitViewModel {
 
 /**
  * Compose entry point. Constructs the view model on first call, returns the
- * same instance across recompositions, and runs [KonduitViewModel.onCleared]
+ * same instance across recompositions, and runs [KeliverViewModel.onCleared]
  * when the hosting `@Composable` leaves the tree (or when [key] changes).
  *
  * The factory lambda is the dependency-wiring point — pass host service
- * handles, your `KonduitHttp` instance, etc.
+ * handles, your `KeliverHttp` instance, etc.
  *
  * [key] is an optional cache-buster: when it changes between recompositions
  * the existing VM is `onCleared`'d and the [factory] runs again. Useful for
@@ -106,7 +106,7 @@ public abstract class KonduitViewModel {
  * ```
  */
 @Composable
-public inline fun <reified VM : KonduitViewModel> keliverViewModel(
+public inline fun <reified VM : KeliverViewModel> keliverViewModel(
   key: Any? = null,
   crossinline factory: () -> VM,
 ): VM {

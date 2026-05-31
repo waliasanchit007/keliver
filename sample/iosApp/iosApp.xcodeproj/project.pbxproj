@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		669975D820EE6B116C3BD971 /* KonduitSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KonduitSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		669975D820EE6B116C3BD971 /* KeliverSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeliverSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		FCDC4C31FFBCFBC48652D283 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				669975D820EE6B116C3BD971 /* KonduitSample.app */,
+				669975D820EE6B116C3BD971 /* KeliverSample.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = 669975D820EE6B116C3BD971 /* KonduitSample.app */;
+			productReference = 669975D820EE6B116C3BD971 /* KeliverSample.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

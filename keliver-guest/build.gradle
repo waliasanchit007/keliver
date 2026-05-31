@@ -1,4 +1,4 @@
-// Guest-side facade module — re-exports the public Konduit API surface
+// Guest-side facade module — re-exports the public Keliver API surface
 // that every Zipline guest module needs so adopters can depend on a
 // single `dev.keliver:keliver-guest` artifact instead of wiring the
 // generator + runtime modules manually. See PUBLIC_LAUNCH_ROADMAP.md
@@ -39,31 +39,31 @@ kotlin {
         api projects.keliverTreehouseGuest
         api projects.keliverTreehouseGuestCompose
 
-        // ViewModel helper — `KonduitViewModel` base + `keliverViewModel { }`
+        // ViewModel helper — `KeliverViewModel` base + `keliverViewModel { }`
         // Compose entry point. See issue #6.
         api projects.keliverVm
 
-        // HTTP shim — KonduitHttp typed wrapper + HostHttpProvider
+        // HTTP shim — KeliverHttp typed wrapper + HostHttpProvider
         // ZiplineService interface. Guest calls REST endpoints through
         // a single host-bound service instead of N per-endpoint
         // services. See issue #7.
         api projects.keliverHttp
 
-        // Key/value persistence shim — `KonduitStorage` typed wrapper +
+        // Key/value persistence shim — `KeliverStorage` typed wrapper +
         // `HostStorage` ZiplineService interface. See issue #10.
         api projects.keliverStorage
 
-        // Typed navigation — `KonduitNavController` + `KonduitNavHost` +
-        // `currentKonduitNavController`. Replaces the per-app
+        // Typed navigation — `KeliverNavController` + `KeliverNavHost` +
+        // `currentKeliverNavController`. Replaces the per-app
         // `HostNavigator` RPC-per-route pattern with a guest-owned typed
         // back stack. See issue #25.
         api projects.keliverNav
 
-        // HTTP API annotations — @KonduitApi, @GET, @POST, etc. Phase 1
+        // HTTP API annotations — @KeliverApi, @GET, @POST, etc. Phase 1
         // of the Retrofit-style codegen workstream (issue #18). The KSP
         // processor that consumes these is queued for the next dev
         // cycle; the annotations themselves are committed and adopters
-        // can start drafting `@KonduitApi` interfaces today.
+        // can start drafting `@KeliverApi` interfaces today.
         api projects.keliverHttpAnnotations
       }
     }

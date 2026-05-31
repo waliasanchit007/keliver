@@ -1,9 +1,9 @@
 # Change Log
 
-> Konduit's history begins with a fork from CashApp Redwood `0.18.0`.
-> Entries below `0.18.0` are from upstream Redwood. Konduit-only entries
+> Keliver's history begins with a fork from CashApp Redwood `0.18.0`.
+> Entries below `0.18.0` are from upstream Redwood. Keliver-only entries
 > use the `1.0.0-caliclan.N` versioning scheme — see
-> `docs/KONDUIT_PLAN.md` (in the Caliclan repo) for the full versioning
+> `docs/KELIVER_PLAN.md` (in the Caliclan repo) for the full versioning
 > and wire-format compatibility policy.
 
 ## [Unreleased]
@@ -51,7 +51,7 @@ New:
   Production pass exercises the R8/DCE-minified ship path on a
   Pixel 9 emulator (API 37). 0 bugs found. Specifically confirms
   Kotlin/JS DCE does **not** strip the reflectively-loaded
-  `@KonduitAppService` `Companion.Adapter` (Zipline's IR plugin
+  `@KeliverAppService` `Companion.Adapter` (Zipline's IR plugin
   pins it as a retained root) and minification preserves the
   name-based adapter lookup — the highest-risk failure mode for
   the new codegen path in Production. Signed-manifest verification
@@ -62,7 +62,7 @@ New:
   DevoStatus (~120-widget schema, 7+ host services)**. First
   real-world adopter migration: replaced the production
   `ManualSduiAppServiceAdapter.kt` (~95 LoC) with the
-  `@KonduitAppService` annotation + 5-line companion wrapper.
+  `@KeliverAppService` annotation + 5-line companion wrapper.
   End-to-end verified on Pixel 9 emulator: same Zipline RPC
   sequence, all widget categories render, chip-tap recompose
   works. Confirms the processor + runtime helper are
@@ -76,7 +76,7 @@ New:
 
 - `dev.keliver:keliver-treehouse-codegen` — KSP processor that
   emits `Generated<Name>Adapter` open classes for
-  `@KonduitAppService`-annotated interfaces. Closes the second
+  `@KeliverAppService`-annotated interfaces. Closes the second
   half of U12; adopter cost drops to **~5 LoC + zero
   `@file:Suppress`** (a companion-object wrapper on the
   interface itself). The 5 lines are unavoidable: Zipline IR
@@ -93,12 +93,12 @@ New:
 
   Sample migrated as a proof of API: `SampleAppService.kt`
   drops from ~30 LoC + `ManualSampleAppServiceAdapter.kt`
-  (~70 LoC) to a single `@KonduitAppService`-annotated
+  (~70 LoC) to a single `@KeliverAppService`-annotated
   interface with the 5-line companion wrapper. End-to-end
   verified on Pixel 9 emulator (API 37): same Zipline RPC
-  sequence, same "Hello, Konduit!" rendered.
+  sequence, same "Hello, Keliver!" rendered.
 
-- `@KonduitAppService` source-retention annotation in
+- `@KeliverAppService` source-retention annotation in
   `keliver-treehouse` — marker that the codegen processor
   picks up. Zero runtime weight (SOURCE retention).
 
@@ -121,8 +121,8 @@ New:
   upstream issue. See `docs/PERFORMANCE.md` § "Phase 2 known
   limitation" for the full writeup.
 
-- `dev.keliver.treehouse.KonduitAppServiceAdapter<T>` +
-  `keliverReturningFunction()` helper + Konduit-blessed
+- `dev.keliver.treehouse.KeliverAppServiceAdapter<T>` +
+  `keliverReturningFunction()` helper + Keliver-blessed
   typealiases for `OutboundCallHandler` / `OutboundService` —
   cuts the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
   manual-adapter boilerplate from ~95 LoC + 7-entry
@@ -135,12 +135,12 @@ New:
   elimination of the boilerplate) is queued.
 
 - `docs/KNOWN_BUGS.md` U12 — codifies the [Zipline #765](https://github.com/cashapp/zipline/issues/765)
-  manual-adapter requirement that every Konduit `AppService`
+  manual-adapter requirement that every Keliver `AppService`
   subinterface hits. Documents the symptom (`Constructor 'Adapter.<init>'
   can not be called` at QuickJS load), the root cause (Zipline IR
   plugin can't generate adapters for interfaces that transitively
   extend `ZiplineService` via `AppService`), the ~95-line manual
-  workaround, and two possible Konduit-side fix approaches.
+  workaround, and two possible Keliver-side fix approaches.
   Surfaced during the sample app's first end-to-end test run
   ([`sample/TESTING.md`](sample/TESTING.md)).
 
@@ -168,7 +168,7 @@ New:
   Android and iOS case studies.
 
   Ready-made Xcode project at [`sample/iosApp/`](sample/iosApp/)
-  links the `KonduitSampleHost.framework` and runs against the
+  links the `KeliverSampleHost.framework` and runs against the
   same `python3 -m http.server`-served bundle as the Android side.
 
 - `docs/PERFORMANCE.md` + `scripts/measure-baselines.sh` — baseline
@@ -177,7 +177,7 @@ New:
 
   * **Measured today.** APK size (debug 13.4 MB / release 10.8 MB),
     Zipline bundle (Development 2.8 MB / Production 732 KB —
-    *of which Konduit own-code is 12 KB*), iOS framework size,
+    *of which Keliver own-code is 12 KB*), iOS framework size,
     cold + warm build times. Reproduced from `sample/` against
     `1.0.0-caliclan.4-SNAPSHOT`.
 
@@ -204,14 +204,14 @@ New:
   roadmap table.
 
 - `sample/` — standalone Gradle build that's the smallest faithful
-  Konduit setup adopters can copy. Covers every required moving
+  Keliver setup adopters can copy. Covers every required moving
   part: a 2-widget custom `@Schema` (`Box`, `Text`), the four
   codegen modules (widget / modifier / protocol-host /
   protocol-guest), a Kotlin/JS `:guest` bundle, a Compose
   Multiplatform `:host-compose` module producing a
-  `KonduitSampleHost.framework` for iOS, and a thin
+  `KeliverSampleHost.framework` for iOS, and a thin
   `:host-android` Android application shell. The whole thing
-  renders one `Text` widget reading "Hello, Konduit!" — minimal
+  renders one `Text` widget reading "Hello, Keliver!" — minimal
   but end-to-end. Adopters point their Swift app at
   `MainKt.MainViewController()` for iOS; the Android side is a
   standard `MainActivity` + `TreehouseAppFactory(...)`. Folds in
@@ -220,8 +220,8 @@ New:
   runbook + adoption walkthrough.
 
 - `dev.keliver:keliver-http-codegen` — KSP processor that reads
-  `@KonduitApi`-annotated interfaces from `keliver-http-annotations`
-  (Phase 1) and emits a companion `*Impl(KonduitHttp)` class per
+  `@KeliverApi`-annotated interfaces from `keliver-http-annotations`
+  (Phase 1) and emits a companion `*Impl(KeliverHttp)` class per
   interface. Phases 2 + 3 of issue #18; ships the codegen MVP covering
   `@GET`, `@POST`, `@PUT`, `@DELETE`, `@Path`, `@Query`, `@Body`,
   `@Header`, and `@HeaderMap`. Adopter integration:
@@ -238,7 +238,7 @@ New:
   ```
 
   The processor validates:
-  - `@KonduitApi` only on interfaces (rejects classes)
+  - `@KeliverApi` only on interfaces (rejects classes)
   - All methods must be `suspend`
   - Exactly one HTTP-method annotation per method
   - `@Body` only on `@POST` / `@PUT`; rejected on `@GET` / `@DELETE`
@@ -254,10 +254,10 @@ New:
   that drops null values before insertion — keeps the wire-level
   `Map<String, String>` invariant on `HttpRequest.headers`.
 
-  Generated code uses inline + reified KonduitHttp helpers
+  Generated code uses inline + reified KeliverHttp helpers
   (`http.get<Res>(path, query, headers)`, `http.post(path, body, ...)`
   etc.), so JSON serialization picks up the adopter's
-  `KonduitHttp.json` configuration without extra wiring. Auto-service
+  `KeliverHttp.json` configuration without extra wiring. Auto-service
   registration via `dev.zacsweers.autoservice:auto-service-ksp` — no
   manual META-INF/services entry needed.
 
@@ -289,13 +289,13 @@ New:
   the task type directly.
 
 - `dev.keliver:keliver-http-annotations` — Retrofit-style HTTP API
-  annotations (`@KonduitApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`,
+  annotations (`@KeliverApi`, `@GET`, `@POST`, `@PUT`, `@DELETE`,
   `@Path`, `@Query`, `@Body`, `@Header`, `@HeaderMap`). Phase 1 of
   the codegen workstream from issue #18; ships the annotation API
   surface so adopters can preview the shape and start drafting
-  `@KonduitApi` interfaces today. All annotations are `SOURCE`
+  `@KeliverApi` interfaces today. All annotations are `SOURCE`
   retention — zero runtime weight. The KSP processor that consumes
-  them and generates `*Impl(http: KonduitHttp)` classes is queued
+  them and generates `*Impl(http: KeliverHttp)` classes is queued
   for the next development cycle — full multi-phase design is in
   `docs/HTTP_API_CODEGEN_DESIGN.md`. Re-exported through
   `dev.keliver:keliver-guest`.
@@ -387,14 +387,14 @@ New:
 
 - `dev.keliver:keliver-nav` — guest-side typed navigation. Replaces
   the per-app `HostNavigator` RPC-per-route pattern with a
-  guest-owned back stack and a `KonduitNavController<R>` API that
+  guest-owned back stack and a `KeliverNavController<R>` API that
   mirrors Compose Navigation ergonomics.
 
   Adopters define routes as a sealed interface (args inline,
-  type-checked at the call site); `rememberKonduitNavController<R>(start)`
-  + `KonduitNavHost(controller) { route -> when … }` is the entire
+  type-checked at the call site); `rememberKeliverNavController<R>(start)`
+  + `KeliverNavHost(controller) { route -> when … }` is the entire
   setup. Nested screens read the controller via
-  `currentKonduitNavController<R>()`.
+  `currentKeliverNavController<R>()`.
 
   Each stack entry is wrapped in its own `SaveableStateHolder` slot,
   so a screen's `rememberSaveable` state survives a navigate-away-
@@ -410,10 +410,10 @@ New:
   `docs/USAGE.md` "Typed navigation in the guest".
 
 Changed:
-- POM metadata for every published artifact now reflects the Konduit fork
+- POM metadata for every published artifact now reflects the Keliver fork
   rather than the upstream Cash App Redwood project. Adopters inspecting
   published artifacts (or any consumers using Maven's POM-driven tooling)
-  see Konduit-branded `<name>`, `<description>`, `<url>`, `<developers>`,
+  see Keliver-branded `<name>`, `<description>`, `<url>`, `<developers>`,
   and `<scm>` instead of inherited `cashapp/redwood` values. License stays
   Apache-2.0. Required cleanup before Maven Central publishing (Phase 5);
   also removes a real source of confusion on GitHub Packages today.
@@ -423,11 +423,11 @@ New:
 - `dev.keliver:keliver-http` — HTTP shim. `HostHttpProvider :
   ZiplineService` is a generic HTTP proxy the host implements once with
   its existing `HttpClient` (Ktor / Retrofit / OkHttp / etc.).
-  `KonduitHttp` is the guest-side typed wrapper exposing `get<Res>`,
+  `KeliverHttp` is the guest-side typed wrapper exposing `get<Res>`,
   `post<Req, Res>`, `put<Req, Res>`, `delete<Res>`, plus empty-body
   helpers `deleteUnit`, `postEmpty<Res>`, `putEmpty<Res>`, and
   `requestRaw`. Built on inline + reified kotlinx-serialization.
-  Non-2xx responses raise `KonduitHttpException(status, body)`.
+  Non-2xx responses raise `KeliverHttpException(status, body)`.
   Adopters replace N per-endpoint `HostXxxProvider` services with
   one host binding plus a typed API class per backend. Wire types
   (`HttpRequest`, `HttpResponse`) are wire-additive — all fields
@@ -440,7 +440,7 @@ New:
   `HostStorage : ZiplineService` is a minimal `get` / `set` / `keys`
   contract the host implements once with its backend of choice
   (`DataStore<Preferences>` on Android, `NSUserDefaults` on iOS, a
-  file-backed JSON blob, an SQLite KV table). `KonduitStorage` is the
+  file-backed JSON blob, an SQLite KV table). `KeliverStorage` is the
   guest-side typed wrapper: `suspend inline fun <reified T> get(key)`
   / `set(key, value)` / `remove(key)` / `keys(prefix)`, with values
   round-tripping through kotlinx-serialization. Closes the common need
@@ -451,7 +451,7 @@ New:
 
 - `docs/MIGRATION_FROM_REDWOOD.md` — migration guide for teams moving
   from upstream Cash App Redwood (any version up to `0.18.0`) to
-  Konduit. Covers what's identical (wire format, runtime semantics,
+  Keliver. Covers what's identical (wire format, runtime semantics,
   type names), what's renamed (Maven coordinates, Gradle plugin IDs,
   package paths), what's removed (Phase 1.5 View / UIView / DOM
   module trim), what's added (production-hardening helpers, facades,
@@ -459,9 +459,9 @@ New:
   surface, and a step-by-step migration checklist. Closes #13.
 
 - `dev.keliver:keliver-console` — standard host-bound logging service.
-  `KonduitConsole : ZiplineService` is the canonical `fun log(level,
+  `KeliverConsole : ZiplineService` is the canonical `fun log(level,
   message)` contract every adopter previously rewrote from scratch.
-  `DefaultKonduitConsole(tag)` ships as a reference impl that emits
+  `DefaultKeliverConsole(tag)` ships as a reference impl that emits
   `"[$tag/$level] $message"` via `println` (lands on Logcat on Android,
   the Xcode console on iOS, stdout on JVM). Subclass and override
   `output(line)` to route through `android.util.Log`, `os_log`, SLF4J,
@@ -470,7 +470,7 @@ New:
 
 - `dev.keliver:keliver-image` — one-line Coil 3 setup. Closes the
   long-standing KNOWN_BUGS U5 silent-failure shape (blank AsyncImage
-  with no exception). `KonduitImage.installSingleton()` registers a
+  with no exception). `KeliverImage.installSingleton()` registers a
   platform-appropriate Coil 3 `ImageLoader` singleton with a default
   network fetcher: OkHttp on Android / JVM (zero new transitive
   weight — OkHttp ships with Zipline anyway), Ktor 3 + Darwin engine
@@ -483,7 +483,7 @@ New:
   AsyncImage", `docs/KNOWN_BUGS.md` U5.
 
 - `dev.keliver:keliver-vm` — guest-side ViewModel helper module.
-  `KonduitViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
+  `KeliverViewModel` base class owns a `viewModelScope` (`SupervisorJob` +
   `Dispatchers.Main`, the Zipline dispatcher) and an `onCleared` hook;
   the `keliverViewModel { factory() }` `@Composable` entry point
   constructs the VM on first composition, returns the same instance
@@ -497,7 +497,7 @@ New:
 - `dev.keliver:keliver-host` and `dev.keliver:keliver-guest` —
   facade modules that aggregate the public adopter-facing surface
   through `api` dependencies. A host module can drop its 8-line
-  Konduit dependency block (`keliver-treehouse-host`,
+  Keliver dependency block (`keliver-treehouse-host`,
   `keliver-treehouse-host-composeui`, `keliver-compose`,
   `keliver-widget`, `keliver-runtime`, `keliver-protocol`,
   `keliver-protocol-host`, `keliver-treehouse`, plus `zipline` and
@@ -509,7 +509,7 @@ New:
   adoption snippets.
 
 Changed:
-- `KonduitViewModel.onCleared()` visibility narrowed from `public open`
+- `KeliverViewModel.onCleared()` visibility narrowed from `public open`
   to `protected open`. The Compose helper invokes it through a
   framework-internal trampoline (`@PublishedApi internal
   clearInternal()`), matching the encapsulation pattern Android's
@@ -611,7 +611,7 @@ Fixed:
 
 ## [1.0.0-caliclan.2] - 2026-04-30
 
-Phase 1.5 cleanup. Konduit now ships only Compose Multiplatform-relevant
+Phase 1.5 cleanup. Keliver now ships only Compose Multiplatform-relevant
 modules.
 
 Removed:
@@ -630,7 +630,7 @@ consumers can upgrade transparently.
 
 ## [1.0.0-caliclan.1] - 2026-04-29
 
-Initial Konduit fork from CashApp Redwood `0.18.0`. No functional
+Initial Keliver fork from CashApp Redwood `0.18.0`. No functional
 changes from upstream — only renames + group/version reset.
 
 Changed:

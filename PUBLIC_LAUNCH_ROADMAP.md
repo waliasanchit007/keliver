@@ -1,6 +1,6 @@
-# Konduit — Public OSS Launch Roadmap
+# Keliver — Public OSS Launch Roadmap
 
-Tracks the work to take Konduit from "private fork shipping to Caliclan's own
+Tracks the work to take Keliver from "private fork shipping to Caliclan's own
 apps" → "public OSS framework adoptable by external Compose Multiplatform
 teams."
 
@@ -18,14 +18,14 @@ This is a living document. Check items off as they land.
 These are things the integration team can ship without external dependencies
 or GitHub-org changes.
 
-- [ ] Rewrite `README.md` for Konduit (currently the upstream Cash App Redwood
-      README — never rebranded). Must cover: what Konduit is, why a fork, what
+- [ ] Rewrite `README.md` for Keliver (currently the upstream Cash App Redwood
+      README — never rebranded). Must cover: what Keliver is, why a fork, what
       it gives you, the wire-format / API stability commitments, a 30-second
       "what does adoption look like" code sample.
 - [ ] Move `docs/USAGE.md`, `docs/KNOWN_BUGS.md`, `docs/CHANGELOG.md`,
       `docs/HANDOVER.md` from the [ServerDrivenUI reference repo](https://github.com/waliasanchit007/ServerDrivenUI)
-      into the Konduit fork so the docs travel with the artifact. (Keep
-      ServerDrivenUI copies as redirects or delete entirely once the Konduit
+      into the Keliver fork so the docs travel with the artifact. (Keep
+      ServerDrivenUI copies as redirects or delete entirely once the Keliver
       copies are canonical.)
 - [ ] `CONTRIBUTING.md` — how to file an issue, how to open a PR, the local
       dev loop, the test policy.
@@ -36,7 +36,7 @@ or GitHub-org changes.
 
 ## Phase 2 — Compose Facade (one-PR API surface reduction) — ✅ landed
 
-Adopters previously imported from 8+ Konduit modules (`keliver-treehouse-host`,
+Adopters previously imported from 8+ Keliver modules (`keliver-treehouse-host`,
 `keliver-treehouse-host-composeui`, `keliver-compose`, `keliver-widget`,
 `keliver-runtime`, `keliver-protocol`, `keliver-protocol-host`,
 `keliver-treehouse`) plus the two Zipline artifacts. This is friction
@@ -62,7 +62,7 @@ DevoStatus currently has no iOS UI. "iOS works" is backed only by
 `compileKotlinIosSimulatorArm64` passing — no real-world end-to-end. The
 first external adopter targeting iOS will hit something.
 
-- [ ] Wire DevoStatus's iOS host: `KonduitIosHost.kt` already exists in
+- [ ] Wire DevoStatus's iOS host: `KeliverIosHost.kt` already exists in
       `keliver-host/src/iosMain` but doesn't have a SwiftUI / UIKit entry
       point. Add a minimal iOS app that mounts at least the Quotes tab.
 - [ ] Verify the full host-service stack on iPhone simulator: HostConsole,
@@ -74,10 +74,10 @@ first external adopter targeting iOS will hit something.
 ## Phase 4 — Public sample app
 
 External adopters need a runnable reference. DevoStatus is private, so a
-**public** Konduit-Sample needs to exist.
+**public** Keliver-Sample needs to exist.
 
 - [ ] Extract a 1–2 screen sample from DevoStatus into a new public repo
-      (`waliasanchit007/keliver-sample`) OR commit it inside the Konduit
+      (`waliasanchit007/keliver-sample`) OR commit it inside the Keliver
       repo under `sample/`. Latter is simpler for discoverability.
 - [ ] Sample covers: host setup (Android + iOS), `HostConsole`, one provider
       service, one navigator callback, one screen with widgets.
@@ -105,7 +105,7 @@ groupId changes. Full walkthrough in
 - [ ] **USER ACTION**: Generate a GPG signing key and add to keyserver.
       Add the private key + passphrase as GitHub repo secrets.
 - [ ] **Implementation**: replace the inherited Cash App Redwood POM
-      metadata (`<url>`, `<scm>`, `<developers>`) with Konduit /
+      metadata (`<url>`, `<scm>`, `<developers>`) with Keliver /
       waliasanchit007 values — Maven Central rejects POMs that don't
       match the publishing namespace.
 - [ ] Update `publish.yml` GHA workflow to target Maven Central in addition
@@ -120,7 +120,7 @@ groupId changes. Full walkthrough in
 
 ## Phase 6 — Public visibility (user-action gated)
 
-- [ ] **USER ACTION**: Flip Konduit fork visibility from **private → public**
+- [ ] **USER ACTION**: Flip Keliver fork visibility from **private → public**
       via GitHub repo settings. Triple-check there are no secrets, internal
       paths, or proprietary context in commit history (we don't think there
       are, but worth one careful pass).
@@ -150,12 +150,12 @@ onboarding.
 
 ## Phase 8 — Migration guide from Cash App Redwood
 
-Many CMP teams have evaluated upstream Redwood (which is sunsetted). Konduit
+Many CMP teams have evaluated upstream Redwood (which is sunsetted). Keliver
 is the natural fork they should consider — but the migration story has to be
 spelled out.
 
 - [ ] Cataloging of API differences between upstream Redwood `0.18.0` (the
-      fork point) and Konduit `1.0.0-caliclan.3+`. Most are renames
+      fork point) and Keliver `1.0.0-caliclan.3+`. Most are renames
       (`app.cash.redwood.*` → `dev.keliver.*`); some are deliberate trims
       (removed View/UIView/DOM modules in `1.0.0-caliclan.2`).
 - [ ] A scripted rename helper for adopters with existing Redwood codebases.

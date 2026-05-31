@@ -1,5 +1,5 @@
 // HTTP shim module — wire types + HostHttpProvider ZiplineService +
-// guest-side KonduitHttp typed wrapper. Adopters point KonduitHttp at
+// guest-side KeliverHttp typed wrapper. Adopters point KeliverHttp at
 // their own Ktor / Retrofit / OkHttp client wrapped as a
 // HostHttpProvider, and get typed HTTP calls from the guest without
 // writing N per-endpoint HostXxxProvider services. See issue #7.

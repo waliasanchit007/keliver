@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http.codegen
@@ -23,7 +23,7 @@ import org.junit.Test
  * generated source file's content (for happy-path emission).
  */
 @OptIn(ExperimentalCompilerApi::class)
-class KonduitHttpCodegenTest {
+class KeliverHttpCodegenTest {
 
   private fun compile(source: SourceFile): Pair<JvmCompilationResult, File> {
     val compilation = KotlinCompilation().apply {
@@ -31,11 +31,11 @@ class KonduitHttpCodegenTest {
       inheritClassPath = true
       messageOutputStream = System.out
       // Match keliver-http-codegen's main JVM target so the generated
-      // Impl's inline calls into KonduitHttp aren't rejected as
+      // Impl's inline calls into KeliverHttp aren't rejected as
       // "JVM target 11 cannot inline into JVM target 1.8".
       jvmTarget = "11"
       configureKsp {
-        symbolProcessorProviders.add(KonduitHttpCodegenProvider())
+        symbolProcessorProviders.add(KeliverHttpCodegenProvider())
       }
     }
     val result = compilation.compile()
@@ -61,7 +61,7 @@ class KonduitHttpCodegenTest {
 
           import dev.keliver.http.api.*
 
-          @KonduitApi
+          @KeliverApi
           interface QuotesApi {
               @GET("/quotes")
               suspend fun list(@Query("filter") filter: String?): List<String>
@@ -93,7 +93,7 @@ class KonduitHttpCodegenTest {
           @Serializable data class NewQuote(val text: String)
           @Serializable data class Quote(val id: Int, val text: String)
 
-          @KonduitApi
+          @KeliverApi
           interface QuotesApi {
               @POST("/quotes")
               suspend fun create(@Body body: NewQuote): Quote
@@ -118,7 +118,7 @@ class KonduitHttpCodegenTest {
 
           import dev.keliver.http.api.*
 
-          @KonduitApi
+          @KeliverApi
           interface QuotesApi {
               @GET("/users/{userId}/quotes/{quoteId}")
               suspend fun get(
@@ -147,7 +147,7 @@ class KonduitHttpCodegenTest {
 
           import dev.keliver.http.api.*
 
-          @KonduitApi
+          @KeliverApi
           interface QuotesApi {
               @GET("/quotes")
               suspend fun list(@HeaderMap headers: Map<String, String>): List<String>
@@ -170,7 +170,7 @@ class KonduitHttpCodegenTest {
 
           import dev.keliver.http.api.*
 
-          @KonduitApi
+          @KeliverApi
           interface QuotesApi {
               @GET("/quotes")
               suspend fun list(@HeaderMap headers: Map<String, String?>): List<String>
@@ -194,7 +194,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           class NotAnInterface {
               @GET("/x") suspend fun foo(): String = ""
           }
@@ -202,7 +202,7 @@ class KonduitHttpCodegenTest {
       ),
     )
     assertThat(result.exitCode).isEqualTo(KotlinCompilation.ExitCode.COMPILATION_ERROR)
-    assertThat(result.messages).contains("@KonduitApi can only be applied to interfaces")
+    assertThat(result.messages).contains("@KeliverApi can only be applied to interfaces")
   }
 
   @Test
@@ -213,7 +213,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           interface Bad {
               @GET("/x") fun foo(): String
           }
@@ -232,7 +232,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           interface Bad {
               @GET("/x") suspend fun foo(@Body body: String): String
           }
@@ -251,7 +251,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           interface Bad {
               @GET("/users/{userId}") suspend fun foo(): String
           }
@@ -270,7 +270,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           interface Bad {
               @GET("/quotes") suspend fun foo(@Path("userId") userId: String): String
           }
@@ -289,7 +289,7 @@ class KonduitHttpCodegenTest {
         """
           package com.example
           import dev.keliver.http.api.*
-          @KonduitApi
+          @KeliverApi
           interface Bad {
               @GET("/x") suspend fun foo(@HeaderMap h: Map<String, Int>): String
           }

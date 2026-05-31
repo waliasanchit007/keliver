@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http
@@ -20,7 +20,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class KonduitHttpTest {
+class KeliverHttpTest {
 
   @Serializable
   data class Quote(val id: Int, val text: String)
@@ -43,7 +43,7 @@ class KonduitHttpTest {
     val json = Json
     val quotes = listOf(Quote(1, "First"), Quote(2, "Second"))
     val stub = StubProvider(HttpResponse(200, json.encodeToString(quotes)))
-    val http = KonduitHttp(stub, json)
+    val http = KeliverHttp(stub, json)
 
     val result: List<Quote> = http.get("/quotes", mapOf("limit" to "20"))
 
@@ -59,7 +59,7 @@ class KonduitHttpTest {
     val newQuote = NewQuote("Hello")
     val created = Quote(99, "Hello")
     val stub = StubProvider(HttpResponse(201, json.encodeToString(created)))
-    val http = KonduitHttp(stub, json)
+    val http = KeliverHttp(stub, json)
 
     val result: Quote = http.post("/quotes", newQuote)
 
@@ -71,7 +71,7 @@ class KonduitHttpTest {
   @Test
   fun post_sets_application_json_content_type_by_default() = runTest {
     val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     http.post<NewQuote, Quote>("/quotes", NewQuote("x"))
 
@@ -81,7 +81,7 @@ class KonduitHttpTest {
   @Test
   fun post_allows_adopter_to_override_content_type() = runTest {
     val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     http.post<NewQuote, Quote>(
       "/quotes",
@@ -98,7 +98,7 @@ class KonduitHttpTest {
   @Test
   fun post_passes_query_parameters_through() = runTest {
     val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     http.post<NewQuote, Quote>(
       "/quotes",
@@ -112,7 +112,7 @@ class KonduitHttpTest {
   @Test
   fun put_sets_application_json_content_type_by_default() = runTest {
     val stub = StubProvider(HttpResponse(200, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     http.put<NewQuote, Quote>("/quotes/1", NewQuote("x"))
 
@@ -123,7 +123,7 @@ class KonduitHttpTest {
   @Test
   fun deleteUnit_succeeds_on_2xx_with_empty_body() = runTest {
     val stub = StubProvider(HttpResponse(204, ""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     http.deleteUnit("/quotes/1")
 
@@ -134,9 +134,9 @@ class KonduitHttpTest {
   @Test
   fun deleteUnit_throws_on_4xx() = runTest {
     val stub = StubProvider(HttpResponse(403, "Forbidden"))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
-    val ex = assertFailsWith<KonduitHttpException> {
+    val ex = assertFailsWith<KeliverHttpException> {
       http.deleteUnit("/quotes/1")
     }
     assertEquals(403, ex.status)
@@ -146,7 +146,7 @@ class KonduitHttpTest {
   @Test
   fun postEmpty_sends_no_body_and_parses_typed_response() = runTest {
     val stub = StubProvider(HttpResponse(201, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     val result: Quote = http.postEmpty("/quotes/regenerate")
 
@@ -158,7 +158,7 @@ class KonduitHttpTest {
   @Test
   fun putEmpty_sends_no_body_and_parses_typed_response() = runTest {
     val stub = StubProvider(HttpResponse(200, """{"id":1,"text":"x"}"""))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     val result: Quote = http.putEmpty("/quotes/1/touch")
 
@@ -168,11 +168,11 @@ class KonduitHttpTest {
   }
 
   @Test
-  fun non_2xx_throws_KonduitHttpException_with_status_and_body() = runTest {
+  fun non_2xx_throws_KeliverHttpException_with_status_and_body() = runTest {
     val stub = StubProvider(HttpResponse(404, "Not found"))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
-    val ex = assertFailsWith<KonduitHttpException> {
+    val ex = assertFailsWith<KeliverHttpException> {
       http.get<Quote>("/quotes/999")
     }
 
@@ -181,10 +181,10 @@ class KonduitHttpTest {
   }
 
   @Test
-  fun server_error_5xx_also_raises_KonduitHttpException() = runTest {
+  fun server_error_5xx_also_raises_KeliverHttpException() = runTest {
     val stub = StubProvider(HttpResponse(503, "Service Unavailable"))
-    val http = KonduitHttp(stub)
-    val ex = assertFailsWith<KonduitHttpException> {
+    val http = KeliverHttp(stub)
+    val ex = assertFailsWith<KeliverHttpException> {
       http.get<Quote>("/quotes/1")
     }
     assertEquals(503, ex.status)
@@ -193,7 +193,7 @@ class KonduitHttpTest {
   @Test
   fun requestRaw_returns_response_for_non_2xx_without_throwing() = runTest {
     val stub = StubProvider(HttpResponse(404, "Not found"))
-    val http = KonduitHttp(stub)
+    val http = KeliverHttp(stub)
 
     val response = http.requestRaw(HttpRequest("GET", "/quotes/999"))
 
@@ -206,7 +206,7 @@ class KonduitHttpTest {
     val strictJson = Json { ignoreUnknownKeys = false }
     // Response includes an extra field not in Quote — strict Json should fail.
     val stub = StubProvider(HttpResponse(200, """{"id":1,"text":"x","extra":"surprise"}"""))
-    val http = KonduitHttp(stub, strictJson)
+    val http = KeliverHttp(stub, strictJson)
 
     assertFailsWith<Exception> {
       http.get<Quote>("/quotes/1")
@@ -214,7 +214,7 @@ class KonduitHttpTest {
   }
 
   @Test
-  fun cancellation_propagates_through_KonduitHttp_to_provider() = runTest {
+  fun cancellation_propagates_through_KeliverHttp_to_provider() = runTest {
     val started = CompletableDeferred<Unit>()
     val cancelled = CompletableDeferred<Unit>()
     val blockingProvider = object : HostHttpProvider {
@@ -227,7 +227,7 @@ class KonduitHttpTest {
         }
       }
     }
-    val http = KonduitHttp(blockingProvider)
+    val http = KeliverHttp(blockingProvider)
 
     val job = launch(Dispatchers.Unconfined) {
       http.get<Quote>("/quotes/1")

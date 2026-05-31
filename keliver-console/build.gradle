@@ -1,5 +1,5 @@
-// Host-bound logging service — KonduitConsole interface + a
-// no-frills DefaultKonduitConsole using `println`. Lets every adopter
+// Host-bound logging service — KeliverConsole interface + a
+// no-frills DefaultKeliverConsole using `println`. Lets every adopter
 // drop a `class FooHostConsole : ZiplineService { fun log(...) }`
 // copy/paste. See issue #27.
 

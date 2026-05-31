@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http.codegen
@@ -32,21 +32,21 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 
 /**
- * Reads `@KonduitApi`-annotated interfaces and emits a companion
- * `*Impl(KonduitHttp)` class per interface backed by the typed
- * helpers on `dev.keliver.http.KonduitHttp`.
+ * Reads `@KeliverApi`-annotated interfaces and emits a companion
+ * `*Impl(KeliverHttp)` class per interface backed by the typed
+ * helpers on `dev.keliver.http.KeliverHttp`.
  *
  * Design locked in `docs/HTTP_API_CODEGEN_DESIGN.md`. Phase 2 of
  * issue #18.
  */
-public class KonduitHttpCodegen(
+public class KeliverHttpCodegen(
   private val codeGenerator: CodeGenerator,
   private val logger: KSPLogger,
 ) : SymbolProcessor {
 
   override fun process(resolver: Resolver): List<KSAnnotated> {
     val symbols = resolver
-      .getSymbolsWithAnnotation(FqNames.KONDUIT_API)
+      .getSymbolsWithAnnotation(FqNames.KELIVER_API)
       .filterIsInstance<KSClassDeclaration>()
 
     val deferred = mutableListOf<KSAnnotated>()
@@ -64,7 +64,7 @@ public class KonduitHttpCodegen(
         logger.error(e.message.orEmpty(), e.symbol)
       } catch (e: Exception) {
         logger.error(
-          "Unhandled error generating @KonduitApi impl for " +
+          "Unhandled error generating @KeliverApi impl for " +
             "${ksClass.qualifiedName?.asString()}: ${e.message}",
           ksClass,
         )
@@ -79,7 +79,7 @@ public class KonduitHttpCodegen(
   private fun processInterface(ksClass: KSClassDeclaration) {
     if (ksClass.classKind != ClassKind.INTERFACE) {
       throw ProcessingException(
-        "@KonduitApi can only be applied to interfaces. " +
+        "@KeliverApi can only be applied to interfaces. " +
           "Found: ${ksClass.classKind.name.lowercase()} ${ksClass.qualifiedName?.asString()}.",
         ksClass,
       )
@@ -91,13 +91,13 @@ public class KonduitHttpCodegen(
 
     val interfaceType = ksClass.toClassName()
 
-    val httpProp = PropertySpec.builder("http", FqNames.KONDUIT_HTTP)
+    val httpProp = PropertySpec.builder("http", FqNames.KELIVER_HTTP)
       .initializer("http")
       .addModifiers(KModifier.PRIVATE)
       .build()
 
     val ctorSpec = FunSpec.constructorBuilder()
-      .addParameter("http", FqNames.KONDUIT_HTTP)
+      .addParameter("http", FqNames.KELIVER_HTTP)
       .build()
 
     val typeSpec = TypeSpec.classBuilder(implName)
@@ -140,9 +140,9 @@ public class KonduitHttpCodegen(
 
     if (Modifier.SUSPEND !in fn.modifiers) {
       throw ProcessingException(
-        "@KonduitApi method `${iface.qualifiedName?.asString()}.$methodName` " +
+        "@KeliverApi method `${iface.qualifiedName?.asString()}.$methodName` " +
           "must be `suspend`. The codegen only routes through the suspending " +
-          "helpers on KonduitHttp (get / post / put / delete).",
+          "helpers on KeliverHttp (get / post / put / delete).",
         fn,
       )
     }
@@ -151,7 +151,7 @@ public class KonduitHttpCodegen(
     if (httpAnnotations.size != 1) {
       val present = httpAnnotations.map { it.shortName.asString() }
       throw ProcessingException(
-        "@KonduitApi method `${iface.qualifiedName?.asString()}.$methodName` " +
+        "@KeliverApi method `${iface.qualifiedName?.asString()}.$methodName` " +
           "must have exactly one HTTP-method annotation " +
           "(@GET, @POST, @PUT, or @DELETE). Found: $present.",
         fn,
@@ -174,7 +174,7 @@ public class KonduitHttpCodegen(
     }
     if (bodyParams.size > 1) {
       throw ProcessingException(
-        "@KonduitApi method `${iface.qualifiedName?.asString()}.$methodName` " +
+        "@KeliverApi method `${iface.qualifiedName?.asString()}.$methodName` " +
           "has multiple @Body parameters; only one is allowed.",
         fn,
       )
@@ -182,7 +182,7 @@ public class KonduitHttpCodegen(
     if (httpVerb in BODY_VERBS && bodyParams.isEmpty()) {
       throw ProcessingException(
         "@$httpVerb method `${iface.qualifiedName?.asString()}.$methodName` " +
-          "has no @Body parameter. Use the raw KonduitHttp.execute API for " +
+          "has no @Body parameter. Use the raw KeliverHttp.execute API for " +
           "body-less POST/PUT, or add a @Body parameter.",
         fn,
       )
@@ -259,7 +259,7 @@ public class KonduitHttpCodegen(
       else -> error("unreachable")
     }
 
-    // For GET<Unit> there's no KonduitHttp helper; emit a raw get<Unit>.
+    // For GET<Unit> there's no KeliverHttp helper; emit a raw get<Unit>.
     val methodCall = if (httpVerb == "GET" && isUnit) "get<kotlin.Unit>" else callTarget
 
     builder.add("return http.$methodCall(\n")

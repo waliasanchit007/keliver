@@ -1,8 +1,8 @@
-// KSP processor that reads @KonduitAppService-annotated interfaces
+// KSP processor that reads @KeliverAppService-annotated interfaces
 // from `keliver-treehouse` and emits Generated<Name>Adapter classes
 // — the full Zipline #765 manual-adapter workaround, lifted out of
 // every adopter's tree. See `docs/KNOWN_BUGS.md` U12 for the
-// background and the helper-only API (KonduitAppServiceAdapter,
+// background and the helper-only API (KeliverAppServiceAdapter,
 // keliverReturningFunction) that this processor builds on top of.
 //
 // Tooling target group — JVM-only, runs at build time. Adopters
@@ -40,8 +40,8 @@ dependencies {
   testImplementation libs.junit
   testImplementation libs.assertk
   testImplementation libs.kotlinCompileTesting.ksp
-  // The compile-testing fixtures reference @KonduitAppService +
-  // AppService + KonduitAppServiceAdapter — all live in
+  // The compile-testing fixtures reference @KeliverAppService +
+  // AppService + KeliverAppServiceAdapter — all live in
   // keliver-treehouse — so it has to be on the test classpath for
   // fixture sources to compile.
   testImplementation projects.keliverTreehouse

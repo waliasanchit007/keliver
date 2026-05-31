@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.sample.benchmarks
@@ -13,7 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Phase 2 of the Konduit performance workstream — cold-start
+ * Phase 2 of the Keliver performance workstream — cold-start
  * latency measurement on the `:host-android` sample.
  *
  * **What this measures.** Wall time from a `pressHome` / cold
@@ -26,7 +26,7 @@ import org.junit.runner.RunWith
  * latency that completes AFTER `MainActivity.onCreate` (Treehouse
  * downloads the manifest + modules asynchronously). For that, see
  * the queued `BundleLoadBenchmark` that watches the
- * `KonduitSample: codeLoadSuccess` log line via UiAutomator.
+ * `KeliverSample: codeLoadSuccess` log line via UiAutomator.
  *
  * **Reproducibility.** Macrobenchmark iterates 5 times by default
  * and reports median + P90 + P99. The numbers vary substantially

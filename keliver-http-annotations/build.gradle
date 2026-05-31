@@ -1,8 +1,8 @@
 // Retrofit-style HTTP API annotations for keliver-http. Adopters
-// annotate a Kotlin interface with @KonduitApi + @GET / @POST / @Path
+// annotate a Kotlin interface with @KeliverApi + @GET / @POST / @Path
 // / @Query / @Body / @Header / @HeaderMap; a KSP processor (queued —
 // see `docs/HTTP_API_CODEGEN_DESIGN.md`) will generate an
-// implementation backed by `dev.keliver.http.KonduitHttp`. Issue #18.
+// implementation backed by `dev.keliver.http.KeliverHttp`. Issue #18.
 //
 // This module ships annotations only — Phase 1 of the codegen
 // workstream. The annotations are SOURCE-retention so they cost

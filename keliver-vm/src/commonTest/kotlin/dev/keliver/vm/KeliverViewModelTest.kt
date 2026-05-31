@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.vm
@@ -15,8 +15,8 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class KonduitViewModelTest {
-  private class TestVM : KonduitViewModel()
+class KeliverViewModelTest {
+  private class TestVM : KeliverViewModel()
 
   @Test
   fun viewModelScope_isActive_initially() {
@@ -53,7 +53,7 @@ class KonduitViewModelTest {
   @Test
   fun subclass_canOverride_onCleared_and_super_still_cancels() {
     var subclassCalled = false
-    val vm = object : KonduitViewModel() {
+    val vm = object : KeliverViewModel() {
       override fun onCleared() {
         subclassCalled = true
         super.onCleared()
@@ -70,7 +70,7 @@ class KonduitViewModelTest {
     // bad practice but the framework shouldn't crash; verify the scope
     // stays active (which is the natural consequence of not cancelling).
     var subclassCalled = false
-    val vm = object : KonduitViewModel() {
+    val vm = object : KeliverViewModel() {
       override fun onCleared() {
         subclassCalled = true
         // Deliberately not calling super.onCleared()

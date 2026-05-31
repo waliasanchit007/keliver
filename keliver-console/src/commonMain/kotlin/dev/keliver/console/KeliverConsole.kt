@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.console
@@ -11,13 +11,13 @@ import app.cash.zipline.ZiplineService
  * surface a message through the host's logging stack (Logcat on Android,
  * `os_log` / `NSLog` on iOS, the JVM logging framework, etc.).
  *
- * Adopters typically bind a single instance of [DefaultKonduitConsole]
+ * Adopters typically bind a single instance of [DefaultKeliverConsole]
  * (or a platform-specific subclass) at startup:
  *
  * ```
  * override suspend fun bindServices(treehouseApp, zipline) {
  *     bindWithTimeout {
- *         zipline.bind<KonduitConsole>("console", retain(DefaultKonduitConsole()))
+ *         zipline.bind<KeliverConsole>("console", retain(DefaultKeliverConsole()))
  *     }
  *     // … other services
  * }
@@ -28,7 +28,7 @@ import app.cash.zipline.ZiplineService
  * `"30"`/`"40"` for syslog parity). Platform-specific impls decide how
  * to route levels to the underlying logger.
  */
-public interface KonduitConsole : ZiplineService {
+public interface KeliverConsole : ZiplineService {
   public fun log(level: String, message: String)
 }
 
@@ -43,9 +43,9 @@ public interface KonduitConsole : ZiplineService {
  * That covers the "I just want to see what the guest is logging"
  * case; production deployments will want platform-specific routing.
  */
-public open class DefaultKonduitConsole(
-  private val tag: String = "Konduit",
-) : KonduitConsole {
+public open class DefaultKeliverConsole(
+  private val tag: String = "Keliver",
+) : KeliverConsole {
   override fun log(level: String, message: String) {
     output("[$tag/$level] $message")
   }

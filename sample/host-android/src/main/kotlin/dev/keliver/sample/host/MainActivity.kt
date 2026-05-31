@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
   }
 
   private companion object {
-    const val TAG = "KonduitSample"
+    const val TAG = "KeliverSample"
   }
 }
 
@@ -164,7 +164,7 @@ private object LoggingEventListener : EventListener() {
   override fun serviceLeaked(name: String) {
     Log.w(TAG, "serviceLeaked name=$name")
   }
-  private const val TAG = "KonduitSample"
+  private const val TAG = "KeliverSample"
 }
 
 object DevConfig {

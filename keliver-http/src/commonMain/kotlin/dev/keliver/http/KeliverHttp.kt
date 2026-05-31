@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http
@@ -15,21 +15,21 @@ import kotlinx.serialization.json.Json
  * Usage:
  *
  * ```
- * val http = KonduitHttp(HostHttpProviderBridge.instance!!)
+ * val http = KeliverHttp(HostHttpProviderBridge.instance!!)
  * val quotes: List<Quote> = http.get("/quotes", mapOf("limit" to "20"))
  * val created: Quote = http.post("/quotes", NewQuote(text = "hello"))
  * ```
  *
- * Non-2xx responses raise [KonduitHttpException]; the raw 4xx / 5xx body is
+ * Non-2xx responses raise [KeliverHttpException]; the raw 4xx / 5xx body is
  * still accessible via [HostHttpProvider.execute] directly if the adopter
  * wants to handle status codes without exceptions.
  *
  * Adopter ergonomics — wrap your endpoints in plain classes that take a
- * `KonduitHttp` in their constructor, the same way Retrofit interfaces are
+ * `KeliverHttp` in their constructor, the same way Retrofit interfaces are
  * grouped per backend:
  *
  * ```
- * class QuotesApi(private val http: KonduitHttp) {
+ * class QuotesApi(private val http: KeliverHttp) {
  *     suspend fun list(filter: String?): List<Quote> =
  *         http.get("/quotes", mapOf("filter" to (filter ?: "")))
  *     suspend fun create(quote: NewQuote): Quote =
@@ -37,19 +37,19 @@ import kotlinx.serialization.json.Json
  * }
  * ```
  */
-public class KonduitHttp(
+public class KeliverHttp(
   public val provider: HostHttpProvider,
   public val json: Json = Json { ignoreUnknownKeys = true },
 ) {
   /**
    * Translate a raw [HttpResponse] into either the response body (for
-   * downstream typed deserialization) or a thrown [KonduitHttpException].
+   * downstream typed deserialization) or a thrown [KeliverHttpException].
    * Exposed `@PublishedApi internal` so the inline helpers below can call it.
    */
   @PublishedApi
   internal fun unwrap(response: HttpResponse): HttpResponse {
     if (response.status !in 200..299) {
-      throw KonduitHttpException(response.status, response.body)
+      throw KeliverHttpException(response.status, response.body)
     }
     return response
   }
@@ -130,7 +130,7 @@ public class KonduitHttp(
 
   /**
    * Execute a DELETE; ignore the response body (treat any 2xx as success,
-   * throw [KonduitHttpException] on non-2xx). Use for endpoints that return
+   * throw [KeliverHttpException] on non-2xx). Use for endpoints that return
    * `204 No Content` or other empty success responses — the typed
    * [delete] would fail trying to deserialize an empty body.
    */

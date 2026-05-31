@@ -35,8 +35,8 @@ open annotation class dev.keliver.http.api/HeaderMap : kotlin/Annotation { // de
     constructor <init>() // dev.keliver.http.api/HeaderMap.<init>|<init>(){}[0]
 }
 
-open annotation class dev.keliver.http.api/KonduitApi : kotlin/Annotation { // dev.keliver.http.api/KonduitApi|null[0]
-    constructor <init>() // dev.keliver.http.api/KonduitApi.<init>|<init>(){}[0]
+open annotation class dev.keliver.http.api/KeliverApi : kotlin/Annotation { // dev.keliver.http.api/KeliverApi|null[0]
+    constructor <init>() // dev.keliver.http.api/KeliverApi.<init>|<init>(){}[0]
 }
 
 open annotation class dev.keliver.http.api/POST : kotlin/Annotation { // dev.keliver.http.api/POST|null[0]

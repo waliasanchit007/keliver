@@ -643,11 +643,11 @@ private fun FirContext.parseModifier(
       // workaround.
       require(!resolvedType.isBasicFunctionType(firSession)) {
         "@Modifier $memberType#$name cannot be a function type. " +
-          "Konduit codegen for lambda-typed modifier properties is broken " +
+          "Keliver codegen for lambda-typed modifier properties is broken " +
           "on Kotlin/JS — the generated `ContextualSerializer(Function0<Unit>::class)` " +
           "is invalid Kotlin syntax and breaks `:shared-protocol-guest:compileKotlinJs`. " +
           "Move the handler onto the widget as a regular `@Property` instead " +
-          "(see Konduit's `Button.onClick` / `Box.onClick` for the canonical " +
+          "(see Keliver's `Button.onClick` / `Box.onClick` for the canonical " +
           "shape). KNOWN_BUGS.md U6."
       }
 

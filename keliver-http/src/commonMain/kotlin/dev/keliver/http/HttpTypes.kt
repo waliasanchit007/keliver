@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http
@@ -27,8 +27,8 @@ public data class HttpRequest(
  * Wire-level HTTP response envelope. The host adapter populates this from the
  * underlying network call's result. Non-2xx status values do **not** raise an
  * exception at this layer — adopters who want exception semantics use
- * [KonduitHttp]'s typed helpers, which translate non-2xx into
- * [KonduitHttpException].
+ * [KeliverHttp]'s typed helpers, which translate non-2xx into
+ * [KeliverHttpException].
  *
  * Every field except [status] and [body] is default-valued.
  */
@@ -40,12 +40,12 @@ public data class HttpResponse(
 )
 
 /**
- * Thrown by [KonduitHttp] typed helpers when the underlying HTTP call returned
+ * Thrown by [KeliverHttp] typed helpers when the underlying HTTP call returned
  * a status outside the 2xx range. Adopters who want to inspect 4xx / 5xx
  * without exceptions can use [HostHttpProvider.execute] directly and read the
  * [HttpResponse.status] field.
  */
-public class KonduitHttpException(
+public class KeliverHttpException(
   public val status: Int,
   public val body: String,
 ) : Exception("HTTP $status: ${body.take(200)}")

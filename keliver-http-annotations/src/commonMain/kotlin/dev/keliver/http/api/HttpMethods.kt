@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http.api
 
 /**
- * Annotates a method on a [KonduitApi]-marked interface as an
+ * Annotates a method on a [KeliverApi]-marked interface as an
  * HTTP GET request. [path] is the URL path template; `{name}`
  * placeholders are substituted from parameters annotated with
  * [Path].
@@ -31,7 +31,7 @@ public annotation class GET(public val path: String)
 /**
  * HTTP POST. The request body comes from the parameter annotated with
  * [Body]; serialization uses the adopter-supplied
- * [dev.keliver.http.KonduitHttp.json] instance.
+ * [dev.keliver.http.KeliverHttp.json] instance.
  *
  * ```
  * @POST("/quotes")
@@ -52,8 +52,8 @@ public annotation class PUT(public val path: String)
 /**
  * HTTP DELETE. Typically returns `Unit` or a small confirmation
  * envelope; the generated impl routes through
- * [dev.keliver.http.KonduitHttp.deleteUnit] for `Unit` returns and
- * [dev.keliver.http.KonduitHttp.delete] for typed returns.
+ * [dev.keliver.http.KeliverHttp.deleteUnit] for `Unit` returns and
+ * [dev.keliver.http.KeliverHttp.delete] for typed returns.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.SOURCE)

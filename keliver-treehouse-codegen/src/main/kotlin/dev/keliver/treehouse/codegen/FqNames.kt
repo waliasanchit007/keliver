@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.treehouse.codegen
@@ -12,7 +12,7 @@ internal object FqNames {
   private const val SERIALIZATION = "kotlinx.serialization"
 
   // Annotation the adopter applies to opt in.
-  val KonduitAppService = ClassName(TREEHOUSE, "KonduitAppService")
+  val KeliverAppService = ClassName(TREEHOUSE, "KeliverAppService")
 
   // Base type the annotated interface MUST extend (directly or
   // transitively). We use this to reject misapplied annotations
@@ -20,12 +20,12 @@ internal object FqNames {
   val AppService = ClassName(TREEHOUSE, "AppService")
 
   // Base class the generated adapter extends.
-  val KonduitAppServiceAdapter = ClassName(TREEHOUSE, "KonduitAppServiceAdapter")
+  val KeliverAppServiceAdapter = ClassName(TREEHOUSE, "KeliverAppServiceAdapter")
 
-  // Konduit-blessed aliases for Zipline internals that adopter
+  // Keliver-blessed aliases for Zipline internals that adopter
   // outbound impls touch — emitted by-name in the generated source.
-  val KonduitOutboundCallHandler = ClassName(TREEHOUSE, "KonduitOutboundCallHandler")
-  val KonduitOutboundService = ClassName(TREEHOUSE, "KonduitOutboundService")
+  val KeliverOutboundCallHandler = ClassName(TREEHOUSE, "KeliverOutboundCallHandler")
+  val KeliverOutboundService = ClassName(TREEHOUSE, "KeliverOutboundService")
   val keliverReturningFunction =
     ClassName(TREEHOUSE, "keliverReturningFunction")
 

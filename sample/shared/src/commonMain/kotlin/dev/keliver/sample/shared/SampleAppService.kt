@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.sample.shared
 
 import dev.keliver.treehouse.AppService
-import dev.keliver.treehouse.KonduitAppService
+import dev.keliver.treehouse.KeliverAppService
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import kotlinx.serialization.KSerializer
 
@@ -16,10 +16,10 @@ import kotlinx.serialization.KSerializer
  * `zipline.take<SampleAppService>("app")`.
  *
  * `launch()` is what mounts the Compose root. Calling it returns a
- * `ZiplineTreehouseUi` — Konduit's host adapter wraps that into a
+ * `ZiplineTreehouseUi` — Keliver's host adapter wraps that into a
  * `TreehouseContent` mount point inside the host's Compose tree.
  *
- * The [`@KonduitAppService`][KonduitAppService] annotation drives
+ * The [`@KeliverAppService`][KeliverAppService] annotation drives
  * the `keliver-treehouse-codegen` KSP processor — it emits
  * `GeneratedSampleAppServiceAdapter` in this same package at build
  * time, which the companion-object [Companion.Adapter] wrapper
@@ -32,10 +32,10 @@ import kotlinx.serialization.KSerializer
  * into an existing companion object — so the adopter writes the
  * 5-line wrapper, and the heavy lifting (~70 LoC of method maps
  * + outbound proxy + serializer routing) lives in the generated
- * class. See Konduit's `docs/KNOWN_BUGS.md` U12 entry for the
+ * class. See Keliver's `docs/KNOWN_BUGS.md` U12 entry for the
  * full background on Zipline #765.
  */
-@KonduitAppService
+@KeliverAppService
 public interface SampleAppService : AppService {
   public fun launch(): ZiplineTreehouseUi
 

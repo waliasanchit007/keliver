@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.nav
@@ -20,10 +20,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * composition.
  *
  * Wraps the rendered route in a `CompositionLocalProvider` so nested
- * screens can read the controller via [currentKonduitNavController].
+ * screens can read the controller via [currentKeliverNavController].
  *
  * ```
- * KonduitNavHost(nav) { route ->
+ * KeliverNavHost(nav) { route ->
  *     when (route) {
  *         is Route.Home        -> HomeScreen()
  *         is Route.QuoteDetail -> QuoteDetailScreen(route.id)
@@ -32,8 +32,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
  * ```
  */
 @Composable
-public fun <R : Any> KonduitNavHost(
-  controller: KonduitNavController<R>,
+public fun <R : Any> KeliverNavHost(
+  controller: KeliverNavController<R>,
   content: @Composable (R) -> Unit,
 ) {
   val stateHolder = rememberSaveableStateHolder()
@@ -50,7 +50,7 @@ public fun <R : Any> KonduitNavHost(
   }
 
   val top = controller.entries.last()
-  CompositionLocalProvider(LocalKonduitNavController provides controller) {
+  CompositionLocalProvider(LocalKeliverNavController provides controller) {
     stateHolder.SaveableStateProvider(top.id) {
       content(top.route)
     }
@@ -58,28 +58,28 @@ public fun <R : Any> KonduitNavHost(
 }
 
 /**
- * `CompositionLocal` carrying the current [KonduitNavController]. Type
- * is erased to `KonduitNavController<*>?` because Compose
+ * `CompositionLocal` carrying the current [KeliverNavController]. Type
+ * is erased to `KeliverNavController<*>?` because Compose
  * `CompositionLocal`s don't carry a generic parameter; adopters should
- * use the typed [currentKonduitNavController] accessor instead of
- * reading `LocalKonduitNavController.current` directly.
+ * use the typed [currentKeliverNavController] accessor instead of
+ * reading `LocalKeliverNavController.current` directly.
  *
  * `@PublishedApi internal` because the typed accessor is inline +
  * reified — adopters never reference this directly.
  */
 @PublishedApi
-internal val LocalKonduitNavController: ProvidableCompositionLocal<KonduitNavController<*>?> =
+internal val LocalKeliverNavController: ProvidableCompositionLocal<KeliverNavController<*>?> =
   staticCompositionLocalOf { null }
 
 /**
- * Read the current [KonduitNavController] from the nearest enclosing
- * [KonduitNavHost]. Type parameter [R] is the adopter's route type
+ * Read the current [KeliverNavController] from the nearest enclosing
+ * [KeliverNavHost]. Type parameter [R] is the adopter's route type
  * (typically a sealed interface).
  *
  * ```
  * @Composable
  * fun HomeScreen() {
- *     val nav = currentKonduitNavController<Route>()
+ *     val nav = currentKeliverNavController<Route>()
  *     Button(onClick = { nav.navigate(Route.QuoteDetail("42")) }) {
  *         Text("Open 42")
  *     }
@@ -87,16 +87,16 @@ internal val LocalKonduitNavController: ProvidableCompositionLocal<KonduitNavCon
  * ```
  *
  * Throws an [IllegalStateException] if called outside a
- * [KonduitNavHost]'s composition.
+ * [KeliverNavHost]'s composition.
  */
 @Composable
 @Suppress("UNCHECKED_CAST")
-public inline fun <reified R : Any> currentKonduitNavController(): KonduitNavController<R> {
-  val controller = LocalKonduitNavController.current
+public inline fun <reified R : Any> currentKeliverNavController(): KeliverNavController<R> {
+  val controller = LocalKeliverNavController.current
     ?: error(
-      "No KonduitNavController in this composition. Wrap your screen " +
-        "tree in KonduitNavHost { … } at the top of the @Composable that " +
+      "No KeliverNavController in this composition. Wrap your screen " +
+        "tree in KeliverNavHost { … } at the top of the @Composable that " +
         "owns navigation.",
     )
-  return controller as KonduitNavController<R>
+  return controller as KeliverNavController<R>
 }

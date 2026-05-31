@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.sample.host
@@ -22,9 +22,9 @@ import dev.keliver.widget.compose.ComposeWidgetChildren
  * of this type — a Composable that paints itself into the host's
  * Compose tree, given an incoming Modifier from the parent.
  *
- * The `WidgetSystem` Konduit hands to `TreehouseContent` is
+ * The `WidgetSystem` Keliver hands to `TreehouseContent` is
  * parameterized over this signature; that's how the host plugs in
- * its rendering layer without Konduit having to know about Compose.
+ * its rendering layer without Keliver having to know about Compose.
  */
 public typealias CmpRender = @Composable (ComposeModifier) -> Unit
 
@@ -45,7 +45,7 @@ public object CmpWidgetFactory : SampleSchemaWidgetFactory<CmpRender> {
 
 /**
  * `Box` impl. A single `Children(1)` slot in the schema becomes a
- * `Widget.Children<CmpRender>` here — Konduit injects the host's
+ * `Widget.Children<CmpRender>` here — Keliver injects the host's
  * `ComposeWidgetChildren` so the guest's child widgets get rendered
  * inside the Compose Box layout.
  */

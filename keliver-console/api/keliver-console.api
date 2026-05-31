@@ -1,4 +1,4 @@
-public class dev/keliver/console/DefaultKonduitConsole : dev/keliver/console/KonduitConsole {
+public class dev/keliver/console/DefaultKeliverConsole : dev/keliver/console/KeliverConsole {
 	public fun <init> ()V
 	public fun <init> (Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -6,21 +6,21 @@ public class dev/keliver/console/DefaultKonduitConsole : dev/keliver/console/Kon
 	protected fun output (Ljava/lang/String;)V
 }
 
-public abstract interface class dev/keliver/console/KonduitConsole : app/cash/zipline/ZiplineService {
-	public static final field Companion Ldev/keliver/console/KonduitConsole$Companion;
+public abstract interface class dev/keliver/console/KeliverConsole : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/keliver/console/KeliverConsole$Companion;
 	public abstract fun log (Ljava/lang/String;Ljava/lang/String;)V
 }
 
-public final class dev/keliver/console/KonduitConsole$Companion {
+public final class dev/keliver/console/KeliverConsole$Companion {
 }
 
-public final class dev/keliver/console/KonduitConsole$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+public final class dev/keliver/console/KeliverConsole$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
 	public final fun getSerialName ()Ljava/lang/String;
 	public final fun getSerializers ()Ljava/util/List;
 	public final fun getSimpleName ()Ljava/lang/String;
 	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
-	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/keliver/console/KonduitConsole;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/keliver/console/KeliverConsole;
 	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
 }
 

@@ -1,7 +1,7 @@
-# Konduit performance — baseline measurements
+# Keliver performance — baseline measurements
 
 > **Reading guide.** This document is for adopters trying to predict
-> how much code, time, and memory Konduit will cost them. It tracks
+> how much code, time, and memory Keliver will cost them. It tracks
 > four metric categories — **artifact size**, **build time**,
 > **runtime latency**, and **memory footprint** — with as much
 > reproducibility as we can deliver, plus methodology for the metrics
@@ -13,7 +13,7 @@
 > for the perf workstream's Phase 2.
 
 All baseline numbers below come from the `sample/` reference app
-(`Box { Text("Hello, Konduit!") }`) built against
+(`Box { Text("Hello, Keliver!") }`) built against
 `1.0.0-caliclan.4-SNAPSHOT`. Re-running every measurement is a
 one-liner away — see ["How to reproduce"](#how-to-reproduce).
 
@@ -25,11 +25,11 @@ one-liner away — see ["How to reproduce"](#how-to-reproduce).
 
 | Variant | Size | Notes |
 |---|---|---|
-| Debug (unsigned) | **13.4 MB** | Full Compose runtime + Konduit + Zipline (incl. QuickJS native libs for arm64 + x86_64) |
-| Release (R8, unsigned) | **10.8 MB** | -19% from debug — R8 trims compose + Konduit reflection paths |
+| Debug (unsigned) | **13.4 MB** | Full Compose runtime + Keliver + Zipline (incl. QuickJS native libs for arm64 + x86_64) |
+| Release (R8, unsigned) | **10.8 MB** | -19% from debug — R8 trims compose + Keliver reflection paths |
 
 The dominant size contributor is **`libquickjs.so`** (the JS engine
-that runs the guest bundle) plus Compose runtime. Konduit's own
+that runs the guest bundle) plus Compose runtime. Keliver's own
 host-side code adds ~250 KB; the rest is dependencies.
 
 ### Zipline guest bundle
@@ -37,13 +37,13 @@ host-side code adds ~250 KB; the rest is dependencies.
 The guest bundle is what the host downloads at runtime. Two
 configurations matter:
 
-| Variant | Total | Konduit + sample own-code | Kotlin runtime |
+| Variant | Total | Keliver + sample own-code | Kotlin runtime |
 |---|---|---|---|
 | Development | **2.8 MB** | ~80 KB | 1.0 MB (stdlib + coroutines + serialization + Compose) |
 | Production | **732 KB** | **12 KB** | 532 KB |
 
-The "Konduit + sample own-code" column is the cost of *all*
-Konduit guest modules combined with the sample's domain code —
+The "Keliver + sample own-code" column is the cost of *all*
+Keliver guest modules combined with the sample's domain code —
 **12 KB in production mode**. Effectively every byte beyond that
 is the Kotlin/JS standard runtime that the JS engine needs anyway.
 
@@ -59,11 +59,11 @@ Per-module breakdown of the Production bundle (largest first):
 | `keliver-treehouse-guest` | 3,734 | Lifecycle + protocol glue |
 | `keliver-sample-guest` | 3,272 | The sample's own `main()` |
 | `keliver-sample-shared-protocol-guest` | 1,031 | Codegen output |
-| `keliver-keliver-runtime` | 760 | Konduit Compose binding |
-| `keliver-keliver-compose` | 635 | Compose-Konduit bridge |
+| `keliver-keliver-runtime` | 760 | Keliver Compose binding |
+| `keliver-keliver-compose` | 635 | Compose-Keliver bridge |
 | All other `keliver-*` | <500 each | Individual schemas / widgets |
 
-The takeaway: **once you've shipped Konduit at all, adding new
+The takeaway: **once you've shipped Keliver at all, adding new
 widgets or screens costs single-digit KB per addition.** The
 runtime cost is fixed, the per-feature cost is small.
 
@@ -71,7 +71,7 @@ runtime cost is fixed, the per-feature cost is small.
 
 | Variant | Size | Notes |
 |---|---|---|
-| `KonduitSampleHost.framework` (debug, simulator-arm64) | **187 MB** | Static framework, debug symbols, full Kotlin Native stdlib |
+| `KeliverSampleHost.framework` (debug, simulator-arm64) | **187 MB** | Static framework, debug symbols, full Kotlin Native stdlib |
 
 iOS frameworks are large in debug because:
 1. They embed the entire Kotlin Native stdlib (since they're `isStatic = true`)
@@ -214,23 +214,23 @@ equivalent native-Compose-only app would use; per-screen delta
 
 Two reference points belong in any final perf report:
 
-1. **Native Compose-only.** The same `Box { Text("Hello, Konduit!") }`
-   rendered without the Konduit guest layer — pure Android Compose
-   + iOS Compose Multiplatform. This isolates the Konduit overhead
+1. **Native Compose-only.** The same `Box { Text("Hello, Keliver!") }`
+   rendered without the Keliver guest layer — pure Android Compose
+   + iOS Compose Multiplatform. This isolates the Keliver overhead
    from the underlying Compose runtime cost. Implementation: a
    sibling `:host-android-native` module in `sample/` that omits
    the `:guest` dependency.
 
-2. **Upstream Cash App Redwood 0.18.0.** Konduit forks from Redwood
+2. **Upstream Cash App Redwood 0.18.0.** Keliver forks from Redwood
    0.18.0; running the same widget through upstream Redwood
-   demonstrates whether Konduit has introduced perf regressions.
+   demonstrates whether Keliver has introduced perf regressions.
    Implementation: a `redwood-018-baseline/` sibling project
-   pinned to that version (no Konduit). Practical caveat — the
+   pinned to that version (no Keliver). Practical caveat — the
    namespaces diverge significantly so the comparison needs a
    schema port. Defer until adopter demand surfaces.
 
 Both comparisons run with **the same methodology** as the
-Konduit-side measurements above, so the deltas are apples-to-apples.
+Keliver-side measurements above, so the deltas are apples-to-apples.
 
 ---
 
@@ -315,7 +315,7 @@ numbers should always be measured on hardware. The
 `testInstrumentationRunnerArguments["androidx.benchmark.suppressErrors"] = "EMULATOR"`
 in `:benchmarks/build.gradle.kts` lets emulator runs at least
 *attempt* the measurement, but the framestats issue is upstream
-and not fixable in Konduit's harness.
+and not fixable in Keliver's harness.
 
 **Phase 3** is the comparison work — native-Compose-only and
 upstream Redwood 0.18.0 baselines — and depends on Phase 2 numbers

@@ -78,20 +78,20 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 // resolving `dev.keliver:*`. The Kotlin package names inside the
 // artifacts are always `dev.keliver.*` regardless; only the coordinate
 // string changes. See docs/MAVEN_CENTRAL_SETUP.md.
-private const val KONDUIT_GROUP_ID = "dev.keliver"
+private const val KELIVER_GROUP_ID = "dev.keliver"
 
 private fun Project.keliverGroupId(): String =
-  providers.gradleProperty("keliverGroupId").getOrElse(KONDUIT_GROUP_ID)
+  providers.gradleProperty("keliverGroupId").getOrElse(KELIVER_GROUP_ID)
 
 // HEY! If you change the major version update release.yaml doc folder.
 // Overridable via the `keliverVersion` Gradle property — e.g. a Maven
 // Central release passes `-PkeliverVersion=1.0.0-caliclan.4` (no
 // `-SNAPSHOT`) because the Central *deployment* flow only accepts release
 // versions; the default keeps `-SNAPSHOT` for the GitHub Packages dev flow.
-private const val KONDUIT_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
+private const val KELIVER_VERSION = "1.0.0-caliclan.4-SNAPSHOT"
 
 private fun Project.keliverVersion(): String =
-  providers.gradleProperty("keliverVersion").getOrElse(KONDUIT_VERSION)
+  providers.gradleProperty("keliverVersion").getOrElse(KELIVER_VERSION)
 
 private val isCiEnvironment = System.getenv("CI") == "true"
 
@@ -493,7 +493,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
             "fork of Cash App Redwood. Render Kotlin Compose UI on Android and iOS " +
             "from JavaScript bundles delivered over the network.",
         )
-        // Inception year of the Konduit fork (the upstream Cash App Redwood
+        // Inception year of the Keliver fork (the upstream Cash App Redwood
         // project's inception is preserved in the credit / licensing copy
         // of the README and LICENSE).
         pom.inceptionYear.set("2026")

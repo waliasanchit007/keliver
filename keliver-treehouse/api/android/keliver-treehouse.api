@@ -92,16 +92,16 @@ public final class dev/keliver/treehouse/ChangesSinkService$Companion$Adapter : 
 	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
 }
 
-public abstract interface annotation class dev/keliver/treehouse/KonduitAppService : java/lang/annotation/Annotation {
+public abstract interface annotation class dev/keliver/treehouse/KeliverAppService : java/lang/annotation/Annotation {
 }
 
-public abstract class dev/keliver/treehouse/KonduitAppServiceAdapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter {
+public abstract class dev/keliver/treehouse/KeliverAppServiceAdapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter {
 	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
 	public final fun getSerialName ()Ljava/lang/String;
 	public final fun getSerializers ()Ljava/util/List;
 }
 
-public final class dev/keliver/treehouse/KonduitAppServiceAdapterKt {
+public final class dev/keliver/treehouse/KeliverAppServiceAdapterKt {
 	public static final fun keliverReturningFunction (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function1;)Lapp/cash/zipline/ZiplineFunction;
 	public static synthetic fun keliverReturningFunction$default (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlinx/serialization/KSerializer;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lapp/cash/zipline/ZiplineFunction;
 }

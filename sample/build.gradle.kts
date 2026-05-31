@@ -1,5 +1,5 @@
 /*
- * Root build script for the standalone Konduit sample. Declares every
+ * Root build script for the standalone Keliver sample. Declares every
  * plugin the subprojects might use with `apply false` so Gradle can
  * resolve them ONCE from pluginManagement and hand the same classloader
  * to every subproject. Otherwise each subproject's `plugins { ... }`

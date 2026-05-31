@@ -2,7 +2,7 @@
 // AsyncImage in their schema. Replaces the per-app
 // `setSingletonImageLoaderFactory { ... }` boilerplate and ships a
 // platform-appropriate network fetcher: OkHttp on Android/JVM
-// (already in the Konduit dep cone via Zipline), Ktor 3 + Darwin
+// (already in the Keliver dep cone via Zipline), Ktor 3 + Darwin
 // engine on iOS. Closes KNOWN_BUGS U5. See issue #26.
 
 import static dev.keliver.buildsupport.TargetGroup.TreehouseHost

@@ -58,7 +58,7 @@ apk_debug="host-android/build/outputs/apk/debug/host-android-debug.apk"
 apk_release="host-android/build/outputs/apk/release/host-android-release-unsigned.apk"
 zipline_dev="guest/build/zipline/Development"
 zipline_prod="guest/build/zipline/Production"
-ios_framework="host-compose/build/bin/iosSimulatorArm64/debugFramework/KonduitSampleHost.framework"
+ios_framework="host-compose/build/bin/iosSimulatorArm64/debugFramework/KeliverSampleHost.framework"
 
 emit() { printf '%s=%s\n' "$1" "$2"; }
 

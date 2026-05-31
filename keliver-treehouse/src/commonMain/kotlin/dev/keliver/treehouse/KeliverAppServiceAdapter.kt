@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 @file:Suppress(
@@ -23,18 +23,18 @@ import app.cash.zipline.internal.bridge.ZiplineServiceAdapter
 import kotlinx.serialization.KSerializer
 
 /**
- * Konduit-blessed base class for hand-rolled `ZiplineServiceAdapter`s
+ * Keliver-blessed base class for hand-rolled `ZiplineServiceAdapter`s
  * on [AppService] subinterfaces. Replaces the ~95-line manual
  * adapter pattern (touching Zipline `INVISIBLE_REFERENCE` internals
- * via a file-level `@Suppress` block) that every Konduit adopter
+ * via a file-level `@Suppress` block) that every Keliver adopter
  * has to write today because of
  * [Zipline #765](https://github.com/cashapp/zipline/issues/765).
  *
  * **Why this exists.** Zipline's IR plugin cannot auto-generate
  * adapters for interfaces that transitively extend `ZiplineService`
- * via Konduit's `AppService`. Without a manual adapter, the host
+ * via Keliver's `AppService`. Without a manual adapter, the host
  * fails at QuickJS code-load time with
- * `Constructor 'Adapter.<init>' can not be called`. See Konduit's
+ * `Constructor 'Adapter.<init>' can not be called`. See Keliver's
  * `docs/KNOWN_BUGS.md` U12 entry for the full background.
  *
  * **Adopter usage.** Extend this class for each `AppService`
@@ -44,7 +44,7 @@ import kotlinx.serialization.KSerializer
  * - No `@file:Suppress(...)` block. The 7-element opt-in to
  *   Zipline internals lives here, not in adopter code.
  * - No `app.cash.zipline.internal.bridge.*` imports. Adopters
- *   import [KonduitOutboundCallHandler], [KonduitOutboundService],
+ *   import [KeliverOutboundCallHandler], [KeliverOutboundService],
  *   and [keliverReturningFunction] from `dev.keliver.treehouse`.
  * - No `object : ReturningZiplineFunction<T>(...) { … }` boilerplate
  *   per method — [keliverReturningFunction] takes a single lambda.
@@ -56,7 +56,7 @@ import kotlinx.serialization.KSerializer
  * internal open class MyAppServiceAdapter(
  *   serializers: List<KSerializer<*>>,
  *   serialName: String = "your.pkg.MyAppService",
- * ) : KonduitAppServiceAdapter<MyAppService>(serializers, serialName) {
+ * ) : KeliverAppServiceAdapter<MyAppService>(serializers, serialName) {
  *   override val simpleName = "MyAppService"
  *
  *   override fun ziplineFunctions(
@@ -74,9 +74,9 @@ import kotlinx.serialization.KSerializer
  *   }
  *
  *   override fun outboundService(
- *     callHandler: KonduitOutboundCallHandler,
- *   ): MyAppService = object : MyAppService, KonduitOutboundService {
- *     override val callHandler: KonduitOutboundCallHandler = callHandler
+ *     callHandler: KeliverOutboundCallHandler,
+ *   ): MyAppService = object : MyAppService, KeliverOutboundService {
+ *     override val callHandler: KeliverOutboundCallHandler = callHandler
  *     // override every interface member with `callHandler.call(this, N)`
  *     // where N is the position in `ziplineFunctions()` above.
  *   }
@@ -100,13 +100,13 @@ import kotlinx.serialization.KSerializer
  * be hidden behind a helper — it's structural to how Zipline's
  * outbound calls work.
  */
-public abstract class KonduitAppServiceAdapter<T : AppService>(
+public abstract class KeliverAppServiceAdapter<T : AppService>(
   public final override val serializers: List<KSerializer<*>>,
   public final override val serialName: String,
 ) : ZiplineServiceAdapter<T>()
 
 /**
- * Konduit-blessed alias for Zipline's `OutboundCallHandler`.
+ * Keliver-blessed alias for Zipline's `OutboundCallHandler`.
  * Adopter `outboundService(...)` overrides receive a parameter of
  * this type and call `callHandler.call(this, positionalId)` for
  * each interface member.
@@ -116,17 +116,17 @@ public abstract class KonduitAppServiceAdapter<T : AppService>(
  * triggers Kotlin's invisible-reference diagnostics, which is
  * how this whole boilerplate problem started.
  */
-public typealias KonduitOutboundCallHandler = OutboundCallHandler
+public typealias KeliverOutboundCallHandler = OutboundCallHandler
 
 /**
- * Konduit-blessed alias for Zipline's `OutboundService` marker.
+ * Keliver-blessed alias for Zipline's `OutboundService` marker.
  * Adopter `outboundService(...)` overrides return an
- * `object : YourAppService, KonduitOutboundService { … }`.
+ * `object : YourAppService, KeliverOutboundService { … }`.
  */
-public typealias KonduitOutboundService = OutboundService
+public typealias KeliverOutboundService = OutboundService
 
 /**
- * Build one [ZiplineFunction] entry for a [KonduitAppServiceAdapter]'s
+ * Build one [ZiplineFunction] entry for a [KeliverAppServiceAdapter]'s
  * `ziplineFunctions(...)` list. Hides the
  * `object : ReturningZiplineFunction<T>(...) { override fun call }`
  * boilerplate that adopters would otherwise hand-write per method.

@@ -15,9 +15,9 @@ ksp = "2.2.0-2.0.2"
 # were built with. Mismatches surface at QuickJS load time as
 # `IrLinkageError` on the generated `Adapter.<init>` constructor.
 # Verify against `keliver/gradle/libs.versions.toml` after every
-# Konduit bump.
+# Keliver bump.
 kotlin = "2.2.0"
-# Tracks the latest Konduit pre-release. Adopters point at a fixed
+# Tracks the latest Keliver pre-release. Adopters point at a fixed
 # released version (`1.0.0-caliclan.4` etc.) rather than `-SNAPSHOT`.
 keliver = "1.0.0-caliclan.4-SNAPSHOT"
 # MUST match the Zipline version in `keliver/gradle/libs.versions.toml`.

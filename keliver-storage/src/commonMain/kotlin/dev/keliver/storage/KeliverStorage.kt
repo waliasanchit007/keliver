@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.storage
@@ -15,7 +15,7 @@ import kotlinx.serialization.json.Json
  * Usage:
  *
  * ```
- * val storage = KonduitStorage(HostStorageBridge.instance!!)
+ * val storage = KeliverStorage(HostStorageBridge.instance!!)
  * val savedQuotes: List<Quote>? = storage.get("savedQuotes")
  * storage.set("savedQuotes", listOf(Quote(1, "hello")))
  * storage.remove("savedQuotes")
@@ -25,7 +25,7 @@ import kotlinx.serialization.json.Json
  * [HostStorage], which itself routes through Zipline. Cancellation and
  * exception propagation match the rest of the host-service surface.
  */
-public class KonduitStorage(
+public class KeliverStorage(
   public val provider: HostStorage,
   public val json: Json = Json { ignoreUnknownKeys = true },
 ) {

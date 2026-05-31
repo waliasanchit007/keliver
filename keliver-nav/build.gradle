@@ -1,5 +1,5 @@
-// Typed guest-side navigation — KonduitNavController + KonduitNavHost
-// + LocalKonduitNavController. Replaces the per-app HostNavigator
+// Typed guest-side navigation — KeliverNavController + KeliverNavHost
+// + LocalKeliverNavController. Replaces the per-app HostNavigator
 // RPC-per-route boilerplate with a guest-owned typed back stack that
 // mirrors Compose Navigation ergonomics. See issue #25.
 

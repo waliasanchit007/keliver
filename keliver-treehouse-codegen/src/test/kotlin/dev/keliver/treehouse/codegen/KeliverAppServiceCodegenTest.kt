@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.treehouse.codegen
@@ -25,7 +25,7 @@ import org.junit.Test
  * emission).
  */
 @OptIn(ExperimentalCompilerApi::class)
-class KonduitAppServiceCodegenTest {
+class KeliverAppServiceCodegenTest {
 
   private fun compile(source: SourceFile): Pair<JvmCompilationResult, File> {
     val compilation = KotlinCompilation().apply {
@@ -34,7 +34,7 @@ class KonduitAppServiceCodegenTest {
       messageOutputStream = System.out
       jvmTarget = "11"
       configureKsp {
-        symbolProcessorProviders.add(KonduitAppServiceCodegenProvider())
+        symbolProcessorProviders.add(KeliverAppServiceCodegenProvider())
       }
     }
     val result = compilation.compile()
@@ -59,10 +59,10 @@ class KonduitAppServiceCodegenTest {
           package com.example
 
           import dev.keliver.treehouse.AppService
-          import dev.keliver.treehouse.KonduitAppService
+          import dev.keliver.treehouse.KeliverAppService
           import dev.keliver.treehouse.ZiplineTreehouseUi
 
-          @KonduitAppService
+          @KeliverAppService
           interface MyAppService : AppService {
               fun launch(): ZiplineTreehouseUi
           }
@@ -74,10 +74,10 @@ class KonduitAppServiceCodegenTest {
     val generated = kspDir.findFile("GeneratedMyAppServiceAdapter.kt").readText()
 
     // Class header + correct generic over the user interface.
-    // INTERNAL not PUBLIC — see comment in KonduitAppServiceCodegen.kt
+    // INTERNAL not PUBLIC — see comment in KeliverAppServiceCodegen.kt
     // for why; companion-object Adapter wrappers are internal too.
     assertThat(generated).contains("internal open class GeneratedMyAppServiceAdapter")
-    assertThat(generated).contains("KonduitAppServiceAdapter<MyAppService>")
+    assertThat(generated).contains("KeliverAppServiceAdapter<MyAppService>")
 
     // The user-declared method shows up first (positional id 0).
     assertThat(generated).contains("id = \"launch\"")
@@ -110,10 +110,10 @@ class KonduitAppServiceCodegenTest {
           package com.example.demo
 
           import dev.keliver.treehouse.AppService
-          import dev.keliver.treehouse.KonduitAppService
+          import dev.keliver.treehouse.KeliverAppService
           import dev.keliver.treehouse.ZiplineTreehouseUi
 
-          @KonduitAppService
+          @KeliverAppService
           interface MyAppService : AppService {
               fun launch(): ZiplineTreehouseUi
           }
@@ -136,10 +136,10 @@ class KonduitAppServiceCodegenTest {
           package com.example
 
           import dev.keliver.treehouse.AppService
-          import dev.keliver.treehouse.KonduitAppService
+          import dev.keliver.treehouse.KeliverAppService
           import dev.keliver.treehouse.ZiplineTreehouseUi
 
-          @KonduitAppService
+          @KeliverAppService
           class NotAnInterface : AppService {
               override val appLifecycle get() = TODO()
               fun launch(): ZiplineTreehouseUi = TODO()
@@ -148,7 +148,7 @@ class KonduitAppServiceCodegenTest {
       ),
     )
     assertThat(result.exitCode).isEqualTo(KotlinCompilation.ExitCode.COMPILATION_ERROR)
-    assertThat(result.messages).contains("@KonduitAppService can only be applied to interfaces")
+    assertThat(result.messages).contains("@KeliverAppService can only be applied to interfaces")
   }
 
   @Test
@@ -159,9 +159,9 @@ class KonduitAppServiceCodegenTest {
         """
           package com.example
 
-          import dev.keliver.treehouse.KonduitAppService
+          import dev.keliver.treehouse.KeliverAppService
 
-          @KonduitAppService
+          @KeliverAppService
           interface NotAnAppService {
               fun doSomething()
           }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.sample.guest
@@ -33,7 +33,7 @@ public fun main() {
 private class SampleAppServiceImpl : SampleAppService {
 
   // The lifecycle is what wires the guest's @Composable tree into
-  // Konduit's protocol layer. Required arguments:
+  // Keliver's protocol layer. Required arguments:
   //
   //  - `protocolWidgetSystemFactory` is the generated factory from
   //    `:shared-protocol-guest` — it knows how to wrap the codegen'd
@@ -60,7 +60,7 @@ private class SampleAppServiceImpl : SampleAppService {
       @Composable
       override fun Show() {
         Box {
-          Text(text = "Hello, Konduit!")
+          Text(text = "Hello, Keliver!")
         }
       }
     }

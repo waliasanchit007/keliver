@@ -1,9 +1,9 @@
 /*
- * Standalone Gradle build for the Konduit sample app. Mirrors how an
- * external adopter would wire their own project — published Konduit
+ * Standalone Gradle build for the Keliver sample app. Mirrors how an
+ * external adopter would wire their own project — published Keliver
  * artifacts from GitHub Packages, plain `kotlin("multiplatform")` /
  * `com.android.application` plugins (no `redwoodBuild { }` DSL — that
- * one is internal to the Konduit repo).
+ * one is internal to the Keliver repo).
  *
  * Auth: configure `gpr.user` / `gpr.token` in `~/.gradle/gradle.properties`
  * OR set `GITHUB_ACTOR` / `GITHUB_TOKEN` env vars. Token needs `read:packages`

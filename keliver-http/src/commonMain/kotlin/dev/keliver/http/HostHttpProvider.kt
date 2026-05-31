@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.http
@@ -10,7 +10,7 @@ import app.cash.zipline.ZiplineService
  * Generic HTTP proxy bound by the host and called by the guest. Adopters
  * implement this once with their existing `HttpClient` (Ktor / Retrofit /
  * OkHttp / etc.) and bind a single `"http"` service; guest code then makes
- * arbitrary HTTP calls through [KonduitHttp] without writing per-endpoint
+ * arbitrary HTTP calls through [KeliverHttp] without writing per-endpoint
  * `HostXxxProvider` ZiplineServices.
  *
  * Reference adapter (Ktor) — copy / paste into your host module:

@@ -1,6 +1,6 @@
-# Contributing to Konduit
+# Contributing to Keliver
 
-Thanks for considering contributing. Konduit is currently a private fork
+Thanks for considering contributing. Keliver is currently a private fork
 moving toward public OSS launch (see [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md));
 external contribution flows will firm up as we get closer to the launch.
 Until then, this doc is the source of truth for the local dev loop and
@@ -61,7 +61,7 @@ cd ../ServerDrivenUI
 
 See [RELEASING.md](./RELEASING.md) for the canonical steps. Roughly:
 
-1. On a release branch, bump `KONDUIT_VERSION` in
+1. On a release branch, bump `KELIVER_VERSION` in
    `build-support/.../RedwoodBuildPlugin.kt` from `-SNAPSHOT` to the
    release version.
 2. Update `CHANGELOG.md`: move `[Unreleased]` content into a new
@@ -76,12 +76,12 @@ See [RELEASING.md](./RELEASING.md) for the canonical steps. Roughly:
 
 ## What lives where
 
-Konduit's schema parser + codegen live in this repo (`keliver-tooling-schema`,
+Keliver's schema parser + codegen live in this repo (`keliver-tooling-schema`,
 `keliver-tooling-codegen`). The downstream **schema definitions** for
 Caliclan-specific widgets and the **reference integration** live in
 [`waliasanchit007/ServerDrivenUI`](https://github.com/waliasanchit007/ServerDrivenUI).
 The **production app** consuming both is [DevoStatus](https://github.com/waliasanchit007/DevoStatus).
 
 If you find yourself adding a new widget to ServerDrivenUI, that's the
-right place — Konduit's codegen / runtime is the framework; widget
+right place — Keliver's codegen / runtime is the framework; widget
 definitions are per-application.

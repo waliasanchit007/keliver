@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package dev.keliver.gradle
  *
  * Lifted from the inline Gradle task that originally shipped in the
  * ServerDrivenUI integration's `shared/build.gradle.kts`. The scanner
- * is intentionally regex-based rather than PSI-based — Konduit's build
+ * is intentionally regex-based rather than PSI-based — Keliver's build
  * graph is heavy enough already; this catches the 95% case (any code
  * an adopter would naively write) without dragging in `kotlin-compiler-embeddable`.
  *
@@ -119,7 +119,7 @@ internal object ZiplineShapeScanner {
   fun formatError(findings: List<Finding>): String = buildString {
     appendLine(
       "ZiplineService interface(s) have function-typed parameters " +
-        "(Konduit KNOWN_BUGS U11).",
+        "(Keliver KNOWN_BUGS U11).",
     )
     appendLine(
       "Zipline can only marshal @Serializable values or ZiplineService proxies; raw",

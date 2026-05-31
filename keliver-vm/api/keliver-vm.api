@@ -1,4 +1,4 @@
-public abstract class dev/keliver/vm/KonduitViewModel {
+public abstract class dev/keliver/vm/KeliverViewModel {
 	public static final field $stable I
 	public fun <init> ()V
 	public final fun clearInternal ()V

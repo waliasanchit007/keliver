@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11,7 +11,7 @@ package dev.keliver.host
 
 /**
  * Marker identifying this artifact as the `keliver-host` facade. The
- * module exists primarily to aggregate the public host-side Konduit
+ * module exists primarily to aggregate the public host-side Keliver
  * API surface via `api` dependencies; this constant gives the KMP
  * compiler something to package so each platform produces a klib /
  * jar artifact suitable for publishing.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.storage
@@ -13,7 +13,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class KonduitStorageTest {
+class KeliverStorageTest {
 
   @Serializable
   data class Quote(val id: Int, val text: String)
@@ -39,14 +39,14 @@ class KonduitStorageTest {
 
   @Test
   fun get_returns_null_for_missing_key() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     val result: Quote? = storage.get("nope")
     assertNull(result)
   }
 
   @Test
   fun set_then_get_round_trips_a_typed_value() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     val quote = Quote(42, "Hello")
 
     storage.set("quote", quote)
@@ -57,7 +57,7 @@ class KonduitStorageTest {
 
   @Test
   fun set_null_removes_the_entry() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     storage.set("quote", Quote(1, "x"))
     storage.set<Quote?>("quote", null)
 
@@ -67,7 +67,7 @@ class KonduitStorageTest {
 
   @Test
   fun remove_clears_the_entry() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     storage.set("quote", Quote(1, "x"))
     storage.remove("quote")
 
@@ -77,7 +77,7 @@ class KonduitStorageTest {
 
   @Test
   fun keys_filters_by_prefix() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     storage.set("quote:1", Quote(1, "a"))
     storage.set("quote:2", Quote(2, "b"))
     storage.set("setting:theme", Quote(0, "dark"))
@@ -91,7 +91,7 @@ class KonduitStorageTest {
 
   @Test
   fun keys_with_empty_prefix_returns_all_keys() = runTest {
-    val storage = KonduitStorage(InMemoryStorage())
+    val storage = KeliverStorage(InMemoryStorage())
     storage.set("a", Quote(1, "a"))
     storage.set("b", Quote(2, "b"))
 
@@ -103,7 +103,7 @@ class KonduitStorageTest {
   @Test
   fun malformed_payload_throws_on_typed_get() = runTest {
     // Pre-populate with a value that doesn't parse as a Quote.
-    val storage = KonduitStorage(
+    val storage = KeliverStorage(
       InMemoryStorage(mapOf("quote" to "not-json-at-all")),
     )
 
@@ -118,7 +118,7 @@ class KonduitStorageTest {
     val backing = InMemoryStorage(
       mapOf("quote" to """{"id":1,"text":"x","extra":"surprise"}"""),
     )
-    val storage = KonduitStorage(backing, strictJson)
+    val storage = KeliverStorage(backing, strictJson)
 
     assertFailsWith<Exception> {
       storage.get<Quote>("quote")

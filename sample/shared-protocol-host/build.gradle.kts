@@ -1,6 +1,6 @@
 /*
  * Codegen: host-side protocol adapters. Produces `SampleSchemaHostProtocol`
- * which the host's `TreehouseApp.Spec` plugs into Konduit's
+ * which the host's `TreehouseApp.Spec` plugs into Keliver's
  * `TreehouseAppFactory` as the `hostProtocolFactory` argument.
  *
  * Host-only target set (jvm + iOS); the guest side has its own twin

@@ -1,6 +1,6 @@
 // Key/value persistence shim — guest can read and write strings via
 // HostStorage (a ZiplineService) bound by the host to its own
-// DataStore / NSUserDefaults / file backend. KonduitStorage wraps it
+// DataStore / NSUserDefaults / file backend. KeliverStorage wraps it
 // with typed `get<T>` / `set<T>` helpers using kotlinx-serialization.
 // See issue #10.
 

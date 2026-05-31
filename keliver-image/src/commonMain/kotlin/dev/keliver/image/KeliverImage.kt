@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.image
@@ -13,7 +13,7 @@ import coil3.request.crossfade
 /**
  * Configures Coil 3 for the schema's `AsyncImage` widget in one call.
  *
- * The Konduit `AsyncImage` widget renders through Coil's singleton
+ * The Keliver `AsyncImage` widget renders through Coil's singleton
  * `ImageLoader`. Without an installed singleton, AsyncImage shows a
  * blank rectangle and never errors — the most-reported silent failure
  * in adopter onboarding (see KNOWN_BUGS.md U5). [installSingleton]
@@ -26,7 +26,7 @@ import coil3.request.crossfade
  * ```
  * @Composable
  * fun App(treehouseApp: TreehouseApp<MyAppService>?) {
- *     KonduitImage.installSingleton()
+ *     KeliverImage.installSingleton()
  *     MaterialTheme { /* … your host UI … */ }
  * }
  * ```
@@ -34,7 +34,7 @@ import coil3.request.crossfade
  * Customize the underlying `ImageLoader.Builder` via [additional]:
  *
  * ```
- * KonduitImage.installSingleton(
+ * KeliverImage.installSingleton(
  *     crossfade = true,
  *     additional = {
  *         diskCachePolicy(CachePolicy.ENABLED)
@@ -46,13 +46,13 @@ import coil3.request.crossfade
  * Replace the default network fetcher entirely:
  *
  * ```
- * KonduitImage.installSingleton(
+ * KeliverImage.installSingleton(
  *     fetcher = { /* nothing — disable default */ },
  *     additional = { components { add(MyCustomFetcherFactory()) } },
  * )
  * ```
  */
-public object KonduitImage {
+public object KeliverImage {
   /**
    * @param crossfade Enable Coil's crossfade transition (default true).
    * @param fetcher Configures the network fetcher component. Default
@@ -90,6 +90,6 @@ public object KonduitImage {
  *     with the Darwin engine.
  *
  * Exposed as `internal` so adopters can't accidentally call it
- * outside the [KonduitImage.installSingleton] entry point.
+ * outside the [KeliverImage.installSingleton] entry point.
  */
 internal expect fun ComponentRegistry.Builder.installCoilNetworkFetcher()

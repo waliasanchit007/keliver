@@ -1,23 +1,23 @@
-# Migrating from Cash App Redwood to Konduit
+# Migrating from Cash App Redwood to Keliver
 
 This guide is for teams already using upstream
 [Cash App Redwood](https://github.com/cashapp/redwood) (any version up
-to `0.18.0`, the fork point) and considering Konduit as the maintained
+to `0.18.0`, the fork point) and considering Keliver as the maintained
 successor for the Compose Multiplatform subset.
 
 The short version:
 
-- **Wire format and runtime semantics are unchanged.** Konduit doesn't
+- **Wire format and runtime semantics are unchanged.** Keliver doesn't
   fork the protocol; bundles built against Redwood widgets render the
-  same way through the Konduit runtime.
+  same way through the Keliver runtime.
 - **API surface is identical except for renames.** Every Redwood type,
-  function, and Gradle plugin has a Konduit equivalent at the same
+  function, and Gradle plugin has a Keliver equivalent at the same
   signature.
 - **The migration is mostly `sed`.** A scripted rename handles 90%+ of
   the codebase change. The rest is deliberate trims (Phase 1.5 removed
   the View / UIView / DOM toolkits — see "What's removed" below).
 
-> **Status:** Konduit is currently a private GitHub Packages fork while
+> **Status:** Keliver is currently a private GitHub Packages fork while
 > the integration validation work (issues
 > [#8 iOS](https://github.com/waliasanchit007/keliver/issues/8),
 > [#9 sample app](https://github.com/waliasanchit007/keliver/issues/9))
@@ -31,7 +31,7 @@ The short version:
 ## Why migrate
 
 Upstream Redwood is no longer being actively developed by Cash App. The
-last upstream release is `0.18.0` (August 2025). Konduit picks up where
+last upstream release is `0.18.0` (August 2025). Keliver picks up where
 that left off:
 
 1. **Continued maintenance.** The fork's `1.0.0-caliclan.N` line ships
@@ -42,7 +42,7 @@ that left off:
    turn the most painful Zipline / Treehouse adoption gotchas into
    actionable exceptions at bind time. See
    [`docs/KNOWN_BUGS.md`](./KNOWN_BUGS.md) for the catalog (11 of 12
-   documented gotchas have a Konduit-side mitigation as of
+   documented gotchas have a Keliver-side mitigation as of
    `1.0.0-caliclan.3`).
 3. **Compose-Multiplatform focus.** Phase 1.5 dropped 13 upstream
    modules that aren't relevant to CMP (Android Views, iOS UIView,
@@ -56,7 +56,7 @@ that left off:
 ## What's identical
 
 If your project is already running on Redwood `0.18.0`, the following
-require **zero code changes** to keep working under Konduit:
+require **zero code changes** to keep working under Keliver:
 
 - The protocol wire format. Bundles built against Redwood widgets ship
   unchanged.
@@ -77,7 +77,7 @@ Every rename is mechanical — no semantic change.
 
 ### Maven coordinates
 
-| Upstream Redwood | Konduit |
+| Upstream Redwood | Keliver |
 |---|---|
 | `app.cash.redwood:redwood-runtime` | `dev.keliver:keliver-runtime` |
 | `app.cash.redwood:redwood-compose` | `dev.keliver:keliver-compose` |
@@ -106,7 +106,7 @@ See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
 
 ### Gradle plugins
 
-| Upstream Redwood | Konduit |
+| Upstream Redwood | Keliver |
 |---|---|
 | `app.cash.redwood.schema` | `dev.keliver.schema` |
 | `app.cash.redwood.generator.compose` | `dev.keliver.generator.compose` |
@@ -129,7 +129,7 @@ plugins {
 
 ### Kotlin packages
 
-| Upstream Redwood prefix | Konduit prefix |
+| Upstream Redwood prefix | Keliver prefix |
 |---|---|
 | `app.cash.redwood.*` | `dev.keliver.*` |
 | `app.cash.redwood.compose.*` | `dev.keliver.compose.*` |
@@ -200,7 +200,7 @@ any of these, **stay on upstream Redwood** or fork them separately:
 
 Module count went from 60 → 47. CMP-only adopters lose nothing.
 
-## What's added in Konduit
+## What's added in Keliver
 
 These have no upstream-Redwood equivalent — they exist only in the
 fork. Adopt incrementally; none of them are mandatory.
@@ -234,16 +234,16 @@ needs. Replace the 8-line dep block with one line per side.
 
 ### Guest-side helpers
 
-- **`keliver-vm`** — `KonduitViewModel` base + `keliverViewModel { }`
+- **`keliver-vm`** — `KeliverViewModel` base + `keliverViewModel { }`
   Compose entry point. Mirrors native Android `ViewModel` ergonomics
   for the parts that port to the QuickJS guest. See
   [`docs/USAGE.md`](./USAGE.md) "ViewModel-like patterns in the guest".
-- **`keliver-http`** — `HostHttpProvider` ZiplineService + `KonduitHttp`
+- **`keliver-http`** — `HostHttpProvider` ZiplineService + `KeliverHttp`
   typed wrapper. Adopters wire their Ktor / Retrofit / OkHttp client
   ONCE; guest screens get typed `get<T>` / `post<Req, Res>` / etc.
   without per-endpoint `HostXxxProvider` services. See "API calls from
   the guest".
-- **`keliver-storage`** — `HostStorage` ZiplineService + `KonduitStorage`
+- **`keliver-storage`** — `HostStorage` ZiplineService + `KeliverStorage`
   typed wrapper. Adopters wire any KV backend (`DataStore`,
   `NSUserDefaults`, file blob); guest persists any `@Serializable` type
   with `set<T>` / `get<T>`. See "Key/value persistence from the guest".
@@ -273,7 +273,7 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
 }
 ```
 
-### Same Spec — Konduit
+### Same Spec — Keliver
 
 ```kotlin
 // dev.keliver imports — package paths renamed, types and shapes identical
@@ -287,7 +287,7 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
     override val serializersModule = SduiSerializersModule
 
     override suspend fun bindServices(treehouseApp, zipline) {
-        // bindWithTimeout: new in Konduit — turns Zipline's silent
+        // bindWithTimeout: new in Keliver — turns Zipline's silent
         // bind hangs into actionable timeouts. Safe to wrap every bind.
         bindWithTimeout {
             zipline.bind<HostConsole>("console", retain(StatusCraftHostConsole()))
@@ -315,7 +315,7 @@ optional — your Redwood code keeps working without them. They're the
 The guest-side authoring surface is identical:
 
 ```kotlin
-// Same code on Redwood and Konduit — package import differs.
+// Same code on Redwood and Keliver — package import differs.
 class QuotesScreen : Screen {
     @Composable override fun Content(navigator: Navigator) {
         val provider = HostQuotesProviderBridge.instance
@@ -335,13 +335,13 @@ class QuotesScreen : Screen {
 }
 ```
 
-Upgrading the guest screen to use Konduit's new shims is optional:
+Upgrading the guest screen to use Keliver's new shims is optional:
 
 ```kotlin
 class QuotesScreen : Screen {
     @Composable override fun Content(navigator: Navigator) {
         // keliver-vm + keliver-http
-        val http = remember { KonduitHttp(HostHttpProviderBridge.instance!!) }
+        val http = remember { KeliverHttp(HostHttpProviderBridge.instance!!) }
         val vm = keliverViewModel { QuotesViewModel(http) }
         val quotes by vm.state.collectAsState()
 
@@ -357,7 +357,7 @@ class QuotesScreen : Screen {
 
 ## Step-by-step migration checklist
 
-1. Bump your version catalog to point at Konduit:
+1. Bump your version catalog to point at Keliver:
 
    ```toml
    [versions]
@@ -376,7 +376,7 @@ class QuotesScreen : Screen {
    keliver-generator-modifiers      = { id = "dev.keliver.generator.modifiers",      version.ref = "keliver" }
    ```
 
-2. Add the Konduit repository while we're still on GitHub Packages
+2. Add the Keliver repository while we're still on GitHub Packages
    (Maven Central is Phase 5 — see
    [`MAVEN_CENTRAL_SETUP.md`](./MAVEN_CENTRAL_SETUP.md)):
 
@@ -422,13 +422,13 @@ class QuotesScreen : Screen {
 Yes, you can keep using upstream Redwood — the source is still on
 GitHub and Apache-licensed. But it's not being actively developed and
 the silent-failure shapes catalogued in
-[`KNOWN_BUGS.md`](./KNOWN_BUGS.md) are real. Konduit ships
+[`KNOWN_BUGS.md`](./KNOWN_BUGS.md) are real. Keliver ships
 mitigations for 11 of 12 documented gotchas as of `1.0.0-caliclan.3`.
 
 **Is the wire format compatible?**
 Yes. Bundles built against Redwood widgets render unchanged through
-the Konduit runtime. If your `.zipline` bundles are built upstream and
-your host is Konduit, things just work.
+the Keliver runtime. If your `.zipline` bundles are built upstream and
+your host is Keliver, things just work.
 
 **What about the View / UIView / DOM widget toolkits I depend on?**
 Phase 1.5 removed them as part of the CMP focus. Your options are:

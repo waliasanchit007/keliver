@@ -390,7 +390,7 @@ public abstract class TreehouseApp<A : AppService> : AutoCloseable {
      * every wire type at bind time forces the failure into the
      * actionable surface instead.
      *
-     * Multiplatform: works in any Konduit host (Android, iOS, JVM).
+     * Multiplatform: works in any Keliver host (Android, iOS, JVM).
      *
      * Trade-off vs. an auto-walking helper: adopters list each wire type
      * explicitly. A reflection-based auto-walker would need

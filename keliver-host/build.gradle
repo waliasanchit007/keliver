@@ -1,4 +1,4 @@
-// Host-side facade module — re-exports the public Konduit API surface
+// Host-side facade module — re-exports the public Keliver API surface
 // that every host adopter needs so consumers can depend on a single
 // `dev.keliver:keliver-host` artifact instead of wiring 8 modules
 // manually. See PUBLIC_LAUNCH_ROADMAP.md Phase 2.
@@ -42,25 +42,25 @@ kotlin {
         api projects.keliverTreehouseHost
         api projects.keliverTreehouseHostComposeui
 
-        // HTTP shim — HostHttpProvider ZiplineService + KonduitHttp
+        // HTTP shim — HostHttpProvider ZiplineService + KeliverHttp
         // wrapper. Host wires this with their existing HttpClient. See
         // issue #7.
         api projects.keliverHttp
 
         // Key/value persistence shim — `HostStorage` interface +
-        // `KonduitStorage` typed wrapper. Host implements with
+        // `KeliverStorage` typed wrapper. Host implements with
         // DataStore / NSUserDefaults / whatever; guest reads / writes
         // any @Serializable type. See issue #10.
         api projects.keliverStorage
 
-        // Logging service — `KonduitConsole` interface + reference
-        // `DefaultKonduitConsole` implementation. Standard adopter
-        // pattern: bind one instance of DefaultKonduitConsole (or a
+        // Logging service — `KeliverConsole` interface + reference
+        // `DefaultKeliverConsole` implementation. Standard adopter
+        // pattern: bind one instance of DefaultKeliverConsole (or a
         // platform-routing subclass) at startup. See issue #27.
         api projects.keliverConsole
 
         // One-line Coil 3 ImageLoader setup —
-        // `KonduitImage.installSingleton()` wires the platform-
+        // `KeliverImage.installSingleton()` wires the platform-
         // appropriate network fetcher (OkHttp on Android/JVM,
         // Ktor 3 + Darwin on iOS). Closes KNOWN_BUGS U5. See
         // issue #26.

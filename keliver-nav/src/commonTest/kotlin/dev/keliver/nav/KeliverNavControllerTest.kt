@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.nav
@@ -10,7 +10,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class KonduitNavControllerTest {
+class KeliverNavControllerTest {
 
   /**
    * Sample sealed route — mirrors the API adopters will reach for. Kept
@@ -24,7 +24,7 @@ class KonduitNavControllerTest {
   }
 
   // Use `internal` to mirror what the production factory does.
-  private fun controller() = KonduitNavController<TestRoute>(TestRoute.Home)
+  private fun controller() = KeliverNavController<TestRoute>(TestRoute.Home)
 
   @Test
   fun starts_at_root_route() {

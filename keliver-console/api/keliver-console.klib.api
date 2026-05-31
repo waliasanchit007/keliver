@@ -6,15 +6,15 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-console>
-abstract interface dev.keliver.console/KonduitConsole : app.cash.zipline/ZiplineService { // dev.keliver.console/KonduitConsole|null[0]
-    abstract fun log(kotlin/String, kotlin/String) // dev.keliver.console/KonduitConsole.log|log(kotlin.String;kotlin.String){}[0]
+abstract interface dev.keliver.console/KeliverConsole : app.cash.zipline/ZiplineService { // dev.keliver.console/KeliverConsole|null[0]
+    abstract fun log(kotlin/String, kotlin/String) // dev.keliver.console/KeliverConsole.log|log(kotlin.String;kotlin.String){}[0]
 
-    final object Companion // dev.keliver.console/KonduitConsole.Companion|null[0]
+    final object Companion // dev.keliver.console/KeliverConsole.Companion|null[0]
 }
 
-open class dev.keliver.console/DefaultKonduitConsole : dev.keliver.console/KonduitConsole { // dev.keliver.console/DefaultKonduitConsole|null[0]
-    constructor <init>(kotlin/String = ...) // dev.keliver.console/DefaultKonduitConsole.<init>|<init>(kotlin.String){}[0]
+open class dev.keliver.console/DefaultKeliverConsole : dev.keliver.console/KeliverConsole { // dev.keliver.console/DefaultKeliverConsole|null[0]
+    constructor <init>(kotlin/String = ...) // dev.keliver.console/DefaultKeliverConsole.<init>|<init>(kotlin.String){}[0]
 
-    open fun log(kotlin/String, kotlin/String) // dev.keliver.console/DefaultKonduitConsole.log|log(kotlin.String;kotlin.String){}[0]
-    open fun output(kotlin/String) // dev.keliver.console/DefaultKonduitConsole.output|output(kotlin.String){}[0]
+    open fun log(kotlin/String, kotlin/String) // dev.keliver.console/DefaultKeliverConsole.log|log(kotlin.String;kotlin.String){}[0]
+    open fun output(kotlin/String) // dev.keliver.console/DefaultKeliverConsole.output|output(kotlin.String){}[0]
 }

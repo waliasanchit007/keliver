@@ -1,6 +1,6 @@
 name: Kotlin Compatibility Matrix
 
-# Weekly informational job: try building Konduit against multiple Kotlin
+# Weekly informational job: try building Keliver against multiple Kotlin
 # versions to catch IR/FIR plugin breakage early. Failures are NOT blocking.
 # When this fails, file an issue and document in docs/UPGRADING_KOTLIN.md.
 

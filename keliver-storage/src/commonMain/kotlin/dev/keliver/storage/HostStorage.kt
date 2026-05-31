@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.storage
@@ -12,7 +12,7 @@ import app.cash.zipline.ZiplineService
  * (`DataStore<Preferences>` on Android, `NSUserDefaults` on iOS, a
  * file-backed JSON blob, an SQLite key/value table, etc.) and binds a
  * single `"storage"` service. Guests then persist any JSON-serializable
- * value through [KonduitStorage].
+ * value through [KeliverStorage].
  *
  * Reference adapter (Android `DataStore<Preferences>`) — copy / paste:
  *
@@ -52,7 +52,7 @@ public interface HostStorage : ZiplineService {
 
   /**
    * Stores [value] under [key]. Passing `null` removes the entry, matching
-   * the [KonduitStorage.remove] convention.
+   * the [KeliverStorage.remove] convention.
    */
   public suspend fun set(key: String, value: String?)
 

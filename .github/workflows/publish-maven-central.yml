@@ -1,6 +1,6 @@
 name: Publish to Maven Central
 
-# Publishes Konduit artifacts to Maven Central (Sonatype Central Portal)
+# Publishes Keliver artifacts to Maven Central (Sonatype Central Portal)
 # under the GitHub-vanity namespace `io.github.waliasanchit007`.
 #
 # This is intentionally MANUAL-ONLY (workflow_dispatch). It is gated on
@@ -19,7 +19,7 @@ name: Publish to Maven Central
 # Coordinates: the `-PkeliverGroupId=io.github.waliasanchit007` override
 # flips the Gradle group for this build only; published Kotlin package
 # names stay `dev.keliver.*`. The version comes from
-# build-support/RedwoodBuildPlugin.kt's KONDUIT_VERSION — bump it before
+# build-support/RedwoodBuildPlugin.kt's KELIVER_VERSION — bump it before
 # releasing. Note: `*-SNAPSHOT` versions route to the Central snapshots
 # repository, not the main index.
 
@@ -32,7 +32,7 @@ on:
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false -Dorg.gradle.vfs.watch=false -Dkotlin.incremental=false"
-  KONDUIT_GROUP_ID: io.github.waliasanchit007
+  KELIVER_GROUP_ID: io.github.waliasanchit007
 
 jobs:
   publish:
@@ -75,17 +75,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       # Sanity check: if publishing from a `v*` tag, ensure it matches the
-      # build's KONDUIT_VERSION (same guard as publish.yml).
+      # build's KELIVER_VERSION (same guard as publish.yml).
       - name: Verify tag matches build version
         if: startsWith(inputs.ref, 'v')
         run: |
           tag_version="${{ inputs.ref }}"
           tag_version="${tag_version#v}"
-          build_version=$(grep 'KONDUIT_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          build_version=$(grep 'KELIVER_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           echo "Tag version:   $tag_version"
           echo "Build version: $build_version"
           if [ "$tag_version" != "$build_version" ]; then
-            echo "::error::Tag $tag_version doesn't match KONDUIT_VERSION $build_version. Bump the constant before tagging."
+            echo "::error::Tag $tag_version doesn't match KELIVER_VERSION $build_version. Bump the constant before tagging."
             exit 1
           fi
 
@@ -97,7 +97,7 @@ jobs:
         run: >
           ./gradlew
           publishToMavenCentral
-          -PkeliverGroupId=${{ env.KONDUIT_GROUP_ID }}
+          -PkeliverGroupId=${{ env.KELIVER_GROUP_ID }}
           -x test
         env:
           # vanniktech maven-publish reads these project properties (Gradle

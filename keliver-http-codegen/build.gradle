@@ -1,5 +1,5 @@
-// KSP processor that reads @KonduitApi-annotated interfaces from
-// `keliver-http-annotations` and emits `*Impl(KonduitHttp)` classes
+// KSP processor that reads @KeliverApi-annotated interfaces from
+// `keliver-http-annotations` and emits `*Impl(KeliverHttp)` classes
 // backed by the existing typed helpers. Phase 2 of issue #18; design
 // locked in `docs/HTTP_API_CODEGEN_DESIGN.md`.
 //
@@ -39,10 +39,10 @@ dependencies {
   testImplementation libs.assertk
   testImplementation libs.kotlinCompileTesting.ksp
   // The compile-testing fixtures need keliver-http-annotations on the
-  // test classpath so the @KonduitApi etc. references in the fixture
+  // test classpath so the @KeliverApi etc. references in the fixture
   // sources resolve.
   testImplementation projects.keliverHttpAnnotations
-  // keliver-http for KonduitHttp; the generated impl classes call into
+  // keliver-http for KeliverHttp; the generated impl classes call into
   // it (http.get / http.post / etc.). Plus kotlinx-serialization-json
   // for the @Serializable wire types used by fixture sources.
   testImplementation projects.keliverHttp

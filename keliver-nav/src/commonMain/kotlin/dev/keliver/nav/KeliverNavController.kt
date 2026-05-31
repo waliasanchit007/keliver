@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Konduit contributors.
+ * Copyright (C) 2026 Keliver contributors.
  * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.nav
@@ -18,12 +18,12 @@ import androidx.compose.runtime.remember
  * future release).
  *
  * Each navigate call assigns the new entry a monotonically increasing
- * id; [KonduitNavHost] uses these ids as `SaveableStateHolder` keys so
+ * id; [KeliverNavHost] uses these ids as `SaveableStateHolder` keys so
  * each stack entry's `rememberSaveable` state survives a navigate-away-
  * and-back round-trip. When an entry is popped or replaced its state
  * slot is cleared.
  *
- * Construct via [rememberKonduitNavController] in a `@Composable`:
+ * Construct via [rememberKeliverNavController] in a `@Composable`:
  *
  * ```
  * @Serializable sealed interface Route {
@@ -33,8 +33,8 @@ import androidx.compose.runtime.remember
  *
  * @Composable
  * fun App() {
- *     val nav = rememberKonduitNavController<Route>(start = Route.Home)
- *     KonduitNavHost(nav) { route ->
+ *     val nav = rememberKeliverNavController<Route>(start = Route.Home)
+ *     KeliverNavHost(nav) { route ->
  *         when (route) {
  *             is Route.Home        -> HomeScreen()
  *             is Route.QuoteDetail -> QuoteDetailScreen(route.id)
@@ -44,14 +44,14 @@ import androidx.compose.runtime.remember
  * ```
  */
 @Stable
-public class KonduitNavController<R : Any> internal constructor(initialRoute: R) {
+public class KeliverNavController<R : Any> internal constructor(initialRoute: R) {
   private var nextId: Long = 0L
 
   // Backing list — Compose-observable; reads recompose, writes trigger
   // recomposition of every reader of `current` / `backstack` / `canPop`.
   internal val entries = mutableStateListOf(NavEntry(nextId++, initialRoute))
 
-  /** The route at the top of the stack — what [KonduitNavHost] is rendering. */
+  /** The route at the top of the stack — what [KeliverNavHost] is rendering. */
   public val current: R get() = entries.last().route
 
   /** Read-only view of the stack, bottom-to-top (root first, current last). */
@@ -104,7 +104,7 @@ public class KonduitNavController<R : Any> internal constructor(initialRoute: R)
   /**
    * Replaces the entire stack with a single new root [route]. Every
    * previously-saved entry state slot is orphaned and cleaned up by
-   * [KonduitNavHost]'s next composition.
+   * [KeliverNavHost]'s next composition.
    */
   public fun replaceAll(route: R) {
     entries.clear()
@@ -116,11 +116,11 @@ public class KonduitNavController<R : Any> internal constructor(initialRoute: R)
 internal data class NavEntry<R>(val id: Long, val route: R)
 
 /**
- * Compose factory — remembers a [KonduitNavController] across
+ * Compose factory — remembers a [KeliverNavController] across
  * recompositions. The controller's identity stays stable for the
  * lifetime of the surrounding `@Composable`.
  */
 @Composable
-public fun <R : Any> rememberKonduitNavController(start: R): KonduitNavController<R> {
-  return remember { KonduitNavController(start) }
+public fun <R : Any> rememberKeliverNavController(start: R): KeliverNavController<R> {
+  return remember { KeliverNavController(start) }
 }

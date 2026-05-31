@@ -10,7 +10,7 @@ hit the same dead ends.
 This file now holds **four** case studies:
 1. **Android** (Development bundle) — 5 bugs found + fixed.
 2. **iOS** (Development bundle) — 3 bugs found + fixed.
-3. *(implicit)* `@KonduitAppService` migration — see the Konduit
+3. *(implicit)* `@KeliverAppService` migration — see the Keliver
    repo's U12 entry; validated against DevoStatus.
 4. **Production bundle** — 0 bugs; validates the R8/DCE-minified
    ship path that the first two case studies didn't exercise.
@@ -18,8 +18,8 @@ This file now holds **four** case studies:
 **Final state**: `./gradlew :host-android:installDebug` against a
 Pixel 9 emulator, with `python3 -m http.server 8080` serving
 `guest/build/zipline/Development/`, renders `Box { Text("Hello,
-Konduit!") }` correctly. The full Zipline RPC handshake is visible
-in `adb logcat` under the `KonduitSample` tag.
+Keliver!") }` correctly. The full Zipline RPC handshake is visible
+in `adb logcat` under the `KeliverSample` tag.
 
 ## Test setup (reproducible)
 
@@ -33,7 +33,7 @@ cd /path/to/keliver
     -x :keliver-http-codegen:publishMavenPublicationToMavenLocal
 # 17 minutes cold; 5-10 min if the source set is unchanged.
 
-# 2. Build + serve the guest bundle. Konduit + Zipline don't ship a
+# 2. Build + serve the guest bundle. Keliver + Zipline don't ship a
 #    `serveDevelopmentZipline` Gradle task (the README's reference
 #    was wrong); Python's stdlib http.server is the smallest
 #    workaround. See Finding #1.
@@ -54,21 +54,21 @@ adb shell pm clear dev.keliver.sample
 adb logcat -c
 adb shell am start -n dev.keliver.sample/dev.keliver.sample.host.MainActivity
 sleep 15
-adb logcat -d | grep -E "KonduitSample|FATAL|AndroidRuntime"
+adb logcat -d | grep -E "KeliverSample|FATAL|AndroidRuntime"
 ```
 
 The expected end-state log lines, in order, are:
 
 ```
-KonduitSample: onCreate — manifest URL: http://10.0.2.2:8080/manifest.zipline.json
-KonduitSample: manifestReady modules=30
-KonduitSample: takeService name=zipline/guest
-KonduitSample: bindService name=zipline/host
-KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=keliver-sample
-KonduitSample: mainFunctionEnd app=keliver-sample
-KonduitSample: codeLoadSuccess modules=30
-KonduitSample: takeService name=app
+KeliverSample: onCreate — manifest URL: http://10.0.2.2:8080/manifest.zipline.json
+KeliverSample: manifestReady modules=30
+KeliverSample: takeService name=zipline/guest
+KeliverSample: bindService name=zipline/host
+KeliverSample: ziplineCreated
+KeliverSample: mainFunctionStart app=keliver-sample
+KeliverSample: mainFunctionEnd app=keliver-sample
+KeliverSample: codeLoadSuccess modules=30
+KeliverSample: takeService name=app
 …
 ```
 
@@ -105,20 +105,20 @@ Python server's access log) but nothing visible happened on the
 host side, and no logcat clue pointed at the cause.
 
 **Root cause.** The sample's `TreehouseAppFactory.create(...)` call
-omitted the `eventListenerFactory` argument. Konduit's Treehouse
+omitted the `eventListenerFactory` argument. Keliver's Treehouse
 events (`manifestReady`, `codeLoadSuccess`, `codeLoadFailed`,
 `uncaughtException`, etc.) are all delivered through that
 listener; with no listener wired, the host has no idea anything
 went wrong — guest exceptions don't surface, crashes are silent.
 
 **Fix.** Added a `LoggingEventListenerFactory` to `MainActivity.kt`
-that logs every event under the `KonduitSample` tag. Adopters can
+that logs every event under the `KeliverSample` tag. Adopters can
 swap this for their own production listener (or drop it in release
 builds), but at least the sample now ships a working debug
 baseline.
 
 This is **U1/U2/U3 of `keliver/docs/KNOWN_BUGS.md`** — the silent-
-failure shape Konduit's hardening work has been chipping away at.
+failure shape Keliver's hardening work has been chipping away at.
 The sample now ships an explicit example of how to escape it.
 
 ### #3 — `Adapter.<init>` IrLinkageError at QuickJS load time
@@ -146,8 +146,8 @@ that no matching constructor existed.
    change.
 2. *Kotlin version mismatch* — tried both Kotlin 2.1.0 + Zipline
    1.26.0 (matching ServerDrivenUI's stack) and Kotlin 2.2.0 +
-   Zipline 1.22.0 (matching Konduit's). No change.
-3. *Stale GH Packages artifacts* — published Konduit fresh to
+   Zipline 1.22.0 (matching Keliver's). No change.
+3. *Stale GH Packages artifacts* — published Keliver fresh to
    `mavenLocal` so the sample picked up the current working-tree
    build. No change.
 
@@ -156,7 +156,7 @@ None of those addressed the actual problem.
 **Root cause.** Zipline issue
 [#765](https://github.com/cashapp/zipline/issues/765) — the
 Zipline IR plugin **cannot auto-generate** an Adapter for an
-interface that transitively extends `ZiplineService` via Konduit's
+interface that transitively extends `ZiplineService` via Keliver's
 `AppService`. The class gets emitted with the wrong constructor
 shape, the linker rejects it.
 
@@ -174,7 +174,7 @@ adapter touches three `INVISIBLE_REFERENCE` Zipline internals
 `@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE", ...)`.
 
 This is significant adopter-onboarding friction. Until Zipline
-#765 is fixed upstream, every Konduit adopter writing a new
+#765 is fixed upstream, every Keliver adopter writing a new
 `AppService` subinterface needs to hand-roll this same ~60 lines
 of adapter glue. It belongs in `keliver-treehouse` as a helper
 (future work).
@@ -236,15 +236,15 @@ then guest-1/2/3/4 ↔ host-1/2/3/4/5 service pairs as the protocol
 streams widget mutations across the boundary:
 
 ```
-KonduitSample: takeService name=app
-KonduitSample: takeService name=zipline/guest-1
-KonduitSample: bindService name=zipline/host-1
-KonduitSample: takeService name=zipline/guest-2
-KonduitSample: bindService name=zipline/host-2
+KeliverSample: takeService name=app
+KeliverSample: takeService name=zipline/guest-1
+KeliverSample: bindService name=zipline/host-1
+KeliverSample: takeService name=zipline/guest-2
+KeliverSample: bindService name=zipline/host-2
 …
 ```
 
-Screenshot confirms `Hello, Konduit!` painted at top-start of the
+Screenshot confirms `Hello, Keliver!` painted at top-start of the
 host's `Box`. The sample is now a true end-to-end working
 reference.
 
@@ -276,10 +276,10 @@ follow-up.
 # iOS case study
 
 After the Android pass landed, we mirrored the same exercise on
-iOS — built the `KonduitSampleHost.framework`, wired it into a
+iOS — built the `KeliverSampleHost.framework`, wired it into a
 minimal Xcode project under [`iosApp/`](iosApp/), and ran on an
 **iPhone 17 Pro simulator (iOS 26.3.1, Xcode 26.3)**. Final state:
-the same `Hello, Konduit!` widget paints at top-start, with the
+the same `Hello, Keliver!` widget paints at top-start, with the
 same full Zipline RPC sequence visible in `xcrun simctl launch
 --console`. Three iOS-specific findings surfaced; all fixed.
 
@@ -317,8 +317,8 @@ xcodebuild \
 
 # 5. Install + launch with --console to capture EventListener output.
 xcrun simctl install "$SIM_UDID" \
-  build/Build/Products/Debug-iphonesimulator/KonduitSample.app
-xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KonduitSample &
+  build/Build/Products/Debug-iphonesimulator/KeliverSample.app
+xcrun simctl launch --console "$SIM_UDID" dev.keliver.sample.KeliverSample &
 sleep 12
 xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
 ```
@@ -326,16 +326,16 @@ xcrun simctl io "$SIM_UDID" screenshot /tmp/sample-ios.png
 Expected `--console` output, in order:
 
 ```
-KonduitSample: manifestReady modules=30
-KonduitSample: takeService name=zipline/guest
-KonduitSample: bindService name=zipline/host
-KonduitSample: ziplineCreated
-KonduitSample: mainFunctionStart app=keliver-sample
-KonduitSample: mainFunctionEnd app=keliver-sample
-KonduitSample: codeLoadSuccess modules=30
-KonduitSample: takeService name=app
-KonduitSample: takeService name=zipline/guest-1
-KonduitSample: bindService name=zipline/host-1
+KeliverSample: manifestReady modules=30
+KeliverSample: takeService name=zipline/guest
+KeliverSample: bindService name=zipline/host
+KeliverSample: ziplineCreated
+KeliverSample: mainFunctionStart app=keliver-sample
+KeliverSample: mainFunctionEnd app=keliver-sample
+KeliverSample: codeLoadSuccess modules=30
+KeliverSample: takeService name=app
+KeliverSample: takeService name=zipline/guest-1
+KeliverSample: bindService name=zipline/host-1
 …
 ```
 
@@ -356,18 +356,18 @@ Command PhaseScriptExecution failed with a nonzero exit code
 `cd "$SRCROOT/.." && ./gradlew :host-compose:embedAndSignAppleFrameworkForXcode`.
 `$SRCROOT` is `iosApp/`, so `$SRCROOT/..` is `sample/`. But the
 sample was originally designed as a sub-build that uses the parent
-Konduit repo's gradlew wrapper (`../gradlew` from inside `sample/`).
+Keliver repo's gradlew wrapper (`../gradlew` from inside `sample/`).
 No wrapper existed at `sample/gradlew`.
 
 **Fix.** Copied `gradlew`, `gradlew.bat`, and
 `gradle/wrapper/{gradle-wrapper.jar,gradle-wrapper.properties}`
-from the Konduit root into `sample/`. Sample now has its own
+from the Keliver root into `sample/`. Sample now has its own
 working wrapper that the Run Script can resolve. The duplication
 costs ~60 KB (a wrapper jar + the shell script) and removes a
 fragile cross-directory assumption.
 
 This is also a net win for adopter UX — anyone who clones a
-released Konduit and `cd`s into the sample directly can now run
+released Keliver and `cd`s into the sample directly can now run
 `./gradlew :host-android:installDebug` without `cd ..` first.
 
 ### iOS-#2 — No `EventListener` wired on iOS host either
@@ -380,7 +380,7 @@ lifecycle event was silent on iOS too.
 
 **Fix.** Mirrored the Android pattern — added a
 `LoggingEventListenerFactory` to `MainViewController.kt` that logs
-every event under the `KonduitSample` tag. iOS adopters get the
+every event under the `KeliverSample` tag. iOS adopters get the
 same debug baseline as Android, surfaced via `--console` (see
 Finding iOS-#3 for the println-vs-NSLog choice).
 
@@ -390,12 +390,12 @@ Finding iOS-#3 for the println-vs-NSLog choice).
 ObjC-idiomatic shape
 
 ```kotlin
-NSLog("KonduitSample: takeService name=%@", name)
+NSLog("KeliverSample: takeService name=%@", name)
 ```
 
 …the app crashed at launch (~1 s after splash) with no Kotlin
 stack trace. The native crash report at
-`~/Library/Logs/DiagnosticReports/KonduitSample-….ips` showed:
+`~/Library/Logs/DiagnosticReports/KeliverSample-….ips` showed:
 
 ```
 EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at
@@ -472,7 +472,7 @@ R8-shrunk on the host APK side, and Kotlin/JS-DCE-minified on the
 guest side. Different compiler path, different risk surface. This
 case study closes that gap.
 
-**Final state**: the Production bundle renders `Hello, Konduit!`
+**Final state**: the Production bundle renders `Hello, Keliver!`
 identically to Development, with the same Zipline RPC handshake.
 **Zero bugs found** — but the validation is the point: an untested
 code path is an unknown code path, and this one is now known-good.
@@ -492,7 +492,7 @@ shipped the codegen as "working."
 
 It didn't happen. Zipline's IR plugin correctly marks the adapter
 as a retained root, so DCE keeps it and the name survives
-minification. **The `@KonduitAppService` codegen path is
+minification. **The `@KeliverAppService` codegen path is
 production-safe**, not just debug-correct.
 
 ## Test setup
@@ -559,6 +559,6 @@ additive over an already-working load path.
 | Signed-manifest path (`SignatureChecks`) | ⏳ not tested — documented follow-up |
 
 Net: the Production code path — the one that actually ships to
-users — is validated end-to-end for the `@KonduitAppService`
+users — is validated end-to-end for the `@KeliverAppService`
 codegen. The one remaining unknown (signed manifests) is scoped
 and documented.

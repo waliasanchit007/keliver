@@ -86,35 +86,35 @@ final class dev.keliver.http/HttpResponse { // dev.keliver.http/HttpResponse|nul
     }
 }
 
-final class dev.keliver.http/KonduitHttp { // dev.keliver.http/KonduitHttp|null[0]
-    constructor <init>(dev.keliver.http/HostHttpProvider, kotlinx.serialization.json/Json = ...) // dev.keliver.http/KonduitHttp.<init>|<init>(dev.keliver.http.HostHttpProvider;kotlinx.serialization.json.Json){}[0]
+final class dev.keliver.http/KeliverHttp { // dev.keliver.http/KeliverHttp|null[0]
+    constructor <init>(dev.keliver.http/HostHttpProvider, kotlinx.serialization.json/Json = ...) // dev.keliver.http/KeliverHttp.<init>|<init>(dev.keliver.http.HostHttpProvider;kotlinx.serialization.json.Json){}[0]
 
-    final val json // dev.keliver.http/KonduitHttp.json|{}json[0]
-        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.http/KonduitHttp.json.<get-json>|<get-json>(){}[0]
-    final val provider // dev.keliver.http/KonduitHttp.provider|{}provider[0]
-        final fun <get-provider>(): dev.keliver.http/HostHttpProvider // dev.keliver.http/KonduitHttp.provider.<get-provider>|<get-provider>(){}[0]
+    final val json // dev.keliver.http/KeliverHttp.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.http/KeliverHttp.json.<get-json>|<get-json>(){}[0]
+    final val provider // dev.keliver.http/KeliverHttp.provider|{}provider[0]
+        final fun <get-provider>(): dev.keliver.http/HostHttpProvider // dev.keliver.http/KeliverHttp.provider.<get-provider>|<get-provider>(){}[0]
 
-    final fun unwrap(dev.keliver.http/HttpResponse): dev.keliver.http/HttpResponse // dev.keliver.http/KonduitHttp.unwrap|unwrap(dev.keliver.http.HttpResponse){}[0]
-    final suspend fun deleteUnit(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.http/KonduitHttp.deleteUnit|deleteUnit(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
-    final suspend fun requestRaw(dev.keliver.http/HttpRequest): dev.keliver.http/HttpResponse // dev.keliver.http/KonduitHttp.requestRaw|requestRaw(dev.keliver.http.HttpRequest){}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> post(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KonduitHttp.post|post(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> put(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KonduitHttp.put|put(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?> delete(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KonduitHttp.delete|delete(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?> get(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KonduitHttp.get|get(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?> postEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KonduitHttp.postEmpty|postEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
-    final suspend inline fun <#A1: reified kotlin/Any?> putEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KonduitHttp.putEmpty|putEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final fun unwrap(dev.keliver.http/HttpResponse): dev.keliver.http/HttpResponse // dev.keliver.http/KeliverHttp.unwrap|unwrap(dev.keliver.http.HttpResponse){}[0]
+    final suspend fun deleteUnit(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.http/KeliverHttp.deleteUnit|deleteUnit(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final suspend fun requestRaw(dev.keliver.http/HttpRequest): dev.keliver.http/HttpResponse // dev.keliver.http/KeliverHttp.requestRaw|requestRaw(dev.keliver.http.HttpRequest){}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> post(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KeliverHttp.post|post(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?, #B1: reified kotlin/Any?> put(kotlin/String, #A1, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #B1 // dev.keliver.http/KeliverHttp.put|put(kotlin.String;0:0;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> delete(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.delete|delete(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> get(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.get|get(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> postEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.postEmpty|postEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
+    final suspend inline fun <#A1: reified kotlin/Any?> putEmpty(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): #A1 // dev.keliver.http/KeliverHttp.putEmpty|putEmpty(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){0§<kotlin.Any?>}[0]
 
-    final object Companion { // dev.keliver.http/KonduitHttp.Companion|null[0]
-        final val JSON_CONTENT_TYPE // dev.keliver.http/KonduitHttp.Companion.JSON_CONTENT_TYPE|{}JSON_CONTENT_TYPE[0]
-            final fun <get-JSON_CONTENT_TYPE>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/KonduitHttp.Companion.JSON_CONTENT_TYPE.<get-JSON_CONTENT_TYPE>|<get-JSON_CONTENT_TYPE>(){}[0]
+    final object Companion { // dev.keliver.http/KeliverHttp.Companion|null[0]
+        final val JSON_CONTENT_TYPE // dev.keliver.http/KeliverHttp.Companion.JSON_CONTENT_TYPE|{}JSON_CONTENT_TYPE[0]
+            final fun <get-JSON_CONTENT_TYPE>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.http/KeliverHttp.Companion.JSON_CONTENT_TYPE.<get-JSON_CONTENT_TYPE>|<get-JSON_CONTENT_TYPE>(){}[0]
     }
 }
 
-final class dev.keliver.http/KonduitHttpException : kotlin/Exception { // dev.keliver.http/KonduitHttpException|null[0]
-    constructor <init>(kotlin/Int, kotlin/String) // dev.keliver.http/KonduitHttpException.<init>|<init>(kotlin.Int;kotlin.String){}[0]
+final class dev.keliver.http/KeliverHttpException : kotlin/Exception { // dev.keliver.http/KeliverHttpException|null[0]
+    constructor <init>(kotlin/Int, kotlin/String) // dev.keliver.http/KeliverHttpException.<init>|<init>(kotlin.Int;kotlin.String){}[0]
 
-    final val body // dev.keliver.http/KonduitHttpException.body|{}body[0]
-        final fun <get-body>(): kotlin/String // dev.keliver.http/KonduitHttpException.body.<get-body>|<get-body>(){}[0]
-    final val status // dev.keliver.http/KonduitHttpException.status|{}status[0]
-        final fun <get-status>(): kotlin/Int // dev.keliver.http/KonduitHttpException.status.<get-status>|<get-status>(){}[0]
+    final val body // dev.keliver.http/KeliverHttpException.body|{}body[0]
+        final fun <get-body>(): kotlin/String // dev.keliver.http/KeliverHttpException.body.<get-body>|<get-body>(){}[0]
+    final val status // dev.keliver.http/KeliverHttpException.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // dev.keliver.http/KeliverHttpException.status.<get-status>|<get-status>(){}[0]
 }
