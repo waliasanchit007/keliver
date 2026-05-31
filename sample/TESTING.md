@@ -351,6 +351,31 @@ KeliverSample: bindService name=zipline/host-1
 …
 ```
 
+## iOS hot reload (parity with Android case study D)
+
+iOS now mirrors the Android hot-reload wiring: `MainViewController.kt` re-emits
+the manifest URL on each guest rebuild via
+`flowOf(manifestUrl).withDevelopmentServerPush(ziplineHttpClient)`, backed by an
+`NSURLSessionWebSocketTask` implementation of
+`ZiplineHttpClient.openDevelopmentServerWebSocket` (the base class's default is an
+empty flow — no push — so the override is what makes iOS push work). It is gated
+on `IosDevConfig.HOT_RELOAD`, **default `false`**.
+
+Status: **compile-validated** — `./gradlew :host-compose:compileKotlinIosSimulatorArm64`
+is green, so the Kotlin/Native + NSURLSession cinterop is sound — but **not yet
+runtime-verified on a device/simulator**, hence the default-off flag. To test it:
+
+```sh
+# Serve over the Zipline dev server — NOT `python3 -m http.server`. Only the
+# Zipline serve task exposes the WebSocket the push channel needs (see
+# Finding #1's correction); plain http.server has no push channel.
+./gradlew :guest:serveDevelopmentZipline   # ws + http on :8080
+```
+
+Then set `IosDevConfig.HOT_RELOAD = true`, rebuild the framework, edit a guest
+screen, and confirm the running app reloads with no reinstall. If it works, flip
+the default to `true` for full Android/iOS dev-loop parity.
+
 ## iOS findings
 
 ### iOS-#1 — Run Script expected `./gradlew` in `$SRCROOT/..` but `sample/` had none

@@ -12,6 +12,7 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.ZiplineService
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.ZiplineHttpClient
+import app.cash.zipline.loader.withDevelopmentServerPush
 import dev.keliver.leaks.LeakDetector
 import dev.keliver.sample.schema.protocol.host.SampleSchemaHostProtocol
 import dev.keliver.sample.shared.SampleAppService
@@ -24,8 +25,12 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString
@@ -40,6 +45,8 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequestUseProtocolCachePolicy
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSURLSessionWebSocketCloseCodeNormalClosure
+import platform.Foundation.NSURLSessionWebSocketMessage
 import platform.Foundation.addValue
 import platform.Foundation.dataTaskWithRequest
 import kotlin.coroutines.resume
@@ -73,6 +80,15 @@ public fun MainViewController() = ComposeUIViewController {
  * a physical device. The simulator uses `localhost` directly. */
 public object IosDevConfig {
   public val manifestUrl: String = "http://localhost:8080/manifest.zipline.json"
+
+  /**
+   * Parity with host-android `DevConfig.HOT_RELOAD`. Default **false**: the iOS
+   * `NSURLSessionWebSocketTask` push path (see
+   * [IosZiplineHttpClient.openDevelopmentServerWebSocket]) is implemented but
+   * not yet verified on a device/simulator. Flip to `true` to test hot reload,
+   * with the bundle served by `./gradlew :guest:serveDevelopmentZipline`.
+   */
+  public const val HOT_RELOAD: Boolean = false
 }
 
 // Ed25519 PUBLIC key matching the PRIVATE signing key in
@@ -87,10 +103,12 @@ private var cachedApp: TreehouseApp<SampleAppService>? = null
 private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
   cachedApp?.let { return it }
 
-  val manifestUrlFlow = MutableStateFlow(IosDevConfig.manifestUrl)
+  // Hoisted so the same Zipline HTTP client backs both the bundle fetch and
+  // the hot-reload WebSocket below (mirrors host-android).
+  val ziplineHttpClient = IosZiplineHttpClient()
 
   val factory = TreehouseAppFactory(
-    httpClient = IosZiplineHttpClient(),
+    httpClient = ziplineHttpClient,
     // Mirror host-android: verify the guest manifest's Ed25519 signature
     // (signed in guest/build.gradle.kts) before running guest code. Same
     // key name + public key as the Android host.
@@ -112,7 +130,19 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
 
   val spec = object : TreehouseApp.Spec<SampleAppService>() {
     override val name = "keliver-sample"
-    override val manifestUrl = manifestUrlFlow.asStateFlow()
+
+    // Hot reload (parity with host-android): when enabled, subscribe to the
+    // Zipline dev server's WebSocket and re-emit the manifest URL on each
+    // rebuild via `withDevelopmentServerPush` — which drives our
+    // `IosZiplineHttpClient.openDevelopmentServerWebSocket` below. Gated on
+    // IosDevConfig.HOT_RELOAD (default OFF): the NSURLSessionWebSocketTask push
+    // path is implemented but not yet verified on a device/simulator.
+    override val manifestUrl: Flow<String> =
+      if (IosDevConfig.HOT_RELOAD) {
+        flowOf(IosDevConfig.manifestUrl).withDevelopmentServerPush(ziplineHttpClient)
+      } else {
+        MutableStateFlow(IosDevConfig.manifestUrl).asStateFlow()
+      }
     override val serializersModule = EmptySerializersModule()
 
     override suspend fun bindServices(
@@ -221,6 +251,50 @@ private class IosZiplineHttpClient(
       )
       continuation.invokeOnCancellation { task.cancel() }
       task.resume()
+    }
+  }
+
+  /**
+   * Hot-reload SPI (host-android parity). Opens a receive-only WebSocket to
+   * [url] with `NSURLSessionWebSocketTask` and emits each text message the
+   * Zipline dev server pushes; the flow completes when the socket closes —
+   * matching the [ZiplineHttpClient.openDevelopmentServerWebSocket] contract.
+   * NOTE: implemented but not yet verified on a device/simulator; reachable
+   * only when IosDevConfig.HOT_RELOAD is true.
+   */
+  @OptIn(ExperimentalForeignApi::class)
+  override suspend fun openDevelopmentServerWebSocket(
+    url: String,
+    requestHeaders: List<Pair<String, String>>,
+  ): Flow<String> = callbackFlow {
+    val request = NSMutableURLRequest(
+      uRL = NSURL(string = url),
+      cachePolicy = NSURLRequestUseProtocolCachePolicy,
+      timeoutInterval = 60.0,
+    ).apply {
+      for ((name, value) in requestHeaders) {
+        addValue(value = value, forHTTPHeaderField = name)
+      }
+    }
+    val task = urlSession.webSocketTaskWithRequest(request)
+
+    // Re-arm the receiver after each message (receive-only socket).
+    fun receiveNext() {
+      task.receiveMessageWithCompletionHandler { message: NSURLSessionWebSocketMessage?, error ->
+        if (error != null) {
+          close()
+        } else {
+          message?.string?.let { trySend(it) }
+          receiveNext()
+        }
+      }
+    }
+
+    task.resume()
+    receiveNext()
+
+    awaitClose {
+      task.cancelWithCloseCode(NSURLSessionWebSocketCloseCodeNormalClosure, null)
     }
   }
 }
