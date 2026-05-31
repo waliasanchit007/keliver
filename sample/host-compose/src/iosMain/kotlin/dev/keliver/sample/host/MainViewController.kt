@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString
+import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
 import okio.IOException
 import platform.Foundation.NSData
@@ -74,6 +75,12 @@ public object IosDevConfig {
   public val manifestUrl: String = "http://localhost:8080/manifest.zipline.json"
 }
 
+// Ed25519 PUBLIC key matching the PRIVATE signing key in
+// guest/build.gradle.kts (identical to host-android). Public keys are
+// safe to embed in the app.
+private const val SAMPLE_SIGNING_PUBLIC_KEY =
+  "98ecb60bb1c418e771378d4451ddfb2f9c440e3ec29cf2f89850ded8f5190cea"
+
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 private var cachedApp: TreehouseApp<SampleAppService>? = null
 
@@ -84,7 +91,15 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
 
   val factory = TreehouseAppFactory(
     httpClient = IosZiplineHttpClient(),
-    manifestVerifier = ManifestVerifier.NO_SIGNATURE_CHECKS,
+    // Mirror host-android: verify the guest manifest's Ed25519 signature
+    // (signed in guest/build.gradle.kts) before running guest code. Same
+    // key name + public key as the Android host.
+    manifestVerifier = ManifestVerifier.Builder()
+      .addEd25519(
+        name = "keliver-sample-ed25519",
+        trustedKey = SAMPLE_SIGNING_PUBLIC_KEY.decodeHex(),
+      )
+      .build(),
     embeddedFileSystem = null,
     embeddedDir = null,
     cacheName = "keliver-sample-zipline",
