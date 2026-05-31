@@ -1,9 +1,10 @@
 # Keliver sample
 
 Minimal end-to-end Keliver setup. The guest tree is authored in
-Kotlin/JS using a small **Compose-like widget set** — `Column`, `Row`,
-`Box`, `Card`, styled `Text`, `Button`, `Spacer` — and the host renders
-it natively on both Android and iOS. Writing a screen reads almost
+Kotlin/JS using a small **Compose-like widget set** — layout (`Column`,
+`Row`, `Box`, `Card`, `Spacer`), content (styled `Text`, `Button`), and
+inputs (`TextField`, `Checkbox`) — and the host renders it natively on
+both Android and iOS. Writing a screen reads almost
 exactly like Compose, down to `remember { mutableStateOf }` state and a
 `Button` whose `onClick` round-trips over the Zipline bridge:
 
@@ -25,7 +26,8 @@ point. If you're new to Keliver, this is the file tree to copy.
 
 ```
 sample/
-├── schema/                  # @Schema: Box, Text, Column, Row, Button, Spacer, Card
+├── schema/                  # @Schema: Box, Text, Column, Row, Button,
+│                            #          Spacer, Card, TextField, Checkbox
 ├── shared-modifier/         # Codegen: layout modifiers (empty here)
 ├── shared-widget/           # Codegen: host + guest widget interfaces
 ├── shared-protocol-host/    # Codegen: host-side protocol adapters
