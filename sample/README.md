@@ -17,6 +17,14 @@ Column {
 }
 ```
 
+**Recommended architecture.** The default screen is a small **Workouts**
+example — an API call (`keliver-http`) + a host-owned "database" (a Zipline
+service) + a **Repository → Presenter → Screen** split that reads like native
+MVVM. Full guide, both presentation styles, and the host/guest data split:
+**[docs/SCREEN_ARCHITECTURE.md](../docs/SCREEN_ARCHITECTURE.md)**. (Host services
+are currently bound in `host-android`; the iOS host's `bindServices` takes the
+same two `zipline.bind` lines.)
+
 It's deliberately small. The goal is to be the smallest faithful
 demonstration of every required moving part: schema, codegen,
 guest bundle, host renderer, and the cross-platform Compose mount

@@ -741,6 +741,12 @@ Notes on stability:
 
 ## Step 4 — Define a guest screen
 
+> **For the full screen architecture** — Repository → Presenter → Screen,
+> the host/guest data split, API (`keliver-http`) + database (host Zipline
+> service) sources, and the two presentation styles — see
+> **[SCREEN_ARCHITECTURE.md](SCREEN_ARCHITECTURE.md)**, with a runnable
+> Workouts example in [`sample/`](../sample).
+
 The guest side is a Kotlin/JS module that compiles to a `.zipline`
 bundle. Keliver's `:presenter` is the canonical reference; the minimum
 for a new integrator is a 3-file scaffold:

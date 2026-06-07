@@ -5,25 +5,20 @@
 package dev.keliver.sample.guest
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import app.cash.zipline.Zipline
-import dev.keliver.sample.schema.compose.Button
-import dev.keliver.sample.schema.compose.Card
-import dev.keliver.sample.schema.compose.Checkbox
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.KeliverHttp
 import dev.keliver.sample.schema.compose.Column
-import dev.keliver.sample.schema.compose.Row
-import dev.keliver.sample.schema.compose.Spacer
 import dev.keliver.sample.schema.compose.Text
-import dev.keliver.sample.schema.compose.TextField
 import dev.keliver.sample.schema.protocol.guest.SampleSchemaProtocolWidgetSystemFactory
+import dev.keliver.sample.shared.HostFavoritesStore
 import dev.keliver.sample.shared.SampleAppService
 import dev.keliver.treehouse.StandardAppLifecycle
 import dev.keliver.treehouse.TreehouseUi
 import dev.keliver.treehouse.ZiplineTreehouseUi
 import dev.keliver.treehouse.asZiplineTreehouseUi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.json.Json
 
 /**
@@ -37,7 +32,21 @@ import kotlinx.serialization.json.Json
  */
 public fun main() {
   val zipline = Zipline.get()
+  // Take the host's generic HTTP transport (bound as "http"). Tolerant of
+  // absence so the same bundle still runs on a host that didn't bind it.
+  HttpBridge.provider = runCatching { zipline.take<HostHttpProvider>("http") }.getOrNull()
+  FavoritesBridge.store = runCatching { zipline.take<HostFavoritesStore>("favorites") }.getOrNull()
   zipline.bind<SampleAppService>("app", SampleAppServiceImpl())
+}
+
+/** Holds the host HTTP transport so a screen can build a [KeliverHttp]. */
+private object HttpBridge {
+  var provider: HostHttpProvider? = null
+}
+
+/** Holds the host-owned "database" service. */
+private object FavoritesBridge {
+  var store: HostFavoritesStore? = null
 }
 
 private class SampleAppServiceImpl : SampleAppService {
@@ -69,38 +78,26 @@ private class SampleAppServiceImpl : SampleAppService {
     val ui = object : TreehouseUi {
       @Composable
       override fun Show() {
-        // Reads almost exactly like Compose: a Column of widgets, local
-        // state via remember { mutableStateOf }, and a Button whose
-        // onClick recomposes the label across the Zipline bridge.
-        var count by remember { mutableStateOf(0) }
-        var name by remember { mutableStateOf("") }
-        var agreed by remember { mutableStateOf(false) }
-        Column {
-          Text(text = "Hello, Keliver!", fontSize = 24, bold = true)
-          Spacer(height = 12)
-          Card {
-            Column {
-              Text(text = "Inside a Card", bold = true)
-              Spacer(height = 4)
-              Row {
-                Text(text = "Built with ")
-                Text(text = "Compose-like widgets")
-              }
-            }
+        // The repository combines the API (keliver-http) and the host
+        // "database" (HostFavoritesStore) — both taken at startup in main().
+        val repo = remember {
+          val provider = HttpBridge.provider
+          val store = FavoritesBridge.store
+          if (provider != null && store != null) {
+            WorkoutsRepository(KeliverHttp(provider), store)
+          } else {
+            null
           }
-          Spacer(height = 12)
-          // Text input writes back into guest state — Compose's
-          // TextField(value, onValueChange) contract over the wire.
-          TextField(value = name, placeholder = "Your name", onValueChange = { name = it })
-          Spacer(height = 4)
-          Text(text = if (name.isEmpty()) "Type your name above" else "Hello, $name!")
-          Spacer(height = 12)
-          Row {
-            Checkbox(checked = agreed, onCheckedChange = { agreed = it })
-            Text(text = if (agreed) "Agreed" else "Tap the checkbox")
-          }
-          Spacer(height = 12)
-          Button(text = "Tapped $count times", onClick = { count++ })
+        }
+        if (repo == null) {
+          Column { Text(text = "(host services not bound)") }
+        } else {
+          // STYLE B (recommended): events channel + presenter + UI in 3 lines.
+          // To see STYLE A instead, replace this block with:
+          //     WorkoutsScreenInline(repo)
+          val events = remember { MutableSharedFlow<WorkoutsEvent>(extraBufferCapacity = 16) }
+          val model = WorkoutsPresenter(events, repo)
+          WorkoutsScreen(model) { events.tryEmit(it) }
         }
       }
     }

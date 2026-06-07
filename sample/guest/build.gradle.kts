@@ -17,6 +17,7 @@ plugins {
   alias(libs.plugins.zipline)
   alias(libs.plugins.keliver.generator.compose)
   alias(libs.plugins.composeMultiplatform)
+  alias(libs.plugins.kotlinSerialization)
 }
 
 redwoodSchema {
@@ -62,6 +63,7 @@ kotlin {
         implementation(libs.keliver.widget)
         implementation(libs.keliver.treehouse)
         implementation(libs.keliver.treehouse.guest)
+        implementation(libs.keliver.http)
         implementation(libs.zipline)
         implementation(project(":shared"))
       }

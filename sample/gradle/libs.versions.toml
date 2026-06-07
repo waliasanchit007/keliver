@@ -45,6 +45,7 @@ keliver-treehouse-host-composeui = { module = "dev.keliver:keliver-treehouse-hos
 keliver-protocol = { module = "dev.keliver:keliver-protocol", version.ref = "keliver" }
 keliver-protocol-host = { module = "dev.keliver:keliver-protocol-host", version.ref = "keliver" }
 keliver-protocol-guest = { module = "dev.keliver:keliver-protocol-guest", version.ref = "keliver" }
+keliver-http = { module = "dev.keliver:keliver-http", version.ref = "keliver" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 zipline = { module = "app.cash.zipline:zipline", version.ref = "zipline" }
 zipline-loader = { module = "app.cash.zipline:zipline-loader", version.ref = "zipline" }

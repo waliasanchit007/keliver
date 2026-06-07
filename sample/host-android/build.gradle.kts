@@ -82,6 +82,7 @@ dependencies {
   // `api` dependencies — keeping `:host-android` thin (just the Android
   // entry shell + HTTP client glue).
   implementation(project(":host-compose"))
+  implementation(libs.keliver.http)
   implementation(libs.okhttp)
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.activity.compose)

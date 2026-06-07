@@ -20,8 +20,13 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.treehouse.EventListener
 import dev.keliver.treehouse.TreehouseApp as KTreehouseApp
 import dev.keliver.sample.schema.protocol.host.SampleSchemaHostProtocol
+import dev.keliver.sample.shared.FavoritesSnapshot
+import dev.keliver.sample.shared.HostFavoritesStore
 import dev.keliver.sample.shared.SampleAppService
 import dev.keliver.treehouse.MemoryStateStore
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.HttpRequest
+import dev.keliver.http.HttpResponse
 import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import kotlinx.coroutines.flow.Flow
@@ -110,13 +115,46 @@ class MainActivity : ComponentActivity() {
       // fields here. This sample binds no host services — the guest
       // only consumes `SampleAppService` via the standard "app" name.
 
+      // A generic, endpoint-agnostic HTTP transport for the guest: the host
+      // owns base URL + auth + the client; the guest defines the endpoint,
+      // request and response. Held as a `val` so it isn't GC'd (see U7). This
+      // fake returns canned JSON to prove the keliver-http round-trip +
+      // suspend-over-Zipline; swap for an OkHttp-backed impl for real network.
+      private val httpProvider = object : HostHttpProvider {
+        override suspend fun execute(request: HttpRequest): HttpResponse {
+          Log.d("SDUI", "host keliver-http execute: ${request.method} ${request.path}")
+          val body = when (request.path) {
+            "/workouts" ->
+              """[{"id":"1","name":"Push Day","durationMin":45},""" +
+                """{"id":"2","name":"Leg Day","durationMin":60},""" +
+                """{"id":"3","name":"Pull Day","durationMin":50},""" +
+                """{"id":"4","name":"Core Blast","durationMin":20}]"""
+            else ->
+              """{"message":"Hello from the host via keliver-http — you called ${request.method} ${request.path}"}"""
+          }
+          return HttpResponse(status = 200, body = body)
+        }
+      }
+
+      // In-memory "database" standing in for SQLDelight/Room — the host owns
+      // persistence; the guest reads/writes it over Zipline as a data source.
+      private val favoritesStore = object : HostFavoritesStore {
+        private val favs = linkedSetOf<String>()
+        override suspend fun favorites(): FavoritesSnapshot = FavoritesSnapshot(favs.toList())
+        override suspend fun setFavorite(id: String, favorite: Boolean) {
+          if (favorite) favs.add(id) else favs.remove(id)
+          Log.d("SDUI", "host DB setFavorite $id=$favorite -> $favs")
+        }
+      }
+
       override suspend fun bindServices(
         treehouseApp: TreehouseApp<SampleAppService>,
         zipline: Zipline,
       ) {
-        // No host-bound services in this minimal sample. Adopters
-        // typically bind a HostConsole / HostHttp / domain services
-        // here; see keliver-host for the bundled set.
+        // Bind under "http"; the guest take()s it and wraps it in KeliverHttp.
+        zipline.bind<HostHttpProvider>("http", httpProvider)
+        // The host "database" — guest takes it as a local data source.
+        zipline.bind<HostFavoritesStore>("favorites", favoritesStore)
       }
 
       override fun create(zipline: Zipline): SampleAppService {
