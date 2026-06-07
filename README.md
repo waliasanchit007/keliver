@@ -139,13 +139,22 @@ uses it for two screens out of ~10.
 
 ## Getting started
 
-For now: read [`docs/USAGE.md`](./docs/USAGE.md). It's a thorough
-walkthrough of vendoring Keliver into a Compose Multiplatform host,
-defining a guest screen, wiring host services, and the silent-failure
-shapes to watch for.
+- **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)** — the short path: run
+  the sample, then write your first screen, on Android + iOS.
+- **[docs/SCREEN_ARCHITECTURE.md](./docs/SCREEN_ARCHITECTURE.md)** — how to
+  structure an app: Repository → Presenter → Screen, API + database via host
+  services, and the two presentation styles (with when to use each).
+- **[docs/USAGE.md](./docs/USAGE.md)** — the exhaustive reference: vendoring
+  Keliver into a Compose Multiplatform host, the dev loop, and every
+  silent-failure shape to watch for.
+
+The [`sample/`](./sample) directory is a complete, runnable **starter** — a
+Workouts screen (an API call + a host database + live search) built in both
+architecture styles, with a green unit test. Copy it and rename, or run it
+first to see the loop.
 
 When the public OSS launch lands (see [PUBLIC_LAUNCH_ROADMAP.md](./PUBLIC_LAUNCH_ROADMAP.md))
-a proper docs site will replace the long USAGE.md.
+a proper docs site will replace these.
 
 ## Known limitations + open bugs
 
