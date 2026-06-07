@@ -151,7 +151,8 @@ private fun initializeTreehouseApp(): TreehouseApp<SampleAppService> {
       treehouseApp: TreehouseApp<SampleAppService>,
       zipline: Zipline,
     ) {
-      // No host services bound in the minimal sample.
+      // Same host services as Android — see SampleHostServices (commonMain).
+      SampleHostServices.bind(zipline)
     }
 
     override fun create(zipline: Zipline): SampleAppService =

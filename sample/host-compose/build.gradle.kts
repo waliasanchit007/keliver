@@ -75,6 +75,7 @@ kotlin {
         api(libs.keliver.treehouse.host.composeui)
         api(libs.keliver.widget)
         api(libs.keliver.widget.composeui)
+        api(libs.keliver.http)
         api(libs.zipline)
         api(libs.zipline.loader)
         implementation(compose.runtime)
