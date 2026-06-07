@@ -170,6 +170,13 @@ a proper docs site will replace these.
   at [cashapp/zipline#1825](https://github.com/cashapp/zipline/issues/1825).
   Workaround pattern is well-established.
 
+## Versioning & API stability
+
+Keliver is **pre-1.0** — pin an exact `dev.keliver:*` version and expect
+breaking API changes across `0.x`. The public surface of every published module
+is tracked by the binary-compatibility-validator on each build, so no API change
+ships by accident. See [`docs/API_STABILITY.md`](./docs/API_STABILITY.md).
+
 ## What's planned
 
 [`ROADMAP.md`](./ROADMAP.md) — adopter-facing forward-looking plan.

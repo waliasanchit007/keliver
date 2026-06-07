@@ -1,3 +1,0 @@
-public abstract interface class dev/keliver/ui/basic/modifier/Reuse : dev/keliver/Modifier$UnscopedElement {
-}
-
