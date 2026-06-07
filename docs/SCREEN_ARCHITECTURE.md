@@ -105,6 +105,9 @@ class WorkoutsRepository(private val http: KeliverHttp, private val favorites: H
 
 The repository is a **plain class** — no Compose — so the business logic is
 unit-testable without any UI, regardless of which presentation style you pick.
+The sample's `WorkoutsRepositoryTest` does exactly that — **3 passing tests**
+with fake host services (`HostHttpProvider` + `HostFavoritesStore`), no UI, no
+device (`./gradlew :guest:jsTest`).
 
 ## 4. Presentation layer — two styles
 
@@ -183,7 +186,8 @@ list, a leaf). They compose — a `Screen` can be inline or delegate to a
 | `sample/guest/.../WorkoutsData.kt` | `Workout`, `WorkoutsRepository`, `WorkoutsModel`, events |
 | `sample/guest/.../WorkoutsPresenter.kt` | Style B (Presenter + Screen) |
 | `sample/guest/.../WorkoutsInline.kt` | Style A (inline) |
-| `sample/host-*/.../*.kt` | host wiring: serve `/workouts`, bind `HostHttpProvider` + `HostFavoritesStore` |
+| `sample/guest/src/jsTest/.../WorkoutsRepositoryTest.kt` | the logic, unit-tested (3 green, no UI/device) |
+| `sample/host-compose/.../SampleHostServices.kt` | host wiring (Android **+** iOS): serve `/workouts`, bind `HostHttpProvider` + `HostFavoritesStore` |
 
 Run it: `sample/README.md`. The guest's `Show()` renders Style B by default;
 swap the one block for `WorkoutsScreenInline(repo)` to see Style A.
