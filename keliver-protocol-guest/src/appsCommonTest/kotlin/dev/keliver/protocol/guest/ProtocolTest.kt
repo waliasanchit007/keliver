@@ -296,12 +296,17 @@ class ProtocolTest {
     )
   }
 
-  // QUARANTINED (task #45 / docs/KNOWN_BUGS.md U14): movableContentOf reuse
-  // across different parent appliers recreates nodes (detach=false) instead of
-  // moving them (detach=true) on JetBrains Compose 1.8.2. Inherited Redwood
-  // test; this is a compose-runtime behavior divergence, not a keliver
-  // regression (the build is a consistent Kotlin 2.2.0 toolchain). The UI still
-  // renders correctly — only node identity is lost on movable-content moves.
+  // QUARANTINED (task #45 / docs/KNOWN_BUGS.md U14). movableContentOf moved
+  // between two different parents in ONE recomposition should reuse the node
+  // (Remove(detach=true) + re-Add the same id); on the pinned toolchain
+  // (Kotlin 2.2.0 compose-compiler + JetBrains Compose runtime 1.8.2) it
+  // recreates instead (every Remove is detach=false, no re-Add) — VERIFIED
+  // 2026-06-07 via jvmTest. NOT a keliver defect: the identical tests are
+  // enabled+passing on upstream cashapp/redwood trunk, and an Applier cannot
+  // turn a runtime Create into a reuse. CMP 1.8.2 == androidx 1.8.2; the reuse
+  // fixes are in compose-runtime 1.9.x/1.10.x, so the fix is a compose-toolchain
+  // bump deferred (it cascades into a Kotlin bump the 0.1.x line pins away from).
+  // Re-test recipe + full rationale in KNOWN_BUGS.md U14.
   @Ignore
   @Test fun movableContentSameRecomposition() = runTest {
     val (composition) = testProtocolComposition()

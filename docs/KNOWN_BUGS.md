@@ -992,22 +992,54 @@ They are `@Ignore`-quarantined so CI stays green; see task #45.
 `-PkeliverWithTestApp` suite — the cloud runner never ran it (Actions billing),
 so the self-hosted-runner shift is what exposed it. Reproduces deterministically.
 
-**Root cause (narrowed).** NOT a toolchain skew: keliver's build is a consistent
-Kotlin 2.2.0 / compose-compiler 2.2.0 / JetBrains Compose 1.8.2 (confirmed via
-`buildEnvironment`; the Kotlin-2.3.10 float only affects the *unpinned consumer*
-build). `DefaultGuestProtocolAdapter.appendAdd` upgrades a prior `Remove` to
-`detach=true` only when the re-added child is the *same* `ProtocolWidget`
-instance (`removeIndex` set). JetBrains Compose runtime **1.8.2** creates a new
-node for the moved content instead of reusing the existing one, so that signal
-never fires — diverging from the compose-runtime version upstream Redwood used.
+**Verified 2026-06-07** by un-quarantining both tests and running
+`./gradlew :keliver-protocol-guest:jvmTest -PkeliverWithTestApp --tests '*ProtocolTest'`
+(8 tests, 2 fail, deterministic). The captured wire for
+`multipleMovableContentButOnlyOneReused` is three `Remove(detach=false)` and
+*nothing else*, where the contract expects
+`Remove(false), Remove(detach=true), Remove(false), Add(sameId)` — i.e. every
+removal is a destroy and the surviving node is never re-attached. The reuse path
+never fires. The 6 other `ProtocolTest` cases pass, including
+`movableContentMultipleRecompositions` (which correctly expects `detach=false`).
 
-**Severity: low-to-moderate.** The UI still renders correctly; the only loss is
-node *identity* (and any host-side widget state bound to it) on
-`movableContentOf` moves between parents — an edge case.
+**Root cause: toolchain-version coupling, NOT a keliver code defect.** Three
+independent facts pin this down:
 
-**Fix path (open-ended).** Bisect/align the compose-runtime version against what
-restores reuse, which may cascade (Compose 1.9.x wants Kotlin 2.3.x,
-reintroducing the float keliver pins away). Tracked as task #45.
+1. The *identical* inherited tests are **enabled and passing on upstream
+   cashapp/redwood trunk** (added by [PR #2510](https://github.com/cashapp/redwood/pull/2510),
+   Jake Wharton's `detach` design, closing #1902). Same test, same protocol code,
+   different toolchain → different result. So it is not the test or the protocol
+   that is wrong.
+2. keliver's `NodeApplier` and `DefaultGuestProtocolAdapter` are upstream-
+   unchanged. An `Applier` only *executes* the ops the compose runtime emits — it
+   cannot turn a runtime `Create` back into a reuse. The divergence is therefore
+   *upstream of the Applier* (runtime/compiler), and **no Applier-side edit can
+   fix it** (an Applier audit against the contract found nothing to change).
+3. CMP 1.8.2 == androidx Compose 1.8.2 (JetBrains' fork carries platform patches,
+   not movable-content semantics). The genuine movable-content reuse fixes landed
+   in compose-runtime **1.9.x / 1.10.x** — *after* the pinned 1.8.2.
+
+Mechanically: `DefaultGuestProtocolAdapter.appendAdd` upgrades a prior `Remove`
+to `detach=true` only when the re-added child is the *same* `ProtocolWidget`
+instance (`removeIndex` set); on this toolchain the runtime hands it a freshly
+created node, so that signal never fires.
+
+**Severity: low-to-moderate.** The UI still renders; the only loss is node
+*identity* (and any host-side widget state bound to it — scroll offset, animation)
+on `movableContentOf` moves between *different* parents in a *single*
+recomposition. Multi-recomposition moves (content fully leaves the tree and
+returns) already recreate by design and pass.
+
+**Decision: keep quarantined; defer the fix to the next compose-toolchain bump.**
+The fix is a compose toolchain carrying the post-1.8.2 reuse fixes, which cascades
+into a Kotlin bump (Compose 1.9.x wants Kotlin 2.3.x) that the published `0.1.x`
+line — pinned around Kotlin 2.2.0 / KSP 2.2.0-2.0.2 / Zipline 1.26.0 for stability
+— deliberately avoids. Spending that churn to recover node identity on one rare
+UI pattern is not worth destabilizing the released line.
+
+**Tripwire.** Whenever keliver next bumps Kotlin/compose (for any reason), re-run
+the recipe above and drop the two `@Ignore`s if they pass — the toolchain cost is
+then already amortized. Tracked as task #45.
 
 **Owner.** Keliver.
 
