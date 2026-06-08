@@ -1,13 +1,12 @@
 /*
  * Standalone Gradle build for the Keliver sample app. Mirrors how an
- * external adopter would wire their own project — published Keliver
- * artifacts from GitHub Packages, plain `kotlin("multiplatform")` /
- * `com.android.application` plugins (no `redwoodBuild { }` DSL — that
- * one is internal to the Keliver repo).
+ * external adopter wires their own project — published Keliver artifacts
+ * from Maven Central (`dev.keliver:keliver-*:0.1.0`), plain
+ * `kotlin("multiplatform")` / `com.android.application` plugins (no
+ * `redwoodBuild { }` DSL — that one is internal to the Keliver repo).
  *
- * Auth: configure `gpr.user` / `gpr.token` in `~/.gradle/gradle.properties`
- * OR set `GITHUB_ACTOR` / `GITHUB_TOKEN` env vars. Token needs `read:packages`
- * scope. See sample/README.md for the full setup walkthrough.
+ * No credentials required: `mavenCentral()` serves every `dev.keliver`
+ * artifact. Clone and build. See sample/README.md.
  */
 
 rootProject.name = "keliver-sample"
@@ -17,23 +16,6 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 pluginManagement {
   repositories {
     mavenLocal()
-    maven {
-      url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
-      credentials {
-        username = (providers.gradleProperty("gpr.user").orNull
-          ?: System.getenv("GITHUB_ACTOR")).orEmpty()
-        password = (providers.gradleProperty("gpr.token").orNull
-          ?: System.getenv("GITHUB_TOKEN")).orEmpty()
-      }
-      // Restrict to dev.keliver.* — without this, Gradle queries GH
-      // Packages for every transitive dep (kotlin, androidx, etc.) and
-      // first builds hang for ~10 min before falling through. Same fix
-      // as documented in `keliver/docs/USAGE.md`.
-      content {
-        includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.keliver\\..*")
-      }
-    }
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google {
       mavenContent {
@@ -57,19 +39,6 @@ pluginManagement {
 dependencyResolutionManagement {
   repositories {
     mavenLocal()
-    maven {
-      url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
-      credentials {
-        username = (providers.gradleProperty("gpr.user").orNull
-          ?: System.getenv("GITHUB_ACTOR")).orEmpty()
-        password = (providers.gradleProperty("gpr.token").orNull
-          ?: System.getenv("GITHUB_TOKEN")).orEmpty()
-      }
-      content {
-        includeGroup("dev.keliver")
-        includeGroupByRegex("dev\\.keliver\\..*")
-      }
-    }
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google {
       mavenContent {

@@ -89,25 +89,10 @@ same `SampleHostApp` composable.
 
 1. **JDK 17+** on your PATH.
 2. **Android SDK** (`ANDROID_HOME` set) for `:host-android`.
-3. **GitHub Packages credentials** to resolve Keliver artifacts.
-   The pre-release Keliver Maven repo
-   (`maven.pkg.github.com/waliasanchit007/keliver`) requires a GitHub
-   token with `read:packages` scope. Two ways to provide it:
-
-   - **gradle.properties** (recommended for dev):
-     ```properties
-     gpr.user=your-github-username
-     gpr.token=ghp_xxxxxxxxxxxxxxxxxxxxxx
-     ```
-     Put this in `~/.gradle/gradle.properties` (NOT in this repo —
-     the included `sample/gradle.properties` has commented-out keys
-     you can copy from).
-
-   - **Environment variables** (for CI):
-     ```sh
-     export GITHUB_ACTOR=your-github-username
-     export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxx
-     ```
+3. **No credentials needed.** Keliver is published on **Maven Central**
+   (`dev.keliver:keliver-*:0.1.0`), so `mavenCentral()` in
+   `settings.gradle.kts` resolves every artifact — no GitHub token, no
+   `gpr.user`/`gpr.token`. Just clone and build.
 
 4. (iOS only) **Xcode 15+** and CocoaPods / KMP-direct framework
    integration of your choice.
@@ -318,12 +303,11 @@ documented in the main Keliver repo under `docs/` if you need them:
 ## Standalone vs. monorepo
 
 This sample is a standalone Gradle build inside the Keliver repo —
-its `settings.gradle.kts` is independent of the parent. To work
-on it without publishing Keliver first, you can either:
+its `settings.gradle.kts` is independent of the parent. By default it
+resolves the released `dev.keliver:*:0.1.0` artifacts from Maven
+Central, so it builds with no extra setup.
 
-- Run `./gradlew publishToMavenLocal` from the Keliver root (one
-  level up) so the sample resolves `dev.keliver:*` from your local
-  Maven cache.
-- Or rely on the live `1.0.0-caliclan.4-SNAPSHOT` artifacts in the
-  GitHub Packages repo — that's what the `gpr.user / gpr.token`
-  setup above is for.
+If you're hacking on Keliver itself and want the sample to pick up
+**unreleased** changes, run `./gradlew publishToMavenLocal` from the
+Keliver root (one level up) — the sample's `mavenLocal()` repo is
+checked first, so a local build wins over Central.

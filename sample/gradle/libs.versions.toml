@@ -17,9 +17,9 @@ ksp = "2.2.0-2.0.2"
 # Verify against `keliver/gradle/libs.versions.toml` after every
 # Keliver bump.
 kotlin = "2.2.0"
-# Tracks the latest Keliver pre-release. Adopters point at a fixed
-# released version (`1.0.0-caliclan.4` etc.) rather than `-SNAPSHOT`.
-keliver = "1.0.0-caliclan.4-SNAPSHOT"
+# The published public release on Maven Central (no auth required).
+# Pin an exact version; see keliver/docs/API_STABILITY.md (pre-1.0).
+keliver = "0.1.0"
 # MUST match the Zipline version in `keliver/gradle/libs.versions.toml`.
 zipline = "1.22.0"
 okhttp = "4.12.0"
