@@ -1,0 +1,114 @@
+public abstract interface class dev/keliver/material/widget/AsyncImage : dev/keliver/widget/Widget {
+	public abstract fun contentScale (I)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun url (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/BottomSheet : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun onDismiss (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun visible (Z)V
+}
+
+public abstract interface class dev/keliver/material/widget/Button : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Card : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/Checkbox : dev/keliver/widget/Widget {
+	public abstract fun checked (Z)V
+	public abstract fun enabled (Z)V
+	public abstract fun onCheckedChange (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Chip : dev/keliver/widget/Widget {
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Divider : dev/keliver/widget/Widget {
+	public abstract fun thickness (I)V
+}
+
+public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
+	public abstract fun imageUrl (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Image : dev/keliver/widget/Widget {
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun url (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/KeliverMaterialWidgetFactory {
+	public abstract fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public abstract fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
+	public abstract fun Button ()Ldev/keliver/material/widget/Button;
+	public abstract fun Card ()Ldev/keliver/material/widget/Card;
+	public abstract fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
+	public abstract fun Chip ()Ldev/keliver/material/widget/Chip;
+	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
+	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
+	public abstract fun Image ()Ldev/keliver/material/widget/Image;
+	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
+	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public abstract fun Switch ()Ldev/keliver/material/widget/Switch;
+	public abstract fun Text ()Ldev/keliver/material/widget/Text;
+	public abstract fun TextField ()Ldev/keliver/material/widget/TextField;
+	public abstract fun TextInput ()Ldev/keliver/material/widget/TextInput;
+}
+
+public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem : dev/keliver/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactoryOwner, dev/keliver/material/widget/KeliverMaterialWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
+	public static final field Companion Ldev/keliver/material/widget/KeliverMaterialWidgetSystem$Companion;
+	public fun <init> (Ldev/keliver/material/widget/KeliverMaterialWidgetFactory;Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;Ldev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactory;)V
+	public fun apply (Ljava/lang/Object;Ldev/keliver/Modifier$UnscopedElement;)V
+	public fun getKeliverMaterial ()Ldev/keliver/material/widget/KeliverMaterialWidgetFactory;
+	public fun getRedwoodLayout ()Ldev/keliver/layout/widget/RedwoodLayoutWidgetFactory;
+	public fun getRedwoodLazyLayout ()Ldev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactory;
+}
+
+public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem$Companion {
+	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/material/widget/ScrollableColumn : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/StyledText : dev/keliver/widget/Widget {
+	public abstract fun align (I)V
+	public abstract fun bold (Z)V
+	public abstract fun colorArgb (I)V
+	public abstract fun fontSize (I)V
+	public abstract fun maxLines (I)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Switch : dev/keliver/widget/Widget {
+	public abstract fun checked (Z)V
+	public abstract fun enabled (Z)V
+	public abstract fun onCheckedChange (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Text : dev/keliver/widget/Widget {
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/TextField : dev/keliver/widget/Widget {
+	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun placeholder (Ljava/lang/String;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/TextInput : dev/keliver/widget/Widget {
+	public abstract fun hint (Ljava/lang/String;)V
+	public abstract fun onChange (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun state (Ldev/keliver/material/api/TextFieldState;)V
+}
+

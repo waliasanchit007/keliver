@@ -124,7 +124,9 @@ public data class Checkbox(
 /** Single-line text field (Compose `value` / `onValueChange` contract). */
 @Widget(9)
 public data class TextField(
-  @Property(1) val value: String,
+  // NB: named `text`, not `value` — `value` is reserved (it's the Widget render
+  // slot) and collides in the generated test doubles.
+  @Property(1) val text: String,
   @Property(2) val placeholder: String = "",
   @Property(3) val onValueChange: ((String) -> Unit)? = null,
 )

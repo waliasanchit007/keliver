@@ -1,0 +1,31 @@
+public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactory : dev/keliver/material/widget/KeliverMaterialWidgetFactory {
+	public static final field $stable I
+	public fun <init> (Lcoil3/ImageLoader;)V
+	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
+	public fun Button ()Ldev/keliver/material/widget/Button;
+	public fun Card ()Ldev/keliver/material/widget/Card;
+	public fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
+	public fun Chip ()Ldev/keliver/material/widget/Chip;
+	public fun Divider ()Ldev/keliver/material/widget/Divider;
+	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
+	public fun Image ()Ldev/keliver/material/widget/Image;
+	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
+	public fun Reuse (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Reuse;)V
+	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public fun Switch ()Ldev/keliver/material/widget/Switch;
+	public fun Text ()Ldev/keliver/material/widget/Text;
+	public fun TextField ()Ldev/keliver/material/widget/TextField;
+	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+}
+
+public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactoryKt {
+	public static final fun ComposeUiKeliverMaterialWidgetSystem (Lcoil3/ImageLoader;)Ldev/keliver/material/widget/KeliverMaterialWidgetSystem;
+}
+
+public final class dev/keliver/material/composeui/ThemeKt {
+	public static final fun KeliverMaterialTheme (ZLkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun getTypography ()Landroidx/compose/material/Typography;
+}
+

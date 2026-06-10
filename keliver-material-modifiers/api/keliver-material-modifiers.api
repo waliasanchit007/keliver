@@ -1,0 +1,3 @@
+public abstract interface class dev/keliver/material/modifier/Reuse : dev/keliver/Modifier$UnscopedElement {
+}
+

@@ -1,0 +1,129 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-material-widget>
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AsyncImage : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AsyncImage|null[0]
+    abstract fun contentScale(kotlin/Int) // dev.keliver.material.widget/AsyncImage.contentScale|contentScale(kotlin.Int){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AsyncImage.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun url(kotlin/String) // dev.keliver.material.widget/AsyncImage.url|url(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/BottomSheet : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/BottomSheet|null[0]
+    abstract val children // dev.keliver.material.widget/BottomSheet.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/BottomSheet.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun onDismiss(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/BottomSheet.onDismiss|onDismiss(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun visible(kotlin/Boolean) // dev.keliver.material.widget/BottomSheet.visible|visible(kotlin.Boolean){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Button : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Button|null[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/Button.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/Button.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun text(kotlin/String?) // dev.keliver.material.widget/Button.text|text(kotlin.String?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Card : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Card|null[0]
+    abstract val children // dev.keliver.material.widget/Card.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Card.children.<get-children>|<get-children>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Checkbox : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Checkbox|null[0]
+    abstract fun checked(kotlin/Boolean) // dev.keliver.material.widget/Checkbox.checked|checked(kotlin.Boolean){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/Checkbox.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun onCheckedChange(kotlin/Function1<kotlin/Boolean, kotlin/Unit>?) // dev.keliver.material.widget/Checkbox.onCheckedChange|onCheckedChange(kotlin.Function1<kotlin.Boolean,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Chip : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Chip|null[0]
+    abstract fun label(kotlin/String) // dev.keliver.material.widget/Chip.label|label(kotlin.String){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/Chip.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Divider : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Divider|null[0]
+    abstract fun thickness(kotlin/Int) // dev.keliver.material.widget/Divider.thickness|thickness(kotlin.Int){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/IconButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/IconButton|null[0]
+    abstract fun imageUrl(kotlin/String) // dev.keliver.material.widget/IconButton.imageUrl|imageUrl(kotlin.String){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/IconButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Image : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Image|null[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/Image.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun url(kotlin/String) // dev.keliver.material.widget/Image.url|url(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialWidgetFactory { // dev.keliver.material.widget/KeliverMaterialWidgetFactory|null[0]
+    abstract fun AsyncImage(): dev.keliver.material.widget/AsyncImage<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AsyncImage|AsyncImage(){}[0]
+    abstract fun BottomSheet(): dev.keliver.material.widget/BottomSheet<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.BottomSheet|BottomSheet(){}[0]
+    abstract fun Button(): dev.keliver.material.widget/Button<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Button|Button(){}[0]
+    abstract fun Card(): dev.keliver.material.widget/Card<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Card|Card(){}[0]
+    abstract fun Checkbox(): dev.keliver.material.widget/Checkbox<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Checkbox|Checkbox(){}[0]
+    abstract fun Chip(): dev.keliver.material.widget/Chip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Chip|Chip(){}[0]
+    abstract fun Divider(): dev.keliver.material.widget/Divider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Divider|Divider(){}[0]
+    abstract fun IconButton(): dev.keliver.material.widget/IconButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.IconButton|IconButton(){}[0]
+    abstract fun Image(): dev.keliver.material.widget/Image<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Image|Image(){}[0]
+    abstract fun Reuse(#A, dev.keliver.material.modifier/Reuse) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Reuse|Reuse(1:0;dev.keliver.material.modifier.Reuse){}[0]
+    abstract fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
+    abstract fun StyledText(): dev.keliver.material.widget/StyledText<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.StyledText|StyledText(){}[0]
+    abstract fun Switch(): dev.keliver.material.widget/Switch<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Switch|Switch(){}[0]
+    abstract fun Text(): dev.keliver.material.widget/Text<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Text|Text(){}[0]
+    abstract fun TextField(): dev.keliver.material.widget/TextField<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextField|TextField(){}[0]
+    abstract fun TextInput(): dev.keliver.material.widget/TextInput<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextInput|TextInput(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/ScrollableColumn : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/ScrollableColumn|null[0]
+    abstract val children // dev.keliver.material.widget/ScrollableColumn.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/ScrollableColumn.children.<get-children>|<get-children>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledText : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/StyledText|null[0]
+    abstract fun align(kotlin/Int) // dev.keliver.material.widget/StyledText.align|align(kotlin.Int){}[0]
+    abstract fun bold(kotlin/Boolean) // dev.keliver.material.widget/StyledText.bold|bold(kotlin.Boolean){}[0]
+    abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/StyledText.colorArgb|colorArgb(kotlin.Int){}[0]
+    abstract fun fontSize(kotlin/Int) // dev.keliver.material.widget/StyledText.fontSize|fontSize(kotlin.Int){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.material.widget/StyledText.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun text(kotlin/String) // dev.keliver.material.widget/StyledText.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Switch : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Switch|null[0]
+    abstract fun checked(kotlin/Boolean) // dev.keliver.material.widget/Switch.checked|checked(kotlin.Boolean){}[0]
+    abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/Switch.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun onCheckedChange(kotlin/Function1<kotlin/Boolean, kotlin/Unit>?) // dev.keliver.material.widget/Switch.onCheckedChange|onCheckedChange(kotlin.Function1<kotlin.Boolean,kotlin.Unit>?){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Text : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Text|null[0]
+    abstract fun text(kotlin/String) // dev.keliver.material.widget/Text.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextField : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/TextField|null[0]
+    abstract fun onValueChange(kotlin/Function1<kotlin/String, kotlin/Unit>?) // dev.keliver.material.widget/TextField.onValueChange|onValueChange(kotlin.Function1<kotlin.String,kotlin.Unit>?){}[0]
+    abstract fun placeholder(kotlin/String) // dev.keliver.material.widget/TextField.placeholder|placeholder(kotlin.String){}[0]
+    abstract fun text(kotlin/String) // dev.keliver.material.widget/TextField.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextInput : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/TextInput|null[0]
+    abstract fun hint(kotlin/String) // dev.keliver.material.widget/TextInput.hint|hint(kotlin.String){}[0]
+    abstract fun onChange(kotlin/Function1<dev.keliver.material.api/TextFieldState, kotlin/Unit>?) // dev.keliver.material.widget/TextInput.onChange|onChange(kotlin.Function1<dev.keliver.material.api.TextFieldState,kotlin.Unit>?){}[0]
+    abstract fun state(dev.keliver.material.api/TextFieldState) // dev.keliver.material.widget/TextInput.state|state(dev.keliver.material.api.TextFieldState){}[0]
+}
+
+final class <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialWidgetSystem : dev.keliver.layout.widget/RedwoodLayoutWidgetFactoryOwner<#A>, dev.keliver.lazylayout.widget/RedwoodLazyLayoutWidgetFactoryOwner<#A>, dev.keliver.material.widget/KeliverMaterialWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.material.widget/KeliverMaterialWidgetSystem|null[0]
+    constructor <init>(dev.keliver.material.widget/KeliverMaterialWidgetFactory<#A>, dev.keliver.layout.widget/RedwoodLayoutWidgetFactory<#A>, dev.keliver.lazylayout.widget/RedwoodLazyLayoutWidgetFactory<#A>) // dev.keliver.material.widget/KeliverMaterialWidgetSystem.<init>|<init>(dev.keliver.material.widget.KeliverMaterialWidgetFactory<1:0>;dev.keliver.layout.widget.RedwoodLayoutWidgetFactory<1:0>;dev.keliver.lazylayout.widget.RedwoodLazyLayoutWidgetFactory<1:0>){}[0]
+
+    final val KeliverMaterial // dev.keliver.material.widget/KeliverMaterialWidgetSystem.KeliverMaterial|{}KeliverMaterial[0]
+        final fun <get-KeliverMaterial>(): dev.keliver.material.widget/KeliverMaterialWidgetFactory<#A> // dev.keliver.material.widget/KeliverMaterialWidgetSystem.KeliverMaterial.<get-KeliverMaterial>|<get-KeliverMaterial>(){}[0]
+    final val RedwoodLayout // dev.keliver.material.widget/KeliverMaterialWidgetSystem.RedwoodLayout|{}RedwoodLayout[0]
+        final fun <get-RedwoodLayout>(): dev.keliver.layout.widget/RedwoodLayoutWidgetFactory<#A> // dev.keliver.material.widget/KeliverMaterialWidgetSystem.RedwoodLayout.<get-RedwoodLayout>|<get-RedwoodLayout>(){}[0]
+    final val RedwoodLazyLayout // dev.keliver.material.widget/KeliverMaterialWidgetSystem.RedwoodLazyLayout|{}RedwoodLazyLayout[0]
+        final fun <get-RedwoodLazyLayout>(): dev.keliver.lazylayout.widget/RedwoodLazyLayoutWidgetFactory<#A> // dev.keliver.material.widget/KeliverMaterialWidgetSystem.RedwoodLazyLayout.<get-RedwoodLazyLayout>|<get-RedwoodLazyLayout>(){}[0]
+
+    final fun apply(#A, dev.keliver/Modifier.UnscopedElement) // dev.keliver.material.widget/KeliverMaterialWidgetSystem.apply|apply(1:0;dev.keliver.Modifier.UnscopedElement){}[0]
+
+    final object Companion { // dev.keliver.material.widget/KeliverMaterialWidgetSystem.Companion|null[0]
+        final fun <#A2: kotlin/Any> allChildren(dev.keliver.widget/Widget<#A2>): kotlin.collections/List<dev.keliver.widget/Widget<#A2>> // dev.keliver.material.widget/KeliverMaterialWidgetSystem.Companion.allChildren|allChildren(dev.keliver.widget.Widget<0:0>){0§<kotlin.Any>}[0]
+    }
+}

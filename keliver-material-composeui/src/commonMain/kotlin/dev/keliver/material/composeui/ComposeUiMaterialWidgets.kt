@@ -122,20 +122,20 @@ internal class ComposeUiCheckbox : Checkbox<@Composable (Modifier) -> Unit> {
 }
 
 internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
-  private var valueState by mutableStateOf("")
+  private var textState by mutableStateOf("")
   private var placeholderState by mutableStateOf("")
   private var onValueChange by mutableStateOf<((String) -> Unit)?>(null)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
     M3TextField(
-      value = valueState,
+      value = textState,
       onValueChange = { onValueChange?.invoke(it) },
       placeholder = { M3Text(placeholderState) },
       singleLine = true,
       modifier = m,
     )
   }
-  override fun value(value: String) { this.valueState = value }
+  override fun text(text: String) { this.textState = text }
   override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
   override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
 }
