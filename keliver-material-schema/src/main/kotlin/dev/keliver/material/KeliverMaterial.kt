@@ -1,35 +1,48 @@
 /*
- * Copyright (C) 2025 Square, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright (C) 2026 Keliver contributors.
+ * Licensed under the Apache License, Version 2.0.
  */
 package dev.keliver.material
 
 import dev.keliver.layout.RedwoodLayout
 import dev.keliver.lazylayout.RedwoodLazyLayout
+import dev.keliver.material.api.TextFieldState
+import dev.keliver.schema.Children
 import dev.keliver.schema.Modifier
 import dev.keliver.schema.Property
 import dev.keliver.schema.Schema
 import dev.keliver.schema.Schema.Dependency
 import dev.keliver.schema.Widget
-import dev.keliver.material.api.TextFieldState
 
+/**
+ * `keliver-material` — a batteries-included, Compose/Material3-parity widget
+ * schema. Adopters depend on this single schema to author server-driven UI that
+ * reads like native Compose, with no per-app widget definitions. Composes on the
+ * layout + lazylayout primitives.
+ *
+ * Widget IDs (`@Widget(n)`) and trait tags (`@Property`/`@Children`, which share
+ * one namespace per widget) are WIRE-STABLE once shipped: never renumber, only
+ * append. Batch 0 = tags 1-15; later batches append toward full parity.
+ */
 @Schema(
   members = [
+    // inherited primitives (from keliver-ui-basic)
     TextInput::class,
     Text::class,
     Image::class,
     Button::class,
+    // Batch 0 seed (Material3)
+    StyledText::class,
+    Card::class,
+    Switch::class,
+    Checkbox::class,
+    TextField::class,
+    Divider::class,
+    Chip::class,
+    IconButton::class,
+    AsyncImage::class,
+    ScrollableColumn::class,
+    BottomSheet::class,
     Reuse::class,
   ],
   dependencies = [
@@ -39,14 +52,15 @@ import dev.keliver.material.api.TextFieldState
 )
 public interface KeliverMaterial
 
+// ---------------------------------------------------------------------------
+// Inherited primitives (unchanged from ui-basic).
+// ---------------------------------------------------------------------------
+
 @Widget(1)
 public data class TextInput(
-  @Property(1)
-  val state: TextFieldState = TextFieldState(),
-  @Property(2)
-  val hint: String = "",
-  @Property(3)
-  val onChange: ((TextFieldState) -> Unit)? = null,
+  @Property(1) val state: TextFieldState = TextFieldState(),
+  @Property(2) val hint: String = "",
+  @Property(3) val onChange: ((TextFieldState) -> Unit)? = null,
 )
 
 @Widget(2)
@@ -67,5 +81,95 @@ public data class Button(
   @Property(3) val onClick: (() -> Unit)? = null,
 )
 
-@Modifier(-4_543_827) // -4_543_827 is a reserved tag.
+// ---------------------------------------------------------------------------
+// Batch 0 seed widgets (Material3 defaults).
+// ---------------------------------------------------------------------------
+
+/** Styled text: weight, size, color, alignment, line clamp. */
+@Widget(5)
+public data class StyledText(
+  @Property(1) val text: String,
+  @Property(2) val fontSize: Int = 14,
+  @Property(3) val bold: Boolean = false,
+  /** ARGB int; 0 => theme `onSurface`. */
+  @Property(4) val colorArgb: Int = 0,
+  /** 0 start, 1 center, 2 end. */
+  @Property(5) val align: Int = 0,
+  /** 0 => unlimited. */
+  @Property(6) val maxLines: Int = 0,
+)
+
+/** Material3 elevated card container. */
+@Widget(6)
+public data class Card(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Material3 toggle switch. */
+@Widget(7)
+public data class Switch(
+  @Property(1) val checked: Boolean,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onCheckedChange: ((Boolean) -> Unit)? = null,
+)
+
+/** Material3 checkbox. */
+@Widget(8)
+public data class Checkbox(
+  @Property(1) val checked: Boolean,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onCheckedChange: ((Boolean) -> Unit)? = null,
+)
+
+/** Single-line text field (Compose `value` / `onValueChange` contract). */
+@Widget(9)
+public data class TextField(
+  @Property(1) val value: String,
+  @Property(2) val placeholder: String = "",
+  @Property(3) val onValueChange: ((String) -> Unit)? = null,
+)
+
+/** Horizontal divider of [thickness] dp. */
+@Widget(10)
+public data class Divider(
+  @Property(1) val thickness: Int = 1,
+)
+
+/** Material3 assist chip with a text label. */
+@Widget(11)
+public data class Chip(
+  @Property(1) val label: String,
+  @Property(2) val onClick: (() -> Unit)? = null,
+)
+
+/** Icon-only button rendering a URL image inside an `IconButton`. */
+@Widget(12)
+public data class IconButton(
+  @Property(1) val imageUrl: String,
+  @Property(2) val onClick: (() -> Unit)? = null,
+)
+
+/** Network image via Coil. [contentScale]: 0 fit, 1 crop, 2 fillBounds. */
+@Widget(13)
+public data class AsyncImage(
+  @Property(1) val url: String,
+  @Property(2) val contentScale: Int = 0,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+/** Vertically scrollable column container. */
+@Widget(14)
+public data class ScrollableColumn(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Material3 modal bottom sheet; content in [children]. */
+@Widget(15)
+public data class BottomSheet(
+  @Property(1) val visible: Boolean,
+  @Property(2) val onDismiss: (() -> Unit)? = null,
+  @Children(3) val children: () -> Unit,
+)
+
+@Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.
 public object Reuse
