@@ -1,0 +1,28 @@
+import static dev.keliver.buildsupport.TargetGroup.ToolkitComposeUi
+
+redwoodBuild {
+  targets(ToolkitComposeUi)
+  publishing()
+}
+
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverMaterialWidget
+        api libs.coil.compose
+        api libs.jetbrains.compose.material
+        implementation projects.keliverLayoutComposeui
+        implementation projects.keliverLazylayoutComposeui
+        implementation projects.keliverWidgetComposeui
+        implementation libs.jetbrains.compose.ui
+      }
+    }
+  }
+}
+
+android {
+  namespace 'dev.keliver.material.composeui'
+}

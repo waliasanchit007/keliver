@@ -164,6 +164,14 @@ include ':keliver-ui-basic-schema'
 include ':keliver-ui-basic-testing'
 include ':keliver-ui-basic-widget'
 
+include ':keliver-material-api'
+include ':keliver-material-compose'
+include ':keliver-material-composeui'
+include ':keliver-material-modifiers'
+include ':keliver-material-schema'
+include ':keliver-material-testing'
+include ':keliver-material-widget'
+
 // Test-only fixture: the upstream Redwood `test-app` schema + its codegen
 // outputs (com.example.redwood.testapp.*). Provides the shared TestSchema
 // that ~22 inherited protocol/codegen/treehouse tests assert against.
