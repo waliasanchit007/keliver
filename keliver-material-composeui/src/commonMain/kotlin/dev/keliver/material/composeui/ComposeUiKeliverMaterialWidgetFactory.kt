@@ -51,6 +51,10 @@ import dev.keliver.material.widget.CircularProgressIndicator
 import dev.keliver.material.widget.Dialog
 import dev.keliver.material.widget.LinearProgressIndicator
 import dev.keliver.material.widget.Snackbar
+import dev.keliver.material.widget.Badge
+import dev.keliver.material.widget.FilterChip
+import dev.keliver.material.widget.InputChip
+import dev.keliver.material.widget.SuggestionChip
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -105,6 +109,12 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun Snackbar(): Snackbar<@Composable (Modifier) -> Unit> = ComposeUiSnackbar()
   override fun CircularProgressIndicator(): CircularProgressIndicator<@Composable (Modifier) -> Unit> = ComposeUiCircularProgressIndicator()
   override fun LinearProgressIndicator(): LinearProgressIndicator<@Composable (Modifier) -> Unit> = ComposeUiLinearProgressIndicator()
+
+  // Batch 5: chips & badges.
+  override fun FilterChip(): FilterChip<@Composable (Modifier) -> Unit> = ComposeUiFilterChip()
+  override fun InputChip(): InputChip<@Composable (Modifier) -> Unit> = ComposeUiInputChip()
+  override fun SuggestionChip(): SuggestionChip<@Composable (Modifier) -> Unit> = ComposeUiSuggestionChip()
+  override fun Badge(): Badge<@Composable (Modifier) -> Unit> = ComposeUiBadge()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

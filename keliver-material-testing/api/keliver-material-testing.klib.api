@@ -54,6 +54,23 @@ final class dev.keliver.material.testing/AsyncImageValue : dev.keliver.testing/W
     final fun toString(): kotlin/String // dev.keliver.material.testing/AsyncImageValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/BadgeValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/BadgeValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String = ...) // dev.keliver.material.testing/BadgeValue.<init>|<init>(dev.keliver.Modifier;kotlin.String){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/BadgeValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/BadgeValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/BadgeValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/BadgeValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val text // dev.keliver.material.testing/BadgeValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/BadgeValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/BadgeValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/BadgeValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/BadgeValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/BadgeValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/BadgeValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/BottomAppBarValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/BottomAppBarValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/BottomAppBarValue.<init>|<init>(dev.keliver.Modifier;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
 
@@ -282,6 +299,27 @@ final class dev.keliver.material.testing/FilledTonalButtonValue : dev.keliver.te
     final fun toString(): kotlin/String // dev.keliver.material.testing/FilledTonalButtonValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/FilterChipValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/FilterChipValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/FilterChipValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/FilterChipValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/FilterChipValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val label // dev.keliver.material.testing/FilterChipValue.label|{}label[0]
+        final fun <get-label>(): kotlin/String // dev.keliver.material.testing/FilterChipValue.label.<get-label>|<get-label>(){}[0]
+    final val modifier // dev.keliver.material.testing/FilterChipValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/FilterChipValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/FilterChipValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/FilterChipValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val selected // dev.keliver.material.testing/FilterChipValue.selected|{}selected[0]
+        final fun <get-selected>(): kotlin/Boolean // dev.keliver.material.testing/FilterChipValue.selected.<get-selected>|<get-selected>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/FilterChipValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/FilterChipValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/FilterChipValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/FilterChipValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/FilterChipValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/FloatingActionButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/FloatingActionButtonValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/FloatingActionButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
 
@@ -373,11 +411,33 @@ final class dev.keliver.material.testing/ImageValue : dev.keliver.testing/Widget
     final fun toString(): kotlin/String // dev.keliver.material.testing/ImageValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/InputChipValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/InputChipValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/InputChipValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/InputChipValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/InputChipValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val label // dev.keliver.material.testing/InputChipValue.label|{}label[0]
+        final fun <get-label>(): kotlin/String // dev.keliver.material.testing/InputChipValue.label.<get-label>|<get-label>(){}[0]
+    final val modifier // dev.keliver.material.testing/InputChipValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/InputChipValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/InputChipValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/InputChipValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val selected // dev.keliver.material.testing/InputChipValue.selected|{}selected[0]
+        final fun <get-selected>(): kotlin/Boolean // dev.keliver.material.testing/InputChipValue.selected.<get-selected>|<get-selected>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/InputChipValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/InputChipValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/InputChipValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/InputChipValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/InputChipValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : dev.keliver.material.widget/KeliverMaterialWidgetFactory<dev.keliver.testing/WidgetValue> { // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory|null[0]
     constructor <init>() // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.<init>|<init>(){}[0]
 
     final fun AlertDialog(): dev.keliver.material.widget/AlertDialog<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AlertDialog|AlertDialog(){}[0]
     final fun AsyncImage(): dev.keliver.material.widget/AsyncImage<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AsyncImage|AsyncImage(){}[0]
+    final fun Badge(): dev.keliver.material.widget/Badge<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Badge|Badge(){}[0]
     final fun BottomAppBar(): dev.keliver.material.widget/BottomAppBar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.BottomAppBar|BottomAppBar(){}[0]
     final fun BottomSheet(): dev.keliver.material.widget/BottomSheet<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.BottomSheet|BottomSheet(){}[0]
     final fun Button(): dev.keliver.material.widget/Button<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Button|Button(){}[0]
@@ -390,11 +450,13 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun ElevatedButton(): dev.keliver.material.widget/ElevatedButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ElevatedButton|ElevatedButton(){}[0]
     final fun ElevatedCard(): dev.keliver.material.widget/ElevatedCard<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ElevatedCard|ElevatedCard(){}[0]
     final fun FilledTonalButton(): dev.keliver.material.widget/FilledTonalButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FilledTonalButton|FilledTonalButton(){}[0]
+    final fun FilterChip(): dev.keliver.material.widget/FilterChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FilterChip|FilterChip(){}[0]
     final fun FloatingActionButton(): dev.keliver.material.widget/FloatingActionButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FloatingActionButton|FloatingActionButton(){}[0]
     final fun FlowColumn(): dev.keliver.material.widget/FlowColumn<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FlowColumn|FlowColumn(){}[0]
     final fun FlowRow(): dev.keliver.material.widget/FlowRow<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FlowRow|FlowRow(){}[0]
     final fun IconButton(): dev.keliver.material.widget/IconButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.IconButton|IconButton(){}[0]
     final fun Image(): dev.keliver.material.widget/Image<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Image|Image(){}[0]
+    final fun InputChip(): dev.keliver.material.widget/InputChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.InputChip|InputChip(){}[0]
     final fun LinearProgressIndicator(): dev.keliver.material.widget/LinearProgressIndicator<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LinearProgressIndicator|LinearProgressIndicator(){}[0]
     final fun NavigationBar(): dev.keliver.material.widget/NavigationBar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.NavigationBar|NavigationBar(){}[0]
     final fun OutlinedButton(): dev.keliver.material.widget/OutlinedButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.OutlinedButton|OutlinedButton(){}[0]
@@ -407,6 +469,7 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun Slider(): dev.keliver.material.widget/Slider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Slider|Slider(){}[0]
     final fun Snackbar(): dev.keliver.material.widget/Snackbar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Snackbar|Snackbar(){}[0]
     final fun StyledText(): dev.keliver.material.widget/StyledText<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.StyledText|StyledText(){}[0]
+    final fun SuggestionChip(): dev.keliver.material.widget/SuggestionChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.SuggestionChip|SuggestionChip(){}[0]
     final fun Surface(): dev.keliver.material.widget/Surface<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Surface|Surface(){}[0]
     final fun Switch(): dev.keliver.material.widget/Switch<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Switch|Switch(){}[0]
     final fun Tab(): dev.keliver.material.widget/Tab<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Tab|Tab(){}[0]
@@ -631,6 +694,25 @@ final class dev.keliver.material.testing/StyledTextValue : dev.keliver.testing/W
     final fun hashCode(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.hashCode|hashCode(){}[0]
     final fun toDebugString(): kotlin/String // dev.keliver.material.testing/StyledTextValue.toDebugString|toDebugString(){}[0]
     final fun toString(): kotlin/String // dev.keliver.material.testing/StyledTextValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/SuggestionChipValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/SuggestionChipValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/SuggestionChipValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/SuggestionChipValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/SuggestionChipValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val label // dev.keliver.material.testing/SuggestionChipValue.label|{}label[0]
+        final fun <get-label>(): kotlin/String // dev.keliver.material.testing/SuggestionChipValue.label.<get-label>|<get-label>(){}[0]
+    final val modifier // dev.keliver.material.testing/SuggestionChipValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/SuggestionChipValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/SuggestionChipValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/SuggestionChipValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/SuggestionChipValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/SuggestionChipValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/SuggestionChipValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/SuggestionChipValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/SuggestionChipValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/SurfaceValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/SurfaceValue|null[0]

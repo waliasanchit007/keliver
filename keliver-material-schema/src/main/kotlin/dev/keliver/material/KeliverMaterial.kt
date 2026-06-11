@@ -71,6 +71,11 @@ import dev.keliver.schema.Widget
     Snackbar::class,
     CircularProgressIndicator::class,
     LinearProgressIndicator::class,
+    // Batch 5: chips & badges
+    FilterChip::class,
+    InputChip::class,
+    SuggestionChip::class,
+    Badge::class,
     Reuse::class,
   ],
   dependencies = [
@@ -369,6 +374,35 @@ public data class CircularProgressIndicator(
 @Widget(39)
 public data class LinearProgressIndicator(
   @Property(1) val progress: Float = -1f,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 5: chips & badges (Material3).
+// ---------------------------------------------------------------------------
+
+@Widget(40)
+public data class FilterChip(
+  @Property(1) val label: String,
+  @Property(2) val selected: Boolean = false,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(41)
+public data class InputChip(
+  @Property(1) val label: String,
+  @Property(2) val selected: Boolean = false,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(42)
+public data class SuggestionChip(
+  @Property(1) val label: String,
+  @Property(2) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(43)
+public data class Badge(
+  @Property(1) val text: String = "",
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

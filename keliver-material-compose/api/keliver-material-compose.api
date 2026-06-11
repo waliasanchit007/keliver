@@ -6,6 +6,10 @@ public final class dev/keliver/material/compose/AsyncImageKt {
 	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/BadgeKt {
+	public static final fun Badge (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/BottomAppBarKt {
 	public static final fun BottomAppBar (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
@@ -54,6 +58,10 @@ public final class dev/keliver/material/compose/FilledTonalButtonKt {
 	public static final fun FilledTonalButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/FilterChipKt {
+	public static final fun FilterChip (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/FloatingActionButtonKt {
 	public static final fun FloatingActionButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -72,6 +80,10 @@ public final class dev/keliver/material/compose/IconButtonKt {
 
 public final class dev/keliver/material/compose/ImageKt {
 	public static final fun Image (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/InputChipKt {
+	public static final fun InputChip (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/LinearProgressIndicatorKt {
@@ -116,6 +128,10 @@ public final class dev/keliver/material/compose/SnackbarKt {
 
 public final class dev/keliver/material/compose/StyledTextKt {
 	public static final fun StyledText (Ljava/lang/String;IZIIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/SuggestionChipKt {
+	public static final fun SuggestionChip (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/SurfaceKt {

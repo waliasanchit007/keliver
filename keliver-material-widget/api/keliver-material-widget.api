@@ -13,6 +13,10 @@ public abstract interface class dev/keliver/material/widget/AsyncImage : dev/kel
 	public abstract fun url (Ljava/lang/String;)V
 }
 
+public abstract interface class dev/keliver/material/widget/Badge : dev/keliver/widget/Widget {
+	public abstract fun text (Ljava/lang/String;)V
+}
+
 public abstract interface class dev/keliver/material/widget/BottomAppBar : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
@@ -73,6 +77,12 @@ public abstract interface class dev/keliver/material/widget/FilledTonalButton : 
 	public abstract fun text (Ljava/lang/String;)V
 }
 
+public abstract interface class dev/keliver/material/widget/FilterChip : dev/keliver/widget/Widget {
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun selected (Z)V
+}
+
 public abstract interface class dev/keliver/material/widget/FloatingActionButton : dev/keliver/widget/Widget {
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
@@ -96,9 +106,16 @@ public abstract interface class dev/keliver/material/widget/Image : dev/keliver/
 	public abstract fun url (Ljava/lang/String;)V
 }
 
+public abstract interface class dev/keliver/material/widget/InputChip : dev/keliver/widget/Widget {
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun selected (Z)V
+}
+
 public abstract interface class dev/keliver/material/widget/KeliverMaterialWidgetFactory {
 	public abstract fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public abstract fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public abstract fun Badge ()Ldev/keliver/material/widget/Badge;
 	public abstract fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public abstract fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public abstract fun Button ()Ldev/keliver/material/widget/Button;
@@ -111,11 +128,13 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public abstract fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public abstract fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
+	public abstract fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public abstract fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
+	public abstract fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
@@ -128,6 +147,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public abstract fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public abstract fun Surface ()Ldev/keliver/material/widget/Surface;
 	public abstract fun Switch ()Ldev/keliver/material/widget/Switch;
 	public abstract fun Tab ()Ldev/keliver/material/widget/Tab;
@@ -208,6 +228,11 @@ public abstract interface class dev/keliver/material/widget/StyledText : dev/kel
 	public abstract fun fontSize (I)V
 	public abstract fun maxLines (I)V
 	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/SuggestionChip : dev/keliver/widget/Widget {
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 }
 
 public abstract interface class dev/keliver/material/widget/Surface : dev/keliver/widget/Widget {

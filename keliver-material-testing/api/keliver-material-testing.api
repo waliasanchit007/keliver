@@ -31,6 +31,20 @@ public final class dev/keliver/material/testing/AsyncImageValue : dev/keliver/te
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/BadgeValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/BottomAppBarValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
 	public fun <init> (Ldev/keliver/Modifier;Ljava/util/List;)V
@@ -205,6 +219,21 @@ public final class dev/keliver/material/testing/FilledTonalButtonValue : dev/kel
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/FilterChipValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getSelected ()Z
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/FloatingActionButtonValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
 	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
@@ -276,6 +305,21 @@ public final class dev/keliver/material/testing/ImageValue : dev/keliver/testing
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/InputChipValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getSelected ()Z
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/KeliverMaterialTesterKt {
 	public static final fun KeliverMaterialTester (Ldev/keliver/ui/OnBackPressedDispatcher;Ldev/keliver/testing/TestSavedState;Ldev/keliver/ui/UiConfiguration;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun KeliverMaterialTester$default (Ldev/keliver/ui/OnBackPressedDispatcher;Ldev/keliver/testing/TestSavedState;Ldev/keliver/ui/UiConfiguration;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -285,6 +329,7 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun <init> ()V
 	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public fun Badge ()Ldev/keliver/material/widget/Badge;
 	public fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public fun Button ()Ldev/keliver/material/widget/Button;
@@ -297,11 +342,13 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
+	public fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
+	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
@@ -315,6 +362,7 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;
 	public fun Tab ()Ldev/keliver/material/widget/Tab;
@@ -483,6 +531,20 @@ public final class dev/keliver/material/testing/StyledTextValue : dev/keliver/te
 	public final fun getMaxLines ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/SuggestionChipValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

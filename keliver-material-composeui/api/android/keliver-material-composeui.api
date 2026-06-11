@@ -3,6 +3,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun <init> (Lcoil3/ImageLoader;)V
 	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public fun Badge ()Ldev/keliver/material/widget/Badge;
 	public fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public fun Button ()Ldev/keliver/material/widget/Button;
@@ -15,11 +16,13 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
+	public fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
+	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
@@ -33,6 +36,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;
 	public fun Tab ()Ldev/keliver/material/widget/Tab;
