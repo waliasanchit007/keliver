@@ -43,6 +43,15 @@ import dev.keliver.schema.Widget
     AsyncImage::class,
     ScrollableColumn::class,
     BottomSheet::class,
+    // Batch 1: buttons & inputs
+    OutlinedButton::class,
+    TextButton::class,
+    ElevatedButton::class,
+    FilledTonalButton::class,
+    FloatingActionButton::class,
+    RadioButton::class,
+    Slider::class,
+    OutlinedTextField::class,
     Reuse::class,
   ],
   dependencies = [
@@ -171,6 +180,67 @@ public data class BottomSheet(
   @Property(1) val visible: Boolean,
   @Property(2) val onDismiss: (() -> Unit)? = null,
   @Children(3) val children: () -> Unit,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 1: buttons & inputs (Material3).
+// ---------------------------------------------------------------------------
+
+@Widget(16)
+public data class OutlinedButton(
+  @Property(1) val text: String,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(17)
+public data class TextButton(
+  @Property(1) val text: String,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(18)
+public data class ElevatedButton(
+  @Property(1) val text: String,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(19)
+public data class FilledTonalButton(
+  @Property(1) val text: String,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+/** Floating action button with a short text label. */
+@Widget(20)
+public data class FloatingActionButton(
+  @Property(1) val text: String = "",
+  @Property(2) val onClick: (() -> Unit)? = null,
+)
+
+@Widget(21)
+public data class RadioButton(
+  @Property(1) val selected: Boolean,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+/** Slider; [position] is 0f..1f. */
+@Widget(22)
+public data class Slider(
+  @Property(1) val position: Float = 0f,
+  @Property(2) val enabled: Boolean = true,
+  @Property(3) val onValueChange: ((Float) -> Unit)? = null,
+)
+
+@Widget(23)
+public data class OutlinedTextField(
+  @Property(1) val text: String,
+  @Property(2) val placeholder: String = "",
+  @Property(3) val onValueChange: ((String) -> Unit)? = null,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

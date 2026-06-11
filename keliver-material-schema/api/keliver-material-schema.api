@@ -100,6 +100,53 @@ public final class dev/keliver/material/Divider {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/ElevatedButton {
+	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/ElevatedButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/ElevatedButton;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ElevatedButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/FilledTonalButton {
+	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/FilledTonalButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/FilledTonalButton;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/FilledTonalButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/FloatingActionButton {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/FloatingActionButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/FloatingActionButton;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/FloatingActionButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/IconButton {
 	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -131,6 +178,54 @@ public final class dev/keliver/material/Image {
 public abstract interface class dev/keliver/material/KeliverMaterial {
 }
 
+public final class dev/keliver/material/OutlinedButton {
+	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/OutlinedButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/OutlinedButton;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/OutlinedButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/OutlinedTextField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ldev/keliver/material/OutlinedTextField;
+	public static synthetic fun copy$default (Ldev/keliver/material/OutlinedTextField;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/material/OutlinedTextField;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnValueChange ()Lkotlin/jvm/functions/Function1;
+	public final fun getPlaceholder ()Ljava/lang/String;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/RadioButton {
+	public fun <init> (ZZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (ZZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (ZZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/RadioButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/RadioButton;ZZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/RadioButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getSelected ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/Reuse {
 	public static final field INSTANCE Ldev/keliver/material/Reuse;
 }
@@ -142,6 +237,23 @@ public final class dev/keliver/material/ScrollableColumn {
 	public static synthetic fun copy$default (Ldev/keliver/material/ScrollableColumn;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ScrollableColumn;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/Slider {
+	public fun <init> ()V
+	public fun <init> (FZLkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (FZLkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()F
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (FZLkotlin/jvm/functions/Function1;)Ldev/keliver/material/Slider;
+	public static synthetic fun copy$default (Ldev/keliver/material/Slider;FZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/material/Slider;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnValueChange ()Lkotlin/jvm/functions/Function1;
+	public final fun getPosition ()F
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -190,6 +302,22 @@ public final class dev/keliver/material/Text {
 	public final fun copy (Ljava/lang/String;)Ldev/keliver/material/Text;
 	public static synthetic fun copy$default (Ldev/keliver/material/Text;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/material/Text;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/TextButton {
+	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/TextButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/TextButton;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/TextButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnabled ()Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

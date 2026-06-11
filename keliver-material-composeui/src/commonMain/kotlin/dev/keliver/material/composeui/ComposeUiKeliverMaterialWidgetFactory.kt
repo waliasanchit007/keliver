@@ -27,6 +27,14 @@ import dev.keliver.material.widget.Switch
 import dev.keliver.material.widget.Text
 import dev.keliver.material.widget.TextField
 import dev.keliver.material.widget.TextInput
+import dev.keliver.material.widget.ElevatedButton
+import dev.keliver.material.widget.FilledTonalButton
+import dev.keliver.material.widget.FloatingActionButton
+import dev.keliver.material.widget.OutlinedButton
+import dev.keliver.material.widget.OutlinedTextField
+import dev.keliver.material.widget.RadioButton
+import dev.keliver.material.widget.Slider
+import dev.keliver.material.widget.TextButton
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -49,6 +57,16 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun AsyncImage(): AsyncImage<@Composable (Modifier) -> Unit> = ComposeUiAsyncImage(imageLoader)
   override fun ScrollableColumn(): ScrollableColumn<@Composable (Modifier) -> Unit> = ComposeUiScrollableColumn()
   override fun BottomSheet(): BottomSheet<@Composable (Modifier) -> Unit> = ComposeUiBottomSheet()
+
+  // Batch 1: buttons & inputs.
+  override fun OutlinedButton(): OutlinedButton<@Composable (Modifier) -> Unit> = ComposeUiOutlinedButton()
+  override fun TextButton(): TextButton<@Composable (Modifier) -> Unit> = ComposeUiTextButton()
+  override fun ElevatedButton(): ElevatedButton<@Composable (Modifier) -> Unit> = ComposeUiElevatedButton()
+  override fun FilledTonalButton(): FilledTonalButton<@Composable (Modifier) -> Unit> = ComposeUiFilledTonalButton()
+  override fun FloatingActionButton(): FloatingActionButton<@Composable (Modifier) -> Unit> = ComposeUiFloatingActionButton()
+  override fun RadioButton(): RadioButton<@Composable (Modifier) -> Unit> = ComposeUiRadioButton()
+  override fun Slider(): Slider<@Composable (Modifier) -> Unit> = ComposeUiSlider()
+  override fun OutlinedTextField(): OutlinedTextField<@Composable (Modifier) -> Unit> = ComposeUiOutlinedTextField()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

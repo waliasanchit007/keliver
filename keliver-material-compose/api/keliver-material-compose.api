@@ -26,6 +26,18 @@ public final class dev/keliver/material/compose/DividerKt {
 	public static final fun Divider (ILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/ElevatedButtonKt {
+	public static final fun ElevatedButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/FilledTonalButtonKt {
+	public static final fun FilledTonalButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/FloatingActionButtonKt {
+	public static final fun FloatingActionButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/IconButtonKt {
 	public static final fun IconButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -34,8 +46,24 @@ public final class dev/keliver/material/compose/ImageKt {
 	public static final fun Image (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/OutlinedButtonKt {
+	public static final fun OutlinedButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/OutlinedTextFieldKt {
+	public static final fun OutlinedTextField (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/RadioButtonKt {
+	public static final fun RadioButton (ZZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/ScrollableColumnKt {
 	public static final fun ScrollableColumn (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/SliderKt {
+	public static final fun Slider (FZLkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
@@ -44,6 +72,10 @@ public final class dev/keliver/material/compose/StyledTextKt {
 
 public final class dev/keliver/material/compose/SwitchKt {
 	public static final fun Switch (ZZLkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/TextButtonKt {
+	public static final fun TextButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/TextFieldKt {

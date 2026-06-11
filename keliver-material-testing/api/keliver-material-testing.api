@@ -100,6 +100,51 @@ public final class dev/keliver/material/testing/DividerValue : dev/keliver/testi
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/ElevatedButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/FilledTonalButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/FloatingActionButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/IconButtonValue : dev/keliver/testing/WidgetValue {
 	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -142,16 +187,69 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public fun Chip ()Ldev/keliver/material/widget/Chip;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
+	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
+	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
+	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
+	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
+	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
+	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public fun Reuse (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Reuse;)V
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;
 	public fun Text ()Ldev/keliver/material/widget/Text;
+	public fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+}
+
+public final class dev/keliver/material/testing/OutlinedButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/OutlinedTextFieldValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnValueChange ()Lkotlin/jvm/functions/Function1;
+	public final fun getPlaceholder ()Ljava/lang/String;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/RadioButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;ZZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;ZZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getSelected ()Z
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
 public final class dev/keliver/material/testing/ScrollableColumnValue : dev/keliver/testing/WidgetValue {
@@ -162,6 +260,22 @@ public final class dev/keliver/material/testing/ScrollableColumnValue : dev/keli
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/SliderValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;FZLkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;FZLkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnValueChange ()Lkotlin/jvm/functions/Function1;
+	public final fun getPosition ()F
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -195,6 +309,21 @@ public final class dev/keliver/material/testing/SwitchValue : dev/keliver/testin
 	public final fun getEnabled ()Z
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnCheckedChange ()Lkotlin/jvm/functions/Function1;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/TextButtonValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getEnabled ()Z
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

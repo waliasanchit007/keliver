@@ -35,6 +35,23 @@ public abstract interface class dev/keliver/material/widget/Divider : dev/kelive
 	public abstract fun thickness (I)V
 }
 
+public abstract interface class dev/keliver/material/widget/ElevatedButton : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/FilledTonalButton : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/FloatingActionButton : dev/keliver/widget/Widget {
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
 public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
 	public abstract fun imageUrl (Ljava/lang/String;)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -53,13 +70,21 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public abstract fun Chip ()Ldev/keliver/material/widget/Chip;
 	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
+	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
+	public abstract fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
+	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
+	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
+	public abstract fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
+	public abstract fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public abstract fun Switch ()Ldev/keliver/material/widget/Switch;
 	public abstract fun Text ()Ldev/keliver/material/widget/Text;
+	public abstract fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public abstract fun TextField ()Ldev/keliver/material/widget/TextField;
 	public abstract fun TextInput ()Ldev/keliver/material/widget/TextInput;
 }
@@ -77,8 +102,32 @@ public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem$Compa
 	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
 }
 
+public abstract interface class dev/keliver/material/widget/OutlinedButton : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/OutlinedTextField : dev/keliver/widget/Widget {
+	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun placeholder (Ljava/lang/String;)V
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/RadioButton : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun selected (Z)V
+}
+
 public abstract interface class dev/keliver/material/widget/ScrollableColumn : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/Slider : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun position (F)V
 }
 
 public abstract interface class dev/keliver/material/widget/StyledText : dev/keliver/widget/Widget {
@@ -97,6 +146,12 @@ public abstract interface class dev/keliver/material/widget/Switch : dev/keliver
 }
 
 public abstract interface class dev/keliver/material/widget/Text : dev/keliver/widget/Widget {
+	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/TextButton : dev/keliver/widget/Widget {
+	public abstract fun enabled (Z)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
 }
 

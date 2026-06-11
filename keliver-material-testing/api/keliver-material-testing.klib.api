@@ -143,6 +143,67 @@ final class dev.keliver.material.testing/DividerValue : dev.keliver.testing/Widg
     final fun toString(): kotlin/String // dev.keliver.material.testing/DividerValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/ElevatedButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/ElevatedButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/ElevatedButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/ElevatedButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/ElevatedButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/ElevatedButtonValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/ElevatedButtonValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/ElevatedButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/ElevatedButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/ElevatedButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/ElevatedButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val text // dev.keliver.material.testing/ElevatedButtonValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/ElevatedButtonValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/ElevatedButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/ElevatedButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/ElevatedButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/ElevatedButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/ElevatedButtonValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/FilledTonalButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/FilledTonalButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/FilledTonalButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/FilledTonalButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/FilledTonalButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/FilledTonalButtonValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/FilledTonalButtonValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/FilledTonalButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/FilledTonalButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/FilledTonalButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/FilledTonalButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val text // dev.keliver.material.testing/FilledTonalButtonValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/FilledTonalButtonValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/FilledTonalButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/FilledTonalButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/FilledTonalButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/FilledTonalButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/FilledTonalButtonValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/FloatingActionButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/FloatingActionButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/FloatingActionButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/FloatingActionButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/FloatingActionButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/FloatingActionButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/FloatingActionButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/FloatingActionButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/FloatingActionButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val text // dev.keliver.material.testing/FloatingActionButtonValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/FloatingActionButtonValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/FloatingActionButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/FloatingActionButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/FloatingActionButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/FloatingActionButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/FloatingActionButtonValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/IconButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/IconButtonValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/IconButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
 
@@ -191,15 +252,86 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun Checkbox(): dev.keliver.material.widget/Checkbox<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Checkbox|Checkbox(){}[0]
     final fun Chip(): dev.keliver.material.widget/Chip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Chip|Chip(){}[0]
     final fun Divider(): dev.keliver.material.widget/Divider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Divider|Divider(){}[0]
+    final fun ElevatedButton(): dev.keliver.material.widget/ElevatedButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ElevatedButton|ElevatedButton(){}[0]
+    final fun FilledTonalButton(): dev.keliver.material.widget/FilledTonalButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FilledTonalButton|FilledTonalButton(){}[0]
+    final fun FloatingActionButton(): dev.keliver.material.widget/FloatingActionButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FloatingActionButton|FloatingActionButton(){}[0]
     final fun IconButton(): dev.keliver.material.widget/IconButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.IconButton|IconButton(){}[0]
     final fun Image(): dev.keliver.material.widget/Image<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Image|Image(){}[0]
+    final fun OutlinedButton(): dev.keliver.material.widget/OutlinedButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.OutlinedButton|OutlinedButton(){}[0]
+    final fun OutlinedTextField(): dev.keliver.material.widget/OutlinedTextField<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.OutlinedTextField|OutlinedTextField(){}[0]
+    final fun RadioButton(): dev.keliver.material.widget/RadioButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.RadioButton|RadioButton(){}[0]
     final fun Reuse(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Reuse) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Reuse|Reuse(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Reuse){}[0]
     final fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
+    final fun Slider(): dev.keliver.material.widget/Slider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Slider|Slider(){}[0]
     final fun StyledText(): dev.keliver.material.widget/StyledText<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.StyledText|StyledText(){}[0]
     final fun Switch(): dev.keliver.material.widget/Switch<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Switch|Switch(){}[0]
     final fun Text(): dev.keliver.material.widget/Text<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Text|Text(){}[0]
+    final fun TextButton(): dev.keliver.material.widget/TextButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextButton|TextButton(){}[0]
     final fun TextField(): dev.keliver.material.widget/TextField<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextField|TextField(){}[0]
     final fun TextInput(): dev.keliver.material.widget/TextInput<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextInput|TextInput(){}[0]
+}
+
+final class dev.keliver.material.testing/OutlinedButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/OutlinedButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/OutlinedButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/OutlinedButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/OutlinedButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/OutlinedButtonValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/OutlinedButtonValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/OutlinedButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/OutlinedButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/OutlinedButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/OutlinedButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val text // dev.keliver.material.testing/OutlinedButtonValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/OutlinedButtonValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/OutlinedButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/OutlinedButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/OutlinedButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/OutlinedButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/OutlinedButtonValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/OutlinedTextFieldValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/OutlinedTextFieldValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/Function1<kotlin/String, kotlin/Unit>? = ...) // dev.keliver.material.testing/OutlinedTextFieldValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/OutlinedTextFieldValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/OutlinedTextFieldValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/OutlinedTextFieldValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/OutlinedTextFieldValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onValueChange // dev.keliver.material.testing/OutlinedTextFieldValue.onValueChange|{}onValueChange[0]
+        final fun <get-onValueChange>(): kotlin/Function1<kotlin/String, kotlin/Unit>? // dev.keliver.material.testing/OutlinedTextFieldValue.onValueChange.<get-onValueChange>|<get-onValueChange>(){}[0]
+    final val placeholder // dev.keliver.material.testing/OutlinedTextFieldValue.placeholder|{}placeholder[0]
+        final fun <get-placeholder>(): kotlin/String // dev.keliver.material.testing/OutlinedTextFieldValue.placeholder.<get-placeholder>|<get-placeholder>(){}[0]
+    final val text // dev.keliver.material.testing/OutlinedTextFieldValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/OutlinedTextFieldValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/OutlinedTextFieldValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/OutlinedTextFieldValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/OutlinedTextFieldValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/OutlinedTextFieldValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/OutlinedTextFieldValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/RadioButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/RadioButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Boolean, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/RadioButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.Boolean;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/RadioButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/RadioButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/RadioButtonValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/RadioButtonValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/RadioButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/RadioButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/RadioButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/RadioButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val selected // dev.keliver.material.testing/RadioButtonValue.selected|{}selected[0]
+        final fun <get-selected>(): kotlin/Boolean // dev.keliver.material.testing/RadioButtonValue.selected.<get-selected>|<get-selected>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/RadioButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/RadioButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/RadioButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/RadioButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/RadioButtonValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/ScrollableColumnValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/ScrollableColumnValue|null[0]
@@ -217,6 +349,27 @@ final class dev.keliver.material.testing/ScrollableColumnValue : dev.keliver.tes
     final fun hashCode(): kotlin/Int // dev.keliver.material.testing/ScrollableColumnValue.hashCode|hashCode(){}[0]
     final fun toDebugString(): kotlin/String // dev.keliver.material.testing/ScrollableColumnValue.toDebugString|toDebugString(){}[0]
     final fun toString(): kotlin/String // dev.keliver.material.testing/ScrollableColumnValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/SliderValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/SliderValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Float = ..., kotlin/Boolean = ..., kotlin/Function1<kotlin/Float, kotlin/Unit>? = ...) // dev.keliver.material.testing/SliderValue.<init>|<init>(dev.keliver.Modifier;kotlin.Float;kotlin.Boolean;kotlin.Function1<kotlin.Float,kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/SliderValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/SliderValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/SliderValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/SliderValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/SliderValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/SliderValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onValueChange // dev.keliver.material.testing/SliderValue.onValueChange|{}onValueChange[0]
+        final fun <get-onValueChange>(): kotlin/Function1<kotlin/Float, kotlin/Unit>? // dev.keliver.material.testing/SliderValue.onValueChange.<get-onValueChange>|<get-onValueChange>(){}[0]
+    final val position // dev.keliver.material.testing/SliderValue.position|{}position[0]
+        final fun <get-position>(): kotlin/Float // dev.keliver.material.testing/SliderValue.position.<get-position>|<get-position>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/SliderValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/SliderValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/SliderValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/SliderValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/SliderValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/StyledTextValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/StyledTextValue|null[0]
@@ -265,6 +418,27 @@ final class dev.keliver.material.testing/SwitchValue : dev.keliver.testing/Widge
     final fun hashCode(): kotlin/Int // dev.keliver.material.testing/SwitchValue.hashCode|hashCode(){}[0]
     final fun toDebugString(): kotlin/String // dev.keliver.material.testing/SwitchValue.toDebugString|toDebugString(){}[0]
     final fun toString(): kotlin/String // dev.keliver.material.testing/SwitchValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/TextButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/TextButtonValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Boolean = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/TextButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Boolean;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/TextButtonValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/TextButtonValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val enabled // dev.keliver.material.testing/TextButtonValue.enabled|{}enabled[0]
+        final fun <get-enabled>(): kotlin/Boolean // dev.keliver.material.testing/TextButtonValue.enabled.<get-enabled>|<get-enabled>(){}[0]
+    final val modifier // dev.keliver.material.testing/TextButtonValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/TextButtonValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/TextButtonValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/TextButtonValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val text // dev.keliver.material.testing/TextButtonValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/TextButtonValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/TextButtonValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/TextButtonValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/TextButtonValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/TextButtonValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/TextButtonValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/TextFieldValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/TextFieldValue|null[0]
