@@ -65,6 +65,12 @@ import dev.keliver.schema.Widget
     NavigationBar::class,
     TabRow::class,
     Tab::class,
+    // Batch 4: feedback & overlays
+    AlertDialog::class,
+    Dialog::class,
+    Snackbar::class,
+    CircularProgressIndicator::class,
+    LinearProgressIndicator::class,
     Reuse::class,
   ],
   dependencies = [
@@ -325,6 +331,44 @@ public data class Tab(
   @Property(1) val text: String,
   @Property(2) val selected: Boolean = false,
   @Property(3) val onClick: (() -> Unit)? = null,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 4: feedback & overlays (Material3).
+// ---------------------------------------------------------------------------
+
+@Widget(35)
+public data class AlertDialog(
+  @Property(1) val title: String,
+  @Property(2) val text: String,
+  @Property(3) val confirmText: String = "OK",
+  @Property(4) val dismissText: String = "",
+  @Property(5) val onConfirm: (() -> Unit)? = null,
+  @Property(6) val onDismiss: (() -> Unit)? = null,
+)
+
+/** Generic modal dialog; content in [children]. */
+@Widget(36)
+public data class Dialog(
+  @Property(1) val onDismiss: (() -> Unit)? = null,
+  @Children(2) val children: () -> Unit,
+)
+
+@Widget(37)
+public data class Snackbar(
+  @Property(1) val message: String,
+)
+
+/** Circular progress; [progress] 0f..1f, or < 0 for indeterminate. */
+@Widget(38)
+public data class CircularProgressIndicator(
+  @Property(1) val progress: Float = -1f,
+)
+
+/** Linear progress; [progress] 0f..1f, or < 0 for indeterminate. */
+@Widget(39)
+public data class LinearProgressIndicator(
+  @Property(1) val progress: Float = -1f,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

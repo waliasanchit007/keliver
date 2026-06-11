@@ -46,6 +46,11 @@ import dev.keliver.material.widget.Scaffold
 import dev.keliver.material.widget.Tab
 import dev.keliver.material.widget.TabRow
 import dev.keliver.material.widget.TopAppBar
+import dev.keliver.material.widget.AlertDialog
+import dev.keliver.material.widget.CircularProgressIndicator
+import dev.keliver.material.widget.Dialog
+import dev.keliver.material.widget.LinearProgressIndicator
+import dev.keliver.material.widget.Snackbar
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -93,6 +98,13 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun NavigationBar(): NavigationBar<@Composable (Modifier) -> Unit> = ComposeUiNavigationBar()
   override fun TabRow(): TabRow<@Composable (Modifier) -> Unit> = ComposeUiTabRow()
   override fun Tab(): Tab<@Composable (Modifier) -> Unit> = ComposeUiTab()
+
+  // Batch 4: feedback & overlays.
+  override fun AlertDialog(): AlertDialog<@Composable (Modifier) -> Unit> = ComposeUiAlertDialog()
+  override fun Dialog(): Dialog<@Composable (Modifier) -> Unit> = ComposeUiDialog()
+  override fun Snackbar(): Snackbar<@Composable (Modifier) -> Unit> = ComposeUiSnackbar()
+  override fun CircularProgressIndicator(): CircularProgressIndicator<@Composable (Modifier) -> Unit> = ComposeUiCircularProgressIndicator()
+  override fun LinearProgressIndicator(): LinearProgressIndicator<@Composable (Modifier) -> Unit> = ComposeUiLinearProgressIndicator()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

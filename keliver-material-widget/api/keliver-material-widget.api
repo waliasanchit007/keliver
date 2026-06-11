@@ -1,3 +1,12 @@
+public abstract interface class dev/keliver/material/widget/AlertDialog : dev/keliver/widget/Widget {
+	public abstract fun confirmText (Ljava/lang/String;)V
+	public abstract fun dismissText (Ljava/lang/String;)V
+	public abstract fun onConfirm (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun onDismiss (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
+	public abstract fun title (Ljava/lang/String;)V
+}
+
 public abstract interface class dev/keliver/material/widget/AsyncImage : dev/keliver/widget/Widget {
 	public abstract fun contentScale (I)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -33,6 +42,15 @@ public abstract interface class dev/keliver/material/widget/Checkbox : dev/keliv
 public abstract interface class dev/keliver/material/widget/Chip : dev/keliver/widget/Widget {
 	public abstract fun label (Ljava/lang/String;)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class dev/keliver/material/widget/CircularProgressIndicator : dev/keliver/widget/Widget {
+	public abstract fun progress (F)V
+}
+
+public abstract interface class dev/keliver/material/widget/Dialog : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun onDismiss (Lkotlin/jvm/functions/Function0;)V
 }
 
 public abstract interface class dev/keliver/material/widget/Divider : dev/keliver/widget/Widget {
@@ -79,6 +97,7 @@ public abstract interface class dev/keliver/material/widget/Image : dev/keliver/
 }
 
 public abstract interface class dev/keliver/material/widget/KeliverMaterialWidgetFactory {
+	public abstract fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public abstract fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
 	public abstract fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public abstract fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
@@ -86,6 +105,8 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Card ()Ldev/keliver/material/widget/Card;
 	public abstract fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public abstract fun Chip ()Ldev/keliver/material/widget/Chip;
+	public abstract fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
+	public abstract fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
 	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public abstract fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
@@ -95,6 +116,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
+	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public abstract fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
@@ -104,6 +126,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
+	public abstract fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public abstract fun Surface ()Ldev/keliver/material/widget/Surface;
 	public abstract fun Switch ()Ldev/keliver/material/widget/Switch;
@@ -127,6 +150,10 @@ public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem : dev
 
 public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem$Companion {
 	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/material/widget/LinearProgressIndicator : dev/keliver/widget/Widget {
+	public abstract fun progress (F)V
 }
 
 public abstract interface class dev/keliver/material/widget/NavigationBar : dev/keliver/widget/Widget {
@@ -168,6 +195,10 @@ public abstract interface class dev/keliver/material/widget/Slider : dev/keliver
 	public abstract fun enabled (Z)V
 	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun position (F)V
+}
+
+public abstract interface class dev/keliver/material/widget/Snackbar : dev/keliver/widget/Widget {
+	public abstract fun message (Ljava/lang/String;)V
 }
 
 public abstract interface class dev/keliver/material/widget/StyledText : dev/keliver/widget/Widget {

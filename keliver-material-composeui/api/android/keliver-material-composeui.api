@@ -1,6 +1,7 @@
 public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactory : dev/keliver/material/widget/KeliverMaterialWidgetFactory {
 	public static final field $stable I
 	public fun <init> (Lcoil3/ImageLoader;)V
+	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
 	public fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
@@ -8,6 +9,8 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Card ()Ldev/keliver/material/widget/Card;
 	public fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public fun Chip ()Ldev/keliver/material/widget/Chip;
+	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
+	public fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
@@ -17,6 +20,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
+	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
@@ -27,6 +31,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
+	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;

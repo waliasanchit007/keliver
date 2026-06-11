@@ -1,3 +1,7 @@
+public final class dev/keliver/material/compose/AlertDialogKt {
+	public static final fun AlertDialog (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/AsyncImageKt {
 	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -24,6 +28,14 @@ public final class dev/keliver/material/compose/CheckboxKt {
 
 public final class dev/keliver/material/compose/ChipKt {
 	public static final fun Chip (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/CircularProgressIndicatorKt {
+	public static final fun CircularProgressIndicator (FLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/DialogKt {
+	public static final fun Dialog (Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/DividerKt {
@@ -62,6 +74,10 @@ public final class dev/keliver/material/compose/ImageKt {
 	public static final fun Image (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/LinearProgressIndicatorKt {
+	public static final fun LinearProgressIndicator (FLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/NavigationBarKt {
 	public static final fun NavigationBar (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
@@ -92,6 +108,10 @@ public final class dev/keliver/material/compose/ScrollableColumnKt {
 
 public final class dev/keliver/material/compose/SliderKt {
 	public static final fun Slider (FZLkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/SnackbarKt {
+	public static final fun Snackbar (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
