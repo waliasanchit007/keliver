@@ -9,11 +9,15 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Chip ()Ldev/keliver/material/widget/Chip;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
+	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
+	public fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
+	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
+	public fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
@@ -21,6 +25,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public fun Surface ()Ldev/keliver/material/widget/Surface;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;
 	public fun Text ()Ldev/keliver/material/widget/Text;
 	public fun TextButton ()Ldev/keliver/material/widget/TextButton;

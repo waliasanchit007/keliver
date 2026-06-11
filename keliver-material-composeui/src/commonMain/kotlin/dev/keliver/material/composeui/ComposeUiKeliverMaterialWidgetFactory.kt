@@ -35,6 +35,11 @@ import dev.keliver.material.widget.OutlinedTextField
 import dev.keliver.material.widget.RadioButton
 import dev.keliver.material.widget.Slider
 import dev.keliver.material.widget.TextButton
+import dev.keliver.material.widget.ElevatedCard
+import dev.keliver.material.widget.FlowColumn
+import dev.keliver.material.widget.FlowRow
+import dev.keliver.material.widget.OutlinedCard
+import dev.keliver.material.widget.Surface
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -67,6 +72,13 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun RadioButton(): RadioButton<@Composable (Modifier) -> Unit> = ComposeUiRadioButton()
   override fun Slider(): Slider<@Composable (Modifier) -> Unit> = ComposeUiSlider()
   override fun OutlinedTextField(): OutlinedTextField<@Composable (Modifier) -> Unit> = ComposeUiOutlinedTextField()
+
+  // Batch 2: containers & layout.
+  override fun Surface(): Surface<@Composable (Modifier) -> Unit> = ComposeUiSurface()
+  override fun ElevatedCard(): ElevatedCard<@Composable (Modifier) -> Unit> = ComposeUiElevatedCard()
+  override fun OutlinedCard(): OutlinedCard<@Composable (Modifier) -> Unit> = ComposeUiOutlinedCard()
+  override fun FlowRow(): FlowRow<@Composable (Modifier) -> Unit> = ComposeUiFlowRow()
+  override fun FlowColumn(): FlowColumn<@Composable (Modifier) -> Unit> = ComposeUiFlowColumn()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

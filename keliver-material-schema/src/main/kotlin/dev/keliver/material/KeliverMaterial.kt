@@ -52,6 +52,12 @@ import dev.keliver.schema.Widget
     RadioButton::class,
     Slider::class,
     OutlinedTextField::class,
+    // Batch 2: containers & layout
+    Surface::class,
+    ElevatedCard::class,
+    OutlinedCard::class,
+    FlowRow::class,
+    FlowColumn::class,
     Reuse::class,
   ],
   dependencies = [
@@ -241,6 +247,38 @@ public data class OutlinedTextField(
   @Property(1) val text: String,
   @Property(2) val placeholder: String = "",
   @Property(3) val onValueChange: ((String) -> Unit)? = null,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 2: containers & layout (Material3).
+// ---------------------------------------------------------------------------
+
+/** Material3 Surface container. */
+@Widget(24)
+public data class Surface(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(25)
+public data class ElevatedCard(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(26)
+public data class OutlinedCard(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Flow layout — children wrap horizontally. */
+@Widget(27)
+public data class FlowRow(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Flow layout — children wrap vertically. */
+@Widget(28)
+public data class FlowColumn(
+  @Children(1) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

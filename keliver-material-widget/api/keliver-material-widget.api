@@ -41,6 +41,10 @@ public abstract interface class dev/keliver/material/widget/ElevatedButton : dev
 	public abstract fun text (Ljava/lang/String;)V
 }
 
+public abstract interface class dev/keliver/material/widget/ElevatedCard : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
 public abstract interface class dev/keliver/material/widget/FilledTonalButton : dev/keliver/widget/Widget {
 	public abstract fun enabled (Z)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -50,6 +54,14 @@ public abstract interface class dev/keliver/material/widget/FilledTonalButton : 
 public abstract interface class dev/keliver/material/widget/FloatingActionButton : dev/keliver/widget/Widget {
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/FlowColumn : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/FlowRow : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
 public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
@@ -71,17 +83,22 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Chip ()Ldev/keliver/material/widget/Chip;
 	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
 	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
+	public abstract fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public abstract fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
+	public abstract fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
+	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
 	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
+	public abstract fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public abstract fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
 	public abstract fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
+	public abstract fun Surface ()Ldev/keliver/material/widget/Surface;
 	public abstract fun Switch ()Ldev/keliver/material/widget/Switch;
 	public abstract fun Text ()Ldev/keliver/material/widget/Text;
 	public abstract fun TextButton ()Ldev/keliver/material/widget/TextButton;
@@ -106,6 +123,10 @@ public abstract interface class dev/keliver/material/widget/OutlinedButton : dev
 	public abstract fun enabled (Z)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/OutlinedCard : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
 public abstract interface class dev/keliver/material/widget/OutlinedTextField : dev/keliver/widget/Widget {
@@ -137,6 +158,10 @@ public abstract interface class dev/keliver/material/widget/StyledText : dev/kel
 	public abstract fun fontSize (I)V
 	public abstract fun maxLines (I)V
 	public abstract fun text (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Surface : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
 public abstract interface class dev/keliver/material/widget/Switch : dev/keliver/widget/Widget {

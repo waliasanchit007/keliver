@@ -116,6 +116,17 @@ public final class dev/keliver/material/ElevatedButton {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/ElevatedCard {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/ElevatedCard;
+	public static synthetic fun copy$default (Ldev/keliver/material/ElevatedCard;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ElevatedCard;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/FilledTonalButton {
 	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -143,6 +154,28 @@ public final class dev/keliver/material/FloatingActionButton {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/FlowColumn {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/FlowColumn;
+	public static synthetic fun copy$default (Ldev/keliver/material/FlowColumn;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/FlowColumn;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/FlowRow {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/FlowRow;
+	public static synthetic fun copy$default (Ldev/keliver/material/FlowRow;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/FlowRow;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -190,6 +223,17 @@ public final class dev/keliver/material/OutlinedButton {
 	public final fun getEnabled ()Z
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/OutlinedCard {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/OutlinedCard;
+	public static synthetic fun copy$default (Ldev/keliver/material/OutlinedCard;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/OutlinedCard;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -276,6 +320,17 @@ public final class dev/keliver/material/StyledText {
 	public final fun getFontSize ()I
 	public final fun getMaxLines ()I
 	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/Surface {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/Surface;
+	public static synthetic fun copy$default (Ldev/keliver/material/Surface;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/Surface;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

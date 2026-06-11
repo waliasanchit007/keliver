@@ -52,6 +52,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/ElevatedButton :
     abstract fun text(kotlin/String) // dev.keliver.material.widget/ElevatedButton.text|text(kotlin.String){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/ElevatedCard : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/ElevatedCard|null[0]
+    abstract val children // dev.keliver.material.widget/ElevatedCard.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/ElevatedCard.children.<get-children>|<get-children>(){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FilledTonalButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/FilledTonalButton|null[0]
     abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/FilledTonalButton.enabled|enabled(kotlin.Boolean){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/FilledTonalButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
@@ -61,6 +66,16 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FilledTonalButto
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FloatingActionButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/FloatingActionButton|null[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/FloatingActionButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/FloatingActionButton.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FlowColumn : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/FlowColumn|null[0]
+    abstract val children // dev.keliver.material.widget/FlowColumn.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/FlowColumn.children.<get-children>|<get-children>(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FlowRow : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/FlowRow|null[0]
+    abstract val children // dev.keliver.material.widget/FlowRow.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/FlowRow.children.<get-children>|<get-children>(){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/IconButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/IconButton|null[0]
@@ -82,17 +97,22 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun Chip(): dev.keliver.material.widget/Chip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Chip|Chip(){}[0]
     abstract fun Divider(): dev.keliver.material.widget/Divider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Divider|Divider(){}[0]
     abstract fun ElevatedButton(): dev.keliver.material.widget/ElevatedButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ElevatedButton|ElevatedButton(){}[0]
+    abstract fun ElevatedCard(): dev.keliver.material.widget/ElevatedCard<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ElevatedCard|ElevatedCard(){}[0]
     abstract fun FilledTonalButton(): dev.keliver.material.widget/FilledTonalButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FilledTonalButton|FilledTonalButton(){}[0]
     abstract fun FloatingActionButton(): dev.keliver.material.widget/FloatingActionButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FloatingActionButton|FloatingActionButton(){}[0]
+    abstract fun FlowColumn(): dev.keliver.material.widget/FlowColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FlowColumn|FlowColumn(){}[0]
+    abstract fun FlowRow(): dev.keliver.material.widget/FlowRow<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FlowRow|FlowRow(){}[0]
     abstract fun IconButton(): dev.keliver.material.widget/IconButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.IconButton|IconButton(){}[0]
     abstract fun Image(): dev.keliver.material.widget/Image<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Image|Image(){}[0]
     abstract fun OutlinedButton(): dev.keliver.material.widget/OutlinedButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.OutlinedButton|OutlinedButton(){}[0]
+    abstract fun OutlinedCard(): dev.keliver.material.widget/OutlinedCard<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.OutlinedCard|OutlinedCard(){}[0]
     abstract fun OutlinedTextField(): dev.keliver.material.widget/OutlinedTextField<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.OutlinedTextField|OutlinedTextField(){}[0]
     abstract fun RadioButton(): dev.keliver.material.widget/RadioButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.RadioButton|RadioButton(){}[0]
     abstract fun Reuse(#A, dev.keliver.material.modifier/Reuse) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Reuse|Reuse(1:0;dev.keliver.material.modifier.Reuse){}[0]
     abstract fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
     abstract fun Slider(): dev.keliver.material.widget/Slider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Slider|Slider(){}[0]
     abstract fun StyledText(): dev.keliver.material.widget/StyledText<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.StyledText|StyledText(){}[0]
+    abstract fun Surface(): dev.keliver.material.widget/Surface<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Surface|Surface(){}[0]
     abstract fun Switch(): dev.keliver.material.widget/Switch<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Switch|Switch(){}[0]
     abstract fun Text(): dev.keliver.material.widget/Text<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Text|Text(){}[0]
     abstract fun TextButton(): dev.keliver.material.widget/TextButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextButton|TextButton(){}[0]
@@ -104,6 +124,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedButton :
     abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/OutlinedButton.enabled|enabled(kotlin.Boolean){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/OutlinedButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/OutlinedButton.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedCard : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/OutlinedCard|null[0]
+    abstract val children // dev.keliver.material.widget/OutlinedCard.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/OutlinedCard.children.<get-children>|<get-children>(){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedTextField : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/OutlinedTextField|null[0]
@@ -136,6 +161,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledText : dev
     abstract fun fontSize(kotlin/Int) // dev.keliver.material.widget/StyledText.fontSize|fontSize(kotlin.Int){}[0]
     abstract fun maxLines(kotlin/Int) // dev.keliver.material.widget/StyledText.maxLines|maxLines(kotlin.Int){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/StyledText.text|text(kotlin.String){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Surface : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Surface|null[0]
+    abstract val children // dev.keliver.material.widget/Surface.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Surface.children.<get-children>|<get-children>(){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Switch : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Switch|null[0]
