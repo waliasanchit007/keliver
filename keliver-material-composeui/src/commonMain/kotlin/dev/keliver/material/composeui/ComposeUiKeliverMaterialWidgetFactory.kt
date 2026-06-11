@@ -40,6 +40,12 @@ import dev.keliver.material.widget.FlowColumn
 import dev.keliver.material.widget.FlowRow
 import dev.keliver.material.widget.OutlinedCard
 import dev.keliver.material.widget.Surface
+import dev.keliver.material.widget.BottomAppBar
+import dev.keliver.material.widget.NavigationBar
+import dev.keliver.material.widget.Scaffold
+import dev.keliver.material.widget.Tab
+import dev.keliver.material.widget.TabRow
+import dev.keliver.material.widget.TopAppBar
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -79,6 +85,14 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun OutlinedCard(): OutlinedCard<@Composable (Modifier) -> Unit> = ComposeUiOutlinedCard()
   override fun FlowRow(): FlowRow<@Composable (Modifier) -> Unit> = ComposeUiFlowRow()
   override fun FlowColumn(): FlowColumn<@Composable (Modifier) -> Unit> = ComposeUiFlowColumn()
+
+  // Batch 3: navigation & scaffolding.
+  override fun Scaffold(): Scaffold<@Composable (Modifier) -> Unit> = ComposeUiScaffold()
+  override fun TopAppBar(): TopAppBar<@Composable (Modifier) -> Unit> = ComposeUiTopAppBar()
+  override fun BottomAppBar(): BottomAppBar<@Composable (Modifier) -> Unit> = ComposeUiBottomAppBar()
+  override fun NavigationBar(): NavigationBar<@Composable (Modifier) -> Unit> = ComposeUiNavigationBar()
+  override fun TabRow(): TabRow<@Composable (Modifier) -> Unit> = ComposeUiTabRow()
+  override fun Tab(): Tab<@Composable (Modifier) -> Unit> = ComposeUiTab()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

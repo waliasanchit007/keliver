@@ -58,6 +58,13 @@ import dev.keliver.schema.Widget
     OutlinedCard::class,
     FlowRow::class,
     FlowColumn::class,
+    // Batch 3: navigation & scaffolding
+    Scaffold::class,
+    TopAppBar::class,
+    BottomAppBar::class,
+    NavigationBar::class,
+    TabRow::class,
+    Tab::class,
     Reuse::class,
   ],
   dependencies = [
@@ -279,6 +286,45 @@ public data class FlowRow(
 @Widget(28)
 public data class FlowColumn(
   @Children(1) val children: () -> Unit,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 3: navigation & scaffolding (Material3).
+// ---------------------------------------------------------------------------
+
+/** Material3 Scaffold with a top-bar slot and a content slot. */
+@Widget(29)
+public data class Scaffold(
+  @Children(1) val topBar: () -> Unit,
+  @Children(2) val content: () -> Unit,
+)
+
+@Widget(30)
+public data class TopAppBar(
+  @Property(1) val title: String,
+)
+
+@Widget(31)
+public data class BottomAppBar(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(32)
+public data class NavigationBar(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(33)
+public data class TabRow(
+  @Property(1) val selectedIndex: Int = 0,
+  @Children(2) val tabs: () -> Unit,
+)
+
+@Widget(34)
+public data class Tab(
+  @Property(1) val text: String,
+  @Property(2) val selected: Boolean = false,
+  @Property(3) val onClick: (() -> Unit)? = null,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

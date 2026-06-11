@@ -2,6 +2,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public static final field $stable I
 	public fun <init> (Lcoil3/ImageLoader;)V
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public fun Button ()Ldev/keliver/material/widget/Button;
 	public fun Card ()Ldev/keliver/material/widget/Card;
@@ -16,21 +17,26 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
+	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public fun Reuse (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Reuse;)V
+	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;
 	public fun Switch ()Ldev/keliver/material/widget/Switch;
+	public fun Tab ()Ldev/keliver/material/widget/Tab;
+	public fun TabRow ()Ldev/keliver/material/widget/TabRow;
 	public fun Text ()Ldev/keliver/material/widget/Text;
 	public fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 }
 
 public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactoryKt {

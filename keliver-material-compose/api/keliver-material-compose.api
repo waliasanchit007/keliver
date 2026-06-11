@@ -2,6 +2,10 @@ public final class dev/keliver/material/compose/AsyncImageKt {
 	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/BottomAppBarKt {
+	public static final fun BottomAppBar (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/BottomSheetKt {
 	public static final fun BottomSheet (ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
@@ -58,6 +62,10 @@ public final class dev/keliver/material/compose/ImageKt {
 	public static final fun Image (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/NavigationBarKt {
+	public static final fun NavigationBar (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/OutlinedButtonKt {
 	public static final fun OutlinedButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -72,6 +80,10 @@ public final class dev/keliver/material/compose/OutlinedTextFieldKt {
 
 public final class dev/keliver/material/compose/RadioButtonKt {
 	public static final fun RadioButton (ZZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/ScaffoldKt {
+	public static final fun Scaffold (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/ScrollableColumnKt {
@@ -94,6 +106,14 @@ public final class dev/keliver/material/compose/SwitchKt {
 	public static final fun Switch (ZZLkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/TabKt {
+	public static final fun Tab (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/TabRowKt {
+	public static final fun TabRow (ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/TextButtonKt {
 	public static final fun TextButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -108,6 +128,10 @@ public final class dev/keliver/material/compose/TextInputKt {
 
 public final class dev/keliver/material/compose/TextKt {
 	public static final fun Text (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/TopAppBarKt {
+	public static final fun TopAppBar (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/UnscopedKt {
