@@ -173,6 +173,24 @@ public final class dev/keliver/material/Divider {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/DropdownMenu {
+	public fun <init> (ZLjava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (ZLjava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun component4 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (ZLjava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/DropdownMenu;
+	public static synthetic fun copy$default (Ldev/keliver/material/DropdownMenu;ZLjava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/DropdownMenu;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpanded ()Z
+	public final fun getOnDismiss ()Lkotlin/jvm/functions/Function0;
+	public final fun getOnSelect ()Lkotlin/jvm/functions/Function1;
+	public final fun getOptions ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/ElevatedButton {
 	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -196,6 +214,20 @@ public final class dev/keliver/material/ElevatedCard {
 	public static synthetic fun copy$default (Ldev/keliver/material/ElevatedCard;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ElevatedCard;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/ExtendedFloatingActionButton {
+	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/ExtendedFloatingActionButton;
+	public static synthetic fun copy$default (Ldev/keliver/material/ExtendedFloatingActionButton;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ExtendedFloatingActionButton;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -340,6 +372,17 @@ public final class dev/keliver/material/NavigationBar {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/NavigationRail {
+	public fun <init> (Lkotlin/jvm/functions/Function0;)V
+	public final fun component1 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/NavigationRail;
+	public static synthetic fun copy$default (Ldev/keliver/material/NavigationRail;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/NavigationRail;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/OutlinedButton {
 	public fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -423,6 +466,22 @@ public final class dev/keliver/material/ScrollableColumn {
 	public static synthetic fun copy$default (Ldev/keliver/material/ScrollableColumn;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ScrollableColumn;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/SegmentedButtonRow {
+	public fun <init> (Ljava/util/List;ILkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/util/List;ILkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()I
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (Ljava/util/List;ILkotlin/jvm/functions/Function1;)Ldev/keliver/material/SegmentedButtonRow;
+	public static synthetic fun copy$default (Ldev/keliver/material/SegmentedButtonRow;Ljava/util/List;ILkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ldev/keliver/material/SegmentedButtonRow;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnSelect ()Lkotlin/jvm/functions/Function1;
+	public final fun getOptions ()Ljava/util/List;
+	public final fun getSelectedIndex ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -615,6 +674,19 @@ public final class dev/keliver/material/TopAppBar {
 	public static synthetic fun copy$default (Ldev/keliver/material/TopAppBar;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/material/TopAppBar;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/VerticalDivider {
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun copy (I)Ldev/keliver/material/VerticalDivider;
+	public static synthetic fun copy$default (Ldev/keliver/material/VerticalDivider;IILjava/lang/Object;)Ldev/keliver/material/VerticalDivider;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getThickness ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

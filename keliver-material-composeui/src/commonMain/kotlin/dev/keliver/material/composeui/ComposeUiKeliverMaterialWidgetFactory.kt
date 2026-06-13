@@ -55,6 +55,11 @@ import dev.keliver.material.widget.Badge
 import dev.keliver.material.widget.FilterChip
 import dev.keliver.material.widget.InputChip
 import dev.keliver.material.widget.SuggestionChip
+import dev.keliver.material.widget.DropdownMenu
+import dev.keliver.material.widget.ExtendedFloatingActionButton
+import dev.keliver.material.widget.NavigationRail
+import dev.keliver.material.widget.SegmentedButtonRow
+import dev.keliver.material.widget.VerticalDivider
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -115,6 +120,13 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun InputChip(): InputChip<@Composable (Modifier) -> Unit> = ComposeUiInputChip()
   override fun SuggestionChip(): SuggestionChip<@Composable (Modifier) -> Unit> = ComposeUiSuggestionChip()
   override fun Badge(): Badge<@Composable (Modifier) -> Unit> = ComposeUiBadge()
+
+  // Batch 6: advanced.
+  override fun NavigationRail(): NavigationRail<@Composable (Modifier) -> Unit> = ComposeUiNavigationRail()
+  override fun VerticalDivider(): VerticalDivider<@Composable (Modifier) -> Unit> = ComposeUiVerticalDivider()
+  override fun ExtendedFloatingActionButton(): ExtendedFloatingActionButton<@Composable (Modifier) -> Unit> = ComposeUiExtendedFloatingActionButton()
+  override fun SegmentedButtonRow(): SegmentedButtonRow<@Composable (Modifier) -> Unit> = ComposeUiSegmentedButtonRow()
+  override fun DropdownMenu(): DropdownMenu<@Composable (Modifier) -> Unit> = ComposeUiDropdownMenu()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

@@ -76,6 +76,12 @@ import dev.keliver.schema.Widget
     InputChip::class,
     SuggestionChip::class,
     Badge::class,
+    // Batch 6: advanced
+    NavigationRail::class,
+    VerticalDivider::class,
+    ExtendedFloatingActionButton::class,
+    SegmentedButtonRow::class,
+    DropdownMenu::class,
     Reuse::class,
   ],
   dependencies = [
@@ -403,6 +409,43 @@ public data class SuggestionChip(
 @Widget(43)
 public data class Badge(
   @Property(1) val text: String = "",
+)
+
+// ---------------------------------------------------------------------------
+// Batch 6: advanced (Material3).
+// ---------------------------------------------------------------------------
+
+@Widget(44)
+public data class NavigationRail(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(45)
+public data class VerticalDivider(
+  @Property(1) val thickness: Int = 1,
+)
+
+@Widget(46)
+public data class ExtendedFloatingActionButton(
+  @Property(1) val text: String,
+  @Property(2) val onClick: (() -> Unit)? = null,
+)
+
+/** Single-choice segmented button row over [options]. */
+@Widget(47)
+public data class SegmentedButtonRow(
+  @Property(1) val options: List<String>,
+  @Property(2) val selectedIndex: Int = 0,
+  @Property(3) val onSelect: ((Int) -> Unit)? = null,
+)
+
+/** Dropdown menu; renders [options] as items while [expanded]. */
+@Widget(48)
+public data class DropdownMenu(
+  @Property(1) val expanded: Boolean = false,
+  @Property(2) val options: List<String>,
+  @Property(3) val onSelect: ((Int) -> Unit)? = null,
+  @Property(4) val onDismiss: (() -> Unit)? = null,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

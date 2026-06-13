@@ -46,12 +46,20 @@ public final class dev/keliver/material/compose/DividerKt {
 	public static final fun Divider (ILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/DropdownMenuKt {
+	public static final fun DropdownMenu (ZLjava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/ElevatedButtonKt {
 	public static final fun ElevatedButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/ElevatedCardKt {
 	public static final fun ElevatedCard (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/ExtendedFloatingActionButtonKt {
+	public static final fun ExtendedFloatingActionButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/FilledTonalButtonKt {
@@ -94,6 +102,10 @@ public final class dev/keliver/material/compose/NavigationBarKt {
 	public static final fun NavigationBar (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/NavigationRailKt {
+	public static final fun NavigationRail (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/OutlinedButtonKt {
 	public static final fun OutlinedButton (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -116,6 +128,10 @@ public final class dev/keliver/material/compose/ScaffoldKt {
 
 public final class dev/keliver/material/compose/ScrollableColumnKt {
 	public static final fun ScrollableColumn (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/SegmentedButtonRowKt {
+	public static final fun SegmentedButtonRow (Ljava/util/List;ILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/SliderKt {
@@ -172,5 +188,9 @@ public final class dev/keliver/material/compose/TopAppBarKt {
 
 public final class dev/keliver/material/compose/UnscopedKt {
 	public static final fun reuse (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+}
+
+public final class dev/keliver/material/compose/VerticalDividerKt {
+	public static final fun VerticalDivider (ILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 

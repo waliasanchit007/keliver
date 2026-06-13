@@ -61,6 +61,13 @@ public abstract interface class dev/keliver/material/widget/Divider : dev/kelive
 	public abstract fun thickness (I)V
 }
 
+public abstract interface class dev/keliver/material/widget/DropdownMenu : dev/keliver/widget/Widget {
+	public abstract fun expanded (Z)V
+	public abstract fun onDismiss (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun onSelect (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun options (Ljava/util/List;)V
+}
+
 public abstract interface class dev/keliver/material/widget/ElevatedButton : dev/keliver/widget/Widget {
 	public abstract fun enabled (Z)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -69,6 +76,11 @@ public abstract interface class dev/keliver/material/widget/ElevatedButton : dev
 
 public abstract interface class dev/keliver/material/widget/ElevatedCard : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/ExtendedFloatingActionButton : dev/keliver/widget/Widget {
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun text (Ljava/lang/String;)V
 }
 
 public abstract interface class dev/keliver/material/widget/FilledTonalButton : dev/keliver/widget/Widget {
@@ -125,8 +137,10 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
 	public abstract fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
+	public abstract fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public abstract fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
+	public abstract fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
 	public abstract fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public abstract fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
@@ -137,6 +151,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
+	public abstract fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
 	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public abstract fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public abstract fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
@@ -144,6 +159,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public abstract fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public abstract fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
@@ -157,6 +173,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun TextField ()Ldev/keliver/material/widget/TextField;
 	public abstract fun TextInput ()Ldev/keliver/material/widget/TextInput;
 	public abstract fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
+	public abstract fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
 }
 
 public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem : dev/keliver/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactoryOwner, dev/keliver/material/widget/KeliverMaterialWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
@@ -177,6 +194,10 @@ public abstract interface class dev/keliver/material/widget/LinearProgressIndica
 }
 
 public abstract interface class dev/keliver/material/widget/NavigationBar : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/NavigationRail : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
@@ -209,6 +230,12 @@ public abstract interface class dev/keliver/material/widget/Scaffold : dev/keliv
 
 public abstract interface class dev/keliver/material/widget/ScrollableColumn : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
+public abstract interface class dev/keliver/material/widget/SegmentedButtonRow : dev/keliver/widget/Widget {
+	public abstract fun onSelect (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun options (Ljava/util/List;)V
+	public abstract fun selectedIndex (I)V
 }
 
 public abstract interface class dev/keliver/material/widget/Slider : dev/keliver/widget/Widget {
@@ -280,5 +307,9 @@ public abstract interface class dev/keliver/material/widget/TextInput : dev/keli
 
 public abstract interface class dev/keliver/material/widget/TopAppBar : dev/keliver/widget/Widget {
 	public abstract fun title (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/VerticalDivider : dev/keliver/widget/Widget {
+	public abstract fun thickness (I)V
 }
 

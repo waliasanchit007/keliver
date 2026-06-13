@@ -13,8 +13,10 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
 	public fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
+	public fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
+	public fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
@@ -25,6 +27,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
+	public fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
@@ -33,6 +36,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Reuse (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Reuse;)V
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
+	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
@@ -46,6 +50,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
 	public fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
+	public fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
 }
 
 public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactoryKt {
