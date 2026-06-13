@@ -415,6 +415,23 @@ final class dev.keliver.material.testing/FlowRowValue : dev.keliver.testing/Widg
     final fun toString(): kotlin/String // dev.keliver.material.testing/FlowRowValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/HorizontalPagerValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/HorizontalPagerValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/HorizontalPagerValue.<init>|<init>(dev.keliver.Modifier;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/HorizontalPagerValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/HorizontalPagerValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/HorizontalPagerValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/HorizontalPagerValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/HorizontalPagerValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/HorizontalPagerValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/HorizontalPagerValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/HorizontalPagerValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/HorizontalPagerValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/HorizontalPagerValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/HorizontalPagerValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/IconButtonValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/IconButtonValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/IconButtonValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
 
@@ -498,9 +515,12 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun FloatingActionButton(): dev.keliver.material.widget/FloatingActionButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FloatingActionButton|FloatingActionButton(){}[0]
     final fun FlowColumn(): dev.keliver.material.widget/FlowColumn<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FlowColumn|FlowColumn(){}[0]
     final fun FlowRow(): dev.keliver.material.widget/FlowRow<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FlowRow|FlowRow(){}[0]
+    final fun HorizontalPager(): dev.keliver.material.widget/HorizontalPager<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.HorizontalPager|HorizontalPager(){}[0]
     final fun IconButton(): dev.keliver.material.widget/IconButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.IconButton|IconButton(){}[0]
     final fun Image(): dev.keliver.material.widget/Image<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Image|Image(){}[0]
     final fun InputChip(): dev.keliver.material.widget/InputChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.InputChip|InputChip(){}[0]
+    final fun LazyHorizontalGrid(): dev.keliver.material.widget/LazyHorizontalGrid<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LazyHorizontalGrid|LazyHorizontalGrid(){}[0]
+    final fun LazyVerticalGrid(): dev.keliver.material.widget/LazyVerticalGrid<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LazyVerticalGrid|LazyVerticalGrid(){}[0]
     final fun LinearProgressIndicator(): dev.keliver.material.widget/LinearProgressIndicator<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LinearProgressIndicator|LinearProgressIndicator(){}[0]
     final fun NavigationBar(): dev.keliver.material.widget/NavigationBar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.NavigationBar|NavigationBar(){}[0]
     final fun NavigationRail(): dev.keliver.material.widget/NavigationRail<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.NavigationRail|NavigationRail(){}[0]
@@ -524,8 +544,48 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun TextButton(): dev.keliver.material.widget/TextButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextButton|TextButton(){}[0]
     final fun TextField(): dev.keliver.material.widget/TextField<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextField|TextField(){}[0]
     final fun TextInput(): dev.keliver.material.widget/TextInput<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TextInput|TextInput(){}[0]
+    final fun Tooltip(): dev.keliver.material.widget/Tooltip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Tooltip|Tooltip(){}[0]
     final fun TopAppBar(): dev.keliver.material.widget/TopAppBar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.TopAppBar|TopAppBar(){}[0]
     final fun VerticalDivider(): dev.keliver.material.widget/VerticalDivider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.VerticalDivider|VerticalDivider(){}[0]
+    final fun VerticalPager(): dev.keliver.material.widget/VerticalPager<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.VerticalPager|VerticalPager(){}[0]
+}
+
+final class dev.keliver.material.testing/LazyHorizontalGridValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/LazyHorizontalGridValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/LazyHorizontalGridValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/LazyHorizontalGridValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/LazyHorizontalGridValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/LazyHorizontalGridValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/LazyHorizontalGridValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/LazyHorizontalGridValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/LazyHorizontalGridValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val rows // dev.keliver.material.testing/LazyHorizontalGridValue.rows|{}rows[0]
+        final fun <get-rows>(): kotlin/Int // dev.keliver.material.testing/LazyHorizontalGridValue.rows.<get-rows>|<get-rows>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/LazyHorizontalGridValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/LazyHorizontalGridValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/LazyHorizontalGridValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/LazyHorizontalGridValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/LazyHorizontalGridValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/LazyVerticalGridValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/LazyVerticalGridValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/LazyVerticalGridValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/LazyVerticalGridValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/LazyVerticalGridValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/LazyVerticalGridValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/LazyVerticalGridValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val columns // dev.keliver.material.testing/LazyVerticalGridValue.columns|{}columns[0]
+        final fun <get-columns>(): kotlin/Int // dev.keliver.material.testing/LazyVerticalGridValue.columns.<get-columns>|<get-columns>(){}[0]
+    final val modifier // dev.keliver.material.testing/LazyVerticalGridValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/LazyVerticalGridValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/LazyVerticalGridValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/LazyVerticalGridValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/LazyVerticalGridValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/LazyVerticalGridValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/LazyVerticalGridValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/LinearProgressIndicatorValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/LinearProgressIndicatorValue|null[0]
@@ -958,6 +1018,25 @@ final class dev.keliver.material.testing/TextValue : dev.keliver.testing/WidgetV
     final fun toString(): kotlin/String // dev.keliver.material.testing/TextValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/TooltipValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/TooltipValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/TooltipValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/TooltipValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/TooltipValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/TooltipValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/TooltipValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/TooltipValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/TooltipValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val text // dev.keliver.material.testing/TooltipValue.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.testing/TooltipValue.text.<get-text>|<get-text>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/TooltipValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/TooltipValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/TooltipValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/TooltipValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/TooltipValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/TopAppBarValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/TopAppBarValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String) // dev.keliver.material.testing/TopAppBarValue.<init>|<init>(dev.keliver.Modifier;kotlin.String){}[0]
 
@@ -990,6 +1069,23 @@ final class dev.keliver.material.testing/VerticalDividerValue : dev.keliver.test
     final fun hashCode(): kotlin/Int // dev.keliver.material.testing/VerticalDividerValue.hashCode|hashCode(){}[0]
     final fun toDebugString(): kotlin/String // dev.keliver.material.testing/VerticalDividerValue.toDebugString|toDebugString(){}[0]
     final fun toString(): kotlin/String // dev.keliver.material.testing/VerticalDividerValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/VerticalPagerValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/VerticalPagerValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/VerticalPagerValue.<init>|<init>(dev.keliver.Modifier;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/VerticalPagerValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/VerticalPagerValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/VerticalPagerValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/VerticalPagerValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/VerticalPagerValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/VerticalPagerValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/VerticalPagerValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/VerticalPagerValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/VerticalPagerValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/VerticalPagerValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/VerticalPagerValue.toString|toString(){}[0]
 }
 
 final suspend fun <#A: kotlin/Any?> dev.keliver.material.testing/KeliverMaterialTester(dev.keliver.ui/OnBackPressedDispatcher = ..., dev.keliver.testing/TestSavedState? = ..., dev.keliver.ui/UiConfiguration = ..., kotlin.coroutines/SuspendFunction1<dev.keliver.testing/TestRedwoodComposition<kotlin.collections/List<dev.keliver.testing/WidgetValue>>, #A>): #A // dev.keliver.material.testing/KeliverMaterialTester|KeliverMaterialTester(dev.keliver.ui.OnBackPressedDispatcher;dev.keliver.testing.TestSavedState?;dev.keliver.ui.UiConfiguration;kotlin.coroutines.SuspendFunction1<dev.keliver.testing.TestRedwoodComposition<kotlin.collections.List<dev.keliver.testing.WidgetValue>>,0:0>){0§<kotlin.Any?>}[0]

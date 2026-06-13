@@ -22,9 +22,12 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
+	public fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
 	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
+	public fun LazyHorizontalGrid ()Ldev/keliver/material/widget/LazyHorizontalGrid;
+	public fun LazyVerticalGrid ()Ldev/keliver/material/widget/LazyVerticalGrid;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
@@ -49,8 +52,10 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public fun Tooltip ()Ldev/keliver/material/widget/Tooltip;
 	public fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 	public fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
+	public fun VerticalPager ()Ldev/keliver/material/widget/VerticalPager;
 }
 
 public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidgetFactoryKt {

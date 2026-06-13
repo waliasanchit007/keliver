@@ -108,6 +108,10 @@ public abstract interface class dev/keliver/material/widget/FlowRow : dev/kelive
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
+public abstract interface class dev/keliver/material/widget/HorizontalPager : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+}
+
 public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
 	public abstract fun imageUrl (Ljava/lang/String;)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -146,9 +150,12 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public abstract fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
+	public abstract fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
 	public abstract fun InputChip ()Ldev/keliver/material/widget/InputChip;
+	public abstract fun LazyHorizontalGrid ()Ldev/keliver/material/widget/LazyHorizontalGrid;
+	public abstract fun LazyVerticalGrid ()Ldev/keliver/material/widget/LazyVerticalGrid;
 	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public abstract fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
@@ -172,8 +179,10 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public abstract fun TextField ()Ldev/keliver/material/widget/TextField;
 	public abstract fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public abstract fun Tooltip ()Ldev/keliver/material/widget/Tooltip;
 	public abstract fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 	public abstract fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
+	public abstract fun VerticalPager ()Ldev/keliver/material/widget/VerticalPager;
 }
 
 public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem : dev/keliver/layout/widget/RedwoodLayoutWidgetFactoryOwner, dev/keliver/lazylayout/widget/RedwoodLazyLayoutWidgetFactoryOwner, dev/keliver/material/widget/KeliverMaterialWidgetFactoryOwner, dev/keliver/widget/WidgetSystem {
@@ -187,6 +196,16 @@ public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem : dev
 
 public final class dev/keliver/material/widget/KeliverMaterialWidgetSystem$Companion {
 	public final fun allChildren (Ldev/keliver/widget/Widget;)Ljava/util/List;
+}
+
+public abstract interface class dev/keliver/material/widget/LazyHorizontalGrid : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun rows (I)V
+}
+
+public abstract interface class dev/keliver/material/widget/LazyVerticalGrid : dev/keliver/widget/Widget {
+	public abstract fun columns (I)V
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 
 public abstract interface class dev/keliver/material/widget/LinearProgressIndicator : dev/keliver/widget/Widget {
@@ -305,11 +324,20 @@ public abstract interface class dev/keliver/material/widget/TextInput : dev/keli
 	public abstract fun state (Ldev/keliver/material/api/TextFieldState;)V
 }
 
+public abstract interface class dev/keliver/material/widget/Tooltip : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun text (Ljava/lang/String;)V
+}
+
 public abstract interface class dev/keliver/material/widget/TopAppBar : dev/keliver/widget/Widget {
 	public abstract fun title (Ljava/lang/String;)V
 }
 
 public abstract interface class dev/keliver/material/widget/VerticalDivider : dev/keliver/widget/Widget {
 	public abstract fun thickness (I)V
+}
+
+public abstract interface class dev/keliver/material/widget/VerticalPager : dev/keliver/widget/Widget {
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 }
 

@@ -125,6 +125,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FlowRow : dev.ke
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/FlowRow.children.<get-children>|<get-children>(){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/HorizontalPager : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/HorizontalPager|null[0]
+    abstract val children // dev.keliver.material.widget/HorizontalPager.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/HorizontalPager.children.<get-children>|<get-children>(){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/IconButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/IconButton|null[0]
     abstract fun imageUrl(kotlin/String) // dev.keliver.material.widget/IconButton.imageUrl|imageUrl(kotlin.String){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/IconButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
@@ -163,9 +168,12 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun FloatingActionButton(): dev.keliver.material.widget/FloatingActionButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FloatingActionButton|FloatingActionButton(){}[0]
     abstract fun FlowColumn(): dev.keliver.material.widget/FlowColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FlowColumn|FlowColumn(){}[0]
     abstract fun FlowRow(): dev.keliver.material.widget/FlowRow<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FlowRow|FlowRow(){}[0]
+    abstract fun HorizontalPager(): dev.keliver.material.widget/HorizontalPager<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.HorizontalPager|HorizontalPager(){}[0]
     abstract fun IconButton(): dev.keliver.material.widget/IconButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.IconButton|IconButton(){}[0]
     abstract fun Image(): dev.keliver.material.widget/Image<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Image|Image(){}[0]
     abstract fun InputChip(): dev.keliver.material.widget/InputChip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.InputChip|InputChip(){}[0]
+    abstract fun LazyHorizontalGrid(): dev.keliver.material.widget/LazyHorizontalGrid<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.LazyHorizontalGrid|LazyHorizontalGrid(){}[0]
+    abstract fun LazyVerticalGrid(): dev.keliver.material.widget/LazyVerticalGrid<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.LazyVerticalGrid|LazyVerticalGrid(){}[0]
     abstract fun LinearProgressIndicator(): dev.keliver.material.widget/LinearProgressIndicator<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.LinearProgressIndicator|LinearProgressIndicator(){}[0]
     abstract fun NavigationBar(): dev.keliver.material.widget/NavigationBar<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.NavigationBar|NavigationBar(){}[0]
     abstract fun NavigationRail(): dev.keliver.material.widget/NavigationRail<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.NavigationRail|NavigationRail(){}[0]
@@ -189,8 +197,24 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun TextButton(): dev.keliver.material.widget/TextButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextButton|TextButton(){}[0]
     abstract fun TextField(): dev.keliver.material.widget/TextField<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextField|TextField(){}[0]
     abstract fun TextInput(): dev.keliver.material.widget/TextInput<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextInput|TextInput(){}[0]
+    abstract fun Tooltip(): dev.keliver.material.widget/Tooltip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Tooltip|Tooltip(){}[0]
     abstract fun TopAppBar(): dev.keliver.material.widget/TopAppBar<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TopAppBar|TopAppBar(){}[0]
     abstract fun VerticalDivider(): dev.keliver.material.widget/VerticalDivider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.VerticalDivider|VerticalDivider(){}[0]
+    abstract fun VerticalPager(): dev.keliver.material.widget/VerticalPager<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.VerticalPager|VerticalPager(){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/LazyHorizontalGrid : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/LazyHorizontalGrid|null[0]
+    abstract val children // dev.keliver.material.widget/LazyHorizontalGrid.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/LazyHorizontalGrid.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun rows(kotlin/Int) // dev.keliver.material.widget/LazyHorizontalGrid.rows|rows(kotlin.Int){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/LazyVerticalGrid : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/LazyVerticalGrid|null[0]
+    abstract val children // dev.keliver.material.widget/LazyVerticalGrid.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/LazyVerticalGrid.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun columns(kotlin/Int) // dev.keliver.material.widget/LazyVerticalGrid.columns|columns(kotlin.Int){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/LinearProgressIndicator : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/LinearProgressIndicator|null[0]
@@ -318,12 +342,24 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextInput : dev.
     abstract fun state(dev.keliver.material.api/TextFieldState) // dev.keliver.material.widget/TextInput.state|state(dev.keliver.material.api.TextFieldState){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Tooltip : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Tooltip|null[0]
+    abstract val children // dev.keliver.material.widget/Tooltip.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Tooltip.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun text(kotlin/String) // dev.keliver.material.widget/Tooltip.text|text(kotlin.String){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TopAppBar : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/TopAppBar|null[0]
     abstract fun title(kotlin/String) // dev.keliver.material.widget/TopAppBar.title|title(kotlin.String){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/VerticalDivider : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/VerticalDivider|null[0]
     abstract fun thickness(kotlin/Int) // dev.keliver.material.widget/VerticalDivider.thickness|thickness(kotlin.Int){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/VerticalPager : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/VerticalPager|null[0]
+    abstract val children // dev.keliver.material.widget/VerticalPager.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/VerticalPager.children.<get-children>|<get-children>(){}[0]
 }
 
 final class <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialWidgetSystem : dev.keliver.layout.widget/RedwoodLayoutWidgetFactoryOwner<#A>, dev.keliver.lazylayout.widget/RedwoodLazyLayoutWidgetFactoryOwner<#A>, dev.keliver.material.widget/KeliverMaterialWidgetFactoryOwner<#A>, dev.keliver.widget/WidgetSystem<#A> { // dev.keliver.material.widget/KeliverMaterialWidgetSystem|null[0]

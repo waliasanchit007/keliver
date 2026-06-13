@@ -82,6 +82,10 @@ public final class dev/keliver/material/compose/FlowRowKt {
 	public static final fun FlowRow (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/HorizontalPagerKt {
+	public static final fun HorizontalPager (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/IconButtonKt {
 	public static final fun IconButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -92,6 +96,14 @@ public final class dev/keliver/material/compose/ImageKt {
 
 public final class dev/keliver/material/compose/InputChipKt {
 	public static final fun InputChip (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/LazyHorizontalGridKt {
+	public static final fun LazyHorizontalGrid (ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/LazyVerticalGridKt {
+	public static final fun LazyVerticalGrid (ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/LinearProgressIndicatorKt {
@@ -182,6 +194,10 @@ public final class dev/keliver/material/compose/TextKt {
 	public static final fun Text (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/TooltipKt {
+	public static final fun Tooltip (Ljava/lang/String;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/TopAppBarKt {
 	public static final fun TopAppBar (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -192,5 +208,9 @@ public final class dev/keliver/material/compose/UnscopedKt {
 
 public final class dev/keliver/material/compose/VerticalDividerKt {
 	public static final fun VerticalDivider (ILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/VerticalPagerKt {
+	public static final fun VerticalPager (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 

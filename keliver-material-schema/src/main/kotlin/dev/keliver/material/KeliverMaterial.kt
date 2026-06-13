@@ -82,6 +82,12 @@ import dev.keliver.schema.Widget
     ExtendedFloatingActionButton::class,
     SegmentedButtonRow::class,
     DropdownMenu::class,
+    // Batch 7: lazy grids, pagers, tooltip
+    LazyVerticalGrid::class,
+    LazyHorizontalGrid::class,
+    HorizontalPager::class,
+    VerticalPager::class,
+    Tooltip::class,
     Reuse::class,
   ],
   dependencies = [
@@ -446,6 +452,41 @@ public data class DropdownMenu(
   @Property(2) val options: List<String>,
   @Property(3) val onSelect: ((Int) -> Unit)? = null,
   @Property(4) val onDismiss: (() -> Unit)? = null,
+)
+
+// ---------------------------------------------------------------------------
+// Batch 7: lazy grids, pagers, tooltip (Material3 / foundation).
+// ---------------------------------------------------------------------------
+
+/** Lazy grid; children laid out in [columns] columns, only visible composed. */
+@Widget(49)
+public data class LazyVerticalGrid(
+  @Property(1) val columns: Int = 2,
+  @Children(2) val children: () -> Unit,
+)
+
+@Widget(50)
+public data class LazyHorizontalGrid(
+  @Property(1) val rows: Int = 2,
+  @Children(2) val children: () -> Unit,
+)
+
+/** Horizontal pager; each child is a page. */
+@Widget(51)
+public data class HorizontalPager(
+  @Children(1) val children: () -> Unit,
+)
+
+@Widget(52)
+public data class VerticalPager(
+  @Children(1) val children: () -> Unit,
+)
+
+/** Wraps [children] with a plain tooltip showing [text]. */
+@Widget(53)
+public data class Tooltip(
+  @Property(1) val text: String,
+  @Children(2) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

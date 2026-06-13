@@ -60,6 +60,11 @@ import dev.keliver.material.widget.ExtendedFloatingActionButton
 import dev.keliver.material.widget.NavigationRail
 import dev.keliver.material.widget.SegmentedButtonRow
 import dev.keliver.material.widget.VerticalDivider
+import dev.keliver.material.widget.HorizontalPager
+import dev.keliver.material.widget.LazyHorizontalGrid
+import dev.keliver.material.widget.LazyVerticalGrid
+import dev.keliver.material.widget.Tooltip
+import dev.keliver.material.widget.VerticalPager
 
 public class ComposeUiKeliverMaterialWidgetFactory(
   private val imageLoader: ImageLoader,
@@ -127,6 +132,13 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun ExtendedFloatingActionButton(): ExtendedFloatingActionButton<@Composable (Modifier) -> Unit> = ComposeUiExtendedFloatingActionButton()
   override fun SegmentedButtonRow(): SegmentedButtonRow<@Composable (Modifier) -> Unit> = ComposeUiSegmentedButtonRow()
   override fun DropdownMenu(): DropdownMenu<@Composable (Modifier) -> Unit> = ComposeUiDropdownMenu()
+
+  // Batch 7: lazy grids, pagers, tooltip.
+  override fun LazyVerticalGrid(): LazyVerticalGrid<@Composable (Modifier) -> Unit> = ComposeUiLazyVerticalGrid()
+  override fun LazyHorizontalGrid(): LazyHorizontalGrid<@Composable (Modifier) -> Unit> = ComposeUiLazyHorizontalGrid()
+  override fun HorizontalPager(): HorizontalPager<@Composable (Modifier) -> Unit> = ComposeUiHorizontalPager()
+  override fun VerticalPager(): VerticalPager<@Composable (Modifier) -> Unit> = ComposeUiVerticalPager()
+  override fun Tooltip(): Tooltip<@Composable (Modifier) -> Unit> = ComposeUiTooltip()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }
