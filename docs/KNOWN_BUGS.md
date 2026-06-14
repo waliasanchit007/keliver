@@ -1045,6 +1045,46 @@ then already amortized. Tracked as task #45.
 
 ---
 
+### U15. iOS Zipline cache dir is created under the (read-only) app sandbox root → crashes on a real device
+
+**Symptom.** Any Treehouse iOS host crashes at startup **on a physical device**
+(works fine on the simulator) with:
+```
+Uncaught Kotlin exception: okio.IOException: Operation not permitted
+  okio.PosixFileSystem#createDirectory
+  app.cash.zipline.loader#ZiplineCache
+  dev.keliver.treehouse.IosTreehousePlatform#newCache
+```
+
+**Root cause.** `keliver-treehouse-host/src/iosMain/kotlin/dev/keliver/treehouse/IosTreehousePlatform.kt`:
+```kotlin
+override fun newCache(name, maxSizeInBytes, loaderEventListener) = ZiplineCache(
+  fileSystem = FileSystem.SYSTEM,
+  directory = NSHomeDirectory().toPath() / name,   // <-- app sandbox ROOT
+  ...
+)
+```
+`NSHomeDirectory()` is the app container root. On the **simulator** that path is
+writable (so this was never caught); on a **real device** only `Documents/`,
+`Library/`, `Library/Caches/`, and `tmp/` under it are writable — creating a dir
+directly at the root returns `EPERM`.
+
+**Surfaced 2026-06-14** running the keliver-material SDUI host inside the real
+Stashfin iOS app on a physical device (the simulator path was already render-proven,
+which is exactly why it hid this).
+
+**Fix.** Resolve a device-writable cache dir, e.g.
+`directory = NSHomeDirectory().toPath() / "Library" / "Caches" / name`
+(or `NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)`).
+
+**Consumer workaround (until fixed upstream):** pass
+`cacheName = "Library/Caches/<your-name>"` to `TreehouseAppFactory` so the dir lands
+under the writable Library/Caches.
+
+**Owner.** Keliver.
+
+---
+
 ## Recently resolved
 
 These were resolved in this repo or in the Keliver fork. Full entries
