@@ -16,6 +16,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AlertDialog : de
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AsyncImage : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AsyncImage|null[0]
+    abstract fun blurDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.blurDp|blurDp(kotlin.Int){}[0]
     abstract fun contentScale(kotlin/Int) // dev.keliver.material.widget/AsyncImage.contentScale|contentScale(kotlin.Int){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.heightDp|heightDp(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AsyncImage.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
@@ -289,13 +290,17 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledBox : dev.
     abstract val children // dev.keliver.material.widget/StyledBox.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/StyledBox.children.<get-children>|<get-children>(){}[0]
 
+    abstract fun borderColorArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.borderColorArgb|borderColorArgb(kotlin.Int){}[0]
+    abstract fun borderWidthDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.borderWidthDp|borderWidthDp(kotlin.Int){}[0]
     abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.colorArgb|colorArgb(kotlin.Int){}[0]
     abstract fun contentAlignment(kotlin/Int) // dev.keliver.material.widget/StyledBox.contentAlignment|contentAlignment(kotlin.Int){}[0]
     abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
+    abstract fun elevationDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.elevationDp|elevationDp(kotlin.Int){}[0]
     abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.fillWidth|fillWidth(kotlin.Boolean){}[0]
     abstract fun gradientEndArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientEndArgb|gradientEndArgb(kotlin.Int){}[0]
     abstract fun gradientStartArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientStartArgb|gradientStartArgb(kotlin.Int){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.heightDp|heightDp(kotlin.Int){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/StyledBox.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun paddingDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.paddingDp|paddingDp(kotlin.Int){}[0]
     abstract fun widthDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.widthDp|widthDp(kotlin.Int){}[0]
 }

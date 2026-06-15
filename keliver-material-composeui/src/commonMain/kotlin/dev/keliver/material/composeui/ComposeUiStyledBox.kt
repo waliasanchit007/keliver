@@ -5,6 +5,8 @@
 package dev.keliver.material.composeui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -36,6 +39,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   private var paddingDp by mutableStateOf(0)
   private var fillWidth by mutableStateOf(false)
   private var contentAlignment by mutableStateOf(0)
+  private var elevationDp by mutableStateOf(0)
+  private var borderColorArgb by mutableStateOf(0)
+  private var borderWidthDp by mutableStateOf(0)
+  private var onClick by mutableStateOf<(() -> Unit)?>(null)
 
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
@@ -45,7 +52,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     if (fillWidth) m = m.fillMaxWidth()
     if (widthDp > 0) m = m.width(widthDp.dp)
     if (heightDp > 0) m = m.height(heightDp.dp)
-    if (cornerRadiusDp > 0) m = m.clip(RoundedCornerShape(cornerRadiusDp.dp))
+    val shape = RoundedCornerShape(cornerRadiusDp.dp)
+    // shadow() must precede clip()/background() so the drop-shadow renders.
+    if (elevationDp > 0) m = m.shadow(elevationDp.dp, shape, clip = false)
+    if (cornerRadiusDp > 0) m = m.clip(shape)
     val hasGradient = gradientStartArgb != 0 || gradientEndArgb != 0
     m = when {
       hasGradient -> m.background(
@@ -54,6 +64,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
       colorArgb != 0 -> m.background(Color(colorArgb))
       else -> m
     }
+    if (borderWidthDp > 0 && borderColorArgb != 0) {
+      m = m.border(borderWidthDp.dp, Color(borderColorArgb), shape)
+    }
+    onClick?.let { cb -> m = m.clickable { cb() } }
     if (paddingDp > 0) m = m.padding(paddingDp.dp)
     Box(modifier = m, contentAlignment = toAlignment(contentAlignment)) {
       (children as ComposeWidgetChildren).Render()
@@ -69,6 +83,10 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   override fun paddingDp(paddingDp: Int) { this.paddingDp = paddingDp }
   override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
   override fun contentAlignment(contentAlignment: Int) { this.contentAlignment = contentAlignment }
+  override fun elevationDp(elevationDp: Int) { this.elevationDp = elevationDp }
+  override fun borderColorArgb(borderColorArgb: Int) { this.borderColorArgb = borderColorArgb }
+  override fun borderWidthDp(borderWidthDp: Int) { this.borderWidthDp = borderWidthDp }
+  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
 }
 
 private fun toAlignment(i: Int): Alignment = when (i) {

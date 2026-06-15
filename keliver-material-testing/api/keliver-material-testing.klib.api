@@ -34,8 +34,10 @@ final class dev.keliver.material.testing/AlertDialogValue : dev.keliver.testing/
 }
 
 final class dev.keliver.material.testing/AsyncImageValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/AsyncImageValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/AsyncImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/AsyncImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 
+    final val blurDp // dev.keliver.material.testing/AsyncImageValue.blurDp|{}blurDp[0]
+        final fun <get-blurDp>(): kotlin/Int // dev.keliver.material.testing/AsyncImageValue.blurDp.<get-blurDp>|<get-blurDp>(){}[0]
     final val childrenLists // dev.keliver.material.testing/AsyncImageValue.childrenLists|{}childrenLists[0]
         final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/AsyncImageValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
     final val contentScale // dev.keliver.material.testing/AsyncImageValue.contentScale|{}contentScale[0]
@@ -820,8 +822,12 @@ final class dev.keliver.material.testing/SnackbarValue : dev.keliver.testing/Wid
 }
 
 final class dev.keliver.material.testing/StyledBoxValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/StyledBoxValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/StyledBoxValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/StyledBoxValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
 
+    final val borderColorArgb // dev.keliver.material.testing/StyledBoxValue.borderColorArgb|{}borderColorArgb[0]
+        final fun <get-borderColorArgb>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.borderColorArgb.<get-borderColorArgb>|<get-borderColorArgb>(){}[0]
+    final val borderWidthDp // dev.keliver.material.testing/StyledBoxValue.borderWidthDp|{}borderWidthDp[0]
+        final fun <get-borderWidthDp>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.borderWidthDp.<get-borderWidthDp>|<get-borderWidthDp>(){}[0]
     final val children // dev.keliver.material.testing/StyledBoxValue.children|{}children[0]
         final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/StyledBoxValue.children.<get-children>|<get-children>(){}[0]
     final val childrenLists // dev.keliver.material.testing/StyledBoxValue.childrenLists|{}childrenLists[0]
@@ -832,6 +838,8 @@ final class dev.keliver.material.testing/StyledBoxValue : dev.keliver.testing/Wi
         final fun <get-contentAlignment>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.contentAlignment.<get-contentAlignment>|<get-contentAlignment>(){}[0]
     final val cornerRadiusDp // dev.keliver.material.testing/StyledBoxValue.cornerRadiusDp|{}cornerRadiusDp[0]
         final fun <get-cornerRadiusDp>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.cornerRadiusDp.<get-cornerRadiusDp>|<get-cornerRadiusDp>(){}[0]
+    final val elevationDp // dev.keliver.material.testing/StyledBoxValue.elevationDp|{}elevationDp[0]
+        final fun <get-elevationDp>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.elevationDp.<get-elevationDp>|<get-elevationDp>(){}[0]
     final val fillWidth // dev.keliver.material.testing/StyledBoxValue.fillWidth|{}fillWidth[0]
         final fun <get-fillWidth>(): kotlin/Boolean // dev.keliver.material.testing/StyledBoxValue.fillWidth.<get-fillWidth>|<get-fillWidth>(){}[0]
     final val gradientEndArgb // dev.keliver.material.testing/StyledBoxValue.gradientEndArgb|{}gradientEndArgb[0]
@@ -842,6 +850,8 @@ final class dev.keliver.material.testing/StyledBoxValue : dev.keliver.testing/Wi
         final fun <get-heightDp>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.heightDp.<get-heightDp>|<get-heightDp>(){}[0]
     final val modifier // dev.keliver.material.testing/StyledBoxValue.modifier|{}modifier[0]
         final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/StyledBoxValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/StyledBoxValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/StyledBoxValue.onClick.<get-onClick>|<get-onClick>(){}[0]
     final val paddingDp // dev.keliver.material.testing/StyledBoxValue.paddingDp|{}paddingDp[0]
         final fun <get-paddingDp>(): kotlin/Int // dev.keliver.material.testing/StyledBoxValue.paddingDp.<get-paddingDp>|<get-paddingDp>(){}[0]
     final val widthDp // dev.keliver.material.testing/StyledBoxValue.widthDp|{}widthDp[0]

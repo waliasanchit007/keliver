@@ -208,6 +208,8 @@ public data class AsyncImage(
   @Property(4) val widthDp: Int = 0,
   /** Fixed height in dp; 0 => unconstrained. */
   @Property(5) val heightDp: Int = 0,
+  /** Gaussian blur radius in dp; 0 => sharp. Used e.g. for masked QR previews. */
+  @Property(6) val blurDp: Int = 0,
 )
 
 /** Vertically scrollable column container. */
@@ -522,7 +524,17 @@ public data class StyledBox(
   /** Content alignment: 0 topStart,1 topCenter,2 topEnd,3 centerStart,4 center,
    *  5 centerEnd,6 bottomStart,7 bottomCenter,8 bottomEnd. */
   @Property(9) val contentAlignment: Int = 0,
-  @Children(10) val children: () -> Unit,
+  /** Drop-shadow elevation in dp (cards); 0 => flat. */
+  @Property(11) val elevationDp: Int = 0,
+  /** Border color ARGB; 0 => no border. */
+  @Property(12) val borderColorArgb: Int = 0,
+  /** Border width in dp (with [borderColorArgb]). */
+  @Property(13) val borderWidthDp: Int = 0,
+  /** Tap handler; non-null makes the whole box clickable (rows, buttons, back). */
+  @Property(14) val onClick: (() -> Unit)? = null,
+  // children must hold the HIGHEST tag so the generated composable keeps it as
+  // the trailing slot (enables `StyledBox(...) { content }` lambda syntax).
+  @Children(15) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

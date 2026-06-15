@@ -17,9 +17,10 @@ public final class dev/keliver/material/testing/AlertDialogValue : dev/keliver/t
 }
 
 public final class dev/keliver/material/testing/AsyncImageValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;II)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;III)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBlurDp ()I
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getContentScale ()I
 	public final fun getHeightDp ()I
@@ -637,19 +638,23 @@ public final class dev/keliver/material/testing/SnackbarValue : dev/keliver/test
 
 public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
-	public fun <init> (Ldev/keliver/Modifier;IIIIIIIZILjava/util/List;)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;IIIIIIIZILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIILkotlin/jvm/functions/Function0;Ljava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIILkotlin/jvm/functions/Function0;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBorderColorArgb ()I
+	public final fun getBorderWidthDp ()I
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getColorArgb ()I
 	public final fun getContentAlignment ()I
 	public final fun getCornerRadiusDp ()I
+	public final fun getElevationDp ()I
 	public final fun getFillWidth ()Z
 	public final fun getGradientEndArgb ()I
 	public final fun getGradientStartArgb ()I
 	public final fun getHeightDp ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getPaddingDp ()I
 	public final fun getWidthDp ()I
 	public fun hashCode ()I
