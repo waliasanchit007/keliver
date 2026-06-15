@@ -63,6 +63,7 @@ import dev.keliver.material.widget.VerticalDivider
 import dev.keliver.material.widget.HorizontalPager
 import dev.keliver.material.widget.LazyHorizontalGrid
 import dev.keliver.material.widget.LazyVerticalGrid
+import dev.keliver.material.widget.StyledBox
 import dev.keliver.material.widget.Tooltip
 import dev.keliver.material.widget.VerticalPager
 
@@ -139,6 +140,7 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun HorizontalPager(): HorizontalPager<@Composable (Modifier) -> Unit> = ComposeUiHorizontalPager()
   override fun VerticalPager(): VerticalPager<@Composable (Modifier) -> Unit> = ComposeUiVerticalPager()
   override fun Tooltip(): Tooltip<@Composable (Modifier) -> Unit> = ComposeUiTooltip()
+  override fun StyledBox(): StyledBox<@Composable (Modifier) -> Unit> = ComposeUiStyledBox()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

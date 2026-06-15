@@ -17,14 +17,16 @@ public final class dev/keliver/material/testing/AlertDialogValue : dev/keliver/t
 }
 
 public final class dev/keliver/material/testing/AsyncImageValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;II)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getContentScale ()I
+	public final fun getHeightDp ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getUrl ()Ljava/lang/String;
+	public final fun getWidthDp ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
@@ -412,6 +414,7 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
+	public fun StyledBox ()Ldev/keliver/material/widget/StyledBox;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;
@@ -626,6 +629,29 @@ public final class dev/keliver/material/testing/SnackbarValue : dev/keliver/test
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getMessage ()Ljava/lang/String;
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;IIIIIIIZILjava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;IIIIIIIZILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Ljava/util/List;
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getColorArgb ()I
+	public final fun getContentAlignment ()I
+	public final fun getCornerRadiusDp ()I
+	public final fun getFillWidth ()Z
+	public final fun getGradientEndArgb ()I
+	public final fun getGradientStartArgb ()I
+	public final fun getHeightDp ()I
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getPaddingDp ()I
+	public final fun getWidthDp ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

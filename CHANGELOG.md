@@ -9,6 +9,22 @@
 ## [Unreleased]
 
 Fixed / infrastructure:
+- **U15 fixed — iOS Zipline cache no longer crashes on a real device.**
+  `IosTreehousePlatform.newCache` created the cache directory directly
+  under `NSHomeDirectory()` (the app sandbox root). That path is writable
+  on the simulator but **not** on a physical device, where only
+  `Documents/`, `Library/`, `Library/Caches/`, and `tmp/` are writable —
+  so `okio.PosixFileSystem.createDirectory` threw
+  `IOException: Operation not permitted` (EPERM) and crashed every
+  Treehouse app at startup. The cache directory is now resolved via
+  `NSSearchPathForDirectoriesInDomains(NSCachesDirectory, …)`, i.e.
+  `<sandbox>/Library/Caches/<name>`, which is device-writable. Regression
+  guard added in `keliver-treehouse-host` iosTest
+  (`IosTreehousePlatformTest`). **Consumer note:** any app that shipped
+  the `cacheName = "Library/Caches/<name>"` workaround must revert to a
+  plain `cacheName` when adopting this build — the platform now prepends
+  `Library/Caches`, so keeping the prefix would double it into a
+  non-writable path. See KNOWN_BUGS U15.
 - **U13 fully resolved — all 22 inherited Redwood tests revived.**
   Recovered the upstream `test-app` fixture (schema + 6 codegen
   modules + presenter + presenter-treehouse guest bundle) from git

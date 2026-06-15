@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.ImageLoader
@@ -185,8 +187,13 @@ internal class ComposeUiAsyncImage(
   private var url by mutableStateOf("")
   private var contentScale by mutableStateOf(0)
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
+  private var widthDp by mutableStateOf(0)
+  private var heightDp by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
-  override val value: @Composable (Modifier) -> Unit = { m ->
+  override val value: @Composable (Modifier) -> Unit = { incoming ->
+    var m = incoming
+    if (widthDp > 0) m = m.width(widthDp.dp)
+    if (heightDp > 0) m = m.height(heightDp.dp)
     CoilAsyncImage(
       model = url,
       imageLoader = imageLoader,
@@ -202,6 +209,8 @@ internal class ComposeUiAsyncImage(
   override fun url(url: String) { this.url = url }
   override fun contentScale(contentScale: Int) { this.contentScale = contentScale }
   override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
+  override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
 }
 
 internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifier) -> Unit> {

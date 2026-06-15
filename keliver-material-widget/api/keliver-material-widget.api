@@ -9,8 +9,10 @@ public abstract interface class dev/keliver/material/widget/AlertDialog : dev/ke
 
 public abstract interface class dev/keliver/material/widget/AsyncImage : dev/keliver/widget/Widget {
 	public abstract fun contentScale (I)V
+	public abstract fun heightDp (I)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun url (Ljava/lang/String;)V
+	public abstract fun widthDp (I)V
 }
 
 public abstract interface class dev/keliver/material/widget/Badge : dev/keliver/widget/Widget {
@@ -169,6 +171,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
+	public abstract fun StyledBox ()Ldev/keliver/material/widget/StyledBox;
 	public abstract fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public abstract fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public abstract fun Surface ()Ldev/keliver/material/widget/Surface;
@@ -265,6 +268,19 @@ public abstract interface class dev/keliver/material/widget/Slider : dev/keliver
 
 public abstract interface class dev/keliver/material/widget/Snackbar : dev/keliver/widget/Widget {
 	public abstract fun message (Ljava/lang/String;)V
+}
+
+public abstract interface class dev/keliver/material/widget/StyledBox : dev/keliver/widget/Widget {
+	public abstract fun colorArgb (I)V
+	public abstract fun contentAlignment (I)V
+	public abstract fun cornerRadiusDp (I)V
+	public abstract fun fillWidth (Z)V
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun gradientEndArgb (I)V
+	public abstract fun gradientStartArgb (I)V
+	public abstract fun heightDp (I)V
+	public abstract fun paddingDp (I)V
+	public abstract fun widthDp (I)V
 }
 
 public abstract interface class dev/keliver/material/widget/StyledText : dev/keliver/widget/Widget {

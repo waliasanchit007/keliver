@@ -42,6 +42,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
+	public fun StyledBox ()Ldev/keliver/material/widget/StyledBox;
 	public fun StyledText ()Ldev/keliver/material/widget/StyledText;
 	public fun SuggestionChip ()Ldev/keliver/material/widget/SuggestionChip;
 	public fun Surface ()Ldev/keliver/material/widget/Surface;

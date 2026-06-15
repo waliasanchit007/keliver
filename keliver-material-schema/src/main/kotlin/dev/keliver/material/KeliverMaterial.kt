@@ -88,6 +88,8 @@ import dev.keliver.schema.Widget
     HorizontalPager::class,
     VerticalPager::class,
     Tooltip::class,
+    // Batch 8: styled container (background/gradient/shape/size) for pixel-exact UI
+    StyledBox::class,
     Reuse::class,
   ],
   dependencies = [
@@ -202,6 +204,10 @@ public data class AsyncImage(
   @Property(1) val url: String,
   @Property(2) val contentScale: Int = 0,
   @Property(3) val onClick: (() -> Unit)? = null,
+  /** Fixed width in dp; 0 => unconstrained. */
+  @Property(4) val widthDp: Int = 0,
+  /** Fixed height in dp; 0 => unconstrained. */
+  @Property(5) val heightDp: Int = 0,
 )
 
 /** Vertically scrollable column container. */
@@ -487,6 +493,36 @@ public data class VerticalPager(
 public data class Tooltip(
   @Property(1) val text: String,
   @Children(2) val children: () -> Unit,
+)
+
+/**
+ * Styled container — a Box with an optional solid/gradient background, rounded
+ * corners, fixed size, padding, and content alignment. Enables real-world UI
+ * (gradient headers, colored avatar circles, icon chips) that the Material
+ * widgets alone can't express. All dimensions in dp; colors are ARGB ints.
+ */
+@Widget(54)
+public data class StyledBox(
+  /** Solid background ARGB; 0 => transparent. */
+  @Property(1) val colorArgb: Int = 0,
+  /** Linear-gradient start ARGB; 0 (with [gradientEndArgb] 0) => no gradient. */
+  @Property(2) val gradientStartArgb: Int = 0,
+  /** Linear-gradient end ARGB. */
+  @Property(3) val gradientEndArgb: Int = 0,
+  /** Corner radius in dp; a large value on a square box yields a circle. */
+  @Property(4) val cornerRadiusDp: Int = 0,
+  /** Fixed width in dp; 0 => wrap content. */
+  @Property(5) val widthDp: Int = 0,
+  /** Fixed height in dp; 0 => wrap content. */
+  @Property(6) val heightDp: Int = 0,
+  /** Uniform inner padding in dp. */
+  @Property(7) val paddingDp: Int = 0,
+  /** Whether width should fill the parent. */
+  @Property(8) val fillWidth: Boolean = false,
+  /** Content alignment: 0 topStart,1 topCenter,2 topEnd,3 centerStart,4 center,
+   *  5 centerEnd,6 bottomStart,7 bottomCenter,8 bottomEnd. */
+  @Property(9) val contentAlignment: Int = 0,
+  @Children(10) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

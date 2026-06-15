@@ -3,7 +3,7 @@ public final class dev/keliver/material/compose/AlertDialogKt {
 }
 
 public final class dev/keliver/material/compose/AsyncImageKt {
-	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/BadgeKt {
@@ -152,6 +152,10 @@ public final class dev/keliver/material/compose/SliderKt {
 
 public final class dev/keliver/material/compose/SnackbarKt {
 	public static final fun Snackbar (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/StyledBoxKt {
+	public static final fun StyledBox (IIIIIIIZILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
