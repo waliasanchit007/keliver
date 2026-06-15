@@ -18,8 +18,11 @@ package dev.keliver.treehouse
 import app.cash.zipline.loader.LoaderEventListener
 import app.cash.zipline.loader.ZiplineCache
 import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toPath
-import platform.Foundation.NSHomeDirectory
+import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSUserDomainMask
 
 internal class IosTreehousePlatform : TreehousePlatform {
   override fun newCache(
@@ -28,11 +31,33 @@ internal class IosTreehousePlatform : TreehousePlatform {
     loaderEventListener: LoaderEventListener,
   ): ZiplineCache = ZiplineCache(
     fileSystem = FileSystem.SYSTEM,
-    directory = NSHomeDirectory().toPath() / name,
+    directory = iosZiplineCacheDirectory(name),
     maxSizeInBytes = maxSizeInBytes,
     loaderEventListener = loaderEventListener,
   )
 
   override fun newDispatchers(applicationName: String): TreehouseDispatchers =
     IosTreehouseDispatchers(applicationName)
+}
+
+/**
+ * Resolves the on-device Zipline cache directory: `<sandbox>/Library/Caches/[name]`.
+ *
+ * Do NOT place the cache under [platform.Foundation.NSHomeDirectory] (the app
+ * container root) directly: on the **simulator** that path is writable, but on a
+ * **physical device** only `Documents/`, `Library/`, `Library/Caches/`, and `tmp/`
+ * under the sandbox are writable. Creating the cache dir at the sandbox root returns
+ * `EPERM` (`okio.IOException: Operation not permitted`) and crashes the app at startup.
+ * `Library/Caches` always exists, so ZiplineCache only has to create the [name] leaf.
+ * See docs/KNOWN_BUGS.md (U15).
+ */
+internal fun iosZiplineCacheDirectory(name: String): Path {
+  val paths = NSSearchPathForDirectoriesInDomains(
+    directory = NSCachesDirectory,
+    domainMask = NSUserDomainMask,
+    expandTilde = true,
+  )
+  val cachesPath = paths.firstOrNull() as? String
+    ?: error("could not resolve NSCachesDirectory")
+  return cachesPath.toPath() / name
 }

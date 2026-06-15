@@ -1045,7 +1045,20 @@ then already amortized. Tracked as task #45.
 
 ---
 
-### U15. iOS Zipline cache dir is created under the (read-only) app sandbox root → crashes on a real device
+### U15. ~~iOS Zipline cache dir is created under the (read-only) app sandbox root → crashes on a real device~~ — FIXED (see [`CHANGELOG.md`](../CHANGELOG.md) `[Unreleased]`)
+
+**Resolution.** `IosTreehousePlatform.newCache` now resolves the cache directory via
+`NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)` →
+`<sandbox>/Library/Caches/<name>`, which is writable on a physical device. The
+resolution is extracted into `internal fun iosZiplineCacheDirectory(name)` and guarded
+by `IosTreehousePlatformTest` in `keliver-treehouse-host` iosTest. Note: the EPERM crash
+only reproduces on a **real device**, so the simulator test asserts the structural
+invariant (cache is under `Library/Caches`, not the sandbox root) rather than the crash
+itself. **Consumers** that shipped the `cacheName = "Library/Caches/<name>"` workaround
+must revert to a plain `cacheName` when adopting this build, or the platform's new
+`Library/Caches` prefix will double into a non-writable path.
+
+Original report retained below for context.
 
 **Symptom.** Any Treehouse iOS host crashes at startup **on a physical device**
 (works fine on the simulator) with:
@@ -1076,10 +1089,12 @@ which is exactly why it hid this).
 **Fix.** Resolve a device-writable cache dir, e.g.
 `directory = NSHomeDirectory().toPath() / "Library" / "Caches" / name`
 (or `NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true)`).
+✅ Shipped — see the Resolution note at the top of this entry.
 
-**Consumer workaround (until fixed upstream):** pass
+**Consumer workaround (no longer needed after the fix):** pass
 `cacheName = "Library/Caches/<your-name>"` to `TreehouseAppFactory` so the dir lands
-under the writable Library/Caches.
+under the writable Library/Caches. Revert to a plain `cacheName` when adopting the fixed
+build (the platform now prepends `Library/Caches` itself).
 
 **Owner.** Keliver.
 
@@ -1128,6 +1143,10 @@ and (for integration-side fixes) in ServerDrivenUI's
   Zipline-upstream root cause, but prevents the silent runtime no-op
   from ever shipping. Adopters can copy the same task into their
   protocol modules.
+- **U15** iOS Zipline cache crashed on real device (EPERM at sandbox
+  root) — `IosTreehousePlatform` now resolves the cache under
+  `Library/Caches` via `NSSearchPathForDirectoriesInDomains`, guarded
+  by `IosTreehousePlatformTest`. See CHANGELOG `[Unreleased]`.
 
 ---
 
