@@ -307,6 +307,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledBox : dev.
     abstract fun gradientEndArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientEndArgb|gradientEndArgb(kotlin.Int){}[0]
     abstract fun gradientStartArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientStartArgb|gradientStartArgb(kotlin.Int){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.heightDp|heightDp(kotlin.Int){}[0]
+    abstract fun offsetYDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.offsetYDp|offsetYDp(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/StyledBox.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun paddingDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.paddingDp|paddingDp(kotlin.Int){}[0]
     abstract fun widthDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.widthDp|widthDp(kotlin.Int){}[0]

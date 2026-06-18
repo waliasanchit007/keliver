@@ -537,6 +537,9 @@ public data class StyledBox(
   /** Content alignment: 0 topStart,1 topCenter,2 topEnd,3 centerStart,4 center,
    *  5 centerEnd,6 bottomStart,7 bottomCenter,8 bottomEnd. */
   @Property(9) val contentAlignment: Int = 0,
+  /** Vertical draw offset in dp (signed). Negative pulls the box UP over the
+   *  previous sibling — e.g. a rounded white sheet lapping over a header. */
+  @Property(10) val offsetYDp: Int = 0,
   /** Drop-shadow elevation in dp (cards); 0 => flat. */
   @Property(11) val elevationDp: Int = 0,
   /** Border color ARGB; 0 => no border. */

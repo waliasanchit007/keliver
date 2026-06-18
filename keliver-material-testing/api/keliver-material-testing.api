@@ -644,8 +644,8 @@ public final class dev/keliver/material/testing/SnackbarValue : dev/keliver/test
 
 public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
-	public fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIILkotlin/jvm/functions/Function0;Ljava/util/List;)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIILkotlin/jvm/functions/Function0;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIIILkotlin/jvm/functions/Function0;Ljava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;IIIIIIIZIIIIILkotlin/jvm/functions/Function0;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBorderColorArgb ()I
 	public final fun getBorderWidthDp ()I
@@ -660,6 +660,7 @@ public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/tes
 	public final fun getGradientStartArgb ()I
 	public final fun getHeightDp ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOffsetYDp ()I
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getPaddingDp ()I
 	public final fun getWidthDp ()I

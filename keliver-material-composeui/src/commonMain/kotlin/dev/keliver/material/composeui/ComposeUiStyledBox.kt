@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,7 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   private var elevationDp by mutableStateOf(0)
   private var borderColorArgb by mutableStateOf(0)
   private var borderWidthDp by mutableStateOf(0)
+  private var offsetYDp by mutableStateOf(0)
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
 
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
@@ -49,6 +51,9 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
 
   override val value: @Composable (Modifier) -> Unit = { incoming ->
     var m = incoming
+    // Draw-offset (e.g. a rounded sheet lapping up over a header). Applied first
+    // so the whole box (shadow/bg/border) shifts together.
+    if (offsetYDp != 0) m = m.offset(y = offsetYDp.dp)
     if (fillWidth) m = m.fillMaxWidth()
     if (widthDp > 0) m = m.width(widthDp.dp)
     if (heightDp > 0) m = m.height(heightDp.dp)
@@ -84,6 +89,7 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
   override fun contentAlignment(contentAlignment: Int) { this.contentAlignment = contentAlignment }
   override fun elevationDp(elevationDp: Int) { this.elevationDp = elevationDp }
+  override fun offsetYDp(offsetYDp: Int) { this.offsetYDp = offsetYDp }
   override fun borderColorArgb(borderColorArgb: Int) { this.borderColorArgb = borderColorArgb }
   override fun borderWidthDp(borderWidthDp: Int) { this.borderWidthDp = borderWidthDp }
   override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
