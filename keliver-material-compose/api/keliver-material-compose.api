@@ -3,7 +3,7 @@ public final class dev/keliver/material/compose/AlertDialogKt {
 }
 
 public final class dev/keliver/material/compose/AsyncImageKt {
-	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/BadgeKt {
@@ -83,7 +83,7 @@ public final class dev/keliver/material/compose/FlowRowKt {
 }
 
 public final class dev/keliver/material/compose/HorizontalPagerKt {
-	public static final fun HorizontalPager (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun HorizontalPager (IZIIILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/IconButtonKt {

@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -191,17 +192,18 @@ internal class ComposeUiAsyncImage(
   private var widthDp by mutableStateOf(0)
   private var heightDp by mutableStateOf(0)
   private var blurDp by mutableStateOf(0)
+  private var fillWidth by mutableStateOf(false)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { incoming ->
     var m = incoming
-    if (widthDp > 0) m = m.width(widthDp.dp)
+    if (fillWidth) m = m.fillMaxWidth() else if (widthDp > 0) m = m.width(widthDp.dp)
     if (heightDp > 0) m = m.height(heightDp.dp)
     if (blurDp > 0) m = m.blur(blurDp.dp)
     CoilAsyncImage(
       model = url,
       imageLoader = imageLoader,
       contentDescription = null,
-      contentScale = when (contentScale) {
+      contentScale = if (fillWidth) ContentScale.FillWidth else when (contentScale) {
         1 -> ContentScale.Crop
         2 -> ContentScale.FillBounds
         else -> ContentScale.Fit
@@ -215,6 +217,7 @@ internal class ComposeUiAsyncImage(
   override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
   override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
   override fun blurDp(blurDp: Int) { this.blurDp = blurDp }
+  override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
 }
 
 internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifier) -> Unit> {

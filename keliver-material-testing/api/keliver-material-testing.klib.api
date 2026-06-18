@@ -34,7 +34,7 @@ final class dev.keliver.material.testing/AlertDialogValue : dev.keliver.testing/
 }
 
 final class dev.keliver.material.testing/AsyncImageValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/AsyncImageValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/AsyncImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ...) // dev.keliver.material.testing/AsyncImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean){}[0]
 
     final val blurDp // dev.keliver.material.testing/AsyncImageValue.blurDp|{}blurDp[0]
         final fun <get-blurDp>(): kotlin/Int // dev.keliver.material.testing/AsyncImageValue.blurDp.<get-blurDp>|<get-blurDp>(){}[0]
@@ -42,6 +42,8 @@ final class dev.keliver.material.testing/AsyncImageValue : dev.keliver.testing/W
         final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/AsyncImageValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
     final val contentScale // dev.keliver.material.testing/AsyncImageValue.contentScale|{}contentScale[0]
         final fun <get-contentScale>(): kotlin/Int // dev.keliver.material.testing/AsyncImageValue.contentScale.<get-contentScale>|<get-contentScale>(){}[0]
+    final val fillWidth // dev.keliver.material.testing/AsyncImageValue.fillWidth|{}fillWidth[0]
+        final fun <get-fillWidth>(): kotlin/Boolean // dev.keliver.material.testing/AsyncImageValue.fillWidth.<get-fillWidth>|<get-fillWidth>(){}[0]
     final val heightDp // dev.keliver.material.testing/AsyncImageValue.heightDp|{}heightDp[0]
         final fun <get-heightDp>(): kotlin/Int // dev.keliver.material.testing/AsyncImageValue.heightDp.<get-heightDp>|<get-heightDp>(){}[0]
     final val modifier // dev.keliver.material.testing/AsyncImageValue.modifier|{}modifier[0]
@@ -422,14 +424,24 @@ final class dev.keliver.material.testing/FlowRowValue : dev.keliver.testing/Widg
 }
 
 final class dev.keliver.material.testing/HorizontalPagerValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/HorizontalPagerValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/HorizontalPagerValue.<init>|<init>(dev.keliver.Modifier;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/HorizontalPagerValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
 
+    final val autoScrollMs // dev.keliver.material.testing/HorizontalPagerValue.autoScrollMs|{}autoScrollMs[0]
+        final fun <get-autoScrollMs>(): kotlin/Int // dev.keliver.material.testing/HorizontalPagerValue.autoScrollMs.<get-autoScrollMs>|<get-autoScrollMs>(){}[0]
     final val children // dev.keliver.material.testing/HorizontalPagerValue.children|{}children[0]
         final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/HorizontalPagerValue.children.<get-children>|<get-children>(){}[0]
     final val childrenLists // dev.keliver.material.testing/HorizontalPagerValue.childrenLists|{}childrenLists[0]
         final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/HorizontalPagerValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val contentPaddingDp // dev.keliver.material.testing/HorizontalPagerValue.contentPaddingDp|{}contentPaddingDp[0]
+        final fun <get-contentPaddingDp>(): kotlin/Int // dev.keliver.material.testing/HorizontalPagerValue.contentPaddingDp.<get-contentPaddingDp>|<get-contentPaddingDp>(){}[0]
+    final val indicatorActiveArgb // dev.keliver.material.testing/HorizontalPagerValue.indicatorActiveArgb|{}indicatorActiveArgb[0]
+        final fun <get-indicatorActiveArgb>(): kotlin/Int // dev.keliver.material.testing/HorizontalPagerValue.indicatorActiveArgb.<get-indicatorActiveArgb>|<get-indicatorActiveArgb>(){}[0]
+    final val indicatorInactiveArgb // dev.keliver.material.testing/HorizontalPagerValue.indicatorInactiveArgb|{}indicatorInactiveArgb[0]
+        final fun <get-indicatorInactiveArgb>(): kotlin/Int // dev.keliver.material.testing/HorizontalPagerValue.indicatorInactiveArgb.<get-indicatorInactiveArgb>|<get-indicatorInactiveArgb>(){}[0]
     final val modifier // dev.keliver.material.testing/HorizontalPagerValue.modifier|{}modifier[0]
         final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/HorizontalPagerValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val showIndicator // dev.keliver.material.testing/HorizontalPagerValue.showIndicator|{}showIndicator[0]
+        final fun <get-showIndicator>(): kotlin/Boolean // dev.keliver.material.testing/HorizontalPagerValue.showIndicator.<get-showIndicator>|<get-showIndicator>(){}[0]
 
     final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/HorizontalPagerValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/HorizontalPagerValue.equals|equals(kotlin.Any?){}[0]

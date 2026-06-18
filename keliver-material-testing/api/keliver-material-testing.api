@@ -17,12 +17,13 @@ public final class dev/keliver/material/testing/AlertDialogValue : dev/keliver/t
 }
 
 public final class dev/keliver/material/testing/AsyncImageValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;III)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBlurDp ()I
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getContentScale ()I
+	public final fun getFillWidth ()Z
 	public final fun getHeightDp ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
@@ -312,12 +313,17 @@ public final class dev/keliver/material/testing/FlowRowValue : dev/keliver/testi
 
 public final class dev/keliver/material/testing/HorizontalPagerValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
-	public fun <init> (Ldev/keliver/Modifier;Ljava/util/List;)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;IZIIILjava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;IZIIILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAutoScrollMs ()I
 	public final fun getChildren ()Ljava/util/List;
 	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getContentPaddingDp ()I
+	public final fun getIndicatorActiveArgb ()I
+	public final fun getIndicatorInactiveArgb ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getShowIndicator ()Z
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

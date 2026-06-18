@@ -21,19 +21,21 @@ public final class dev/keliver/material/AlertDialog {
 }
 
 public final class dev/keliver/material/AsyncImage {
-	public fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;III)V
-	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()I
 	public final fun component3 ()Lkotlin/jvm/functions/Function0;
 	public final fun component4 ()I
 	public final fun component5 ()I
 	public final fun component6 ()I
-	public final fun copy (Ljava/lang/String;ILkotlin/jvm/functions/Function0;III)Ldev/keliver/material/AsyncImage;
-	public static synthetic fun copy$default (Ldev/keliver/material/AsyncImage;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIILjava/lang/Object;)Ldev/keliver/material/AsyncImage;
+	public final fun component7 ()Z
+	public final fun copy (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)Ldev/keliver/material/AsyncImage;
+	public static synthetic fun copy$default (Ldev/keliver/material/AsyncImage;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILjava/lang/Object;)Ldev/keliver/material/AsyncImage;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBlurDp ()I
 	public final fun getContentScale ()I
+	public final fun getFillWidth ()Z
 	public final fun getHeightDp ()I
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getUrl ()Ljava/lang/String;
@@ -308,12 +310,23 @@ public final class dev/keliver/material/FlowRow {
 }
 
 public final class dev/keliver/material/HorizontalPager {
-	public fun <init> (Lkotlin/jvm/functions/Function0;)V
-	public final fun component1 ()Lkotlin/jvm/functions/Function0;
-	public final fun copy (Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/HorizontalPager;
-	public static synthetic fun copy$default (Ldev/keliver/material/HorizontalPager;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/HorizontalPager;
+	public fun <init> (IZIIILkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (IZIIILkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()Z
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun component6 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (IZIIILkotlin/jvm/functions/Function0;)Ldev/keliver/material/HorizontalPager;
+	public static synthetic fun copy$default (Ldev/keliver/material/HorizontalPager;IZIIILkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/HorizontalPager;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAutoScrollMs ()I
 	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public final fun getContentPaddingDp ()I
+	public final fun getIndicatorActiveArgb ()I
+	public final fun getIndicatorInactiveArgb ()I
+	public final fun getShowIndicator ()Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

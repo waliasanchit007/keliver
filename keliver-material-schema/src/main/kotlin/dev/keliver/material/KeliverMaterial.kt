@@ -210,6 +210,9 @@ public data class AsyncImage(
   @Property(5) val heightDp: Int = 0,
   /** Gaussian blur radius in dp; 0 => sharp. Used e.g. for masked QR previews. */
   @Property(6) val blurDp: Int = 0,
+  /** Fill the parent's width and scale height by aspect ratio (ContentScale
+   *  .FillWidth) — for full-bleed banners. Overrides [widthDp]/[contentScale]. */
+  @Property(7) val fillWidth: Boolean = false,
 )
 
 /** Vertically scrollable column container. */
@@ -482,7 +485,17 @@ public data class LazyHorizontalGrid(
 /** Horizontal pager; each child is a page. */
 @Widget(51)
 public data class HorizontalPager(
-  @Children(1) val children: () -> Unit,
+  /** Auto-advance interval in ms; 0 => no auto-scroll. Pauses while dragging. */
+  @Property(1) val autoScrollMs: Int = 0,
+  /** Show page-indicator dots below the pager (only when >1 page). */
+  @Property(2) val showIndicator: Boolean = false,
+  /** Active / inactive dot color ARGB (defaults: primary / light gray). */
+  @Property(3) val indicatorActiveArgb: Int = 0,
+  @Property(4) val indicatorInactiveArgb: Int = 0,
+  /** Horizontal content padding in dp (peek of adjacent pages). */
+  @Property(5) val contentPaddingDp: Int = 0,
+  // children holds the highest tag → stays the trailing slot in the generated composable.
+  @Children(6) val children: () -> Unit,
 )
 
 @Widget(52)

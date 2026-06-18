@@ -18,6 +18,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AlertDialog : de
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AsyncImage : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AsyncImage|null[0]
     abstract fun blurDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.blurDp|blurDp(kotlin.Int){}[0]
     abstract fun contentScale(kotlin/Int) // dev.keliver.material.widget/AsyncImage.contentScale|contentScale(kotlin.Int){}[0]
+    abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/AsyncImage.fillWidth|fillWidth(kotlin.Boolean){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.heightDp|heightDp(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AsyncImage.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun url(kotlin/String) // dev.keliver.material.widget/AsyncImage.url|url(kotlin.String){}[0]
@@ -131,6 +132,12 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/FlowRow : dev.ke
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/HorizontalPager : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/HorizontalPager|null[0]
     abstract val children // dev.keliver.material.widget/HorizontalPager.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/HorizontalPager.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun autoScrollMs(kotlin/Int) // dev.keliver.material.widget/HorizontalPager.autoScrollMs|autoScrollMs(kotlin.Int){}[0]
+    abstract fun contentPaddingDp(kotlin/Int) // dev.keliver.material.widget/HorizontalPager.contentPaddingDp|contentPaddingDp(kotlin.Int){}[0]
+    abstract fun indicatorActiveArgb(kotlin/Int) // dev.keliver.material.widget/HorizontalPager.indicatorActiveArgb|indicatorActiveArgb(kotlin.Int){}[0]
+    abstract fun indicatorInactiveArgb(kotlin/Int) // dev.keliver.material.widget/HorizontalPager.indicatorInactiveArgb|indicatorInactiveArgb(kotlin.Int){}[0]
+    abstract fun showIndicator(kotlin/Boolean) // dev.keliver.material.widget/HorizontalPager.showIndicator|showIndicator(kotlin.Boolean){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/IconButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/IconButton|null[0]

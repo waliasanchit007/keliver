@@ -10,6 +10,7 @@ public abstract interface class dev/keliver/material/widget/AlertDialog : dev/ke
 public abstract interface class dev/keliver/material/widget/AsyncImage : dev/keliver/widget/Widget {
 	public abstract fun blurDp (I)V
 	public abstract fun contentScale (I)V
+	public abstract fun fillWidth (Z)V
 	public abstract fun heightDp (I)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun url (Ljava/lang/String;)V
@@ -112,7 +113,12 @@ public abstract interface class dev/keliver/material/widget/FlowRow : dev/kelive
 }
 
 public abstract interface class dev/keliver/material/widget/HorizontalPager : dev/keliver/widget/Widget {
+	public abstract fun autoScrollMs (I)V
+	public abstract fun contentPaddingDp (I)V
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun indicatorActiveArgb (I)V
+	public abstract fun indicatorInactiveArgb (I)V
+	public abstract fun showIndicator (Z)V
 }
 
 public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
