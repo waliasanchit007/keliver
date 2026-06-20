@@ -15,6 +15,19 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AlertDialog : de
     abstract fun title(kotlin/String) // dev.keliver.material.widget/AlertDialog.title|title(kotlin.String){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AnimatedBorder : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AnimatedBorder|null[0]
+    abstract val children // dev.keliver.material.widget/AnimatedBorder.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/AnimatedBorder.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun baseColorArgb(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.baseColorArgb|baseColorArgb(kotlin.Int){}[0]
+    abstract fun cometColorArgb(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.cometColorArgb|cometColorArgb(kotlin.Int){}[0]
+    abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
+    abstract fun durationMs(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.durationMs|durationMs(kotlin.Int){}[0]
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AnimatedBorder.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun segmentLenDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.segmentLenDp|segmentLenDp(kotlin.Int){}[0]
+    abstract fun strokeWidthDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.strokeWidthDp|strokeWidthDp(kotlin.Int){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AnimatedVisibility : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AnimatedVisibility|null[0]
     abstract val children // dev.keliver.material.widget/AnimatedVisibility.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/AnimatedVisibility.children.<get-children>|<get-children>(){}[0]
@@ -179,6 +192,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun AlertDialog(): dev.keliver.material.widget/AlertDialog<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AlertDialog|AlertDialog(){}[0]
     abstract fun Alpha(#A, dev.keliver.material.modifier/Alpha) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Alpha|Alpha(1:0;dev.keliver.material.modifier.Alpha){}[0]
     abstract fun AnimateContentSize(#A, dev.keliver.material.modifier/AnimateContentSize) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AnimateContentSize|AnimateContentSize(1:0;dev.keliver.material.modifier.AnimateContentSize){}[0]
+    abstract fun AnimatedBorder(): dev.keliver.material.widget/AnimatedBorder<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AnimatedBorder|AnimatedBorder(){}[0]
     abstract fun AnimatedVisibility(): dev.keliver.material.widget/AnimatedVisibility<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AnimatedVisibility|AnimatedVisibility(){}[0]
     abstract fun AspectRatio(#A, dev.keliver.material.modifier/AspectRatio) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AspectRatio|AspectRatio(1:0;dev.keliver.material.modifier.AspectRatio){}[0]
     abstract fun AsyncImage(): dev.keliver.material.widget/AsyncImage<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AsyncImage|AsyncImage(){}[0]
@@ -375,7 +389,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledBox : dev.
     abstract fun borderWidthDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.borderWidthDp|borderWidthDp(kotlin.Int){}[0]
     abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.colorArgb|colorArgb(kotlin.Int){}[0]
     abstract fun contentAlignment(kotlin/Int) // dev.keliver.material.widget/StyledBox.contentAlignment|contentAlignment(kotlin.Int){}[0]
+    abstract fun cornerBottomEndDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerBottomEndDp|cornerBottomEndDp(kotlin.Int){}[0]
+    abstract fun cornerBottomStartDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerBottomStartDp|cornerBottomStartDp(kotlin.Int){}[0]
     abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
+    abstract fun cornerTopEndDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerTopEndDp|cornerTopEndDp(kotlin.Int){}[0]
+    abstract fun cornerTopStartDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerTopStartDp|cornerTopStartDp(kotlin.Int){}[0]
     abstract fun elevationDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.elevationDp|elevationDp(kotlin.Int){}[0]
     abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.fillWidth|fillWidth(kotlin.Boolean){}[0]
     abstract fun gradientColorsArgb(kotlin.collections/List<kotlin/Int>) // dev.keliver.material.widget/StyledBox.gradientColorsArgb|gradientColorsArgb(kotlin.collections.List<kotlin.Int>){}[0]

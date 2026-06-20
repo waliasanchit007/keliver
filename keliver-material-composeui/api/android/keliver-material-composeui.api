@@ -6,6 +6,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Alpha (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Alpha;)V
 	public synthetic fun AnimateContentSize (Ljava/lang/Object;Ldev/keliver/material/modifier/AnimateContentSize;)V
 	public fun AnimateContentSize (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public fun AnimatedBorder ()Ldev/keliver/material/widget/AnimatedBorder;
 	public fun AnimatedVisibility ()Ldev/keliver/material/widget/AnimatedVisibility;
 	public synthetic fun AspectRatio (Ljava/lang/Object;Ldev/keliver/material/modifier/AspectRatio;)V
 	public fun AspectRatio (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/AspectRatio;)V

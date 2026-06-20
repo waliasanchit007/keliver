@@ -7,6 +7,17 @@ public abstract interface class dev/keliver/material/widget/AlertDialog : dev/ke
 	public abstract fun title (Ljava/lang/String;)V
 }
 
+public abstract interface class dev/keliver/material/widget/AnimatedBorder : dev/keliver/widget/Widget {
+	public abstract fun baseColorArgb (I)V
+	public abstract fun cometColorArgb (I)V
+	public abstract fun cornerRadiusDp (I)V
+	public abstract fun durationMs (I)V
+	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun segmentLenDp (I)V
+	public abstract fun strokeWidthDp (I)V
+}
+
 public abstract interface class dev/keliver/material/widget/AnimatedVisibility : dev/keliver/widget/Widget {
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 	public abstract fun visible (Z)V
@@ -156,6 +167,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public abstract fun Alpha (Ljava/lang/Object;Ldev/keliver/material/modifier/Alpha;)V
 	public abstract fun AnimateContentSize (Ljava/lang/Object;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public abstract fun AnimatedBorder ()Ldev/keliver/material/widget/AnimatedBorder;
 	public abstract fun AnimatedVisibility ()Ldev/keliver/material/widget/AnimatedVisibility;
 	public abstract fun AspectRatio (Ljava/lang/Object;Ldev/keliver/material/modifier/AspectRatio;)V
 	public abstract fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
@@ -352,7 +364,11 @@ public abstract interface class dev/keliver/material/widget/StyledBox : dev/keli
 	public abstract fun borderWidthDp (I)V
 	public abstract fun colorArgb (I)V
 	public abstract fun contentAlignment (I)V
+	public abstract fun cornerBottomEndDp (I)V
+	public abstract fun cornerBottomStartDp (I)V
 	public abstract fun cornerRadiusDp (I)V
+	public abstract fun cornerTopEndDp (I)V
+	public abstract fun cornerTopStartDp (I)V
 	public abstract fun elevationDp (I)V
 	public abstract fun fillWidth (Z)V
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;

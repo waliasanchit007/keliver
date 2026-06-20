@@ -101,6 +101,8 @@ import dev.keliver.schema.Widget
     Clickable::class,
     // Batch 13: inline rich text (AnnotatedString-style multi-style/gradient runs).
     RichText::class,
+    // Batch 14: animated travelling-comet border (host-side Compose animation).
+    AnimatedBorder::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -651,9 +653,15 @@ public data class StyledBox(
   /** Direction for [gradientColorsArgb]: 0 diagonal TL→BR, 1 vertical T→B,
    *  2 horizontal L→R, 3 diagonal BL→TR. */
   @Property(18) val gradientDirection: Int = 0,
+  // Per-corner radii in dp; -1 => fall back to [cornerRadiusDp]. Use for
+  // top-only rounded panels etc.
+  @Property(19) val cornerTopStartDp: Int = -1,
+  @Property(20) val cornerTopEndDp: Int = -1,
+  @Property(21) val cornerBottomStartDp: Int = -1,
+  @Property(22) val cornerBottomEndDp: Int = -1,
   // children must hold the HIGHEST tag so the generated composable keeps it as
   // the trailing slot (enables `StyledBox(...) { content }` lambda syntax).
-  @Children(19) val children: () -> Unit,
+  @Children(23) val children: () -> Unit,
 )
 
 // ---------------------------------------------------------------------------
@@ -734,6 +742,29 @@ public data class RichText(
   @Property(6) val maxLines: Int = 0,
   /** Base color ARGB for spans that don't set their own; 0 => onSurface. */
   @Property(7) val colorArgb: Int = 0,
+)
+
+/**
+ * Container that draws a bright segment ("comet") travelling around its rounded
+ * border, over a faint base ring — the keliver answer to a `drawWithCache` +
+ * `PathMeasure` animated border. The animation runs entirely host-side (no
+ * per-frame protocol traffic); [children] render inside. Pair with a guest-driven
+ * typewriter [RichText] for the full "personalised UPI" nudge effect.
+ */
+@Widget(60)
+public data class AnimatedBorder(
+  @Property(1) val cornerRadiusDp: Int = 8,
+  @Property(2) val strokeWidthDp: Int = 1,
+  /** Faint always-on ring ARGB; 0 => [cometColorArgb] at 15% alpha. */
+  @Property(3) val baseColorArgb: Int = 0,
+  /** Bright travelling-segment ARGB. */
+  @Property(4) val cometColorArgb: Int = 0xFFFC14AB.toInt(),
+  /** Full loop duration in ms. */
+  @Property(5) val durationMs: Int = 1800,
+  /** Minimum visible comet length in dp. */
+  @Property(6) val segmentLenDp: Int = 50,
+  @Property(7) val onClick: (() -> Unit)? = null,
+  @Children(8) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

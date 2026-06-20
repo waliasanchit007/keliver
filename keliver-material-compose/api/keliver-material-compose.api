@@ -2,6 +2,10 @@ public final class dev/keliver/material/compose/AlertDialogKt {
 	public static final fun AlertDialog (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/AnimatedBorderKt {
+	public static final fun AnimatedBorder (IIIIIILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/AnimatedVisibilityKt {
 	public static final fun AnimatedVisibility (ZLdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
@@ -171,7 +175,7 @@ public final class dev/keliver/material/compose/SnackbarKt {
 }
 
 public final class dev/keliver/material/compose/StyledBoxKt {
-	public static final fun StyledBox (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
+	public static final fun StyledBox (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;IIIIILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;IIII)V
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
