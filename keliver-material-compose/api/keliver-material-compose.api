@@ -7,7 +7,7 @@ public final class dev/keliver/material/compose/AnimatedVisibilityKt {
 }
 
 public final class dev/keliver/material/compose/AsyncImageKt {
-	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/BadgeKt {
@@ -142,6 +142,10 @@ public final class dev/keliver/material/compose/RadioButtonKt {
 	public static final fun RadioButton (ZZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/RichTextKt {
+	public static final fun RichText (Ljava/util/List;IZIIIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/ScaffoldKt {
 	public static final fun Scaffold (Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
@@ -167,7 +171,7 @@ public final class dev/keliver/material/compose/SnackbarKt {
 }
 
 public final class dev/keliver/material/compose/StyledBoxKt {
-	public static final fun StyledBox (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
+	public static final fun StyledBox (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {

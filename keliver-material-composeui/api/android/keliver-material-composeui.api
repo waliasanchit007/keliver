@@ -69,6 +69,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public fun Reuse (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Reuse;)V
+	public fun RichText ()Ldev/keliver/material/widget/RichText;
 	public synthetic fun Rotate (Ljava/lang/Object;Ldev/keliver/material/modifier/Rotate;)V
 	public fun Rotate (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Rotate;)V
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;

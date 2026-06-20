@@ -28,6 +28,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AsyncImage : dev
     abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/AsyncImage.fillWidth|fillWidth(kotlin.Boolean){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.heightDp|heightDp(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AsyncImage.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+    abstract fun tintArgb(kotlin/Int) // dev.keliver.material.widget/AsyncImage.tintArgb|tintArgb(kotlin.Int){}[0]
     abstract fun url(kotlin/String) // dev.keliver.material.widget/AsyncImage.url|url(kotlin.String){}[0]
     abstract fun widthDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.widthDp|widthDp(kotlin.Int){}[0]
 }
@@ -227,6 +228,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun PaddingEach(#A, dev.keliver.material.modifier/PaddingEach) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.PaddingEach|PaddingEach(1:0;dev.keliver.material.modifier.PaddingEach){}[0]
     abstract fun RadioButton(): dev.keliver.material.widget/RadioButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.RadioButton|RadioButton(){}[0]
     abstract fun Reuse(#A, dev.keliver.material.modifier/Reuse) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Reuse|Reuse(1:0;dev.keliver.material.modifier.Reuse){}[0]
+    abstract fun RichText(): dev.keliver.material.widget/RichText<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.RichText|RichText(){}[0]
     abstract fun Rotate(#A, dev.keliver.material.modifier/Rotate) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Rotate|Rotate(1:0;dev.keliver.material.modifier.Rotate){}[0]
     abstract fun Scaffold(): dev.keliver.material.widget/Scaffold<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Scaffold|Scaffold(){}[0]
     abstract fun Scale(#A, dev.keliver.material.modifier/Scale) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Scale|Scale(1:0;dev.keliver.material.modifier.Scale){}[0]
@@ -321,6 +323,16 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/RadioButton : de
     abstract fun selected(kotlin/Boolean) // dev.keliver.material.widget/RadioButton.selected|selected(kotlin.Boolean){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/RichText : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/RichText|null[0]
+    abstract fun align(kotlin/Int) // dev.keliver.material.widget/RichText.align|align(kotlin.Int){}[0]
+    abstract fun bold(kotlin/Boolean) // dev.keliver.material.widget/RichText.bold|bold(kotlin.Boolean){}[0]
+    abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/RichText.colorArgb|colorArgb(kotlin.Int){}[0]
+    abstract fun fontSize(kotlin/Int) // dev.keliver.material.widget/RichText.fontSize|fontSize(kotlin.Int){}[0]
+    abstract fun lineHeightSp(kotlin/Int) // dev.keliver.material.widget/RichText.lineHeightSp|lineHeightSp(kotlin.Int){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.material.widget/RichText.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun spans(kotlin.collections/List<dev.keliver.material.api/TextSpan>) // dev.keliver.material.widget/RichText.spans|spans(kotlin.collections.List<dev.keliver.material.api.TextSpan>){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Scaffold : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Scaffold|null[0]
     abstract val content // dev.keliver.material.widget/Scaffold.content|{}content[0]
         abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Scaffold.content.<get-content>|<get-content>(){}[0]
@@ -366,8 +378,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledBox : dev.
     abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
     abstract fun elevationDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.elevationDp|elevationDp(kotlin.Int){}[0]
     abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.fillWidth|fillWidth(kotlin.Boolean){}[0]
+    abstract fun gradientColorsArgb(kotlin.collections/List<kotlin/Int>) // dev.keliver.material.widget/StyledBox.gradientColorsArgb|gradientColorsArgb(kotlin.collections.List<kotlin.Int>){}[0]
+    abstract fun gradientDirection(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientDirection|gradientDirection(kotlin.Int){}[0]
     abstract fun gradientEndArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientEndArgb|gradientEndArgb(kotlin.Int){}[0]
     abstract fun gradientStartArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientStartArgb|gradientStartArgb(kotlin.Int){}[0]
+    abstract fun gradientStops(kotlin.collections/List<kotlin/Float>) // dev.keliver.material.widget/StyledBox.gradientStops|gradientStops(kotlin.collections.List<kotlin.Float>){}[0]
     abstract fun gradientVertical(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.gradientVertical|gradientVertical(kotlin.Boolean){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.heightDp|heightDp(kotlin.Int){}[0]
     abstract fun offsetYDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.offsetYDp|offsetYDp(kotlin.Int){}[0]

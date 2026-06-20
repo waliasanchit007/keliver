@@ -145,6 +145,7 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun AnimatedVisibility(): dev.keliver.material.widget.AnimatedVisibility<@Composable (Modifier) -> Unit> = ComposeUiAnimatedVisibility()
   override fun Theme(): dev.keliver.material.widget.Theme<@Composable (Modifier) -> Unit> = ComposeUiTheme()
   override fun Clickable(): dev.keliver.material.widget.Clickable<@Composable (Modifier) -> Unit> = ComposeUiClickable()
+  override fun RichText(): dev.keliver.material.widget.RichText<@Composable (Modifier) -> Unit> = ComposeUiRichText()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

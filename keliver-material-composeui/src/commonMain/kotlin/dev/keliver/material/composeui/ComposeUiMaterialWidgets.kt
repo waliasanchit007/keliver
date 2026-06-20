@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -252,6 +253,7 @@ internal class ComposeUiAsyncImage(
   private var heightDp by mutableStateOf(0)
   private var blurDp by mutableStateOf(0)
   private var fillWidth by mutableStateOf(false)
+  private var tintArgb by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { incoming ->
     var m = incoming
@@ -262,6 +264,7 @@ internal class ComposeUiAsyncImage(
       model = url,
       imageLoader = imageLoader,
       contentDescription = null,
+      colorFilter = if (tintArgb != 0) ColorFilter.tint(Color(tintArgb)) else null,
       contentScale = if (fillWidth) ContentScale.FillWidth else when (contentScale) {
         1 -> ContentScale.Crop
         2 -> ContentScale.FillBounds
@@ -277,6 +280,7 @@ internal class ComposeUiAsyncImage(
   override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
   override fun blurDp(blurDp: Int) { this.blurDp = blurDp }
   override fun fillWidth(fillWidth: Boolean) { this.fillWidth = fillWidth }
+  override fun tintArgb(tintArgb: Int) { this.tintArgb = tintArgb }
 }
 
 internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifier) -> Unit> {

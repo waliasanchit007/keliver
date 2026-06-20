@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,9 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   private var borderWidthDp by mutableStateOf(0)
   private var offsetYDp by mutableStateOf(0)
   private var gradientVertical by mutableStateOf(false)
+  private var gradientColorsArgb by mutableStateOf<List<Int>>(emptyList())
+  private var gradientStops by mutableStateOf<List<Float>>(emptyList())
+  private var gradientDirection by mutableStateOf(0)
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
 
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
@@ -62,13 +66,14 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     // shadow() must precede clip()/background() so the drop-shadow renders.
     if (elevationDp > 0) m = m.shadow(elevationDp.dp, shape, clip = false)
     if (cornerRadiusDp > 0) m = m.clip(shape)
-    val hasGradient = gradientStartArgb != 0 || gradientEndArgb != 0
-    val gradientColors = listOf(Color(gradientStartArgb), Color(gradientEndArgb))
+    val hasMultiStop = gradientColorsArgb.size >= 2
+    val has2Stop = gradientStartArgb != 0 || gradientEndArgb != 0
     m = when {
-      hasGradient -> m.background(
-        if (gradientVertical) Brush.verticalGradient(gradientColors)
-        else Brush.linearGradient(gradientColors),
-      )
+      hasMultiStop -> m.background(buildGradient(gradientColorsArgb, gradientStops, gradientDirection))
+      has2Stop -> {
+        val cols = listOf(Color(gradientStartArgb), Color(gradientEndArgb))
+        m.background(if (gradientVertical) Brush.verticalGradient(cols) else Brush.linearGradient(cols))
+      }
       colorArgb != 0 -> m.background(Color(colorArgb))
       else -> m
     }
@@ -94,9 +99,33 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   override fun elevationDp(elevationDp: Int) { this.elevationDp = elevationDp }
   override fun offsetYDp(offsetYDp: Int) { this.offsetYDp = offsetYDp }
   override fun gradientVertical(gradientVertical: Boolean) { this.gradientVertical = gradientVertical }
+  override fun gradientColorsArgb(gradientColorsArgb: List<Int>) { this.gradientColorsArgb = gradientColorsArgb }
+  override fun gradientStops(gradientStops: List<Float>) { this.gradientStops = gradientStops }
+  override fun gradientDirection(gradientDirection: Int) { this.gradientDirection = gradientDirection }
   override fun borderColorArgb(borderColorArgb: Int) { this.borderColorArgb = borderColorArgb }
   override fun borderWidthDp(borderWidthDp: Int) { this.borderWidthDp = borderWidthDp }
   override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+}
+
+/**
+ * Build a multi-stop linear gradient. [direction]: 0 diagonal TL→BR, 1 vertical
+ * T→B, 2 horizontal L→R, 3 diagonal BL→TR. Compose treats `Float.POSITIVE_INFINITY`
+ * offset components as the drawn size, so the diagonals span the full box.
+ */
+internal fun buildGradient(colorsArgb: List<Int>, stops: List<Float>, direction: Int): Brush {
+  val colors = colorsArgb.map { Color(it) }
+  val inf = Float.POSITIVE_INFINITY
+  val (start, end) = when (direction) {
+    1 -> Offset(0f, 0f) to Offset(0f, inf)        // vertical T→B
+    2 -> Offset(0f, 0f) to Offset(inf, 0f)        // horizontal L→R
+    3 -> Offset(0f, inf) to Offset(inf, 0f)       // diagonal BL→TR
+    else -> Offset(0f, 0f) to Offset(inf, inf)    // diagonal TL→BR
+  }
+  return if (stops.size == colors.size && stops.isNotEmpty()) {
+    Brush.linearGradient(*Array(colors.size) { stops[it] to colors[it] }, start = start, end = end)
+  } else {
+    Brush.linearGradient(colors, start = start, end = end)
+  }
 }
 
 private fun toAlignment(i: Int): Alignment = when (i) {

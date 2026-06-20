@@ -42,3 +42,49 @@ final class dev.keliver.material.api/TextFieldState { // dev.keliver.material.ap
         final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.material.api/TextFieldState> // dev.keliver.material.api/TextFieldState.Companion.serializer|serializer(){}[0]
     }
 }
+
+final class dev.keliver.material.api/TextSpan { // dev.keliver.material.api/TextSpan|null[0]
+    constructor <init>(kotlin/String, kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin/Int = ...) // dev.keliver.material.api/TextSpan.<init>|<init>(kotlin.String;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.collections.List<kotlin.Int>;kotlin.Int){}[0]
+
+    final val bold // dev.keliver.material.api/TextSpan.bold|{}bold[0]
+        final fun <get-bold>(): kotlin/Boolean // dev.keliver.material.api/TextSpan.bold.<get-bold>|<get-bold>(){}[0]
+    final val colorArgb // dev.keliver.material.api/TextSpan.colorArgb|{}colorArgb[0]
+        final fun <get-colorArgb>(): kotlin/Int // dev.keliver.material.api/TextSpan.colorArgb.<get-colorArgb>|<get-colorArgb>(){}[0]
+    final val fontSize // dev.keliver.material.api/TextSpan.fontSize|{}fontSize[0]
+        final fun <get-fontSize>(): kotlin/Int // dev.keliver.material.api/TextSpan.fontSize.<get-fontSize>|<get-fontSize>(){}[0]
+    final val gradientColorsArgb // dev.keliver.material.api/TextSpan.gradientColorsArgb|{}gradientColorsArgb[0]
+        final fun <get-gradientColorsArgb>(): kotlin.collections/List<kotlin/Int> // dev.keliver.material.api/TextSpan.gradientColorsArgb.<get-gradientColorsArgb>|<get-gradientColorsArgb>(){}[0]
+    final val italic // dev.keliver.material.api/TextSpan.italic|{}italic[0]
+        final fun <get-italic>(): kotlin/Boolean // dev.keliver.material.api/TextSpan.italic.<get-italic>|<get-italic>(){}[0]
+    final val text // dev.keliver.material.api/TextSpan.text|{}text[0]
+        final fun <get-text>(): kotlin/String // dev.keliver.material.api/TextSpan.text.<get-text>|<get-text>(){}[0]
+    final val underline // dev.keliver.material.api/TextSpan.underline|{}underline[0]
+        final fun <get-underline>(): kotlin/Boolean // dev.keliver.material.api/TextSpan.underline.<get-underline>|<get-underline>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.material.api/TextSpan.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // dev.keliver.material.api/TextSpan.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // dev.keliver.material.api/TextSpan.component3|component3(){}[0]
+    final fun component4(): kotlin/Boolean // dev.keliver.material.api/TextSpan.component4|component4(){}[0]
+    final fun component5(): kotlin/Int // dev.keliver.material.api/TextSpan.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/List<kotlin/Int> // dev.keliver.material.api/TextSpan.component6|component6(){}[0]
+    final fun component7(): kotlin/Int // dev.keliver.material.api/TextSpan.component7|component7(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin/Int = ...): dev.keliver.material.api/TextSpan // dev.keliver.material.api/TextSpan.copy|copy(kotlin.String;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int;kotlin.collections.List<kotlin.Int>;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.api/TextSpan.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.api/TextSpan.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.api/TextSpan.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.material.api/TextSpan> { // dev.keliver.material.api/TextSpan.$serializer|null[0]
+        final val descriptor // dev.keliver.material.api/TextSpan.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.material.api/TextSpan.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.material.api/TextSpan.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.material.api/TextSpan // dev.keliver.material.api/TextSpan.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.material.api/TextSpan) // dev.keliver.material.api/TextSpan.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.material.api.TextSpan){}[0]
+    }
+
+    final object Companion { // dev.keliver.material.api/TextSpan.Companion|null[0]
+        final val $childSerializers // dev.keliver.material.api/TextSpan.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.material.api/TextSpan> // dev.keliver.material.api/TextSpan.Companion.serializer|serializer(){}[0]
+    }
+}

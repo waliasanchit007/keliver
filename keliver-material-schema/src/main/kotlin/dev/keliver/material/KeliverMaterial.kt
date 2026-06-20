@@ -7,6 +7,7 @@ package dev.keliver.material
 import dev.keliver.layout.RedwoodLayout
 import dev.keliver.lazylayout.RedwoodLazyLayout
 import dev.keliver.material.api.TextFieldState
+import dev.keliver.material.api.TextSpan
 import dev.keliver.schema.Children
 import dev.keliver.schema.Modifier
 import dev.keliver.schema.Property
@@ -98,6 +99,8 @@ import dev.keliver.schema.Widget
     // Batch 12: interactivity wrapper (clickable can't be a modifier — keliver U6:
     // modifiers are non-addressable value objects with no event channel).
     Clickable::class,
+    // Batch 13: inline rich text (AnnotatedString-style multi-style/gradient runs).
+    RichText::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -266,6 +269,9 @@ public data class AsyncImage(
   /** Fill the parent's width and scale height by aspect ratio (ContentScale
    *  .FillWidth) — for full-bleed banners. Overrides [widthDp]/[contentScale]. */
   @Property(7) val fillWidth: Boolean = false,
+  /** Tint ARGB applied as a `ColorFilter` (mono icons, like native
+   *  `fromDrawable(color = …)`); 0 => draw the image's own colors. */
+  @Property(8) val tintArgb: Int = 0,
 )
 
 /** Vertically scrollable column container. */
@@ -634,12 +640,20 @@ public data class StyledBox(
   @Property(13) val borderWidthDp: Int = 0,
   /** Tap handler; non-null makes the whole box clickable (rows, buttons, back). */
   @Property(14) val onClick: (() -> Unit)? = null,
-  /** Draw the gradient top→bottom (`Brush.verticalGradient`) instead of the
-   *  default diagonal (`linearGradient`). Used for hero/header washes. */
+  /** Draw the 2-stop gradient top→bottom (`Brush.verticalGradient`) instead of
+   *  the default diagonal. Ignored when [gradientColorsArgb] is set. */
   @Property(15) val gradientVertical: Boolean = false,
+  /** Multi-stop linear gradient (3+ colors / custom stops). When non-empty this
+   *  supersedes [gradientStartArgb]/[gradientEndArgb]/[gradientVertical]. */
+  @Property(16) val gradientColorsArgb: List<Int> = emptyList(),
+  /** Stop offsets (0f..1f) for [gradientColorsArgb]; empty => even spacing. */
+  @Property(17) val gradientStops: List<Float> = emptyList(),
+  /** Direction for [gradientColorsArgb]: 0 diagonal TL→BR, 1 vertical T→B,
+   *  2 horizontal L→R, 3 diagonal BL→TR. */
+  @Property(18) val gradientDirection: Int = 0,
   // children must hold the HIGHEST tag so the generated composable keeps it as
   // the trailing slot (enables `StyledBox(...) { content }` lambda syntax).
-  @Children(16) val children: () -> Unit,
+  @Children(19) val children: () -> Unit,
 )
 
 // ---------------------------------------------------------------------------
@@ -697,6 +711,29 @@ public data class Theme(
 public data class Clickable(
   @Property(1) val onClick: (() -> Unit)? = null,
   @Children(2) val content: () -> Unit,
+)
+
+/**
+ * Inline rich text — one text block whose [spans] each carry their own weight,
+ * color, size, or gradient fill (the keliver equivalent of an `AnnotatedString`
+ * built from multiple `SpanStyle`s). Use for "Make your UPI ID **sound like
+ * you**"-style mixed styling within a single flowing line.
+ */
+@Widget(59)
+public data class RichText(
+  @Property(1) val spans: List<TextSpan>,
+  /** Base font size (sp); spans with [TextSpan.fontSize] 0 inherit it. */
+  @Property(2) val fontSize: Int = 14,
+  /** Base bold for spans that don't set their own. */
+  @Property(3) val bold: Boolean = false,
+  /** 0 start, 1 center, 2 end, 3 justify. */
+  @Property(4) val align: Int = 0,
+  /** Line height in sp; 0 => font default. */
+  @Property(5) val lineHeightSp: Int = 0,
+  /** 0 => unlimited. */
+  @Property(6) val maxLines: Int = 0,
+  /** Base color ARGB for spans that don't set their own; 0 => onSurface. */
+  @Property(7) val colorArgb: Int = 0,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

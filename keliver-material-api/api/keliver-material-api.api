@@ -35,3 +35,42 @@ public final class dev/keliver/material/api/TextFieldState$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class dev/keliver/material/api/TextSpan {
+	public static final field Companion Ldev/keliver/material/api/TextSpan$Companion;
+	public fun <init> (Ljava/lang/String;ZZZILjava/util/List;I)V
+	public synthetic fun <init> (Ljava/lang/String;ZZZILjava/util/List;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun component5 ()I
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()I
+	public final fun copy (Ljava/lang/String;ZZZILjava/util/List;I)Ldev/keliver/material/api/TextSpan;
+	public static synthetic fun copy$default (Ldev/keliver/material/api/TextSpan;Ljava/lang/String;ZZZILjava/util/List;IILjava/lang/Object;)Ldev/keliver/material/api/TextSpan;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBold ()Z
+	public final fun getColorArgb ()I
+	public final fun getFontSize ()I
+	public final fun getGradientColorsArgb ()Ljava/util/List;
+	public final fun getItalic ()Z
+	public final fun getText ()Ljava/lang/String;
+	public final fun getUnderline ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/material/api/TextSpan$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/material/api/TextSpan$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/material/api/TextSpan;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/material/api/TextSpan;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/material/api/TextSpan$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+

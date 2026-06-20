@@ -61,8 +61,8 @@ public final class dev/keliver/material/AspectRatio {
 }
 
 public final class dev/keliver/material/AsyncImage {
-	public fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)V
-	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZI)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()I
 	public final fun component3 ()Lkotlin/jvm/functions/Function0;
@@ -70,14 +70,16 @@ public final class dev/keliver/material/AsyncImage {
 	public final fun component5 ()I
 	public final fun component6 ()I
 	public final fun component7 ()Z
-	public final fun copy (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)Ldev/keliver/material/AsyncImage;
-	public static synthetic fun copy$default (Ldev/keliver/material/AsyncImage;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILjava/lang/Object;)Ldev/keliver/material/AsyncImage;
+	public final fun component8 ()I
+	public final fun copy (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZI)Ldev/keliver/material/AsyncImage;
+	public static synthetic fun copy$default (Ldev/keliver/material/AsyncImage;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZIILjava/lang/Object;)Ldev/keliver/material/AsyncImage;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBlurDp ()I
 	public final fun getContentScale ()I
 	public final fun getFillWidth ()Z
 	public final fun getHeightDp ()I
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getTintArgb ()I
 	public final fun getUrl ()Ljava/lang/String;
 	public final fun getWidthDp ()I
 	public fun hashCode ()I
@@ -725,6 +727,30 @@ public final class dev/keliver/material/Reuse {
 	public static final field INSTANCE Ldev/keliver/material/Reuse;
 }
 
+public final class dev/keliver/material/RichText {
+	public fun <init> (Ljava/util/List;IZIIII)V
+	public synthetic fun <init> (Ljava/util/List;IZIIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()I
+	public final fun component3 ()Z
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun copy (Ljava/util/List;IZIIII)Ldev/keliver/material/RichText;
+	public static synthetic fun copy$default (Ldev/keliver/material/RichText;Ljava/util/List;IZIIIIILjava/lang/Object;)Ldev/keliver/material/RichText;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlign ()I
+	public final fun getBold ()Z
+	public final fun getColorArgb ()I
+	public final fun getFontSize ()I
+	public final fun getLineHeightSp ()I
+	public final fun getMaxLines ()I
+	public final fun getSpans ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/Rotate {
 	public fun <init> (I)V
 	public final fun component1 ()I
@@ -857,8 +883,8 @@ public final class dev/keliver/material/Snackbar {
 }
 
 public final class dev/keliver/material/StyledBox {
-	public fun <init> (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()I
 	public final fun component11 ()I
@@ -866,7 +892,10 @@ public final class dev/keliver/material/StyledBox {
 	public final fun component13 ()I
 	public final fun component14 ()Lkotlin/jvm/functions/Function0;
 	public final fun component15 ()Z
-	public final fun component16 ()Lkotlin/jvm/functions/Function0;
+	public final fun component16 ()Ljava/util/List;
+	public final fun component17 ()Ljava/util/List;
+	public final fun component18 ()I
+	public final fun component19 ()Lkotlin/jvm/functions/Function0;
 	public final fun component2 ()I
 	public final fun component3 ()I
 	public final fun component4 ()I
@@ -875,8 +904,8 @@ public final class dev/keliver/material/StyledBox {
 	public final fun component7 ()I
 	public final fun component8 ()Z
 	public final fun component9 ()I
-	public final fun copy (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/StyledBox;
-	public static synthetic fun copy$default (Ldev/keliver/material/StyledBox;IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/StyledBox;
+	public final fun copy (IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILkotlin/jvm/functions/Function0;)Ldev/keliver/material/StyledBox;
+	public static synthetic fun copy$default (Ldev/keliver/material/StyledBox;IIIIIIIZIIIIILkotlin/jvm/functions/Function0;ZLjava/util/List;Ljava/util/List;ILkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/StyledBox;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBorderColorArgb ()I
 	public final fun getBorderWidthDp ()I
@@ -886,8 +915,11 @@ public final class dev/keliver/material/StyledBox {
 	public final fun getCornerRadiusDp ()I
 	public final fun getElevationDp ()I
 	public final fun getFillWidth ()Z
+	public final fun getGradientColorsArgb ()Ljava/util/List;
+	public final fun getGradientDirection ()I
 	public final fun getGradientEndArgb ()I
 	public final fun getGradientStartArgb ()I
+	public final fun getGradientStops ()Ljava/util/List;
 	public final fun getGradientVertical ()Z
 	public final fun getHeightDp ()I
 	public final fun getOffsetYDp ()I
