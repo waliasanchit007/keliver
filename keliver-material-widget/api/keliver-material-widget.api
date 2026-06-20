@@ -31,12 +31,16 @@ public abstract interface class dev/keliver/material/widget/BottomAppBar : dev/k
 }
 
 public abstract interface class dev/keliver/material/widget/BottomSheet : dev/keliver/widget/Widget {
+	public abstract fun contentPaddingDp (I)V
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 	public abstract fun onDismiss (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun visible (Z)V
 }
 
 public abstract interface class dev/keliver/material/widget/Button : dev/keliver/widget/Widget {
+	public abstract fun containerArgb (I)V
+	public abstract fun contentArgb (I)V
+	public abstract fun cornerRadiusDp (I)V
 	public abstract fun enabled (Z)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
@@ -280,8 +284,17 @@ public abstract interface class dev/keliver/material/widget/OutlinedCard : dev/k
 }
 
 public abstract interface class dev/keliver/material/widget/OutlinedTextField : dev/keliver/widget/Widget {
+	public abstract fun borderArgb (I)V
+	public abstract fun cornerRadiusDp (I)V
+	public abstract fun isError (Z)V
+	public abstract fun keyboardType (I)V
+	public abstract fun label (Ljava/lang/String;)V
+	public abstract fun leadingText (Ljava/lang/String;)V
+	public abstract fun maxLines (I)V
 	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun placeholder (Ljava/lang/String;)V
+	public abstract fun singleLine (Z)V
+	public abstract fun supportingText (Ljava/lang/String;)V
 	public abstract fun text (Ljava/lang/String;)V
 }
 

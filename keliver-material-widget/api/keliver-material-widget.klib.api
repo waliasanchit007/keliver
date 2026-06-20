@@ -45,11 +45,15 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/BottomSheet : de
     abstract val children // dev.keliver.material.widget/BottomSheet.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/BottomSheet.children.<get-children>|<get-children>(){}[0]
 
+    abstract fun contentPaddingDp(kotlin/Int) // dev.keliver.material.widget/BottomSheet.contentPaddingDp|contentPaddingDp(kotlin.Int){}[0]
     abstract fun onDismiss(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/BottomSheet.onDismiss|onDismiss(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun visible(kotlin/Boolean) // dev.keliver.material.widget/BottomSheet.visible|visible(kotlin.Boolean){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Button : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Button|null[0]
+    abstract fun containerArgb(kotlin/Int) // dev.keliver.material.widget/Button.containerArgb|containerArgb(kotlin.Int){}[0]
+    abstract fun contentArgb(kotlin/Int) // dev.keliver.material.widget/Button.contentArgb|contentArgb(kotlin.Int){}[0]
+    abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/Button.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
     abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/Button.enabled|enabled(kotlin.Boolean){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/Button.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun text(kotlin/String?) // dev.keliver.material.widget/Button.text|text(kotlin.String?){}[0]
@@ -297,8 +301,17 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedCard : d
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedTextField : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/OutlinedTextField|null[0]
+    abstract fun borderArgb(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.borderArgb|borderArgb(kotlin.Int){}[0]
+    abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
+    abstract fun isError(kotlin/Boolean) // dev.keliver.material.widget/OutlinedTextField.isError|isError(kotlin.Boolean){}[0]
+    abstract fun keyboardType(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.keyboardType|keyboardType(kotlin.Int){}[0]
+    abstract fun label(kotlin/String) // dev.keliver.material.widget/OutlinedTextField.label|label(kotlin.String){}[0]
+    abstract fun leadingText(kotlin/String) // dev.keliver.material.widget/OutlinedTextField.leadingText|leadingText(kotlin.String){}[0]
+    abstract fun maxLines(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.maxLines|maxLines(kotlin.Int){}[0]
     abstract fun onValueChange(kotlin/Function1<kotlin/String, kotlin/Unit>?) // dev.keliver.material.widget/OutlinedTextField.onValueChange|onValueChange(kotlin.Function1<kotlin.String,kotlin.Unit>?){}[0]
     abstract fun placeholder(kotlin/String) // dev.keliver.material.widget/OutlinedTextField.placeholder|placeholder(kotlin.String){}[0]
+    abstract fun singleLine(kotlin/Boolean) // dev.keliver.material.widget/OutlinedTextField.singleLine|singleLine(kotlin.Boolean){}[0]
+    abstract fun supportingText(kotlin/String) // dev.keliver.material.widget/OutlinedTextField.supportingText|supportingText(kotlin.String){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/OutlinedTextField.text|text(kotlin.String){}[0]
 }
 

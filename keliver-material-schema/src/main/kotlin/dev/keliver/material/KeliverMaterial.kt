@@ -158,6 +158,12 @@ public data class Button(
   @Property(1) val text: String?,
   @Property(2) val enabled: Boolean = true,
   @Property(3) val onClick: (() -> Unit)? = null,
+  /** Container (fill) color ARGB; 0 => theme primary. */
+  @Property(4) val containerArgb: Int = 0,
+  /** Content (label) color ARGB; 0 => theme onPrimary. */
+  @Property(5) val contentArgb: Int = 0,
+  /** Corner radius in dp; 0 => Material default pill shape. */
+  @Property(6) val cornerRadiusDp: Int = 0,
 )
 
 // ---------------------------------------------------------------------------
@@ -268,12 +274,15 @@ public data class ScrollableColumn(
   @Children(1) val children: () -> Unit,
 )
 
-/** Material3 modal bottom sheet; content in [children]. */
+/** Material3 modal bottom sheet; content in [children]. Lifts above the IME so
+ *  text fields stay visible while editing. */
 @Widget(15)
 public data class BottomSheet(
   @Property(1) val visible: Boolean,
   @Property(2) val onDismiss: (() -> Unit)? = null,
-  @Children(3) val children: () -> Unit,
+  /** Uniform inner content padding in dp. */
+  @Property(3) val contentPaddingDp: Int = 0,
+  @Children(4) val children: () -> Unit,
 )
 
 // ---------------------------------------------------------------------------
@@ -348,6 +357,23 @@ public data class OutlinedTextField(
   @Property(1) val text: String,
   @Property(2) val placeholder: String = "",
   @Property(3) val onValueChange: ((String) -> Unit)? = null,
+  /** Floating label (Material). Empty => none. */
+  @Property(4) val label: String = "",
+  /** Leading text affix drawn inside the field (e.g. "₹"). Empty => none. */
+  @Property(5) val leadingText: String = "",
+  /** Soft-keyboard type: 0 text, 1 number, 2 decimal, 3 email, 4 phone, 5 password. */
+  @Property(6) val keyboardType: Int = 0,
+  @Property(7) val singleLine: Boolean = true,
+  /** Max visible lines (multi-line when > 1 and not [singleLine]). */
+  @Property(8) val maxLines: Int = 1,
+  /** Error styling (red border/label) + show [supportingText] in error color. */
+  @Property(9) val isError: Boolean = false,
+  /** Helper / error message shown beneath the field. Empty => none. */
+  @Property(10) val supportingText: String = "",
+  /** Outline color ARGB when unfocused; 0 => theme default. */
+  @Property(11) val borderArgb: Int = 0,
+  /** Corner radius in dp; 0 => Material default. */
+  @Property(12) val cornerRadiusDp: Int = 0,
 )
 
 // ---------------------------------------------------------------------------

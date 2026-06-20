@@ -20,12 +20,19 @@ import androidx.compose.material3.Switch as M3Switch
 import androidx.compose.material3.Text as M3Text
 import androidx.compose.material3.TextField as M3TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -170,20 +177,28 @@ internal class ComposeUiCheckbox : Checkbox<@Composable (Modifier) -> Unit> {
 }
 
 internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
-  private var textState by mutableStateOf("")
+  private var incoming by mutableStateOf("")
   private var placeholderState by mutableStateOf("")
   private var onValueChange by mutableStateOf<((String) -> Unit)?>(null)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
+    // Host-local editing buffer: typing updates `local` immediately so the field
+    // is responsive, instead of being frozen waiting on the async guest echo of
+    // `value`. Guest-driven (programmatic) changes are adopted when `incoming`
+    // actually differs from what we're showing.
+    var local by remember { mutableStateOf(TextFieldValue(incoming, TextRange(incoming.length))) }
+    LaunchedEffect(incoming) {
+      if (incoming != local.text) local = TextFieldValue(incoming, TextRange(incoming.length))
+    }
     M3TextField(
-      value = textState,
-      onValueChange = { onValueChange?.invoke(it) },
+      value = local,
+      onValueChange = { local = it; onValueChange?.invoke(it.text) },
       placeholder = { M3Text(placeholderState) },
       singleLine = true,
       modifier = m,
     )
   }
-  override fun text(text: String) { this.textState = text }
+  override fun text(text: String) { this.incoming = text }
   override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
   override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
 }
@@ -278,15 +293,24 @@ internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifie
 internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit> {
   private var visible by mutableStateOf(false)
   private var onDismiss by mutableStateOf<(() -> Unit)?>(null)
+  private var contentPaddingDp by mutableStateOf(0)
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { _ ->
     if (visible) {
       ModalBottomSheet(onDismissRequest = { onDismiss?.invoke() }) {
-        (children as ComposeWidgetChildren).Render()
+        // fillMaxWidth so Constraint.Fill children get a width; navigationBarsPadding
+        // + imePadding so content (text fields) lifts above the soft keyboard,
+        // matching native ModalBottomSheet ime insets.
+        var m: Modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
+        if (contentPaddingDp > 0) m = m.padding(contentPaddingDp.dp)
+        FoundationColumn(modifier = m) {
+          (children as ComposeWidgetChildren).Render()
+        }
       }
     }
   }
   override fun visible(visible: Boolean) { this.visible = visible }
   override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
+  override fun contentPaddingDp(contentPaddingDp: Int) { this.contentPaddingDp = contentPaddingDp }
 }

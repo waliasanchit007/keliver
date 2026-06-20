@@ -9,7 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text as M3FieldText
 import androidx.compose.material3.ElevatedButton as M3ElevatedButton
 import androidx.compose.material3.FilledTonalButton as M3FilledTonalButton
 import androidx.compose.material3.FloatingActionButton as M3FloatingActionButton
@@ -23,8 +26,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage as CoilAsyncImage
@@ -170,20 +180,70 @@ internal class ComposeUiSlider : Slider<@Composable (Modifier) -> Unit> {
 }
 
 internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modifier) -> Unit> {
-  private var textState by mutableStateOf("")
+  private var incoming by mutableStateOf("")
   private var placeholderState by mutableStateOf("")
   private var onValueChange by mutableStateOf<((String) -> Unit)?>(null)
+  private var label by mutableStateOf("")
+  private var leadingText by mutableStateOf("")
+  private var keyboardType by mutableStateOf(0)
+  private var singleLine by mutableStateOf(true)
+  private var maxLines by mutableStateOf(1)
+  private var isError by mutableStateOf(false)
+  private var supportingText by mutableStateOf("")
+  private var borderArgb by mutableStateOf(0)
+  private var cornerRadiusDp by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
+    // Host-local editing buffer (see ComposeUiTextField) — keeps typing responsive.
+    var local by remember { mutableStateOf(TextFieldValue(incoming, TextRange(incoming.length))) }
+    LaunchedEffect(incoming) {
+      if (incoming != local.text) local = TextFieldValue(incoming, TextRange(incoming.length))
+    }
+    val shape = if (cornerRadiusDp > 0) RoundedCornerShape(cornerRadiusDp.dp) else OutlinedTextFieldDefaults.shape
+    val colors = if (borderArgb != 0) {
+      OutlinedTextFieldDefaults.colors(
+        unfocusedBorderColor = Color(borderArgb),
+        focusedBorderColor = Color(borderArgb),
+      )
+    } else {
+      OutlinedTextFieldDefaults.colors()
+    }
     M3OutlinedTextField(
-      value = textState,
-      onValueChange = { onValueChange?.invoke(it) },
-      placeholder = { M3Text(placeholderState) },
-      singleLine = true,
+      value = local,
+      onValueChange = { local = it; onValueChange?.invoke(it.text) },
+      placeholder = { if (placeholderState.isNotEmpty()) M3FieldText(placeholderState) },
+      label = if (label.isNotEmpty()) ({ M3FieldText(label) }) else null,
+      leadingIcon = if (leadingText.isNotEmpty()) ({ M3FieldText(leadingText) }) else null,
+      supportingText = if (supportingText.isNotEmpty()) ({ M3FieldText(supportingText) }) else null,
+      isError = isError,
+      singleLine = singleLine,
+      maxLines = if (singleLine) 1 else maxLines,
+      shape = shape,
+      colors = colors,
+      visualTransformation = if (keyboardType == 5) PasswordVisualTransformation() else VisualTransformation.None,
+      keyboardOptions = KeyboardOptions(keyboardType = toKeyboardType(keyboardType)),
       modifier = m,
     )
   }
-  override fun text(text: String) { this.textState = text }
+  override fun text(text: String) { this.incoming = text }
   override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
   override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
+  override fun label(label: String) { this.label = label }
+  override fun leadingText(leadingText: String) { this.leadingText = leadingText }
+  override fun keyboardType(keyboardType: Int) { this.keyboardType = keyboardType }
+  override fun singleLine(singleLine: Boolean) { this.singleLine = singleLine }
+  override fun maxLines(maxLines: Int) { this.maxLines = maxLines }
+  override fun isError(isError: Boolean) { this.isError = isError }
+  override fun supportingText(supportingText: String) { this.supportingText = supportingText }
+  override fun borderArgb(borderArgb: Int) { this.borderArgb = borderArgb }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+}
+
+private fun toKeyboardType(i: Int): KeyboardType = when (i) {
+  1 -> KeyboardType.Number
+  2 -> KeyboardType.Decimal
+  3 -> KeyboardType.Email
+  4 -> KeyboardType.Phone
+  5 -> KeyboardType.Password
+  else -> KeyboardType.Text
 }

@@ -19,11 +19,11 @@ public final class dev/keliver/material/compose/BottomAppBarKt {
 }
 
 public final class dev/keliver/material/compose/BottomSheetKt {
-	public static final fun BottomSheet (ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun BottomSheet (ZLkotlin/jvm/functions/Function0;ILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/ButtonKt {
-	public static final fun Button (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun Button (Ljava/lang/String;ZLkotlin/jvm/functions/Function0;IIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/CardKt {
@@ -135,7 +135,7 @@ public final class dev/keliver/material/compose/OutlinedCardKt {
 }
 
 public final class dev/keliver/material/compose/OutlinedTextFieldKt {
-	public static final fun OutlinedTextField (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun OutlinedTextField (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ljava/lang/String;Ljava/lang/String;IZIZLjava/lang/String;IILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/RadioButtonKt {
