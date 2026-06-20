@@ -144,12 +144,31 @@ public class ComposeUiKeliverMaterialWidgetFactory(
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }
+
+  // Universal visual modifiers are applied SELF-APPLY (each renderer reads its own
+  // modifier via applyKeliverVisuals); these dispatch hooks are intentionally no-ops
+  // for the Compose backend (they exist for imperative/View backends).
+  override fun Background(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Background) {}
+  override fun GradientBackground(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.GradientBackground) {}
+  override fun CornerRadius(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.CornerRadius) {}
+  override fun Border(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Border) {}
+  override fun Shadow(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Shadow) {}
+  override fun Padding(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Padding) {}
+  override fun Size(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Size) {}
+  override fun FillWidth(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.FillWidth) {}
+  override fun Offset(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Offset) {}
+  override fun Blur(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Blur) {}
+  override fun Alpha(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Alpha) {}
 }
 
 @Suppress("FunctionName") // Acting like a type.
 public fun ComposeUiKeliverMaterialWidgetSystem(
   imageLoader: ImageLoader,
 ): KeliverMaterialWidgetSystem<@Composable (Modifier) -> Unit> {
+  // Install keliver-material's visual-modifier translator into the central
+  // child renderer, so Modifier.background()/cornerRadius()/border()/… compose
+  // on EVERY widget (material + layout + lazylayout) with no per-widget code.
+  dev.keliver.widget.compose.keliverVisualModifierApplier = { m, km -> m.applyKeliverVisuals(km) }
   return KeliverMaterialWidgetSystem(
     KeliverMaterial = ComposeUiKeliverMaterialWidgetFactory(imageLoader),
     RedwoodLayout = ComposeUiRedwoodLayoutWidgetFactory(),

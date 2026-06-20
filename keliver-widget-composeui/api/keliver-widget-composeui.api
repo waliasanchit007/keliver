@@ -12,3 +12,8 @@ public final class dev/keliver/widget/compose/ComposeWidgetChildren : dev/kelive
 	public fun remove (II)V
 }
 
+public final class dev/keliver/widget/compose/ComposeWidgetChildrenKt {
+	public static final fun getKeliverVisualModifierApplier ()Lkotlin/jvm/functions/Function2;
+	public static final fun setKeliverVisualModifierApplier (Lkotlin/jvm/functions/Function2;)V
+}
+

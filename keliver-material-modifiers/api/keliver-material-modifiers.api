@@ -1,3 +1,50 @@
+public abstract interface class dev/keliver/material/modifier/Alpha : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getPct ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Background : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getColorArgb ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Blur : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getRadiusDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Border : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getColorArgb ()I
+	public abstract fun getWidthDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/CornerRadius : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getRadiusDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/FillWidth : dev/keliver/Modifier$UnscopedElement {
+}
+
+public abstract interface class dev/keliver/material/modifier/GradientBackground : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getEndArgb ()I
+	public abstract fun getStartArgb ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Offset : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getXDp ()I
+	public abstract fun getYDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Padding : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getAllDp ()I
+}
+
 public abstract interface class dev/keliver/material/modifier/Reuse : dev/keliver/Modifier$UnscopedElement {
+}
+
+public abstract interface class dev/keliver/material/modifier/Shadow : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getElevationDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Size : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getHeightDp ()I
+	public abstract fun getWidthDp ()I
 }
 

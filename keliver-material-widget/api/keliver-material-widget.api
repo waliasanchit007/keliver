@@ -139,8 +139,12 @@ public abstract interface class dev/keliver/material/widget/InputChip : dev/keli
 
 public abstract interface class dev/keliver/material/widget/KeliverMaterialWidgetFactory {
 	public abstract fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
+	public abstract fun Alpha (Ljava/lang/Object;Ldev/keliver/material/modifier/Alpha;)V
 	public abstract fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public abstract fun Background (Ljava/lang/Object;Ldev/keliver/material/modifier/Background;)V
 	public abstract fun Badge ()Ldev/keliver/material/widget/Badge;
+	public abstract fun Blur (Ljava/lang/Object;Ldev/keliver/material/modifier/Blur;)V
+	public abstract fun Border (Ljava/lang/Object;Ldev/keliver/material/modifier/Border;)V
 	public abstract fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public abstract fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public abstract fun Button ()Ldev/keliver/material/widget/Button;
@@ -148,17 +152,20 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public abstract fun Chip ()Ldev/keliver/material/widget/Chip;
 	public abstract fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
+	public abstract fun CornerRadius (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadius;)V
 	public abstract fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public abstract fun Divider ()Ldev/keliver/material/widget/Divider;
 	public abstract fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public abstract fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public abstract fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public abstract fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
+	public abstract fun FillWidth (Ljava/lang/Object;Ldev/keliver/material/modifier/FillWidth;)V
 	public abstract fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public abstract fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public abstract fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public abstract fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
+	public abstract fun GradientBackground (Ljava/lang/Object;Ldev/keliver/material/modifier/GradientBackground;)V
 	public abstract fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
@@ -168,14 +175,18 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public abstract fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
+	public abstract fun Offset (Ljava/lang/Object;Ldev/keliver/material/modifier/Offset;)V
 	public abstract fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public abstract fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public abstract fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
+	public abstract fun Padding (Ljava/lang/Object;Ldev/keliver/material/modifier/Padding;)V
 	public abstract fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public abstract fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public abstract fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public abstract fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
+	public abstract fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
+	public abstract fun Size (Ljava/lang/Object;Ldev/keliver/material/modifier/Size;)V
 	public abstract fun Slider ()Ldev/keliver/material/widget/Slider;
 	public abstract fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public abstract fun StyledBox ()Ldev/keliver/material/widget/StyledBox;

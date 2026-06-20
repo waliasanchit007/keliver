@@ -91,6 +91,20 @@ import dev.keliver.schema.Widget
     // Batch 8: styled container (background/gradient/shape/size) for pixel-exact UI
     StyledBox::class,
     Reuse::class,
+    // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
+    // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
+    // on any widget; the host applies them in declaration order.
+    Background::class,
+    GradientBackground::class,
+    CornerRadius::class,
+    Border::class,
+    Shadow::class,
+    Padding::class,
+    Size::class,
+    FillWidth::class,
+    Offset::class,
+    Blur::class,
+    Alpha::class,
   ],
   dependencies = [
     Dependency(1, RedwoodLayout::class),
@@ -555,3 +569,79 @@ public data class StyledBox(
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.
 public object Reuse
+
+// ---------------------------------------------------------------------------
+// Batch 9: universal visual modifiers (unscoped — usable on ANY widget).
+// Authored guest-side like native Compose: `SomeWidget(modifier =
+// Modifier.background(argb).cornerRadius(16).padding(8))`. Applied host-side in
+// the order declared. Spike set (background/corner/padding); the full set
+// (border, shadow, offset, blur, size, fillWidth, clickable) follows once proven.
+// ---------------------------------------------------------------------------
+
+/** Solid background fill. ARGB int. */
+@Modifier(60)
+public data class Background(
+  val colorArgb: Int,
+)
+
+/** Clip to rounded corners of [radiusDp]. */
+@Modifier(61)
+public data class CornerRadius(
+  val radiusDp: Int,
+)
+
+/** Uniform inner padding of [allDp]. */
+@Modifier(62)
+public data class Padding(
+  val allDp: Int,
+)
+
+/** Border stroke. Rounds to a preceding [CornerRadius] (any order). */
+@Modifier(63)
+public data class Border(
+  val widthDp: Int,
+  val colorArgb: Int,
+)
+
+/** Drop-shadow elevation. Rounds to a preceding [CornerRadius] (any order). */
+@Modifier(64)
+public data class Shadow(
+  val elevationDp: Int,
+)
+
+/** Fixed size; 0 on an axis => leave it unconstrained. */
+@Modifier(65)
+public data class Size(
+  val widthDp: Int,
+  val heightDp: Int,
+)
+
+/** Fill the parent's available width. */
+@Modifier(66)
+public object FillWidth
+
+/** Translate drawing by (x, y) dp (signed). */
+@Modifier(67)
+public data class Offset(
+  val xDp: Int,
+  val yDp: Int,
+)
+
+/** Gaussian blur of [radiusDp]. */
+@Modifier(68)
+public data class Blur(
+  val radiusDp: Int,
+)
+
+/** Opacity, 0..100 (%). */
+@Modifier(69)
+public data class Alpha(
+  val pct: Int,
+)
+
+/** Vertical linear-gradient background ([startArgb] top → [endArgb] bottom). */
+@Modifier(70)
+public data class GradientBackground(
+  val startArgb: Int,
+  val endArgb: Int,
+)

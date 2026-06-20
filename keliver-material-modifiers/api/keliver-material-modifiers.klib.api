@@ -6,4 +6,64 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:keliver-material-modifiers>
+abstract interface dev.keliver.material.modifier/Alpha : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Alpha|null[0]
+    abstract val pct // dev.keliver.material.modifier/Alpha.pct|{}pct[0]
+        abstract fun <get-pct>(): kotlin/Int // dev.keliver.material.modifier/Alpha.pct.<get-pct>|<get-pct>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Background : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Background|null[0]
+    abstract val colorArgb // dev.keliver.material.modifier/Background.colorArgb|{}colorArgb[0]
+        abstract fun <get-colorArgb>(): kotlin/Int // dev.keliver.material.modifier/Background.colorArgb.<get-colorArgb>|<get-colorArgb>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Blur : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Blur|null[0]
+    abstract val radiusDp // dev.keliver.material.modifier/Blur.radiusDp|{}radiusDp[0]
+        abstract fun <get-radiusDp>(): kotlin/Int // dev.keliver.material.modifier/Blur.radiusDp.<get-radiusDp>|<get-radiusDp>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Border : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Border|null[0]
+    abstract val colorArgb // dev.keliver.material.modifier/Border.colorArgb|{}colorArgb[0]
+        abstract fun <get-colorArgb>(): kotlin/Int // dev.keliver.material.modifier/Border.colorArgb.<get-colorArgb>|<get-colorArgb>(){}[0]
+    abstract val widthDp // dev.keliver.material.modifier/Border.widthDp|{}widthDp[0]
+        abstract fun <get-widthDp>(): kotlin/Int // dev.keliver.material.modifier/Border.widthDp.<get-widthDp>|<get-widthDp>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/CornerRadius : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/CornerRadius|null[0]
+    abstract val radiusDp // dev.keliver.material.modifier/CornerRadius.radiusDp|{}radiusDp[0]
+        abstract fun <get-radiusDp>(): kotlin/Int // dev.keliver.material.modifier/CornerRadius.radiusDp.<get-radiusDp>|<get-radiusDp>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/FillWidth : dev.keliver/Modifier.UnscopedElement // dev.keliver.material.modifier/FillWidth|null[0]
+
+abstract interface dev.keliver.material.modifier/GradientBackground : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/GradientBackground|null[0]
+    abstract val endArgb // dev.keliver.material.modifier/GradientBackground.endArgb|{}endArgb[0]
+        abstract fun <get-endArgb>(): kotlin/Int // dev.keliver.material.modifier/GradientBackground.endArgb.<get-endArgb>|<get-endArgb>(){}[0]
+    abstract val startArgb // dev.keliver.material.modifier/GradientBackground.startArgb|{}startArgb[0]
+        abstract fun <get-startArgb>(): kotlin/Int // dev.keliver.material.modifier/GradientBackground.startArgb.<get-startArgb>|<get-startArgb>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Offset : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Offset|null[0]
+    abstract val xDp // dev.keliver.material.modifier/Offset.xDp|{}xDp[0]
+        abstract fun <get-xDp>(): kotlin/Int // dev.keliver.material.modifier/Offset.xDp.<get-xDp>|<get-xDp>(){}[0]
+    abstract val yDp // dev.keliver.material.modifier/Offset.yDp|{}yDp[0]
+        abstract fun <get-yDp>(): kotlin/Int // dev.keliver.material.modifier/Offset.yDp.<get-yDp>|<get-yDp>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Padding : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Padding|null[0]
+    abstract val allDp // dev.keliver.material.modifier/Padding.allDp|{}allDp[0]
+        abstract fun <get-allDp>(): kotlin/Int // dev.keliver.material.modifier/Padding.allDp.<get-allDp>|<get-allDp>(){}[0]
+}
+
 abstract interface dev.keliver.material.modifier/Reuse : dev.keliver/Modifier.UnscopedElement // dev.keliver.material.modifier/Reuse|null[0]
+
+abstract interface dev.keliver.material.modifier/Shadow : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Shadow|null[0]
+    abstract val elevationDp // dev.keliver.material.modifier/Shadow.elevationDp|{}elevationDp[0]
+        abstract fun <get-elevationDp>(): kotlin/Int // dev.keliver.material.modifier/Shadow.elevationDp.<get-elevationDp>|<get-elevationDp>(){}[0]
+}
+
+abstract interface dev.keliver.material.modifier/Size : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Size|null[0]
+    abstract val heightDp // dev.keliver.material.modifier/Size.heightDp|{}heightDp[0]
+        abstract fun <get-heightDp>(): kotlin/Int // dev.keliver.material.modifier/Size.heightDp.<get-heightDp>|<get-heightDp>(){}[0]
+    abstract val widthDp // dev.keliver.material.modifier/Size.widthDp|{}widthDp[0]
+        abstract fun <get-widthDp>(): kotlin/Int // dev.keliver.material.modifier/Size.widthDp.<get-widthDp>|<get-widthDp>(){}[0]
+}

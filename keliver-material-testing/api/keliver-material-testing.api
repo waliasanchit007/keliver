@@ -381,8 +381,16 @@ public final class dev/keliver/material/testing/KeliverMaterialTesterKt {
 public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFactory : dev/keliver/material/widget/KeliverMaterialWidgetFactory {
 	public fun <init> ()V
 	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
+	public fun Alpha (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Alpha;)V
+	public synthetic fun Alpha (Ljava/lang/Object;Ldev/keliver/material/modifier/Alpha;)V
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
+	public fun Background (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Background;)V
+	public synthetic fun Background (Ljava/lang/Object;Ldev/keliver/material/modifier/Background;)V
 	public fun Badge ()Ldev/keliver/material/widget/Badge;
+	public fun Blur (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Blur;)V
+	public synthetic fun Blur (Ljava/lang/Object;Ldev/keliver/material/modifier/Blur;)V
+	public fun Border (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Border;)V
+	public synthetic fun Border (Ljava/lang/Object;Ldev/keliver/material/modifier/Border;)V
 	public fun BottomAppBar ()Ldev/keliver/material/widget/BottomAppBar;
 	public fun BottomSheet ()Ldev/keliver/material/widget/BottomSheet;
 	public fun Button ()Ldev/keliver/material/widget/Button;
@@ -390,17 +398,23 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public fun Chip ()Ldev/keliver/material/widget/Chip;
 	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
+	public fun CornerRadius (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/CornerRadius;)V
+	public synthetic fun CornerRadius (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadius;)V
 	public fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
 	public fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
+	public fun FillWidth (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/FillWidth;)V
+	public synthetic fun FillWidth (Ljava/lang/Object;Ldev/keliver/material/modifier/FillWidth;)V
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
 	public fun FilterChip ()Ldev/keliver/material/widget/FilterChip;
 	public fun FloatingActionButton ()Ldev/keliver/material/widget/FloatingActionButton;
 	public fun FlowColumn ()Ldev/keliver/material/widget/FlowColumn;
 	public fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
+	public fun GradientBackground (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/GradientBackground;)V
+	public synthetic fun GradientBackground (Ljava/lang/Object;Ldev/keliver/material/modifier/GradientBackground;)V
 	public fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
@@ -410,15 +424,23 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
+	public fun Offset (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Offset;)V
+	public synthetic fun Offset (Ljava/lang/Object;Ldev/keliver/material/modifier/Offset;)V
 	public fun OutlinedButton ()Ldev/keliver/material/widget/OutlinedButton;
 	public fun OutlinedCard ()Ldev/keliver/material/widget/OutlinedCard;
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
+	public fun Padding (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Padding;)V
+	public synthetic fun Padding (Ljava/lang/Object;Ldev/keliver/material/modifier/Padding;)V
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public fun Reuse (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Reuse;)V
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
+	public fun Shadow (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Shadow;)V
+	public synthetic fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
+	public fun Size (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Size;)V
+	public synthetic fun Size (Ljava/lang/Object;Ldev/keliver/material/modifier/Size;)V
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
 	public fun Snackbar ()Ldev/keliver/material/widget/Snackbar;
 	public fun StyledBox ()Ldev/keliver/material/widget/StyledBox;

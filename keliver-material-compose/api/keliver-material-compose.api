@@ -207,7 +207,18 @@ public final class dev/keliver/material/compose/TopAppBarKt {
 }
 
 public final class dev/keliver/material/compose/UnscopedKt {
+	public static final fun alpha (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun background (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun blur (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun border (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
+	public static final fun cornerRadius (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun fillWidth (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+	public static final fun gradientBackground (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
+	public static final fun offset (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
+	public static final fun padding (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun reuse (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+	public static final fun shadow (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun size (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 }
 
 public final class dev/keliver/material/compose/VerticalDividerKt {

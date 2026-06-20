@@ -21,8 +21,20 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import dev.keliver.Modifier as KeliverModifier
 import dev.keliver.widget.Widget
 import kotlin.jvm.JvmOverloads
+
+/**
+ * Pluggable translator: turns a widget's keliver [KeliverModifier] chain into a
+ * real Compose [Modifier], so UNIVERSAL visual modifiers (background, corner,
+ * border, shadow, padding, …) compose on ANY widget — the keliver answer to
+ * native `Modifier.background().clip().padding()`. A widget set installs its
+ * applier (e.g. keliver-material's `applyKeliverVisuals`) when its widget system
+ * is created; until then it's identity (a no-op). Applied centrally here so no
+ * per-widget renderer needs to know about modifiers.
+ */
+public var keliverVisualModifierApplier: (Modifier, KeliverModifier) -> Modifier = { m, _ -> m }
 
 public class ComposeWidgetChildren @JvmOverloads constructor(
   private val onModifierUpdated: () -> Unit = {},
@@ -34,11 +46,12 @@ public class ComposeWidgetChildren @JvmOverloads constructor(
 
   @Composable
   public fun Render() {
-    // Observe the layout modifier count so we recompose if it changes.
+    // Observe the modifier count so we recompose if a child's modifier changes.
     modifierTick
 
     for (index in _widgets.indices) {
-      _widgets[index].value(Modifier)
+      val widget = _widgets[index]
+      _widgets[index].value(keliverVisualModifierApplier(Modifier, widget.modifier))
     }
   }
 

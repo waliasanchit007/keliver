@@ -22,4 +22,8 @@ final class dev.keliver.widget.compose/ComposeWidgetChildren : dev.keliver.widge
 
 final val dev.keliver.widget.compose/dev_keliver_widget_compose_ComposeWidgetChildren$stableprop // dev.keliver.widget.compose/dev_keliver_widget_compose_ComposeWidgetChildren$stableprop|#static{}dev_keliver_widget_compose_ComposeWidgetChildren$stableprop[0]
 
+final var dev.keliver.widget.compose/keliverVisualModifierApplier // dev.keliver.widget.compose/keliverVisualModifierApplier|{}keliverVisualModifierApplier[0]
+    final fun <get-keliverVisualModifierApplier>(): kotlin/Function2<androidx.compose.ui/Modifier, dev.keliver/Modifier, androidx.compose.ui/Modifier> // dev.keliver.widget.compose/keliverVisualModifierApplier.<get-keliverVisualModifierApplier>|<get-keliverVisualModifierApplier>(){}[0]
+    final fun <set-keliverVisualModifierApplier>(kotlin/Function2<androidx.compose.ui/Modifier, dev.keliver/Modifier, androidx.compose.ui/Modifier>) // dev.keliver.widget.compose/keliverVisualModifierApplier.<set-keliverVisualModifierApplier>|<set-keliverVisualModifierApplier>(kotlin.Function2<androidx.compose.ui.Modifier,dev.keliver.Modifier,androidx.compose.ui.Modifier>){}[0]
+
 final fun dev.keliver.widget.compose/dev_keliver_widget_compose_ComposeWidgetChildren$stableprop_getter(): kotlin/Int // dev.keliver.widget.compose/dev_keliver_widget_compose_ComposeWidgetChildren$stableprop_getter|dev_keliver_widget_compose_ComposeWidgetChildren$stableprop_getter(){}[0]
