@@ -215,6 +215,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public abstract fun TextField ()Ldev/keliver/material/widget/TextField;
 	public abstract fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public abstract fun Theme ()Ldev/keliver/material/widget/Theme;
 	public abstract fun Tooltip ()Ldev/keliver/material/widget/Tooltip;
 	public abstract fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 	public abstract fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
@@ -331,6 +332,7 @@ public abstract interface class dev/keliver/material/widget/StyledText : dev/kel
 	public abstract fun align (I)V
 	public abstract fun bold (Z)V
 	public abstract fun colorArgb (I)V
+	public abstract fun colorRole (I)V
 	public abstract fun fontSize (I)V
 	public abstract fun italic (Z)V
 	public abstract fun letterSpacingX100 (I)V
@@ -389,6 +391,23 @@ public abstract interface class dev/keliver/material/widget/TextInput : dev/keli
 	public abstract fun hint (Ljava/lang/String;)V
 	public abstract fun onChange (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun state (Ldev/keliver/material/api/TextFieldState;)V
+}
+
+public abstract interface class dev/keliver/material/widget/Theme : dev/keliver/widget/Widget {
+	public abstract fun backgroundArgb (I)V
+	public abstract fun dark (Z)V
+	public abstract fun errorArgb (I)V
+	public abstract fun getContent ()Ldev/keliver/widget/Widget$Children;
+	public abstract fun onBackgroundArgb (I)V
+	public abstract fun onPrimaryArgb (I)V
+	public abstract fun onSecondaryArgb (I)V
+	public abstract fun onSurfaceArgb (I)V
+	public abstract fun onSurfaceVariantArgb (I)V
+	public abstract fun outlineArgb (I)V
+	public abstract fun primaryArgb (I)V
+	public abstract fun secondaryArgb (I)V
+	public abstract fun surfaceArgb (I)V
+	public abstract fun surfaceVariantArgb (I)V
 }
 
 public abstract interface class dev/keliver/material/widget/Tooltip : dev/keliver/widget/Widget {

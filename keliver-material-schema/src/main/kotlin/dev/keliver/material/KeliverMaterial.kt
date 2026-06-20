@@ -93,6 +93,8 @@ import dev.keliver.schema.Widget
     // Batch 10: loading + animation
     Shimmer::class,
     AnimatedVisibility::class,
+    // Batch 11: theming + dark mode
+    Theme::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -182,6 +184,10 @@ public data class StyledText(
   @Property(12) val strikethrough: Boolean = false,
   /** Explicit weight 100..900; 0 => use [bold]. */
   @Property(13) val weight: Int = 0,
+  /** Theme color role (resolved from the enclosing [Theme]); 0 => use [colorArgb].
+   *  1 primary, 2 onPrimary, 3 secondary, 4 surface, 5 onSurface,
+   *  6 onSurfaceVariant, 7 background, 8 error, 9 outline. */
+  @Property(14) val colorRole: Int = 0,
 )
 
 /** Material3 elevated card container. */
@@ -609,6 +615,31 @@ public data class Shimmer(
 public data class AnimatedVisibility(
   @Property(1) val visible: Boolean = true,
   @Children(2) val children: () -> Unit,
+)
+
+/**
+ * Server/host-driven theme. Wraps [content] in a Material3 theme so EVERY widget
+ * (Button, Card, Switch, …) and any [StyledText]/[StyledBox] using a `colorRole`
+ * draws from one palette — incl. dark mode. Each color is ARGB; 0 => keep the
+ * base scheme's default (so the server can override just a few roles).
+ */
+@Widget(57)
+public data class Theme(
+  /** Start from the dark base color scheme. */
+  @Property(1) val dark: Boolean = false,
+  @Property(2) val primaryArgb: Int = 0,
+  @Property(3) val onPrimaryArgb: Int = 0,
+  @Property(4) val secondaryArgb: Int = 0,
+  @Property(5) val onSecondaryArgb: Int = 0,
+  @Property(6) val surfaceArgb: Int = 0,
+  @Property(7) val onSurfaceArgb: Int = 0,
+  @Property(8) val surfaceVariantArgb: Int = 0,
+  @Property(9) val onSurfaceVariantArgb: Int = 0,
+  @Property(10) val backgroundArgb: Int = 0,
+  @Property(11) val onBackgroundArgb: Int = 0,
+  @Property(12) val errorArgb: Int = 0,
+  @Property(13) val outlineArgb: Int = 0,
+  @Children(14) val content: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

@@ -93,6 +93,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public fun Theme ()Ldev/keliver/material/widget/Theme;
 	public fun Tooltip ()Ldev/keliver/material/widget/Tooltip;
 	public fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 	public fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;

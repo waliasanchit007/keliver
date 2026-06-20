@@ -68,6 +68,7 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
   private var underline by mutableStateOf(false)
   private var strikethrough by mutableStateOf(false)
   private var weight by mutableStateOf(0)
+  private var colorRole by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
     val decoration = when {
@@ -88,7 +89,11 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
       textDecoration = decoration,
       lineHeight = if (lineHeightSp > 0) lineHeightSp.sp else TextUnit.Unspecified,
       letterSpacing = if (letterSpacingX100 != 0) (letterSpacingX100 / 100f).sp else TextUnit.Unspecified,
-      color = if (colorArgb == 0) Color.Unspecified else Color(colorArgb),
+      color = when {
+        colorRole > 0 -> colorForRole(colorRole)
+        colorArgb == 0 -> Color.Unspecified
+        else -> Color(colorArgb)
+      },
       textAlign = when (align) {
         1 -> TextAlign.Center
         2 -> TextAlign.End
@@ -117,6 +122,7 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
   override fun underline(underline: Boolean) { this.underline = underline }
   override fun strikethrough(strikethrough: Boolean) { this.strikethrough = strikethrough }
   override fun weight(weight: Int) { this.weight = weight }
+  override fun colorRole(colorRole: Int) { this.colorRole = colorRole }
 }
 
 internal class ComposeUiCard : Card<@Composable (Modifier) -> Unit> {

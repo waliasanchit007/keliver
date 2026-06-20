@@ -487,6 +487,7 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun TextButton ()Ldev/keliver/material/widget/TextButton;
 	public fun TextField ()Ldev/keliver/material/widget/TextField;
 	public fun TextInput ()Ldev/keliver/material/widget/TextInput;
+	public fun Theme ()Ldev/keliver/material/widget/Theme;
 	public fun Tooltip ()Ldev/keliver/material/widget/Tooltip;
 	public fun TopAppBar ()Ldev/keliver/material/widget/TopAppBar;
 	public fun VerticalDivider ()Ldev/keliver/material/widget/VerticalDivider;
@@ -742,13 +743,14 @@ public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/tes
 }
 
 public final class dev/keliver/material/testing/StyledTextValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZI)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZII)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAlign ()I
 	public final fun getBold ()Z
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getColorArgb ()I
+	public final fun getColorRole ()I
 	public final fun getFontSize ()I
 	public final fun getItalic ()Z
 	public final fun getLetterSpacingX100 ()I
@@ -892,6 +894,33 @@ public final class dev/keliver/material/testing/TextValue : dev/keliver/testing/
 	public fun getChildrenLists ()Ljava/util/List;
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/ThemeValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;ZIIIIIIIIIIIILjava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;ZIIIIIIIIIIIILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBackgroundArgb ()I
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getContent ()Ljava/util/List;
+	public final fun getDark ()Z
+	public final fun getErrorArgb ()I
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnBackgroundArgb ()I
+	public final fun getOnPrimaryArgb ()I
+	public final fun getOnSecondaryArgb ()I
+	public final fun getOnSurfaceArgb ()I
+	public final fun getOnSurfaceVariantArgb ()I
+	public final fun getOutlineArgb ()I
+	public final fun getPrimaryArgb ()I
+	public final fun getSecondaryArgb ()I
+	public final fun getSurfaceArgb ()I
+	public final fun getSurfaceVariantArgb ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

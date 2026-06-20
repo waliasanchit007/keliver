@@ -143,6 +143,7 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun StyledBox(): StyledBox<@Composable (Modifier) -> Unit> = ComposeUiStyledBox()
   override fun Shimmer(): dev.keliver.material.widget.Shimmer<@Composable (Modifier) -> Unit> = ComposeUiShimmer()
   override fun AnimatedVisibility(): dev.keliver.material.widget.AnimatedVisibility<@Composable (Modifier) -> Unit> = ComposeUiAnimatedVisibility()
+  override fun Theme(): dev.keliver.material.widget.Theme<@Composable (Modifier) -> Unit> = ComposeUiTheme()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

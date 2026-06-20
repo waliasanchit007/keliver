@@ -167,7 +167,7 @@ public final class dev/keliver/material/compose/StyledBoxKt {
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
-	public static final fun StyledText (Ljava/lang/String;IZIIIIIIZZZILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
+	public static final fun StyledText (Ljava/lang/String;IZIIIIIIZZZIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/SuggestionChipKt {
@@ -204,6 +204,10 @@ public final class dev/keliver/material/compose/TextInputKt {
 
 public final class dev/keliver/material/compose/TextKt {
 	public static final fun Text (Ljava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/ThemeKt {
+	public static final fun Theme (ZIIIIIIIIIIIILdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/TooltipKt {

@@ -236,6 +236,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun TextButton(): dev.keliver.material.widget/TextButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextButton|TextButton(){}[0]
     abstract fun TextField(): dev.keliver.material.widget/TextField<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextField|TextField(){}[0]
     abstract fun TextInput(): dev.keliver.material.widget/TextInput<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TextInput|TextInput(){}[0]
+    abstract fun Theme(): dev.keliver.material.widget/Theme<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Theme|Theme(){}[0]
     abstract fun Tooltip(): dev.keliver.material.widget/Tooltip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Tooltip|Tooltip(){}[0]
     abstract fun TopAppBar(): dev.keliver.material.widget/TopAppBar<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.TopAppBar|TopAppBar(){}[0]
     abstract fun VerticalDivider(): dev.keliver.material.widget/VerticalDivider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.VerticalDivider|VerticalDivider(){}[0]
@@ -351,6 +352,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledText : dev
     abstract fun align(kotlin/Int) // dev.keliver.material.widget/StyledText.align|align(kotlin.Int){}[0]
     abstract fun bold(kotlin/Boolean) // dev.keliver.material.widget/StyledText.bold|bold(kotlin.Boolean){}[0]
     abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/StyledText.colorArgb|colorArgb(kotlin.Int){}[0]
+    abstract fun colorRole(kotlin/Int) // dev.keliver.material.widget/StyledText.colorRole|colorRole(kotlin.Int){}[0]
     abstract fun fontSize(kotlin/Int) // dev.keliver.material.widget/StyledText.fontSize|fontSize(kotlin.Int){}[0]
     abstract fun italic(kotlin/Boolean) // dev.keliver.material.widget/StyledText.italic|italic(kotlin.Boolean){}[0]
     abstract fun letterSpacingX100(kotlin/Int) // dev.keliver.material.widget/StyledText.letterSpacingX100|letterSpacingX100(kotlin.Int){}[0]
@@ -412,6 +414,25 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextInput : dev.
     abstract fun hint(kotlin/String) // dev.keliver.material.widget/TextInput.hint|hint(kotlin.String){}[0]
     abstract fun onChange(kotlin/Function1<dev.keliver.material.api/TextFieldState, kotlin/Unit>?) // dev.keliver.material.widget/TextInput.onChange|onChange(kotlin.Function1<dev.keliver.material.api.TextFieldState,kotlin.Unit>?){}[0]
     abstract fun state(dev.keliver.material.api/TextFieldState) // dev.keliver.material.widget/TextInput.state|state(dev.keliver.material.api.TextFieldState){}[0]
+}
+
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Theme : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Theme|null[0]
+    abstract val content // dev.keliver.material.widget/Theme.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Theme.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun backgroundArgb(kotlin/Int) // dev.keliver.material.widget/Theme.backgroundArgb|backgroundArgb(kotlin.Int){}[0]
+    abstract fun dark(kotlin/Boolean) // dev.keliver.material.widget/Theme.dark|dark(kotlin.Boolean){}[0]
+    abstract fun errorArgb(kotlin/Int) // dev.keliver.material.widget/Theme.errorArgb|errorArgb(kotlin.Int){}[0]
+    abstract fun onBackgroundArgb(kotlin/Int) // dev.keliver.material.widget/Theme.onBackgroundArgb|onBackgroundArgb(kotlin.Int){}[0]
+    abstract fun onPrimaryArgb(kotlin/Int) // dev.keliver.material.widget/Theme.onPrimaryArgb|onPrimaryArgb(kotlin.Int){}[0]
+    abstract fun onSecondaryArgb(kotlin/Int) // dev.keliver.material.widget/Theme.onSecondaryArgb|onSecondaryArgb(kotlin.Int){}[0]
+    abstract fun onSurfaceArgb(kotlin/Int) // dev.keliver.material.widget/Theme.onSurfaceArgb|onSurfaceArgb(kotlin.Int){}[0]
+    abstract fun onSurfaceVariantArgb(kotlin/Int) // dev.keliver.material.widget/Theme.onSurfaceVariantArgb|onSurfaceVariantArgb(kotlin.Int){}[0]
+    abstract fun outlineArgb(kotlin/Int) // dev.keliver.material.widget/Theme.outlineArgb|outlineArgb(kotlin.Int){}[0]
+    abstract fun primaryArgb(kotlin/Int) // dev.keliver.material.widget/Theme.primaryArgb|primaryArgb(kotlin.Int){}[0]
+    abstract fun secondaryArgb(kotlin/Int) // dev.keliver.material.widget/Theme.secondaryArgb|secondaryArgb(kotlin.Int){}[0]
+    abstract fun surfaceArgb(kotlin/Int) // dev.keliver.material.widget/Theme.surfaceArgb|surfaceArgb(kotlin.Int){}[0]
+    abstract fun surfaceVariantArgb(kotlin/Int) // dev.keliver.material.widget/Theme.surfaceVariantArgb|surfaceVariantArgb(kotlin.Int){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Tooltip : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Tooltip|null[0]
