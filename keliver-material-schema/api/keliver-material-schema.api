@@ -31,6 +31,35 @@ public final class dev/keliver/material/Alpha {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/AnimateContentSize {
+	public static final field INSTANCE Ldev/keliver/material/AnimateContentSize;
+}
+
+public final class dev/keliver/material/AnimatedVisibility {
+	public fun <init> (ZLkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (ZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (ZLkotlin/jvm/functions/Function0;)Ldev/keliver/material/AnimatedVisibility;
+	public static synthetic fun copy$default (Ldev/keliver/material/AnimatedVisibility;ZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/AnimatedVisibility;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public final fun getVisible ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/AspectRatio {
+	public fun <init> (F)V
+	public final fun component1 ()F
+	public final fun copy (F)Ldev/keliver/material/AspectRatio;
+	public static synthetic fun copy$default (Ldev/keliver/material/AspectRatio;FILjava/lang/Object;)Ldev/keliver/material/AspectRatio;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRatio ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/AsyncImage {
 	public fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)V
 	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -211,6 +240,23 @@ public final class dev/keliver/material/CornerRadius {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/CornerRadiusEach {
+	public fun <init> (IIII)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun copy (IIII)Ldev/keliver/material/CornerRadiusEach;
+	public static synthetic fun copy$default (Ldev/keliver/material/CornerRadiusEach;IIIIILjava/lang/Object;)Ldev/keliver/material/CornerRadiusEach;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBottomEndDp ()I
+	public final fun getBottomStartDp ()I
+	public final fun getTopEndDp ()I
+	public final fun getTopStartDp ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/Dialog {
 	public fun <init> (Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -295,6 +341,14 @@ public final class dev/keliver/material/ExtendedFloatingActionButton {
 	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/FillMaxHeight {
+	public static final field INSTANCE Ldev/keliver/material/FillMaxHeight;
+}
+
+public final class dev/keliver/material/FillMaxSize {
+	public static final field INSTANCE Ldev/keliver/material/FillMaxSize;
 }
 
 public final class dev/keliver/material/FillWidth {
@@ -582,6 +636,23 @@ public final class dev/keliver/material/Padding {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/PaddingEach {
+	public fun <init> (IIII)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun copy (IIII)Ldev/keliver/material/PaddingEach;
+	public static synthetic fun copy$default (Ldev/keliver/material/PaddingEach;IIIIILjava/lang/Object;)Ldev/keliver/material/PaddingEach;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBottomDp ()I
+	public final fun getEndDp ()I
+	public final fun getStartDp ()I
+	public final fun getTopDp ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/RadioButton {
 	public fun <init> (ZZLkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (ZZLkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -602,6 +673,17 @@ public final class dev/keliver/material/Reuse {
 	public static final field INSTANCE Ldev/keliver/material/Reuse;
 }
 
+public final class dev/keliver/material/Rotate {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Ldev/keliver/material/Rotate;
+	public static synthetic fun copy$default (Ldev/keliver/material/Rotate;IILjava/lang/Object;)Ldev/keliver/material/Rotate;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDegrees ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/Scaffold {
 	public fun <init> (Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
 	public final fun component1 ()Lkotlin/jvm/functions/Function0;
@@ -611,6 +693,17 @@ public final class dev/keliver/material/Scaffold {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getContent ()Lkotlin/jvm/functions/Function0;
 	public final fun getTopBar ()Lkotlin/jvm/functions/Function0;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/Scale {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Ldev/keliver/material/Scale;
+	public static synthetic fun copy$default (Ldev/keliver/material/Scale;IILjava/lang/Object;)Ldev/keliver/material/Scale;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPercent ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -649,6 +742,23 @@ public final class dev/keliver/material/Shadow {
 	public static synthetic fun copy$default (Ldev/keliver/material/Shadow;IILjava/lang/Object;)Ldev/keliver/material/Shadow;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getElevationDp ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/Shimmer {
+	public fun <init> ()V
+	public fun <init> (III)V
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Ldev/keliver/material/Shimmer;
+	public static synthetic fun copy$default (Ldev/keliver/material/Shimmer;IIIILjava/lang/Object;)Ldev/keliver/material/Shimmer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCornerRadiusDp ()I
+	public final fun getHeightDp ()I
+	public final fun getWidthDp ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -735,23 +845,37 @@ public final class dev/keliver/material/StyledBox {
 }
 
 public final class dev/keliver/material/StyledText {
-	public fun <init> (Ljava/lang/String;IZIII)V
-	public synthetic fun <init> (Ljava/lang/String;IZIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;IZIIIIIIZZZI)V
+	public synthetic fun <init> (Ljava/lang/String;IZIIIIIIZZZIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Z
+	public final fun component11 ()Z
+	public final fun component12 ()Z
+	public final fun component13 ()I
 	public final fun component2 ()I
 	public final fun component3 ()Z
 	public final fun component4 ()I
 	public final fun component5 ()I
 	public final fun component6 ()I
-	public final fun copy (Ljava/lang/String;IZIII)Ldev/keliver/material/StyledText;
-	public static synthetic fun copy$default (Ldev/keliver/material/StyledText;Ljava/lang/String;IZIIIILjava/lang/Object;)Ldev/keliver/material/StyledText;
+	public final fun component7 ()I
+	public final fun component8 ()I
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;IZIIIIIIZZZI)Ldev/keliver/material/StyledText;
+	public static synthetic fun copy$default (Ldev/keliver/material/StyledText;Ljava/lang/String;IZIIIIIIZZZIILjava/lang/Object;)Ldev/keliver/material/StyledText;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAlign ()I
 	public final fun getBold ()Z
 	public final fun getColorArgb ()I
 	public final fun getFontSize ()I
+	public final fun getItalic ()Z
+	public final fun getLetterSpacingX100 ()I
+	public final fun getLineHeightSp ()I
 	public final fun getMaxLines ()I
+	public final fun getOverflow ()I
+	public final fun getStrikethrough ()Z
 	public final fun getText ()Ljava/lang/String;
+	public final fun getUnderline ()Z
+	public final fun getWeight ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

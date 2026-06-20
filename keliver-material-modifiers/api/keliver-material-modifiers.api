@@ -2,6 +2,13 @@ public abstract interface class dev/keliver/material/modifier/Alpha : dev/kelive
 	public abstract fun getPct ()I
 }
 
+public abstract interface class dev/keliver/material/modifier/AnimateContentSize : dev/keliver/Modifier$UnscopedElement {
+}
+
+public abstract interface class dev/keliver/material/modifier/AspectRatio : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getRatio ()F
+}
+
 public abstract interface class dev/keliver/material/modifier/Background : dev/keliver/Modifier$UnscopedElement {
 	public abstract fun getColorArgb ()I
 }
@@ -17,6 +24,19 @@ public abstract interface class dev/keliver/material/modifier/Border : dev/keliv
 
 public abstract interface class dev/keliver/material/modifier/CornerRadius : dev/keliver/Modifier$UnscopedElement {
 	public abstract fun getRadiusDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/CornerRadiusEach : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getBottomEndDp ()I
+	public abstract fun getBottomStartDp ()I
+	public abstract fun getTopEndDp ()I
+	public abstract fun getTopStartDp ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/FillMaxHeight : dev/keliver/Modifier$UnscopedElement {
+}
+
+public abstract interface class dev/keliver/material/modifier/FillMaxSize : dev/keliver/Modifier$UnscopedElement {
 }
 
 public abstract interface class dev/keliver/material/modifier/FillWidth : dev/keliver/Modifier$UnscopedElement {
@@ -36,7 +56,22 @@ public abstract interface class dev/keliver/material/modifier/Padding : dev/keli
 	public abstract fun getAllDp ()I
 }
 
+public abstract interface class dev/keliver/material/modifier/PaddingEach : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getBottomDp ()I
+	public abstract fun getEndDp ()I
+	public abstract fun getStartDp ()I
+	public abstract fun getTopDp ()I
+}
+
 public abstract interface class dev/keliver/material/modifier/Reuse : dev/keliver/Modifier$UnscopedElement {
+}
+
+public abstract interface class dev/keliver/material/modifier/Rotate : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getDegrees ()I
+}
+
+public abstract interface class dev/keliver/material/modifier/Scale : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getPercent ()I
 }
 
 public abstract interface class dev/keliver/material/modifier/Shadow : dev/keliver/Modifier$UnscopedElement {

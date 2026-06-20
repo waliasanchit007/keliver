@@ -4,6 +4,11 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public synthetic fun Alpha (Ljava/lang/Object;Ldev/keliver/material/modifier/Alpha;)V
 	public fun Alpha (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Alpha;)V
+	public synthetic fun AnimateContentSize (Ljava/lang/Object;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public fun AnimateContentSize (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public fun AnimatedVisibility ()Ldev/keliver/material/widget/AnimatedVisibility;
+	public synthetic fun AspectRatio (Ljava/lang/Object;Ldev/keliver/material/modifier/AspectRatio;)V
+	public fun AspectRatio (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/AspectRatio;)V
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
 	public synthetic fun Background (Ljava/lang/Object;Ldev/keliver/material/modifier/Background;)V
 	public fun Background (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Background;)V
@@ -21,12 +26,18 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
 	public synthetic fun CornerRadius (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadius;)V
 	public fun CornerRadius (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/CornerRadius;)V
+	public synthetic fun CornerRadiusEach (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadiusEach;)V
+	public fun CornerRadiusEach (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/CornerRadiusEach;)V
 	public fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
 	public fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
+	public synthetic fun FillMaxHeight (Ljava/lang/Object;Ldev/keliver/material/modifier/FillMaxHeight;)V
+	public fun FillMaxHeight (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/FillMaxHeight;)V
+	public synthetic fun FillMaxSize (Ljava/lang/Object;Ldev/keliver/material/modifier/FillMaxSize;)V
+	public fun FillMaxSize (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/FillMaxSize;)V
 	public synthetic fun FillWidth (Ljava/lang/Object;Ldev/keliver/material/modifier/FillWidth;)V
 	public fun FillWidth (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/FillWidth;)V
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
@@ -52,14 +63,21 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
 	public synthetic fun Padding (Ljava/lang/Object;Ldev/keliver/material/modifier/Padding;)V
 	public fun Padding (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Padding;)V
+	public synthetic fun PaddingEach (Ljava/lang/Object;Ldev/keliver/material/modifier/PaddingEach;)V
+	public fun PaddingEach (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/PaddingEach;)V
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
 	public fun Reuse (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Reuse;)V
+	public synthetic fun Rotate (Ljava/lang/Object;Ldev/keliver/material/modifier/Rotate;)V
+	public fun Rotate (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Rotate;)V
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
+	public synthetic fun Scale (Ljava/lang/Object;Ldev/keliver/material/modifier/Scale;)V
+	public fun Scale (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Scale;)V
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public synthetic fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
 	public fun Shadow (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Shadow;)V
+	public fun Shimmer ()Ldev/keliver/material/widget/Shimmer;
 	public synthetic fun Size (Ljava/lang/Object;Ldev/keliver/material/modifier/Size;)V
 	public fun Size (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Size;)V
 	public fun Slider ()Ldev/keliver/material/widget/Slider;

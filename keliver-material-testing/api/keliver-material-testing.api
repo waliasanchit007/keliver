@@ -16,6 +16,21 @@ public final class dev/keliver/material/testing/AlertDialogValue : dev/keliver/t
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/AnimatedVisibilityValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;ZLjava/util/List;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;ZLjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Ljava/util/List;
+	public fun getChildrenLists ()Ljava/util/List;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getVisible ()Z
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/AsyncImageValue : dev/keliver/testing/WidgetValue {
 	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZ)V
 	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -383,6 +398,11 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun AlertDialog ()Ldev/keliver/material/widget/AlertDialog;
 	public fun Alpha (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Alpha;)V
 	public synthetic fun Alpha (Ljava/lang/Object;Ldev/keliver/material/modifier/Alpha;)V
+	public fun AnimateContentSize (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public synthetic fun AnimateContentSize (Ljava/lang/Object;Ldev/keliver/material/modifier/AnimateContentSize;)V
+	public fun AnimatedVisibility ()Ldev/keliver/material/widget/AnimatedVisibility;
+	public fun AspectRatio (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/AspectRatio;)V
+	public synthetic fun AspectRatio (Ljava/lang/Object;Ldev/keliver/material/modifier/AspectRatio;)V
 	public fun AsyncImage ()Ldev/keliver/material/widget/AsyncImage;
 	public fun Background (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Background;)V
 	public synthetic fun Background (Ljava/lang/Object;Ldev/keliver/material/modifier/Background;)V
@@ -400,12 +420,18 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
 	public fun CornerRadius (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/CornerRadius;)V
 	public synthetic fun CornerRadius (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadius;)V
+	public fun CornerRadiusEach (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/CornerRadiusEach;)V
+	public synthetic fun CornerRadiusEach (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadiusEach;)V
 	public fun Dialog ()Ldev/keliver/material/widget/Dialog;
 	public fun Divider ()Ldev/keliver/material/widget/Divider;
 	public fun DropdownMenu ()Ldev/keliver/material/widget/DropdownMenu;
 	public fun ElevatedButton ()Ldev/keliver/material/widget/ElevatedButton;
 	public fun ElevatedCard ()Ldev/keliver/material/widget/ElevatedCard;
 	public fun ExtendedFloatingActionButton ()Ldev/keliver/material/widget/ExtendedFloatingActionButton;
+	public fun FillMaxHeight (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/FillMaxHeight;)V
+	public synthetic fun FillMaxHeight (Ljava/lang/Object;Ldev/keliver/material/modifier/FillMaxHeight;)V
+	public fun FillMaxSize (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/FillMaxSize;)V
+	public synthetic fun FillMaxSize (Ljava/lang/Object;Ldev/keliver/material/modifier/FillMaxSize;)V
 	public fun FillWidth (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/FillWidth;)V
 	public synthetic fun FillWidth (Ljava/lang/Object;Ldev/keliver/material/modifier/FillWidth;)V
 	public fun FilledTonalButton ()Ldev/keliver/material/widget/FilledTonalButton;
@@ -431,14 +457,21 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun OutlinedTextField ()Ldev/keliver/material/widget/OutlinedTextField;
 	public fun Padding (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Padding;)V
 	public synthetic fun Padding (Ljava/lang/Object;Ldev/keliver/material/modifier/Padding;)V
+	public fun PaddingEach (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/PaddingEach;)V
+	public synthetic fun PaddingEach (Ljava/lang/Object;Ldev/keliver/material/modifier/PaddingEach;)V
 	public fun RadioButton ()Ldev/keliver/material/widget/RadioButton;
 	public fun Reuse (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Reuse;)V
 	public synthetic fun Reuse (Ljava/lang/Object;Ldev/keliver/material/modifier/Reuse;)V
+	public fun Rotate (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Rotate;)V
+	public synthetic fun Rotate (Ljava/lang/Object;Ldev/keliver/material/modifier/Rotate;)V
 	public fun Scaffold ()Ldev/keliver/material/widget/Scaffold;
+	public fun Scale (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Scale;)V
+	public synthetic fun Scale (Ljava/lang/Object;Ldev/keliver/material/modifier/Scale;)V
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
 	public fun Shadow (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Shadow;)V
 	public synthetic fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
+	public fun Shimmer ()Ldev/keliver/material/widget/Shimmer;
 	public fun Size (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Size;)V
 	public synthetic fun Size (Ljava/lang/Object;Ldev/keliver/material/modifier/Size;)V
 	public fun Slider ()Ldev/keliver/material/widget/Slider;
@@ -635,6 +668,22 @@ public final class dev/keliver/material/testing/SegmentedButtonRowValue : dev/ke
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/ShimmerValue : dev/keliver/testing/WidgetValue {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/Modifier;III)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getCornerRadiusDp ()I
+	public final fun getHeightDp ()I
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getWidthDp ()I
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/SliderValue : dev/keliver/testing/WidgetValue {
 	public fun <init> ()V
 	public fun <init> (Ldev/keliver/Modifier;FZLkotlin/jvm/functions/Function1;)V
@@ -693,17 +742,24 @@ public final class dev/keliver/material/testing/StyledBoxValue : dev/keliver/tes
 }
 
 public final class dev/keliver/material/testing/StyledTextValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIII)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZI)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IZIIIIIIZZZIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAlign ()I
 	public final fun getBold ()Z
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getColorArgb ()I
 	public final fun getFontSize ()I
+	public final fun getItalic ()Z
+	public final fun getLetterSpacingX100 ()I
+	public final fun getLineHeightSp ()I
 	public final fun getMaxLines ()I
 	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOverflow ()I
+	public final fun getStrikethrough ()Z
 	public final fun getText ()Ljava/lang/String;
+	public final fun getUnderline ()Z
+	public final fun getWeight ()I
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

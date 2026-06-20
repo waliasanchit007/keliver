@@ -141,6 +141,8 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun VerticalPager(): VerticalPager<@Composable (Modifier) -> Unit> = ComposeUiVerticalPager()
   override fun Tooltip(): Tooltip<@Composable (Modifier) -> Unit> = ComposeUiTooltip()
   override fun StyledBox(): StyledBox<@Composable (Modifier) -> Unit> = ComposeUiStyledBox()
+  override fun Shimmer(): dev.keliver.material.widget.Shimmer<@Composable (Modifier) -> Unit> = ComposeUiShimmer()
+  override fun AnimatedVisibility(): dev.keliver.material.widget.AnimatedVisibility<@Composable (Modifier) -> Unit> = ComposeUiAnimatedVisibility()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }
@@ -159,6 +161,14 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun Offset(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Offset) {}
   override fun Blur(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Blur) {}
   override fun Alpha(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Alpha) {}
+  override fun CornerRadiusEach(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.CornerRadiusEach) {}
+  override fun PaddingEach(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.PaddingEach) {}
+  override fun AspectRatio(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.AspectRatio) {}
+  override fun FillMaxHeight(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.FillMaxHeight) {}
+  override fun FillMaxSize(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.FillMaxSize) {}
+  override fun Rotate(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Rotate) {}
+  override fun Scale(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Scale) {}
+  override fun AnimateContentSize(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.AnimateContentSize) {}
 }
 
 @Suppress("FunctionName") // Acting like a type.

@@ -15,6 +15,13 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AlertDialog : de
     abstract fun title(kotlin/String) // dev.keliver.material.widget/AlertDialog.title|title(kotlin.String){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AnimatedVisibility : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AnimatedVisibility|null[0]
+    abstract val children // dev.keliver.material.widget/AnimatedVisibility.children|{}children[0]
+        abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/AnimatedVisibility.children.<get-children>|<get-children>(){}[0]
+
+    abstract fun visible(kotlin/Boolean) // dev.keliver.material.widget/AnimatedVisibility.visible|visible(kotlin.Boolean){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AsyncImage : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/AsyncImage|null[0]
     abstract fun blurDp(kotlin/Int) // dev.keliver.material.widget/AsyncImage.blurDp|blurDp(kotlin.Int){}[0]
     abstract fun contentScale(kotlin/Int) // dev.keliver.material.widget/AsyncImage.contentScale|contentScale(kotlin.Int){}[0]
@@ -159,6 +166,9 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/InputChip : dev.
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialWidgetFactory { // dev.keliver.material.widget/KeliverMaterialWidgetFactory|null[0]
     abstract fun AlertDialog(): dev.keliver.material.widget/AlertDialog<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AlertDialog|AlertDialog(){}[0]
     abstract fun Alpha(#A, dev.keliver.material.modifier/Alpha) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Alpha|Alpha(1:0;dev.keliver.material.modifier.Alpha){}[0]
+    abstract fun AnimateContentSize(#A, dev.keliver.material.modifier/AnimateContentSize) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AnimateContentSize|AnimateContentSize(1:0;dev.keliver.material.modifier.AnimateContentSize){}[0]
+    abstract fun AnimatedVisibility(): dev.keliver.material.widget/AnimatedVisibility<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AnimatedVisibility|AnimatedVisibility(){}[0]
+    abstract fun AspectRatio(#A, dev.keliver.material.modifier/AspectRatio) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AspectRatio|AspectRatio(1:0;dev.keliver.material.modifier.AspectRatio){}[0]
     abstract fun AsyncImage(): dev.keliver.material.widget/AsyncImage<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.AsyncImage|AsyncImage(){}[0]
     abstract fun Background(#A, dev.keliver.material.modifier/Background) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Background|Background(1:0;dev.keliver.material.modifier.Background){}[0]
     abstract fun Badge(): dev.keliver.material.widget/Badge<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Badge|Badge(){}[0]
@@ -172,12 +182,15 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun Chip(): dev.keliver.material.widget/Chip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Chip|Chip(){}[0]
     abstract fun CircularProgressIndicator(): dev.keliver.material.widget/CircularProgressIndicator<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CircularProgressIndicator|CircularProgressIndicator(){}[0]
     abstract fun CornerRadius(#A, dev.keliver.material.modifier/CornerRadius) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CornerRadius|CornerRadius(1:0;dev.keliver.material.modifier.CornerRadius){}[0]
+    abstract fun CornerRadiusEach(#A, dev.keliver.material.modifier/CornerRadiusEach) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CornerRadiusEach|CornerRadiusEach(1:0;dev.keliver.material.modifier.CornerRadiusEach){}[0]
     abstract fun Dialog(): dev.keliver.material.widget/Dialog<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Dialog|Dialog(){}[0]
     abstract fun Divider(): dev.keliver.material.widget/Divider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Divider|Divider(){}[0]
     abstract fun DropdownMenu(): dev.keliver.material.widget/DropdownMenu<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.DropdownMenu|DropdownMenu(){}[0]
     abstract fun ElevatedButton(): dev.keliver.material.widget/ElevatedButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ElevatedButton|ElevatedButton(){}[0]
     abstract fun ElevatedCard(): dev.keliver.material.widget/ElevatedCard<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ElevatedCard|ElevatedCard(){}[0]
     abstract fun ExtendedFloatingActionButton(): dev.keliver.material.widget/ExtendedFloatingActionButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ExtendedFloatingActionButton|ExtendedFloatingActionButton(){}[0]
+    abstract fun FillMaxHeight(#A, dev.keliver.material.modifier/FillMaxHeight) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FillMaxHeight|FillMaxHeight(1:0;dev.keliver.material.modifier.FillMaxHeight){}[0]
+    abstract fun FillMaxSize(#A, dev.keliver.material.modifier/FillMaxSize) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FillMaxSize|FillMaxSize(1:0;dev.keliver.material.modifier.FillMaxSize){}[0]
     abstract fun FillWidth(#A, dev.keliver.material.modifier/FillWidth) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FillWidth|FillWidth(1:0;dev.keliver.material.modifier.FillWidth){}[0]
     abstract fun FilledTonalButton(): dev.keliver.material.widget/FilledTonalButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FilledTonalButton|FilledTonalButton(){}[0]
     abstract fun FilterChip(): dev.keliver.material.widget/FilterChip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.FilterChip|FilterChip(){}[0]
@@ -199,12 +212,16 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun OutlinedCard(): dev.keliver.material.widget/OutlinedCard<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.OutlinedCard|OutlinedCard(){}[0]
     abstract fun OutlinedTextField(): dev.keliver.material.widget/OutlinedTextField<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.OutlinedTextField|OutlinedTextField(){}[0]
     abstract fun Padding(#A, dev.keliver.material.modifier/Padding) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Padding|Padding(1:0;dev.keliver.material.modifier.Padding){}[0]
+    abstract fun PaddingEach(#A, dev.keliver.material.modifier/PaddingEach) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.PaddingEach|PaddingEach(1:0;dev.keliver.material.modifier.PaddingEach){}[0]
     abstract fun RadioButton(): dev.keliver.material.widget/RadioButton<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.RadioButton|RadioButton(){}[0]
     abstract fun Reuse(#A, dev.keliver.material.modifier/Reuse) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Reuse|Reuse(1:0;dev.keliver.material.modifier.Reuse){}[0]
+    abstract fun Rotate(#A, dev.keliver.material.modifier/Rotate) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Rotate|Rotate(1:0;dev.keliver.material.modifier.Rotate){}[0]
     abstract fun Scaffold(): dev.keliver.material.widget/Scaffold<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Scaffold|Scaffold(){}[0]
+    abstract fun Scale(#A, dev.keliver.material.modifier/Scale) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Scale|Scale(1:0;dev.keliver.material.modifier.Scale){}[0]
     abstract fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
     abstract fun SegmentedButtonRow(): dev.keliver.material.widget/SegmentedButtonRow<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.SegmentedButtonRow|SegmentedButtonRow(){}[0]
     abstract fun Shadow(#A, dev.keliver.material.modifier/Shadow) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Shadow|Shadow(1:0;dev.keliver.material.modifier.Shadow){}[0]
+    abstract fun Shimmer(): dev.keliver.material.widget/Shimmer<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Shimmer|Shimmer(){}[0]
     abstract fun Size(#A, dev.keliver.material.modifier/Size) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Size|Size(1:0;dev.keliver.material.modifier.Size){}[0]
     abstract fun Slider(): dev.keliver.material.widget/Slider<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Slider|Slider(){}[0]
     abstract fun Snackbar(): dev.keliver.material.widget/Snackbar<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Snackbar|Snackbar(){}[0]
@@ -294,6 +311,12 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/SegmentedButtonR
     abstract fun selectedIndex(kotlin/Int) // dev.keliver.material.widget/SegmentedButtonRow.selectedIndex|selectedIndex(kotlin.Int){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Shimmer : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Shimmer|null[0]
+    abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/Shimmer.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
+    abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/Shimmer.heightDp|heightDp(kotlin.Int){}[0]
+    abstract fun widthDp(kotlin/Int) // dev.keliver.material.widget/Shimmer.widthDp|widthDp(kotlin.Int){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Slider : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Slider|null[0]
     abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/Slider.enabled|enabled(kotlin.Boolean){}[0]
     abstract fun onValueChange(kotlin/Function1<kotlin/Float, kotlin/Unit>?) // dev.keliver.material.widget/Slider.onValueChange|onValueChange(kotlin.Function1<kotlin.Float,kotlin.Unit>?){}[0]
@@ -329,8 +352,15 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledText : dev
     abstract fun bold(kotlin/Boolean) // dev.keliver.material.widget/StyledText.bold|bold(kotlin.Boolean){}[0]
     abstract fun colorArgb(kotlin/Int) // dev.keliver.material.widget/StyledText.colorArgb|colorArgb(kotlin.Int){}[0]
     abstract fun fontSize(kotlin/Int) // dev.keliver.material.widget/StyledText.fontSize|fontSize(kotlin.Int){}[0]
+    abstract fun italic(kotlin/Boolean) // dev.keliver.material.widget/StyledText.italic|italic(kotlin.Boolean){}[0]
+    abstract fun letterSpacingX100(kotlin/Int) // dev.keliver.material.widget/StyledText.letterSpacingX100|letterSpacingX100(kotlin.Int){}[0]
+    abstract fun lineHeightSp(kotlin/Int) // dev.keliver.material.widget/StyledText.lineHeightSp|lineHeightSp(kotlin.Int){}[0]
     abstract fun maxLines(kotlin/Int) // dev.keliver.material.widget/StyledText.maxLines|maxLines(kotlin.Int){}[0]
+    abstract fun overflow(kotlin/Int) // dev.keliver.material.widget/StyledText.overflow|overflow(kotlin.Int){}[0]
+    abstract fun strikethrough(kotlin/Boolean) // dev.keliver.material.widget/StyledText.strikethrough|strikethrough(kotlin.Boolean){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/StyledText.text|text(kotlin.String){}[0]
+    abstract fun underline(kotlin/Boolean) // dev.keliver.material.widget/StyledText.underline|underline(kotlin.Boolean){}[0]
+    abstract fun weight(kotlin/Int) // dev.keliver.material.widget/StyledText.weight|weight(kotlin.Int){}[0]
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/SuggestionChip : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/SuggestionChip|null[0]

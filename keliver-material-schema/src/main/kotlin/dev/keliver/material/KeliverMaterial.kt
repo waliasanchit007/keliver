@@ -90,6 +90,9 @@ import dev.keliver.schema.Widget
     Tooltip::class,
     // Batch 8: styled container (background/gradient/shape/size) for pixel-exact UI
     StyledBox::class,
+    // Batch 10: loading + animation
+    Shimmer::class,
+    AnimatedVisibility::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -102,9 +105,19 @@ import dev.keliver.schema.Widget
     Padding::class,
     Size::class,
     FillWidth::class,
+    FillMaxHeight::class,
+    FillMaxSize::class,
     Offset::class,
     Blur::class,
     Alpha::class,
+    // Batch 9b: finer geometry (clickable stays a widget @Property — keliver
+    // U6: lambda-typed modifier props break Kotlin/JS codegen).
+    CornerRadiusEach::class,
+    PaddingEach::class,
+    AspectRatio::class,
+    Rotate::class,
+    Scale::class,
+    AnimateContentSize::class,
   ],
   dependencies = [
     Dependency(1, RedwoodLayout::class),
@@ -146,7 +159,7 @@ public data class Button(
 // Batch 0 seed widgets (Material3 defaults).
 // ---------------------------------------------------------------------------
 
-/** Styled text: weight, size, color, alignment, line clamp. */
+/** Styled text: weight, size, color, alignment, line clamp + rich-text controls. */
 @Widget(5)
 public data class StyledText(
   @Property(1) val text: String,
@@ -154,10 +167,21 @@ public data class StyledText(
   @Property(3) val bold: Boolean = false,
   /** ARGB int; 0 => theme `onSurface`. */
   @Property(4) val colorArgb: Int = 0,
-  /** 0 start, 1 center, 2 end. */
+  /** 0 start, 1 center, 2 end, 3 justify. */
   @Property(5) val align: Int = 0,
   /** 0 => unlimited. */
   @Property(6) val maxLines: Int = 0,
+  /** Overflow when clamped: 0 clip, 1 ellipsis ("…"), 2 visible. */
+  @Property(7) val overflow: Int = 0,
+  /** Line height in sp; 0 => font default. */
+  @Property(8) val lineHeightSp: Int = 0,
+  /** Letter spacing in 1/100 sp (e.g. 50 => 0.5sp); 0 => default. */
+  @Property(9) val letterSpacingX100: Int = 0,
+  @Property(10) val italic: Boolean = false,
+  @Property(11) val underline: Boolean = false,
+  @Property(12) val strikethrough: Boolean = false,
+  /** Explicit weight 100..900; 0 => use [bold]. */
+  @Property(13) val weight: Int = 0,
 )
 
 /** Material3 elevated card container. */
@@ -567,8 +591,32 @@ public data class StyledBox(
   @Children(15) val children: () -> Unit,
 )
 
+// ---------------------------------------------------------------------------
+// Batch 10: loading + animation.
+// ---------------------------------------------------------------------------
+
+/** Animated shimmer placeholder (skeleton loading). */
+@Widget(55)
+public data class Shimmer(
+  /** 0 => fill width. */
+  @Property(1) val widthDp: Int = 0,
+  @Property(2) val heightDp: Int = 16,
+  @Property(3) val cornerRadiusDp: Int = 8,
+)
+
+/** Animates [children] in/out (fade + expand/shrink) as [visible] toggles. */
+@Widget(56)
+public data class AnimatedVisibility(
+  @Property(1) val visible: Boolean = true,
+  @Children(2) val children: () -> Unit,
+)
+
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.
 public object Reuse
+
+/** Animate this widget's own size changes (`Modifier.animateContentSize`). */
+@Modifier(79)
+public object AnimateContentSize
 
 // ---------------------------------------------------------------------------
 // Batch 9: universal visual modifiers (unscoped — usable on ANY widget).
@@ -644,4 +692,48 @@ public data class Alpha(
 public data class GradientBackground(
   val startArgb: Int,
   val endArgb: Int,
+)
+
+/** Per-corner clip radius (dp), clockwise from top-start. */
+@Modifier(72)
+public data class CornerRadiusEach(
+  val topStartDp: Int,
+  val topEndDp: Int,
+  val bottomEndDp: Int,
+  val bottomStartDp: Int,
+)
+
+/** Directional inner padding (dp). */
+@Modifier(73)
+public data class PaddingEach(
+  val startDp: Int,
+  val topDp: Int,
+  val endDp: Int,
+  val bottomDp: Int,
+)
+
+/** Constrain to a width:height [ratio] (e.g. 1.78 for 16:9). */
+@Modifier(74)
+public data class AspectRatio(
+  val ratio: Float,
+)
+
+/** Fill the parent's available height. */
+@Modifier(75)
+public object FillMaxHeight
+
+/** Fill the parent's available width AND height. */
+@Modifier(76)
+public object FillMaxSize
+
+/** Rotate by [degrees] clockwise. */
+@Modifier(77)
+public data class Rotate(
+  val degrees: Int,
+)
+
+/** Uniform scale, [percent] (100 = 1.0×). */
+@Modifier(78)
+public data class Scale(
+  val percent: Int,
 )

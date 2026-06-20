@@ -2,6 +2,10 @@ public final class dev/keliver/material/compose/AlertDialogKt {
 	public static final fun AlertDialog (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/AnimatedVisibilityKt {
+	public static final fun AnimatedVisibility (ZLdev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/AsyncImageKt {
 	public static final fun AsyncImage (Ljava/lang/String;ILkotlin/jvm/functions/Function0;IIIZLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -146,6 +150,10 @@ public final class dev/keliver/material/compose/SegmentedButtonRowKt {
 	public static final fun SegmentedButtonRow (Ljava/util/List;ILkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/ShimmerKt {
+	public static final fun Shimmer (IIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/SliderKt {
 	public static final fun Slider (FZLkotlin/jvm/functions/Function1;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -159,7 +167,7 @@ public final class dev/keliver/material/compose/StyledBoxKt {
 }
 
 public final class dev/keliver/material/compose/StyledTextKt {
-	public static final fun StyledText (Ljava/lang/String;IZIIILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun StyledText (Ljava/lang/String;IZIIIIIIZZZILdev/keliver/Modifier;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/SuggestionChipKt {
@@ -208,15 +216,23 @@ public final class dev/keliver/material/compose/TopAppBarKt {
 
 public final class dev/keliver/material/compose/UnscopedKt {
 	public static final fun alpha (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun animateContentSize (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+	public static final fun aspectRatio (Ldev/keliver/Modifier;F)Ldev/keliver/Modifier;
 	public static final fun background (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun blur (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun border (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 	public static final fun cornerRadius (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun cornerRadiusEach (Ldev/keliver/Modifier;IIII)Ldev/keliver/Modifier;
+	public static final fun fillMaxHeight (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+	public static final fun fillMaxSize (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
 	public static final fun fillWidth (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
 	public static final fun gradientBackground (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 	public static final fun offset (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 	public static final fun padding (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun paddingEach (Ldev/keliver/Modifier;IIII)Ldev/keliver/Modifier;
 	public static final fun reuse (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
+	public static final fun rotate (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun scale (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun shadow (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun size (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 }

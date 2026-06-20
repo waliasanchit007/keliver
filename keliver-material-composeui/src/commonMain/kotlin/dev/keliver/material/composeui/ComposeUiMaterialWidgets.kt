@@ -26,8 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
@@ -57,17 +61,44 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
   private var colorArgb by mutableStateOf(0)
   private var align by mutableStateOf(0)
   private var maxLines by mutableStateOf(0)
+  private var overflow by mutableStateOf(0)
+  private var lineHeightSp by mutableStateOf(0)
+  private var letterSpacingX100 by mutableStateOf(0)
+  private var italic by mutableStateOf(false)
+  private var underline by mutableStateOf(false)
+  private var strikethrough by mutableStateOf(false)
+  private var weight by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
+    val decoration = when {
+      underline && strikethrough -> TextDecoration.combine(listOf(TextDecoration.Underline, TextDecoration.LineThrough))
+      underline -> TextDecoration.Underline
+      strikethrough -> TextDecoration.LineThrough
+      else -> null
+    }
     M3Text(
       text = text,
       fontSize = fontSize.sp,
-      fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+      fontWeight = when {
+        weight in 100..900 -> FontWeight(weight)
+        bold -> FontWeight.Bold
+        else -> FontWeight.Normal
+      },
+      fontStyle = if (italic) FontStyle.Italic else FontStyle.Normal,
+      textDecoration = decoration,
+      lineHeight = if (lineHeightSp > 0) lineHeightSp.sp else TextUnit.Unspecified,
+      letterSpacing = if (letterSpacingX100 != 0) (letterSpacingX100 / 100f).sp else TextUnit.Unspecified,
       color = if (colorArgb == 0) Color.Unspecified else Color(colorArgb),
       textAlign = when (align) {
         1 -> TextAlign.Center
         2 -> TextAlign.End
+        3 -> TextAlign.Justify
         else -> TextAlign.Start
+      },
+      overflow = when (overflow) {
+        1 -> TextOverflow.Ellipsis
+        2 -> TextOverflow.Visible
+        else -> TextOverflow.Clip
       },
       maxLines = if (maxLines <= 0) Int.MAX_VALUE else maxLines,
       modifier = m,
@@ -79,6 +110,13 @@ internal class ComposeUiStyledText : StyledText<@Composable (Modifier) -> Unit> 
   override fun colorArgb(colorArgb: Int) { this.colorArgb = colorArgb }
   override fun align(align: Int) { this.align = align }
   override fun maxLines(maxLines: Int) { this.maxLines = maxLines }
+  override fun overflow(overflow: Int) { this.overflow = overflow }
+  override fun lineHeightSp(lineHeightSp: Int) { this.lineHeightSp = lineHeightSp }
+  override fun letterSpacingX100(letterSpacingX100: Int) { this.letterSpacingX100 = letterSpacingX100 }
+  override fun italic(italic: Boolean) { this.italic = italic }
+  override fun underline(underline: Boolean) { this.underline = underline }
+  override fun strikethrough(strikethrough: Boolean) { this.strikethrough = strikethrough }
+  override fun weight(weight: Int) { this.weight = weight }
 }
 
 internal class ComposeUiCard : Card<@Composable (Modifier) -> Unit> {

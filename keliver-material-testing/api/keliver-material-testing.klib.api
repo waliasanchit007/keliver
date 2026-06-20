@@ -33,6 +33,25 @@ final class dev.keliver.material.testing/AlertDialogValue : dev.keliver.testing/
     final fun toString(): kotlin/String // dev.keliver.material.testing/AlertDialogValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/AnimatedVisibilityValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/AnimatedVisibilityValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Boolean = ..., kotlin.collections/List<dev.keliver.testing/WidgetValue> = ...) // dev.keliver.material.testing/AnimatedVisibilityValue.<init>|<init>(dev.keliver.Modifier;kotlin.Boolean;kotlin.collections.List<dev.keliver.testing.WidgetValue>){}[0]
+
+    final val children // dev.keliver.material.testing/AnimatedVisibilityValue.children|{}children[0]
+        final fun <get-children>(): kotlin.collections/List<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/AnimatedVisibilityValue.children.<get-children>|<get-children>(){}[0]
+    final val childrenLists // dev.keliver.material.testing/AnimatedVisibilityValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/AnimatedVisibilityValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val modifier // dev.keliver.material.testing/AnimatedVisibilityValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/AnimatedVisibilityValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val visible // dev.keliver.material.testing/AnimatedVisibilityValue.visible|{}visible[0]
+        final fun <get-visible>(): kotlin/Boolean // dev.keliver.material.testing/AnimatedVisibilityValue.visible.<get-visible>|<get-visible>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/AnimatedVisibilityValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/AnimatedVisibilityValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/AnimatedVisibilityValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/AnimatedVisibilityValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/AnimatedVisibilityValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/AsyncImageValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/AsyncImageValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Function0<kotlin/Unit>? = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ...) // dev.keliver.material.testing/AsyncImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Function0<kotlin.Unit>?;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean){}[0]
 
@@ -514,6 +533,9 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
 
     final fun AlertDialog(): dev.keliver.material.widget/AlertDialog<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AlertDialog|AlertDialog(){}[0]
     final fun Alpha(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Alpha) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Alpha|Alpha(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Alpha){}[0]
+    final fun AnimateContentSize(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/AnimateContentSize) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AnimateContentSize|AnimateContentSize(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.AnimateContentSize){}[0]
+    final fun AnimatedVisibility(): dev.keliver.material.widget/AnimatedVisibility<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AnimatedVisibility|AnimatedVisibility(){}[0]
+    final fun AspectRatio(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/AspectRatio) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AspectRatio|AspectRatio(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.AspectRatio){}[0]
     final fun AsyncImage(): dev.keliver.material.widget/AsyncImage<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.AsyncImage|AsyncImage(){}[0]
     final fun Background(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Background) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Background|Background(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Background){}[0]
     final fun Badge(): dev.keliver.material.widget/Badge<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Badge|Badge(){}[0]
@@ -527,12 +549,15 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun Chip(): dev.keliver.material.widget/Chip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Chip|Chip(){}[0]
     final fun CircularProgressIndicator(): dev.keliver.material.widget/CircularProgressIndicator<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.CircularProgressIndicator|CircularProgressIndicator(){}[0]
     final fun CornerRadius(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/CornerRadius) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.CornerRadius|CornerRadius(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.CornerRadius){}[0]
+    final fun CornerRadiusEach(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/CornerRadiusEach) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.CornerRadiusEach|CornerRadiusEach(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.CornerRadiusEach){}[0]
     final fun Dialog(): dev.keliver.material.widget/Dialog<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Dialog|Dialog(){}[0]
     final fun Divider(): dev.keliver.material.widget/Divider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Divider|Divider(){}[0]
     final fun DropdownMenu(): dev.keliver.material.widget/DropdownMenu<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.DropdownMenu|DropdownMenu(){}[0]
     final fun ElevatedButton(): dev.keliver.material.widget/ElevatedButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ElevatedButton|ElevatedButton(){}[0]
     final fun ElevatedCard(): dev.keliver.material.widget/ElevatedCard<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ElevatedCard|ElevatedCard(){}[0]
     final fun ExtendedFloatingActionButton(): dev.keliver.material.widget/ExtendedFloatingActionButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ExtendedFloatingActionButton|ExtendedFloatingActionButton(){}[0]
+    final fun FillMaxHeight(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/FillMaxHeight) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FillMaxHeight|FillMaxHeight(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.FillMaxHeight){}[0]
+    final fun FillMaxSize(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/FillMaxSize) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FillMaxSize|FillMaxSize(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.FillMaxSize){}[0]
     final fun FillWidth(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/FillWidth) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FillWidth|FillWidth(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.FillWidth){}[0]
     final fun FilledTonalButton(): dev.keliver.material.widget/FilledTonalButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FilledTonalButton|FilledTonalButton(){}[0]
     final fun FilterChip(): dev.keliver.material.widget/FilterChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FilterChip|FilterChip(){}[0]
@@ -554,12 +579,16 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun OutlinedCard(): dev.keliver.material.widget/OutlinedCard<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.OutlinedCard|OutlinedCard(){}[0]
     final fun OutlinedTextField(): dev.keliver.material.widget/OutlinedTextField<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.OutlinedTextField|OutlinedTextField(){}[0]
     final fun Padding(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Padding) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Padding|Padding(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Padding){}[0]
+    final fun PaddingEach(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/PaddingEach) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.PaddingEach|PaddingEach(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.PaddingEach){}[0]
     final fun RadioButton(): dev.keliver.material.widget/RadioButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.RadioButton|RadioButton(){}[0]
     final fun Reuse(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Reuse) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Reuse|Reuse(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Reuse){}[0]
+    final fun Rotate(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Rotate) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Rotate|Rotate(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Rotate){}[0]
     final fun Scaffold(): dev.keliver.material.widget/Scaffold<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Scaffold|Scaffold(){}[0]
+    final fun Scale(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Scale) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Scale|Scale(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Scale){}[0]
     final fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
     final fun SegmentedButtonRow(): dev.keliver.material.widget/SegmentedButtonRow<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.SegmentedButtonRow|SegmentedButtonRow(){}[0]
     final fun Shadow(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Shadow) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Shadow|Shadow(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Shadow){}[0]
+    final fun Shimmer(): dev.keliver.material.widget/Shimmer<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Shimmer|Shimmer(){}[0]
     final fun Size(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Size) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Size|Size(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Size){}[0]
     final fun Slider(): dev.keliver.material.widget/Slider<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Slider|Slider(){}[0]
     final fun Snackbar(): dev.keliver.material.widget/Snackbar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Snackbar|Snackbar(){}[0]
@@ -806,6 +835,27 @@ final class dev.keliver.material.testing/SegmentedButtonRowValue : dev.keliver.t
     final fun toString(): kotlin/String // dev.keliver.material.testing/SegmentedButtonRowValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/ShimmerValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/ShimmerValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/ShimmerValue.<init>|<init>(dev.keliver.Modifier;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/ShimmerValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/ShimmerValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val cornerRadiusDp // dev.keliver.material.testing/ShimmerValue.cornerRadiusDp|{}cornerRadiusDp[0]
+        final fun <get-cornerRadiusDp>(): kotlin/Int // dev.keliver.material.testing/ShimmerValue.cornerRadiusDp.<get-cornerRadiusDp>|<get-cornerRadiusDp>(){}[0]
+    final val heightDp // dev.keliver.material.testing/ShimmerValue.heightDp|{}heightDp[0]
+        final fun <get-heightDp>(): kotlin/Int // dev.keliver.material.testing/ShimmerValue.heightDp.<get-heightDp>|<get-heightDp>(){}[0]
+    final val modifier // dev.keliver.material.testing/ShimmerValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/ShimmerValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val widthDp // dev.keliver.material.testing/ShimmerValue.widthDp|{}widthDp[0]
+        final fun <get-widthDp>(): kotlin/Int // dev.keliver.material.testing/ShimmerValue.widthDp.<get-widthDp>|<get-widthDp>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/ShimmerValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/ShimmerValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/ShimmerValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/ShimmerValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/ShimmerValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/SliderValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/SliderValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/Float = ..., kotlin/Boolean = ..., kotlin/Function1<kotlin/Float, kotlin/Unit>? = ...) // dev.keliver.material.testing/SliderValue.<init>|<init>(dev.keliver.Modifier;kotlin.Float;kotlin.Boolean;kotlin.Function1<kotlin.Float,kotlin.Unit>?){}[0]
 
@@ -890,7 +940,7 @@ final class dev.keliver.material.testing/StyledBoxValue : dev.keliver.testing/Wi
 }
 
 final class dev.keliver.material.testing/StyledTextValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/StyledTextValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/StyledTextValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ...) // dev.keliver.material.testing/StyledTextValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
 
     final val align // dev.keliver.material.testing/StyledTextValue.align|{}align[0]
         final fun <get-align>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.align.<get-align>|<get-align>(){}[0]
@@ -902,12 +952,26 @@ final class dev.keliver.material.testing/StyledTextValue : dev.keliver.testing/W
         final fun <get-colorArgb>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.colorArgb.<get-colorArgb>|<get-colorArgb>(){}[0]
     final val fontSize // dev.keliver.material.testing/StyledTextValue.fontSize|{}fontSize[0]
         final fun <get-fontSize>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.fontSize.<get-fontSize>|<get-fontSize>(){}[0]
+    final val italic // dev.keliver.material.testing/StyledTextValue.italic|{}italic[0]
+        final fun <get-italic>(): kotlin/Boolean // dev.keliver.material.testing/StyledTextValue.italic.<get-italic>|<get-italic>(){}[0]
+    final val letterSpacingX100 // dev.keliver.material.testing/StyledTextValue.letterSpacingX100|{}letterSpacingX100[0]
+        final fun <get-letterSpacingX100>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.letterSpacingX100.<get-letterSpacingX100>|<get-letterSpacingX100>(){}[0]
+    final val lineHeightSp // dev.keliver.material.testing/StyledTextValue.lineHeightSp|{}lineHeightSp[0]
+        final fun <get-lineHeightSp>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.lineHeightSp.<get-lineHeightSp>|<get-lineHeightSp>(){}[0]
     final val maxLines // dev.keliver.material.testing/StyledTextValue.maxLines|{}maxLines[0]
         final fun <get-maxLines>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.maxLines.<get-maxLines>|<get-maxLines>(){}[0]
     final val modifier // dev.keliver.material.testing/StyledTextValue.modifier|{}modifier[0]
         final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/StyledTextValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val overflow // dev.keliver.material.testing/StyledTextValue.overflow|{}overflow[0]
+        final fun <get-overflow>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.overflow.<get-overflow>|<get-overflow>(){}[0]
+    final val strikethrough // dev.keliver.material.testing/StyledTextValue.strikethrough|{}strikethrough[0]
+        final fun <get-strikethrough>(): kotlin/Boolean // dev.keliver.material.testing/StyledTextValue.strikethrough.<get-strikethrough>|<get-strikethrough>(){}[0]
     final val text // dev.keliver.material.testing/StyledTextValue.text|{}text[0]
         final fun <get-text>(): kotlin/String // dev.keliver.material.testing/StyledTextValue.text.<get-text>|<get-text>(){}[0]
+    final val underline // dev.keliver.material.testing/StyledTextValue.underline|{}underline[0]
+        final fun <get-underline>(): kotlin/Boolean // dev.keliver.material.testing/StyledTextValue.underline.<get-underline>|<get-underline>(){}[0]
+    final val weight // dev.keliver.material.testing/StyledTextValue.weight|{}weight[0]
+        final fun <get-weight>(): kotlin/Int // dev.keliver.material.testing/StyledTextValue.weight.<get-weight>|<get-weight>(){}[0]
 
     final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/StyledTextValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/StyledTextValue.equals|equals(kotlin.Any?){}[0]
