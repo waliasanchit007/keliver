@@ -24,6 +24,7 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Checkbox ()Ldev/keliver/material/widget/Checkbox;
 	public fun Chip ()Ldev/keliver/material/widget/Chip;
 	public fun CircularProgressIndicator ()Ldev/keliver/material/widget/CircularProgressIndicator;
+	public fun Clickable ()Ldev/keliver/material/widget/Clickable;
 	public synthetic fun CornerRadius (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadius;)V
 	public fun CornerRadius (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/CornerRadius;)V
 	public synthetic fun CornerRadiusEach (Ljava/lang/Object;Ldev/keliver/material/modifier/CornerRadiusEach;)V

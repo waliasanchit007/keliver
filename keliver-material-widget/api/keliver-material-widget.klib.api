@@ -75,6 +75,13 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/CircularProgress
     abstract fun progress(kotlin/Float) // dev.keliver.material.widget/CircularProgressIndicator.progress|progress(kotlin.Float){}[0]
 }
 
+abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Clickable : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Clickable|null[0]
+    abstract val content // dev.keliver.material.widget/Clickable.content|{}content[0]
+        abstract fun <get-content>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Clickable.content.<get-content>|<get-content>(){}[0]
+
+    abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/Clickable.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
+}
+
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/Dialog : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/Dialog|null[0]
     abstract val children // dev.keliver.material.widget/Dialog.children|{}children[0]
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/Dialog.children.<get-children>|<get-children>(){}[0]
@@ -181,6 +188,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun Checkbox(): dev.keliver.material.widget/Checkbox<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Checkbox|Checkbox(){}[0]
     abstract fun Chip(): dev.keliver.material.widget/Chip<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Chip|Chip(){}[0]
     abstract fun CircularProgressIndicator(): dev.keliver.material.widget/CircularProgressIndicator<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CircularProgressIndicator|CircularProgressIndicator(){}[0]
+    abstract fun Clickable(): dev.keliver.material.widget/Clickable<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Clickable|Clickable(){}[0]
     abstract fun CornerRadius(#A, dev.keliver.material.modifier/CornerRadius) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CornerRadius|CornerRadius(1:0;dev.keliver.material.modifier.CornerRadius){}[0]
     abstract fun CornerRadiusEach(#A, dev.keliver.material.modifier/CornerRadiusEach) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.CornerRadiusEach|CornerRadiusEach(1:0;dev.keliver.material.modifier.CornerRadiusEach){}[0]
     abstract fun Dialog(): dev.keliver.material.widget/Dialog<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Dialog|Dialog(){}[0]

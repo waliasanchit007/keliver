@@ -95,6 +95,9 @@ import dev.keliver.schema.Widget
     AnimatedVisibility::class,
     // Batch 11: theming + dark mode
     Theme::class,
+    // Batch 12: interactivity wrapper (clickable can't be a modifier — keliver U6:
+    // modifiers are non-addressable value objects with no event channel).
+    Clickable::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -640,6 +643,18 @@ public data class Theme(
   @Property(12) val errorArgb: Int = 0,
   @Property(13) val outlineArgb: Int = 0,
   @Children(14) val content: () -> Unit,
+)
+
+/**
+ * Wraps [content] to make it tappable — the keliver answer to
+ * `Modifier.clickable { }` (which can't be a modifier: keliver U6 — modifiers are
+ * non-addressable serialized values, while events need an addressable node).
+ * Lean (no styling): `Clickable(onClick = { … }) { AnyWidget() }`.
+ */
+@Widget(58)
+public data class Clickable(
+  @Property(1) val onClick: (() -> Unit)? = null,
+  @Children(2) val content: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

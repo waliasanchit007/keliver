@@ -15,6 +15,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.keliver.material.widget.AnimatedVisibility
+import dev.keliver.material.widget.Clickable
 import dev.keliver.material.widget.Shimmer
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
@@ -62,6 +64,19 @@ internal class ComposeUiShimmer : Shimmer<@Composable (Modifier) -> Unit> {
   override fun widthDp(widthDp: Int) { this.widthDp = widthDp }
   override fun heightDp(heightDp: Int) { this.heightDp = heightDp }
   override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+}
+
+internal class ComposeUiClickable : Clickable<@Composable (Modifier) -> Unit> {
+  private var onClick by mutableStateOf<(() -> Unit)?>(null)
+  override val content: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
+  override var modifier: RedwoodModifier = RedwoodModifier
+  override val value: @Composable (Modifier) -> Unit = { m ->
+    val cb = onClick
+    Box(modifier = if (cb != null) m.clickable { cb() } else m) {
+      (content as ComposeWidgetChildren).Render()
+    }
+  }
+  override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
 }
 
 internal class ComposeUiAnimatedVisibility : AnimatedVisibility<@Composable (Modifier) -> Unit> {

@@ -42,6 +42,10 @@ public final class dev/keliver/material/compose/CircularProgressIndicatorKt {
 	public static final fun CircularProgressIndicator (FLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/ClickableKt {
+	public static final fun Clickable (Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/DialogKt {
 	public static final fun Dialog (Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
 }
