@@ -90,7 +90,7 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun BottomSheet(): BottomSheet<@Composable (Modifier) -> Unit> = ComposeUiBottomSheet()
 
   // Batch 1: buttons & inputs.
-  override fun OutlinedButton(): OutlinedButton<@Composable (Modifier) -> Unit> = ComposeUiOutlinedButton()
+  override fun OutlinedButton(): OutlinedButton<@Composable (Modifier) -> Unit> = ComposeUiOutlinedButton(imageLoader)
   override fun TextButton(): TextButton<@Composable (Modifier) -> Unit> = ComposeUiTextButton()
   override fun ElevatedButton(): ElevatedButton<@Composable (Modifier) -> Unit> = ComposeUiElevatedButton()
   override fun FilledTonalButton(): FilledTonalButton<@Composable (Modifier) -> Unit> = ComposeUiFilledTonalButton()

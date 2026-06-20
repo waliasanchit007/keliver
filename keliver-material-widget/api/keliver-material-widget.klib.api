@@ -280,7 +280,13 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/NavigationRail :
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedButton : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/OutlinedButton|null[0]
+    abstract fun borderArgb(kotlin/Int) // dev.keliver.material.widget/OutlinedButton.borderArgb|borderArgb(kotlin.Int){}[0]
+    abstract fun containerArgb(kotlin/Int) // dev.keliver.material.widget/OutlinedButton.containerArgb|containerArgb(kotlin.Int){}[0]
+    abstract fun contentArgb(kotlin/Int) // dev.keliver.material.widget/OutlinedButton.contentArgb|contentArgb(kotlin.Int){}[0]
+    abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/OutlinedButton.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
     abstract fun enabled(kotlin/Boolean) // dev.keliver.material.widget/OutlinedButton.enabled|enabled(kotlin.Boolean){}[0]
+    abstract fun iconSizeDp(kotlin/Int) // dev.keliver.material.widget/OutlinedButton.iconSizeDp|iconSizeDp(kotlin.Int){}[0]
+    abstract fun iconUrl(kotlin/String) // dev.keliver.material.widget/OutlinedButton.iconUrl|iconUrl(kotlin.String){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/OutlinedButton.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/OutlinedButton.text|text(kotlin.String){}[0]
 }
@@ -349,6 +355,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/StyledBox : dev.
     abstract fun fillWidth(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.fillWidth|fillWidth(kotlin.Boolean){}[0]
     abstract fun gradientEndArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientEndArgb|gradientEndArgb(kotlin.Int){}[0]
     abstract fun gradientStartArgb(kotlin/Int) // dev.keliver.material.widget/StyledBox.gradientStartArgb|gradientStartArgb(kotlin.Int){}[0]
+    abstract fun gradientVertical(kotlin/Boolean) // dev.keliver.material.widget/StyledBox.gradientVertical|gradientVertical(kotlin.Boolean){}[0]
     abstract fun heightDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.heightDp|heightDp(kotlin.Int){}[0]
     abstract fun offsetYDp(kotlin/Int) // dev.keliver.material.widget/StyledBox.offsetYDp|offsetYDp(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/StyledBox.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]

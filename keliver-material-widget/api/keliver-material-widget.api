@@ -264,7 +264,13 @@ public abstract interface class dev/keliver/material/widget/NavigationRail : dev
 }
 
 public abstract interface class dev/keliver/material/widget/OutlinedButton : dev/keliver/widget/Widget {
+	public abstract fun borderArgb (I)V
+	public abstract fun containerArgb (I)V
+	public abstract fun contentArgb (I)V
+	public abstract fun cornerRadiusDp (I)V
 	public abstract fun enabled (Z)V
+	public abstract fun iconSizeDp (I)V
+	public abstract fun iconUrl (Ljava/lang/String;)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun text (Ljava/lang/String;)V
 }
@@ -327,6 +333,7 @@ public abstract interface class dev/keliver/material/widget/StyledBox : dev/keli
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 	public abstract fun gradientEndArgb (I)V
 	public abstract fun gradientStartArgb (I)V
+	public abstract fun gradientVertical (Z)V
 	public abstract fun heightDp (I)V
 	public abstract fun offsetYDp (I)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V

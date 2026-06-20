@@ -4,6 +4,12 @@
  */
 package dev.keliver.material.composeui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton as M3ElevatedButton
 import androidx.compose.material3.FilledTonalButton as M3FilledTonalButton
 import androidx.compose.material3.FloatingActionButton as M3FloatingActionButton
@@ -18,6 +24,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
+import coil3.compose.AsyncImage as CoilAsyncImage
 import dev.keliver.Modifier as RedwoodModifier
 import dev.keliver.material.widget.ElevatedButton
 import dev.keliver.material.widget.FilledTonalButton
@@ -28,17 +38,54 @@ import dev.keliver.material.widget.RadioButton
 import dev.keliver.material.widget.Slider
 import dev.keliver.material.widget.TextButton
 
-internal class ComposeUiOutlinedButton : OutlinedButton<@Composable (Modifier) -> Unit> {
+internal class ComposeUiOutlinedButton(
+  private val imageLoader: ImageLoader,
+) : OutlinedButton<@Composable (Modifier) -> Unit> {
   private var text by mutableStateOf("")
   private var enabled by mutableStateOf(true)
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
+  private var iconUrl by mutableStateOf("")
+  private var iconSizeDp by mutableStateOf(18)
+  private var containerArgb by mutableStateOf(0)
+  private var contentArgb by mutableStateOf(0)
+  private var borderArgb by mutableStateOf(0)
+  private var cornerRadiusDp by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
-    M3OutlinedButton(onClick = { onClick?.invoke() }, enabled = enabled, modifier = m) { M3Text(text) }
+    val colors = ButtonDefaults.outlinedButtonColors(
+      containerColor = if (containerArgb != 0) Color(containerArgb) else Color.Transparent,
+      contentColor = if (contentArgb != 0) Color(contentArgb) else ButtonDefaults.outlinedButtonColors().contentColor,
+    )
+    val border = if (borderArgb != 0) BorderStroke(1.dp, Color(borderArgb)) else ButtonDefaults.outlinedButtonBorder(enabled)
+    M3OutlinedButton(
+      onClick = { onClick?.invoke() },
+      enabled = enabled,
+      modifier = m,
+      colors = colors,
+      border = border,
+      shape = if (cornerRadiusDp > 0) RoundedCornerShape(cornerRadiusDp.dp) else ButtonDefaults.outlinedShape,
+    ) {
+      if (iconUrl.isNotEmpty()) {
+        CoilAsyncImage(
+          model = iconUrl,
+          imageLoader = imageLoader,
+          contentDescription = null,
+          modifier = Modifier.size(iconSizeDp.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+      }
+      M3Text(text)
+    }
   }
   override fun text(text: String) { this.text = text }
   override fun enabled(enabled: Boolean) { this.enabled = enabled }
   override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }
+  override fun iconUrl(iconUrl: String) { this.iconUrl = iconUrl }
+  override fun iconSizeDp(iconSizeDp: Int) { this.iconSizeDp = iconSizeDp }
+  override fun containerArgb(containerArgb: Int) { this.containerArgb = containerArgb }
+  override fun contentArgb(contentArgb: Int) { this.contentArgb = contentArgb }
+  override fun borderArgb(borderArgb: Int) { this.borderArgb = borderArgb }
+  override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
 }
 
 internal class ComposeUiTextButton : TextButton<@Composable (Modifier) -> Unit> {

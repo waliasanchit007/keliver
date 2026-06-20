@@ -44,6 +44,7 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   private var borderColorArgb by mutableStateOf(0)
   private var borderWidthDp by mutableStateOf(0)
   private var offsetYDp by mutableStateOf(0)
+  private var gradientVertical by mutableStateOf(false)
   private var onClick by mutableStateOf<(() -> Unit)?>(null)
 
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
@@ -62,9 +63,11 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
     if (elevationDp > 0) m = m.shadow(elevationDp.dp, shape, clip = false)
     if (cornerRadiusDp > 0) m = m.clip(shape)
     val hasGradient = gradientStartArgb != 0 || gradientEndArgb != 0
+    val gradientColors = listOf(Color(gradientStartArgb), Color(gradientEndArgb))
     m = when {
       hasGradient -> m.background(
-        Brush.linearGradient(listOf(Color(gradientStartArgb), Color(gradientEndArgb))),
+        if (gradientVertical) Brush.verticalGradient(gradientColors)
+        else Brush.linearGradient(gradientColors),
       )
       colorArgb != 0 -> m.background(Color(colorArgb))
       else -> m
@@ -90,6 +93,7 @@ internal class ComposeUiStyledBox : StyledBox<@Composable (Modifier) -> Unit> {
   override fun contentAlignment(contentAlignment: Int) { this.contentAlignment = contentAlignment }
   override fun elevationDp(elevationDp: Int) { this.elevationDp = elevationDp }
   override fun offsetYDp(offsetYDp: Int) { this.offsetYDp = offsetYDp }
+  override fun gradientVertical(gradientVertical: Boolean) { this.gradientVertical = gradientVertical }
   override fun borderColorArgb(borderColorArgb: Int) { this.borderColorArgb = borderColorArgb }
   override fun borderWidthDp(borderWidthDp: Int) { this.borderWidthDp = borderWidthDp }
   override fun onClick(onClick: (() -> Unit)?) { this.onClick = onClick }

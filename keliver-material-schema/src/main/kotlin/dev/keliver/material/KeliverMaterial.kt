@@ -285,6 +285,19 @@ public data class OutlinedButton(
   @Property(1) val text: String,
   @Property(2) val enabled: Boolean = true,
   @Property(3) val onClick: (() -> Unit)? = null,
+  /** Optional leading icon (network URL), drawn before [text] like a Material
+   *  button with `Icon()` + `Spacer()` content. Empty => text only. */
+  @Property(4) val iconUrl: String = "",
+  /** Leading-icon size in dp. */
+  @Property(5) val iconSizeDp: Int = 18,
+  /** Container (fill) color ARGB; 0 => transparent (default outlined look). */
+  @Property(6) val containerArgb: Int = 0,
+  /** Content (text + icon tint) color ARGB; 0 => theme default. */
+  @Property(7) val contentArgb: Int = 0,
+  /** Border color ARGB; 0 => theme default outline. */
+  @Property(8) val borderArgb: Int = 0,
+  /** Corner radius in dp; 0 => Material default pill shape. */
+  @Property(9) val cornerRadiusDp: Int = 0,
 )
 
 @Widget(17)
@@ -595,9 +608,12 @@ public data class StyledBox(
   @Property(13) val borderWidthDp: Int = 0,
   /** Tap handler; non-null makes the whole box clickable (rows, buttons, back). */
   @Property(14) val onClick: (() -> Unit)? = null,
+  /** Draw the gradient top→bottom (`Brush.verticalGradient`) instead of the
+   *  default diagonal (`linearGradient`). Used for hero/header washes. */
+  @Property(15) val gradientVertical: Boolean = false,
   // children must hold the HIGHEST tag so the generated composable keeps it as
   // the trailing slot (enables `StyledBox(...) { content }` lambda syntax).
-  @Children(15) val children: () -> Unit,
+  @Children(16) val children: () -> Unit,
 )
 
 // ---------------------------------------------------------------------------
