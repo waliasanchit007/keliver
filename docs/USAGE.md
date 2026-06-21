@@ -25,8 +25,8 @@ consumer.
 #    (most projects already have it). No git submodule, no GitHub PAT.
 
 # 2. Depend on the single-import facades in your module build.gradle.kts:
-#      implementation("dev.keliver:keliver-host:0.1.0")    // host side
-#      implementation("dev.keliver:keliver-guest:0.1.0")   // guest module
+#      implementation("dev.keliver:keliver-host:0.2.0")    // host side
+#      implementation("dev.keliver:keliver-guest:0.2.0")   // guest module
 
 # 3. If you build for iOS, add kotlin.native.cacheKind=none to your
 #    gradle.properties (CMP-8845 workaround).
@@ -107,6 +107,125 @@ Keliver `1.0.0-caliclan.3` (the `Spec.bindWithTimeout` /
 The host never imports guest code; the guest never imports host code. They
 communicate through the schema (in `schema/`) and the generated protocol
 modules.
+
+---
+
+## The fast path — `keliver-material` (no schema authoring) — NEW in 0.2.0
+
+Steps 1–4 below describe authoring **your own** schema (the
+ServerDrivenUI/DevoStatus reference path). Most adopters don't need to: **0.2.0
+ships `keliver-material`, a batteries-included library of ~60 Compose/Material3
+-parity widgets** so you can write server-driven screens that read like native
+Compose *without defining a single widget*. This is the recommended starting
+point.
+
+```kotlin
+// guest screen authored entirely with published keliver-material widgets
+import dev.keliver.material.compose.Column
+import dev.keliver.material.compose.StyledText
+import dev.keliver.material.compose.StyledBox
+import dev.keliver.material.compose.RichText
+import dev.keliver.material.compose.AnimatedBorder
+import dev.keliver.material.api.TextSpan
+
+@Composable
+fun PromoCard() {
+  StyledBox(
+    gradientColorsArgb = listOf(0xFFFFFCFC.toInt(), 0xFFFFEEEE.toInt(), 0xFFFFF3EE.toInt()),
+    gradientStops = listOf(0.0f, 0.55f, 1.0f), gradientDirection = 3, // diagonal
+    cornerRadiusDp = 12, fillWidth = true, paddingDp = 16,
+  ) {
+    Column(width = Constraint.Fill) {
+      // inline gradient-filled text (AnnotatedString-style spans)
+      RichText(spans = listOf(
+        TextSpan(text = "Make your UPI ID ", bold = true, colorArgb = 0xFF111111.toInt()),
+        TextSpan(text = "sound like you", bold = true,
+                 gradientColorsArgb = listOf(0xFFFF3E3E.toInt(), 0xFFFF552B.toInt())),
+      ), fontSize = 18)
+      // a comet/glow animated border (host-side animation, zero per-frame RPC)
+      AnimatedBorder(effect = 1 /* gradientSweep */, cornerRadiusDp = 8) {
+        StyledText(text = "Personalise now", fontSize = 14, bold = true)
+      }
+    }
+  }
+}
+```
+
+### Widget catalog (highlights)
+
+| Group | Widgets |
+|---|---|
+| Layout | `Column`, `Row`, `Box`, `Spacer`, `StyledBox` (bg/gradient/border/corner/elevation/padding/offset/onClick), `ScrollableColumn`, `FlowRow`, `FlowColumn`, `Surface`, `Scaffold` |
+| Text | `StyledText` (size/weight/color/italic/underline/overflow/letter-spacing/line-height/color-role), **`RichText` + `TextSpan`** (inline mixed-style **and gradient-filled** runs) |
+| Buttons & input | `Button` (container/content/corner), `OutlinedButton` (leading icon), `TextButton`, `ElevatedButton`, `FilledTonalButton`, `FAB`/`ExtendedFAB`, `TextField` / `OutlinedTextField` (label, ₹-style `leadingText`, `keyboardType`, `maxLines`, `isError`, `supportingText`, border/corner), `Checkbox`, `Switch`, `RadioButton`, `Slider` |
+| Images & media | `AsyncImage` (Coil 3; size, `contentScale`, `blurDp`, `fillWidth`, **`tintArgb`**) |
+| Containers | `Card`, `ElevatedCard`, `OutlinedCard`, `Chip`/`FilterChip`/`InputChip`/`SuggestionChip`, `Badge`, `Divider`/`VerticalDivider` |
+| Navigation & overlays | `TopAppBar`, `BottomAppBar`, `NavigationBar`, `NavigationRail`, `TabRow`/`Tab`, `BottomSheet` (ime-aware), `AlertDialog`, `Dialog`, `Snackbar`, `DropdownMenu`, `Tooltip` |
+| Lazy | `LazyColumn`, `LazyRow`, `LazyVerticalGrid`, `LazyHorizontalGrid`, `HorizontalPager`/`VerticalPager` (auto-scroll + dots) |
+| Feedback/anim | `CircularProgressIndicator`, `LinearProgressIndicator`, `Shimmer`, `AnimatedVisibility`, **`AnimatedBorder`** (5 host-side border effects: comet / gradientSweep / pulse / marchingAnts / glow) |
+| Theming | `Theme` (server-driven Material3 light/dark palette) |
+| Interactivity | `Clickable` (wrap any bare content to make it tappable) |
+
+### Universal modifiers — compose like native
+
+`keliver-material` ships a universal visual-modifier system: chain
+`Modifier.background(...).cornerRadius(...).padding(...).border(...).shadow(...)
+.size(...).fillWidth().offset(...).blur(...).alpha(...).gradientBackground(...)
+.rotate(...).scale(...).aspectRatio(...).animateContentSize()` on **any** widget,
+exactly like native Compose — no per-widget plumbing.
+
+### How to consume it
+
+You depend on the published `keliver-material-*` modules and run **one** codegen
+step that generates the treehouse protocol adapters from the **published** schema
+(no schema sources of your own). This is exactly the
+[`stashfin-sdui`](https://github.com/waliasanchit007/keliver) consumer setup,
+verified end-to-end (Android APK + guest bundle) against Central `0.2.0`.
+
+`gradle/libs.versions.toml`:
+
+```toml
+[versions]
+keliver = "0.2.0"
+
+[libraries]
+keliver-material-schema     = { module = "dev.keliver:keliver-material-schema",     version.ref = "keliver" }
+keliver-material-widget     = { module = "dev.keliver:keliver-material-widget",     version.ref = "keliver" }
+keliver-material-modifiers  = { module = "dev.keliver:keliver-material-modifiers",  version.ref = "keliver" }
+keliver-material-compose    = { module = "dev.keliver:keliver-material-compose",    version.ref = "keliver" }  # guest composables
+keliver-material-composeui  = { module = "dev.keliver:keliver-material-composeui",  version.ref = "keliver" }  # host renderers
+
+[plugins]
+keliver-generator-protocol-guest = { id = "dev.keliver.generator.protocol.guest", version.ref = "keliver" }
+keliver-generator-protocol-host  = { id = "dev.keliver.generator.protocol.host",  version.ref = "keliver" }
+```
+
+A tiny `:shared-protocol-guest` (and `:shared-protocol-host`) module runs the
+codegen off the **published** schema coordinate — pin it to the catalog version
+so a single `keliver =` bump can't drift:
+
+```kotlin
+// shared-protocol-guest/build.gradle.kts
+plugins {
+  alias(libs.plugins.kotlinMultiplatform)
+  alias(libs.plugins.keliver.generator.protocol.guest)
+}
+redwoodSchema {
+  source = "dev.keliver:keliver-material-schema:${libs.versions.keliver.get()}"
+  type   = "dev.keliver.material.KeliverMaterial"
+}
+```
+
+The host binds the generated widget system from `keliver-material-composeui`
+(`ComposeUiKeliverMaterialWidgetSystem(imageLoader)`); the guest authors screens
+with the `dev.keliver.material.compose.*` composables. Everything else in this
+guide (host `TreehouseApp.Spec`, the dev loop, host services, `keliver-http`)
+applies unchanged.
+
+> **When to author your own schema instead** (Steps 1–4): you need bespoke
+> widgets `keliver-material` doesn't cover, or a deliberately minimal protocol
+> surface. Otherwise prefer `keliver-material` — it's the path under active
+> development and the one the reference apps dogfood.
 
 ---
 
@@ -207,7 +326,7 @@ android.useAndroidX=true
 
 ### Maven Central (no auth)
 
-Keliver `0.1.0` is published to **Maven Central** under `dev.keliver:keliver-*`.
+Keliver `0.2.0` is published to **Maven Central** under `dev.keliver:keliver-*`.
 If your build already has `mavenCentral()` in `dependencyResolutionManagement`
 (most do), there's **nothing to set up** — no GitHub PAT, no `gpr.user`/
 `gpr.token`, no private repo, and no content-filter workaround:
@@ -224,13 +343,15 @@ dependencyResolutionManagement {
 Then depend on the single-import facades:
 
 ```kotlin
-implementation("dev.keliver:keliver-host:0.1.0")    // host side
-implementation("dev.keliver:keliver-guest:0.1.0")   // guest module
+implementation("dev.keliver:keliver-host:0.2.0")    // host side
+implementation("dev.keliver:keliver-guest:0.2.0")   // guest module
 ```
 
-(`0.1.x` is the first public line — pre-`1.0`, so the API may still evolve;
-the Zipline wire format is stable within the line. Kotlin package names stay
-`dev.keliver.*`, so `import` statements don't change.)
+(`0.2.x` is the current line — `0.1.0` was the first public release, and `0.2.0`
+adds the **`keliver-material`** batteries-included widget library (see the next
+section). Pre-`1.0`, so the API may still evolve; the Zipline wire format is
+stable within a line. Kotlin package names stay `dev.keliver.*`, so `import`
+statements don't change.)
 
 ### Optional: the keliver BOM
 
@@ -238,7 +359,7 @@ Keliver publishes a Bill-of-Materials that pins every `keliver-*` artifact to on
 version. Import it as a `platform` and omit versions on the individual deps:
 
 ```kotlin
-implementation(platform("dev.keliver:keliver-bom:0.1.0"))
+implementation(platform("dev.keliver:keliver-bom:0.2.0"))
 
 implementation("dev.keliver:keliver-host")            // version comes from the BOM
 implementation("dev.keliver:keliver-treehouse-host")
@@ -250,7 +371,7 @@ the BOM (one coordinate to bump) is the recommended way to keep them in lock-ste
 
 ### Toolchain — what your build must use
 
-Keliver `0.1.0` is compiled with **Kotlin 2.2.0** (KSP `2.2.0-2.0.2`, Coroutines
+Keliver `0.2.0` is compiled with **Kotlin 2.2.0** (KSP `2.2.0-2.0.2`, Coroutines
 `1.10.2`, Serialization `1.9.0`, AGP `8.12`). Kotlin's metadata rule means a
 consumer on an **older** Kotlin than 2.2.0 can't read keliver's classes — the
 symptom is `Cannot access class '…' — missing or conflicting dependencies` — so
@@ -267,17 +388,17 @@ Consequences:
   `ksp … is too old for kotlin-2.3.10` warning — builds still succeed — but the
   matching line keeps your log clean.
 - Compose Multiplatform **1.8.0** and AGP **8.12+** are known-good with this combo
-  (verified building a real multi-module consumer APK against `0.1.0`).
+  (verified building a real multi-module consumer APK against `0.2.0`).
 
 ### Copy-paste version catalog
 
 This `gradle/libs.versions.toml` is the exact toolchain that built a real
-multi-module Compose Multiplatform consumer against keliver `0.1.0` end-to-end
+multi-module Compose Multiplatform consumer against keliver `0.2.0` end-to-end
 (Android APK + iOS framework). Paste it and trim what you don't use:
 
 ```toml
 [versions]
-keliver = "0.1.0"
+keliver = "0.2.0"
 kotlin = "2.2.0"            # keliver's metadata floor; see the Toolchain note
 ksp = "2.2.0-2.0.2"         # bump to a 2.3.10-line KSP for a warning-free log
 zipline = "1.26.0"          # NOTE: floats the build's Kotlin compiler to 2.3.10
@@ -582,7 +703,7 @@ The `libs.keliver.host` reference assumes a version catalog entry:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-keliver = "0.1.0"
+keliver = "0.2.0"
 
 [libraries]
 keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
@@ -596,7 +717,6 @@ Migration from the pre-facade setup: replace
 `libs.zipline.loader`, and `libs.zipline` (host side) with the single
 `libs.keliver.host` line. The pre-facade `libs.redwood.*` catalog
 entries still work — the facade is additive.
-```
 
 ### If you use AsyncImage: call `KeliverImage.installSingleton()`
 
@@ -1626,12 +1746,14 @@ mode keywords (the section was written to be greppable).
 If you need any of these, expect to either help land them or work around
 them:
 
-- **No Compose Facade**: you import from 6+ modules. Tracked as Phase 2
-  in [PUBLIC_LAUNCH_ROADMAP.md](../PUBLIC_LAUNCH_ROADMAP.md) — collapses
-  the multi-module wiring into a single `dev.keliver:keliver` import.
-- **No Maven Central publishing**: submodule only for now.
 - **No production load testing**: only showcase-level traffic verified.
 - **iOS verified only on sim**: physical iOS devices not yet tested
   end-to-end on this branch.
 - **No StateFlow / Flow patterns demonstrated**: would need the same
   dispatcher pattern as gotcha #12. Pattern works but no example yet.
+
+Already shipped (these used to be listed here): **Maven Central publishing**
+(`dev.keliver:keliver-*:0.2.0`, no auth — see the Maven Central section above),
+the **single-import facades** (`keliver-host` / `keliver-guest`), and the
+**`keliver-material` widget library** (no schema authoring — see the fast-path
+section above).

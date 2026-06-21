@@ -4,11 +4,14 @@ Server-driven UI for Compose Multiplatform. Render Kotlin Compose UI on
 Android and iOS from JavaScript bundles delivered over the network —
 ship UI updates without an app-store release.
 
-> **Status: public on Maven Central — `0.1.0`.** Add `mavenCentral()` and
-> depend on `dev.keliver:keliver-host:0.1.0` (host) /
-> `dev.keliver:keliver-guest:0.1.0` (guest) — no GitHub PAT, no extra repo.
-> See [`docs/USAGE.md`](./docs/USAGE.md). `0.1.x` is the first public line
-> (pre-`1.0`, API may still evolve); the wire format is stable within it.
+> **Status: public on Maven Central — `0.2.0`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.2.0` (host) /
+> `dev.keliver:keliver-guest:0.2.0` (guest) — no GitHub PAT, no extra repo.
+> `0.2.0` adds **`keliver-material`**, a ~60-widget Compose/Material3-parity
+> library so you can build server-driven screens without authoring a schema.
+> See [`docs/USAGE.md`](./docs/USAGE.md). `0.2.x` is the current line; `0.1.0`
+> was the first public release (pre-`1.0`, API may still evolve); the wire
+> format is stable within a line.
 
 ---
 

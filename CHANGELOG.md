@@ -8,6 +8,43 @@
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.2.0] - 2026-06-21
+
+First Maven Central release to bundle the **`keliver-material`** widget library
+(`dev.keliver:keliver-*:0.2.0`, no auth). Released via the
+`publish-maven-central.yml` workflow; dogfooded end-to-end (Android APK + guest
+bundle) by the stashfin-sdui consumer against the published artifacts.
+
+Added:
+- **`keliver-material` — ~60 Compose/Material3-parity widgets** so adopters can
+  author server-driven screens without defining their own schema (layout, text,
+  buttons, inputs, images, cards, chips, nav, overlays, lazy lists, feedback).
+  See the "fast path" section in [docs/USAGE.md](docs/USAGE.md).
+- **Universal visual-modifier system** — chain
+  `Modifier.background/cornerRadius/padding/border/shadow/size/fillWidth/offset/
+  blur/alpha/gradientBackground/rotate/scale/aspectRatio/animateContentSize` on
+  any widget, like native Compose.
+- **`RichText` + `TextSpan`** — one text block with inline mixed-style **and
+  gradient-filled** runs (AnnotatedString-style spans).
+- **`AnimatedBorder`** — a container with five host-side border animations
+  (comet / gradientSweep / pulse / marchingAnts / glow); the animation runs
+  entirely on the host with zero per-frame protocol traffic.
+- **`Clickable`** — wrap any bare content to make it tappable (the addressable
+  answer to `Modifier.clickable {}`, which can't be a modifier; see U6).
+- **`Theme`** — server-driven Material3 light/dark palette.
+- **`StyledBox`** — multi-stop gradients (colors + stops + direction),
+  per-corner radii, elevation/border/offset/onClick.
+- **`AsyncImage.tintArgb`**, **`Button` container/content/corner styling**, and
+  styled **`OutlinedTextField`** (label, leading affix, keyboard type, error +
+  supporting text), **ime-aware `BottomSheet`**.
+
+Fixed:
+- **Responsive text input** — `TextField`/`OutlinedTextField` keep a host-local
+  editing buffer so keystrokes apply immediately instead of being dropped while
+  the controlled value waited on the async guest echo.
+
 Fixed / infrastructure:
 - **U15 fixed — iOS Zipline cache no longer crashes on a real device.**
   `IosTreehousePlatform.newCache` created the cache directory directly
