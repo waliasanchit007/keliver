@@ -3,7 +3,7 @@ public final class dev/keliver/material/compose/AlertDialogKt {
 }
 
 public final class dev/keliver/material/compose/AnimatedBorderKt {
-	public static final fun AnimatedBorder (IIIIIILkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;II)V
+	public static final fun AnimatedBorder (IIIIIILkotlin/jvm/functions/Function0;ILjava/util/List;Ldev/keliver/Modifier;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;III)V
 }
 
 public final class dev/keliver/material/compose/AnimatedVisibilityKt {

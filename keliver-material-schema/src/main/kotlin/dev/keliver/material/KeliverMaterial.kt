@@ -745,11 +745,16 @@ public data class RichText(
 )
 
 /**
- * Container that draws a bright segment ("comet") travelling around its rounded
- * border, over a faint base ring — the keliver answer to a `drawWithCache` +
- * `PathMeasure` animated border. The animation runs entirely host-side (no
- * per-frame protocol traffic); [children] render inside. Pair with a guest-driven
- * typewriter [RichText] for the full "personalised UPI" nudge effect.
+ * Container with a family of host-side animated border/edge effects (no per-frame
+ * protocol traffic); [children] render inside. The keliver answer to bespoke
+ * `drawWithCache` border animations. Choose via [effect]:
+ *  - 0 comet — a bright segment travels the perimeter over a faint base ring.
+ *  - 1 gradientSweep — the whole ring is a rotating gradient ("AI glow").
+ *  - 2 pulse — the ring breathes in width + alpha.
+ *  - 3 marchingAnts — a dashed ring marches around ([segmentLenDp] = dash length).
+ *  - 4 glow — a soft outer halo pulses behind a crisp ring.
+ * [colorsArgb] (2+) supplies a gradient palette for comet/sweep; otherwise
+ * [cometColorArgb] is used solid.
  */
 @Widget(60)
 public data class AnimatedBorder(
@@ -757,14 +762,18 @@ public data class AnimatedBorder(
   @Property(2) val strokeWidthDp: Int = 1,
   /** Faint always-on ring ARGB; 0 => [cometColorArgb] at 15% alpha. */
   @Property(3) val baseColorArgb: Int = 0,
-  /** Bright travelling-segment ARGB. */
+  /** Bright travelling-segment / ring ARGB (used solid when [colorsArgb] empty). */
   @Property(4) val cometColorArgb: Int = 0xFFFC14AB.toInt(),
   /** Full loop duration in ms. */
   @Property(5) val durationMs: Int = 1800,
-  /** Minimum visible comet length in dp. */
+  /** comet: min visible segment length; marchingAnts: dash length (dp). */
   @Property(6) val segmentLenDp: Int = 50,
   @Property(7) val onClick: (() -> Unit)? = null,
-  @Children(8) val children: () -> Unit,
+  /** 0 comet, 1 gradientSweep, 2 pulse, 3 marchingAnts, 4 glow. */
+  @Property(8) val effect: Int = 0,
+  /** 2+ ARGB stops => gradient palette for comet/sweep; empty => [cometColorArgb]. */
+  @Property(9) val colorsArgb: List<Int> = emptyList(),
+  @Children(10) val children: () -> Unit,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

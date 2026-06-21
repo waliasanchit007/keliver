@@ -36,24 +36,28 @@ public final class dev/keliver/material/AnimateContentSize {
 }
 
 public final class dev/keliver/material/AnimatedBorder {
-	public fun <init> (IIIIIILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)V
-	public synthetic fun <init> (IIIIIILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (IIIIIILkotlin/jvm/functions/Function0;ILjava/util/List;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (IIIIIILkotlin/jvm/functions/Function0;ILjava/util/List;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
+	public final fun component10 ()Lkotlin/jvm/functions/Function0;
 	public final fun component2 ()I
 	public final fun component3 ()I
 	public final fun component4 ()I
 	public final fun component5 ()I
 	public final fun component6 ()I
 	public final fun component7 ()Lkotlin/jvm/functions/Function0;
-	public final fun component8 ()Lkotlin/jvm/functions/Function0;
-	public final fun copy (IIIIIILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/AnimatedBorder;
-	public static synthetic fun copy$default (Ldev/keliver/material/AnimatedBorder;IIIIIILkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/AnimatedBorder;
+	public final fun component8 ()I
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy (IIIIIILkotlin/jvm/functions/Function0;ILjava/util/List;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/AnimatedBorder;
+	public static synthetic fun copy$default (Ldev/keliver/material/AnimatedBorder;IIIIIILkotlin/jvm/functions/Function0;ILjava/util/List;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/AnimatedBorder;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBaseColorArgb ()I
 	public final fun getChildren ()Lkotlin/jvm/functions/Function0;
+	public final fun getColorsArgb ()Ljava/util/List;
 	public final fun getCometColorArgb ()I
 	public final fun getCornerRadiusDp ()I
 	public final fun getDurationMs ()I
+	public final fun getEffect ()I
 	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
 	public final fun getSegmentLenDp ()I
 	public final fun getStrokeWidthDp ()I

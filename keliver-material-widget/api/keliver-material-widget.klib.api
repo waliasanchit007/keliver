@@ -20,9 +20,11 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/AnimatedBorder :
         abstract fun <get-children>(): dev.keliver.widget/Widget.Children<#A> // dev.keliver.material.widget/AnimatedBorder.children.<get-children>|<get-children>(){}[0]
 
     abstract fun baseColorArgb(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.baseColorArgb|baseColorArgb(kotlin.Int){}[0]
+    abstract fun colorsArgb(kotlin.collections/List<kotlin/Int>) // dev.keliver.material.widget/AnimatedBorder.colorsArgb|colorsArgb(kotlin.collections.List<kotlin.Int>){}[0]
     abstract fun cometColorArgb(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.cometColorArgb|cometColorArgb(kotlin.Int){}[0]
     abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
     abstract fun durationMs(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.durationMs|durationMs(kotlin.Int){}[0]
+    abstract fun effect(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.effect|effect(kotlin.Int){}[0]
     abstract fun onClick(kotlin/Function0<kotlin/Unit>?) // dev.keliver.material.widget/AnimatedBorder.onClick|onClick(kotlin.Function0<kotlin.Unit>?){}[0]
     abstract fun segmentLenDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.segmentLenDp|segmentLenDp(kotlin.Int){}[0]
     abstract fun strokeWidthDp(kotlin/Int) // dev.keliver.material.widget/AnimatedBorder.strokeWidthDp|strokeWidthDp(kotlin.Int){}[0]

@@ -9,9 +9,11 @@ public abstract interface class dev/keliver/material/widget/AlertDialog : dev/ke
 
 public abstract interface class dev/keliver/material/widget/AnimatedBorder : dev/keliver/widget/Widget {
 	public abstract fun baseColorArgb (I)V
+	public abstract fun colorsArgb (Ljava/util/List;)V
 	public abstract fun cometColorArgb (I)V
 	public abstract fun cornerRadiusDp (I)V
 	public abstract fun durationMs (I)V
+	public abstract fun effect (I)V
 	public abstract fun getChildren ()Ldev/keliver/widget/Widget$Children;
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun segmentLenDp (I)V
