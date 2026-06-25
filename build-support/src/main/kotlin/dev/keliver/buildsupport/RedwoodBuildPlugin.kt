@@ -376,6 +376,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           androidTarget().publishLibraryVariants("release")
           iosTargets()
+          js().browser() // spike/keliver-web: Compose-for-Web (canvas) renderer target
           jvm()
         }
       }

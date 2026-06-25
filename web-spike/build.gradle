@@ -1,0 +1,32 @@
+// spike/keliver-web: a Compose-for-Web (JS canvas) app that renders keliver-material
+// widgets in a browser using the SAME renderer code as Android/iOS — proving
+// "one Kotlin codebase → web + Android + iOS". Not published; spike only.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+
+kotlin {
+  js {
+    browser {
+      commonWebpackConfig {
+        outputFileName = 'web-spike.js'
+      }
+    }
+    binaries.executable()
+  }
+  sourceSets {
+    jsMain {
+      dependencies {
+        implementation project(':keliver-composeui')          // RedwoodContent (standalone mount)
+        implementation project(':keliver-material-composeui')  // host renderers + widget system
+        implementation project(':keliver-material-compose')    // guest composables (StyledBox/RichText/...)
+        implementation project(':keliver-layout-compose')      // Column/Row/Spacer
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.ui
+        implementation libs.jetbrains.compose.material3
+        implementation libs.coil.compose                       // ImageLoader for the widget system
+      }
+    }
+  }
+}

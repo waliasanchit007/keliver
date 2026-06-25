@@ -168,6 +168,7 @@ include ':keliver-material-api'
 include ':keliver-material-compose'
 include ':keliver-material-composeui'
 include ':keliver-material-modifiers'
+include ':web-spike' // spike/keliver-web: Compose-for-Web host rendering keliver widgets in a browser
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'
