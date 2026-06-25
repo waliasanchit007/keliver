@@ -6,7 +6,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 
 kotlin {
-  js {
+  wasmJs {
     browser {
       commonWebpackConfig {
         outputFileName = 'web-spike.js'
@@ -15,7 +15,7 @@ kotlin {
     binaries.executable()
   }
   sourceSets {
-    jsMain {
+    wasmJsMain {
       dependencies {
         implementation project(':keliver-composeui')          // RedwoodContent (standalone mount)
         implementation project(':keliver-material-composeui')  // host renderers + widget system

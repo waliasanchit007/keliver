@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "keliver-web",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8091", "--directory", "/Users/sanchitwalia/AndroidStudioProjects/konduit/web-spike/build/dist/wasmJs/developmentExecutable"],
+      "port": 8091
+    }
+  ]
+}

@@ -17,6 +17,7 @@ kotlin {
         it.group("ios") {}
         it.withAndroidTarget()
         it.withJvm()
+        it.withWasmJs() // spike/keliver-web: Wasm uses the plain-Kotlin (non JS-interop) actuals
       }
     }
   }

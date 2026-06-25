@@ -29,26 +29,12 @@ private val RED = listOf(0xFFFF3E3E.toInt(), 0xFFFF2D4E.toInt(), 0xFFFF552B.toIn
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-  val w = kotlinx.browser.window.asDynamic()
-  w.__step = "start"
-  try {
-    val imageLoader = ImageLoader.Builder(PlatformContext.INSTANCE).build()
-    w.__step = "imageLoader"
-    val widgetSystem = ComposeUiKeliverMaterialWidgetSystem(imageLoader)
-    w.__step = "widgetSystem"
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
-      RedwoodContent(widgetSystem = widgetSystem) {
-        Column(width = Constraint.Fill) {
-          StyledText(text = "keliver renders on WEB", fontSize = 22, bold = true, colorArgb = BLACK)
-          Spacer(height = Dp(8.0))
-          StyledText(text = "same Kotlin widgets as Android + iOS", fontSize = 14, colorArgb = 0xFF8A8A8A.toInt())
-        }
-      }
+  val imageLoader = ImageLoader.Builder(PlatformContext.INSTANCE).build()
+  val widgetSystem = ComposeUiKeliverMaterialWidgetSystem(imageLoader)
+  CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+    RedwoodContent(widgetSystem = widgetSystem) {
+      MiniNudge()
     }
-    w.__step = "canvasWindow"
-  } catch (t: Throwable) {
-    w.__err = t.toString()
-    kotlinx.browser.document.title = "ERR"
   }
 }
 
