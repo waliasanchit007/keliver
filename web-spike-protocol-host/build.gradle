@@ -1,10 +1,11 @@
+import dev.keliver.buildsupport.WasmJs
 // spike/keliver-web: host-side protocol adapter for keliver-material, generated
 // for the web (Wasm) target. Produces the GeneratedHostProtocol that
 // HostProtocolAdapter applies onto the ComposeUi widget system.
 import static dev.keliver.buildsupport.TargetGroup.Common
 
 redwoodBuild {
-  targets(Common)
+  targets(Common + WasmJs.Browser)
 }
 
 apply plugin: 'dev.keliver.generator.protocol.host'

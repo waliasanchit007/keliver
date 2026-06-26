@@ -1,9 +1,10 @@
+import dev.keliver.buildsupport.WasmJs
 import static dev.keliver.buildsupport.TargetGroup.CommonWithAndroid
 
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 redwoodBuild {
-  targets(CommonWithAndroid)
+  targets(CommonWithAndroid + WasmJs.Browser)
 }
 
 kotlin {

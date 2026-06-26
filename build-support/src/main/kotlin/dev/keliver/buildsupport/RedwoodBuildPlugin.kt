@@ -91,11 +91,6 @@ private fun Project.keliverGroupId(): String =
 // keeps `-SNAPSHOT` for ongoing development after the 0.1.0 release.
 private const val KELIVER_VERSION = "0.2.1-SNAPSHOT"
 
-// spike/keliver-web: Treehouse data-service modules that can't target wasmJs
-// (they depend on Zipline/Ktor, which have no wasmJs variant) and aren't part
-// of the Compose-for-Web render chain.
-private val WASM_EXCLUDED = setOf("keliver-console", "keliver-storage", "keliver-http")
-
 private fun Project.keliverVersion(): String =
   providers.gradleProperty("keliverVersion").getOrElse(KELIVER_VERSION)
 
@@ -328,14 +323,10 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
   override fun targets(modifiedGroup: ModifiedTargetGroup) {
     when (modifiedGroup.group) {
       Common -> {
-        // spike/keliver-web: Compose-for-Web (Wasm) renderer chain. Skip the
-        // Treehouse data-service modules — they depend on Zipline/Ktor, which
-        // have no wasmJs variant and aren't part of the render path.
-        val wasm = project.name !in WASM_EXCLUDED
         project.applyKotlinMultiplatform {
           iosTargets()
           modifiedGroup[JsTests, NodeJs].applyTo(js())
-          if (wasm) wasmJs { browser() }
+          modifiedGroup[WasmJs]?.applyTo(this) // opt-in Compose-for-Web (Wasm)
           jvm()
         }
         // Needed for lint in downstream Android projects to analyze this dependency.
@@ -347,7 +338,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
           androidTarget().publishLibraryVariants("release")
           iosTargets()
           modifiedGroup[JsTests, NodeJs].applyTo(js())
-          wasmJs { browser() } // spike/keliver-web
+          modifiedGroup[WasmJs]?.applyTo(this) // opt-in Compose-for-Web (Wasm)
           jvm()
         }
       }
@@ -363,7 +354,7 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           iosTargets()
           js().browser()
-          wasmJs { browser() } // spike/keliver-web
+          modifiedGroup[WasmJs]?.applyTo(this) // opt-in Compose-for-Web (Wasm)
           jvm()
         }
         // Needed for lint in downstream Android projects to analyze this dependency.
@@ -388,8 +379,8 @@ private class RedwoodBuildExtensionImpl(private val project: Project) : RedwoodB
         project.applyKotlinMultiplatform {
           androidTarget().publishLibraryVariants("release")
           iosTargets()
-          js().browser()       // spike/keliver-web: Compose-for-Web (legacy js canvas)
-          wasmJs { browser() }  // spike/keliver-web: Compose-for-Web (Wasm canvas — skiko complete)
+          js().browser()       // Compose-for-Web (legacy js canvas)
+          modifiedGroup[WasmJs]?.applyTo(this) // opt-in Compose-for-Web (Wasm canvas — skiko)
           jvm()
         }
       }

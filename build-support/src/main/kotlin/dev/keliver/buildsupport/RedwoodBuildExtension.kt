@@ -17,6 +17,7 @@ package dev.keliver.buildsupport
 
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 
 interface RedwoodBuildExtension {
@@ -107,6 +108,28 @@ enum class JsTests : TargetModifier {
 
   override val key get() = Companion
   companion object : TargetModifier.Key<JsTests>
+}
+
+/**
+ * Opt a module into a Compose-for-Web (Wasm) target. Unlike [JsTests], which
+ * picks the sub-environment of an always-present `js()` target, `wasmJs` is an
+ * *additional* target that only the Compose-for-Web render chain wants — so it's
+ * applied per-module via `targets(group + WasmJs.Browser)` rather than enabled
+ * for a whole [TargetGroup]. This keeps the web target first-class without a
+ * shared-group denylist.
+ */
+enum class WasmJs : TargetModifier {
+  Browser,
+  ;
+
+  fun applyTo(kotlin: KotlinMultiplatformExtension) {
+    when (this) {
+      Browser -> kotlin.wasmJs { browser() }
+    }
+  }
+
+  override val key get() = Companion
+  companion object : TargetModifier.Key<WasmJs>
 }
 
 class ModifiedTargetGroup(
