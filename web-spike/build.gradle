@@ -17,16 +17,19 @@ kotlin {
   sourceSets {
     wasmJsMain {
       dependencies {
-        // GATE 3: a GENERIC host — only the protocol-host + ComposeUi renderers.
-        // NO guest-screen modules: the UI is fetched from screen.json at runtime.
+        // Host side: protocol-host + ComposeUi renderers (canvas).
         implementation project(':keliver-material-composeui')  // host renderers + widget system
         implementation project(':web-spike-protocol-host')     // KeliverMaterialHostProtocol
-        implementation project(':keliver-protocol')            // SnapshotChangeList (wire format)
-        implementation project(':keliver-protocol-guest')      // guestRedwoodVersion (constant only)
-        implementation project(':keliver-protocol-host')       // HostProtocolAdapter + UiChange
+        implementation project(':keliver-protocol')            // protocol Change / ChangesSink
+        implementation project(':keliver-protocol-host')       // HostProtocolAdapter + UiChange + UiEventSink
         implementation project(':keliver-widget-composeui')    // ComposeWidgetChildren (host root)
         implementation project(':keliver-leak-detector')       // LeakDetector.none()
-        implementation project(':keliver-runtime')
+        implementation project(':keliver-runtime')             // UiConfiguration, Dp
+        // GATE 5 (Phase B): the GUEST now runs IN THE BROWSER (browser-side / fat client).
+        implementation project(':keliver-protocol-guest')      // DefaultGuestProtocolAdapter + ProtocolRedwoodComposition
+        implementation project(':web-spike-protocol-guest')    // KeliverMaterialProtocolWidgetSystemFactory (guest)
+        implementation project(':keliver-material-compose')    // guest @Composable widgets (StyledBox/StyledText/Button…)
+        implementation project(':keliver-layout-compose')      // Column / Spacer guest composables
         implementation libs.kotlinx.serialization.json
         implementation libs.kotlinx.coroutines.core           // delay() in the hot-reload watch loop
         implementation libs.jetbrains.compose.runtime
