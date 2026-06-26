@@ -174,9 +174,11 @@ below it without dropping canvas. Read against the alternatives:
 **Recommendation:** for an *app-like* SDUI surface, canvas is the philosophy-aligned
 default (same widgets everywhere, no per-platform renderer). Choose DOM only if a
 hard product constraint — public-web SEO, sub-1 MB budget, or screen-reader-grade
-a11y — outweighs parity + effort. Strategic/product fork; left for the user.
-(Canvas mitigations: brotli, skiko caching/CDN, and the Kotlin/JS `js()` canvas as
-a lighter-but-still-canvas variant.)
+a11y — outweighs parity + effort.
+**DECIDED (2026-06-26): Canvas (skiko).** Aligns with the "author once, render
+identically everywhere, no per-platform renderer" thesis; the ~4 MB first-load is
+accepted (browser-cached; mitigate with brotli + skiko CDN caching). DOM binding
+is off the table unless a future product needs hard SEO/a11y.
 
 ---
 
