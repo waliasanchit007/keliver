@@ -1,0 +1,24 @@
+// spike/keliver-web GATE 3: the "guest build" — a plain JVM tool that composes
+// the guest screen and writes its serialized protocol (screen.json). This is
+// SEPARATE from the web host; regenerating it changes what the web renders with
+// no host rebuild.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'application'
+
+application {
+  mainClass = 'GuestCompilerKt'
+}
+
+dependencies {
+  implementation project(':web-spike-protocol-guest')  // KeliverMaterialProtocolWidgetSystemFactory
+  implementation project(':keliver-material-compose')   // guest composables
+  implementation project(':keliver-layout-compose')
+  implementation project(':keliver-testing')            // TestRedwoodComposition
+  implementation project(':keliver-protocol')           // SnapshotChangeList
+  implementation project(':keliver-protocol-guest')
+  implementation project(':keliver-runtime')
+  implementation libs.jetbrains.compose.runtime
+  implementation libs.kotlinx.serialization.json
+  implementation libs.kotlinx.coroutines.core
+}

@@ -17,22 +17,17 @@ kotlin {
   sourceSets {
     wasmJsMain {
       dependencies {
-        implementation project(':keliver-composeui')          // RedwoodContent (standalone mount)
+        // GATE 3: a GENERIC host — only the protocol-host + ComposeUi renderers.
+        // NO guest-screen modules: the UI is fetched from screen.json at runtime.
         implementation project(':keliver-material-composeui')  // host renderers + widget system
-        implementation project(':keliver-material-compose')    // guest composables (StyledBox/RichText/...)
-        implementation project(':keliver-layout-compose')      // Column/Row/Spacer
-        // Gate 2: protocol round-trip (guest emit -> serialize -> host apply -> render)
-        implementation project(':web-spike-protocol-guest')    // KeliverMaterialProtocolWidgetSystemFactory
         implementation project(':web-spike-protocol-host')     // KeliverMaterialHostProtocol
         implementation project(':keliver-protocol')            // SnapshotChangeList (wire format)
-        implementation project(':keliver-protocol-guest')      // DefaultGuestProtocolAdapter
-        implementation project(':keliver-protocol-host')       // HostProtocolAdapter
-        implementation project(':keliver-testing')             // TestRedwoodComposition.setContentAndSnapshot
+        implementation project(':keliver-protocol-guest')      // guestRedwoodVersion (constant only)
+        implementation project(':keliver-protocol-host')       // HostProtocolAdapter + UiChange
         implementation project(':keliver-widget-composeui')    // ComposeWidgetChildren (host root)
         implementation project(':keliver-leak-detector')       // LeakDetector.none()
-        implementation project(':keliver-runtime')             // guestRedwoodVersion
+        implementation project(':keliver-runtime')
         implementation libs.kotlinx.serialization.json
-        implementation libs.kotlinx.coroutines.core
         implementation libs.jetbrains.compose.runtime
         implementation libs.jetbrains.compose.foundation
         implementation libs.jetbrains.compose.ui
