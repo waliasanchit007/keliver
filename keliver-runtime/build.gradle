@@ -11,6 +11,16 @@ apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'dev.drewhamilton.poko'
 
 kotlin {
+  // Share the identical js/wasmJs actuals from a single webMain source set.
+  applyDefaultHierarchyTemplate {
+    it.group("common") {
+      it.group("web") {
+        it.withJs()
+        it.withWasmJs()
+      }
+    }
+  }
+
   sourceSets {
     commonMain {
       dependencies {
