@@ -1,0 +1,27 @@
+// spike/keliver-web: host-side protocol adapter for keliver-material, generated
+// for the web (Wasm) target. Produces the GeneratedHostProtocol that
+// HostProtocolAdapter applies onto the ComposeUi widget system.
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+redwoodBuild {
+  targets(Common)
+}
+
+apply plugin: 'dev.keliver.generator.protocol.host'
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.keliverMaterialWidget
+        api projects.keliverMaterialModifiers
+        implementation projects.keliverProtocolHost
+      }
+    }
+  }
+}
+
+redwoodSchema {
+  source = projects.keliverMaterialSchema
+  type = 'dev.keliver.material.KeliverMaterial'
+}
