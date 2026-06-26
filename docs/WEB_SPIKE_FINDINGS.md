@@ -143,9 +143,46 @@ transport, OTA, and hot-reload underneath all work today.
 
 ---
 
+## Bundle size — MEASURED (Phase B data, 2026-06-26)
+
+The production webpack build (`:web-spike:wasmJsBrowserDistribution`, minified +
+DCE + `wasm-opt`) of the generic host + full keliver-material render chain:
+
+| Asset | Raw | Gzipped |
+|---|---|---|
+| skiko wasm (Compose graphics engine) | 8.4 MB | **3.2 MB** |
+| app + compose-runtime wasm | 4.6 MB | **1.4 MB** |
+| JS glue (`web-spike.js`) | 0.56 MB | **0.10 MB** |
+| **Total shipped payload** | **12.9 MB** | **≈4.4 MB** |
+
+(`wasm-opt` ~halved the raw size vs the dev build's ~30 MB. Source maps + LICENSE
+are not user-shipped; `composeResources` was empty for this minimal screen — real
+screens add fonts. Brotli, which CDNs use, typically lands ~3.7–4.0 MB.)
+
+**The number that drives the canvas-vs-DOM call:** ~4 MB gzipped first-load,
+**browser-cached** thereafter (wasm is cached; subsequent visits ≈ free). skiko
+alone is 3.2 MB gzipped — the fixed floor of the canvas approach; you can't shrink
+below it without dropping canvas. Read against the alternatives:
+
+- **Canvas (today):** ~4 MB gzipped, **pixel-identical to Android/iOS**, renderers
+  **already shared** (zero extra renderer code — this IS the "author once" thesis).
+  Cost: heavy first load; canvas text isn't real DOM (SEO/accessibility need work).
+- **HTML/DOM binding:** likely <1 MB, SEO-friendly, but ≈ **re-implementing ~60
+  widget renderers** in HTML/CSS and **losing pixel parity** with mobile — i.e.
+  re-introducing a platform-specific renderer, the very thing keliver avoids.
+
+**Recommendation:** for an *app-like* SDUI surface, canvas is the philosophy-aligned
+default (same widgets everywhere, no per-platform renderer). Choose DOM only if a
+hard product constraint — public-web SEO, sub-1 MB budget, or screen-reader-grade
+a11y — outweighs parity + effort. Strategic/product fork; left for the user.
+(Canvas mitigations: brotli, skiko caching/CDN, and the Kotlin/JS `js()` canvas as
+a lighter-but-still-canvas variant.)
+
+---
+
 ## Recommended production roadmap
 
-**Phase A — make the web target first-class (no spike hacks).**
+**Phase A — make the web target first-class (no spike hacks). DONE 2026-06-26.**
 1. Replace the broad group edits with a `WasmJs` opt-in target modifier; apply it
    to the render-chain modules. Delete `WASM_EXCLUDED`.
 2. Move the duplicated `wasmJs` actuals into shared `webMain` source sets (js +
