@@ -49,6 +49,17 @@ jobs:
           -x allTests
           -DRELEASE_SIGNING_ENABLED=false
 
+      # Guard the Compose-for-Web (Wasm) render target so it never silently
+      # breaks. publishToMavenLocal above already compiles each library's
+      # wasmJs klib; this compiles the generic web host (web-spike), which
+      # transitively links the whole render chain to wasm — the part not
+      # covered by publishing. See docs/WEB_SPIKE_FINDINGS.md.
+      - name: Compile Compose-for-Web (Wasm) host
+        run: >
+          ./gradlew
+          :web-spike:compileKotlinWasmJs
+          -DRELEASE_SIGNING_ENABLED=false
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.
