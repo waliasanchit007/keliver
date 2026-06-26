@@ -28,10 +28,10 @@ import java.io.File
 private const val OUT = "/Users/sanchitwalia/AndroidStudioProjects/konduit/web-spike/build/dist/wasmJs/developmentExecutable/screen.json"
 
 private const val BLACK = 0xFF111111.toInt()
-private const val BORDER = 0xFFC7E0FF.toInt()
-private val CARD = listOf(0xFFEAF2FF.toInt(), 0xFFDDE9FF.toInt(), 0xFFFFFFFF.toInt())
+private const val BORDER = 0xFFFFD9B0.toInt()
+private val CARD = listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt(), 0xFFFFFFFF.toInt())
 private val CARD_STOPS = listOf(0.0f, 0.55f, 1.0f)
-private val RED = listOf(0xFF12B76A.toInt(), 0xFF0E8C52.toInt())
+private val RED = listOf(0xFFFF8A00.toInt(), 0xFFFF5A00.toInt())
 
 fun main() {
   val guestAdapter = DefaultGuestProtocolAdapter(
@@ -59,20 +59,20 @@ private fun MiniNudge() {
     fillWidth = true, paddingDp = 20,
   ) {
     Column(width = Constraint.Fill, horizontalAlignment = CrossAxisAlignment.Stretch) {
-      StyledText(text = "EDITED GUEST · regenerated screen.json · same host binary", fontSize = 12, bold = true, colorArgb = 0xFF8A8A8A.toInt())
+      StyledText(text = "LIVE HOT-RELOAD · no manual refresh · same host binary", fontSize = 12, bold = true, colorArgb = 0xFF8A8A8A.toInt())
       Spacer(height = Dp(12.0))
       RichText(
         spans = listOf(
-          TextSpan(text = "Switch to ", bold = true, colorArgb = BLACK),
-          TextSpan(text = "UPI Lite", bold = true, gradientColorsArgb = RED),
-          TextSpan(text = " — pay in a tap", bold = true, colorArgb = BLACK),
+          TextSpan(text = "Get ", bold = true, colorArgb = BLACK),
+          TextSpan(text = "5% cashback", bold = true, gradientColorsArgb = RED),
+          TextSpan(text = " on every payment", bold = true, colorArgb = BLACK),
         ),
         fontSize = 20,
       )
       Spacer(height = Dp(20.0))
-      AnimatedBorder(effect = 2 /* pulse */, cornerRadiusDp = 10, strokeWidthDp = 2, cometColorArgb = 0xFF12B76A.toInt()) {
+      AnimatedBorder(effect = 4 /* glow */, cornerRadiusDp = 10, strokeWidthDp = 2, cometColorArgb = 0xFFFF6A00.toInt()) {
         StyledBox(fillWidth = true, heightDp = 48, contentAlignment = 4) {
-          StyledText(text = "Enable UPI Lite", fontSize = 14, bold = true, colorArgb = BLACK)
+          StyledText(text = "Claim cashback", fontSize = 14, bold = true, colorArgb = BLACK)
         }
       }
     }

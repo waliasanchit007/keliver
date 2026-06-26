@@ -28,6 +28,7 @@ kotlin {
         implementation project(':keliver-leak-detector')       // LeakDetector.none()
         implementation project(':keliver-runtime')
         implementation libs.kotlinx.serialization.json
+        implementation libs.kotlinx.coroutines.core           // delay() in the hot-reload watch loop
         implementation libs.jetbrains.compose.runtime
         implementation libs.jetbrains.compose.foundation
         implementation libs.jetbrains.compose.ui
