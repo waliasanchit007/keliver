@@ -1,21 +1,20 @@
 /*
- * spike/keliver-web GATE 5 (Phase B) — BROWSER-SIDE GUEST + EVENT REVERSE-CHANNEL.
+ * spike/keliver-web PORTAL sub-project A — the runtime engine.
  *
- * The keliver guest now runs LIVE IN THE BROWSER (wasm), exactly like it runs
- * on-device on Android/iOS — no JVM tool, no screen.json, no network round-trip.
+ * The browser-side guest (gate 5) is now driven by a DATA TREE instead of a
+ * hardcoded screen: the guest composition is `RenderNode(treeState.value)`, and
+ * editing the tree (here, a host "Add item" button) recomposes the guest, which
+ * emits the minimal protocol changes to the host canvas — instant, no recompile.
+ * This is the portal's engine: edit a WidgetNode tree -> live preview.
  *
- *   guest composition (in-browser) --in-memory protocol Changes--> host renderer (canvas)
- *   tap on a widget --UiEvent.toProtocol()--> guest --recompose--> new Changes --> host
- *
- * This is the "fat client" / mobile-parity interactivity model: author Kotlin
- * once, it composes and handles events client-side everywhere. WebSocket (future)
- * is then only for DEV code-push, not for runtime interaction.
+ *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
+ *   edit the tree --recompose--> minimal changes --> live preview update
  */
 import androidx.compose.foundation.layout.Column as RawColumn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button as RawButton
 import androidx.compose.material3.Text as RawText
 import androidx.compose.runtime.BroadcastFrameClock
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,15 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.CanvasBasedWindow
 import coil3.ImageLoader
 import coil3.PlatformContext
-import dev.keliver.layout.api.Constraint
-import dev.keliver.layout.api.CrossAxisAlignment
-import dev.keliver.layout.compose.Column
-import dev.keliver.layout.compose.Spacer
 import dev.keliver.leaks.LeakDetector
-import dev.keliver.material.compose.AsyncImage
-import dev.keliver.material.compose.Button
-import dev.keliver.material.compose.StyledBox
-import dev.keliver.material.compose.StyledText
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
@@ -51,7 +42,6 @@ import dev.keliver.protocol.host.ProtocolMismatchHandler
 import dev.keliver.protocol.host.UiChange
 import dev.keliver.protocol.host.UiEventSink
 import dev.keliver.ui.Cancellable
-import dev.keliver.ui.Dp
 import dev.keliver.ui.OnBackPressedCallback
 import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
@@ -80,7 +70,8 @@ fun main() {
       )
     }
     val root = remember { ComposeWidgetChildren() }
-    var taps by remember { mutableStateOf(0) }
+    var items by remember { mutableStateOf(1) }
+    val treeState = remember { mutableStateOf(buildTree(1)) }
 
     // Stand up the fat client: a guest composition + a host renderer, talking via
     // the in-memory protocol. Runs once; stays live for the page's lifetime.
@@ -99,10 +90,7 @@ fun main() {
         container = root,
         protocol = hostProtocol,
         widgetSystem = widgetSystem,
-        eventSink = UiEventSink { uiEvent ->
-          taps++
-          guestAdapter.sendEvent(uiEvent.toProtocol())
-        },
+        eventSink = UiEventSink { uiEvent -> guestAdapter.sendEvent(uiEvent.toProtocol()) },
         leakDetector = LeakDetector.none(),
       )
 
@@ -128,7 +116,7 @@ fun main() {
         saveableStateRegistry = null,
         uiConfigurations = MutableStateFlow(UiConfiguration()),
       )
-      composition.setContent { GuestUi() }
+      composition.setContent { RenderNode(treeState.value) }
       guestAdapter.emitChanges() // initial render
 
       while (true) {
@@ -138,40 +126,38 @@ fun main() {
     }
 
     RawColumn(modifier = Modifier.padding(8.dp)) {
-      RawText("browser-side keliver guest · taps recompose locally, no network · host events=$taps", fontSize = 11.sp)
+      RawText("portal engine · preview is rendered from an in-memory WidgetNode tree · items=$items", fontSize = 11.sp)
+      RawButton(onClick = { items += 1; treeState.value = buildTree(items) }) { RawText("Add item to preview") }
       root.Render()
     }
   }
 }
 
-/**
- * The GUEST UI — ordinary keliver-material @Composables with real Compose state.
- * Tapping the button mutates `count`; the guest recomposes IN THE BROWSER and the
- * host re-renders the new number. Same code that would run on Android/iOS.
- */
-@Composable
-private fun GuestUi() {
-  var count by remember { mutableStateOf(0) }
-  StyledBox(
-    gradientColorsArgb = listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt()),
-    gradientStops = listOf(0.0f, 1.0f),
-    gradientDirection = 3,
-    borderColorArgb = 0xFFFFD9B0.toInt(),
-    borderWidthDp = 1,
-    cornerRadiusDp = 12,
-    fillWidth = true,
-    paddingDp = 20,
-  ) {
-    Column(width = Constraint.Fill, horizontalAlignment = CrossAxisAlignment.Stretch) {
-      StyledText(text = "LIVE · guest runs in the browser", fontSize = 12, bold = true, colorArgb = 0xFF8A8A8A.toInt())
-      Spacer(height = Dp(12.0))
-      StyledText(text = "Tapped $count times", fontSize = 26, bold = true, colorArgb = 0xFF111111.toInt())
-      Spacer(height = Dp(16.0))
-      Button(text = "Tap me  (+1)", onClick = { count++ })
-      Spacer(height = Dp(16.0))
-      StyledText(text = "AsyncImage (network, fetched in-browser):", fontSize = 12, bold = true, colorArgb = 0xFF8A8A8A.toInt())
-      Spacer(height = Dp(8.0))
-      AsyncImage(url = "https://picsum.photos/seed/keliver/96/96")
-    }
-  }
-}
+/** Sample portal tree: a card whose item count is data-driven. */
+private fun buildTree(items: Int): WidgetNode = WidgetNode(
+  type = "StyledBox",
+  props = mapOf(
+    "gradientColorsArgb" to listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt()),
+    "gradientStops" to listOf(0.0f, 1.0f),
+    "gradientDirection" to 3,
+    "borderColorArgb" to 0xFFFFD9B0.toInt(),
+    "borderWidthDp" to 1,
+    "cornerRadiusDp" to 12,
+    "fillWidth" to true,
+    "paddingDp" to 20,
+  ),
+  children = listOf(
+    WidgetNode(
+      type = "Column",
+      children = buildList {
+        add(WidgetNode("StyledText", mapOf("text" to "PORTAL PREVIEW · rendered from a tree", "fontSize" to 12, "bold" to true, "colorArgb" to 0xFF8A8A8A.toInt())))
+        add(WidgetNode("Spacer", mapOf("height" to 10.0)))
+        add(WidgetNode("StyledText", mapOf("text" to "items: $items", "fontSize" to 24, "bold" to true, "colorArgb" to 0xFF111111.toInt())))
+        add(WidgetNode("Spacer", mapOf("height" to 8.0)))
+        repeat(items) { i ->
+          add(WidgetNode("StyledText", mapOf("text" to "• item ${i + 1}", "fontSize" to 16, "colorArgb" to 0xFF333333.toInt())))
+        }
+      },
+    ),
+  ),
+)
