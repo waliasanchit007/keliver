@@ -37,6 +37,8 @@ kotlin {
         implementation libs.jetbrains.compose.ui
         implementation libs.jetbrains.compose.material3
         implementation libs.coil.compose                       // ImageLoader for the widget system
+        implementation libs.okio                               // Buffer/ImageSource for the network fetcher
+        implementation libs.kotlinx.browser                    // window.fetch + typed arrays (browser-fetch Coil fetcher)
       }
     }
   }

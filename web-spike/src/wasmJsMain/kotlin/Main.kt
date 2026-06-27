@@ -34,6 +34,7 @@ import dev.keliver.layout.api.CrossAxisAlignment
 import dev.keliver.layout.compose.Column
 import dev.keliver.layout.compose.Spacer
 import dev.keliver.leaks.LeakDetector
+import dev.keliver.material.compose.AsyncImage
 import dev.keliver.material.compose.Button
 import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.StyledText
@@ -70,7 +71,14 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
   CanvasBasedWindow(canvasElementId = "ComposeTarget") {
-    val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(ImageLoader.Builder(PlatformContext.INSTANCE).build()) }
+    val widgetSystem = remember {
+      ComposeUiKeliverMaterialWidgetSystem(
+        ImageLoader.Builder(PlatformContext.INSTANCE)
+          // wasm has no built-in Coil network stack — register the browser-fetch one.
+          .components { add(BrowserFetchFetcher.Factory()) }
+          .build(),
+      )
+    }
     val root = remember { ComposeWidgetChildren() }
     var taps by remember { mutableStateOf(0) }
 
@@ -160,6 +168,10 @@ private fun GuestUi() {
       StyledText(text = "Tapped $count times", fontSize = 26, bold = true, colorArgb = 0xFF111111.toInt())
       Spacer(height = Dp(16.0))
       Button(text = "Tap me  (+1)", onClick = { count++ })
+      Spacer(height = Dp(16.0))
+      StyledText(text = "AsyncImage (network, fetched in-browser):", fontSize = 12, bold = true, colorArgb = 0xFF8A8A8A.toInt())
+      Spacer(height = Dp(8.0))
+      AsyncImage(url = "https://picsum.photos/seed/keliver/96/96")
     }
   }
 }
