@@ -97,6 +97,23 @@ regenerated `screen.json`, and the open page repainted in ~1 s — same URL, no
 refresh, no rebuild (`updates=1` → `updates=2`). This is the mobile
 `serveDevelopmentZipline` loop, on the web.
 
+### Gate 5 — browser-side guest + event reverse-channel (Phase B)
+
+The guest now runs **live in the browser** (wasm), like it runs on-device on
+mobile — no JVM tool, no `screen.json`, no network. A `ProtocolRedwoodComposition`
+(guest) streams in-memory `Change`s straight into the host renderer; the host's
+`UiEventSink` routes a tap back via the one-liner reverse channel
+`UiEventSink { e -> guestAdapter.sendEvent(e.toProtocol()) }`. Guest frames are
+driven from the host's `withFrameNanos`, so recomposition + animation stay in sync.
+
+**Runtime-verified in Chrome (2026-06-26):** a guest Button with a `remember`ed
+counter. Clicking it drove the guest counter and the host-side event counter in
+lockstep **0 → 1 → 2 → 3 → 4** (`host events=N` and "Tapped N times" both tick) —
+proving the full round-trip: host canvas click → `UiEvent` → guest `sendEvent` →
+guest recomposes locally → new `Change`s → host re-renders, all client-side. This
+is the fat-client / mobile-parity interactivity model on the web. (Decision:
+**browser-side guest**; WebSocket is reserved for dev code-push, not runtime.)
+
 ---
 
 ## The architecture that emerged
@@ -196,6 +213,7 @@ is off the table unless a future product needs hard SEO/a11y.
 4. Production webpack build; measure gzipped size; make the canvas-vs-DOM call.
 5. WebSocket push (reuse the dev-server/hot-reload channel); async fetch.
 6. Wire the event reverse-channel; verify a tappable screen end to end on web.
+   **DONE 2026-06-26 (gate 5):** browser-side guest, taps verified end-to-end.
 7. Verify `AsyncImage` on Wasm.
 
 **Phase C — safety + delivery.**
