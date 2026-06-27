@@ -60,53 +60,62 @@ transport in M1**. The WebSocket push appears only in M2 (remote devices).
 
 ### Tree model
 
-One generic node type (no per-widget classes):
+One generic node type, keyed by friendly **type name** (not protocol tags):
 
 ```kotlin
 class WidgetNode(
-  val tag: Int,                                 // keliver widget tag (schema)
-  val properties: Map<Int, JsonElement>,        // propertyTag -> encoded value
-  val modifiers: List<ModifierElement>,         // protocol ModifierElement list
-  val children: Map<Int, List<WidgetNode>>,     // childrenTag -> child nodes
+  val type: String,                    // "StyledBox", "Button", "Column", ...
+  val props: Map<String, Any?>,        // property name -> value (Int/String/List/…)
+  val children: List<WidgetNode> = emptyList(),
 )
 ```
 
-It is generic over the schema because it speaks in tags + encoded values, exactly
-like the protocol. The same node carries enough to drive **both** backends.
+In-memory `Any?` values are enough for M1 (portal + preview are one app, no
+serialization). Serializable `JsonElement` values come in M2 when the tree is
+pushed to remote devices.
 
-### Render backend — protocol translator (chosen over a Compose interpreter)
+### Render backend — `@Composable` interpreter (chosen over a raw protocol translator)
 
-`render(tree)` walks the tree and emits protocol changes to the host, the same
-pipeline the guest used in gates 2/5 — only sourced from a tree:
+The engine is a guest `@Composable` that maps each node to the real keliver
+composable, run as the **gate-5 browser-side guest composition** — the body just
+becomes `RenderNode(tree)` instead of `MiniNudge()`, driven by a tree
+`MutableState`:
 
+```kotlin
+@Composable fun RenderNode(node: WidgetNode) {
+  when (node.type) {
+    "StyledBox"  -> StyledBox(borderColorArgb = node.int("borderColorArgb"), …) { node.children.forEach { RenderNode(it) } }
+    "Column"     -> Column(width = Constraint.Fill, …) { node.children.forEach { RenderNode(it) } }
+    "StyledText" -> StyledText(text = node.str("text"), …)
+    "Button"     -> Button(text = node.str("text"), onClick = { /* M1: noop */ })
+    "AsyncImage" -> AsyncImage(url = node.str("url"))
+    "Spacer"     -> Spacer(height = Dp(node.dbl("height")))
+    "Row"        -> Row(…) { node.children.forEach { RenderNode(it) } }
+  }
+}
 ```
-for each node (depth-first, assigning fresh Ids):
-  Create(id, WidgetTag(node.tag))
-  node.properties.forEach { (propTag, value) -> PropertyChange(id, widgetTag, PropertyTag(propTag), value) }
-  if (node.modifiers.isNotEmpty()) ModifierChange(id, node.modifiers)
-  node.children.forEach { (childrenTag, kids) -> kids.forEachIndexed { i, kid -> ChildrenChange.Add(id, ChildrenTag(childrenTag), kid.id, i) } }
-→ changes.map { UiChange.fromProtocol(hostProtocol, it) } → hostAdapter.sendChanges(...)
-```
 
-On a tree edit (MVP): **rebuild** — fresh `ComposeWidgetChildren` root + re-emit the
-whole tree (like gate 4 rebuilt on change). Minimal-diff is a later optimization.
+A tree edit = mutate the tree `MutableState` → the guest recomposes → Compose emits
+the **minimal** protocol changes → host updates. No tags, no manual diff.
 
-**Why translator, not a `@Composable` interpreter:** the protocol layer is already
-tag-based, so the translator is generic over all ~60 widgets with **zero
-per-widget code**; it reuses exactly what we proved; and it makes "render" and
-"export" two clean backends over one tree. A Compose interpreter would need a
-generated tag→composable dispatcher and generic typed-property plumbing — more
-code and fidelity risk, no upside for a preview.
+**Why interpreter, not a raw protocol translator:** the merged widget system
+namespaces dependency-schema tags (e.g. `Column` is `keliver-layout`, offset inside
+`KeliverMaterial`), so a tag-level translator means hand-writing offset tags —
+error-prone. The interpreter calls real composables **by name**: correct by
+construction, no tag math, reuses the proven gate-5 guest, and Compose diffs for
+free. The per-widget `when()` is ~7 cases for the MVP subset and is **codegen-able
+from the schema** when we scale — the *same* per-widget mapping also drives
+Export-to-Kotlin (sub-project B), so it is written once conceptually.
 
-### Widget catalog (MVP: curated, hand-written)
+### Widget subset (MVP: curated)
 
-A small catalog describing the subset we've already exercised — **StyledBox,
-Column, Row, StyledText, Button, AsyncImage, Spacer** — giving for each: widget
-name, widget tag, and its properties (name, tag, value encoder). Sources of truth
-are the `@Widget(n)` / `@Property(n)` tags in `keliver-material-schema`
-(`KeliverMaterial.kt`). This catalog is what lets a tree be built and (later)
-exported by friendly names. **Deferred:** generating the catalog from the schema
-(so all widgets appear automatically).
+The interpreter covers the subset we've already exercised — **StyledBox, Column,
+Row, StyledText, Button, AsyncImage, Spacer**. For engine A the per-widget
+knowledge lives entirely in `RenderNode`'s `when()` (and the typed prop getters);
+no tag table is needed. A separate *metadata* catalog (each widget's editable
+properties + types, for the portal's property panels) is a **sub-project C**
+concern, and generating it — and the `when()` — from the schema is **deferred**
+until the hand-written subset proves the shape.
 
 ### Verification (browser harness)
 
