@@ -30,6 +30,7 @@ kotlin {
         implementation project(':web-spike-protocol-guest')    // KeliverMaterialProtocolWidgetSystemFactory (guest)
         implementation project(':keliver-material-compose')    // guest @Composable widgets (StyledBox/StyledText/Button…)
         implementation project(':keliver-layout-compose')      // Column / Spacer guest composables
+        implementation project(':portal-core')                 // WidgetNode model + sampleTree
         implementation libs.kotlinx.serialization.json
         implementation libs.kotlinx.coroutines.core           // delay() in the hot-reload watch loop
         implementation libs.jetbrains.compose.runtime

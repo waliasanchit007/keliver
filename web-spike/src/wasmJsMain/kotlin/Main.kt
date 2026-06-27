@@ -32,6 +32,7 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.sampleTree
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
@@ -72,7 +73,7 @@ fun main() {
     }
     val root = remember { ComposeWidgetChildren() }
     var items by remember { mutableStateOf(1) }
-    val treeState = remember { mutableStateOf(buildTree(1)) }
+    val treeState = remember { mutableStateOf(sampleTree(1)) }
 
     // Stand up the fat client: a guest composition + a host renderer, talking via
     // the in-memory protocol. Runs once; stays live for the page's lifetime.
@@ -133,43 +134,14 @@ fun main() {
       while (true) {
         delay(1200)
         items = items % 6 + 1
-        treeState.value = buildTree(items)
+        treeState.value = sampleTree(items)
       }
     }
 
     RawColumn(modifier = Modifier.padding(8.dp)) {
       RawText("portal engine · preview rendered from a WidgetNode tree, auto-edited every 1.2s · items=$items", fontSize = 11.sp)
-      RawButton(onClick = { items += 1; treeState.value = buildTree(items) }) { RawText("Add item to preview") }
+      RawButton(onClick = { items += 1; treeState.value = sampleTree(items) }) { RawText("Add item to preview") }
       root.Render()
     }
   }
 }
-
-/** Sample portal tree: a card whose item count is data-driven. */
-private fun buildTree(items: Int): WidgetNode = WidgetNode(
-  type = "StyledBox",
-  props = mapOf(
-    "gradientColorsArgb" to listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt()),
-    "gradientStops" to listOf(0.0f, 1.0f),
-    "gradientDirection" to 3,
-    "borderColorArgb" to 0xFFFFD9B0.toInt(),
-    "borderWidthDp" to 1,
-    "cornerRadiusDp" to 12,
-    "fillWidth" to true,
-    "paddingDp" to 20,
-  ),
-  children = listOf(
-    WidgetNode(
-      type = "Column",
-      children = buildList {
-        add(WidgetNode("StyledText", mapOf("text" to "PORTAL PREVIEW · rendered from a tree", "fontSize" to 12, "bold" to true, "colorArgb" to 0xFF8A8A8A.toInt())))
-        add(WidgetNode("Spacer", mapOf("height" to 10.0)))
-        add(WidgetNode("StyledText", mapOf("text" to "items: $items", "fontSize" to 24, "bold" to true, "colorArgb" to 0xFF111111.toInt())))
-        add(WidgetNode("Spacer", mapOf("height" to 8.0)))
-        repeat(items) { i ->
-          add(WidgetNode("StyledText", mapOf("text" to "• item ${i + 1}", "fontSize" to 16, "colorArgb" to 0xFF333333.toInt())))
-        }
-      },
-    ),
-  ),
-)

@@ -7,6 +7,13 @@
  * the schema later, and the same mapping drives Export-to-Kotlin (sub-project B).
  */
 import androidx.compose.runtime.Composable
+import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.bool
+import dev.keliver.portal.dbl
+import dev.keliver.portal.floatList
+import dev.keliver.portal.int
+import dev.keliver.portal.intList
+import dev.keliver.portal.str
 import dev.keliver.layout.api.Constraint
 import dev.keliver.layout.api.CrossAxisAlignment
 import dev.keliver.layout.compose.Column
