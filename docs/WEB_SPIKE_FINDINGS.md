@@ -114,6 +114,22 @@ guest recomposes locally → new `Change`s → host re-renders, all client-side.
 is the fat-client / mobile-parity interactivity model on the web. (Decision:
 **browser-side guest**; WebSocket is reserved for dev code-push, not runtime.)
 
+### Gate 6 — network images (`AsyncImage`) on wasm (Phase B)
+
+Coil 3 ships only **Ktor- and OkHttp-based** network fetchers, and neither has a
+usable wasm variant (the same Ktor-no-wasm reason `keliver-http` is wasm-excluded).
+So the host `ImageLoader` had no way to load `http(s)` images on wasm. Fix: a
+`BrowserFetchFetcher` — a small Coil `Fetcher` that loads bytes with the
+**browser's native `fetch()`** (via `kotlinx-browser`) and hands them to Coil's
+**skiko decoder** (already in the bundle). Registered with
+`ImageLoader.Builder(...).components { add(BrowserFetchFetcher.Factory()) }`.
+
+**Runtime-verified in Chrome (2026-06-26):** a guest `AsyncImage(url = picsum…)`
+fetched (HTTP 200, redirect followed, **CORS handled natively by the browser**),
+decoded on wasm, and rendered. This is the right wasm-native networking path — no
+Ktor, no extra engine — and it means web screens can do their own image loading
+(and, by the same pattern, any http) using the browser stack.
+
 ---
 
 ## The architecture that emerged
@@ -214,7 +230,8 @@ is off the table unless a future product needs hard SEO/a11y.
 5. WebSocket push (reuse the dev-server/hot-reload channel); async fetch.
 6. Wire the event reverse-channel; verify a tappable screen end to end on web.
    **DONE 2026-06-26 (gate 5):** browser-side guest, taps verified end-to-end.
-7. Verify `AsyncImage` on Wasm.
+7. Verify `AsyncImage` on Wasm. **DONE 2026-06-26 (gate 6):** browser-fetch Coil
+   fetcher + skiko decoder; network image verified in Chrome.
 
 **Phase C — safety + delivery.**
 8. Served-UI versioning, validation, rollback, staged rollout.
