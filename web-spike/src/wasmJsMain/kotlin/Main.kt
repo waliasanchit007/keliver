@@ -47,6 +47,7 @@ import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
 import dev.keliver.widget.compose.ComposeWidgetChildren
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 
@@ -125,8 +126,19 @@ fun main() {
       }
     }
 
+    // Auto-driver (verification): edit the tree on a timer so that repeated
+    // tree-edits -> live preview updates are provable deterministically, and the
+    // full-rebuild render path is stress-tested over many cycles.
+    LaunchedEffect(Unit) {
+      while (true) {
+        delay(1200)
+        items = items % 6 + 1
+        treeState.value = buildTree(items)
+      }
+    }
+
     RawColumn(modifier = Modifier.padding(8.dp)) {
-      RawText("portal engine · preview is rendered from an in-memory WidgetNode tree · items=$items", fontSize = 11.sp)
+      RawText("portal engine · preview rendered from a WidgetNode tree, auto-edited every 1.2s · items=$items", fontSize = 11.sp)
       RawButton(onClick = { items += 1; treeState.value = buildTree(items) }) { RawText("Add item to preview") }
       root.Render()
     }
