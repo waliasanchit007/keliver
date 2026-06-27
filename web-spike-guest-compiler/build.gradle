@@ -11,14 +11,9 @@ application {
 }
 
 dependencies {
-  implementation project(':web-spike-protocol-guest')  // KeliverMaterialProtocolWidgetSystemFactory
-  implementation project(':keliver-material-compose')   // guest composables
+  implementation project(':portal-core')               // WidgetNode + exportKotlin + sampleTree
+  implementation project(':keliver-material-compose')  // composables the generated code calls
   implementation project(':keliver-layout-compose')
-  implementation project(':keliver-testing')            // TestRedwoodComposition
-  implementation project(':keliver-protocol')           // SnapshotChangeList
-  implementation project(':keliver-protocol-guest')
-  implementation project(':keliver-runtime')
-  implementation libs.jetbrains.compose.runtime
-  implementation libs.kotlinx.serialization.json
-  implementation libs.kotlinx.coroutines.core
+  implementation project(':keliver-runtime')           // Dp
+  implementation libs.jetbrains.compose.runtime        // @Composable
 }
