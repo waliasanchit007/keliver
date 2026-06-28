@@ -1,0 +1,8 @@
+// spike/keliver-web portal M2 — the tree relay. A tiny JVM HTTP server (JDK only,
+// no deps): the browser portal POSTs the current tree; the device polls GET.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'application'
+
+application {
+  mainClass = 'RelayKt'
+}

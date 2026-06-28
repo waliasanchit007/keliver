@@ -173,6 +173,7 @@ include ':web-spike-protocol-guest' // spike/keliver-web
 include ':web-spike-protocol-host' // spike/keliver-web
 include ':web-spike-guest-compiler' // spike/keliver-web gate3
 include ':portal-core' // spike/keliver-web portal: WidgetNode model + Kotlin codegen
+include ':portal-relay' // spike/keliver-web portal M2: tree relay (POST/GET /tree)
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'
