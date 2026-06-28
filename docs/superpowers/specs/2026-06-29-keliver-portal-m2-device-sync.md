@@ -85,5 +85,42 @@ hosting of the relay.
 ## Done when
 
 Editing a property in the browser portal updates a running Android emulator's native
-Compose screen within a poll interval — no app rebuild — with the same `WidgetNode`
-tree + `RenderNode` interpreter the web preview uses.
+Compose screen within a poll interval — no app rebuild.
+
+---
+
+## UPDATE 2026-06-29 — device-render findings + corrected plan
+
+**Status:** web+relay half DONE+verified (L1 serialization, L3 relay, portal→relay
+push). Device half corrected after exploring ServerDrivenUI.
+
+**Hard findings (change the device approach):**
+- **No app renders keliver-material natively.** ServerDrivenUI's guest uses its OWN
+  schema `com.example.serverdrivenui.schema.compose.*` (Box/Text/Button/Column/
+  AsyncImage…) on keliver **0.1.0**; konduit/sample also uses its own schema. So
+  `RenderNode` (keliver-material composables) can't run in SDUI's guest — **L2's
+  "publish RenderNode for the device" is moot.**
+- **A guest can't do HTTP directly** (QuickJS) — it must call a host-bound
+  `ZiplineService` (RPC) that does the OkHttp GET on Android.
+- keliver-material-compose has no `android` target → Android *requires* the
+  Zipline-JS-guest path (can't run the guest in-process like web did).
+
+**Corrected device approach (lossy map into SDUI's schema, reuse SDUI's pipeline):**
+1. `shared/.../Protocol.kt`: `interface HostTreeProvider : ZiplineService { fun getTreeJson(): String }`.
+2. `composeApp`/`androidApp` host impl: OkHttp `GET http://10.0.2.2:8077/tree` → return the body.
+3. `androidApp/.../MainActivity.kt` `Spec.bindServices`: `zipline.bind<HostTreeProvider>("tree", impl)`.
+4. `presenter` guest: copy `WidgetNode` + the type-tagged `deserializeTree` (pure Kotlin) in; add a
+   `DynamicTreeScreen` that polls `getTreeJson()` (`while(isActive){ … ; delay(1000) }`) → `deserializeTree` →
+   a NEW `when(node.type)` mapping to SDUI schema composables (`"StyledText"`→`Text(text=str("text"))`,
+   `"Column"`→`Column{children}`, `"StyledBox"`→`Box{children}`, `"Button"`→`Button(text=…)`,
+   `"AsyncImage"`→`AsyncImage(url=…)`, `"Spacer"`→`Box`/spacer). **Lossy** — keeps text/structure, drops
+   keliver-material styling (different schema). Confirm each SDUI composable's signature in
+   `schema/.../Schema.kt` before mapping.
+5. Route to `DynamicTreeScreen` in `presenter/.../RootUi.kt`.
+6. Run loop: `./gradlew :dev-server:run` (serves the guest bundle) + `:androidApp:installDebug` (or
+   `bin/konduit-dev`); boot `Pixel_9`; **verify:** edit text in the browser portal → the emulator screen
+   updates within ~1s. Relay must be running (`konduit: ./gradlew :portal-relay:run`).
+
+**Do this on a BRANCH in ServerDrivenUI** (production repo). Not attempted unsupervised overnight (the
+multi-process guest-bundle/dev-server/install loop + lossy mapping has too many failure points to leave
+unattended); the above is the precise execution plan.
