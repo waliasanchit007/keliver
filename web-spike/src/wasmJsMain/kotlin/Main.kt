@@ -62,6 +62,7 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
+  mountPortalChrome()
   CanvasBasedWindow(canvasElementId = "ComposeTarget") {
     val widgetSystem = remember {
       ComposeUiKeliverMaterialWidgetSystem(
@@ -72,8 +73,6 @@ fun main() {
       )
     }
     val root = remember { ComposeWidgetChildren() }
-    var items by remember { mutableStateOf(1) }
-    val treeState = remember { mutableStateOf(sampleTree(1)) }
 
     // Stand up the fat client: a guest composition + a host renderer, talking via
     // the in-memory protocol. Runs once; stays live for the page's lifetime.
@@ -118,7 +117,7 @@ fun main() {
         saveableStateRegistry = null,
         uiConfigurations = MutableStateFlow(UiConfiguration()),
       )
-      composition.setContent { RenderNode(treeState.value) }
+      composition.setContent { RenderNode(portalTree.value) }
       guestAdapter.emitChanges() // initial render
 
       while (true) {
@@ -127,21 +126,8 @@ fun main() {
       }
     }
 
-    // Auto-driver (verification): edit the tree on a timer so that repeated
-    // tree-edits -> live preview updates are provable deterministically, and the
-    // full-rebuild render path is stress-tested over many cycles.
-    LaunchedEffect(Unit) {
-      while (true) {
-        delay(1200)
-        items = items % 6 + 1
-        treeState.value = sampleTree(items)
-      }
-    }
-
-    RawColumn(modifier = Modifier.padding(8.dp)) {
-      RawText("portal engine · preview rendered from a WidgetNode tree, auto-edited every 1.2s · items=$items", fontSize = 11.sp)
-      RawButton(onClick = { items += 1; treeState.value = sampleTree(items) }) { RawText("Add item to preview") }
-      root.Render()
-    }
+    // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
+    // just shows the live preview.
+    root.Render()
   }
 }
