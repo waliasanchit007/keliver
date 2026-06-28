@@ -12,6 +12,7 @@ import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
 import dev.keliver.portal.insertChild
 import dev.keliver.portal.moveNode
+import dev.keliver.portal.serializeTree
 import dev.keliver.portal.updateProps
 import kotlinx.browser.document
 import org.w3c.dom.DragEvent
@@ -42,9 +43,17 @@ private lateinit var outlineEl: HTMLElement
 private lateinit var propsEl: HTMLElement
 private lateinit var exportEl: HTMLElement
 
+private const val RELAY = "http://localhost:8077/tree"
+
+/** Fire-and-forget POST of the serialized tree to the relay (M2 device sync). */
+private fun postTree(url: String, body: String) {
+  js("fetch(url, { method: 'POST', body: body }).catch(function(){})")
+}
+
 private fun applyTree(t: WidgetNode) {
   portalTree.value = t
   Snapshot.sendApplyNotifications() // write happens outside composition (DOM callback) — flush
+  postTree(RELAY, serializeTree(t)) // push to the relay; the device polls GET /tree
 }
 
 private fun el(tag: String, style: String = "", text: String = ""): HTMLElement {
@@ -95,6 +104,7 @@ fun mountPortalChrome() {
   document.body?.appendChild(panel)
   (document.getElementById("ComposeTarget") as? HTMLElement)?.setAttribute("style", "position:absolute; left:340px; top:0;")
   refresh()
+  postTree(RELAY, serializeTree(portalTree.value)) // push the initial tree to the relay
 }
 
 private fun addToSelectedOrRoot(node: WidgetNode) {
