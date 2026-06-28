@@ -1,10 +1,14 @@
 package dev.keliver.portal
 
-/** One node = a widget type, its properties (by name), and children. */
-class WidgetNode(
+private var nodeIdCounter = 0
+fun nextNodeId(): Int = ++nodeIdCounter
+
+/** One node = a widget type, its properties (by name), children, and a stable id. */
+data class WidgetNode(
   val type: String,
   val props: Map<String, Any?> = emptyMap(),
   val children: List<WidgetNode> = emptyList(),
+  val id: Int = nextNodeId(),
 )
 
 fun WidgetNode.str(key: String, default: String = ""): String = props[key] as? String ?: default
