@@ -5,6 +5,9 @@ apply plugin: 'org.jetbrains.kotlin.multiplatform'
 
 kotlin {
   jvm()
+  js {
+    browser() // for the on-device Treehouse guest (Option X)
+  }
   wasmJs {
     browser()
   }
