@@ -1,0 +1,63 @@
+// spike/keliver-web portal P1 — schema→portal codegen tool. Parses the
+// keliver-material + keliver-layout schema SOURCES with keliver's own FIR
+// parser and generates the portal widget catalog, the WidgetNode interpreter
+// (portal-render), and the Kotlin exporter (portal-core). See
+// docs/superpowers/specs/2026-07-03-keliver-portal-sota-design.md §2.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'application'
+
+application {
+  mainClass = 'dev.keliver.portal.codegen.MainKt'
+}
+
+dependencies {
+  implementation projects.keliverToolingSchema
+  testImplementation libs.junit
+  testImplementation libs.kotlin.test.junit
+}
+
+// Classpath handed to the FIR parser: compiled schema modules + their deps
+// (keliver-schema annotations, dependency schemas' embedded JSON).
+configurations {
+  schemaClasspath {
+    canBeConsumed = false
+    attributes {
+      attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+    }
+  }
+}
+dependencies {
+  schemaClasspath projects.keliverMaterialSchema
+  schemaClasspath projects.keliverLayoutSchema
+}
+
+def codegenArgs = { extra ->
+  [
+    '--material-sources', rootProject.file('keliver-material-schema/src/main/kotlin').absolutePath,
+    '--layout-sources', rootProject.file('keliver-layout-schema/src/main/kotlin').absolutePath,
+    '--classpath', configurations.schemaClasspath.asPath,
+    '--out-core', rootProject.file('portal-core/src/commonMain/kotlin').absolutePath,
+    '--out-render', rootProject.file('portal-render/src/commonMain/kotlin').absolutePath,
+  ] + extra
+}
+
+tasks.named('run') {
+  classpath += configurations.schemaClasspath
+  args = codegenArgs([])
+}
+
+tasks.register('generatePortalCode', JavaExec) {
+  group = 'build'
+  description = 'Regenerate GeneratedCatalog/GeneratedExporter/GeneratedRenderNode from the schemas'
+  classpath = sourceSets.main.runtimeClasspath + configurations.schemaClasspath
+  mainClass = 'dev.keliver.portal.codegen.MainKt'
+  args = codegenArgs([])
+}
+
+tasks.register('checkPortalCode', JavaExec) {
+  group = 'verification'
+  description = 'Fail if committed generated portal code is stale vs the schemas'
+  classpath = sourceSets.main.runtimeClasspath + configurations.schemaClasspath
+  mainClass = 'dev.keliver.portal.codegen.MainKt'
+  args = codegenArgs(['--check'])
+}

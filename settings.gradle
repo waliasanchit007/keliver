@@ -176,6 +176,8 @@ include ':portal-core' // spike/keliver-web portal: WidgetNode model + Kotlin co
 include ':portal-relay' // spike/keliver-web portal M2: tree relay (POST/GET /tree)
 include ':portal-device-guest' // spike/keliver-web portal M2 Option X: keliver-material Treehouse guest
 include ':portal-device-android' // spike/keliver-web portal M2 Option X: Android Treehouse host
+include ':portal-schema-codegen' // spike/keliver-web portal P1: schema→portal codegen tool
+include ':portal-render' // spike/keliver-web portal P1: generated WidgetNode interpreter (js+wasm, shared web+device)
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'
