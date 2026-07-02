@@ -84,7 +84,8 @@ A prop value is **literal** (`{"s":"Buy now"}`), **bound** (`{"bind":"ctaLabel"}
 or — for events — an **action** (`{"action":"addToCart"}`). Each screen's tree
 declares its contract: `fields` (name: type) and `actions` (names).
 
-Export emits two generated files plus one human-owned file:
+Export emits two generated files; a third, human-owned file implements the
+contract and is never generated or touched:
 
 ```kotlin
 // GENERATED — regenerated on every publish, never hand-edited
@@ -112,8 +113,9 @@ values and an "action fired" console, so authoring needs no implementation.
    committed bindings impls).
 2. Invoke Gradle (tooling API) → Kotlin/JS → `.zipline` bundle.
 3. **Sign the manifest** with the project's EdDSA key (keliver's existing
-   `ManifestSigner`); prod hosts embed the public key.
-   `NO_SIGNATURE_CHECKS` becomes dev-mode-only.
+   `ManifestSigner`). `portal-server` generates and stores the keypair per
+   project (local file, permissions-restricted); prod hosts embed the public
+   key. `NO_SIGNATURE_CHECKS` becomes dev-mode-only.
 4. Store as `bundle vN` with metadata: `widgetProtocolVersion`, keliver
    version, created-at, and the **tree snapshot hash** (every bundle traces to
    the exact tree that produced it — the audit trail).
