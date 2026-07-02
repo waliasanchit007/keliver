@@ -14,10 +14,15 @@ import dev.keliver.portal.insertChild
 import dev.keliver.portal.moveNode
 import dev.keliver.portal.serializeTree
 import dev.keliver.portal.updateProps
+import dev.keliver.portal.widgetSpec
+import dev.keliver.portal.widgetSpecs
 import kotlinx.browser.document
 import org.w3c.dom.DragEvent
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLOptGroupElement
+import org.w3c.dom.HTMLOptionElement
+import org.w3c.dom.HTMLSelectElement
 
 private val BOX_PROPS: Map<String, Any?> = mapOf(
   "gradientColorsArgb" to listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt()),
@@ -66,11 +71,13 @@ private fun el(tag: String, style: String = "", text: String = ""): HTMLElement 
 private fun clear(host: HTMLElement) { while (host.firstChild != null) host.removeChild(host.firstChild!!) }
 
 private fun newNode(type: String): WidgetNode = when (type) {
+  // Curated starters for the quick-add chips; everything else uses the
+  // GENERATED catalog's sampleProps (required props pre-filled).
   "StyledText" -> WidgetNode("StyledText", mapOf("text" to "text", "fontSize" to 16, "colorArgb" to 0xFF333333.toInt()))
   "Spacer" -> WidgetNode("Spacer", mapOf("height" to 12.0))
   "Button" -> WidgetNode("Button", mapOf("text" to "Button"))
   "AsyncImage" -> WidgetNode("AsyncImage", mapOf("url" to "https://picsum.photos/seed/keliver/96/96"))
-  else -> WidgetNode(type)
+  else -> WidgetNode(type, widgetSpec(type)?.sampleProps ?: emptyMap())
 }
 
 fun mountPortalChrome() {
@@ -86,6 +93,27 @@ fun mountPortalChrome() {
     palette.appendChild(chip)
   }
   panel.appendChild(palette)
+
+  // Full generated catalog (P1): every schema widget, grouped by category.
+  val catalogRow = el("div", "display:flex; gap:6px; margin-bottom:8px; align-items:center;")
+  val select = document.createElement("select") as HTMLSelectElement
+  select.setAttribute("style", "flex:1; padding:3px;")
+  widgetSpecs.groupBy { it.category }.forEach { (category, specs) ->
+    val group = document.createElement("optgroup") as HTMLOptGroupElement
+    group.label = category
+    specs.forEach { spec ->
+      val opt = document.createElement("option") as HTMLOptionElement
+      opt.value = spec.type
+      opt.textContent = spec.type + if (spec.acceptsChildren) " ▸" else ""
+      group.appendChild(opt)
+    }
+    select.appendChild(group)
+  }
+  catalogRow.appendChild(select)
+  val addBtn = el("button", "padding:3px 10px; cursor:pointer;", "Add")
+  addBtn.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(select.value)) })
+  catalogRow.appendChild(addBtn)
+  panel.appendChild(catalogRow)
 
   panel.appendChild(el("div", "font-weight:bold; margin:8px 0 4px;", "Outline"))
   outlineEl = el("div", "border:1px solid #ddd; background:#fff; padding:4px; min-height:80px;")
@@ -109,7 +137,9 @@ fun mountPortalChrome() {
 
 private fun addToSelectedOrRoot(node: WidgetNode) {
   val sel = selectedId
-  val parentId = if (sel != null && portalTree.value.findNode(sel)?.type in setOf("StyledBox", "Column", "Row")) sel
+  val selType = sel?.let { portalTree.value.findNode(it)?.type }
+  // Catalog-driven: any widget with a children slot can be a drop target.
+  val parentId = if (sel != null && selType != null && widgetSpec(selType)?.acceptsChildren == true) sel
   else (portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id)
   applyTree(portalTree.value.insertChild(parentId, node, Int.MAX_VALUE))
   refresh()
@@ -167,6 +197,10 @@ private fun renderProps() {
         input.addEventListener("change", { _ -> editProp(id, spec.name, input.checked) }) }
       PropKind.Color -> { input.setAttribute("type", "color"); input.value = argbToHex(node.props[spec.name] as? Int ?: 0xFF000000.toInt())
         input.addEventListener("input", { _ -> editProp(id, spec.name, hexToArgb(input.value)) }) }
+      PropKind.IntList, PropKind.FloatList -> {
+        input.setAttribute("type", "text"); input.setAttribute("disabled", "disabled")
+        input.value = (node.props[spec.name] as? List<*>)?.joinToString(", ") ?: "(list — not editable yet)"
+      }
     }
     rowEl.appendChild(input)
     propsEl.appendChild(rowEl)

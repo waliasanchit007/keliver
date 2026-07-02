@@ -33,6 +33,7 @@ kotlin {
         implementation projects.keliverMaterialCompose   // StyledBox/StyledText/Button/AsyncImage
         implementation projects.keliverLayoutCompose      // Column/Row/Spacer
         implementation projects.portalCore                // WidgetNode + deserializeTree
+        implementation projects.portalRender              // GENERATED RenderNode interpreter (P1)
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
       }

@@ -32,7 +32,7 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
-import dev.keliver.portal.sampleTree
+import dev.keliver.portal.render.RenderNode
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
