@@ -60,6 +60,15 @@ jobs:
           :web-spike:compileKotlinWasmJs
           -DRELEASE_SIGNING_ENABLED=false
 
+      # Portal codegen staleness: the committed GeneratedCatalog/GeneratedExporter/
+      # GeneratedRenderNode must match what the schemas produce. Regenerate with
+      # `./gradlew :portal-schema-codegen:generatePortalCode` and commit.
+      - name: Portal generated code is fresh
+        run: >
+          ./gradlew
+          :portal-schema-codegen:checkPortalCode
+          -DRELEASE_SIGNING_ENABLED=false
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.
