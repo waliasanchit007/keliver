@@ -1,10 +1,8 @@
 package dev.keliver.portal
 
 /** The editable-property metadata catalog, for the portal's property panel. */
-
-enum class PropKind { Text, Int, Bool, Color, Double }
-
-data class PropSpec(val name: String, val kind: PropKind, val label: String)
+// PropKind/PropSpec moved to CatalogTypes.kt (P1); this hand-written catalog is
+// replaced by GeneratedCatalog.kt in P1 Task 7.
 
 fun editableProps(type: String): List<PropSpec> = when (type) {
   "StyledText" -> listOf(
