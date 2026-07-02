@@ -82,7 +82,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>): String = buildString {
   appendLine("  collectTypes(tree, used)")
   appendLine("  val sb = StringBuilder()")
   appendLine("  sb.append(\"import androidx.compose.runtime.Composable\\n\")")
-  appendLine("  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() }).toSortedSet()")
+  appendLine("  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() }).distinct().sorted()")
   appendLine("  imports.forEach { sb.append(\"import \$it\\n\") }")
   appendLine("  sb.append(\"\\n@Composable\\nfun \$functionName() {\\n\")")
   appendLine("  emitNode(sb, tree, \"  \")")
