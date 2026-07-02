@@ -1,0 +1,43 @@
+// spike/keliver-web portal M2 Option X — the Android Treehouse HOST. Loads the
+// keliver-material guest bundle, binds HostApi (OkHttp GET of the relay), and mounts
+// TreehouseContent with the published ComposeUiKeliverMaterialWidgetSystem renderers.
+// Template: sample/host-android.
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+apply plugin: 'app.cash.zipline' // IR plugin for zipline.take/bind
+
+android {
+  namespace 'dev.keliver.portaldevice.host'
+
+  defaultConfig {
+    applicationId 'dev.keliver.portaldevice'
+    versionCode 1
+    versionName '1.0'
+  }
+
+  buildFeatures {
+    compose true
+  }
+}
+
+dependencies {
+  implementation projects.keliverTreehouseHost           // TreehouseAppFactory, Spec, MemoryStateStore
+  implementation projects.keliverTreehouseHostComposeui  // TreehouseContent
+  implementation projects.keliverMaterialComposeui       // ComposeUiKeliverMaterialWidgetSystem
+  implementation projects.webSpikeProtocolHost           // KeliverMaterialHostProtocol
+  implementation projects.portalDeviceGuest              // HostApi / PortalPresenter interfaces
+  implementation libs.zipline
+  implementation libs.zipline.loader                     // ManifestVerifier, asZiplineHttpClient
+  implementation libs.okhttp
+  implementation libs.androidx.activity.compose
+  implementation libs.androidx.core
+  implementation libs.coil.compose                       // ImageLoader
+  implementation libs.coil.network.okhttp                // network images on Android
+  implementation libs.jetbrains.compose.runtime
+  implementation libs.jetbrains.compose.foundation
+  implementation libs.jetbrains.compose.material
+  implementation libs.jetbrains.compose.ui
+  implementation libs.kotlinx.coroutines.core
+}
