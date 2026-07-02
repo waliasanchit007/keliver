@@ -1,1 +1,21 @@
-// placeholder — filled in P1 Task 6
+// spike/keliver-web portal P1 — the GENERATED WidgetNode→keliver-material
+// interpreter, shared by the web preview (wasmJs) and the device dev-guest (js).
+// GeneratedRenderNode.kt is produced by :portal-schema-codegen:generatePortalCode.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+
+kotlin {
+  js { browser() }
+  wasmJs { browser() }
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.portalCore
+        api projects.keliverMaterialCompose
+        api projects.keliverLayoutCompose
+        implementation libs.jetbrains.compose.runtime
+      }
+    }
+  }
+}

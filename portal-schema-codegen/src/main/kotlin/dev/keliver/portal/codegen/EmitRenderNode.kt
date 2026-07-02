@@ -15,6 +15,7 @@ internal fun getterExpr(p: MappedProp): String = when (p.kind) {
   MappedKind.CONSTRAINT -> "constraintOf(node.int(\"${p.name}\", ${constraintDefault(p.defaultExpr)}))"
   MappedKind.CROSS_AXIS -> "crossAxisOf(node.int(\"${p.name}\", ${crossAxisDefault(p.defaultExpr)}))"
   MappedKind.MAIN_AXIS -> "mainAxisOf(node.int(\"${p.name}\", ${mainAxisDefault(p.defaultExpr)}))"
+  MappedKind.OVERFLOW -> "overflowOf(node.int(\"${p.name}\", ${overflowDefault(p.defaultExpr)}))"
 }
 
 fun emitRenderNode(widgets: List<WidgetPlan.Include>): String = buildString {

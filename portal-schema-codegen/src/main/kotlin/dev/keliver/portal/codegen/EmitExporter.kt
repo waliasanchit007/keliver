@@ -14,6 +14,7 @@ private fun literalExpr(p: MappedProp): String {
     MappedKind.CONSTRAINT -> "fmtConstraint($v)"
     MappedKind.CROSS_AXIS -> "fmtCrossAxis($v)"
     MappedKind.MAIN_AXIS -> "fmtMainAxis($v)"
+    MappedKind.OVERFLOW -> "fmtOverflow($v)"
   }
 }
 
@@ -23,6 +24,7 @@ private fun supportImports(w: WidgetPlan.Include): List<String> = buildList {
   if (w.props.any { it.kind == MappedKind.CONSTRAINT }) add("dev.keliver.layout.api.Constraint")
   if (w.props.any { it.kind == MappedKind.CROSS_AXIS }) add("dev.keliver.layout.api.CrossAxisAlignment")
   if (w.props.any { it.kind == MappedKind.MAIN_AXIS }) add("dev.keliver.layout.api.MainAxisAlignment")
+  if (w.props.any { it.kind == MappedKind.OVERFLOW }) add("dev.keliver.layout.api.Overflow")
 }
 
 fun emitExporter(widgets: List<WidgetPlan.Include>): String = buildString {
@@ -63,6 +65,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>): String = buildString {
     |  3 -> "CrossAxisAlignment.Stretch"
     |  else -> "CrossAxisAlignment.Start"
     |}
+    |private fun fmtOverflow(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
     |private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
     |  1 -> "MainAxisAlignment.Center"
     |  2 -> "MainAxisAlignment.End"

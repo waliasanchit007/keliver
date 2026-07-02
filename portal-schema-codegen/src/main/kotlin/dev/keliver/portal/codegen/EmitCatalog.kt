@@ -4,7 +4,7 @@ internal fun catalogKind(p: MappedProp): String = when {
   p.isColor -> "Color"
   else -> when (p.kind) {
     MappedKind.TEXT -> "Text"
-    MappedKind.INT, MappedKind.CONSTRAINT, MappedKind.CROSS_AXIS, MappedKind.MAIN_AXIS -> "Int"
+    MappedKind.INT, MappedKind.CONSTRAINT, MappedKind.CROSS_AXIS, MappedKind.MAIN_AXIS, MappedKind.OVERFLOW -> "Int"
     MappedKind.BOOL -> "Bool"
     MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP -> "Double"
     MappedKind.INT_LIST -> "IntList"
@@ -22,7 +22,7 @@ private fun sampleValue(widgetName: String, p: MappedProp): String? = when {
   !p.required -> null
   else -> when (p.kind) {
     MappedKind.TEXT -> "\"New $widgetName\""
-    MappedKind.INT, MappedKind.CONSTRAINT, MappedKind.CROSS_AXIS, MappedKind.MAIN_AXIS -> "0"
+    MappedKind.INT, MappedKind.CONSTRAINT, MappedKind.CROSS_AXIS, MappedKind.MAIN_AXIS, MappedKind.OVERFLOW -> "0"
     MappedKind.BOOL -> "false"
     MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP -> "0.0"
     MappedKind.INT_LIST -> "listOf<Int>()"

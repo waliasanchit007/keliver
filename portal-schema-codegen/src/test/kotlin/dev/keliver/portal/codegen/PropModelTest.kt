@@ -76,6 +76,8 @@ class PropModelTest {
     assertEquals(1, constraintDefault("Constraint.Fill"))
     assertEquals(0, constraintDefault("Constraint.Wrap"))
     assertEquals(3, crossAxisDefault("CrossAxisAlignment.Stretch"))
+    assertEquals(MappedKind.OVERFLOW, mapType(fq("dev.keliver.layout.api", "Overflow")))
+    assertEquals(1, overflowDefault("Overflow.Scroll"))
     assertEquals(true, defaultBool("true"))
     assertEquals(0.0, defaultDouble("0f"))
     assertEquals("", defaultString("\"\""))
