@@ -69,6 +69,26 @@ class PropModelTest {
     assertIs<WidgetPlan.Exclude>(plan(evReq))
   }
 
+  @Test fun modifierPlanning() {
+    val padding = FakeModifier(fq("dev.keliver.material", "Padding"),
+      properties = listOf(FakeModifierProperty("allDp", fq("kotlin", "Int"))))
+    val plan = planModifier("dev.keliver.material.compose", padding)!!
+    assertEquals("padding", plan.extensionName)
+    assertEquals(listOf("allDp"), plan.props.map { it.name })
+
+    val scoped = FakeModifier(fq("dev.keliver.layout", "Margin"),
+      scopes = listOf(fq("dev.keliver.layout", "RowScope")),
+      properties = emptyList())
+    assertEquals(null, planModifier("dev.keliver.layout.compose", scoped))
+
+    val flag = FakeModifier(fq("dev.keliver.material", "AnimateContentSize"))
+    assertEquals("animateContentSize", planModifier("dev.keliver.material.compose", flag)!!.extensionName)
+
+    val unsupported = FakeModifier(fq("dev.keliver.material", "Weird"),
+      properties = listOf(FakeModifierProperty("thing", fq("dev.keliver.material.api", "TextSpan"))))
+    assertEquals(null, planModifier("dev.keliver.material.compose", unsupported))
+  }
+
   @Test fun defaultParsing() {
     assertEquals(14, defaultInt("14"))
     assertEquals(-1, defaultInt("-1"))

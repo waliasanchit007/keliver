@@ -46,13 +46,19 @@ fun main(argv: Array<String>) {
   val includes = plans.values.filterIsInstance<WidgetPlan.Include>()
   val excluded = plans.values.filterIsInstance<WidgetPlan.Exclude>()
 
+  // Unscoped modifiers (material's live at top level; layout's are scoped -> skipped).
+  val mods = (
+    material.schema.modifiers.map { it to "dev.keliver.material.compose" } +
+      layout.schema.modifiers.map { it to "dev.keliver.layout.compose" }
+    ).mapNotNull { (m, pkg) -> planModifier(pkg, m) }
+
   val outputs = mapOf(
-    File(args.outCore, "dev/keliver/portal/GeneratedCatalog.kt") to emitCatalog(includes),
-    File(args.outCore, "dev/keliver/portal/GeneratedExporter.kt") to emitExporter(includes),
-    File(args.outRender, "dev/keliver/portal/render/GeneratedRenderNode.kt") to emitRenderNode(includes),
+    File(args.outCore, "dev/keliver/portal/GeneratedCatalog.kt") to emitCatalog(includes, mods),
+    File(args.outCore, "dev/keliver/portal/GeneratedExporter.kt") to emitExporter(includes, mods),
+    File(args.outRender, "dev/keliver/portal/render/GeneratedRenderNode.kt") to emitRenderNode(includes, mods),
   )
 
-  println("included=${includes.size} excluded=${excluded.size}")
+  println("included=${includes.size} excluded=${excluded.size} modifiers=${mods.size}")
   excluded.sortedBy { it.name }.forEach { println("  excluded ${it.name}: ${it.reason}") }
   includes.filter { it.skippedProps.isNotEmpty() }.sortedBy { it.name }.forEach {
     println("  ${it.name}: skipped props ${it.skippedProps}")

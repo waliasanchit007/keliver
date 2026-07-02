@@ -1,4 +1,5 @@
 import androidx.compose.runtime.Composable
+import dev.keliver.Modifier
 import dev.keliver.layout.api.Constraint
 import dev.keliver.layout.api.CrossAxisAlignment
 import dev.keliver.layout.api.MainAxisAlignment
@@ -63,6 +64,9 @@ import dev.keliver.material.compose.Tooltip
 import dev.keliver.material.compose.TopAppBar
 import dev.keliver.material.compose.VerticalDivider
 import dev.keliver.material.compose.VerticalPager
+import dev.keliver.material.compose.animateContentSize
+import dev.keliver.material.compose.cornerRadius
+import dev.keliver.material.compose.padding
 import dev.keliver.ui.Dp
 
 @Composable
@@ -70,6 +74,7 @@ fun ExportedKitchenSink() {
   Column(
   ) {
     AlertDialog(
+      modifier = Modifier.animateContentSize().cornerRadius(4).padding(8),
       title = "New AlertDialog",
       text = "New AlertDialog",
     )

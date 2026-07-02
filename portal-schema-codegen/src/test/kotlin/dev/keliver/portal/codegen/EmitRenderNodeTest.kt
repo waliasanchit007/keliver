@@ -45,4 +45,17 @@ class EmitRenderNodeTest {
     assertContains(src, "else -> StyledText(text = \"\\u26a0 unknown widget: \${node.type}\"")
     assertFalse("onLongPress" in src)
   }
+
+  @Test fun emitsModifierChain() {
+    val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
+      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
+    val flag = ModPlan("AnimateContentSize", "animateContentSize", "dev.keliver.material.compose", emptyList())
+    val src = emitRenderNode(listOf(text), listOf(padding, flag))
+    assertContains(src, "import dev.keliver.Modifier")
+    assertContains(src, "import dev.keliver.material.compose.padding")
+    assertContains(src, "modifier = nodeModifier(node),")
+    assertContains(src, "private fun nodeModifier(node: WidgetNode): Modifier {")
+    assertContains(src, "if (\"mod.Padding.allDp\" in node.props) m = m.padding(node.int(\"mod.Padding.allDp\", 0))")
+    assertContains(src, "if (node.bool(\"mod.AnimateContentSize\")) m = m.animateContentSize()")
+  }
 }

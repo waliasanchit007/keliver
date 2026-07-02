@@ -76,6 +76,31 @@ internal fun mainAxisDefault(e: String?): Int = when {
   else -> 0
 }
 
+/**
+ * A modifier the portal can offer. Rides on nodes as namespaced props:
+ * `"mod.Padding.allDp" to 12`, or `"mod.AnimateContentSize" to true` for
+ * object (flag) modifiers. Unscoped modifiers only — scoped ones (layout's
+ * margin/flex/…) need parent-scope awareness, deferred.
+ */
+data class ModPlan(
+  val name: String,           // e.g. "Padding"
+  val extensionName: String,  // e.g. "padding" — the generated Modifier extension
+  val composePackage: String, // where the extension lives
+  val props: List<MappedProp>, // empty for object modifiers (flags)
+)
+
+fun planModifier(composePackage: String, modifier: dev.keliver.tooling.schema.Modifier): ModPlan? {
+  if (modifier.scopes.isNotEmpty()) return null // unscoped only
+  val name = modifier.type.names.last()
+  if (name == "Reuse") return null // internal recycling marker, not a style
+  val props = mutableListOf<MappedProp>()
+  for (p in modifier.properties) {
+    val kind = mapType(p.type) ?: return null // any unsupported prop -> skip modifier
+    props += MappedProp(p.name, kind, required = p.defaultExpression == null, defaultExpr = p.defaultExpression)
+  }
+  return ModPlan(name, name.replaceFirstChar { it.lowercase() }, composePackage, props)
+}
+
 fun planWidget(composePackage: String, category: String, widget: Widget): WidgetPlan {
   val name = widget.type.names.last()
   val props = mutableListOf<MappedProp>()

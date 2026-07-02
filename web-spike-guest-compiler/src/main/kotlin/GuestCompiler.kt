@@ -33,10 +33,19 @@ fun main() {
   // P1 kitchen sink: one instance of EVERY generated-catalog widget with its
   // sampleProps — compiling this proves every generated exporter branch emits
   // valid Kotlin against the real keliver composable signatures.
+  // The first child also carries modifier props ("mod.*"), proving the exported
+  // Modifier chain compiles against the generated extensions.
   val kitchenSink = WidgetNode(
     type = "Column",
     props = emptyMap(),
-    children = widgetSpecs.map { spec -> WidgetNode(type = spec.type, props = spec.sampleProps) },
+    children = widgetSpecs.mapIndexed { i, spec ->
+      val mods = if (i == 0) {
+        mapOf("mod.Padding.allDp" to 8, "mod.CornerRadius.radiusDp" to 4, "mod.AnimateContentSize" to true)
+      } else {
+        emptyMap()
+      }
+      WidgetNode(type = spec.type, props = spec.sampleProps + mods)
+    },
   )
   val sinkSource = exportKotlin(kitchenSink, functionName = "ExportedKitchenSink")
   File(SINK_OUT).writeText(sinkSource)

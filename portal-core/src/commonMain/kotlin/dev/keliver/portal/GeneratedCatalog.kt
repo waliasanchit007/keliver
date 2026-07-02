@@ -270,6 +270,28 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("VerticalPager", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
 )
 
+val modifierSpecs: List<ModifierSpec> = listOf(
+  ModifierSpec("Alpha", listOf(PropSpec("pct", PropKind.Int, "Pct"))),
+  ModifierSpec("AnimateContentSize", listOf()),
+  ModifierSpec("AspectRatio", listOf(PropSpec("ratio", PropKind.Double, "Ratio"))),
+  ModifierSpec("Background", listOf(PropSpec("colorArgb", PropKind.Color, "Color argb"))),
+  ModifierSpec("Blur", listOf(PropSpec("radiusDp", PropKind.Int, "Radius dp"))),
+  ModifierSpec("Border", listOf(PropSpec("widthDp", PropKind.Int, "Width dp"), PropSpec("colorArgb", PropKind.Color, "Color argb"))),
+  ModifierSpec("CornerRadius", listOf(PropSpec("radiusDp", PropKind.Int, "Radius dp"))),
+  ModifierSpec("CornerRadiusEach", listOf(PropSpec("topStartDp", PropKind.Int, "Top start dp"), PropSpec("topEndDp", PropKind.Int, "Top end dp"), PropSpec("bottomEndDp", PropKind.Int, "Bottom end dp"), PropSpec("bottomStartDp", PropKind.Int, "Bottom start dp"))),
+  ModifierSpec("FillMaxHeight", listOf()),
+  ModifierSpec("FillMaxSize", listOf()),
+  ModifierSpec("FillWidth", listOf()),
+  ModifierSpec("GradientBackground", listOf(PropSpec("startArgb", PropKind.Color, "Start argb"), PropSpec("endArgb", PropKind.Color, "End argb"))),
+  ModifierSpec("Offset", listOf(PropSpec("xDp", PropKind.Int, "X dp"), PropSpec("yDp", PropKind.Int, "Y dp"))),
+  ModifierSpec("Padding", listOf(PropSpec("allDp", PropKind.Int, "All dp"))),
+  ModifierSpec("PaddingEach", listOf(PropSpec("startDp", PropKind.Int, "Start dp"), PropSpec("topDp", PropKind.Int, "Top dp"), PropSpec("endDp", PropKind.Int, "End dp"), PropSpec("bottomDp", PropKind.Int, "Bottom dp"))),
+  ModifierSpec("Rotate", listOf(PropSpec("degrees", PropKind.Int, "Degrees"))),
+  ModifierSpec("Scale", listOf(PropSpec("percent", PropKind.Int, "Percent"))),
+  ModifierSpec("Shadow", listOf(PropSpec("elevationDp", PropKind.Int, "Elevation dp"))),
+  ModifierSpec("Size", listOf(PropSpec("widthDp", PropKind.Int, "Width dp"), PropSpec("heightDp", PropKind.Int, "Height dp"))),
+)
+
 private val specsByType = widgetSpecs.associateBy { it.type }
 
 fun widgetSpec(type: String): WidgetSpec? = specsByType[type]

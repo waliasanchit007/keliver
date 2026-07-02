@@ -2,6 +2,7 @@
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.Composable
+import dev.keliver.Modifier
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.bool
 import dev.keliver.portal.dbl
@@ -70,18 +71,39 @@ import dev.keliver.material.compose.Tooltip
 import dev.keliver.material.compose.TopAppBar
 import dev.keliver.material.compose.VerticalDivider
 import dev.keliver.material.compose.VerticalPager
+import dev.keliver.material.compose.alpha
+import dev.keliver.material.compose.animateContentSize
+import dev.keliver.material.compose.aspectRatio
+import dev.keliver.material.compose.background
+import dev.keliver.material.compose.blur
+import dev.keliver.material.compose.border
+import dev.keliver.material.compose.cornerRadius
+import dev.keliver.material.compose.cornerRadiusEach
+import dev.keliver.material.compose.fillMaxHeight
+import dev.keliver.material.compose.fillMaxSize
+import dev.keliver.material.compose.fillWidth
+import dev.keliver.material.compose.gradientBackground
+import dev.keliver.material.compose.offset
+import dev.keliver.material.compose.padding
+import dev.keliver.material.compose.paddingEach
+import dev.keliver.material.compose.rotate
+import dev.keliver.material.compose.scale
+import dev.keliver.material.compose.shadow
+import dev.keliver.material.compose.size
 
 /** Interprets a portal WidgetNode tree as live keliver composables. */
 @Composable
 fun RenderNode(node: WidgetNode) {
   when (node.type) {
     "AlertDialog" -> AlertDialog(
+      modifier = nodeModifier(node),
       title = node.str("title"),
       text = node.str("text"),
       confirmText = node.str("confirmText", "OK"),
       dismissText = node.str("dismissText"),
     )
     "AnimatedBorder" -> AnimatedBorder(
+      modifier = nodeModifier(node),
       cornerRadiusDp = node.int("cornerRadiusDp", 8),
       strokeWidthDp = node.int("strokeWidthDp", 1),
       baseColorArgb = node.int("baseColorArgb", 0),
@@ -92,9 +114,11 @@ fun RenderNode(node: WidgetNode) {
       colorsArgb = node.intList("colorsArgb"),
     ) { node.children.forEach { RenderNode(it) } }
     "AnimatedVisibility" -> AnimatedVisibility(
+      modifier = nodeModifier(node),
       visible = node.bool("visible", true),
     ) { node.children.forEach { RenderNode(it) } }
     "AsyncImage" -> AsyncImage(
+      modifier = nodeModifier(node),
       url = node.str("url"),
       contentScale = node.int("contentScale", 0),
       widthDp = node.int("widthDp", 0),
@@ -104,71 +128,100 @@ fun RenderNode(node: WidgetNode) {
       tintArgb = node.int("tintArgb", 0),
     )
     "Badge" -> Badge(
+      modifier = nodeModifier(node),
       text = node.str("text"),
     )
-    "BottomAppBar" -> BottomAppBar() { node.children.forEach { RenderNode(it) } }
+    "BottomAppBar" -> BottomAppBar(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "BottomSheet" -> BottomSheet(
+      modifier = nodeModifier(node),
       visible = node.bool("visible", false),
       contentPaddingDp = node.int("contentPaddingDp", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "Box" -> Box(
+      modifier = nodeModifier(node),
       width = constraintOf(node.int("width", 0)),
       height = constraintOf(node.int("height", 0)),
       horizontalAlignment = crossAxisOf(node.int("horizontalAlignment", 0)),
       verticalAlignment = crossAxisOf(node.int("verticalAlignment", 0)),
     ) { node.children.forEach { RenderNode(it) } }
     "Button" -> Button(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       enabled = node.bool("enabled", true),
       containerArgb = node.int("containerArgb", 0),
       contentArgb = node.int("contentArgb", 0),
       cornerRadiusDp = node.int("cornerRadiusDp", 0),
     )
-    "Card" -> Card() { node.children.forEach { RenderNode(it) } }
+    "Card" -> Card(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "Checkbox" -> Checkbox(
+      modifier = nodeModifier(node),
       checked = node.bool("checked", false),
       enabled = node.bool("enabled", true),
     )
     "Chip" -> Chip(
+      modifier = nodeModifier(node),
       label = node.str("label"),
     )
     "CircularProgressIndicator" -> CircularProgressIndicator(
+      modifier = nodeModifier(node),
       progress = node.dbl("progress", -1.0).toFloat(),
     )
-    "Clickable" -> Clickable() { node.children.forEach { RenderNode(it) } }
+    "Clickable" -> Clickable(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "Column" -> Column(
+      modifier = nodeModifier(node),
       width = constraintOf(node.int("width", 0)),
       height = constraintOf(node.int("height", 0)),
       overflow = overflowOf(node.int("overflow", 0)),
       horizontalAlignment = crossAxisOf(node.int("horizontalAlignment", 0)),
       verticalAlignment = mainAxisOf(node.int("verticalAlignment", 0)),
     ) { node.children.forEach { RenderNode(it) } }
-    "Dialog" -> Dialog() { node.children.forEach { RenderNode(it) } }
+    "Dialog" -> Dialog(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "Divider" -> Divider(
+      modifier = nodeModifier(node),
       thickness = node.int("thickness", 1),
     )
     "ElevatedButton" -> ElevatedButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       enabled = node.bool("enabled", true),
     )
-    "ElevatedCard" -> ElevatedCard() { node.children.forEach { RenderNode(it) } }
+    "ElevatedCard" -> ElevatedCard(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "ExtendedFloatingActionButton" -> ExtendedFloatingActionButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
     )
     "FilledTonalButton" -> FilledTonalButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       enabled = node.bool("enabled", true),
     )
     "FilterChip" -> FilterChip(
+      modifier = nodeModifier(node),
       label = node.str("label"),
       selected = node.bool("selected", false),
     )
     "FloatingActionButton" -> FloatingActionButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
     )
-    "FlowColumn" -> FlowColumn() { node.children.forEach { RenderNode(it) } }
-    "FlowRow" -> FlowRow() { node.children.forEach { RenderNode(it) } }
+    "FlowColumn" -> FlowColumn(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
+    "FlowRow" -> FlowRow(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "HorizontalPager" -> HorizontalPager(
+      modifier = nodeModifier(node),
       autoScrollMs = node.int("autoScrollMs", 0),
       showIndicator = node.bool("showIndicator", false),
       indicatorActiveArgb = node.int("indicatorActiveArgb", 0),
@@ -176,27 +229,38 @@ fun RenderNode(node: WidgetNode) {
       contentPaddingDp = node.int("contentPaddingDp", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "IconButton" -> IconButton(
+      modifier = nodeModifier(node),
       imageUrl = node.str("imageUrl"),
     )
     "Image" -> Image(
+      modifier = nodeModifier(node),
       url = node.str("url"),
     )
     "InputChip" -> InputChip(
+      modifier = nodeModifier(node),
       label = node.str("label"),
       selected = node.bool("selected", false),
     )
     "LazyHorizontalGrid" -> LazyHorizontalGrid(
+      modifier = nodeModifier(node),
       rows = node.int("rows", 2),
     ) { node.children.forEach { RenderNode(it) } }
     "LazyVerticalGrid" -> LazyVerticalGrid(
+      modifier = nodeModifier(node),
       columns = node.int("columns", 2),
     ) { node.children.forEach { RenderNode(it) } }
     "LinearProgressIndicator" -> LinearProgressIndicator(
+      modifier = nodeModifier(node),
       progress = node.dbl("progress", -1.0).toFloat(),
     )
-    "NavigationBar" -> NavigationBar() { node.children.forEach { RenderNode(it) } }
-    "NavigationRail" -> NavigationRail() { node.children.forEach { RenderNode(it) } }
+    "NavigationBar" -> NavigationBar(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
+    "NavigationRail" -> NavigationRail(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "OutlinedButton" -> OutlinedButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       enabled = node.bool("enabled", true),
       iconUrl = node.str("iconUrl"),
@@ -206,8 +270,11 @@ fun RenderNode(node: WidgetNode) {
       borderArgb = node.int("borderArgb", 0),
       cornerRadiusDp = node.int("cornerRadiusDp", 0),
     )
-    "OutlinedCard" -> OutlinedCard() { node.children.forEach { RenderNode(it) } }
+    "OutlinedCard" -> OutlinedCard(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "OutlinedTextField" -> OutlinedTextField(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       placeholder = node.str("placeholder"),
       label = node.str("label"),
@@ -221,34 +288,43 @@ fun RenderNode(node: WidgetNode) {
       cornerRadiusDp = node.int("cornerRadiusDp", 0),
     )
     "RadioButton" -> RadioButton(
+      modifier = nodeModifier(node),
       selected = node.bool("selected", false),
       enabled = node.bool("enabled", true),
     )
     "Row" -> Row(
+      modifier = nodeModifier(node),
       width = constraintOf(node.int("width", 0)),
       height = constraintOf(node.int("height", 0)),
       overflow = overflowOf(node.int("overflow", 0)),
       horizontalAlignment = mainAxisOf(node.int("horizontalAlignment", 0)),
       verticalAlignment = crossAxisOf(node.int("verticalAlignment", 0)),
     ) { node.children.forEach { RenderNode(it) } }
-    "ScrollableColumn" -> ScrollableColumn() { node.children.forEach { RenderNode(it) } }
+    "ScrollableColumn" -> ScrollableColumn(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "Shimmer" -> Shimmer(
+      modifier = nodeModifier(node),
       widthDp = node.int("widthDp", 0),
       heightDp = node.int("heightDp", 16),
       cornerRadiusDp = node.int("cornerRadiusDp", 8),
     )
     "Slider" -> Slider(
+      modifier = nodeModifier(node),
       position = node.dbl("position", 0.0).toFloat(),
       enabled = node.bool("enabled", true),
     )
     "Snackbar" -> Snackbar(
+      modifier = nodeModifier(node),
       message = node.str("message"),
     )
     "Spacer" -> Spacer(
+      modifier = nodeModifier(node),
       width = Dp(node.dbl("width", 0.0)),
       height = Dp(node.dbl("height", 0.0)),
     )
     "StyledBox" -> StyledBox(
+      modifier = nodeModifier(node),
       colorArgb = node.int("colorArgb", 0),
       gradientStartArgb = node.int("gradientStartArgb", 0),
       gradientEndArgb = node.int("gradientEndArgb", 0),
@@ -272,6 +348,7 @@ fun RenderNode(node: WidgetNode) {
       cornerBottomEndDp = node.int("cornerBottomEndDp", -1),
     ) { node.children.forEach { RenderNode(it) } }
     "StyledText" -> StyledText(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       fontSize = node.int("fontSize", 14),
       bold = node.bool("bold", false),
@@ -288,35 +365,46 @@ fun RenderNode(node: WidgetNode) {
       colorRole = node.int("colorRole", 0),
     )
     "SuggestionChip" -> SuggestionChip(
+      modifier = nodeModifier(node),
       label = node.str("label"),
     )
-    "Surface" -> Surface() { node.children.forEach { RenderNode(it) } }
+    "Surface" -> Surface(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     "Switch" -> Switch(
+      modifier = nodeModifier(node),
       checked = node.bool("checked", false),
       enabled = node.bool("enabled", true),
     )
     "Tab" -> Tab(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       selected = node.bool("selected", false),
     )
     "TabRow" -> TabRow(
+      modifier = nodeModifier(node),
       selectedIndex = node.int("selectedIndex", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "Text" -> Text(
+      modifier = nodeModifier(node),
       text = node.str("text"),
     )
     "TextButton" -> TextButton(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       enabled = node.bool("enabled", true),
     )
     "TextField" -> TextField(
+      modifier = nodeModifier(node),
       text = node.str("text"),
       placeholder = node.str("placeholder"),
     )
     "TextInput" -> TextInput(
+      modifier = nodeModifier(node),
       hint = node.str("hint"),
     )
     "Theme" -> Theme(
+      modifier = nodeModifier(node),
       dark = node.bool("dark", false),
       primaryArgb = node.int("primaryArgb", 0),
       onPrimaryArgb = node.int("onPrimaryArgb", 0),
@@ -332,15 +420,45 @@ fun RenderNode(node: WidgetNode) {
       outlineArgb = node.int("outlineArgb", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "Tooltip" -> Tooltip(
+      modifier = nodeModifier(node),
       text = node.str("text"),
     ) { node.children.forEach { RenderNode(it) } }
     "TopAppBar" -> TopAppBar(
+      modifier = nodeModifier(node),
       title = node.str("title"),
     )
     "VerticalDivider" -> VerticalDivider(
+      modifier = nodeModifier(node),
       thickness = node.int("thickness", 1),
     )
-    "VerticalPager" -> VerticalPager() { node.children.forEach { RenderNode(it) } }
+    "VerticalPager" -> VerticalPager(
+      modifier = nodeModifier(node),
+    ) { node.children.forEach { RenderNode(it) } }
     else -> StyledText(text = "\u26a0 unknown widget: ${node.type}", colorArgb = -5238254)
   }
+}
+
+/** Builds the Modifier chain from a node's namespaced "mod.*" props. */
+private fun nodeModifier(node: WidgetNode): Modifier {
+  var m: Modifier = Modifier
+  if ("mod.Alpha.pct" in node.props) m = m.alpha(node.int("mod.Alpha.pct", 0))
+  if (node.bool("mod.AnimateContentSize")) m = m.animateContentSize()
+  if ("mod.AspectRatio.ratio" in node.props) m = m.aspectRatio(node.dbl("mod.AspectRatio.ratio", 0.0).toFloat())
+  if ("mod.Background.colorArgb" in node.props) m = m.background(node.int("mod.Background.colorArgb", 0))
+  if ("mod.Blur.radiusDp" in node.props) m = m.blur(node.int("mod.Blur.radiusDp", 0))
+  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) m = m.border(node.int("mod.Border.widthDp", 0), node.int("mod.Border.colorArgb", 0))
+  if ("mod.CornerRadius.radiusDp" in node.props) m = m.cornerRadius(node.int("mod.CornerRadius.radiusDp", 0))
+  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) m = m.cornerRadiusEach(node.int("mod.CornerRadiusEach.topStartDp", 0), node.int("mod.CornerRadiusEach.topEndDp", 0), node.int("mod.CornerRadiusEach.bottomEndDp", 0), node.int("mod.CornerRadiusEach.bottomStartDp", 0))
+  if (node.bool("mod.FillMaxHeight")) m = m.fillMaxHeight()
+  if (node.bool("mod.FillMaxSize")) m = m.fillMaxSize()
+  if (node.bool("mod.FillWidth")) m = m.fillWidth()
+  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) m = m.gradientBackground(node.int("mod.GradientBackground.startArgb", 0), node.int("mod.GradientBackground.endArgb", 0))
+  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) m = m.offset(node.int("mod.Offset.xDp", 0), node.int("mod.Offset.yDp", 0))
+  if ("mod.Padding.allDp" in node.props) m = m.padding(node.int("mod.Padding.allDp", 0))
+  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.int("mod.PaddingEach.startDp", 0), node.int("mod.PaddingEach.topDp", 0), node.int("mod.PaddingEach.endDp", 0), node.int("mod.PaddingEach.bottomDp", 0))
+  if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.int("mod.Rotate.degrees", 0))
+  if ("mod.Scale.percent" in node.props) m = m.scale(node.int("mod.Scale.percent", 0))
+  if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.int("mod.Shadow.elevationDp", 0))
+  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.int("mod.Size.widthDp", 0), node.int("mod.Size.heightDp", 0))
+  return m
 }

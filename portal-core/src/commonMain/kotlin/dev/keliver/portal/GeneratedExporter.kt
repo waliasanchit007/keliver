@@ -71,9 +71,39 @@ private val supportImports: Map<String, List<String>> = mapOf(
   "Spacer" to listOf("dev.keliver.ui.Dp"),
 )
 
+/** modifier name -> the import its extension function needs in exported code. */
+private val modifierImport: Map<String, String> = mapOf(
+  "Alpha" to "dev.keliver.material.compose.alpha",
+  "AnimateContentSize" to "dev.keliver.material.compose.animateContentSize",
+  "AspectRatio" to "dev.keliver.material.compose.aspectRatio",
+  "Background" to "dev.keliver.material.compose.background",
+  "Blur" to "dev.keliver.material.compose.blur",
+  "Border" to "dev.keliver.material.compose.border",
+  "CornerRadius" to "dev.keliver.material.compose.cornerRadius",
+  "CornerRadiusEach" to "dev.keliver.material.compose.cornerRadiusEach",
+  "FillMaxHeight" to "dev.keliver.material.compose.fillMaxHeight",
+  "FillMaxSize" to "dev.keliver.material.compose.fillMaxSize",
+  "FillWidth" to "dev.keliver.material.compose.fillWidth",
+  "GradientBackground" to "dev.keliver.material.compose.gradientBackground",
+  "Offset" to "dev.keliver.material.compose.offset",
+  "Padding" to "dev.keliver.material.compose.padding",
+  "PaddingEach" to "dev.keliver.material.compose.paddingEach",
+  "Rotate" to "dev.keliver.material.compose.rotate",
+  "Scale" to "dev.keliver.material.compose.scale",
+  "Shadow" to "dev.keliver.material.compose.shadow",
+  "Size" to "dev.keliver.material.compose.size",
+)
+
 private fun collectTypes(node: WidgetNode, out: MutableSet<String>) {
   out += node.type
   node.children.forEach { collectTypes(it, out) }
+}
+
+private fun collectModifierNames(node: WidgetNode, out: MutableSet<String>) {
+  for (key in node.props.keys) {
+    if (key.startsWith("mod.")) out += key.removePrefix("mod.").substringBefore('.')
+  }
+  node.children.forEach { collectModifierNames(it, out) }
 }
 
 private fun fmtString(v: Any?): String = "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -104,9 +134,12 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
 fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen"): String {
   val used = mutableSetOf<String>()
   collectTypes(tree, used)
+  val usedMods = mutableSetOf<String>()
+  collectModifierNames(tree, usedMods)
   val sb = StringBuilder()
   sb.append("import androidx.compose.runtime.Composable\n")
-  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() }).distinct().sorted()
+  val modImports = usedMods.mapNotNull { modifierImport[it] } + (if (usedMods.isNotEmpty()) listOf("dev.keliver.Modifier") else emptyList())
+  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()
   imports.forEach { sb.append("import $it\n") }
   sb.append("\n@Composable\nfun $functionName() {\n")
   emitNode(sb, tree, "  ")
@@ -114,10 +147,36 @@ fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen"): Str
   return sb.toString()
 }
 
+/** The exported `modifier = Modifier.x().y()` chain, or null when the node has no mod props. */
+private fun modifierExpr(node: WidgetNode): String? {
+  val parts = mutableListOf<String>()
+  if ("mod.Alpha.pct" in node.props) parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"
+  if (node.props["mod.AnimateContentSize"] == true) parts += "animateContentSize()"
+  if ("mod.AspectRatio.ratio" in node.props) parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"
+  if ("mod.Background.colorArgb" in node.props) parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"
+  if ("mod.Blur.radiusDp" in node.props) parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"
+  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"
+  if ("mod.CornerRadius.radiusDp" in node.props) parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"
+  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"
+  if (node.props["mod.FillMaxHeight"] == true) parts += "fillMaxHeight()"
+  if (node.props["mod.FillMaxSize"] == true) parts += "fillMaxSize()"
+  if (node.props["mod.FillWidth"] == true) parts += "fillWidth()"
+  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"
+  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"
+  if ("mod.Padding.allDp" in node.props) parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"
+  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"
+  if ("mod.Rotate.degrees" in node.props) parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"
+  if ("mod.Scale.percent" in node.props) parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"
+  if ("mod.Shadow.elevationDp" in node.props) parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"
+  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"
+  return if (parts.isEmpty()) null else "Modifier." + parts.joinToString(".")
+}
+
 private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
   when (node.type) {
     "AlertDialog" -> {
       sb.append("${indent}AlertDialog(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("confirmText" in node.props) sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n")
@@ -126,6 +185,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "AnimatedBorder" -> {
       sb.append("${indent}AnimatedBorder(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
       if ("strokeWidthDp" in node.props) sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n")
       if ("baseColorArgb" in node.props) sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n")
@@ -140,6 +200,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "AnimatedVisibility" -> {
       sb.append("${indent}AnimatedVisibility(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("visible" in node.props) sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
@@ -147,6 +208,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "AsyncImage" -> {
       sb.append("${indent}AsyncImage(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
       if ("contentScale" in node.props) sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n")
       if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
@@ -158,17 +220,20 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Badge" -> {
       sb.append("${indent}Badge(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "BottomAppBar" -> {
       sb.append("${indent}BottomAppBar(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "BottomSheet" -> {
       sb.append("${indent}BottomSheet(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
       if ("contentPaddingDp" in node.props) sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n")
       sb.append("$indent) {\n")
@@ -177,6 +242,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Box" -> {
       sb.append("${indent}Box(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
@@ -187,6 +253,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Button" -> {
       sb.append("${indent}Button(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       if ("containerArgb" in node.props) sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n")
@@ -196,34 +263,40 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Card" -> {
       sb.append("${indent}Card(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "Checkbox" -> {
       sb.append("${indent}Checkbox(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "Chip" -> {
       sb.append("${indent}Chip(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "CircularProgressIndicator" -> {
       sb.append("${indent}CircularProgressIndicator(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
       sb.append("$indent)\n")
     }
     "Clickable" -> {
       sb.append("${indent}Clickable(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "Column" -> {
       sb.append("${indent}Column(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
@@ -235,63 +308,74 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Dialog" -> {
       sb.append("${indent}Dialog(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "Divider" -> {
       sb.append("${indent}Divider(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
       sb.append("$indent)\n")
     }
     "ElevatedButton" -> {
       sb.append("${indent}ElevatedButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "ElevatedCard" -> {
       sb.append("${indent}ElevatedCard(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "ExtendedFloatingActionButton" -> {
       sb.append("${indent}ExtendedFloatingActionButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "FilledTonalButton" -> {
       sb.append("${indent}FilledTonalButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "FilterChip" -> {
       sb.append("${indent}FilterChip(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       sb.append("$indent)\n")
     }
     "FloatingActionButton" -> {
       sb.append("${indent}FloatingActionButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "FlowColumn" -> {
       sb.append("${indent}FlowColumn(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "FlowRow" -> {
       sb.append("${indent}FlowRow(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "HorizontalPager" -> {
       sb.append("${indent}HorizontalPager(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("autoScrollMs" in node.props) sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n")
       if ("showIndicator" in node.props) sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n")
       if ("indicatorActiveArgb" in node.props) sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n")
@@ -303,22 +387,26 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "IconButton" -> {
       sb.append("${indent}IconButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Image" -> {
       sb.append("${indent}Image(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "InputChip" -> {
       sb.append("${indent}InputChip(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       sb.append("$indent)\n")
     }
     "LazyHorizontalGrid" -> {
       sb.append("${indent}LazyHorizontalGrid(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("rows" in node.props) sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
@@ -326,6 +414,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "LazyVerticalGrid" -> {
       sb.append("${indent}LazyVerticalGrid(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("columns" in node.props) sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
@@ -333,23 +422,27 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "LinearProgressIndicator" -> {
       sb.append("${indent}LinearProgressIndicator(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
       sb.append("$indent)\n")
     }
     "NavigationBar" -> {
       sb.append("${indent}NavigationBar(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "NavigationRail" -> {
       sb.append("${indent}NavigationRail(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "OutlinedButton" -> {
       sb.append("${indent}OutlinedButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       if ("iconUrl" in node.props) sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n")
@@ -362,12 +455,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "OutlinedCard" -> {
       sb.append("${indent}OutlinedCard(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "OutlinedTextField" -> {
       sb.append("${indent}OutlinedTextField(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
       if ("label" in node.props) sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
@@ -383,12 +478,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "RadioButton" -> {
       sb.append("${indent}RadioButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "Row" -> {
       sb.append("${indent}Row(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
@@ -400,12 +497,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "ScrollableColumn" -> {
       sb.append("${indent}ScrollableColumn(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "Shimmer" -> {
       sb.append("${indent}Shimmer(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
       if ("heightDp" in node.props) sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n")
       if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
@@ -413,23 +512,27 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Slider" -> {
       sb.append("${indent}Slider(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("position" in node.props) sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "Snackbar" -> {
       sb.append("${indent}Snackbar(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  message = ${fmtString(node.props["message"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Spacer" -> {
       sb.append("${indent}Spacer(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n")
       sb.append("$indent)\n")
     }
     "StyledBox" -> {
       sb.append("${indent}StyledBox(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("colorArgb" in node.props) sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n")
       if ("gradientStartArgb" in node.props) sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n")
       if ("gradientEndArgb" in node.props) sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n")
@@ -457,6 +560,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "StyledText" -> {
       sb.append("${indent}StyledText(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("fontSize" in node.props) sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n")
       if ("bold" in node.props) sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n")
@@ -475,29 +579,34 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "SuggestionChip" -> {
       sb.append("${indent}SuggestionChip(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Surface" -> {
       sb.append("${indent}Surface(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
     "Switch" -> {
       sb.append("${indent}Switch(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "Tab" -> {
       sb.append("${indent}Tab(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       sb.append("$indent)\n")
     }
     "TabRow" -> {
       sb.append("${indent}TabRow(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
@@ -505,28 +614,33 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Text" -> {
       sb.append("${indent}Text(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "TextButton" -> {
       sb.append("${indent}TextButton(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       sb.append("$indent)\n")
     }
     "TextField" -> {
       sb.append("${indent}TextField(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "TextInput" -> {
       sb.append("${indent}TextInput(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("hint" in node.props) sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Theme" -> {
       sb.append("${indent}Theme(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("dark" in node.props) sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n")
       if ("primaryArgb" in node.props) sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n")
       if ("onPrimaryArgb" in node.props) sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n")
@@ -546,6 +660,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "Tooltip" -> {
       sb.append("${indent}Tooltip(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
@@ -553,16 +668,19 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
     }
     "TopAppBar" -> {
       sb.append("${indent}TopAppBar(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "VerticalDivider" -> {
       sb.append("${indent}VerticalDivider(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
       sb.append("$indent)\n")
     }
     "VerticalPager" -> {
       sb.append("${indent}VerticalPager(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")

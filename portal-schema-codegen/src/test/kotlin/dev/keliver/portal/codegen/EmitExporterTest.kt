@@ -33,4 +33,15 @@ class EmitExporterTest {
     assertContains(src, "fmtFloatList")
     assertContains(src, "// unknown widget:")
   }
+
+  @Test fun emitsModifierChainExport() {
+    val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
+      listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
+    val src = emitExporter(listOf(text), listOf(padding))
+    assertContains(src, "\"Padding\" to \"dev.keliver.material.compose.padding\"")
+    assertContains(src, "private fun modifierExpr(node: WidgetNode): String?")
+    assertContains(src, "if (\"mod.Padding.allDp\" in node.props) parts += \"padding(\" + fmtInt(node.props[\"mod.Padding.allDp\"]) + \")\"")
+    assertContains(src, "modifierExpr(node)?.let { sb.append(\"\${indent}  modifier = \$it,\\n\") }")
+    assertContains(src, "collectModifierNames")
+  }
 }
