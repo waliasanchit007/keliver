@@ -8,8 +8,11 @@
  */
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
+import dev.keliver.portal.Action
+import dev.keliver.portal.Bind
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.collectContract
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.ensureNodeIdsAbove
@@ -21,6 +24,8 @@ import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.moveNode
 import dev.keliver.portal.removeNode
 import dev.keliver.portal.serializeTree
+import dev.keliver.portal.kotlinTypeOf
+import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.updateProps
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
@@ -101,6 +106,8 @@ private lateinit var outlineEl: HTMLElement
 private lateinit var propsEl: HTMLElement
 private lateinit var modsEl: HTMLElement
 private lateinit var opsEl: HTMLElement
+private lateinit var bindingsEl: HTMLElement
+private lateinit var consoleEl: HTMLElement
 private lateinit var paletteListEl: HTMLElement
 private lateinit var saveDotEl: HTMLElement
 private lateinit var saveTextEl: HTMLElement
@@ -289,6 +296,19 @@ private fun buildRightPane() {
   pane.appendChild(Ui.section("Node"))
   opsEl = Ui.el("div", "card")
   pane.appendChild(opsEl)
+  pane.appendChild(Ui.section("Bindings"))
+  bindingsEl = Ui.el("div", "card")
+  pane.appendChild(bindingsEl)
+  pane.appendChild(Ui.section("Action console"))
+  consoleEl = Ui.el("div", "card")
+  consoleEl.setAttribute("style", "max-height:130px; overflow:auto; font-size:11px;")
+  consoleEl.appendChild(Ui.el("div", "muted", "Tap a wired widget in the preview…"))
+  pane.appendChild(consoleEl)
+  PreviewBindings.actionSink = { name ->
+    val row = Ui.el("div", "", "⚡ $name")
+    row.setAttribute("style", "color:var(--good);")
+    consoleEl.insertBefore(row, consoleEl.firstChild)
+  }
   document.body?.appendChild(pane)
 }
 
@@ -417,7 +437,7 @@ private fun promptCreate(project: Boolean) {
 // Panels
 
 private fun refresh() {
-  renderOutline(); renderProps(); renderMods(); renderOps()
+  renderOutline(); renderProps(); renderMods(); renderOps(); renderBindings()
 }
 
 private fun renderPalette(filter: String) {
@@ -485,12 +505,68 @@ private fun renderProps() {
     return
   }
   propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
+  val spec = widgetSpec(node.type)
   val specs = editableProps(node.type)
   if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
-  specs.forEach { spec ->
-    propsEl.appendChild(propRow(node.id, node.props, spec.name, spec.kind, spec.label, keyPrefix = ""))
+  specs.forEach { s ->
+    propsEl.appendChild(propRow(node.id, node.props, s.name, s.kind, s.label, keyPrefix = ""))
+  }
+  // P3: events — each wires to a named Action.
+  val events = spec?.events ?: emptyList()
+  if (events.isNotEmpty()) {
+    propsEl.appendChild(Ui.el("div", "section", "Events"))
+    events.forEach { evName ->
+      val rowEl = Ui.el("div", "row")
+      val lab = Ui.el("label", "", evName)
+      lab.setAttribute("title", evName)
+      rowEl.appendChild(lab)
+      val input = Ui.input()
+      input.setAttribute("type", "text")
+      input.setAttribute("placeholder", "action name")
+      input.value = (node.props[evName] as? Action)?.name ?: ""
+      input.addEventListener("input", { _ ->
+        val cur = portalTree.value.findNode(node.id) ?: return@addEventListener
+        val name = input.value.trim()
+        val newProps = if (name.isEmpty()) cur.props - evName else cur.props + (evName to Action(name))
+        applyTree(portalTree.value.updateProps(node.id, newProps))
+        renderBindings()
+      })
+      rowEl.appendChild(input)
+      propsEl.appendChild(rowEl)
+    }
   }
 }
+
+/** The derived contract + mock inputs, and everything bound across the screen. */
+private fun renderBindings() {
+  Ui.clear(bindingsEl)
+  val contract = collectContract(portalTree.value)
+  if (contract.isEmpty) {
+    bindingsEl.appendChild(Ui.el("div", "muted", "Bind a prop (@) or wire an event to build the contract"))
+    return
+  }
+  contract.fields.forEach { (field, kind) ->
+    val rowEl = Ui.el("div", "row")
+    val lab = Ui.el("label", "", "$field: ${kotlinTypeOf(kind)}")
+    lab.setAttribute("title", field)
+    rowEl.appendChild(lab)
+    val mock = Ui.input()
+    mock.setAttribute("type", "text")
+    mock.setAttribute("placeholder", "mock value")
+    mock.value = PreviewBindings.mocks[field] ?: ""
+    mock.addEventListener("input", { _ ->
+      PreviewBindings.mocks[field] = mock.value
+      Snapshot.sendApplyNotifications()
+    })
+    rowEl.appendChild(mock)
+    bindingsEl.appendChild(rowEl)
+  }
+  contract.actions.forEach { a ->
+    bindingsEl.appendChild(Ui.el("div", "muted", "fun $a()"))
+  }
+}
+
+private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKind.Double, PropKind.Color)
 
 /** One editable property row; [keyPrefix] namespaces modifier props ("mod.X."). */
 private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
@@ -499,6 +575,30 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
   val lab = Ui.el("label", "", label)
   lab.setAttribute("title", label)
   rowEl.appendChild(lab)
+
+  // P3: bound props show a field-name input instead of a literal editor.
+  val bound = props[key] as? Bind
+  if (bound != null) {
+    val fieldInput = Ui.input()
+    fieldInput.setAttribute("type", "text")
+    fieldInput.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
+    fieldInput.value = bound.field
+    fieldInput.addEventListener("input", { _ ->
+      val cur = portalTree.value.findNode(nodeId) ?: return@addEventListener
+      applyTree(portalTree.value.updateProps(nodeId, cur.props + (key to Bind(fieldInput.value.trim()))))
+      renderBindings()
+    })
+    rowEl.appendChild(fieldInput)
+    rowEl.appendChild(
+      Ui.button("@", "btn icon") {
+        val cur = portalTree.value.findNode(nodeId) ?: return@button
+        applyTree(portalTree.value.updateProps(nodeId, cur.props - key)) // back to literal default
+        refresh()
+      }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);") },
+    )
+    return rowEl
+  }
+
   val input = Ui.input()
   when (kind) {
     PropKind.Text -> {
@@ -536,6 +636,15 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     }
   }
   rowEl.appendChild(input)
+  if (kind in BINDABLE && keyPrefix.isEmpty()) {
+    rowEl.appendChild(
+      Ui.button("@", "btn icon") {
+        val cur = portalTree.value.findNode(nodeId) ?: return@button
+        applyTree(portalTree.value.updateProps(nodeId, cur.props + (key to Bind(name))))
+        refresh()
+      },
+    )
+  }
   return rowEl
 }
 
