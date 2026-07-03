@@ -240,7 +240,19 @@ private fun buildTopbar() {
   savePill.appendChild(saveTextEl)
   bar.appendChild(savePill)
 
-  bar.appendChild(Ui.button("Export Kotlin", "btn primary") { showExport() })
+  bar.appendChild(Ui.button("Export Kotlin", "btn") { showExport() })
+  bar.appendChild(
+    Ui.button("Publish", "btn primary") {
+      exportPre.textContent = "Publishing… (compiles + signs the bundle, ~1-2 min)"
+      exportOverlay.removeAttribute("style")
+      val xhr = XMLHttpRequest()
+      xhr.open("POST", "$SERVER/publish")
+      xhr.addEventListener("load", { _ ->
+        exportPre.textContent = (if (xhr.status.toInt() == 200) "✅ " else "❌ ") + xhr.responseText
+      })
+      xhr.send()
+    },
+  )
   document.body?.appendChild(bar)
 }
 

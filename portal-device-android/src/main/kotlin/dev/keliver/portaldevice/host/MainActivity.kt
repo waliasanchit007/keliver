@@ -37,20 +37,37 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.modules.EmptySerializersModule
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okio.ByteString.Companion.decodeHex
 
 private const val TAG = "PortalDevice"
 // The Zipline dev server (:guest:serveDevelopmentZipline) serves the bundle on 8080;
 // 10.0.2.2 is the emulator's alias for the host machine's localhost.
 private const val MANIFEST_URL = "http://10.0.2.2:8080/manifest.zipline.json"
+private const val PORTAL_SERVER = "http://10.0.2.2:8077"
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    Log.d(TAG, "onCreate — manifest $MANIFEST_URL")
+
+    // P4: `adb shell am start ... --es mode prod` loads the PUBLISHED, SIGNED
+    // bundle from the portal-server bundle store (no relay, no interpreter).
+    val prodMode = intent.getStringExtra("mode") == "prod"
+    val publicKeyHex = runCatching {
+      assets.open("portal_ed25519.pub").bufferedReader().use { it.readText().trim() }
+    }.getOrNull()
+    val verifier = if (prodMode && publicKeyHex != null) {
+      Log.d(TAG, "prod mode: verifying manifests with portal-ed25519 ${publicKeyHex.take(8)}…")
+      ManifestVerifier.Builder().addEd25519("portal-ed25519", publicKeyHex.decodeHex()).build()
+    } else {
+      if (prodMode) Log.w(TAG, "prod mode WITHOUT embedded public key — falling back to NO_SIGNATURE_CHECKS")
+      ManifestVerifier.NO_SIGNATURE_CHECKS
+    }
+    Log.d(TAG, "onCreate — mode=${if (prodMode) "prod" else "dev"}")
 
     val ziplineHttpClient = OkHttpClient().asZiplineHttpClient()
     val okhttp = OkHttpClient()
@@ -58,10 +75,12 @@ class MainActivity : ComponentActivity() {
     val factory = TreehouseAppFactory(
       context = applicationContext,
       httpClient = ziplineHttpClient,
-      manifestVerifier = ManifestVerifier.NO_SIGNATURE_CHECKS,
+      manifestVerifier = verifier,
       embeddedFileSystem = null,
       embeddedDir = null,
-      cacheName = "portal-device-zipline",
+      // Separate caches: the dev cache holds unsigned bundles the prod
+      // verifier must never even see.
+      cacheName = if (prodMode) "portal-device-zipline-prod" else "portal-device-zipline",
       cacheMaxSizeInBytes = 50L * 1024L * 1024L,
       concurrentDownloads = 4,
       stateStore = MemoryStateStore(),
@@ -69,9 +88,28 @@ class MainActivity : ComponentActivity() {
       hostProtocolFactory = KeliverMaterialHostProtocol.Factory,
     )
 
+    // Prod mode resolves the newest COMPATIBLE bundle from the store; the flow
+    // updates once the lookup completes (Treehouse reloads on flow emissions).
+    val manifestFlow = MutableStateFlow(if (prodMode) "" else MANIFEST_URL)
+    if (prodMode) {
+      lifecycleScope.launch(Dispatchers.IO) {
+        runCatching {
+          val body = okhttp.newCall(Request.Builder().url("$PORTAL_SERVER/bundles/latest?widgetVersion=1").build())
+            .execute().use { it.body?.string() ?: "" }
+          val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
+          if (path != null) {
+            Log.d(TAG, "prod mode: loading $PORTAL_SERVER$path")
+            manifestFlow.value = "$PORTAL_SERVER$path"
+          } else {
+            Log.e(TAG, "prod mode: no compatible bundle ($body)")
+          }
+        }.onFailure { Log.e(TAG, "prod mode: bundle lookup failed", it) }
+      }
+    }
+
     val spec = object : TreehouseApp.Spec<PortalPresenter>() {
       override val name = "portal-device"
-      override val manifestUrl = MutableStateFlow(MANIFEST_URL).asStateFlow()
+      override val manifestUrl = manifestFlow.asStateFlow()
       override val serializersModule = EmptySerializersModule()
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {

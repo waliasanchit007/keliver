@@ -178,6 +178,7 @@ include ':portal-device-guest' // spike/keliver-web portal M2 Option X: keliver-
 include ':portal-device-android' // spike/keliver-web portal M2 Option X: Android Treehouse host
 include ':portal-schema-codegen' // spike/keliver-web portal P1: schema→portal codegen tool
 include ':portal-render' // spike/keliver-web portal P1: generated WidgetNode interpreter (js+wasm, shared web+device)
+include ':portal-published-guest' // spike/keliver-web portal P4: the compiled+signed published-screen guest
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'
