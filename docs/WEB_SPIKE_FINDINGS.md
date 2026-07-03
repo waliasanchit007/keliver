@@ -233,6 +233,18 @@ is off the table unless a future product needs hard SEO/a11y.
 7. Verify `AsyncImage` on Wasm. **DONE 2026-06-26 (gate 6):** browser-fetch Coil
    fetcher + skiko decoder; network image verified in Chrome.
 
+**Portal SOTA P1 — schema codegen engine. DONE 2026-07-03.**
+The portal's catalog / RenderNode interpreter / exportKotlin are now GENERATED
+from the keliver-material + keliver-layout schema sources by
+`:portal-schema-codegen` (60 widgets + 19 unscoped modifiers; the generated
+interpreter lives in shared `:portal-render`, consumed by web-spike AND
+portal-device-guest). Gates: emitter unit tests, all-target compiles, a
+kitchen-sink export→compile check (every widget + a modifier chain), a CI
+staleness guard (`checkPortalCode`), and runtime verification in Chrome + on
+the Android emulator (Slider/CircularProgressIndicator/Switch rendered natively
+from a portal edit). Spec: `docs/superpowers/specs/2026-07-03-keliver-portal-sota-design.md`;
+plan: `docs/superpowers/plans/2026-07-03-keliver-portal-p1-codegen.md`.
+
 **Phase C — safety + delivery.**
 8. Served-UI versioning, validation, rollback, staged rollout.
 9. A small `keliver-web-host` library (the generic host wrapped as a reusable
