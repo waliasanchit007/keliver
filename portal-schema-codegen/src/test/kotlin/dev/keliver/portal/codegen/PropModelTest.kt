@@ -62,7 +62,7 @@ class PropModelTest {
       FakeEvent("onClick", isNullable = true),
     ))
     val inc = assertIs<WidgetPlan.Include>(plan(ev))
-    assertEquals(listOf("onClick"), inc.events)
+    assertEquals(listOf(EventPlan("onClick", 0)), inc.events)
 
     val evReq = FakeWidget(fq("dev.keliver.material", "Weird"),
       listOf(FakeEvent("onThing", isNullable = false, defaultExpression = null)))

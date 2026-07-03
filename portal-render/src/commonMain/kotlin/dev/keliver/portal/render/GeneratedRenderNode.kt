@@ -5,11 +5,8 @@ import androidx.compose.runtime.Composable
 import dev.keliver.Modifier
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.bool
-import dev.keliver.portal.dbl
 import dev.keliver.portal.floatList
-import dev.keliver.portal.int
 import dev.keliver.portal.intList
-import dev.keliver.portal.str
 import dev.keliver.ui.Dp
 import dev.keliver.material.compose.AlertDialog
 import dev.keliver.material.compose.AnimatedBorder
@@ -97,122 +94,138 @@ fun RenderNode(node: WidgetNode) {
   when (node.type) {
     "AlertDialog" -> AlertDialog(
       modifier = nodeModifier(node),
-      title = node.str("title"),
-      text = node.str("text"),
-      confirmText = node.str("confirmText", "OK"),
-      dismissText = node.str("dismissText"),
+      title = node.strB("title"),
+      text = node.strB("text"),
+      confirmText = node.strB("confirmText", "OK"),
+      dismissText = node.strB("dismissText"),
+      onConfirm = node.actionOf("onConfirm")?.let { n -> { PreviewBindings.fire(n) } },
+      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "AnimatedBorder" -> AnimatedBorder(
       modifier = nodeModifier(node),
-      cornerRadiusDp = node.int("cornerRadiusDp", 8),
-      strokeWidthDp = node.int("strokeWidthDp", 1),
-      baseColorArgb = node.int("baseColorArgb", 0),
-      cometColorArgb = node.int("cometColorArgb", 0),
-      durationMs = node.int("durationMs", 1800),
-      segmentLenDp = node.int("segmentLenDp", 50),
-      effect = node.int("effect", 0),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 8),
+      strokeWidthDp = node.intB("strokeWidthDp", 1),
+      baseColorArgb = node.intB("baseColorArgb", 0),
+      cometColorArgb = node.intB("cometColorArgb", 0),
+      durationMs = node.intB("durationMs", 1800),
+      segmentLenDp = node.intB("segmentLenDp", 50),
+      effect = node.intB("effect", 0),
       colorsArgb = node.intList("colorsArgb"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "AnimatedVisibility" -> AnimatedVisibility(
       modifier = nodeModifier(node),
-      visible = node.bool("visible", true),
+      visible = node.boolB("visible", true),
     ) { node.children.forEach { RenderNode(it) } }
     "AsyncImage" -> AsyncImage(
       modifier = nodeModifier(node),
-      url = node.str("url"),
-      contentScale = node.int("contentScale", 0),
-      widthDp = node.int("widthDp", 0),
-      heightDp = node.int("heightDp", 0),
-      blurDp = node.int("blurDp", 0),
-      fillWidth = node.bool("fillWidth", false),
-      tintArgb = node.int("tintArgb", 0),
+      url = node.strB("url"),
+      contentScale = node.intB("contentScale", 0),
+      widthDp = node.intB("widthDp", 0),
+      heightDp = node.intB("heightDp", 0),
+      blurDp = node.intB("blurDp", 0),
+      fillWidth = node.boolB("fillWidth", false),
+      tintArgb = node.intB("tintArgb", 0),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "Badge" -> Badge(
       modifier = nodeModifier(node),
-      text = node.str("text"),
+      text = node.strB("text"),
     )
     "BottomAppBar" -> BottomAppBar(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "BottomSheet" -> BottomSheet(
       modifier = nodeModifier(node),
-      visible = node.bool("visible", false),
-      contentPaddingDp = node.int("contentPaddingDp", 0),
+      visible = node.boolB("visible", false),
+      contentPaddingDp = node.intB("contentPaddingDp", 0),
+      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Box" -> Box(
       modifier = nodeModifier(node),
-      width = constraintOf(node.int("width", 0)),
-      height = constraintOf(node.int("height", 0)),
-      horizontalAlignment = crossAxisOf(node.int("horizontalAlignment", 0)),
-      verticalAlignment = crossAxisOf(node.int("verticalAlignment", 0)),
+      width = constraintOf(node.intB("width", 0)),
+      height = constraintOf(node.intB("height", 0)),
+      horizontalAlignment = crossAxisOf(node.intB("horizontalAlignment", 0)),
+      verticalAlignment = crossAxisOf(node.intB("verticalAlignment", 0)),
     ) { node.children.forEach { RenderNode(it) } }
     "Button" -> Button(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      enabled = node.bool("enabled", true),
-      containerArgb = node.int("containerArgb", 0),
-      contentArgb = node.int("contentArgb", 0),
-      cornerRadiusDp = node.int("cornerRadiusDp", 0),
+      text = node.strB("text"),
+      enabled = node.boolB("enabled", true),
+      containerArgb = node.intB("containerArgb", 0),
+      contentArgb = node.intB("contentArgb", 0),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 0),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "Card" -> Card(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "Checkbox" -> Checkbox(
       modifier = nodeModifier(node),
-      checked = node.bool("checked", false),
-      enabled = node.bool("enabled", true),
+      checked = node.boolB("checked", false),
+      enabled = node.boolB("enabled", true),
+      onCheckedChange = node.actionOf("onCheckedChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "Chip" -> Chip(
       modifier = nodeModifier(node),
-      label = node.str("label"),
+      label = node.strB("label"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "CircularProgressIndicator" -> CircularProgressIndicator(
       modifier = nodeModifier(node),
-      progress = node.dbl("progress", -1.0).toFloat(),
+      progress = node.dblB("progress", -1.0).toFloat(),
     )
     "Clickable" -> Clickable(
       modifier = nodeModifier(node),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Column" -> Column(
       modifier = nodeModifier(node),
-      width = constraintOf(node.int("width", 0)),
-      height = constraintOf(node.int("height", 0)),
-      overflow = overflowOf(node.int("overflow", 0)),
-      horizontalAlignment = crossAxisOf(node.int("horizontalAlignment", 0)),
-      verticalAlignment = mainAxisOf(node.int("verticalAlignment", 0)),
+      width = constraintOf(node.intB("width", 0)),
+      height = constraintOf(node.intB("height", 0)),
+      overflow = overflowOf(node.intB("overflow", 0)),
+      horizontalAlignment = crossAxisOf(node.intB("horizontalAlignment", 0)),
+      verticalAlignment = mainAxisOf(node.intB("verticalAlignment", 0)),
+      onScroll = node.actionOf("onScroll")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Dialog" -> Dialog(
       modifier = nodeModifier(node),
+      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Divider" -> Divider(
       modifier = nodeModifier(node),
-      thickness = node.int("thickness", 1),
+      thickness = node.intB("thickness", 1),
     )
     "ElevatedButton" -> ElevatedButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      enabled = node.bool("enabled", true),
+      text = node.strB("text"),
+      enabled = node.boolB("enabled", true),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "ElevatedCard" -> ElevatedCard(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "ExtendedFloatingActionButton" -> ExtendedFloatingActionButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
+      text = node.strB("text"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "FilledTonalButton" -> FilledTonalButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      enabled = node.bool("enabled", true),
+      text = node.strB("text"),
+      enabled = node.boolB("enabled", true),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "FilterChip" -> FilterChip(
       modifier = nodeModifier(node),
-      label = node.str("label"),
-      selected = node.bool("selected", false),
+      label = node.strB("label"),
+      selected = node.boolB("selected", false),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "FloatingActionButton" -> FloatingActionButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
+      text = node.strB("text"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "FlowColumn" -> FlowColumn(
       modifier = nodeModifier(node),
@@ -222,36 +235,39 @@ fun RenderNode(node: WidgetNode) {
     ) { node.children.forEach { RenderNode(it) } }
     "HorizontalPager" -> HorizontalPager(
       modifier = nodeModifier(node),
-      autoScrollMs = node.int("autoScrollMs", 0),
-      showIndicator = node.bool("showIndicator", false),
-      indicatorActiveArgb = node.int("indicatorActiveArgb", 0),
-      indicatorInactiveArgb = node.int("indicatorInactiveArgb", 0),
-      contentPaddingDp = node.int("contentPaddingDp", 0),
+      autoScrollMs = node.intB("autoScrollMs", 0),
+      showIndicator = node.boolB("showIndicator", false),
+      indicatorActiveArgb = node.intB("indicatorActiveArgb", 0),
+      indicatorInactiveArgb = node.intB("indicatorInactiveArgb", 0),
+      contentPaddingDp = node.intB("contentPaddingDp", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "IconButton" -> IconButton(
       modifier = nodeModifier(node),
-      imageUrl = node.str("imageUrl"),
+      imageUrl = node.strB("imageUrl"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "Image" -> Image(
       modifier = nodeModifier(node),
-      url = node.str("url"),
+      url = node.strB("url"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "InputChip" -> InputChip(
       modifier = nodeModifier(node),
-      label = node.str("label"),
-      selected = node.bool("selected", false),
+      label = node.strB("label"),
+      selected = node.boolB("selected", false),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "LazyHorizontalGrid" -> LazyHorizontalGrid(
       modifier = nodeModifier(node),
-      rows = node.int("rows", 2),
+      rows = node.intB("rows", 2),
     ) { node.children.forEach { RenderNode(it) } }
     "LazyVerticalGrid" -> LazyVerticalGrid(
       modifier = nodeModifier(node),
-      columns = node.int("columns", 2),
+      columns = node.intB("columns", 2),
     ) { node.children.forEach { RenderNode(it) } }
     "LinearProgressIndicator" -> LinearProgressIndicator(
       modifier = nodeModifier(node),
-      progress = node.dbl("progress", -1.0).toFloat(),
+      progress = node.dblB("progress", -1.0).toFloat(),
     )
     "NavigationBar" -> NavigationBar(
       modifier = nodeModifier(node),
@@ -261,175 +277,187 @@ fun RenderNode(node: WidgetNode) {
     ) { node.children.forEach { RenderNode(it) } }
     "OutlinedButton" -> OutlinedButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      enabled = node.bool("enabled", true),
-      iconUrl = node.str("iconUrl"),
-      iconSizeDp = node.int("iconSizeDp", 18),
-      containerArgb = node.int("containerArgb", 0),
-      contentArgb = node.int("contentArgb", 0),
-      borderArgb = node.int("borderArgb", 0),
-      cornerRadiusDp = node.int("cornerRadiusDp", 0),
+      text = node.strB("text"),
+      enabled = node.boolB("enabled", true),
+      iconUrl = node.strB("iconUrl"),
+      iconSizeDp = node.intB("iconSizeDp", 18),
+      containerArgb = node.intB("containerArgb", 0),
+      contentArgb = node.intB("contentArgb", 0),
+      borderArgb = node.intB("borderArgb", 0),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 0),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "OutlinedCard" -> OutlinedCard(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "OutlinedTextField" -> OutlinedTextField(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      placeholder = node.str("placeholder"),
-      label = node.str("label"),
-      leadingText = node.str("leadingText"),
-      keyboardType = node.int("keyboardType", 0),
-      singleLine = node.bool("singleLine", true),
-      maxLines = node.int("maxLines", 1),
-      isError = node.bool("isError", false),
-      supportingText = node.str("supportingText"),
-      borderArgb = node.int("borderArgb", 0),
-      cornerRadiusDp = node.int("cornerRadiusDp", 0),
+      text = node.strB("text"),
+      placeholder = node.strB("placeholder"),
+      label = node.strB("label"),
+      leadingText = node.strB("leadingText"),
+      keyboardType = node.intB("keyboardType", 0),
+      singleLine = node.boolB("singleLine", true),
+      maxLines = node.intB("maxLines", 1),
+      isError = node.boolB("isError", false),
+      supportingText = node.strB("supportingText"),
+      borderArgb = node.intB("borderArgb", 0),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 0),
+      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "RadioButton" -> RadioButton(
       modifier = nodeModifier(node),
-      selected = node.bool("selected", false),
-      enabled = node.bool("enabled", true),
+      selected = node.boolB("selected", false),
+      enabled = node.boolB("enabled", true),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "Row" -> Row(
       modifier = nodeModifier(node),
-      width = constraintOf(node.int("width", 0)),
-      height = constraintOf(node.int("height", 0)),
-      overflow = overflowOf(node.int("overflow", 0)),
-      horizontalAlignment = mainAxisOf(node.int("horizontalAlignment", 0)),
-      verticalAlignment = crossAxisOf(node.int("verticalAlignment", 0)),
+      width = constraintOf(node.intB("width", 0)),
+      height = constraintOf(node.intB("height", 0)),
+      overflow = overflowOf(node.intB("overflow", 0)),
+      horizontalAlignment = mainAxisOf(node.intB("horizontalAlignment", 0)),
+      verticalAlignment = crossAxisOf(node.intB("verticalAlignment", 0)),
+      onScroll = node.actionOf("onScroll")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "ScrollableColumn" -> ScrollableColumn(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "Shimmer" -> Shimmer(
       modifier = nodeModifier(node),
-      widthDp = node.int("widthDp", 0),
-      heightDp = node.int("heightDp", 16),
-      cornerRadiusDp = node.int("cornerRadiusDp", 8),
+      widthDp = node.intB("widthDp", 0),
+      heightDp = node.intB("heightDp", 16),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 8),
     )
     "Slider" -> Slider(
       modifier = nodeModifier(node),
-      position = node.dbl("position", 0.0).toFloat(),
-      enabled = node.bool("enabled", true),
+      position = node.dblB("position", 0.0).toFloat(),
+      enabled = node.boolB("enabled", true),
+      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "Snackbar" -> Snackbar(
       modifier = nodeModifier(node),
-      message = node.str("message"),
+      message = node.strB("message"),
     )
     "Spacer" -> Spacer(
       modifier = nodeModifier(node),
-      width = Dp(node.dbl("width", 0.0)),
-      height = Dp(node.dbl("height", 0.0)),
+      width = Dp(node.dblB("width", 0.0)),
+      height = Dp(node.dblB("height", 0.0)),
     )
     "StyledBox" -> StyledBox(
       modifier = nodeModifier(node),
-      colorArgb = node.int("colorArgb", 0),
-      gradientStartArgb = node.int("gradientStartArgb", 0),
-      gradientEndArgb = node.int("gradientEndArgb", 0),
-      cornerRadiusDp = node.int("cornerRadiusDp", 0),
-      widthDp = node.int("widthDp", 0),
-      heightDp = node.int("heightDp", 0),
-      paddingDp = node.int("paddingDp", 0),
-      fillWidth = node.bool("fillWidth", false),
-      contentAlignment = node.int("contentAlignment", 0),
-      offsetYDp = node.int("offsetYDp", 0),
-      elevationDp = node.int("elevationDp", 0),
-      borderColorArgb = node.int("borderColorArgb", 0),
-      borderWidthDp = node.int("borderWidthDp", 0),
-      gradientVertical = node.bool("gradientVertical", false),
+      colorArgb = node.intB("colorArgb", 0),
+      gradientStartArgb = node.intB("gradientStartArgb", 0),
+      gradientEndArgb = node.intB("gradientEndArgb", 0),
+      cornerRadiusDp = node.intB("cornerRadiusDp", 0),
+      widthDp = node.intB("widthDp", 0),
+      heightDp = node.intB("heightDp", 0),
+      paddingDp = node.intB("paddingDp", 0),
+      fillWidth = node.boolB("fillWidth", false),
+      contentAlignment = node.intB("contentAlignment", 0),
+      offsetYDp = node.intB("offsetYDp", 0),
+      elevationDp = node.intB("elevationDp", 0),
+      borderColorArgb = node.intB("borderColorArgb", 0),
+      borderWidthDp = node.intB("borderWidthDp", 0),
+      gradientVertical = node.boolB("gradientVertical", false),
       gradientColorsArgb = node.intList("gradientColorsArgb"),
       gradientStops = node.floatList("gradientStops"),
-      gradientDirection = node.int("gradientDirection", 0),
-      cornerTopStartDp = node.int("cornerTopStartDp", -1),
-      cornerTopEndDp = node.int("cornerTopEndDp", -1),
-      cornerBottomStartDp = node.int("cornerBottomStartDp", -1),
-      cornerBottomEndDp = node.int("cornerBottomEndDp", -1),
+      gradientDirection = node.intB("gradientDirection", 0),
+      cornerTopStartDp = node.intB("cornerTopStartDp", -1),
+      cornerTopEndDp = node.intB("cornerTopEndDp", -1),
+      cornerBottomStartDp = node.intB("cornerBottomStartDp", -1),
+      cornerBottomEndDp = node.intB("cornerBottomEndDp", -1),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     ) { node.children.forEach { RenderNode(it) } }
     "StyledText" -> StyledText(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      fontSize = node.int("fontSize", 14),
-      bold = node.bool("bold", false),
-      colorArgb = node.int("colorArgb", 0),
-      align = node.int("align", 0),
-      maxLines = node.int("maxLines", 0),
-      overflow = node.int("overflow", 0),
-      lineHeightSp = node.int("lineHeightSp", 0),
-      letterSpacingX100 = node.int("letterSpacingX100", 0),
-      italic = node.bool("italic", false),
-      underline = node.bool("underline", false),
-      strikethrough = node.bool("strikethrough", false),
-      weight = node.int("weight", 0),
-      colorRole = node.int("colorRole", 0),
+      text = node.strB("text"),
+      fontSize = node.intB("fontSize", 14),
+      bold = node.boolB("bold", false),
+      colorArgb = node.intB("colorArgb", 0),
+      align = node.intB("align", 0),
+      maxLines = node.intB("maxLines", 0),
+      overflow = node.intB("overflow", 0),
+      lineHeightSp = node.intB("lineHeightSp", 0),
+      letterSpacingX100 = node.intB("letterSpacingX100", 0),
+      italic = node.boolB("italic", false),
+      underline = node.boolB("underline", false),
+      strikethrough = node.boolB("strikethrough", false),
+      weight = node.intB("weight", 0),
+      colorRole = node.intB("colorRole", 0),
     )
     "SuggestionChip" -> SuggestionChip(
       modifier = nodeModifier(node),
-      label = node.str("label"),
+      label = node.strB("label"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "Surface" -> Surface(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
     "Switch" -> Switch(
       modifier = nodeModifier(node),
-      checked = node.bool("checked", false),
-      enabled = node.bool("enabled", true),
+      checked = node.boolB("checked", false),
+      enabled = node.boolB("enabled", true),
+      onCheckedChange = node.actionOf("onCheckedChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "Tab" -> Tab(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      selected = node.bool("selected", false),
+      text = node.strB("text"),
+      selected = node.boolB("selected", false),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "TabRow" -> TabRow(
       modifier = nodeModifier(node),
-      selectedIndex = node.int("selectedIndex", 0),
+      selectedIndex = node.intB("selectedIndex", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "Text" -> Text(
       modifier = nodeModifier(node),
-      text = node.str("text"),
+      text = node.strB("text"),
     )
     "TextButton" -> TextButton(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      enabled = node.bool("enabled", true),
+      text = node.strB("text"),
+      enabled = node.boolB("enabled", true),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "TextField" -> TextField(
       modifier = nodeModifier(node),
-      text = node.str("text"),
-      placeholder = node.str("placeholder"),
+      text = node.strB("text"),
+      placeholder = node.strB("placeholder"),
+      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "TextInput" -> TextInput(
       modifier = nodeModifier(node),
-      hint = node.str("hint"),
+      hint = node.strB("hint"),
+      onChange = node.actionOf("onChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
     )
     "Theme" -> Theme(
       modifier = nodeModifier(node),
-      dark = node.bool("dark", false),
-      primaryArgb = node.int("primaryArgb", 0),
-      onPrimaryArgb = node.int("onPrimaryArgb", 0),
-      secondaryArgb = node.int("secondaryArgb", 0),
-      onSecondaryArgb = node.int("onSecondaryArgb", 0),
-      surfaceArgb = node.int("surfaceArgb", 0),
-      onSurfaceArgb = node.int("onSurfaceArgb", 0),
-      surfaceVariantArgb = node.int("surfaceVariantArgb", 0),
-      onSurfaceVariantArgb = node.int("onSurfaceVariantArgb", 0),
-      backgroundArgb = node.int("backgroundArgb", 0),
-      onBackgroundArgb = node.int("onBackgroundArgb", 0),
-      errorArgb = node.int("errorArgb", 0),
-      outlineArgb = node.int("outlineArgb", 0),
+      dark = node.boolB("dark", false),
+      primaryArgb = node.intB("primaryArgb", 0),
+      onPrimaryArgb = node.intB("onPrimaryArgb", 0),
+      secondaryArgb = node.intB("secondaryArgb", 0),
+      onSecondaryArgb = node.intB("onSecondaryArgb", 0),
+      surfaceArgb = node.intB("surfaceArgb", 0),
+      onSurfaceArgb = node.intB("onSurfaceArgb", 0),
+      surfaceVariantArgb = node.intB("surfaceVariantArgb", 0),
+      onSurfaceVariantArgb = node.intB("onSurfaceVariantArgb", 0),
+      backgroundArgb = node.intB("backgroundArgb", 0),
+      onBackgroundArgb = node.intB("onBackgroundArgb", 0),
+      errorArgb = node.intB("errorArgb", 0),
+      outlineArgb = node.intB("outlineArgb", 0),
     ) { node.children.forEach { RenderNode(it) } }
     "Tooltip" -> Tooltip(
       modifier = nodeModifier(node),
-      text = node.str("text"),
+      text = node.strB("text"),
     ) { node.children.forEach { RenderNode(it) } }
     "TopAppBar" -> TopAppBar(
       modifier = nodeModifier(node),
-      title = node.str("title"),
+      title = node.strB("title"),
     )
     "VerticalDivider" -> VerticalDivider(
       modifier = nodeModifier(node),
-      thickness = node.int("thickness", 1),
+      thickness = node.intB("thickness", 1),
     )
     "VerticalPager" -> VerticalPager(
       modifier = nodeModifier(node),
@@ -441,24 +469,24 @@ fun RenderNode(node: WidgetNode) {
 /** Builds the Modifier chain from a node's namespaced "mod.*" props. */
 private fun nodeModifier(node: WidgetNode): Modifier {
   var m: Modifier = Modifier
-  if ("mod.Alpha.pct" in node.props) m = m.alpha(node.int("mod.Alpha.pct", 0))
+  if ("mod.Alpha.pct" in node.props) m = m.alpha(node.intB("mod.Alpha.pct", 0))
   if (node.bool("mod.AnimateContentSize")) m = m.animateContentSize()
-  if ("mod.AspectRatio.ratio" in node.props) m = m.aspectRatio(node.dbl("mod.AspectRatio.ratio", 0.0).toFloat())
-  if ("mod.Background.colorArgb" in node.props) m = m.background(node.int("mod.Background.colorArgb", 0))
-  if ("mod.Blur.radiusDp" in node.props) m = m.blur(node.int("mod.Blur.radiusDp", 0))
-  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) m = m.border(node.int("mod.Border.widthDp", 0), node.int("mod.Border.colorArgb", 0))
-  if ("mod.CornerRadius.radiusDp" in node.props) m = m.cornerRadius(node.int("mod.CornerRadius.radiusDp", 0))
-  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) m = m.cornerRadiusEach(node.int("mod.CornerRadiusEach.topStartDp", 0), node.int("mod.CornerRadiusEach.topEndDp", 0), node.int("mod.CornerRadiusEach.bottomEndDp", 0), node.int("mod.CornerRadiusEach.bottomStartDp", 0))
+  if ("mod.AspectRatio.ratio" in node.props) m = m.aspectRatio(node.dblB("mod.AspectRatio.ratio", 0.0).toFloat())
+  if ("mod.Background.colorArgb" in node.props) m = m.background(node.intB("mod.Background.colorArgb", 0))
+  if ("mod.Blur.radiusDp" in node.props) m = m.blur(node.intB("mod.Blur.radiusDp", 0))
+  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) m = m.border(node.intB("mod.Border.widthDp", 0), node.intB("mod.Border.colorArgb", 0))
+  if ("mod.CornerRadius.radiusDp" in node.props) m = m.cornerRadius(node.intB("mod.CornerRadius.radiusDp", 0))
+  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) m = m.cornerRadiusEach(node.intB("mod.CornerRadiusEach.topStartDp", 0), node.intB("mod.CornerRadiusEach.topEndDp", 0), node.intB("mod.CornerRadiusEach.bottomEndDp", 0), node.intB("mod.CornerRadiusEach.bottomStartDp", 0))
   if (node.bool("mod.FillMaxHeight")) m = m.fillMaxHeight()
   if (node.bool("mod.FillMaxSize")) m = m.fillMaxSize()
   if (node.bool("mod.FillWidth")) m = m.fillWidth()
-  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) m = m.gradientBackground(node.int("mod.GradientBackground.startArgb", 0), node.int("mod.GradientBackground.endArgb", 0))
-  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) m = m.offset(node.int("mod.Offset.xDp", 0), node.int("mod.Offset.yDp", 0))
-  if ("mod.Padding.allDp" in node.props) m = m.padding(node.int("mod.Padding.allDp", 0))
-  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.int("mod.PaddingEach.startDp", 0), node.int("mod.PaddingEach.topDp", 0), node.int("mod.PaddingEach.endDp", 0), node.int("mod.PaddingEach.bottomDp", 0))
-  if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.int("mod.Rotate.degrees", 0))
-  if ("mod.Scale.percent" in node.props) m = m.scale(node.int("mod.Scale.percent", 0))
-  if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.int("mod.Shadow.elevationDp", 0))
-  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.int("mod.Size.widthDp", 0), node.int("mod.Size.heightDp", 0))
+  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) m = m.gradientBackground(node.intB("mod.GradientBackground.startArgb", 0), node.intB("mod.GradientBackground.endArgb", 0))
+  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) m = m.offset(node.intB("mod.Offset.xDp", 0), node.intB("mod.Offset.yDp", 0))
+  if ("mod.Padding.allDp" in node.props) m = m.padding(node.intB("mod.Padding.allDp", 0))
+  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
+  if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.intB("mod.Rotate.degrees", 0))
+  if ("mod.Scale.percent" in node.props) m = m.scale(node.intB("mod.Scale.percent", 0))
+  if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.intB("mod.Shadow.elevationDp", 0))
+  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
   return m
 }

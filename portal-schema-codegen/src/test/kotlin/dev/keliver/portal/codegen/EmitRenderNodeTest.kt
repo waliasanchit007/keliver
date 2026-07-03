@@ -11,7 +11,7 @@ class EmitRenderNodeTest {
       MappedProp("text", MappedKind.TEXT, required = true, defaultExpr = null),
       MappedProp("fontSize", MappedKind.INT, required = false, defaultExpr = "14"),
     ),
-    skippedProps = emptyList(), events = listOf("onLongPress"), hasChildren = false,
+    skippedProps = emptyList(), events = listOf(EventPlan("onLongPress", 0)), hasChildren = false,
   )
   private val column = WidgetPlan.Include(
     name = "Column", composePackage = "dev.keliver.layout.compose", category = "Layout",
@@ -36,14 +36,15 @@ class EmitRenderNodeTest {
     assertContains(src, "@Composable")
     assertContains(src, "fun RenderNode(node: WidgetNode)")
     assertContains(src, "\"StyledText\" -> StyledText(")
-    assertContains(src, "text = node.str(\"text\"),")
-    assertContains(src, "fontSize = node.int(\"fontSize\", 14),")
-    assertContains(src, "width = constraintOf(node.int(\"width\", 0)),")
-    assertContains(src, "horizontalAlignment = crossAxisOf(node.int(\"horizontalAlignment\", 0)),")
-    assertContains(src, "height = Dp(node.dbl(\"height\", 0.0)),")
+    assertContains(src, "text = node.strB(\"text\"),")
+    assertContains(src, "fontSize = node.intB(\"fontSize\", 14),")
+    assertContains(src, "width = constraintOf(node.intB(\"width\", 0)),")
+    assertContains(src, "horizontalAlignment = crossAxisOf(node.intB(\"horizontalAlignment\", 0)),")
+    assertContains(src, "height = Dp(node.dblB(\"height\", 0.0)),")
     assertContains(src, ") { node.children.forEach { RenderNode(it) } }")
     assertContains(src, "else -> StyledText(text = \"\\u26a0 unknown widget: \${node.type}\"")
-    assertFalse("onLongPress" in src)
+    // P3: nullable events are wired to Action props via the preview sink.
+    assertContains(src, "onLongPress = node.actionOf(\"onLongPress\")?.let { n -> { PreviewBindings.fire(n) } },")
   }
 
   @Test fun emitsModifierChain() {
@@ -55,7 +56,7 @@ class EmitRenderNodeTest {
     assertContains(src, "import dev.keliver.material.compose.padding")
     assertContains(src, "modifier = nodeModifier(node),")
     assertContains(src, "private fun nodeModifier(node: WidgetNode): Modifier {")
-    assertContains(src, "if (\"mod.Padding.allDp\" in node.props) m = m.padding(node.int(\"mod.Padding.allDp\", 0))")
+    assertContains(src, "if (\"mod.Padding.allDp\" in node.props) m = m.padding(node.intB(\"mod.Padding.allDp\", 0))")
     assertContains(src, "if (node.bool(\"mod.AnimateContentSize\")) m = m.animateContentSize()")
   }
 }

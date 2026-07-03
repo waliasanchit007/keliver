@@ -18,6 +18,9 @@ data class MappedProp(
   val isColor: Boolean get() = kind == MappedKind.INT && name.endsWith("Argb")
 }
 
+/** A nullable event trait the portal can wire to a named Action (P3). */
+data class EventPlan(val name: String, val paramCount: Int)
+
 sealed interface WidgetPlan {
   data class Include(
     val name: String,               // simple name, == WidgetNode.type
@@ -25,7 +28,7 @@ sealed interface WidgetPlan {
     val category: String,           // "Material" / "Layout"
     val props: List<MappedProp>,
     val skippedProps: List<String>, // unsupported-with-default, omitted from calls
-    val events: List<String>,       // nullable events, omitted from calls (P1: no bindings)
+    val events: List<EventPlan>,    // nullable events, wired to Action props
     val hasChildren: Boolean,
   ) : WidgetPlan
 
@@ -105,7 +108,7 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
   val name = widget.type.names.last()
   val props = mutableListOf<MappedProp>()
   val skipped = mutableListOf<String>()
-  val events = mutableListOf<String>()
+  val events = mutableListOf<EventPlan>()
   var childrenCount = 0
   for (trait in widget.traits) {
     when (trait) {
@@ -122,7 +125,7 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
         if (!trait.isNullable && trait.defaultExpression == null) {
           return WidgetPlan.Exclude(name, "required non-nullable event '${trait.name}'")
         }
-        events += trait.name
+        events += EventPlan(trait.name, trait.parameters.size)
       }
       is Widget.Children -> childrenCount++
       // Protocol* trait interfaces extend Property/Event/Children, so the

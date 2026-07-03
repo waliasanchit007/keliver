@@ -49,6 +49,7 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
     append(", acceptsChildren = ${w.hasChildren}, sampleProps = ")
     val samples = w.props.mapNotNull { p -> sampleValue(w.name, p)?.let { "\"${p.name}\" to $it" } }
     if (samples.isEmpty()) append("emptyMap()") else append("mapOf(${samples.joinToString(", ")})")
+    if (w.events.isNotEmpty()) append(", events = listOf(${w.events.joinToString(", ") { "\"${it.name}\"" }})")
     appendLine("),")
   }
   appendLine(")")

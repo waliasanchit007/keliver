@@ -1,21 +1,32 @@
 package dev.keliver.portal.codegen
 
+// P3: the interpreter reads through the *B getters (portal-render), which
+// resolve Bind values against PreviewBindings.mocks before falling back.
 internal fun getterExpr(p: MappedProp): String = when (p.kind) {
   MappedKind.TEXT -> {
     val d = defaultString(p.defaultExpr).replace("\\", "\\\\").replace("\"", "\\\"")
-    if (d.isEmpty()) "node.str(\"${p.name}\")" else "node.str(\"${p.name}\", \"$d\")"
+    if (d.isEmpty()) "node.strB(\"${p.name}\")" else "node.strB(\"${p.name}\", \"$d\")"
   }
-  MappedKind.INT -> "node.int(\"${p.name}\", ${defaultInt(p.defaultExpr)})"
-  MappedKind.BOOL -> "node.bool(\"${p.name}\", ${defaultBool(p.defaultExpr)})"
-  MappedKind.DOUBLE -> "node.dbl(\"${p.name}\", ${defaultDouble(p.defaultExpr)})"
-  MappedKind.FLOAT -> "node.dbl(\"${p.name}\", ${defaultDouble(p.defaultExpr)}).toFloat()"
+  MappedKind.INT -> "node.intB(\"${p.name}\", ${defaultInt(p.defaultExpr)})"
+  MappedKind.BOOL -> "node.boolB(\"${p.name}\", ${defaultBool(p.defaultExpr)})"
+  MappedKind.DOUBLE -> "node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr)})"
+  MappedKind.FLOAT -> "node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr)}).toFloat()"
   MappedKind.INT_LIST -> "node.intList(\"${p.name}\")"
   MappedKind.FLOAT_LIST -> "node.floatList(\"${p.name}\")"
-  MappedKind.DP -> "Dp(node.dbl(\"${p.name}\", ${defaultDouble(p.defaultExpr?.removePrefix("Dp(")?.removeSuffix(")"))}))"
-  MappedKind.CONSTRAINT -> "constraintOf(node.int(\"${p.name}\", ${constraintDefault(p.defaultExpr)}))"
-  MappedKind.CROSS_AXIS -> "crossAxisOf(node.int(\"${p.name}\", ${crossAxisDefault(p.defaultExpr)}))"
-  MappedKind.MAIN_AXIS -> "mainAxisOf(node.int(\"${p.name}\", ${mainAxisDefault(p.defaultExpr)}))"
-  MappedKind.OVERFLOW -> "overflowOf(node.int(\"${p.name}\", ${overflowDefault(p.defaultExpr)}))"
+  MappedKind.DP -> "Dp(node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr?.removePrefix("Dp(")?.removeSuffix(")"))}))"
+  MappedKind.CONSTRAINT -> "constraintOf(node.intB(\"${p.name}\", ${constraintDefault(p.defaultExpr)}))"
+  MappedKind.CROSS_AXIS -> "crossAxisOf(node.intB(\"${p.name}\", ${crossAxisDefault(p.defaultExpr)}))"
+  MappedKind.MAIN_AXIS -> "mainAxisOf(node.intB(\"${p.name}\", ${mainAxisDefault(p.defaultExpr)}))"
+  MappedKind.OVERFLOW -> "overflowOf(node.intB(\"${p.name}\", ${overflowDefault(p.defaultExpr)}))"
+}
+
+/** Lambda wiring for a nullable event prop holding an Action. */
+internal fun eventExpr(e: EventPlan): String {
+  val lambda = when (e.paramCount) {
+    0 -> "{ PreviewBindings.fire(n) }"
+    else -> "{ ${List(e.paramCount) { "_" }.joinToString(", ")} -> PreviewBindings.fire(n) }"
+  }
+  return "node.actionOf(\"${e.name}\")?.let { n -> $lambda }"
 }
 
 fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = emptyList()): String = buildString {
@@ -28,11 +39,8 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   if (mods.isNotEmpty()) appendLine("import dev.keliver.Modifier")
   appendLine("import dev.keliver.portal.WidgetNode")
   appendLine("import dev.keliver.portal.bool")
-  appendLine("import dev.keliver.portal.dbl")
   appendLine("import dev.keliver.portal.floatList")
-  appendLine("import dev.keliver.portal.int")
   appendLine("import dev.keliver.portal.intList")
-  appendLine("import dev.keliver.portal.str")
   if (sorted.any { w -> w.props.any { it.kind == MappedKind.DP } }) appendLine("import dev.keliver.ui.Dp")
   for (w in sorted) appendLine("import ${w.composePackage}.${w.name}")
   for (m in mods) appendLine("import ${m.composePackage}.${m.extensionName}")
@@ -45,6 +53,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
     appendLine("    \"${w.name}\" -> ${w.name}(")
     if (mods.isNotEmpty()) appendLine("      modifier = nodeModifier(node),")
     for (p in w.props) appendLine("      ${p.name} = ${getterExpr(p)},")
+    for (e in w.events) appendLine("      ${e.name} = ${eventExpr(e)},")
     append("    )")
     if (w.hasChildren) append(" { node.children.forEach { RenderNode(it) } }")
     appendLine()

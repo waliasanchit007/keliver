@@ -15,4 +15,6 @@ data class WidgetSpec(
   val acceptsChildren: Boolean,
   /** Values a palette-add starts with: every required prop, sensible defaults. */
   val sampleProps: Map<String, Any?>,
+  /** Event names the editor can wire to named Actions (P3 bindings). */
+  val events: List<String> = emptyList(),
 )

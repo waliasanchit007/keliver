@@ -82,10 +82,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  node.children.forEach { collectModifierNames(it, out) }
     |}
     |
-    |private fun fmtString(v: Any?): String = "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-    |private fun fmtInt(v: Any?): String = ((v as? Int) ?: 0).toString()
-    |private fun fmtBool(v: Any?): String = ((v as? Boolean) ?: false).toString()
-    |private fun fmtDouble(v: Any?): String = ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
+    |private fun fmtString(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    |private fun fmtInt(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Int) ?: 0).toString()
+    |private fun fmtBool(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Boolean) ?: false).toString()
+    |private fun fmtDouble(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
     |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(v)}f"
     |private fun fmtDp(v: Any?): String = "Dp(${'$'}{fmtDouble(v)})"
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
@@ -114,14 +114,23 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  collectTypes(tree, used)")
   appendLine("  val usedMods = mutableSetOf<String>()")
   appendLine("  collectModifierNames(tree, usedMods)")
+  appendLine("  val contract = collectContract(tree)")
   appendLine("  val sb = StringBuilder()")
   appendLine("  sb.append(\"import androidx.compose.runtime.Composable\\n\")")
   appendLine("  val modImports = usedMods.mapNotNull { modifierImport[it] } + (if (usedMods.isNotEmpty()) listOf(\"dev.keliver.Modifier\") else emptyList())")
   appendLine("  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()")
   appendLine("  imports.forEach { sb.append(\"import \$it\\n\") }")
-  appendLine("  sb.append(\"\\n@Composable\\nfun \$functionName() {\\n\")")
+  appendLine("  val param = if (contract.isEmpty) \"\" else \"b: \${functionName}Bindings\"")
+  appendLine("  sb.append(\"\\n@Composable\\nfun \$functionName(\$param) {\\n\")")
   appendLine("  emitNode(sb, tree, \"  \")")
   appendLine("  sb.append(\"}\\n\")")
+  appendLine("  if (!contract.isEmpty) {")
+  appendLine("    sb.append(\"\\n/** The round-trip boundary: implement this by hand; the portal never touches it. */\\n\")")
+  appendLine("    sb.append(\"interface \${functionName}Bindings {\\n\")")
+  appendLine("    contract.fields.forEach { (f, k) -> sb.append(\"  val \$f: \${kotlinTypeOf(k)}\\n\") }")
+  appendLine("    contract.actions.forEach { a -> sb.append(\"  fun \$a()\\n\") }")
+  appendLine("    sb.append(\"}\\n\")")
+  appendLine("  }")
   appendLine("  return sb.toString()")
   appendLine("}")
   appendLine()
@@ -156,6 +165,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
       } else {
         appendLine("      if (\"${p.name}\" in node.props) sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")")
       }
+    }
+    for (e in w.events) {
+      val lambda = if (e.paramCount == 0) "{ b.\${a.name}() }" else "{ ${List(e.paramCount) { "_" }.joinToString(", ")} -> b.\${a.name}() }"
+      appendLine("      (node.props[\"${e.name}\"] as? Action)?.let { a -> sb.append(\"\${indent}  ${e.name} = $lambda,\\n\") }")
     }
     if (w.hasChildren) {
       appendLine("      sb.append(\"\$indent) {\\n\")")

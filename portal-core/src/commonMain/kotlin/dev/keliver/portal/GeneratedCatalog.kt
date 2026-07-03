@@ -7,7 +7,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("confirmText", PropKind.Text, "Confirm text"),
     PropSpec("dismissText", PropKind.Text, "Dismiss text"),
-  ), acceptsChildren = false, sampleProps = mapOf("title" to "New AlertDialog", "text" to "New AlertDialog")),
+  ), acceptsChildren = false, sampleProps = mapOf("title" to "New AlertDialog", "text" to "New AlertDialog"), events = listOf("onConfirm", "onDismiss")),
   WidgetSpec("AnimatedBorder", "Material", listOf(
     PropSpec("cornerRadiusDp", PropKind.Int, "Corner radius dp"),
     PropSpec("strokeWidthDp", PropKind.Int, "Stroke width dp"),
@@ -17,7 +17,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("segmentLenDp", PropKind.Int, "Segment len dp"),
     PropSpec("effect", PropKind.Int, "Effect"),
     PropSpec("colorsArgb", PropKind.IntList, "Colors argb"),
-  ), acceptsChildren = true, sampleProps = emptyMap()),
+  ), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onClick")),
   WidgetSpec("AnimatedVisibility", "Material", listOf(
     PropSpec("visible", PropKind.Bool, "Visible"),
   ), acceptsChildren = true, sampleProps = emptyMap()),
@@ -29,7 +29,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("blurDp", PropKind.Int, "Blur dp"),
     PropSpec("fillWidth", PropKind.Bool, "Fill width"),
     PropSpec("tintArgb", PropKind.Color, "Tint argb"),
-  ), acceptsChildren = false, sampleProps = mapOf("url" to "New AsyncImage")),
+  ), acceptsChildren = false, sampleProps = mapOf("url" to "New AsyncImage"), events = listOf("onClick")),
   WidgetSpec("Badge", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
@@ -37,7 +37,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("BottomSheet", "Material", listOf(
     PropSpec("visible", PropKind.Bool, "Visible"),
     PropSpec("contentPaddingDp", PropKind.Int, "Content padding dp"),
-  ), acceptsChildren = true, sampleProps = mapOf("visible" to false)),
+  ), acceptsChildren = true, sampleProps = mapOf("visible" to false), events = listOf("onDismiss")),
   WidgetSpec("Box", "Layout", listOf(
     PropSpec("width", PropKind.Int, "Width"),
     PropSpec("height", PropKind.Int, "Height"),
@@ -50,49 +50,49 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("containerArgb", PropKind.Color, "Container argb"),
     PropSpec("contentArgb", PropKind.Color, "Content argb"),
     PropSpec("cornerRadiusDp", PropKind.Int, "Corner radius dp"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New Button")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New Button"), events = listOf("onClick")),
   WidgetSpec("Card", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("Checkbox", "Material", listOf(
     PropSpec("checked", PropKind.Bool, "Checked"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("checked" to false)),
+  ), acceptsChildren = false, sampleProps = mapOf("checked" to false), events = listOf("onCheckedChange")),
   WidgetSpec("Chip", "Material", listOf(
     PropSpec("label", PropKind.Text, "Label"),
-  ), acceptsChildren = false, sampleProps = mapOf("label" to "New Chip")),
+  ), acceptsChildren = false, sampleProps = mapOf("label" to "New Chip"), events = listOf("onClick")),
   WidgetSpec("CircularProgressIndicator", "Material", listOf(
     PropSpec("progress", PropKind.Double, "Progress"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
-  WidgetSpec("Clickable", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
+  WidgetSpec("Clickable", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onClick")),
   WidgetSpec("Column", "Layout", listOf(
     PropSpec("width", PropKind.Int, "Width"),
     PropSpec("height", PropKind.Int, "Height"),
     PropSpec("overflow", PropKind.Int, "Overflow"),
     PropSpec("horizontalAlignment", PropKind.Int, "Horizontal alignment"),
     PropSpec("verticalAlignment", PropKind.Int, "Vertical alignment"),
-  ), acceptsChildren = true, sampleProps = emptyMap()),
-  WidgetSpec("Dialog", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
+  ), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onScroll")),
+  WidgetSpec("Dialog", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onDismiss")),
   WidgetSpec("Divider", "Material", listOf(
     PropSpec("thickness", PropKind.Int, "Thickness"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
   WidgetSpec("ElevatedButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New ElevatedButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New ElevatedButton"), events = listOf("onClick")),
   WidgetSpec("ElevatedCard", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("ExtendedFloatingActionButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New ExtendedFloatingActionButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New ExtendedFloatingActionButton"), events = listOf("onClick")),
   WidgetSpec("FilledTonalButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New FilledTonalButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New FilledTonalButton"), events = listOf("onClick")),
   WidgetSpec("FilterChip", "Material", listOf(
     PropSpec("label", PropKind.Text, "Label"),
     PropSpec("selected", PropKind.Bool, "Selected"),
-  ), acceptsChildren = false, sampleProps = mapOf("label" to "New FilterChip")),
+  ), acceptsChildren = false, sampleProps = mapOf("label" to "New FilterChip"), events = listOf("onClick")),
   WidgetSpec("FloatingActionButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
-  ), acceptsChildren = false, sampleProps = emptyMap()),
+  ), acceptsChildren = false, sampleProps = emptyMap(), events = listOf("onClick")),
   WidgetSpec("FlowColumn", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("FlowRow", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("HorizontalPager", "Material", listOf(
@@ -104,14 +104,14 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   ), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("IconButton", "Material", listOf(
     PropSpec("imageUrl", PropKind.Text, "Image url"),
-  ), acceptsChildren = false, sampleProps = mapOf("imageUrl" to "New IconButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("imageUrl" to "New IconButton"), events = listOf("onClick")),
   WidgetSpec("Image", "Material", listOf(
     PropSpec("url", PropKind.Text, "Url"),
-  ), acceptsChildren = false, sampleProps = mapOf("url" to "New Image")),
+  ), acceptsChildren = false, sampleProps = mapOf("url" to "New Image"), events = listOf("onClick")),
   WidgetSpec("InputChip", "Material", listOf(
     PropSpec("label", PropKind.Text, "Label"),
     PropSpec("selected", PropKind.Bool, "Selected"),
-  ), acceptsChildren = false, sampleProps = mapOf("label" to "New InputChip")),
+  ), acceptsChildren = false, sampleProps = mapOf("label" to "New InputChip"), events = listOf("onClick")),
   WidgetSpec("LazyHorizontalGrid", "Material", listOf(
     PropSpec("rows", PropKind.Int, "Rows"),
   ), acceptsChildren = true, sampleProps = emptyMap()),
@@ -132,7 +132,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("contentArgb", PropKind.Color, "Content argb"),
     PropSpec("borderArgb", PropKind.Color, "Border argb"),
     PropSpec("cornerRadiusDp", PropKind.Int, "Corner radius dp"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New OutlinedButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New OutlinedButton"), events = listOf("onClick")),
   WidgetSpec("OutlinedCard", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("OutlinedTextField", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
@@ -146,18 +146,18 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("supportingText", PropKind.Text, "Supporting text"),
     PropSpec("borderArgb", PropKind.Color, "Border argb"),
     PropSpec("cornerRadiusDp", PropKind.Int, "Corner radius dp"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New OutlinedTextField")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New OutlinedTextField"), events = listOf("onValueChange")),
   WidgetSpec("RadioButton", "Material", listOf(
     PropSpec("selected", PropKind.Bool, "Selected"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("selected" to false)),
+  ), acceptsChildren = false, sampleProps = mapOf("selected" to false), events = listOf("onClick")),
   WidgetSpec("Row", "Layout", listOf(
     PropSpec("width", PropKind.Int, "Width"),
     PropSpec("height", PropKind.Int, "Height"),
     PropSpec("overflow", PropKind.Int, "Overflow"),
     PropSpec("horizontalAlignment", PropKind.Int, "Horizontal alignment"),
     PropSpec("verticalAlignment", PropKind.Int, "Vertical alignment"),
-  ), acceptsChildren = true, sampleProps = emptyMap()),
+  ), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onScroll")),
   WidgetSpec("ScrollableColumn", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("Shimmer", "Material", listOf(
     PropSpec("widthDp", PropKind.Int, "Width dp"),
@@ -167,7 +167,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("Slider", "Material", listOf(
     PropSpec("position", PropKind.Double, "Position"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = emptyMap()),
+  ), acceptsChildren = false, sampleProps = emptyMap(), events = listOf("onValueChange")),
   WidgetSpec("Snackbar", "Material", listOf(
     PropSpec("message", PropKind.Text, "Message"),
   ), acceptsChildren = false, sampleProps = mapOf("message" to "New Snackbar")),
@@ -197,7 +197,7 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("cornerTopEndDp", PropKind.Int, "Corner top end dp"),
     PropSpec("cornerBottomStartDp", PropKind.Int, "Corner bottom start dp"),
     PropSpec("cornerBottomEndDp", PropKind.Int, "Corner bottom end dp"),
-  ), acceptsChildren = true, sampleProps = emptyMap()),
+  ), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onClick")),
   WidgetSpec("StyledText", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("fontSize", PropKind.Int, "Font size"),
@@ -216,16 +216,16 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   ), acceptsChildren = false, sampleProps = mapOf("text" to "New StyledText")),
   WidgetSpec("SuggestionChip", "Material", listOf(
     PropSpec("label", PropKind.Text, "Label"),
-  ), acceptsChildren = false, sampleProps = mapOf("label" to "New SuggestionChip")),
+  ), acceptsChildren = false, sampleProps = mapOf("label" to "New SuggestionChip"), events = listOf("onClick")),
   WidgetSpec("Surface", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("Switch", "Material", listOf(
     PropSpec("checked", PropKind.Bool, "Checked"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("checked" to false)),
+  ), acceptsChildren = false, sampleProps = mapOf("checked" to false), events = listOf("onCheckedChange")),
   WidgetSpec("Tab", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("selected", PropKind.Bool, "Selected"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New Tab")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New Tab"), events = listOf("onClick")),
   WidgetSpec("TabRow", "Material", listOf(
     PropSpec("selectedIndex", PropKind.Int, "Selected index"),
   ), acceptsChildren = true, sampleProps = emptyMap()),
@@ -235,14 +235,14 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("TextButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New TextButton")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New TextButton"), events = listOf("onClick")),
   WidgetSpec("TextField", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("placeholder", PropKind.Text, "Placeholder"),
-  ), acceptsChildren = false, sampleProps = mapOf("text" to "New TextField")),
+  ), acceptsChildren = false, sampleProps = mapOf("text" to "New TextField"), events = listOf("onValueChange")),
   WidgetSpec("TextInput", "Material", listOf(
     PropSpec("hint", PropKind.Text, "Hint"),
-  ), acceptsChildren = false, sampleProps = emptyMap()),
+  ), acceptsChildren = false, sampleProps = emptyMap(), events = listOf("onChange")),
   WidgetSpec("Theme", "Material", listOf(
     PropSpec("dark", PropKind.Bool, "Dark"),
     PropSpec("primaryArgb", PropKind.Color, "Primary argb"),
