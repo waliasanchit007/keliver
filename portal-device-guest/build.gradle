@@ -13,6 +13,8 @@ redwoodBuild {
 
 kotlin {
   jvm() // lets the android host consume the HostApi / PortalPresenter interfaces
+  iosArm64() // P5: the iOS host consumes the same interfaces
+  iosSimulatorArm64()
   js {
     outputModuleName = 'portal-device-guest'
     browser()

@@ -1,0 +1,62 @@
+// spike/keliver-web portal P5 — the iOS Treehouse HOST framework (peer of
+// portal-device-android). Same two modes: dev (interpreter guest polling the
+// portal-server draft) and prod (compiled, Ed25519-signed published bundle).
+// The Xcode shell (portal-device-ios-app/) embeds this via
+// `:portal-device-ios:embedAndSignAppleFrameworkForXcode`.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+apply plugin: 'app.cash.zipline' // IR plugin: rewrites the host's zipline.take/bind
+
+// P4/P5: embed the portal's Ed25519 PUBLIC key as a generated Kotlin const so
+// prod mode can verify signed manifests (parity with the Android host's asset).
+def portalPubKey = new File(System.getProperty('user.home'), '.keliver-portal/keys/ed25519.pub')
+def portalKeyDir = file("$buildDir/generated/portalKeys/kotlin")
+def generatePortalKey = tasks.register('generatePortalKey') {
+  inputs.property('exists', portalPubKey.exists())
+  if (portalPubKey.exists()) inputs.file(portalPubKey)
+  outputs.dir(portalKeyDir)
+  doLast {
+    def hex = portalPubKey.exists() ? portalPubKey.text.trim() : ''
+    def f = new File(portalKeyDir, 'PortalPublicKey.kt')
+    f.parentFile.mkdirs()
+    f.text = "package dev.keliver.portaldevice.ios\n\n// GENERATED from ~/.keliver-portal/keys/ed25519.pub — do not edit.\ninternal const val PORTAL_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+  }
+}
+tasks.configureEach { t ->
+  if (t.name.startsWith('compileKotlinIos')) t.dependsOn(generatePortalKey)
+}
+
+kotlin {
+  [iosArm64(), iosSimulatorArm64()].each { iosTarget ->
+    iosTarget.binaries.framework {
+      baseName = 'PortalDeviceHost'
+      isStatic = true
+      binaryOption('bundleId', 'dev.keliver.portaldevice.ios')
+      // Zipline's SQLite-backed bundle cache.
+      linkerOpts.add('-lsqlite3')
+    }
+  }
+
+  sourceSets {
+    iosMain {
+      kotlin.srcDir(portalKeyDir)
+      dependencies {
+        implementation projects.keliverTreehouseHost
+        implementation projects.keliverTreehouseHostComposeui
+        implementation projects.keliverMaterialComposeui
+        implementation projects.webSpikeProtocolHost      // KeliverMaterialHostProtocol
+        implementation projects.portalDeviceGuest          // HostApi / PortalPresenter interfaces
+        implementation projects.keliverLeakDetector
+        implementation libs.zipline
+        implementation libs.zipline.loader
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.jetbrains.compose.foundation
+        implementation libs.jetbrains.compose.ui
+        implementation libs.coil.compose
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.okio
+      }
+    }
+  }
+}
