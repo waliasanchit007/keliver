@@ -25,7 +25,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.ui.window.ComposeViewport
 import coil3.ImageLoader
 import coil3.PlatformContext
 import dev.keliver.leaks.LeakDetector
@@ -63,7 +63,9 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
   mountPortalChrome()
-  CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+  // ComposeViewport sizes the composition to the device-frame host div (and
+  // observes its size), unlike CanvasBasedWindow which fills the window.
+  ComposeViewport(viewportContainer = kotlinx.browser.document.getElementById(PREVIEW_HOST_ID)!!) {
     val widgetSystem = remember {
       ComposeUiKeliverMaterialWidgetSystem(
         ImageLoader.Builder(PlatformContext.INSTANCE)

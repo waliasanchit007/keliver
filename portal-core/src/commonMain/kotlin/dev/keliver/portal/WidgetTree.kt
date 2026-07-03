@@ -3,6 +3,17 @@ package dev.keliver.portal
 private var nodeIdCounter = 0
 fun nextNodeId(): Int = ++nodeIdCounter
 
+/** Highest id anywhere in this tree. */
+fun WidgetNode.maxId(): Int = maxOf(id, children.maxOfOrNull { it.maxId() } ?: 0)
+
+/**
+ * After loading a persisted tree (whose ids came from an earlier session), lift
+ * the id counter above them so freshly created nodes can't collide.
+ */
+fun ensureNodeIdsAbove(min: Int) {
+  if (min > nodeIdCounter) nodeIdCounter = min
+}
+
 /** One node = a widget type, its properties (by name), children, and a stable id. */
 data class WidgetNode(
   val type: String,
