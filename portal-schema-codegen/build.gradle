@@ -12,6 +12,7 @@ application {
 
 dependencies {
   implementation projects.keliverToolingSchema
+  implementation libs.kotlin.compilerEmbeddable // PSI for the V2 S1 ingest spike
   testImplementation libs.junit
   testImplementation libs.kotlin.test.junit
 }
@@ -60,4 +61,11 @@ tasks.register('checkPortalCode', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath + configurations.schemaClasspath
   mainClass = 'dev.keliver.portal.codegen.MainKt'
   args = codegenArgs(['--check'])
+}
+
+// V2 SPIKE S1 — headless PSI ingest (see docs .../2026-07-04-...validation-register.md).
+tasks.register('runPsiSpike', JavaExec) {
+  group = 'verification'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.portal.codegen.spike.PsiIngestSpikeKt'
 }
