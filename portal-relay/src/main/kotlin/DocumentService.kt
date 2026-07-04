@@ -99,11 +99,27 @@ class DocumentService(
     runCatching { sendEvent(out, doc.version) }
   }
 
-  private fun changed() {
+  /** V2 M3: a file-originated document (recognize+reconcile done by the caller).
+   * No undo entry, no .kt rewrite — the file IS the new baseline. */
+  @Synchronized
+  fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument) {
+    doc = newDoc
+    undoStacks.clear()
+    redoStacks.clear()
+    changed(writeBack = false)
+  }
+
+  /** Self-write suppression for the file watcher. */
+  @Volatile private var lastWrittenText: String? = null
+  fun wasSelfWrite(text: String): Boolean = text == lastWrittenText
+
+  private fun changed(writeBack: Boolean = true) {
     onProjected(doc.toWidgetTree())
     listeners.removeAll { out -> runCatching { sendEvent(out, doc.version) }.isFailure }
-    pendingWrite?.cancel(false)
-    pendingWrite = writer.schedule({ writeKotlin() }, 400, TimeUnit.MILLISECONDS)
+    if (writeBack) {
+      pendingWrite?.cancel(false)
+      pendingWrite = writer.schedule({ writeKotlin() }, 400, TimeUnit.MILLISECONDS)
+    }
   }
 
   private fun sendEvent(out: OutputStream, version: Long) {
@@ -115,7 +131,9 @@ class DocumentService(
     runCatching {
       kotlinFile.parentFile.mkdirs()
       val header = "// GENERATED projection (until M4 write-back) — screen $screenKey v${doc.version}\n"
-      kotlinFile.writeText(header + exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen"))
+      val text = header + exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen")
+      lastWrittenText = text
+      kotlinFile.writeText(text)
     }
   }
 

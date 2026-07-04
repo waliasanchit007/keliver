@@ -189,12 +189,41 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
 
 private fun subscribeDocEvents() {
   eventSource?.close()
-  eventSource = EventSource("$SERVER/doc-events?project=$currentProject&screen=$currentScreen").also { es ->
+  val project = currentProject
+  val screen = currentScreen
+  eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
     es.onmessage = { ev ->
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       if (v != null && v != docVersion) refetchDoc(true) // another session/editor changed the doc
     }
+    es.onerror = { _ ->
+      // Server restart kills the stream; recreate after a beat (fresh subscribe).
+      if (project == currentProject && screen == currentScreen) {
+        window.setTimeout({ if (eventSource == es) subscribeDocEvents(); null }, 2000)
+      }
+      null
+    }
   }
+  startVersionPoll()
+}
+
+// Belt and braces: a cheap version poll catches anything SSE misses.
+private var versionPollStarted = false
+private fun startVersionPoll() {
+  if (versionPollStarted) return
+  versionPollStarted = true
+  window.setInterval({
+    if (!opInFlight && opQueue.isEmpty()) {
+      val xhr = XMLHttpRequest()
+      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen")
+      xhr.addEventListener("load", { _ ->
+        val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
+        if (v != null && v != docVersion) refetchDoc(true)
+      })
+      xhr.send()
+    }
+    null
+  }, 5000)
 }
 
 private fun undo() {

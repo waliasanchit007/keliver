@@ -160,3 +160,9 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   list_projects/list_screens/get_document/apply_ops(dryRun)/undo/redo/find_usages/
   device_screenshot). Scripted agent session verified end to end (catalog 60w/19m,
   steering dryRun error, insert v1, find_usages by handle, undo reverts).
+- **M3 SHIPPED:** portal-ingest (resident PsiEnv + catalog-grounded Recognizer +
+  handle-preserving Reconciler; 3/3 tests incl. THE exporter round-trip gate) +
+  fsevents watcher in portal-server (300ms debounce, self-write suppression,
+  acceptExternal = new baseline: no undo entry, no .kt rewrite). VERIFIED live:
+  sed the .kt -> ingest v(N+1) -> /doc + device /tree + OPEN EDITOR updated with
+  NO reload (SSE + reconnect + 5s version-poll fallback). .kt = source of truth.

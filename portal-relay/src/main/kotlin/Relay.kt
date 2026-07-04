@@ -203,8 +203,49 @@ private fun docFor(q: Map<String, String>): DocumentService {
 private fun session(ex: HttpExchange): String =
   ex.requestHeaders.getFirst("X-Portal-Session") ?: "anon"
 
+// ── V2 M3: the .kt files are the source of truth — watch + ingest ──────────
+
+private val ingestExec = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+  Thread(r, "kt-ingest").apply { isDaemon = true }
+}
+private val pendingIngest = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ScheduledFuture<*>>()
+
+private fun startKotlinWatcher() {
+  val kotlinRoot = File(root, "kotlin").apply { mkdirs() }
+  val watcher = io.methvin.watcher.DirectoryWatcher.builder()
+    .path(kotlinRoot.toPath())
+    .listener { event ->
+      val f = event.path().toFile()
+      if (f.name.endsWith(".kt")) {
+        val key = f.absolutePath
+        pendingIngest[key]?.cancel(false)
+        pendingIngest[key] = ingestExec.schedule({ ingestFile(f) }, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
+      }
+    }
+    .build()
+  Thread({ watcher.watch() }, "kt-watcher").apply { isDaemon = true }.start()
+  println("portal-server: watching $kotlinRoot (edits in ANY editor go live)")
+}
+
+private fun ingestFile(f: File) {
+  runCatching {
+    if (!f.exists()) return
+    val project = f.parentFile.name
+    val screen = f.nameWithoutExtension
+    val text = f.readText()
+    val svc = docFor(mapOf("project" to project, "screen" to screen))
+    if (svc.wasSelfWrite(text)) return
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(f.name, text)
+      ?: return println("ingest: ${f.name}: no @Composable screen function — skipped")
+    val newDoc = dev.keliver.portal.ingest.Reconciler.reconcile(svc.doc, recognized)
+    svc.acceptExternal(newDoc)
+    println("ingest: $project/$screen -> v${newDoc.version} (file edit)")
+  }.onFailure { println("ingest failed for $f: $it") }
+}
+
 fun main() {
   ensureDefaults()
+  startKotlinWatcher()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
 
   server.createContext("/projects") { ex ->
