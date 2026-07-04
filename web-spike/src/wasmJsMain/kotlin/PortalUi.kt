@@ -4,6 +4,7 @@
  * one injected stylesheet, and small helpers the editor chrome builds with.
  */
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
@@ -111,5 +112,22 @@ object Ui {
 
   fun clear(host: HTMLElement) {
     while (host.firstChild != null) host.removeChild(host.firstChild!!)
+  }
+
+  /** Transient bottom-center notice (V2 M1: op rejections / rebase). */
+  fun toast(message: String) {
+    val t = el(
+      "div",
+      "",
+      message,
+    )
+    t.setAttribute(
+      "style",
+      "position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:99; " +
+        "background:var(--panel, #222); color:var(--fg, #eee); border:1px solid var(--line, #444); " +
+        "border-radius:8px; padding:8px 14px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.4);",
+    )
+    document.body?.appendChild(t)
+    window.setTimeout({ t.remove(); null }, 2600)
   }
 }

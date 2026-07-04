@@ -11,19 +11,22 @@ import dev.keliver.portal.WidgetNode
  * values, modifiers ride as "mod.<Name>.<prop>" keys, RawCode becomes the
  * "RawCode" placeholder type.
  */
-fun UiDocument.toWidgetTree(mocks: Map<String, Any?> = emptyMap()): WidgetNode = nodeToTree(root, mocks)
+fun UiDocument.toWidgetTree(
+  mocks: Map<String, Any?> = emptyMap(),
+  /** true = WidgetNode.id carries the node HANDLE (editor mode: panels key ops off ids). */
+  handleIds: Boolean = false,
+): WidgetNode = nodeToTree(root, mocks, handleIds)
 
-private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>): WidgetNode = when (n) {
-  is DocNode.RawCode -> WidgetNode(
-    type = "RawCode",
-    props = buildMap {
+private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>, handleIds: Boolean): WidgetNode = when (n) {
+  is DocNode.RawCode -> {
+    val props = buildMap<String, Any?> {
       put("text", n.text)
       n.kindHint?.let { put("kindHint", it) }
-    },
-  )
-  is DocNode.Widget -> WidgetNode(
-    type = n.type,
-    props = buildMap {
+    }
+    if (handleIds) WidgetNode("RawCode", props, emptyList(), id = n.handle.v.toInt()) else WidgetNode("RawCode", props)
+  }
+  is DocNode.Widget -> {
+    val props = buildMap<String, Any?> {
       n.props.forEach { (name, v) ->
         when (v) {
           is PropValue.Lit -> put(name, v.toAny())
@@ -32,7 +35,24 @@ private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>): WidgetNode = when 
         }
       }
       n.modifiers.forEach { (name, v) -> if (v is PropValue.Lit) put("mod.$name", v.toAny()) }
-    },
-    children = n.children.map { nodeToTree(it, mocks) },
-  )
+    }
+    val children = n.children.map { nodeToTree(it, mocks, handleIds) }
+    if (handleIds) WidgetNode(n.type, props, children, id = n.handle.v.toInt()) else WidgetNode(n.type, props, children)
+  }
 }
+
+/** Editor→server direction: lift a V1 node (palette sample / duplicate) into a DocNode for InsertNode. */
+fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
+  handle = Handle(0), // server allocates
+  type = type,
+  props = props.filterKeys { !it.startsWith("mod.") }.mapValues { (_, v) ->
+    when (v) {
+      is Bind -> PropValue.Bind(v.field)
+      is Action -> PropValue.Action(v.name)
+      else -> lit(v)
+    }
+  },
+  modifiers = props.filterKeys { it.startsWith("mod.") }
+    .map { (k, v) -> k.removePrefix("mod.") to lit(v) }.toMap(),
+  children = children.map { it.toDocNode() },
+)

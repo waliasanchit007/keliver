@@ -32,6 +32,7 @@ kotlin {
         implementation project(':keliver-layout-compose')      // Column / Spacer guest composables
         implementation project(':portal-core')                 // WidgetNode model + sampleTree
         implementation project(':portal-render')               // GENERATED RenderNode interpreter (P1)
+        implementation project(':portal-document')             // V2 M1: document + op client
         implementation libs.kotlinx.serialization.json
         implementation libs.kotlinx.coroutines.core           // delay() in the hot-reload watch loop
         implementation libs.jetbrains.compose.runtime

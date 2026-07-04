@@ -13,20 +13,23 @@ import dev.keliver.portal.Bind
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
-import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.document.DocJson
+import dev.keliver.portal.document.DocOp
+import dev.keliver.portal.document.Handle
+import dev.keliver.portal.document.OpAck
+import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.document.OpEnvelope
+import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.lit
+import dev.keliver.portal.document.toDocNode
+import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
-import dev.keliver.portal.ensureNodeIdsAbove
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
-import dev.keliver.portal.insertChild
-import dev.keliver.portal.maxId
 import dev.keliver.portal.modifierSpecs
-import dev.keliver.portal.moveNode
-import dev.keliver.portal.removeNode
-import dev.keliver.portal.serializeTree
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
-import dev.keliver.portal.updateProps
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
 import kotlinx.browser.document
@@ -37,6 +40,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.w3c.dom.DragEvent
+import org.w3c.dom.EventSource
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLOptionElement
@@ -74,12 +78,16 @@ val portalTree = mutableStateOf(initialTree())
 private var selectedId: Int? = null
 private var currentProject = "default"
 private var currentScreen = "main"
-private val undoStack = ArrayDeque<WidgetNode>()
-private val redoStack = ArrayDeque<WidgetNode>()
-private const val UNDO_CAP = 100
-private var saveTimer = -1
+
+// V2 M1: the SERVER owns the document; the editor is an op-emitting client.
+// portalTree is a projection with WidgetNode.id == document HANDLE.
+private var docVersion: Long = -1
+private var eventSource: EventSource? = null
+private val opQueue = ArrayDeque<Pair<List<DocOp>, Boolean>>() // ops to refreshPanels
+private var opInFlight = false
 
 private const val SERVER = "http://localhost:8077"
+private const val SESSION = "editor"
 
 // ---------------------------------------------------------------------------
 // Server IO (XHR reads with callbacks; fire-and-forget writes)
@@ -119,52 +127,101 @@ private lateinit var exportOverlay: HTMLElement
 private lateinit var exportPre: HTMLElement
 
 // ---------------------------------------------------------------------------
-// Tree editing core
+// V2 M1 ops client — every edit is a transactional op batch against the
+// server document; the tree state here is only a projection of the ack'd doc.
 
-private fun applyTree(t: WidgetNode, recordUndo: Boolean = true) {
-  if (recordUndo) {
-    undoStack.addLast(portalTree.value)
-    while (undoStack.size > UNDO_CAP) undoStack.removeFirst()
-    redoStack.clear()
+private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true) {
+  opQueue.addLast(ops to refreshPanels)
+  pumpOps()
+}
+
+private fun pumpOps() {
+  if (opInFlight) return
+  val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: return
+  opInFlight = true
+  saveDotEl.className = "dot saving"
+  saveTextEl.textContent = "Saving…"
+  val batch = OpBatch(docVersion, OpEnvelope(SESSION, 0), ops)
+  val xhr = XMLHttpRequest()
+  xhr.open("POST", "$SERVER/ops?project=$currentProject&screen=$currentScreen")
+  xhr.setRequestHeader("X-Portal-Session", SESSION)
+  xhr.addEventListener("load", { _ ->
+    opInFlight = false
+    val ack = runCatching { DocJson.decodeFromString<OpAck>(xhr.responseText) }.getOrNull()
+    when {
+      ack?.ok == true -> {
+        docVersion = ack.version
+        refetchDoc(refreshPanels)
+        pumpOps()
+      }
+      xhr.status.toInt() == 409 -> { // raced an external edit — rebase on server state
+        opQueue.clear()
+        Ui.toast("Rebased on newer document")
+        refetchDoc(true)
+      }
+      else -> {
+        opQueue.clear()
+        Ui.toast(ack?.error ?: "edit rejected")
+        refetchDoc(true)
+      }
+    }
+    saveDotEl.className = "dot"
+    saveTextEl.textContent = "Saved"
+  })
+  xhr.send(DocJson.encodeToString(batch))
+}
+
+/** Pull the authoritative document; ids in the projected tree ARE handles. */
+private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) {
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen")
+  xhr.addEventListener("load", { _ ->
+    runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
+      docVersion = doc.version
+      portalTree.value = doc.toWidgetTree(handleIds = true)
+      Snapshot.sendApplyNotifications()
+      if (refreshPanels) refresh()
+      cb?.invoke()
+    }
+  })
+  xhr.send()
+}
+
+private fun subscribeDocEvents() {
+  eventSource?.close()
+  eventSource = EventSource("$SERVER/doc-events?project=$currentProject&screen=$currentScreen").also { es ->
+    es.onmessage = { ev ->
+      val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+      if (v != null && v != docVersion) refetchDoc(true) // another session/editor changed the doc
+    }
   }
-  portalTree.value = t
-  Snapshot.sendApplyNotifications() // DOM callbacks write outside composition — flush
-  scheduleSave()
-  updateUndoButtons()
 }
 
 private fun undo() {
-  val prev = undoStack.removeLastOrNull() ?: return
-  redoStack.addLast(portalTree.value)
-  portalTree.value = prev
-  Snapshot.sendApplyNotifications()
-  scheduleSave(); updateUndoButtons(); refresh()
+  serverPost("/undo") { refetchDoc(true) }
 }
 
 private fun redo() {
-  val next = redoStack.removeLastOrNull() ?: return
-  undoStack.addLast(portalTree.value)
-  portalTree.value = next
-  Snapshot.sendApplyNotifications()
-  scheduleSave(); updateUndoButtons(); refresh()
+  serverPost("/redo") { refetchDoc(true) }
+}
+
+private fun serverPost(path: String, cb: () -> Unit) {
+  val xhr = XMLHttpRequest()
+  xhr.open("POST", "$SERVER$path?project=$currentProject&screen=$currentScreen")
+  xhr.setRequestHeader("X-Portal-Session", SESSION)
+  xhr.addEventListener("load", { _ -> cb() })
+  xhr.send()
 }
 
 private fun updateUndoButtons() {
-  if (undoStack.isEmpty()) undoBtn.setAttribute("disabled", "disabled") else undoBtn.removeAttribute("disabled")
-  if (redoStack.isEmpty()) redoBtn.setAttribute("disabled", "disabled") else redoBtn.removeAttribute("disabled")
+  // Server-side stacks: buttons stay enabled; the server acks "nothing to undo".
+  undoBtn.removeAttribute("disabled")
+  redoBtn.removeAttribute("disabled")
 }
 
-private fun scheduleSave() {
-  saveDotEl.className = "dot saving"
-  saveTextEl.textContent = "Saving…"
-  if (saveTimer >= 0) window.clearTimeout(saveTimer)
-  saveTimer = window.setTimeout({
-    sendBody("$SERVER/draft?project=$currentProject&screen=$currentScreen", "PUT", serializeTree(portalTree.value))
-    saveDotEl.className = "dot"
-    saveTextEl.textContent = "Saved"
-    null
-  }, 400)
-}
+/** Anchor for append-to-end inserts: the parent's last child handle (excluding [excludeId]). */
+private fun lastChildHandle(parentId: Int, excludeId: Int? = null): Handle? =
+  portalTree.value.findNode(parentId)?.children?.lastOrNull { it.id != excludeId }?.let { Handle(it.id.toLong()) }
 
 private fun deepCopy(n: WidgetNode): WidgetNode =
   WidgetNode(n.type, n.props, n.children.map { deepCopy(it) }) // fresh ids via default
@@ -180,9 +237,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
   } else {
     portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id
   }
-  applyTree(portalTree.value.insertChild(parentId, node, Int.MAX_VALUE))
-  selectedId = node.id
-  refresh()
+  sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), lastChildHandle(parentId), node.toDocNode())))
 }
 
 // ---------------------------------------------------------------------------
@@ -396,17 +451,11 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 }
 
 private fun loadDraft() {
-  serverGet("/draft?project=$currentProject&screen=$currentScreen") { txt ->
-    val loaded = if (txt.isBlank() || txt.trim() == "{}") null else runCatching { deserializeTree(txt) }.getOrNull()
-    val tree = loaded ?: initialTree()
-    ensureNodeIdsAbove(tree.maxId())
-    undoStack.clear(); redoStack.clear(); selectedId = null
-    portalTree.value = tree
-    Snapshot.sendApplyNotifications()
-    if (loaded == null) scheduleSave() // persist the starter so the device mirrors it
-    updateUndoButtons()
-    refresh()
-  }
+  // V2 M1: the server document is the truth — fetch it and subscribe to changes.
+  selectedId = null
+  opQueue.clear()
+  refetchDoc(true) { subscribeDocEvents() }
+  updateUndoButtons()
 }
 
 private fun switchProject(name: String) {
@@ -497,14 +546,14 @@ private fun renderOutline() {
 private fun handleDrop(payload: String?, targetId: Int) {
   if (payload == null) return
   when {
-    payload.startsWith("new:") -> {
-      applyTree(portalTree.value.insertChild(targetId, newNode(payload.removePrefix("new:")), Int.MAX_VALUE))
-      refresh()
-    }
+    payload.startsWith("new:") -> sendOps(listOf(
+      DocOp.InsertNode(Handle(targetId.toLong()), lastChildHandle(targetId), newNode(payload.removePrefix("new:")).toDocNode()),
+    ))
     payload.startsWith("move:") -> {
       val id = payload.removePrefix("move:").toIntOrNull() ?: return
-      applyTree(portalTree.value.moveNode(id, targetId, Int.MAX_VALUE))
-      refresh()
+      sendOps(listOf(
+        DocOp.MoveNode(Handle(id.toLong()), Handle(targetId.toLong()), lastChildHandle(targetId, excludeId = id)),
+      ))
     }
   }
 }
@@ -537,10 +586,13 @@ private fun renderProps() {
       input.setAttribute("placeholder", "action name")
       input.value = (node.props[evName] as? Action)?.name ?: ""
       input.addEventListener("input", { _ ->
-        val cur = portalTree.value.findNode(node.id) ?: return@addEventListener
         val name = input.value.trim()
-        val newProps = if (name.isEmpty()) cur.props - evName else cur.props + (evName to Action(name))
-        applyTree(portalTree.value.updateProps(node.id, newProps))
+        val op = if (name.isEmpty()) {
+          DocOp.RemoveProp(Handle(node.id.toLong()), evName)
+        } else {
+          DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name))
+        }
+        sendOps(listOf(op), refreshPanels = false)
         renderBindings()
       })
       rowEl.appendChild(input)
@@ -596,16 +648,13 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     fieldInput.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
     fieldInput.value = bound.field
     fieldInput.addEventListener("input", { _ ->
-      val cur = portalTree.value.findNode(nodeId) ?: return@addEventListener
-      applyTree(portalTree.value.updateProps(nodeId, cur.props + (key to Bind(fieldInput.value.trim()))))
+      sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(fieldInput.value.trim()))), refreshPanels = false)
       renderBindings()
     })
     rowEl.appendChild(fieldInput)
     rowEl.appendChild(
       Ui.button("@", "btn icon") {
-        val cur = portalTree.value.findNode(nodeId) ?: return@button
-        applyTree(portalTree.value.updateProps(nodeId, cur.props - key)) // back to literal default
-        refresh()
+        sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
       }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);") },
     )
     return rowEl
@@ -651,9 +700,7 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
   if (kind in BINDABLE && keyPrefix.isEmpty()) {
     rowEl.appendChild(
       Ui.button("@", "btn icon") {
-        val cur = portalTree.value.findNode(nodeId) ?: return@button
-        applyTree(portalTree.value.updateProps(nodeId, cur.props + (key to Bind(name))))
-        refresh()
+        sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(name))))
       },
     )
   }
@@ -679,10 +726,8 @@ private fun renderMods() {
     head.appendChild(Ui.el("span", "t", name))
     val x = Ui.el("span", "x", "✕")
     x.addEventListener("click", { _ ->
-      val cur = portalTree.value.findNode(node.id) ?: return@addEventListener
-      val cleaned = cur.props.filterKeys { !(it == "mod.$name" || it.startsWith("mod.$name.")) }
-      applyTree(portalTree.value.updateProps(node.id, cleaned))
-      refresh()
+      val keys = node.props.keys.filter { it == "mod.$name" || it.startsWith("mod.$name.") }
+      sendOps(keys.map { DocOp.RemoveModifier(Handle(node.id.toLong()), it.removePrefix("mod.")) })
     })
     head.appendChild(x)
     chip.appendChild(head)
@@ -706,12 +751,11 @@ private fun renderMods() {
     Ui.button("Add", "btn") {
       val name = sel.value.ifEmpty { return@button }
       val spec = modifierSpecs.firstOrNull { it.name == name } ?: return@button
-      val cur = portalTree.value.findNode(node.id) ?: return@button
-      val newProps = if (spec.props.isEmpty()) {
-        mapOf("mod.$name" to true)
+      val defaults: Map<String, Any?> = if (spec.props.isEmpty()) {
+        mapOf(name to true)
       } else {
         spec.props.associate { p ->
-          "mod.$name.${p.name}" to when (p.kind) {
+          "$name.${p.name}" to when (p.kind) {
             PropKind.Int -> 8
             PropKind.Double -> 8.0
             PropKind.Bool -> true
@@ -720,8 +764,7 @@ private fun renderMods() {
           }
         }
       }
-      applyTree(portalTree.value.updateProps(node.id, cur.props + newProps))
-      refresh()
+      sendOps(defaults.map { (k, v) -> DocOp.SetModifier(Handle(node.id.toLong()), k, lit(v)) })
     },
   )
   modsEl.appendChild(addRow)
@@ -737,20 +780,17 @@ private fun renderOps() {
   val row = Ui.el("div", "row")
   row.appendChild(
     Ui.button("Duplicate", "btn") {
-      val copy = deepCopy(node)
-      // insert as a sibling: find the parent by scanning
       val parentId = findParentId(portalTree.value, node.id) ?: portalTree.value.id
-      applyTree(portalTree.value.insertChild(parentId, copy, Int.MAX_VALUE))
-      selectedId = copy.id
-      refresh()
+      sendOps(listOf(
+        DocOp.InsertNode(Handle(parentId.toLong()), Handle(node.id.toLong()), deepCopy(node).toDocNode()),
+      ))
     },
   )
   row.appendChild(
     Ui.button("Delete", "btn danger") {
       if (node.id == portalTree.value.id) return@button // never delete the root
-      applyTree(portalTree.value.removeNode(node.id))
       selectedId = null
-      refresh()
+      sendOps(listOf(DocOp.DeleteNode(Handle(node.id.toLong()))))
     },
   )
   opsEl.appendChild(row)
@@ -763,9 +803,13 @@ private fun findParentId(root: WidgetNode, childId: Int): Int? {
 }
 
 private fun editProp(id: Int, name: String, value: Any?) {
-  val cur = portalTree.value.findNode(id) ?: return
-  applyTree(portalTree.value.updateProps(id, cur.props + (name to value)))
-  // no refresh(): keeps input focus while typing; the preview updates live.
+  val op = if (name.startsWith("mod.")) {
+    DocOp.SetModifier(Handle(id.toLong()), name.removePrefix("mod."), lit(value))
+  } else {
+    DocOp.SetProp(Handle(id.toLong()), name, lit(value))
+  }
+  // refreshPanels=false: keeps input focus while typing; the preview updates live.
+  sendOps(listOf(op), refreshPanels = false)
 }
 
 private fun argbToHex(argb: Int): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
