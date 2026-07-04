@@ -1,0 +1,12 @@
+// V2 M3 — Kotlin ingest: headless PSI recognizer (spike S1 recipe) + the
+// identity-preserving Reconciler. The .kt screen file becomes the source of
+// truth; this module turns file text into live-Document updates.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+dependencies {
+  api projects.portalDocument
+  implementation projects.portalCore          // generated catalog grounds the grammar
+  implementation libs.kotlin.compilerEmbeddable
+  testImplementation libs.junit
+  testImplementation libs.kotlin.test.junit
+}

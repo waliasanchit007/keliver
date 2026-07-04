@@ -184,6 +184,7 @@ include ':portal-sql-spike' // V2 S3: SQLDelight-over-Zipline driver-contract sp
 include ':portal-presenter-spike' // V2 S4: live-presenter wasm loop spike
 include ':portal-document' // V2 M1: live semantic document + op engine model
 include ':portal-mcp' // V2 M2: agent-native MCP surface over the op engine
+include ':portal-ingest' // V2 M3: headless PSI recognizer + reconciler (.kt = source of truth)
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'
