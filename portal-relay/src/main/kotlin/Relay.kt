@@ -23,7 +23,11 @@
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.document.DocJson
+import dev.keliver.portal.document.OpBatch
 import dev.keliver.portal.exportKotlin
+import dev.keliver.portal.serializeTree
+import kotlinx.serialization.encodeToString
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.URLDecoder
@@ -174,6 +178,31 @@ private fun handle(ex: HttpExchange, block: () -> Unit) {
   }
 }
 
+// ── V2 M1: the live document engine ─────────────────────────────────────────
+
+private val documents = java.util.concurrent.ConcurrentHashMap<String, DocumentService>()
+
+/** One engine per screen; projection feeds the EXISTING draft file (devices + /tree unchanged). */
+private fun docFor(q: Map<String, String>): DocumentService {
+  val project = safe(q["project"] ?: "default")
+  val screen = safe(q["screen"] ?: "main")
+  return documents.getOrPut("$project/$screen") {
+    val f = screenFile(project, screen)
+    DocumentService.fromTree(
+      screenKey = "$project/$screen",
+      treeJson = if (f.exists()) f.readText() else null,
+      onProjected = { tree ->
+        f.parentFile.mkdirs()
+        f.writeText(serializeTree(tree))
+      },
+      kotlinFile = File(File(File(root, "kotlin"), project), "$screen.kt"),
+    )
+  }
+}
+
+private fun session(ex: HttpExchange): String =
+  ex.requestHeaders.getFirst("X-Portal-Session") ?: "anon"
+
 fun main() {
   ensureDefaults()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
@@ -250,6 +279,32 @@ fun main() {
         else -> respond(ex, 405)
       }
     }
+  }
+
+  // ── V2 M1 document routes ──────────────────────────────────────────────
+  server.createContext("/doc") { ex ->
+    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).doc)) }
+  }
+  server.createContext("/ops") { ex ->
+    handle(ex) {
+      val batch = DocJson.decodeFromString<OpBatch>(ex.requestBody.readBytes().decodeToString())
+      val ack = docFor(query(ex)).submit(batch)
+      val code = if (ack.ok) 200 else if (ack.error?.startsWith("stale") == true) 409 else 422
+      respond(ex, code, DocJson.encodeToString(ack))
+    }
+  }
+  server.createContext("/undo") { ex ->
+    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).undo(session(ex)))) }
+  }
+  server.createContext("/redo") { ex ->
+    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex)))) }
+  }
+  server.createContext("/doc-events") { ex -> // SSE: {"version":N} on every change
+    cors(ex)
+    ex.responseHeaders.add("Content-Type", "text/event-stream")
+    ex.responseHeaders.add("Cache-Control", "no-cache")
+    ex.sendResponseHeaders(200, 0)
+    docFor(query(ex)).subscribe(ex.responseBody) // stream stays open
   }
 
   // LEGACY device endpoint — unchanged wire shape. Mirrors the ACTIVE screen's draft.

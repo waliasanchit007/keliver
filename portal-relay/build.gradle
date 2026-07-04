@@ -10,4 +10,6 @@ application {
 
 dependencies {
   implementation projects.portalCore
+  implementation projects.portalDocument // V2 M1: live document + op engine
+  implementation libs.kotlinx.serialization.json // DocJson wire
 }
