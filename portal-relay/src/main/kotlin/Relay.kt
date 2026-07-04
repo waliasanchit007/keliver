@@ -287,8 +287,10 @@ fun main() {
   }
   server.createContext("/ops") { ex ->
     handle(ex) {
+      val q = query(ex)
       val batch = DocJson.decodeFromString<OpBatch>(ex.requestBody.readBytes().decodeToString())
-      val ack = docFor(query(ex)).submit(batch)
+      val svc = docFor(q)
+      val ack = if (q["dryRun"] == "1") svc.dryRun(batch) else svc.submit(batch)
       val code = if (ack.ok) 200 else if (ack.error?.startsWith("stale") == true) 409 else 422
       respond(ex, code, DocJson.encodeToString(ack))
     }

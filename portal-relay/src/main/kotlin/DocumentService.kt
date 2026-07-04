@@ -40,6 +40,16 @@ class DocumentService(
   }
   private var pendingWrite: ScheduledFuture<*>? = null
 
+  /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */
+  @Synchronized
+  fun dryRun(batch: OpBatch): OpAck {
+    if (batch.baseVersion != doc.version) {
+      return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
+    }
+    val res = doc.applyBatch(batch.ops)
+    return if (res.result == null) OpAck(false, doc.version, res.error) else OpAck(true, doc.version)
+  }
+
   @Synchronized
   fun submit(batch: OpBatch): OpAck {
     if (batch.baseVersion != doc.version) {
