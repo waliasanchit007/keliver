@@ -151,3 +151,12 @@ on a named implementation fallback.
 **Freeze checklist update: every 🔬 subsystem → ✅ Ready for implementation.**
 Spike code: portal-schema-codegen/src/main/kotlin/.../spike/ (tasks runPsiSpike,
 runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest.
+
+## MILESTONE LOG
+- **M1 SHIPPED (`5d64de87a`):** portal-document (model+ops+inverses+projection, 10 tests),
+  DocumentService (409/422, per-session undo/redo, SSE, draft projection, .kt dual-write),
+  editor = op client (handleIds projection kept all panels unchanged). Browser-verified.
+- **M2 SHIPPED:** /ops dryRun + portal-mcp stdio server (10 tools: get_catalog/get_guide/
+  list_projects/list_screens/get_document/apply_ops(dryRun)/undo/redo/find_usages/
+  device_screenshot). Scripted agent session verified end to end (catalog 60w/19m,
+  steering dryRun error, insert v1, find_usages by handle, undo reverts).

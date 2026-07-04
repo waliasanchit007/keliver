@@ -1,0 +1,15 @@
+// V2 M2 — the agent-native surface: a stdio JSON-RPC MCP server fronting the
+// portal-server op engine (:8077). Agents get catalog-grounded, transactional,
+// dry-runnable screen authoring. See design §6.
+apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'application'
+
+application {
+  mainClass = 'dev.keliver.portal.mcp.MainKt'
+}
+
+dependencies {
+  implementation projects.portalCore      // generated catalog for get_catalog
+  implementation projects.portalDocument  // op/document types
+  implementation libs.kotlinx.serialization.json
+}
