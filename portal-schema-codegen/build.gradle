@@ -69,3 +69,10 @@ tasks.register('runPsiSpike', JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'dev.keliver.portal.codegen.spike.PsiIngestSpikeKt'
 }
+
+// V2 SPIKE S2 — PSI subtree write-back.
+tasks.register('runWriteBackSpike', JavaExec) {
+  group = 'verification'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'dev.keliver.portal.codegen.spike.PsiWriteBackSpikeKt'
+}
