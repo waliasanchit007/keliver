@@ -1,0 +1,23 @@
+// V2 M1 — the live semantic document + operation vocabulary (design §1-§2).
+// Pure model: serializable, no server/UI deps; portal-core only for projection.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  jvm()
+  js { browser() }
+  wasmJs { browser() }
+  sourceSets {
+    commonMain {
+      dependencies {
+        api projects.portalCore
+        implementation libs.kotlinx.serialization.json
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}
