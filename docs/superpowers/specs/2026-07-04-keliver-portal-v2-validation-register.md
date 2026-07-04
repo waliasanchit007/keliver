@@ -1,0 +1,125 @@
+# Portal V2 — Engineering Validation Register
+
+**Date:** 2026-07-04
+**Status:** Architecture FROZEN (per `2026-07-04-keliver-portal-v2-bidirectional-design.md`
++ design-review amendments). This register eliminates implementation unknowns
+before/alongside the milestone work. No redesign here — risk classification only.
+
+## Design-review amendments folded into the frozen architecture
+
+1. Write-back primitive = **PSI subtree replacement** on a fresh parse (spans demoted
+   to lookup hints; no offset-shifting state machine).
+2. Subset gains **Condition(bind)** and **Repeat(itemsBind)** semantic nodes in M5
+   (`if (b.x) {…}` / `b.items.forEach {…}` — lists + conditionals are portal-editable).
+3. Op positions are **sibling-anchored** (`after: Handle?`, not integer index) + ops carry
+   an **envelope** (session, timestamp, batch label).
+4. **Capability gating**: bundles declare required host services (name+version) in publish
+   metadata; `/bundles/latest` gates on them like `widgetVersion`.
+5. Guest data API = **SQLDelight-over-Zipline** (typed queries OTA) atop the dumb
+   `HostSqlDriver` wire (execute/executeBatch/transaction).
+6. portal-mcp adds `apply_ops(dryRun)`, `list_screens`/`find_usages`, and (post-M8)
+   `execute_action` behavioral verification.
+7. Overlay runtime clarified: ONE Zipline instance/bundle — interpreter is a library
+   inside the dev guest; "overlay" is a routing decision with versioned catch-up.
+8. RawCode nodes get a display-only `kindHint` (condition-ish/loop-ish/effect-ish).
+
+## Classification
+
+### ✅ Proven (evidence in this repo)
+- Browser/wasm execution (V1 verified end-to-end; 4.4 MB gz measured)
+- Runtime interchange + generated interpreter (web/Android/iOS)
+- Publish pipeline: compile→sign→version→gate→tamper-reject (P4 runtime-verified)
+- Zipline hot-reload push (`--continuous`, Android + iOS)
+- Suspend host services over Zipline (keliver-http on-device; U1 dodge known)
+- Headless in-process compiler use (portal-schema-codegen FIR parsing)
+- Op engine mechanics, SSE, MCP surface (standard tech + V1 EditTree seed)
+- Capability gating (same mechanism as verified widgetVersion gating)
+
+### 🟡 Assumed (validate inside owning milestone)
+- Identity reconciliation quality (property harness + diff corpus in M3;
+  blast radius = UX-only)
+- Condition/Repeat recognizer patterns (gated on S1; corpus in M5)
+- RawCode byte-preservation (success criterion of S1/S2)
+- Overlay router + versioned catch-up (components proven; latency via S0)
+- One-JVM portal-server (PSI + SSE + ProcessBuilder gradle; classpath isolation
+  watch item in S1)
+- Memory envelope (modules=40 loads fine; PSI JVM = dev-tool-acceptable; monitor)
+- File-watch latency (JDK WatchService on macOS = ~2s polling — use a native-events
+  watcher lib; verify in S0)
+
+### 🔬 Needs Spike
+
+**S0 — Measurement pass (~½ day, first).** Warm incremental guest JS compile time
+(the 3–10s overlay assumption), native file-watcher lib latency, parse-time baseline.
+
+**S1 — Headless PSI ingest (1–2d).**
+Assumption: KtFile PSI from source in plain JVM, recognizer walk without resolution,
+<500ms warm. Fail modes: KotlinCoreEnvironment setup outside IDEA; embeddable version
+pinning; import-alias ambiguity. Prototype: standalone main parses a realistic
+CheckoutScreen.kt → recognized tree + verbatim RawCode spans. Success: correct tree,
+byte-exact raw spans, <500ms warm, runs in portal-server JVM. Fallbacks (impl-only):
+Analysis-API standalone, or FIR (already proven in-repo).
+
+**S2 — PSI subtree write-back (1–2d, after S1).**
+Assumption: KtPsiFactory node replacement serializes byte-identical outside the touched
+node, headlessly (no CodeStyleManager dependence). Prototype: replace one Button call;
+then 10-file round-trip corpus (comments, odd formatting, RawCode) + random-op property
+test (ops → write → re-ingest → Document equality). Fallback (impl-only): PSI locates
+node boundaries, text spliced at FRESH offsets (no stale-span machinery).
+
+**S3 — SQLDelight-over-Zipline (1–2d, parallel).**
+Assumption: SQLDelight 2.x generated common code runs in the Zipline JS guest over a
+custom suspending SqlDriver bridging HostSqlDriver; rows cross as one serializable
+payload (U1-safe); latency fine; transactions map. Prototype: one table+query, custom
+driver → fake host on JVM SQLite, end-to-end in a Zipline guest. Fallback (impl-only):
+hand-rolled typed helpers over the same wire — the wire IS the frozen contract.
+
+**S4 — Live Presenter wasm loop (2d, parallel; uses S0 numbers).**
+Assumption: project logic compiles to wasm on-idle and (re)loads into the running
+preview; loop = seconds. Watch: wasmJs link times; dynamic module reload; SQLDelight has
+no wasmJs driver today (browser tier may use in-memory fake — decide from data).
+Prototype: Workouts-style presenter as wasm module driving a Bindings screen; measure
+edit→result. Success: ≤15s cold / ≤8s warm. Fallback (impl-only): Tier-2 presenters run
+JVM-side in portal-server, state streamed to preview (tier UX survives).
+
+### ⏳ Deferred
+Multi-user/CRDT; branch-workspaces + PR previews; IntelliJ plugin (M10); declarative
+data sources (V3); scale beyond local-first single team; QuickJS ceiling (monitor).
+
+## Risk register (high → low)
+1. S2 write-back fidelity (only file-corrupting risk; dignified fallback)
+2. S4 live-presenter loop latency (tier value at stake)
+3. S1 headless PSI environment (gates M3–M5; two fallbacks)
+4. S3 SQL driver impedance (wire survives failure)
+5. Incremental compile latency (S0; overlay UX promise)
+6. Identity reconciliation (UX-grade)
+7. File-watcher latency (lib choice)
+8. PSI-in-server classpath isolation
+9. Memory growth (monitor)
+
+## Spike roadmap
+```
+Week 1: S0 (½d) → S1 (1–2d) → S2 (1–2d)   ← critical path
+        S3 (1–2d) parallel
+        S4 (2d)   parallel
+M1 (Document+ops) + M2 (portal-mcp) are spike-independent → start immediately.
+```
+
+## Architecture freeze checklist
+| Subsystem | Status |
+|---|---|
+| Document model + identity + ops (M1) | ✅ Ready |
+| portal-mcp (M2) | ✅ Ready |
+| Publish changes + capability gating | ✅ Ready |
+| Interchange/interpreter/preview | ✅ Ready (unchanged) |
+| Kotlin ingest (M3) | 🔬 S1 first |
+| Write-back (M4) | 🔬 S2 first |
+| Condition/Repeat + RawCode (M5) | 🔬 gated S1/S2 (design ✅) |
+| App project model (M6) | ✅ Ready |
+| Data layer (M7) | 🔬 S3 first (wire frozen) |
+| Live Presenter (M8) | 🔬 S4 first (tier UX frozen) |
+| Overlay runtime (M9) | 🟡 S0 then ready |
+| IntelliJ plugin (M10) | ⏳ Deferred |
+
+Nothing on the spike list can force an architectural change — every failure mode lands
+on a named implementation fallback.
