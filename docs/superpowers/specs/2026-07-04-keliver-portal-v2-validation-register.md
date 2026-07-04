@@ -123,3 +123,31 @@ M1 (Document+ops) + M2 (portal-mcp) are spike-independent → start immediately.
 
 Nothing on the spike list can force an architectural change — every failure mode lands
 on a named implementation fallback.
+
+---
+
+## SPIKE RESULTS (2026-07-04 — ALL PASS, architecture confirmed frozen)
+
+- **S0:** warm incremental guest zipline compile 8.2–10s (band holds; --continuous
+  shaves ~2s gradle overhead). Watcher: io.methvin:directory-watcher:0.19.0 (JDK
+  WatchService on macOS = 2s polling, rejected). Parser env must be resident.
+- **S1 PASS:** headless PSI ingest — env boot 357ms once, cold 138ms, **warm 1ms**
+  (budget 500ms). Recognizer extracts widgets/args/binds/actions/modifiers/children;
+  unknown statements RAW byte-exact. Gotchas: embeddable shades com.intellij.* →
+  org.jetbrains.kotlin.com.intellij.*; body via `bodyExpression as KtBlockExpression`.
+- **S2 PASS (#1 risk retired):** PSI subtree mutation headless works with the ktlint
+  recipe — rootArea EPs (treeCopyHandler, psi.treeChangePreprocessor,
+  smartPointerAnchorProvider, jvm.elementProvider) + pass-through PomModel service
+  (TreeAspect). Replace/insert/delete byte-identical outside touched nodes; idempotent.
+- **S3 PASS:** SQLDelight 2.1.0 runtime + async-extensions on Kotlin/JS with a custom
+  suspending SqlDriver over the single-payload wire — typed insert+select green on
+  ChromeHeadless. M7: transactions→executeBatch; gradle plugin = standard usage.
+- **S4 PASS (latency note):** presenter logic + JSON state/action channel runs in wasm
+  (ChromeHeadless 1/1). Warm incremental wasm dist 8.7–9.1s — marginal vs the 8s warm
+  target with ~2s gradle overhead included; within the 15s budget; --continuous or a
+  resident build service closes the gap. Side-by-side bundle loading = M8 integration
+  (JVM-side execution fallback stands if needed).
+
+**Freeze checklist update: every 🔬 subsystem → ✅ Ready for implementation.**
+Spike code: portal-schema-codegen/src/main/kotlin/.../spike/ (tasks runPsiSpike,
+runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest.

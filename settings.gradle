@@ -181,6 +181,7 @@ include ':portal-render' // spike/keliver-web portal P1: generated WidgetNode in
 include ':portal-published-guest' // spike/keliver-web portal P4: the compiled+signed published-screen guest
 include ':portal-device-ios' // spike/keliver-web portal P5: iOS Treehouse host framework (dev+prod modes)
 include ':portal-sql-spike' // V2 S3: SQLDelight-over-Zipline driver-contract spike
+include ':portal-presenter-spike' // V2 S4: live-presenter wasm loop spike
 include ':keliver-material-schema'
 include ':keliver-material-testing'
 include ':keliver-material-widget'

@@ -1,0 +1,27 @@
+// V2 SPIKE S4 — live-presenter wasm loop. Validates: (a) warm incremental
+// wasm compile latency for a logic-only module (the tier's go/no-go number),
+// (b) the presenter↔preview state channel across the wasm/JS boundary
+// (serialized Bindings state out, actions in). Run: :portal-presenter-spike:wasmJsTest
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  wasmJs {
+    browser()
+    binaries.executable()
+  }
+  sourceSets {
+    wasmJsMain {
+      dependencies {
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.kotlinx.serialization.json
+      }
+    }
+    wasmJsTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
