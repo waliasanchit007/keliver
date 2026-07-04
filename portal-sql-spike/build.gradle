@@ -1,0 +1,27 @@
+// V2 SPIKE S3 — SQLDelight-over-Zipline driver contract, on Kotlin/JS.
+// Validates: SQLDelight 2.x runtime + async extensions run in the guest's JS
+// world with a custom suspending SqlDriver whose wire is the U1-safe
+// single-payload HostSqlDriver shape. The Zipline RPC leg itself is
+// proven-by-composition (keliver-http). Run: :portal-sql-spike:jsTest
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+
+kotlin {
+  js { browser() }
+  sourceSets {
+    jsMain {
+      dependencies {
+        implementation 'app.cash.sqldelight:runtime:2.1.0'
+        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
+        implementation libs.kotlinx.coroutines.core
+        implementation libs.kotlinx.serialization.json
+      }
+    }
+    jsTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}
