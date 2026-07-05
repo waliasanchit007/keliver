@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLambdaArgument
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
@@ -26,6 +27,12 @@ data class Recognized(
   val contract: Contract,
   /** null when the file has no recognizable screen function. */
   val screenName: String?,
+  /** M4: temp-handle -> the PSI expression it came from (write-back targeting). Transient. */
+  val psiByHandle: Map<Long, KtExpression> = emptyMap(),
+  /** M4: the KtFile the PSI refs belong to — mutate then read [KtFile.getText]. Transient. */
+  val file: KtFile? = null,
+  /** M4: the screen function's Bindings interface, if present, for contract write-back. */
+  val bindingsInterface: KtClass? = null,
 )
 
 object Recognizer {
@@ -39,12 +46,17 @@ object Recognizer {
 
     var temp = -1L // temp handles are NEGATIVE; the Reconciler replaces them
     fun nextTemp() = Handle(temp--)
+    val psiByHandle = mutableMapOf<Long, KtExpression>()
+    fun track(h: Handle, e: KtExpression): Handle {
+      psiByHandle[h.v] = e
+      return h
+    }
 
     fun statementToNode(expr: KtExpression): DocNode {
       val call = expr as? KtCallExpression
       val type = call?.calleeExpression?.text
       val spec = type?.let { widgetSpec(it) }
-      if (call == null || spec == null) return rawNode(expr, ::nextTemp)
+      if (call == null || spec == null) return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
 
       val props = mutableMapOf<String, PropValue>()
       val modifiers = mutableMapOf<String, PropValue>()
@@ -53,17 +65,19 @@ object Recognizer {
         val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp)
         val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp)
         if (name == "modifier") {
-          val mods = parseModifierChain(ve.text) ?: return rawNode(expr, ::nextTemp)
+          val mods = parseModifierChain(ve.text)
+            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
           modifiers += mods
           continue
         }
-        val value = parseValue(ve, bindingsParam) ?: return rawNode(expr, ::nextTemp)
+        val value = parseValue(ve, bindingsParam)
+          ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         props[name] = value
       }
       val children = call.lambdaArguments.firstOrNull()
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
         .map { statementToNode(it) }
-      return DocNode.Widget(nextTemp(), type, props, modifiers, children)
+      return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
     }
 
     val rootStatements = body.statements.map { statementToNode(it) }
@@ -71,17 +85,17 @@ object Recognizer {
     val root = rootStatements.singleOrNull() as? DocNode.Widget
       ?: DocNode.Widget(nextTemp(), "Column", children = rootStatements)
 
-    val contract = file.declarations.filterIsInstance<KtClass>()
+    val ifaceClass = file.declarations.filterIsInstance<KtClass>()
       .firstOrNull { it.isInterface() && it.name?.endsWith("Bindings") == true }
-      ?.let { iface ->
-        Contract(
-          fields = iface.declarations.filterIsInstance<KtProperty>()
-            .associate { (it.name ?: "?") to (it.typeReference?.text ?: "String") },
-          actions = iface.declarations.filterIsInstance<KtNamedFunction>().mapNotNull { it.name },
-        )
-      } ?: Contract()
+    val contract = ifaceClass?.let { iface ->
+      Contract(
+        fields = iface.declarations.filterIsInstance<KtProperty>()
+          .associate { (it.name ?: "?") to (it.typeReference?.text ?: "String") },
+        actions = iface.declarations.filterIsInstance<KtNamedFunction>().mapNotNull { it.name },
+      )
+    } ?: Contract()
 
-    return Recognized(root, contract, fn.name)
+    return Recognized(root, contract, fn.name, psiByHandle, file, ifaceClass)
   }
 
   private fun rawNode(expr: KtExpression, nextTemp: () -> Handle): DocNode.RawCode {

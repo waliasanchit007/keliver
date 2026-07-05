@@ -166,3 +166,10 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   acceptExternal = new baseline: no undo entry, no .kt rewrite). VERIFIED live:
   sed the .kt -> ingest v(N+1) -> /doc + device /tree + OPEN EDITOR updated with
   NO reload (SSE + reconnect + 5s version-poll fallback). .kt = source of truth.
+- **M4 SHIPPED:** surgical PSI write-back — NodeEmitter (single-node canonical text via
+  export+PSI-lift) + WriteBack.merge (re-parse file, shape-match parsed↔target, replace
+  only changed argument lists / insert-delete only changed child statements; reorder or
+  contract change → null → full-export fallback). DocumentService.writeKotlin tries merge
+  first. 4 tests (comment+RawCode preserved on prop edit, insert/delete surgical,
+  merged output re-ingests to target). E2E verified: hand comment SURVIVED a /ops prop
+  edit (paddingDp=40 applied surgically) — comment survival proves the PSI path ran.

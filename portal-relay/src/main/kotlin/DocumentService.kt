@@ -130,11 +130,17 @@ class DocumentService(
   private fun writeKotlin() {
     runCatching {
       kotlinFile.parentFile.mkdirs()
-      val header = "// GENERATED projection (until M4 write-back) — screen $screenKey v${doc.version}\n"
-      val text = header + exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen")
+      // M4: surgical PSI write-back preserves comments/formatting/RawCode when
+      // the file already exists; fall back to a full export on first write or
+      // when the change isn't safely surgical (type change, reorder, contract).
+      val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
+      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc) }
+      val text = surgical
+        ?: ("// GENERATED projection — screen $screenKey v${doc.version}\n" +
+          exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen"))
       lastWrittenText = text
       kotlinFile.writeText(text)
-    }
+    }.onFailure { println("writeKotlin failed for $screenKey: $it") }
   }
 
   companion object {
