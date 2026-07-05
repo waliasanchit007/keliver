@@ -49,6 +49,8 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("@Composable")
   appendLine("fun RenderNode(node: WidgetNode) {")
   appendLine("  when (node.type) {")
+  // M5: logic nodes render their children (preview shows the branch/one iteration).
+  appendLine("    \"Condition\", \"Repeat\" -> Column { node.children.forEach { RenderNode(it) } }")
   for (w in sorted) {
     appendLine("    \"${w.name}\" -> ${w.name}(")
     if (mods.isNotEmpty()) appendLine("      modifier = nodeModifier(node),")

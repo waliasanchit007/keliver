@@ -173,3 +173,12 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   first. 4 tests (comment+RawCode preserved on prop edit, insert/delete surgical,
   merged output re-ingests to target). E2E verified: hand comment SURVIVED a /ops prop
   edit (paddingDp=40 applied surgically) — comment survival proves the PSI path ran.
+- **M5 SHIPPED:** Condition/Repeat semantic nodes — lists + conditionals are portal-EDITABLE
+  (not RawCode). Reserved widget types handled by hand-written branches in the emitter
+  templates (regeneration-safe): catalog (synthetic "Logic" specs), interpreter (passthrough
+  Column preview), exporter (real `if (b.field) {}` / `b.items.forEach { item -> }` + typed
+  contract fields Boolean/List<String>). Recognizer parses KtIfExpression (no-else) →
+  Condition and `b.x.forEach { item -> }` → Repeat; else → RawCode. WriteBack handles logic
+  nodes (props change → full regen, else recurse the if/forEach block). 9/9 ingest tests
+  (incl. recognize + export round-trip). E2E: a .kt with if/forEach ingested to editable
+  Condition/Repeat, shown in the editor outline + rendered in preview (palette now 62).

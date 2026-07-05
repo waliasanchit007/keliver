@@ -4,9 +4,10 @@ import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.UiDocument
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtPsiFactory
-import org.jetbrains.kotlin.psi.psiUtil.getChildOfType
 
 /**
  * Surgical write-back (design §4, spike S2): apply a target document onto the
@@ -50,6 +51,13 @@ object WriteBack {
     parsed as DocNode.Widget
     target as DocNode.Widget
     if (parsed.type != target.type) return false
+
+    // M5 logic nodes (if/forEach): props change → full regen (bail); else recurse children.
+    if (parsed.type == "Condition" || parsed.type == "Repeat") {
+      if (parsed.props != target.props) return false
+      val block = logicBlock(psi[parsed.handle.v]) ?: return false
+      return mergeChildren(parsed.children, target.children, block, psi, factory)
+    }
 
     val call = psi[parsed.handle.v] as? KtCallExpression ?: return false
 
@@ -113,7 +121,7 @@ object WriteBack {
       if (matchOf[ti] != null) continue
       val anchorTargetIdx = (ti - 1 downTo 0).firstOrNull { matchOf[it] != null }
       val anchorPsi = anchorTargetIdx?.let { psi[parsedChildren[matchOf[it]!!].handle.v] }
-      val newStmt = NodeEmitter.callExpression(tc)
+      val newStmt = NodeEmitter.statement(tc)
       insertStatement(block, newStmt, anchorPsi, factory)
     }
     return true
@@ -123,6 +131,15 @@ object WriteBack {
     a is DocNode.Widget && b is DocNode.Widget -> a.type == b.type
     a is DocNode.RawCode && b is DocNode.RawCode -> true
     else -> false
+  }
+
+  /** The children block of a logic node's PSI (if-then block / forEach lambda body). */
+  private fun logicBlock(expr: KtExpression?): KtBlockExpression? = when (expr) {
+    is KtIfExpression -> expr.then as? KtBlockExpression
+    is KtDotQualifiedExpression ->
+      (expr.selectorExpression as? KtCallExpression)?.lambdaArguments?.firstOrNull()
+        ?.getLambdaExpression()?.bodyExpression as? KtBlockExpression
+    else -> null
   }
 
   private fun insertStatement(

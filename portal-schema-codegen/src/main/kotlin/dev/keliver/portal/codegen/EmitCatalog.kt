@@ -52,6 +52,9 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
     if (w.events.isNotEmpty()) append(", events = listOf(${w.events.joinToString(", ") { "\"${it.name}\"" }})")
     appendLine("),")
   }
+  // M5: logic nodes (not schema widgets) — portal-editable control flow.
+  appendLine("""  WidgetSpec("Condition", "Logic", listOf(PropSpec("field", PropKind.Text, "If field (Boolean)")), acceptsChildren = true, sampleProps = mapOf("field" to "showThis")),""")
+  appendLine("""  WidgetSpec("Repeat", "Logic", listOf(PropSpec("items", PropKind.Text, "Items field (List)"), PropSpec("item", PropKind.Text, "Item name")), acceptsChildren = true, sampleProps = mapOf("items" to "items", "item" to "item")),""")
   appendLine(")")
   appendLine()
   appendLine("val modifierSpecs: List<ModifierSpec> = listOf(")

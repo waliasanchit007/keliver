@@ -10,9 +10,12 @@ import dev.keliver.portal.widgetSpec
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtLambdaArgument
+import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
 
@@ -53,6 +56,17 @@ object Recognizer {
     }
 
     fun statementToNode(expr: KtExpression): DocNode {
+      // M5: logic constructs → editable Condition/Repeat nodes (not RawCode).
+      recognizeCondition(expr, bindingsParam)?.let { (field, thenStmts) ->
+        return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
+          children = thenStmts.map { statementToNode(it) })
+      }
+      recognizeRepeat(expr, bindingsParam)?.let { (items, itemVar, bodyStmts) ->
+        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
+          mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
+          children = bodyStmts.map { statementToNode(it) })
+      }
+
       val call = expr as? KtCallExpression
       val type = call?.calleeExpression?.text
       val spec = type?.let { widgetSpec(it) }
@@ -96,6 +110,31 @@ object Recognizer {
     } ?: Contract()
 
     return Recognized(root, contract, fn.name, psiByHandle, file, ifaceClass)
+  }
+
+  /** `if (b.field) { <stmts> }` with no else → (field, thenStatements). */
+  private fun recognizeCondition(expr: KtExpression, b: String?): Pair<String, List<KtExpression>>? {
+    if (b == null) return null
+    val ifExpr = expr as? KtIfExpression ?: return null
+    if (ifExpr.`else` != null) return null // else-branches aren't modeled → RawCode
+    val field = Regex("^${Regex.escape(b)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(ifExpr.condition?.text?.trim() ?: "")
+      ?.groupValues?.get(1) ?: return null
+    val block = ifExpr.then as? KtBlockExpression ?: return null
+    return field to block.statements
+  }
+
+  /** `b.items.forEach { item -> <stmts> }` → (items, itemVar, bodyStatements). */
+  private fun recognizeRepeat(expr: KtExpression, b: String?): Triple<String, String, List<KtExpression>>? {
+    if (b == null) return null
+    val dot = expr as? KtDotQualifiedExpression ?: return null
+    val items = Regex("^${Regex.escape(b)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(dot.receiverExpression.text.trim())
+      ?.groupValues?.get(1) ?: return null
+    val call = dot.selectorExpression as? KtCallExpression ?: return null
+    if (call.calleeExpression?.text != "forEach") return null
+    val lambda = call.lambdaArguments.firstOrNull()?.getLambdaExpression() as? KtLambdaExpression ?: return null
+    val itemVar = lambda.valueParameters.firstOrNull()?.name ?: "it"
+    val body = lambda.bodyExpression?.statements ?: return null
+    return Triple(items, itemVar, body)
   }
 
   private fun rawNode(expr: KtExpression, nextTemp: () -> Handle): DocNode.RawCode {

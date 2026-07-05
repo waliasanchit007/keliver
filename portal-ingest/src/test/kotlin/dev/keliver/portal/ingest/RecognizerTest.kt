@@ -115,6 +115,65 @@ class RecognizerTest {
     assertEquals(doc.version + 1, reconciled.version)
   }
 
+  @Test fun recognizesConditionAndRepeatAsEditableNodes() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.StyledText
+      import dev.keliver.layout.compose.Column
+
+      @Composable
+      fun S(b: SBindings) {
+        Column {
+          if (b.loggedIn) {
+            StyledText(text = "Welcome")
+          }
+          b.rows.forEach { row ->
+            StyledText(text = "item")
+          }
+        }
+      }
+
+      interface SBindings {
+        val loggedIn: Boolean
+        val rows: List<String>
+      }
+    """.trimIndent()
+    val r = Recognizer.recognize("S.kt", src)!!
+    val col = r.root
+    val cond = col.children[0] as DocNode.Widget
+    assertEquals("Condition", cond.type)
+    assertEquals(PropValue.Lit("s", s = "loggedIn"), cond.props["field"])
+    assertEquals("StyledText", (cond.children[0] as DocNode.Widget).type)
+    val rep = col.children[1] as DocNode.Widget
+    assertEquals("Repeat", rep.type)
+    assertEquals(PropValue.Lit("s", s = "rows"), rep.props["items"])
+    assertEquals(PropValue.Lit("s", s = "row"), rep.props["item"])
+  }
+
+  @Test fun conditionRepeatRoundTripThroughExport() {
+    val doc = UiDocument(
+      screen = "main",
+      root = DocNode.Widget(Handle(1), "Column", children = listOf(
+        DocNode.Widget(Handle(2), "Condition", mapOf("field" to PropValue.Lit("s", s = "showBanner")),
+          children = listOf(DocNode.Widget(Handle(3), "StyledText", mapOf("text" to lit("Hi"))))),
+        DocNode.Widget(Handle(4), "Repeat",
+          mapOf("items" to PropValue.Lit("s", s = "cards"), "item" to PropValue.Lit("s", s = "card")),
+          children = listOf(DocNode.Widget(Handle(5), "StyledText", mapOf("text" to lit("row"))))),
+      )),
+      contract = Contract(), version = 0, nextHandle = 10,
+    )
+    val exported = exportKotlin(doc.toWidgetTree(), functionName = "S")
+    // Real control flow in the output + a typed contract.
+    assertTrue("if (b.showBanner) {" in exported, exported)
+    assertTrue("b.cards.forEach { card ->" in exported, exported)
+    assertTrue("val showBanner: Boolean" in exported)
+    assertTrue("val cards: List<String>" in exported)
+    // Round-trips back to the same document.
+    val r = Recognizer.recognize("S.kt", exported)!!
+    val re = Reconciler.reconcile(doc, r)
+    assertEquals(doc.root, re.root)
+  }
+
   @Test fun reconcilerPreservesHandlesAcrossEditsAndAllocatesNew() {
     val old = UiDocument(
       screen = "main",

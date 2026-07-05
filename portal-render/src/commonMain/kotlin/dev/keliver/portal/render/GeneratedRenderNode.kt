@@ -92,6 +92,7 @@ import dev.keliver.material.compose.size
 @Composable
 fun RenderNode(node: WidgetNode) {
   when (node.type) {
+    "Condition", "Repeat" -> Column { node.children.forEach { RenderNode(it) } }
     "AlertDialog" -> AlertDialog(
       modifier = nodeModifier(node),
       title = node.strB("title"),
