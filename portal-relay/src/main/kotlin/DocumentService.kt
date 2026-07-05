@@ -28,6 +28,10 @@ class DocumentService(
   initial: UiDocument,
   private val onProjected: (WidgetNode) -> Unit,
   private val kotlinFile: File,
+  /** M6: screen function name (e.g. "MainScreen") — Bindings iface derives from it. */
+  private val functionName: String = "PortalScreen",
+  /** M6: package line for full exports of in-project screens (null = none/legacy). */
+  private val packageName: String? = null,
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -127,6 +131,11 @@ class DocumentService(
     out.flush()
   }
 
+  /** M6: create the canonical .kt on first sight of a screen (no change needed). */
+  fun ensureKotlinFile() {
+    if (!kotlinFile.exists()) writer.schedule({ writeKotlin() }, 100, TimeUnit.MILLISECONDS)
+  }
+
   private fun writeKotlin() {
     runCatching {
       kotlinFile.parentFile.mkdirs()
@@ -135,21 +144,51 @@ class DocumentService(
       // when the change isn't safely surgical (type change, reorder, contract).
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
       val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc) }
-      val text = surgical
-        ?: ("// GENERATED projection — screen $screenKey v${doc.version}\n" +
-          exportKotlin(doc.toWidgetTree(), functionName = "PortalScreen"))
+      val pkg = packageName?.let { "package $it\n\n" } ?: ""
+      val text = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
       lastWrittenText = text
       kotlinFile.writeText(text)
     }.onFailure { println("writeKotlin failed for $screenKey: $it") }
   }
 
   companion object {
+    /** M6: the canonical .kt file bootstraps the document when it exists (file = truth). */
+    fun fromFileOrTree(
+      screenKey: String,
+      treeJson: String?,
+      onProjected: (WidgetNode) -> Unit,
+      kotlinFile: File,
+      functionName: String,
+      packageName: String?,
+    ): DocumentService {
+      if (kotlinFile.exists()) {
+        val rec = runCatching {
+          dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText())
+        }.getOrNull()
+        if (rec != null) {
+          var next = 1L
+          fun renumber(n: dev.keliver.portal.document.DocNode): dev.keliver.portal.document.DocNode = when (n) {
+            is dev.keliver.portal.document.DocNode.RawCode -> n.copy(handle = Handle(next++))
+            is dev.keliver.portal.document.DocNode.Widget ->
+              n.copy(handle = Handle(next++), children = n.children.map { renumber(it) })
+          }
+          val root = renumber(rec.root)
+          val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
+          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName)
+            .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
+        }
+      }
+      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName)
+    }
+
     /** M1 bootstrap: lift an existing V1 draft tree into a Document. */
     fun fromTree(
       screenKey: String,
       treeJson: String?,
       onProjected: (WidgetNode) -> Unit,
       kotlinFile: File,
+      functionName: String = "PortalScreen",
+      packageName: String? = null,
     ): DocumentService {
       var next = 1L
       fun lift(n: WidgetNode): DocNode.Widget = DocNode.Widget(
@@ -171,7 +210,7 @@ class DocumentService(
         ?.let { lift(deserializeTree(it)) }
         ?: DocNode.Widget(Handle(next++), "Column")
       val doc = UiDocument(screenKey, root, Contract(), version = 0, nextHandle = next)
-      return DocumentService(screenKey, doc, onProjected, kotlinFile)
+      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName)
     }
   }
 }

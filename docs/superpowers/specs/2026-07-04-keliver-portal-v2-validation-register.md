@@ -182,3 +182,13 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   nodes (props change → full regen, else recurse the if/forEach block). 9/9 ingest tests
   (incl. recognize + export round-trip). E2E: a .kt with if/forEach ingested to editable
   Condition/Repeat, shown in the editor outline + rendered in preview (palette now 62).
+- **M6 SHIPPED:** app project model — canonical screens live IN the guest Gradle module
+  (portal-published-guest/src/jsMain/kotlin/screens/<screen>.kt, git-versioned; file name =
+  screen id, fn = <Screen>Screen), logic/ + PublishedEntry hand-owned (presenter =
+  @Composable fun MainPresenter(): MainScreenBindings, Style-B unification), portal-server
+  maps project "default" → the repo screens dir (legacy ~/.keliver-portal/kotlin fallback),
+  watches BOTH, docFor bootstraps FILE-FIRST (recognize the .kt incl. contract; draft-lift
+  fallback), publish compiles the canonical project AS-IS (export step + generated/ dir
+  DELETED; meta srcHash = canonical source hash). VERIFIED: portal op → ONE-LINE surgical
+  git diff (cornerRadiusDp 12→24) with hand comment intact; repo-file sed → live doc +
+  device /tree; publish → signed v3 bundle containing the fresh source + presenter.

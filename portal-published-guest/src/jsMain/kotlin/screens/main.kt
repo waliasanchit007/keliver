@@ -1,4 +1,4 @@
-package dev.keliver.portalpublished
+package dev.keliver.portalpublished.screens
 
 import androidx.compose.runtime.Composable
 import dev.keliver.Modifier
@@ -9,16 +9,21 @@ import dev.keliver.layout.api.Overflow
 import dev.keliver.layout.compose.Column
 import dev.keliver.layout.compose.Spacer
 import dev.keliver.material.compose.Button
+import dev.keliver.material.compose.Snackbar
 import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.StyledText
+import dev.keliver.material.compose.Switch
+import dev.keliver.material.compose.TextButton
+import dev.keliver.material.compose.cornerRadius
 import dev.keliver.material.compose.padding
 import dev.keliver.ui.Dp
 
 @Composable
-fun PublishedScreen(b: PublishedScreenBindings) {
+// HAND-WRITTEN COMMENT — must survive edits
+fun MainScreen(b: MainScreenBindings) {
   StyledBox(
-    cornerRadiusDp = 12,
-    paddingDp = 20,
+    cornerRadiusDp = 24,
+    paddingDp = 40,
     fillWidth = true,
     borderColorArgb = -9808,
     borderWidthDp = 1,
@@ -26,13 +31,16 @@ fun PublishedScreen(b: PublishedScreenBindings) {
     gradientStops = listOf(0.0f, 1.0f),
     gradientDirection = 3,
   ) {
+    Button(
+      text = "M6 In-Repo Canonical",
+    )
     Column(
     ) {
       StyledText(
         modifier = Modifier.padding(8),
         text = b.text,
         fontSize = 20,
-        bold = true,
+        bold = false,
         colorArgb = -15658735,
       )
       Spacer(
@@ -47,12 +55,22 @@ fun PublishedScreen(b: PublishedScreenBindings) {
         text = "New Button",
         onClick = { b.buyTapped() },
       )
+      Snackbar(
+        modifier = Modifier.cornerRadius(40),
+        message = "hey",
+      )
+      Switch(
+        checked = false,
+      )
+      TextButton(
+        text = "New TextButton",
+      )
     }
   }
 }
 
 /** The round-trip boundary: implement this by hand; the portal never touches it. */
-interface PublishedScreenBindings {
+interface MainScreenBindings {
   val text: String
   fun buyTapped()
 }
