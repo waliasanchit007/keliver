@@ -214,3 +214,18 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   "buyTapped ×1 — persisted in SQLite (preview impl)" + console logs. Convergence note:
   running arbitrary per-project presenter Kotlin (vs the reference presenter) = the per-app
   preview build; the capability-fidelity MODEL is the project-agnostic M8 deliverable.
+- **M9 SHIPPED + EMULATOR-VERIFIED:** overlay dev runtime. Extracted the app's screens/ +
+  logic/ + PublishedEntry into a shared library portal-app-lib (breaks the published<->device
+  interface cycle). The dev guest becomes the OVERLAY runtime: compiled screen (real
+  MainPresenter + SQLite) primary; when the active screen's live doc version > the bundle's
+  baked COMPILED_VERSION, overlay the interpreter (RenderNode over the live tree) with a badge;
+  rebuilding the bundle bakes the new version and the router auto-discards the overlay (versioned
+  catch-up). One Zipline instance. Server /devstate exposes the live version; writeKotlin bakes
+  Compiled_<screen>.kt. Verified on Pixel_9 (modules=43): compiled MainScreen -> edit -> live
+  overlay v1 (compiled v0) -> rebuild -> caught up to compiled. Folds in the M7 device-persistence
+  check (compiled path uses on-device SQLite). Regression clean (M6 publish v5 + M7 gating). iOS
+  parity: IosSqlHost bound + portal-sql iOS targets; host framework compiles (runtime follows the
+  shared bundle). M10 (IntelliJ plugin) = the one deferred item.
+
+## FINAL STATUS: V2 M1–M9 COMPLETE. Full comprehensive sweep GREEN (all portal modules:
+## tests + jvm/js/wasm/android/ios compiles + both zipline bundles). M10 deferred by design.

@@ -1,9 +1,44 @@
 # Keliver Portal — Usage Guide
 
-The portal's loop: **design a screen in the browser → see it live everywhere →
-publish it as compiled, signed Kotlin → implement the data/logic contract by
-hand**. This guide covers where the exported code lives, what you're allowed to
-edit, and how changes reach web, Android, and iOS.
+> **V2 update:** the portal is now **bidirectional** — the visual editor, any
+> code editor, and AI agents all edit the same screen (one `UiDocument`, with
+> the `.kt` file as the git-versioned source of truth). See
+> `PORTAL_V2_COMPLETE.md` for the architecture. This guide covers the day-to-day
+> workflow.
+
+The portal's loop: **design a screen (in the browser, your IDE, or via an AI
+agent) → see it live everywhere → publish it as compiled, signed Kotlin →
+implement the data/logic behind the generated contract by hand.**
+
+## Where the app lives (V2)
+
+A portal project is a real Gradle project in git:
+
+```
+portal-app-lib/src/jsMain/kotlin/
+├── screens/  main.kt          ← canonical, portal-editable (edit here OR in the portal — both sync)
+│             Compiled_main.kt  ← generated version stamp (M9 overlay catch-up); don't edit
+│             capabilities.txt  ← host capabilities this app needs (e.g. HostSqlDriver@1)
+├── logic/    MainPresenter.kt  ← hand-owned presenter → produces the screen's Bindings (Style B)
+│             TapStore.kt        ← hand-owned data layer (schema + queries ship OTA)
+└── dev/keliver/portalpublished/PublishedEntry.kt  ← hand-owned: wires presenter → screen
+```
+
+**The round-trip boundary:** the portal owns `screens/*.kt` (layout + bindings +
+`if`/`forEach`); engineers own `logic/` and `PublishedEntry.kt`. The portal
+never touches the hand-owned files. Editing a screen in the portal produces a
+**surgical git diff** in `screens/main.kt` — comments and any non-portal
+(`RawCode`) constructs are preserved.
+
+## Three ways to edit — all converge on the same document
+
+1. **Portal UI** (`:8096`) — drag, tweak props, bind fields (`@`), wire actions,
+   add `if`/`forEach` from the Logic palette.
+2. **Any code editor** — edit `screens/main.kt` directly; the file-watcher
+   ingests it and the portal + devices update live (no portal restart).
+3. **AI agent** — the `portal-mcp` stdio server exposes `get_catalog`,
+   `get_document`, `apply_ops` (transactional, `dryRun` to validate),
+   `find_usages`, etc. Every widget/prop is catalog-grounded.
 
 ## 1. Start the stack
 
@@ -26,79 +61,55 @@ PORTAL_REPO=$PWD portal-relay/build/install/portal-relay/bin/portal-relay &
 Open **http://localhost:8096**. Everything you author is autosaved per
 project/screen under `~/.keliver-portal/`.
 
-## 2. Where the exported code is
+## Layout / styling / bindings → edit the SCREEN (portal or file — both sync)
 
-| Where | What | Edit it? |
-|---|---|---|
-| Editor → **Export Kotlin** button | The current screen as Kotlin source, in an overlay — copy-paste into any keliver app. | It's a snapshot; paste-and-own if you take it elsewhere. |
-| `portal-published-guest/src/jsMain/kotlin/generated/` | `PublishedScreen.kt` + `PublishedEntry.kt`, written by every **Publish**. This is what actually compiles and ships. | **Never** — regenerated on every publish. |
-| `portal-published-guest/src/jsMain/kotlin/impl/` | `PublishedBindings.kt` — the hand-written implementation of the generated `PublishedScreenBindings` interface (data fields + action handlers). | **Yes — this is your file.** The publish step never touches it. |
+Add widgets, tweak props, attach modifiers, bind props with **@**, wire events
+to named actions, drop `if`/`forEach` from the Logic palette. Every edit lands
+in `screens/main.kt` (surgically — comments preserved).
 
-That split is the round-trip boundary: the portal owns layout + bindings (the
-tree), engineers own the implementations behind the generated interface. If a
-publish changes the contract (say you bind a new field), your impl stops
-compiling until you add it — that's the system working.
+- **Web preview:** updates as you type.
+- **Android / iOS dev device:** mirrors the active screen within ~1s — no
+  rebuild, no publish (the interpreter overlay renders the live tree):
+  ```bash
+  ./gradlew :portal-device-guest:serveDevelopmentZipline &
+  ./gradlew :portal-device-android:installDebug
+  adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
+  ```
 
-## 3. Changing things and seeing it everywhere
+## Data / logic → edit `logic/` (your hand-owned Kotlin)
 
-### Layout / styling / bindings → edit in the PORTAL (the tree is the source of truth)
+`logic/MainPresenter.kt` produces the screen's `MainScreenBindings` (values +
+action handlers); `logic/TapStore.kt` is the guest-owned data layer (schema +
+queries — they ship OTA in the signed bundle; the host is just a SQL executor).
+If a portal edit changes the contract (you bind a new field), the presenter
+stops compiling until you add it — the round-trip boundary enforcing itself.
 
-1. Edit in the editor: add widgets from the palette, tweak properties, attach
-   modifiers, bind props with **@** (then give them mock values in the
-   Bindings panel), wire events to action names.
-2. **Web:** the canvas preview updates as you type.
-3. **Android (dev mode):** the app mirrors the active screen within ~1s:
-   ```bash
-   ./gradlew :portal-device-android:installDebug
-   adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
-   ```
-4. **iOS (dev mode):** same, live:
-   ```bash
-   (cd portal-device-ios-app && xcodebuild -project iosApp.xcodeproj -scheme iosApp \
-     -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build)
-   xcrun simctl install booted <path-to-built .app>
-   xcrun simctl launch booted dev.keliver.sample.KeliverSample
-   ```
+## Preview fidelity (M8)
 
-No rebuild, no publish — dev devices poll the draft.
+Press **▶ Live** in the editor. The preview runs the **real logic** and
+auto-substitutes a preview implementation per host capability
+(`HostSqlDriver@1` → in-memory SQLite). The **Preview fidelity** panel shows
+**Full** when every capability has a preview impl, or **Reduced** naming the
+stubbed ones (Camera/BLE/…). The **State inspector** shows the live binding
+values; **⚡ action** buttons fire wired actions.
 
-Don't hand-edit exported layout Kotlin expecting the portal to pick it up:
-there is deliberately no Kotlin→tree parser. Layout changes go through the
-editor (or through `~/.keliver-portal/<project>/<screen>.json` if you must).
+## Ship it (Publish)
 
-### Data / logic → edit `impl/PublishedBindings.kt` (your Kotlin)
+Hit **Publish** (or `curl -X POST localhost:8077/publish`). This compiles the
+**canonical project as-is** (`screens/` + your `logic/`), **Ed25519-signs** the
+manifest, and stores a versioned bundle with its required capabilities. Prod
+devices resolve the newest **compatible** bundle at launch (widget-protocol +
+host-capability gated) and verify the signature:
 
-1. Change field values / action handlers in
-   `portal-published-guest/src/jsMain/kotlin/impl/PublishedBindings.kt`
-   (or wire them to real services — it's ordinary guest Kotlin).
-2. Hit **Publish** in the editor (or `curl -X POST localhost:8077/publish`).
-   This re-exports the active screen, compiles it together with your impl,
-   **signs** the manifest, and stores it as the next bundle version.
-3. **Prod devices** pick it up on next launch (they resolve
-   `/bundles/latest?widgetVersion=…` at startup):
-   ```bash
-   # Android
-   adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
-   # iOS
-   xcrun simctl launch booted dev.keliver.sample.KeliverSample prod
-   ```
-
-The publish log (shown in the editor overlay) is your compile feedback: a
-contract without an implementation fails right there with the Kotlin error.
-
-## 4. Mental model
-
-```
-            EDIT (instant)                        SHIP (deliberate)
- editor ──► draft tree ──► web preview       Publish ──► exportKotlin
-                       └─► dev Android/iOS            └─► + impl/ (yours)
-                           (poll, ~1s)                 └─► compile + Ed25519 sign
-                                                       └─► bundles/vN (gated)
-                                                       └─► prod Android/iOS (verified)
+```bash
+adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
 ```
 
-- **Dev mode** devices interpret the tree — instant, unsigned, for authoring.
-- **Prod mode** devices run compiled Kotlin only, verify the signature, and
-  reject anything tampered (`codeLoadFailed: checksum mismatch`).
-- Mock values in the Bindings panel exist only in the editor preview; dev
-  devices show bound props as defaults, prod devices show your impl's data.
+## Dev runtime (M9 overlay)
+
+Dev devices run the **compiled** screen (real logic + data) by default. While
+you're editing a screen, they show a **live interpreter overlay** (with a badge)
+for instant feedback; once `serveDevelopmentZipline` recompiles the bundle, the
+overlay auto-discards and the compiled screen returns (**versioned catch-up**).
+Prod mode runs compiled Kotlin only and rejects tampered bundles
+(`codeLoadFailed: checksum mismatch`).
