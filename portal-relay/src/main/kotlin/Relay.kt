@@ -278,6 +278,20 @@ fun main() {
     }
   }
 
+  // M8: the app project's declared host-capability requirements (drives preview fidelity).
+  server.createContext("/capabilities") { ex ->
+    handle(ex) {
+      val project = safe(query(ex)["project"] ?: "default")
+      val capsFile = File(screensDirFor(project), "capabilities.txt")
+      val caps = if (capsFile.exists()) {
+        capsFile.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
+      } else {
+        emptyList()
+      }
+      respond(ex, 200, jsonList(caps))
+    }
+  }
+
   server.createContext("/screens") { ex ->
     handle(ex) {
       val project = safe(query(ex)["project"] ?: "default")

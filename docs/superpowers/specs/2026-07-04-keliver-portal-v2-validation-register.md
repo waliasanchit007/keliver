@@ -202,3 +202,15 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   (typed query + batch tx); gating BOTH ways by curl; guest bundle links (needed the zipline
   plugin on the service-defining module — else 'unbound HostSqlDriver.Companion.Adapter');
   Android host + all guests compile. Device-runtime persistence folded into the M9 device pass.
+- **M8 SHIPPED (user reframe: capability-driven fidelity, not mock-vs-real modes):** the
+  browser preview runs REAL logic and auto-substitutes a preview impl per host capability
+  (HostSqlDriver@1 -> in-memory SQLite); capabilities without a preview impl are STUBBED and
+  flagged reduced-fidelity. Fidelity is EMERGENT from the app's capability graph. New:
+  /capabilities endpoint (reads capabilities.txt), PreviewCapabilities registry + PreviewSqlHost,
+  LivePresenter (runs the real data path -> writes PreviewBindings.mocks), Fidelity panel +
+  State Inspector + ▶ Live toggle + per-action ⚡ DOM triggers. VERIFIED in Chrome: Live ->
+  "✅ Full fidelity · HostSqlDriver@1 preview impl", bound canvas text = presenter output;
+  ⚡ buyTapped -> real INSERT into in-memory SQL -> recount -> canvas rebinds to
+  "buyTapped ×1 — persisted in SQLite (preview impl)" + console logs. Convergence note:
+  running arbitrary per-project presenter Kotlin (vs the reference presenter) = the per-app
+  preview build; the capability-fidelity MODEL is the project-agnostic M8 deliverable.

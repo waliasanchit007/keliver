@@ -116,6 +116,9 @@ private lateinit var modsEl: HTMLElement
 private lateinit var opsEl: HTMLElement
 private lateinit var bindingsEl: HTMLElement
 private lateinit var consoleEl: HTMLElement
+private lateinit var fidelityEl: HTMLElement
+private lateinit var inspectorEl: HTMLElement
+private lateinit var liveBtn: HTMLElement
 private lateinit var paletteListEl: HTMLElement
 private lateinit var saveDotEl: HTMLElement
 private lateinit var saveTextEl: HTMLElement
@@ -324,6 +327,9 @@ private fun buildTopbar() {
   savePill.appendChild(saveTextEl)
   bar.appendChild(savePill)
 
+  liveBtn = Ui.button("▶ Live", "btn") { toggleLive() }
+  bar.appendChild(liveBtn)
+
   bar.appendChild(Ui.button("Export Kotlin", "btn") { showExport() })
   bar.appendChild(
     Ui.button("Publish", "btn primary") {
@@ -395,17 +401,117 @@ private fun buildRightPane() {
   pane.appendChild(Ui.section("Bindings"))
   bindingsEl = Ui.el("div", "card")
   pane.appendChild(bindingsEl)
+  pane.appendChild(Ui.section("Preview fidelity"))
+  fidelityEl = Ui.el("div", "card")
+  fidelityEl.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic"))
+  pane.appendChild(fidelityEl)
+  pane.appendChild(Ui.section("State inspector"))
+  inspectorEl = Ui.el("div", "card")
+  inspectorEl.setAttribute("style", "font-size:11px;")
+  inspectorEl.appendChild(Ui.el("div", "muted", "—"))
+  pane.appendChild(inspectorEl)
   pane.appendChild(Ui.section("Action console"))
   consoleEl = Ui.el("div", "card")
   consoleEl.setAttribute("style", "max-height:130px; overflow:auto; font-size:11px;")
   consoleEl.appendChild(Ui.el("div", "muted", "Tap a wired widget in the preview…"))
   pane.appendChild(consoleEl)
+  installMockActionSink()
+  document.body?.appendChild(pane)
+}
+
+/** Mock mode: actions just log to the console (no logic runs). */
+private fun installMockActionSink() {
   PreviewBindings.actionSink = { name ->
     val row = Ui.el("div", "", "⚡ $name")
     row.setAttribute("style", "color:var(--good);")
     consoleEl.insertBefore(row, consoleEl.firstChild)
   }
-  document.body?.appendChild(pane)
+}
+
+// ── M8: capability-driven live preview ──────────────────────────────────────
+
+private fun toggleLive() {
+  if (LivePresenter.enabled) disableLive() else enableLive()
+}
+
+private fun enableLive() {
+  serverGet("/capabilities?project=$currentProject") { txt ->
+    val required = parseNames(txt)
+    renderFidelity(required)
+    val fields = collectContract(portalTree.value).fields.keys.toList()
+    LivePresenter.enable(fields) { renderInspector() }
+    // Keep the console logging AND run the presenter transition.
+    PreviewBindings.actionSink = { name ->
+      val row = Ui.el("div", "", "⚡ $name → live logic")
+      row.setAttribute("style", "color:var(--good);")
+      consoleEl.insertBefore(row, consoleEl.firstChild)
+      LivePresenter.fireLive(name)
+      renderInspector()
+      Snapshot.sendApplyNotifications()
+    }
+    liveBtn.textContent = "■ Stop"
+    liveBtn.className = "btn primary"
+    renderInspector()
+    Snapshot.sendApplyNotifications()
+  }
+}
+
+private fun disableLive() {
+  LivePresenter.disable()
+  PreviewBindings.mocks.clear()
+  installMockActionSink()
+  liveBtn.textContent = "▶ Live"
+  liveBtn.className = "btn"
+  fidelityEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic")) }
+  inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
+  refresh()
+  Snapshot.sendApplyNotifications()
+}
+
+private fun renderFidelity(required: List<String>) {
+  Ui.clear(fidelityEl)
+  if (required.isEmpty()) {
+    fidelityEl.appendChild(Ui.el("div", "", "✅ Full fidelity — no host capabilities required"))
+    return
+  }
+  val report = PreviewCapabilities.report(required)
+  val full = report.all { it.real }
+  val head = Ui.el("div", "", if (full) "✅ Full fidelity" else "⚠ Reduced fidelity")
+  head.setAttribute("style", "color:" + (if (full) "var(--good)" else "var(--warn, #e0a030)") + "; font-weight:600; margin-bottom:4px;")
+  fidelityEl.appendChild(head)
+  report.forEach { c ->
+    val row = Ui.el("div", "", (if (c.real) "● " else "○ ") + c.name + " — " + c.note)
+    row.setAttribute("style", "color:" + (if (c.real) "var(--good)" else "var(--warn, #e0a030)") + ";")
+    fidelityEl.appendChild(row)
+  }
+}
+
+private fun renderInspector() {
+  Ui.clear(inspectorEl)
+  val state = LivePresenter.stateSnapshot()
+  if (state.isEmpty()) { inspectorEl.appendChild(Ui.el("div", "muted", "no live bindings")); return }
+  state.forEach { (k, v) ->
+    inspectorEl.appendChild(Ui.el("div", "", "$k = \"$v\""))
+  }
+  // Fire wired actions from here too (DOM-reliable; complements canvas taps).
+  val contract = collectContract(portalTree.value)
+  if (contract.actions.isNotEmpty()) {
+    val row = Ui.el("div", "row")
+    row.setAttribute("style", "margin-top:6px; flex-wrap:wrap; gap:4px;")
+    contract.actions.forEach { action ->
+      row.appendChild(
+        Ui.button("⚡ $action", "btn icon") {
+          val log = Ui.el("div", "", "⚡ $action → live logic")
+          log.setAttribute("style", "color:var(--good);")
+          consoleEl.insertBefore(log, consoleEl.firstChild)
+          LivePresenter.fireLive(action)
+          renderInspector()
+          Snapshot.sendApplyNotifications()
+        },
+      )
+    }
+    inspectorEl.appendChild(row)
+  }
 }
 
 private fun buildExportOverlay() {
