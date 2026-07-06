@@ -23,7 +23,7 @@ import dev.keliver.ui.Dp
 fun MainScreen(b: MainScreenBindings) {
   StyledBox(
     cornerRadiusDp = 24,
-    paddingDp = 40,
+    paddingDp = 32,
     fillWidth = true,
     borderColorArgb = -9808,
     borderWidthDp = 1,

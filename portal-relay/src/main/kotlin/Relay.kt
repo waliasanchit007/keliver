@@ -175,7 +175,7 @@ private val documents = java.util.concurrent.ConcurrentHashMap<String, DocumentS
  * M6 app project model: the "default" project's canonical screens live INSIDE
  * the guest Gradle module (git-versioned); other projects use the legacy dir.
  */
-private val appScreensDir = File(repoDir, "portal-published-guest/src/jsMain/kotlin/screens")
+private val appScreensDir = File(repoDir, "portal-app-lib/src/jsMain/kotlin/screens")
 private fun screensDirFor(project: String): File =
   if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
   else File(File(root, "kotlin"), project)
@@ -275,6 +275,16 @@ fun main() {
         }
         else -> respond(ex, 405)
       }
+    }
+  }
+
+  // M9: the overlay dev runtime polls this for the active screen's live doc
+  // version — if it's ahead of the bundle's baked COMPILED_VERSION, overlay.
+  server.createContext("/devstate") { ex ->
+    handle(ex) {
+      val (p, s) = activeScreen()
+      val version = documents["$p/$s"]?.doc?.version ?: 0L
+      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version}")
     }
   }
 

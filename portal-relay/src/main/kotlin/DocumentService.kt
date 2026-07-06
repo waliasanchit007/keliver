@@ -148,6 +148,15 @@ class DocumentService(
       val text = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
       lastWrittenText = text
       kotlinFile.writeText(text)
+      // M9 versioned catch-up: bake the doc version this screen was written at
+      // into a sibling const. Rebuilding the dev bundle (serve --continuous)
+      // picks it up; the device router compares it to the live doc version.
+      packageName?.let { p ->
+        val screen = kotlinFile.nameWithoutExtension
+        File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
+          "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
+        )
+      }
     }.onFailure { println("writeKotlin failed for $screenKey: $it") }
   }
 

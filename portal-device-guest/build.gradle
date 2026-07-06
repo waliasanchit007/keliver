@@ -36,6 +36,8 @@ kotlin {
         implementation projects.keliverLayoutCompose      // Column/Row/Spacer
         implementation projects.portalCore                // WidgetNode + deserializeTree
         implementation projects.portalRender              // GENERATED RenderNode interpreter (P1)
+        implementation projects.portalAppLib              // M9: the COMPILED screens (overlay-router primary)
+        implementation projects.portalSql                 // M9: HostSqlDriver for the compiled path
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
       }

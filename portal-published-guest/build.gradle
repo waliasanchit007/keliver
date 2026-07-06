@@ -47,11 +47,8 @@ kotlin {
         api projects.keliverTreehouseGuest
         implementation projects.portalDeviceGuest          // HostApi / PortalPresenter interfaces
         implementation projects.webSpikeProtocolGuest      // KeliverMaterialProtocolWidgetSystemFactory
-        implementation projects.keliverMaterialCompose
-        implementation projects.keliverLayoutCompose
-        implementation projects.portalSql                  // M7: HostSqlDriver wire + guest driver
-        implementation 'app.cash.sqldelight:runtime:2.1.0'
-        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
+        implementation projects.portalAppLib               // canonical screens/ + logic/ + PublishedEntry
+        implementation projects.portalSql                  // M7: HostSqlDriver wire
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
       }

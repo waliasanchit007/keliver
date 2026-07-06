@@ -1,0 +1,26 @@
+// V2 M6/M9 — the APP LIBRARY: the canonical portal-editable screens/, the
+// hand-owned logic/ presenters, and the PublishedEntry wiring. Shared by BOTH
+// the prod bundle (portal-published-guest) and the overlay dev bundle
+// (portal-device-guest), which is why it's a plain library (breaks the
+// published<->device interface cycle). No zipline plugin — it defines no
+// ZiplineService.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+
+kotlin {
+  js { browser() }
+  sourceSets {
+    jsMain {
+      dependencies {
+        api projects.keliverMaterialCompose   // StyledBox/StyledText/Button/…
+        api projects.keliverLayoutCompose      // Column/Row/Spacer
+        api projects.portalSql                 // HostSqlDriver + guest driver (M7 data layer)
+        implementation 'app.cash.sqldelight:runtime:2.1.0'
+        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
+        implementation libs.jetbrains.compose.runtime
+        implementation libs.kotlinx.coroutines.core
+      }
+    }
+  }
+}
