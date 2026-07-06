@@ -14,7 +14,10 @@ import kotlinx.serialization.json.Json
  * interpreter). Same service surface as the dev presenter, so the host app
  * only switches the manifest URL + signature verifier.
  */
-class RealPublishedPresenter(json: Json) : PortalPresenter {
+class RealPublishedPresenter(
+  json: Json,
+  private val sql: dev.keliver.portal.sql.HostSqlDriver?, // M7 capability
+) : PortalPresenter {
   override val appLifecycle = StandardAppLifecycle(
     protocolWidgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
     json = json,
@@ -22,12 +25,14 @@ class RealPublishedPresenter(json: Json) : PortalPresenter {
   )
 
   override fun launch(): ZiplineTreehouseUi =
-    PublishedTreehouseUi().asZiplineTreehouseUi(appLifecycle)
+    PublishedTreehouseUi(sql).asZiplineTreehouseUi(appLifecycle)
 }
 
-private class PublishedTreehouseUi : TreehouseUi {
+private class PublishedTreehouseUi(
+  private val sql: dev.keliver.portal.sql.HostSqlDriver?,
+) : TreehouseUi {
   @Composable
   override fun Show() {
-    PublishedEntry()
+    PublishedEntry(sql)
   }
 }

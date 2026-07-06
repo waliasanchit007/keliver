@@ -120,8 +120,16 @@ private fun publish(): Pair<Boolean, String> {
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).
   val srcHash = hex(MessageDigest.getInstance("SHA-256").digest(canonical.readBytes())).take(16)
+  // M7: the app project declares required host capabilities beside its screens.
+  val capsFile = File(screensDirFor(p), "capabilities.txt")
+  val caps = if (capsFile.exists()) {
+    capsFile.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }
+  } else {
+    emptyList()
+  }
+  val capsJson = caps.joinToString(",") { "\"$it\"" }
   File(dest, "meta.json").writeText(
-    "{\"version\":$version,\"widgetVersion\":1,\"project\":\"$p\",\"screen\":\"$s\",\"srcHash\":\"$srcHash\",\"createdAt\":${System.currentTimeMillis()}}",
+    "{\"version\":$version,\"widgetVersion\":1,\"capabilities\":[$capsJson],\"project\":\"$p\",\"screen\":\"$s\",\"srcHash\":\"$srcHash\",\"createdAt\":${System.currentTimeMillis()}}",
   )
   log.appendLine("publish OK: bundle v$version (widgetVersion=1, srcHash=$srcHash) -> $dest")
   return true to log.toString()
@@ -395,13 +403,20 @@ fun main() {
       val path = ex.requestURI.path.removePrefix("/bundles").trimStart('/')
       when {
         path == "latest" -> {
-          val want = query(ex)["widgetVersion"]?.toIntOrNull() ?: Int.MAX_VALUE
+          val q = query(ex)
+          val want = q["widgetVersion"]?.toIntOrNull() ?: Int.MAX_VALUE
+          // M7: capability gating — a bundle only qualifies when every capability
+          // it REQUIRES is in the host's declared list (caps=a@1,b@2).
+          val hostCaps = (q["caps"] ?: "").split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
           val best = bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }
             ?.filter { dir ->
-              val meta = File(dir, "meta.json")
-              val recorded = Regex("\"widgetVersion\":(\\d+)").find(meta.takeIf { it.exists() }?.readText() ?: "")
+              val metaText = File(dir, "meta.json").takeIf { it.exists() }?.readText() ?: ""
+              val recorded = Regex("\"widgetVersion\":(\\d+)").find(metaText)
                 ?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
-              recorded <= want
+              val required = Regex("\"capabilities\":\\[([^\\]]*)]").find(metaText)
+                ?.groupValues?.get(1)?.split(',')?.map { it.trim().trim('"') }?.filter { it.isNotEmpty() }
+                ?: emptyList()
+              recorded <= want && hostCaps.containsAll(required)
             }
             ?.maxByOrNull { it.name.removePrefix("v").toIntOrNull() ?: 0 }
           if (best == null) {

@@ -49,6 +49,9 @@ kotlin {
         implementation projects.webSpikeProtocolGuest      // KeliverMaterialProtocolWidgetSystemFactory
         implementation projects.keliverMaterialCompose
         implementation projects.keliverLayoutCompose
+        implementation projects.portalSql                  // M7: HostSqlDriver wire + guest driver
+        implementation 'app.cash.sqldelight:runtime:2.1.0'
+        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
       }

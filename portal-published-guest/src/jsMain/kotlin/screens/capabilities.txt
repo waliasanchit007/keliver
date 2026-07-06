@@ -1,0 +1,3 @@
+# Host services this app requires (name@version). Publish embeds these;
+# /bundles/latest only serves the bundle to hosts declaring them.
+HostSqlDriver@1

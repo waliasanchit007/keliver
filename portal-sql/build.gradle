@@ -1,0 +1,29 @@
+// V2 M7 — the data-layer wire (design §8, S3-proven): ONE dumb host SQL
+// executor as a ZiplineService; the GUEST owns schema/queries/migrations as
+// pure Kotlin that ships OTA in the signed bundle. SQLDelight-shaped driver
+// included for typed queries.
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
+apply plugin: 'app.cash.zipline' // IR plugin: generates the HostSqlDriver ZiplineService adapter
+
+kotlin {
+  jvm()      // host impls (tests, server-side) + android host consumes via jvm artifact
+  js { browser() } // the guest side
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.zipline
+        implementation libs.kotlinx.serialization.json
+        implementation 'app.cash.sqldelight:runtime:2.1.0'
+        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
+        implementation libs.kotlinx.coroutines.core
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
+  }
+}

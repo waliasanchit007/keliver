@@ -192,3 +192,13 @@ runWriteBackSpike), :portal-sql-spike:jsTest, :portal-presenter-spike:wasmJsTest
   DELETED; meta srcHash = canonical source hash). VERIFIED: portal op → ONE-LINE surgical
   git diff (cornerRadiusDp 12→24) with hand comment intact; repo-file sed → live doc +
   device /tree; publish → signed v3 bundle containing the fresh source + presenter.
+- **M7 SHIPPED:** data layer over the S3-proven wire. New `portal-sql` module (jvm+js, zipline
+  IR plugin) — HostSqlDriver : ZiplineService (execute + executeBatch/transaction, single-
+  payload SqlRows = U1-safe) + guest PortalSqlDriver (SQLDelight driver) + FakeSqlHost. Android
+  host binds AndroidSqlHost (real SQLite, one DB file). App logic/: TapStore (guest-owned
+  schema+queries, ships OTA) + MainPresenter persists taps. Capability gating: capabilities.txt
+  beside screens/ -> publish meta "capabilities":["HostSqlDriver@1"]; /bundles/latest?...&caps=
+  gates (host without cap -> older v3, host with cap -> v4). VERIFIED: portal-sql jvmTest 2/2
+  (typed query + batch tx); gating BOTH ways by curl; guest bundle links (needed the zipline
+  plugin on the service-defining module — else 'unbound HostSqlDriver.Companion.Adapter');
+  Android host + all guests compile. Device-runtime persistence folded into the M9 device pass.

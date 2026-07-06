@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity() {
     if (prodMode) {
       lifecycleScope.launch(Dispatchers.IO) {
         runCatching {
-          val body = okhttp.newCall(Request.Builder().url("$PORTAL_SERVER/bundles/latest?widgetVersion=1").build())
+          val body = okhttp.newCall(Request.Builder().url("$PORTAL_SERVER/bundles/latest?widgetVersion=1&caps=" + java.net.URLEncoder.encode(dev.keliver.portal.sql.HOST_SQL_CAPABILITY, "UTF-8")).build())
             .execute().use { it.body?.string() ?: "" }
           val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
           if (path != null) {
@@ -114,6 +114,8 @@ class MainActivity : ComponentActivity() {
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostApi>("HostApi", RealHostApi(okhttp))
+        // M7: the data-layer capability (declared to /bundles/latest as HostSqlDriver@1).
+        zipline.bind<dev.keliver.portal.sql.HostSqlDriver>("HostSqlDriver", AndroidSqlHost(applicationContext))
       }
 
       override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")

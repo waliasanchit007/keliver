@@ -1,0 +1,71 @@
+package dev.keliver.portal.sql
+
+import app.cash.sqldelight.Query
+import app.cash.sqldelight.Transacter
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlCursor
+import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
+
+/**
+ * The GUEST-side SQLDelight driver over the [HostSqlDriver] wire (promoted
+ * from spike S3, verified on Kotlin/JS): every statement is one suspend call;
+ * QueryResult.AsyncValue carries the suspension into SQLDelight's machinery.
+ */
+class PortalSqlDriver(private val host: HostSqlDriver) : SqlDriver {
+  override fun <R> executeQuery(
+    identifier: Int?,
+    sql: String,
+    mapper: (SqlCursor) -> QueryResult<R>,
+    parameters: Int,
+    binders: (SqlPreparedStatement.() -> Unit)?,
+  ): QueryResult<R> = QueryResult.AsyncValue {
+    val stmt = CollectingStatement()
+    binders?.invoke(stmt)
+    val rows = host.execute(sql, stmt.args)
+    mapper(ListCursor(rows.rows)).await()
+  }
+
+  override fun execute(
+    identifier: Int?,
+    sql: String,
+    parameters: Int,
+    binders: (SqlPreparedStatement.() -> Unit)?,
+  ): QueryResult<Long> = QueryResult.AsyncValue {
+    val stmt = CollectingStatement()
+    binders?.invoke(stmt)
+    host.execute(sql, stmt.args).rowsAffected
+  }
+
+  override fun newTransaction(): QueryResult<Transacter.Transaction> =
+    throw UnsupportedOperationException("use HostSqlDriver.executeBatch for transactions")
+  override fun currentTransaction(): Transacter.Transaction? = null
+  override fun addListener(vararg queryKeys: String, listener: Query.Listener) {}
+  override fun removeListener(vararg queryKeys: String, listener: Query.Listener) {}
+  override fun notifyListeners(vararg queryKeys: String) {}
+  override fun close() {}
+}
+
+private class CollectingStatement : SqlPreparedStatement {
+  val args = mutableListOf<String?>()
+  private fun set(index: Int, v: String?) {
+    while (args.size <= index) args.add(null)
+    args[index] = v
+  }
+  override fun bindBoolean(index: Int, boolean: Boolean?) = set(index, boolean?.toString())
+  override fun bindBytes(index: Int, bytes: ByteArray?) = set(index, bytes?.decodeToString())
+  override fun bindDouble(index: Int, double: Double?) = set(index, double?.toString())
+  override fun bindLong(index: Int, long: Long?) = set(index, long?.toString())
+  override fun bindString(index: Int, string: String?) = set(index, string)
+}
+
+private class ListCursor(private val rows: List<SqlRow>) : SqlCursor {
+  private var index = -1
+  override fun next(): QueryResult<Boolean> = QueryResult.Value(++index < rows.size)
+  private fun at(i: Int): String? = rows[index].values.getOrNull(i)
+  override fun getBoolean(index: Int): Boolean? = at(index)?.toBooleanStrictOrNull()
+  override fun getBytes(index: Int): ByteArray? = at(index)?.encodeToByteArray()
+  override fun getDouble(index: Int): Double? = at(index)?.toDoubleOrNull()
+  override fun getLong(index: Int): Long? = at(index)?.toLongOrNull()
+  override fun getString(index: Int): String? = at(index)
+}

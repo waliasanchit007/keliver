@@ -1,6 +1,7 @@
 package dev.keliver.portalpublished
 
 import androidx.compose.runtime.Composable
+import dev.keliver.portal.sql.HostSqlDriver
 import dev.keliver.portalpublished.logic.MainPresenter
 import dev.keliver.portalpublished.screens.MainScreen
 
@@ -9,6 +10,6 @@ import dev.keliver.portalpublished.screens.MainScreen
  * project AS-IS — the canonical screens/ files are the source, no export step.
  */
 @Composable
-fun PublishedEntry() {
-  MainScreen(MainPresenter())
+fun PublishedEntry(sql: HostSqlDriver?) {
+  MainScreen(MainPresenter(sql))
 }

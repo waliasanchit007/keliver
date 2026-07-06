@@ -46,6 +46,7 @@ dependencies {
   implementation projects.keliverMaterialComposeui       // ComposeUiKeliverMaterialWidgetSystem
   implementation projects.webSpikeProtocolHost           // KeliverMaterialHostProtocol
   implementation projects.portalDeviceGuest              // HostApi / PortalPresenter interfaces
+  implementation projects.portalSql                      // M7: HostSqlDriver wire (AndroidSqlHost)
   implementation libs.zipline
   implementation libs.zipline.loader                     // ManifestVerifier, asZiplineHttpClient
   implementation libs.okhttp
