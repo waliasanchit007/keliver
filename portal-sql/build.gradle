@@ -9,6 +9,8 @@ apply plugin: 'app.cash.zipline' // IR plugin: generates the HostSqlDriver Zipli
 kotlin {
   jvm()      // host impls (tests, server-side) + android host consumes via jvm artifact
   js { browser() } // the guest side
+  iosArm64() // M7/M9: the iOS host binds HostSqlDriver
+  iosSimulatorArm64()
   sourceSets {
     commonMain {
       dependencies {

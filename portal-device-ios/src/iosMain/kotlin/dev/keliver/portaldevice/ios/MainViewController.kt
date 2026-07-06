@@ -138,6 +138,9 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
       zipline.bind<HostApi>("HostApi", IosHostApi())
+      // M7/M9: the data-layer capability so the compiled screen's presenter has
+      // its data layer on iOS too (parity with the Android host).
+      zipline.bind<dev.keliver.portal.sql.HostSqlDriver>("HostSqlDriver", IosSqlHost())
     }
 
     override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
