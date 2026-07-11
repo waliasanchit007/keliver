@@ -68,6 +68,15 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   for (m in mods) appendLine("  \"${m.name}\" to \"${m.composePackage}.${m.extensionName}\",")
   appendLine(")")
   appendLine()
+  appendLine("/** \"Widget.event\" -> the single param's Kotlin type (typed action contracts, P2). */")
+  appendLine("val eventParamType: Map<String, String> = mapOf(")
+  for (w in sorted) {
+    for (e in w.events) {
+      if (e.paramCount == 1 && e.paramType != null) appendLine("  \"${w.name}.${e.name}\" to \"${e.paramType}\",")
+    }
+  }
+  appendLine(")")
+  appendLine()
   appendLine(
     """
     |private fun collectTypes(node: WidgetNode, out: MutableSet<String>) {
@@ -82,14 +91,31 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  node.children.forEach { collectModifierNames(it, out) }
     |}
     |
+    |// P2: single-arg actions. arg=="it" -> the event payload; "item.field" -> item-scoped data.
+    |private fun fmtAction(a: Action, paramCount: Int): String {
+    |  val underscores = List(paramCount) { "_" }.joinToString(", ")
+    |  return when {
+    |    paramCount == 0 -> "{ b.${'$'}{a.name}(${'$'}{a.arg ?: ""}) }"
+    |    a.arg == "it" && paramCount == 1 -> "{ b.${'$'}{a.name}(it) }"
+    |    a.arg != null -> "{ ${'$'}underscores -> b.${'$'}{a.name}(${'$'}{a.arg}) }"
+    |    else -> "{ ${'$'}underscores -> b.${'$'}{a.name}() }"
+    |  }
+    |}
+    |
     |// M5/P1-B: logic nodes contribute typed contract fields. Repeat with per-item
     |// binds (item.title) generates List<ItemType> + a typed item interface.
+    |// P2: item-scoped Action args (item.id) contribute item fields too.
     |private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap<String, String>) {
     |  if (node.type != "Repeat") { // a nested Repeat opens its own item scope
     |    for ((prop, v) in node.props) {
     |      if (v is Bind && v.field.startsWith("${'$'}itemVar.")) {
     |        val sub = v.field.substringAfter('.')
     |        iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
+    |      }
+    |      val arg = (v as? Action)?.arg
+    |      if (arg != null && arg.startsWith("${'$'}itemVar.")) {
+    |        val sub = arg.substringAfter('.')
+    |        if (sub !in iface) iface[sub] = "String"
     |      }
     |    }
     |    node.children.forEach { itemFieldsOf(it, itemVar, iface) }
@@ -177,7 +203,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("    sb.append(\"interface \${functionName}Bindings {\\n\")")
   appendLine("    contract.fields.forEach { (f, k) -> sb.append(\"  val \$f: \${kotlinTypeOf(k)}\\n\") }")
   appendLine("    logicFields.forEach { (f, t) -> sb.append(\"  val \$f: \$t\\n\") }")
-  appendLine("    contract.actions.forEach { a -> sb.append(\"  fun \$a()\\n\") }")
+  appendLine("    contract.actions.forEach { a ->")
+  appendLine("      val p = contract.actionParams[a]")
+  appendLine("      sb.append(if (p != null) \"  fun \$a(value: \$p)\\n\" else \"  fun \$a()\\n\")")
+  appendLine("    }")
   appendLine("    sb.append(\"}\\n\")")
   appendLine("  }")
   appendLine("  return sb.toString()")
@@ -230,8 +259,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
       }
     }
     for (e in w.events) {
-      val lambda = if (e.paramCount == 0) "{ b.\${a.name}() }" else "{ ${List(e.paramCount) { "_" }.joinToString(", ")} -> b.\${a.name}() }"
-      appendLine("      (node.props[\"${e.name}\"] as? Action)?.let { a -> sb.append(\"\${indent}  ${e.name} = $lambda,\\n\") }")
+      appendLine("      (node.props[\"${e.name}\"] as? Action)?.let { a -> sb.append(\"\${indent}  ${e.name} = \${fmtAction(a, ${e.paramCount})},\\n\") }")
     }
     if (w.hasChildren) {
       appendLine("      sb.append(\"\$indent) {\\n\")")

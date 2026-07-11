@@ -19,7 +19,18 @@ data class MappedProp(
 }
 
 /** A nullable event trait the portal can wire to a named Action (P3). */
-data class EventPlan(val name: String, val paramCount: Int)
+data class EventPlan(val name: String, val paramCount: Int, val paramType: String? = null)
+
+/** The single event param's Kotlin type, for typed action contracts (P2). */
+internal fun mapEventParamType(t: FqType): String? = when (t.names.joinToString(".")) {
+  "kotlin.String" -> "String"
+  "kotlin.Int" -> "Int"
+  "kotlin.Boolean" -> "Boolean"
+  "kotlin.Float" -> "Float"
+  "kotlin.Double" -> "Double"
+  "kotlin.Long" -> "Long"
+  else -> null
+}
 
 sealed interface WidgetPlan {
   data class Include(
@@ -125,7 +136,11 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
         if (!trait.isNullable && trait.defaultExpression == null) {
           return WidgetPlan.Exclude(name, "required non-nullable event '${trait.name}'")
         }
-        events += EventPlan(trait.name, trait.parameters.size)
+        events += EventPlan(
+          trait.name,
+          trait.parameters.size,
+          trait.parameters.singleOrNull()?.type?.let { mapEventParamType(it) },
+        )
       }
       is Widget.Children -> childrenCount++
       // Protocol* trait interfaces extend Property/Event/Children, so the
