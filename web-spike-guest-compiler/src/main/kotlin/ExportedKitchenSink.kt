@@ -70,7 +70,7 @@ import dev.keliver.material.compose.padding
 import dev.keliver.ui.Dp
 
 @Composable
-fun ExportedKitchenSink() {
+fun ExportedKitchenSink(b: ExportedKitchenSinkBindings) {
   Column(
   ) {
     AlertDialog(
@@ -247,5 +247,15 @@ fun ExportedKitchenSink() {
     VerticalPager(
     ) {
     }
+    if (b.showThis) {
+    }
+    b.items.forEach { item ->
+    }
   }
+}
+
+/** The round-trip boundary: implement this by hand; the portal never touches it. */
+interface ExportedKitchenSinkBindings {
+  val showThis: Boolean
+  val items: List<String>
 }

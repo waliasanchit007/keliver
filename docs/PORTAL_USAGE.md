@@ -49,7 +49,6 @@ scripts/keliver-dev.sh --android  # …and install + launch the Android host
 
 Open **http://localhost:8096**. Ctrl-C stops everything. Everything you author
 is saved into the app project (`portal-app-lib/src/jsMain/kotlin/screens/`).
-project/screen under `~/.keliver-portal/`.
 
 ## Layout / styling / bindings → edit the SCREEN (portal or file — both sync)
 
