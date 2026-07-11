@@ -92,15 +92,95 @@ private const val SESSION = "editor"
 // ── Playground mode: no portal-server reachable (e.g. the GitHub Pages build).
 // The SAME UiDocument apply/invert engine runs locally; edits stay in-memory.
 private var playground = false
-private var localDoc = UiDocument(
-  "playground",
-  dev.keliver.portal.document.DocNode.Widget(Handle(1), "Column"),
-  dev.keliver.portal.document.Contract(),
-  version = 0,
-  nextHandle = 2,
-)
+private var localDoc = demoTemplate()
 private val localUndo = ArrayDeque<List<DocOp>>()
 private val localRedo = ArrayDeque<List<DocOp>>()
+
+private fun w(
+  h: Long,
+  type: String,
+  props: Map<String, PropValue> = emptyMap(),
+  children: List<dev.keliver.portal.document.DocNode> = emptyList(),
+): dev.keliver.portal.document.DocNode.Widget =
+  dev.keliver.portal.document.DocNode.Widget(Handle(h), type, props, children = children)
+
+private fun s(v: String) = PropValue.Lit("s", s = v)
+private fun i(v: Int) = PropValue.Lit("i", i = v)
+
+/** The first thing a playground visitor sees: binds, mock rows, actions, Icon/ListItem. */
+private fun demoTemplate(): UiDocument = UiDocument(
+  "playground",
+  w(1, "Column", children = listOf(
+    w(2, "StyledText", mapOf("text" to s("Field Notes"), "fontSize" to i(26), "bold" to PropValue.Lit("b", b = true))),
+    w(3, "StyledText", mapOf("text" to PropValue.Bind("subtitle"), "fontSize" to i(13))),
+    w(4, "TextField", mapOf(
+      "text" to PropValue.Bind("draft"),
+      "placeholder" to s("What did you notice?"),
+      "onValueChange" to PropValue.Action("onDraftChange", arg = "it"),
+    )),
+    w(5, "Button", mapOf("text" to s("Add note"), "onClick" to PropValue.Action("addNote"))),
+    w(6, "Repeat", mapOf("items" to s("notes"), "item" to s("note")), children = listOf(
+      w(7, "ListItem", mapOf(
+        "headline" to PropValue.Bind("note.title"),
+        "supporting" to PropValue.Bind("note.body"),
+        "leadingIcon" to s("Star"),
+        "onClick" to PropValue.Action("openNote", arg = "note.id"),
+      )),
+    )),
+  )),
+  dev.keliver.portal.document.Contract(),
+  version = 0,
+  nextHandle = 20,
+)
+
+private fun formTemplate(): UiDocument = UiDocument(
+  "playground",
+  w(1, "Column", children = listOf(
+    w(2, "StyledText", mapOf("text" to s("Create account"), "fontSize" to i(24), "bold" to PropValue.Lit("b", b = true))),
+    w(3, "TextField", mapOf("text" to PropValue.Bind("email"), "placeholder" to s("Email"), "onValueChange" to PropValue.Action("onEmail", arg = "it"))),
+    w(4, "SegmentedButtonRow", mapOf(
+      "options" to PropValue.Lit("ls", ls = listOf("Free", "Pro", "Team")),
+      "selectedIndex" to i(0),
+      "onSelect" to PropValue.Action("onPlan", arg = "it"),
+    )),
+    w(5, "Checkbox", mapOf("checked" to PropValue.Lit("b", b = true))),
+    w(6, "Button", mapOf("text" to s("Sign up"), "onClick" to PropValue.Action("submit"))),
+  )),
+  dev.keliver.portal.document.Contract(),
+  version = 0,
+  nextHandle = 20,
+)
+
+private fun profileTemplate(): UiDocument = UiDocument(
+  "playground",
+  w(1, "Column", children = listOf(
+    w(2, "Icon", mapOf("name" to s("AccountCircle"), "sizeDp" to i(64))),
+    w(3, "StyledText", mapOf("text" to PropValue.Bind("displayName"), "fontSize" to i(22), "bold" to PropValue.Lit("b", b = true))),
+    w(4, "Divider", emptyMap()),
+    w(5, "ListItem", mapOf("headline" to s("Notifications"), "leadingIcon" to s("Notifications"), "trailingIcon" to s("KeyboardArrowRight"))),
+    w(6, "ListItem", mapOf("headline" to s("Settings"), "leadingIcon" to s("Settings"), "trailingIcon" to s("KeyboardArrowRight"))),
+    w(7, "ListItem", mapOf("headline" to s("Sign out"), "leadingIcon" to s("ExitToApp"), "onClick" to PropValue.Action("signOut"))),
+  )),
+  dev.keliver.portal.document.Contract(),
+  version = 0,
+  nextHandle = 20,
+)
+
+private fun loadTemplate(doc: UiDocument, mocks: Map<String, String>) {
+  localDoc = doc
+  localUndo.clear()
+  localRedo.clear()
+  PreviewBindings.mocks.clear()
+  PreviewBindings.mocks.putAll(mocks)
+  localRefresh(true)
+}
+
+private val demoMocks = mapOf(
+  "subtitle" to "3 notes · persisted in SQLite, shipped OTA",
+  "notes" to "3",
+  "note.title" to "Trail by the lake|Morning espresso|Cloud shapes",
+  "note.body" to "Saw two herons near the dock|Second cup was a mistake|One looked exactly like a whale",
+)
 
 private fun localRefresh(refreshPanels: Boolean) {
   docVersion = localDoc.version
@@ -113,8 +193,27 @@ private fun enterPlayground() {
   if (playground) return
   playground = true
   saveTextEl.textContent = "playground — edits are local to this tab"
-  Ui.toast("Playground mode: no portal-server — full editor + live preview, edits stay in this tab")
+  PreviewBindings.mocks.putAll(demoMocks)
+  mountPlaygroundStrip()
   localRefresh(true)
+}
+
+/** The onboarding strip: what to try + one-click starter templates. */
+private fun mountPlaygroundStrip() {
+  val strip = Ui.el("div", "")
+  strip.setAttribute(
+    "style",
+    "position:fixed; left:0; right:0; top:46px; z-index:29; display:flex; align-items:center; gap:10px; " +
+      "padding:6px 14px; background:#2a2436; border-bottom:1px solid var(--border); font-size:12px;",
+  )
+  strip.appendChild(Ui.el("span", "", "Playground — try: ① drag widgets from the palette  ② bind props with @ (mocks drive the preview)  ③ Export Kotlin: it's real code."))
+  strip.appendChild(Ui.el("span", "grow"))
+  strip.appendChild(Ui.el("span", "muted", "Templates:"))
+  strip.appendChild(Ui.button("Feed", "btn") { loadTemplate(demoTemplate(), demoMocks) })
+  strip.appendChild(Ui.button("Form", "btn") { loadTemplate(formTemplate(), mapOf("email" to "ada@lovelace.dev")) })
+  strip.appendChild(Ui.button("Profile", "btn") { loadTemplate(profileTemplate(), mapOf("displayName" to "Ada Lovelace")) })
+  strip.appendChild(Ui.button("✕", "btn icon") { strip.remove() })
+  kotlinx.browser.document.body?.appendChild(strip)
 }
 
 // ---------------------------------------------------------------------------
