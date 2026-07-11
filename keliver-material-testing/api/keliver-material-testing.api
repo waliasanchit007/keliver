@@ -402,6 +402,22 @@ public final class dev/keliver/material/testing/IconButtonValue : dev/keliver/te
 	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
 }
 
+public final class dev/keliver/material/testing/IconValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IILjava/lang/String;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;IILjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getContentDescription ()Ljava/lang/String;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSizeDp ()I
+	public final fun getTintArgb ()I
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
 public final class dev/keliver/material/testing/ImageValue : dev/keliver/testing/WidgetValue {
 	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -487,12 +503,14 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public fun GradientBackground (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/GradientBackground;)V
 	public synthetic fun GradientBackground (Ljava/lang/Object;Ldev/keliver/material/modifier/GradientBackground;)V
 	public fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
+	public fun Icon ()Ldev/keliver/material/widget/Icon;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
 	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public fun LazyHorizontalGrid ()Ldev/keliver/material/widget/LazyHorizontalGrid;
 	public fun LazyVerticalGrid ()Ldev/keliver/material/widget/LazyVerticalGrid;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
+	public fun ListItem ()Ldev/keliver/material/widget/ListItem;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
 	public fun Offset (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Offset;)V
@@ -578,6 +596,24 @@ public final class dev/keliver/material/testing/LinearProgressIndicatorValue : d
 	public fun getChildrenLists ()Ljava/util/List;
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getProgress ()F
+	public fun hashCode ()I
+	public fun toDebugString ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public fun toWidget (Ldev/keliver/widget/WidgetSystem;)Ldev/keliver/widget/Widget;
+}
+
+public final class dev/keliver/material/testing/ListItemValue : dev/keliver/testing/WidgetValue {
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getChildrenLists ()Ljava/util/List;
+	public final fun getHeadline ()Ljava/lang/String;
+	public final fun getLeadingIcon ()Ljava/lang/String;
+	public fun getModifier ()Ldev/keliver/Modifier;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getOverline ()Ljava/lang/String;
+	public final fun getSupporting ()Ljava/lang/String;
+	public final fun getTrailingIcon ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toDebugString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;

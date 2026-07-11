@@ -552,6 +552,29 @@ final class dev.keliver.material.testing/IconButtonValue : dev.keliver.testing/W
     final fun toString(): kotlin/String // dev.keliver.material.testing/IconButtonValue.toString|toString(){}[0]
 }
 
+final class dev.keliver.material.testing/IconValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/IconValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...) // dev.keliver.material.testing/IconValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/IconValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/IconValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val contentDescription // dev.keliver.material.testing/IconValue.contentDescription|{}contentDescription[0]
+        final fun <get-contentDescription>(): kotlin/String // dev.keliver.material.testing/IconValue.contentDescription.<get-contentDescription>|<get-contentDescription>(){}[0]
+    final val modifier // dev.keliver.material.testing/IconValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/IconValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val name // dev.keliver.material.testing/IconValue.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.material.testing/IconValue.name.<get-name>|<get-name>(){}[0]
+    final val sizeDp // dev.keliver.material.testing/IconValue.sizeDp|{}sizeDp[0]
+        final fun <get-sizeDp>(): kotlin/Int // dev.keliver.material.testing/IconValue.sizeDp.<get-sizeDp>|<get-sizeDp>(){}[0]
+    final val tintArgb // dev.keliver.material.testing/IconValue.tintArgb|{}tintArgb[0]
+        final fun <get-tintArgb>(): kotlin/Int // dev.keliver.material.testing/IconValue.tintArgb.<get-tintArgb>|<get-tintArgb>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/IconValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/IconValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/IconValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/IconValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/IconValue.toString|toString(){}[0]
+}
+
 final class dev.keliver.material.testing/ImageValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/ImageValue|null[0]
     constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/ImageValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
 
@@ -632,12 +655,14 @@ final class dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory : d
     final fun FlowRow(): dev.keliver.material.widget/FlowRow<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.FlowRow|FlowRow(){}[0]
     final fun GradientBackground(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/GradientBackground) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.GradientBackground|GradientBackground(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.GradientBackground){}[0]
     final fun HorizontalPager(): dev.keliver.material.widget/HorizontalPager<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.HorizontalPager|HorizontalPager(){}[0]
+    final fun Icon(): dev.keliver.material.widget/Icon<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Icon|Icon(){}[0]
     final fun IconButton(): dev.keliver.material.widget/IconButton<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.IconButton|IconButton(){}[0]
     final fun Image(): dev.keliver.material.widget/Image<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Image|Image(){}[0]
     final fun InputChip(): dev.keliver.material.widget/InputChip<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.InputChip|InputChip(){}[0]
     final fun LazyHorizontalGrid(): dev.keliver.material.widget/LazyHorizontalGrid<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LazyHorizontalGrid|LazyHorizontalGrid(){}[0]
     final fun LazyVerticalGrid(): dev.keliver.material.widget/LazyVerticalGrid<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LazyVerticalGrid|LazyVerticalGrid(){}[0]
     final fun LinearProgressIndicator(): dev.keliver.material.widget/LinearProgressIndicator<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.LinearProgressIndicator|LinearProgressIndicator(){}[0]
+    final fun ListItem(): dev.keliver.material.widget/ListItem<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.ListItem|ListItem(){}[0]
     final fun NavigationBar(): dev.keliver.material.widget/NavigationBar<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.NavigationBar|NavigationBar(){}[0]
     final fun NavigationRail(): dev.keliver.material.widget/NavigationRail<dev.keliver.testing/WidgetValue> // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.NavigationRail|NavigationRail(){}[0]
     final fun Offset(dev.keliver.testing/WidgetValue, dev.keliver.material.modifier/Offset) // dev.keliver.material.testing/KeliverMaterialTestingWidgetFactory.Offset|Offset(dev.keliver.testing.WidgetValue;dev.keliver.material.modifier.Offset){}[0]
@@ -730,6 +755,33 @@ final class dev.keliver.material.testing/LinearProgressIndicatorValue : dev.keli
     final fun hashCode(): kotlin/Int // dev.keliver.material.testing/LinearProgressIndicatorValue.hashCode|hashCode(){}[0]
     final fun toDebugString(): kotlin/String // dev.keliver.material.testing/LinearProgressIndicatorValue.toDebugString|toDebugString(){}[0]
     final fun toString(): kotlin/String // dev.keliver.material.testing/LinearProgressIndicatorValue.toString|toString(){}[0]
+}
+
+final class dev.keliver.material.testing/ListItemValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/ListItemValue|null[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Function0<kotlin/Unit>? = ...) // dev.keliver.material.testing/ListItemValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.Function0<kotlin.Unit>?){}[0]
+
+    final val childrenLists // dev.keliver.material.testing/ListItemValue.childrenLists|{}childrenLists[0]
+        final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/ListItemValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
+    final val headline // dev.keliver.material.testing/ListItemValue.headline|{}headline[0]
+        final fun <get-headline>(): kotlin/String // dev.keliver.material.testing/ListItemValue.headline.<get-headline>|<get-headline>(){}[0]
+    final val leadingIcon // dev.keliver.material.testing/ListItemValue.leadingIcon|{}leadingIcon[0]
+        final fun <get-leadingIcon>(): kotlin/String // dev.keliver.material.testing/ListItemValue.leadingIcon.<get-leadingIcon>|<get-leadingIcon>(){}[0]
+    final val modifier // dev.keliver.material.testing/ListItemValue.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.material.testing/ListItemValue.modifier.<get-modifier>|<get-modifier>(){}[0]
+    final val onClick // dev.keliver.material.testing/ListItemValue.onClick|{}onClick[0]
+        final fun <get-onClick>(): kotlin/Function0<kotlin/Unit>? // dev.keliver.material.testing/ListItemValue.onClick.<get-onClick>|<get-onClick>(){}[0]
+    final val overline // dev.keliver.material.testing/ListItemValue.overline|{}overline[0]
+        final fun <get-overline>(): kotlin/String // dev.keliver.material.testing/ListItemValue.overline.<get-overline>|<get-overline>(){}[0]
+    final val supporting // dev.keliver.material.testing/ListItemValue.supporting|{}supporting[0]
+        final fun <get-supporting>(): kotlin/String // dev.keliver.material.testing/ListItemValue.supporting.<get-supporting>|<get-supporting>(){}[0]
+    final val trailingIcon // dev.keliver.material.testing/ListItemValue.trailingIcon|{}trailingIcon[0]
+        final fun <get-trailingIcon>(): kotlin/String // dev.keliver.material.testing/ListItemValue.trailingIcon.<get-trailingIcon>|<get-trailingIcon>(){}[0]
+
+    final fun <#A1: kotlin/Any> toWidget(dev.keliver.widget/WidgetSystem<#A1>): dev.keliver.widget/Widget<#A1> // dev.keliver.material.testing/ListItemValue.toWidget|toWidget(dev.keliver.widget.WidgetSystem<0:0>){0§<kotlin.Any>}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.material.testing/ListItemValue.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.material.testing/ListItemValue.hashCode|hashCode(){}[0]
+    final fun toDebugString(): kotlin/String // dev.keliver.material.testing/ListItemValue.toDebugString|toDebugString(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.material.testing/ListItemValue.toString|toString(){}[0]
 }
 
 final class dev.keliver.material.testing/NavigationBarValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/NavigationBarValue|null[0]

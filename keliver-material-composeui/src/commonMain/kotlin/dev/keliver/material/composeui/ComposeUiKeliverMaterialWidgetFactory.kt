@@ -147,6 +147,8 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun Clickable(): dev.keliver.material.widget.Clickable<@Composable (Modifier) -> Unit> = ComposeUiClickable()
   override fun RichText(): dev.keliver.material.widget.RichText<@Composable (Modifier) -> Unit> = ComposeUiRichText()
   override fun AnimatedBorder(): dev.keliver.material.widget.AnimatedBorder<@Composable (Modifier) -> Unit> = ComposeUiAnimatedBorder()
+  override fun Icon(): dev.keliver.material.widget.Icon<@Composable (Modifier) -> Unit> = ComposeUiIcon()
+  override fun ListItem(): dev.keliver.material.widget.ListItem<@Composable (Modifier) -> Unit> = ComposeUiListItem()
 
   override fun Reuse(value: @Composable (Modifier) -> Unit, modifier: Reuse) {
   }

@@ -149,6 +149,13 @@ public abstract interface class dev/keliver/material/widget/HorizontalPager : de
 	public abstract fun showIndicator (Z)V
 }
 
+public abstract interface class dev/keliver/material/widget/Icon : dev/keliver/widget/Widget {
+	public abstract fun contentDescription (Ljava/lang/String;)V
+	public abstract fun name (Ljava/lang/String;)V
+	public abstract fun sizeDp (I)V
+	public abstract fun tintArgb (I)V
+}
+
 public abstract interface class dev/keliver/material/widget/IconButton : dev/keliver/widget/Widget {
 	public abstract fun imageUrl (Ljava/lang/String;)V
 	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
@@ -203,12 +210,14 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun FlowRow ()Ldev/keliver/material/widget/FlowRow;
 	public abstract fun GradientBackground (Ljava/lang/Object;Ldev/keliver/material/modifier/GradientBackground;)V
 	public abstract fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
+	public abstract fun Icon ()Ldev/keliver/material/widget/Icon;
 	public abstract fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public abstract fun Image ()Ldev/keliver/material/widget/Image;
 	public abstract fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public abstract fun LazyHorizontalGrid ()Ldev/keliver/material/widget/LazyHorizontalGrid;
 	public abstract fun LazyVerticalGrid ()Ldev/keliver/material/widget/LazyVerticalGrid;
 	public abstract fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
+	public abstract fun ListItem ()Ldev/keliver/material/widget/ListItem;
 	public abstract fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public abstract fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
 	public abstract fun Offset (Ljava/lang/Object;Ldev/keliver/material/modifier/Offset;)V
@@ -273,6 +282,15 @@ public abstract interface class dev/keliver/material/widget/LazyVerticalGrid : d
 
 public abstract interface class dev/keliver/material/widget/LinearProgressIndicator : dev/keliver/widget/Widget {
 	public abstract fun progress (F)V
+}
+
+public abstract interface class dev/keliver/material/widget/ListItem : dev/keliver/widget/Widget {
+	public abstract fun headline (Ljava/lang/String;)V
+	public abstract fun leadingIcon (Ljava/lang/String;)V
+	public abstract fun onClick (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun overline (Ljava/lang/String;)V
+	public abstract fun supporting (Ljava/lang/String;)V
+	public abstract fun trailingIcon (Ljava/lang/String;)V
 }
 
 public abstract interface class dev/keliver/material/widget/NavigationBar : dev/keliver/widget/Widget {

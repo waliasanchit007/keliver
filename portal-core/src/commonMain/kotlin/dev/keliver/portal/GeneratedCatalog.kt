@@ -106,6 +106,12 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("indicatorInactiveArgb", PropKind.Color, "Indicator inactive argb"),
     PropSpec("contentPaddingDp", PropKind.Int, "Content padding dp"),
   ), acceptsChildren = true, sampleProps = emptyMap()),
+  WidgetSpec("Icon", "Material", listOf(
+    PropSpec("name", PropKind.Text, "Name"),
+    PropSpec("sizeDp", PropKind.Int, "Size dp"),
+    PropSpec("tintArgb", PropKind.Color, "Tint argb"),
+    PropSpec("contentDescription", PropKind.Text, "Content description"),
+  ), acceptsChildren = false, sampleProps = mapOf("name" to "New Icon")),
   WidgetSpec("IconButton", "Material", listOf(
     PropSpec("imageUrl", PropKind.Text, "Image url"),
   ), acceptsChildren = false, sampleProps = mapOf("imageUrl" to "New IconButton"), events = listOf("onClick")),
@@ -125,6 +131,13 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("LinearProgressIndicator", "Material", listOf(
     PropSpec("progress", PropKind.Double, "Progress"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
+  WidgetSpec("ListItem", "Material", listOf(
+    PropSpec("headline", PropKind.Text, "Headline"),
+    PropSpec("supporting", PropKind.Text, "Supporting"),
+    PropSpec("overline", PropKind.Text, "Overline"),
+    PropSpec("leadingIcon", PropKind.Text, "Leading icon"),
+    PropSpec("trailingIcon", PropKind.Text, "Trailing icon"),
+  ), acceptsChildren = false, sampleProps = mapOf("headline" to "New ListItem"), events = listOf("onClick")),
   WidgetSpec("NavigationBar", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("NavigationRail", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
   WidgetSpec("OutlinedButton", "Material", listOf(

@@ -50,12 +50,14 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public synthetic fun GradientBackground (Ljava/lang/Object;Ldev/keliver/material/modifier/GradientBackground;)V
 	public fun GradientBackground (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/GradientBackground;)V
 	public fun HorizontalPager ()Ldev/keliver/material/widget/HorizontalPager;
+	public fun Icon ()Ldev/keliver/material/widget/Icon;
 	public fun IconButton ()Ldev/keliver/material/widget/IconButton;
 	public fun Image ()Ldev/keliver/material/widget/Image;
 	public fun InputChip ()Ldev/keliver/material/widget/InputChip;
 	public fun LazyHorizontalGrid ()Ldev/keliver/material/widget/LazyHorizontalGrid;
 	public fun LazyVerticalGrid ()Ldev/keliver/material/widget/LazyVerticalGrid;
 	public fun LinearProgressIndicator ()Ldev/keliver/material/widget/LinearProgressIndicator;
+	public fun ListItem ()Ldev/keliver/material/widget/ListItem;
 	public fun NavigationBar ()Ldev/keliver/material/widget/NavigationBar;
 	public fun NavigationRail ()Ldev/keliver/material/widget/NavigationRail;
 	public synthetic fun Offset (Ljava/lang/Object;Ldev/keliver/material/modifier/Offset;)V

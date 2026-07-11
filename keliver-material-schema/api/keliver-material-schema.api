@@ -513,6 +513,24 @@ public final class dev/keliver/material/HorizontalPager {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/Icon {
+	public fun <init> (Ljava/lang/String;IILjava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;IILjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;IILjava/lang/String;)Ldev/keliver/material/Icon;
+	public static synthetic fun copy$default (Ldev/keliver/material/Icon;Ljava/lang/String;IILjava/lang/String;ILjava/lang/Object;)Ldev/keliver/material/Icon;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContentDescription ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSizeDp ()I
+	public final fun getTintArgb ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/IconButton {
 	public fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
 	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -597,6 +615,28 @@ public final class dev/keliver/material/LinearProgressIndicator {
 	public static synthetic fun copy$default (Ldev/keliver/material/LinearProgressIndicator;FILjava/lang/Object;)Ldev/keliver/material/LinearProgressIndicator;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getProgress ()F
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/material/ListItem {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Lkotlin/jvm/functions/Function0;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ldev/keliver/material/ListItem;
+	public static synthetic fun copy$default (Ldev/keliver/material/ListItem;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Ldev/keliver/material/ListItem;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeadline ()Ljava/lang/String;
+	public final fun getLeadingIcon ()Ljava/lang/String;
+	public final fun getOnClick ()Lkotlin/jvm/functions/Function0;
+	public final fun getOverline ()Ljava/lang/String;
+	public final fun getSupporting ()Ljava/lang/String;
+	public final fun getTrailingIcon ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

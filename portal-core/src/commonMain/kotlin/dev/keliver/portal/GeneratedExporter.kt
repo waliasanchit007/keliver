@@ -29,12 +29,14 @@ val composableImport: Map<String, String> = mapOf(
   "FlowColumn" to "dev.keliver.material.compose.FlowColumn",
   "FlowRow" to "dev.keliver.material.compose.FlowRow",
   "HorizontalPager" to "dev.keliver.material.compose.HorizontalPager",
+  "Icon" to "dev.keliver.material.compose.Icon",
   "IconButton" to "dev.keliver.material.compose.IconButton",
   "Image" to "dev.keliver.material.compose.Image",
   "InputChip" to "dev.keliver.material.compose.InputChip",
   "LazyHorizontalGrid" to "dev.keliver.material.compose.LazyHorizontalGrid",
   "LazyVerticalGrid" to "dev.keliver.material.compose.LazyVerticalGrid",
   "LinearProgressIndicator" to "dev.keliver.material.compose.LinearProgressIndicator",
+  "ListItem" to "dev.keliver.material.compose.ListItem",
   "NavigationBar" to "dev.keliver.material.compose.NavigationBar",
   "NavigationRail" to "dev.keliver.material.compose.NavigationRail",
   "OutlinedButton" to "dev.keliver.material.compose.OutlinedButton",
@@ -516,6 +518,15 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
+    "Icon" -> {
+      sb.append("${indent}Icon(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      sb.append("${indent}  name = ${fmtString(node.props["name"] ?: "")},\n")
+      if ("sizeDp" in node.props) sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n")
+      if ("tintArgb" in node.props) sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n")
+      if ("contentDescription" in node.props) sb.append("${indent}  contentDescription = ${fmtString(node.props["contentDescription"] ?: "")},\n")
+      sb.append("$indent)\n")
+    }
     "IconButton" -> {
       sb.append("${indent}IconButton(\n")
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
@@ -558,6 +569,17 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
       sb.append("${indent}LinearProgressIndicator(\n")
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
+      sb.append("$indent)\n")
+    }
+    "ListItem" -> {
+      sb.append("${indent}ListItem(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      sb.append("${indent}  headline = ${fmtString(node.props["headline"] ?: "")},\n")
+      if ("supporting" in node.props) sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n")
+      if ("overline" in node.props) sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n")
+      if ("leadingIcon" in node.props) sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n")
+      if ("trailingIcon" in node.props) sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n")
+      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "NavigationBar" -> {

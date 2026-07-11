@@ -103,6 +103,9 @@ import dev.keliver.schema.Widget
     RichText::class,
     // Batch 14: animated travelling-comet border (host-side Compose animation).
     AnimatedBorder::class,
+    // Batch 15: native-parity essentials (Icon by name, Material3 ListItem).
+    Icon::class,
+    ListItem::class,
     Reuse::class,
     // Batch 9: universal VISUAL MODIFIERS — composable like native Compose
     // (Modifier.background(...).cornerRadius(...).padding(...)). Unscoped: valid
@@ -774,6 +777,31 @@ public data class AnimatedBorder(
   /** 2+ ARGB stops => gradient palette for comet/sweep; empty => [cometColorArgb]. */
   @Property(9) val colorsArgb: List<Int> = emptyList(),
   @Children(10) val children: () -> Unit,
+)
+
+/**
+ * Material icon by NAME from the curated `Icons.Filled` set (see the host's
+ * MaterialIcons.kt for supported names, e.g. "Add", "Search", "Settings",
+ * "Favorite"). Unknown names render a neutral placeholder.
+ */
+@Widget(61)
+public data class Icon(
+  @Property(1) val name: String,
+  @Property(2) val sizeDp: Int = 24,
+  /** ARGB tint; 0 => the ambient content color. */
+  @Property(3) val tintArgb: Int = 0,
+  @Property(4) val contentDescription: String = "",
+)
+
+/** Material3 list row: headline + optional supporting/overline text and leading/trailing icons (by name). */
+@Widget(62)
+public data class ListItem(
+  @Property(1) val headline: String,
+  @Property(2) val supporting: String = "",
+  @Property(3) val overline: String = "",
+  @Property(4) val leadingIcon: String = "",
+  @Property(5) val trailingIcon: String = "",
+  @Property(6) val onClick: (() -> Unit)? = null,
 )
 
 @Modifier(-4_543_827) // reserved tag, inherited from ui-basic Reuse.

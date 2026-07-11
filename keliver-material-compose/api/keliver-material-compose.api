@@ -102,6 +102,10 @@ public final class dev/keliver/material/compose/IconButtonKt {
 	public static final fun IconButton (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
+public final class dev/keliver/material/compose/IconKt {
+	public static final fun Icon (Ljava/lang/String;IILjava/lang/String;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class dev/keliver/material/compose/ImageKt {
 	public static final fun Image (Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
@@ -120,6 +124,10 @@ public final class dev/keliver/material/compose/LazyVerticalGridKt {
 
 public final class dev/keliver/material/compose/LinearProgressIndicatorKt {
 	public static final fun LinearProgressIndicator (FLdev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class dev/keliver/material/compose/ListItemKt {
+	public static final fun ListItem (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function0;Ldev/keliver/Modifier;Landroidx/compose/runtime/Composer;II)V
 }
 
 public final class dev/keliver/material/compose/NavigationBarKt {

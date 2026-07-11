@@ -36,12 +36,14 @@ import dev.keliver.material.compose.FloatingActionButton
 import dev.keliver.material.compose.FlowColumn
 import dev.keliver.material.compose.FlowRow
 import dev.keliver.material.compose.HorizontalPager
+import dev.keliver.material.compose.Icon
 import dev.keliver.material.compose.IconButton
 import dev.keliver.material.compose.Image
 import dev.keliver.material.compose.InputChip
 import dev.keliver.material.compose.LazyHorizontalGrid
 import dev.keliver.material.compose.LazyVerticalGrid
 import dev.keliver.material.compose.LinearProgressIndicator
+import dev.keliver.material.compose.ListItem
 import dev.keliver.material.compose.NavigationBar
 import dev.keliver.material.compose.NavigationRail
 import dev.keliver.material.compose.OutlinedButton
@@ -264,6 +266,13 @@ fun RenderNode(node: WidgetNode) {
       indicatorInactiveArgb = node.intB("indicatorInactiveArgb", 0),
       contentPaddingDp = node.intB("contentPaddingDp", 0),
     ) { node.children.forEach { RenderNode(it) } }
+    "Icon" -> Icon(
+      modifier = nodeModifier(node),
+      name = node.strB("name"),
+      sizeDp = node.intB("sizeDp", 24),
+      tintArgb = node.intB("tintArgb", 0),
+      contentDescription = node.strB("contentDescription"),
+    )
     "IconButton" -> IconButton(
       modifier = nodeModifier(node),
       imageUrl = node.strB("imageUrl"),
@@ -291,6 +300,15 @@ fun RenderNode(node: WidgetNode) {
     "LinearProgressIndicator" -> LinearProgressIndicator(
       modifier = nodeModifier(node),
       progress = node.dblB("progress", -1.0).toFloat(),
+    )
+    "ListItem" -> ListItem(
+      modifier = nodeModifier(node),
+      headline = node.strB("headline"),
+      supporting = node.strB("supporting"),
+      overline = node.strB("overline"),
+      leadingIcon = node.strB("leadingIcon"),
+      trailingIcon = node.strB("trailingIcon"),
+      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
     )
     "NavigationBar" -> NavigationBar(
       modifier = nodeModifier(node),

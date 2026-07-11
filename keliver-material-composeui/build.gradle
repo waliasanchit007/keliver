@@ -15,6 +15,7 @@ kotlin {
         api projects.keliverMaterialWidget
         api libs.coil.compose
         api libs.jetbrains.compose.material
+        api libs.jetbrains.compose.material.icons.core // Icon widget's curated name map
         api libs.jetbrains.compose.material3
         implementation projects.keliverLayoutComposeui
         implementation projects.keliverLazylayoutComposeui
