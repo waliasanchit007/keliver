@@ -13,6 +13,7 @@ internal fun getterExpr(p: MappedProp): String = when (p.kind) {
   MappedKind.FLOAT -> "node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr)}).toFloat()"
   MappedKind.INT_LIST -> "node.intList(\"${p.name}\")"
   MappedKind.FLOAT_LIST -> "node.floatList(\"${p.name}\")"
+  MappedKind.STRING_LIST -> "node.strList(\"${p.name}\")"
   MappedKind.DP -> "Dp(node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr?.removePrefix("Dp(")?.removeSuffix(")"))}))"
   MappedKind.CONSTRAINT -> "constraintOf(node.intB(\"${p.name}\", ${constraintDefault(p.defaultExpr)}))"
   MappedKind.CROSS_AXIS -> "crossAxisOf(node.intB(\"${p.name}\", ${crossAxisDefault(p.defaultExpr)}))"
@@ -41,6 +42,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("import dev.keliver.portal.bool")
   appendLine("import dev.keliver.portal.floatList")
   appendLine("import dev.keliver.portal.intList")
+  appendLine("import dev.keliver.portal.strList")
   if (sorted.any { w -> w.props.any { it.kind == MappedKind.DP } }) appendLine("import dev.keliver.ui.Dp")
   for (w in sorted) appendLine("import ${w.composePackage}.${w.name}")
   for (m in mods) appendLine("import ${m.composePackage}.${m.extensionName}")

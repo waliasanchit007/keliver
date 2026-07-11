@@ -10,6 +10,7 @@ private fun literalExpr(p: MappedProp): String {
     MappedKind.FLOAT -> "fmtFloat($v)"
     MappedKind.INT_LIST -> "fmtIntList($v)"
     MappedKind.FLOAT_LIST -> "fmtFloatList($v)"
+    MappedKind.STRING_LIST -> "fmtStringList($v)"
     MappedKind.DP -> "fmtDp($v)"
     MappedKind.CONSTRAINT -> "fmtConstraint($v)"
     MappedKind.CROSS_AXIS -> "fmtCrossAxis($v)"
@@ -38,6 +39,7 @@ private fun modLiteralExpr(kind: MappedKind, key: String): String {
     MappedKind.FLOAT -> "fmtFloat($v)"
     MappedKind.INT_LIST -> "fmtIntList($v)"
     MappedKind.FLOAT_LIST -> "fmtFloatList($v)"
+    MappedKind.STRING_LIST -> "fmtStringList($v)"
     MappedKind.DP -> "fmtDp($v)"
     MappedKind.CONSTRAINT -> "fmtConstraint($v)"
     MappedKind.CROSS_AXIS -> "fmtCrossAxis($v)"
@@ -153,6 +155,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(v)}f"
     |private fun fmtDp(v: Any?): String = "Dp(${'$'}{fmtDouble(v)})"
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
+    |private fun fmtStringList(v: Any?): String =
+    |  "listOf(" + ((v as? List<*>)?.joinToString(", ") { "\"" + it.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"" } ?: "") + ")"
     |private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${'$'}{it}f" } ?: "") + ")"
     |private fun fmtConstraint(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
     |private fun fmtCrossAxis(v: Any?): String = when ((v as? Int) ?: 0) {

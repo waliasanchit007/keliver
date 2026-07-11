@@ -29,6 +29,7 @@ fun kotlinTypeOf(kind: PropKind): String = when (kind) {
   PropKind.Double -> "Double"
   PropKind.IntList -> "List<Int>"
   PropKind.FloatList -> "List<Float>"
+  PropKind.StringList -> "List<String>"
 }
 
 /** Walks the tree collecting Bind fields (typed via the generated catalog) and Action names. */

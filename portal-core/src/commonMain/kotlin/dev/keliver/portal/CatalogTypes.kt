@@ -1,7 +1,7 @@
 package dev.keliver.portal
 
 /** Editor-facing property kinds. Keep in sync with the editor's property panel. */
-enum class PropKind { Text, Int, Bool, Color, Double, IntList, FloatList }
+enum class PropKind { Text, Int, Bool, Color, Double, IntList, FloatList, StringList }
 
 data class PropSpec(val name: String, val kind: PropKind, val label: String)
 

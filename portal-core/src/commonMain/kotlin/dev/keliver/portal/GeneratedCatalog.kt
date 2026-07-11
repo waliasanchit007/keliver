@@ -74,6 +74,10 @@ val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("Divider", "Material", listOf(
     PropSpec("thickness", PropKind.Int, "Thickness"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
+  WidgetSpec("DropdownMenu", "Material", listOf(
+    PropSpec("expanded", PropKind.Bool, "Expanded"),
+    PropSpec("options", PropKind.StringList, "Options"),
+  ), acceptsChildren = false, sampleProps = mapOf("options" to listOf("Option A", "Option B")), events = listOf("onSelect", "onDismiss")),
   WidgetSpec("ElevatedButton", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("enabled", PropKind.Bool, "Enabled"),
@@ -159,6 +163,10 @@ val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("verticalAlignment", PropKind.Int, "Vertical alignment"),
   ), acceptsChildren = true, sampleProps = emptyMap(), events = listOf("onScroll")),
   WidgetSpec("ScrollableColumn", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
+  WidgetSpec("SegmentedButtonRow", "Material", listOf(
+    PropSpec("options", PropKind.StringList, "Options"),
+    PropSpec("selectedIndex", PropKind.Int, "Selected index"),
+  ), acceptsChildren = false, sampleProps = mapOf("options" to listOf("Option A", "Option B")), events = listOf("onSelect")),
   WidgetSpec("Shimmer", "Material", listOf(
     PropSpec("widthDp", PropKind.Int, "Width dp"),
     PropSpec("heightDp", PropKind.Int, "Height dp"),

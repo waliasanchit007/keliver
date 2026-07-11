@@ -206,12 +206,20 @@ object Recognizer {
   private fun parseList(inner: String): PropValue.Lit? {
     val items = inner.split(',').map { it.trim() }.filter { it.isNotEmpty() }
     if (items.isEmpty()) return PropValue.Lit("li", li = emptyList())
-    return if (items.all { it.endsWith("f") }) {
-      val floats = items.map { it.removeSuffix("f").toFloatOrNull() ?: return null }
-      PropValue.Lit("lf", lf = floats)
-    } else {
-      val ints = items.map { it.toIntOrNull() ?: return null }
-      PropValue.Lit("li", li = ints)
+    return when {
+      items.all { it.length >= 2 && it.startsWith('"') && it.endsWith('"') } -> {
+        // STRING_LIST ("ls"): listOf("A", "B") — commas inside strings aren't in
+        // the exporter's output grammar, so the simple split is round-trip safe.
+        PropValue.Lit("ls", ls = items.map { it.substring(1, it.length - 1).replace("\\\"", "\"").replace("\\\\", "\\") })
+      }
+      items.all { it.endsWith("f") } -> {
+        val floats = items.map { it.removeSuffix("f").toFloatOrNull() ?: return null }
+        PropValue.Lit("lf", lf = floats)
+      }
+      else -> {
+        val ints = items.map { it.toIntOrNull() ?: return null }
+        PropValue.Lit("li", li = ints)
+      }
     }
   }
 

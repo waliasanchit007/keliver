@@ -19,6 +19,7 @@ val composableImport: Map<String, String> = mapOf(
   "Column" to "dev.keliver.layout.compose.Column",
   "Dialog" to "dev.keliver.material.compose.Dialog",
   "Divider" to "dev.keliver.material.compose.Divider",
+  "DropdownMenu" to "dev.keliver.material.compose.DropdownMenu",
   "ElevatedButton" to "dev.keliver.material.compose.ElevatedButton",
   "ElevatedCard" to "dev.keliver.material.compose.ElevatedCard",
   "ExtendedFloatingActionButton" to "dev.keliver.material.compose.ExtendedFloatingActionButton",
@@ -42,6 +43,7 @@ val composableImport: Map<String, String> = mapOf(
   "RadioButton" to "dev.keliver.material.compose.RadioButton",
   "Row" to "dev.keliver.layout.compose.Row",
   "ScrollableColumn" to "dev.keliver.material.compose.ScrollableColumn",
+  "SegmentedButtonRow" to "dev.keliver.material.compose.SegmentedButtonRow",
   "Shimmer" to "dev.keliver.material.compose.Shimmer",
   "Slider" to "dev.keliver.material.compose.Slider",
   "Snackbar" to "dev.keliver.material.compose.Snackbar",
@@ -97,7 +99,9 @@ val modifierImport: Map<String, String> = mapOf(
 /** "Widget.event" -> the single param's Kotlin type (typed action contracts, P2). */
 val eventParamType: Map<String, String> = mapOf(
   "Checkbox.onCheckedChange" to "Boolean",
+  "DropdownMenu.onSelect" to "Int",
   "OutlinedTextField.onValueChange" to "String",
+  "SegmentedButtonRow.onSelect" to "Int",
   "Slider.onValueChange" to "Float",
   "Switch.onCheckedChange" to "Boolean",
   "TextField.onValueChange" to "String",
@@ -177,6 +181,8 @@ private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((
 private fun fmtFloat(v: Any?): String = "${fmtDouble(v)}f"
 private fun fmtDp(v: Any?): String = "Dp(${fmtDouble(v)})"
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
+private fun fmtStringList(v: Any?): String =
+  "listOf(" + ((v as? List<*>)?.joinToString(", ") { "\"" + it.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"" } ?: "") + ")"
 private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${it}f" } ?: "") + ")"
 private fun fmtConstraint(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
 private fun fmtCrossAxis(v: Any?): String = when ((v as? Int) ?: 0) {
@@ -430,6 +436,15 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
       if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
       sb.append("$indent)\n")
     }
+    "DropdownMenu" -> {
+      sb.append("${indent}DropdownMenu(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("expanded" in node.props) sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n")
+      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
+      (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
+      (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
+      sb.append("$indent)\n")
+    }
     "ElevatedButton" -> {
       sb.append("${indent}ElevatedButton(\n")
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
@@ -624,6 +639,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
+    }
+    "SegmentedButtonRow" -> {
+      sb.append("${indent}SegmentedButtonRow(\n")
+      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
+      if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
+      (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
+      sb.append("$indent)\n")
     }
     "Shimmer" -> {
       sb.append("${indent}Shimmer(\n")

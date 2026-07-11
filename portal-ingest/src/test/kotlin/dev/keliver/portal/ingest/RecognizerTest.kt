@@ -393,6 +393,38 @@ class RecognizerTest {
     assertEquals("String", r.contract.actionParams["openNote"])
   }
 
+  /** P4 STRING_LIST: options lists recognize + export round-trip (Dropdown/Segmented). */
+  @Test fun stringListOptionsRoundTrip() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.SegmentedButtonRow
+
+      @Composable
+      fun S(b: SBindings) {
+        Column {
+          SegmentedButtonRow(options = listOf("Day", "Week", "Month"), selectedIndex = 1, onSelect = { b.onRangeSelect(it) })
+        }
+      }
+
+      interface SBindings {
+        fun onRangeSelect(value: Int)
+      }
+    """.trimIndent()
+    val r = Recognizer.recognize("S.kt", src)!!
+    val seg = (r.root as DocNode.Widget).children[0] as DocNode.Widget
+    assertEquals("SegmentedButtonRow", seg.type)
+    assertEquals(PropValue.Lit("ls", ls = listOf("Day", "Week", "Month")), seg.props["options"])
+    assertEquals(PropValue.Action("onRangeSelect", arg = "it"), seg.props["onSelect"])
+
+    val doc = UiDocument("s", r.root, r.contract, version = 0, nextHandle = 50)
+    val exported = exportKotlin(doc.toWidgetTree(), functionName = "S")
+    assertTrue("options = listOf(\"Day\", \"Week\", \"Month\")," in exported, exported)
+    assertTrue("fun onRangeSelect(value: Int)" in exported, exported)
+    val r2 = Recognizer.recognize("S.kt", exported)!!
+    assertEquals(doc.root, Reconciler.reconcile(doc, r2).root)
+  }
+
   @Test fun reconcilerPreservesHandlesAcrossEditsAndAllocatesNew() {
     val old = UiDocument(
       screen = "main",

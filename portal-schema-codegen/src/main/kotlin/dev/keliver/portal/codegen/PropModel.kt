@@ -7,7 +7,7 @@ import dev.keliver.tooling.schema.Widget
  * The portal's supported property kinds — the bridge between schema trait types
  * and what the WidgetNode tree wire format (i/d/b/s/li/lf tags) can carry.
  */
-enum class MappedKind { TEXT, INT, BOOL, DOUBLE, FLOAT, INT_LIST, FLOAT_LIST, DP, CONSTRAINT, CROSS_AXIS, MAIN_AXIS, OVERFLOW }
+enum class MappedKind { TEXT, INT, BOOL, DOUBLE, FLOAT, INT_LIST, FLOAT_LIST, STRING_LIST, DP, CONSTRAINT, CROSS_AXIS, MAIN_AXIS, OVERFLOW }
 
 data class MappedProp(
   val name: String,
@@ -58,6 +58,8 @@ internal fun mapType(t: FqType): MappedKind? = when {
     t.parameterTypes[0].key() == "kotlin.Int" -> MappedKind.INT_LIST
   t.key() == "kotlin.collections.List" && t.parameterTypes.size == 1 &&
     t.parameterTypes[0].key() == "kotlin.Float" -> MappedKind.FLOAT_LIST
+  t.key() == "kotlin.collections.List" && t.parameterTypes.size == 1 &&
+    t.parameterTypes[0].key() == "kotlin.String" -> MappedKind.STRING_LIST
   t.key() == "dev.keliver.ui.Dp" -> MappedKind.DP
   t.key() == "dev.keliver.layout.api.Constraint" -> MappedKind.CONSTRAINT
   t.key() == "dev.keliver.layout.api.CrossAxisAlignment" -> MappedKind.CROSS_AXIS

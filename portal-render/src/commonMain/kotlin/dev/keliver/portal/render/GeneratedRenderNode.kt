@@ -7,6 +7,7 @@ import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.bool
 import dev.keliver.portal.floatList
 import dev.keliver.portal.intList
+import dev.keliver.portal.strList
 import dev.keliver.ui.Dp
 import dev.keliver.material.compose.AlertDialog
 import dev.keliver.material.compose.AnimatedBorder
@@ -25,6 +26,7 @@ import dev.keliver.material.compose.Clickable
 import dev.keliver.layout.compose.Column
 import dev.keliver.material.compose.Dialog
 import dev.keliver.material.compose.Divider
+import dev.keliver.material.compose.DropdownMenu
 import dev.keliver.material.compose.ElevatedButton
 import dev.keliver.material.compose.ElevatedCard
 import dev.keliver.material.compose.ExtendedFloatingActionButton
@@ -48,6 +50,7 @@ import dev.keliver.material.compose.OutlinedTextField
 import dev.keliver.material.compose.RadioButton
 import dev.keliver.layout.compose.Row
 import dev.keliver.material.compose.ScrollableColumn
+import dev.keliver.material.compose.SegmentedButtonRow
 import dev.keliver.material.compose.Shimmer
 import dev.keliver.material.compose.Slider
 import dev.keliver.material.compose.Snackbar
@@ -209,6 +212,13 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       thickness = node.intB("thickness", 1),
     )
+    "DropdownMenu" -> DropdownMenu(
+      modifier = nodeModifier(node),
+      expanded = node.boolB("expanded", false),
+      options = node.strList("options"),
+      onSelect = node.actionOf("onSelect")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
+    )
     "ElevatedButton" -> ElevatedButton(
       modifier = nodeModifier(node),
       text = node.strB("text"),
@@ -336,6 +346,12 @@ fun RenderNode(node: WidgetNode) {
     "ScrollableColumn" -> ScrollableColumn(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
+    "SegmentedButtonRow" -> SegmentedButtonRow(
+      modifier = nodeModifier(node),
+      options = node.strList("options"),
+      selectedIndex = node.intB("selectedIndex", 0),
+      onSelect = node.actionOf("onSelect")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+    )
     "Shimmer" -> Shimmer(
       modifier = nodeModifier(node),
       widthDp = node.intB("widthDp", 0),

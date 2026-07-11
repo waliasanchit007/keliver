@@ -935,6 +935,16 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
       input.setAttribute("disabled", "disabled")
       input.value = (props[key] as? List<*>)?.joinToString(", ") ?: "(list)"
     }
+    PropKind.StringList -> {
+      // Editable string lists (Dropdown/SegmentedButton options): pipe-separated.
+      input.setAttribute("type", "text")
+      input.setAttribute("placeholder", "options: a|b|c")
+      input.value = (props[key] as? List<*>)?.joinToString("|") ?: ""
+      input.addEventListener("input", { _ ->
+        val items = input.value.split('|').map { it.trim() }.filter { it.isNotEmpty() }
+        sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Lit("ls", ls = items))), refreshPanels = false)
+      })
+    }
   }
   rowEl.appendChild(input)
   if (kind in BINDABLE && keyPrefix.isEmpty()) {

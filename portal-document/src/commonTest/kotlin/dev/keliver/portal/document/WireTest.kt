@@ -39,6 +39,18 @@ class WireTest {
     assertEquals(Contract(mapOf("draft" to "String"), listOf("onDraftChange")), DocJson.decodeFromString<Contract>(old))
   }
 
+  @Test fun stringListLitRoundTripsAndOldJsonStillDecodes() {
+    // P4 STRING_LIST ("ls"): options lists (DropdownMenu/SegmentedButtonRow).
+    val node: DocNode = DocNode.Widget(
+      Handle(1), "SegmentedButtonRow",
+      props = mapOf("options" to PropValue.Lit("ls", ls = listOf("Day", "Week", "Month"))),
+    )
+    val json = DocJson.encodeToString(node)
+    assertEquals(node, DocJson.decodeFromString<DocNode>(json))
+    val old = """{"kind":"dev.keliver.portal.document.DocNode.Widget","handle":1,"type":"Button","props":{"text":{"kind":"dev.keliver.portal.document.PropValue.Lit","tag":"s","s":"Buy"}}}"""
+    assertEquals("Buy", ((DocJson.decodeFromString<DocNode>(old) as DocNode.Widget).props["text"] as PropValue.Lit).s)
+  }
+
   @Test fun docNodeRoundTrips() {
     val doc: DocNode = DocNode.Widget(
       Handle(1), "Column",

@@ -19,6 +19,7 @@ sealed interface PropValue {
     val b: Boolean? = null,
     val li: List<Int>? = null,
     val lf: List<Float>? = null,
+    val ls: List<String>? = null,
   ) : PropValue
 
   @Serializable
@@ -39,10 +40,10 @@ fun lit(v: Any?): PropValue.Lit = when (v) {
   is Int -> PropValue.Lit("i", i = v)
   is Double -> PropValue.Lit("d", d = v)
   is Boolean -> PropValue.Lit("b", b = v)
-  is List<*> -> if (v.firstOrNull() is Float) {
-    PropValue.Lit("lf", lf = v.filterIsInstance<Float>())
-  } else {
-    PropValue.Lit("li", li = v.filterIsInstance<Int>())
+  is List<*> -> when (v.firstOrNull()) {
+    is Float -> PropValue.Lit("lf", lf = v.filterIsInstance<Float>())
+    is String -> PropValue.Lit("ls", ls = v.filterIsInstance<String>())
+    else -> PropValue.Lit("li", li = v.filterIsInstance<Int>())
   }
   else -> PropValue.Lit("s", s = v?.toString() ?: "")
 }
@@ -54,6 +55,7 @@ fun PropValue.Lit.toAny(): Any? = when (tag) {
   "b" -> b
   "li" -> li
   "lf" -> lf
+  "ls" -> ls
   else -> null
 }
 

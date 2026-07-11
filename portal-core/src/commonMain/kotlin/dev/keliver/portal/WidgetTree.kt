@@ -33,6 +33,9 @@ fun WidgetNode.intList(key: String): List<Int> = props[key] as? List<Int> ?: emp
 @Suppress("UNCHECKED_CAST")
 fun WidgetNode.floatList(key: String): List<Float> = props[key] as? List<Float> ?: emptyList()
 
+@Suppress("UNCHECKED_CAST")
+fun WidgetNode.strList(key: String): List<String> = props[key] as? List<String> ?: emptyList()
+
 /** The shared sample tree: a card whose item count is data-driven. */
 fun sampleTree(items: Int): WidgetNode = WidgetNode(
   type = "StyledBox",

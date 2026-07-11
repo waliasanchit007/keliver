@@ -9,6 +9,7 @@ internal fun catalogKind(p: MappedProp): String = when {
     MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP -> "Double"
     MappedKind.INT_LIST -> "IntList"
     MappedKind.FLOAT_LIST -> "FloatList"
+    MappedKind.STRING_LIST -> "StringList"
   }
 }
 
@@ -27,6 +28,7 @@ private fun sampleValue(widgetName: String, p: MappedProp): String? = when {
     MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP -> "0.0"
     MappedKind.INT_LIST -> "listOf<Int>()"
     MappedKind.FLOAT_LIST -> "listOf<Float>()"
+    MappedKind.STRING_LIST -> "listOf(\"Option A\", \"Option B\")"
   }
 }
 
