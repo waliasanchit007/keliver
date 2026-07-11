@@ -89,6 +89,34 @@ private var opInFlight = false
 private const val SERVER = "http://localhost:8077"
 private const val SESSION = "editor"
 
+// ── Playground mode: no portal-server reachable (e.g. the GitHub Pages build).
+// The SAME UiDocument apply/invert engine runs locally; edits stay in-memory.
+private var playground = false
+private var localDoc = UiDocument(
+  "playground",
+  dev.keliver.portal.document.DocNode.Widget(Handle(1), "Column"),
+  dev.keliver.portal.document.Contract(),
+  version = 0,
+  nextHandle = 2,
+)
+private val localUndo = ArrayDeque<List<DocOp>>()
+private val localRedo = ArrayDeque<List<DocOp>>()
+
+private fun localRefresh(refreshPanels: Boolean) {
+  docVersion = localDoc.version
+  portalTree.value = localDoc.toWidgetTree(handleIds = true)
+  Snapshot.sendApplyNotifications()
+  if (refreshPanels) refresh()
+}
+
+private fun enterPlayground() {
+  if (playground) return
+  playground = true
+  saveTextEl.textContent = "playground — edits are local to this tab"
+  Ui.toast("Playground mode: no portal-server — full editor + live preview, edits stay in this tab")
+  localRefresh(true)
+}
+
 // ---------------------------------------------------------------------------
 // Server IO (XHR reads with callbacks; fire-and-forget writes)
 
@@ -139,6 +167,22 @@ private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true) {
 }
 
 private fun pumpOps() {
+  if (playground) {
+    while (true) {
+      val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: break
+      val t = localDoc.applyBatch(ops)
+      val r = t.result
+      if (r == null) {
+        Ui.toast(t.error ?: "edit rejected")
+      } else {
+        localDoc = r.doc.copy(version = localDoc.version + 1)
+        localUndo.addLast(r.inverseBatch)
+        localRedo.clear()
+      }
+      localRefresh(refreshPanels)
+    }
+    return
+  }
   if (opInFlight) return
   val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: return
   opInFlight = true
@@ -176,6 +220,11 @@ private fun pumpOps() {
 
 /** Pull the authoritative document; ids in the projected tree ARE handles. */
 private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) {
+  if (playground) {
+    localRefresh(refreshPanels)
+    cb?.invoke()
+    return
+  }
   val xhr = XMLHttpRequest()
   xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen")
   xhr.addEventListener("load", { _ ->
@@ -187,10 +236,13 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
       cb?.invoke()
     }
   })
+  // No server ever reached (fresh load, connection refused) -> playground.
+  xhr.addEventListener("error", { _ -> if (docVersion == -1L) enterPlayground() })
   xhr.send()
 }
 
 private fun subscribeDocEvents() {
+  if (playground) return
   eventSource?.close()
   val project = currentProject
   val screen = currentScreen
@@ -213,7 +265,7 @@ private fun subscribeDocEvents() {
 // Belt and braces: a cheap version poll catches anything SSE misses.
 private var versionPollStarted = false
 private fun startVersionPoll() {
-  if (versionPollStarted) return
+  if (playground || versionPollStarted) return
   versionPollStarted = true
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
@@ -230,10 +282,28 @@ private fun startVersionPoll() {
 }
 
 private fun undo() {
+  if (playground) {
+    val inv = localUndo.removeLastOrNull() ?: return
+    localDoc.applyBatch(inv).result?.let { r ->
+      localDoc = r.doc.copy(version = localDoc.version + 1)
+      localRedo.addLast(r.inverseBatch)
+    }
+    localRefresh(true)
+    return
+  }
   serverPost("/undo") { refetchDoc(true) }
 }
 
 private fun redo() {
+  if (playground) {
+    val inv = localRedo.removeLastOrNull() ?: return
+    localDoc.applyBatch(inv).result?.let { r ->
+      localDoc = r.doc.copy(version = localDoc.version + 1)
+      localUndo.addLast(r.inverseBatch)
+    }
+    localRefresh(true)
+    return
+  }
   serverPost("/redo") { refetchDoc(true) }
 }
 
