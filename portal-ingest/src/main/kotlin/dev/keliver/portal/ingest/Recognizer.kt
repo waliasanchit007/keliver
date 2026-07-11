@@ -107,6 +107,11 @@ object Recognizer {
         fields = iface.declarations.filterIsInstance<KtProperty>()
           .associate { (it.name ?: "?") to (it.typeReference?.text ?: "String") },
         actions = iface.declarations.filterIsInstance<KtNamedFunction>().mapNotNull { it.name },
+        actionParams = iface.declarations.filterIsInstance<KtNamedFunction>()
+          .mapNotNull { f ->
+            val p = f.valueParameters.firstOrNull()?.typeReference?.text ?: return@mapNotNull null
+            (f.name ?: return@mapNotNull null) to p
+          }.toMap(),
       )
     } ?: Contract()
 
@@ -160,6 +165,16 @@ object Recognizer {
         ?.let { return PropValue.Action(it.groupValues[1]) }
       Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
+      // P2: single-arg actions — { b.name(it) } (event payload) and
+      // { b.name(item.field) } (item-scoped data, e.g. a row id).
+      Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(it\\)\\s*}$").find(t)
+        ?.let { return PropValue.Action(it.groupValues[1], arg = "it") }
+      Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\)\\s*}$").find(t)
+        ?.let { m ->
+          if (m.groupValues[2] in itemScope) {
+            return PropValue.Action(m.groupValues[1], arg = "${m.groupValues[2]}.${m.groupValues[3]}")
+          }
+        }
     }
     // P1-B: item.subfield inside a Repeat → an item-scoped Bind ("item.subfield").
     Regex("^([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)$").find(t)?.let { m ->

@@ -217,6 +217,71 @@ class RecognizerTest {
   }
 
   /**
+   * P2: single-arg action lambdas — `{ b.onX(it) }` carries the event payload,
+   * `{ b.onX(item.field) }` carries item-scoped data (e.g. a row id). Both must
+   * recognize (no RawCode), export byte-identically, contribute typed action
+   * signatures, and feed item interfaces.
+   */
+  @Test fun singleArgActionEventsRoundTrip() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.Clickable
+      import dev.keliver.material.compose.StyledText
+      import dev.keliver.material.compose.TextField
+
+      @Composable
+      fun FormScreen(b: FormScreenBindings) {
+        Column {
+          TextField(text = b.draft, onValueChange = { b.onDraftChange(it) })
+          b.notes.forEach { note ->
+            Clickable(onClick = { b.openNote(note.id) }) {
+              StyledText(text = note.title, fontSize = 16)
+            }
+          }
+        }
+      }
+
+      interface FormScreenBindings {
+        val draft: String
+        val notes: List<Note>
+        fun onDraftChange(value: String)
+        fun openNote(value: String)
+      }
+
+      interface Note {
+        val id: String
+        val title: String
+      }
+    """.trimIndent()
+
+    val r = Recognizer.recognize("FormScreen.kt", src)!!
+    fun walk(n: DocNode): List<DocNode> = when (n) {
+      is DocNode.Widget -> listOf(n) + n.children.flatMap { walk(it) }
+      else -> listOf(n)
+    }
+    val all = walk(r.root)
+    assertTrue(all.none { it is DocNode.RawCode }, all.filterIsInstance<DocNode.RawCode>().toString())
+
+    val tf = all.filterIsInstance<DocNode.Widget>().first { it.type == "TextField" }
+    assertEquals(PropValue.Action("onDraftChange", arg = "it"), tf.props["onValueChange"])
+    val click = all.filterIsInstance<DocNode.Widget>().first { it.type == "Clickable" }
+    assertEquals(PropValue.Action("openNote", arg = "note.id"), click.props["onClick"])
+    assertEquals("String", r.contract.actionParams["onDraftChange"])
+
+    val doc = UiDocument("form", r.root, r.contract, version = 0, nextHandle = 100)
+    val exported = exportKotlin(doc.toWidgetTree(), functionName = "FormScreen")
+    assertTrue("onValueChange = { b.onDraftChange(it) }" in exported, exported)
+    assertTrue("onClick = { b.openNote(note.id) }" in exported, exported)
+    assertTrue("fun onDraftChange(value: String)" in exported, exported)
+    assertTrue("fun openNote(value: String)" in exported, exported)
+    assertTrue("val id: String" in exported, exported)
+
+    val r2 = Recognizer.recognize("FormScreen.kt", exported)!!
+    assertEquals(doc.root, Reconciler.reconcile(doc, r2).root)
+  }
+
+  /**
    * DOGFOOD (Field Notes): the real screen shipped in portal-app-lib must be
    * FULLY portal-recognized — the "no escape hatches" contract means every node
    * ingests as a Widget (zero RawCode), the per-item Repeat binds resolve, the
