@@ -7,7 +7,8 @@ package dev.keliver.portal
  */
 data class Bind(val field: String)
 
-data class Action(val name: String)
+/** [arg]: null -> `{ b.name() }`; "it" -> event payload; "item.field" -> item-scoped data (P2). */
+data class Action(val name: String, val arg: String? = null)
 
 /** The derived contract of a screen tree. */
 data class ScreenContract(

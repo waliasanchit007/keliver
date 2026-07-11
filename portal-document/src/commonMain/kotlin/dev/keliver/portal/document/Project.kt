@@ -31,7 +31,7 @@ private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>, handleIds: Boolean)
         when (v) {
           is PropValue.Lit -> put(name, v.toAny())
           is PropValue.Bind -> put(name, if (v.field in mocks) mocks[v.field] else Bind(v.field))
-          is PropValue.Action -> put(name, Action(v.name))
+          is PropValue.Action -> put(name, Action(v.name, v.arg))
         }
       }
       n.modifiers.forEach { (name, v) -> if (v is PropValue.Lit) put("mod.$name", v.toAny()) }
@@ -48,7 +48,7 @@ fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
   props = props.filterKeys { !it.startsWith("mod.") }.mapValues { (_, v) ->
     when (v) {
       is Bind -> PropValue.Bind(v.field)
-      is Action -> PropValue.Action(v.name)
+      is Action -> PropValue.Action(v.name, v.arg)
       else -> lit(v)
     }
   },

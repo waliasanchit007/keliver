@@ -19,6 +19,26 @@ class WireTest {
     assertEquals(batch, DocJson.decodeFromString<OpBatch>(json))
   }
 
+  @Test fun actionArgSerializesAndOldJsonStillDecodes() {
+    // Phase 2: single-arg actions ride the wire; pre-arg documents must still decode.
+    val node: DocNode = DocNode.Widget(
+      Handle(1), "Clickable",
+      props = mapOf("onClick" to PropValue.Action("openNote", arg = "note.id")),
+    )
+    val json = DocJson.encodeToString(node)
+    assertEquals(node, DocJson.decodeFromString<DocNode>(json))
+    val old = json.replace(Regex(",?\"arg\":\"note.id\""), "")
+    val decoded = DocJson.decodeFromString<DocNode>(old) as DocNode.Widget
+    assertEquals(PropValue.Action("openNote"), decoded.props["onClick"])
+  }
+
+  @Test fun contractActionParamsDefaultKeepsOldJsonDecodable() {
+    val c = Contract(fields = mapOf("draft" to "String"), actions = listOf("onDraftChange"), actionParams = mapOf("onDraftChange" to "String"))
+    assertEquals(c, DocJson.decodeFromString<Contract>(DocJson.encodeToString(c)))
+    val old = """{"fields":{"draft":"String"},"actions":["onDraftChange"]}"""
+    assertEquals(Contract(mapOf("draft" to "String"), listOf("onDraftChange")), DocJson.decodeFromString<Contract>(old))
+  }
+
   @Test fun docNodeRoundTrips() {
     val doc: DocNode = DocNode.Widget(
       Handle(1), "Column",

@@ -24,8 +24,13 @@ sealed interface PropValue {
   @Serializable
   data class Bind(val field: String) : PropValue
 
+  /**
+   * An event wired to a named handler. [arg] is what the emitted lambda passes:
+   * `null` -> `{ b.name() }`; `"it"` -> the event payload `{ b.name(it) }`;
+   * `"item.field"` -> item-scoped data `{ b.name(item.field) }` (P2).
+   */
   @Serializable
-  data class Action(val name: String) : PropValue
+  data class Action(val name: String, val arg: String? = null) : PropValue
 }
 
 /** Convenience constructor mirroring the V1 tree's prop kinds. */
@@ -78,4 +83,5 @@ sealed interface DocNode {
 data class Contract(
   val fields: Map<String, String> = emptyMap(), // name -> Kotlin type
   val actions: List<String> = emptyList(),
+  val actionParams: Map<String, String> = emptyMap(), // action name -> single param Kotlin type
 )

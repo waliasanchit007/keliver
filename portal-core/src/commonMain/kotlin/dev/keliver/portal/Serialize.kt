@@ -30,7 +30,10 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
     is Boolean -> put("b", v)
     is String -> put("s", v)
     is Bind -> put("bind", v.field)
-    is Action -> put("action", v.name)
+    is Action -> {
+      put("action", v.name)
+      v.arg?.let { put("actionArg", it) }
+    }
     is List<*> -> {
       if (v.firstOrNull() is Float) put("lf", buildJsonArray { v.forEach { add(JsonPrimitive(it as Float)) } })
       else put("li", buildJsonArray { v.forEach { add(JsonPrimitive(it as Int)) } })
@@ -47,7 +50,7 @@ private fun decodeValue(o: JsonObject): Any? = when {
   "li" in o -> o.getValue("li").jsonArray.map { it.jsonPrimitive.int }
   "lf" in o -> o.getValue("lf").jsonArray.map { it.jsonPrimitive.float }
   "bind" in o -> Bind(o.getValue("bind").jsonPrimitive.content)
-  "action" in o -> Action(o.getValue("action").jsonPrimitive.content)
+  "action" in o -> Action(o.getValue("action").jsonPrimitive.content, o["actionArg"]?.jsonPrimitive?.content)
   else -> null
 }
 
