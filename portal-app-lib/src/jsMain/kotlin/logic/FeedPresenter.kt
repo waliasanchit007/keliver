@@ -14,14 +14,15 @@ import dev.keliver.portalpublished.screens.Note
 import kotlinx.coroutines.launch
 
 /**
- * HAND-OWNED (M6/M7): produces the Field Notes screen's Bindings (Style B).
- * Notes persist in the HOST's SQLite through the guest-owned data layer, so the
- * feed survives restarts and the whole layer shipped OTA in the signed bundle.
+ * HAND-OWNED (M6/M7): produces the Field Notes feed's Bindings (Style B).
+ * v2 (P2): the TextField's typed text lands here via onDraftChange(value),
+ * and openNote(value) hands the tapped row's id to the hand-owned nav.
  */
 @Composable
-fun FeedPresenter(sql: HostSqlDriver?): FeedScreenBindings {
+fun FeedPresenter(sql: HostSqlDriver?, onOpenNote: (String) -> Unit): FeedScreenBindings {
   val scope = rememberCoroutineScope()
   var notesList by remember { mutableStateOf<List<Note>>(emptyList()) }
+  var draftText by remember { mutableStateOf("") }
   var loaded by remember { mutableStateOf(false) }
   val store = remember { sql?.let { NotesStore(PortalSqlDriver(it)) } }
 
@@ -46,18 +47,26 @@ fun FeedPresenter(sql: HostSqlDriver?): FeedScreenBindings {
       else -> "${notesList.size} note${if (notesList.size == 1) "" else "s"} · persisted in SQLite via OTA data layer"
     }
 
+    override val draft: String = draftText
+
     override val isEmpty: Boolean = loaded && notesList.isEmpty()
 
     override val notes: List<Note> = notesList
 
+    override fun onDraftChange(value: String) {
+      draftText = value
+    }
+
     override fun addNote() {
       scope.launch {
         val n = (store?.count() ?: 0L) + 1L
+        val typed = draftText.trim()
         store?.insert(
-          title = "Note #$n",
-          body = "Captured from the portal-built feed.",
+          title = if (typed.isEmpty()) "Note #$n" else typed,
+          body = if (typed.isEmpty()) "Captured from the portal-built feed." else "Typed in the portal-authored TextField.",
           time = "entry $n",
         )
+        draftText = ""
         refresh()
       }
     }
@@ -68,5 +77,7 @@ fun FeedPresenter(sql: HostSqlDriver?): FeedScreenBindings {
         refresh()
       }
     }
+
+    override fun openNote(value: String) = onOpenNote(value)
   }
 }

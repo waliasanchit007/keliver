@@ -296,11 +296,13 @@ class RecognizerTest {
       import dev.keliver.layout.compose.Spacer
       import dev.keliver.material.compose.Button
       import dev.keliver.material.compose.Card
+      import dev.keliver.material.compose.Clickable
       import dev.keliver.material.compose.Divider
       import dev.keliver.material.compose.ScrollableColumn
       import dev.keliver.material.compose.StyledBox
       import dev.keliver.material.compose.StyledText
       import dev.keliver.material.compose.TextButton
+      import dev.keliver.material.compose.TextField
       import dev.keliver.material.compose.padding
       import dev.keliver.ui.Dp
 
@@ -311,16 +313,19 @@ class RecognizerTest {
             StyledText(text = "Field Notes", fontSize = 28, bold = true)
             StyledText(text = b.subtitle, fontSize = 13)
             Spacer(height = Dp(14.0))
+            TextField(text = b.draft, placeholder = "What did you notice?", onValueChange = { b.onDraftChange(it) })
             Button(text = "Add note", onClick = { b.addNote() })
             if (b.isEmpty) {
               StyledText(text = "No notes yet.", fontSize = 14)
             }
             b.notes.forEach { note ->
-              Card {
-                Column {
-                  StyledText(modifier = Modifier.padding(4), text = note.title, fontSize = 17, bold = true)
-                  StyledText(modifier = Modifier.padding(4), text = note.body, fontSize = 14)
-                  StyledText(modifier = Modifier.padding(4), text = note.time, fontSize = 11)
+              Clickable(onClick = { b.openNote(note.id) }) {
+                Card {
+                  Column {
+                    StyledText(modifier = Modifier.padding(4), text = note.title, fontSize = 17, bold = true)
+                    StyledText(modifier = Modifier.padding(4), text = note.body, fontSize = 14)
+                    StyledText(modifier = Modifier.padding(4), text = note.time, fontSize = 11)
+                  }
                 }
               }
               Spacer(height = Dp(10.0))
@@ -333,13 +338,17 @@ class RecognizerTest {
 
       interface FeedScreenBindings {
         val subtitle: String
+        val draft: String
         val isEmpty: Boolean
         val notes: List<Note>
+        fun onDraftChange(value: String)
         fun addNote()
         fun clearAll()
+        fun openNote(value: String)
       }
 
       interface Note {
+        val id: String
         val title: String
         val body: String
         val time: String
@@ -362,14 +371,26 @@ class RecognizerTest {
     val repeat = all.filterIsInstance<DocNode.Widget>().first { it.type == "Repeat" }
     assertEquals(PropValue.Lit("s", s = "notes"), repeat.props["items"])
     assertEquals(PropValue.Lit("s", s = "note"), repeat.props["item"])
-    // Per-item binds (P1-B): note.title / note.body / note.time inside the Repeat.
-    val itemBinds = walk(repeat).filterIsInstance<DocNode.Widget>()
+    // Per-item binds (P1-B) + the item-carrying action arg (P2) inside the Repeat.
+    val repeatWidgets = walk(repeat).filterIsInstance<DocNode.Widget>()
+    val itemBinds = repeatWidgets
       .flatMap { it.props.values }.filterIsInstance<PropValue.Bind>().map { it.field }.toSet()
     assertEquals(setOf("note.title", "note.body", "note.time"), itemBinds)
+    val itemActionArgs = repeatWidgets
+      .flatMap { it.props.values }.filterIsInstance<PropValue.Action>().mapNotNull { it.arg }.toSet()
+    assertEquals(setOf("note.id"), itemActionArgs)
+
+    // P2 single-arg actions: typed text entry + the tapped row's id.
+    val tf = all.filterIsInstance<DocNode.Widget>().first { it.type == "TextField" }
+    assertEquals(PropValue.Action("onDraftChange", arg = "it"), tf.props["onValueChange"])
+    val click = all.filterIsInstance<DocNode.Widget>().first { it.type == "Clickable" }
+    assertEquals(PropValue.Action("openNote", arg = "note.id"), click.props["onClick"])
 
     // Contract is exactly what FeedPresenter implements.
-    assertEquals(setOf("subtitle", "isEmpty", "notes"), r.contract.fields.keys)
-    assertEquals(setOf("addNote", "clearAll"), r.contract.actions.toSet())
+    assertEquals(setOf("subtitle", "draft", "isEmpty", "notes"), r.contract.fields.keys)
+    assertEquals(setOf("onDraftChange", "addNote", "clearAll", "openNote"), r.contract.actions.toSet())
+    assertEquals("String", r.contract.actionParams["onDraftChange"])
+    assertEquals("String", r.contract.actionParams["openNote"])
   }
 
   @Test fun reconcilerPreservesHandlesAcrossEditsAndAllocatesNew() {
