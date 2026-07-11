@@ -1,0 +1,40 @@
+# Deploys the wasm portal editor to GitHub Pages. With no portal-server
+# reachable, the editor runs in PLAYGROUND mode (local document engine) —
+# a public "try keliver in the browser" URL.
+# Requires: repo public (or a Pages-enabled plan) + Settings -> Pages ->
+# Source: "GitHub Actions".
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: ./gradlew :web-spike:wasmJsBrowserDistribution --no-daemon
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-spike/build/dist/wasmJs/productionExecutable
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

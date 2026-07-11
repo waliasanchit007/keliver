@@ -40,6 +40,14 @@ never touches the hand-owned files. Editing a screen in the portal produces a
    `get_document`, `apply_ops` (transactional, `dryRun` to validate),
    `find_usages`, etc. Every widget/prop is catalog-grounded.
 
+## Try it with zero install (playground)
+
+The editor deploys to GitHub Pages (`.github/workflows/pages.yml`). With no
+portal-server reachable it enters **playground mode**: the full editor — 60+
+widget palette, props/modifiers, bindings, Repeat mock rows, undo/redo, Export
+Kotlin — backed by a local in-browser document engine. Edits stay in the tab;
+publish/devices/`.kt` sync need the real stack below.
+
 ## Start the stack
 
 ```bash
