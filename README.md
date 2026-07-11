@@ -4,11 +4,16 @@ Server-driven UI for Compose Multiplatform. Render Kotlin Compose UI on
 Android and iOS from JavaScript bundles delivered over the network —
 ship UI updates without an app-store release.
 
+**▶ Try it in your browser, zero install: [the Keliver Portal playground](http://keliver.me/keliver/)** —
+the visual editor with a live canvas, 60+ widgets, data bindings with mock
+previews, and one-click **Export Kotlin** (the output is real code).
+
 > **Status: public on Maven Central — `0.2.0`.** Add `mavenCentral()` and
 > depend on `dev.keliver:keliver-host:0.2.0` (host) /
 > `dev.keliver:keliver-guest:0.2.0` (guest) — no GitHub PAT, no extra repo.
-> `0.2.0` adds **`keliver-material`**, a ~60-widget Compose/Material3-parity
-> library so you can build server-driven screens without authoring a schema.
+> `0.2.0` adds **`keliver-material`**, a Compose/Material3-parity widget
+> library (76 widgets — see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md))
+> so you can build server-driven screens without authoring a schema.
 > See [`docs/USAGE.md`](./docs/USAGE.md). `0.2.x` is the current line; `0.1.0`
 > was the first public release (pre-`1.0`, API may still evolve); the wire
 > format is stable within a line.
@@ -120,6 +125,35 @@ class QuotesAppSpec : TreehouseApp.Spec<SduiAppService>() {
 }
 ```
 
+## The Portal — screens are editable by everyone
+
+Beyond the library, this repo ships the **Keliver Portal**: a visual editor,
+any code editor, and AI agents all edit the **same screen document**, with the
+`.kt` file in git as the source of truth.
+
+```
+        EDIT (any of)                          SHIP
+ Portal UI  ─┐                          Publish → compile the canonical
+ IDE / vim  ─┼─► one UiDocument ──►     Kotlin → Ed25519-sign → versioned,
+ AI (MCP)   ─┘   (.kt in git = truth)   capability-gated bundle → devices
+                     │                        verify the signature
+        ┌────────────┼───────────────┐
+   web preview   dev devices      surgical .kt write-back
+   (mock rows,   (live overlay,   (comments survive edits)
+    fidelity)     ~1s mirror)
+```
+
+- Edits in the browser become **surgical git diffs** in `screens/*.kt`; edits
+  in your IDE appear live in the browser and on devices — no restart.
+- Production ships **compiled, signed Kotlin** — the interpreter is a dev tool,
+  never the shipping artifact.
+- One command runs everything: `scripts/keliver-dev.sh`.
+
+See [`docs/PORTAL_USAGE.md`](./docs/PORTAL_USAGE.md) (workflow) and
+[`docs/PORTAL_V2_COMPLETE.md`](./docs/PORTAL_V2_COMPLETE.md) (architecture).
+The [playground](http://keliver.me/keliver/) is this editor running
+serverlessly in wasm.
+
 ## When to use it
 
 **Good fit:**
@@ -144,6 +178,10 @@ uses it for two screens out of ~10.
 
 - **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)** — the short path: run
   the sample, then write your first screen, on Android + iOS.
+- **[docs/IDE_SETUP.md](./docs/IDE_SETUP.md)** — screens are plain Kotlin
+  against generated composables, so IntelliJ/Android Studio completion, param
+  hints, and docs work exactly like native Compose (sources jars ship with
+  every artifact).
 - **[docs/SCREEN_ARCHITECTURE.md](./docs/SCREEN_ARCHITECTURE.md)** — how to
   structure an app: Repository → Presenter → Screen, API + database via host
   services, and the two presentation styles (with when to use each).
