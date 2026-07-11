@@ -716,21 +716,32 @@ private fun renderProps() {
       val lab = Ui.el("label", "", evName)
       lab.setAttribute("title", evName)
       rowEl.appendChild(lab)
-      val input = Ui.input()
-      input.setAttribute("type", "text")
-      input.setAttribute("placeholder", "action name")
-      input.value = (node.props[evName] as? Action)?.name ?: ""
-      input.addEventListener("input", { _ ->
-        val name = input.value.trim()
+      val current = node.props[evName] as? Action
+      val nameIn = Ui.input()
+      nameIn.setAttribute("type", "text")
+      nameIn.setAttribute("placeholder", "action name")
+      nameIn.value = current?.name ?: ""
+      // P2: the action's single arg — "it" (event payload) or "item.field".
+      val argIn = Ui.input()
+      argIn.setAttribute("type", "text")
+      argIn.setAttribute("placeholder", "arg")
+      argIn.setAttribute("title", "arg: it (event payload) or item.field (inside a Repeat)")
+      argIn.setAttribute("style", "flex: 0 1 90px;")
+      argIn.value = current?.arg ?: ""
+      fun sendNow() {
+        val name = nameIn.value.trim()
         val op = if (name.isEmpty()) {
           DocOp.RemoveProp(Handle(node.id.toLong()), evName)
         } else {
-          DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name))
+          DocOp.SetProp(Handle(node.id.toLong()), evName, PropValue.Action(name, argIn.value.trim().ifEmpty { null }))
         }
         sendOps(listOf(op), refreshPanels = false)
         renderBindings()
-      })
-      rowEl.appendChild(input)
+      }
+      nameIn.addEventListener("input", { _ -> sendNow() })
+      argIn.addEventListener("input", { _ -> sendNow() })
+      rowEl.appendChild(nameIn)
+      rowEl.appendChild(argIn)
       propsEl.appendChild(rowEl)
     }
   }
@@ -751,7 +762,8 @@ private fun renderBindings() {
     rowEl.appendChild(lab)
     val mock = Ui.input()
     mock.setAttribute("type", "text")
-    mock.setAttribute("placeholder", "mock value")
+    // P2: dotted fields are item-scoped — the mock holds per-row values.
+    mock.setAttribute("placeholder", if ('.' in field) "rows: a|b|c" else "mock value")
     mock.value = PreviewBindings.mocks[field] ?: ""
     mock.addEventListener("input", { _ ->
       PreviewBindings.mocks[field] = mock.value
@@ -760,8 +772,31 @@ private fun renderBindings() {
     rowEl.appendChild(mock)
     bindingsEl.appendChild(rowEl)
   }
+  // P2: each Repeat's items field mocks its preview ROW COUNT.
+  val reps = mutableListOf<WidgetNode>()
+  fun collectRepeats(n: WidgetNode) {
+    if (n.type == "Repeat") reps += n
+    n.children.forEach { collectRepeats(it) }
+  }
+  collectRepeats(portalTree.value)
+  reps.forEach { rep ->
+    val items = (rep.props["items"] as? String)?.takeIf { it.isNotBlank() } ?: return@forEach
+    val rowEl = Ui.el("div", "row")
+    rowEl.appendChild(Ui.el("label", "", "$items: rows"))
+    val mock = Ui.input()
+    mock.setAttribute("type", "text")
+    mock.setAttribute("placeholder", "row count (3)")
+    mock.value = PreviewBindings.mocks[items] ?: ""
+    mock.addEventListener("input", { _ ->
+      PreviewBindings.mocks[items] = mock.value
+      Snapshot.sendApplyNotifications()
+    })
+    rowEl.appendChild(mock)
+    bindingsEl.appendChild(rowEl)
+  }
   contract.actions.forEach { a ->
-    bindingsEl.appendChild(Ui.el("div", "muted", "fun $a()"))
+    val p = contract.actionParams[a]
+    bindingsEl.appendChild(Ui.el("div", "muted", if (p != null) "fun $a(value: $p)" else "fun $a()"))
   }
 }
 
