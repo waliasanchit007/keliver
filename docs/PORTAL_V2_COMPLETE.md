@@ -49,16 +49,19 @@ All work is on branch `spike/keliver-web`. Merge to `main` is a human decision.
 | `portal-relay` | the local-first portal-server (docs, ops, SSE, ingest, publish, gating, `/devstate`) |
 | `portal-device-guest` | the overlay dev guest (compiled + interpreter, versioned catch-up) |
 
-## Run it
+## Run it — one command
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-./gradlew :portal-relay:installDist && PORTAL_REPO=$PWD portal-relay/build/install/portal-relay/bin/portal-relay &   # :8077
-./gradlew :web-spike:wasmJsBrowserDevelopmentExecutableDistribution
-(cd web-spike/build/dist/wasmJs/developmentExecutable && python3 -m http.server 8096) &                              # editor
-./gradlew :portal-device-guest:serveDevelopmentZipline &                                                             # dev bundle :8080
-./gradlew :portal-device-android:installDebug && adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
-# AI agent: PORTAL_REPO=$PWD portal-mcp/build/install/portal-mcp/bin/portal-mcp   (stdio MCP)
+scripts/keliver-dev.sh            # server (:8077) + editor (:8096) + device bundle (:8080)
+scripts/keliver-dev.sh --android  # …and install + launch the Android host
+```
+
+It builds what's needed, prints the URLs, and Ctrl-C stops everything. Open the
+editor URL, or edit `portal-app-lib/src/jsMain/kotlin/screens/*.kt` directly, or
+drive it from an AI agent:
+
+```bash
+PORTAL_REPO=$PWD portal-mcp/build/install/portal-mcp/bin/portal-mcp   # stdio MCP
 ```
 
 See `PORTAL_USAGE.md` for the day-to-day workflow.

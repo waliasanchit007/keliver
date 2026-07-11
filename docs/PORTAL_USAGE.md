@@ -40,25 +40,15 @@ never touches the hand-owned files. Editing a screen in the portal produces a
    `get_document`, `apply_ops` (transactional, `dryRun` to validate),
    `find_usages`, etc. Every widget/prop is catalog-grounded.
 
-## 1. Start the stack
+## Start the stack
 
 ```bash
-cd konduit
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-
-# The portal server (:8077): projects/screens/drafts, publish, bundle store.
-./gradlew :portal-relay:installDist
-PORTAL_REPO=$PWD portal-relay/build/install/portal-relay/bin/portal-relay &
-
-# The editor (:8096).
-./gradlew :web-spike:wasmJsBrowserDevelopmentExecutableDistribution
-(cd web-spike/build/dist/wasmJs/developmentExecutable && python3 -m http.server 8096) &
-
-# The DEV guest bundle server (:8080) — what dev-mode devices load.
-./gradlew :portal-device-guest:serveDevelopmentZipline &
+scripts/keliver-dev.sh            # portal-server + editor + live device bundle
+scripts/keliver-dev.sh --android  # …and install + launch the Android host
 ```
 
-Open **http://localhost:8096**. Everything you author is autosaved per
+Open **http://localhost:8096**. Ctrl-C stops everything. Everything you author
+is saved into the app project (`portal-app-lib/src/jsMain/kotlin/screens/`).
 project/screen under `~/.keliver-portal/`.
 
 ## Layout / styling / bindings → edit the SCREEN (portal or file — both sync)
