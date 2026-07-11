@@ -49,8 +49,21 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("@Composable")
   appendLine("fun RenderNode(node: WidgetNode) {")
   appendLine("  when (node.type) {")
-  // M5: logic nodes render their children (preview shows the branch/one iteration).
-  appendLine("    \"Condition\", \"Repeat\" -> Column { node.children.forEach { RenderNode(it) } }")
+  // M5/P2: Condition honors a boolean mock (default shown); Repeat renders
+  // rowCount() mock rows with item binds resolved per row.
+  appendLine("    \"Condition\" -> {")
+  appendLine("      val field = (node.props[\"field\"] as? String) ?: \"\"")
+  appendLine("      if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {")
+  appendLine("        Column { node.children.forEach { RenderNode(it) } }")
+  appendLine("      }")
+  appendLine("    }")
+  appendLine("    \"Repeat\" -> Column {")
+  appendLine("      val itemVar = (node.props[\"item\"] as? String) ?: \"item\"")
+  appendLine("      val itemsField = (node.props[\"items\"] as? String) ?: \"items\"")
+  appendLine("      repeat(PreviewBindings.rowCount(itemsField)) { i ->")
+  appendLine("        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, i)) }")
+  appendLine("      }")
+  appendLine("    }")
   for (w in sorted) {
     appendLine("    \"${w.name}\" -> ${w.name}(")
     if (mods.isNotEmpty()) appendLine("      modifier = nodeModifier(node),")

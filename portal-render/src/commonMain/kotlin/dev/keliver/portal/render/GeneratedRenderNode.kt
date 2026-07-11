@@ -92,7 +92,19 @@ import dev.keliver.material.compose.size
 @Composable
 fun RenderNode(node: WidgetNode) {
   when (node.type) {
-    "Condition", "Repeat" -> Column { node.children.forEach { RenderNode(it) } }
+    "Condition" -> {
+      val field = (node.props["field"] as? String) ?: ""
+      if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {
+        Column { node.children.forEach { RenderNode(it) } }
+      }
+    }
+    "Repeat" -> Column {
+      val itemVar = (node.props["item"] as? String) ?: "item"
+      val itemsField = (node.props["items"] as? String) ?: "items"
+      repeat(PreviewBindings.rowCount(itemsField)) { i ->
+        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, i)) }
+      }
+    }
     "AlertDialog" -> AlertDialog(
       modifier = nodeModifier(node),
       title = node.strB("title"),

@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.resolveItemRow
 
 /**
  * P3 dev-preview binding resolution. The editor fills [mocks] (string-typed;
@@ -15,6 +16,13 @@ object PreviewBindings {
   var actionSink: (String) -> Unit = {}
 
   fun fire(name: String) = actionSink(name)
+
+  /** Mocked preview row count for a Repeat: the ITEMS field's mock parses as an int (default 3, clamped 0..10). */
+  fun rowCount(itemsField: String): Int = mocks[itemsField]?.trim()?.toIntOrNull()?.coerceIn(0, 10) ?: 3
+
+  /** One preview row: item binds resolved against the mocks map ("a|b|c" = per-row values). */
+  fun mockItemRow(node: WidgetNode, itemVar: String, index: Int): WidgetNode =
+    resolveItemRow(node, itemVar, index, mocks::get)
 }
 
 /** The Action name wired to an event prop, or null. */
