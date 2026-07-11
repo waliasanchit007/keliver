@@ -34,15 +34,18 @@ import java.net.URLDecoder
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 
-private const val PORT = 8077
+/** The app repo checkout the portal serves (and the publish step compiles in). */
+private val repoDir = File(System.getenv("PORTAL_REPO") ?: System.getProperty("user.dir"))
 
-private val root = File(System.getProperty("user.home"), ".keliver-portal")
+/** Separability: the repo's keliver.portal.json (all fields default to this repo's layout). */
+private val config = loadPortalConfig(repoDir)
+
+private val PORT = config.port
+
+private val root = config.storeDir()
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")
 private val bundlesDir = File(root, "bundles")
-
-/** The konduit checkout the publish step compiles in. */
-private val repoDir = File(System.getenv("PORTAL_REPO") ?: System.getProperty("user.dir"))
 
 /** project/screen names are path segments — restrict to a safe charset. */
 private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifEmpty { "unnamed" }
@@ -104,7 +107,7 @@ private fun publish(): Pair<Boolean, String> {
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
   val gradlew = File(repoDir, "gradlew").absolutePath
-  val proc = ProcessBuilder(gradlew, ":portal-published-guest:compileDevelopmentZipline", "--console=plain")
+  val proc = ProcessBuilder(gradlew, config.publishTask, "--console=plain")
     .directory(repoDir)
     .redirectErrorStream(true)
     .start()
@@ -113,7 +116,7 @@ private fun publish(): Pair<Boolean, String> {
   log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
   if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
-  val ziplineOut = File(repoDir, "portal-published-guest/build/zipline/Development")
+  val ziplineOut = File(repoDir, config.publishOutput)
   if (!ziplineOut.exists()) return false to log.appendLine("publish FAILED: no zipline output at $ziplineOut").toString()
   val version = nextBundleVersion()
   val dest = File(bundlesDir, "v$version")
@@ -175,7 +178,7 @@ private val documents = java.util.concurrent.ConcurrentHashMap<String, DocumentS
  * M6 app project model: the "default" project's canonical screens live INSIDE
  * the guest Gradle module (git-versioned); other projects use the legacy dir.
  */
-private val appScreensDir = File(repoDir, "portal-app-lib/src/jsMain/kotlin/screens")
+private val appScreensDir = File(repoDir, config.screensDir)
 private fun screensDirFor(project: String): File =
   if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
   else File(File(root, "kotlin"), project)

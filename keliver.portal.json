@@ -1,0 +1,7 @@
+{
+  "port": 8077,
+  "screensDir": "portal-app-lib/src/jsMain/kotlin/screens",
+  "publishTask": ":portal-published-guest:compileDevelopmentZipline",
+  "publishOutput": "portal-published-guest/build/zipline/Development",
+  "store": "~/.keliver-portal"
+}

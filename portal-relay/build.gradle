@@ -2,6 +2,7 @@
 // HttpServer + files; portal-core (project dep) supplies the tree codec and
 // the generated exporter for the publish pipeline. No external deps.
 apply plugin: 'org.jetbrains.kotlin.jvm'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization' // PortalConfig (keliver.portal.json)
 apply plugin: 'application'
 
 application {

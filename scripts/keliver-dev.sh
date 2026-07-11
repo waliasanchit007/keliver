@@ -20,7 +20,8 @@ export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null || tru
 export PORTAL_REPO="$ROOT"
 
 EDITOR_PORT=8096
-SERVER_PORT=8077
+# The server port comes from keliver.portal.json (separability), default 8077.
+SERVER_PORT=$(python3 -c "import json;print(json.load(open('$ROOT/keliver.portal.json')).get('port',8077))" 2>/dev/null || echo 8077)
 ZIPLINE_PORT=8080
 WITH_ANDROID=false
 [[ "${1:-}" == "--android" ]] && WITH_ANDROID=true
