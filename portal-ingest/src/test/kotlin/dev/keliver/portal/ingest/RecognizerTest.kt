@@ -216,6 +216,97 @@ class RecognizerTest {
     assertEquals(doc.root, re.root)
   }
 
+  /**
+   * DOGFOOD (Field Notes): the real screen shipped in portal-app-lib must be
+   * FULLY portal-recognized — the "no escape hatches" contract means every node
+   * ingests as a Widget (zero RawCode), the per-item Repeat binds resolve, the
+   * empty-state is a Condition, and the contract is exactly what the presenter
+   * implements. This locks the dogfood app against recognizer regressions.
+   */
+  @Test fun recognizesDogfoodFeedScreenWithNoRawCode() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.Modifier
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.layout.compose.Spacer
+      import dev.keliver.material.compose.Button
+      import dev.keliver.material.compose.Card
+      import dev.keliver.material.compose.Divider
+      import dev.keliver.material.compose.ScrollableColumn
+      import dev.keliver.material.compose.StyledBox
+      import dev.keliver.material.compose.StyledText
+      import dev.keliver.material.compose.TextButton
+      import dev.keliver.material.compose.padding
+      import dev.keliver.ui.Dp
+
+      @Composable
+      fun FeedScreen(b: FeedScreenBindings) {
+        StyledBox(paddingDp = 20, fillWidth = true) {
+          ScrollableColumn {
+            StyledText(text = "Field Notes", fontSize = 28, bold = true)
+            StyledText(text = b.subtitle, fontSize = 13)
+            Spacer(height = Dp(14.0))
+            Button(text = "Add note", onClick = { b.addNote() })
+            if (b.isEmpty) {
+              StyledText(text = "No notes yet.", fontSize = 14)
+            }
+            b.notes.forEach { note ->
+              Card {
+                Column {
+                  StyledText(modifier = Modifier.padding(4), text = note.title, fontSize = 17, bold = true)
+                  StyledText(modifier = Modifier.padding(4), text = note.body, fontSize = 14)
+                  StyledText(modifier = Modifier.padding(4), text = note.time, fontSize = 11)
+                }
+              }
+              Spacer(height = Dp(10.0))
+            }
+            Divider()
+            TextButton(text = "Clear all", onClick = { b.clearAll() })
+          }
+        }
+      }
+
+      interface FeedScreenBindings {
+        val subtitle: String
+        val isEmpty: Boolean
+        val notes: List<Note>
+        fun addNote()
+        fun clearAll()
+      }
+
+      interface Note {
+        val title: String
+        val body: String
+        val time: String
+      }
+    """.trimIndent()
+
+    val r = Recognizer.recognize("feed.kt", src)!!
+
+    // No escape hatches: every node in the tree is a recognized Widget.
+    fun walk(n: DocNode): List<DocNode> = when (n) {
+      is DocNode.Widget -> listOf(n) + n.children.flatMap { walk(it) }
+      else -> listOf(n)
+    }
+    val all = walk(r.root)
+    assertTrue(all.none { it is DocNode.RawCode }, "expected zero RawCode, got: " + all.filterIsInstance<DocNode.RawCode>())
+
+    // The Condition empty-state and the per-item Repeat feed both recognized.
+    val types = all.filterIsInstance<DocNode.Widget>().map { it.type }
+    assertTrue("Condition" in types, types.toString())
+    val repeat = all.filterIsInstance<DocNode.Widget>().first { it.type == "Repeat" }
+    assertEquals(PropValue.Lit("s", s = "notes"), repeat.props["items"])
+    assertEquals(PropValue.Lit("s", s = "note"), repeat.props["item"])
+    // Per-item binds (P1-B): note.title / note.body / note.time inside the Repeat.
+    val itemBinds = walk(repeat).filterIsInstance<DocNode.Widget>()
+      .flatMap { it.props.values }.filterIsInstance<PropValue.Bind>().map { it.field }.toSet()
+    assertEquals(setOf("note.title", "note.body", "note.time"), itemBinds)
+
+    // Contract is exactly what FeedPresenter implements.
+    assertEquals(setOf("subtitle", "isEmpty", "notes"), r.contract.fields.keys)
+    assertEquals(setOf("addNote", "clearAll"), r.contract.actions.toSet())
+  }
+
   @Test fun reconcilerPreservesHandlesAcrossEditsAndAllocatesNew() {
     val old = UiDocument(
       screen = "main",
