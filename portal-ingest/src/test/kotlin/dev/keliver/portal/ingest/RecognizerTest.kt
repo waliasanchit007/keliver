@@ -150,6 +150,48 @@ class RecognizerTest {
     assertEquals(PropValue.Lit("s", s = "row"), rep.props["item"])
   }
 
+  @Test fun perItemRepeatBindingRoundTrips() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+      @Composable
+      fun Feed(b: FeedBindings) {
+        Column {
+          b.posts.forEach { post ->
+            StyledText(text = post.title, fontSize = 18)
+          }
+        }
+      }
+      interface FeedBindings {
+        val posts: List<Post>
+      }
+      interface Post {
+        val title: String
+      }
+    """.trimIndent()
+    val r = Recognizer.recognize("Feed.kt", src)!!
+    val rep = (r.root.children[0] as DocNode.Widget) // Repeat
+    assertEquals("Repeat", rep.type)
+    val text = rep.children[0] as DocNode.Widget
+    // the loop-var reference became an item-scoped bind
+    assertEquals(PropValue.Bind("post.title"), text.props["text"])
+
+    // Export: real forEach with item.title + a typed item interface.
+    val doc = UiDocument("main", r.root, r.contract, 0, 100)
+    val exported = exportKotlin(doc.toWidgetTree(), functionName = "Feed")
+    assertTrue("b.posts.forEach { post ->" in exported, exported)
+    assertTrue("text = post.title," in exported, exported)          // item-scoped, NOT b.post.title
+    assertTrue("val posts: List<Post>" in exported)
+    assertTrue("interface Post {" in exported)
+    assertTrue("val title: String" in exported)
+
+    // Round-trips back to an equal document.
+    val r2 = Recognizer.recognize("Feed.kt", exported)!!
+    val re = Reconciler.reconcile(doc, r2)
+    assertEquals(doc.root, re.root)
+  }
+
   @Test fun conditionRepeatRoundTripThroughExport() {
     val doc = UiDocument(
       screen = "main",

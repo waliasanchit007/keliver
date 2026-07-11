@@ -55,16 +55,17 @@ object Recognizer {
       return h
     }
 
-    fun statementToNode(expr: KtExpression): DocNode {
+    fun statementToNode(expr: KtExpression, itemScope: Set<String>): DocNode {
       // M5: logic constructs → editable Condition/Repeat nodes (not RawCode).
       recognizeCondition(expr, bindingsParam)?.let { (field, thenStmts) ->
         return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
-          children = thenStmts.map { statementToNode(it) })
+          children = thenStmts.map { statementToNode(it, itemScope) })
       }
       recognizeRepeat(expr, bindingsParam)?.let { (items, itemVar, bodyStmts) ->
+        // P1-B: the loop var is in scope for the children → item.field binds.
         return DocNode.Widget(track(nextTemp(), expr), "Repeat",
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = bodyStmts.map { statementToNode(it) })
+          children = bodyStmts.map { statementToNode(it, itemScope + itemVar) })
       }
 
       val call = expr as? KtCallExpression
@@ -84,17 +85,17 @@ object Recognizer {
           modifiers += mods
           continue
         }
-        val value = parseValue(ve, bindingsParam)
+        val value = parseValue(ve, bindingsParam, itemScope)
           ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         props[name] = value
       }
       val children = call.lambdaArguments.firstOrNull()
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
-        .map { statementToNode(it) }
+        .map { statementToNode(it, itemScope) }
       return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
     }
 
-    val rootStatements = body.statements.map { statementToNode(it) }
+    val rootStatements = body.statements.map { statementToNode(it, emptySet()) }
     // One top-level widget = the root; several = wrap (shouldn't happen with our exporter).
     val root = rootStatements.singleOrNull() as? DocNode.Widget
       ?: DocNode.Widget(nextTemp(), "Column", children = rootStatements)
@@ -149,7 +150,7 @@ object Recognizer {
   }
 
   /** Literal / bind / action argument expressions. Null = not in the grammar. */
-  private fun parseValue(expr: KtExpression, bindingsParam: String?): PropValue? {
+  private fun parseValue(expr: KtExpression, bindingsParam: String?, itemScope: Set<String> = emptySet()): PropValue? {
     val t = expr.text.trim()
     // b.field / b::action / { b.action() }
     if (bindingsParam != null) {
@@ -159,6 +160,10 @@ object Recognizer {
         ?.let { return PropValue.Action(it.groupValues[1]) }
       Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
+    }
+    // P1-B: item.subfield inside a Repeat → an item-scoped Bind ("item.subfield").
+    Regex("^([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)$").find(t)?.let { m ->
+      if (m.groupValues[1] in itemScope) return PropValue.Bind("${m.groupValues[1]}.${m.groupValues[2]}")
     }
     return parseLiteral(t)
   }

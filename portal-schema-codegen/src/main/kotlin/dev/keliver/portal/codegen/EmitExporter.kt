@@ -82,19 +82,48 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  node.children.forEach { collectModifierNames(it, out) }
     |}
     |
-    |// M5: logic nodes contribute typed contract fields (Condition->Boolean, Repeat->List).
-    |private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, String>) {
+    |// M5/P1-B: logic nodes contribute typed contract fields. Repeat with per-item
+    |// binds (item.title) generates List<ItemType> + a typed item interface.
+    |private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap<String, String>) {
+    |  if (node.type != "Repeat") { // a nested Repeat opens its own item scope
+    |    for ((prop, v) in node.props) {
+    |      if (v is Bind && v.field.startsWith("${'$'}itemVar.")) {
+    |        val sub = v.field.substringAfter('.')
+    |        iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
+    |      }
+    |    }
+    |    node.children.forEach { itemFieldsOf(it, itemVar, iface) }
+    |  }
+    |}
+    |private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, String>, ifaces: LinkedHashMap<String, LinkedHashMap<String, String>>) {
     |  when (node.type) {
     |    "Condition" -> (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let { out[it] = "Boolean" }
-    |    "Repeat" -> (node.props["items"] as? String)?.takeIf { it.isNotBlank() }?.let { out[it] = "List<String>" }
+    |    "Repeat" -> {
+    |      val items = (node.props["items"] as? String)?.takeIf { it.isNotBlank() }
+    |      val itemVar = (node.props["item"] as? String)?.takeIf { it.isNotBlank() } ?: "item"
+    |      if (items != null) {
+    |        val iface = LinkedHashMap<String, String>()
+    |        node.children.forEach { itemFieldsOf(it, itemVar, iface) }
+    |        if (iface.isNotEmpty()) {
+    |          val typeName = itemVar.replaceFirstChar { it.uppercase() }
+    |          out[items] = "List<${'$'}typeName>"
+    |          ifaces[typeName] = iface
+    |        } else {
+    |          out[items] = "List<String>"
+    |        }
+    |      }
+    |    }
     |  }
-    |  node.children.forEach { collectLogicFields(it, out) }
+    |  node.children.forEach { collectLogicFields(it, out, ifaces) }
     |}
     |
-    |private fun fmtString(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-    |private fun fmtInt(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Int) ?: 0).toString()
-    |private fun fmtBool(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Boolean) ?: false).toString()
-    |private fun fmtDouble(v: Any?): String = if (v is Bind) "b.${'$'}{v.field}" else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
+    |// P1-B: a dotted Bind field ("item.title") is item-scoped -> emit as-is;
+    |// a bare field ("title") is a screen binding -> b.title.
+    |private fun bindRef(field: String): String = if ('.' in field) field else "b.${'$'}field"
+    |private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    |private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
+    |private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
+    |private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
     |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(v)}f"
     |private fun fmtDp(v: Any?): String = "Dp(${'$'}{fmtDouble(v)})"
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
@@ -125,7 +154,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  collectModifierNames(tree, usedMods)")
   appendLine("  val contract = collectContract(tree)")
   appendLine("  val logicFields = LinkedHashMap<String, String>()")
-  appendLine("  collectLogicFields(tree, logicFields)")
+  appendLine("  val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()")
+  appendLine("  collectLogicFields(tree, logicFields, itemIfaces)")
   appendLine("  contract.fields.keys.forEach { logicFields.remove(it) }") // widget binds win the type
   appendLine("  val hasContract = !contract.isEmpty || logicFields.isNotEmpty()")
   appendLine("  val sb = StringBuilder()")
@@ -138,6 +168,11 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  emitNode(sb, tree, \"  \")")
   appendLine("  sb.append(\"}\\n\")")
   appendLine("  if (hasContract) {")
+  appendLine("    itemIfaces.forEach { (name, fields) ->")
+  appendLine("      sb.append(\"\\ninterface \$name {\\n\")")
+  appendLine("      fields.forEach { (f, t) -> sb.append(\"  val \$f: \$t\\n\") }")
+  appendLine("      sb.append(\"}\\n\")")
+  appendLine("    }")
   appendLine("    sb.append(\"\\n/** The round-trip boundary: implement this by hand; the portal never touches it. */\\n\")")
   appendLine("    sb.append(\"interface \${functionName}Bindings {\\n\")")
   appendLine("    contract.fields.forEach { (f, k) -> sb.append(\"  val \$f: \${kotlinTypeOf(k)}\\n\") }")
