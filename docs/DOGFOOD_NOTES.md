@@ -1,5 +1,8 @@
 # Dogfood: Field Notes — frictions & wins
 
+> **Status update (Phase 2, 2026-07-11):** frictions **#1 and #2 are FIXED** and
+> device-verified against bundle v8 — see "Phase 2 resolution" at the bottom.
+
 The first real app built under the **"no escape hatches"** rule: every UI node in
 `portal-app-lib/src/jsMain/kotlin/screens/feed.kt` is portal-recognized (verified
 by `RecognizerTest.recognizesDogfoodFeedScreenWithNoRawCode` — zero `RawCode`).
@@ -74,3 +77,37 @@ The compiled+signed+persisted+gated pipeline is solid and the per-item list
 feature works on-device. The gap between "renders a feed" and "a person can
 actually use it" is **input** (#1) and **navigation** (#2) — those two are the
 right Phase 2 headline, discovered by building rather than guessing.
+
+---
+
+## Phase 2 resolution (2026-07-11, bundle v8)
+
+**#1 FIXED — single-arg action events.** `PropValue.Action` gained `arg`
+(`"it"` = event payload, `"item.field"` = item-scoped data). The recognizer
+parses `{ b.onDraftChange(it) }` and `{ b.openNote(note.id) }`; the generated
+exporter emits them back byte-identically, generates typed signatures
+(`fun onDraftChange(value: String)` — param type from the generated
+`eventParamType` map, extracted from the schema FIR), and item-scoped action
+args feed the item interface (`Note.id`). Device-proof: typed into the
+portal-authored `TextField` on the Pixel_9 prod host (signed v8), the typed
+title became a card, the field cleared.
+
+**#2 FIXED (minimal-by-design) — list→detail navigation.** No new portal
+primitive: the portal authors screens (`feed.kt`, `detail.kt`), the app owns
+how they connect — `PublishedEntry` keeps a hand-owned route state and the
+item-carrying `openNote(note.id)` drives it. Device-proof: tapped a card →
+the detail screen loaded that row by id → "< Back" returned; the note
+survived a force-stop + relaunch. A formal Navigator primitive stays deferred
+until dogfooding demands one (deep links, tabs, state restoration).
+
+**#4 PARTIALLY FIXED** — item interfaces now include action-arg fields
+(`id`), and `Contract.actionParams` carries typed action signatures both
+directions. The portal still doesn't *edit* item interfaces.
+
+**#3 still open** — per-item Repeat preview remains a single template row in
+the browser/overlay interpreter; the compiled device path runs the real
+`forEach`. Fix = a preview mock list for the Repeat item scope.
+
+Grammar note for app authors: events accept exactly three shapes —
+`{ b.action() }`, `{ b.action(it) }`, and `{ b.action(item.field) }` (inside
+that item's `Repeat`). Anything else makes the widget `RawCode` on purpose.

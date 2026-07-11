@@ -68,7 +68,9 @@ See `PORTAL_USAGE.md` for the day-to-day workflow.
 
 ## Known follow-ups (documented, non-blocking)
 
-- Per-item data binding inside `Repeat` (children referencing the loop variable) — V3.
+- ~~Per-item data binding inside `Repeat`~~ — DONE (P1-B), plus single-arg action
+  events and item-carrying actions (P2): `{ b.onX(it) }` / `{ b.onX(item.field) }`
+  round-trip, typed contracts, list→detail proven in the Field Notes dogfood.
 - Running arbitrary per-project presenter Kotlin in the browser preview (vs the reference
   presenter's behavior) = the per-app preview build; the capability-fidelity *model* ships now.
 - Surgical write-back falls back to full-file regen on reorders/contract changes (safe, not silent).
