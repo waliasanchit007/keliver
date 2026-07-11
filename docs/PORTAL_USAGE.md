@@ -65,6 +65,32 @@ in `screens/main.kt` (surgically — comments preserved).
   adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
   ```
 
+## Events, lists & input (P2)
+
+Events accept exactly three shapes — anything else becomes `RawCode` on purpose:
+
+```kotlin
+onClick = { b.addNote() }              // zero-arg
+onValueChange = { b.onDraftChange(it) } // the event's payload (TextField text, Slider value…)
+onClick = { b.openNote(note.id) }       // item-scoped data, inside that item's forEach
+```
+
+The generated Bindings interface types these for you (`fun onDraftChange(value:
+String)` — param types come from the widget schema). In the editor, each event
+row has a small **arg** input (`it` or `item.field`); item-carrying args also
+add the field to the item interface (`Note.id`).
+
+**Repeat preview mock rows:** the preview renders **3 mock rows** per `forEach`
+by default. In the Bindings panel:
+
+- the items field's mock (`notes`) sets the **row count** (`2` → two rows),
+- an item field's mock (`note.title`) holds **per-row values**: `First|Second`
+  (rows past the list clamp to the last; unmocked shows `{note.title} N`),
+- a `Condition` field mocked `false` hides its branch in the preview.
+
+The compiled device path always runs the real `forEach`/`if` — mocks are
+preview-only.
+
 ## Data / logic → edit `logic/` (your hand-owned Kotlin)
 
 `logic/MainPresenter.kt` produces the screen's `MainScreenBindings` (values +
@@ -92,6 +118,18 @@ host-capability gated) and verify the signature:
 
 ```bash
 adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
+```
+
+## Project config & scaffolding (separability groundwork)
+
+`keliver.portal.json` at the repo root tells the portal-server everything about
+the app repo it serves — `port`, `screensDir`, `publishTask`, `publishOutput`,
+`store`. Every field defaults to this repo's layout, so the file is optional
+here and required only for a future split-out app repo (that split, and a full
+`keliver init` new-project scaffolder, are deliberately deferred).
+
+```bash
+scripts/keliver-new-screen.sh Profile   # scaffolds screens/profile.kt + logic/ProfilePresenter.kt
 ```
 
 ## Dev runtime (M9 overlay)

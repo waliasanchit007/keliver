@@ -104,9 +104,13 @@ until dogfooding demands one (deep links, tabs, state restoration).
 (`id`), and `Contract.actionParams` carries typed action signatures both
 directions. The portal still doesn't *edit* item interfaces.
 
-**#3 still open** — per-item Repeat preview remains a single template row in
-the browser/overlay interpreter; the compiled device path runs the real
-`forEach`. Fix = a preview mock list for the Repeat item scope.
+**#3 FIXED (2026-07-11 slice 2)** — the interpreter now renders **N mock rows**
+per Repeat: the items field's mock is the row count (default 3), item-field
+mocks hold `|`-separated per-row values (clamped; unmocked shows `{note.title}
+N`), and a Condition mocked `false` hides its branch. Verified: unit tests
+(`resolveItemRow`) + real pixels via the device dev-overlay (3 numbered Card
+rows on the Pixel_9). The compiled path still runs the real `forEach` — mocks
+are preview-only.
 
 Grammar note for app authors: events accept exactly three shapes —
 `{ b.action() }`, `{ b.action(it) }`, and `{ b.action(item.field) }` (inside
