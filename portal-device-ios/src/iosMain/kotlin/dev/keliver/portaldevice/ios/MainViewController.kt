@@ -119,7 +119,10 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
   if (prodMode) {
     appScope.launch(Dispatchers.Default) {
       runCatching {
-        val body = httpGet("$PORTAL_SERVER/bundles/latest?widgetVersion=1")
+        // M7: declare the host capabilities we bind below (Zipline HostSqlDriver),
+        // or the gate serves an older bundle that doesn't need them.
+        val caps = dev.keliver.portal.sql.HOST_SQL_CAPABILITY.replace("@", "%40")
+        val body = httpGet("$PORTAL_SERVER/bundles/latest?widgetVersion=1&caps=$caps")
         val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
         if (path != null) {
           log("prod mode: loading $PORTAL_SERVER$path")
