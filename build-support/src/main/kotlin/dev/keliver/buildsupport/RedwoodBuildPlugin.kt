@@ -89,7 +89,7 @@ private fun Project.keliverGroupId(): String =
 // Central release passes `-PkeliverVersion=0.1.0` (no `-SNAPSHOT`) because
 // the Central *deployment* flow only accepts release versions; the default
 // keeps `-SNAPSHOT` for ongoing development after the 0.1.0 release.
-private const val KELIVER_VERSION = "0.2.1-SNAPSHOT"
+private const val KELIVER_VERSION = "0.3.0"
 
 private fun Project.keliverVersion(): String =
   providers.gradleProperty("keliverVersion").getOrElse(KELIVER_VERSION)
