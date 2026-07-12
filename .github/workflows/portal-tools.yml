@@ -33,5 +33,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
-          tag_name: ${{ github.ref_name }}
+          tag_name: v${{ steps.v.outputs.version }}
           fail_on_unmatched_files: true
