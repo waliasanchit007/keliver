@@ -8,14 +8,15 @@ ship UI updates without an app-store release.
 the visual editor with a live canvas, 60+ widgets, data bindings with mock
 previews, and one-click **Export Kotlin** (the output is real code).
 
-> **Status: public on Maven Central — `0.2.0`.** Add `mavenCentral()` and
-> depend on `dev.keliver:keliver-host:0.2.0` (host) /
-> `dev.keliver:keliver-guest:0.2.0` (guest) — no GitHub PAT, no extra repo.
-> `0.2.0` adds **`keliver-material`**, a Compose/Material3-parity widget
-> library (76 widgets — see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md))
-> so you can build server-driven screens without authoring a schema.
-> See [`docs/USAGE.md`](./docs/USAGE.md). `0.2.x` is the current line; `0.1.0`
-> was the first public release (pre-`1.0`, API may still evolve); the wire
+> **Status: public on Maven Central — `0.3.0`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.3.0` (host) /
+> `dev.keliver:keliver-guest:0.3.0` (guest) — no GitHub PAT, no extra repo.
+> `keliver-material` is a Compose/Material3-parity widget library (76 widgets —
+> see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md)) so you build
+> server-driven screens without authoring a schema. `0.3.0` adds Icon +
+> ListItem, DropdownMenu/SegmentedButtonRow in the portal, and publishes
+> `dev.keliver:portal-sql` (the SDUI data layer). Start a new app in seconds
+> with **keliver-init** (below). Pre-`1.0`, API may still evolve; the wire
 > format is stable within a line.
 
 ---
@@ -175,6 +176,20 @@ whole app. The [DevoStatus integration](https://github.com/waliasanchit007/DevoS
 uses it for two screens out of ~10.
 
 ## Getting started
+
+**New project in 60 seconds** — grab `keliver-portal-tools` from the
+[latest release](https://github.com/waliasanchit007/keliver/releases), then:
+
+```bash
+export PATH="$PWD/keliver-portal-tools/bin:$PATH"
+keliver-init Acme && cd acme
+./gradlew compileKotlinJs     # your screens, type-checked against keliver 0.3.0
+keliver-portal .              # visual editor + live preview → http://localhost:8096
+```
+
+`keliver-init` scaffolds a standalone project whose screens are real Kotlin
+Compose against the published `dev.keliver:*` artifacts — no keliver checkout.
+Or just poke the hosted playground: **http://keliver.me/keliver/**.
 
 - **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)** — the short path: run
   the sample, then write your first screen, on Android + iOS.
