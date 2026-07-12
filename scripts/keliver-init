@@ -1,0 +1,181 @@
+#!/bin/bash
+# keliver init — scaffold a STANDALONE keliver server-driven-UI project.
+# Produces a guest module of portal-editable screens wired to the PUBLISHED
+# keliver artifacts (no keliver checkout needed), plus keliver.portal.json so
+# `keliver-portal` can run the visual editor against it.
+#
+#   keliver-init <AppName> [target-dir]
+set -euo pipefail
+NAME="${1:?usage: keliver-init <AppName> [target-dir]}"
+[[ "$NAME" =~ ^[A-Za-z][A-Za-z0-9]*$ ]] || { echo "AppName must be alphanumeric (e.g. Acme)"; exit 1; }
+DIR="${2:-$(echo "$NAME" | tr '[:upper:]' '[:lower:]')}"
+PROJECT="$(basename "$DIR")"            # gradle rootProject.name (no path separators)
+PKG="$(echo "$PROJECT" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')"  # kotlin package segment
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.0}"
+[ -e "$DIR" ] && { echo "refusing to overwrite existing path: $DIR"; exit 1; }
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The gradle wrapper ships beside this script in the tools bundle (../wrapper),
+# or lives at the repo root when run from a keliver checkout.
+WRAPPER=""
+for c in "$SCRIPT_DIR/../wrapper" "$SCRIPT_DIR/.."; do
+  [ -f "$c/gradlew" ] && { WRAPPER="$c"; break; }
+done
+
+echo "==> scaffolding $NAME into $DIR (keliver $KELIVER_VERSION)"
+mkdir -p "$DIR/src/jsMain/kotlin/screens" "$DIR/src/jsMain/kotlin/logic"
+
+cat > "$DIR/settings.gradle" <<EOF
+pluginManagement {
+  repositories { gradlePluginPortal(); mavenCentral(); google() }
+  plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
+    id 'org.jetbrains.compose' version '1.8.2'
+  }
+}
+dependencyResolutionManagement {
+  repositories { mavenCentral(); google() }
+}
+rootProject.name = '${PROJECT}'
+EOF
+
+cat > "$DIR/gradle.properties" <<'EOF'
+kotlin.code.style=official
+org.gradle.jvmargs=-Xmx3g
+EOF
+
+cat > "$DIR/build.gradle" <<EOF
+// $NAME — keliver server-driven-UI screens (the guest). Author screens in
+// src/jsMain/kotlin/screens/ (visually via keliver-portal, or here in your IDE
+// with native Compose completion). Compiles to JS; ships OTA as a signed bundle.
+plugins {
+  id 'org.jetbrains.kotlin.multiplatform'
+  id 'org.jetbrains.kotlin.plugin.compose'
+  id 'org.jetbrains.compose'
+}
+
+kotlin {
+  js { browser() }
+  sourceSets {
+    jsMain {
+      dependencies {
+        api 'dev.keliver:keliver-material-compose:${KELIVER_VERSION}'   // StyledText/Button/Icon/ListItem/…
+        api 'dev.keliver:keliver-layout-compose:${KELIVER_VERSION}'     // Column/Row/Spacer
+        api 'dev.keliver:portal-sql:${KELIVER_VERSION}'                 // HostSqlDriver data layer
+        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+      }
+    }
+  }
+}
+EOF
+
+cat > "$DIR/keliver.portal.json" <<'EOF'
+{
+  "screensDir": "src/jsMain/kotlin/screens",
+  "port": 8077
+}
+EOF
+
+cat > "$DIR/src/jsMain/kotlin/screens/home.kt" <<EOF
+package ${PKG}.screens
+
+import androidx.compose.runtime.Composable
+import dev.keliver.layout.compose.Column
+import dev.keliver.layout.compose.Spacer
+import dev.keliver.material.compose.Button
+import dev.keliver.material.compose.Icon
+import dev.keliver.material.compose.ListItem
+import dev.keliver.material.compose.StyledText
+import dev.keliver.ui.Dp
+
+/** Scaffolded starter screen — every node is portal-editable. */
+@Composable
+fun HomeScreen(b: HomeScreenBindings) {
+  Column {
+    StyledText(
+      text = "$NAME",
+      fontSize = 28,
+      bold = true,
+    )
+    StyledText(
+      text = b.subtitle,
+      fontSize = 14,
+    )
+    Spacer(
+      height = Dp(12.0),
+    )
+    b.items.forEach { item ->
+      ListItem(
+        headline = item.title,
+        leadingIcon = "Star",
+      )
+    }
+    Button(
+      text = "Refresh",
+      onClick = { b.refresh() },
+    )
+  }
+}
+
+/** The round-trip boundary: implement this by hand; the portal never touches it. */
+interface HomeScreenBindings {
+  val subtitle: String
+  val items: List<Item>
+  fun refresh()
+}
+
+interface Item {
+  val title: String
+}
+EOF
+
+cat > "$DIR/src/jsMain/kotlin/logic/HomePresenter.kt" <<EOF
+package ${PKG}.logic
+
+import androidx.compose.runtime.Composable
+import ${PKG}.screens.HomeScreenBindings
+import ${PKG}.screens.Item
+
+/** HAND-OWNED: produce HomeScreen's bindings. Wire real data/host services here. */
+@Composable
+fun HomePresenter(): HomeScreenBindings = object : HomeScreenBindings {
+  override val subtitle: String = "Edit screens/home.kt — or run keliver-portal for the visual editor."
+  override val items: List<Item> = listOf(
+    object : Item { override val title = "First item" },
+    object : Item { override val title = "Second item" },
+  )
+  override fun refresh() {}
+}
+EOF
+
+cat > "$DIR/README.md" <<EOF
+# $NAME
+
+A [keliver](https://github.com/waliasanchit007/keliver) server-driven-UI app.
+Screens live in \`src/jsMain/kotlin/screens/\` and are real Kotlin Compose —
+edit them in your IDE (native completion) or visually with \`keliver-portal\`.
+
+\`\`\`bash
+./gradlew compileKotlinJs      # type-check the screens against keliver $KELIVER_VERSION
+keliver-portal .               # visual editor + live preview (from the tools bundle)
+\`\`\`
+
+The visual playground (no install): http://keliver.me/keliver/
+EOF
+
+if [ -n "$WRAPPER" ]; then
+  cp "$WRAPPER/gradlew" "$DIR/" 2>/dev/null || true
+  cp "$WRAPPER/gradlew.bat" "$DIR/" 2>/dev/null || true
+  mkdir -p "$DIR/gradle/wrapper"
+  cp "$WRAPPER/gradle/wrapper/"* "$DIR/gradle/wrapper/" 2>/dev/null || true
+  chmod +x "$DIR/gradlew" 2>/dev/null || true
+fi
+
+echo "==> created $DIR/"
+echo "    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver $KELIVER_VERSION) · keliver.portal.json"
+echo ""
+echo "next:"
+echo "  cd $DIR && ./gradlew compileKotlinJs     # type-check your screens"
+echo "  keliver-portal .                         # visual editor (from keliver-portal-tools)"

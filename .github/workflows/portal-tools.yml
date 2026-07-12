@@ -1,0 +1,37 @@
+# Builds keliver-portal-tools (server + editor + mcp + keliver-init/keliver-portal
+# launchers) and attaches the zip to the GitHub Release for the tag. No signing
+# secrets needed — free on ubuntu-latest for a public repo.
+name: portal-tools
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label for the bundle (e.g. 0.3.0)"
+        required: true
+permissions:
+  contents: write
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Resolve version
+        id: v
+        run: |
+          v="${{ github.event.inputs.version }}"
+          [ -z "$v" ] && v="${GITHUB_REF_NAME#v}"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Build the tools bundle
+        run: scripts/build-portal-tools.sh "${{ steps.v.outputs.version }}"
+      - name: Attach to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+          tag_name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true

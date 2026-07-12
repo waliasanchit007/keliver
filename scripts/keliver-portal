@@ -1,0 +1,41 @@
+#!/bin/bash
+# keliver-portal — run the visual portal (server + editor) against an app repo.
+# Ships in keliver-portal-tools; needs only Java 17+ and python3.
+#
+#   keliver-portal [app-dir]     # default: current directory
+set -uo pipefail
+APP_DIR="$(cd "${1:-$PWD}" && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLE="$(cd "$HERE/.." && pwd)"
+RELAY="$BUNDLE/relay/bin/portal-relay"
+EDITOR="$BUNDLE/editor"
+[ -x "$RELAY" ] || { echo "portal-relay not found at $RELAY (run from an unpacked keliver-portal-tools)"; exit 1; }
+[ -f "$APP_DIR/keliver.portal.json" ] || echo "note: no keliver.portal.json in $APP_DIR — using defaults (run keliver-init first)"
+
+PORT="$(python3 -c "import json;print(json.load(open('$APP_DIR/keliver.portal.json')).get('port',8077))" 2>/dev/null || echo 8077)"
+EDITOR_PORT=8096
+pids=()
+cleanup() {
+  set +e
+  for p in "$PORT" "$EDITOR_PORT"; do lsof -ti ":$p" 2>/dev/null | xargs kill 2>/dev/null; done
+  for pid in "${pids[@]:-}"; do kill "$pid" 2>/dev/null; done
+  echo ""; echo "stopped."
+  exit 0
+}
+trap cleanup INT TERM EXIT
+
+echo "==> portal-server against $APP_DIR (:$PORT)"
+( cd "$APP_DIR" && PORTAL_REPO="$APP_DIR" "$RELAY" ) >/tmp/keliver-portal-server.log 2>&1 &
+pids+=($!)
+echo "==> editor (:$EDITOR_PORT)"
+( cd "$EDITOR" && python3 -m http.server "$EDITOR_PORT" ) >/tmp/keliver-portal-editor.log 2>&1 &
+pids+=($!)
+
+sleep 3
+echo ""
+echo "  Editor   →  http://localhost:$EDITOR_PORT"
+echo "  Server   →  http://localhost:$PORT"
+echo "  MCP      →  PORTAL_REPO=$APP_DIR $BUNDLE/mcp/bin/portal-mcp   (stdio, for AI agents)"
+echo ""
+echo "  Edit screens in the browser or in $APP_DIR — both stay in sync. Ctrl-C to stop."
+while true; do wait || break; done
