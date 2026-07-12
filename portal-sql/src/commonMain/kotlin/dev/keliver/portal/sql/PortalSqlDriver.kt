@@ -12,7 +12,7 @@ import app.cash.sqldelight.db.SqlPreparedStatement
  * from spike S3, verified on Kotlin/JS): every statement is one suspend call;
  * QueryResult.AsyncValue carries the suspension into SQLDelight's machinery.
  */
-class PortalSqlDriver(private val host: HostSqlDriver) : SqlDriver {
+public class PortalSqlDriver(private val host: HostSqlDriver) : SqlDriver {
   override fun <R> executeQuery(
     identifier: Int?,
     sql: String,

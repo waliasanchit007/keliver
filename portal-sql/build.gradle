@@ -6,6 +6,12 @@ apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'app.cash.zipline' // IR plugin: generates the HostSqlDriver ZiplineService adapter
 
+// Published to Maven Central: a scaffolded keliver app's guest data layer
+// (HostSqlDriver wire + PortalSqlDriver) depends on this at runtime.
+redwoodBuild {
+  publishing()
+}
+
 kotlin {
   jvm()      // host impls (tests, server-side) + android host consumes via jvm artifact
   js { browser() } // the guest side

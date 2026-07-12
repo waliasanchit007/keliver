@@ -9,23 +9,23 @@ import kotlinx.serialization.Serializable
  * Kotlin that ships OTA. Rows cross as a single serializable payload (the
  * keliver-http U1 dodge). Batch = the transaction primitive.
  */
-interface HostSqlDriver : ZiplineService {
-  suspend fun execute(sql: String, args: List<String?>): SqlRows
+public interface HostSqlDriver : ZiplineService {
+  public suspend fun execute(sql: String, args: List<String?>): SqlRows
 
   /** Runs all statements in ONE transaction (all-or-nothing). */
-  suspend fun executeBatch(statements: List<SqlStatement>): SqlRows
+  public suspend fun executeBatch(statements: List<SqlStatement>): SqlRows
 }
 
-const val HOST_SQL_CAPABILITY: String = "HostSqlDriver@1"
+public const val HOST_SQL_CAPABILITY: String = "HostSqlDriver@1"
 
 @Serializable
-data class SqlStatement(val sql: String, val args: List<String?> = emptyList())
+public data class SqlStatement(val sql: String, val args: List<String?> = emptyList())
 
 @Serializable
-data class SqlRows(
+public data class SqlRows(
   val rows: List<SqlRow> = emptyList(),
   val rowsAffected: Long = 0,
 )
 
 @Serializable
-data class SqlRow(val values: List<String?>)
+public data class SqlRow(val values: List<String?>)

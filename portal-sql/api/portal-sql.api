@@ -1,0 +1,126 @@
+public final class dev/keliver/portal/sql/FakeSqlHost : dev/keliver/portal/sql/HostSqlDriver {
+	public fun <init> ()V
+	public fun execute (Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun executeBatch (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class dev/keliver/portal/sql/HostSqlDriver : app/cash/zipline/ZiplineService {
+	public static final field Companion Ldev/keliver/portal/sql/HostSqlDriver$Companion;
+	public abstract fun execute (Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun executeBatch (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class dev/keliver/portal/sql/HostSqlDriver$Companion {
+}
+
+public final class dev/keliver/portal/sql/HostSqlDriver$Companion$Adapter : app/cash/zipline/internal/bridge/ZiplineServiceAdapter, kotlinx/serialization/KSerializer {
+	public fun <init> (Ljava/util/List;Ljava/lang/String;)V
+	public final fun getSerialName ()Ljava/lang/String;
+	public final fun getSerializers ()Ljava/util/List;
+	public final fun getSimpleName ()Ljava/lang/String;
+	public synthetic fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Lapp/cash/zipline/ZiplineService;
+	public fun outboundService (Lapp/cash/zipline/internal/bridge/OutboundCallHandler;)Ldev/keliver/portal/sql/HostSqlDriver;
+	public fun ziplineFunctions (Lkotlinx/serialization/modules/SerializersModule;)Ljava/util/List;
+}
+
+public final class dev/keliver/portal/sql/HostSqlDriverKt {
+	public static final field HOST_SQL_CAPABILITY Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/sql/PortalSqlDriver : app/cash/sqldelight/db/SqlDriver {
+	public fun <init> (Ldev/keliver/portal/sql/HostSqlDriver;)V
+	public fun addListener ([Ljava/lang/String;Lapp/cash/sqldelight/Query$Listener;)V
+	public fun close ()V
+	public fun currentTransaction ()Lapp/cash/sqldelight/Transacter$Transaction;
+	public fun execute (Ljava/lang/Integer;Ljava/lang/String;ILkotlin/jvm/functions/Function1;)Lapp/cash/sqldelight/db/QueryResult;
+	public fun executeQuery (Ljava/lang/Integer;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/functions/Function1;)Lapp/cash/sqldelight/db/QueryResult;
+	public fun newTransaction ()Lapp/cash/sqldelight/db/QueryResult;
+	public fun notifyListeners ([Ljava/lang/String;)V
+	public fun removeListener ([Ljava/lang/String;Lapp/cash/sqldelight/Query$Listener;)V
+}
+
+public final class dev/keliver/portal/sql/SqlRow {
+	public static final field Companion Ldev/keliver/portal/sql/SqlRow$Companion;
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Ldev/keliver/portal/sql/SqlRow;
+	public static synthetic fun copy$default (Ldev/keliver/portal/sql/SqlRow;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/sql/SqlRow;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValues ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/sql/SqlRow$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/sql/SqlRow$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/sql/SqlRow;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/sql/SqlRow;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/sql/SqlRow$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/sql/SqlRows {
+	public static final field Companion Ldev/keliver/portal/sql/SqlRows$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;J)V
+	public synthetic fun <init> (Ljava/util/List;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()J
+	public final fun copy (Ljava/util/List;J)Ldev/keliver/portal/sql/SqlRows;
+	public static synthetic fun copy$default (Ldev/keliver/portal/sql/SqlRows;Ljava/util/List;JILjava/lang/Object;)Ldev/keliver/portal/sql/SqlRows;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRows ()Ljava/util/List;
+	public final fun getRowsAffected ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/sql/SqlRows$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/sql/SqlRows$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/sql/SqlRows;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/sql/SqlRows;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/sql/SqlRows$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/sql/SqlStatement {
+	public static final field Companion Ldev/keliver/portal/sql/SqlStatement$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/keliver/portal/sql/SqlStatement;
+	public static synthetic fun copy$default (Ldev/keliver/portal/sql/SqlStatement;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/sql/SqlStatement;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/List;
+	public final fun getSql ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/sql/SqlStatement$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/sql/SqlStatement$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/sql/SqlStatement;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/sql/SqlStatement;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/sql/SqlStatement$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+

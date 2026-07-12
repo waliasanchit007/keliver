@@ -6,7 +6,7 @@ package dev.keliver.portal.sql
  * against a key-value-with-rowid shape) — NOT a SQL engine; real hosts wrap
  * real SQLite.
  */
-class FakeSqlHost : HostSqlDriver {
+public class FakeSqlHost : HostSqlDriver {
   private val tables = mutableMapOf<String, MutableList<List<String?>>>()
 
   override suspend fun execute(sql: String, args: List<String?>): SqlRows {

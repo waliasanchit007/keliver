@@ -1,0 +1,120 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:portal-sql>
+abstract interface dev.keliver.portal.sql/HostSqlDriver : app.cash.zipline/ZiplineService { // dev.keliver.portal.sql/HostSqlDriver|null[0]
+    abstract suspend fun execute(kotlin/String, kotlin.collections/List<kotlin/String?>): dev.keliver.portal.sql/SqlRows // dev.keliver.portal.sql/HostSqlDriver.execute|execute(kotlin.String;kotlin.collections.List<kotlin.String?>){}[0]
+    abstract suspend fun executeBatch(kotlin.collections/List<dev.keliver.portal.sql/SqlStatement>): dev.keliver.portal.sql/SqlRows // dev.keliver.portal.sql/HostSqlDriver.executeBatch|executeBatch(kotlin.collections.List<dev.keliver.portal.sql.SqlStatement>){}[0]
+
+    final object Companion // dev.keliver.portal.sql/HostSqlDriver.Companion|null[0]
+}
+
+final class dev.keliver.portal.sql/PortalSqlDriver : app.cash.sqldelight.db/SqlDriver { // dev.keliver.portal.sql/PortalSqlDriver|null[0]
+    constructor <init>(dev.keliver.portal.sql/HostSqlDriver) // dev.keliver.portal.sql/PortalSqlDriver.<init>|<init>(dev.keliver.portal.sql.HostSqlDriver){}[0]
+
+    final fun <#A1: kotlin/Any?> executeQuery(kotlin/Int?, kotlin/String, kotlin/Function1<app.cash.sqldelight.db/SqlCursor, app.cash.sqldelight.db/QueryResult<#A1>>, kotlin/Int, kotlin/Function1<app.cash.sqldelight.db/SqlPreparedStatement, kotlin/Unit>?): app.cash.sqldelight.db/QueryResult<#A1> // dev.keliver.portal.sql/PortalSqlDriver.executeQuery|executeQuery(kotlin.Int?;kotlin.String;kotlin.Function1<app.cash.sqldelight.db.SqlCursor,app.cash.sqldelight.db.QueryResult<0:0>>;kotlin.Int;kotlin.Function1<app.cash.sqldelight.db.SqlPreparedStatement,kotlin.Unit>?){0§<kotlin.Any?>}[0]
+    final fun addListener(kotlin/Array<out kotlin/String>..., app.cash.sqldelight/Query.Listener) // dev.keliver.portal.sql/PortalSqlDriver.addListener|addListener(kotlin.Array<out|kotlin.String>...;app.cash.sqldelight.Query.Listener){}[0]
+    final fun close() // dev.keliver.portal.sql/PortalSqlDriver.close|close(){}[0]
+    final fun currentTransaction(): app.cash.sqldelight/Transacter.Transaction? // dev.keliver.portal.sql/PortalSqlDriver.currentTransaction|currentTransaction(){}[0]
+    final fun execute(kotlin/Int?, kotlin/String, kotlin/Int, kotlin/Function1<app.cash.sqldelight.db/SqlPreparedStatement, kotlin/Unit>?): app.cash.sqldelight.db/QueryResult<kotlin/Long> // dev.keliver.portal.sql/PortalSqlDriver.execute|execute(kotlin.Int?;kotlin.String;kotlin.Int;kotlin.Function1<app.cash.sqldelight.db.SqlPreparedStatement,kotlin.Unit>?){}[0]
+    final fun newTransaction(): app.cash.sqldelight.db/QueryResult<app.cash.sqldelight/Transacter.Transaction> // dev.keliver.portal.sql/PortalSqlDriver.newTransaction|newTransaction(){}[0]
+    final fun notifyListeners(kotlin/Array<out kotlin/String>...) // dev.keliver.portal.sql/PortalSqlDriver.notifyListeners|notifyListeners(kotlin.Array<out|kotlin.String>...){}[0]
+    final fun removeListener(kotlin/Array<out kotlin/String>..., app.cash.sqldelight/Query.Listener) // dev.keliver.portal.sql/PortalSqlDriver.removeListener|removeListener(kotlin.Array<out|kotlin.String>...;app.cash.sqldelight.Query.Listener){}[0]
+}
+
+final class dev.keliver.portal.sql/SqlRow { // dev.keliver.portal.sql/SqlRow|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String?>) // dev.keliver.portal.sql/SqlRow.<init>|<init>(kotlin.collections.List<kotlin.String?>){}[0]
+
+    final val values // dev.keliver.portal.sql/SqlRow.values|{}values[0]
+        final fun <get-values>(): kotlin.collections/List<kotlin/String?> // dev.keliver.portal.sql/SqlRow.values.<get-values>|<get-values>(){}[0]
+
+    final fun component1(): kotlin.collections/List<kotlin/String?> // dev.keliver.portal.sql/SqlRow.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/String?> = ...): dev.keliver.portal.sql/SqlRow // dev.keliver.portal.sql/SqlRow.copy|copy(kotlin.collections.List<kotlin.String?>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.sql/SqlRow.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.sql/SqlRow.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.sql/SqlRow.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.sql/SqlRow> { // dev.keliver.portal.sql/SqlRow.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.sql/SqlRow.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.sql/SqlRow.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.sql/SqlRow.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.sql/SqlRow // dev.keliver.portal.sql/SqlRow.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.sql/SqlRow) // dev.keliver.portal.sql/SqlRow.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.sql.SqlRow){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.sql/SqlRow.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.sql/SqlRow.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.sql/SqlRow> // dev.keliver.portal.sql/SqlRow.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.sql/SqlRows { // dev.keliver.portal.sql/SqlRows|null[0]
+    constructor <init>(kotlin.collections/List<dev.keliver.portal.sql/SqlRow> = ..., kotlin/Long = ...) // dev.keliver.portal.sql/SqlRows.<init>|<init>(kotlin.collections.List<dev.keliver.portal.sql.SqlRow>;kotlin.Long){}[0]
+
+    final val rows // dev.keliver.portal.sql/SqlRows.rows|{}rows[0]
+        final fun <get-rows>(): kotlin.collections/List<dev.keliver.portal.sql/SqlRow> // dev.keliver.portal.sql/SqlRows.rows.<get-rows>|<get-rows>(){}[0]
+    final val rowsAffected // dev.keliver.portal.sql/SqlRows.rowsAffected|{}rowsAffected[0]
+        final fun <get-rowsAffected>(): kotlin/Long // dev.keliver.portal.sql/SqlRows.rowsAffected.<get-rowsAffected>|<get-rowsAffected>(){}[0]
+
+    final fun component1(): kotlin.collections/List<dev.keliver.portal.sql/SqlRow> // dev.keliver.portal.sql/SqlRows.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // dev.keliver.portal.sql/SqlRows.component2|component2(){}[0]
+    final fun copy(kotlin.collections/List<dev.keliver.portal.sql/SqlRow> = ..., kotlin/Long = ...): dev.keliver.portal.sql/SqlRows // dev.keliver.portal.sql/SqlRows.copy|copy(kotlin.collections.List<dev.keliver.portal.sql.SqlRow>;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.sql/SqlRows.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.sql/SqlRows.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.sql/SqlRows.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.sql/SqlRows> { // dev.keliver.portal.sql/SqlRows.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.sql/SqlRows.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.sql/SqlRows.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.sql/SqlRows.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.sql/SqlRows // dev.keliver.portal.sql/SqlRows.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.sql/SqlRows) // dev.keliver.portal.sql/SqlRows.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.sql.SqlRows){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.sql/SqlRows.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.sql/SqlRows.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.sql/SqlRows> // dev.keliver.portal.sql/SqlRows.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.sql/SqlStatement { // dev.keliver.portal.sql/SqlStatement|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/List<kotlin/String?> = ...) // dev.keliver.portal.sql/SqlStatement.<init>|<init>(kotlin.String;kotlin.collections.List<kotlin.String?>){}[0]
+
+    final val args // dev.keliver.portal.sql/SqlStatement.args|{}args[0]
+        final fun <get-args>(): kotlin.collections/List<kotlin/String?> // dev.keliver.portal.sql/SqlStatement.args.<get-args>|<get-args>(){}[0]
+    final val sql // dev.keliver.portal.sql/SqlStatement.sql|{}sql[0]
+        final fun <get-sql>(): kotlin/String // dev.keliver.portal.sql/SqlStatement.sql.<get-sql>|<get-sql>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.portal.sql/SqlStatement.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<kotlin/String?> // dev.keliver.portal.sql/SqlStatement.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/List<kotlin/String?> = ...): dev.keliver.portal.sql/SqlStatement // dev.keliver.portal.sql/SqlStatement.copy|copy(kotlin.String;kotlin.collections.List<kotlin.String?>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.sql/SqlStatement.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.sql/SqlStatement.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.sql/SqlStatement.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.sql/SqlStatement> { // dev.keliver.portal.sql/SqlStatement.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.sql/SqlStatement.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.sql/SqlStatement.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.sql/SqlStatement.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.sql/SqlStatement // dev.keliver.portal.sql/SqlStatement.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.sql/SqlStatement) // dev.keliver.portal.sql/SqlStatement.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.sql.SqlStatement){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.sql/SqlStatement.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.sql/SqlStatement.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.sql/SqlStatement> // dev.keliver.portal.sql/SqlStatement.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final const val dev.keliver.portal.sql/HOST_SQL_CAPABILITY // dev.keliver.portal.sql/HOST_SQL_CAPABILITY|{}HOST_SQL_CAPABILITY[0]
+    final fun <get-HOST_SQL_CAPABILITY>(): kotlin/String // dev.keliver.portal.sql/HOST_SQL_CAPABILITY.<get-HOST_SQL_CAPABILITY>|<get-HOST_SQL_CAPABILITY>(){}[0]
