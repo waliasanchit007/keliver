@@ -61,11 +61,20 @@ object WriteBack {
 
     val call = psi[parsed.handle.v] as? KtCallExpression ?: return false
 
-    // Props / modifiers changed → replace ONLY the argument list.
+    // Props / modifiers changed. P0 trust gate: prefer replacing ONLY the
+    // changed arguments' VALUE expressions — that is byte-exact for everything
+    // the user didn't touch (indentation, spacing, one-line vs multi-line).
+    // Prop add/remove or modifier changes fall back to a whole-list replace,
+    // re-indented to the call's depth (and kept single-line if the source was).
     if (parsed.props != target.props || parsed.modifiers != target.modifiers) {
-      val oldList = call.valueArgumentList ?: return false
-      val newList = NodeEmitter.argumentList(target) ?: return false
-      oldList.replace(newList)
+      if (!editArgumentValues(call, parsed, target, factory)) {
+        val oldList = call.valueArgumentList ?: return false
+        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call))
+        if ('\n' !in oldList.text) callText = collapseCall(callText)
+        val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
+        val newList = newCall.valueArgumentList ?: return false
+        oldList.replace(newList)
+      }
     }
 
     // Children.
@@ -121,8 +130,7 @@ object WriteBack {
       if (matchOf[ti] != null) continue
       val anchorTargetIdx = (ti - 1 downTo 0).firstOrNull { matchOf[it] != null }
       val anchorPsi = anchorTargetIdx?.let { psi[parsedChildren[matchOf[it]!!].handle.v] }
-      val newStmt = NodeEmitter.statement(tc)
-      insertStatement(block, newStmt, anchorPsi, factory)
+      insertStatement(block, tc, anchorPsi, factory)
     }
     return true
   }
@@ -144,23 +152,78 @@ object WriteBack {
 
   private fun insertStatement(
     block: KtBlockExpression,
-    stmt: KtExpression,
+    node: DocNode,
     after: KtExpression?,
     factory: KtPsiFactory,
   ) {
-    val newline = factory.createNewLine()
+    // P0 indent fix: every insertion carries "\n" + the destination indent, and
+    // the statement text itself is emitted re-indented to that depth (the old
+    // bare createNewLine() left inserted/shifted lines at column 0).
     if (after != null) {
-      val nl = block.addAfter(newline, after)
-      block.addAfter(stmt, nl)
+      val indent = indentOf(after)
+      val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
+      val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), after)
+      block.addAfter(stmt, ws)
     } else {
       val first = block.statements.firstOrNull()
       if (first != null) {
+        val indent = indentOf(first)
+        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
         val inserted = block.addBefore(stmt, first)
-        block.addAfter(factory.createNewLine(), inserted)
+        block.addAfter(factory.createWhiteSpace("\n$indent"), inserted)
       } else {
-        block.addAfter(stmt, block.lBrace)
+        val braceIndent = indentOf(block)
+        val indent = "$braceIndent  "
+        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
+        val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), block.lBrace)
+        val inserted = block.addAfter(stmt, ws)
+        block.addAfter(factory.createWhiteSpace("\n$braceIndent"), inserted)
       }
     }
+  }
+
+  /** Same prop KEYS, some values changed → replace just those value exprs. */
+  private fun editArgumentValues(
+    call: KtCallExpression,
+    parsed: DocNode.Widget,
+    target: DocNode.Widget,
+    factory: KtPsiFactory,
+  ): Boolean {
+    if (parsed.modifiers != target.modifiers) return false
+    if (parsed.props.keys != target.props.keys) return false
+    // Canonical values come from the emitter so write-back matches a fresh export.
+    val canonical = factory.createExpression(
+      NodeEmitter.statementText(target.copy(children = emptyList()), ""),
+    ) as? KtCallExpression ?: return false
+    val newByName = canonical.valueArguments.associateBy(
+      { it.getArgumentName()?.asName?.asString() },
+      { it.getArgumentExpression() },
+    )
+    for ((k, v) in target.props) {
+      if (parsed.props[k] == v) continue
+      val arg = call.valueArguments.firstOrNull { it.getArgumentName()?.asName?.asString() == k }
+        ?: return false // positional/absent arg — not safely surgical here
+      val newExpr = newByName[k] ?: return false
+      val oldExpr = arg.getArgumentExpression() ?: return false
+      oldExpr.replace(newExpr)
+    }
+    return true
+  }
+
+  /** `Foo(\n  a = 1,\n  b = 2,\n)` → `Foo(a = 1, b = 2)` (grammar props never hold raw newlines). */
+  private fun collapseCall(text: String): String {
+    val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    if (lines.size <= 1) return text
+    val body = lines.drop(1).dropLast(1).joinToString(" ").removeSuffix(",")
+    return lines.first() + body + lines.last()
+  }
+
+  /** Leading whitespace of the line [element] starts on (its splice depth). */
+  private fun indentOf(element: org.jetbrains.kotlin.com.intellij.psi.PsiElement): String {
+    val text = element.containingFile.text
+    val off = element.textRange.startOffset
+    val lineStart = text.lastIndexOf('\n', off - 1) + 1
+    return text.substring(lineStart, off).takeIf { it.isBlank() } ?: ""
   }
 
   private fun deleteStatement(stmt: KtExpression) {

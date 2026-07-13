@@ -144,14 +144,18 @@ class DocumentService(
       // when the change isn't safely surgical (type change, reorder, contract).
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
       val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc) }
-      val pkg = packageName?.let { "package $it\n\n" } ?: ""
+      // P0: the file's OWN package wins over the configured default — a full-
+      // export fallback must never rewrite a foreign-package screen (e.g.
+      // com.stashfin.*) into dev.keliver.portalpublished.screens.
+      val pkgName = existing?.let { PKG_RE.find(it)?.groupValues?.get(1) } ?: packageName
+      val pkg = pkgName?.let { "package $it\n\n" } ?: ""
       val text = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
       lastWrittenText = text
       kotlinFile.writeText(text)
       // M9 versioned catch-up: bake the doc version this screen was written at
       // into a sibling const. Rebuilding the dev bundle (serve --continuous)
       // picks it up; the device router compares it to the live doc version.
-      packageName?.let { p ->
+      pkgName?.let { p ->
         val screen = kotlinFile.nameWithoutExtension
         File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
           "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
@@ -161,6 +165,8 @@ class DocumentService(
   }
 
   companion object {
+    private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
+
     /** M6: the canonical .kt file bootstraps the document when it exists (file = truth). */
     fun fromFileOrTree(
       screenKey: String,

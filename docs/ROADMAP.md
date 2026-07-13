@@ -4,22 +4,29 @@ Ordered by (impact on the adoption thesis) × (how soon it bites). Every item li
 its evidence — nothing here is speculative. Status: 2026-07-12, after the Stashfin
 tri-platform loop + Profile Style-B port.
 
-## P0 — Write-back trust (the thesis-critical gate)
+## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
 The 100-screen review's top finding: if portal diffs are noisy, senior engineers
 reject them, the portal becomes designer-only, and the two-way thesis dies socially.
-Target: **byte-stable round-trip** (ingest → write → re-ingest → identical file) as
-a CI gate over a corpus of real screens.
 
-1. **Surgical-edit re-indent bug** — a prop edit rewrites the call at column 2
-   instead of the original depth (seen live on ProfileLiteScreen). NodeEmitter
-   splice must inherit the target's indentation.
-2. **/undo doesn't rewrite the .kt** — it reverts the document only; the watcher
-   then re-ingests the file value, so undo appears ineffective. Undo must run the
-   same write-back path as ops.
-3. **writeKotlin hardcodes `dev.keliver.portalpublished.screens`** for in-project
-   full regeneration — a foreign-package repo (com.stashfin.*) would get a broken
-   file on the regen path. Make packageName config/ingest-derived.
+1. ✅ **Surgical-edit indent/format churn** — FIXED: prop edits replace only the
+   changed arguments' VALUE expressions (byte-exact for all untouched formatting,
+   including hand spacing and one-line style); prop add/remove falls back to a
+   whole-list replace re-indented to the call's depth (single-line preserved);
+   inserts land at sibling depth with proper leading whitespace. Byte-idempotency
+   (edit + undo == original bytes) is unit-tested (WriteBackTest, 7 green) and was
+   live-verified on stashfin ProfileScreen/ProfileLiteScreen.
+2. ✅ **/undo** — re-diagnosed: undo always wrote the file. The observed failure
+   was a SESSION mismatch (undo stacks are per-session; `/undo` without an
+   `X-Portal-Session` header matching the ops envelope hits an empty stack and
+   returns ok:false inside HTTP 200). Live-verified working. Follow-up UX trap
+   (small): default undo to the last-writing session or return 4xx on empty stack.
+3. ✅ **packageName** — FIXED: writeKotlin (and the Compiled_ sibling) derive the
+   package from the EXISTING file; the constructor default is only a fallback.
+   Severity confirmed in the wild: before the fix, a full-export fallback
+   regenerated stashfin's ProfileScreen into dev.keliver.portalpublished.screens
+   and broke the guest compile. Follow-up: log when the non-surgical fallback
+   fires so full regens are observable.
 
 ## P1 — Grammar & recognizer gaps (each found by porting a real screen)
 

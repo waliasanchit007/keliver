@@ -112,6 +112,94 @@ class WriteBackTest {
     )
   }
 
+  // ── P0 indent regression: a nested multi-line call, edited surgically, must
+  // keep every line at its ORIGINAL depth (the bug: emitter spliced at exporter
+  // base depth → column-2 argument lines). Byte-level asserts on purpose —
+  // substring asserts are exactly how this shipped broken. ──
+  private val nestedFile = """
+    import androidx.compose.runtime.Composable
+    import dev.keliver.material.compose.StyledBox
+    import dev.keliver.material.compose.StyledText
+    import dev.keliver.layout.compose.Column
+
+    @Composable
+    fun PortalScreen(b: PortalScreenBindings) {
+      StyledBox(cornerRadiusDp = 12) {
+        Column {
+          StyledText(
+            text = b.title,
+            fontSize = 22,
+            bold = true,
+          )
+        }
+      }
+    }
+
+    interface PortalScreenBindings {
+      val title: String
+    }
+  """.trimIndent()
+
+  private fun nestedDoc(): UiDocument {
+    val rec = Recognizer.recognize("PortalScreen.kt", nestedFile)!!
+    return UiDocument("main", rec.root, rec.contract, version = 0, nextHandle = 0)
+  }
+
+  @Test fun nestedPropEditIsByteMinimal() {
+    val doc = nestedDoc()
+    val styled = ((doc.root as DocNode.Widget).children[0] as DocNode.Widget).children[0].handle
+    val target = doc.apply(DocOp.SetProp(styled, "fontSize", lit(30))).doc
+
+    val merged = WriteBack.merge(nestedFile, target)
+    assertNotNull(merged)
+    assertEquals(
+      nestedFile.replace("fontSize = 22,", "fontSize = 30,"),
+      merged,
+      "surgical edit must change only the value, preserving all indentation",
+    )
+  }
+
+  @Test fun singleLineIrregularSpacingSurvivesEditAndUndo() {
+    // The `file` fixture's StyledText is single-line with irregular spacing
+    // ("b.title,   fontSize") — a value-only edit must preserve it byte-exact,
+    // and applying the inverse op must restore the ORIGINAL bytes.
+    val doc = docFromFile()
+    val h = styledTextHandle(doc)
+    val target = doc.apply(DocOp.SetProp(h, "fontSize", lit(30))).doc
+
+    val merged = WriteBack.merge(file, target)
+    assertNotNull(merged)
+    assertEquals(file.replace("fontSize = 22", "fontSize = 30"), merged, "value-only edit")
+
+    // Undo: merge the ORIGINAL doc back onto the edited text → original bytes.
+    val rec2 = Recognizer.recognize("PortalScreen.kt", merged)!!
+    val doc2 = UiDocument("main", rec2.root, rec2.contract, version = 0, nextHandle = 0)
+    val undone = doc2.apply(DocOp.SetProp(styledTextHandle(doc2), "fontSize", lit(22))).doc
+    assertEquals(file, WriteBack.merge(merged, undone), "edit+undo must be byte-idempotent")
+  }
+
+  @Test fun nestedInsertLandsAtSiblingDepthAndReIngests() {
+    val doc = nestedDoc()
+    val col = (doc.root as DocNode.Widget).children[0] as DocNode.Widget
+    val target = doc.apply(
+      DocOp.InsertNode(
+        col.handle,
+        after = col.children.last().handle,
+        node = DocNode.Widget(Handle(0), "Spacer", mapOf("height" to lit(12.0))),
+      ),
+    ).doc
+
+    val merged = WriteBack.merge(nestedFile, target)
+    assertNotNull(merged)
+    assertTrue("\n      Spacer(" in merged, "insert must sit at the sibling's depth (6):\n$merged")
+    val reRec = Recognizer.recognize("PortalScreen.kt", merged)!!
+    assertEquals(
+      exportEquiv(target.root),
+      exportEquiv(UiDocument("main", reRec.root, reRec.contract, 0, 0).root),
+      "merged file must re-ingest to the target tree",
+    )
+  }
+
   // Compare trees ignoring handles.
   private fun exportEquiv(n: DocNode): String = when (n) {
     is DocNode.RawCode -> "RAW(${n.text.trim()})"
