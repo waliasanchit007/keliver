@@ -67,6 +67,22 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     update the host library or gate widgetVersion" instead of the cryptic
     "Unknown widget ID N". (Ships to consumers with the next host-lib publish.)
 
+## P2b — New findings (2026-07-16, from the user's live editor session)
+
+10a. **Contract-extending editor ops break the guest compile.** Inserting a
+    Repeat bound to a NEW field (`b.items`) writes `.kt` code referencing a
+    binding the interface doesn't declare — the continuous build goes red and
+    devices stop updating, silently from the editor's perspective. Fix: ops
+    that introduce new binds must extend doc.contract AND write the interface
+    member (M4's contract write-back path), or the editor must flag "undeclared
+    binding" before committing the op. High priority — this is the first thing
+    a real user hit.
+10b. **`gradle -t serveDevelopmentZipline` DIES on a compile error** instead of
+    waiting for the fix — the whole hot-reload loop silently stops until
+    someone restarts it. Investigate the serve task's continuous-mode failure
+    handling; at minimum the dev.sh/keliver-portal launcher should supervise
+    and restart it.
+
 ## P3 — Application-scale features (from the 100-screen review; build in this order)
 
 11. **Canvas click-to-select** (design locked): `SelectionTag(handle)` modifier →
