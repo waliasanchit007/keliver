@@ -148,3 +148,18 @@ for instant feedback; once `serveDevelopmentZipline` recompiles the bundle, the
 overlay auto-discards and the compiled screen returns (**versioned catch-up**).
 Prod mode runs compiled Kotlin only and rejects tampered bundles
 (`codeLoadFailed: checksum mismatch`).
+
+## Project components (molecules)
+
+Build reusable composables from keliver primitives under `components/` (a
+sibling of `screens/`, or set `componentsDir` in keliver.portal.json). Their
+Kotlin signature is the portal spec — screens call them, and the editor shows
+them under **"Project components"** in the palette. See
+`docs/SCREEN_ARCHITECTURE.md` §7 for the full model.
+
+- Scaffold one: `scripts/keliver-new-component.sh MenuRow`
+- Use it in a screen: `MenuRow(title = b.name, subtitle = "Account", onClick = { b.open("X") })`
+- Edit the definition file → every instance's preview updates live (no reload).
+- Endpoint: `GET /components?project=<p>` returns each spec + body tree.
+- v1: leaf components only (no `@Composable () -> Unit` slot params); a
+  non-grammar body is **opaque** (renders on devices, previews as a placeholder).

@@ -34,3 +34,11 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Doesn't (yet):** compile/sign the production bundle or drive on-device
   preview — those run in your app's own Gradle. See the keliver repo's
   `docs/PORTAL_USAGE.md` and `docs/SCREEN_ARCHITECTURE.md` for the host wiring.
+
+### bin/keliver-new-component.sh
+
+Scaffold a project component ("molecule") built from keliver primitives:
+`bin/keliver-new-component.sh MenuRow`. Reads `componentsDir` from
+keliver.portal.json, derives the package from existing sources, and refuses to
+overwrite. It appears under "Project components" in the editor palette and is
+callable from any screen. (Companion to `bin/keliver-new-screen.sh`.)

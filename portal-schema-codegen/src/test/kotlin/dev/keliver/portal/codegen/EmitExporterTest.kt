@@ -24,14 +24,16 @@ class EmitExporterTest {
   @Test fun emitsExporterWithPerWidgetBranches() {
     val src = emitExporter(listOf(text, box))
     assertContains(src, "package dev.keliver.portal")
-    assertContains(src, "fun exportKotlin(tree: WidgetNode, functionName: String = \"ExportedScreen\"): String")
+    assertContains(src, "fun exportKotlin(tree: WidgetNode, functionName: String = \"ExportedScreen\", components: ComponentRegistry = EmptyComponentRegistry): String")
     assertContains(src, "\"StyledText\" to \"dev.keliver.material.compose.StyledText\"")
     assertContains(src, "sb.append(\"\${indent}  text = \${fmtString(node.props[\"text\"] ?: \"\")},\\n\")")
     assertContains(src, "if (\"fontSize\" in node.props)")
     assertContains(src, "\"StyledBox\" -> {")
     assertContains(src, "fmtConstraint")
     assertContains(src, "fmtFloatList")
-    assertContains(src, "// unknown widget:")
+    // C1: unknown type routes to the generic component-instance emitter.
+    assertContains(src, "else -> emitComponentInstance(sb, node, indent)")
+    assertContains(src, "private fun emitComponentInstance(")
   }
 
   @Test fun emitsModifierChainExport() {

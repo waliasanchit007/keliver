@@ -27,7 +27,10 @@ cp -R portal-relay/build/install/portal-relay/. "$STAGE/relay/"
 cp -R portal-mcp/build/install/portal-mcp/. "$STAGE/mcp/"
 cp -R web-spike/build/dist/wasmJs/productionExecutable/. "$STAGE/editor/"
 cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
-chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init"
+# Scaffolders so external app repos get the same DX (C1: new-component too).
+cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh "$STAGE/bin/"
+chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
+  "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh"
 # The gradle wrapper so `keliver-init` scaffolds immediately-buildable projects.
 cp gradlew gradlew.bat "$STAGE/wrapper/" 2>/dev/null || true
 cp gradle/wrapper/* "$STAGE/wrapper/gradle/wrapper/"

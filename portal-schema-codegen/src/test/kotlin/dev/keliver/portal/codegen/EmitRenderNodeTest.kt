@@ -42,7 +42,9 @@ class EmitRenderNodeTest {
     assertContains(src, "horizontalAlignment = crossAxisOf(node.intB(\"horizontalAlignment\", 0)),")
     assertContains(src, "height = Dp(node.dblB(\"height\", 0.0)),")
     assertContains(src, ") { node.children.forEach { RenderNode(it) } }")
-    assertContains(src, "else -> StyledText(text = \"\\u26a0 unknown widget: \${node.type}\"")
+    // C1: unknown type (project component) routes to the settable preview hook,
+    // falling back to the unknown-widget marker when unset.
+    assertContains(src, "else -> componentPreview?.invoke(node) ?: StyledText(text = \"\\u26a0 unknown widget: \${node.type}\"")
     // P3: nullable events are wired to Action props via the preview sink.
     assertContains(src, "onLongPress = node.actionOf(\"onLongPress\")?.let { n -> { PreviewBindings.fire(n) } },")
   }

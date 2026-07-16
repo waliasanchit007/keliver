@@ -191,3 +191,44 @@ list, a leaf). They compose — a `Screen` can be inline or delegate to a
 
 Run it: `sample/README.md`. The guest's `Show()` renders Style B by default;
 swap the one block for `WorkoutsScreenInline(repo)` to see Style A.
+
+## 7. Project components ("molecules") — C1
+
+App-owned reusable composables built from keliver primitives, whose Kotlin
+**signature is the portal spec** — no annotation, no sidecar (D4). Screens call
+them like any widget; the portal recognizes, edits, exports, and previews the
+call **without a schema tag or protocol change** (D6/D9). Devices just call the
+compiled composable — zero runtime cost.
+
+```kotlin
+// components/MenuRow.kt  (a SIBLING of screens/, configurable via componentsDir)
+@Composable
+fun MenuRow(title: String, subtitle: String, icon: String = "Star", onClick: () -> Unit) {
+  ListItem(headline = title, supporting = subtitle, leadingIcon = icon,
+    trailingIcon = "KeyboardArrowRight", onClick = onClick)
+}
+```
+
+- **Signature → spec.** `String`/`Int`/`Boolean`/`Double` params become editable
+  props; `() -> Unit` / `(T) -> Unit` params become events; literal defaults are
+  parsed (an omitted optional arg uses the default). Slot params
+  (`@Composable () -> Unit`) are **out of scope in v1** — components are leaf
+  nodes (no children).
+- **Master / instance.** A component USE in a screen is one selectable node with
+  a prop panel from the signature; its internals are edited on the DEFINITION
+  (its own file), and every instance's preview updates live.
+- **Transparent vs opaque.** A grammar body is macro-expanded in preview
+  (props/events substituted, defaults applied, nested components recursed, cycles
+  guarded). A body with non-grammar code stays **opaque**: still a real device
+  composable, previewed as a labeled placeholder.
+- **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
+  `screensDir`; old configs stay valid.
+- **Scaffold:** `scripts/keliver-new-component.sh <Name>` (config-aware,
+  package-derived, refuses overwrite).
+- **Contract:** a component instance's `b.x` / `b.go(...)` args contribute to the
+  screen's Bindings with the component's declared param types — definition-
+  internal param names never leak into the screen contract.
+
+Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionHeader}.kt` +
+`screens/settings.kt` (a 24-line Settings screen, 3 SectionHeader + 4 MenuRow,
+**0 RawCode** — ~60% shorter than inlining the ListItems/labels).

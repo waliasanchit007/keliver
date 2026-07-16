@@ -97,12 +97,19 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     draws selection/hover overlays; 🎯 toggle switches select/interact. Repeat
     rows select their template. Verify at :8096, then extend with a breadcrumb +
     double-click-into-Repeat as polish.
-11b. **Project components (molecules)** — spec committed
-    (docs/superpowers/specs/2026-07-16-project-components-design.md): components/
-    dir, signature-derived specs, master/instance semantics, transparent
-    expansion in preview, C1(recognizer+registry) → C2(write-back) →
-    C3(editor+preview) → C4(scaffold+stashfin dogfood). NEXT BUILD after
-    click-to-select verification.
+11b. ✅ **Project components (molecules)** DONE 2026-07-16 (C1–C4):
+    components/ dir (configurable componentsDir), signature-derived specs (no
+    annotations), master/instance, transparent expansion, opaque/cycle
+    placeholders. C1 recognizer+registry+relay /components (component-first
+    boot, dependent re-ingest); C2 export+surgical write-back for instances
+    (byte-idempotent) + contract typing; C3 editor palette + prop panel +
+    preview expansion + instance click-to-select (Chrome-verified); C4
+    keliver-new-component scaffold (bundled in portal-tools) + docs + keliver
+    dogfood (settings.kt: 3 SectionHeader + 4 MenuRow, 0 RawCode, ~60% shorter,
+    renders in editor). Gates: 65 portal tests, codegen staleness, apiCheck,
+    guest compile all green. Remaining: slot params (v1 out of scope),
+    detach-instance + double-click-into-definition (later), stashfin
+    ProfileScreen dogfood (separate repo — change set reported, not auto-run).
 12. **Per-app live-presenter preview**: compile the consumer app's screens+logic
     (stashfin-sdui pattern: portal-app-lib extraction) to the browser so ▶ Live
     runs the app's REAL presenters against PreviewCapabilities.
