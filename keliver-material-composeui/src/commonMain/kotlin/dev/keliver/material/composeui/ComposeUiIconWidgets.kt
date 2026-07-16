@@ -5,6 +5,7 @@
 package dev.keliver.material.composeui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon as M3Icon
 import androidx.compose.material3.ListItem as M3ListItem
@@ -63,7 +64,9 @@ internal class ComposeUiListItem : ListItem<@Composable (Modifier) -> Unit> {
       trailingContent = if (trailingIcon.isEmpty()) null else ({
         M3Icon(iconOrPlaceholder(trailingIcon), contentDescription = trailingIcon)
       }),
-      modifier = if (click == null) m else m.clickable { click() },
+      // P1-7: M3 ListItem wraps content under loose constraints (visible in the
+      // editor canvas); a list row should always span its container.
+      modifier = (if (click == null) m else m.clickable { click() }).fillMaxWidth(),
     )
   }
   override fun headline(headline: String) { this.headline = headline }

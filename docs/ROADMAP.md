@@ -46,8 +46,11 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    Receipt/Fingerprint/Logout/History/Verified/…). Kept curated — the name map
    defeats DCE per icon, bulk-import would bloat every bundle. Consumers get the
    new names after a host-lib republish + app rebuild.
-7. **Editor canvas: ListItem width** doesn't fill its card in preview (renders
-   correctly on devices) — canvas-host sizing bug, cosmetic but visible in demos.
+7. ✅ **Editor canvas: ListItem width** (code-complete 2026-07-16, canvas visual
+   check pending — browser tooling was down): ComposeUiListItem now applies
+   fillMaxWidth() — M3 ListItem wraps content under loose constraints, which the
+   editor canvas exposes; devices were unaffected (parents imposed width) and
+   remain so. Editor dist rebuilt; refresh :8096 to confirm.
 
 ## P2 — Relay/tooling ergonomics (each cost real session time)
 
