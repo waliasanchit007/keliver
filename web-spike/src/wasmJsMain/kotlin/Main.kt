@@ -70,6 +70,13 @@ internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.port
   return tagged.copy(children = tagged.children.map { selectionTagged(it) })
 }
 
+/** C3: tag an expanded component subtree with a FIXED handle (the instance). */
+internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver.portal.WidgetNode {
+  val tagged = if (n.type in UNRENDERED_TYPES) n
+  else n.copy(props = n.props + ("mod.SelectionTag.handle" to handle))
+  return tagged.copy(children = tagged.children.map { tagWith(it, handle) })
+}
+
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
@@ -135,6 +142,17 @@ fun main() {
         saveableStateRegistry = null,
         uiConfigurations = MutableStateFlow(UiConfiguration()),
       )
+      // C3: component instances render via transparent expansion; the whole
+      // expansion carries the INSTANCE handle so click-to-select picks the
+      // instance (one selectable unit), never an internal expanded primitive.
+      dev.keliver.portal.render.componentPreview = { node ->
+        val expanded = when (val e = dev.keliver.portal.expandForPreview(node, editorComponents)) {
+          is dev.keliver.portal.Expansion.Transparent -> e.tree
+          is dev.keliver.portal.Expansion.Opaque -> dev.keliver.portal.placeholder(e.name, e.reason)
+          is dev.keliver.portal.Expansion.Cycle -> dev.keliver.portal.cycleChip(e.path)
+        }
+        RenderNode(tagWith(expanded, node.id))
+      }
       composition.setContent { RenderNode(selectionTagged(portalTree.value)) }
       guestAdapter.emitChanges() // initial render
 

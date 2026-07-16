@@ -348,7 +348,9 @@ private fun subscribeDocEvents() {
   eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
     es.onmessage = { ev ->
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
-      if (v != null && v != docVersion) refetchDoc(true) // another session/editor changed the doc
+      // C3 master updates: a component edit re-ingests screens (doc bumps) — refresh
+      // the registry too so instance previews reflect the new definition without reload.
+      if (v != null && v != docVersion) fetchComponents { refetchDoc(true) }
     }
     es.onerror = { _ ->
       // Server restart kills the stream; recreate after a beat (fresh subscribe).
@@ -427,8 +429,17 @@ private fun lastChildHandle(parentId: Int, excludeId: Int? = null): Handle? =
 private fun deepCopy(n: WidgetNode): WidgetNode =
   WidgetNode(n.type, n.props, n.children.map { deepCopy(it) }) // fresh ids via default
 
-private fun newNode(type: String): WidgetNode =
-  WidgetNode(type, widgetSpec(type)?.sampleProps ?: emptyMap())
+private fun newNode(type: String): WidgetNode {
+  // C3: a project-component instance starts with sample values for REQUIRED
+  // scalar props (optional ones use the signature default = omitted); events
+  // begin unbound; leaf node (no children in v1).
+  editorComponents.spec(type)?.let { c ->
+    val props = LinkedHashMap<String, Any?>()
+    c.props.forEach { p -> if (p.name !in c.defaults) props[p.name] = c.sampleFor(p) }
+    return WidgetNode(type, props)
+  }
+  return WidgetNode(type, widgetSpec(type)?.sampleProps ?: emptyMap())
+}
 
 private fun addToSelectedOrRoot(node: WidgetNode) {
   val sel = selectedId
@@ -806,7 +817,17 @@ private fun loadWorkspace() {
     }
     reloadProjectList()
     reloadScreenList()
-    loadDraft()
+    fetchComponents { loadDraft() } // C3: components before the doc so instances render
+  }
+}
+
+/** C3: pull the active project's component registry for palette + preview. */
+private fun fetchComponents(then: (() -> Unit)? = null) {
+  if (playground) { then?.invoke(); return }
+  serverGet("/components?project=$currentProject") { txt ->
+    setEditorComponents(parseComponents(txt))
+    renderPalette(paletteFilter)
+    then?.invoke()
   }
 }
 
@@ -887,22 +908,33 @@ private fun refresh() {
   renderOutline(); renderProps(); renderMods(); renderOps(); renderBindings()
 }
 
+private var paletteFilter = ""
+
 private fun renderPalette(filter: String) {
+  paletteFilter = filter
   Ui.clear(paletteListEl)
   val q = filter.trim().lowercase()
+  fun paletteRow(type: String, tag: String?, cycle: Boolean) {
+    val row = Ui.el("div", "pal-row")
+    row.appendChild(Ui.el("span", "t", type))
+    if (tag != null) row.appendChild(Ui.el("span", "cat", tag))
+    row.setAttribute("draggable", "true")
+    row.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "new:$type") })
+    row.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(type)) })
+    paletteListEl.appendChild(row)
+  }
+  // C3: project components FIRST — the app's own vocabulary is what authors reach for.
+  val comps = editorComponents.names().sorted().mapNotNull { editorComponents.spec(it) }
+    .filter { q.isEmpty() || it.name.lowercase().contains(q) }
+  if (comps.isNotEmpty()) {
+    paletteListEl.appendChild(Ui.el("div", "section", "Project components"))
+    comps.forEach { c -> paletteRow(c.name, if (c.transparent) null else "opaque", false) }
+  }
   widgetSpecs.groupBy { it.category }.forEach { (category, specs) ->
     val hits = specs.filter { q.isEmpty() || it.type.lowercase().contains(q) }
     if (hits.isEmpty()) return@forEach
     paletteListEl.appendChild(Ui.el("div", "section", category))
-    hits.forEach { spec ->
-      val row = Ui.el("div", "pal-row")
-      row.appendChild(Ui.el("span", "t", spec.type))
-      if (spec.acceptsChildren) row.appendChild(Ui.el("span", "cat", "container"))
-      row.setAttribute("draggable", "true")
-      row.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "new:${spec.type}") })
-      row.addEventListener("click", { _ -> addToSelectedOrRoot(newNode(spec.type)) })
-      paletteListEl.appendChild(row)
-    }
+    hits.forEach { spec -> paletteRow(spec.type, if (spec.acceptsChildren) "container" else null, false) }
   }
 }
 
@@ -931,6 +963,9 @@ private fun renderOutline() {
 
 private fun handleDrop(payload: String?, targetId: Int) {
   if (payload == null) return
+  // C3: component instances are leaf nodes — never accept dropped children.
+  val targetType = portalTree.value.findNode(targetId)?.type
+  if (targetType != null && editorComponents.isComponent(targetType)) return
   when {
     payload.startsWith("new:") -> sendOps(listOf(
       DocOp.InsertNode(Handle(targetId.toLong()), lastChildHandle(targetId), newNode(payload.removePrefix("new:")).toDocNode()),
@@ -951,15 +986,22 @@ private fun renderProps() {
     propsEl.appendChild(Ui.el("div", "muted", "Select a node in the outline"))
     return
   }
-  propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
+  // C3: a component instance uses its SIGNATURE spec; internals are not shown.
+  val comp = editorComponents.spec(node.type)
+  if (comp != null) {
+    propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id} · component" +
+      (if (!comp.transparent) " (opaque)" else "")))
+  } else {
+    propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
+  }
   val spec = widgetSpec(node.type)
-  val specs = editableProps(node.type)
+  val specs = comp?.props ?: editableProps(node.type)
   if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
     propsEl.appendChild(propRow(node.id, node.props, s.name, s.kind, s.label, keyPrefix = ""))
   }
   // P3: events — each wires to a named Action.
-  val events = spec?.events ?: emptyList()
+  val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()
   if (events.isNotEmpty()) {
     propsEl.appendChild(Ui.el("div", "section", "Events"))
     events.forEach { evName ->
