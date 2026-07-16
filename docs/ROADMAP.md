@@ -36,11 +36,16 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    collectContract types the param from the literal (String/Int/Double/Boolean).
    Round-trip tested (RecognizerTest.literalArgActionsRoundTrip) + live-verified
    ingesting a probe screen in stashfin-sdui (0 RawCode).
-5. **Repeat mock hints surfacing**: preview shows `{item.title} 1..3` — wire the
-   existing item-mock-hints so section lists preview with realistic data by default.
-6. **Icon set**: curated ~55 names is too small for real apps (QrCode, ContentCopy,
-   AccountBalance all missing → ⓘ). Either extend the map or add an icon-font/URL
-   fallback prop.
+5. ✅ **Field-aware Repeat mock defaults** (DONE 2026-07-16): unmocked item binds
+   preview as realistic values — icon props get VALID icon names (never ⓘ),
+   image/url fields a picsum URL (AsyncImage renders), amount/date/phone/email
+   plausible values, else humanized "Title 1". Editor hints still override.
+   ItemMockTest 4/4.
+6. ✅ **Icon set** (DONE 2026-07-16): material-icons-extended added; the curated
+   map grew to ~100 names (QrCode/ContentCopy/AccountBalance/CreditCard/Payments/
+   Receipt/Fingerprint/Logout/History/Verified/…). Kept curated — the name map
+   defeats DCE per icon, bulk-import would bloat every bundle. Consumers get the
+   new names after a host-lib republish + app rebuild.
 7. **Editor canvas: ListItem width** doesn't fill its card in preview (renders
    correctly on devices) — canvas-host sizing bug, cosmetic but visible in demos.
 

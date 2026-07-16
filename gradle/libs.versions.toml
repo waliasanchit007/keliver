@@ -70,6 +70,10 @@ jetbrains-compose-foundation = { module = "org.jetbrains.compose.foundation:foun
 jetbrains-compose-material = { module = "org.jetbrains.compose.material:material", version.ref = "jbCompose" }
 # material-icons-core was frozen at 1.7.3 when CMP decoupled it from the compose version.
 jetbrains-compose-material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version = "1.7.3" }
+# P1-6: the extended set backs the Icon widget's expanded curated map (only the
+# ~50 names referenced in MaterialIcons.kt land in bundles — the map defeats DCE
+# per-icon, so keep the map curated, not exhaustive).
+jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version = "1.7.3" }
 jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "jbCompose" }
 jetbrains-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "jbCompose" }
 jetbrains-compose-runtime-saveable = { module = "org.jetbrains.compose.runtime:runtime-saveable", version.ref = "jbCompose" }

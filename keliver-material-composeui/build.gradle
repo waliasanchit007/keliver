@@ -16,6 +16,7 @@ kotlin {
         api libs.coil.compose
         api libs.jetbrains.compose.material
         api libs.jetbrains.compose.material.icons.core // Icon widget's curated name map
+        implementation libs.jetbrains.compose.material.icons.extended // P1-6: expanded curated map
         api libs.jetbrains.compose.material3
         implementation projects.keliverLayoutComposeui
         implementation projects.keliverLazylayoutComposeui

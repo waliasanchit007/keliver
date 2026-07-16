@@ -8,7 +8,7 @@ Material3. This is the living audit of how close we are (last full pass:
 
 | Group | Widgets |
 |---|---|
-| Text & media | Text, StyledText (full text-style parity: size/weight/italic/underline/strike/align/maxLines/overflow/lineHeight/letterSpacing/colorRole), RichText†, Image, AsyncImage, **Icon** (name-based, curated core set), Badge |
+| Text & media | Text, StyledText (full text-style parity: size/weight/italic/underline/strike/align/maxLines/overflow/lineHeight/letterSpacing/colorRole), RichText†, Image, AsyncImage, **Icon** (name-based, curated core+extended set ~100 names), Badge |
 | Buttons | Button, ElevatedButton, FilledTonalButton, OutlinedButton, TextButton, IconButton, FloatingActionButton, ExtendedFloatingActionButton |
 | Inputs & selection | TextField, OutlinedTextField, TextInput, Checkbox, Switch, RadioButton, Slider, DropdownMenu, SegmentedButtonRow, Chip, FilterChip, InputChip, SuggestionChip |
 | Containers | Card, ElevatedCard, OutlinedCard, StyledBox, Surface, Scaffold†, BottomSheet, Dialog, AlertDialog, Tooltip, Clickable |
@@ -30,8 +30,11 @@ material + layout schemas only (ScrollableColumn covers the common case).
 ## Batch 15 (this audit's additions)
 
 - **Icon** — `Icon(name = "Search", sizeDp = 24, tintArgb = …)`. The most-used
-  Material composable was missing entirely. Names map to the material-icons
-  CORE set (~50, see `keliver-material-composeui/.../MaterialIcons.kt`);
+  Material composable was missing entirely. Names map to a curated ~100-name
+  set (core + P1-6 extended additions: QrCode/ContentCopy/AccountBalance/
+  CreditCard/Payments/Receipt/Fingerprint/Logout/History/Verified/… — see
+  `keliver-material-composeui/.../MaterialIcons.kt`; the map defeats DCE per
+  icon, so extend it curatedly rather than bulk-importing);
   unknown names render a neutral placeholder, never crash.
 - **ListItem** — `ListItem(headline, supporting, overline, leadingIcon,
   trailingIcon, onClick)` with name-based icons.

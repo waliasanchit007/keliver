@@ -54,6 +54,50 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.CurrencyRupee
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Percent
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -111,6 +155,54 @@ internal val materialIconByName: Map<String, ImageVector> = mapOf(
   "Star" to Icons.Filled.Star,
   "ThumbUp" to Icons.Filled.ThumbUp,
   "Warning" to Icons.Filled.Warning,
+  // ── P1-6: extended-set additions (material-icons-extended). Every name a real
+  // fintech screen asked for and got the ⓘ fallback, plus common UI verbs.
+  // The map defeats DCE per icon, so additions stay curated — extend here +
+  // WIDGET_PARITY.md, don't bulk-import. ──
+  "AccountBalance" to Icons.Filled.AccountBalance,
+  "AccountBalanceWallet" to Icons.Filled.AccountBalanceWallet,
+  "Analytics" to Icons.Filled.Analytics,
+  "Article" to Icons.Filled.Article,
+  "AttachMoney" to Icons.Filled.AttachMoney,
+  "BarChart" to Icons.Filled.BarChart,
+  "Block" to Icons.Filled.Block,
+  "CameraAlt" to Icons.Filled.CameraAlt,
+  "ChevronLeft" to Icons.Filled.ChevronLeft,
+  "ChevronRight" to Icons.Filled.ChevronRight,
+  "ContentCopy" to Icons.Filled.ContentCopy,
+  "CreditCard" to Icons.Filled.CreditCard,
+  "CurrencyRupee" to Icons.Filled.CurrencyRupee,
+  "Description" to Icons.Filled.Description,
+  "Download" to Icons.Filled.Download,
+  "Fingerprint" to Icons.Filled.Fingerprint,
+  "Help" to Icons.Filled.Help,
+  "HelpOutline" to Icons.Filled.HelpOutline,
+  "History" to Icons.Filled.History,
+  "Image" to Icons.Filled.Image,
+  "Language" to Icons.Filled.Language,
+  "Logout" to Icons.Filled.Logout,
+  "OpenInNew" to Icons.Filled.OpenInNew,
+  "Payment" to Icons.Filled.Payment,
+  "Payments" to Icons.Filled.Payments,
+  "Percent" to Icons.Filled.Percent,
+  "PieChart" to Icons.Filled.PieChart,
+  "PrivacyTip" to Icons.Filled.PrivacyTip,
+  "QrCode" to Icons.Filled.QrCode,
+  "QrCode2" to Icons.Filled.QrCode2,
+  "QrCodeScanner" to Icons.Filled.QrCodeScanner,
+  "Receipt" to Icons.Filled.Receipt,
+  "ReceiptLong" to Icons.Filled.ReceiptLong,
+  "Schedule" to Icons.Filled.Schedule,
+  "Security" to Icons.Filled.Security,
+  "SupportAgent" to Icons.Filled.SupportAgent,
+  "SystemUpdate" to Icons.Filled.SystemUpdate,
+  "TrendingDown" to Icons.Filled.TrendingDown,
+  "TrendingUp" to Icons.Filled.TrendingUp,
+  "Upload" to Icons.Filled.Upload,
+  "Verified" to Icons.Filled.Verified,
+  "Visibility" to Icons.Filled.Visibility,
+  "VisibilityOff" to Icons.Filled.VisibilityOff,
+  "Wallet" to Icons.Filled.Wallet,
 )
 
 /** Unknown names render a neutral placeholder rather than crashing the screen. */
