@@ -18,8 +18,12 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
  * (type change, reorder, contract change) — caller falls back to full export.
  */
 object WriteBack {
-  fun merge(fileText: String, target: UiDocument): String? {
-    val rec = Recognizer.recognize("Screen.kt", fileText) ?: return null
+  fun merge(
+    fileText: String,
+    target: UiDocument,
+    components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
+  ): String? {
+    val rec = Recognizer.recognize("Screen.kt", fileText, components) ?: return null
     val file = rec.file ?: return null
     val factory = PsiEnv.factory
 

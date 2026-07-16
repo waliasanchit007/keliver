@@ -205,6 +205,12 @@ private fun screensDirFor(project: String): File =
   if (project == "default" && appScreensDir.parentFile.exists()) appScreensDir
   else File(File(root, "kotlin"), project)
 
+/** C1: project components live next to screens (default project = the repo dir). */
+private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
+private fun componentsDirFor(project: String): File =
+  if (project == "default") appComponentsDir
+  else File(screensDirFor(project).parentFile, "components")
+
 private fun screenFunctionName(screen: String): String =
   screen.replaceFirstChar { it.uppercase() } + "Screen"
 
@@ -225,6 +231,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
       kotlinFile = File(screensDirFor(project), "$screen.kt"),
       functionName = screenFunctionName(screen),
       packageName = if (inProject) "dev.keliver.portalpublished.screens" else null,
+      components = { Components.registry(project) },
     ).also { it.ensureKotlinFile() }
   }
 }
@@ -247,6 +254,11 @@ private val pendingIngest = java.util.concurrent.ConcurrentHashMap<String, java.
  * mirrors from past sessions otherwise shadow the /screens picker forever.
  */
 private fun bootScan() {
+  // C1: components FIRST so screens recognize their calls on the first pass.
+  if (appComponentsDir.exists()) {
+    val reg = Components.rebuild("default", appComponentsDir)
+    println("portal-server: components boot scan -> ${reg.names().sorted()} from $appComponentsDir")
+  }
   if (!appScreensDir.exists()) return
   val ktScreens = (appScreensDir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray())
   ktScreens.forEach { runCatching { ingestFile(it) }.onFailure { e -> println("boot ingest failed for $it: $e") } }
@@ -269,16 +281,22 @@ private fun startKotlinWatcher() {
       appScreensDir.mkdirs()
       add(appScreensDir)
     }
-  }
+    // C1: watch the components dir (same debounce + self-write behavior).
+    if (appComponentsDir.parentFile?.exists() == true) {
+      appComponentsDir.mkdirs()
+      add(appComponentsDir)
+    }
+  }.distinctBy { it.absolutePath }
   dirs.forEach { dir ->
     val watcher = io.methvin.watcher.DirectoryWatcher.builder()
       .path(dir.toPath())
       .listener { event ->
         val f = event.path().toFile()
-        if (f.name.endsWith(".kt")) {
+        if (f.name.endsWith(".kt") && !f.name.startsWith("Compiled_")) {
           val key = f.absolutePath
           pendingIngest[key]?.cancel(false)
-          pendingIngest[key] = ingestExec.schedule({ ingestFile(f) }, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
+          val task = Runnable { if (isComponentFile(f)) ingestComponentFile(f) else ingestFile(f) }
+          pendingIngest[key] = ingestExec.schedule(task, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
         }
       }
       .build()
@@ -296,12 +314,46 @@ private fun ingestFile(f: File) {
     val text = f.readText()
     val svc = docFor(mapOf("project" to project, "screen" to screen))
     if (svc.wasSelfWrite(text)) return
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(f.name, text)
+    // C1: recognize with the project's component registry so component calls
+    // become editable Widget nodes instead of RawCode.
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(f.name, text, Components.registry(project))
       ?: return println("ingest: ${f.name}: no @Composable screen function — skipped")
     val newDoc = dev.keliver.portal.ingest.Reconciler.reconcile(svc.doc, recognized)
     svc.acceptExternal(newDoc)
     println("ingest: $project/$screen -> v${newDoc.version} (file edit)")
   }.onFailure { println("ingest failed for $f: $it") }
+}
+
+/** C1: whether [f] is a component definition file (not a screen). */
+private fun isComponentFile(f: File): Boolean {
+  val p = f.parentFile ?: return false
+  return p.absolutePath == appComponentsDir.absolutePath || p.name == "components"
+}
+
+/**
+ * C1: a component file changed — rebuild the project's registry deterministically
+ * and re-ingest every screen (and thus dependent-component previews refresh via
+ * screen re-recognition). Removal is handled the same way: rebuild sees the file
+ * gone and drops it.
+ */
+private fun ingestComponentFile(f: File) {
+  runCatching {
+    val project = if (isDefaultComponents(f)) "default" else (f.parentFile.parentFile?.name ?: "default")
+    val dir = componentsDirFor(project)
+    val reg = Components.rebuild(project, dir)
+    println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
+    reingestScreens(project)
+  }.onFailure { println("component ingest failed for $f: $it") }
+}
+
+private fun isDefaultComponents(f: File): Boolean =
+  f.parentFile?.absolutePath == appComponentsDir.absolutePath
+
+/** Re-ingest every open/known screen of [project] against the current registry. */
+private fun reingestScreens(project: String) {
+  val dir = screensDirFor(project)
+  (dir.listFiles { x -> x.name.endsWith(".kt") && !x.name.startsWith("Compiled_") } ?: emptyArray())
+    .forEach { runCatching { ingestFile(it) } }
 }
 
 fun main(args: Array<String>) {
@@ -357,6 +409,14 @@ fun main(args: Array<String>) {
         emptyList()
       }
       respond(ex, 200, jsonList(caps))
+    }
+  }
+
+  // C1: project components (specs + body trees) for the editor palette + preview.
+  server.createContext("/components") { ex ->
+    handle(ex) {
+      val project = safe(query(ex)["project"] ?: "default")
+      respond(ex, 200, Components.toJson(project))
     }
   }
 

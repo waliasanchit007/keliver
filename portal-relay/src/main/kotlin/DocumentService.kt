@@ -32,6 +32,8 @@ class DocumentService(
   private val functionName: String = "PortalScreen",
   /** M6: package line for full exports of in-project screens (null = none/legacy). */
   private val packageName: String? = null,
+  /** C1: the project's component registry provider (component-aware write-back). */
+  private val components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -142,20 +144,23 @@ class DocumentService(
       // M4: surgical PSI write-back preserves comments/formatting/RawCode when
       // the file already exists; fall back to a full export on first write or
       // when the change isn't safely surgical (type change, reorder, contract).
+      val registry = components()
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
-      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc) }
+      // C1: component-aware surgical merge so a screen using a component isn't
+      // forced into a whole-file regen (its call stays byte-stable in place).
+      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry) }
       // P0: the file's OWN package wins over the configured default — a full-
       // export fallback must never rewrite a foreign-package screen (e.g.
       // com.stashfin.*) into dev.keliver.portalpublished.screens.
       val pkgName = existing?.let { PKG_RE.find(it)?.groupValues?.get(1) } ?: packageName
       val pkg = pkgName?.let { "package $it\n\n" } ?: ""
-      val merged = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
+      val merged = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName, components = registry))
       // P2b-a: keep the Bindings interface in sync with the tree — new binds
       // gain defaulted, TODO(portal)-marked members so the guest keeps
       // compiling; marker-carrying members that ops un-required are removed.
       val tree = doc.toWidgetTree()
       val text = runCatching {
-        dev.keliver.portal.ingest.ContractWriteBack.ensure(merged, tree, functionName)
+        dev.keliver.portal.ingest.ContractWriteBack.ensure(merged, tree, functionName, registry)
       }.getOrDefault(merged)
       lastWrittenText = text
       kotlinFile.writeText(text)
@@ -182,10 +187,11 @@ class DocumentService(
       kotlinFile: File,
       functionName: String,
       packageName: String?,
+      components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
     ): DocumentService {
       if (kotlinFile.exists()) {
         val rec = runCatching {
-          dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText())
+          dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText(), components())
         }.getOrNull()
         if (rec != null) {
           var next = 1L
@@ -196,11 +202,11 @@ class DocumentService(
           }
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
-          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName)
+          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components)
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }
-      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName)
+      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components)
     }
 
     /** M1 bootstrap: lift an existing V1 draft tree into a Document. */
@@ -211,6 +217,7 @@ class DocumentService(
       kotlinFile: File,
       functionName: String = "PortalScreen",
       packageName: String? = null,
+      components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
     ): DocumentService {
       var next = 1L
       fun lift(n: WidgetNode): DocNode.Widget = DocNode.Widget(

@@ -35,8 +35,13 @@ object ContractWriteBack {
 
   private data class Edit(val start: Int, val end: Int, val replacement: String)
 
-  fun ensure(fileText: String, tree: WidgetNode, functionName: String): String {
-    val exported = exportKotlin(tree, functionName = functionName)
+  fun ensure(
+    fileText: String,
+    tree: WidgetNode,
+    functionName: String,
+    components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
+  ): String {
+    val exported = exportKotlin(tree, functionName = functionName, components = components)
     val exportFile = PsiEnv.parse("Exported.kt", exported)
     val exportIfaces = exportFile.declarations.filterIsInstance<KtClass>().filter { it.isInterface() }
     val requiredBindings = exportIfaces.firstOrNull { it.name == "${functionName}Bindings" }
