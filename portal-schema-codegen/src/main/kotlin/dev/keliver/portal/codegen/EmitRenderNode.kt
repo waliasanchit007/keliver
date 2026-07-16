@@ -75,7 +75,10 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
     if (w.hasChildren) append(" { node.children.forEach { RenderNode(it) } }")
     appendLine()
   }
-  appendLine("    else -> StyledText(text = \"\\u26a0 unknown widget: \${node.type}\", colorArgb = -5238254)")
+  // C1: an unrecognized type is a project-component instance — the editor sets
+  // `componentPreview` to expand it transparently (or render an opaque/cycle
+  // placeholder). Devices never hit this path (they call the real composable).
+  appendLine("    else -> componentPreview?.invoke(node) ?: StyledText(text = \"\\u26a0 unknown widget: \${node.type}\", colorArgb = -5238254)")
   appendLine("  }")
   appendLine("}")
   if (mods.isNotEmpty()) {

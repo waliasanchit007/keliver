@@ -32,20 +32,28 @@ fun kotlinTypeOf(kind: PropKind): String = when (kind) {
   PropKind.StringList -> "List<String>"
 }
 
-/** Walks the tree collecting Bind fields (typed via the generated catalog) and Action names. */
-fun collectContract(tree: WidgetNode): ScreenContract {
+/**
+ * Walks the tree collecting Bind fields (typed via the generated catalog) and
+ * Action names. [components] (C1) types binds/actions consumed by project
+ * component instances from the component signature; primitive-only by default.
+ */
+fun collectContract(tree: WidgetNode, components: ComponentRegistry = EmptyComponentRegistry): ScreenContract {
   val fields = LinkedHashMap<String, PropKind>()
   val actions = LinkedHashSet<String>()
   val actionParams = LinkedHashMap<String, String>()
   fun kindOf(nodeType: String, propKey: String): PropKind? {
-    return if (propKey.startsWith("mod.")) {
+    if (propKey.startsWith("mod.")) {
       val mod = propKey.removePrefix("mod.").substringBefore('.')
       val prop = propKey.removePrefix("mod.$mod.").takeIf { it != propKey }
-      modifierSpecs.firstOrNull { it.name == mod }?.props?.firstOrNull { it.name == prop }?.kind
-    } else {
-      widgetSpec(nodeType)?.props?.firstOrNull { it.name == propKey }?.kind
+      return modifierSpecs.firstOrNull { it.name == mod }?.props?.firstOrNull { it.name == prop }?.kind
     }
+    widgetSpec(nodeType)?.props?.firstOrNull { it.name == propKey }?.kind?.let { return it }
+    // C1: component instance prop → the component's declared param kind.
+    return components.spec(nodeType)?.props?.firstOrNull { it.name == propKey }?.kind
   }
+  /** For an Action on a component instance event, the handler's param type. */
+  fun componentEventParamType(nodeType: String, propKey: String): String? =
+    components.spec(nodeType)?.events?.firstOrNull { it.name == propKey }?.paramType
   fun walk(n: WidgetNode) {
     for ((key, value) in n.props) {
       when (value) {
@@ -58,7 +66,8 @@ fun collectContract(tree: WidgetNode): ScreenContract {
         is Action -> {
           actions += value.name
           when {
-            value.arg == "it" -> actionParams[value.name] = eventParamType["${n.type}.$key"] ?: "String"
+            value.arg == "it" -> actionParams[value.name] =
+              eventParamType["${n.type}.$key"] ?: componentEventParamType(n.type, key) ?: "String"
             value.arg != null -> actionParams[value.name] = literalArgType(value.arg)
           }
         }

@@ -510,7 +510,7 @@ fun RenderNode(node: WidgetNode) {
     "VerticalPager" -> VerticalPager(
       modifier = nodeModifier(node),
     ) { node.children.forEach { RenderNode(it) } }
-    else -> StyledText(text = "\u26a0 unknown widget: ${node.type}", colorArgb = -5238254)
+    else -> componentPreview?.invoke(node) ?: StyledText(text = "\u26a0 unknown widget: ${node.type}", colorArgb = -5238254)
   }
 }
 

@@ -177,12 +177,12 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     """.trimMargin(),
   )
   appendLine()
-  appendLine("fun exportKotlin(tree: WidgetNode, functionName: String = \"ExportedScreen\"): String {")
+  appendLine("fun exportKotlin(tree: WidgetNode, functionName: String = \"ExportedScreen\", components: ComponentRegistry = EmptyComponentRegistry): String {")
   appendLine("  val used = mutableSetOf<String>()")
   appendLine("  collectTypes(tree, used)")
   appendLine("  val usedMods = mutableSetOf<String>()")
   appendLine("  collectModifierNames(tree, usedMods)")
-  appendLine("  val contract = collectContract(tree)")
+  appendLine("  val contract = collectContract(tree, components)")
   appendLine("  val logicFields = LinkedHashMap<String, String>()")
   appendLine("  val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()")
   appendLine("  collectLogicFields(tree, logicFields, itemIfaces)")
@@ -274,7 +274,38 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     }
     appendLine("    }")
   }
-  appendLine("    else -> sb.append(\"\$indent// unknown widget: \${node.type}\\n\")")
+  // C1: an unrecognized type is a project-component instance — emit it as a
+  // plain named call from its props (registry-free). A genuinely unknown type
+  // with no props still emits `Name()`, harmless.
+  appendLine("    else -> emitComponentInstance(sb, node, indent)")
   appendLine("  }")
   appendLine("}")
+  appendLine()
+  append(
+    """
+    |// C1: generic emitter for a project-component INSTANCE call. Leaf node (v1,
+    |// no children slot); props emit in insertion order so a recognized call
+    |// round-trips byte-for-byte. Reuses the private value formatters above.
+    |private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String) {
+    |  val args = node.props.entries.toList()
+    |  if (args.isEmpty()) { sb.append("${'$'}indent${'$'}{node.type}()\n"); return }
+    |  sb.append("${'$'}indent${'$'}{node.type}(\n")
+    |  for ((k, v) in args) {
+    |    val rendered = when (v) {
+    |      is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
+    |      is Bind -> bindRef(v.field)
+    |      is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    |      is Boolean -> v.toString()
+    |      is Int -> v.toString()
+    |      is Double -> v.toString()
+    |      is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) "\"" + it + "\"" else it.toString() } + ")"
+    |      else -> v.toString()
+    |    }
+    |    sb.append("${'$'}indent  ${'$'}k = ${'$'}rendered,\n")
+    |  }
+    |  sb.append("${'$'}indent)\n")
+    |}
+    """.trimMargin(),
+  )
+  appendLine()
 }

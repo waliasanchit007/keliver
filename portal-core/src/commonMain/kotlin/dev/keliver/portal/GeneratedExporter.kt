@@ -203,12 +203,12 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
   else -> "MainAxisAlignment.Start"
 }
 
-fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen"): String {
+fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen", components: ComponentRegistry = EmptyComponentRegistry): String {
   val used = mutableSetOf<String>()
   collectTypes(tree, used)
   val usedMods = mutableSetOf<String>()
   collectModifierNames(tree, usedMods)
-  val contract = collectContract(tree)
+  val contract = collectContract(tree, components)
   val logicFields = LinkedHashMap<String, String>()
   val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()
   collectLogicFields(tree, logicFields, itemIfaces)
@@ -861,6 +861,29 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {
       node.children.forEach { emitNode(sb, it, "$indent  ") }
       sb.append("$indent}\n")
     }
-    else -> sb.append("$indent// unknown widget: ${node.type}\n")
+    else -> emitComponentInstance(sb, node, indent)
   }
+}
+
+// C1: generic emitter for a project-component INSTANCE call. Leaf node (v1,
+// no children slot); props emit in insertion order so a recognized call
+// round-trips byte-for-byte. Reuses the private value formatters above.
+private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String) {
+  val args = node.props.entries.toList()
+  if (args.isEmpty()) { sb.append("$indent${node.type}()\n"); return }
+  sb.append("$indent${node.type}(\n")
+  for ((k, v) in args) {
+    val rendered = when (v) {
+      is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
+      is Bind -> bindRef(v.field)
+      is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+      is Boolean -> v.toString()
+      is Int -> v.toString()
+      is Double -> v.toString()
+      is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) "\"" + it + "\"" else it.toString() } + ")"
+      else -> v.toString()
+    }
+    sb.append("$indent  $k = $rendered,\n")
+  }
+  sb.append("$indent)\n")
 }

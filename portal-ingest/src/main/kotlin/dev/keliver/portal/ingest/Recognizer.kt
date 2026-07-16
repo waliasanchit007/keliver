@@ -1,10 +1,19 @@
 package dev.keliver.portal.ingest
 
+import dev.keliver.portal.ComponentEventSpec
+import dev.keliver.portal.ComponentRegistry
+import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropSpec
+import dev.keliver.portal.RESERVED_COMPONENT_NAMES
+import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.widgetSpec
 import org.jetbrains.kotlin.psi.KtBlockExpression
@@ -13,10 +22,12 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtFunctionType
 import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtLambdaArgument
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 
 /**
@@ -38,67 +49,44 @@ data class Recognized(
   val bindingsInterface: KtClass? = null,
 )
 
+/**
+ * Name-resolution context for a body. Screens resolve `b.field`/`b.action()`;
+ * component definitions resolve bare parameter names (`title` -> Bind,
+ * `onClick` -> Action). Shared by both recognition modes.
+ */
+internal sealed interface NameCtx {
+  data class Screen(val bindingsParam: String?) : NameCtx
+  data class Component(val valueParams: Set<String>, val eventParams: Set<String>) : NameCtx
+}
+
+/** C1: a recognized component definition — its signature spec + body tree. */
+data class RecognizedComponent(
+  val spec: ComponentSpec,
+  val root: DocNode.Widget?,
+  val functionName: String,
+  val psiByHandle: Map<Long, KtExpression> = emptyMap(),
+  val file: KtFile? = null,
+)
+
 object Recognizer {
-  fun recognize(fileName: String, source: String): Recognized? {
+  /**
+   * Recognize a SCREEN. [components] lets calls to known project components
+   * (e.g. `MenuRow(...)`) become Widget nodes instead of RawCode; default empty
+   * keeps every existing caller primitive-only.
+   */
+  fun recognize(
+    fileName: String,
+    source: String,
+    components: ComponentRegistry = EmptyComponentRegistry,
+  ): Recognized? {
     val file = PsiEnv.parse(fileName, source)
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
-
-    var temp = -1L // temp handles are NEGATIVE; the Reconciler replaces them
-    fun nextTemp() = Handle(temp--)
-    val psiByHandle = mutableMapOf<Long, KtExpression>()
-    fun track(h: Handle, e: KtExpression): Handle {
-      psiByHandle[h.v] = e
-      return h
-    }
-
-    fun statementToNode(expr: KtExpression, itemScope: Set<String>): DocNode {
-      // M5: logic constructs → editable Condition/Repeat nodes (not RawCode).
-      recognizeCondition(expr, bindingsParam)?.let { (field, thenStmts) ->
-        return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
-          children = thenStmts.map { statementToNode(it, itemScope) })
-      }
-      recognizeRepeat(expr, bindingsParam)?.let { (items, itemVar, bodyStmts) ->
-        // P1-B: the loop var is in scope for the children → item.field binds.
-        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
-          mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = bodyStmts.map { statementToNode(it, itemScope + itemVar) })
-      }
-
-      val call = expr as? KtCallExpression
-      val type = call?.calleeExpression?.text
-      val spec = type?.let { widgetSpec(it) }
-      if (call == null || spec == null) return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-
-      val props = mutableMapOf<String, PropValue>()
-      val modifiers = mutableMapOf<String, PropValue>()
-      for (arg in call.valueArguments) {
-        if (arg is KtLambdaArgument) continue
-        val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp)
-        val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp)
-        if (name == "modifier") {
-          val mods = parseModifierChain(ve.text)
-            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-          modifiers += mods
-          continue
-        }
-        val value = parseValue(ve, bindingsParam, itemScope)
-          ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-        props[name] = value
-      }
-      val children = call.lambdaArguments.firstOrNull()
-        ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
-        .map { statementToNode(it, itemScope) }
-      return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
-    }
-
-    val rootStatements = body.statements.map { statementToNode(it, emptySet()) }
-    // One top-level widget = the root; several = wrap (shouldn't happen with our exporter).
-    val root = rootStatements.singleOrNull() as? DocNode.Widget
-      ?: DocNode.Widget(nextTemp(), "Column", children = rootStatements)
+    val walk = Walker(NameCtx.Screen(bindingsParam), components.names())
+    val root = walk.rootOf(body)
 
     val ifaceClass = file.declarations.filterIsInstance<KtClass>()
       .firstOrNull { it.isInterface() && it.name?.endsWith("Bindings") == true }
@@ -115,26 +103,213 @@ object Recognizer {
       )
     } ?: Contract()
 
-    return Recognized(root, contract, fn.name, psiByHandle, file, ifaceClass)
+    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass)
   }
 
-  /** `if (b.field) { <stmts> }` with no else → (field, thenStatements). */
-  private fun recognizeCondition(expr: KtExpression, b: String?): Pair<String, List<KtExpression>>? {
-    if (b == null) return null
+  /**
+   * C1: recognize a COMPONENT definition file. Derives the [ComponentSpec] from
+   * the @Composable signature (String/Int/Boolean/Double params -> props;
+   * `() -> Unit`/`(T) -> Unit` params -> events; literal defaults parsed) and
+   * the body tree (params act as binds/actions). A signature-valid component
+   * whose body contains unsupported code registers as OPAQUE (still a real
+   * device composable). [components] carries already-known components so nested
+   * component calls in the body recognize.
+   */
+  fun recognizeComponent(
+    fileName: String,
+    source: String,
+    components: ComponentRegistry = EmptyComponentRegistry,
+  ): RecognizedComponent? {
+    val file = PsiEnv.parse(fileName, source)
+    val fn = file.declarations.filterIsInstance<KtNamedFunction>()
+      .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+      ?: return null
+    val name = fn.name ?: return null
+    if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) {
+      return RecognizedComponent(
+        ComponentSpec(name, emptyList(), emptyList(), emptyMap(),
+          diagnostic = "name '$name' collides with a reserved/primitive widget", transparent = false),
+        null, name, emptyMap(), file,
+      )
+    }
+
+    val props = mutableListOf<PropSpec>()
+    val events = mutableListOf<ComponentEventSpec>()
+    val paramTypes = LinkedHashMap<String, String>()
+    val defaults = LinkedHashMap<String, Any?>()
+    val valueParams = LinkedHashSet<String>()
+    val eventParams = LinkedHashSet<String>()
+    var slotParam: String? = null
+    for (p in fn.valueParameters) {
+      val pName = p.name ?: continue
+      val typeRef = p.typeReference
+      val typeText = typeRef?.text ?: continue
+      paramTypes[pName] = typeText
+      p.defaultValue?.let { defaults[pName] = parseLiteral(it.text.trim())?.let { l -> litValue(l) } }
+      val fnType = typeRef.typeElement as? KtFunctionType
+      if (fnType != null) {
+        // Slot params (@Composable () -> Unit) are out of scope for v1.
+        if (p.text.contains("@Composable")) { slotParam = pName; continue }
+        val ret = fnType.returnTypeReference?.text
+        if (ret == "Unit" || ret == null) {
+          val argType = fnType.parameters.firstOrNull()?.typeReference?.text
+          events += ComponentEventSpec(pName, argType)
+          eventParams += pName
+        }
+        continue
+      }
+      val kind = scalarKind(typeText)
+      if (kind != null) {
+        props += PropSpec(pName, kind, pName.replaceFirstChar { it.uppercaseChar() })
+        valueParams += pName
+      }
+    }
+
+    if (slotParam != null) {
+      return RecognizedComponent(
+        ComponentSpec(name, props, events, paramTypes, defaults,
+          diagnostic = "slot parameter '$slotParam' (@Composable) not supported in v1", transparent = false),
+        null, name, emptyMap(), file,
+      )
+    }
+
+    val body = fn.bodyExpression as? KtBlockExpression
+    if (body == null) {
+      return RecognizedComponent(
+        ComponentSpec(name, props, events, paramTypes, defaults,
+          diagnostic = "component has no block body", transparent = false),
+        null, name, emptyMap(), file,
+      )
+    }
+    val walk = Walker(NameCtx.Component(valueParams, eventParams), components.names())
+    val root = walk.rootOf(body)
+    val hasRaw = containsRawCode(root)
+    val deps = collectComponentDeps(root, components.names())
+    val spec = ComponentSpec(
+      name = name,
+      props = props,
+      events = events,
+      paramTypes = paramTypes,
+      defaults = defaults,
+      body = if (hasRaw) null else docNodeToWidget(root),
+      transparent = !hasRaw,
+      dependencies = deps,
+      diagnostic = if (hasRaw) "body contains code outside the portal grammar (opaque)" else null,
+    )
+    return RecognizedComponent(spec, root, name, walk.psiByHandle, file)
+  }
+
+  private fun containsRawCode(n: DocNode): Boolean = when (n) {
+    is DocNode.RawCode -> true
+    is DocNode.Widget -> n.children.any { containsRawCode(it) }
+  }
+
+  private fun collectComponentDeps(n: DocNode, names: Set<String>): Set<String> {
+    val out = mutableSetOf<String>()
+    fun walk(x: DocNode) {
+      if (x is DocNode.Widget) {
+        if (x.type in names) out += x.type
+        x.children.forEach { walk(it) }
+      }
+    }
+    walk(n)
+    return out
+  }
+
+  private fun docNodeToWidget(n: DocNode.Widget): WidgetNode =
+    UiDocument("_", n, Contract(), 0, 0).toWidgetTree()
+
+  private fun scalarKind(typeText: String): PropKind? = when (typeText.removeSuffix("?").trim()) {
+    "String" -> PropKind.Text
+    "Int" -> PropKind.Int
+    "Boolean" -> PropKind.Bool
+    "Double" -> PropKind.Double
+    else -> null
+  }
+
+  private fun litValue(l: PropValue.Lit): Any? = l.s ?: l.i ?: l.d ?: l.b
+
+  /**
+   * Shared body walker for both recognition modes. Holds the temp-handle
+   * counter + psiByHandle map; [ctx] drives bind/action resolution.
+   */
+  internal class Walker(private val ctx: NameCtx, private val componentNames: Set<String>) {
+    private var temp = -1L
+    val psiByHandle = mutableMapOf<Long, KtExpression>()
+    private fun nextTemp() = Handle(temp--)
+    private fun track(h: Handle, e: KtExpression): Handle { psiByHandle[h.v] = e; return h }
+
+    fun rootOf(body: KtBlockExpression): DocNode.Widget {
+      val statements = body.statements.map { statementToNode(it, emptySet()) }
+      return statements.singleOrNull() as? DocNode.Widget
+        ?: DocNode.Widget(nextTemp(), "Column", children = statements)
+    }
+
+    private fun statementToNode(expr: KtExpression, itemScope: Set<String>): DocNode {
+      recognizeCondition(expr, ctx)?.let { (field, thenStmts) ->
+        return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
+          children = thenStmts.map { statementToNode(it, itemScope) })
+      }
+      recognizeRepeat(expr, ctx)?.let { (items, itemVar, bodyStmts) ->
+        return DocNode.Widget(track(nextTemp(), expr), "Repeat",
+          mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
+          children = bodyStmts.map { statementToNode(it, itemScope + itemVar) })
+      }
+
+      val call = expr as? KtCallExpression
+      val type = call?.calleeExpression?.text
+      // Primitive widget OR a known project component → editable Widget node.
+      val known = type != null && (widgetSpec(type) != null || type in componentNames)
+      if (call == null || !known) return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+
+      val props = mutableMapOf<String, PropValue>()
+      val modifiers = mutableMapOf<String, PropValue>()
+      for (arg in call.valueArguments) {
+        if (arg is KtLambdaArgument) continue
+        val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+        val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+        if (name == "modifier") {
+          val mods = parseModifierChain(ve.text)
+            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+          modifiers += mods
+          continue
+        }
+        val value = parseValue(ve, ctx, itemScope, componentNames)
+          ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+        props[name] = value
+      }
+      val children = call.lambdaArguments.firstOrNull()
+        ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
+        .map { statementToNode(it, itemScope) }
+      return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
+    }
+  }
+
+  /** Extracts the bound field from `b.field` (screen) or a bare Boolean param (component). */
+  private fun recognizeCondition(expr: KtExpression, ctx: NameCtx): Pair<String, List<KtExpression>>? {
     val ifExpr = expr as? KtIfExpression ?: return null
-    if (ifExpr.`else` != null) return null // else-branches aren't modeled → RawCode
-    val field = Regex("^${Regex.escape(b)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(ifExpr.condition?.text?.trim() ?: "")
-      ?.groupValues?.get(1) ?: return null
+    if (ifExpr.`else` != null) return null
+    val cond = ifExpr.condition?.text?.trim() ?: return null
+    val field = when (ctx) {
+      is NameCtx.Screen -> ctx.bindingsParam?.let {
+        Regex("^${Regex.escape(it)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(cond)?.groupValues?.get(1)
+      }
+      is NameCtx.Component -> cond.takeIf { it in ctx.valueParams }
+    } ?: return null
     val block = ifExpr.then as? KtBlockExpression ?: return null
     return field to block.statements
   }
 
-  /** `b.items.forEach { item -> <stmts> }` → (items, itemVar, bodyStatements). */
-  private fun recognizeRepeat(expr: KtExpression, b: String?): Triple<String, String, List<KtExpression>>? {
-    if (b == null) return null
+  /** Extracts (items, itemVar, body) from `b.items.forEach {..}` or a bare `items.forEach {..}`. */
+  private fun recognizeRepeat(expr: KtExpression, ctx: NameCtx): Triple<String, String, List<KtExpression>>? {
     val dot = expr as? KtDotQualifiedExpression ?: return null
-    val items = Regex("^${Regex.escape(b)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(dot.receiverExpression.text.trim())
-      ?.groupValues?.get(1) ?: return null
+    val recv = dot.receiverExpression.text.trim()
+    val items = when (ctx) {
+      is NameCtx.Screen -> ctx.bindingsParam?.let {
+        Regex("^${Regex.escape(it)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(recv)?.groupValues?.get(1)
+      }
+      is NameCtx.Component -> recv.takeIf { it in ctx.valueParams }
+    } ?: return null
     val call = dot.selectorExpression as? KtCallExpression ?: return null
     if (call.calleeExpression?.text != "forEach") return null
     val lambda = call.lambdaArguments.firstOrNull()?.getLambdaExpression() as? KtLambdaExpression ?: return null
@@ -155,8 +330,37 @@ object Recognizer {
   }
 
   /** Literal / bind / action argument expressions. Null = not in the grammar. */
-  private fun parseValue(expr: KtExpression, bindingsParam: String?, itemScope: Set<String> = emptySet()): PropValue? {
+  private fun parseValue(
+    expr: KtExpression,
+    ctx: NameCtx,
+    itemScope: Set<String> = emptySet(),
+    componentNames: Set<String> = emptySet(),
+  ): PropValue? {
     val t = expr.text.trim()
+    // ── Component mode: bare parameter names are the binds/actions. ──
+    if (ctx is NameCtx.Component) {
+      if (t in ctx.valueParams) return PropValue.Bind(t)
+      // `onClick = onClick` (event passed through) / `{ onClick() }` / `{ onClick(it) }`.
+      if (t in ctx.eventParams) return PropValue.Action(t)
+      Regex("^\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)?.let {
+        if (it.groupValues[1] in ctx.eventParams) return PropValue.Action(it.groupValues[1])
+      }
+      Regex("^\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\(it\\)\\s*}$").find(t)?.let {
+        if (it.groupValues[1] in ctx.eventParams) return PropValue.Action(it.groupValues[1], arg = "it")
+      }
+      Regex("^\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\((.+)\\)\\s*}$", RegexOption.DOT_MATCHES_ALL).find(t)?.let { m ->
+        val raw = m.groupValues[2].trim()
+        if (m.groupValues[1] in ctx.eventParams && parseLiteral(raw) != null) {
+          return PropValue.Action(m.groupValues[1], arg = raw)
+        }
+      }
+      // item.subfield inside a Repeat, then literals — shared tail below.
+      Regex("^([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)$").find(t)?.let { m ->
+        if (m.groupValues[1] in itemScope) return PropValue.Bind("${m.groupValues[1]}.${m.groupValues[2]}")
+      }
+      return parseLiteral(t)
+    }
+    val bindingsParam = (ctx as NameCtx.Screen).bindingsParam
     // b.field / b::action / { b.action() }
     if (bindingsParam != null) {
       Regex("^${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(t)
