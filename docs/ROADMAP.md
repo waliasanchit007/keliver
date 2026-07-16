@@ -89,10 +89,20 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## P3 — Application-scale features (from the 100-screen review; build in this order)
 
-11. **Canvas click-to-select** (design locked): `SelectionTag(handle)` modifier →
-    ComposeUi host impl does onGloballyPositioned → SelectionRegistry → editor
-    overlay + breadcrumb. Guest-side measurement is impossible; the host modifier
-    is the way.
+11. ✅ **Canvas click-to-select** (code-complete 2026-07-16, commit 388bd592f;
+    in-browser visual check pending — browser tooling was down): portal-internal
+    SelectionTag(handle) modifier (in RenderNode, hidden from palette/exporter) →
+    ComposeUi applier reports bounds into SelectionRegistry → DOM chrome
+    hit-tests clicks (dpr-aware, innermost-wins), syncs the outline selection,
+    draws selection/hover overlays; 🎯 toggle switches select/interact. Repeat
+    rows select their template. Verify at :8096, then extend with a breadcrumb +
+    double-click-into-Repeat as polish.
+11b. **Project components (molecules)** — spec committed
+    (docs/superpowers/specs/2026-07-16-project-components-design.md): components/
+    dir, signature-derived specs, master/instance semantics, transparent
+    expansion in preview, C1(recognizer+registry) → C2(write-back) →
+    C3(editor+preview) → C4(scaffold+stashfin dogfood). NEXT BUILD after
+    click-to-select verification.
 12. **Per-app live-presenter preview**: compile the consumer app's screens+logic
     (stashfin-sdui pattern: portal-app-lib extraction) to the browser so ▶ Live
     runs the app's REAL presenters against PreviewCapabilities.
