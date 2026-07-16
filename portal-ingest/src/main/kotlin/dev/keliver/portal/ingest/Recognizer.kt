@@ -175,6 +175,15 @@ object Recognizer {
             return PropValue.Action(m.groupValues[1], arg = "${m.groupValues[2]}.${m.groupValues[3]}")
           }
         }
+      // P1-4: LITERAL action args — { b.open("ROUTE") } / { b.pick(3) } — the
+      // commonest idiom in ported native code. The arg keeps its SOURCE text so
+      // export/write-back stay byte-identical. Also matches the `{ _ -> ... }`
+      // form the exporter emits when the event has an ignored payload param.
+      Regex("^\\{\\s*(?:_\\s*->\\s*)?${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\((.+)\\)\\s*}$", RegexOption.DOT_MATCHES_ALL).find(t)
+        ?.let { m ->
+          val raw = m.groupValues[2].trim()
+          if (parseLiteral(raw) != null) return PropValue.Action(m.groupValues[1], arg = raw)
+        }
     }
     // P1-B: item.subfield inside a Repeat → an item-scoped Bind ("item.subfield").
     Regex("^([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)$").find(t)?.let { m ->

@@ -282,6 +282,58 @@ class RecognizerTest {
   }
 
   /**
+   * P1-4: LITERAL action args — `{ b.open("ROUTE") }` / `{ b.pick(3) }` — the
+   * commonest idiom porting native screens (found on stashfin Profile's App
+   * Update row, which silently RawCoded). Must recognize (no RawCode), keep the
+   * arg's SOURCE text, export byte-identically, and type the contract param.
+   */
+  @Test fun literalArgActionsRoundTrip() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.Button
+      import dev.keliver.material.compose.ListItem
+
+      @Composable
+      fun MenuScreen(b: MenuScreenBindings) {
+        Column {
+          ListItem(headline = "App Update", onClick = { b.open("APP_UPDATE") })
+          Button(text = "Pick 3", onClick = { b.pick(3) })
+        }
+      }
+
+      interface MenuScreenBindings {
+        fun open(value: String)
+        fun pick(value: Int)
+      }
+    """.trimIndent()
+
+    val r = Recognizer.recognize("MenuScreen.kt", src)!!
+    fun walk(n: DocNode): List<DocNode> = when (n) {
+      is DocNode.Widget -> listOf(n) + n.children.flatMap { walk(it) }
+      else -> listOf(n)
+    }
+    val all = walk(r.root)
+    assertTrue(all.none { it is DocNode.RawCode }, all.filterIsInstance<DocNode.RawCode>().toString())
+
+    val li = all.filterIsInstance<DocNode.Widget>().first { it.type == "ListItem" }
+    assertEquals(PropValue.Action("open", arg = "\"APP_UPDATE\""), li.props["onClick"])
+    val btn = all.filterIsInstance<DocNode.Widget>().first { it.type == "Button" }
+    assertEquals(PropValue.Action("pick", arg = "3"), btn.props["onClick"])
+
+    // Export reproduces the source forms + a TYPED contract (String vs Int).
+    val doc = UiDocument("menu", r.root, r.contract, version = 0, nextHandle = 100)
+    val exported = exportKotlin(doc.toWidgetTree(), functionName = "MenuScreen")
+    assertTrue("""onClick = { b.open("APP_UPDATE") }""" in exported, exported)
+    assertTrue("onClick = { b.pick(3) }" in exported, exported)
+    assertTrue("fun open(value: String)" in exported, exported)
+    assertTrue("fun pick(value: Int)" in exported, exported)
+
+    val r2 = Recognizer.recognize("MenuScreen.kt", exported)!!
+    assertEquals(doc.root, Reconciler.reconcile(doc, r2).root)
+  }
+
+  /**
    * DOGFOOD (Field Notes): the real screen shipped in portal-app-lib must be
    * FULLY portal-recognized — the "no escape hatches" contract means every node
    * ingests as a Widget (zero RawCode), the per-item Repeat binds resolve, the

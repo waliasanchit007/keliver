@@ -30,9 +30,12 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## P1 — Grammar & recognizer gaps (each found by porting a real screen)
 
-4. **Literal action args**: `{ b.open("ROUTE") }` silently RawCodes (found on the
-   Profile App-Update row). Support literal `Action.arg` — commonest idiom in
-   ported native code.
+4. ✅ **Literal action args** (DONE 2026-07-12): `{ b.open("ROUTE") }` / `{ b.pick(3) }`
+   are grammar — the recognizer keeps the arg's SOURCE text (also matches the
+   `{ _ -> ... }` exporter form), the exporter already emitted verbatim, and
+   collectContract types the param from the literal (String/Int/Double/Boolean).
+   Round-trip tested (RecognizerTest.literalArgActionsRoundTrip) + live-verified
+   ingesting a probe screen in stashfin-sdui (0 RawCode).
 5. **Repeat mock hints surfacing**: preview shows `{item.title} 1..3` — wire the
    existing item-mock-hints so section lists preview with realistic data by default.
 6. **Icon set**: curated ~55 names is too small for real apps (QrCode, ContentCopy,

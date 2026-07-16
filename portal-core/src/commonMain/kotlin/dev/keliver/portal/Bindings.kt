@@ -54,7 +54,7 @@ fun collectContract(tree: WidgetNode): ScreenContract {
           actions += value.name
           when {
             value.arg == "it" -> actionParams[value.name] = eventParamType["${n.type}.$key"] ?: "String"
-            value.arg != null -> actionParams[value.name] = "String" // item-scoped data (ids etc.)
+            value.arg != null -> actionParams[value.name] = literalArgType(value.arg)
           }
         }
         else -> {}
@@ -64,4 +64,15 @@ fun collectContract(tree: WidgetNode): ScreenContract {
   }
   walk(tree)
   return ScreenContract(fields, actions.toList(), actionParams)
+}
+
+/** P1-4: the handler param type implied by an Action arg's SOURCE text —
+ * `"ROUTE"` → String, `3` → Int, `2.5` → Double, `true` → Boolean;
+ * item-scoped data (`item.id`) stays String. */
+private fun literalArgType(arg: String): String = when {
+  arg.startsWith('"') -> "String"
+  arg == "true" || arg == "false" -> "Boolean"
+  Regex("^-?\\d+$").matches(arg) -> "Int"
+  Regex("^-?\\d*\\.\\d+$").matches(arg) -> "Double"
+  else -> "String"
 }
