@@ -69,19 +69,23 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## P2b — New findings (2026-07-16, from the user's live editor session)
 
-10a. **Contract-extending editor ops break the guest compile.** Inserting a
-    Repeat bound to a NEW field (`b.items`) writes `.kt` code referencing a
-    binding the interface doesn't declare — the continuous build goes red and
-    devices stop updating, silently from the editor's perspective. Fix: ops
-    that introduce new binds must extend doc.contract AND write the interface
-    member (M4's contract write-back path), or the editor must flag "undeclared
-    binding" before committing the op. High priority — this is the first thing
-    a real user hit.
-10b. **`gradle -t serveDevelopmentZipline` DIES on a compile error** instead of
-    waiting for the fix — the whole hot-reload loop silently stops until
-    someone restarts it. Investigate the serve task's continuous-mode failure
-    handling; at minimum the dev.sh/keliver-portal launcher should supervise
-    and restart it.
+10a. ✅ **Contract write-back** (DONE 2026-07-16): every tree write now runs
+    ContractWriteBack.ensure — new binds/actions ADD defaulted, TODO(portal)-
+    marked interface members (`val items: List<Item> get() = emptyList()`,
+    `fun open(value: String) {}`) so presenters keep compiling and devices
+    render the draft; marked members ops un-require are REMOVED (undo is
+    byte-clean); hand-written members are never touched; item interfaces are
+    managed only when referenced by managed members (hand-named item types are
+    not duplicated). The contract-mismatch full-regen bail in WriteBack is
+    gone. Fixed en route: collectContract leaked item-scoped binds as invalid
+    dotted interface members (`val item.label: String`) — latent PUBLISH-path
+    exporter bug. Live-verified on stashfin ProfileScreen: insert Repeat over
+    a new field → guest build GREEN with 2 markers → undo → byte-identical.
+    Follow-up: the publish verifier should reject bundles whose contract still
+    carries TODO(portal) markers (drafts must not ship to prod).
+10b. ✅ (mitigated 2026-07-16) **serve dies on compile error** — stashfin's
+    dev.sh now supervises and restarts it (5s backoff). Root-cause fix in the
+    zipline serve task's continuous-mode failure handling still open (P4-ish).
 
 ## P3 — Application-scale features (from the 100-screen review; build in this order)
 

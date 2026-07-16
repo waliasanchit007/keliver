@@ -149,7 +149,14 @@ class DocumentService(
       // com.stashfin.*) into dev.keliver.portalpublished.screens.
       val pkgName = existing?.let { PKG_RE.find(it)?.groupValues?.get(1) } ?: packageName
       val pkg = pkgName?.let { "package $it\n\n" } ?: ""
-      val text = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
+      val merged = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName))
+      // P2b-a: keep the Bindings interface in sync with the tree — new binds
+      // gain defaulted, TODO(portal)-marked members so the guest keeps
+      // compiling; marker-carrying members that ops un-required are removed.
+      val tree = doc.toWidgetTree()
+      val text = runCatching {
+        dev.keliver.portal.ingest.ContractWriteBack.ensure(merged, tree, functionName)
+      }.getOrDefault(merged)
       lastWrittenText = text
       kotlinFile.writeText(text)
       // M9 versioned catch-up: bake the doc version this screen was written at

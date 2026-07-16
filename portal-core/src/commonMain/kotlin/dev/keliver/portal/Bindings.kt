@@ -49,7 +49,12 @@ fun collectContract(tree: WidgetNode): ScreenContract {
   fun walk(n: WidgetNode) {
     for ((key, value) in n.props) {
       when (value) {
-        is Bind -> kindOf(n.type, key)?.let { k -> if (value.field !in fields) fields[value.field] = k }
+        // Item-scoped binds ("item.label") belong to the Repeat's item interface
+        // (collectLogicFields), NOT the screen contract — a dotted name here
+        // would emit invalid Kotlin (`val item.label: String`).
+        is Bind -> kindOf(n.type, key)?.let { k ->
+          if ('.' !in value.field && value.field !in fields) fields[value.field] = k
+        }
         is Action -> {
           actions += value.name
           when {

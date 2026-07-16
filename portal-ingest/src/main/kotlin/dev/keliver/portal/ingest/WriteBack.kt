@@ -23,8 +23,8 @@ object WriteBack {
     val file = rec.file ?: return null
     val factory = PsiEnv.factory
 
-    // Contract change isn't surgical yet — bail so the interface is regenerated.
-    if (rec.contract != target.contract) return null
+    // P2b-a: contract drift no longer forces a full regen — ContractWriteBack
+    // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return null
     if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory)) return null
