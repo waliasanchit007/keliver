@@ -34,8 +34,30 @@ import java.net.URLDecoder
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
 
-/** The app repo checkout the portal serves (and the publish step compiles in). */
-private val repoDir = File(System.getenv("PORTAL_REPO") ?: System.getProperty("user.dir"))
+/**
+ * The app repo checkout the portal serves (and the publish step compiles in).
+ * Resolution (P2-9): PORTAL_REPO env → nearest ancestor of cwd holding a
+ * keliver.portal.json → cwd. The startup banner names which source won.
+ */
+private fun discoverRepoUpward(): File? {
+  var d: File? = File(System.getProperty("user.dir"))
+  repeat(8) {
+    val dir = d ?: return null
+    if (File(dir, "keliver.portal.json").exists()) return dir
+    d = dir.parentFile
+  }
+  return null
+}
+
+private val repoResolution: Pair<String, File> = run {
+  val env = System.getenv("PORTAL_REPO")
+  if (env != null) return@run "PORTAL_REPO env" to File(env)
+  val discovered = discoverRepoUpward()
+  if (discovered != null) return@run "keliver.portal.json discovered at $discovered" to discovered
+  "cwd (no keliver.portal.json found upward)" to File(System.getProperty("user.dir"))
+}
+private val repoDirSource = repoResolution.first
+private val repoDir = repoResolution.second
 
 /** Separability: the repo's keliver.portal.json (all fields default to this repo's layout). */
 private val config = loadPortalConfig(repoDir)
@@ -217,6 +239,28 @@ private val ingestExec = java.util.concurrent.Executors.newSingleThreadScheduled
 }
 private val pendingIngest = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ScheduledFuture<*>>()
 
+/**
+ * P2-8/9: the watcher only reacts to file EVENTS (and macOS `touch` fires
+ * none), so screens created or edited while the relay was down never appeared.
+ * At boot: ingest every screen .kt in the app screens dir, and retire store
+ * mirrors (~store/default/<screen>.json) whose .kt no longer exists — stale
+ * mirrors from past sessions otherwise shadow the /screens picker forever.
+ */
+private fun bootScan() {
+  if (!appScreensDir.exists()) return
+  val ktScreens = (appScreensDir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray())
+  ktScreens.forEach { runCatching { ingestFile(it) }.onFailure { e -> println("boot ingest failed for $it: $e") } }
+  val names = ktScreens.map { it.nameWithoutExtension }.toSet()
+  File(root, "default").listFiles { f -> f.name.endsWith(".json") }?.forEach { mirror ->
+    val screen = mirror.name.removeSuffix(".json")
+    if (screen !in names) {
+      mirror.delete()
+      println("portal-server: retired stale store mirror default/$screen (no ${screen}.kt in $appScreensDir)")
+    }
+  }
+  println("portal-server: boot scan ingested ${ktScreens.size} screen(s) from $appScreensDir")
+}
+
 private fun startKotlinWatcher() {
   val legacyRoot = File(root, "kotlin").apply { mkdirs() }
   val dirs = buildList {
@@ -260,8 +304,19 @@ private fun ingestFile(f: File) {
   }.onFailure { println("ingest failed for $f: $it") }
 }
 
-fun main() {
+fun main(args: Array<String>) {
+  // P2-9: repoDir resolves BEFORE main (top-level state), so a positional arg
+  // cannot be honored — fail loudly instead of silently serving the wrong repo.
+  if (args.isNotEmpty()) {
+    System.err.println(
+      "portal-server: positional arguments are not supported. Point the server at an app repo\n" +
+        "with PORTAL_REPO=<dir>, or run it from inside a repo containing keliver.portal.json.",
+    )
+    kotlin.system.exitProcess(64)
+  }
+  println("portal-server: repo=$repoDir (via $repoDirSource)")
   ensureDefaults()
+  bootScan()
   startKotlinWatcher()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
 

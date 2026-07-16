@@ -54,16 +54,18 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## P2 — Relay/tooling ergonomics (each cost real session time)
 
-8. **Relay boot scan**: no initial ingest — screens created while the relay is down
-   never appear; macOS watcher also ignores `touch`. Scan screensDir at boot.
-9. **Config over env**: `PORTAL_REPO` env is undiscoverable; accept a CLI arg /
-   read `keliver.portal.json` upward from cwd. Also: stale store mirrors
-   (`~/.keliver-portal/<project>/*.json`) shadow deleted screens — reconcile
-   against screensDir at boot.
-10. **Host/guest widget-version handshake in DEV** — a stale host lib produced a
-    blank screen + cryptic `Unknown widget ID N` (node-id desync after a silently
-    skipped unknown widget). Dev loader should log the missing widget TAG and
-    surface a visible "host lacks widget X" error. (Prod is already gated; dev isn't.)
+8. ✅ **Relay boot scan** (DONE 2026-07-16): every screens-dir .kt is ingested at
+   boot — no more invisible screens / touch-doesn't-fire dance. Live-verified.
+9. ✅ **Config discovery + store reconcile** (DONE 2026-07-16): repo resolves
+   PORTAL_REPO env → nearest ancestor of cwd with keliver.portal.json → cwd,
+   with a startup banner naming the source; positional args fail loudly (they
+   can't be honored — top-level init order). Stale ~store/default/*.json mirrors
+   are retired at boot when their .kt is gone. Live-verified (GhostScreen probe).
+10. ✅ **Unknown-widget diagnostic** (DONE 2026-07-16): HostProtocolAdapter now
+    logs the missing widget TAG at create-skip time and the eventual node lookup
+    fails with "Widget tag X is unknown to this host — host older than guest;
+    update the host library or gate widgetVersion" instead of the cryptic
+    "Unknown widget ID N". (Ships to consumers with the next host-lib publish.)
 
 ## P3 — Application-scale features (from the 100-screen review; build in this order)
 

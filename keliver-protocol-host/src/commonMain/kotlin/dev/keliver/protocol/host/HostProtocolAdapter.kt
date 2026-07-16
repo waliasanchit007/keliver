@@ -67,6 +67,14 @@ public class HostProtocolAdapter<W : Any>(
   /** Nodes available for reuse. */
   private val pool = ArrayDeque<ProtocolNode<W>>()
 
+  /**
+   * P2-10: node ids whose CREATE was skipped because this host doesn't know the
+   * widget tag (host widget system older than the guest bundle). Kept so later
+   * references fail with a self-diagnosing message instead of a bare
+   * "Unknown widget ID N" (which reads like a protocol bug, not a version skew).
+   */
+  private val skippedByUnknownTag = mutableIntObjectMapOf<Int>()
+
   private var closed = false
 
   override fun sendChanges(changes: List<UiChange>) {
@@ -80,7 +88,16 @@ public class HostProtocolAdapter<W : Any>(
       val id = change.id
       when (change) {
         is UiCreate -> {
-          val widgetProtocol = protocol.widget(change.tag) ?: continue
+          val widgetProtocol = protocol.widget(change.tag)
+          if (widgetProtocol == null) {
+            skippedByUnknownTag.put(change.id.value, change.tag.value)
+            println(
+              "keliver: host widget system has no widget for tag ${change.tag.value} — " +
+                "skipping node ${change.id.value}. The host library predates the guest " +
+                "bundle; update the host (republish + rebuild) or gate the bundle's widgetVersion.",
+            )
+            continue
+          }
           val node = widgetProtocol.createNode(id, widgetSystem)
           val old = nodes.put(change.id.value, node)
           require(old == null) {
@@ -159,7 +176,16 @@ public class HostProtocolAdapter<W : Any>(
   }
 
   internal fun node(id: Id): ProtocolNode<W> {
-    return checkNotNull(nodes[id.value]) { "Unknown widget ID ${id.value}" }
+    return checkNotNull(nodes[id.value]) {
+      val tag = skippedByUnknownTag[id.value]
+      if (tag != null) {
+        "Widget tag $tag (node ${id.value}) is unknown to this host — the host widget " +
+          "system is older than the guest bundle. Update the host library or gate the " +
+          "bundle's widgetVersion."
+      } else {
+        "Unknown widget ID ${id.value}"
+      }
+    }
   }
 
   /**
