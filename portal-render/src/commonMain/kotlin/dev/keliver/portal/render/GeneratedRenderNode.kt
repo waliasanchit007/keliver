@@ -90,6 +90,7 @@ import dev.keliver.material.compose.padding
 import dev.keliver.material.compose.paddingEach
 import dev.keliver.material.compose.rotate
 import dev.keliver.material.compose.scale
+import dev.keliver.material.compose.selectionTag
 import dev.keliver.material.compose.shadow
 import dev.keliver.material.compose.size
 
@@ -533,6 +534,7 @@ private fun nodeModifier(node: WidgetNode): Modifier {
   if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
   if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.intB("mod.Rotate.degrees", 0))
   if ("mod.Scale.percent" in node.props) m = m.scale(node.intB("mod.Scale.percent", 0))
+  if ("mod.SelectionTag.handle" in node.props) m = m.selectionTag(node.intB("mod.SelectionTag.handle", 0))
   if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.intB("mod.Shadow.elevationDp", 0))
   if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
   return m

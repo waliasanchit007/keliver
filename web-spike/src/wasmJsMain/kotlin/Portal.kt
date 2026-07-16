@@ -545,15 +545,97 @@ private fun buildCenter() {
   val dims = (localStorage.getItem("portal.preset") ?: "390x780").split("x")
   val w = dims.getOrNull(0)?.toIntOrNull() ?: 390
   val h = dims.getOrNull(1)?.toIntOrNull() ?: 780
-  frame.setAttribute("style", "width:${w}px; height:${h}px;")
+  frame.setAttribute("style", "width:${w}px; height:${h}px; position:relative;")
   val host = Ui.el("div")
   host.id = PREVIEW_HOST_ID
   host.setAttribute("style", "width:100%; height:100%;")
   frame.appendChild(host)
+  installClickToSelect(frame, host)
   center.appendChild(frame)
   document.body?.appendChild(center)
   // The legacy fixed-size canvas from index.html is unused now.
   (document.getElementById("ComposeTarget") as? HTMLElement)?.setAttribute("style", "display:none;")
+}
+
+// ── P3-11: canvas click-to-select. The composition tags every rendered node
+// with its handle (SelectionTag modifier); the ComposeUi host reports bounds
+// into SelectionRegistry (compose px, canvas-root coords). The chrome
+// hit-tests DOM events against it and mirrors selection/hover as overlay divs.
+private var selectMode = true
+private lateinit var selOverlay: HTMLElement
+private lateinit var hoverOverlay: HTMLElement
+
+private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
+  selOverlay = Ui.el("div").also {
+    it.setAttribute("style", "position:absolute; pointer-events:none; border:2px solid #4f8cff; border-radius:3px; display:none; z-index:5;")
+    frame.appendChild(it)
+  }
+  hoverOverlay = Ui.el("div").also {
+    it.setAttribute("style", "position:absolute; pointer-events:none; border:1px dashed rgba(79,140,255,.7); border-radius:3px; display:none; z-index:4;")
+    frame.appendChild(it)
+  }
+  val toggle = Ui.el("div", "sel-toggle", "🎯 select")
+  toggle.setAttribute(
+    "style",
+    "position:absolute; top:6px; right:6px; z-index:6; padding:2px 8px; border-radius:6px; " +
+      "font-size:11px; cursor:pointer; background:rgba(79,140,255,.85); color:#fff; user-select:none;",
+  )
+  toggle.addEventListener("click", { _ ->
+    selectMode = !selectMode
+    toggle.setAttribute(
+      "style",
+      toggle.getAttribute("style")!!.replace(
+        Regex("background:[^;]+;"),
+        if (selectMode) "background:rgba(79,140,255,.85);" else "background:rgba(120,120,120,.6);",
+      ),
+    )
+    if (!selectMode) { hideOverlay(selOverlay); hideOverlay(hoverOverlay) }
+  })
+  frame.appendChild(toggle)
+
+  fun hitAt(ev: org.w3c.dom.events.Event): Int? {
+    val me = ev as org.w3c.dom.events.MouseEvent
+    val r = host.getBoundingClientRect()
+    val dpr = kotlinx.browser.window.devicePixelRatio
+    val x = ((me.clientX - r.left) * dpr).toFloat()
+    val y = ((me.clientY - r.top) * dpr).toFloat()
+    val h = dev.keliver.material.composeui.SelectionRegistry.hitTest(x, y) ?: return null
+    return if (portalTree.value.findNode(h) != null) h else null // ignore stale handles
+  }
+  host.addEventListener("click", { ev ->
+    if (!selectMode) return@addEventListener
+    hitAt(ev)?.let { selectedId = it; refresh() }
+  })
+  host.addEventListener("mousemove", { ev ->
+    if (!selectMode) { hideOverlay(hoverOverlay); return@addEventListener }
+    val h = hitAt(ev)
+    if (h == null || h == selectedId) hideOverlay(hoverOverlay) else positionOverlay(hoverOverlay, h)
+  })
+  host.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
+
+  // Rects move under layout/scroll; a light tick keeps the selection box glued.
+  kotlinx.browser.window.setInterval({
+    if (selectMode) {
+      val sel = selectedId
+      if (sel != null && portalTree.value.findNode(sel) != null) positionOverlay(selOverlay, sel)
+      else hideOverlay(selOverlay)
+    }
+    null
+  }, 120)
+}
+
+private fun positionOverlay(el: HTMLElement, handle: Int) {
+  val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: run { hideOverlay(el); return }
+  val dpr = kotlinx.browser.window.devicePixelRatio
+  el.style.display = "block"
+  el.style.left = "${rect.left / dpr}px"
+  el.style.top = "${rect.top / dpr}px"
+  el.style.width = "${rect.width / dpr}px"
+  el.style.height = "${rect.height / dpr}px"
+}
+
+private fun hideOverlay(el: HTMLElement) {
+  el.style.display = "none"
 }
 
 private fun buildRightPane() {

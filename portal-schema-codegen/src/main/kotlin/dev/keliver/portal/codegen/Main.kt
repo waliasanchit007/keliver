@@ -52,9 +52,15 @@ fun main(argv: Array<String>) {
       layout.schema.modifiers.map { it to "dev.keliver.layout.compose" }
     ).mapNotNull { (m, pkg) -> planModifier(pkg, m) }
 
+  // P3-11: portal-INTERNAL modifiers render in the preview (RenderNode) but are
+  // invisible to users — not in the palette/prop-panel (catalog) and never
+  // written to files (exporter). SelectionTag maps canvas geometry -> handles.
+  val internalMods = setOf("SelectionTag")
+  val userMods = mods.filterNot { it.name in internalMods }
+
   val outputs = mapOf(
-    File(args.outCore, "dev/keliver/portal/GeneratedCatalog.kt") to emitCatalog(includes, mods),
-    File(args.outCore, "dev/keliver/portal/GeneratedExporter.kt") to emitExporter(includes, mods),
+    File(args.outCore, "dev/keliver/portal/GeneratedCatalog.kt") to emitCatalog(includes, userMods),
+    File(args.outCore, "dev/keliver/portal/GeneratedExporter.kt") to emitExporter(includes, userMods),
     File(args.outRender, "dev/keliver/portal/render/GeneratedRenderNode.kt") to emitRenderNode(includes, mods),
   )
 

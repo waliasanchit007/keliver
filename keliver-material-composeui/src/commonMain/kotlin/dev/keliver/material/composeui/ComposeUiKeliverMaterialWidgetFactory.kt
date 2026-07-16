@@ -175,6 +175,7 @@ public class ComposeUiKeliverMaterialWidgetFactory(
   override fun Rotate(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Rotate) {}
   override fun Scale(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.Scale) {}
   override fun AnimateContentSize(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.AnimateContentSize) {}
+  override fun SelectionTag(value: @Composable (Modifier) -> Unit, modifier: dev.keliver.material.modifier.SelectionTag) {}
 }
 
 @Suppress("FunctionName") // Acting like a type.

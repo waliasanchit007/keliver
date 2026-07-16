@@ -533,6 +533,8 @@ public final class dev/keliver/material/testing/KeliverMaterialTestingWidgetFact
 	public synthetic fun Scale (Ljava/lang/Object;Ldev/keliver/material/modifier/Scale;)V
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
+	public fun SelectionTag (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/SelectionTag;)V
+	public synthetic fun SelectionTag (Ljava/lang/Object;Ldev/keliver/material/modifier/SelectionTag;)V
 	public fun Shadow (Ldev/keliver/testing/WidgetValue;Ldev/keliver/material/modifier/Shadow;)V
 	public synthetic fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
 	public fun Shimmer ()Ldev/keliver/material/widget/Shimmer;

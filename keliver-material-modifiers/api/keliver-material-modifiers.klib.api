@@ -99,6 +99,11 @@ abstract interface dev.keliver.material.modifier/Scale : dev.keliver/Modifier.Un
         abstract fun <get-percent>(): kotlin/Int // dev.keliver.material.modifier/Scale.percent.<get-percent>|<get-percent>(){}[0]
 }
 
+abstract interface dev.keliver.material.modifier/SelectionTag : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/SelectionTag|null[0]
+    abstract val handle // dev.keliver.material.modifier/SelectionTag.handle|{}handle[0]
+        abstract fun <get-handle>(): kotlin/Int // dev.keliver.material.modifier/SelectionTag.handle.<get-handle>|<get-handle>(){}[0]
+}
+
 abstract interface dev.keliver.material.modifier/Shadow : dev.keliver/Modifier.UnscopedElement { // dev.keliver.material.modifier/Shadow|null[0]
     abstract val elevationDp // dev.keliver.material.modifier/Shadow.elevationDp|{}elevationDp[0]
         abstract fun <get-elevationDp>(): kotlin/Int // dev.keliver.material.modifier/Shadow.elevationDp.<get-elevationDp>|<get-elevationDp>(){}[0]

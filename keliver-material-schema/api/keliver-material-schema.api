@@ -883,6 +883,17 @@ public final class dev/keliver/material/SegmentedButtonRow {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/material/SelectionTag {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Ldev/keliver/material/SelectionTag;
+	public static synthetic fun copy$default (Ldev/keliver/material/SelectionTag;IILjava/lang/Object;)Ldev/keliver/material/SelectionTag;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHandle ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/material/Shadow {
 	public fun <init> (I)V
 	public final fun component1 ()I

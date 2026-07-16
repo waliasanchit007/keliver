@@ -259,6 +259,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/KeliverMaterialW
     abstract fun Scale(#A, dev.keliver.material.modifier/Scale) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Scale|Scale(1:0;dev.keliver.material.modifier.Scale){}[0]
     abstract fun ScrollableColumn(): dev.keliver.material.widget/ScrollableColumn<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.ScrollableColumn|ScrollableColumn(){}[0]
     abstract fun SegmentedButtonRow(): dev.keliver.material.widget/SegmentedButtonRow<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.SegmentedButtonRow|SegmentedButtonRow(){}[0]
+    abstract fun SelectionTag(#A, dev.keliver.material.modifier/SelectionTag) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.SelectionTag|SelectionTag(1:0;dev.keliver.material.modifier.SelectionTag){}[0]
     abstract fun Shadow(#A, dev.keliver.material.modifier/Shadow) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Shadow|Shadow(1:0;dev.keliver.material.modifier.Shadow){}[0]
     abstract fun Shimmer(): dev.keliver.material.widget/Shimmer<#A> // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Shimmer|Shimmer(){}[0]
     abstract fun Size(#A, dev.keliver.material.modifier/Size) // dev.keliver.material.widget/KeliverMaterialWidgetFactory.Size|Size(1:0;dev.keliver.material.modifier.Size){}[0]

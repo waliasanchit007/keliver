@@ -80,6 +80,8 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 	public fun Scale (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Scale;)V
 	public fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
+	public synthetic fun SelectionTag (Ljava/lang/Object;Ldev/keliver/material/modifier/SelectionTag;)V
+	public fun SelectionTag (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/SelectionTag;)V
 	public synthetic fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
 	public fun Shadow (Lkotlin/jvm/functions/Function3;Ldev/keliver/material/modifier/Shadow;)V
 	public fun Shimmer ()Ldev/keliver/material/widget/Shimmer;
@@ -111,6 +113,15 @@ public final class dev/keliver/material/composeui/ComposeUiKeliverMaterialWidget
 
 public final class dev/keliver/material/composeui/KeliverVisualModifiersKt {
 	public static final fun applyKeliverVisuals (Landroidx/compose/ui/Modifier;Ldev/keliver/Modifier;)Landroidx/compose/ui/Modifier;
+}
+
+public final class dev/keliver/material/composeui/SelectionRegistry {
+	public static final field $stable I
+	public static final field INSTANCE Ldev/keliver/material/composeui/SelectionRegistry;
+	public final fun clear ()V
+	public final fun getBounds ()Landroidx/compose/runtime/snapshots/SnapshotStateMap;
+	public final fun hitTest (FF)Ljava/lang/Integer;
+	public final fun report (ILandroidx/compose/ui/geometry/Rect;)V
 }
 
 public final class dev/keliver/material/composeui/ThemeKt {

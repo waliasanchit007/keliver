@@ -74,6 +74,10 @@ public abstract interface class dev/keliver/material/modifier/Scale : dev/kelive
 	public abstract fun getPercent ()I
 }
 
+public abstract interface class dev/keliver/material/modifier/SelectionTag : dev/keliver/Modifier$UnscopedElement {
+	public abstract fun getHandle ()I
+}
+
 public abstract interface class dev/keliver/material/modifier/Shadow : dev/keliver/Modifier$UnscopedElement {
 	public abstract fun getElevationDp ()I
 }

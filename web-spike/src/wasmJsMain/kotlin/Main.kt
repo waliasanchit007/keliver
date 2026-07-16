@@ -54,6 +54,22 @@ import kotlinx.serialization.json.Json
 
 private val JSON = Json { ignoreUnknownKeys = true }
 
+/**
+ * P3-11 click-to-select: every RENDERED node carries the portal-internal
+ * SelectionTag modifier with its document handle (WidgetNode.id == handle in
+ * editor mode). The ComposeUi host reports tagged bounds into
+ * SelectionRegistry; the DOM chrome hit-tests taps against it. Logic nodes
+ * aren't rendered directly — a Repeat's mock rows inherit the template's
+ * handle, so clicking any row selects the template (the editable thing).
+ */
+private val UNRENDERED_TYPES = setOf("Repeat", "Condition", "RawCode")
+
+internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
+  val tagged = if (n.type in UNRENDERED_TYPES) n
+  else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  return tagged.copy(children = tagged.children.map { selectionTagged(it) })
+}
+
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
   override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
@@ -119,7 +135,7 @@ fun main() {
         saveableStateRegistry = null,
         uiConfigurations = MutableStateFlow(UiConfiguration()),
       )
-      composition.setContent { RenderNode(portalTree.value) }
+      composition.setContent { RenderNode(selectionTagged(portalTree.value)) }
       guestAdapter.emitChanges() // initial render
 
       while (true) {

@@ -234,6 +234,7 @@ public abstract interface class dev/keliver/material/widget/KeliverMaterialWidge
 	public abstract fun Scale (Ljava/lang/Object;Ldev/keliver/material/modifier/Scale;)V
 	public abstract fun ScrollableColumn ()Ldev/keliver/material/widget/ScrollableColumn;
 	public abstract fun SegmentedButtonRow ()Ldev/keliver/material/widget/SegmentedButtonRow;
+	public abstract fun SelectionTag (Ljava/lang/Object;Ldev/keliver/material/modifier/SelectionTag;)V
 	public abstract fun Shadow (Ljava/lang/Object;Ldev/keliver/material/modifier/Shadow;)V
 	public abstract fun Shimmer ()Ldev/keliver/material/widget/Shimmer;
 	public abstract fun Size (Ljava/lang/Object;Ldev/keliver/material/modifier/Size;)V

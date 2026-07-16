@@ -131,6 +131,7 @@ import dev.keliver.schema.Widget
     Rotate::class,
     Scale::class,
     AnimateContentSize::class,
+    SelectionTag::class,
   ],
   dependencies = [
     Dependency(1, RedwoodLayout::class),
@@ -810,6 +811,18 @@ public object Reuse
 /** Animate this widget's own size changes (`Modifier.animateContentSize`). */
 @Modifier(79)
 public object AnimateContentSize
+
+/**
+ * P3-11 (portal-internal): tags a widget with its portal document handle so the
+ * EDITOR's canvas can map rendered geometry back to tree nodes (host impl
+ * reports bounds via onGloballyPositioned into the SelectionRegistry).
+ * Injected ONLY into the editor's in-memory preview tree — never written to
+ * files, never in the palette, never sent to devices.
+ */
+@Modifier(80)
+public data class SelectionTag(
+  val handle: Int,
+)
 
 // ---------------------------------------------------------------------------
 // Batch 9: universal visual modifiers (unscoped — usable on ANY widget).

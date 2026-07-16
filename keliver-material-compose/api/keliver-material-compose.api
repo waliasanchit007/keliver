@@ -257,6 +257,7 @@ public final class dev/keliver/material/compose/UnscopedKt {
 	public static final fun reuse (Ldev/keliver/Modifier;)Ldev/keliver/Modifier;
 	public static final fun rotate (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun scale (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
+	public static final fun selectionTag (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun shadow (Ldev/keliver/Modifier;I)Ldev/keliver/Modifier;
 	public static final fun size (Ldev/keliver/Modifier;II)Ldev/keliver/Modifier;
 }

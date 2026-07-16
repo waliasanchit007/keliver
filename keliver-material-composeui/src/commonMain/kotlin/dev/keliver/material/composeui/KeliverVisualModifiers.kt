@@ -43,8 +43,11 @@ import dev.keliver.material.modifier.Padding
 import dev.keliver.material.modifier.PaddingEach
 import dev.keliver.material.modifier.Rotate
 import dev.keliver.material.modifier.Scale
+import dev.keliver.material.modifier.SelectionTag
 import dev.keliver.material.modifier.Shadow
 import dev.keliver.material.modifier.Size
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import dev.keliver.Modifier as RedwoodModifier
 
 /**
@@ -95,6 +98,8 @@ public fun Modifier.applyKeliverVisuals(keliver: RedwoodModifier): Modifier {
       is Blur -> m.blur(element.radiusDp.dp)
       is AnimateContentSize -> m.animateContentSize()
       is Alpha -> m.alpha(element.pct / 100f)
+      // P3-11: editor-injected geometry reporter (never present on devices).
+      is SelectionTag -> m.onGloballyPositioned { c -> SelectionRegistry.report(element.handle, c.boundsInRoot()) }
       is Padding -> m.padding(element.allDp.dp)
       is PaddingEach -> m.padding(element.startDp.dp, element.topDp.dp, element.endDp.dp, element.bottomDp.dp)
       else -> m // Reuse + any modifier this host doesn't render: ignore.
