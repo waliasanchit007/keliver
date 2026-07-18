@@ -32,7 +32,14 @@ the editor with `python3 -m http.server 8096` FROM `build/portal-editor-live`
 (the promoted last-known-good — NOT web-spike/build/dist directly; serving
 from the wrong dir = white screen, app .wasm 404s). `GET /preview-build` =
 build status. Config paths in keliver.portal.json point at
-portal-app-lib/src/commonMain (js+wasm since P3-12).
+portal-app-lib/src/commonMain (js+wasm since P3-12). **CACHE TRAP: the editor
+loader `web-spike.js` has a CONSTANT filename, so after a rebuild the browser
+keeps running the OLD cached loader (and its baked-in stale wasm hash) — your
+fix appears to "not work". The relay's promote() now stamps `?v=<millis>` onto
+the script ref (a625d4233), but a relay predating that fix won't; either
+restart the relay, or hard-reload / bump the `?v=` in
+build/portal-editor-live/index.html, and confirm via read_network_requests
+that the NEW hashed .wasm loaded.**
 
 **Session-earned gotchas:** a new schema widget/modifier MUST also be listed in
 the @Schema members annotation or codegen silently ignores it; Zipline has no

@@ -121,16 +121,30 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     reference presenter DELETED; relay rebuild loop (debounce, single-flight,
     stale-reject, promote-on-success last-known-good) + /preview-build; editor
     build chip + state-preserving auto-reload. PreviewBuilderTest 3/3.
-    LOOP LIVE-DEMONSTRATED (2026-07-16 end of session): a presenter edit
-    built (~90s), promoted (id=3), and AUTO-RELOADED the user's open editor
-    window (state-preserving). Still awaiting user confirmation of the
-    in-canvas Live gates (real presenter text on `main`, ⚡ buyTapped counter,
-    feed rows, settings-through-components) — the 60-second script is in the
-    session log. NOTE: :8096 must serve build/portal-editor-live (the PROMOTED
-    dist) from now on. External-app (stashfin) enablement pending —
-    stashfin needs the editor shell published (separability) before it can own
-    a per-app preview build. Known v1 limits: canvas event payloads arrive as
-    null arg; presenter COMPOSITION crashes aren't caught (dispatch errors are).
+    **ALL FOUR IN-CANVAS LIVE GATES VERIFIED IN-BROWSER 2026-07-19** (agent-
+    driven, Claude_Browser): `main`→▶Live shows real "Compiled + SIGNED Kotlin
+    from the portal" (not the {text} mock); ⚡buyTapped climbs ×1→×2 "persisted
+    in SQLite via OTA data layer" + action-console logs; `feed`→addNote adds a
+    real "Note #1" row (empty-state → "1 note"); `settings` renders "Live
+    Presenter" through the MenuRow component. Three real bugs found+fixed+
+    verified while gating (bb4fc40ed, 905567267, a625d4233): (1) switchProject
+    didn't refetch the per-project component registry → components became opaque
+    placeholders after any project switch; (2) renderBindings/renderInspector
+    called collectContract WITHOUT the registry → binds through component
+    instances (subtitle=b.name) dropped from the panel/mocks; (3) the relay's
+    promote didn't cache-bust the constant-named web-spike.js → browsers ran a
+    stale editor+wasm across rebuilds (silently defeated promote-on-success —
+    cost a full detour). NOTE: :8096 must serve build/portal-editor-live (the
+    PROMOTED dist). External-app (stashfin) enablement pending — stashfin needs
+    the editor shell published (separability) before it can own a per-app
+    preview build. Known v1 limits / fast-follows: canvas event payloads arrive
+    as null arg; presenter COMPOSITION crashes aren't caught (dispatch errors
+    are); the STATE INSPECTOR panel lags one frame + doesn't clear on screen
+    switch (canvas is correct); **component-expanded binds don't reflect the
+    FIRST live frame until the next recompose (direct binds do) — snapshot
+    read-tracking edge on the just-added mock key under the applyValues
+    SideEffect; fix candidate: pre-seed contract field keys into mocks before
+    Live's first compose, or apply live values outside the SideEffect.**
 13. **Typed Route contracts + derived nav graph + flow preview** — sealed Route
     per feature, recognizer derives the graph, preview actually navigates
     (Login→OTP→Dashboard with a persona). Biggest authoring-experience win.
@@ -149,19 +163,28 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## NEXT SESSION — pick up here
 
-1. Confirm the P3-12 in-canvas Live gates with the user (script in #12 note);
-   then mark #12 fully verified.
+1. ✅ DONE 2026-07-19: P3-12 Live gates verified in-browser + 3 bugs fixed
+   (see #12). #12 is fully verified. The editor at :8096 is live on the fresh
+   wasm (both editor fixes). Relay cache-bust (a625d4233) needs a relay RESTART
+   to take effect — the running relay predates it; until then, manually
+   cache-bust (edit build/portal-editor-live/index.html script ?v=, or
+   hard-reload) after each editor rebuild.
 2. **Editor-shell separability + stashfin enablement** (the revised #2 from the
    priority review): publish the editor shell so stashfin owns a per-app
    preview build; do the deferred stashfin SectionCard/MenuRow dogfood
    on-device. Converts components + click-to-select + live preview from
-   dogfood demos into real-app adoption.
+   dogfood demos into real-app adoption. Scoping done: of web-spike's 9
+   wasmJsMain files only AppLibPreview.kt is truly app-specific (+ one line in
+   Main.kt: `appPreviewEntry = AppLibPreview`, + the :portal-app-lib dep). The
+   `appPreviewEntry` seam is already a global var → the shell extraction is
+   thin. On-device/publishing steps want the user present.
 3. Then: typed Route contracts + nav graph + flow preview (#13, folding
    FlowScope #14 into it); capability personas + recorded HTTP (#16);
    @PortalComponent polish (#17) last.
 4. Small debts: TODO(portal) publish-verifier gate; live-preview fast-follows
    (contract-driven codegen of values/dispatch adapter maps, canvas event
-   payload delivery, composition-crash guard).
+   payload delivery, composition-crash guard, **component-first-live-frame
+   staleness**, STATE INSPECTOR one-frame lag / no-clear-on-switch).
 
 ## P4 — Platform debt (tracked, not urgent)
 
