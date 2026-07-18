@@ -121,6 +121,7 @@ object Recognizer {
     components: ComponentRegistry = EmptyComponentRegistry,
   ): RecognizedComponent? {
     val file = PsiEnv.parse(fileName, source)
+    val pkg = file.packageFqName.asString().takeIf { it.isNotEmpty() }
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
@@ -128,7 +129,7 @@ object Recognizer {
     if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) {
       return RecognizedComponent(
         ComponentSpec(name, emptyList(), emptyList(), emptyMap(),
-          diagnostic = "name '$name' collides with a reserved/primitive widget", transparent = false),
+          diagnostic = "name '$name' collides with a reserved/primitive widget", transparent = false, packageName = pkg),
         null, name, emptyMap(), file,
       )
     }
@@ -153,7 +154,7 @@ object Recognizer {
         val ret = fnType.returnTypeReference?.text
         if (ret == "Unit" || ret == null) {
           val argType = fnType.parameters.firstOrNull()?.typeReference?.text
-          events += ComponentEventSpec(pName, argType)
+          events += ComponentEventSpec(pName, argType, required = p.defaultValue == null)
           eventParams += pName
         }
         continue
@@ -168,7 +169,7 @@ object Recognizer {
     if (slotParam != null) {
       return RecognizedComponent(
         ComponentSpec(name, props, events, paramTypes, defaults,
-          diagnostic = "slot parameter '$slotParam' (@Composable) not supported in v1", transparent = false),
+          diagnostic = "slot parameter '$slotParam' (@Composable) not supported in v1", transparent = false, packageName = pkg),
         null, name, emptyMap(), file,
       )
     }
@@ -177,7 +178,7 @@ object Recognizer {
     if (body == null) {
       return RecognizedComponent(
         ComponentSpec(name, props, events, paramTypes, defaults,
-          diagnostic = "component has no block body", transparent = false),
+          diagnostic = "component has no block body", transparent = false, packageName = pkg),
         null, name, emptyMap(), file,
       )
     }
@@ -195,6 +196,7 @@ object Recognizer {
       transparent = !hasRaw,
       dependencies = deps,
       diagnostic = if (hasRaw) "body contains code outside the portal grammar (opaque)" else null,
+      packageName = pkg,
     )
     return RecognizedComponent(spec, root, name, walk.psiByHandle, file)
   }

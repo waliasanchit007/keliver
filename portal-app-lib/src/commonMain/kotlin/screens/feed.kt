@@ -13,6 +13,8 @@ import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.TextButton
 import dev.keliver.material.compose.TextField
+import dev.keliver.portalpublished.components.MenuRow
+import dev.keliver.portalpublished.components.SectionHeader
 import dev.keliver.material.compose.padding
 import dev.keliver.ui.Dp
 
@@ -105,6 +107,19 @@ fun FeedScreen(b: FeedScreenBindings) {
       TextButton(
         text = "Clear all",
         onClick = { b.clearAll() },
+      )
+      MenuRow(
+        title = "Title",
+        subtitle = "Subtitle",
+        onClick = { b.addNote() },
+      )
+      SectionHeader(
+        label = "Label",
+      )
+      MenuRow(
+        title = "Title",
+        subtitle = "Subtitle",
+        onClick = { b.addNote() },
       )
     }
   }

@@ -436,6 +436,9 @@ private fun newNode(type: String): WidgetNode {
   editorComponents.spec(type)?.let { c ->
     val props = LinkedHashMap<String, Any?>()
     c.props.forEach { p -> if (p.name !in c.defaults) props[p.name] = c.sampleFor(p) }
+    // REQUIRED events must emit compiling Kotlin: wire them to a same-named
+    // action — ContractWriteBack adds the defaulted TODO(portal) member.
+    c.events.forEach { e -> if (e.required) props[e.name] = Action(e.name) }
     return WidgetNode(type, props)
   }
   return WidgetNode(type, widgetSpec(type)?.sampleProps ?: emptyMap())

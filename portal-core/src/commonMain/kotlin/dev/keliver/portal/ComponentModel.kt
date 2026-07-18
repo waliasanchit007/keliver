@@ -9,7 +9,7 @@ package dev.keliver.portal
  */
 
 /** A lambda parameter: `() -> Unit` (paramType null) or `(T) -> Unit` (paramType = T). */
-data class ComponentEventSpec(val name: String, val paramType: String? = null)
+data class ComponentEventSpec(val name: String, val paramType: String? = null, val required: Boolean = true)
 
 /**
  * The signature-derived spec for one component plus its recognized body.
@@ -34,6 +34,8 @@ data class ComponentSpec(
   val dependencies: Set<String> = emptySet(),
   /** Human diagnostic when opaque, invalid, or in a cycle; null when clean. */
   val diagnostic: String? = null,
+  /** The definition file's package — screens importing the component need it. */
+  val packageName: String? = null,
 ) {
   /** Editor sample value for a required scalar prop with no signature default. */
   fun sampleFor(prop: PropSpec): Any? = defaults[prop.name] ?: when (prop.kind) {

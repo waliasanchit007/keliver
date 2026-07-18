@@ -39,7 +39,11 @@ fun parseComponents(json: String): ComponentRegistry = runCatching {
     }
     val events = o["events"]!!.jsonArray.map { e ->
       val eo = e.jsonObject
-      ComponentEventSpec(eo["name"]!!.jsonPrimitive.content, eo["paramType"]?.jsonPrimitive?.content)
+      ComponentEventSpec(
+        eo["name"]!!.jsonPrimitive.content,
+        eo["paramType"]?.jsonPrimitive?.content,
+        required = eo["required"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
+      )
     }
     val defaults = o["defaults"]!!.jsonObject.mapValues { (_, v) -> jsonToAny(v.toString()) }
     val bodyEl = o["body"]

@@ -41,7 +41,46 @@ object ContractWriteBack {
     functionName: String,
     components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
   ): String {
+    // C2 gap found live (P3-12 build loop): surgical inserts of COMPONENT
+    // instances emit the call but not its import — ensure them here (adds
+    // only; removing unused imports is a human decision).
+    val withImports = ensureComponentImports(fileText, tree, components)
     val exported = exportKotlin(tree, functionName = functionName, components = components)
+    return ensureContract(withImports, exported, functionName)
+  }
+
+  /** Insert `import <pkg>.<Name>` for every component instance in [tree] the file lacks. */
+  private fun ensureComponentImports(
+    fileText: String,
+    tree: WidgetNode,
+    components: dev.keliver.portal.ComponentRegistry,
+  ): String {
+    val used = LinkedHashSet<String>()
+    fun walk(n: WidgetNode) {
+      if (components.isComponent(n.type)) used += n.type
+      n.children.forEach(::walk)
+    }
+    walk(tree)
+    if (used.isEmpty()) return fileText
+    val filePkg = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
+      .find(fileText)?.groupValues?.get(1)
+    val needed = used.mapNotNull { name ->
+      val pkg = components.spec(name)?.packageName ?: return@mapNotNull null
+      if (pkg == filePkg) null else "import $pkg.$name"
+    }.filter { it !in fileText }
+    if (needed.isEmpty()) return fileText
+    val lines = fileText.lines().toMutableList()
+    // After the last existing import, else after the package line, else at top.
+    val lastImport = lines.indexOfLast { it.startsWith("import ") }
+    val insertAt = when {
+      lastImport >= 0 -> lastImport + 1
+      else -> lines.indexOfFirst { it.startsWith("package ") }.let { if (it >= 0) it + 1 else 0 }
+    }
+    lines.addAll(insertAt, needed)
+    return lines.joinToString("\n")
+  }
+
+  private fun ensureContract(fileText: String, exported: String, functionName: String): String {
     val exportFile = PsiEnv.parse("Exported.kt", exported)
     val exportIfaces = exportFile.declarations.filterIsInstance<KtClass>().filter { it.isInterface() }
     val requiredBindings = exportIfaces.firstOrNull { it.name == "${functionName}Bindings" }

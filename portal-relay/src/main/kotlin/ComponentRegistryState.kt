@@ -107,7 +107,7 @@ object Components {
     "{\"name\":\"${p.name}\",\"kind\":\"${p.kind.name}\",\"label\":\"${p.label}\"}"
 
   private fun eventJson(e: ComponentEventSpec): String =
-    "{\"name\":\"${e.name}\"" + (e.paramType?.let { ",\"paramType\":\"$it\"" } ?: "") + "}"
+    "{\"name\":\"${e.name}\",\"required\":${e.required}" + (e.paramType?.let { ",\"paramType\":\"$it\"" } ?: "") + "}"
 
   private fun defaultJson(v: Any?): String = when (v) {
     null -> "null"
