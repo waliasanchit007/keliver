@@ -957,7 +957,10 @@ private fun switchProject(name: String) {
   sendEmpty("$SERVER/active?project=$currentProject&screen=main", "POST")
   currentScreen = "main"
   reloadScreenList()
-  loadDraft()
+  // The component registry is per-project — refetch it for the new project
+  // BEFORE the doc loads, or every instance falls back to an opaque placeholder
+  // (mirrors the init path at boot).
+  fetchComponents { loadDraft() }
 }
 
 private fun switchScreen(name: String) {
