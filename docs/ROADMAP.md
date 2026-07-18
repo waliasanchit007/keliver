@@ -169,15 +169,29 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    to take effect — the running relay predates it; until then, manually
    cache-bust (edit build/portal-editor-live/index.html script ?v=, or
    hard-reload) after each editor rebuild.
-2. **Editor-shell separability + stashfin enablement** (the revised #2 from the
-   priority review): publish the editor shell so stashfin owns a per-app
-   preview build; do the deferred stashfin SectionCard/MenuRow dogfood
-   on-device. Converts components + click-to-select + live preview from
-   dogfood demos into real-app adoption. Scoping done: of web-spike's 9
-   wasmJsMain files only AppLibPreview.kt is truly app-specific (+ one line in
-   Main.kt: `appPreviewEntry = AppLibPreview`, + the :portal-app-lib dep). The
-   `appPreviewEntry` seam is already a global var → the shell extraction is
-   thin. On-device/publishing steps want the user present.
+2. **Editor-shell separability** ✅ DONE 2026-07-19 (7454d7646, verified). The
+   reusable editor is now its own compose-wasmJs library **:portal-editor** (8
+   shell files incl. `EditorShell.kt`'s `runPortalEditor(entry: AppPreviewEntry)`
+   + the generic PreviewCapabilities/PreviewSqlDriver). **web-spike** is now a
+   THIN executable: `Main.kt = fun main() = runPortalEditor(AppLibPreview)` +
+   `AppLibPreview.kt`, depending on :portal-editor. Root package kept across the
+   module boundary → zero import churn. Verified on fresh wasm (850c30de): dogfood
+   editor renders + `main`→Live runs the REAL MainPresenter through the extracted
+   shell. **CONSUMER RECIPE (a per-app editor in 3 pieces):** (a) depend on
+   `:portal-editor` (composite build now; a published artifact later); (b) write
+   an `AppPreviewEntry` (map screen name → `ScreenPreview { PreviewFrame(values,
+   dispatch) }` wrapping the app's REAL presenters, taking sqldelight `SqlDriver`
+   from `PreviewSqlDriver` — NOT Zipline; wasm has no dynamic linking, so the
+   presenters compile IN); (c) `fun main() = runPortalEditor(YourAppPreview)`,
+   build `:yourEditor:wasmJsBrowserDistribution`, serve it against a relay whose
+   PORTAL_REPO points at your app repo. AppLibPreview.kt + web-spike/build.gradle
+   are the copy-paste template.
+   **STASHFIN ENABLEMENT (remaining — wants the user + stashfin repo):** create
+   stashfin's editor module (its own AppPreviewEntry over its Profile/… presenters),
+   wire :portal-editor via composite build, build+serve its editor, then the
+   deferred stashfin SectionCard/MenuRow on-device dogfood. Cross-repo + device →
+   do together. Optional first: a `keliver-new-editor` scaffold script (mirrors
+   keliver-new-component) that stamps the 3 pieces.
 3. Then: typed Route contracts + nav graph + flow preview (#13, folding
    FlowScope #14 into it); capability personas + recorded HTTP (#16);
    @PortalComponent polish (#17) last.

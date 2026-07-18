@@ -21,9 +21,12 @@ self-hosted `keliver-mac` runner.
 **Key modules:** `keliver-material*` (60-widget lib + schema), `portal-relay`
 (:8077 server — ingest/write-back/publish; needs `PORTAL_REPO=<app repo>` env),
 `portal-ingest` (PSI recognizer/reconciler), `portal-core`/`portal-document`
-(tree + ops engine), `portal-render` (shared RenderNode), `web-spike` (wasm
-editor → :8096), `portal-schema-codegen` (schemas → catalog/exporter/RenderNode
-— regenerate when schemas change, CI has a staleness guard).
+(tree + ops engine), `portal-render` (shared RenderNode), `portal-editor` (the
+REUSABLE editor shell — `runPortalEditor(entry: AppPreviewEntry)`; a consumer
+app ships a per-app editor by depending on it + supplying its own AppPreviewEntry),
+`web-spike` (konduit's OWN thin editor executable = shell + AppLibPreview → :8096),
+`portal-schema-codegen` (schemas → catalog/exporter/RenderNode — regenerate when
+schemas change, CI has a staleness guard).
 
 **Dev loop (current):** relay `PORTAL_REPO=$PWD ./gradlew :portal-relay:run`
 (:8077; boot-scans screens+components, watches logic/, debounce-rebuilds the
