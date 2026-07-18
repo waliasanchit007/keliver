@@ -32,6 +32,7 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
@@ -83,8 +84,18 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
     object : Cancellable { override fun cancel() {} }
 }
 
+/**
+ * Separability seam (item ②): the reusable portal-editor SHELL entry. Everything
+ * below is app-agnostic — it wires the DOM chrome, the wasm canvas guest/host,
+ * component preview, and the live-preview host. A consumer app owns exactly ONE
+ * thing: its [AppPreviewEntry] (its real presenters + capability impls compiled
+ * in, since wasm has no dynamic linking). To ship a per-app editor, a consumer
+ * builds a thin wasmJs executable whose `main()` calls `runPortalEditor(itsEntry)`.
+ * When this shell is extracted into its own module, this function moves verbatim
+ * and only the one-line `main()` below stays app-side.
+ */
 @OptIn(ExperimentalComposeUiApi::class)
-fun main() {
+fun runPortalEditor(entry: AppPreviewEntry) {
   mountPortalChrome()
   // ComposeViewport sizes the composition to the device-frame host div (and
   // observes its size), unlike CanvasBasedWindow which fills the window.
@@ -156,7 +167,7 @@ fun main() {
       // P3-12: register the per-app preview entry (this build compiles the
       // dogfood app's REAL presenters in) and host the live presenter INSIDE
       // the guest composition, before RenderNode reads the mocks it feeds.
-      dev.keliver.portal.render.appPreviewEntry = AppLibPreview
+      dev.keliver.portal.render.appPreviewEntry = entry
       composition.setContent {
         LivePresenterHost()
         RenderNode(selectionTagged(portalTree.value))
@@ -174,3 +185,11 @@ fun main() {
     root.Render()
   }
 }
+
+/**
+ * web-spike = konduit's OWN dogfood editor executable: the shell above + this
+ * repo's app (Field Notes / settings). A consumer app's editor is the same
+ * one-liner with its own AppPreviewEntry — that single substitution is the whole
+ * of "per-app preview". See docs/ROADMAP.md item ② (editor-shell separability).
+ */
+fun main() = runPortalEditor(AppLibPreview)
