@@ -1,0 +1,46 @@
+// Item ②: the REUSABLE portal-editor SHELL — everything the visual editor needs
+// EXCEPT the per-app AppPreviewEntry. A consumer app builds a thin wasmJs
+// executable that depends on this module and calls runPortalEditor(itsEntry).
+// konduit's own editor executable is :web-spike (shell + AppLibPreview).
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.compose'
+
+kotlin {
+  wasmJs { browser() }
+  sourceSets {
+    wasmJsMain {
+      dependencies {
+        // Host side: protocol-host + ComposeUi renderers (canvas).
+        api project(':keliver-material-composeui')
+        api project(':web-spike-protocol-host')
+        api project(':keliver-protocol')
+        api project(':keliver-protocol-host')
+        api project(':keliver-widget-composeui')
+        api project(':keliver-leak-detector')
+        api project(':keliver-runtime')
+        // Browser-side guest (fat client).
+        api project(':keliver-protocol-guest')
+        api project(':web-spike-protocol-guest')
+        api project(':keliver-material-compose')
+        api project(':keliver-layout-compose')
+        // Portal engine + the generated RenderNode interpreter + document/ops.
+        api project(':portal-core')
+        api project(':portal-render')
+        api project(':portal-document')
+        api libs.kotlinx.serialization.json
+        api libs.kotlinx.coroutines.core
+        api libs.jetbrains.compose.runtime
+        api libs.jetbrains.compose.foundation
+        api libs.jetbrains.compose.ui
+        api libs.jetbrains.compose.material3
+        api libs.coil.compose
+        api libs.okio
+        api libs.kotlinx.browser
+        // Generic capability preview: the in-memory SQL impl (PreviewSqlDriver)
+        // runs the app's REAL sqldelight query strings unchanged in the browser.
+        api 'app.cash.sqldelight:runtime:2.1.0'
+      }
+    }
+  }
+}

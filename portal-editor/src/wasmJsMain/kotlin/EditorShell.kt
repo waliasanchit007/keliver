@@ -1,0 +1,172 @@
+/*
+ * portal-editor — the REUSABLE editor shell entry (item ②). Extracted verbatim
+ * from web-spike's Main.kt: the app-agnostic wasm-canvas editor runtime. A
+ * consumer app depends on this module and ships a thin executable whose main()
+ * calls runPortalEditor(itsAppPreviewEntry). See docs/ROADMAP.md item ②.
+ *
+ *   tree (MutableState) --RenderNode--> guest composition --protocol--> host (canvas)
+ *   edit the tree --recompose--> minimal changes --> live preview update
+ */
+import androidx.compose.runtime.BroadcastFrameClock
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.window.ComposeViewport
+import coil3.ImageLoader
+import coil3.PlatformContext
+import dev.keliver.leaks.LeakDetector
+import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
+import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
+import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.render.AppPreviewEntry
+import dev.keliver.portal.render.RenderNode
+import dev.keliver.protocol.Change
+import dev.keliver.protocol.ChangesSink
+import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
+import dev.keliver.protocol.guest.ProtocolRedwoodComposition
+import dev.keliver.protocol.guest.guestRedwoodVersion
+import dev.keliver.protocol.host.HostProtocolAdapter
+import dev.keliver.protocol.host.ProtocolMismatchHandler
+import dev.keliver.protocol.host.UiChange
+import dev.keliver.protocol.host.UiEventSink
+import dev.keliver.ui.Cancellable
+import dev.keliver.ui.OnBackPressedCallback
+import dev.keliver.ui.OnBackPressedDispatcher
+import dev.keliver.ui.UiConfiguration
+import dev.keliver.widget.compose.ComposeWidgetChildren
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.json.Json
+
+private val JSON = Json { ignoreUnknownKeys = true }
+
+/**
+ * P3-11 click-to-select: every RENDERED node carries the portal-internal
+ * SelectionTag modifier with its document handle (WidgetNode.id == handle in
+ * editor mode). The ComposeUi host reports tagged bounds into
+ * SelectionRegistry; the DOM chrome hit-tests taps against it. Logic nodes
+ * aren't rendered directly — a Repeat's mock rows inherit the template's
+ * handle, so clicking any row selects the template (the editable thing).
+ */
+private val UNRENDERED_TYPES = setOf("Repeat", "Condition", "RawCode")
+
+internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
+  val tagged = if (n.type in UNRENDERED_TYPES) n
+  else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
+  return tagged.copy(children = tagged.children.map { selectionTagged(it) })
+}
+
+/** C3: tag an expanded component subtree with a FIXED handle (the instance). */
+internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver.portal.WidgetNode {
+  val tagged = if (n.type in UNRENDERED_TYPES) n
+  else n.copy(props = n.props + ("mod.SelectionTag.handle" to handle))
+  return tagged.copy(children = tagged.children.map { tagWith(it, handle) })
+}
+
+/** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
+private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
+  override fun addCallback(onBackPressedCallback: OnBackPressedCallback): Cancellable =
+    object : Cancellable { override fun cancel() {} }
+}
+
+/**
+ * Separability seam (item ②): the reusable portal-editor SHELL entry. Everything
+ * below is app-agnostic — it wires the DOM chrome, the wasm canvas guest/host,
+ * component preview, and the live-preview host. A consumer app owns exactly ONE
+ * thing: its [AppPreviewEntry] (its real presenters + capability impls compiled
+ * in, since wasm has no dynamic linking). To ship a per-app editor, a consumer
+ * builds a thin wasmJs executable whose `main()` calls `runPortalEditor(itsEntry)`.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+fun runPortalEditor(entry: AppPreviewEntry) {
+  mountPortalChrome()
+  // ComposeViewport sizes the composition to the device-frame host div (and
+  // observes its size), unlike CanvasBasedWindow which fills the window.
+  ComposeViewport(viewportContainer = kotlinx.browser.document.getElementById(PREVIEW_HOST_ID)!!) {
+    val widgetSystem = remember {
+      ComposeUiKeliverMaterialWidgetSystem(
+        ImageLoader.Builder(PlatformContext.INSTANCE)
+          // wasm has no built-in Coil network stack — register the browser-fetch one.
+          .components { add(BrowserFetchFetcher.Factory()) }
+          .build(),
+      )
+    }
+    val root = remember { ComposeWidgetChildren() }
+
+    // Stand up the fat client: a guest composition + a host renderer, talking via
+    // the in-memory protocol. Runs once; stays live for the page's lifetime.
+    LaunchedEffect(Unit) {
+      val hostProtocol = KeliverMaterialHostProtocol.Factory.create(JSON, ProtocolMismatchHandler.Throwing)
+
+      val guestAdapter = DefaultGuestProtocolAdapter(
+        hostVersion = guestRedwoodVersion,
+        widgetSystemFactory = KeliverMaterialProtocolWidgetSystemFactory,
+      )
+
+      // Host side. Its event sink is the REVERSE CHANNEL: a tap on a rendered widget
+      // becomes a UiEvent, which we hand straight back to the guest as a protocol Event.
+      val hostAdapter = HostProtocolAdapter(
+        guestVersion = guestRedwoodVersion,
+        container = root,
+        protocol = hostProtocol,
+        widgetSystem = widgetSystem,
+        eventSink = UiEventSink { uiEvent -> guestAdapter.sendEvent(uiEvent.toProtocol()) },
+        leakDetector = LeakDetector.none(),
+      )
+
+      // Guest -> host: every batch of guest Changes is applied to the host tree in
+      // memory (no JSON document; the Changes already carry encoded property values).
+      guestAdapter.initChangesSink(
+        object : ChangesSink {
+          override fun sendChanges(changes: List<Change>) {
+            hostAdapter.sendChanges(changes.mapNotNull { UiChange.fromProtocol(hostProtocol, it) })
+          }
+        },
+      )
+
+      // The guest composition runs on its own frame clock, which we tick from the
+      // host's real frames — so guest recomposition AND animations stay in sync.
+      val guestClock = BroadcastFrameClock()
+      val guestScope = CoroutineScope(this.coroutineContext + guestClock)
+      val composition = ProtocolRedwoodComposition(
+        scope = guestScope,
+        guestAdapter = guestAdapter,
+        widgetVersion = 1U,
+        onBackPressedDispatcher = NoBackPressedDispatcher,
+        saveableStateRegistry = null,
+        uiConfigurations = MutableStateFlow(UiConfiguration()),
+      )
+      // C3: component instances render via transparent expansion; the whole
+      // expansion carries the INSTANCE handle so click-to-select picks the
+      // instance (one selectable unit), never an internal expanded primitive.
+      dev.keliver.portal.render.componentPreview = { node ->
+        val expanded = when (val e = dev.keliver.portal.expandForPreview(node, editorComponents)) {
+          is dev.keliver.portal.Expansion.Transparent -> e.tree
+          is dev.keliver.portal.Expansion.Opaque -> dev.keliver.portal.placeholder(e.name, e.reason)
+          is dev.keliver.portal.Expansion.Cycle -> dev.keliver.portal.cycleChip(e.path)
+        }
+        RenderNode(tagWith(expanded, node.id))
+      }
+      // P3-12: register the per-app preview entry (the app's REAL presenters are
+      // compiled in) and host the live presenter INSIDE the guest composition,
+      // before RenderNode reads the mocks it feeds.
+      dev.keliver.portal.render.appPreviewEntry = entry
+      composition.setContent {
+        LivePresenterHost()
+        RenderNode(selectionTagged(portalTree.value))
+      }
+      guestAdapter.emitChanges() // initial render
+
+      while (true) {
+        withFrameNanos { nanos -> guestClock.sendFrame(nanos) }
+        guestAdapter.emitChanges() // flush whatever the recomposition produced
+      }
+    }
+
+    // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
+    // just shows the live preview.
+    root.Render()
+  }
+}
