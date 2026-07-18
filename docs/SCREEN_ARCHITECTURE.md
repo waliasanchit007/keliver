@@ -232,3 +232,44 @@ fun MenuRow(title: String, subtitle: String, icon: String = "Star", onClick: () 
 Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionHeader}.kt` +
 `screens/settings.kt` (a 24-line Settings screen, 3 SectionHeader + 4 MenuRow,
 **0 RawCode** — ~60% shorter than inlining the ListItems/labels).
+
+## 8. Live-presenter preview — P3-12
+
+The editor's ▶ Live tier runs the app's REAL presenters/repositories in the
+browser; ONLY host capabilities get preview substitutes (D7). Kotlin/Wasm has
+no dynamic linking, so the app's logic compiles INTO the preview binary via an
+explicit app-owned entry:
+
+```kotlin
+// the app registers one AppPreviewEntry (same explicitness as PublishedEntry)
+object AppLibPreview : AppPreviewEntry {
+  override val screens = mapOf(
+    "feed" to ScreenPreview { env ->
+      val b = FeedPresenter(previewDriver, onOpenNote = { env.log("→ $it") })
+      PreviewFrame(
+        values = buildMap { put("subtitle", b.subtitle); putRows("notes", "note", …) },
+        dispatch = { a, arg -> when (a) { "addNote" -> b.addNote(); … } },
+      )
+    },
+  )
+}
+```
+
+- **Capability purity is compiler-enforced:** presenters may not reference
+  Zipline types (they won't compile to wasm). They take capability interfaces
+  (e.g. sqldelight's `SqlDriver`); device wiring adapts at the edge
+  (`PortalSqlDriver` in `PublishedEntry`), the preview provides browser impls
+  (`PreviewSqlDriver` over in-memory SQL). Fidelity reporting stays emergent.
+- **Values transport** through the string-typed `PreviewBindings.mocks`
+  (lists via `putRows` — count + pipe-joined row fields), so Repeat rows and
+  component expansion light up with real data automatically.
+- **Rebuild loop:** the relay watches `logicDirs` (config; default `logic/`
+  sibling), debounces into a single-flight `previewBuildTask` build, rejects
+  stale results, and promotes ONLY successful dists (`previewServeDir`) — a
+  failed build keeps the last-known-good editor serving, with the error in
+  the build chip. The editor auto-reloads on a newly promoted build,
+  restoring project/screen/selection/live from a session snapshot.
+- **Honesty rules:** a screen without a registered presenter shows
+  "no presenter registered — mock tier"; presenter dispatch errors surface in
+  the action console; canvas event payloads are not yet delivered (dispatch
+  receives `arg = null` from canvas taps — the ⚡ console fires named actions).

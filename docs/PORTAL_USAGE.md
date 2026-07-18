@@ -163,3 +163,14 @@ them under **"Project components"** in the palette. See
 - Endpoint: `GET /components?project=<p>` returns each spec + body tree.
 - v1: leaf components only (no `@Composable () -> Unit` slot params); a
   non-grammar body is **opaque** (renders on devices, previews as a placeholder).
+
+## Live-presenter preview (P3-12)
+
+Press **▶ Live** on a screen whose project registered an `AppPreviewEntry`: the
+REAL presenter runs in the browser against preview capabilities (SQL =
+in-memory). Edit `logic/*.kt` → the relay rebuilds the preview binary
+(debounced, single-flight) and the editor auto-reloads preserving your
+project/screen/selection; a FAILED build keeps the last-known-good preview and
+shows the error in the topbar chip. Config: `logicDirs`, `previewBuildTask`,
+`previewDist`, `previewServeDir` in keliver.portal.json. See
+SCREEN_ARCHITECTURE §8 for the entry-point contract.

@@ -110,9 +110,21 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     guest compile all green. Remaining: slot params (v1 out of scope),
     detach-instance + double-click-into-definition (later), stashfin
     ProfileScreen dogfood (separate repo — change set reported, not auto-run).
-12. **Per-app live-presenter preview**: compile the consumer app's screens+logic
-    (stashfin-sdui pattern: portal-app-lib extraction) to the browser so ▶ Live
-    runs the app's REAL presenters against PreviewCapabilities.
+12. ✅ **Per-app live-presenter preview** (A+B code-complete 2026-07-16,
+    fc6d357fa): explicit AppPreviewEntry contract (portal-render) — app logic
+    compiles INTO the preview binary (wasm has no dynamic linking; the
+    refreshless-iframe split is the v2 increment); portal-app-lib js+wasm with
+    compiler-enforced capability purity (presenters take SqlDriver, Zipline
+    adapter at the device edge — device bundle unchanged); LiveEngine composes
+    the REAL presenter keyed by screen, values through PreviewBindings.mocks
+    (Repeat rows + component expansion light up free); M8's hardcoded
+    reference presenter DELETED; relay rebuild loop (debounce, single-flight,
+    stale-reject, promote-on-success last-known-good) + /preview-build; editor
+    build chip + state-preserving auto-reload. PreviewBuilderTest 3/3.
+    Browser verification + external-app (stashfin) enablement pending —
+    stashfin needs the editor shell published (separability) before it can own
+    a per-app preview build. Known v1 limits: canvas event payloads arrive as
+    null arg; presenter COMPOSITION crashes aren't caught (dispatch errors are).
 13. **Typed Route contracts + derived nav graph + flow preview** — sealed Route
     per feature, recognizer derives the graph, preview actually navigates
     (Login→OTP→Dashboard with a persona). Biggest authoring-experience win.
