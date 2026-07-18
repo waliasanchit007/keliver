@@ -25,6 +25,23 @@ self-hosted `keliver-mac` runner.
 editor → :8096), `portal-schema-codegen` (schemas → catalog/exporter/RenderNode
 — regenerate when schemas change, CI has a staleness guard).
 
+**Dev loop (current):** relay `PORTAL_REPO=$PWD ./gradlew :portal-relay:run`
+(:8077; boot-scans screens+components, watches logic/, debounce-rebuilds the
+preview editor and promotes ON SUCCESS to `build/portal-editor-live`). Serve
+the editor with `python3 -m http.server 8096` FROM `build/portal-editor-live`
+(the promoted last-known-good — NOT web-spike/build/dist directly; serving
+from the wrong dir = white screen, app .wasm 404s). `GET /preview-build` =
+build status. Config paths in keliver.portal.json point at
+portal-app-lib/src/commonMain (js+wasm since P3-12).
+
+**Session-earned gotchas:** a new schema widget/modifier MUST also be listed in
+the @Schema members annotation or codegen silently ignores it; Zipline has no
+wasm target — guest presenters must take capability interfaces (e.g. sqldelight
+SqlDriver, which HAS wasm since 2.x), Zipline adapters live at the device edge;
+PSI tree mutation is fragile at brace anchors — prefer offset-based string
+surgery from one parse (see ContractWriteBack); generated-file behavior changes
+go through portal-schema-codegen + generatePortalCode + its tests.
+
 **Gates before "done":** `apiCheck` + affected module tests + (portal changes)
 ingest round-trip on a real screen + (widget changes) device render. The
 universal screen bar is D14 in DECISIONS.md: compile → 0 RawCode ingest → device

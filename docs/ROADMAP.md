@@ -121,7 +121,13 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     reference presenter DELETED; relay rebuild loop (debounce, single-flight,
     stale-reject, promote-on-success last-known-good) + /preview-build; editor
     build chip + state-preserving auto-reload. PreviewBuilderTest 3/3.
-    Browser verification + external-app (stashfin) enablement pending —
+    LOOP LIVE-DEMONSTRATED (2026-07-16 end of session): a presenter edit
+    built (~90s), promoted (id=3), and AUTO-RELOADED the user's open editor
+    window (state-preserving). Still awaiting user confirmation of the
+    in-canvas Live gates (real presenter text on `main`, ⚡ buyTapped counter,
+    feed rows, settings-through-components) — the 60-second script is in the
+    session log. NOTE: :8096 must serve build/portal-editor-live (the PROMOTED
+    dist) from now on. External-app (stashfin) enablement pending —
     stashfin needs the editor shell published (separability) before it can own
     a per-app preview build. Known v1 limits: canvas event payloads arrive as
     null arg; presenter COMPOSITION crashes aren't caught (dispatch errors are).
@@ -140,6 +146,22 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     props/thumbnail; the consumer app's design system becomes the palette.
 18. **Presenter lint pack** — @Composable-presenter footguns (state in companions,
     LaunchedEffect misuse, shared state in presenters) enforced mechanically.
+
+## NEXT SESSION — pick up here
+
+1. Confirm the P3-12 in-canvas Live gates with the user (script in #12 note);
+   then mark #12 fully verified.
+2. **Editor-shell separability + stashfin enablement** (the revised #2 from the
+   priority review): publish the editor shell so stashfin owns a per-app
+   preview build; do the deferred stashfin SectionCard/MenuRow dogfood
+   on-device. Converts components + click-to-select + live preview from
+   dogfood demos into real-app adoption.
+3. Then: typed Route contracts + nav graph + flow preview (#13, folding
+   FlowScope #14 into it); capability personas + recorded HTTP (#16);
+   @PortalComponent polish (#17) last.
+4. Small debts: TODO(portal) publish-verifier gate; live-preview fast-follows
+   (contract-driven codegen of values/dispatch adapter maps, canvas event
+   payload delivery, composition-crash guard).
 
 ## P4 — Platform debt (tracked, not urgent)
 
