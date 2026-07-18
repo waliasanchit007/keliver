@@ -234,6 +234,17 @@ private val previewBuilder = PreviewBuilder(object : PreviewBuilder.Runner {
     // Swap: serve dir replaced only after the full copy succeeded.
     dst.deleteRecursively()
     tmp.renameTo(dst)
+    // Cache-bust: web-spike.js has a CONSTANT filename, so a browser holding the
+    // previous editor keeps running it (and its stale wasm hash) across rebuilds,
+    // silently defeating promote-on-success. Version the script ref per promote so
+    // every reload fetches the fresh loader (and thus the new hashed wasm).
+    val index = File(dst, "index.html")
+    if (index.exists()) {
+      val stamped = index.readText().replace(
+        Regex("""web-spike\.js(\?v=\d+)?"""), "web-spike.js?v=${System.currentTimeMillis()}",
+      )
+      index.writeText(stamped)
+    }
   }
 })
 
