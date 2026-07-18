@@ -33,6 +33,7 @@ kotlin {
         implementation project(':portal-core')                 // WidgetNode model + sampleTree
         implementation project(':portal-render')               // GENERATED RenderNode interpreter (P1)
         implementation project(':portal-document')             // V2 M1: document + op client
+        implementation project(':portal-app-lib')              // P3-12: the APP's real presenters (per-app preview build)
         implementation libs.kotlinx.serialization.json
         implementation libs.kotlinx.coroutines.core           // delay() in the hot-reload watch loop
         implementation libs.jetbrains.compose.runtime

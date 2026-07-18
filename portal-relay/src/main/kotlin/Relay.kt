@@ -207,6 +207,36 @@ private fun screensDirFor(project: String): File =
 
 /** C1: project components live next to screens (default project = the repo dir). */
 private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
+// ── P3-12: live-preview rebuild orchestration ───────────────────────────────
+
+private val previewBuilder = PreviewBuilder(object : PreviewBuilder.Runner {
+  private var proc: Process? = null
+  override fun build(cancelled: () -> Boolean): String? {
+    val cmd = listOf(File(repoDir, "gradlew").absolutePath, config.previewBuildTask, "-q")
+    val p = ProcessBuilder(cmd).directory(repoDir).redirectErrorStream(true).start()
+    proc = p
+    val out = StringBuilder()
+    p.inputStream.bufferedReader().forEachLine { line ->
+      out.appendLine(line)
+      if (cancelled()) p.destroy()
+    }
+    val code = p.waitFor()
+    if (cancelled()) return "cancelled"
+    return if (code == 0) null else out.lines().filter { it.isNotBlank() }.takeLast(15).joinToString("\n")
+  }
+
+  override fun promote() {
+    val src = File(repoDir, config.previewDist)
+    val dst = File(repoDir, config.previewServeDir)
+    val tmp = File(dst.parentFile ?: repoDir, dst.name + ".tmp")
+    tmp.deleteRecursively()
+    src.copyRecursively(tmp, overwrite = true)
+    // Swap: serve dir replaced only after the full copy succeeded.
+    dst.deleteRecursively()
+    tmp.renameTo(dst)
+  }
+})
+
 private fun componentsDirFor(project: String): File =
   if (project == "default") appComponentsDir
   else File(screensDirFor(project).parentFile, "components")
@@ -286,6 +316,11 @@ private fun startKotlinWatcher() {
       appComponentsDir.mkdirs()
       add(appComponentsDir)
     }
+    // P3-12: watch logic dirs — presenter edits trigger the preview rebuild.
+    config.resolvedLogicDirs().forEach { rel ->
+      val d = File(repoDir, rel)
+      if (d.parentFile?.exists() == true) { d.mkdirs(); add(d) }
+    }
   }.distinctBy { it.absolutePath }
   dirs.forEach { dir ->
     val watcher = io.methvin.watcher.DirectoryWatcher.builder()
@@ -297,6 +332,7 @@ private fun startKotlinWatcher() {
           pendingIngest[key]?.cancel(false)
           val task = Runnable { if (isComponentFile(f)) ingestComponentFile(f) else ingestFile(f) }
           pendingIngest[key] = ingestExec.schedule(task, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
+          previewBuilder.trigger() // P3-12: any source change rebuilds the live editor
         }
       }
       .build()
@@ -410,6 +446,11 @@ fun main(args: Array<String>) {
       }
       respond(ex, 200, jsonList(caps))
     }
+  }
+
+  // P3-12: live-preview build status (id/promotedId/state/error) for the editor.
+  server.createContext("/preview-build") { ex ->
+    handle(ex) { respond(ex, 200, previewBuilder.statusJson()) }
   }
 
   // C1: project components (specs + body trees) for the editor palette + preview.

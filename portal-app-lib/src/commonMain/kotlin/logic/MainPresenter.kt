@@ -7,8 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import dev.keliver.portal.sql.HostSqlDriver
-import dev.keliver.portal.sql.PortalSqlDriver
+import app.cash.sqldelight.db.SqlDriver
 import dev.keliver.portalpublished.screens.MainScreenBindings
 import kotlinx.coroutines.launch
 
@@ -18,10 +17,10 @@ import kotlinx.coroutines.launch
  * state survives app restarts, and the whole layer shipped OTA.
  */
 @Composable
-fun MainPresenter(sql: HostSqlDriver?): MainScreenBindings {
+fun MainPresenter(sql: SqlDriver?): MainScreenBindings {
   val scope = rememberCoroutineScope()
   var taps by remember { mutableStateOf(-1L) } // -1 = loading
-  val store = remember { sql?.let { TapStore(PortalSqlDriver(it)) } }
+  val store = remember { sql?.let { TapStore(it) } }
 
   LaunchedEffect(Unit) {
     if (store != null) {

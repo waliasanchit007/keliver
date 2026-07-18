@@ -21,7 +21,22 @@ data class PortalConfig(
   val publishTask: String = ":portal-published-guest:compileDevelopmentZipline",
   val publishOutput: String = "portal-published-guest/build/zipline/Development",
   val store: String = "~/.keliver-portal",
+  /**
+   * P3-12 live-presenter preview: logic dirs to watch (null = a `logic` sibling
+   * of screensDir), the gradle task that rebuilds the per-app editor, where its
+   * dist lands, and where SUCCESSFUL builds are promoted for serving (the
+   * last-known-good copy an http server should serve).
+   */
+  val logicDirs: List<String>? = null,
+  val previewBuildTask: String = ":web-spike:wasmJsBrowserDistribution",
+  val previewDist: String = "web-spike/build/dist/wasmJs/productionExecutable",
+  val previewServeDir: String = "build/portal-editor-live",
 )
+
+fun PortalConfig.resolvedLogicDirs(): List<String> =
+  logicDirs ?: listOf(
+    screensDir.substringBeforeLast('/', "").let { if (it.isEmpty()) "logic" else "$it/logic" },
+  )
 
 /** The resolved components dir: explicit [componentsDir], else a `components` sibling of screens. */
 fun PortalConfig.resolvedComponentsDir(): String =

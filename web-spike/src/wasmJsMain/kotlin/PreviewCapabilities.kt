@@ -32,19 +32,38 @@ object PreviewCapabilities {
 
 /**
  * The preview substitute for HostSqlDriver@1: an in-memory store understanding
- * the tiny SQL the demo data layer uses. Mirrors the production wire so the
- * REAL query strings run unchanged — only the executor is swapped.
+ * the SQL shapes the app data layers use (per-table storage, rowid synthesis,
+ * WHERE rowid, ORDER BY rowid DESC). Mirrors the production wire so the REAL
+ * query strings run unchanged — only the executor is swapped. P3-12 upgraded
+ * it from single-table to per-table so multiple live presenters coexist.
  */
 class PreviewSqlHost {
-  private val rows = mutableListOf<List<String?>>()
+  private val tables = mutableMapOf<String, MutableList<List<String?>>>()
+
+  private fun tableOf(sql: String): String {
+    val m = Regex("(?:INTO|FROM|EXISTS|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?)\\s+([A-Za-z_][A-Za-z0-9_]*)", RegexOption.IGNORE_CASE)
+      .findAll(sql).lastOrNull() ?: return "_"
+    return m.groupValues[1].lowercase()
+  }
 
   fun execute(sql: String, args: List<String?>): List<List<String?>> {
     val s = sql.trim()
+    val rows = tables.getOrPut(tableOf(s)) { mutableListOf() }
+    val wantsRowid = s.contains("rowid", ignoreCase = true)
+    fun withRowid(): List<List<String?>> = rows.mapIndexed { i, r -> listOf((i + 1).toString()) + r }
     return when {
       s.startsWith("CREATE TABLE", ignoreCase = true) -> emptyList()
       s.startsWith("INSERT", ignoreCase = true) -> { rows.add(args); emptyList() }
       s.startsWith("DELETE", ignoreCase = true) -> { rows.clear(); emptyList() }
       s.startsWith("SELECT COUNT", ignoreCase = true) -> listOf(listOf(rows.size.toString()))
+      s.startsWith("SELECT", ignoreCase = true) && s.contains("WHERE rowid", ignoreCase = true) -> {
+        val id = args.firstOrNull()?.toIntOrNull() ?: return emptyList()
+        withRowid().filter { it.firstOrNull() == id.toString() }
+      }
+      s.startsWith("SELECT", ignoreCase = true) && wantsRowid -> {
+        val all = withRowid()
+        if (s.contains("ORDER BY rowid DESC", ignoreCase = true)) all.reversed() else all
+      }
       s.startsWith("SELECT", ignoreCase = true) -> rows.toList()
       else -> emptyList()
     }

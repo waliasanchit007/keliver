@@ -4,22 +4,33 @@
 // (portal-device-guest), which is why it's a plain library (breaks the
 // published<->device interface cycle). No zipline plugin — it defines no
 // ZiplineService.
+//
+// P3-12: screens/components/logic live in commonMain and ALSO compile to
+// wasmJs so the web editor can run the REAL presenters (live-presenter
+// preview). Capability purity is enforced by the compiler: commonMain speaks
+// sqldelight's SqlDriver only; the Zipline adapter (PortalSqlDriver over
+// HostSqlDriver) is jsMain device wiring in PublishedEntry.
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 
 kotlin {
   js { browser() }
+  wasmJs { browser() }
   sourceSets {
-    jsMain {
+    commonMain {
       dependencies {
         api projects.keliverMaterialCompose   // StyledBox/StyledText/Button/…
         api projects.keliverLayoutCompose      // Column/Row/Spacer
-        api projects.portalSql                 // HostSqlDriver + guest driver (M7 data layer)
-        implementation 'app.cash.sqldelight:runtime:2.1.0'
-        implementation 'app.cash.sqldelight:async-extensions:2.1.0'
+        api 'app.cash.sqldelight:runtime:2.1.0'
+        api 'app.cash.sqldelight:async-extensions:2.1.0'
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
+      }
+    }
+    jsMain {
+      dependencies {
+        api projects.portalSql                 // HostSqlDriver + guest driver (M7 data layer)
       }
     }
   }

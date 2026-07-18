@@ -509,6 +509,9 @@ private fun buildTopbar() {
 
   liveBtn = Ui.button("▶ Live", "btn") { toggleLive() }
   bar.appendChild(liveBtn)
+  buildChip = Ui.el("span", "", "")
+  buildChip.setAttribute("style", "font-size:11px; padding:2px 8px; border-radius:8px; margin-left:6px;")
+  bar.appendChild(buildChip)
 
   bar.appendChild(Ui.button("Export Kotlin", "btn") { showExport() })
   bar.appendChild(
@@ -693,23 +696,35 @@ private fun installMockActionSink() {
 // ── M8: capability-driven live preview ──────────────────────────────────────
 
 private fun toggleLive() {
-  if (LivePresenter.enabled) disableLive() else enableLive()
+  if (LiveEngine.request.value != null || liveBtn.textContent == "■ Stop") disableLive() else enableLive()
 }
 
 private fun enableLive() {
   serverGet("/capabilities?project=$currentProject") { txt ->
     val required = parseNames(txt)
-    renderFidelity(required)
-    val fields = collectContract(portalTree.value).fields.keys.toList()
-    LivePresenter.enable(fields) { renderInspector() }
-    // Keep the console logging AND run the presenter transition.
-    PreviewBindings.actionSink = { name ->
-      val row = Ui.el("div", "", "⚡ $name → live logic")
-      row.setAttribute("style", "color:var(--good);")
+    // P3-12: run the APP'S REAL presenter when the per-app entry registers one
+    // for this screen; otherwise stay honest — mock tier, clearly labeled.
+    val entry = dev.keliver.portal.render.appPreviewEntry
+    val registered = entry?.screens?.get(currentScreen) != null
+    renderFidelity(required, livePresenter = if (registered) entry?.label else null)
+    LiveEngine.onError = { msg ->
+      val row = Ui.el("div", "", "⚠ $msg")
+      row.setAttribute("style", "color:var(--bad, #e57373);")
       consoleEl.insertBefore(row, consoleEl.firstChild)
-      LivePresenter.fireLive(name)
-      renderInspector()
-      Snapshot.sendApplyNotifications()
+    }
+    if (registered) {
+      LiveEngine.request.value = currentScreen
+      PreviewBindings.actionSink = { name ->
+        val row = Ui.el("div", "", "⚡ $name → real presenter")
+        row.setAttribute("style", "color:var(--good);")
+        consoleEl.insertBefore(row, consoleEl.firstChild)
+        LiveEngine.dispatch(name, null)
+        renderInspector()
+        Snapshot.sendApplyNotifications()
+      }
+    } else {
+      LiveEngine.stop()
+      PreviewBindings.mocks.clear()
     }
     liveBtn.textContent = "■ Stop"
     liveBtn.className = "btn primary"
@@ -719,7 +734,7 @@ private fun enableLive() {
 }
 
 private fun disableLive() {
-  LivePresenter.disable()
+  LiveEngine.stop()
   PreviewBindings.mocks.clear()
   installMockActionSink()
   liveBtn.textContent = "▶ Live"
@@ -730,8 +745,12 @@ private fun disableLive() {
   Snapshot.sendApplyNotifications()
 }
 
-private fun renderFidelity(required: List<String>) {
+private fun renderFidelity(required: List<String>, livePresenter: String? = null) {
   Ui.clear(fidelityEl)
+  // P3-12: name the presenter tier first — real app entry vs mock tier.
+  val pres = Ui.el("div", "", if (livePresenter != null) "● real presenter — $livePresenter" else "○ no presenter registered for '$currentScreen' — mock tier")
+  pres.setAttribute("style", "color:" + (if (livePresenter != null) "var(--good)" else "var(--warn, #e0a030)") + ";")
+  fidelityEl.appendChild(pres)
   if (required.isEmpty()) {
     fidelityEl.appendChild(Ui.el("div", "", "✅ Full fidelity — no host capabilities required"))
     return
@@ -750,7 +769,7 @@ private fun renderFidelity(required: List<String>) {
 
 private fun renderInspector() {
   Ui.clear(inspectorEl)
-  val state = LivePresenter.stateSnapshot()
+  val state = if (LiveEngine.request.value != null) PreviewBindings.mocks.toMap() else emptyMap()
   if (state.isEmpty()) { inspectorEl.appendChild(Ui.el("div", "muted", "no live bindings")); return }
   state.forEach { (k, v) ->
     inspectorEl.appendChild(Ui.el("div", "", "$k = \"$v\""))
@@ -763,10 +782,10 @@ private fun renderInspector() {
     contract.actions.forEach { action ->
       row.appendChild(
         Ui.button("⚡ $action", "btn icon") {
-          val log = Ui.el("div", "", "⚡ $action → live logic")
+          val log = Ui.el("div", "", "⚡ $action → real presenter")
           log.setAttribute("style", "color:var(--good);")
           consoleEl.insertBefore(log, consoleEl.firstChild)
-          LivePresenter.fireLive(action)
+          LiveEngine.dispatch(action, null)
           renderInspector()
           Snapshot.sendApplyNotifications()
         },
@@ -808,13 +827,78 @@ private fun installKeyboard() {
 // ---------------------------------------------------------------------------
 // Workspace (projects / screens / drafts)
 
+// ── P3-12: live-build poll + state-preserving auto-reload ───────────────────
+private lateinit var buildChip: HTMLElement
+private var buildBaseline: Long = -1
+
+private fun startPreviewBuildPoll() {
+  window.setInterval({
+    serverGet("/preview-build") { txt ->
+      runCatching {
+        val o = Json.parseToJsonElement(txt).jsonObject
+        val promoted = o.getValue("promotedId").jsonPrimitive.content.toLong()
+        val state = o.getValue("state").jsonPrimitive.content
+        val err = o["error"]?.jsonPrimitive?.content
+        renderBuildChip(state, err)
+        if (buildBaseline < 0) {
+          buildBaseline = promoted // first poll = baseline, never reload on boot
+        } else if (promoted > buildBaseline) {
+          // A newer editor build was promoted: snapshot UI state and swap to it.
+          window.sessionStorage.setItem(
+            "portal.reload",
+            "{\"project\":\"$currentProject\",\"screen\":\"$currentScreen\"," +
+              "\"selected\":${selectedId ?: -1},\"live\":${LiveEngine.request.value != null}}",
+          )
+          window.location.reload()
+        }
+      }
+    }
+    null
+  }, 3000)
+}
+
+private fun renderBuildChip(state: String, err: String?) {
+  if (!::buildChip.isInitialized) return
+  when (state) {
+    "building" -> { buildChip.textContent = "\u23f3 building preview\u2026"; buildChip.setAttribute("style", buildChipStyle("#8a6d3b")) }
+    "failed" -> {
+      buildChip.textContent = "\u2715 preview build failed"
+      buildChip.setAttribute("style", buildChipStyle("#a94442"))
+      buildChip.setAttribute("title", err ?: "")
+    }
+    "ok" -> { buildChip.textContent = "\u2713 preview up to date"; buildChip.setAttribute("style", buildChipStyle("#3c763d")) }
+    else -> buildChip.textContent = ""
+  }
+}
+
+private fun buildChipStyle(color: String) =
+  "font-size:11px; padding:2px 8px; border-radius:8px; margin-left:6px; color:#fff; background:$color;"
+
+private fun restoreSnapshotIfAny(): Boolean {
+  val raw = window.sessionStorage.getItem("portal.reload") ?: return false
+  window.sessionStorage.removeItem("portal.reload")
+  return runCatching {
+    val o = Json.parseToJsonElement(raw).jsonObject
+    currentProject = o.getValue("project").jsonPrimitive.content
+    currentScreen = o.getValue("screen").jsonPrimitive.content
+    val sel = o.getValue("selected").jsonPrimitive.content.toInt()
+    if (sel >= 0) selectedId = sel
+    val live = o.getValue("live").jsonPrimitive.content.toBoolean()
+    if (live) window.setTimeout({ enableLive(); null }, 800) // after the doc loads
+    true
+  }.getOrDefault(false)
+}
+
 private fun loadWorkspace() {
+  startPreviewBuildPoll()
   serverGet("/active") { txt ->
     runCatching {
       val o = Json.parseToJsonElement(txt).jsonObject
       currentProject = o.getValue("project").jsonPrimitive.content
       currentScreen = o.getValue("screen").jsonPrimitive.content
     }
+    // P3-12: a post-rebuild reload restores the exact editing context.
+    restoreSnapshotIfAny()
     reloadProjectList()
     reloadScreenList()
     fetchComponents { loadDraft() } // C3: components before the doc so instances render
@@ -877,6 +961,17 @@ private fun switchScreen(name: String) {
   currentScreen = name
   sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
   loadDraft()
+  // P3-12: live mode follows the screen — re-enable for the new screen's
+  // presenter (or fall back to the honest no-presenter state).
+  if (LiveEngine.request.value != null) enableLive()
+}
+
+/** P3-12: append a line to the action console (used by PreviewEnv.log). */
+fun portalLiveLog(msg: String) {
+  if (!::consoleEl.isInitialized) return
+  val row = Ui.el("div", "", msg)
+  row.setAttribute("style", "color:var(--muted);")
+  consoleEl.insertBefore(row, consoleEl.firstChild)
 }
 
 private fun promptCreate(project: Boolean) {

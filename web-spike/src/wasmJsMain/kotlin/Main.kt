@@ -153,7 +153,14 @@ fun main() {
         }
         RenderNode(tagWith(expanded, node.id))
       }
-      composition.setContent { RenderNode(selectionTagged(portalTree.value)) }
+      // P3-12: register the per-app preview entry (this build compiles the
+      // dogfood app's REAL presenters in) and host the live presenter INSIDE
+      // the guest composition, before RenderNode reads the mocks it feeds.
+      dev.keliver.portal.render.appPreviewEntry = AppLibPreview
+      composition.setContent {
+        LivePresenterHost()
+        RenderNode(selectionTagged(portalTree.value))
+      }
       guestAdapter.emitChanges() // initial render
 
       while (true) {

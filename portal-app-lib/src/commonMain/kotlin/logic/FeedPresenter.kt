@@ -7,8 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import dev.keliver.portal.sql.HostSqlDriver
-import dev.keliver.portal.sql.PortalSqlDriver
+import app.cash.sqldelight.db.SqlDriver
 import dev.keliver.portalpublished.screens.FeedScreenBindings
 import dev.keliver.portalpublished.screens.Note
 import kotlinx.coroutines.launch
@@ -19,12 +18,12 @@ import kotlinx.coroutines.launch
  * and openNote(value) hands the tapped row's id to the hand-owned nav.
  */
 @Composable
-fun FeedPresenter(sql: HostSqlDriver?, onOpenNote: (String) -> Unit): FeedScreenBindings {
+fun FeedPresenter(sql: SqlDriver?, onOpenNote: (String) -> Unit): FeedScreenBindings {
   val scope = rememberCoroutineScope()
   var notesList by remember { mutableStateOf<List<Note>>(emptyList()) }
   var draftText by remember { mutableStateOf("") }
   var loaded by remember { mutableStateOf(false) }
-  val store = remember { sql?.let { NotesStore(PortalSqlDriver(it)) } }
+  val store = remember { sql?.let { NotesStore(it) } }
 
   suspend fun refresh() {
     notesList = store?.all() ?: emptyList()

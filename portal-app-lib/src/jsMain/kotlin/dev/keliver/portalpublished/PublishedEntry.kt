@@ -20,11 +20,15 @@ import dev.keliver.portalpublished.screens.FeedScreen
  */
 @Composable
 fun PublishedEntry(sql: HostSqlDriver?) {
+  // P3-12 capability purity: presenters speak sqldelight's SqlDriver only —
+  // the Zipline adapter (PortalSqlDriver over HostSqlDriver) is DEVICE wiring,
+  // applied here at the edge. Same driver, same queries: behavior unchanged.
+  val driver = remember(sql) { sql?.let { dev.keliver.portal.sql.PortalSqlDriver(it) } }
   var openNoteId by remember { mutableStateOf<String?>(null) }
   val id = openNoteId
   if (id == null) {
-    FeedScreen(FeedPresenter(sql, onOpenNote = { openNoteId = it }))
+    FeedScreen(FeedPresenter(driver, onOpenNote = { openNoteId = it }))
   } else {
-    DetailScreen(DetailPresenter(sql, id, onBack = { openNoteId = null }))
+    DetailScreen(DetailPresenter(driver, id, onBack = { openNoteId = null }))
   }
 }
