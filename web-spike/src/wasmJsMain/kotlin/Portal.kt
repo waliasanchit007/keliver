@@ -778,7 +778,7 @@ private fun renderInspector() {
     inspectorEl.appendChild(Ui.el("div", "", "$k = \"$v\""))
   }
   // Fire wired actions from here too (DOM-reliable; complements canvas taps).
-  val contract = collectContract(portalTree.value)
+  val contract = collectContract(portalTree.value, editorComponents)
   if (contract.actions.isNotEmpty()) {
     val row = Ui.el("div", "row")
     row.setAttribute("style", "margin-top:6px; flex-wrap:wrap; gap:4px;")
@@ -1144,7 +1144,7 @@ private fun renderProps() {
 /** The derived contract + mock inputs, and everything bound across the screen. */
 private fun renderBindings() {
   Ui.clear(bindingsEl)
-  val contract = collectContract(portalTree.value)
+  val contract = collectContract(portalTree.value, editorComponents)
   if (contract.isEmpty) {
     bindingsEl.appendChild(Ui.el("div", "muted", "Bind a prop (@) or wire an event to build the contract"))
     return
