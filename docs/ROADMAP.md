@@ -148,8 +148,11 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 13. **Typed Route contracts + derived nav graph + flow preview** — sealed Route
     per feature, recognizer derives the graph, preview actually navigates
     (Login→OTP→Dashboard with a persona). Biggest authoring-experience win.
+    📄 **DESIGN READY FOR REVIEW: docs/superpowers/specs/2026-07-19-flow-preview-design.md**
+    (folds #14; phased F1–F4; 5 open questions). No code yet — gates Phase 2.
 14. **FlowScope presenter** — name the pattern (parent presenter composing screen
     presenters, owning flow-lifetime draft state), scaffold + document it.
+    FOLDED into #13's design (§3.2).
 15. **Transparent components** — recognizer descends into local @Composable calls
     whose bodies are grammar (sections: `Profile ▸ OffersSection`). One feature
     buys feature composition.
@@ -199,18 +202,29 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    composite build "just worked" (compile first try) — the version alignment is
    the whole trick.** GOTCHA: `wasmJsBrowserDistribution` skipped the webpack
    bundle until run with `--rerun-tasks` (then dist landed in
-   build/dist/wasmJs/productionExecutable). REMAINING (wants a device + user):
-   the stashfin SectionCard/MenuRow ON-DEVICE dogfood; move the mirrored
-   ProfilePresenter/contract into a shared commonMain source set (currently
-   copied into editor/ from guest/jsMain — drift risk). Optional: a
-   `keliver-new-editor` scaffold that stamps the 3 pieces.
-3. Then: typed Route contracts + nav graph + flow preview (#13, folding
-   FlowScope #14 into it); capability personas + recorded HTTP (#16);
-   @PortalComponent polish (#17) last.
-4. Small debts: TODO(portal) publish-verifier gate; live-preview fast-follows
-   (contract-driven codegen of values/dispatch adapter maps, canvas event
-   payload delivery, composition-crash guard, **component-first-live-frame
-   staleness**, STATE INSPECTOR one-frame lag / no-clear-on-switch).
+   build/dist/wasmJs/productionExecutable).
+   **PHASE-1 CONSOLIDATION ✅ DONE 2026-07-19** (stashfin commits 6d2c612 /
+   e508eb2 / 1ee0aba; konduit 3110b7bae / 969d2785f / 7591973e1): (a) stashfin
+   Profile adopted **MenuRow + SectionHeader** components — verified in its own
+   editor (0 RawCode) AND rendered NATIVELY on the **Pixel_9 emulator + iPhone
+   16 Pro sim** (agent-driven; evidence/profile-components-{android,ios}.png);
+   (b) **multi-list row-collision fix** (3110b7bae — see #12 note); (c) presenter
+   **dedup** — editor now compiles guest's real presenter/contract via srcDir
+   (no copy); (d) **configurable relay** (`?relay=<port>`, 7591973e1). iOS
+   gotcha fixed in stashfin WORKFLOW.md: disambiguate the sim by UDID.
+   REMAINING (optional): a `keliver-new-editor` scaffold; a SectionCard
+   (container) component needs component **slots** (v1 is leaf-only) — a real
+   "components v2" motivation surfaced by Profile's card wrappers.
+3. **Typed Route contracts + nav graph + flow preview (#13)** — DESIGN READY
+   FOR REVIEW (docs/superpowers/specs/2026-07-19-flow-preview-design.md; folds
+   FlowScope #14). Recommend approving the F1→F2 slice. Then capability personas
+   + recorded HTTP (#16); @PortalComponent polish (#17) last.
+4. Small debts: ✅ TODO(portal) publish-verifier gate DONE (969d2785f — rejects
+   drafts whose contract still carries TODO(portal) markers, members named).
+   Live-preview fast-follows remain (contract-driven codegen of values/dispatch
+   adapter maps, canvas event payload delivery, composition-crash guard,
+   **component-first-live-frame staleness**, STATE INSPECTOR one-frame lag /
+   no-clear-on-switch); `--rerun-tasks` dist-skip root-cause.
 
 ## P4 — Platform debt (tracked, not urgent)
 
