@@ -86,7 +86,14 @@ private var eventSource: EventSource? = null
 private val opQueue = ArrayDeque<Pair<List<DocOp>, Boolean>>() // ops to refreshPanels
 private var opInFlight = false
 
-private const val SERVER = "http://localhost:8077"
+// The relay defaults to :8077, overridable via `?relay=<port>` so several per-app
+// editors (each pointed at its own app's relay) can run side by side without the
+// stop-one-start-another dance.
+private val SERVER: String = run {
+  val port = Regex("[?&]relay=(\\d+)")
+    .find(kotlinx.browser.window.location.search)?.groupValues?.get(1)
+  "http://localhost:${port ?: "8077"}"
+}
 private const val SESSION = "editor"
 
 // ── Playground mode: no portal-server reachable (e.g. the GitHub Pages build).
