@@ -145,11 +145,29 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     read-tracking edge on the just-added mock key under the applyValues
     SideEffect; fix candidate: pre-seed contract field keys into mocks before
     Live's first compose, or apply live values outside the SideEffect.**
-13. **Typed Route contracts + derived nav graph + flow preview** — sealed Route
-    per feature, recognizer derives the graph, preview actually navigates
-    (Login→OTP→Dashboard with a persona). Biggest authoring-experience win.
-    📄 **DESIGN READY FOR REVIEW: docs/superpowers/specs/2026-07-19-flow-preview-design.md**
-    (folds #14; phased F1–F4; 5 open questions). No code yet — gates Phase 2.
+13. **Typed Route contracts + derived nav graph + flow preview** — IN BUILD
+    2026-07-20 (user delegated the design decisions; recorded in the spec §0:
+    v1 routes = string tokens via a `flow{}` DSL, sealed Routes deferred to F4;
+    separate appFlowEntry; back-stack; derived edges matching literal action
+    args OR action names).
+    ✅ **F1 DONE + LIVE-VERIFIED** (a171f3d00): :portal-flow micro-lib (FlowSpec
+    + flow{} DSL, jvm+js+wasm, zero deps — apps compile it, relay parses it);
+    FlowRecognizer (PSI) 3/3 tests on the Login→OTP→Dashboard fixture;
+    portal-core deriveFlowEdges (primitives-only); relay flowsDir + boot scan +
+    watch + GET /flow — served the derived graph `feed --openNote--> detail`
+    from the real recognized trees.
+    🔶 **F2 CODE-COMPLETE** (43ffa5c3c), in-browser walkthrough gate PENDING —
+    browser tooling (safety classifier) was down at build time. Engine:
+    LiveEngine flow mode keyed by FLOW (state survives screen swaps),
+    onFlowScreen→flowFollow chrome follow, Flow select next to ▶ Live,
+    runPortalEditor(entry, flows=null). Dogfood: AppLibFlows (FieldNotes:
+    feed→openNote→detail→back, real presenters, flow-lifetime PreviewSqlHost).
+    Dist c3051a99 built+promoted+cache-busted; served JS verified to reference
+    it. GATE SCRIPT when browser returns: select flow "FieldNotes" → ▶ Live on
+    any screen (follows to feed) → addNote → ⚡ openNote → DETAIL renders the
+    real note via DetailPresenter → back → feed intact (flow state survived).
+    📄 Spec: docs/superpowers/specs/2026-07-19-flow-preview-design.md. F3
+    (visual graph view) + F4 (typed route params, personas) after the gate.
 14. **FlowScope presenter** — name the pattern (parent presenter composing screen
     presenters, owning flow-lifetime draft state), scaffold + document it.
     FOLDED into #13's design (§3.2).
