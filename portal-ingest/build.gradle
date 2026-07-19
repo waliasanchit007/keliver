@@ -5,6 +5,7 @@ apply plugin: 'org.jetbrains.kotlin.jvm'
 
 dependencies {
   api projects.portalDocument
+  api projects.portalFlow                     // #13 F1: FlowSpec returned by FlowRecognizer
   implementation projects.portalCore          // generated catalog grounds the grammar
   implementation libs.kotlin.compilerEmbeddable
   testImplementation libs.junit

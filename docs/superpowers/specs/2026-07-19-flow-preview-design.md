@@ -1,7 +1,35 @@
 # Typed Routes + derived nav graph + flow preview (Roadmap #13, folding FlowScope #14)
 
-**Status:** DESIGN — awaiting review before any implementation.
+**Status:** DECIDED 2026-07-20 (user delegated: "decide and start the voyage") — F1+F2 in build.
 **Author:** agent, 2026-07-19. **Reviewer:** (you).
+
+## 0. DECISIONS (2026-07-20)
+
+1. **Route declaration — v1 is STRING TOKENS via a tiny `flow{}` DSL**, not the
+   sealed interface. Rationale: screens ALREADY carry the tokens
+   (`b.open("SETTINGS")` — P1-4 literal args), so tokens need zero new screen
+   grammar; the DSL is trivially PSI-derivable AND runtime-real (one declaration
+   serves the relay's static graph and the app's runtime nav); sealed Route
+   interfaces return in F4 as typed sugar when route PARAMS land (`Help(topic)`).
+   Deviation from §3.1 recorded deliberately — the sealed form derived poorly
+   (token→Route mapping lives inside presenter `when`s, fragile to parse).
+2. **Separate `appFlowEntry`** beside `appPreviewEntry` — screen-only apps stay
+   untouched (§Q2 proposal, confirmed).
+3. **Back-stack** nav model (§Q3 proposal, confirmed).
+4. **Derived edges**, with one widening: a route key matches a nav action's
+   LITERAL ARG (`open("SETTINGS")`) **or its ACTION NAME** (`openNote(item.id)` —
+   dynamic data args can't be tokens; the action name is the stable edge label).
+5. **F2 first cut = screen-swap-on-nav + a minimal Flow select** in the chrome.
+   The visual graph is F3.
+
+The flow declaration (dogfood):
+
+```kotlin
+// portal-app-lib/src/commonMain/kotlin/flows/FieldNotesFlow.kt
+val FieldNotesFlow = flow("FieldNotes", start = "feed") {
+  route("openNote", to = "detail")   // action-name edge (dynamic arg = note id)
+}
+```
 
 ## 1. Why
 

@@ -28,6 +28,8 @@ data class PortalConfig(
    * last-known-good copy an http server should serve).
    */
   val logicDirs: List<String>? = null,
+  /** #13 F1: flow declarations (flow{} DSL). Null = a `flows` sibling of [screensDir]. */
+  val flowsDir: String? = null,
   val previewBuildTask: String = ":web-spike:wasmJsBrowserDistribution",
   val previewDist: String = "web-spike/build/dist/wasmJs/productionExecutable",
   val previewServeDir: String = "build/portal-editor-live",
@@ -41,6 +43,10 @@ fun PortalConfig.resolvedLogicDirs(): List<String> =
 /** The resolved components dir: explicit [componentsDir], else a `components` sibling of screens. */
 fun PortalConfig.resolvedComponentsDir(): String =
   componentsDir ?: (screensDir.substringBeforeLast('/', "") .let { if (it.isEmpty()) "components" else "$it/components" })
+
+/** The resolved flows dir: explicit [flowsDir], else a `flows` sibling of screens. */
+fun PortalConfig.resolvedFlowsDir(): String =
+  flowsDir ?: (screensDir.substringBeforeLast('/', "").let { if (it.isEmpty()) "flows" else "$it/flows" })
 
 fun loadPortalConfig(repoDir: File): PortalConfig {
   val f = File(repoDir, "keliver.portal.json")

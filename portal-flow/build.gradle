@@ -1,0 +1,12 @@
+// Roadmap #13 F1 — the FLOW declaration micro-lib: FlowSpec + the `flow{}` DSL.
+// Pure Kotlin, zero deps, all targets: an app's flows/ dir compiles this into
+// its guest bundle (runtime nav) while the jvm relay/ingest parse and derive
+// from the SAME declaration. Kept tiny + separable on the portal-sql precedent
+// (guest-side runtime libs stay minimal, publishable alone).
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+
+kotlin {
+  jvm()
+  js { browser() }
+  wasmJs { browser() }
+}

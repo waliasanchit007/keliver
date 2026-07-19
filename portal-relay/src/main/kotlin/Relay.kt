@@ -217,6 +217,12 @@ private fun screensDirFor(project: String): File =
 
 /** C1: project components live next to screens (default project = the repo dir). */
 private val appComponentsDir = File(repoDir, config.resolvedComponentsDir())
+
+/** #13 F1: flow declarations live next to screens too (flow{} DSL files). */
+private val appFlowsDir = File(repoDir, config.resolvedFlowsDir())
+private fun flowsDirFor(project: String): File =
+  if (project == "default") appFlowsDir
+  else File(screensDirFor(project).parentFile, "flows")
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
 private val previewBuilder = PreviewBuilder(object : PreviewBuilder.Runner {
@@ -310,6 +316,11 @@ private fun bootScan() {
     val reg = Components.rebuild("default", appComponentsDir)
     println("portal-server: components boot scan -> ${reg.names().sorted()} from $appComponentsDir")
   }
+  // #13 F1: flow declarations (screens don't depend on them; order is free).
+  if (appFlowsDir.exists()) {
+    val flows = Flows.rebuild("default", appFlowsDir)
+    println("portal-server: flows boot scan -> ${flows.keys.sorted()} from $appFlowsDir")
+  }
   if (!appScreensDir.exists()) return
   val ktScreens = (appScreensDir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray())
   ktScreens.forEach { runCatching { ingestFile(it) }.onFailure { e -> println("boot ingest failed for $it: $e") } }
@@ -337,6 +348,11 @@ private fun startKotlinWatcher() {
       appComponentsDir.mkdirs()
       add(appComponentsDir)
     }
+    // #13 F1: watch the flows dir — edits re-derive the nav graph live.
+    if (appFlowsDir.parentFile?.exists() == true) {
+      appFlowsDir.mkdirs()
+      add(appFlowsDir)
+    }
     // P3-12: watch logic dirs — presenter edits trigger the preview rebuild.
     config.resolvedLogicDirs().forEach { rel ->
       val d = File(repoDir, rel)
@@ -351,7 +367,13 @@ private fun startKotlinWatcher() {
         if (f.name.endsWith(".kt") && !f.name.startsWith("Compiled_")) {
           val key = f.absolutePath
           pendingIngest[key]?.cancel(false)
-          val task = Runnable { if (isComponentFile(f)) ingestComponentFile(f) else ingestFile(f) }
+          val task = Runnable {
+            when {
+              isComponentFile(f) -> ingestComponentFile(f)
+              isFlowFile(f) -> ingestFlowFile(f)
+              else -> ingestFile(f)
+            }
+          }
           pendingIngest[key] = ingestExec.schedule(task, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
           previewBuilder.trigger() // P3-12: any source change rebuilds the live editor
         }
@@ -401,6 +423,21 @@ private fun ingestComponentFile(f: File) {
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
     reingestScreens(project)
   }.onFailure { println("component ingest failed for $f: $it") }
+}
+
+// #13 F1: flow declarations — whole-dir rebuild on any flows/ change.
+private fun isFlowFile(f: File): Boolean {
+  val p = f.parentFile ?: return false
+  return p.absolutePath == appFlowsDir.absolutePath || p.name == "flows"
+}
+
+private fun ingestFlowFile(f: File) {
+  runCatching {
+    val project = if (f.parentFile.absolutePath == appFlowsDir.absolutePath) "default"
+    else (f.parentFile.parentFile?.name ?: "default")
+    val flows = Flows.rebuild(project, flowsDirFor(project))
+    println("ingest(flow): $project -> ${flows.keys.sorted()} (${f.name} changed)")
+  }.onFailure { println("flow ingest failed for $f: $it") }
 }
 
 private fun isDefaultComponents(f: File): Boolean =
@@ -479,6 +516,19 @@ fun main(args: Array<String>) {
     handle(ex) {
       val project = safe(query(ex)["project"] ?: "default")
       respond(ex, 200, Components.toJson(project))
+    }
+  }
+
+  // #13 F1: declared flows + the nav graph DERIVED from the project's current
+  // screen trees (read from the store mirrors — each screen's live projection).
+  server.createContext("/flow") { ex ->
+    handle(ex) {
+      val project = safe(query(ex)["project"] ?: "default")
+      val screens = File(root, project).listFiles { f -> f.name.endsWith(".json") }
+        ?.mapNotNull { f ->
+          runCatching { f.name.removeSuffix(".json") to deserializeTree(f.readText()) }.getOrNull()
+        }?.toMap() ?: emptyMap()
+      respond(ex, 200, Flows.toJson(project, screens))
     }
   }
 

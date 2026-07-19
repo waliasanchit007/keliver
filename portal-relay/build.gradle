@@ -11,6 +11,7 @@ application {
 
 dependencies {
   implementation projects.portalCore
+  implementation projects.portalFlow     // #13 F1: FlowSpec (declarations parsed by ingest)
   implementation projects.portalDocument // V2 M1: live document + op engine
   implementation projects.portalIngest   // V2 M3: recognizer + reconciler
   implementation libs.kotlinx.serialization.json // DocJson wire
