@@ -1,6 +1,10 @@
 # Typed Routes + derived nav graph + flow preview (Roadmap #13, folding FlowScope #14)
 
-**Status:** DECIDED 2026-07-20 (user delegated: "decide and start the voyage") — F1+F2 in build.
+**Status:** DECIDED 2026-07-20 (user delegated: "decide and start the voyage").
+**F1 DONE + LIVE-VERIFIED** (a171f3d00): flow{} DSL, FlowRecognizer (3/3 tests,
+Login→OTP→Dashboard fixture, both edge kinds + literal precedence), /flow served
+the derived graph `feed --openNote--> detail` from the real recognized trees.
+**F2 code-complete** (43ffa5c3c) — in-browser walkthrough gate pending.
 **Author:** agent, 2026-07-19. **Reviewer:** (you).
 
 ## 0. DECISIONS (2026-07-20)
