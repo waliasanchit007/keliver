@@ -58,6 +58,19 @@ class ContractWriteBackTest {
     assertEquals(out, ContractWriteBack.ensure(out, treeOf(out), "MenuScreen"))
   }
 
+  @Test fun unimplementedMembersDrivesThePublishGate() {
+    // A synced-but-unimplemented contract must be REJECTED by publish: the gate
+    // reports each TODO(portal)-marked member so the author knows what to write.
+    val synced = ContractWriteBack.ensure(file, treeOf(file), "MenuScreen")
+    val unimpl = ContractWriteBack.unimplementedMembers(synced)
+    assertTrue("val items: List<Item> get() = emptyList()" in unimpl, unimpl.toString())
+    assertTrue("fun open(value: String) {}" in unimpl, unimpl.toString())
+    // Hand-written members are never flagged.
+    assertTrue(unimpl.none { "handWritten" in it || "val title" in it }, unimpl.toString())
+    // A marker-free contract (the original fixture) is safe to ship.
+    assertTrue(ContractWriteBack.unimplementedMembers(file).isEmpty())
+  }
+
   @Test fun handNamedItemInterfacesAreNotDuplicated() {
     // The hand-written contract names its item type ProfileMenuEntry; the
     // exporter derives Item/Entry names from the itemVar. A synced file with

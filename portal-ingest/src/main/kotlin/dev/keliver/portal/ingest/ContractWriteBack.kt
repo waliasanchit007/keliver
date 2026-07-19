@@ -33,6 +33,20 @@ object ContractWriteBack {
   const val MARKER = "TODO(portal): implement — auto-added for a portal binding"
   private val MARKER_DOC = "/** $MARKER. */"
 
+  /**
+   * Publish-safety gate: the contract member declarations still carrying a
+   * [MARKER] doc — portal bindings the presenter never implemented (they render
+   * their defaulted no-op). Returns the member decls (e.g.
+   * "val items: List<Item> get() = emptyList()") so the relay can reject a
+   * publish and name exactly what to implement. Empty = safe to ship.
+   */
+  fun unimplementedMembers(src: String): List<String> {
+    val lines = src.lines()
+    return lines.indices
+      .filter { "TODO(portal)" in lines[it] }
+      .mapNotNull { i -> lines.drop(i + 1).firstOrNull { it.isNotBlank() }?.trim() }
+  }
+
   private data class Edit(val start: Int, val end: Int, val replacement: String)
 
   fun ensure(

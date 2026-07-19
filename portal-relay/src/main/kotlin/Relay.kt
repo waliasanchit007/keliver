@@ -126,6 +126,16 @@ private fun publish(): Pair<Boolean, String> {
   val (p, s) = activeScreen()
   val canonical = File(screensDirFor(p), "$s.kt")
   if (!canonical.exists()) return false to "nothing to publish: no canonical screen at $canonical"
+  // Publish-safety gate: a contract member still marked TODO(portal) is a portal
+  // binding the presenter never implemented — it would ship rendering the
+  // defaulted no-op. Drafts must not reach prod; reject and name the members.
+  val unimpl = dev.keliver.portal.ingest.ContractWriteBack.unimplementedMembers(canonical.readText())
+  if (unimpl.isNotEmpty()) {
+    return false to buildString {
+      appendLine("publish REJECTED: ${unimpl.size} contract member(s) still TODO(portal) — implement them in the presenter (or remove the binding) before shipping to prod:")
+      unimpl.forEach { appendLine("  • $it") }
+    }
+  }
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
   val gradlew = File(repoDir, "gradlew").absolutePath
