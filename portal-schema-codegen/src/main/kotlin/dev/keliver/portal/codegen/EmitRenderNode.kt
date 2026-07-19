@@ -63,7 +63,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("      val itemVar = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val itemsField = (node.props[\"items\"] as? String) ?: \"items\"")
   appendLine("      repeat(PreviewBindings.rowCount(itemsField)) { i ->")
-  appendLine("        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, i)) }")
+  appendLine("        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i)) }")
   appendLine("      }")
   appendLine("    }")
   for (w in sorted) {

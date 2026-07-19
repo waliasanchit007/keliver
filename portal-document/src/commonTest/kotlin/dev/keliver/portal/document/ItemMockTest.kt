@@ -20,9 +20,9 @@ class ItemMockTest {
 
   @Test fun resolvesPipeSeparatedRowValuesAndClamps() {
     val mocks = mapOf("note.title" to "First|Second")
-    val r0 = resolveItemRow(row, "note", 0, mocks::get)
-    val r1 = resolveItemRow(row, "note", 1, mocks::get)
-    val r2 = resolveItemRow(row, "note", 2, mocks::get)
+    val r0 = resolveItemRow(row, "note", "notes", 0, mocks::get)
+    val r1 = resolveItemRow(row, "note", "notes", 1, mocks::get)
+    val r2 = resolveItemRow(row, "note", "notes", 2, mocks::get)
     assertEquals("First", r0.children[0].props["text"])
     assertEquals("Second", r1.children[0].props["text"])
     assertEquals("Second", r2.children[0].props["text"]) // clamped to last
@@ -31,7 +31,7 @@ class ItemMockTest {
   }
 
   @Test fun unmockedItemBindShowsHumanizedDefault() {
-    val r = resolveItemRow(row, "note", 1) { null }
+    val r = resolveItemRow(row, "note", "notes", 1) { null }
     assertEquals("Title 2", r.children[0].props["text"])
   }
 
@@ -42,26 +42,43 @@ class ItemMockTest {
       "headline" to Bind("item.title"),
       "leadingIcon" to Bind("item.icon"),
     ))
-    val r0 = resolveItemRow(li, "item", 0) { null }
+    val r0 = resolveItemRow(li, "item", "items", 0) { null }
     assertEquals("Star", r0.props["leadingIcon"])
     assertEquals("Title 1", r0.props["headline"])
-    val r1 = resolveItemRow(li, "item", 1) { null }
+    val r1 = resolveItemRow(li, "item", "items", 1) { null }
     assertEquals("Settings", r1.props["leadingIcon"])
 
     val img = WidgetNode("AsyncImage", mapOf("url" to Bind("item.imageUrl")))
     assertEquals(
       "https://picsum.photos/seed/keliver1/200",
-      resolveItemRow(img, "item", 0) { null }.props["url"],
+      resolveItemRow(img, "item", "items", 0) { null }.props["url"],
     )
 
     val amt = WidgetNode("StyledText", mapOf("text" to Bind("item.amount")))
-    assertEquals("₹2,250", resolveItemRow(amt, "item", 1) { null }.props["text"])
+    assertEquals("₹2,250", resolveItemRow(amt, "item", "items", 1) { null }.props["text"])
   }
 
   @Test fun nestedRepeatKeepsItsOwnScope() {
     val nested = WidgetNode("Repeat", mapOf("items" to "tags", "item" to "tag"),
       listOf(WidgetNode("StyledText", mapOf("text" to Bind("tag.name")))))
-    val out = resolveItemRow(WidgetNode("Column", emptyMap(), listOf(nested)), "note", 0) { null }
+    val out = resolveItemRow(WidgetNode("Column", emptyMap(), listOf(nested)), "note", "notes", 0) { null }
     assertEquals(Bind("tag.name"), out.children[0].children[0].props["text"])
+  }
+
+  // Stashfin Profile surfaced this: account/security/support all iterate with
+  // `forEach { item -> }`, so their rows share the itemVar "item". Rows are
+  // namespaced by the LIST field so they stay distinct; the plain "item.title"
+  // key is the shared fallback (editor per-item mocks / single-list back-compat).
+  @Test fun listsSharingItemVarStayDistinctByFieldNamespace() {
+    val li = WidgetNode("ListItem", mapOf("headline" to Bind("item.title")))
+    val mocks = mapOf(
+      "accountItems.item.title" to "Notifications",
+      "securityItems.item.title" to "App Settings",
+      "item.title" to "SHARED-FALLBACK",
+    )
+    assertEquals("Notifications", resolveItemRow(li, "item", "accountItems", 0, mocks::get).props["headline"])
+    assertEquals("App Settings", resolveItemRow(li, "item", "securityItems", 0, mocks::get).props["headline"])
+    // supportItems has no namespaced key → falls back to the plain key.
+    assertEquals("SHARED-FALLBACK", resolveItemRow(li, "item", "supportItems", 0, mocks::get).props["headline"])
   }
 }

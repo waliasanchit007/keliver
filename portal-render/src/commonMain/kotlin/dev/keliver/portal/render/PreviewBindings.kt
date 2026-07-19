@@ -20,9 +20,10 @@ object PreviewBindings {
   /** Mocked preview row count for a Repeat: the ITEMS field's mock parses as an int (default 3, clamped 0..10). */
   fun rowCount(itemsField: String): Int = mocks[itemsField]?.trim()?.toIntOrNull()?.coerceIn(0, 10) ?: 3
 
-  /** One preview row: item binds resolved against the mocks map ("a|b|c" = per-row values). */
-  fun mockItemRow(node: WidgetNode, itemVar: String, index: Int): WidgetNode =
-    resolveItemRow(node, itemVar, index, mocks::get)
+  /** One preview row: item binds resolved against the mocks map ("a|b|c" = per-row
+   *  values), namespaced by [itemsField] so lists sharing an itemVar don't collide. */
+  fun mockItemRow(node: WidgetNode, itemVar: String, itemsField: String, index: Int): WidgetNode =
+    resolveItemRow(node, itemVar, itemsField, index, mocks::get)
 }
 
 /** The Action name wired to an event prop, or null. */

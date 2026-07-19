@@ -60,6 +60,8 @@ fun MutableMap<String, String>.putRows(
   this[field] = rows.size.toString()
   val keys = rows.flatMap { it.keys }.toSet()
   for (k in keys) {
-    this["$itemVar.$k"] = rows.joinToString("|") { it[k].orEmpty().replace("|", "/") }
+    // Namespaced by [field] so multiple lists sharing an itemVar stay distinct
+    // (resolveItemRow reads "$itemsField.$itemVar.$k", falling back to the plain key).
+    this["$field.$itemVar.$k"] = rows.joinToString("|") { it[k].orEmpty().replace("|", "/") }
   }
 }

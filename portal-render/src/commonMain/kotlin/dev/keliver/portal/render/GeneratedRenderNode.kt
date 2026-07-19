@@ -108,7 +108,7 @@ fun RenderNode(node: WidgetNode) {
       val itemVar = (node.props["item"] as? String) ?: "item"
       val itemsField = (node.props["items"] as? String) ?: "items"
       repeat(PreviewBindings.rowCount(itemsField)) { i ->
-        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, i)) }
+        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i)) }
       }
     }
     "AlertDialog" -> AlertDialog(

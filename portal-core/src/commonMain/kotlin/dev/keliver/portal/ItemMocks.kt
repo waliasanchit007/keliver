@@ -10,17 +10,29 @@ package dev.keliver.portal
  * values, and everything else gets a humanized "Title 1" style label.
  * Actions and screen binds pass through; a nested Repeat keeps its own scope.
  */
-fun resolveItemRow(node: WidgetNode, itemVar: String, index: Int, mockOf: (String) -> String?): WidgetNode {
+fun resolveItemRow(
+  node: WidgetNode,
+  itemVar: String,
+  itemsField: String,
+  index: Int,
+  mockOf: (String) -> String?,
+): WidgetNode {
   if (node.type == "Repeat") return node
   val props = node.props.mapValues { (key, v) ->
     if (v is Bind && v.field.startsWith("$itemVar.")) {
-      val rows = mockOf(v.field)?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
+      // Namespace row content by the LIST field ("accountItems.item.title") so
+      // several lists that reuse the same itemVar ("item") don't collide — the
+      // single-list dogfood never hit this, but real screens (Stashfin Profile:
+      // account/security/support) do. Fall back to the un-namespaced key for
+      // editor per-item mocks and single-list back-compat.
+      val raw = mockOf("$itemsField.${v.field}") ?: mockOf(v.field)
+      val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
       if (rows.isNullOrEmpty()) defaultMock(v.field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
     } else {
       v
     }
   }
-  return node.copy(props = props, children = node.children.map { resolveItemRow(it, itemVar, index, mockOf) })
+  return node.copy(props = props, children = node.children.map { resolveItemRow(it, itemVar, itemsField, index, mockOf) })
 }
 
 private val MOCK_ICONS = listOf("Star", "Settings", "Notifications", "Person", "Info")
