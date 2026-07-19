@@ -253,6 +253,7 @@ private lateinit var consoleEl: HTMLElement
 private lateinit var fidelityEl: HTMLElement
 private lateinit var inspectorEl: HTMLElement
 private lateinit var liveBtn: HTMLElement
+private var flowSel: HTMLSelectElement? = null // #13 F2: null when the app registered no flows
 private lateinit var paletteListEl: HTMLElement
 private lateinit var saveDotEl: HTMLElement
 private lateinit var saveTextEl: HTMLElement
@@ -517,8 +518,21 @@ private fun buildTopbar() {
   savePill.appendChild(saveTextEl)
   bar.appendChild(savePill)
 
+  // #13 F2: pick a flow to run Live as a WALKTHROUGH (screen-swap-on-nav).
+  // Only shown when the per-app build registered flows; "—" = single-screen live.
+  val flowNames = dev.keliver.portal.render.appFlowEntry?.flows?.keys.orEmpty()
+  if (flowNames.isNotEmpty()) {
+    val sel = Ui.select()
+    fillSelect(sel, listOf("—") + flowNames.toList(), "—")
+    sel.setAttribute("title", "Flow walkthrough: Live follows the flow's navigation")
+    bar.appendChild(sel)
+    flowSel = sel
+  }
   liveBtn = Ui.button("▶ Live", "btn") { toggleLive() }
   bar.appendChild(liveBtn)
+  // Follow the live flow: when its current screen changes, load that screen's
+  // tree (the flow composition itself is keyed by FLOW and survives the swap).
+  LiveEngine.onFlowScreen = { s -> if (s != currentScreen) flowFollow(s) }
   buildChip = Ui.el("span", "", "")
   buildChip.setAttribute("style", "font-size:11px; padding:2px 8px; border-radius:8px; margin-left:6px;")
   bar.appendChild(buildChip)
@@ -712,18 +726,30 @@ private fun toggleLive() {
 private fun enableLive() {
   serverGet("/capabilities?project=$currentProject") { txt ->
     val required = parseNames(txt)
+    // #13 F2: a selected flow wins — Live becomes a WALKTHROUGH: the app's
+    // FlowScope owns which screen shows; the editor follows its navigation.
+    val flowName = flowSel?.value?.takeIf { it != "—" }
+    val flowEntry = dev.keliver.portal.render.appFlowEntry
     // P3-12: run the APP'S REAL presenter when the per-app entry registers one
     // for this screen; otherwise stay honest — mock tier, clearly labeled.
     val entry = dev.keliver.portal.render.appPreviewEntry
+    val flowRegistered = flowName != null && flowEntry?.flows?.get(flowName) != null
     val registered = entry?.screens?.get(currentScreen) != null
-    renderFidelity(required, livePresenter = if (registered) entry?.label else null)
+    renderFidelity(
+      required,
+      livePresenter = when {
+        flowRegistered -> "${flowEntry?.label} · flow '$flowName'"
+        registered -> entry?.label
+        else -> null
+      },
+    )
     LiveEngine.onError = { msg ->
       val row = Ui.el("div", "", "⚠ $msg")
       row.setAttribute("style", "color:var(--bad, #e57373);")
       consoleEl.insertBefore(row, consoleEl.firstChild)
     }
-    if (registered) {
-      LiveEngine.request.value = currentScreen
+    if (flowRegistered || registered) {
+      if (flowRegistered) LiveEngine.flowRequest.value = flowName else LiveEngine.request.value = currentScreen
       PreviewBindings.actionSink = { name ->
         val row = Ui.el("div", "", "⚡ $name → real presenter")
         row.setAttribute("style", "color:var(--good);")
@@ -741,6 +767,15 @@ private fun enableLive() {
     renderInspector()
     Snapshot.sendApplyNotifications()
   }
+}
+
+/** #13 F2: follow the live flow to [screen] — load its tree WITHOUT re-keying
+ *  the flow composition (LiveEngine keys by flow; state survives the swap). */
+private fun flowFollow(screen: String) {
+  currentScreen = screen
+  sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
+  reloadScreenList()
+  loadDraft()
 }
 
 private fun disableLive() {

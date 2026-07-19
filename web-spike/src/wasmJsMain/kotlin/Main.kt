@@ -1,11 +1,11 @@
 /*
  * web-spike = konduit's OWN portal-editor executable: the reusable shell
  * (:portal-editor, runPortalEditor) + this repo's app (AppLibPreview — Field
- * Notes / settings presenters). A consumer app's editor is the same one-liner
- * with its own AppPreviewEntry — that single substitution is the whole of
- * "per-app preview". See docs/ROADMAP.md item ② (editor-shell separability).
+ * Notes / settings presenters; AppLibFlows — the Field Notes flow). A consumer
+ * app's editor is the same one-liner with its own entries — that substitution
+ * is the whole of "per-app preview". See docs/ROADMAP.md item ② and #13 F2.
  *
- * runPortalEditor + AppLibPreview are both in the root package (the shell across
- * the module boundary, the app in this module), so neither needs an import.
+ * runPortalEditor + the entries are all in the root package (the shell across
+ * the module boundary, the app in this module), so none needs an import.
  */
-fun main() = runPortalEditor(AppLibPreview)
+fun main() = runPortalEditor(AppLibPreview, flows = AppLibFlows)
