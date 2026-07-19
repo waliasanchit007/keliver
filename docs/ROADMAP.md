@@ -186,12 +186,24 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    build `:yourEditor:wasmJsBrowserDistribution`, serve it against a relay whose
    PORTAL_REPO points at your app repo. AppLibPreview.kt + web-spike/build.gradle
    are the copy-paste template.
-   **STASHFIN ENABLEMENT (remaining — wants the user + stashfin repo):** create
-   stashfin's editor module (its own AppPreviewEntry over its Profile/… presenters),
-   wire :portal-editor via composite build, build+serve its editor, then the
-   deferred stashfin SectionCard/MenuRow on-device dogfood. Cross-repo + device →
-   do together. Optional first: a `keliver-new-editor` scaffold script (mirrors
-   keliver-new-component) that stamps the 3 pieces.
+   **STASHFIN ENABLEMENT (web) ✅ DONE + VERIFIED LIVE 2026-07-19** (stashfin
+   repo commit 6d80b25). `stashfin-sdui/editor/` is a STANDALONE gradle build
+   that composite-builds konduit's :portal-editor (explicit dependencySubstitution;
+   Kotlin 2.2.0 / Compose 1.8.2 / Gradle 9.0.0 align across both repos) and
+   compiles stashfin's REAL ProfilePresenter in; `fun main() = runPortalEditor(
+   StashfinPreview)`. Verified in-browser (served :8098 → relay :8077
+   PORTAL_REPO=stashfin): relay ingested ProfileScreen.kt at 0 RawCode, editor
+   rendered it, ▶ Live ran the real presenter — real name/phone/UPI/QR + all
+   four sections (Account/Security/App/Support) each DISTINCT (exercised the
+   multi-list fix 3110b7bae), Full fidelity / no host capabilities. **The
+   composite build "just worked" (compile first try) — the version alignment is
+   the whole trick.** GOTCHA: `wasmJsBrowserDistribution` skipped the webpack
+   bundle until run with `--rerun-tasks` (then dist landed in
+   build/dist/wasmJs/productionExecutable). REMAINING (wants a device + user):
+   the stashfin SectionCard/MenuRow ON-DEVICE dogfood; move the mirrored
+   ProfilePresenter/contract into a shared commonMain source set (currently
+   copied into editor/ from guest/jsMain — drift risk). Optional: a
+   `keliver-new-editor` scaffold that stamps the 3 pieces.
 3. Then: typed Route contracts + nav graph + flow preview (#13, folding
    FlowScope #14 into it); capability personas + recorded HTTP (#16);
    @PortalComponent polish (#17) last.
