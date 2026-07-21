@@ -175,8 +175,11 @@ the visual graph is polish.
   ▶ Live on a flow, tap a nav action → target screen's real presenter renders;
   back pops. Verify in-browser (Field Notes: feed → detail → back is the
   ready-made 2-screen flow).
-- **F3 — Editor flow view + walkthrough.** Nav-graph list/visual + start-route
-  picker. Gate: click-through a 3-screen flow in the editor.
+- **F3 — Editor flow view.** ✅ DONE + LIVE-VERIFIED 2026-07-21 (d2f4649ce): a
+  ⛓ button by the Flow select opens a Nav-graph overlay (per flow: node chips —
+  start ▶, current ringed — + "from —key→ to" edge rows), all clickable to open
+  that screen. Verified: opened the graph → saw feed/detail + feed —openNote→
+  detail → clicked "detail" → editor loaded the detail screen.
 - **F4 — Personas / start-state (overlaps #16).** Begin a flow in a given
   capability/auth state. Deferred; designed here only as the seam.
 

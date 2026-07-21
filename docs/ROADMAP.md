@@ -168,8 +168,13 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     it. GATE SCRIPT when browser returns: select flow "FieldNotes" → ▶ Live on
     any screen (follows to feed) → addNote → ⚡ openNote → DETAIL renders the
     real note via DetailPresenter → back → feed intact (flow state survived).
-    📄 Spec: docs/superpowers/specs/2026-07-19-flow-preview-design.md. F3
-    (visual graph view) + F4 (typed route params, personas) after the gate.
+    ✅ **F3 DONE + LIVE-VERIFIED 2026-07-21** (d2f4649ce): ⛓ Nav-graph overlay
+    (clickable node chips — start ▶, current ringed — + "from —key→ to" edge
+    rows over /flow); clicking a node opens that screen. Verified: graph showed
+    feed/detail + feed —openNote→ detail; clicking "detail" loaded it.
+    📄 Spec: docs/superpowers/specs/2026-07-19-flow-preview-design.md.
+    REMAINING: F4 (typed sealed-Route params + personas/start-state, overlaps
+    #16). F1+F2+F3 shipped — the core flow-authoring loop is live.
 14. **FlowScope presenter** — name the pattern (parent presenter composing screen
     presenters, owning flow-lifetime draft state), scaffold + document it.
     FOLDED into #13's design (§3.2).
