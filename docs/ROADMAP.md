@@ -156,8 +156,10 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     portal-core deriveFlowEdges (primitives-only); relay flowsDir + boot scan +
     watch + GET /flow — served the derived graph `feed --openNote--> detail`
     from the real recognized trees.
-    🔶 **F2 CODE-COMPLETE** (43ffa5c3c), in-browser walkthrough gate PENDING —
-    browser tooling (safety classifier) was down at build time. Engine:
+    ✅ **F2 DONE + LIVE-VERIFIED 2026-07-21** (43ffa5c3c): flow "FieldNotes" →
+    ▶ Live followed to feed → addNote (real FeedPresenter) → tap note NAVIGATED
+    to detail (real DetailPresenter) → "< Back" popped to feed with the note
+    still present (flow-lifetime SQLite survived). Full round-trip green. Engine:
     LiveEngine flow mode keyed by FLOW (state survives screen swaps),
     onFlowScreen→flowFollow chrome follow, Flow select next to ▶ Live,
     runPortalEditor(entry, flows=null). Dogfood: AppLibFlows (FieldNotes:

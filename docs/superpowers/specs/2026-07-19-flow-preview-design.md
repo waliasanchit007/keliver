@@ -4,7 +4,12 @@
 **F1 DONE + LIVE-VERIFIED** (a171f3d00): flow{} DSL, FlowRecognizer (3/3 tests,
 Login→OTP→Dashboard fixture, both edge kinds + literal precedence), /flow served
 the derived graph `feed --openNote--> detail` from the real recognized trees.
-**F2 code-complete** (43ffa5c3c) — in-browser walkthrough gate pending.
+**F2 DONE + LIVE-VERIFIED 2026-07-21** (43ffa5c3c): in the editor, selected flow
+"FieldNotes" → ▶ Live followed to `feed` (fidelity "· flow 'FieldNotes'") →
+addNote ran the real FeedPresenter (Note #1) → tapping the note NAVIGATED to
+`detail` (screen dropdown feed→detail, DetailPresenter rendered the real note) →
+"< Back" POPPED to `feed` with Note #1 STILL PRESENT — flow-lifetime SQLite
+survived the round-trip. Every gate green.
 **Author:** agent, 2026-07-19. **Reviewer:** (you).
 
 ## 0. DECISIONS (2026-07-20)
