@@ -263,6 +263,8 @@ private lateinit var projectSel: HTMLSelectElement
 private lateinit var screenSel: HTMLSelectElement
 private lateinit var exportOverlay: HTMLElement
 private lateinit var exportPre: HTMLElement
+private lateinit var flowGraphOverlay: HTMLElement // #13 F3: nav-graph view
+private lateinit var flowGraphBody: HTMLElement
 
 // ---------------------------------------------------------------------------
 // V2 M1 ops client — every edit is a transactional op batch against the
@@ -527,6 +529,9 @@ private fun buildTopbar() {
     sel.setAttribute("title", "Flow walkthrough: Live follows the flow's navigation")
     bar.appendChild(sel)
     flowSel = sel
+    // #13 F3: open the derived nav-graph view (nodes = screens, edges = navs).
+    bar.appendChild(Ui.button("⛓", "btn icon") { showFlowGraph() }
+      .also { it.setAttribute("title", "Nav graph: the flow's screens + navigations (click a node to open it)") })
   }
   liveBtn = Ui.button("▶ Live", "btn") { toggleLive() }
   bar.appendChild(liveBtn)
@@ -851,11 +856,86 @@ private fun buildExportOverlay() {
   exportPre = Ui.el("pre")
   exportOverlay.appendChild(exportPre)
   document.body?.appendChild(exportOverlay)
+
+  // #13 F3: the nav-graph overlay (populated per-open from /flow).
+  flowGraphOverlay = Ui.el("div", "overlay")
+  flowGraphOverlay.setAttribute("style", "display:none;")
+  val gHead = Ui.el("div", "head", "Nav graph")
+  val gClose = Ui.button("✕", "btn icon") { flowGraphOverlay.setAttribute("style", "display:none;") }
+  gClose.setAttribute("style", "margin-left:auto;")
+  gHead.appendChild(gClose)
+  flowGraphOverlay.appendChild(gHead)
+  flowGraphBody = Ui.el("div", "")
+  flowGraphBody.setAttribute("style", "padding:8px 4px; overflow:auto;")
+  flowGraphOverlay.appendChild(flowGraphBody)
+  document.body?.appendChild(flowGraphOverlay)
 }
 
 private fun showExport() {
   exportPre.textContent = exportKotlin(portalTree.value)
   exportOverlay.removeAttribute("style")
+}
+
+/**
+ * #13 F3: render the DERIVED nav graph (GET /flow) — per flow, its screens as
+ * clickable node chips (start marked ▶, the current screen ringed) and its
+ * navigations as "from —key→ to" edge rows. Clicking any node/edge opens that
+ * screen in the editor. Pure read view over the same graph the relay derives
+ * from the recognized trees — no second source of truth.
+ */
+private fun showFlowGraph() {
+  Ui.clear(flowGraphBody)
+  flowGraphBody.appendChild(Ui.el("div", "muted", "loading /flow…"))
+  flowGraphOverlay.removeAttribute("style")
+  serverGet("/flow?project=$currentProject") { txt ->
+    Ui.clear(flowGraphBody)
+    val flows = runCatching { Json.parseToJsonElement(txt).jsonArray }.getOrNull()
+    if (flows == null || flows.isEmpty()) {
+      flowGraphBody.appendChild(Ui.el("div", "muted", "No flows declared (add a flows/ file with flow{ … })."))
+      return@serverGet
+    }
+    flows.forEach { fEl ->
+      val f = fEl.jsonObject
+      val name = f["name"]?.jsonPrimitive?.content ?: "?"
+      val start = f["start"]?.jsonPrimitive?.content ?: ""
+      val nodes = f["nodes"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
+      val edges = f["edges"]?.jsonArray?.map { it.jsonObject } ?: emptyList()
+
+      flowGraphBody.appendChild(Ui.el("div", "", name).also {
+        it.setAttribute("style", "font-weight:600; margin:6px 0 4px;")
+      })
+      // Nodes row: clickable chips (start ▶, current ringed).
+      val nodeRow = Ui.el("div", "row"); nodeRow.setAttribute("style", "flex-wrap:wrap; gap:6px; margin-bottom:6px;")
+      nodes.forEach { n ->
+        val chip = Ui.button((if (n == start) "▶ " else "") + n, "btn") { openFlowNode(n) }
+        val ring = if (n == currentScreen) "outline:2px solid var(--accent, #7a6cff);" else ""
+        chip.setAttribute("style", "font-size:12px; padding:3px 10px; $ring")
+        nodeRow.appendChild(chip)
+      }
+      flowGraphBody.appendChild(nodeRow)
+      // Edge rows: from —key→ to (each opens the target).
+      if (edges.isEmpty()) {
+        flowGraphBody.appendChild(Ui.el("div", "muted", "no navigations found in the current screen trees"))
+      } else {
+        edges.forEach { e ->
+          val from = e["from"]?.jsonPrimitive?.content ?: ""
+          val key = e["key"]?.jsonPrimitive?.content ?: ""
+          val to = e["to"]?.jsonPrimitive?.content ?: ""
+          val row = Ui.button("$from  —$key→  $to", "btn") { openFlowNode(to) }
+          row.setAttribute("style", "display:block; width:100%; text-align:left; font-size:12px; margin:2px 0; padding:4px 8px;")
+          flowGraphBody.appendChild(row)
+        }
+      }
+    }
+  }
+}
+
+/** #13 F3: open a graph node's screen in the editor (loads its tree + syncs the picker). */
+private fun openFlowNode(screen: String) {
+  flowGraphOverlay.setAttribute("style", "display:none;")
+  if (screen.isEmpty() || screen == currentScreen) return
+  if (::screenSel.isInitialized) screenSel.value = screen // reflect the jump in the picker
+  switchScreen(screen)
 }
 
 private fun installKeyboard() {
