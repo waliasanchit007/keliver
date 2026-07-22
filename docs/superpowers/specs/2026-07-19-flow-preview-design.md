@@ -180,8 +180,19 @@ the visual graph is polish.
   start ▶, current ringed — + "from —key→ to" edge rows), all clickable to open
   that screen. Verified: opened the graph → saw feed/detail + feed —openNote→
   detail → clicked "detail" → editor loaded the detail screen.
-- **F4 — Personas / start-state (overlaps #16).** Begin a flow in a given
-  capability/auth state. Deferred; designed here only as the seam.
+- **F4 — Start-state + typed routes.** SCOPED 2026-07-21 into three parts:
+  - **F4a — walkthrough from any node (start-state):** DONE — the nav-graph's
+    ▶ per node starts a Live walkthrough THERE (PreviewEnv.flowStart →
+    FlowScope initial stack; LiveEngine.flowStartOverride keyed into the flow
+    composition). Preview a deep-linked / mid-flow screen, then walk forward.
+  - **F4b — typed sealed-Route params:** DEFERRED (not skipped). String tokens
+    are functionally complete — the FieldNotes flow already carries a data arg
+    (the note id) through the FlowScope stack. Typed `sealed interface Route`
+    with `Help(topic)` params is pure ergonomics over the working wire; revisit
+    when a screen needs multiple typed params (no consumer needs it yet).
+  - **F4c — capability personas** ("logged-in, KYC-pending"): belongs to #16
+    (capability vocabulary + named state fixtures). PreviewEnv.flowStart is the
+    start-STATE seam personas will build on. Tracked in #16.
 
 Dogfood target: stashfin Profile → "App Settings" → a new `SettingsScreen`
 (2-node flow), then feed→detail on konduit. Device parity: FlowScope is a normal

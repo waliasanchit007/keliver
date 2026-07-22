@@ -30,6 +30,13 @@ fun interface ScreenPreview {
 class PreviewEnv(
   /** Log a line into the editor's action console (e.g. navigation intents). */
   val log: (String) -> Unit,
+  /**
+   * #13 F4: for a FLOW preview, the screen to START the walkthrough on (null =
+   * the flow's declared start). A FlowPreview inits its back-stack from this, so
+   * the editor can preview a flow from ANY node (deep-link / mid-flow state),
+   * not only the entry screen.
+   */
+  val flowStart: String? = null,
 )
 
 class PreviewFrame(

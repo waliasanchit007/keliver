@@ -28,6 +28,7 @@ import dev.keliver.portal.render.appPreviewEntry
 object LiveEngine {
   val request = mutableStateOf<String?>(null) // screen name; null = live off
   val flowRequest = mutableStateOf<String?>(null) // #13 F2: flow name; wins over request
+  var flowStartOverride: String? = null // #13 F4: node to begin the walkthrough on (null = declared start)
   var frame: PreviewFrame? = null
   private var lastKeys: Set<String> = emptySet()
   var onError: (String) -> Unit = {}
@@ -52,6 +53,7 @@ object LiveEngine {
     lastKeys = emptySet()
     request.value = null
     flowRequest.value = null
+    flowStartOverride = null
   }
 }
 
@@ -62,8 +64,10 @@ fun LivePresenterHost() {
   val flowName = LiveEngine.flowRequest.value
   if (flowName != null) {
     val fp = appFlowEntry?.flows?.get(flowName) ?: return
-    key("flow:$flowName") {
-      val f = fp.present(PreviewEnv(log = { portalLiveLog(it) }))
+    val startAt = LiveEngine.flowStartOverride
+    // Key by flow + start so choosing a new start node RE-inits the FlowScope.
+    key("flow:$flowName:$startAt") {
+      val f = fp.present(PreviewEnv(log = { portalLiveLog(it) }, flowStart = startAt))
       LiveEngine.frame = PreviewFrame(f.values, f.dispatch)
       SideEffect {
         LiveEngine.applyValues(f.values)

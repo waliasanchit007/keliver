@@ -904,13 +904,19 @@ private fun showFlowGraph() {
       flowGraphBody.appendChild(Ui.el("div", "", name).also {
         it.setAttribute("style", "font-weight:600; margin:6px 0 4px;")
       })
-      // Nodes row: clickable chips (start ▶, current ringed).
-      val nodeRow = Ui.el("div", "row"); nodeRow.setAttribute("style", "flex-wrap:wrap; gap:6px; margin-bottom:6px;")
+      // Nodes row: each node = an "open for edit" chip + a ▶ "walk from here".
+      val nodeRow = Ui.el("div", "row"); nodeRow.setAttribute("style", "flex-wrap:wrap; gap:8px; margin-bottom:6px;")
       nodes.forEach { n ->
+        val group = Ui.el("div", "row"); group.setAttribute("style", "gap:0; align-items:stretch;")
         val chip = Ui.button((if (n == start) "▶ " else "") + n, "btn") { openFlowNode(n) }
         val ring = if (n == currentScreen) "outline:2px solid var(--accent, #7a6cff);" else ""
-        chip.setAttribute("style", "font-size:12px; padding:3px 10px; $ring")
-        nodeRow.appendChild(chip)
+        chip.setAttribute("style", "font-size:12px; padding:3px 10px; border-top-right-radius:0; border-bottom-right-radius:0; $ring")
+        chip.setAttribute("title", "Open $n for editing")
+        val walk = Ui.button("▶", "btn primary") { walkFlowFrom(name, n) }
+        walk.setAttribute("style", "font-size:11px; padding:3px 8px; border-top-left-radius:0; border-bottom-left-radius:0;")
+        walk.setAttribute("title", "Walk the flow live starting at $n")
+        group.appendChild(chip); group.appendChild(walk)
+        nodeRow.appendChild(group)
       }
       flowGraphBody.appendChild(nodeRow)
       // Edge rows: from —key→ to (each opens the target).
@@ -936,6 +942,21 @@ private fun openFlowNode(screen: String) {
   if (screen.isEmpty() || screen == currentScreen) return
   if (::screenSel.isInitialized) screenSel.value = screen // reflect the jump in the picker
   switchScreen(screen)
+}
+
+/**
+ * #13 F4: start a Live flow WALKTHROUGH beginning at [node] (not the declared
+ * start) — deep-link / mid-flow preview. Selects the flow, sets the start
+ * override, and enters flow mode; the flow follows navigation from there.
+ */
+private fun walkFlowFrom(flowName: String, node: String) {
+  flowGraphOverlay.setAttribute("style", "display:none;")
+  // Restart clean if already live; the flow's onFlowScreen(node) then loads the
+  // node's tree via flowFollow, so no manual screen switch is needed here.
+  if (LiveEngine.request.value != null || LiveEngine.flowRequest.value != null) LiveEngine.stop()
+  flowSel?.value = flowName
+  LiveEngine.flowStartOverride = node
+  enableLive()
 }
 
 private fun installKeyboard() {

@@ -29,8 +29,11 @@ object AppLibFlows : AppFlowEntry {
   override val flows: Map<String, FlowPreview> = mapOf(
     FieldNotesFlow.name to FlowPreview { env ->
       // FlowScope: back-stack of (screen, arg). Survives navigation — the
-      // editor keys the composition by flow.
-      var stack by remember { mutableStateOf(listOf(FieldNotesFlow.start to null as String?)) }
+      // editor keys the composition by flow (+start), so a start-override
+      // re-inits us. #13 F4: begin on env.flowStart when the editor deep-links.
+      var stack by remember {
+        mutableStateOf(listOf((env.flowStart ?: FieldNotesFlow.start) to null as String?))
+      }
       val (screen, arg) = stack.last()
       val driver = remember { if (PreviewCapabilities.sqlAvailable) PreviewSqlDriver(sqlHost) else null }
 
