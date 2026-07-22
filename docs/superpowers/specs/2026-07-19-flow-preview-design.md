@@ -181,10 +181,12 @@ the visual graph is polish.
   that screen. Verified: opened the graph → saw feed/detail + feed —openNote→
   detail → clicked "detail" → editor loaded the detail screen.
 - **F4 — Start-state + typed routes.** SCOPED 2026-07-21 into three parts:
-  - **F4a — walkthrough from any node (start-state):** DONE — the nav-graph's
-    ▶ per node starts a Live walkthrough THERE (PreviewEnv.flowStart →
-    FlowScope initial stack; LiveEngine.flowStartOverride keyed into the flow
-    composition). Preview a deep-linked / mid-flow screen, then walk forward.
+  - **F4a — walkthrough from any node (start-state):** DONE + LIVE-VERIFIED
+    2026-07-23 (efb72c8d9) — the nav-graph's ▶ per node starts a Live
+    walkthrough THERE (PreviewEnv.flowStart → FlowScope initial stack;
+    LiveEngine.flowStartOverride keyed into the flow composition). Verified:
+    ▶ on 'detail' started Live ON detail (dropdown→detail, DetailPresenter ran
+    the load state), not the declared start 'feed'.
   - **F4b — typed sealed-Route params:** DEFERRED (not skipped). String tokens
     are functionally complete — the FieldNotes flow already carries a data arg
     (the note id) through the FlowScope stack. Typed `sealed interface Route`

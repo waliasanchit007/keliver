@@ -173,8 +173,14 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     rows over /flow); clicking a node opens that screen. Verified: graph showed
     feed/detail + feed —openNote→ detail; clicking "detail" loaded it.
     📄 Spec: docs/superpowers/specs/2026-07-19-flow-preview-design.md.
-    REMAINING: F4 (typed sealed-Route params + personas/start-state, overlaps
-    #16). F1+F2+F3 shipped — the core flow-authoring loop is live.
+    ✅ **F4a DONE + LIVE-VERIFIED 2026-07-23** (efb72c8d9): the nav-graph's ▶
+    per node starts a Live walkthrough THERE (start-state override) — verified
+    ▶ on 'detail' launched Live on detail. F4b (typed sealed-Route params) +
+    F4c (capability personas) SCOPED-OUT: string tokens are functionally
+    complete (params flow via the stack arg); personas → #16 (PreviewEnv.
+    flowStart is the seam). **#13 COMPLETE — flow declare → derived graph →
+    navigate/deep-link in preview → browse as a graph. The core flow-authoring
+    loop is live.**
 14. **FlowScope presenter** — name the pattern (parent presenter composing screen
     presenters, owning flow-lifetime draft state), scaffold + document it.
     FOLDED into #13's design (§3.2).
