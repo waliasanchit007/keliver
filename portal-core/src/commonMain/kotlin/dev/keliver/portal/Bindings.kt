@@ -80,6 +80,44 @@ fun collectContract(tree: WidgetNode, components: ComponentRegistry = EmptyCompo
   return ScreenContract(fields, actions.toList(), actionParams)
 }
 
+/**
+ * Every preview-mock key the current tree can read on its first composition.
+ *
+ * Live presenter values are applied after composition. Pre-seeding these keys
+ * makes reads of newly introduced component/item bindings observable, so the
+ * first real frame always schedules the RenderNode recomposition which consumes
+ * those values. Repeat item keys use the same list namespace as [resolveItemRow].
+ */
+fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
+  val keys = LinkedHashSet<String>()
+
+  fun walk(node: WidgetNode, itemScope: Pair<String, String>? = null) {
+    val scope = if (node.type == "Repeat") {
+      val items = node.props["items"] as? String
+      val item = node.props["item"] as? String
+      if (!items.isNullOrBlank()) keys += items
+      if (!items.isNullOrBlank() && !item.isNullOrBlank()) items to item else itemScope
+    } else {
+      itemScope
+    }
+    if (node.type == "Condition") {
+      (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
+    }
+    node.props.values.filterIsInstance<Bind>().forEach { bind ->
+      val (items, item) = scope ?: ("" to "")
+      if (items.isNotEmpty() && bind.field.startsWith("$item.")) {
+        keys += "$items.${bind.field}"
+      } else {
+        keys += bind.field
+      }
+    }
+    node.children.forEach { walk(it, scope) }
+  }
+
+  walk(tree)
+  return keys
+}
+
 /** P1-4: the handler param type implied by an Action arg's SOURCE text —
  * `"ROUTE"` → String, `3` → Int, `2.5` → Double, `true` → Boolean;
  * item-scoped data (`item.id`) stays String. */

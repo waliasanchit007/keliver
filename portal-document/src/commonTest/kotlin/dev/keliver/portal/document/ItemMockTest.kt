@@ -27,7 +27,8 @@ class ItemMockTest {
     assertEquals("Second", r1.children[0].props["text"])
     assertEquals("Second", r2.children[0].props["text"]) // clamped to last
     assertEquals(Bind("subtitle"), r0.children[1].props["text"]) // screen binds untouched
-    assertEquals(Action("openNote", "note.id"), r0.props["onClick"]) // actions untouched
+    assertEquals(Action("openNote", "Id 1"), r0.props["onClick"])
+    assertEquals(Action("openNote", "Id 2"), r1.props["onClick"])
   }
 
   @Test fun unmockedItemBindShowsHumanizedDefault() {

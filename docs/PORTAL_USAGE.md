@@ -131,13 +131,17 @@ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.Mai
 ## Project config & scaffolding (separability groundwork)
 
 `keliver.portal.json` at the repo root tells the portal-server everything about
-the app repo it serves — `port`, `screensDir`, `publishTask`, `publishOutput`,
-`store`. Every field defaults to this repo's layout, so the file is optional
-here and required only for a future split-out app repo (that split, and a full
-`keliver init` new-project scaffolder, are deliberately deferred).
+the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
+`logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
+`previewDist`, and `previewServeDir`. Path fields default relative to
+`screensDir`, so the file can stay small. `PORTAL_REPO` can point one relay at
+an external app checkout.
 
 ```bash
 scripts/keliver-new-screen.sh Profile   # scaffolds screens/profile.kt + logic/ProfilePresenter.kt
+scripts/keliver-new-component.sh MenuRow
+scripts/keliver-new-component.sh --slot SectionCard
+scripts/keliver-new-editor.sh MyApp     # consumer-owned real-presenter web editor
 ```
 
 ## Dev runtime (M9 overlay)
@@ -158,11 +162,17 @@ them under **"Project components"** in the palette. See
 `docs/SCREEN_ARCHITECTURE.md` §7 for the full model.
 
 - Scaffold one: `scripts/keliver-new-component.sh MenuRow`
+- Scaffold a container: `scripts/keliver-new-component.sh --slot SectionCard`
 - Use it in a screen: `MenuRow(title = b.name, subtitle = "Account", onClick = { b.open("X") })`
+- A container declares exactly one required `content: @Composable () -> Unit`,
+  invokes `content()` exactly once inside a grammar container, and is used with
+  a trailing lambda. Its children
+  stay editable, selectable, draggable, exportable, and surgically writable.
 - Edit the definition file → every instance's preview updates live (no reload).
 - Endpoint: `GET /components?project=<p>` returns each spec + body tree.
-- v1: leaf components only (no `@Composable () -> Unit` slot params); a
-  non-grammar body is **opaque** (renders on devices, previews as a placeholder).
+- Optional/defaulted, wrapperless, and multiple slots are not guessed: those
+  definitions are **opaque** with a diagnostic. Any other non-grammar body is likewise opaque (renders on
+  devices, previews as a placeholder).
 
 ## Live-presenter preview (P3-12)
 
@@ -174,3 +184,17 @@ project/screen/selection; a FAILED build keeps the last-known-good preview and
 shows the error in the topbar chip. Config: `logicDirs`, `previewBuildTask`,
 `previewDist`, `previewServeDir` in keliver.portal.json. See
 SCREEN_ARCHITECTURE §8 for the entry-point contract.
+
+The relay validates the generated `index.html`, JavaScript, and Wasm before
+promotion. If Gradle reports success but the webpack distribution is absent or
+incomplete, it retries once with `--rerun-tasks`; an incomplete retry is a
+failed build and the last-known-good editor remains served.
+
+## Flow authoring and preview (#13)
+
+Declare app flows with the `portal-flow` `flow {}` DSL under `flows/` (or
+`flowsDir`). The relay recognizes the declaration and derives graph edges from
+the recognized screen actions. In the editor, choose a flow and press **▶ Live**
+to walk it through real presenters; its back stack and flow-lifetime state stay
+alive across screen changes. The graph overlay opens any screen, and each node's
+▶ action starts the live flow from that node.

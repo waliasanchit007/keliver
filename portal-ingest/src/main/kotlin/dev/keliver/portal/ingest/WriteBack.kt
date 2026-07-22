@@ -31,7 +31,7 @@ object WriteBack {
     // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return null
-    if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory)) return null
+    if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components)) return null
     return file.text
   }
 
@@ -41,6 +41,7 @@ object WriteBack {
     target: DocNode,
     psi: Map<Long, KtExpression>,
     factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
   ): Boolean {
     // Type/shape mismatch at a matched position → not surgical.
     if (parsed::class != target::class) return false
@@ -60,7 +61,7 @@ object WriteBack {
     if (parsed.type == "Condition" || parsed.type == "Repeat") {
       if (parsed.props != target.props) return false
       val block = logicBlock(psi[parsed.handle.v]) ?: return false
-      return mergeChildren(parsed.children, target.children, block, psi, factory)
+      return mergeChildren(parsed.children, target.children, block, psi, factory, components)
     }
 
     val call = psi[parsed.handle.v] as? KtCallExpression ?: return false
@@ -71,9 +72,9 @@ object WriteBack {
     // Prop add/remove or modifier changes fall back to a whole-list replace,
     // re-indented to the call's depth (and kept single-line if the source was).
     if (parsed.props != target.props || parsed.modifiers != target.modifiers) {
-      if (!editArgumentValues(call, parsed, target, factory)) {
+      if (!editArgumentValues(call, parsed, target, factory, components)) {
         val oldList = call.valueArgumentList ?: return false
-        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call))
+        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call), components)
         if ('\n' !in oldList.text) callText = collapseCall(callText)
         val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
@@ -87,7 +88,7 @@ object WriteBack {
       ?.getLambdaExpression()?.bodyExpression as? KtBlockExpression
       ?: return target.children.isEmpty() // no lambda in file → only OK if no children wanted
 
-    return mergeChildren(parsed.children, target.children, block, psi, factory)
+    return mergeChildren(parsed.children, target.children, block, psi, factory, components)
   }
 
   private fun mergeChildren(
@@ -96,6 +97,7 @@ object WriteBack {
     block: KtBlockExpression,
     psi: Map<Long, KtExpression>,
     factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
   ): Boolean {
     // Greedy in-order match by shape; require matched parsed indices strictly
     // increasing (else it's a reorder → bail).
@@ -118,7 +120,7 @@ object WriteBack {
     // Recurse matched pairs first (prop/child edits within kept nodes).
     for ((ti, tc) in targetChildren.withIndex()) {
       val pi = matchOf[ti] ?: continue
-      if (!mergeWidget(parsedChildren[pi], tc, psi, factory)) return false
+      if (!mergeWidget(parsedChildren[pi], tc, psi, factory, components)) return false
     }
 
     // Deletes: parsed children never matched.
@@ -134,7 +136,7 @@ object WriteBack {
       if (matchOf[ti] != null) continue
       val anchorTargetIdx = (ti - 1 downTo 0).firstOrNull { matchOf[it] != null }
       val anchorPsi = anchorTargetIdx?.let { psi[parsedChildren[matchOf[it]!!].handle.v] }
-      insertStatement(block, tc, anchorPsi, factory)
+      insertStatement(block, tc, anchorPsi, factory, components)
     }
     return true
   }
@@ -159,29 +161,45 @@ object WriteBack {
     node: DocNode,
     after: KtExpression?,
     factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
   ) {
     // P0 indent fix: every insertion carries "\n" + the destination indent, and
     // the statement text itself is emitted re-indented to that depth (the old
     // bare createNewLine() left inserted/shifted lines at column 0).
     if (after != null) {
       val indent = indentOf(after)
-      val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
+      val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
       val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), after)
       block.addAfter(stmt, ws)
     } else {
       val first = block.statements.firstOrNull()
       if (first != null) {
         val indent = indentOf(first)
-        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
+        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
         val inserted = block.addBefore(stmt, first)
         block.addAfter(factory.createWhiteSpace("\n$indent"), inserted)
       } else {
-        val braceIndent = indentOf(block)
+        // An inline lambda block starts at the `{`, so indentOf(block) is empty:
+        // the text before it also contains the component call. Derive the closing
+        // brace indentation from that owning call instead.
+        val braceIndent = block.text.substringAfterLast('\n')
+          .takeWhile { it == ' ' || it == '\t' }
+          .takeIf { '\n' in block.text }
+          ?: owningCall(block)?.let(::indentOf)
+          ?: lineLeadingIndent(block)
         val indent = "$braceIndent  "
-        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent))
-        val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), block.lBrace)
-        val inserted = block.addAfter(stmt, ws)
-        block.addAfter(factory.createWhiteSpace("\n$braceIndent"), inserted)
+        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
+        val inserted = block.addAfter(stmt, block.lBrace)
+        val leading = factory.createWhiteSpace("\n$indent")
+        val trailing = factory.createWhiteSpace("\n$braceIndent")
+        // Lambda-body whitespace lives beside the body node in Kotlin PSI, not
+        // necessarily beside its first statement, so walk to the preceding leaf.
+        val previous = org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.prevLeaf(inserted)
+        if (previous is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) previous.replace(leading)
+        else block.addBefore(leading, inserted)
+        val next = inserted.nextSibling
+        if (next is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) next.replace(trailing)
+        else block.addAfter(trailing, inserted)
       }
     }
   }
@@ -192,12 +210,13 @@ object WriteBack {
     parsed: DocNode.Widget,
     target: DocNode.Widget,
     factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
   ): Boolean {
     if (parsed.modifiers != target.modifiers) return false
     if (parsed.props.keys != target.props.keys) return false
     // Canonical values come from the emitter so write-back matches a fresh export.
     val canonical = factory.createExpression(
-      NodeEmitter.statementText(target.copy(children = emptyList()), ""),
+      NodeEmitter.statementText(target.copy(children = emptyList()), "", components),
     ) as? KtCallExpression ?: return false
     val newByName = canonical.valueArguments.associateBy(
       { it.getArgumentName()?.asName?.asString() },
@@ -228,6 +247,19 @@ object WriteBack {
     val off = element.textRange.startOffset
     val lineStart = text.lastIndexOf('\n', off - 1) + 1
     return text.substring(lineStart, off).takeIf { it.isBlank() } ?: ""
+  }
+
+  private fun lineLeadingIndent(element: org.jetbrains.kotlin.com.intellij.psi.PsiElement): String {
+    val text = element.containingFile.text
+    val off = element.textRange.startOffset
+    val lineStart = text.lastIndexOf('\n', off - 1) + 1
+    return text.substring(lineStart, off).takeWhile { it == ' ' || it == '\t' }
+  }
+
+  private fun owningCall(block: KtBlockExpression): KtCallExpression? {
+    var current = block.parent
+    while (current != null && current !is KtCallExpression) current = current.parent
+    return current as? KtCallExpression
   }
 
   private fun deleteStatement(stmt: KtExpression) {

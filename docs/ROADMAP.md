@@ -1,8 +1,10 @@
 # Keliver — Roadmap & improvement backlog
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
-its evidence — nothing here is speculative. Status: 2026-07-12, after the Stashfin
-tri-platform loop + Profile Style-B port.
+its evidence — nothing here is speculative. Status: 2026-07-23, after the
+Stashfin tri-platform loop, Project Components C1-C4, real-presenter preview,
+and the complete flow-authoring/preview loop. See `CURRENT_STATE.md` for the
+factual handoff snapshot.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
@@ -107,9 +109,22 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     keliver-new-component scaffold (bundled in portal-tools) + docs + keliver
     dogfood (settings.kt: 3 SectionHeader + 4 MenuRow, 0 RawCode, ~60% shorter,
     renders in editor). Gates: 65 portal tests, codegen staleness, apiCheck,
-    guest compile all green. Remaining: slot params (v1 out of scope),
-    detach-instance + double-click-into-definition (later), stashfin
-    ProfileScreen dogfood (separate repo — change set reported, not auto-run).
+    guest compile all green. Leaf model completed by 11c; detach-instance +
+    double-click-into-definition remain later interactions.
+11c. ✅ **Project Components v2 — one required content slot** COMPLETE + TRI-PLATFORM
+    VERIFIED 2026-07-23: `@Composable () -> Unit` signature discriminator;
+    ComponentSlotSpec + reserved Slot marker; exactly-once definition call-site
+    validation; instance child recognition; transparent expansion with nested
+    component recursion; independent slot-child selection handles; trailing-
+    lambda export (including required empty slots); surgical insertion into an
+    empty slot; editor container palette/outline/drop/props behavior; relay
+    `/components` slots; `keliver-new-component --slot`. Dogfood: canonical
+    Settings = 3 SectionCard + 4 MenuRow, zero RawCode; Stashfin Profile = five
+    repeated white wrappers replaced by SectionCard, zero RawCode. Gates: focused
+    and broad API/codegen/core/document/render tests green (1,453 actions),
+    editor real-presenter + palette insert/undo verified with byte-identical
+    source restoration, signed Android and iOS bundles both loaded 41 modules
+    and visibly rendered the slotted cards. Multiple named slots are deferred.
 12. ✅ **Per-app live-presenter preview** (A+B code-complete 2026-07-16,
     fc6d357fa): explicit AppPreviewEntry contract (portal-render) — app logic
     compiles INTO the preview binary (wasm has no dynamic linking; the
@@ -135,18 +150,21 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     promote didn't cache-bust the constant-named web-spike.js → browsers ran a
     stale editor+wasm across rebuilds (silently defeated promote-on-success —
     cost a full detour). NOTE: :8096 must serve build/portal-editor-live (the
-    PROMOTED dist). External-app (stashfin) enablement pending — stashfin needs
-    the editor shell published (separability) before it can own a per-app
-    preview build. Known v1 limits / fast-follows: canvas event payloads arrive
-    as null arg; presenter COMPOSITION crashes aren't caught (dispatch errors
-    are); the STATE INSPECTOR panel lags one frame + doesn't clear on screen
-    switch (canvas is correct); **component-expanded binds don't reflect the
-    FIRST live frame until the next recompose (direct binds do) — snapshot
-    read-tracking edge on the just-added mock key under the applyValues
-    SideEffect; fix candidate: pre-seed contract field keys into mocks before
-    Live's first compose, or apply live values outside the SideEffect.**
-13. **Typed Route contracts + derived nav graph + flow preview** — IN BUILD
-    2026-07-20 (user delegated the design decisions; recorded in the spec §0:
+    PROMOTED dist). Stashfin external-app enablement is complete through a
+    composite build; publishing the editor's full transitive module graph is a
+    separate productization milestone. **2026-07-23 hardening:** live binding
+    keys are pre-seeded before the first presenter frame, canvas event payloads
+    and repeated-row action args reach presenters, the inspector updates from
+    applied frames and clears on screen changes, presenter recomposition runs
+    in an isolated supervised scope, and incomplete webpack distributions are
+    rejected/retried before promotion. **FULL GATE GREEN 2026-07-23:** broad
+    tests/API/codegen checks passed; the production Wasm editor passed live
+    presenter, action-arg, flow-state, graph, and deep-link checks; Android
+    Pixel 9 and iPhone 16 Pro simulators both loaded the correct
+    `./portal-device-guest.js` manifest (`codeLoadSuccess modules=44`) and
+    visibly rendered the OTA Field Notes screen.
+13. ✅ **Typed Route contracts + derived nav graph + flow preview — COMPLETE
+    2026-07-23.** Design decisions are recorded in the spec §0:
     v1 routes = string tokens via a `flow{}` DSL, sealed Routes deferred to F4;
     separate appFlowEntry; back-stack; derived edges matching literal action
     args OR action names).
@@ -195,67 +213,23 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 18. **Presenter lint pack** — @Composable-presenter footguns (state in companions,
     LaunchedEffect misuse, shared state in presenters) enforced mechanically.
 
-## NEXT SESSION — pick up here
+## Current priorities
 
-1. ✅ DONE 2026-07-19: P3-12 Live gates verified in-browser + 3 bugs fixed
-   (see #12). #12 is fully verified. The editor at :8096 is live on the fresh
-   wasm (both editor fixes). Relay cache-bust (a625d4233) needs a relay RESTART
-   to take effect — the running relay predates it; until then, manually
-   cache-bust (edit build/portal-editor-live/index.html script ?v=, or
-   hard-reload) after each editor rebuild.
-2. **Editor-shell separability** ✅ DONE 2026-07-19 (7454d7646, verified). The
-   reusable editor is now its own compose-wasmJs library **:portal-editor** (8
-   shell files incl. `EditorShell.kt`'s `runPortalEditor(entry: AppPreviewEntry)`
-   + the generic PreviewCapabilities/PreviewSqlDriver). **web-spike** is now a
-   THIN executable: `Main.kt = fun main() = runPortalEditor(AppLibPreview)` +
-   `AppLibPreview.kt`, depending on :portal-editor. Root package kept across the
-   module boundary → zero import churn. Verified on fresh wasm (850c30de): dogfood
-   editor renders + `main`→Live runs the REAL MainPresenter through the extracted
-   shell. **CONSUMER RECIPE (a per-app editor in 3 pieces):** (a) depend on
-   `:portal-editor` (composite build now; a published artifact later); (b) write
-   an `AppPreviewEntry` (map screen name → `ScreenPreview { PreviewFrame(values,
-   dispatch) }` wrapping the app's REAL presenters, taking sqldelight `SqlDriver`
-   from `PreviewSqlDriver` — NOT Zipline; wasm has no dynamic linking, so the
-   presenters compile IN); (c) `fun main() = runPortalEditor(YourAppPreview)`,
-   build `:yourEditor:wasmJsBrowserDistribution`, serve it against a relay whose
-   PORTAL_REPO points at your app repo. AppLibPreview.kt + web-spike/build.gradle
-   are the copy-paste template.
-   **STASHFIN ENABLEMENT (web) ✅ DONE + VERIFIED LIVE 2026-07-19** (stashfin
-   repo commit 6d80b25). `stashfin-sdui/editor/` is a STANDALONE gradle build
-   that composite-builds konduit's :portal-editor (explicit dependencySubstitution;
-   Kotlin 2.2.0 / Compose 1.8.2 / Gradle 9.0.0 align across both repos) and
-   compiles stashfin's REAL ProfilePresenter in; `fun main() = runPortalEditor(
-   StashfinPreview)`. Verified in-browser (served :8098 → relay :8077
-   PORTAL_REPO=stashfin): relay ingested ProfileScreen.kt at 0 RawCode, editor
-   rendered it, ▶ Live ran the real presenter — real name/phone/UPI/QR + all
-   four sections (Account/Security/App/Support) each DISTINCT (exercised the
-   multi-list fix 3110b7bae), Full fidelity / no host capabilities. **The
-   composite build "just worked" (compile first try) — the version alignment is
-   the whole trick.** GOTCHA: `wasmJsBrowserDistribution` skipped the webpack
-   bundle until run with `--rerun-tasks` (then dist landed in
-   build/dist/wasmJs/productionExecutable).
-   **PHASE-1 CONSOLIDATION ✅ DONE 2026-07-19** (stashfin commits 6d2c612 /
-   e508eb2 / 1ee0aba; konduit 3110b7bae / 969d2785f / 7591973e1): (a) stashfin
-   Profile adopted **MenuRow + SectionHeader** components — verified in its own
-   editor (0 RawCode) AND rendered NATIVELY on the **Pixel_9 emulator + iPhone
-   16 Pro sim** (agent-driven; evidence/profile-components-{android,ios}.png);
-   (b) **multi-list row-collision fix** (3110b7bae — see #12 note); (c) presenter
-   **dedup** — editor now compiles guest's real presenter/contract via srcDir
-   (no copy); (d) **configurable relay** (`?relay=<port>`, 7591973e1). iOS
-   gotcha fixed in stashfin WORKFLOW.md: disambiguate the sim by UDID.
-   REMAINING (optional): a `keliver-new-editor` scaffold; a SectionCard
-   (container) component needs component **slots** (v1 is leaf-only) — a real
-   "components v2" motivation surfaced by Profile's card wrappers.
-3. **Typed Route contracts + nav graph + flow preview (#13)** — DESIGN READY
-   FOR REVIEW (docs/superpowers/specs/2026-07-19-flow-preview-design.md; folds
-   FlowScope #14). Recommend approving the F1→F2 slice. Then capability personas
-   + recorded HTTP (#16); @PortalComponent polish (#17) last.
-4. Small debts: ✅ TODO(portal) publish-verifier gate DONE (969d2785f — rejects
-   drafts whose contract still carries TODO(portal) markers, members named).
-   Live-preview fast-follows remain (contract-driven codegen of values/dispatch
-   adapter maps, canvas event payload delivery, composition-crash guard,
-   **component-first-live-frame staleness**, STATE INSPECTOR one-frame lag /
-   no-clear-on-switch); `--rerun-tasks` dist-skip root-cause.
+1. ✅ **Bounded preview hardening and tri-platform verification** — complete
+   2026-07-23; evidence and the pre-change baseline are in `CURRENT_STATE.md`.
+2. ✅ **Project Components v2 — one required content slot** — complete and tri-platform
+   verified 2026-07-23; evidence is in `CURRENT_STATE.md` and item 11c.
+3. **Editor/flow distribution productization (next).** Publish a coherent supported
+   artifact graph so consumer-owned editors no longer require a Keliver source
+   checkout/composite build. This is larger than publishing `portal-editor`
+   alone because its portal and web-protocol dependencies are not independently
+   published today.
+4. **Named personas and capability fixtures**, then **recorded HTTP replay** as
+   a separate design: auth/flags/domain state can use `PreviewEnv.flowStart` as
+   the start-state seam, while HTTP replay additionally needs matching,
+   redaction, privacy, and fixture lifecycle rules.
+5. Presenter/FlowScope linting, transparent local composables, and component
+   metadata/thumbnails follow after those adoption-critical gaps.
 
 ## P4 — Platform debt (tracked, not urgent)
 

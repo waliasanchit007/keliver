@@ -11,6 +11,9 @@ package dev.keliver.portal
 /** A lambda parameter: `() -> Unit` (paramType null) or `(T) -> Unit` (paramType = T). */
 data class ComponentEventSpec(val name: String, val paramType: String? = null, val required: Boolean = true)
 
+/** A single trailing `@Composable () -> Unit` content slot. */
+data class ComponentSlotSpec(val name: String, val required: Boolean = true)
+
 /**
  * The signature-derived spec for one component plus its recognized body.
  * [transparent] = the body is fully in the grammar and can be macro-expanded in
@@ -25,6 +28,8 @@ data class ComponentSpec(
   val events: List<ComponentEventSpec>,
   /** Every parameter's Kotlin type text (props + events), for contract typing. */
   val paramTypes: Map<String, String>,
+  /** Content lambdas. Components v2 supports exactly one trailing slot. */
+  val slots: List<ComponentSlotSpec> = emptyList(),
   /** Parsed literal defaults, keyed by parameter name (absent = required). */
   val defaults: Map<String, Any?> = emptyMap(),
   /** The recognized body tree with parameter binds/actions; null when opaque. */
@@ -72,7 +77,10 @@ class MapComponentRegistry(specs: Collection<ComponentSpec>) : ComponentRegistry
 }
 
 /** Names reserved by the grammar — a component may not shadow them. */
-val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", "RawCode")
+val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", "RawCode", "Slot")
+
+/** Internal expansion provenance consumed by the editor's selection tagging. */
+const val COMPONENT_SOURCE_HANDLE_PROP: String = "portal.componentSourceHandle"
 
 /** True when [type] resolves to a primitive widget OR a project component. */
 fun isKnownWidgetType(type: String, registry: ComponentRegistry = EmptyComponentRegistry): Boolean =

@@ -13,6 +13,7 @@ import dev.keliver.portal.Bind
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
+import dev.keliver.portal.collectPreviewBindingKeys
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
@@ -340,6 +341,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
       portalTree.value = doc.toWidgetTree(handleIds = true)
+      if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
       if (refreshPanels) refresh()
       cb?.invoke()
@@ -442,7 +444,8 @@ private fun deepCopy(n: WidgetNode): WidgetNode =
 private fun newNode(type: String): WidgetNode {
   // C3: a project-component instance starts with sample values for REQUIRED
   // scalar props (optional ones use the signature default = omitted); events
-  // begin unbound; leaf node (no children in v1).
+  // begin unbound. A single-slot component starts as an empty container; the
+  // exporter still emits its required trailing lambda.
   editorComponents.spec(type)?.let { c ->
     val props = LinkedHashMap<String, Any?>()
     c.props.forEach { p -> if (p.name !in c.defaults) props[p.name] = c.sampleFor(p) }
@@ -457,7 +460,10 @@ private fun newNode(type: String): WidgetNode {
 private fun addToSelectedOrRoot(node: WidgetNode) {
   val sel = selectedId
   val selType = sel?.let { portalTree.value.findNode(it)?.type }
-  val parentId = if (sel != null && selType != null && widgetSpec(selType)?.acceptsChildren == true) {
+  val acceptsChildren = selType?.let { type ->
+    widgetSpec(type)?.acceptsChildren == true || editorComponents.spec(type)?.slots?.size == 1
+  } == true
+  val parentId = if (sel != null && acceptsChildren) {
     sel
   } else {
     portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id
@@ -715,8 +721,8 @@ private fun buildRightPane() {
 
 /** Mock mode: actions just log to the console (no logic runs). */
 private fun installMockActionSink() {
-  PreviewBindings.actionSink = { name ->
-    val row = Ui.el("div", "", "⚡ $name")
+  PreviewBindings.actionSink = { name, arg ->
+    val row = Ui.el("div", "", "⚡ $name${arg?.let { "($it)" } ?: ""}")
     row.setAttribute("style", "color:var(--good);")
     consoleEl.insertBefore(row, consoleEl.firstChild)
   }
@@ -753,14 +759,17 @@ private fun enableLive() {
       row.setAttribute("style", "color:var(--bad, #e57373);")
       consoleEl.insertBefore(row, consoleEl.firstChild)
     }
+    LiveEngine.onValuesApplied = {
+      if (::inspectorEl.isInitialized) renderInspector()
+    }
     if (flowRegistered || registered) {
+      LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       if (flowRegistered) LiveEngine.flowRequest.value = flowName else LiveEngine.request.value = currentScreen
-      PreviewBindings.actionSink = { name ->
-        val row = Ui.el("div", "", "⚡ $name → real presenter")
+      PreviewBindings.actionSink = { name, arg ->
+        val row = Ui.el("div", "", "⚡ $name${arg?.let { "($it)" } ?: ""} → real presenter")
         row.setAttribute("style", "color:var(--good);")
         consoleEl.insertBefore(row, consoleEl.firstChild)
-        LiveEngine.dispatch(name, null)
-        renderInspector()
+        LiveEngine.dispatch(name, arg)
         Snapshot.sendApplyNotifications()
       }
     } else {
@@ -819,7 +828,7 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
 
 private fun renderInspector() {
   Ui.clear(inspectorEl)
-  val state = if (LiveEngine.request.value != null) PreviewBindings.mocks.toMap() else emptyMap()
+  val state = if (LiveEngine.isRunning) PreviewBindings.mocks.toMap() else emptyMap()
   if (state.isEmpty()) { inspectorEl.appendChild(Ui.el("div", "muted", "no live bindings")); return }
   state.forEach { (k, v) ->
     inspectorEl.appendChild(Ui.el("div", "", "$k = \"$v\""))
@@ -1087,11 +1096,11 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
   sel.value = current
 }
 
-private fun loadDraft() {
+private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
   opQueue.clear()
-  refetchDoc(true) { subscribeDocEvents() }
+  refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
   updateUndoButtons()
 }
 
@@ -1107,12 +1116,17 @@ private fun switchProject(name: String) {
 }
 
 private fun switchScreen(name: String) {
+  val resumeLive = LiveEngine.isRunning && LiveEngine.flowRequest.value == null
+  if (resumeLive) {
+    LiveEngine.stop()
+    PreviewBindings.mocks.clear()
+    renderInspector()
+  }
   currentScreen = name
   sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
-  loadDraft()
+  loadDraft { if (resumeLive) enableLive() }
   // P3-12: live mode follows the screen — re-enable for the new screen's
   // presenter (or fall back to the honest no-presenter state).
-  if (LiveEngine.request.value != null) enableLive()
 }
 
 /** P3-12: append a line to the action console (used by PreviewEnv.log). */
@@ -1172,7 +1186,14 @@ private fun renderPalette(filter: String) {
     .filter { q.isEmpty() || it.name.lowercase().contains(q) }
   if (comps.isNotEmpty()) {
     paletteListEl.appendChild(Ui.el("div", "section", "Project components"))
-    comps.forEach { c -> paletteRow(c.name, if (c.transparent) null else "opaque", false) }
+    comps.forEach { c ->
+      val tag = when {
+        c.slots.size == 1 -> "container"
+        !c.transparent -> "opaque"
+        else -> null
+      }
+      paletteRow(c.name, tag, false)
+    }
   }
   widgetSpecs.groupBy { it.category }.forEach { (category, specs) ->
     val hits = specs.filter { q.isEmpty() || it.type.lowercase().contains(q) }
@@ -1207,9 +1228,9 @@ private fun renderOutline() {
 
 private fun handleDrop(payload: String?, targetId: Int) {
   if (payload == null) return
-  // C3: component instances are leaf nodes — never accept dropped children.
   val targetType = portalTree.value.findNode(targetId)?.type
-  if (targetType != null && editorComponents.isComponent(targetType)) return
+  val targetComponent = targetType?.let(editorComponents::spec)
+  if (targetComponent != null && targetComponent.slots.size != 1) return
   when {
     payload.startsWith("new:") -> sendOps(listOf(
       DocOp.InsertNode(Handle(targetId.toLong()), lastChildHandle(targetId), newNode(payload.removePrefix("new:")).toDocNode()),
@@ -1234,6 +1255,7 @@ private fun renderProps() {
   val comp = editorComponents.spec(node.type)
   if (comp != null) {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id} · component" +
+      (if (comp.slots.size == 1) " · content slot" else "") +
       (if (!comp.transparent) " (opaque)" else "")))
   } else {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))

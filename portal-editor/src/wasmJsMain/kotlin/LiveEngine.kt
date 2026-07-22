@@ -31,7 +31,11 @@ object LiveEngine {
   var flowStartOverride: String? = null // #13 F4: node to begin the walkthrough on (null = declared start)
   var frame: PreviewFrame? = null
   private var lastKeys: Set<String> = emptySet()
+  private var lastCompositionError: String? = null
   var onError: (String) -> Unit = {}
+  var onValuesApplied: () -> Unit = {}
+
+  val isRunning: Boolean get() = request.value != null || flowRequest.value != null
 
   /** #13 F2: chrome hook — the flow's CURRENT screen each frame (follow + load its tree). */
   var onFlowScreen: (String) -> Unit = {}
@@ -46,14 +50,38 @@ object LiveEngine {
     for ((k, v) in values) if (PreviewBindings.mocks[k] != v) PreviewBindings.mocks[k] = v
     (lastKeys - values.keys).forEach { PreviewBindings.mocks.remove(it) }
     lastKeys = values.keys
+    lastCompositionError = null
+    onValuesApplied()
+  }
+
+  /**
+   * Establish observable entries before the presenter produces its first
+   * frame. SnapshotStateMap reads of a missing component/item key did not
+   * reliably invalidate RenderNode when that key was first added later.
+   */
+  fun prepare(keys: Set<String>) {
+    keys.forEach { if (it !in PreviewBindings.mocks) PreviewBindings.mocks[it] = "" }
+    lastKeys = lastKeys + keys
+  }
+
+  fun compositionFailed(scope: String, error: Throwable) {
+    frame = null
+    val message = "presenter composition failed for '$scope': ${error.message ?: "unknown error"}"
+    if (message != lastCompositionError) {
+      lastCompositionError = message
+      onError(message)
+    }
   }
 
   fun stop() {
     frame = null
+    lastKeys.forEach { PreviewBindings.mocks.remove(it) }
     lastKeys = emptySet()
+    lastCompositionError = null
     request.value = null
     flowRequest.value = null
     flowStartOverride = null
+    onValuesApplied()
   }
 }
 

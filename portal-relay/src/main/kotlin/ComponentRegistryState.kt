@@ -1,6 +1,7 @@
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropSpec
@@ -30,8 +31,10 @@ object Components {
       return EmptyComponentRegistry
     }
     // Pass 1: names only (nested calls may RawCode here — we just need the set).
-    val names = files.mapNotNull { runCatching { Recognizer.recognizeComponent(it.name, it.readText()) }.getOrNull()?.spec?.name }.toSet()
-    val skeleton = MapComponentRegistry(names.map { ComponentSpec(it, emptyList(), emptyList(), emptyMap()) })
+    val firstPass = files.mapNotNull {
+      runCatching { Recognizer.recognizeComponent(it.name, it.readText()) }.getOrNull()?.spec
+    }
+    val skeleton = MapComponentRegistry(firstPass)
     // Pass 2: full recognition with all names known → nested calls resolve.
     val specs = LinkedHashMap<String, ComponentSpec>()
     for (f in files) {
@@ -88,6 +91,7 @@ object Components {
     fun str(x: String) = "\"" + x.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
     val props = s.props.joinToString(",") { propJson(it) }
     val events = s.events.joinToString(",") { eventJson(it) }
+    val slots = s.slots.joinToString(",") { slotJson(it) }
     val defaults = s.defaults.entries.joinToString(",") { (k, v) -> "${str(k)}:${defaultJson(v)}" }
     val deps = s.dependencies.sorted().joinToString(",") { str(it) }
     val body = s.body?.let { serializeTree(it) } ?: "null"
@@ -95,6 +99,7 @@ object Components {
       "\"name\":${str(s.name)}," +
       "\"props\":[$props]," +
       "\"events\":[$events]," +
+      "\"slots\":[$slots]," +
       "\"defaults\":{$defaults}," +
       "\"transparent\":${s.transparent}," +
       "\"dependencies\":[$deps]," +
@@ -108,6 +113,9 @@ object Components {
 
   private fun eventJson(e: ComponentEventSpec): String =
     "{\"name\":\"${e.name}\",\"required\":${e.required}" + (e.paramType?.let { ",\"paramType\":\"$it\"" } ?: "") + "}"
+
+  private fun slotJson(s: ComponentSlotSpec): String =
+    "{\"name\":\"${s.name}\",\"required\":${s.required}}"
 
   private fun defaultJson(v: Any?): String = when (v) {
     null -> "null"

@@ -32,8 +32,9 @@ class EmitExporterTest {
     assertContains(src, "fmtConstraint")
     assertContains(src, "fmtFloatList")
     // C1: unknown type routes to the generic component-instance emitter.
-    assertContains(src, "else -> emitComponentInstance(sb, node, indent)")
+    assertContains(src, "else -> emitComponentInstance(sb, node, indent, components)")
     assertContains(src, "private fun emitComponentInstance(")
+    assertContains(src, "components.spec(node.type)?.slots?.singleOrNull() != null")
   }
 
   @Test fun emitsModifierChainExport() {

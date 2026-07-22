@@ -17,5 +17,10 @@ kotlin {
         implementation libs.jetbrains.compose.runtime
       }
     }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
   }
 }

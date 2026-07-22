@@ -225,44 +225,7 @@ private fun flowsDirFor(project: String): File =
   else File(screensDirFor(project).parentFile, "flows")
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
-private val previewBuilder = PreviewBuilder(object : PreviewBuilder.Runner {
-  private var proc: Process? = null
-  override fun build(cancelled: () -> Boolean): String? {
-    val cmd = listOf(File(repoDir, "gradlew").absolutePath, config.previewBuildTask, "-q")
-    val p = ProcessBuilder(cmd).directory(repoDir).redirectErrorStream(true).start()
-    proc = p
-    val out = StringBuilder()
-    p.inputStream.bufferedReader().forEachLine { line ->
-      out.appendLine(line)
-      if (cancelled()) p.destroy()
-    }
-    val code = p.waitFor()
-    if (cancelled()) return "cancelled"
-    return if (code == 0) null else out.lines().filter { it.isNotBlank() }.takeLast(15).joinToString("\n")
-  }
-
-  override fun promote() {
-    val src = File(repoDir, config.previewDist)
-    val dst = File(repoDir, config.previewServeDir)
-    val tmp = File(dst.parentFile ?: repoDir, dst.name + ".tmp")
-    tmp.deleteRecursively()
-    src.copyRecursively(tmp, overwrite = true)
-    // Swap: serve dir replaced only after the full copy succeeded.
-    dst.deleteRecursively()
-    tmp.renameTo(dst)
-    // Cache-bust: web-spike.js has a CONSTANT filename, so a browser holding the
-    // previous editor keeps running it (and its stale wasm hash) across rebuilds,
-    // silently defeating promote-on-success. Version the script ref per promote so
-    // every reload fetches the fresh loader (and thus the new hashed wasm).
-    val index = File(dst, "index.html")
-    if (index.exists()) {
-      val stamped = index.readText().replace(
-        Regex("""web-spike\.js(\?v=\d+)?"""), "web-spike.js?v=${System.currentTimeMillis()}",
-      )
-      index.writeText(stamped)
-    }
-  }
-})
+private val previewBuilder = PreviewBuilder(PreviewDistributionRunner(repoDir, config))
 
 private fun componentsDirFor(project: String): File =
   if (project == "default") appComponentsDir

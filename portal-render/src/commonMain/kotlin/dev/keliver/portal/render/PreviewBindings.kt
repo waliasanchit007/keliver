@@ -13,9 +13,9 @@ import dev.keliver.portal.resolveItemRow
  */
 object PreviewBindings {
   val mocks = mutableStateMapOf<String, String>()
-  var actionSink: (String) -> Unit = {}
+  var actionSink: (String, String?) -> Unit = { _, _ -> }
 
-  fun fire(name: String) = actionSink(name)
+  fun fire(action: Action, eventValue: Any? = null) = actionSink(action.name, action.previewArg(eventValue))
 
   /** Mocked preview row count for a Repeat: the ITEMS field's mock parses as an int (default 3, clamped 0..10). */
   fun rowCount(itemsField: String): Int = mocks[itemsField]?.trim()?.toIntOrNull()?.coerceIn(0, 10) ?: 3
@@ -26,8 +26,27 @@ object PreviewBindings {
     resolveItemRow(node, itemVar, itemsField, index, mocks::get)
 }
 
-/** The Action name wired to an event prop, or null. */
-fun WidgetNode.actionOf(key: String): String? = (props[key] as? Action)?.name
+/** The Action wired to an event prop, or null. */
+fun WidgetNode.actionOf(key: String): Action? = props[key] as? Action
+
+/** Resolve the source-shaped Action.arg into the value a real presenter receives. */
+fun Action.previewArg(eventValue: Any?): String? {
+  val sourceArg = arg
+  return when (sourceArg) {
+    null -> null
+    "it" -> eventValue?.toString()
+    else -> sourceArg.decodePreviewLiteral()
+  }
+}
+
+private fun String.decodePreviewLiteral(): String {
+  val t = trim()
+  return if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) {
+    t.substring(1, t.length - 1).replace("\\\"", "\"").replace("\\\\", "\\")
+  } else {
+    t
+  }
+}
 
 // Bind-aware getters: resolve Bind via mocks, else use the literal, else default.
 

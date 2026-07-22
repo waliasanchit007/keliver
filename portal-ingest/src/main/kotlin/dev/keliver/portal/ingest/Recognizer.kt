@@ -2,6 +2,7 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
+import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.PropKind
@@ -56,7 +57,11 @@ data class Recognized(
  */
 internal sealed interface NameCtx {
   data class Screen(val bindingsParam: String?) : NameCtx
-  data class Component(val valueParams: Set<String>, val eventParams: Set<String>) : NameCtx
+  data class Component(
+    val valueParams: Set<String>,
+    val eventParams: Set<String>,
+    val slotParams: Set<String>,
+  ) : NameCtx
 }
 
 /** C1: a recognized component definition — its signature spec + body tree. */
@@ -85,7 +90,7 @@ object Recognizer {
       ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
-    val walk = Walker(NameCtx.Screen(bindingsParam), components.names())
+    val walk = Walker(NameCtx.Screen(bindingsParam), components)
     val root = walk.rootOf(body)
 
     val ifaceClass = file.declarations.filterIsInstance<KtClass>()
@@ -140,7 +145,8 @@ object Recognizer {
     val defaults = LinkedHashMap<String, Any?>()
     val valueParams = LinkedHashSet<String>()
     val eventParams = LinkedHashSet<String>()
-    var slotParam: String? = null
+    val slots = mutableListOf<ComponentSlotSpec>()
+    val optionalSlots = mutableListOf<String>()
     for (p in fn.valueParameters) {
       val pName = p.name ?: continue
       val typeRef = p.typeReference
@@ -149,8 +155,11 @@ object Recognizer {
       p.defaultValue?.let { defaults[pName] = parseLiteral(it.text.trim())?.let { l -> litValue(l) } }
       val fnType = typeRef.typeElement as? KtFunctionType
       if (fnType != null) {
-        // Slot params (@Composable () -> Unit) are out of scope for v1.
-        if (p.text.contains("@Composable")) { slotParam = pName; continue }
+        if (typeText.contains("@Composable")) {
+          if (p.defaultValue == null) slots += ComponentSlotSpec(pName)
+          else optionalSlots += pName
+          continue
+        }
         val ret = fnType.returnTypeReference?.text
         if (ret == "Unit" || ret == null) {
           val argType = fnType.parameters.firstOrNull()?.typeReference?.text
@@ -166,10 +175,20 @@ object Recognizer {
       }
     }
 
-    if (slotParam != null) {
+    if (optionalSlots.isNotEmpty()) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, defaults,
-          diagnostic = "slot parameter '$slotParam' (@Composable) not supported in v1", transparent = false, packageName = pkg),
+        ComponentSpec(name, props, events, paramTypes, defaults = defaults,
+          diagnostic = "optional content slots are not supported (found: ${optionalSlots.joinToString()})",
+          transparent = false, packageName = pkg),
+        null, name, emptyMap(), file,
+      )
+    }
+
+    if (slots.size > 1) {
+      return RecognizedComponent(
+        ComponentSpec(name, props, events, paramTypes, slots, defaults,
+          diagnostic = "multiple content slots are not supported (found: ${slots.joinToString { it.name }})",
+          transparent = false, packageName = pkg),
         null, name, emptyMap(), file,
       )
     }
@@ -177,25 +196,34 @@ object Recognizer {
     val body = fn.bodyExpression as? KtBlockExpression
     if (body == null) {
       return RecognizedComponent(
-        ComponentSpec(name, props, events, paramTypes, defaults,
+        ComponentSpec(name, props, events, paramTypes, slots, defaults,
           diagnostic = "component has no block body", transparent = false, packageName = pkg),
         null, name, emptyMap(), file,
       )
     }
-    val walk = Walker(NameCtx.Component(valueParams, eventParams), components.names())
+    val walk = Walker(NameCtx.Component(valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }), components)
     val root = walk.rootOf(body)
     val hasRaw = containsRawCode(root)
+    val slotCalls = countSlotCalls(root)
+    val invalidSlotUse = slots.singleOrNull()?.let { slot ->
+      when {
+        slotCalls != 1 -> "content slot '${slot.name}' must be invoked exactly once (found $slotCalls)"
+        root.type == "Slot" -> "content slot '${slot.name}' must be nested inside a grammar container"
+        else -> null
+      }
+    }
     val deps = collectComponentDeps(root, components.names())
     val spec = ComponentSpec(
       name = name,
       props = props,
       events = events,
       paramTypes = paramTypes,
+      slots = slots,
       defaults = defaults,
-      body = if (hasRaw) null else docNodeToWidget(root),
-      transparent = !hasRaw,
+      body = if (hasRaw || invalidSlotUse != null) null else docNodeToWidget(root),
+      transparent = !hasRaw && invalidSlotUse == null,
       dependencies = deps,
-      diagnostic = if (hasRaw) "body contains code outside the portal grammar (opaque)" else null,
+      diagnostic = invalidSlotUse ?: if (hasRaw) "body contains code outside the portal grammar (opaque)" else null,
       packageName = pkg,
     )
     return RecognizedComponent(spec, root, name, walk.psiByHandle, file)
@@ -204,6 +232,11 @@ object Recognizer {
   private fun containsRawCode(n: DocNode): Boolean = when (n) {
     is DocNode.RawCode -> true
     is DocNode.Widget -> n.children.any { containsRawCode(it) }
+  }
+
+  private fun countSlotCalls(n: DocNode): Int = when (n) {
+    is DocNode.RawCode -> 0
+    is DocNode.Widget -> (if (n.type == "Slot") 1 else 0) + n.children.sumOf(::countSlotCalls)
   }
 
   private fun collectComponentDeps(n: DocNode, names: Set<String>): Set<String> {
@@ -235,7 +268,8 @@ object Recognizer {
    * Shared body walker for both recognition modes. Holds the temp-handle
    * counter + psiByHandle map; [ctx] drives bind/action resolution.
    */
-  internal class Walker(private val ctx: NameCtx, private val componentNames: Set<String>) {
+  internal class Walker(private val ctx: NameCtx, private val components: ComponentRegistry) {
+    private val componentNames = components.names()
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
     private fun nextTemp() = Handle(temp--)
@@ -260,9 +294,27 @@ object Recognizer {
 
       val call = expr as? KtCallExpression
       val type = call?.calleeExpression?.text
+      if (call != null && ctx is NameCtx.Component && type in ctx.slotParams &&
+        call.valueArguments.isEmpty() && call.lambdaArguments.isEmpty()
+      ) {
+        return DocNode.Widget(
+          track(nextTemp(), expr),
+          "Slot",
+          mapOf("name" to PropValue.Lit("s", s = type)),
+        )
+      }
       // Primitive widget OR a known project component → editable Widget node.
       val known = type != null && (widgetSpec(type) != null || type in componentNames)
       if (call == null || !known) return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+
+      val component = type?.let(components::spec)
+      if (component != null) {
+        val hasTrailingContent = call.lambdaArguments.isNotEmpty()
+        val slot = component.slots.singleOrNull()
+        if ((hasTrailingContent && slot == null) || (!hasTrailingContent && slot?.required == true)) {
+          return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+        }
+      }
 
       val props = mutableMapOf<String, PropValue>()
       val modifiers = mutableMapOf<String, PropValue>()

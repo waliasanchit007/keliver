@@ -46,7 +46,16 @@ class EmitRenderNodeTest {
     // falling back to the unknown-widget marker when unset.
     assertContains(src, "else -> componentPreview?.invoke(node) ?: StyledText(text = \"\\u26a0 unknown widget: \${node.type}\"")
     // P3: nullable events are wired to Action props via the preview sink.
-    assertContains(src, "onLongPress = node.actionOf(\"onLongPress\")?.let { n -> { PreviewBindings.fire(n) } },")
+    assertContains(src, "onLongPress = node.actionOf(\"onLongPress\")?.let { a -> { PreviewBindings.fire(a) } },")
+  }
+
+  @Test fun eventPayloadIsForwardedToThePreviewAction() {
+    val input = text.copy(events = listOf(EventPlan("onValueChange", 1, "String")))
+    val src = emitRenderNode(listOf(input))
+    assertContains(
+      src,
+      "onValueChange = node.actionOf(\"onValueChange\")?.let { a -> { value -> PreviewBindings.fire(a, value) } },",
+    )
   }
 
   @Test fun emitsModifierChain() {

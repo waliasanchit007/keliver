@@ -2,10 +2,28 @@
 # keliver new-component — scaffold a portal-recognizable project component
 # ("molecule") built from keliver primitives. Its Kotlin SIGNATURE is its
 # portal spec; screens can call it and edit/preview it in the portal.
-# Usage: scripts/keliver-new-component.sh <ComponentName>   (e.g. MenuRow)
+# Usage: scripts/keliver-new-component.sh [--slot] <ComponentName>
+#   leaf: scripts/keliver-new-component.sh MenuRow
+#   slot: scripts/keliver-new-component.sh --slot SectionCard
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-NAME="${1:?usage: keliver-new-component.sh <ComponentName>}"
+SLOT=false
+NAME=""
+for arg in "$@"; do
+  case "$arg" in
+    --slot) SLOT=true ;;
+    -h|--help)
+      echo "usage: keliver-new-component.sh [--slot] <ComponentName>"
+      exit 0
+      ;;
+    -*) echo "unknown option: $arg"; exit 1 ;;
+    *)
+      [ -z "$NAME" ] || { echo "expected one ComponentName"; exit 1; }
+      NAME="$arg"
+      ;;
+  esac
+done
+[ -n "$NAME" ] || { echo "usage: keliver-new-component.sh [--slot] <ComponentName>"; exit 1; }
 [[ "$NAME" =~ ^[A-Z][A-Za-z0-9]*$ ]] || { echo "ComponentName must be UpperCamelCase (got: $NAME)"; exit 1; }
 
 # Resolve componentsDir from keliver.portal.json (default: sibling of screensDir).
@@ -42,6 +60,33 @@ if [ -z "$PKG" ]; then
 fi
 [ -z "$PKG" ] && PKG="$(echo "$COMPS_REL" | sed -E 's#.*/kotlin/##; s#/#.#g')"
 
+if $SLOT; then
+cat > "$FILE" <<EOF
+package $PKG
+
+import androidx.compose.runtime.Composable
+import dev.keliver.material.compose.StyledBox
+
+/**
+ * Scaffolded by keliver-new-component --slot. The SIGNATURE is the portal spec:
+ * scalar params become editable props; the single @Composable lambda is the
+ * editable content slot. Invoke content() exactly once inside the portal grammar.
+ */
+@Composable
+fun $NAME(
+  title: String,
+  content: @Composable () -> Unit,
+) {
+  StyledBox(
+    fillWidth = true,
+    cornerRadiusDp = 16,
+    paddingDp = 16,
+  ) {
+    content()
+  }
+}
+EOF
+else
 cat > "$FILE" <<EOF
 package $PKG
 
@@ -72,10 +117,15 @@ fun $NAME(
   )
 }
 EOF
+fi
 
 echo "created  ${FILE#$ROOT/}   (package $PKG)"
 echo ""
 echo "next:"
-echo "  • use it in a screen:  $NAME(title = b.x, subtitle = \"...\", onClick = { b.go() })"
+if $SLOT; then
+  echo "  • use it in a screen:  $NAME(title = \"...\") { /* editable children */ }"
+else
+  echo "  • use it in a screen:  $NAME(title = b.x, subtitle = \"...\", onClick = { b.go() })"
+fi
 echo "  • it appears under 'Project components' in the editor palette"
 echo "  • edit its definition (this file) — every instance preview updates live"

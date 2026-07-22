@@ -5,7 +5,7 @@ import dev.keliver.material.compose.StyledText
 
 /**
  * A section title molecule — the app's canonical "ALL-CAPS grey label" styling
- * captured once. Leaf component (v1): no children slot.
+ * captured once. Kept as the small leaf counterpart to SectionCard.
  */
 @Composable
 fun SectionHeader(label: String) {

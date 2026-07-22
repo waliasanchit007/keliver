@@ -3,6 +3,7 @@ package dev.keliver.portal.ingest
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.Expansion
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.WidgetNode
@@ -74,6 +75,55 @@ class ComponentExpansionTest {
     assertEquals("Hello", li.props["headline"]) // outer param -> nested param -> primitive
     assertEquals(Action("go"), li.props["onClick"])
     assertTrue(col.children.none { registry.isComponent(it.type) }, "no residual component nodes")
+  }
+
+  @Test fun contentSlotSplicesAndExpandsInstanceChildren() {
+    val card = Recognizer.recognizeComponent(
+      "SectionCard.kt",
+      """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.material.compose.StyledBox
+        @Composable
+        fun SectionCard(label: String, content: @Composable () -> Unit) {
+          StyledBox(fillWidth = true, cornerRadiusDp = 16) { content() }
+        }
+      """.trimIndent(),
+    )!!.spec
+    val reg = MapComponentRegistry(listOf(menuRow, card))
+    val first = WidgetNode("MenuRow", mapOf("title" to "One", "subtitle" to "First"))
+    val second = WidgetNode("MenuRow", mapOf("title" to Bind("screenTitle"), "subtitle" to "Second"))
+    val expanded = tree(expandForPreview(
+      WidgetNode("SectionCard", mapOf("label" to "ACCOUNT"), listOf(first, second)),
+      reg,
+    ))
+    assertEquals("StyledBox", expanded.type)
+    assertEquals(2, expanded.children.size)
+    assertEquals(listOf("ListItem", "ListItem"), expanded.children.map { it.type })
+    assertEquals("One", expanded.children[0].props["headline"])
+    assertEquals(Bind("screenTitle"), expanded.children[1].props["headline"])
+    assertEquals(first.id, expanded.children[0].props[COMPONENT_SOURCE_HANDLE_PROP])
+    assertEquals(second.id, expanded.children[1].props[COMPONENT_SOURCE_HANDLE_PROP])
+  }
+
+  @Test fun slotContentDoesNotResolveNamesAgainstWrapperParams() {
+    val wrapper = Recognizer.recognizeComponent(
+      "Wrapper.kt",
+      """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.layout.compose.Column
+        @Composable fun Wrapper(title: String, content: @Composable () -> Unit) {
+          Column { content() }
+        }
+      """.trimIndent(),
+    )!!.spec
+    val reg = MapComponentRegistry(listOf(wrapper))
+    val child = WidgetNode("StyledText", mapOf("text" to Bind("title")))
+    val expanded = tree(expandForPreview(
+      WidgetNode("Wrapper", mapOf("title" to "wrapper literal"), listOf(child)),
+      reg,
+    ))
+    assertEquals(Bind("title"), expanded.children.single().props["text"])
+    assertEquals(child.id, expanded.children.single().props[COMPONENT_SOURCE_HANDLE_PROP])
   }
 
   @Test fun opaqueComponentYieldsPlaceholder() {

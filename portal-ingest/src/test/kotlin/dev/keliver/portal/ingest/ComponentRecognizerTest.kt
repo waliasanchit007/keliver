@@ -132,7 +132,7 @@ class ComponentRecognizerTest {
     assertEquals(PropKind.Text, s.props.first { it.name == "label" }.kind)
   }
 
-  @Test fun slotParamIsRejectedAsOpaqueDiagnostic() {
+  @Test fun composableLambdaBecomesSingleContentSlot() {
     val src = """
       import androidx.compose.runtime.Composable
       import dev.keliver.layout.compose.Column
@@ -142,9 +142,79 @@ class ComponentRecognizerTest {
         Column { content() }
       }
     """.trimIndent()
-    val s = Recognizer.recognizeComponent("Wrapper.kt", src)!!.spec
+    val rc = Recognizer.recognizeComponent("Wrapper.kt", src)!!
+    val s = rc.spec
+    assertTrue(s.transparent, s.diagnostic)
+    assertEquals(listOf("content"), s.slots.map { it.name })
+    assertTrue(s.slots.single().required)
+    val column = rc.root!!
+    val slot = column.children.single() as DocNode.Widget
+    assertEquals("Slot", slot.type)
+    assertEquals(dev.keliver.portal.document.PropValue.Lit("s", s = "content"), slot.props["name"])
+  }
+
+  @Test fun multipleContentSlotsAreOpaqueWithDiagnostic() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+
+      @Composable
+      fun TwoSlots(
+        header: @Composable () -> Unit,
+        content: @Composable () -> Unit,
+      ) {
+        Column { header(); content() }
+      }
+    """.trimIndent()
+    val s = Recognizer.recognizeComponent("TwoSlots.kt", src)!!.spec
     assertTrue(!s.transparent)
-    assertTrue(s.diagnostic!!.contains("slot"), s.diagnostic!!)
+    assertEquals(listOf("header", "content"), s.slots.map { it.name })
+    assertTrue(s.diagnostic!!.contains("multiple content slots"), s.diagnostic!!)
+  }
+
+  @Test fun contentSlotMustBeInvokedExactlyOnce() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun DropsContent(content: @Composable () -> Unit) {
+        StyledText(text = "fixed")
+      }
+    """.trimIndent()
+    val s = Recognizer.recognizeComponent("DropsContent.kt", src)!!.spec
+    assertTrue(!s.transparent)
+    assertTrue(s.diagnostic!!.contains("exactly once"), s.diagnostic!!)
+  }
+
+  @Test fun optionalContentSlotIsOpaqueRatherThanChangingDefaultSemantics() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+
+      @Composable
+      fun OptionalWrapper(content: @Composable () -> Unit = { Column {} }) {
+        Column { content() }
+      }
+    """.trimIndent()
+    val s = Recognizer.recognizeComponent("OptionalWrapper.kt", src)!!.spec
+    assertTrue(!s.transparent)
+    assertTrue(s.slots.isEmpty())
+    assertTrue(s.diagnostic!!.contains("optional content slots"), s.diagnostic!!)
+  }
+
+  @Test fun wrapperlessContentSlotIsOpaqueRatherThanAddingPreviewLayout() {
+    val src = """
+      import androidx.compose.runtime.Composable
+
+      @Composable
+      fun PassThrough(content: @Composable () -> Unit) {
+        content()
+      }
+    """.trimIndent()
+    val s = Recognizer.recognizeComponent("PassThrough.kt", src)!!.spec
+    assertTrue(!s.transparent)
+    assertTrue(s.diagnostic!!.contains("nested inside a grammar container"), s.diagnostic!!)
   }
 
   private val screenUsingMenuRow = """
@@ -203,6 +273,76 @@ class ComponentRecognizerTest {
     val menu2 = rc2.root.children.first() as DocNode.Widget
     assertEquals("MenuRow", menu2.type)
     assertEquals(dev.keliver.portal.document.PropValue.Bind("name"), menu2.props["title"])
+  }
+
+  @Test fun slottedComponentInstanceRecognizesAndRoundTripsChildren() {
+    val sectionCard = Recognizer.recognizeComponent(
+      "SectionCard.kt",
+      """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.material.compose.StyledBox
+
+        @Composable
+        fun SectionCard(label: String, content: @Composable () -> Unit) {
+          StyledBox(fillWidth = true, cornerRadiusDp = 16) { content() }
+        }
+      """.trimIndent(),
+    )!!.spec
+    val registry = MapComponentRegistry(listOf(
+      Recognizer.recognizeComponent("MenuRow.kt", menuRow)!!.spec,
+      sectionCard,
+    ))
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+
+      @Composable
+      fun ProfileScreen(b: ProfileScreenBindings) {
+        Column {
+          SectionCard(label = "ACCOUNT") {
+            MenuRow(title = "Profile", subtitle = b.name, onClick = { b.open("PROFILE") })
+          }
+        }
+      }
+
+      interface ProfileScreenBindings {
+        val name: String
+        fun open(value: String)
+      }
+    """.trimIndent()
+    val rc = Recognizer.recognize("ProfileScreen.kt", src, registry)!!
+    assertTrue(!containsRaw(rc.root))
+    val card = rc.root.children.single() as DocNode.Widget
+    assertEquals("SectionCard", card.type)
+    assertEquals(1, card.children.size)
+    assertEquals("MenuRow", (card.children.single() as DocNode.Widget).type)
+
+    val tree = UiDocument("p", rc.root, rc.contract, 0, 0).toWidgetTree()
+    val exported = exportKotlin(tree, "ProfileScreen", registry)
+    assertTrue("SectionCard(" in exported, exported)
+    assertTrue(") {\n      MenuRow(" in exported, exported)
+    val reread = Recognizer.recognize("ProfileScreen.kt", exported, registry)!!
+    assertTrue(!containsRaw(reread.root), exported)
+    assertEquals(1, (reread.root.children.single() as DocNode.Widget).children.size)
+  }
+
+  @Test fun requiredEmptySlotStillExportsTrailingLambda() {
+    val wrapper = Recognizer.recognizeComponent(
+      "Wrapper.kt",
+      """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.layout.compose.Column
+        @Composable fun Wrapper(content: @Composable () -> Unit) { Column { content() } }
+      """.trimIndent(),
+    )!!.spec
+    val registry = MapComponentRegistry(listOf(wrapper))
+    val exported = exportKotlin(
+      dev.keliver.portal.WidgetNode("Wrapper"),
+      functionName = "EmptyScreen",
+      components = registry,
+    )
+    assertTrue("Wrapper {\n  }" in exported, exported)
+    assertTrue(!containsRaw(Recognizer.recognize("EmptyScreen.kt", exported, registry)!!.root), exported)
   }
 
   private fun containsRaw(n: DocNode): Boolean = when (n) {

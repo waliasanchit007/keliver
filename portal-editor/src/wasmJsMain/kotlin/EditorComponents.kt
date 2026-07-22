@@ -1,6 +1,7 @@
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
@@ -45,6 +46,13 @@ fun parseComponents(json: String): ComponentRegistry = runCatching {
         required = eo["required"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
       )
     }
+    val slots = o["slots"]?.jsonArray?.map { s ->
+      val so = s.jsonObject
+      ComponentSlotSpec(
+        so["name"]!!.jsonPrimitive.content,
+        required = so["required"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true,
+      )
+    }.orEmpty()
     val defaults = o["defaults"]!!.jsonObject.mapValues { (_, v) -> jsonToAny(v.toString()) }
     val bodyEl = o["body"]
     val body = if (bodyEl == null || bodyEl is JsonNull) null else deserializeTree(bodyEl.toString())
@@ -53,6 +61,7 @@ fun parseComponents(json: String): ComponentRegistry = runCatching {
       props = props,
       events = events,
       paramTypes = emptyMap(), // contract typing is relay-side; editor doesn't need it
+      slots = slots,
       defaults = defaults,
       body = body,
       transparent = o["transparent"]!!.jsonPrimitive.boolean,

@@ -32,6 +32,7 @@ fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<
   val defaults = spec.defaults
   val paramNames = spec.props.map { it.name }.toSet()
   val eventNames = spec.events.map { it.name }.toSet()
+  val slot = spec.slots.singleOrNull()
 
   fun resolveValue(v: Any?): Any? = when (v) {
     is Bind -> if ('.' in v.field) v // item.field pass-through
@@ -40,24 +41,49 @@ fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<
     else -> v
   }
 
-  fun substitute(n: WidgetNode): WidgetNode {
+  fun source(n: WidgetNode, handle: Int): WidgetNode =
+    n.copy(props = n.props + (COMPONENT_SOURCE_HANDLE_PROP to handle))
+
+  fun substituteSlotContent(n: WidgetNode): WidgetNode {
+    if (registry.isComponent(n.type)) {
+      return when (val r = expandForPreview(n, registry, stack + name)) {
+        is Expansion.Transparent -> source(r.tree, n.id)
+        is Expansion.Opaque -> source(placeholder(r.name, r.reason), n.id)
+        is Expansion.Cycle -> source(cycleChip(r.path), n.id)
+      }
+    }
+    return source(n.copy(children = n.children.map(::substituteSlotContent)), n.id)
+  }
+
+  fun resolveDefinitionTree(n: WidgetNode): WidgetNode = n.copy(
+    props = n.props.mapValues { resolveValue(it.value) },
+    children = n.children.map(::resolveDefinitionTree),
+  )
+
+  fun substitute(n: WidgetNode): List<WidgetNode> {
+    if (n.type == "Slot" && (n.props["name"] as? String) == slot?.name) {
+      return node.children.map(::substituteSlotContent)
+    }
     // A nested component call inside the body: resolve ITS args against the
     // outer params, then expand it recursively (splicing the result).
     if (registry.isComponent(n.type)) {
-      val resolved = n.copy(props = n.props.mapValues { resolveValue(it.value) })
-      return when (val r = expandForPreview(resolved, registry, stack + name)) {
+      val resolved = resolveDefinitionTree(n)
+      return listOf(when (val r = expandForPreview(resolved, registry, stack + name)) {
         is Expansion.Transparent -> r.tree
         is Expansion.Opaque -> placeholder(r.name, r.reason)
         is Expansion.Cycle -> cycleChip(r.path)
-      }
+      })
     }
-    return n.copy(
+    return listOf(n.copy(
       props = n.props.mapValues { resolveValue(it.value) },
-      children = n.children.map { substitute(it) },
-    )
+      children = n.children.flatMap { substitute(it) },
+    ))
   }
 
-  return Expansion.Transparent(substitute(body))
+  val expanded = substitute(body)
+  return Expansion.Transparent(
+    expanded.singleOrNull() ?: WidgetNode("Column", children = expanded),
+  )
 }
 
 /** Placeholder node for an opaque component (renders as a labeled box). */

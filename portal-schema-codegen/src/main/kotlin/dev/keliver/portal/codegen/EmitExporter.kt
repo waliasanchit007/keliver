@@ -195,7 +195,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  imports.forEach { sb.append(\"import \$it\\n\") }")
   appendLine("  val param = if (!hasContract) \"\" else \"b: \${functionName}Bindings\"")
   appendLine("  sb.append(\"\\n@Composable\\nfun \$functionName(\$param) {\\n\")")
-  appendLine("  emitNode(sb, tree, \"  \")")
+  appendLine("  emitNode(sb, tree, \"  \", components)")
   appendLine("  sb.append(\"}\\n\")")
   appendLine("  if (hasContract) {")
   appendLine("    itemIfaces.forEach { (name, fields) ->")
@@ -233,20 +233,20 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     appendLine("}")
     appendLine()
   }
-  appendLine("private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String) {")
+  appendLine("private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {")
   appendLine("  when (node.type) {")
   // M5: logic nodes export as real control flow, not composable calls.
   appendLine("    \"Condition\" -> {")
   appendLine("      val cond = (node.props[\"field\"] as? String) ?: \"cond\"")
   appendLine("      sb.append(\"\${indent}if (b.\$cond) {\\n\")")
-  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \") }")
+  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
   appendLine("      sb.append(\"\$indent}\\n\")")
   appendLine("    }")
   appendLine("    \"Repeat\" -> {")
   appendLine("      val item = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val items = (node.props[\"items\"] as? String) ?: \"items\"")
   appendLine("      sb.append(\"\${indent}b.\$items.forEach { \$item ->\\n\")")
-  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \") }")
+  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
   appendLine("      sb.append(\"\$indent}\\n\")")
   appendLine("    }")
   for (w in sorted) {
@@ -267,7 +267,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     }
     if (w.hasChildren) {
       appendLine("      sb.append(\"\$indent) {\\n\")")
-      appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \") }")
+      appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
       appendLine("      sb.append(\"\$indent}\\n\")")
     } else {
       appendLine("      sb.append(\"\$indent)\\n\")")
@@ -275,35 +275,42 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     appendLine("    }")
   }
   // C1: an unrecognized type is a project-component instance — emit it as a
-  // plain named call from its props (registry-free). A genuinely unknown type
-  // with no props still emits `Name()`, harmless.
-  appendLine("    else -> emitComponentInstance(sb, node, indent)")
+  // named call from its props, consulting the registry for slot metadata. A
+  // genuinely unknown type with no props still emits `Name()`, harmless.
+  appendLine("    else -> emitComponentInstance(sb, node, indent, components)")
   appendLine("  }")
   appendLine("}")
   appendLine()
   append(
     """
-    |// C1: generic emitter for a project-component INSTANCE call. Leaf node (v1,
-    |// no children slot); props emit in insertion order so a recognized call
-    |// round-trips byte-for-byte. Reuses the private value formatters above.
-    |private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String) {
+    |// Generic emitter for a project-component instance. Props emit in insertion
+    |// order; a declared content slot emits a trailing lambda even when empty.
+    |private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {
     |  val args = node.props.entries.toList()
-    |  if (args.isEmpty()) { sb.append("${'$'}indent${'$'}{node.type}()\n"); return }
-    |  sb.append("${'$'}indent${'$'}{node.type}(\n")
-    |  for ((k, v) in args) {
-    |    val rendered = when (v) {
-    |      is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
-    |      is Bind -> bindRef(v.field)
-    |      is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
-    |      is Boolean -> v.toString()
-    |      is Int -> v.toString()
-    |      is Double -> v.toString()
-    |      is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) "\"" + it + "\"" else it.toString() } + ")"
-    |      else -> v.toString()
+    |  val hasSlot = components.spec(node.type)?.slots?.singleOrNull() != null
+    |  if (args.isEmpty()) {
+    |    if (!hasSlot && node.children.isEmpty()) { sb.append("${'$'}indent${'$'}{node.type}()\n"); return }
+    |    sb.append("${'$'}indent${'$'}{node.type} {\n")
+    |  } else {
+    |    sb.append("${'$'}indent${'$'}{node.type}(\n")
+    |    for ((k, v) in args) {
+    |      val rendered = when (v) {
+    |        is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
+    |        is Bind -> bindRef(v.field)
+    |        is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    |        is Boolean -> v.toString()
+    |        is Int -> v.toString()
+    |        is Double -> v.toString()
+    |        is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) "\"" + it + "\"" else it.toString() } + ")"
+    |        else -> v.toString()
+    |      }
+    |      sb.append("${'$'}indent  ${'$'}k = ${'$'}rendered,\n")
     |    }
-    |    sb.append("${'$'}indent  ${'$'}k = ${'$'}rendered,\n")
+    |    if (!hasSlot && node.children.isEmpty()) { sb.append("${'$'}indent)\n"); return }
+    |    sb.append("${'$'}indent) {\n")
     |  }
-    |  sb.append("${'$'}indent)\n")
+    |  node.children.forEach { emitNode(sb, it, "${'$'}indent  ", components) }
+    |  sb.append("${'$'}indent}\n")
     |}
     """.trimMargin(),
   )

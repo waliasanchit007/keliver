@@ -1,6 +1,6 @@
 # Typed Routes + derived nav graph + flow preview (Roadmap #13, folding FlowScope #14)
 
-**Status:** DECIDED 2026-07-20 (user delegated: "decide and start the voyage").
+**Status:** COMPLETE + LIVE-VERIFIED 2026-07-23 (F1, F2, F3, and F4a).
 **F1 DONE + LIVE-VERIFIED** (a171f3d00): flow{} DSL, FlowRecognizer (3/3 tests,
 Login→OTP→Dashboard fixture, both edge kinds + literal precedence), /flow served
 the derived graph `feed --openNote--> detail` from the real recognized trees.
@@ -225,4 +225,8 @@ Approve the model (§3.1–3.3) and the F1→F2 slice as the first build; F3/F4 
 seeing F2 live. I'd start with **F1 + a Login→OTP→Dashboard test fixture** (pure,
 fast to verify) so the graph derivation is proven before touching the editor.
 
-**Nothing is built yet — this is for your sign-off.**
+Implementation result: the app declares a flow, the relay derives its graph,
+the editor walks it through real presenters with flow-lifetime state, any node
+can be used as the live start, and the graph is clickable. Typed sealed routes
+(F4b) were deliberately deferred; capability personas (F4c) moved to roadmap
+item #16.

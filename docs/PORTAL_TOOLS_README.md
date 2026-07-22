@@ -41,4 +41,6 @@ Scaffold a project component ("molecule") built from keliver primitives:
 `bin/keliver-new-component.sh MenuRow`. Reads `componentsDir` from
 keliver.portal.json, derives the package from existing sources, and refuses to
 overwrite. It appears under "Project components" in the editor palette and is
-callable from any screen. (Companion to `bin/keliver-new-screen.sh`.)
+callable from any screen. Add `--slot` (`--slot SectionCard`) to scaffold a
+container with one required editable trailing content slot. (Companion to
+`bin/keliver-new-screen.sh`.)

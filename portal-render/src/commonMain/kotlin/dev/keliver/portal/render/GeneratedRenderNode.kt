@@ -117,8 +117,8 @@ fun RenderNode(node: WidgetNode) {
       text = node.strB("text"),
       confirmText = node.strB("confirmText", "OK"),
       dismissText = node.strB("dismissText"),
-      onConfirm = node.actionOf("onConfirm")?.let { n -> { PreviewBindings.fire(n) } },
-      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
+      onConfirm = node.actionOf("onConfirm")?.let { a -> { PreviewBindings.fire(a) } },
+      onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "AnimatedBorder" -> AnimatedBorder(
       modifier = nodeModifier(node),
@@ -130,7 +130,7 @@ fun RenderNode(node: WidgetNode) {
       segmentLenDp = node.intB("segmentLenDp", 50),
       effect = node.intB("effect", 0),
       colorsArgb = node.intList("colorsArgb"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it) } }
     "AnimatedVisibility" -> AnimatedVisibility(
       modifier = nodeModifier(node),
@@ -145,7 +145,7 @@ fun RenderNode(node: WidgetNode) {
       blurDp = node.intB("blurDp", 0),
       fillWidth = node.boolB("fillWidth", false),
       tintArgb = node.intB("tintArgb", 0),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Badge" -> Badge(
       modifier = nodeModifier(node),
@@ -158,7 +158,7 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       visible = node.boolB("visible", false),
       contentPaddingDp = node.intB("contentPaddingDp", 0),
-      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
+      onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Box" -> Box(
       modifier = nodeModifier(node),
@@ -174,7 +174,7 @@ fun RenderNode(node: WidgetNode) {
       containerArgb = node.intB("containerArgb", 0),
       contentArgb = node.intB("contentArgb", 0),
       cornerRadiusDp = node.intB("cornerRadiusDp", 0),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Card" -> Card(
       modifier = nodeModifier(node),
@@ -183,12 +183,12 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       checked = node.boolB("checked", false),
       enabled = node.boolB("enabled", true),
-      onCheckedChange = node.actionOf("onCheckedChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onCheckedChange = node.actionOf("onCheckedChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Chip" -> Chip(
       modifier = nodeModifier(node),
       label = node.strB("label"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "CircularProgressIndicator" -> CircularProgressIndicator(
       modifier = nodeModifier(node),
@@ -196,7 +196,7 @@ fun RenderNode(node: WidgetNode) {
     )
     "Clickable" -> Clickable(
       modifier = nodeModifier(node),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Column" -> Column(
       modifier = nodeModifier(node),
@@ -205,11 +205,11 @@ fun RenderNode(node: WidgetNode) {
       overflow = overflowOf(node.intB("overflow", 0)),
       horizontalAlignment = crossAxisOf(node.intB("horizontalAlignment", 0)),
       verticalAlignment = mainAxisOf(node.intB("verticalAlignment", 0)),
-      onScroll = node.actionOf("onScroll")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onScroll = node.actionOf("onScroll")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Dialog" -> Dialog(
       modifier = nodeModifier(node),
-      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
+      onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it) } }
     "Divider" -> Divider(
       modifier = nodeModifier(node),
@@ -219,14 +219,14 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       expanded = node.boolB("expanded", false),
       options = node.strList("options"),
-      onSelect = node.actionOf("onSelect")?.let { n -> { _ -> PreviewBindings.fire(n) } },
-      onDismiss = node.actionOf("onDismiss")?.let { n -> { PreviewBindings.fire(n) } },
+      onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
+      onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "ElevatedButton" -> ElevatedButton(
       modifier = nodeModifier(node),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "ElevatedCard" -> ElevatedCard(
       modifier = nodeModifier(node),
@@ -234,24 +234,24 @@ fun RenderNode(node: WidgetNode) {
     "ExtendedFloatingActionButton" -> ExtendedFloatingActionButton(
       modifier = nodeModifier(node),
       text = node.strB("text"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FilledTonalButton" -> FilledTonalButton(
       modifier = nodeModifier(node),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FilterChip" -> FilterChip(
       modifier = nodeModifier(node),
       label = node.strB("label"),
       selected = node.boolB("selected", false),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FloatingActionButton" -> FloatingActionButton(
       modifier = nodeModifier(node),
       text = node.strB("text"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FlowColumn" -> FlowColumn(
       modifier = nodeModifier(node),
@@ -277,18 +277,18 @@ fun RenderNode(node: WidgetNode) {
     "IconButton" -> IconButton(
       modifier = nodeModifier(node),
       imageUrl = node.strB("imageUrl"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Image" -> Image(
       modifier = nodeModifier(node),
       url = node.strB("url"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "InputChip" -> InputChip(
       modifier = nodeModifier(node),
       label = node.strB("label"),
       selected = node.boolB("selected", false),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "LazyHorizontalGrid" -> LazyHorizontalGrid(
       modifier = nodeModifier(node),
@@ -309,7 +309,7 @@ fun RenderNode(node: WidgetNode) {
       overline = node.strB("overline"),
       leadingIcon = node.strB("leadingIcon"),
       trailingIcon = node.strB("trailingIcon"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "NavigationBar" -> NavigationBar(
       modifier = nodeModifier(node),
@@ -327,7 +327,7 @@ fun RenderNode(node: WidgetNode) {
       contentArgb = node.intB("contentArgb", 0),
       borderArgb = node.intB("borderArgb", 0),
       cornerRadiusDp = node.intB("cornerRadiusDp", 0),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "OutlinedCard" -> OutlinedCard(
       modifier = nodeModifier(node),
@@ -345,13 +345,13 @@ fun RenderNode(node: WidgetNode) {
       supportingText = node.strB("supportingText"),
       borderArgb = node.intB("borderArgb", 0),
       cornerRadiusDp = node.intB("cornerRadiusDp", 0),
-      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "RadioButton" -> RadioButton(
       modifier = nodeModifier(node),
       selected = node.boolB("selected", false),
       enabled = node.boolB("enabled", true),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Row" -> Row(
       modifier = nodeModifier(node),
@@ -360,7 +360,7 @@ fun RenderNode(node: WidgetNode) {
       overflow = overflowOf(node.intB("overflow", 0)),
       horizontalAlignment = mainAxisOf(node.intB("horizontalAlignment", 0)),
       verticalAlignment = crossAxisOf(node.intB("verticalAlignment", 0)),
-      onScroll = node.actionOf("onScroll")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onScroll = node.actionOf("onScroll")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     ) { node.children.forEach { RenderNode(it) } }
     "ScrollableColumn" -> ScrollableColumn(
       modifier = nodeModifier(node),
@@ -369,7 +369,7 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       options = node.strList("options"),
       selectedIndex = node.intB("selectedIndex", 0),
-      onSelect = node.actionOf("onSelect")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Shimmer" -> Shimmer(
       modifier = nodeModifier(node),
@@ -381,7 +381,7 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       position = node.dblB("position", 0.0).toFloat(),
       enabled = node.boolB("enabled", true),
-      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Snackbar" -> Snackbar(
       modifier = nodeModifier(node),
@@ -415,7 +415,7 @@ fun RenderNode(node: WidgetNode) {
       cornerTopEndDp = node.intB("cornerTopEndDp", -1),
       cornerBottomStartDp = node.intB("cornerBottomStartDp", -1),
       cornerBottomEndDp = node.intB("cornerBottomEndDp", -1),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it) } }
     "StyledText" -> StyledText(
       modifier = nodeModifier(node),
@@ -437,7 +437,7 @@ fun RenderNode(node: WidgetNode) {
     "SuggestionChip" -> SuggestionChip(
       modifier = nodeModifier(node),
       label = node.strB("label"),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Surface" -> Surface(
       modifier = nodeModifier(node),
@@ -446,13 +446,13 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       checked = node.boolB("checked", false),
       enabled = node.boolB("enabled", true),
-      onCheckedChange = node.actionOf("onCheckedChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onCheckedChange = node.actionOf("onCheckedChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Tab" -> Tab(
       modifier = nodeModifier(node),
       text = node.strB("text"),
       selected = node.boolB("selected", false),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "TabRow" -> TabRow(
       modifier = nodeModifier(node),
@@ -466,18 +466,18 @@ fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
-      onClick = node.actionOf("onClick")?.let { n -> { PreviewBindings.fire(n) } },
+      onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "TextField" -> TextField(
       modifier = nodeModifier(node),
       text = node.strB("text"),
       placeholder = node.strB("placeholder"),
-      onValueChange = node.actionOf("onValueChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "TextInput" -> TextInput(
       modifier = nodeModifier(node),
       hint = node.strB("hint"),
-      onChange = node.actionOf("onChange")?.let { n -> { _ -> PreviewBindings.fire(n) } },
+      onChange = node.actionOf("onChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Theme" -> Theme(
       modifier = nodeModifier(node),

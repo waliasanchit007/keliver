@@ -22,6 +22,7 @@ import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFa
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
+import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
 import dev.keliver.protocol.guest.DefaultGuestProtocolAdapter
@@ -37,6 +38,9 @@ import dev.keliver.ui.OnBackPressedDispatcher
 import dev.keliver.ui.UiConfiguration
 import dev.keliver.widget.compose.ComposeWidgetChildren
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.json.Json
 
@@ -58,11 +62,20 @@ internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.port
   return tagged.copy(children = tagged.children.map { selectionTagged(it) })
 }
 
-/** C3: tag an expanded component subtree with a FIXED handle (the instance). */
+/**
+ * Tag private component internals with the instance handle while preserving the
+ * real document handles carried by slotted content. Nested slotted components
+ * reset the inherited handle at their expansion root.
+ */
 internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver.portal.WidgetNode {
+  val sourceHandle = (n.props[COMPONENT_SOURCE_HANDLE_PROP] as? Int) ?: handle
+  val cleanProps = n.props - COMPONENT_SOURCE_HANDLE_PROP
   val tagged = if (n.type in UNRENDERED_TYPES) n
-  else n.copy(props = n.props + ("mod.SelectionTag.handle" to handle))
-  return tagged.copy(children = tagged.children.map { tagWith(it, handle) })
+  else n.copy(props = cleanProps + ("mod.SelectionTag.handle" to sourceHandle))
+  return tagged.copy(
+    props = if (tagged.type in UNRENDERED_TYPES) cleanProps else tagged.props,
+    children = tagged.children.map { tagWith(it, sourceHandle) },
+  )
 }
 
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
@@ -131,7 +144,15 @@ fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.render.App
       // The guest composition runs on its own frame clock, which we tick from the
       // host's real frames — so guest recomposition AND animations stay in sync.
       val guestClock = BroadcastFrameClock()
-      val guestScope = CoroutineScope(this.coroutineContext + guestClock)
+      // Keep a bad consumer presenter/render from cancelling the editor shell.
+      // Compose does not permit a try/catch directly around @Composable calls;
+      // its recomposer reports the failure through this isolated child scope.
+      val guestErrors = CoroutineExceptionHandler { _, error ->
+        LiveEngine.compositionFailed("live preview", error)
+      }
+      val guestScope = CoroutineScope(
+        this.coroutineContext + SupervisorJob(this.coroutineContext[Job]) + guestClock + guestErrors,
+      )
       val composition = ProtocolRedwoodComposition(
         scope = guestScope,
         guestAdapter = guestAdapter,

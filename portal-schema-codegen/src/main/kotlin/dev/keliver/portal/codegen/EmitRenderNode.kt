@@ -24,10 +24,11 @@ internal fun getterExpr(p: MappedProp): String = when (p.kind) {
 /** Lambda wiring for a nullable event prop holding an Action. */
 internal fun eventExpr(e: EventPlan): String {
   val lambda = when (e.paramCount) {
-    0 -> "{ PreviewBindings.fire(n) }"
-    else -> "{ ${List(e.paramCount) { "_" }.joinToString(", ")} -> PreviewBindings.fire(n) }"
+    0 -> "{ PreviewBindings.fire(a) }"
+    1 -> "{ value -> PreviewBindings.fire(a, value) }"
+    else -> "{ ${List(e.paramCount) { "_" }.joinToString(", ")} -> PreviewBindings.fire(a) }"
   }
-  return "node.actionOf(\"${e.name}\")?.let { n -> $lambda }"
+  return "node.actionOf(\"${e.name}\")?.let { a -> $lambda }"
 }
 
 fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = emptyList()): String = buildString {

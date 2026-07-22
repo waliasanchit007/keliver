@@ -17,14 +17,10 @@ The short version:
   the codebase change. The rest is deliberate trims (Phase 1.5 removed
   the View / UIView / DOM toolkits — see "What's removed" below).
 
-> **Status:** Keliver is currently a private GitHub Packages fork while
-> the integration validation work (issues
-> [#8 iOS](https://github.com/waliasanchit007/keliver/issues/8),
-> [#9 sample app](https://github.com/waliasanchit007/keliver/issues/9))
-> finishes. Maven Central publishing is tracked in Phase 5 of
-> [`PUBLIC_LAUNCH_ROADMAP.md`](../PUBLIC_LAUNCH_ROADMAP.md). If you're
-> evaluating now, read this guide first — then talk to the maintainer
-> about Phase 5 timing if your adoption needs Maven Central access.
+> **Status:** Keliver is public. The current pre-1.0 artifacts are
+> `dev.keliver:*:0.3.0` on Maven Central; no GitHub Packages credentials are
+> required. This guide retains some `1.0.0-caliclan.N` references only as
+> historical version context.
 
 ---
 
@@ -96,9 +92,9 @@ For most adopters the entire upper block collapses into:
 
 ```kotlin
 // host module
-implementation("dev.keliver:keliver-host:1.0.0-caliclan.4")
+implementation("dev.keliver:keliver-host:0.3.0")
 // guest module
-implementation("dev.keliver:keliver-guest:1.0.0-caliclan.4")
+implementation("dev.keliver:keliver-guest:0.3.0")
 ```
 
 See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
@@ -361,7 +357,7 @@ class QuotesScreen : Screen {
 
    ```toml
    [versions]
-   keliver = "1.0.0-caliclan.4"
+   keliver = "0.3.0"
 
    [libraries]
    keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
@@ -376,21 +372,13 @@ class QuotesScreen : Screen {
    keliver-generator-modifiers      = { id = "dev.keliver.generator.modifiers",      version.ref = "keliver" }
    ```
 
-2. Add the Keliver repository while we're still on GitHub Packages
-   (Maven Central is Phase 5 — see
-   [`MAVEN_CENTRAL_SETUP.md`](./MAVEN_CENTRAL_SETUP.md)):
+2. Use Maven Central (no credentials required):
 
    ```kotlin
    // settings.gradle.kts
    dependencyResolutionManagement {
        repositories {
-           maven {
-               url = uri("https://maven.pkg.github.com/waliasanchit007/keliver")
-               credentials {
-                   username = providers.gradleProperty("gpr.user").get()
-                   password = providers.gradleProperty("gpr.token").get()
-               }
-           }
+           mavenCentral()
        }
    }
    ```
@@ -441,12 +429,9 @@ No — the package namespace flip makes it confusing to import both at
 the same time. Do the migration in one shot per module. If your
 project has multiple host modules, do them one at a time.
 
-**Will the namespace change again when Maven Central goes live?**
-The Maven coordinate `groupId` will likely shift from `dev.keliver` to
-`dev.keliver` (Sonatype's GitHub-vanity flow — see
-[`MAVEN_CENTRAL_SETUP.md`](./MAVEN_CENTRAL_SETUP.md)). The Kotlin
-package paths in the JARs stay `dev.keliver.*` — only your Gradle
-dep coordinate string changes.
+**Will the namespace change now that Maven Central is live?**
+No migration is required: both the Maven group and Kotlin package prefix are
+`dev.keliver`.
 
 **Where do I report issues?**
 [`waliasanchit007/keliver`](https://github.com/waliasanchit007/keliver/issues/new/choose)

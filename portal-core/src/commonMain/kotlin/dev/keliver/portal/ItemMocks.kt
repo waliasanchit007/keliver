@@ -8,7 +8,9 @@ package dev.keliver.portal
  * props get valid icon names (never the ⓘ fallback glyph), image-ish fields
  * get a real placeholder URL, money/date/phone/email fields get plausible
  * values, and everything else gets a humanized "Title 1" style label.
- * Actions and screen binds pass through; a nested Repeat keeps its own scope.
+ * Item-scoped action args resolve to the same concrete row value so canvas
+ * events can deliver the actual item id/value to a live presenter. Screen
+ * binds and unrelated actions pass through; a nested Repeat keeps its own scope.
  */
 fun resolveItemRow(
   node: WidgetNode,
@@ -18,18 +20,24 @@ fun resolveItemRow(
   mockOf: (String) -> String?,
 ): WidgetNode {
   if (node.type == "Repeat") return node
-  val props = node.props.mapValues { (key, v) ->
-    if (v is Bind && v.field.startsWith("$itemVar.")) {
+  fun resolved(field: String, key: String): String {
       // Namespace row content by the LIST field ("accountItems.item.title") so
       // several lists that reuse the same itemVar ("item") don't collide — the
       // single-list dogfood never hit this, but real screens (Stashfin Profile:
       // account/security/support) do. Fall back to the un-namespaced key for
       // editor per-item mocks and single-list back-compat.
-      val raw = mockOf("$itemsField.${v.field}") ?: mockOf(v.field)
+      val raw = mockOf("$itemsField.$field") ?: mockOf(field)
       val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
-      if (rows.isNullOrEmpty()) defaultMock(v.field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
-    } else {
-      v
+      return if (rows.isNullOrEmpty()) defaultMock(field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
+  }
+  val props = node.props.mapValues { (key, v) ->
+    when {
+      v is Bind && v.field.startsWith("$itemVar.") -> resolved(v.field, key)
+      v is Action && v.arg?.startsWith("$itemVar.") == true -> {
+        val sourceArg = v.arg ?: return@mapValues v
+        v.copy(arg = resolved(sourceArg, key))
+      }
+      else -> v
     }
   }
   return node.copy(props = props, children = node.children.map { resolveItemRow(it, itemVar, itemsField, index, mockOf) })

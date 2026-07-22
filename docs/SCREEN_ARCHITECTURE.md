@@ -207,13 +207,21 @@ fun MenuRow(title: String, subtitle: String, icon: String = "Star", onClick: () 
   ListItem(headline = title, supporting = subtitle, leadingIcon = icon,
     trailingIcon = "KeyboardArrowRight", onClick = onClick)
 }
+
+@Composable
+fun SectionCard(content: @Composable () -> Unit) {
+  StyledBox(fillWidth = true, cornerRadiusDp = 16) { content() }
+}
 ```
 
 - **Signature → spec.** `String`/`Int`/`Boolean`/`Double` params become editable
   props; `() -> Unit` / `(T) -> Unit` params become events; literal defaults are
-  parsed (an omitted optional arg uses the default). Slot params
-  (`@Composable () -> Unit`) are **out of scope in v1** — components are leaf
-  nodes (no children).
+  parsed (an omitted optional arg uses the default). One `@Composable () ->
+  Unit` required parameter becomes a trailing editable content slot; plain
+  lambdas remain events. The slot must be invoked exactly once inside a grammar
+  container. Optional/defaulted slots, wrapperless pass-through slots, and
+  multiple named slots are deliberately opaque until their source and editor
+  semantics are designed.
 - **Master / instance.** A component USE in a screen is one selectable node with
   a prop panel from the signature; its internals are edited on the DEFINITION
   (its own file), and every instance's preview updates live.
@@ -223,15 +231,16 @@ fun MenuRow(title: String, subtitle: String, icon: String = "Star", onClick: () 
   composable, previewed as a labeled placeholder.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
-- **Scaffold:** `scripts/keliver-new-component.sh <Name>` (config-aware,
-  package-derived, refuses overwrite).
+- **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add
+  `--slot` for a container (config-aware, package-derived, refuses overwrite).
 - **Contract:** a component instance's `b.x` / `b.go(...)` args contribute to the
   screen's Bindings with the component's declared param types — definition-
   internal param names never leak into the screen contract.
 
-Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionHeader}.kt` +
-`screens/settings.kt` (a 24-line Settings screen, 3 SectionHeader + 4 MenuRow,
-**0 RawCode** — ~60% shorter than inlining the ListItems/labels).
+Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionCard}.kt` +
+`screens/settings.kt` (3 SectionCard containers + 4 editable MenuRow children,
+**0 RawCode**). Stashfin Profile uses the same slot capability for its five
+canonical white card wrappers and is verified in its editor, Android, and iOS.
 
 ## 8. Live-presenter preview — P3-12
 

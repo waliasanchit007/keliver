@@ -4,6 +4,8 @@ import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toWidgetTree
+import dev.keliver.portal.ComponentRegistry
+import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.exportKotlin
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -21,14 +23,18 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
  */
 object NodeEmitter {
   /** The whole statement re-indented so line 1 splices at [indent] depth. */
-  fun statementText(node: DocNode, indent: String): String {
-    val (text, srcIndent) = lift(node)
+  fun statementText(
+    node: DocNode,
+    indent: String,
+    components: ComponentRegistry = EmptyComponentRegistry,
+  ): String {
+    val (text, srcIndent) = lift(node, components)
     return reindent(text, srcIndent, indent)
   }
 
-  private fun lift(node: DocNode): Pair<String, String> {
+  private fun lift(node: DocNode, components: ComponentRegistry): Pair<String, String> {
     val throwaway = UiDocument("_", node, Contract(), version = 0, nextHandle = 0)
-    val exported = exportKotlin(throwaway.toWidgetTree(), functionName = "Tmp")
+    val exported = exportKotlin(throwaway.toWidgetTree(), functionName = "Tmp", components = components)
     val file = PsiEnv.parse("Tmp.kt", exported)
     val fn = file.declarations.filterIsInstance<KtNamedFunction>().first { it.name == "Tmp" }
     val stmt = (fn.bodyExpression as KtBlockExpression).statements.first()

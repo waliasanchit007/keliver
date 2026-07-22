@@ -1,5 +1,6 @@
 package dev.keliver.portal.ingest
 
+import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
@@ -198,6 +199,81 @@ class WriteBackTest {
       exportEquiv(UiDocument("main", reRec.root, reRec.contract, 0, 0).root),
       "merged file must re-ingest to the target tree",
     )
+  }
+
+  private val sectionCardSpec = Recognizer.recognizeComponent(
+    "SectionCard.kt",
+    """
+      package app.components
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.StyledBox
+      @Composable
+      fun SectionCard(label: String, content: @Composable () -> Unit) {
+        StyledBox(fillWidth = true) { content() }
+      }
+    """.trimIndent(),
+  )!!.spec
+  private val componentRegistry = MapComponentRegistry(listOf(sectionCardSpec))
+
+  private val slottedFile = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import app.components.SectionCard
+
+    @Composable
+    fun SlotsScreen() {
+      Column {
+        SectionCard(label = "Account") {
+        }
+      }
+    }
+  """.trimIndent()
+
+  @Test fun insertIntoEmptyComponentSlotIsSurgicalAndReingests() {
+    val rec = Recognizer.recognize("SlotsScreen.kt", slottedFile, componentRegistry)!!
+    val doc = UiDocument("slots", rec.root, rec.contract, 0, 0)
+    val card = (doc.root as DocNode.Widget).children.single() as DocNode.Widget
+    val target = doc.apply(DocOp.InsertNode(
+      parent = card.handle,
+      after = null,
+      node = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("Inside"))),
+    )).doc
+
+    val merged = WriteBack.merge(slottedFile, target, componentRegistry)
+    assertNotNull(merged)
+    assertTrue("SectionCard(label = \"Account\") {" in merged)
+    assertTrue("\n      StyledText(" in merged, merged)
+    val reread = Recognizer.recognize("SlotsScreen.kt", merged, componentRegistry)!!
+    assertTrue(!containsRaw(reread.root), merged)
+    assertEquals(1, (reread.root.children.single() as DocNode.Widget).children.size)
+  }
+
+  @Test fun surgicalInsertOfEmptySlottedComponentEmitsRequiredLambda() {
+    val src = slottedFile.replace(
+      "    SectionCard(label = \"Account\") {\n    }\n",
+      "",
+    )
+    val rec = Recognizer.recognize("SlotsScreen.kt", src, componentRegistry)!!
+    val doc = UiDocument("slots", rec.root, rec.contract, 0, 0)
+    val root = doc.root as DocNode.Widget
+    val target = doc.apply(DocOp.InsertNode(
+      parent = root.handle,
+      after = null,
+      node = DocNode.Widget(Handle(0), "SectionCard", mapOf("label" to lit("Account"))),
+    )).doc
+
+    val merged = WriteBack.merge(src, target, componentRegistry)
+    assertNotNull(merged)
+    assertTrue("SectionCard(" in merged, merged)
+    assertTrue(") {\n" in merged, merged)
+    assertTrue(!containsRaw(Recognizer.recognize("SlotsScreen.kt", merged, componentRegistry)!!.root), merged)
+  }
+
+  private fun containsRaw(n: DocNode): Boolean = when (n) {
+    is DocNode.RawCode -> true
+    is DocNode.Widget -> n.children.any(::containsRaw)
   }
 
   // Compare trees ignoring handles.

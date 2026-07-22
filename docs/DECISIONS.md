@@ -57,6 +57,10 @@ the host's existing deep-link vocabulary; intra-flow nav is guest state.
 Hand-written composables register into the palette with typed props (transparent =
 grammar inside, portal can descend; opaque = props-only). The grammar owns
 composition/layout forever — if layout goes opaque, the visual-editing thesis dies.
+Components may expose one required trailing `@Composable () -> Unit` content
+slot, invoked once inside a grammar container; its children remain ordinary
+document nodes while the wrapper stays master-linked. Optional/defaulted slots
+and multiple named slots remain deferred rather than being inferred ambiguously.
 
 ## App architecture (from the 2026-07-12 application-scale review)
 

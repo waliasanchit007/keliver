@@ -1,13 +1,18 @@
 # Keliver — Public OSS Launch Roadmap
 
+> **Historical document.** The public-launch transition is complete: Keliver is
+> public and the current `dev.keliver:*:0.3.0` line is on Maven Central. This
+> checklist is retained as launch history and is not the source of current
+> priorities. Use [`README.md`](./README.md), [`ROADMAP.md`](./ROADMAP.md), and
+> [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md).
+
 Tracks the work to take Keliver from "private fork shipping to Caliclan's own
 apps" → "public OSS framework adoptable by external Compose Multiplatform
 teams."
 
-Current state: `1.0.0-caliclan.3` released to GitHub Packages (private),
-end-to-end validated on Android via DevoStatus. Foundation is solid; the gap
-is discoverability, documentation surface, packaging, and a public reference
-implementation.
+Recorded starting state: `1.0.0-caliclan.3` on private GitHub Packages,
+end-to-end validated on Android via DevoStatus. Later work completed public
+visibility, cross-platform samples/adoption, and Maven Central publication.
 
 This is a living document. Check items off as they land.
 
