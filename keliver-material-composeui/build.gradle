@@ -7,6 +7,7 @@ redwoodBuild {
 }
 
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'app.cash.paparazzi'
 
 kotlin {
   sourceSets {
@@ -24,9 +25,19 @@ kotlin {
         implementation libs.jetbrains.compose.ui
       }
     }
+    androidUnitTest {
+      dependencies {
+        implementation libs.kotlin.test.junit
+      }
+    }
   }
 }
 
 android {
   namespace 'dev.keliver.material.composeui'
+
+  buildFeatures {
+    // For Paparazzi, which internally uses resources to set itself up.
+    androidResources = true
+  }
 }

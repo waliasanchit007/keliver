@@ -235,8 +235,11 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    control flow, components/slots/nesting, modifiers, repeat cardinality, and
    action arguments. The gate found and fixed a false component-cycle diagnosis
    for wrapper reuse from slot content.
-5. **Current layout contract (K2a)** — document each sizing layer and pin its
-   existing semantics in layout tests; no API deprecations in this step.
+5. ✅ **Current layout contract (K2a)** — COMPLETE 2026-07-26 without API
+   changes or deprecations. `docs/LAYOUT_CONTRACT.md` distinguishes container
+   Constraint, Yoga child layout, ordered universal modifiers, and the two
+   widget-specific `fillWidth` properties. Direct Compose/Yoga measurement tests
+   pin Wrap/Fill, boundedness/precedence, stretch, and modifier order.
 6. **Named personas and capability fixtures**, then **recorded HTTP replay** as
    a separate design: auth/flags/domain state can use `PreviewEnv.flowStart` as
    the start-state seam, while HTTP replay additionally needs matching,

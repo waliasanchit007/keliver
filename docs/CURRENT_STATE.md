@@ -315,3 +315,21 @@ A focused unit test now pins the corrected call-site semantics.
 This is a semantic tree gate, not visual platform evidence. The next bounded
 milestone is K2a: document and unit-test the current sizing/layout contract
 without deprecating APIs. Scripted Android/iOS/web layout evidence remains K3.
+
+## Post-snapshot: sizing and layout contract — 2026-07-26
+
+K2a is complete without changing or deprecating an API. The supported contract
+now distinguishes container `Constraint`, Yoga/parent-scoped child layout,
+ordered universal modifiers, legacy `StyledBox.fillWidth`, and semantic
+`AsyncImage.fillWidth`.
+
+Direct measurement tests exercise the real Compose/Yoga host rather than only
+value trees: `Wrap` versus bounded `Fill`, `Row`/`Column` and layout `Box`,
+incoming fixed/fill modifier interactions, cross-axis stretch, and
+outer-to-inner size/fill/padding order. Widget tests additionally pin legacy
+`StyledBox.fillWidth` and image fill-over-fixed-width precedence. The exhaustive
+pre-existing Paparazzi layout matrix remains in place.
+
+The next product-depth milestone is named personas/capability fixtures. K3
+scripted Android/iOS/web layout evidence remains the next consistency-lane
+milestone and a release gate; K2b API convergence remains deferred.

@@ -21,7 +21,13 @@ import androidx.compose.runtime.Immutable
 import kotlin.jvm.JvmInline
 import kotlinx.serialization.Serializable
 
-/** Controls how the container should determine its width/height. */
+/**
+ * Controls how a `Row`, `Column`, or `Box` determines one of its own axes.
+ *
+ * [Wrap] follows measured content. [Fill] consumes the finite space offered by
+ * the parent; it cannot invent a size on an unbounded axis. This does not size
+ * children — use the parent's cross-axis alignment or child modifiers for that.
+ */
 @[Immutable JvmInline Serializable]
 public value class Constraint private constructor(private val ordinal: Int) {
 

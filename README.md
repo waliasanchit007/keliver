@@ -203,6 +203,9 @@ Or just poke the hosted playground: **http://keliver.me/keliver/**.
 - **[docs/USAGE.md](./docs/USAGE.md)** — the exhaustive reference: vendoring
   Keliver into a Compose Multiplatform host, the dev loop, and every
   silent-failure shape to watch for.
+- **[docs/LAYOUT_CONTRACT.md](./docs/LAYOUT_CONTRACT.md)** — the precise
+  `Constraint`, Yoga child-layout, universal-modifier, and widget-specific
+  sizing rules.
 
 The [`sample/`](./sample) directory is a complete, runnable **starter** — a
 Workouts screen (an API call + a host database + live search) built in both

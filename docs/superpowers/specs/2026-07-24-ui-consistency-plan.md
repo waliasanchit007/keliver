@@ -1,7 +1,7 @@
 # UI consistency & predictability — concrete plan
 
-**Status:** K1 COMPLETE (K1a + K1b); K2a is next.
-Technical-review corrections and the delivered shape are recorded in §8–§9.
+**Status:** K1 + K2a COMPLETE; K3 is the next consistency-lane item.
+Technical-review corrections and delivered results are recorded in §8–§10.
 **Author:** agent, 2026-07-24.
 **Trigger:** repeated `forEach` rows filled their card on Android/iOS but stopped
 short on web (fixed in 37f94f239). The bug was NOT a platform difference — it
@@ -197,7 +197,7 @@ two suites, no shared target.
 2. ✅ **K1b** — Condition, leaf + slotted components, nesting, modifiers,
    zero/multiple rows, one integrated fixture; + the golden-tree bridge; +
    separate action-sink tests for event wiring.
-3. **K2a** — document AND unit-test the current layout contract. No deprecations.
+3. ✅ **K2a** — document AND unit-test the current layout contract. No deprecations.
 4. **K3** — scripted tri-platform kitchen-sink evidence.
 5. **K4** — explicit runtime-version metadata handshake.
 6. **K2b** — staged API convergence, next minor.
@@ -232,3 +232,27 @@ Acceptance evidence:
 
 Boundary: K1 proves semantic schema-tree parity. Native/host layout parity
 remains K2a + K3 work.
+
+## 10. K2a implementation result — 2026-07-26
+
+The current contract is documented in `docs/LAYOUT_CONTRACT.md` and linked from
+the main README and usage guide. It names four separate layers:
+
+1. `Constraint` for a layout container's own axes;
+2. Yoga, parent alignment, and scoped modifiers for direct children;
+3. ordered universal modifiers for non-layout widgets;
+4. the legacy `StyledBox.fillWidth` and semantic
+   `AsyncImage.fillWidth` exceptions.
+
+New direct measurement tests run through the real Compose/Yoga host and pin:
+
+- Row/Column and layout Box `Wrap` versus bounded `Fill`;
+- fixed incoming size and incoming fill interactions with `Constraint`;
+- cross-axis stretch behavior;
+- outer-to-inner size, fill, and padding modifier order;
+- legacy `StyledBox.fillWidth` geometry and `AsyncImage.fillWidth` precedence
+  over `widthDp`.
+
+No API changed and no deprecation landed. K2b stays deferred to a versioned
+release decision. Named personas/capability fixtures can now resume as the next
+product-depth arc; K3 remains the next consistency-lane item and release gate.

@@ -174,6 +174,13 @@ fun PromoCard() {
 .rotate(...).scale(...).aspectRatio(...).animateContentSize()` on **any** widget,
 exactly like native Compose — no per-widget plumbing.
 
+Sizing has distinct semantic layers: use `Constraint` for a `Row`, `Column`, or
+layout `Box` itself; layout-scope modifiers or parent alignment for its
+children; and universal modifiers for non-layout widgets. Modifier order is
+observable, and fill operations require bounded parent space. See the
+[sizing and layout contract](LAYOUT_CONTRACT.md) for examples and the two
+widget-specific `fillWidth` exceptions.
+
 ### How to consume it
 
 You depend on the published `keliver-material-*` modules and run **one** codegen
