@@ -1,6 +1,7 @@
 # UI consistency & predictability — concrete plan
 
-**Status:** PLAN — for review, then build in order.
+**Status:** REVISED after technical review — building in the revised order.
+Review corrected two errors in the first draft; both are recorded in §8.
 **Author:** agent, 2026-07-24.
 **Trigger:** repeated `forEach` rows filled their card on Android/iOS but stopped
 short on web (fixed in 37f94f239). The bug was NOT a platform difference — it
@@ -126,3 +127,73 @@ of false bug reports.
    committed-screenshot evidence the pragmatic v1? (Proposal: evidence v1.)
 3. K2 convergence target — confirm universal modifiers as canonical before any
    deprecation lands.
+
+
+## 8. Review corrections (accepted) — 2026-07-24
+
+The first draft was reviewed and two load-bearing claims of mine were **wrong**.
+Both verified before accepting:
+
+1. **K1 cannot be one source-to-widget assertion.** `portal-ingest` is
+   `kotlin.jvm` only; `portal-render` targets js+wasmJs only. They cannot share
+   a test process, and a new module would not have bridged that.
+2. **`toChangeList` does not render composables** — it encodes an *existing*
+   `List<WidgetValue>`. The real harness is the generated
+   `KeliverMaterialTester(...)` over `TestRedwoodComposition`.
+
+Further corrections accepted:
+
+3. **K1 proves schema-tree parity, NOT rendered-layout parity.** It catches the
+   invented container, missing children, wrong props, modifiers and component
+   expansion. It CANNOT adjudicate host internals like
+   `ComposeUiListItem.fillMaxWidth()` — both paths yield the same `ListItemValue`
+   and that Compose modifier never appears in it. So that call belongs to layout
+   tests + K3 screenshots, NOT K1 (my commit note on 37f94f239 was wrong here).
+   Event lambdas are also excluded from generated value equality → action wiring
+   needs separate action-sink tests.
+4. **Component parity needs explicit harness setup:** install the same
+   `componentPreview` expansion hook the editor installs, seed
+   `PreviewBindings.mocks` from the same fixture state as the compiled bindings,
+   and reset global mocks/sinks/hooks between tests. Do NOT apply `SelectionTag`
+   in semantic parity tests — then no normalisation is needed at all.
+5. **K2 is "one obvious mechanism per semantic layer", not one everywhere.**
+   `Constraint.Fill` governs a layout widget's own axis sizing in the Yoga
+   container and is applied *after* the incoming modifier; it is not a spelling
+   of `Modifier.fillWidth()`. Contract: layout widgets → `Constraint`;
+   non-layout widgets → universal sizing modifiers; deprecate
+   `StyledBox.fillWidth` only after migration tests; treat image `fillWidth`
+   separately because it also changes `ContentScale`.
+6. **K4 is not tiny.** There is no authoritative app/runtime version in
+   `PortalConfig`, and parsing Gradle is unreliable (BOMs, version catalogs,
+   composite substitution). It needs an explicit metadata handshake: editor
+   version embedded at build time, guest/runtime version reported via relay or
+   bundle metadata, widget/schema compatibility version alongside SemVer.
+7. **K3 v1 = scripted, committed screenshot evidence** (browser automation +
+   `adb` + `xcrun simctl`), with fixed viewport, locale, font scale, theme,
+   fixture state and file names. `keliver-snapshot-testing` has no Wasm capture
+   path today.
+
+### One addition of mine (completes the split)
+
+Splitting render tests (`portal-render`) from recognition tests
+(`portal-ingest`) means **nothing covers source → tree → render end-to-end**; a
+recognizer producing a subtly wrong tree would slip between the suites. Bridge
+them with a **checked-in golden tree**: `portal-ingest` asserts
+`source → serializeTree(…)` equals the golden; `portal-render` deserialises
+*that same golden* and renders it against the compiled composable. One fixture,
+two suites, no shared target.
+
+### Revised order (superseding §6)
+
+1. **K1a** — ONE Repeat regression fixture proving compiled-vs-interpreted
+   `WidgetValue` comparison works at all (harness before matrix).
+2. **K1b** — Condition, leaf + slotted components, nesting, modifiers,
+   zero/multiple rows, one integrated fixture; + the golden-tree bridge; +
+   separate action-sink tests for event wiring.
+3. **K2a** — document AND unit-test the current layout contract. No deprecations.
+4. **K3** — scripted tri-platform kitchen-sink evidence.
+5. **K4** — explicit runtime-version metadata handshake.
+6. **K2b** — staged API convergence, next minor.
+
+K1 precedes personas. K2b must NOT block the personas/capability arc once the
+parity gates and the layout contract exist.
