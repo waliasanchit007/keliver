@@ -163,7 +163,7 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       val composition = ProtocolRedwoodComposition(
         scope = guestScope,
         guestAdapter = guestAdapter,
-        widgetVersion = 1U,
+        widgetVersion = EDITOR_WIDGET_VERSION.toUInt(),
         onBackPressedDispatcher = NoBackPressedDispatcher,
         saveableStateRegistry = null,
         uiConfigurations = MutableStateFlow(UiConfiguration()),

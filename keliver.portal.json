@@ -4,5 +4,9 @@
   "componentsDir": "portal-app-lib/src/commonMain/kotlin/components",
   "publishTask": ":portal-published-guest:compileDevelopmentZipline",
   "publishOutput": "portal-published-guest/build/zipline/Development",
-  "store": "~/.keliver-portal"
+  "store": "~/.keliver-portal",
+  "appRuntime": {
+    "keliverVersion": "0.3.1-SNAPSHOT",
+    "widgetVersion": 1
+  }
 }

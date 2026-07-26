@@ -2,6 +2,22 @@ import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+@Serializable
+data class AppRuntimeMetadata(
+  val keliverVersion: String,
+  val widgetVersion: Int,
+) {
+  init {
+    require(keliverVersion.isNotBlank()) { "appRuntime.keliverVersion must not be blank" }
+    require(widgetVersion > 0) { "appRuntime.widgetVersion must be positive" }
+  }
+}
+
+@Serializable
+private data class RuntimeMetadataResponse(
+  val appRuntime: AppRuntimeMetadata?,
+)
+
 /**
  * Separability groundwork: everything the portal-server needs to know about
  * the app repo it serves, read from keliver.portal.json at the repo root.
@@ -33,6 +49,12 @@ data class PortalConfig(
   val previewBuildTask: String = ":web-spike:wasmJsBrowserDistribution",
   val previewDist: String = "web-spike/build/dist/wasmJs/productionExecutable",
   val previewServeDir: String = "build/portal-editor-live",
+  /**
+   * K4: explicit version of the app/device runtime this editor is previewing.
+   * Never infer this from Gradle: catalogs, BOMs, and composite substitution
+   * can make the editor's resolved version differ from the app's target.
+   */
+  val appRuntime: AppRuntimeMetadata? = null,
 )
 
 fun PortalConfig.resolvedLogicDirs(): List<String> =
@@ -56,3 +78,9 @@ fun loadPortalConfig(repoDir: File): PortalConfig {
 
 fun PortalConfig.storeDir(): File =
   if (store.startsWith("~/")) File(System.getProperty("user.home"), store.removePrefix("~/")) else File(store)
+
+fun PortalConfig.runtimeMetadataJson(): String =
+  Json.encodeToString(
+    RuntimeMetadataResponse.serializer(),
+    RuntimeMetadataResponse(appRuntime),
+  )

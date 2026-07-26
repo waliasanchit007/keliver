@@ -469,6 +469,12 @@ fun main(args: Array<String>) {
     }
   }
 
+  // K4: authoritative app-target metadata from keliver.portal.json. The
+  // running editor compares this with its own build-embedded versions.
+  server.createContext("/runtime-metadata") { ex ->
+    handle(ex) { respond(ex, 200, config.runtimeMetadataJson()) }
+  }
+
   // P3-12: live-preview build status (id/promotedId/state/error) for the editor.
   server.createContext("/preview-build") { ex ->
     handle(ex) { respond(ex, 200, previewBuilder.statusJson()) }

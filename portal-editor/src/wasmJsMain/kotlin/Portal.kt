@@ -32,6 +32,7 @@ import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.render.resolvePersona
+import dev.keliver.protocol.guest.guestRedwoodVersion
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
 import kotlinx.browser.document
@@ -104,6 +105,7 @@ private var playground = false
 private var localDoc = demoTemplate()
 private val localUndo = ArrayDeque<List<DocOp>>()
 private val localRedo = ArrayDeque<List<DocOp>>()
+private var runtimeMetadataLoad: RuntimeMetadataLoad = RuntimeMetadataLoad.Loading
 
 private fun w(
   h: Long,
@@ -201,10 +203,12 @@ private fun localRefresh(refreshPanels: Boolean) {
 private fun enterPlayground() {
   if (playground) return
   playground = true
+  runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay unavailable in playground mode")
   saveTextEl.textContent = "playground — edits are local to this tab"
   PreviewBindings.mocks.putAll(demoMocks)
   mountPlaygroundStrip()
   localRefresh(true)
+  renderMockFidelity()
 }
 
 /** The onboarding strip: what to try + one-click starter templates. */
@@ -738,7 +742,7 @@ private fun buildRightPane() {
   pane.appendChild(bindingsEl)
   pane.appendChild(Ui.section("Preview fidelity"))
   fidelityEl = Ui.el("div", "card")
-  fidelityEl.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic"))
+  renderMockFidelity()
   pane.appendChild(fidelityEl)
   pane.appendChild(Ui.section("State inspector"))
   inspectorEl = Ui.el("div", "card")
@@ -841,10 +845,17 @@ private fun disableLive() {
   installMockActionSink()
   liveBtn.textContent = "▶ Live"
   liveBtn.className = "btn"
-  fidelityEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic")) }
+  renderMockFidelity()
   inspectorEl.let { Ui.clear(it); it.appendChild(Ui.el("div", "muted", "—")) }
   refresh()
   Snapshot.sendApplyNotifications()
+}
+
+private fun renderMockFidelity() {
+  if (!::fidelityEl.isInitialized) return
+  Ui.clear(fidelityEl)
+  fidelityEl.appendChild(Ui.el("div", "muted", "Mock mode — press ▶ Live to run real logic"))
+  appendRuntimeCompatibility()
 }
 
 private fun renderFidelity(required: List<String>, livePresenter: String? = null) {
@@ -853,6 +864,7 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
   val pres = Ui.el("div", "", if (livePresenter != null) "● real presenter — $livePresenter" else "○ no presenter registered for '$currentScreen' — mock tier")
   pres.setAttribute("style", "color:" + (if (livePresenter != null) "var(--good)" else "var(--warn, #e0a030)") + ";")
   fidelityEl.appendChild(pres)
+  appendRuntimeCompatibility()
   val persona = dev.keliver.portal.render.appPreviewEntry?.resolvePersona(LiveEngine.personaId.value)
   if (persona != null) {
     val row = Ui.el("div", "", "👤 ${persona.label}")
@@ -881,6 +893,70 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
     fidelityEl.appendChild(row)
   }
 }
+
+private fun appendRuntimeCompatibility() {
+  val title = Ui.el("div", "", "Runtime compatibility")
+  title.setAttribute("style", "font-weight:600; margin-top:7px;")
+  fidelityEl.appendChild(title)
+
+  val editor = AppRuntimeMetadata(
+    keliverVersion = guestRedwoodVersion.toString(),
+    widgetVersion = EDITOR_WIDGET_VERSION,
+  )
+  when (val load = runtimeMetadataLoad) {
+    RuntimeMetadataLoad.Loading -> {
+      fidelityEl.appendChild(Ui.el("div", "muted", "… loading app runtime metadata"))
+    }
+    RuntimeMetadataLoad.Undeclared -> {
+      val status = Ui.el("div", "", "○ App runtime not declared")
+      status.setAttribute("style", "color:var(--warn, #e0a030);")
+      fidelityEl.appendChild(status)
+      fidelityEl.appendChild(runtimeVersionRow("Editor", editor))
+      fidelityEl.appendChild(
+        Ui.el("div", "muted", "Add appRuntime to keliver.portal.json; version match is unknown."),
+      )
+    }
+    is RuntimeMetadataLoad.Unavailable -> {
+      val status = Ui.el("div", "", "○ Runtime metadata unavailable")
+      status.setAttribute("style", "color:var(--warn, #e0a030);")
+      status.setAttribute("title", load.reason)
+      fidelityEl.appendChild(status)
+      fidelityEl.appendChild(runtimeVersionRow("Editor", editor))
+    }
+    is RuntimeMetadataLoad.Declared -> {
+      val report = compareRuntimeMetadata(editor, load.appRuntime)
+      val (label, color, help) = when (report.status) {
+        RuntimeCompatibilityStatus.Match ->
+          Triple("● Runtime versions match", "var(--good)", null)
+        RuntimeCompatibilityStatus.KeliverSkew ->
+          Triple(
+            "⚠ Keliver version skew",
+            "var(--warn, #e0a030)",
+            "Preview behavior may differ from the app/device runtime.",
+          )
+        RuntimeCompatibilityStatus.WidgetMismatch ->
+          Triple(
+            "⚠ Widget protocol mismatch",
+            "var(--danger, #e5534b)",
+            "Preview and app use different widget/schema compatibility versions.",
+          )
+      }
+      val status = Ui.el("div", "", label)
+      status.setAttribute("style", "color:$color;")
+      fidelityEl.appendChild(status)
+      fidelityEl.appendChild(runtimeVersionRow("Editor", report.editor))
+      fidelityEl.appendChild(runtimeVersionRow("App", report.app))
+      if (help != null) fidelityEl.appendChild(Ui.el("div", "muted", help))
+    }
+  }
+}
+
+private fun runtimeVersionRow(label: String, runtime: AppRuntimeMetadata): HTMLElement =
+  Ui.el(
+    "div",
+    "muted",
+    "$label — Keliver ${runtime.keliverVersion} · widgets v${runtime.widgetVersion}",
+  )
 
 private fun renderInspector() {
   Ui.clear(inspectorEl)
@@ -1102,6 +1178,7 @@ private fun restoreSnapshotIfAny(): Boolean {
 
 private fun loadWorkspace() {
   startPreviewBuildPoll()
+  loadRuntimeMetadata()
   serverGet("/active") { txt ->
     runCatching {
       val o = Json.parseToJsonElement(txt).jsonObject
@@ -1114,6 +1191,24 @@ private fun loadWorkspace() {
     reloadScreenList()
     fetchComponents { loadDraft() } // C3: components before the doc so instances render
   }
+}
+
+private fun loadRuntimeMetadata() {
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/runtime-metadata")
+  xhr.addEventListener("load", { _ ->
+    runtimeMetadataLoad = parseRuntimeMetadata(xhr.responseText)
+    if (liveBtn.textContent == "■ Stop") {
+      renderFidelity(liveRequiredCapabilities, livePresenterLabel())
+    } else {
+      renderMockFidelity()
+    }
+  })
+  xhr.addEventListener("error", { _ ->
+    runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay request failed")
+    renderMockFidelity()
+  })
+  xhr.send()
 }
 
 /** C3: pull the active project's component registry for palette + preview. */
