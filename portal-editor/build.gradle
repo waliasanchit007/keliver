@@ -4,6 +4,7 @@
 // konduit's own editor executable is :web-spike (shell + AppLibPreview).
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'org.jetbrains.compose'
 
 // Published: the reusable editor shell a consumer app builds its editor from.

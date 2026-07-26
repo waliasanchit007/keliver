@@ -18,11 +18,16 @@ package dev.keliver.portalpublished.logic
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import dev.keliver.capabilities.AnalyticsEvent
 import dev.keliver.capabilities.AuthState
 import dev.keliver.capabilities.HostAnalytics
 import dev.keliver.capabilities.HostAuth
 import dev.keliver.capabilities.HostFlags
+import dev.keliver.capabilities.HostHttp
 import dev.keliver.portalpublished.screens.SettingsScreenBindings
 
 /**
@@ -36,13 +41,19 @@ public fun SettingsPresenter(
   auth: HostAuth,
   flags: HostFlags,
   analytics: HostAnalytics,
+  http: HostHttp? = null,
   onOpen: (String) -> Unit,
 ): SettingsScreenBindings {
   val authState by auth.state.collectAsState()
   val flagValues by flags.values.collectAsState()
+  var recordedProfile by remember(http) { mutableStateOf<ProfileSummary?>(null) }
+  LaunchedEffect(http) {
+    recordedProfile = http?.let { runCatching { ProfileSummaryApi(it).load() }.getOrNull() }
+  }
 
   return object : SettingsScreenBindings {
-    override val name: String = settingsName(authState, flagValues)
+    override val name: String = recordedProfile?.let { "${it.displayName} · ${it.source}" }
+      ?: settingsName(authState, flagValues)
 
     override fun open(value: String) {
       analytics.track(

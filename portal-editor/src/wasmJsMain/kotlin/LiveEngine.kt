@@ -2,6 +2,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.render.PreviewEnv
 import dev.keliver.portal.render.PreviewFrame
@@ -36,6 +37,7 @@ internal object LiveEngine {
   private var lastCompositionError: String? = null
   internal var onError: (String) -> Unit = {}
   internal var onValuesApplied: () -> Unit = {}
+  internal var onFidelityChanged: () -> Unit = {}
 
   internal val isRunning: Boolean get() = request.value != null || flowRequest.value != null
 
@@ -99,6 +101,7 @@ internal object LiveEngine {
     request.value = null
     flowRequest.value = null
     flowStartOverride = null
+    PreviewCapabilities.beginHttpSession()
     onValuesApplied()
   }
 }
@@ -115,11 +118,22 @@ internal fun LivePresenterHost() {
     val persona = appPreviewEntry?.resolvePersona(personaId)
     // Key by flow + start so choosing a new start node RE-inits the FlowScope.
     key("flow:$flowName:$startAt:$personaId") {
+      val http = remember(currentProject, personaId, persona?.httpFixtureSet) {
+        PreviewCapabilities.beginHttpSession()
+        persona?.httpFixtureSet?.let { fixtureSet ->
+          RelayPreviewHostHttp(SERVER, currentProject, fixtureSet) { reason ->
+            PreviewCapabilities.markHttpMiss(reason)
+            LiveEngine.onError("HTTP replay miss: $reason")
+            LiveEngine.onFidelityChanged()
+          }
+        }
+      }
       val f = fp.present(
         PreviewEnv(
           log = { portalLiveLog(it) },
           flowStart = startAt,
           persona = persona,
+          http = http,
         ),
       )
       LiveEngine.frame = PreviewFrame(f.values, f.dispatch)
@@ -135,7 +149,19 @@ internal fun LivePresenterHost() {
   val personaId = LiveEngine.personaId.value
   val persona = appPreviewEntry?.resolvePersona(personaId)
   key("$screen:$personaId") {
-    val frame = sp.present(PreviewEnv(log = { portalLiveLog(it) }, persona = persona))
+    val http = remember(currentProject, personaId, persona?.httpFixtureSet) {
+      PreviewCapabilities.beginHttpSession()
+      persona?.httpFixtureSet?.let { fixtureSet ->
+        RelayPreviewHostHttp(SERVER, currentProject, fixtureSet) { reason ->
+          PreviewCapabilities.markHttpMiss(reason)
+          LiveEngine.onError("HTTP replay miss: $reason")
+          LiveEngine.onFidelityChanged()
+        }
+      }
+    }
+    val frame = sp.present(
+      PreviewEnv(log = { portalLiveLog(it) }, persona = persona, http = http),
+    )
     LiveEngine.frame = frame
     SideEffect { LiveEngine.applyValues(frame.values) }
   }

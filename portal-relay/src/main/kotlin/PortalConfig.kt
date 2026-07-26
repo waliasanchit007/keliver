@@ -50,6 +50,12 @@ data class PortalConfig(
   val previewDist: String = "web-spike/build/dist/wasmJs/productionExecutable",
   val previewServeDir: String = "build/portal-editor-live",
   /**
+   * #16 H1: app-owned, reviewed HTTP replay fixtures. The resolved directory
+   * must stay inside the repository and the relay never writes it in replay
+   * mode.
+   */
+  val httpFixturesDir: String = "portal-fixtures/http",
+  /**
    * K4: explicit version of the app/device runtime this editor is previewing.
    * Never infer this from Gradle: catalogs, BOMs, and composite substitution
    * can make the editor's resolved version differ from the app's target.
@@ -69,6 +75,16 @@ fun PortalConfig.resolvedComponentsDir(): String =
 /** The resolved flows dir: explicit [flowsDir], else a `flows` sibling of screens. */
 fun PortalConfig.resolvedFlowsDir(): String =
   flowsDir ?: (screensDir.substringBeforeLast('/', "").let { if (it.isEmpty()) "flows" else "$it/flows" })
+
+/** Resolve replay fixtures and reject paths that escape the app repository. */
+fun PortalConfig.resolvedHttpFixturesDir(repoDir: File): File {
+  val repo = repoDir.canonicalFile
+  val fixtures = File(repo, httpFixturesDir).canonicalFile
+  require(fixtures.toPath().startsWith(repo.toPath())) {
+    "httpFixturesDir must stay inside the app repository: $httpFixturesDir"
+  }
+  return fixtures
+}
 
 fun loadPortalConfig(repoDir: File): PortalConfig {
   val f = File(repoDir, "keliver.portal.json")

@@ -57,10 +57,12 @@ final class dev.keliver.portal.render/FlowFrame { // dev.keliver.portal.render/F
 }
 
 final class dev.keliver.portal.render/PreviewEnv { // dev.keliver.portal.render/PreviewEnv|null[0]
-    constructor <init>(kotlin/Function1<kotlin/String, kotlin/Unit>, kotlin/String? = ..., dev.keliver.portal.render/PreviewPersona? = ...) // dev.keliver.portal.render/PreviewEnv.<init>|<init>(kotlin.Function1<kotlin.String,kotlin.Unit>;kotlin.String?;dev.keliver.portal.render.PreviewPersona?){}[0]
+    constructor <init>(kotlin/Function1<kotlin/String, kotlin/Unit>, kotlin/String? = ..., dev.keliver.portal.render/PreviewPersona? = ..., dev.keliver.capabilities/HostHttp? = ...) // dev.keliver.portal.render/PreviewEnv.<init>|<init>(kotlin.Function1<kotlin.String,kotlin.Unit>;kotlin.String?;dev.keliver.portal.render.PreviewPersona?;dev.keliver.capabilities.HostHttp?){}[0]
 
     final val flowStart // dev.keliver.portal.render/PreviewEnv.flowStart|{}flowStart[0]
         final fun <get-flowStart>(): kotlin/String? // dev.keliver.portal.render/PreviewEnv.flowStart.<get-flowStart>|<get-flowStart>(){}[0]
+    final val http // dev.keliver.portal.render/PreviewEnv.http|{}http[0]
+        final fun <get-http>(): dev.keliver.capabilities/HostHttp? // dev.keliver.portal.render/PreviewEnv.http.<get-http>|<get-http>(){}[0]
     final val log // dev.keliver.portal.render/PreviewEnv.log|{}log[0]
         final fun <get-log>(): kotlin/Function1<kotlin/String, kotlin/Unit> // dev.keliver.portal.render/PreviewEnv.log.<get-log>|<get-log>(){}[0]
     final val persona // dev.keliver.portal.render/PreviewEnv.persona|{}persona[0]
@@ -77,7 +79,7 @@ final class dev.keliver.portal.render/PreviewFrame { // dev.keliver.portal.rende
 }
 
 final class dev.keliver.portal.render/PreviewPersona { // dev.keliver.portal.render/PreviewPersona|null[0]
-    constructor <init>(kotlin/String, kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.portal.render/PreviewPersona.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    constructor <init>(kotlin/String, kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...) // dev.keliver.portal.render/PreviewPersona.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
 
     final val auth // dev.keliver.portal.render/PreviewPersona.auth|{}auth[0]
         final fun <get-auth>(): dev.keliver.capabilities/AuthState // dev.keliver.portal.render/PreviewPersona.auth.<get-auth>|<get-auth>(){}[0]
@@ -85,6 +87,8 @@ final class dev.keliver.portal.render/PreviewPersona { // dev.keliver.portal.ren
         final fun <get-description>(): kotlin/String // dev.keliver.portal.render/PreviewPersona.description.<get-description>|<get-description>(){}[0]
     final val flags // dev.keliver.portal.render/PreviewPersona.flags|{}flags[0]
         final fun <get-flags>(): kotlin.collections/Map<kotlin/String, kotlin/Boolean> // dev.keliver.portal.render/PreviewPersona.flags.<get-flags>|<get-flags>(){}[0]
+    final val httpFixtureSet // dev.keliver.portal.render/PreviewPersona.httpFixtureSet|{}httpFixtureSet[0]
+        final fun <get-httpFixtureSet>(): kotlin/String? // dev.keliver.portal.render/PreviewPersona.httpFixtureSet.<get-httpFixtureSet>|<get-httpFixtureSet>(){}[0]
     final val id // dev.keliver.portal.render/PreviewPersona.id|{}id[0]
         final fun <get-id>(): kotlin/String // dev.keliver.portal.render/PreviewPersona.id.<get-id>|<get-id>(){}[0]
     final val label // dev.keliver.portal.render/PreviewPersona.label|{}label[0]
@@ -98,7 +102,8 @@ final class dev.keliver.portal.render/PreviewPersona { // dev.keliver.portal.ren
     final fun component4(): dev.keliver.capabilities/AuthState // dev.keliver.portal.render/PreviewPersona.component4|component4(){}[0]
     final fun component5(): kotlin.collections/Map<kotlin/String, kotlin/Boolean> // dev.keliver.portal.render/PreviewPersona.component5|component5(){}[0]
     final fun component6(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewPersona.component6|component6(){}[0]
-    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.portal.render/PreviewPersona // dev.keliver.portal.render/PreviewPersona.copy|copy(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun component7(): kotlin/String? // dev.keliver.portal.render/PreviewPersona.component7|component7(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...): dev.keliver.portal.render/PreviewPersona // dev.keliver.portal.render/PreviewPersona.copy|copy(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
     final fun createCapabilityFixtures(): dev.keliver.capabilities/CapabilityFixtures // dev.keliver.portal.render/PreviewPersona.createCapabilityFixtures|createCapabilityFixtures(){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.render/PreviewPersona.equals|equals(kotlin.Any?){}[0]
     final fun fixtureStates(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewPersona.fixtureStates|fixtureStates(){}[0]

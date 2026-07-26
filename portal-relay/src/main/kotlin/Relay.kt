@@ -68,6 +68,7 @@ private val root = config.storeDir()
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")
 private val bundlesDir = File(root, "bundles")
+private val httpReplayService = HttpReplayService(repoDir, config)
 
 /** project/screen names are path segments — restrict to a safe charset. */
 private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifEmpty { "unnamed" }
@@ -188,6 +189,12 @@ private fun respond(ex: HttpExchange, code: Int, body: String? = null, contentTy
   ex.responseHeaders.add("Content-Type", contentType)
   ex.sendResponseHeaders(code, bytes.size.toLong())
   ex.responseBody.use { it.write(bytes) }
+}
+
+private fun readBoundedBody(ex: HttpExchange, maxBytes: Int): String {
+  val bytes = ex.requestBody.readNBytes(maxBytes + 1)
+  require(bytes.size <= maxBytes) { "request body exceeds $maxBytes bytes" }
+  return bytes.decodeToString()
 }
 
 private fun jsonList(items: List<String>): String =
@@ -473,6 +480,49 @@ fun main(args: Array<String>) {
   // running editor compares this with its own build-embedded versions.
   server.createContext("/runtime-metadata") { ex ->
     handle(ex) { respond(ex, 200, config.runtimeMetadataJson()) }
+  }
+
+  // #16 H1: app-owned deterministic HTTP replay. This endpoint is read-only
+  // with respect to both the repository and the network: a miss fails closed.
+  server.createContext("/http-fixtures") { ex ->
+    handle(ex) {
+      when (ex.requestMethod) {
+        "GET" -> respond(ex, 200, httpReplayService.catalogJson())
+        else -> respond(ex, 405)
+      }
+    }
+  }
+
+  server.createContext("/http-replay") { ex ->
+    handle(ex) {
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handle
+      }
+      val params = query(ex)
+      val fixtureSet = params["fixtureSet"].orEmpty()
+      val session = params["session"].orEmpty()
+      val body = runCatching { readBoundedBody(ex, 1024 * 1024) }.getOrElse {
+        respond(ex, 413, """{"error":"request_too_large"}""")
+        return@handle
+      }
+      val request = runCatching { httpReplayService.decodeRequest(body) }.getOrElse {
+        respond(ex, 400, """{"error":"invalid_request"}""")
+        return@handle
+      }
+      when (val result = httpReplayService.replay(fixtureSet, session, request)) {
+        is HttpReplayResult.Match -> respond(
+          ex,
+          200,
+          httpReplayService.responseJson(result.response),
+        )
+        is HttpReplayResult.Failure -> respond(
+          ex,
+          result.status,
+          httpReplayService.errorJson(result.error),
+        )
+      }
+    }
   }
 
   // P3-12: live-preview build status (id/promotedId/state/error) for the editor.

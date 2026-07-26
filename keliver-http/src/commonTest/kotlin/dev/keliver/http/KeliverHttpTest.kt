@@ -15,6 +15,7 @@
  */
 package dev.keliver.http
 
+import dev.keliver.capabilities.HostHttpRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -47,6 +48,19 @@ class KeliverHttpTest {
       lastRequest = request
       return response
     }
+  }
+
+  @Test
+  fun providerAdaptsToPureHostHttpCapability() = runTest {
+    val stub = StubProvider(HttpResponse(200, """{"ok":true}"""))
+
+    val response = stub.asHostHttp().execute(
+      HostHttpRequest("GET", "/status", query = mapOf("full" to "true")),
+    )
+
+    assertEquals(200, response.status)
+    assertEquals("""{"ok":true}""", response.body)
+    assertEquals(mapOf("full" to "true"), stub.lastRequest?.query)
   }
 
   @Test

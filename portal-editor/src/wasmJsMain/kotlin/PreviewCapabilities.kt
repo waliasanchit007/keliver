@@ -7,7 +7,21 @@
  * capability graph, not a separate "mock vs real" mode.
  */
 
+import dev.keliver.capabilities.HOST_HTTP_CAPABILITY
 import dev.keliver.portal.render.PreviewPersona
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@Serializable
+internal data class PreviewHttpFixtureDescriptor(
+  val id: String,
+  val revision: String?,
+  val entries: Int,
+  val expiresAt: String?,
+  val expired: Boolean,
+  val valid: Boolean,
+  val error: String? = null,
+)
 
 /** A capability's status in the browser preview. */
 public data class CapStatus(val name: String, val real: Boolean, val note: String)
@@ -18,11 +32,16 @@ public object PreviewCapabilities {
     "HostSqlDriver@1" to "in-memory SQLite",
     // convergence targets: "HostHttp@1" to "browser fetch()", "HostStorage@1" to "localStorage"
   )
+  private var httpFixtures: Map<String, PreviewHttpFixtureDescriptor> = emptyMap()
+  private var httpCatalogError: String? = "fixture catalog not loaded"
+  private var httpSessionMiss: String? = null
 
   public fun statusOf(cap: String): CapStatus = statusOf(cap, persona = null)
 
   public fun statusOf(cap: String, persona: PreviewPersona?): CapStatus =
-    persona?.fixtureStates()?.get(cap)?.let {
+    if (cap == HOST_HTTP_CAPABILITY) {
+      httpStatus(persona)
+    } else persona?.fixtureStates()?.get(cap)?.let {
       CapStatus(cap, real = true, note = "persona fixture: $it")
     } ?: providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
       ?: CapStatus(cap, real = false, note = "no preview impl — stubbed (reduced fidelity)")
@@ -40,6 +59,71 @@ public object PreviewCapabilities {
 
   /** True when the SQL capability can back the real data path in-browser. */
   public val sqlAvailable: Boolean get() = "HostSqlDriver@1" in providers
+
+  internal fun updateHttpFixtureCatalog(payload: String) {
+    runCatching {
+      Json.decodeFromString<List<PreviewHttpFixtureDescriptor>>(payload)
+    }.onSuccess { descriptors ->
+      httpFixtures = descriptors.associateBy { it.id }
+      httpCatalogError = null
+    }.onFailure {
+      httpFixtures = emptyMap()
+      httpCatalogError = "invalid fixture catalog"
+    }
+  }
+
+  internal fun httpCatalogUnavailable(reason: String) {
+    httpFixtures = emptyMap()
+    httpCatalogError = reason
+  }
+
+  internal fun beginHttpSession() {
+    httpSessionMiss = null
+  }
+
+  internal fun markHttpMiss(reason: String) {
+    httpSessionMiss = reason
+  }
+
+  private fun httpStatus(persona: PreviewPersona?): CapStatus {
+    httpCatalogError?.let {
+      return CapStatus(HOST_HTTP_CAPABILITY, real = false, note = it)
+    }
+    val fixtureSet = persona?.httpFixtureSet
+      ?: return CapStatus(
+        HOST_HTTP_CAPABILITY,
+        real = false,
+        note = "no fixture set selected by persona",
+      )
+    val descriptor = httpFixtures[fixtureSet]
+      ?: return CapStatus(
+        HOST_HTTP_CAPABILITY,
+        real = false,
+        note = "fixture set '$fixtureSet' not found",
+      )
+    if (!descriptor.valid) {
+      return CapStatus(
+        HOST_HTTP_CAPABILITY,
+        real = false,
+        note = "fixture set '$fixtureSet' invalid: ${descriptor.error ?: "unknown error"}",
+      )
+    }
+    if (descriptor.expired) {
+      return CapStatus(
+        HOST_HTTP_CAPABILITY,
+        real = false,
+        note = "fixture set '$fixtureSet' expired",
+      )
+    }
+    httpSessionMiss?.let {
+      return CapStatus(HOST_HTTP_CAPABILITY, real = false, note = "replay miss: $it")
+    }
+    return CapStatus(
+      HOST_HTTP_CAPABILITY,
+      real = true,
+      note = "replay: $fixtureSet (${descriptor.entries} exchanges)",
+    )
+  }
 }
 
 /**

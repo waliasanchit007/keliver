@@ -20,6 +20,9 @@ import app.cash.zipline.loader.ZiplineHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
 import dev.keliver.leaks.LeakDetector
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.HttpRequest
+import dev.keliver.http.HttpResponse
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portaldevice.HostApi
@@ -40,6 +43,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.modules.EmptySerializersModule
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import okio.ByteString
 import okio.ByteString.Companion.decodeHex
 import okio.ByteString.Companion.toByteString
@@ -49,12 +54,18 @@ import platform.Foundation.NSError
 import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSProcessInfo
+import platform.Foundation.NSString
+import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequestUseProtocolCachePolicy
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
 import platform.Foundation.addValue
 import platform.Foundation.dataTaskWithRequest
+import platform.Foundation.dataUsingEncoding
+import platform.Foundation.setValue
+import platform.Foundation.setHTTPBody
+import platform.Foundation.setHTTPMethod
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -121,7 +132,10 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
       runCatching {
         // M7: declare the host capabilities we bind below (Zipline HostSqlDriver),
         // or the gate serves an older bundle that doesn't need them.
-        val caps = dev.keliver.portal.sql.HOST_SQL_CAPABILITY.replace("@", "%40")
+        val caps = listOf(
+          dev.keliver.portal.sql.HOST_SQL_CAPABILITY,
+          dev.keliver.capabilities.HOST_HTTP_CAPABILITY,
+        ).joinToString(",").replace("@", "%40")
         val body = httpGet("$PORTAL_SERVER/bundles/latest?widgetVersion=1&caps=$caps")
         val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
         if (path != null) {
@@ -144,6 +158,7 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
       // M7/M9: the data-layer capability so the compiled screen's presenter has
       // its data layer on iOS too (parity with the Android host).
       zipline.bind<dev.keliver.portal.sql.HostSqlDriver>("HostSqlDriver", IosSqlHost())
+      zipline.bind<HostHttpProvider>("HostHttp", IosReplayHttpHost())
     }
 
     override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
@@ -165,6 +180,17 @@ private fun initializeTreehouseApp(): TreehouseApp<PortalPresenter> {
 private class IosHostApi : HostApi {
   override suspend fun httpCall(url: String): String =
     httpGet(url.replace("10.0.2.2", "localhost"))
+}
+
+private class IosReplayHttpHost : HostHttpProvider {
+  private val json = Json { ignoreUnknownKeys = true }
+
+  override suspend fun execute(request: HttpRequest): HttpResponse {
+    val endpoint =
+      "$PORTAL_SERVER/http-replay?project=default&fixtureSet=field-researcher&session=device-ios"
+    val payload = httpPostJson(endpoint, json.encodeToString(request))
+    return json.decodeFromString(payload)
+  }
 }
 
 private fun log(message: String) = println("PortalDeviceIos: $message")
@@ -203,6 +229,36 @@ private suspend fun httpGet(url: String): String =
             continuation.resumeWithException(IOException("unexpected response: $response"))
           response.statusCode !in 200 until 300 ->
             continuation.resumeWithException(IOException("failed to fetch $url: ${response.statusCode}"))
+          else -> continuation.resume(data.toByteString().utf8())
+        }
+      },
+    )
+    continuation.invokeOnCancellation { task.cancel() }
+    task.resume()
+  }
+
+/** One-shot NSURLSession JSON POST returning a successful UTF-8 body. */
+@OptIn(ExperimentalForeignApi::class)
+private suspend fun httpPostJson(url: String, body: String): String =
+  suspendCancellableCoroutine { continuation ->
+    val request = NSMutableURLRequest(
+      uRL = NSURL(string = url)!!,
+      cachePolicy = NSURLRequestUseProtocolCachePolicy,
+      timeoutInterval = 30.0,
+    ).apply {
+      setHTTPMethod("POST")
+      setHTTPBody((body as NSString).dataUsingEncoding(NSUTF8StringEncoding))
+      setValue("application/json", forHTTPHeaderField = "Content-Type")
+    }
+    val task = NSURLSession.sharedSession.dataTaskWithRequest(
+      request = request,
+      completionHandler = { data: NSData?, response: NSURLResponse?, error: NSError? ->
+        when {
+          error != null -> continuation.resumeWithException(IOException(error.description))
+          response !is NSHTTPURLResponse || data == null ->
+            continuation.resumeWithException(IOException("unexpected response: $response"))
+          response.statusCode !in 200 until 300 ->
+            continuation.resumeWithException(IOException("HTTP replay ${response.statusCode}"))
           else -> continuation.resume(data.toByteString().utf8())
         }
       },

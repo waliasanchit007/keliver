@@ -118,3 +118,5 @@ final class dev.keliver.http/KeliverHttpException : kotlin/Exception { // dev.ke
     final val status // dev.keliver.http/KeliverHttpException.status|{}status[0]
         final fun <get-status>(): kotlin/Int // dev.keliver.http/KeliverHttpException.status.<get-status>|<get-status>(){}[0]
 }
+
+final fun (dev.keliver.http/HostHttpProvider).dev.keliver.http/asHostHttp(): dev.keliver.capabilities/HostHttp // dev.keliver.http/asHostHttp|asHostHttp@dev.keliver.http.HostHttpProvider(){}[0]

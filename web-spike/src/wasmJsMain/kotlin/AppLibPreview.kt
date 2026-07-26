@@ -47,6 +47,7 @@ object AppLibPreview : AppPreviewEntry {
         attributes = mapOf("plan" to "field"),
       ),
       flags = mapOf("new-profile" to true),
+      httpFixtureSet = "field-researcher",
     ),
     PreviewPersona(
       id = "kyc-pending",
@@ -103,6 +104,7 @@ object AppLibPreview : AppPreviewEntry {
         auth = fixtures.auth,
         flags = fixtures.flags,
         analytics = fixtures.analytics,
+        http = env.http,
         onOpen = { env.log("→ open $it (analytics recorded; nav intent)") },
       )
       PreviewFrame(

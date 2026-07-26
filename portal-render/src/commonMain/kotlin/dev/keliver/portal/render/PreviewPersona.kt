@@ -20,6 +20,7 @@ import dev.keliver.capabilities.CapabilityFixtures
 import dev.keliver.capabilities.HOST_ANALYTICS_CAPABILITY
 import dev.keliver.capabilities.HOST_AUTH_CAPABILITY
 import dev.keliver.capabilities.HOST_FLAGS_CAPABILITY
+import dev.keliver.capabilities.HOST_HTTP_CAPABILITY
 
 /**
  * A named, app-owned start-state for real presenter/flow preview.
@@ -35,6 +36,8 @@ public data class PreviewPersona(
   public val auth: AuthState = AuthState.SignedOut,
   public val flags: Map<String, Boolean> = emptyMap(),
   public val states: Map<String, String> = emptyMap(),
+  /** App-owned relay replay fixture set selected for this start-state. */
+  public val httpFixtureSet: String? = null,
 ) {
   /** Human-readable fixture states for the editor fidelity panel. */
   public fun fixtureStates(): Map<String, String> = buildMap {
@@ -62,6 +65,7 @@ public data class PreviewPersona(
       },
     )
     put(HOST_ANALYTICS_CAPABILITY, "recording sink")
+    httpFixtureSet?.let { put(HOST_HTTP_CAPABILITY, "replay set: $it") }
     putAll(states)
   }
 
@@ -79,6 +83,9 @@ public fun AppPreviewEntry.validatePersonaCatalog() {
   require(ids.none { it.isBlank() }) { "Persona IDs for '$label' must not be blank" }
   require(ids.distinct().size == ids.size) { "Persona IDs for '$label' must be unique: $ids" }
   require(personas.none { it.label.isBlank() }) { "Persona labels for '$label' must not be blank" }
+  require(personas.none { it.httpFixtureSet?.isBlank() == true }) {
+    "HTTP fixture-set IDs for '$label' must not be blank"
+  }
   val default = defaultPersonaId
   require(default == null || personas.any { it.id == default }) {
     "Default persona '$default' is not declared by '$label'"

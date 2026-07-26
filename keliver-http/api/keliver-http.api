@@ -1,3 +1,7 @@
+public final class dev/keliver/http/HostHttpAdapterKt {
+	public static final fun asHostHttp (Ldev/keliver/http/HostHttpProvider;)Ldev/keliver/capabilities/HostHttp;
+}
+
 public abstract interface class dev/keliver/http/HostHttpProvider : app/cash/zipline/ZiplineService {
 	public static final field Companion Ldev/keliver/http/HostHttpProvider$Companion;
 	public abstract fun execute (Ldev/keliver/http/HttpRequest;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

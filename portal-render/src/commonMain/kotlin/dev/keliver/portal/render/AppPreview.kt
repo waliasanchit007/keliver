@@ -16,6 +16,7 @@
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.Composable
+import dev.keliver.capabilities.HostHttp
 
 /**
  * P3-12: the EXPLICIT per-app preview entry point. The consumer app's logic
@@ -58,6 +59,11 @@ public class PreviewEnv(
    * persona; null preserves the pre-persona behavior for existing entries.
    */
   public val persona: PreviewPersona? = null,
+  /**
+   * #16 H1: deterministic text HTTP capability for real repositories in the
+   * browser. Null means the selected persona has no usable replay fixture.
+   */
+  public val http: HostHttp? = null,
 )
 
 public class PreviewFrame(

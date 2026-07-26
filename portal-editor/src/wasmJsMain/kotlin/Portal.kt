@@ -79,7 +79,7 @@ private fun initialTree(): WidgetNode = WidgetNode(
 internal val portalTree = mutableStateOf(initialTree())
 
 private var selectedId: Int? = null
-private var currentProject = "default"
+internal var currentProject = "default"
 private var currentScreen = "main"
 
 // V2 M1: the SERVER owns the document; the editor is an op-emitting client.
@@ -92,7 +92,7 @@ private var opInFlight = false
 // The relay defaults to :8077, overridable via `?relay=<port>` so several per-app
 // editors (each pointed at its own app's relay) can run side by side without the
 // stop-one-start-another dance.
-private val SERVER: String = run {
+internal val SERVER: String = run {
   val port = Regex("[?&]relay=(\\d+)")
     .find(kotlinx.browser.window.location.search)?.groupValues?.get(1)
   "http://localhost:${port ?: "8077"}"
@@ -788,6 +788,12 @@ private fun livePresenterLabel(): String? {
 }
 
 private fun enableLive() {
+  loadHttpFixtureCatalog {
+    enableLiveWithFixtureCatalog()
+  }
+}
+
+private fun enableLiveWithFixtureCatalog() {
   serverGet("/capabilities?project=$currentProject") { txt ->
     val required = parseNames(txt)
     liveRequiredCapabilities = required
@@ -808,6 +814,9 @@ private fun enableLive() {
     }
     LiveEngine.onValuesApplied = {
       if (::inspectorEl.isInitialized) renderInspector()
+    }
+    LiveEngine.onFidelityChanged = {
+      renderFidelity(liveRequiredCapabilities, livePresenterLabel())
     }
     if (flowRegistered || registered) {
       LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
@@ -1187,10 +1196,29 @@ private fun loadWorkspace() {
     }
     // P3-12: a post-rebuild reload restores the exact editing context.
     restoreSnapshotIfAny()
+    loadHttpFixtureCatalog()
     reloadProjectList()
     reloadScreenList()
     fetchComponents { loadDraft() } // C3: components before the doc so instances render
   }
+}
+
+private fun loadHttpFixtureCatalog(then: (() -> Unit)? = null) {
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/http-fixtures?project=$currentProject")
+  xhr.addEventListener("load", { _ ->
+    if (xhr.status.toInt() in 200..299) {
+      PreviewCapabilities.updateHttpFixtureCatalog(xhr.responseText)
+    } else {
+      PreviewCapabilities.httpCatalogUnavailable("fixture catalog unavailable")
+    }
+    then?.invoke()
+  })
+  xhr.addEventListener("error", { _ ->
+    PreviewCapabilities.httpCatalogUnavailable("fixture catalog request failed")
+    then?.invoke()
+  })
+  xhr.send()
 }
 
 private fun loadRuntimeMetadata() {

@@ -19,6 +19,7 @@ import dev.keliver.capabilities.AuthState
 import dev.keliver.capabilities.HOST_ANALYTICS_CAPABILITY
 import dev.keliver.capabilities.HOST_AUTH_CAPABILITY
 import dev.keliver.capabilities.HOST_FLAGS_CAPABILITY
+import dev.keliver.capabilities.HOST_HTTP_CAPABILITY
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -65,6 +66,7 @@ class PreviewPersonaTest {
       ),
       flags = mapOf("new-profile" to true),
       states = mapOf("HostKyc@1" to "pending"),
+      httpFixtureSet = "profile-pending",
     )
 
     val states = persona.fixtureStates()
@@ -73,6 +75,7 @@ class PreviewPersonaTest {
     assertTrue(states.getValue(HOST_AUTH_CAPABILITY).contains("Ari"))
     assertEquals("new-profile=on", states.getValue(HOST_FLAGS_CAPABILITY))
     assertEquals("recording sink", states.getValue(HOST_ANALYTICS_CAPABILITY))
+    assertEquals("replay set: profile-pending", states.getValue(HOST_HTTP_CAPABILITY))
     assertEquals("pending", states.getValue("HostKyc@1"))
     assertEquals(persona.auth, fixtures.auth.state.value)
     assertTrue(fixtures.flags.isEnabled("new-profile"))

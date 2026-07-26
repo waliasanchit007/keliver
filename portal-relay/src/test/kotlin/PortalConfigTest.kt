@@ -20,6 +20,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PortalConfigTest {
   @Test fun missingConfigKeepsRuntimeUndeclared() {
@@ -74,5 +75,31 @@ class PortalConfigTest {
     }
 
     assertContains(error.message.orEmpty(), "widgetVersion")
+  }
+
+  @Test fun httpFixturesResolveInsideRepository() {
+    val repo = createTempDirectory("portal-config-").toFile()
+    try {
+      val resolved = PortalConfig(httpFixturesDir = "fixtures/http")
+        .resolvedHttpFixturesDir(repo)
+
+      assertTrue(resolved.toPath().startsWith(repo.canonicalFile.toPath()))
+      assertEquals(File(repo, "fixtures/http").canonicalFile, resolved)
+    } finally {
+      repo.deleteRecursively()
+    }
+  }
+
+  @Test fun httpFixturesCannotEscapeRepository() {
+    val repo = createTempDirectory("portal-config-").toFile()
+    try {
+      val error = assertFailsWith<IllegalArgumentException> {
+        PortalConfig(httpFixturesDir = "../outside").resolvedHttpFixturesDir(repo)
+      }
+
+      assertContains(error.message.orEmpty(), "inside the app repository")
+    } finally {
+      repo.deleteRecursively()
+    }
   }
 }

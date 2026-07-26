@@ -24,6 +24,9 @@ import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
 import coil3.ImageLoader
 import dev.keliver.leaks.LeakDetector
+import dev.keliver.http.HostHttpProvider
+import dev.keliver.http.HttpRequest
+import dev.keliver.http.HttpResponse
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portaldevice.HostApi
@@ -40,8 +43,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.modules.EmptySerializersModule
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okio.ByteString.Companion.decodeHex
 
 private const val TAG = "PortalDevice"
@@ -94,7 +101,11 @@ class MainActivity : ComponentActivity() {
     if (prodMode) {
       lifecycleScope.launch(Dispatchers.IO) {
         runCatching {
-          val body = okhttp.newCall(Request.Builder().url("$PORTAL_SERVER/bundles/latest?widgetVersion=1&caps=" + java.net.URLEncoder.encode(dev.keliver.portal.sql.HOST_SQL_CAPABILITY, "UTF-8")).build())
+          val hostCapabilities = listOf(
+            dev.keliver.portal.sql.HOST_SQL_CAPABILITY,
+            dev.keliver.capabilities.HOST_HTTP_CAPABILITY,
+          ).joinToString(",")
+          val body = okhttp.newCall(Request.Builder().url("$PORTAL_SERVER/bundles/latest?widgetVersion=1&caps=" + java.net.URLEncoder.encode(hostCapabilities, "UTF-8")).build())
             .execute().use { it.body?.string() ?: "" }
           val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
           if (path != null) {
@@ -116,6 +127,9 @@ class MainActivity : ComponentActivity() {
         zipline.bind<HostApi>("HostApi", RealHostApi(okhttp))
         // M7: the data-layer capability (declared to /bundles/latest as HostSqlDriver@1).
         zipline.bind<dev.keliver.portal.sql.HostSqlDriver>("HostSqlDriver", AndroidSqlHost(applicationContext))
+        // #16 H1 dogfood: one generic transport, pointed at deterministic
+        // relay replay. Real adopters point the same service at their API base.
+        zipline.bind<HostHttpProvider>("HostHttp", AndroidReplayHttpHost(okhttp))
       }
 
       override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
@@ -156,6 +170,24 @@ class MainActivity : ComponentActivity() {
 private class RealHostApi(private val client: OkHttpClient) : HostApi {
   override suspend fun httpCall(url: String): String = withContext(Dispatchers.IO) {
     client.newCall(Request.Builder().url(url).build()).execute().use { it.body?.string() ?: "{}" }
+  }
+}
+
+private class AndroidReplayHttpHost(
+  private val client: OkHttpClient,
+) : HostHttpProvider {
+  private val json = Json { ignoreUnknownKeys = true }
+
+  override suspend fun execute(request: HttpRequest): HttpResponse = withContext(Dispatchers.IO) {
+    val endpoint =
+      "$PORTAL_SERVER/http-replay?project=default&fixtureSet=field-researcher&session=device-android"
+    val body = json.encodeToString(request)
+      .toRequestBody("application/json".toMediaType())
+    client.newCall(Request.Builder().url(endpoint).post(body).build()).execute().use { response ->
+      val payload = response.body?.string().orEmpty()
+      check(response.isSuccessful) { "HTTP replay ${response.code}: $payload" }
+      json.decodeFromString(payload)
+    }
   }
 }
 

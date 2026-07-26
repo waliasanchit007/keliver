@@ -12,6 +12,7 @@
 // HostSqlDriver) is jsMain device wiring in PublishedEntry.
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 apply plugin: 'org.jetbrains.compose'
 
 kotlin {
@@ -28,11 +29,17 @@ kotlin {
         api projects.portalFlow                // #13: flows/ declarations (flow{} DSL)
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
+        implementation libs.kotlinx.serialization.json
       }
     }
     commonTest {
       dependencies {
         implementation libs.kotlin.test
+      }
+    }
+    wasmJsTest {
+      dependencies {
+        implementation libs.kotlinx.coroutines.test
       }
     }
     jsMain {

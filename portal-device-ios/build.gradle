@@ -48,6 +48,7 @@ kotlin {
         implementation projects.keliverMaterialProtocolHostWeb      // KeliverMaterialHostProtocol
         implementation projects.portalDeviceGuest          // HostApi / PortalPresenter interfaces
         implementation projects.portalSql                  // M7/M9: HostSqlDriver wire (IosSqlHost)
+        implementation projects.keliverHttp                // #16 H1: generic HostHttpProvider
         implementation projects.keliverLeakDetector
         implementation libs.zipline
         implementation libs.zipline.loader
