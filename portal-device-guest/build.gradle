@@ -31,7 +31,7 @@ kotlin {
     jsMain {
       dependencies {
         api projects.keliverTreehouseGuest
-        implementation projects.webSpikeProtocolGuest   // KeliverMaterialProtocolWidgetSystemFactory
+        implementation projects.keliverMaterialProtocolGuestWeb   // KeliverMaterialProtocolWidgetSystemFactory
         implementation projects.keliverMaterialCompose   // StyledBox/StyledText/Button/AsyncImage
         implementation projects.keliverLayoutCompose      // Column/Row/Spacer
         implementation projects.portalCore                // WidgetNode + deserializeTree

@@ -46,7 +46,7 @@ kotlin {
       dependencies {
         api projects.keliverTreehouseGuest
         implementation projects.portalDeviceGuest          // HostApi / PortalPresenter interfaces
-        implementation projects.webSpikeProtocolGuest      // KeliverMaterialProtocolWidgetSystemFactory
+        implementation projects.keliverMaterialProtocolGuestWeb      // KeliverMaterialProtocolWidgetSystemFactory
         implementation projects.portalAppLib               // canonical screens/ + logic/ + PublishedEntry
         implementation projects.portalSql                  // M7: HostSqlDriver wire
         implementation libs.jetbrains.compose.runtime

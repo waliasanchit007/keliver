@@ -169,8 +169,8 @@ include ':keliver-material-compose'
 include ':keliver-material-composeui'
 include ':keliver-material-modifiers'
 include ':web-spike' // spike/keliver-web: Compose-for-Web host rendering keliver widgets in a browser
-include ':web-spike-protocol-guest' // spike/keliver-web
-include ':web-spike-protocol-host' // spike/keliver-web
+include ':keliver-material-protocol-guest-web' // keliver-material protocol adapter, web/wasm target
+include ':keliver-material-protocol-host-web' // keliver-material protocol adapter, web/wasm target
 include ':web-spike-guest-compiler' // spike/keliver-web gate3
 include ':portal-core' // spike/keliver-web portal: WidgetNode model + Kotlin codegen
 include ':portal-relay' // spike/keliver-web portal M2: tree relay (POST/GET /tree)

@@ -13,7 +13,7 @@ kotlin {
       dependencies {
         // Host side: protocol-host + ComposeUi renderers (canvas).
         api project(':keliver-material-composeui')
-        api project(':web-spike-protocol-host')
+        api project(':keliver-material-protocol-host-web')
         api project(':keliver-protocol')
         api project(':keliver-protocol-host')
         api project(':keliver-widget-composeui')
@@ -21,7 +21,7 @@ kotlin {
         api project(':keliver-runtime')
         // Browser-side guest (fat client).
         api project(':keliver-protocol-guest')
-        api project(':web-spike-protocol-guest')
+        api project(':keliver-material-protocol-guest-web')
         api project(':keliver-material-compose')
         api project(':keliver-layout-compose')
         // Portal engine + the generated RenderNode interpreter + document/ops.
