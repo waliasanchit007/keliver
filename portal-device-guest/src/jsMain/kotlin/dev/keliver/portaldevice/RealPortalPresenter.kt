@@ -59,27 +59,35 @@ private class OverlayTreehouseUi(
   @Composable
   override fun Show() {
     var liveVersion by remember { mutableStateOf(-1) }
+    var activeScreen by remember { mutableStateOf("") }
     var treeJson by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
       while (true) {
-        liveVersion = runCatching { hostApi.httpCall(DEVSTATE) }.getOrNull()
-          ?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toIntOrNull() } ?: liveVersion
+        runCatching { hostApi.httpCall(DEVSTATE) }.getOrNull()?.let { state ->
+          liveVersion =
+            Regex("\"version\":(\\d+)").find(state)?.groupValues?.get(1)?.toIntOrNull() ?: liveVersion
+          activeScreen =
+            Regex("\"screen\":\"([^\"]+)\"").find(state)?.groupValues?.get(1) ?: activeScreen
+        }
         treeJson = runCatching { hostApi.httpCall(TREE) }.getOrNull()
         delay(1000)
       }
     }
 
-    val overlaying = liveVersion > COMPILED_VERSION_main
+    val evidenceMode = activeScreen == "layout_evidence"
+    val overlaying = evidenceMode || liveVersion > COMPILED_VERSION_main
     if (overlaying && treeJson != null && treeJson != "{}") {
       // Fast interpreter overlay for the screen being edited.
       Column(width = Constraint.Fill, horizontalAlignment = CrossAxisAlignment.Stretch) {
-        StyledBox(fillWidth = true, colorArgb = 0xFF3A2E00.toInt(), paddingDp = 6) {
-          StyledText(
-            text = "⚡ live overlay — doc v$liveVersion (compiled v$COMPILED_VERSION_main, catching up…)",
-            fontSize = 11,
-            colorArgb = 0xFFFFD770.toInt(),
-          )
+        if (!evidenceMode) {
+          StyledBox(fillWidth = true, colorArgb = 0xFF3A2E00.toInt(), paddingDp = 6) {
+            StyledText(
+              text = "⚡ live overlay — doc v$liveVersion (compiled v$COMPILED_VERSION_main, catching up…)",
+              fontSize = 11,
+              colorArgb = 0xFFFFD770.toInt(),
+            )
+          }
         }
         RenderNode(deserializeTree(treeJson!!))
       }

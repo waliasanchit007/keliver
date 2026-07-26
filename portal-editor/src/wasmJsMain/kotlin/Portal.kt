@@ -97,6 +97,14 @@ internal val SERVER: String = run {
     .find(kotlinx.browser.window.location.search)?.groupValues?.get(1)
   "http://localhost:${port ?: "8077"}"
 }
+private val EVIDENCE_MODE =
+  Regex("(?:[?&])evidence=1(?:&|$)").containsMatchIn(kotlinx.browser.window.location.search)
+private val EVIDENCE_WIDTH =
+  Regex("[?&]width=(\\d+)").find(kotlinx.browser.window.location.search)
+    ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(320, 1440) ?: 402
+private val EVIDENCE_HEIGHT =
+  Regex("[?&]height=(\\d+)").find(kotlinx.browser.window.location.search)
+    ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(480, 1600) ?: 874
 private const val SESSION = "editor"
 
 // ── Playground mode: no portal-server reachable (e.g. the GitHub Pages build).
@@ -482,6 +490,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
 
 internal fun mountPortalChrome() {
   Ui.installStylesheet()
+  if (EVIDENCE_MODE) installEvidenceStylesheet()
   buildTopbar()
   buildLeftPane()
   buildCenter()
@@ -489,6 +498,24 @@ internal fun mountPortalChrome() {
   buildExportOverlay()
   installKeyboard()
   loadWorkspace()
+}
+
+private fun installEvidenceStylesheet() {
+  val style = document.createElement("style")
+  style.textContent = """
+    html, body { width: 100%; height: 100%; background: #fff; }
+    .topbar, .pane, .sel-toggle { display: none !important; }
+    .center {
+      inset: 0 !important; padding: 0 !important; overflow: hidden !important;
+      align-items: flex-start !important; justify-content: flex-start !important;
+      background: #fff !important;
+    }
+    .frame {
+      border-radius: 0 !important; box-shadow: none !important;
+      outline: none !important;
+    }
+  """.trimIndent()
+  document.head?.appendChild(style)
 }
 
 private fun buildTopbar() {
@@ -631,8 +658,8 @@ private fun buildCenter() {
   val center = Ui.el("div", "center")
   val frame = Ui.el("div", "frame")
   val dims = (localStorage.getItem("portal.preset") ?: "390x780").split("x")
-  val w = dims.getOrNull(0)?.toIntOrNull() ?: 390
-  val h = dims.getOrNull(1)?.toIntOrNull() ?: 780
+  val w = if (EVIDENCE_MODE) EVIDENCE_WIDTH else dims.getOrNull(0)?.toIntOrNull() ?: 390
+  val h = if (EVIDENCE_MODE) EVIDENCE_HEIGHT else dims.getOrNull(1)?.toIntOrNull() ?: 780
   frame.setAttribute("style", "width:${w}px; height:${h}px; position:relative;")
   val host = Ui.el("div")
   host.id = PREVIEW_HOST_ID
