@@ -49,8 +49,11 @@ final object /PreviewCapabilities { // /PreviewCapabilities|null[0]
         final fun <get-sqlAvailable>(): kotlin/Boolean // /PreviewCapabilities.sqlAvailable.<get-sqlAvailable>|<get-sqlAvailable>(){}[0]
 
     final fun isFullFidelity(kotlin.collections/List<kotlin/String>): kotlin/Boolean // /PreviewCapabilities.isFullFidelity|isFullFidelity(kotlin.collections.List<kotlin.String>){}[0]
+    final fun isFullFidelity(kotlin.collections/List<kotlin/String>, dev.keliver.portal.render/PreviewPersona?): kotlin/Boolean // /PreviewCapabilities.isFullFidelity|isFullFidelity(kotlin.collections.List<kotlin.String>;dev.keliver.portal.render.PreviewPersona?){}[0]
     final fun report(kotlin.collections/List<kotlin/String>): kotlin.collections/List</CapStatus> // /PreviewCapabilities.report|report(kotlin.collections.List<kotlin.String>){}[0]
+    final fun report(kotlin.collections/List<kotlin/String>, dev.keliver.portal.render/PreviewPersona?): kotlin.collections/List</CapStatus> // /PreviewCapabilities.report|report(kotlin.collections.List<kotlin.String>;dev.keliver.portal.render.PreviewPersona?){}[0]
     final fun statusOf(kotlin/String): /CapStatus // /PreviewCapabilities.statusOf|statusOf(kotlin.String){}[0]
+    final fun statusOf(kotlin/String, dev.keliver.portal.render/PreviewPersona?): /CapStatus // /PreviewCapabilities.statusOf|statusOf(kotlin.String;dev.keliver.portal.render.PreviewPersona?){}[0]
 }
 
 final val /BrowserFetchFetcher$stableprop // /BrowserFetchFetcher$stableprop|#static{}BrowserFetchFetcher$stableprop[0]

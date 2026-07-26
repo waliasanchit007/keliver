@@ -24,10 +24,11 @@ import dev.keliver.portalpublished.logic.FeedPresenter
 object AppLibFlows : AppFlowEntry {
   override val label = "portal-app-lib (Field Notes)"
 
-  private val sqlHost = PreviewSqlHost() // flow-lifetime data capability
-
   override val flows: Map<String, FlowPreview> = mapOf(
     FieldNotesFlow.name to FlowPreview { env ->
+      // Each persona owns a fresh app graph. No SQL rows leak across persona
+      // switches; state still survives screen navigation within one flow.
+      val sqlHost = remember(env.persona?.id) { PreviewSqlHost() }
       // FlowScope: back-stack of (screen, arg). Survives navigation — the
       // editor keys the composition by flow (+start), so a start-override
       // re-inits us. #13 F4: begin on env.flowStart when the editor deep-links.
@@ -35,7 +36,9 @@ object AppLibFlows : AppFlowEntry {
         mutableStateOf(listOf((env.flowStart ?: FieldNotesFlow.start) to null as String?))
       }
       val (screen, arg) = stack.last()
-      val driver = remember { if (PreviewCapabilities.sqlAvailable) PreviewSqlDriver(sqlHost) else null }
+      val driver = remember(sqlHost) {
+        if (PreviewCapabilities.sqlAvailable) PreviewSqlDriver(sqlHost) else null
+      }
 
       val frame: PreviewFrame = when (screen) {
         "detail" -> key("detail:$arg") {

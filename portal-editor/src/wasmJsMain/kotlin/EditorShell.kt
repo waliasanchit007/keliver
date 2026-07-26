@@ -22,6 +22,8 @@ import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFa
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
+import dev.keliver.portal.render.resolvePersona
+import dev.keliver.portal.render.validatePersonaCatalog
 import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.protocol.Change
 import dev.keliver.protocol.ChangesSink
@@ -94,6 +96,11 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
  */
 @OptIn(ExperimentalComposeUiApi::class)
 public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.render.AppFlowEntry? = null) {
+  // #16: validate and register the app entry BEFORE mounting the DOM chrome;
+  // the top bar needs its persona catalog synchronously.
+  entry.validatePersonaCatalog()
+  dev.keliver.portal.render.appPreviewEntry = entry
+  LiveEngine.selectPersona(entry.resolvePersona(null)?.id)
   // #13 F2: register flows BEFORE the chrome mounts (the Flow select reads them).
   dev.keliver.portal.render.appFlowEntry = flows
   mountPortalChrome()
@@ -175,7 +182,6 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       // P3-12: register the per-app preview entry (the app's REAL presenters are
       // compiled in) and host the live presenter INSIDE the guest composition,
       // before RenderNode reads the mocks it feeds.
-      dev.keliver.portal.render.appPreviewEntry = entry
       composition.setContent {
         LivePresenterHost()
         RenderNode(selectionTagged(portalTree.value))

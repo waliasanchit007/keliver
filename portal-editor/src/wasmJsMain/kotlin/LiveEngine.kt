@@ -7,6 +7,7 @@ import dev.keliver.portal.render.PreviewEnv
 import dev.keliver.portal.render.PreviewFrame
 import dev.keliver.portal.render.appFlowEntry
 import dev.keliver.portal.render.appPreviewEntry
+import dev.keliver.portal.render.resolvePersona
 
 /**
  * P3-12: the editor side of live-presenter preview. When [request] names a
@@ -28,6 +29,7 @@ import dev.keliver.portal.render.appPreviewEntry
 internal object LiveEngine {
   internal val request = mutableStateOf<String?>(null) // screen name; null = live off
   internal val flowRequest = mutableStateOf<String?>(null) // #13 F2: flow name; wins over request
+  internal val personaId = mutableStateOf<String?>(null) // #16: app-owned capability/domain start-state
   internal var flowStartOverride: String? = null // #13 F4: node to begin the walkthrough on (null = declared start)
   internal var frame: PreviewFrame? = null
   private var lastKeys: Set<String> = emptySet()
@@ -73,6 +75,22 @@ internal object LiveEngine {
     }
   }
 
+  /**
+   * A persona change is a cold start for the live app graph. The composition
+   * key below disposes presenter/flow state; clearing projected bindings keeps
+   * the old persona from flashing while the new frame is produced.
+   */
+  internal fun selectPersona(id: String?) {
+    if (personaId.value == id) return
+    if (isRunning) {
+      frame = null
+      lastKeys.forEach { PreviewBindings.mocks.remove(it) }
+      lastKeys = emptySet()
+      onValuesApplied()
+    }
+    personaId.value = id
+  }
+
   internal fun stop() {
     frame = null
     lastKeys.forEach { PreviewBindings.mocks.remove(it) }
@@ -93,9 +111,17 @@ internal fun LivePresenterHost() {
   if (flowName != null) {
     val fp = appFlowEntry?.flows?.get(flowName) ?: return
     val startAt = LiveEngine.flowStartOverride
+    val personaId = LiveEngine.personaId.value
+    val persona = appPreviewEntry?.resolvePersona(personaId)
     // Key by flow + start so choosing a new start node RE-inits the FlowScope.
-    key("flow:$flowName:$startAt") {
-      val f = fp.present(PreviewEnv(log = { portalLiveLog(it) }, flowStart = startAt))
+    key("flow:$flowName:$startAt:$personaId") {
+      val f = fp.present(
+        PreviewEnv(
+          log = { portalLiveLog(it) },
+          flowStart = startAt,
+          persona = persona,
+        ),
+      )
       LiveEngine.frame = PreviewFrame(f.values, f.dispatch)
       SideEffect {
         LiveEngine.applyValues(f.values)
@@ -106,8 +132,10 @@ internal fun LivePresenterHost() {
   }
   val screen = LiveEngine.request.value ?: return
   val sp = appPreviewEntry?.screens?.get(screen) ?: return
-  key(screen) {
-    val frame = sp.present(PreviewEnv(log = { portalLiveLog(it) }))
+  val personaId = LiveEngine.personaId.value
+  val persona = appPreviewEntry?.resolvePersona(personaId)
+  key("$screen:$personaId") {
+    val frame = sp.present(PreviewEnv(log = { portalLiveLog(it) }, persona = persona))
     LiveEngine.frame = frame
     SideEffect { LiveEngine.applyValues(frame.values) }
   }

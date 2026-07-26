@@ -7,6 +7,8 @@
  * capability graph, not a separate "mock vs real" mode.
  */
 
+import dev.keliver.portal.render.PreviewPersona
+
 /** A capability's status in the browser preview. */
 public data class CapStatus(val name: String, val real: Boolean, val note: String)
 
@@ -17,14 +19,24 @@ public object PreviewCapabilities {
     // convergence targets: "HostHttp@1" to "browser fetch()", "HostStorage@1" to "localStorage"
   )
 
-  public fun statusOf(cap: String): CapStatus =
-    providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
+  public fun statusOf(cap: String): CapStatus = statusOf(cap, persona = null)
+
+  public fun statusOf(cap: String, persona: PreviewPersona?): CapStatus =
+    persona?.fixtureStates()?.get(cap)?.let {
+      CapStatus(cap, real = true, note = "persona fixture: $it")
+    } ?: providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
       ?: CapStatus(cap, real = false, note = "no preview impl — stubbed (reduced fidelity)")
 
   public fun report(required: List<String>): List<CapStatus> = required.map { statusOf(it) }
 
+  public fun report(required: List<String>, persona: PreviewPersona?): List<CapStatus> =
+    required.map { statusOf(it, persona) }
+
   /** Full fidelity only when EVERY required capability has a preview impl. */
   public fun isFullFidelity(required: List<String>): Boolean = required.all { statusOf(it).real }
+
+  public fun isFullFidelity(required: List<String>, persona: PreviewPersona?): Boolean =
+    required.all { statusOf(it, persona).real }
 
   /** True when the SQL capability can back the real data path in-browser. */
   public val sqlAvailable: Boolean get() = "HostSqlDriver@1" in providers

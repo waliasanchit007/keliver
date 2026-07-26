@@ -24,9 +24,15 @@ kotlin {
         api projects.keliverLayoutCompose      // Column/Row/Spacer
         api 'app.cash.sqldelight:runtime:2.1.0'
         api 'app.cash.sqldelight:async-extensions:2.1.0'
+        api projects.keliverCapabilities       // #16: auth/flags/analytics presenter vocabulary
         api projects.portalFlow                // #13: flows/ declarations (flow{} DSL)
         implementation libs.jetbrains.compose.runtime
         implementation libs.kotlinx.coroutines.core
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
       }
     }
     jsMain {

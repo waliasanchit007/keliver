@@ -1,13 +1,25 @@
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import app.cash.sqldelight.db.SqlDriver
+import dev.keliver.capabilities.AuthState
+import dev.keliver.capabilities.CapabilityFixtures
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.PreviewEnv
 import dev.keliver.portal.render.PreviewFrame
+import dev.keliver.portal.render.PreviewPersona
 import dev.keliver.portal.render.ScreenPreview
 import dev.keliver.portal.render.putRows
 import dev.keliver.portalpublished.logic.FeedPresenter
 import dev.keliver.portalpublished.logic.MainPresenter
-import dev.keliver.portalpublished.screens.SettingsScreenBindings
+import dev.keliver.portalpublished.logic.SettingsPresenter
+
+@Composable
+private fun previewDriver(personaId: String?): SqlDriver? {
+  val host = remember(personaId) { PreviewSqlHost() }
+  return remember(host) {
+    if (PreviewCapabilities.sqlAvailable) PreviewSqlDriver(host) else null
+  }
+}
 
 /**
  * P3-12: the APP-OWNED preview entry for this repo's dogfood (Field Notes).
@@ -19,20 +31,51 @@ import dev.keliver.portalpublished.screens.SettingsScreenBindings
 object AppLibPreview : AppPreviewEntry {
   override val label = "portal-app-lib (Field Notes)"
 
-  // One shared in-memory SQL capability per editor session (like one device DB).
-  private val sqlHost = PreviewSqlHost()
-  private fun driver() = if (PreviewCapabilities.sqlAvailable) PreviewSqlDriver(sqlHost) else null
+  override val personas: List<PreviewPersona> = listOf(
+    PreviewPersona(
+      id = "signed-out",
+      label = "Signed out",
+      description = "No authenticated subject; flags use their conservative defaults.",
+    ),
+    PreviewPersona(
+      id = "field-researcher",
+      label = "Field researcher",
+      description = "Authenticated researcher with the new profile treatment enabled.",
+      auth = AuthState.SignedIn(
+        subject = "researcher-42",
+        displayName = "Maya Chen",
+        attributes = mapOf("plan" to "field"),
+      ),
+      flags = mapOf("new-profile" to true),
+    ),
+    PreviewPersona(
+      id = "kyc-pending",
+      label = "KYC pending",
+      description = "Authenticated account waiting for identity review.",
+      auth = AuthState.SignedIn(
+        subject = "applicant-17",
+        displayName = "Ari Patel",
+        attributes = mapOf("kyc" to "pending"),
+      ),
+      states = mapOf("HostKyc@1" to "pending"),
+    ),
+  )
+
+  override val defaultPersonaId: String = "field-researcher"
 
   override val screens: Map<String, ScreenPreview> = mapOf(
-    "main" to ScreenPreview { _ ->
-      val b = MainPresenter(remember { driver() })
+    "main" to ScreenPreview { env ->
+      val b = MainPresenter(previewDriver(env.persona?.id))
       PreviewFrame(
         values = mapOf("text" to b.text),
         dispatch = { a, _ -> if (a == "buyTapped") b.buyTapped() },
       )
     },
     "feed" to ScreenPreview { env ->
-      val b = FeedPresenter(remember { driver() }, onOpenNote = { env.log("→ open note #$it (nav intent)") })
+      val b = FeedPresenter(
+        previewDriver(env.persona?.id),
+        onOpenNote = { env.log("→ open note #$it (nav intent)") },
+      )
       PreviewFrame(
         values = buildMap {
           put("subtitle", b.subtitle)
@@ -53,13 +96,15 @@ object AppLibPreview : AppPreviewEntry {
       )
     },
     "settings" to ScreenPreview { env ->
-      // Hand presenter (no repo yet) — proves components + live values together.
-      val b = remember {
-        object : SettingsScreenBindings {
-          override val name: String = "Live Presenter"
-          override fun open(value: String) = env.log("→ open $value (nav intent)")
-        }
+      val fixtures = remember(env.persona?.id) {
+        env.persona?.createCapabilityFixtures() ?: CapabilityFixtures()
       }
+      val b = SettingsPresenter(
+        auth = fixtures.auth,
+        flags = fixtures.flags,
+        analytics = fixtures.analytics,
+        onOpen = { env.log("→ open $it (analytics recorded; nav intent)") },
+      )
       PreviewFrame(
         values = mapOf("name" to b.name),
         dispatch = { a, arg -> if (a == "open") b.open(arg ?: "?") },

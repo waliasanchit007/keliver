@@ -31,6 +31,7 @@ import dev.keliver.portal.findNode
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
+import dev.keliver.portal.render.resolvePersona
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
 import kotlinx.browser.document
@@ -255,6 +256,7 @@ private lateinit var fidelityEl: HTMLElement
 private lateinit var inspectorEl: HTMLElement
 private lateinit var liveBtn: HTMLElement
 private var flowSel: HTMLSelectElement? = null // #13 F2: null when the app registered no flows
+private var personaSel: HTMLSelectElement? = null // #16: null when the app registered no personas
 private lateinit var paletteListEl: HTMLElement
 private lateinit var saveDotEl: HTMLElement
 private lateinit var saveTextEl: HTMLElement
@@ -526,6 +528,39 @@ private fun buildTopbar() {
   savePill.appendChild(saveTextEl)
   bar.appendChild(savePill)
 
+  // #16: app-owned named capability/domain start-state. A live selection
+  // change rekeys the presenter/flow composition; mock mode remains untouched.
+  val entry = dev.keliver.portal.render.appPreviewEntry
+  val personas = entry?.personas.orEmpty()
+  if (entry != null && personas.isNotEmpty()) {
+    val sel = Ui.select()
+    personas.forEach { persona ->
+      val option = document.createElement("option") as HTMLOptionElement
+      option.value = persona.id
+      option.textContent = "Persona: ${persona.label}"
+      sel.appendChild(option)
+    }
+    val stored = localStorage.getItem("portal.persona")
+    val selected = entry.resolvePersona(stored)
+    sel.value = selected?.id ?: personas.first().id
+    LiveEngine.selectPersona(sel.value)
+    sel.setAttribute("style", "max-width:180px;")
+    sel.setAttribute("title", selected?.description ?: "Named preview start-state")
+    sel.addEventListener("change", { _ ->
+      val persona = entry.resolvePersona(sel.value)
+      sel.value = persona?.id ?: entry.defaultPersonaId.orEmpty()
+      localStorage.setItem("portal.persona", sel.value)
+      sel.setAttribute("title", persona?.description ?: "Named preview start-state")
+      LiveEngine.selectPersona(persona?.id)
+      if (LiveEngine.isRunning) {
+        renderFidelity(liveRequiredCapabilities, livePresenterLabel())
+        Snapshot.sendApplyNotifications()
+      }
+    })
+    bar.appendChild(sel)
+    personaSel = sel
+  }
+
   // #13 F2: pick a flow to run Live as a WALKTHROUGH (screen-swap-on-nav).
   // Only shown when the per-app build registered flows; "—" = single-screen live.
   val flowNames = dev.keliver.portal.render.appFlowEntry?.flows?.keys.orEmpty()
@@ -734,9 +769,24 @@ private fun toggleLive() {
   if (LiveEngine.request.value != null || liveBtn.textContent == "■ Stop") disableLive() else enableLive()
 }
 
+private var liveRequiredCapabilities: List<String> = emptyList()
+
+private fun livePresenterLabel(): String? {
+  val flowName = flowSel?.value?.takeIf { it != "—" }
+  val flowEntry = dev.keliver.portal.render.appFlowEntry
+  val entry = dev.keliver.portal.render.appPreviewEntry
+  return when {
+    flowName != null && flowEntry?.flows?.get(flowName) != null ->
+      "${flowEntry.label} · flow '$flowName'"
+    entry?.screens?.get(currentScreen) != null -> entry.label
+    else -> null
+  }
+}
+
 private fun enableLive() {
   serverGet("/capabilities?project=$currentProject") { txt ->
     val required = parseNames(txt)
+    liveRequiredCapabilities = required
     // #13 F2: a selected flow wins — Live becomes a WALKTHROUGH: the app's
     // FlowScope owns which screen shows; the editor follows its navigation.
     val flowName = flowSel?.value?.takeIf { it != "—" }
@@ -746,14 +796,7 @@ private fun enableLive() {
     val entry = dev.keliver.portal.render.appPreviewEntry
     val flowRegistered = flowName != null && flowEntry?.flows?.get(flowName) != null
     val registered = entry?.screens?.get(currentScreen) != null
-    renderFidelity(
-      required,
-      livePresenter = when {
-        flowRegistered -> "${flowEntry?.label} · flow '$flowName'"
-        registered -> entry?.label
-        else -> null
-      },
-    )
+    renderFidelity(required, livePresenter = livePresenterLabel())
     LiveEngine.onError = { msg ->
       val row = Ui.el("div", "", "⚠ $msg")
       row.setAttribute("style", "color:var(--bad, #e57373);")
@@ -810,11 +853,24 @@ private fun renderFidelity(required: List<String>, livePresenter: String? = null
   val pres = Ui.el("div", "", if (livePresenter != null) "● real presenter — $livePresenter" else "○ no presenter registered for '$currentScreen' — mock tier")
   pres.setAttribute("style", "color:" + (if (livePresenter != null) "var(--good)" else "var(--warn, #e0a030)") + ";")
   fidelityEl.appendChild(pres)
+  val persona = dev.keliver.portal.render.appPreviewEntry?.resolvePersona(LiveEngine.personaId.value)
+  if (persona != null) {
+    val row = Ui.el("div", "", "👤 ${persona.label}")
+    row.setAttribute("style", "font-weight:600; margin-top:5px;")
+    row.setAttribute("title", persona.description)
+    fidelityEl.appendChild(row)
+    if (persona.description.isNotBlank()) {
+      fidelityEl.appendChild(Ui.el("div", "muted", persona.description))
+    }
+    persona.fixtureStates().forEach { (name, state) ->
+      fidelityEl.appendChild(Ui.el("div", "muted", "  $name — $state"))
+    }
+  }
   if (required.isEmpty()) {
     fidelityEl.appendChild(Ui.el("div", "", "✅ Full fidelity — no host capabilities required"))
     return
   }
-  val report = PreviewCapabilities.report(required)
+  val report = PreviewCapabilities.report(required, persona)
   val full = report.all { it.real }
   val head = Ui.el("div", "", if (full) "✅ Full fidelity" else "⚠ Reduced fidelity")
   head.setAttribute("style", "color:" + (if (full) "var(--good)" else "var(--warn, #e0a030)") + "; font-weight:600; margin-bottom:4px;")
