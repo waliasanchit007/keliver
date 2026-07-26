@@ -175,7 +175,6 @@ capture_web() {
   mkdir -p "$profile"
   "$CHROME" \
     --headless=new \
-    --disable-gpu \
     --hide-scrollbars \
     --no-first-run \
     --force-device-scale-factor=1 \

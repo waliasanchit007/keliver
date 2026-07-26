@@ -33,7 +33,7 @@ fun LayoutEvidenceScreen() {
   ) {
     Column(
       width = Constraint.Fill,
-      horizontalAlignment = CrossAxisAlignment.Stretch,
+      horizontalAlignment = CrossAxisAlignment.Start,
     ) {
       StyledText(
         text = "K3 · LAYOUT EVIDENCE · V1",
