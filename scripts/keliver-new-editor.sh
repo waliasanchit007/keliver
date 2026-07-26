@@ -1,9 +1,9 @@
 #!/bin/bash
 # keliver new-editor — stamp a consumer app's OWN portal editor (item ② recipe):
-# a STANDALONE gradle build under <app>/editor/ that composite-builds keliver's
-# :portal-editor shell and compiles the app's real presenters into the preview
-# wasm (no dynamic linking on Kotlin/Wasm). Modeled 1:1 on the verified
-# stashfin-sdui/editor.
+# a STANDALONE gradle build under <app>/editor/ that consumes keliver's
+# PUBLISHED portal-editor shell and compiles the app's real presenters into the
+# preview wasm (no dynamic linking on Kotlin/Wasm). No keliver source checkout
+# and no composite build. Modeled 1:1 on the verified stashfin-sdui/editor.
 #
 # Usage (from the APP repo root):
 #   /path/to/keliver/scripts/keliver-new-editor.sh <AppName> [logicSrcDir]
@@ -12,9 +12,10 @@
 #                   compiled straight into the editor via kotlin.srcDir — e.g.
 #                   guest/src/jsMain/kotlin/com/acme/guest/logic
 #
-# Requires: the keliver checkout this script lives in, on the SAME
-# Kotlin/Compose/Gradle versions as the app (2.2.0 / 1.8.2 / 9.0.0 verified).
+# Requires: the app on the SAME Kotlin/Compose/Gradle versions as the consumed
+# keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.1-SNAPSHOT}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [logicSrcDir]}"
@@ -28,8 +29,9 @@ mkdir -p "$APP/editor/src/wasmJsMain/kotlin" "$APP/editor/src/wasmJsMain/resourc
 
 cat > "$APP/editor/settings.gradle.kts" <<EOF
 /*
- * $NAME's portal editor — a STANDALONE build consuming keliver's :portal-editor
- * shell via composite build. Keep Kotlin/Compose/Gradle aligned with keliver.
+ * $NAME's portal editor — a STANDALONE build consuming keliver's PUBLISHED
+ * portal-editor shell. No keliver checkout, no composite build. Keep
+ * Kotlin/Compose/Gradle aligned with the keliver artifacts you consume.
  */
 rootProject.name = "$LOWER-editor"
 
@@ -44,17 +46,13 @@ pluginManagement {
 
 dependencyResolutionManagement {
   repositories {
+    mavenLocal() // pre-release: a locally published dev.keliver snapshot
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google { mavenContent { includeGroupAndSubgroups("androidx"); includeGroupAndSubgroups("com.android"); includeGroupAndSubgroups("com.google") } }
     mavenCentral()
   }
 }
 
-includeBuild("$KELIVER") {
-  dependencySubstitution {
-    substitute(module("dev.keliver:portal-editor")).using(project(":portal-editor"))
-  }
-}
 EOF
 
 cat > "$APP/editor/build.gradle.kts" <<EOF
@@ -79,7 +77,7 @@ kotlin {
     val wasmJsMain by getting {
 $( [ -n "$LOGIC_DIR" ] && printf '      // The app'\''s REAL pure-Kotlin presenters/contracts — one source, no copy.\n      kotlin.srcDir("../%s")\n' "$LOGIC_DIR" )
       dependencies {
-        implementation("dev.keliver:portal-editor:0.3.1-SNAPSHOT") // composite-substituted
+        implementation("dev.keliver:portal-editor:$KELIVER_VERSION")
         implementation(compose.runtime)
       }
     }
@@ -135,6 +133,13 @@ cat > "$APP/editor/src/wasmJsMain/resources/index.html" <<EOF
   <script src="$LOWER-editor.js"></script>
 </body>
 </html>
+EOF
+
+cat > "$APP/editor/gradle.properties" <<EOF
+# The production wasm compile (whole Compose/skiko graph) OOMs with
+# "GC overhead limit exceeded" on the JVM default heap.
+org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8
+org.gradle.caching=true
 EOF
 
 printf 'build/\n.gradle/\n' > "$APP/editor/.gitignore"

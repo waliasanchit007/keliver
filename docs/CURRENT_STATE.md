@@ -271,3 +271,26 @@ editor/flow distribution productization: publish a coherent supported artifact
 graph so the already-proven consumer editor no longer depends on a Keliver
 checkout. Personas/capability fixtures remain the next large application-depth
 arc after that adoption-friction removal.
+
+
+## Post-snapshot: editor distribution productization — 2026-07-24
+
+Consumer-owned editors no longer require a Keliver source checkout or composite
+build. Seven modules became publishable artifacts (portal-core, portal-document,
+portal-render, portal-flow, portal-editor, and the renamed
+keliver-material-protocol-host-web / -guest-web), each with explicit API mode, a
+committed API dump, and passing binary-compatibility checks.
+
+`portal-editor` exposes a deliberately small supported surface: `runPortalEditor`
+plus the capability-preview types a per-app entry builds against
+(`PreviewCapabilities`, `PreviewSqlHost`, `PreviewSqlDriver`, `CapStatus`). All
+editor chrome is internal.
+
+Verified by removing the composite build from `stashfin-sdui/editor`: it
+compiles, produces a full wasm distribution, and runs in a browser against
+locally published `dev.keliver:*:0.3.1-SNAPSHOT` artifacts, rendering the real
+ProfilePresenter and the slotted SectionCard component.
+
+Publication to Maven Central is intentionally NOT performed here; it is
+irreversible and remains a user-triggered release step. The checklist lives in
+`docs/superpowers/specs/2026-07-24-editor-distribution-design.md`.

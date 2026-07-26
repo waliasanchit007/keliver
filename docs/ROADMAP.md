@@ -219,11 +219,16 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    2026-07-23; evidence and the pre-change baseline are in `CURRENT_STATE.md`.
 2. ✅ **Project Components v2 — one required content slot** — complete and tri-platform
    verified 2026-07-23; evidence is in `CURRENT_STATE.md` and item 11c.
-3. **Editor/flow distribution productization (next).** Publish a coherent supported
-   artifact graph so consumer-owned editors no longer require a Keliver source
-   checkout/composite build. This is larger than publishing `portal-editor`
-   alone because its portal and web-protocol dependencies are not independently
-   published today.
+3. ✅ **Editor/flow distribution productization** — DONE + LOCALLY PROVEN
+   2026-07-24 (f1a85a36a, b8697b7b6, stashfin d8ebe46; design + release
+   checklist in docs/superpowers/specs/2026-07-24-editor-distribution-design.md).
+   The 7 artifacts a consumer editor needs (portal-core/-document/-render/-flow/
+   -editor + the renamed keliver-material-protocol-{host,guest}-web) are now
+   publishable: explicit API, committed apiDump, apiCheck green. PROOF: stashfin
+   DELETED its composite build and its editor compiled, built a wasm dist, and
+   ran in-browser against dev.keliver:*:0.3.1-SNAPSHOT from mavenLocal with the
+   real presenter + slotted SectionCard. The Maven Central push is IRREVERSIBLE
+   and remains user-triggered — checklist in the design doc.
 4. **Named personas and capability fixtures**, then **recorded HTTP replay** as
    a separate design: auth/flags/domain state can use `PreviewEnv.flowStart` as
    the start-state seam, while HTTP replay additionally needs matching,
