@@ -150,10 +150,55 @@ server. `GET /http-fixtures` exposes catalog metadata; `POST /http-replay` is
 the preview/device replay transport. Stopping Live or changing persona creates a
 fresh replay session.
 
-This is deterministic replay, not recording. The relay has no outbound HTTP
-fallback. Secure capture is a separate H2 milestone with explicit record mode,
-allowlisted upstreams, pre-persistence redaction, SSRF defenses, and human
-review.
+Replay never has an outbound fallback. Secure capture is a separate, explicit
+local workflow and is disabled by default. Add reviewed upstream IDs to
+`keliver.portal.json`:
+
+```json
+"httpRecording": {
+  "allowedOrigins": ["http://localhost:8096"],
+  "fixtureTtlDays": 30,
+  "additionalSensitiveKeys": ["customer_id"],
+  "upstreams": {
+    "profile-api": {
+      "baseUrl": "https://api.example.com/v1/",
+      "allowedMethods": ["GET", "POST"],
+      "forwardHeaders": ["accept", "content-type"],
+      "authEnv": "PROFILE_API_TOKEN",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    }
+  }
+}
+```
+
+Start the relay with both the explicit gate and any configured auth:
+
+```bash
+PROFILE_API_TOKEN='…' PORTAL_HTTP_RECORD=1 scripts/keliver-dev.sh
+```
+
+Then use the local CLI. `start` returns an opaque session ID; `record` accepts a
+JSON-encoded `HostHttpRequest`; `close` returns the candidate path, entry count,
+revision, expiry, and whether a reviewed fixture already exists.
+
+```bash
+scripts/keliver-record-http.sh start profile-api field-researcher
+scripts/keliver-record-http.sh record <session-id> /tmp/profile-request.json
+scripts/keliver-record-http.sh close <session-id>
+```
+
+The token is read from the portal store and is neither printed nor passed in
+the CLI process arguments. Recording accepts only loopback callers, exact
+configured browser Origins, server-owned HTTPS targets, and public DNS results.
+It disables redirects/proxies/cookies/retries, injects auth only inside the
+relay, bounds bodies and headers, and redacts before returning, hashing,
+auditing, or writing.
+
+The result stays under `<httpFixturesDir>/.candidates/`. Inspect it carefully,
+then copy it to `<httpFixturesDir>/<fixture-set>.json` as an ordinary reviewed
+git change. No recording endpoint promotes a candidate, and the default relay
+continues to have no outbound behavior.
 
 ## Ship it (Publish)
 
@@ -172,8 +217,9 @@ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.Mai
 `keliver.portal.json` at the repo root tells the portal-server everything about
 the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
-`previewDist`, `previewServeDir`, `httpFixturesDir`, and `appRuntime`. Path
-fields default relative to `screensDir`, so the file can stay small.
+`previewDist`, `previewServeDir`, `httpFixturesDir`, optional `httpRecording`,
+and `appRuntime`. Path fields default relative to `screensDir`, so the file can
+stay small.
 `PORTAL_REPO` can point one relay at an external app checkout.
 
 Declare the app/device runtime target explicitly; the editor cannot infer it

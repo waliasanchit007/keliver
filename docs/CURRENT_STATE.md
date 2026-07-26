@@ -441,9 +441,53 @@ Mechanical and runtime evidence:
   installed on iPhone 16 Pro, and rendered the same guest path; and
 - implementation is commit `e472c9ffd`, following design commit `0ba6d0b27`.
 
-H2 remains deliberately open. The relay still has no outbound HTTP client.
-Secure recording must separately deliver allowlisted upstreams, explicit record
-mode and per-run authorization, environment-only auth injection, redaction
-before hashing/logging/persistence, SSRF and redirect defenses, atomic candidate
-files with human review, and body-free audit output. K3 scripted visual evidence
-remains the next independent consistency milestone.
+At the H1 checkpoint, secure recording remained deliberately open. It is now
+delivered by the following H2 checkpoint. K3 scripted visual evidence remains
+the next independent consistency milestone.
+
+## Post-snapshot: secure HTTP recording (H2) — 2026-07-27
+
+Roadmap item #16 is now complete. Recording is inert by default and becomes
+available only when both `PORTAL_HTTP_RECORD=1` and a non-empty reviewed
+`httpRecording` config are present. The relay then rotates an owner-readable
+per-process token; only loopback callers with that token and an allowed Origin
+can open or use an in-memory recording session.
+
+Callers select a server-owned upstream ID rather than supplying a URL. Each
+configured target is HTTPS with a DNS hostname. The relay resolves every
+address, rejects the whole result if any address is non-global, and gives the
+validated immutable list to OkHttp while retaining normal TLS hostname
+verification. Redirects, proxies, cookies, authenticators, and retries are
+disabled. Caller auth/cookies are never forwarded; optional upstream auth comes
+only from the configured environment variable.
+
+Raw bounded text is redacted in memory before it can be returned, hashed,
+logged, or written. Sensitive query and recursive JSON values become
+`"<redacted>"`; sensitive and hop-by-hop headers are dropped. Replay normalizes
+the corresponding runtime values, so reviewed fixtures match real
+secret-bearing requests without storing the secret. Audit lines contain only
+safe identifiers, a path hash, outcome/status, byte counts, and a duration
+bucket.
+
+Every successful exchange atomically rewrites a privacy-linted file under
+`<httpFixturesDir>/.candidates/`. Neither the relay endpoints nor the CLI can
+promote or overwrite the reviewed `<fixtureSet>.json`; a developer must inspect
+and copy the candidate through a normal git change. Replay misses still never
+contact an upstream.
+
+Evidence:
+
+- focused relay tests cover disabled/stale-token behavior, token rotation,
+  loopback and Origin checks, startup auth failure, unsafe paths and addresses,
+  DNS fail-closed behavior, injected auth isolation, recursive redaction,
+  body-free audit, candidate validation, manual promotion, and replay with
+  different runtime secrets;
+- a hermetic injected transport completed record → candidate → explicit copy →
+  deterministic replay without making a network call;
+- a live relay on a temporary repository returned 201 for the authorized CLI,
+  a clean repo-relative candidate path, 404 for wrong token and Origin, 204 for
+  an allowed preflight, and 409 for a controlled empty close;
+- the H1/editor/app browser, web compilation, Android APK, and iOS simulator
+  framework regression matrix passed (`881 actionable tasks`);
+- design is commit `c1a492c83`; implementation is `0b45f7d0e`, with live-found
+  canonical-path and complete-audit fixes in `bb7d40f1d` and `736951450`.

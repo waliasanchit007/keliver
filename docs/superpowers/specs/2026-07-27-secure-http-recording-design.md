@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-27
 **Roadmap:** item #16, final recording boundary
-**Status:** implementation-ready
+**Status:** delivered
 **Predecessor:** `2026-07-27-recorded-http-replay-design.md`
 
 ## 0. Decision
@@ -94,7 +94,7 @@ endpoints never serialize them.
 
 ## 3. Startup gate and token
 
-`HttpRecordingService` is created only when:
+`HttpRecordingService` becomes active only when:
 
 ```text
 PORTAL_HTTP_RECORD=1
@@ -257,13 +257,15 @@ persisting or comparing the token itself.
 
 The recorder never edits `<httpFixturesDir>/<fixtureSet>.json`.
 
-The close response and CLI print:
+The close response, which the CLI forwards as JSON, contains:
 
 - candidate repository-relative path;
-- entry count, revision, recorded/expiry times;
-- method plus path hash for each exchange;
-- status and byte counts; and
-- a command that runs the existing privacy lint and a normal text diff.
+- entry count and revision;
+- expiry time; and
+- whether a reviewed fixture with that ID already exists.
+
+Per-exchange method, path hash, outcome/status, byte counts, and duration bucket
+stay in the body-free audit rather than the close response.
 
 Promotion is a deliberate filesystem/git action by the developer after review.
 There is no browser endpoint for it in H2 v1.
@@ -307,9 +309,9 @@ Stable categories:
 - upstream/network failure: 502; and
 - privacy-lint or atomic-write failure: 422.
 
-Responses contain category, upstream ID where safe, method, and reason code.
-They never contain target URL, resolved address, header, query, body, raw
-exception message, or environment name.
+Responses contain only a stable error category and reason code. They never
+contain target URL, resolved address, header, query, body, raw exception
+message, environment name, or injected auth.
 
 ## 12. Implementation slices
 
@@ -384,3 +386,24 @@ remains replay-only and has no outbound behavior.
 - [JDK 17 `InetAddress`
   API](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/InetAddress.html)
   — address classification and system A/AAAA resolution primitives.
+
+## 16. Delivery evidence
+
+Delivered on 2026-07-27:
+
+- design: `c1a492c83`;
+- implementation: `0b45f7d0e`;
+- canonical candidate-path fix found by the live CLI gate: `bb7d40f1d`;
+- audit duration/status completion: `736951450`;
+- hermetic record → candidate → manual copy → replay test with an injected
+  transport and resolver;
+- live loopback endpoint gate: authorized create 201, wrong token/origin 404,
+  allowed preflight 204, empty close 409, and no outbound request;
+- focused relay suite green after the final audit change; and
+- H1/editor/app browser, web compilation, Android APK, and iOS simulator
+  framework regression matrix green (`881 actionable tasks`).
+
+The shipped CLI prints the close descriptor as JSON rather than constructing a
+promotion command. This keeps promotion explicit and avoids guessing a reviewed
+fixture destination. The developer inspects the repository-relative candidate
+and copies it through a normal git change.
