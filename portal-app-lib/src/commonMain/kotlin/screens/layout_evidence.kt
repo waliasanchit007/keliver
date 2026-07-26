@@ -31,7 +31,10 @@ fun LayoutEvidenceScreen() {
     paddingDp = 16,
     colorArgb = -460036,
   ) {
-    Column {
+    Column(
+      width = Constraint.Fill,
+      horizontalAlignment = CrossAxisAlignment.Stretch,
+    ) {
       StyledText(
         text = "K3 · LAYOUT EVIDENCE · V1",
         fontSize = 22,

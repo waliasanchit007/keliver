@@ -97,14 +97,16 @@ internal val SERVER: String = run {
     .find(kotlinx.browser.window.location.search)?.groupValues?.get(1)
   "http://localhost:${port ?: "8077"}"
 }
-private val EVIDENCE_MODE =
-  Regex("(?:[?&])evidence=1(?:&|$)").containsMatchIn(kotlinx.browser.window.location.search)
-private val EVIDENCE_WIDTH =
-  Regex("[?&]width=(\\d+)").find(kotlinx.browser.window.location.search)
-    ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(320, 1440) ?: 402
-private val EVIDENCE_HEIGHT =
-  Regex("[?&]height=(\\d+)").find(kotlinx.browser.window.location.search)
-    ?.groupValues?.get(1)?.toIntOrNull()?.coerceIn(480, 1600) ?: 874
+private fun queryParam(name: String): String? =
+  kotlinx.browser.window.location.search.removePrefix("?").split('&')
+    .firstOrNull { it.substringBefore('=') == name }
+    ?.substringAfter('=', "")
+
+private fun evidenceMode() = queryParam("evidence") == "1"
+private fun evidenceWidth() =
+  queryParam("width")?.toIntOrNull()?.coerceIn(320, 1440) ?: 402
+private fun evidenceHeight() =
+  queryParam("height")?.toIntOrNull()?.coerceIn(480, 1600) ?: 874
 private const val SESSION = "editor"
 
 // ── Playground mode: no portal-server reachable (e.g. the GitHub Pages build).
@@ -490,7 +492,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
 
 internal fun mountPortalChrome() {
   Ui.installStylesheet()
-  if (EVIDENCE_MODE) installEvidenceStylesheet()
+  if (evidenceMode()) installEvidenceStylesheet()
   buildTopbar()
   buildLeftPane()
   buildCenter()
@@ -658,8 +660,8 @@ private fun buildCenter() {
   val center = Ui.el("div", "center")
   val frame = Ui.el("div", "frame")
   val dims = (localStorage.getItem("portal.preset") ?: "390x780").split("x")
-  val w = if (EVIDENCE_MODE) EVIDENCE_WIDTH else dims.getOrNull(0)?.toIntOrNull() ?: 390
-  val h = if (EVIDENCE_MODE) EVIDENCE_HEIGHT else dims.getOrNull(1)?.toIntOrNull() ?: 780
+  val w = if (evidenceMode()) evidenceWidth() else dims.getOrNull(0)?.toIntOrNull() ?: 390
+  val h = if (evidenceMode()) evidenceHeight() else dims.getOrNull(1)?.toIntOrNull() ?: 780
   frame.setAttribute("style", "width:${w}px; height:${h}px; position:relative;")
   val host = Ui.el("div")
   host.id = PREVIEW_HOST_ID
