@@ -27,5 +27,15 @@ kotlin {
         implementation libs.kotlin.test
       }
     }
+    // K1 parity gate lives on wasmJs ONLY: that is the target the editor
+    // actually runs, and kotlinx-coroutines-test currently crashes the
+    // Kotlin/JS IR backend (ExternalPropertyOverridingLowering) when pulled
+    // into the js test compilation.
+    wasmJsTest {
+      dependencies {
+        implementation projects.keliverMaterialTesting
+        implementation libs.kotlinx.coroutines.test
+      }
+    }
   }
 }
