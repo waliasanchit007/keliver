@@ -339,7 +339,7 @@ capture_android() {
         fail "Android guest reported a post-load failure (see build/k3-android-log.txt)"
       fi
       resumed_activity="$("$ADB" -s "$android_serial" shell dumpsys activity activities |
-        grep -m1 "mResumedActivity" || true)"
+        grep -m1 "topResumedActivity" || true)"
       [[ "$resumed_activity" == *"dev.keliver.portaldevice"* ]] ||
         fail "Android evidence app is not the resumed activity: $resumed_activity"
       "$ADB" -s "$android_serial" exec-out screencap -p >"$ANDROID_PNG"
