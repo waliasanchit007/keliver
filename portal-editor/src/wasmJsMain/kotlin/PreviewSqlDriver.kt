@@ -11,7 +11,7 @@ import app.cash.sqldelight.db.SqlPreparedStatement
  * REAL stores/presenters run their REAL query strings unchanged in the editor.
  * Only the executor differs from the device (HostSqlDriver over Zipline).
  */
-class PreviewSqlDriver(private val host: PreviewSqlHost) : SqlDriver {
+public class PreviewSqlDriver(private val host: PreviewSqlHost) : SqlDriver {
 
   private class Binder : SqlPreparedStatement {
     val args = mutableListOf<String?>()

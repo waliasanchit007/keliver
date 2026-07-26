@@ -14,4 +14,4 @@ import dev.keliver.portal.WidgetNode
  *
  * Devices never invoke this — they render the compiled composable directly.
  */
-var componentPreview: (@Composable (WidgetNode) -> Unit)? = null
+public var componentPreview: (@Composable (WidgetNode) -> Unit)? = null

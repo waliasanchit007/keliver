@@ -15,26 +15,26 @@ import androidx.compose.runtime.setValue
  * flow state; when [FlowFrame.screen] changes, the editor follows by loading
  * that screen's tree — navigation in the preview, the same UDF a device runs.
  */
-fun interface FlowPreview {
+public fun interface FlowPreview {
   @Composable
-  fun present(env: PreviewEnv): FlowFrame
+  public fun present(env: PreviewEnv): FlowFrame
 }
 
-class FlowFrame(
+public class FlowFrame(
   /** The screen this flow is currently showing (a portal doc name, e.g. "feed"). */
-  val screen: String,
-  val values: Map<String, String>,
-  val dispatch: (action: String, arg: String?) -> Unit,
+  public val screen: String,
+  public val values: Map<String, String>,
+  public val dispatch: (action: String, arg: String?) -> Unit,
 )
 
-interface AppFlowEntry {
+public interface AppFlowEntry {
   /** flow name (as declared in flows/, e.g. "FieldNotes") -> its preview wiring. */
-  val flows: Map<String, FlowPreview>
-  val label: String get() = "app flow entry"
+  public val flows: Map<String, FlowPreview>
+  public val label: String get() = "app flow entry"
 }
 
 /** Set by the per-app editor build's main(); null = no flow preview available. */
-var appFlowEntry: AppFlowEntry? = null
+public var appFlowEntry: AppFlowEntry? = null
 
 /**
  * The back-stack every FlowScope needs (design §3.2): [current] is the top,
@@ -42,15 +42,15 @@ var appFlowEntry: AppFlowEntry? = null
  * belongs beside this in the app's FlowPreview — it survives screen switches
  * because the editor keys the composition by flow.
  */
-class FlowNav<T>(
-  val current: T,
-  val canGoBack: Boolean,
-  val navigate: (T) -> Unit,
-  val back: () -> Unit,
+public class FlowNav<T>(
+  public val current: T,
+  public val canGoBack: Boolean,
+  public val navigate: (T) -> Unit,
+  public val back: () -> Unit,
 )
 
 @Composable
-fun <T> rememberFlowNav(start: T): FlowNav<T> {
+public fun <T> rememberFlowNav(start: T): FlowNav<T> {
   var stack by remember { mutableStateOf(listOf(start)) }
   return FlowNav(
     current = stack.last(),

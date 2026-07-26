@@ -93,7 +93,7 @@ private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
  * builds a thin wasmJs executable whose `main()` calls `runPortalEditor(itsEntry)`.
  */
 @OptIn(ExperimentalComposeUiApi::class)
-fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.render.AppFlowEntry? = null) {
+public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.render.AppFlowEntry? = null) {
   // #13 F2: register flows BEFORE the chrome mounts (the Flow select reads them).
   dev.keliver.portal.render.appFlowEntry = flows
   mountPortalChrome()

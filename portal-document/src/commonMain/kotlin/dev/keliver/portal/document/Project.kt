@@ -11,7 +11,7 @@ import dev.keliver.portal.WidgetNode
  * values, modifiers ride as "mod.<Name>.<prop>" keys, RawCode becomes the
  * "RawCode" placeholder type.
  */
-fun UiDocument.toWidgetTree(
+public fun UiDocument.toWidgetTree(
   mocks: Map<String, Any?> = emptyMap(),
   /** true = WidgetNode.id carries the node HANDLE (editor mode: panels key ops off ids). */
   handleIds: Boolean = false,
@@ -42,7 +42,7 @@ private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>, handleIds: Boolean)
 }
 
 /** Editor→server direction: lift a V1 node (palette sample / duplicate) into a DocNode for InsertNode. */
-fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
+public fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
   handle = Handle(0), // server allocates
   type = type,
   props = props.filterKeys { !it.startsWith("mod.") }.mapValues { (_, v) ->

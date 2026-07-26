@@ -6,12 +6,12 @@ import kotlin.jvm.JvmInline
 /** Stable-for-the-document's-lifetime node handle. All ops target handles. */
 @Serializable
 @JvmInline
-value class Handle(val v: Long)
+public value class Handle(public val v: Long)
 
 @Serializable
-sealed interface PropValue {
+public sealed interface PropValue {
   @Serializable
-  data class Lit(
+  public data class Lit(
     val tag: String,
     val s: String? = null,
     val i: Int? = null,
@@ -23,7 +23,7 @@ sealed interface PropValue {
   ) : PropValue
 
   @Serializable
-  data class Bind(val field: String) : PropValue
+  public data class Bind(val field: String) : PropValue
 
   /**
    * An event wired to a named handler. [arg] is what the emitted lambda passes:
@@ -31,11 +31,11 @@ sealed interface PropValue {
    * `"item.field"` -> item-scoped data `{ b.name(item.field) }` (P2).
    */
   @Serializable
-  data class Action(val name: String, val arg: String? = null) : PropValue
+  public data class Action(val name: String, val arg: String? = null) : PropValue
 }
 
 /** Convenience constructor mirroring the V1 tree's prop kinds. */
-fun lit(v: Any?): PropValue.Lit = when (v) {
+public fun lit(v: Any?): PropValue.Lit = when (v) {
   is String -> PropValue.Lit("s", s = v)
   is Int -> PropValue.Lit("i", i = v)
   is Double -> PropValue.Lit("d", d = v)
@@ -48,7 +48,7 @@ fun lit(v: Any?): PropValue.Lit = when (v) {
   else -> PropValue.Lit("s", s = v?.toString() ?: "")
 }
 
-fun PropValue.Lit.toAny(): Any? = when (tag) {
+public fun PropValue.Lit.toAny(): Any? = when (tag) {
   "s" -> s
   "i" -> i
   "d" -> d
@@ -60,11 +60,11 @@ fun PropValue.Lit.toAny(): Any? = when (tag) {
 }
 
 @Serializable
-sealed interface DocNode {
-  val handle: Handle
+public sealed interface DocNode {
+  public val handle: Handle
 
   @Serializable
-  data class Widget(
+  public data class Widget(
     override val handle: Handle,
     val type: String,                                   // catalog simple name
     val props: Map<String, PropValue> = emptyMap(),
@@ -74,7 +74,7 @@ sealed interface DocNode {
   ) : DocNode
 
   @Serializable
-  data class RawCode(
+  public data class RawCode(
     override val handle: Handle,
     val text: String,                                   // verbatim source — never lost
     val kindHint: String? = null,                       // display-only heuristic
@@ -82,7 +82,7 @@ sealed interface DocNode {
 }
 
 @Serializable
-data class Contract(
+public data class Contract(
   val fields: Map<String, String> = emptyMap(), // name -> Kotlin type
   val actions: List<String> = emptyList(),
   val actionParams: Map<String, String> = emptyMap(), // action name -> single param Kotlin type

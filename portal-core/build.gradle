@@ -3,6 +3,11 @@
 // and the jvm export verifier (web-spike-guest-compiler).
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 
+// Published: the portal tree model + catalog/exporter a consumer editor needs.
+redwoodBuild {
+  publishing()
+}
+
 kotlin {
   jvm()
   js {

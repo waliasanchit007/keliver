@@ -25,28 +25,28 @@ import dev.keliver.portal.render.appPreviewEntry
  * that screen's tree. Nav actions dispatched from the canvas run the real
  * presenter, which calls the flow's navigate — the screen swap IS navigation.
  */
-object LiveEngine {
-  val request = mutableStateOf<String?>(null) // screen name; null = live off
-  val flowRequest = mutableStateOf<String?>(null) // #13 F2: flow name; wins over request
-  var flowStartOverride: String? = null // #13 F4: node to begin the walkthrough on (null = declared start)
-  var frame: PreviewFrame? = null
+internal object LiveEngine {
+  internal val request = mutableStateOf<String?>(null) // screen name; null = live off
+  internal val flowRequest = mutableStateOf<String?>(null) // #13 F2: flow name; wins over request
+  internal var flowStartOverride: String? = null // #13 F4: node to begin the walkthrough on (null = declared start)
+  internal var frame: PreviewFrame? = null
   private var lastKeys: Set<String> = emptySet()
   private var lastCompositionError: String? = null
-  var onError: (String) -> Unit = {}
-  var onValuesApplied: () -> Unit = {}
+  internal var onError: (String) -> Unit = {}
+  internal var onValuesApplied: () -> Unit = {}
 
-  val isRunning: Boolean get() = request.value != null || flowRequest.value != null
+  internal val isRunning: Boolean get() = request.value != null || flowRequest.value != null
 
   /** #13 F2: chrome hook — the flow's CURRENT screen each frame (follow + load its tree). */
-  var onFlowScreen: (String) -> Unit = {}
+  internal var onFlowScreen: (String) -> Unit = {}
 
-  fun dispatch(action: String, arg: String?) {
+  internal fun dispatch(action: String, arg: String?) {
     val f = frame ?: return
     runCatching { f.dispatch(action, arg) }
       .onFailure { onError("presenter error on '$action': ${it.message}") }
   }
 
-  fun applyValues(values: Map<String, String>) {
+  internal fun applyValues(values: Map<String, String>) {
     for ((k, v) in values) if (PreviewBindings.mocks[k] != v) PreviewBindings.mocks[k] = v
     (lastKeys - values.keys).forEach { PreviewBindings.mocks.remove(it) }
     lastKeys = values.keys
@@ -59,12 +59,12 @@ object LiveEngine {
    * frame. SnapshotStateMap reads of a missing component/item key did not
    * reliably invalidate RenderNode when that key was first added later.
    */
-  fun prepare(keys: Set<String>) {
+  internal fun prepare(keys: Set<String>) {
     keys.forEach { if (it !in PreviewBindings.mocks) PreviewBindings.mocks[it] = "" }
     lastKeys = lastKeys + keys
   }
 
-  fun compositionFailed(scope: String, error: Throwable) {
+  internal fun compositionFailed(scope: String, error: Throwable) {
     frame = null
     val message = "presenter composition failed for '$scope': ${error.message ?: "unknown error"}"
     if (message != lastCompositionError) {
@@ -73,7 +73,7 @@ object LiveEngine {
     }
   }
 
-  fun stop() {
+  internal fun stop() {
     frame = null
     lastKeys.forEach { PreviewBindings.mocks.remove(it) }
     lastKeys = emptySet()
@@ -87,7 +87,7 @@ object LiveEngine {
 
 /** Composed inside the canvas composition, BEFORE RenderNode reads the mocks. */
 @Composable
-fun LivePresenterHost() {
+internal fun LivePresenterHost() {
   // #13 F2: flow mode first — the flow owns which screen shows.
   val flowName = LiveEngine.flowRequest.value
   if (flowName != null) {

@@ -1,0 +1,732 @@
+public final class dev/keliver/portal/document/Contract {
+	public static final field Companion Ldev/keliver/portal/document/Contract$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;)Ldev/keliver/portal/document/Contract;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/Contract;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Ldev/keliver/portal/document/Contract;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActionParams ()Ljava/util/Map;
+	public final fun getActions ()Ljava/util/List;
+	public final fun getFields ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/Contract$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/Contract$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/Contract;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/Contract;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/Contract$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocJsonKt {
+	public static final fun getDocJson ()Lkotlinx/serialization/json/Json;
+}
+
+public abstract interface class dev/keliver/portal/document/DocNode {
+	public static final field Companion Ldev/keliver/portal/document/DocNode$Companion;
+	public abstract fun getHandle-LzMeRwk ()J
+}
+
+public final class dev/keliver/portal/document/DocNode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocNode$RawCode : dev/keliver/portal/document/DocNode {
+	public static final field Companion Ldev/keliver/portal/document/DocNode$RawCode$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JLjava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-Vfc23vg (JLjava/lang/String;Ljava/lang/String;)Ldev/keliver/portal/document/DocNode$RawCode;
+	public static synthetic fun copy-Vfc23vg$default (Ldev/keliver/portal/document/DocNode$RawCode;JLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocNode$RawCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getHandle-LzMeRwk ()J
+	public final fun getKindHint ()Ljava/lang/String;
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocNode$RawCode$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocNode$RawCode$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocNode$RawCode;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocNode$RawCode;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocNode$RawCode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocNode$Widget : dev/keliver/portal/document/DocNode {
+	public static final field Companion Ldev/keliver/portal/document/DocNode$Widget$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JLjava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy-hec0-ew (JLjava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/lang/String;)Ldev/keliver/portal/document/DocNode$Widget;
+	public static synthetic fun copy-hec0-ew$default (Ldev/keliver/portal/document/DocNode$Widget;JLjava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocNode$Widget;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChildren ()Ljava/util/List;
+	public final fun getExplicitId ()Ljava/lang/String;
+	public fun getHandle-LzMeRwk ()J
+	public final fun getModifiers ()Ljava/util/Map;
+	public final fun getProps ()Ljava/util/Map;
+	public final fun getType ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocNode$Widget$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocNode$Widget$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocNode$Widget;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocNode$Widget;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocNode$Widget$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocNodeKt {
+	public static final fun lit (Ljava/lang/Object;)Ldev/keliver/portal/document/PropValue$Lit;
+	public static final fun toAny (Ldev/keliver/portal/document/PropValue$Lit;)Ljava/lang/Object;
+}
+
+public abstract interface class dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$Companion;
+}
+
+public final class dev/keliver/portal/document/DocOp$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$ContractEdit : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$ContractEdit$Companion;
+	public fun <init> (Ldev/keliver/portal/document/Contract;)V
+	public final fun component1 ()Ldev/keliver/portal/document/Contract;
+	public final fun copy (Ldev/keliver/portal/document/Contract;)Ldev/keliver/portal/document/DocOp$ContractEdit;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/DocOp$ContractEdit;Ldev/keliver/portal/document/Contract;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$ContractEdit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContract ()Ldev/keliver/portal/document/Contract;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$ContractEdit$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$ContractEdit$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$ContractEdit;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$ContractEdit;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$ContractEdit$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$DeleteNode : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$DeleteNode$Companion;
+	public synthetic fun <init> (JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun copy-07mV84Y (J)Ldev/keliver/portal/document/DocOp$DeleteNode;
+	public static synthetic fun copy-07mV84Y$default (Ldev/keliver/portal/document/DocOp$DeleteNode;JILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$DeleteNode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTarget-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$DeleteNode$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$DeleteNode$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$DeleteNode;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$DeleteNode;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$DeleteNode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$InsertNode : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$InsertNode$Companion;
+	public synthetic fun <init> (JLdev/keliver/portal/document/Handle;Ldev/keliver/portal/document/DocNode;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2-iKrpYGg ()Ldev/keliver/portal/document/Handle;
+	public final fun component3 ()Ldev/keliver/portal/document/DocNode;
+	public final fun copy-5ITua3U (JLdev/keliver/portal/document/Handle;Ldev/keliver/portal/document/DocNode;)Ldev/keliver/portal/document/DocOp$InsertNode;
+	public static synthetic fun copy-5ITua3U$default (Ldev/keliver/portal/document/DocOp$InsertNode;JLdev/keliver/portal/document/Handle;Ldev/keliver/portal/document/DocNode;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$InsertNode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter-iKrpYGg ()Ldev/keliver/portal/document/Handle;
+	public final fun getNode ()Ldev/keliver/portal/document/DocNode;
+	public final fun getParent-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$InsertNode$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$InsertNode$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$InsertNode;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$InsertNode;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$InsertNode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$MoveNode : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$MoveNode$Companion;
+	public synthetic fun <init> (JJLdev/keliver/portal/document/Handle;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2-LzMeRwk ()J
+	public final fun component3-iKrpYGg ()Ldev/keliver/portal/document/Handle;
+	public final fun copy-J_fayFs (JJLdev/keliver/portal/document/Handle;)Ldev/keliver/portal/document/DocOp$MoveNode;
+	public static synthetic fun copy-J_fayFs$default (Ldev/keliver/portal/document/DocOp$MoveNode;JJLdev/keliver/portal/document/Handle;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$MoveNode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter-iKrpYGg ()Ldev/keliver/portal/document/Handle;
+	public final fun getNewParent-LzMeRwk ()J
+	public final fun getTarget-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$MoveNode$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$MoveNode$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$MoveNode;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$MoveNode;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$MoveNode$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$RemoveModifier : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$RemoveModifier$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-2wptp6E (JLjava/lang/String;)Ldev/keliver/portal/document/DocOp$RemoveModifier;
+	public static synthetic fun copy-2wptp6E$default (Ldev/keliver/portal/document/DocOp$RemoveModifier;JLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$RemoveModifier;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getTarget-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$RemoveModifier$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$RemoveModifier$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$RemoveModifier;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$RemoveModifier;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$RemoveModifier$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$RemoveProp : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$RemoveProp$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-2wptp6E (JLjava/lang/String;)Ldev/keliver/portal/document/DocOp$RemoveProp;
+	public static synthetic fun copy-2wptp6E$default (Ldev/keliver/portal/document/DocOp$RemoveProp;JLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$RemoveProp;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getTarget-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$RemoveProp$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$RemoveProp$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$RemoveProp;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$RemoveProp;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$RemoveProp$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$RenameId : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$RenameId$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-2wptp6E (JLjava/lang/String;)Ldev/keliver/portal/document/DocOp$RenameId;
+	public static synthetic fun copy-2wptp6E$default (Ldev/keliver/portal/document/DocOp$RenameId;JLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$RenameId;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId ()Ljava/lang/String;
+	public final fun getTarget-LzMeRwk ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$RenameId$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$RenameId$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$RenameId;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$RenameId;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$RenameId$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$ReplaceRaw : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$ReplaceRaw$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-2wptp6E (JLjava/lang/String;)Ldev/keliver/portal/document/DocOp$ReplaceRaw;
+	public static synthetic fun copy-2wptp6E$default (Ldev/keliver/portal/document/DocOp$ReplaceRaw;JLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$ReplaceRaw;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTarget-LzMeRwk ()J
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$ReplaceRaw$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$ReplaceRaw$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$ReplaceRaw;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$ReplaceRaw;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$ReplaceRaw$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$SetModifier : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$SetModifier$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Ldev/keliver/portal/document/PropValue;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/keliver/portal/document/PropValue;
+	public final fun copy-Vfc23vg (JLjava/lang/String;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/DocOp$SetModifier;
+	public static synthetic fun copy-Vfc23vg$default (Ldev/keliver/portal/document/DocOp$SetModifier;JLjava/lang/String;Ldev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$SetModifier;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getTarget-LzMeRwk ()J
+	public final fun getValue ()Ldev/keliver/portal/document/PropValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$SetModifier$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$SetModifier$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$SetModifier;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$SetModifier;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$SetModifier$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/DocOp$SetProp : dev/keliver/portal/document/DocOp {
+	public static final field Companion Ldev/keliver/portal/document/DocOp$SetProp$Companion;
+	public synthetic fun <init> (JLjava/lang/String;Ldev/keliver/portal/document/PropValue;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LzMeRwk ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ldev/keliver/portal/document/PropValue;
+	public final fun copy-Vfc23vg (JLjava/lang/String;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/DocOp$SetProp;
+	public static synthetic fun copy-Vfc23vg$default (Ldev/keliver/portal/document/DocOp$SetProp;JLjava/lang/String;Ldev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/DocOp$SetProp;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getTarget-LzMeRwk ()J
+	public final fun getValue ()Ldev/keliver/portal/document/PropValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/DocOp$SetProp$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/DocOp$SetProp$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/DocOp$SetProp;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/DocOp$SetProp;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/DocOp$SetProp$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/Handle {
+	public static final field Companion Ldev/keliver/portal/document/Handle$Companion;
+	public static final synthetic fun box-impl (J)Ldev/keliver/portal/document/Handle;
+	public static fun constructor-impl (J)J
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (JLjava/lang/Object;)Z
+	public static final fun equals-impl0 (JJ)Z
+	public final fun getV ()J
+	public fun hashCode ()I
+	public static fun hashCode-impl (J)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (J)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()J
+}
+
+public final synthetic class dev/keliver/portal/document/Handle$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/Handle$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun deserialize-JOvCXbg (Lkotlinx/serialization/encoding/Decoder;)J
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+	public final fun serialize-2Qhlp30 (Lkotlinx/serialization/encoding/Encoder;J)V
+}
+
+public final class dev/keliver/portal/document/Handle$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/OpAck {
+	public static final field Companion Ldev/keliver/portal/document/OpAck$Companion;
+	public fun <init> (ZJLjava/lang/String;)V
+	public synthetic fun <init> (ZJLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (ZJLjava/lang/String;)Ldev/keliver/portal/document/OpAck;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/OpAck;ZJLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/OpAck;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/String;
+	public final fun getOk ()Z
+	public final fun getVersion ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/OpAck$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/OpAck$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/OpAck;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/OpAck;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/OpAck$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/OpBatch {
+	public static final field Companion Ldev/keliver/portal/document/OpBatch$Companion;
+	public fun <init> (JLdev/keliver/portal/document/OpEnvelope;Ljava/util/List;)V
+	public final fun component1 ()J
+	public final fun component2 ()Ldev/keliver/portal/document/OpEnvelope;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (JLdev/keliver/portal/document/OpEnvelope;Ljava/util/List;)Ldev/keliver/portal/document/OpBatch;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/OpBatch;JLdev/keliver/portal/document/OpEnvelope;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/document/OpBatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBaseVersion ()J
+	public final fun getEnvelope ()Ldev/keliver/portal/document/OpEnvelope;
+	public final fun getOps ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/OpBatch$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/OpBatch$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/OpBatch;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/OpBatch;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/OpBatch$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/OpEnvelope {
+	public static final field Companion Ldev/keliver/portal/document/OpEnvelope$Companion;
+	public fun <init> (Ljava/lang/String;JLjava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;JLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;JLjava/lang/String;)Ldev/keliver/portal/document/OpEnvelope;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/OpEnvelope;Ljava/lang/String;JLjava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/OpEnvelope;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAtMillis ()J
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getSession ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/OpEnvelope$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/OpEnvelope$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/OpEnvelope;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/OpEnvelope;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/OpEnvelope$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/ProjectKt {
+	public static final fun toDocNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/document/DocNode$Widget;
+	public static final fun toWidgetTree (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;Z)Ldev/keliver/portal/WidgetNode;
+	public static synthetic fun toWidgetTree$default (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;ZILjava/lang/Object;)Ldev/keliver/portal/WidgetNode;
+}
+
+public abstract interface class dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Companion;
+}
+
+public final class dev/keliver/portal/document/PropValue$Action : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Action$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/portal/document/PropValue$Action;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Action;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Action;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArg ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Action$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Action$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Action;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Action;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Action$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Bind : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Bind$Companion;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Ldev/keliver/portal/document/PropValue$Bind;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Bind;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Bind;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getField ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Bind$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Bind$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Bind;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Bind;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Bind$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Lit : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Lit$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun component4 ()Ljava/lang/Double;
+	public final fun component5 ()Ljava/lang/Boolean;
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/util/List;Ljava/util/List;Ljava/util/List;)Ldev/keliver/portal/document/PropValue$Lit;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Lit;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/Double;Ljava/lang/Boolean;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Lit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getB ()Ljava/lang/Boolean;
+	public final fun getD ()Ljava/lang/Double;
+	public final fun getI ()Ljava/lang/Integer;
+	public final fun getLf ()Ljava/util/List;
+	public final fun getLi ()Ljava/util/List;
+	public final fun getLs ()Ljava/util/List;
+	public final fun getS ()Ljava/lang/String;
+	public final fun getTag ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Lit$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Lit$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Lit;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Lit;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Lit$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/UiDocument {
+	public static final field Companion Ldev/keliver/portal/document/UiDocument$Companion;
+	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/document/DocNode;Ldev/keliver/portal/document/Contract;JJ)V
+	public final fun apply (Ldev/keliver/portal/document/DocOp;)Ldev/keliver/portal/document/UiDocument$ApplyResult;
+	public final fun applyBatch (Ljava/util/List;)Ldev/keliver/portal/document/UiDocument$TryBatch;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/keliver/portal/document/DocNode;
+	public final fun component3 ()Ldev/keliver/portal/document/Contract;
+	public final fun component4 ()J
+	public final fun component5 ()J
+	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/document/DocNode;Ldev/keliver/portal/document/Contract;JJ)Ldev/keliver/portal/document/UiDocument;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/UiDocument;Ljava/lang/String;Ldev/keliver/portal/document/DocNode;Ldev/keliver/portal/document/Contract;JJILjava/lang/Object;)Ldev/keliver/portal/document/UiDocument;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun find-07mV84Y (J)Ldev/keliver/portal/document/DocNode;
+	public final fun getContract ()Ldev/keliver/portal/document/Contract;
+	public final fun getNextHandle ()J
+	public final fun getRoot ()Ldev/keliver/portal/document/DocNode;
+	public final fun getScreen ()Ljava/lang/String;
+	public final fun getVersion ()J
+	public fun hashCode ()I
+	public final fun replay (Ljava/util/List;)Ldev/keliver/portal/document/UiDocument;
+	public fun toString ()Ljava/lang/String;
+	public final fun tryApply (Ldev/keliver/portal/document/DocOp;)Ldev/keliver/portal/document/UiDocument$TryResult;
+}
+
+public final synthetic class dev/keliver/portal/document/UiDocument$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/UiDocument$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/UiDocument;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/UiDocument;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/UiDocument$ApplyResult {
+	public fun <init> (Ldev/keliver/portal/document/UiDocument;Ldev/keliver/portal/document/DocOp;)V
+	public final fun component1 ()Ldev/keliver/portal/document/UiDocument;
+	public final fun component2 ()Ldev/keliver/portal/document/DocOp;
+	public final fun copy (Ldev/keliver/portal/document/UiDocument;Ldev/keliver/portal/document/DocOp;)Ldev/keliver/portal/document/UiDocument$ApplyResult;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/UiDocument$ApplyResult;Ldev/keliver/portal/document/UiDocument;Ldev/keliver/portal/document/DocOp;ILjava/lang/Object;)Ldev/keliver/portal/document/UiDocument$ApplyResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDoc ()Ldev/keliver/portal/document/UiDocument;
+	public final fun getInverse ()Ldev/keliver/portal/document/DocOp;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/document/UiDocument$BatchResult {
+	public fun <init> (Ldev/keliver/portal/document/UiDocument;Ljava/util/List;)V
+	public final fun component1 ()Ldev/keliver/portal/document/UiDocument;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ldev/keliver/portal/document/UiDocument;Ljava/util/List;)Ldev/keliver/portal/document/UiDocument$BatchResult;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/UiDocument$BatchResult;Ldev/keliver/portal/document/UiDocument;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/document/UiDocument$BatchResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDoc ()Ldev/keliver/portal/document/UiDocument;
+	public final fun getInverseBatch ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/document/UiDocument$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/UiDocument$TryBatch {
+	public fun <init> (Ldev/keliver/portal/document/UiDocument$BatchResult;Ljava/lang/String;)V
+	public final fun component1 ()Ldev/keliver/portal/document/UiDocument$BatchResult;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ldev/keliver/portal/document/UiDocument$BatchResult;Ljava/lang/String;)Ldev/keliver/portal/document/UiDocument$TryBatch;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/UiDocument$TryBatch;Ldev/keliver/portal/document/UiDocument$BatchResult;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/UiDocument$TryBatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/String;
+	public final fun getResult ()Ldev/keliver/portal/document/UiDocument$BatchResult;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/document/UiDocument$TryResult {
+	public fun <init> (Ldev/keliver/portal/document/UiDocument$ApplyResult;Ljava/lang/String;)V
+	public final fun component1 ()Ldev/keliver/portal/document/UiDocument$ApplyResult;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ldev/keliver/portal/document/UiDocument$ApplyResult;Ljava/lang/String;)Ldev/keliver/portal/document/UiDocument$TryResult;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/UiDocument$TryResult;Ldev/keliver/portal/document/UiDocument$ApplyResult;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/UiDocument$TryResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/String;
+	public final fun getResult ()Ldev/keliver/portal/document/UiDocument$ApplyResult;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

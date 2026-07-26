@@ -1,6 +1,11 @@
 // V2 M1 — the live semantic document + operation vocabulary (design §1-§2).
 // Pure model: serializable, no server/UI deps; portal-core only for projection.
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
+
+// Published: the live document + op engine a consumer editor drives.
+redwoodBuild {
+  publishing()
+}
 apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 
 kotlin {

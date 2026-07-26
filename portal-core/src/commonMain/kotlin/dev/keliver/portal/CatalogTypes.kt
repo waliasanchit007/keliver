@@ -1,14 +1,14 @@
 package dev.keliver.portal
 
 /** Editor-facing property kinds. Keep in sync with the editor's property panel. */
-enum class PropKind { Text, Int, Bool, Color, Double, IntList, FloatList, StringList }
+public enum class PropKind { Text, Int, Bool, Color, Double, IntList, FloatList, StringList }
 
-data class PropSpec(val name: String, val kind: PropKind, val label: String)
+public data class PropSpec(val name: String, val kind: PropKind, val label: String)
 
 /** An unscoped modifier the editor can attach to any node (props ride as "mod.<Name>.<prop>"). */
-data class ModifierSpec(val name: String, val props: List<PropSpec>)
+public data class ModifierSpec(val name: String, val props: List<PropSpec>)
 
-data class WidgetSpec(
+public data class WidgetSpec(
   val type: String,
   val category: String,
   val props: List<PropSpec>,

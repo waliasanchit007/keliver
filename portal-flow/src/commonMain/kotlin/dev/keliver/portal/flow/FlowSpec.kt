@@ -11,7 +11,7 @@ package dev.keliver.portal.flow
  * ACTION NAME itself. Typed sealed-interface routes (params) are the F4 layer
  * on top of this wire — see the design doc.
  */
-data class FlowSpec(
+public data class FlowSpec(
   val name: String,
   /** The screen the flow begins on. */
   val start: String,
@@ -19,11 +19,11 @@ data class FlowSpec(
   val routes: Map<String, String>,
 )
 
-class FlowBuilder internal constructor() {
+public class FlowBuilder internal constructor() {
   internal val routes = LinkedHashMap<String, String>()
 
   /** Declare an edge: a nav action matching [key] navigates to screen [to]. */
-  fun route(key: String, to: String) {
+  public fun route(key: String, to: String) {
     routes[key] = to
   }
 }
@@ -37,5 +37,5 @@ class FlowBuilder internal constructor() {
  * }
  * ```
  */
-fun flow(name: String, start: String, build: FlowBuilder.() -> Unit = {}): FlowSpec =
+public fun flow(name: String, start: String, build: FlowBuilder.() -> Unit = {}): FlowSpec =
   FlowSpec(name, start, FlowBuilder().apply(build).routes.toMap())

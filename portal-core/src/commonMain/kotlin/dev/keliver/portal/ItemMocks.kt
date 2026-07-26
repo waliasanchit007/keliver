@@ -12,7 +12,7 @@ package dev.keliver.portal
  * events can deliver the actual item id/value to a live presenter. Screen
  * binds and unrelated actions pass through; a nested Repeat keeps its own scope.
  */
-fun resolveItemRow(
+public fun resolveItemRow(
   node: WidgetNode,
   itemVar: String,
   itemsField: String,

@@ -8,26 +8,26 @@
  */
 
 /** A capability's status in the browser preview. */
-data class CapStatus(val name: String, val real: Boolean, val note: String)
+public data class CapStatus(val name: String, val real: Boolean, val note: String)
 
-object PreviewCapabilities {
+public object PreviewCapabilities {
   /** capability name@version -> preview provider label (absent = stubbed). */
   private val providers: Map<String, String> = mapOf(
     "HostSqlDriver@1" to "in-memory SQLite",
     // convergence targets: "HostHttp@1" to "browser fetch()", "HostStorage@1" to "localStorage"
   )
 
-  fun statusOf(cap: String): CapStatus =
+  public fun statusOf(cap: String): CapStatus =
     providers[cap]?.let { CapStatus(cap, real = true, note = "preview impl: $it") }
       ?: CapStatus(cap, real = false, note = "no preview impl — stubbed (reduced fidelity)")
 
-  fun report(required: List<String>): List<CapStatus> = required.map { statusOf(it) }
+  public fun report(required: List<String>): List<CapStatus> = required.map { statusOf(it) }
 
   /** Full fidelity only when EVERY required capability has a preview impl. */
-  fun isFullFidelity(required: List<String>): Boolean = required.all { statusOf(it).real }
+  public fun isFullFidelity(required: List<String>): Boolean = required.all { statusOf(it).real }
 
   /** True when the SQL capability can back the real data path in-browser. */
-  val sqlAvailable: Boolean get() = "HostSqlDriver@1" in providers
+  public val sqlAvailable: Boolean get() = "HostSqlDriver@1" in providers
 }
 
 /**
@@ -37,7 +37,7 @@ object PreviewCapabilities {
  * query strings run unchanged — only the executor is swapped. P3-12 upgraded
  * it from single-table to per-table so multiple live presenters coexist.
  */
-class PreviewSqlHost {
+public class PreviewSqlHost {
   private val tables = mutableMapOf<String, MutableList<List<String?>>>()
 
   private fun tableOf(sql: String): String {
@@ -46,7 +46,7 @@ class PreviewSqlHost {
     return m.groupValues[1].lowercase()
   }
 
-  fun execute(sql: String, args: List<String?>): List<List<String?>> {
+  public fun execute(sql: String, args: List<String?>): List<List<String?>> {
     val s = sql.trim()
     val rows = tables.getOrPut(tableOf(s)) { mutableListOf() }
     val wantsRowid = s.contains("rowid", ignoreCase = true)

@@ -5,6 +5,11 @@
 // (guest-side runtime libs stay minimal, publishable alone).
 apply plugin: 'org.jetbrains.kotlin.multiplatform'
 
+// Published: an app that declares flows compiles this into its guest bundle.
+redwoodBuild {
+  publishing()
+}
+
 kotlin {
   jvm()
   js { browser() }

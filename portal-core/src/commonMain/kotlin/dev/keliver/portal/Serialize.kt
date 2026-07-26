@@ -70,6 +70,6 @@ private fun jsonToNode(o: JsonObject): WidgetNode = WidgetNode(
   id = o.getValue("id").jsonPrimitive.int,
 )
 
-fun serializeTree(node: WidgetNode): String = nodeToJson(node).toString()
+public fun serializeTree(node: WidgetNode): String = nodeToJson(node).toString()
 
-fun deserializeTree(json: String): WidgetNode = jsonToNode(JSON.parseToJsonElement(json).jsonObject)
+public fun deserializeTree(json: String): WidgetNode = jsonToNode(JSON.parseToJsonElement(json).jsonObject)

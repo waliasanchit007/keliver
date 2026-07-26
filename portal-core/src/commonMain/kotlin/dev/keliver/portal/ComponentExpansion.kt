@@ -11,17 +11,17 @@ package dev.keliver.portal
  * The SCREEN document itself is never expanded — only what the renderer asks to
  * draw for a specific instance.
  */
-sealed interface Expansion {
+public sealed interface Expansion {
   /** Fully-primitive tree ready to render. */
-  data class Transparent(val tree: WidgetNode) : Expansion
+  public data class Transparent(val tree: WidgetNode) : Expansion
   /** Render a labeled placeholder (opaque component or unknown type). */
-  data class Opaque(val name: String, val reason: String) : Expansion
+  public data class Opaque(val name: String, val reason: String) : Expansion
   /** Render an error chip; [path] is the dependency cycle. */
-  data class Cycle(val path: List<String>) : Expansion
+  public data class Cycle(val path: List<String>) : Expansion
 }
 
 /** Expand a single component-instance [node] against [registry]. */
-fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<String> = emptyList()): Expansion {
+public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<String> = emptyList()): Expansion {
   val name = node.type
   if (name in stack) return Expansion.Cycle(stack + name)
   val spec = registry.spec(name) ?: return Expansion.Opaque(name, "unknown component")
@@ -87,7 +87,7 @@ fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<
 }
 
 /** Placeholder node for an opaque component (renders as a labeled box). */
-fun placeholder(name: String, reason: String): WidgetNode =
+public fun placeholder(name: String, reason: String): WidgetNode =
   WidgetNode(
     "StyledBox",
     mapOf("colorArgb" to -1_579_033, "cornerRadiusDp" to 8, "paddingDp" to 12, "fillWidth" to true),
@@ -98,7 +98,7 @@ fun placeholder(name: String, reason: String): WidgetNode =
   )
 
 /** Error chip for a component cycle. */
-fun cycleChip(path: List<String>): WidgetNode =
+public fun cycleChip(path: List<String>): WidgetNode =
   WidgetNode(
     "StyledBox",
     mapOf("colorArgb" to -74_910, "cornerRadiusDp" to 8, "paddingDp" to 12, "fillWidth" to true),

@@ -1,0 +1,32 @@
+// Klib ABI Dump
+// Targets: [js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:portal-flow>
+final class dev.keliver.portal.flow/FlowBuilder { // dev.keliver.portal.flow/FlowBuilder|null[0]
+    final fun route(kotlin/String, kotlin/String) // dev.keliver.portal.flow/FlowBuilder.route|route(kotlin.String;kotlin.String){}[0]
+}
+
+final class dev.keliver.portal.flow/FlowSpec { // dev.keliver.portal.flow/FlowSpec|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>) // dev.keliver.portal.flow/FlowSpec.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+    final val name // dev.keliver.portal.flow/FlowSpec.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.portal.flow/FlowSpec.name.<get-name>|<get-name>(){}[0]
+    final val routes // dev.keliver.portal.flow/FlowSpec.routes|{}routes[0]
+        final fun <get-routes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.flow/FlowSpec.routes.<get-routes>|<get-routes>(){}[0]
+    final val start // dev.keliver.portal.flow/FlowSpec.start|{}start[0]
+        final fun <get-start>(): kotlin/String // dev.keliver.portal.flow/FlowSpec.start.<get-start>|<get-start>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.portal.flow/FlowSpec.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.portal.flow/FlowSpec.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.flow/FlowSpec.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.portal.flow/FlowSpec // dev.keliver.portal.flow/FlowSpec.copy|copy(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.flow/FlowSpec.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.flow/FlowSpec.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.flow/FlowSpec.toString|toString(){}[0]
+}
+
+final fun dev.keliver.portal.flow/flow(kotlin/String, kotlin/String, kotlin/Function1<dev.keliver.portal.flow/FlowBuilder, kotlin/Unit> = ...): dev.keliver.portal.flow/FlowSpec // dev.keliver.portal.flow/flow|flow(kotlin.String;kotlin.String;kotlin.Function1<dev.keliver.portal.flow.FlowBuilder,kotlin.Unit>){}[0]

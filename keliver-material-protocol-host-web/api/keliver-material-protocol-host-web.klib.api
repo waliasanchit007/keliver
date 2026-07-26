@@ -1,0 +1,21 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-material-protocol-host-web>
+final class dev.keliver.material.protocol.host/KeliverMaterialHostProtocol : dev.keliver.protocol.host/GeneratedHostProtocol { // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol|null[0]
+    final val json // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.json|{}json[0]
+        final fun <get-json>(): kotlinx.serialization.json/Json // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.json.<get-json>|<get-json>(){}[0]
+    final val mismatchHandler // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.mismatchHandler|{}mismatchHandler[0]
+        final fun <get-mismatchHandler>(): dev.keliver.protocol.host/ProtocolMismatchHandler // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.mismatchHandler.<get-mismatchHandler>|<get-mismatchHandler>(){}[0]
+
+    final fun createModifier(dev.keliver.protocol/ModifierElement): dev.keliver/Modifier // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.createModifier|createModifier(dev.keliver.protocol.ModifierElement){}[0]
+    final fun widget(dev.keliver.protocol/WidgetTag): dev.keliver.protocol.host/WidgetHostProtocol? // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.widget|widget(dev.keliver.protocol.WidgetTag){}[0]
+
+    final object Factory : dev.keliver.protocol.host/HostProtocol.Factory { // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.Factory|null[0]
+        final fun create(kotlinx.serialization.json/Json, dev.keliver.protocol.host/ProtocolMismatchHandler): dev.keliver.material.protocol.host/KeliverMaterialHostProtocol // dev.keliver.material.protocol.host/KeliverMaterialHostProtocol.Factory.create|create(kotlinx.serialization.json.Json;dev.keliver.protocol.host.ProtocolMismatchHandler){}[0]
+    }
+}

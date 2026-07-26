@@ -74,7 +74,7 @@ private fun initialTree(): WidgetNode = WidgetNode(
 )
 
 /** The single source of truth, observed by the canvas composition (RenderNode). */
-val portalTree = mutableStateOf(initialTree())
+internal val portalTree = mutableStateOf(initialTree())
 
 private var selectedId: Int? = null
 private var currentProject = "default"
@@ -474,7 +474,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
 // ---------------------------------------------------------------------------
 // Chrome
 
-fun mountPortalChrome() {
+internal fun mountPortalChrome() {
   Ui.installStylesheet()
   buildTopbar()
   buildLeftPane()
@@ -586,7 +586,7 @@ private fun buildLeftPane() {
 }
 
 /** The container ComposeViewport renders into — sized by the device preset. */
-const val PREVIEW_HOST_ID = "PreviewHost"
+internal const val PREVIEW_HOST_ID = "PreviewHost"
 
 private fun buildCenter() {
   val center = Ui.el("div", "center")
@@ -1130,7 +1130,7 @@ private fun switchScreen(name: String) {
 }
 
 /** P3-12: append a line to the action console (used by PreviewEnv.log). */
-fun portalLiveLog(msg: String) {
+internal fun portalLiveLog(msg: String) {
   if (!::consoleEl.isInitialized) return
   val row = Ui.el("div", "", msg)
   row.setAttribute("style", "color:var(--muted);")

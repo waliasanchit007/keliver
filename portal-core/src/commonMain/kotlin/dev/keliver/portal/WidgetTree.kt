@@ -1,43 +1,43 @@
 package dev.keliver.portal
 
 private var nodeIdCounter = 0
-fun nextNodeId(): Int = ++nodeIdCounter
+public fun nextNodeId(): Int = ++nodeIdCounter
 
 /** Highest id anywhere in this tree. */
-fun WidgetNode.maxId(): Int = maxOf(id, children.maxOfOrNull { it.maxId() } ?: 0)
+public fun WidgetNode.maxId(): Int = maxOf(id, children.maxOfOrNull { it.maxId() } ?: 0)
 
 /**
  * After loading a persisted tree (whose ids came from an earlier session), lift
  * the id counter above them so freshly created nodes can't collide.
  */
-fun ensureNodeIdsAbove(min: Int) {
+public fun ensureNodeIdsAbove(min: Int) {
   if (min > nodeIdCounter) nodeIdCounter = min
 }
 
 /** One node = a widget type, its properties (by name), children, and a stable id. */
-data class WidgetNode(
+public data class WidgetNode(
   val type: String,
   val props: Map<String, Any?> = emptyMap(),
   val children: List<WidgetNode> = emptyList(),
   val id: Int = nextNodeId(),
 )
 
-fun WidgetNode.str(key: String, default: String = ""): String = props[key] as? String ?: default
-fun WidgetNode.int(key: String, default: Int = 0): Int = props[key] as? Int ?: default
-fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = props[key] as? Boolean ?: default
-fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = props[key] as? Double ?: default
+public fun WidgetNode.str(key: String, default: String = ""): String = props[key] as? String ?: default
+public fun WidgetNode.int(key: String, default: Int = 0): Int = props[key] as? Int ?: default
+public fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = props[key] as? Boolean ?: default
+public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = props[key] as? Double ?: default
 
 @Suppress("UNCHECKED_CAST")
-fun WidgetNode.intList(key: String): List<Int> = props[key] as? List<Int> ?: emptyList()
+public fun WidgetNode.intList(key: String): List<Int> = props[key] as? List<Int> ?: emptyList()
 
 @Suppress("UNCHECKED_CAST")
-fun WidgetNode.floatList(key: String): List<Float> = props[key] as? List<Float> ?: emptyList()
+public fun WidgetNode.floatList(key: String): List<Float> = props[key] as? List<Float> ?: emptyList()
 
 @Suppress("UNCHECKED_CAST")
-fun WidgetNode.strList(key: String): List<String> = props[key] as? List<String> ?: emptyList()
+public fun WidgetNode.strList(key: String): List<String> = props[key] as? List<String> ?: emptyList()
 
 /** The shared sample tree: a card whose item count is data-driven. */
-fun sampleTree(items: Int): WidgetNode = WidgetNode(
+public fun sampleTree(items: Int): WidgetNode = WidgetNode(
   type = "StyledBox",
   props = mapOf(
     "gradientColorsArgb" to listOf(0xFFFFF4E8.toInt(), 0xFFFFE9D6.toInt()),

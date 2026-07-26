@@ -50,7 +50,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine()
   appendLine("/** Interprets a portal WidgetNode tree as live keliver composables. */")
   appendLine("@Composable")
-  appendLine("fun RenderNode(node: WidgetNode) {")
+  appendLine("public fun RenderNode(node: WidgetNode) {")
   appendLine("  when (node.type) {")
   // M5/P2: Condition honors a boolean mock (default shown); Repeat renders
   // rowCount() mock rows with item binds resolved per row.

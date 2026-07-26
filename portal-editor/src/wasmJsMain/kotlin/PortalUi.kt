@@ -9,8 +9,8 @@ import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 
-object Ui {
-  const val STYLE = """
+internal object Ui {
+  internal const val STYLE = """
     :root {
       --bg: #16171b; --panel: #1f2026; --panel2: #26272e; --border: #34353e;
       --text: #e6e7ec; --muted: #9a9ba6; --accent: #8b7cf7; --accent2: #6f5ff0;
@@ -83,39 +83,39 @@ object Ui {
     ::-webkit-scrollbar-track { background: transparent; }
   """
 
-  fun installStylesheet() {
+  internal fun installStylesheet() {
     val style = document.createElement("style")
     style.textContent = STYLE
     document.head?.appendChild(style)
   }
 
-  fun el(tag: String, cls: String = "", text: String = ""): HTMLElement {
+  internal fun el(tag: String, cls: String = "", text: String = ""): HTMLElement {
     val e = document.createElement(tag) as HTMLElement
     if (cls.isNotEmpty()) e.className = cls
     if (text.isNotEmpty()) e.textContent = text
     return e
   }
 
-  fun button(label: String, cls: String = "btn", onClick: () -> Unit): HTMLElement {
+  internal fun button(label: String, cls: String = "btn", onClick: () -> Unit): HTMLElement {
     val b = el("button", cls, label)
     b.addEventListener("click", { _ -> onClick() })
     return b
   }
 
-  fun input(cls: String = "input"): HTMLInputElement =
+  internal fun input(cls: String = "input"): HTMLInputElement =
     (document.createElement("input") as HTMLInputElement).also { it.className = cls }
 
-  fun select(cls: String = "select"): HTMLSelectElement =
+  internal fun select(cls: String = "select"): HTMLSelectElement =
     (document.createElement("select") as HTMLSelectElement).also { it.className = cls }
 
-  fun section(title: String): HTMLElement = el("div", "section", title)
+  internal fun section(title: String): HTMLElement = el("div", "section", title)
 
-  fun clear(host: HTMLElement) {
+  internal fun clear(host: HTMLElement) {
     while (host.firstChild != null) host.removeChild(host.firstChild!!)
   }
 
   /** Transient bottom-center notice (V2 M1: op rejections / rebase). */
-  fun toast(message: String) {
+  internal fun toast(message: String) {
     val t = el(
       "div",
       "",

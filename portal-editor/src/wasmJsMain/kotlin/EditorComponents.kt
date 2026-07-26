@@ -21,12 +21,12 @@ import kotlinx.serialization.json.jsonPrimitive
  * Shared by the palette, property panel, and the preview expander hook (set in
  * Main). Reassigned whenever the project's registry changes (SSE/poll or reload).
  */
-var editorComponents: ComponentRegistry = EmptyComponentRegistry
+internal var editorComponents: ComponentRegistry = EmptyComponentRegistry
   private set
 
-fun setEditorComponents(reg: ComponentRegistry) { editorComponents = reg }
+internal fun setEditorComponents(reg: ComponentRegistry) { editorComponents = reg }
 
-fun parseComponents(json: String): ComponentRegistry = runCatching {
+internal fun parseComponents(json: String): ComponentRegistry = runCatching {
   val arr = Json.parseToJsonElement(json).jsonArray
   val specs = arr.map { el ->
     val o = el.jsonObject

@@ -1,0 +1,785 @@
+// Klib ABI Dump
+// Targets: [js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:portal-document>
+sealed interface dev.keliver.portal.document/DocNode { // dev.keliver.portal.document/DocNode|null[0]
+    abstract val handle // dev.keliver.portal.document/DocNode.handle|{}handle[0]
+        abstract fun <get-handle>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocNode.handle.<get-handle>|<get-handle>(){}[0]
+
+    final class RawCode : dev.keliver.portal.document/DocNode { // dev.keliver.portal.document/DocNode.RawCode|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String, kotlin/String? = ...) // dev.keliver.portal.document/DocNode.RawCode.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String;kotlin.String?){}[0]
+
+        final val handle // dev.keliver.portal.document/DocNode.RawCode.handle|{}handle[0]
+            final fun <get-handle>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocNode.RawCode.handle.<get-handle>|<get-handle>(){}[0]
+        final val kindHint // dev.keliver.portal.document/DocNode.RawCode.kindHint|{}kindHint[0]
+            final fun <get-kindHint>(): kotlin/String? // dev.keliver.portal.document/DocNode.RawCode.kindHint.<get-kindHint>|<get-kindHint>(){}[0]
+        final val text // dev.keliver.portal.document/DocNode.RawCode.text|{}text[0]
+            final fun <get-text>(): kotlin/String // dev.keliver.portal.document/DocNode.RawCode.text.<get-text>|<get-text>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocNode.RawCode.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocNode.RawCode.component2|component2(){}[0]
+        final fun component3(): kotlin/String? // dev.keliver.portal.document/DocNode.RawCode.component3|component3(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ..., kotlin/String? = ...): dev.keliver.portal.document/DocNode.RawCode // dev.keliver.portal.document/DocNode.RawCode.copy|copy(dev.keliver.portal.document.Handle;kotlin.String;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocNode.RawCode.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocNode.RawCode.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocNode.RawCode.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocNode.RawCode> { // dev.keliver.portal.document/DocNode.RawCode.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocNode.RawCode.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocNode.RawCode.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocNode.RawCode.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocNode.RawCode // dev.keliver.portal.document/DocNode.RawCode.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocNode.RawCode) // dev.keliver.portal.document/DocNode.RawCode.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocNode.RawCode){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocNode.RawCode.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocNode.RawCode> // dev.keliver.portal.document/DocNode.RawCode.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class Widget : dev.keliver.portal.document/DocNode { // dev.keliver.portal.document/DocNode.Widget|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String, kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> = ..., kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> = ..., kotlin.collections/List<dev.keliver.portal.document/DocNode> = ..., kotlin/String? = ...) // dev.keliver.portal.document/DocNode.Widget.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String;kotlin.collections.Map<kotlin.String,dev.keliver.portal.document.PropValue>;kotlin.collections.Map<kotlin.String,dev.keliver.portal.document.PropValue>;kotlin.collections.List<dev.keliver.portal.document.DocNode>;kotlin.String?){}[0]
+
+        final val children // dev.keliver.portal.document/DocNode.Widget.children|{}children[0]
+            final fun <get-children>(): kotlin.collections/List<dev.keliver.portal.document/DocNode> // dev.keliver.portal.document/DocNode.Widget.children.<get-children>|<get-children>(){}[0]
+        final val explicitId // dev.keliver.portal.document/DocNode.Widget.explicitId|{}explicitId[0]
+            final fun <get-explicitId>(): kotlin/String? // dev.keliver.portal.document/DocNode.Widget.explicitId.<get-explicitId>|<get-explicitId>(){}[0]
+        final val handle // dev.keliver.portal.document/DocNode.Widget.handle|{}handle[0]
+            final fun <get-handle>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocNode.Widget.handle.<get-handle>|<get-handle>(){}[0]
+        final val modifiers // dev.keliver.portal.document/DocNode.Widget.modifiers|{}modifiers[0]
+            final fun <get-modifiers>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/DocNode.Widget.modifiers.<get-modifiers>|<get-modifiers>(){}[0]
+        final val props // dev.keliver.portal.document/DocNode.Widget.props|{}props[0]
+            final fun <get-props>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/DocNode.Widget.props.<get-props>|<get-props>(){}[0]
+        final val type // dev.keliver.portal.document/DocNode.Widget.type|{}type[0]
+            final fun <get-type>(): kotlin/String // dev.keliver.portal.document/DocNode.Widget.type.<get-type>|<get-type>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocNode.Widget.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocNode.Widget.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/DocNode.Widget.component3|component3(){}[0]
+        final fun component4(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/DocNode.Widget.component4|component4(){}[0]
+        final fun component5(): kotlin.collections/List<dev.keliver.portal.document/DocNode> // dev.keliver.portal.document/DocNode.Widget.component5|component5(){}[0]
+        final fun component6(): kotlin/String? // dev.keliver.portal.document/DocNode.Widget.component6|component6(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ..., kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> = ..., kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> = ..., kotlin.collections/List<dev.keliver.portal.document/DocNode> = ..., kotlin/String? = ...): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/DocNode.Widget.copy|copy(dev.keliver.portal.document.Handle;kotlin.String;kotlin.collections.Map<kotlin.String,dev.keliver.portal.document.PropValue>;kotlin.collections.Map<kotlin.String,dev.keliver.portal.document.PropValue>;kotlin.collections.List<dev.keliver.portal.document.DocNode>;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocNode.Widget.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocNode.Widget.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocNode.Widget.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocNode.Widget> { // dev.keliver.portal.document/DocNode.Widget.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocNode.Widget.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocNode.Widget.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocNode.Widget.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/DocNode.Widget.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocNode.Widget) // dev.keliver.portal.document/DocNode.Widget.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocNode.Widget){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocNode.Widget.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/DocNode.Widget.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocNode.Widget> // dev.keliver.portal.document/DocNode.Widget.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.keliver.portal.document/DocNode.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocNode> // dev.keliver.portal.document/DocNode.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.keliver.portal.document/DocNode.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp|null[0]
+    final class ContractEdit : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.ContractEdit|null[0]
+        constructor <init>(dev.keliver.portal.document/Contract) // dev.keliver.portal.document/DocOp.ContractEdit.<init>|<init>(dev.keliver.portal.document.Contract){}[0]
+
+        final val contract // dev.keliver.portal.document/DocOp.ContractEdit.contract|{}contract[0]
+            final fun <get-contract>(): dev.keliver.portal.document/Contract // dev.keliver.portal.document/DocOp.ContractEdit.contract.<get-contract>|<get-contract>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Contract // dev.keliver.portal.document/DocOp.ContractEdit.component1|component1(){}[0]
+        final fun copy(dev.keliver.portal.document/Contract = ...): dev.keliver.portal.document/DocOp.ContractEdit // dev.keliver.portal.document/DocOp.ContractEdit.copy|copy(dev.keliver.portal.document.Contract){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.ContractEdit.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.ContractEdit.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.ContractEdit.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.ContractEdit> { // dev.keliver.portal.document/DocOp.ContractEdit.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.ContractEdit.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.ContractEdit.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.ContractEdit.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.ContractEdit // dev.keliver.portal.document/DocOp.ContractEdit.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.ContractEdit) // dev.keliver.portal.document/DocOp.ContractEdit.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.ContractEdit){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.ContractEdit.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.ContractEdit> // dev.keliver.portal.document/DocOp.ContractEdit.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class DeleteNode : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.DeleteNode|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle) // dev.keliver.portal.document/DocOp.DeleteNode.<init>|<init>(dev.keliver.portal.document.Handle){}[0]
+
+        final val target // dev.keliver.portal.document/DocOp.DeleteNode.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.DeleteNode.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.DeleteNode.component1|component1(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ...): dev.keliver.portal.document/DocOp.DeleteNode // dev.keliver.portal.document/DocOp.DeleteNode.copy|copy(dev.keliver.portal.document.Handle){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.DeleteNode.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.DeleteNode.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.DeleteNode.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.DeleteNode> { // dev.keliver.portal.document/DocOp.DeleteNode.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.DeleteNode.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.DeleteNode.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.DeleteNode.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.DeleteNode // dev.keliver.portal.document/DocOp.DeleteNode.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.DeleteNode) // dev.keliver.portal.document/DocOp.DeleteNode.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.DeleteNode){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.DeleteNode.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.DeleteNode> // dev.keliver.portal.document/DocOp.DeleteNode.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class InsertNode : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.InsertNode|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, dev.keliver.portal.document/Handle?, dev.keliver.portal.document/DocNode) // dev.keliver.portal.document/DocOp.InsertNode.<init>|<init>(dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle?;dev.keliver.portal.document.DocNode){}[0]
+
+        final val after // dev.keliver.portal.document/DocOp.InsertNode.after|{}after[0]
+            final fun <get-after>(): dev.keliver.portal.document/Handle? // dev.keliver.portal.document/DocOp.InsertNode.after.<get-after>|<get-after>(){}[0]
+        final val node // dev.keliver.portal.document/DocOp.InsertNode.node|{}node[0]
+            final fun <get-node>(): dev.keliver.portal.document/DocNode // dev.keliver.portal.document/DocOp.InsertNode.node.<get-node>|<get-node>(){}[0]
+        final val parent // dev.keliver.portal.document/DocOp.InsertNode.parent|{}parent[0]
+            final fun <get-parent>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.InsertNode.parent.<get-parent>|<get-parent>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.InsertNode.component1|component1(){}[0]
+        final fun component2(): dev.keliver.portal.document/Handle? // dev.keliver.portal.document/DocOp.InsertNode.component2|component2(){}[0]
+        final fun component3(): dev.keliver.portal.document/DocNode // dev.keliver.portal.document/DocOp.InsertNode.component3|component3(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., dev.keliver.portal.document/Handle? = ..., dev.keliver.portal.document/DocNode = ...): dev.keliver.portal.document/DocOp.InsertNode // dev.keliver.portal.document/DocOp.InsertNode.copy|copy(dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle?;dev.keliver.portal.document.DocNode){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.InsertNode.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.InsertNode.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.InsertNode.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.InsertNode> { // dev.keliver.portal.document/DocOp.InsertNode.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.InsertNode.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.InsertNode.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.InsertNode.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.InsertNode // dev.keliver.portal.document/DocOp.InsertNode.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.InsertNode) // dev.keliver.portal.document/DocOp.InsertNode.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.InsertNode){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.InsertNode.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/DocOp.InsertNode.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.InsertNode> // dev.keliver.portal.document/DocOp.InsertNode.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class MoveNode : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.MoveNode|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, dev.keliver.portal.document/Handle, dev.keliver.portal.document/Handle?) // dev.keliver.portal.document/DocOp.MoveNode.<init>|<init>(dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle?){}[0]
+
+        final val after // dev.keliver.portal.document/DocOp.MoveNode.after|{}after[0]
+            final fun <get-after>(): dev.keliver.portal.document/Handle? // dev.keliver.portal.document/DocOp.MoveNode.after.<get-after>|<get-after>(){}[0]
+        final val newParent // dev.keliver.portal.document/DocOp.MoveNode.newParent|{}newParent[0]
+            final fun <get-newParent>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.MoveNode.newParent.<get-newParent>|<get-newParent>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.MoveNode.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.MoveNode.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.MoveNode.component1|component1(){}[0]
+        final fun component2(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.MoveNode.component2|component2(){}[0]
+        final fun component3(): dev.keliver.portal.document/Handle? // dev.keliver.portal.document/DocOp.MoveNode.component3|component3(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., dev.keliver.portal.document/Handle = ..., dev.keliver.portal.document/Handle? = ...): dev.keliver.portal.document/DocOp.MoveNode // dev.keliver.portal.document/DocOp.MoveNode.copy|copy(dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle;dev.keliver.portal.document.Handle?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.MoveNode.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.MoveNode.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.MoveNode.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.MoveNode> { // dev.keliver.portal.document/DocOp.MoveNode.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.MoveNode.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.MoveNode.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.MoveNode.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.MoveNode // dev.keliver.portal.document/DocOp.MoveNode.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.MoveNode) // dev.keliver.portal.document/DocOp.MoveNode.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.MoveNode){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.MoveNode.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.MoveNode> // dev.keliver.portal.document/DocOp.MoveNode.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class RemoveModifier : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.RemoveModifier|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String) // dev.keliver.portal.document/DocOp.RemoveModifier.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+
+        final val name // dev.keliver.portal.document/DocOp.RemoveModifier.name|{}name[0]
+            final fun <get-name>(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveModifier.name.<get-name>|<get-name>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.RemoveModifier.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RemoveModifier.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RemoveModifier.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveModifier.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ...): dev.keliver.portal.document/DocOp.RemoveModifier // dev.keliver.portal.document/DocOp.RemoveModifier.copy|copy(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.RemoveModifier.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.RemoveModifier.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveModifier.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.RemoveModifier> { // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.RemoveModifier // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.RemoveModifier) // dev.keliver.portal.document/DocOp.RemoveModifier.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.RemoveModifier){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.RemoveModifier.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.RemoveModifier> // dev.keliver.portal.document/DocOp.RemoveModifier.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class RemoveProp : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.RemoveProp|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String) // dev.keliver.portal.document/DocOp.RemoveProp.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+
+        final val name // dev.keliver.portal.document/DocOp.RemoveProp.name|{}name[0]
+            final fun <get-name>(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveProp.name.<get-name>|<get-name>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.RemoveProp.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RemoveProp.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RemoveProp.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveProp.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ...): dev.keliver.portal.document/DocOp.RemoveProp // dev.keliver.portal.document/DocOp.RemoveProp.copy|copy(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.RemoveProp.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.RemoveProp.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.RemoveProp.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.RemoveProp> { // dev.keliver.portal.document/DocOp.RemoveProp.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.RemoveProp.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.RemoveProp.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.RemoveProp.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.RemoveProp // dev.keliver.portal.document/DocOp.RemoveProp.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.RemoveProp) // dev.keliver.portal.document/DocOp.RemoveProp.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.RemoveProp){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.RemoveProp.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.RemoveProp> // dev.keliver.portal.document/DocOp.RemoveProp.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class RenameId : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.RenameId|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String?) // dev.keliver.portal.document/DocOp.RenameId.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String?){}[0]
+
+        final val id // dev.keliver.portal.document/DocOp.RenameId.id|{}id[0]
+            final fun <get-id>(): kotlin/String? // dev.keliver.portal.document/DocOp.RenameId.id.<get-id>|<get-id>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.RenameId.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RenameId.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.RenameId.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/DocOp.RenameId.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String? = ...): dev.keliver.portal.document/DocOp.RenameId // dev.keliver.portal.document/DocOp.RenameId.copy|copy(dev.keliver.portal.document.Handle;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.RenameId.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.RenameId.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.RenameId.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.RenameId> { // dev.keliver.portal.document/DocOp.RenameId.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.RenameId.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.RenameId.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.RenameId.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.RenameId // dev.keliver.portal.document/DocOp.RenameId.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.RenameId) // dev.keliver.portal.document/DocOp.RenameId.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.RenameId){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.RenameId.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.RenameId> // dev.keliver.portal.document/DocOp.RenameId.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class ReplaceRaw : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.ReplaceRaw|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String) // dev.keliver.portal.document/DocOp.ReplaceRaw.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+
+        final val target // dev.keliver.portal.document/DocOp.ReplaceRaw.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.ReplaceRaw.target.<get-target>|<get-target>(){}[0]
+        final val text // dev.keliver.portal.document/DocOp.ReplaceRaw.text|{}text[0]
+            final fun <get-text>(): kotlin/String // dev.keliver.portal.document/DocOp.ReplaceRaw.text.<get-text>|<get-text>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.ReplaceRaw.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocOp.ReplaceRaw.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ...): dev.keliver.portal.document/DocOp.ReplaceRaw // dev.keliver.portal.document/DocOp.ReplaceRaw.copy|copy(dev.keliver.portal.document.Handle;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.ReplaceRaw.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.ReplaceRaw.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.ReplaceRaw.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.ReplaceRaw> { // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.ReplaceRaw // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.ReplaceRaw) // dev.keliver.portal.document/DocOp.ReplaceRaw.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.ReplaceRaw){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.ReplaceRaw.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.ReplaceRaw> // dev.keliver.portal.document/DocOp.ReplaceRaw.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class SetModifier : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.SetModifier|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String, dev.keliver.portal.document/PropValue) // dev.keliver.portal.document/DocOp.SetModifier.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String;dev.keliver.portal.document.PropValue){}[0]
+
+        final val name // dev.keliver.portal.document/DocOp.SetModifier.name|{}name[0]
+            final fun <get-name>(): kotlin/String // dev.keliver.portal.document/DocOp.SetModifier.name.<get-name>|<get-name>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.SetModifier.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.SetModifier.target.<get-target>|<get-target>(){}[0]
+        final val value // dev.keliver.portal.document/DocOp.SetModifier.value|{}value[0]
+            final fun <get-value>(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/DocOp.SetModifier.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.SetModifier.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocOp.SetModifier.component2|component2(){}[0]
+        final fun component3(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/DocOp.SetModifier.component3|component3(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ..., dev.keliver.portal.document/PropValue = ...): dev.keliver.portal.document/DocOp.SetModifier // dev.keliver.portal.document/DocOp.SetModifier.copy|copy(dev.keliver.portal.document.Handle;kotlin.String;dev.keliver.portal.document.PropValue){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.SetModifier.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.SetModifier.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.SetModifier.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.SetModifier> { // dev.keliver.portal.document/DocOp.SetModifier.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.SetModifier.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.SetModifier.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.SetModifier.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.SetModifier // dev.keliver.portal.document/DocOp.SetModifier.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.SetModifier) // dev.keliver.portal.document/DocOp.SetModifier.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.SetModifier){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.SetModifier.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/DocOp.SetModifier.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.SetModifier> // dev.keliver.portal.document/DocOp.SetModifier.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class SetProp : dev.keliver.portal.document/DocOp { // dev.keliver.portal.document/DocOp.SetProp|null[0]
+        constructor <init>(dev.keliver.portal.document/Handle, kotlin/String, dev.keliver.portal.document/PropValue) // dev.keliver.portal.document/DocOp.SetProp.<init>|<init>(dev.keliver.portal.document.Handle;kotlin.String;dev.keliver.portal.document.PropValue){}[0]
+
+        final val name // dev.keliver.portal.document/DocOp.SetProp.name|{}name[0]
+            final fun <get-name>(): kotlin/String // dev.keliver.portal.document/DocOp.SetProp.name.<get-name>|<get-name>(){}[0]
+        final val target // dev.keliver.portal.document/DocOp.SetProp.target|{}target[0]
+            final fun <get-target>(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.SetProp.target.<get-target>|<get-target>(){}[0]
+        final val value // dev.keliver.portal.document/DocOp.SetProp.value|{}value[0]
+            final fun <get-value>(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/DocOp.SetProp.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/Handle // dev.keliver.portal.document/DocOp.SetProp.component1|component1(){}[0]
+        final fun component2(): kotlin/String // dev.keliver.portal.document/DocOp.SetProp.component2|component2(){}[0]
+        final fun component3(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/DocOp.SetProp.component3|component3(){}[0]
+        final fun copy(dev.keliver.portal.document/Handle = ..., kotlin/String = ..., dev.keliver.portal.document/PropValue = ...): dev.keliver.portal.document/DocOp.SetProp // dev.keliver.portal.document/DocOp.SetProp.copy|copy(dev.keliver.portal.document.Handle;kotlin.String;dev.keliver.portal.document.PropValue){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/DocOp.SetProp.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/DocOp.SetProp.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/DocOp.SetProp.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/DocOp.SetProp> { // dev.keliver.portal.document/DocOp.SetProp.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/DocOp.SetProp.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/DocOp.SetProp.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/DocOp.SetProp.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/DocOp.SetProp // dev.keliver.portal.document/DocOp.SetProp.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/DocOp.SetProp) // dev.keliver.portal.document/DocOp.SetProp.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.DocOp.SetProp){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/DocOp.SetProp.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/DocOp.SetProp.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp.SetProp> // dev.keliver.portal.document/DocOp.SetProp.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.keliver.portal.document/DocOp.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/DocOp> // dev.keliver.portal.document/DocOp.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.keliver.portal.document/DocOp.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+sealed interface dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue|null[0]
+    final class Action : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Action|null[0]
+        constructor <init>(kotlin/String, kotlin/String? = ...) // dev.keliver.portal.document/PropValue.Action.<init>|<init>(kotlin.String;kotlin.String?){}[0]
+
+        final val arg // dev.keliver.portal.document/PropValue.Action.arg|{}arg[0]
+            final fun <get-arg>(): kotlin/String? // dev.keliver.portal.document/PropValue.Action.arg.<get-arg>|<get-arg>(){}[0]
+        final val name // dev.keliver.portal.document/PropValue.Action.name|{}name[0]
+            final fun <get-name>(): kotlin/String // dev.keliver.portal.document/PropValue.Action.name.<get-name>|<get-name>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.portal.document/PropValue.Action.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/PropValue.Action.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String? = ...): dev.keliver.portal.document/PropValue.Action // dev.keliver.portal.document/PropValue.Action.copy|copy(kotlin.String;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.Action.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.Action.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.Action.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.Action> { // dev.keliver.portal.document/PropValue.Action.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.Action.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.Action.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.Action.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.Action // dev.keliver.portal.document/PropValue.Action.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.Action) // dev.keliver.portal.document/PropValue.Action.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.Action){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.Action.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Action> // dev.keliver.portal.document/PropValue.Action.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class Bind : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Bind|null[0]
+        constructor <init>(kotlin/String) // dev.keliver.portal.document/PropValue.Bind.<init>|<init>(kotlin.String){}[0]
+
+        final val field // dev.keliver.portal.document/PropValue.Bind.field|{}field[0]
+            final fun <get-field>(): kotlin/String // dev.keliver.portal.document/PropValue.Bind.field.<get-field>|<get-field>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.portal.document/PropValue.Bind.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): dev.keliver.portal.document/PropValue.Bind // dev.keliver.portal.document/PropValue.Bind.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.Bind.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.Bind.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.Bind.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.Bind> { // dev.keliver.portal.document/PropValue.Bind.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.Bind.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.Bind.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.Bind.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.Bind // dev.keliver.portal.document/PropValue.Bind.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.Bind) // dev.keliver.portal.document/PropValue.Bind.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.Bind){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.Bind.Companion|null[0]
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Bind> // dev.keliver.portal.document/PropValue.Bind.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class Lit : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Lit|null[0]
+        constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/Int? = ..., kotlin/Double? = ..., kotlin/Boolean? = ..., kotlin.collections/List<kotlin/Int>? = ..., kotlin.collections/List<kotlin/Float>? = ..., kotlin.collections/List<kotlin/String>? = ...) // dev.keliver.portal.document/PropValue.Lit.<init>|<init>(kotlin.String;kotlin.String?;kotlin.Int?;kotlin.Double?;kotlin.Boolean?;kotlin.collections.List<kotlin.Int>?;kotlin.collections.List<kotlin.Float>?;kotlin.collections.List<kotlin.String>?){}[0]
+
+        final val b // dev.keliver.portal.document/PropValue.Lit.b|{}b[0]
+            final fun <get-b>(): kotlin/Boolean? // dev.keliver.portal.document/PropValue.Lit.b.<get-b>|<get-b>(){}[0]
+        final val d // dev.keliver.portal.document/PropValue.Lit.d|{}d[0]
+            final fun <get-d>(): kotlin/Double? // dev.keliver.portal.document/PropValue.Lit.d.<get-d>|<get-d>(){}[0]
+        final val i // dev.keliver.portal.document/PropValue.Lit.i|{}i[0]
+            final fun <get-i>(): kotlin/Int? // dev.keliver.portal.document/PropValue.Lit.i.<get-i>|<get-i>(){}[0]
+        final val lf // dev.keliver.portal.document/PropValue.Lit.lf|{}lf[0]
+            final fun <get-lf>(): kotlin.collections/List<kotlin/Float>? // dev.keliver.portal.document/PropValue.Lit.lf.<get-lf>|<get-lf>(){}[0]
+        final val li // dev.keliver.portal.document/PropValue.Lit.li|{}li[0]
+            final fun <get-li>(): kotlin.collections/List<kotlin/Int>? // dev.keliver.portal.document/PropValue.Lit.li.<get-li>|<get-li>(){}[0]
+        final val ls // dev.keliver.portal.document/PropValue.Lit.ls|{}ls[0]
+            final fun <get-ls>(): kotlin.collections/List<kotlin/String>? // dev.keliver.portal.document/PropValue.Lit.ls.<get-ls>|<get-ls>(){}[0]
+        final val s // dev.keliver.portal.document/PropValue.Lit.s|{}s[0]
+            final fun <get-s>(): kotlin/String? // dev.keliver.portal.document/PropValue.Lit.s.<get-s>|<get-s>(){}[0]
+        final val tag // dev.keliver.portal.document/PropValue.Lit.tag|{}tag[0]
+            final fun <get-tag>(): kotlin/String // dev.keliver.portal.document/PropValue.Lit.tag.<get-tag>|<get-tag>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.portal.document/PropValue.Lit.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/PropValue.Lit.component2|component2(){}[0]
+        final fun component3(): kotlin/Int? // dev.keliver.portal.document/PropValue.Lit.component3|component3(){}[0]
+        final fun component4(): kotlin/Double? // dev.keliver.portal.document/PropValue.Lit.component4|component4(){}[0]
+        final fun component5(): kotlin/Boolean? // dev.keliver.portal.document/PropValue.Lit.component5|component5(){}[0]
+        final fun component6(): kotlin.collections/List<kotlin/Int>? // dev.keliver.portal.document/PropValue.Lit.component6|component6(){}[0]
+        final fun component7(): kotlin.collections/List<kotlin/Float>? // dev.keliver.portal.document/PropValue.Lit.component7|component7(){}[0]
+        final fun component8(): kotlin.collections/List<kotlin/String>? // dev.keliver.portal.document/PropValue.Lit.component8|component8(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/Int? = ..., kotlin/Double? = ..., kotlin/Boolean? = ..., kotlin.collections/List<kotlin/Int>? = ..., kotlin.collections/List<kotlin/Float>? = ..., kotlin.collections/List<kotlin/String>? = ...): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/PropValue.Lit.copy|copy(kotlin.String;kotlin.String?;kotlin.Int?;kotlin.Double?;kotlin.Boolean?;kotlin.collections.List<kotlin.Int>?;kotlin.collections.List<kotlin.Float>?;kotlin.collections.List<kotlin.String>?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.Lit.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.Lit.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.Lit.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.Lit> { // dev.keliver.portal.document/PropValue.Lit.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.Lit.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.Lit.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.Lit.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/PropValue.Lit.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.Lit) // dev.keliver.portal.document/PropValue.Lit.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.Lit){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.Lit.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/PropValue.Lit.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Lit> // dev.keliver.portal.document/PropValue.Lit.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final object Companion : kotlinx.serialization.internal/SerializerFactory { // dev.keliver.portal.document/PropValue.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/PropValue.Companion.serializer|serializer(){}[0]
+        final fun serializer(kotlin/Array<out kotlinx.serialization/KSerializer<*>>...): kotlinx.serialization/KSerializer<*> // dev.keliver.portal.document/PropValue.Companion.serializer|serializer(kotlin.Array<out|kotlinx.serialization.KSerializer<*>>...){}[0]
+    }
+}
+
+final class dev.keliver.portal.document/Contract { // dev.keliver.portal.document/Contract|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.portal.document/Contract.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+    final val actionParams // dev.keliver.portal.document/Contract.actionParams|{}actionParams[0]
+        final fun <get-actionParams>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.actionParams.<get-actionParams>|<get-actionParams>(){}[0]
+    final val actions // dev.keliver.portal.document/Contract.actions|{}actions[0]
+        final fun <get-actions>(): kotlin.collections/List<kotlin/String> // dev.keliver.portal.document/Contract.actions.<get-actions>|<get-actions>(){}[0]
+    final val fields // dev.keliver.portal.document/Contract.fields|{}fields[0]
+        final fun <get-fields>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.fields.<get-fields>|<get-fields>(){}[0]
+
+    final fun component1(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<kotlin/String> // dev.keliver.portal.document/Contract.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.component3|component3(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.portal.document/Contract // dev.keliver.portal.document/Contract.copy|copy(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/Contract.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/Contract.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/Contract.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/Contract> { // dev.keliver.portal.document/Contract.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/Contract.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/Contract.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/Contract.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/Contract // dev.keliver.portal.document/Contract.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/Contract) // dev.keliver.portal.document/Contract.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.Contract){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/Contract.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.document/Contract.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/Contract> // dev.keliver.portal.document/Contract.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.document/OpAck { // dev.keliver.portal.document/OpAck|null[0]
+    constructor <init>(kotlin/Boolean, kotlin/Long, kotlin/String? = ...) // dev.keliver.portal.document/OpAck.<init>|<init>(kotlin.Boolean;kotlin.Long;kotlin.String?){}[0]
+
+    final val error // dev.keliver.portal.document/OpAck.error|{}error[0]
+        final fun <get-error>(): kotlin/String? // dev.keliver.portal.document/OpAck.error.<get-error>|<get-error>(){}[0]
+    final val ok // dev.keliver.portal.document/OpAck.ok|{}ok[0]
+        final fun <get-ok>(): kotlin/Boolean // dev.keliver.portal.document/OpAck.ok.<get-ok>|<get-ok>(){}[0]
+    final val version // dev.keliver.portal.document/OpAck.version|{}version[0]
+        final fun <get-version>(): kotlin/Long // dev.keliver.portal.document/OpAck.version.<get-version>|<get-version>(){}[0]
+
+    final fun component1(): kotlin/Boolean // dev.keliver.portal.document/OpAck.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // dev.keliver.portal.document/OpAck.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.keliver.portal.document/OpAck.component3|component3(){}[0]
+    final fun copy(kotlin/Boolean = ..., kotlin/Long = ..., kotlin/String? = ...): dev.keliver.portal.document/OpAck // dev.keliver.portal.document/OpAck.copy|copy(kotlin.Boolean;kotlin.Long;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/OpAck.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/OpAck.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/OpAck.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/OpAck> { // dev.keliver.portal.document/OpAck.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/OpAck.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/OpAck.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/OpAck.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/OpAck // dev.keliver.portal.document/OpAck.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/OpAck) // dev.keliver.portal.document/OpAck.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.OpAck){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/OpAck.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/OpAck> // dev.keliver.portal.document/OpAck.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.document/OpBatch { // dev.keliver.portal.document/OpBatch|null[0]
+    constructor <init>(kotlin/Long, dev.keliver.portal.document/OpEnvelope, kotlin.collections/List<dev.keliver.portal.document/DocOp>) // dev.keliver.portal.document/OpBatch.<init>|<init>(kotlin.Long;dev.keliver.portal.document.OpEnvelope;kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+
+    final val baseVersion // dev.keliver.portal.document/OpBatch.baseVersion|{}baseVersion[0]
+        final fun <get-baseVersion>(): kotlin/Long // dev.keliver.portal.document/OpBatch.baseVersion.<get-baseVersion>|<get-baseVersion>(){}[0]
+    final val envelope // dev.keliver.portal.document/OpBatch.envelope|{}envelope[0]
+        final fun <get-envelope>(): dev.keliver.portal.document/OpEnvelope // dev.keliver.portal.document/OpBatch.envelope.<get-envelope>|<get-envelope>(){}[0]
+    final val ops // dev.keliver.portal.document/OpBatch.ops|{}ops[0]
+        final fun <get-ops>(): kotlin.collections/List<dev.keliver.portal.document/DocOp> // dev.keliver.portal.document/OpBatch.ops.<get-ops>|<get-ops>(){}[0]
+
+    final fun component1(): kotlin/Long // dev.keliver.portal.document/OpBatch.component1|component1(){}[0]
+    final fun component2(): dev.keliver.portal.document/OpEnvelope // dev.keliver.portal.document/OpBatch.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<dev.keliver.portal.document/DocOp> // dev.keliver.portal.document/OpBatch.component3|component3(){}[0]
+    final fun copy(kotlin/Long = ..., dev.keliver.portal.document/OpEnvelope = ..., kotlin.collections/List<dev.keliver.portal.document/DocOp> = ...): dev.keliver.portal.document/OpBatch // dev.keliver.portal.document/OpBatch.copy|copy(kotlin.Long;dev.keliver.portal.document.OpEnvelope;kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/OpBatch.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/OpBatch.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/OpBatch.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/OpBatch> { // dev.keliver.portal.document/OpBatch.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/OpBatch.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/OpBatch.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/OpBatch.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/OpBatch // dev.keliver.portal.document/OpBatch.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/OpBatch) // dev.keliver.portal.document/OpBatch.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.OpBatch){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/OpBatch.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.document/OpBatch.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/OpBatch> // dev.keliver.portal.document/OpBatch.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.document/OpEnvelope { // dev.keliver.portal.document/OpEnvelope|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/String? = ...) // dev.keliver.portal.document/OpEnvelope.<init>|<init>(kotlin.String;kotlin.Long;kotlin.String?){}[0]
+
+    final val atMillis // dev.keliver.portal.document/OpEnvelope.atMillis|{}atMillis[0]
+        final fun <get-atMillis>(): kotlin/Long // dev.keliver.portal.document/OpEnvelope.atMillis.<get-atMillis>|<get-atMillis>(){}[0]
+    final val label // dev.keliver.portal.document/OpEnvelope.label|{}label[0]
+        final fun <get-label>(): kotlin/String? // dev.keliver.portal.document/OpEnvelope.label.<get-label>|<get-label>(){}[0]
+    final val session // dev.keliver.portal.document/OpEnvelope.session|{}session[0]
+        final fun <get-session>(): kotlin/String // dev.keliver.portal.document/OpEnvelope.session.<get-session>|<get-session>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.portal.document/OpEnvelope.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // dev.keliver.portal.document/OpEnvelope.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // dev.keliver.portal.document/OpEnvelope.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Long = ..., kotlin/String? = ...): dev.keliver.portal.document/OpEnvelope // dev.keliver.portal.document/OpEnvelope.copy|copy(kotlin.String;kotlin.Long;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/OpEnvelope.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/OpEnvelope.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/OpEnvelope.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/OpEnvelope> { // dev.keliver.portal.document/OpEnvelope.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/OpEnvelope.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/OpEnvelope.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/OpEnvelope.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/OpEnvelope // dev.keliver.portal.document/OpEnvelope.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/OpEnvelope) // dev.keliver.portal.document/OpEnvelope.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.OpEnvelope){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/OpEnvelope.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/OpEnvelope> // dev.keliver.portal.document/OpEnvelope.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final class dev.keliver.portal.document/UiDocument { // dev.keliver.portal.document/UiDocument|null[0]
+    constructor <init>(kotlin/String, dev.keliver.portal.document/DocNode, dev.keliver.portal.document/Contract, kotlin/Long, kotlin/Long) // dev.keliver.portal.document/UiDocument.<init>|<init>(kotlin.String;dev.keliver.portal.document.DocNode;dev.keliver.portal.document.Contract;kotlin.Long;kotlin.Long){}[0]
+
+    final val contract // dev.keliver.portal.document/UiDocument.contract|{}contract[0]
+        final fun <get-contract>(): dev.keliver.portal.document/Contract // dev.keliver.portal.document/UiDocument.contract.<get-contract>|<get-contract>(){}[0]
+    final val nextHandle // dev.keliver.portal.document/UiDocument.nextHandle|{}nextHandle[0]
+        final fun <get-nextHandle>(): kotlin/Long // dev.keliver.portal.document/UiDocument.nextHandle.<get-nextHandle>|<get-nextHandle>(){}[0]
+    final val root // dev.keliver.portal.document/UiDocument.root|{}root[0]
+        final fun <get-root>(): dev.keliver.portal.document/DocNode // dev.keliver.portal.document/UiDocument.root.<get-root>|<get-root>(){}[0]
+    final val screen // dev.keliver.portal.document/UiDocument.screen|{}screen[0]
+        final fun <get-screen>(): kotlin/String // dev.keliver.portal.document/UiDocument.screen.<get-screen>|<get-screen>(){}[0]
+    final val version // dev.keliver.portal.document/UiDocument.version|{}version[0]
+        final fun <get-version>(): kotlin/Long // dev.keliver.portal.document/UiDocument.version.<get-version>|<get-version>(){}[0]
+
+    final fun apply(dev.keliver.portal.document/DocOp): dev.keliver.portal.document/UiDocument.ApplyResult // dev.keliver.portal.document/UiDocument.apply|apply(dev.keliver.portal.document.DocOp){}[0]
+    final fun applyBatch(kotlin.collections/List<dev.keliver.portal.document/DocOp>): dev.keliver.portal.document/UiDocument.TryBatch // dev.keliver.portal.document/UiDocument.applyBatch|applyBatch(kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+    final fun component1(): kotlin/String // dev.keliver.portal.document/UiDocument.component1|component1(){}[0]
+    final fun component2(): dev.keliver.portal.document/DocNode // dev.keliver.portal.document/UiDocument.component2|component2(){}[0]
+    final fun component3(): dev.keliver.portal.document/Contract // dev.keliver.portal.document/UiDocument.component3|component3(){}[0]
+    final fun component4(): kotlin/Long // dev.keliver.portal.document/UiDocument.component4|component4(){}[0]
+    final fun component5(): kotlin/Long // dev.keliver.portal.document/UiDocument.component5|component5(){}[0]
+    final fun copy(kotlin/String = ..., dev.keliver.portal.document/DocNode = ..., dev.keliver.portal.document/Contract = ..., kotlin/Long = ..., kotlin/Long = ...): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.copy|copy(kotlin.String;dev.keliver.portal.document.DocNode;dev.keliver.portal.document.Contract;kotlin.Long;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/UiDocument.equals|equals(kotlin.Any?){}[0]
+    final fun find(dev.keliver.portal.document/Handle): dev.keliver.portal.document/DocNode? // dev.keliver.portal.document/UiDocument.find|find(dev.keliver.portal.document.Handle){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/UiDocument.hashCode|hashCode(){}[0]
+    final fun replay(kotlin.collections/List<dev.keliver.portal.document/DocOp>): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.replay|replay(kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/UiDocument.toString|toString(){}[0]
+    final fun tryApply(dev.keliver.portal.document/DocOp): dev.keliver.portal.document/UiDocument.TryResult // dev.keliver.portal.document/UiDocument.tryApply|tryApply(dev.keliver.portal.document.DocOp){}[0]
+
+    final class ApplyResult { // dev.keliver.portal.document/UiDocument.ApplyResult|null[0]
+        constructor <init>(dev.keliver.portal.document/UiDocument, dev.keliver.portal.document/DocOp?) // dev.keliver.portal.document/UiDocument.ApplyResult.<init>|<init>(dev.keliver.portal.document.UiDocument;dev.keliver.portal.document.DocOp?){}[0]
+
+        final val doc // dev.keliver.portal.document/UiDocument.ApplyResult.doc|{}doc[0]
+            final fun <get-doc>(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.ApplyResult.doc.<get-doc>|<get-doc>(){}[0]
+        final val inverse // dev.keliver.portal.document/UiDocument.ApplyResult.inverse|{}inverse[0]
+            final fun <get-inverse>(): dev.keliver.portal.document/DocOp? // dev.keliver.portal.document/UiDocument.ApplyResult.inverse.<get-inverse>|<get-inverse>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.ApplyResult.component1|component1(){}[0]
+        final fun component2(): dev.keliver.portal.document/DocOp? // dev.keliver.portal.document/UiDocument.ApplyResult.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/UiDocument = ..., dev.keliver.portal.document/DocOp? = ...): dev.keliver.portal.document/UiDocument.ApplyResult // dev.keliver.portal.document/UiDocument.ApplyResult.copy|copy(dev.keliver.portal.document.UiDocument;dev.keliver.portal.document.DocOp?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/UiDocument.ApplyResult.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/UiDocument.ApplyResult.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/UiDocument.ApplyResult.toString|toString(){}[0]
+    }
+
+    final class BatchResult { // dev.keliver.portal.document/UiDocument.BatchResult|null[0]
+        constructor <init>(dev.keliver.portal.document/UiDocument, kotlin.collections/List<dev.keliver.portal.document/DocOp>) // dev.keliver.portal.document/UiDocument.BatchResult.<init>|<init>(dev.keliver.portal.document.UiDocument;kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+
+        final val doc // dev.keliver.portal.document/UiDocument.BatchResult.doc|{}doc[0]
+            final fun <get-doc>(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.BatchResult.doc.<get-doc>|<get-doc>(){}[0]
+        final val inverseBatch // dev.keliver.portal.document/UiDocument.BatchResult.inverseBatch|{}inverseBatch[0]
+            final fun <get-inverseBatch>(): kotlin.collections/List<dev.keliver.portal.document/DocOp> // dev.keliver.portal.document/UiDocument.BatchResult.inverseBatch.<get-inverseBatch>|<get-inverseBatch>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.BatchResult.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<dev.keliver.portal.document/DocOp> // dev.keliver.portal.document/UiDocument.BatchResult.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/UiDocument = ..., kotlin.collections/List<dev.keliver.portal.document/DocOp> = ...): dev.keliver.portal.document/UiDocument.BatchResult // dev.keliver.portal.document/UiDocument.BatchResult.copy|copy(dev.keliver.portal.document.UiDocument;kotlin.collections.List<dev.keliver.portal.document.DocOp>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/UiDocument.BatchResult.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/UiDocument.BatchResult.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/UiDocument.BatchResult.toString|toString(){}[0]
+    }
+
+    final class TryBatch { // dev.keliver.portal.document/UiDocument.TryBatch|null[0]
+        constructor <init>(dev.keliver.portal.document/UiDocument.BatchResult?, kotlin/String?) // dev.keliver.portal.document/UiDocument.TryBatch.<init>|<init>(dev.keliver.portal.document.UiDocument.BatchResult?;kotlin.String?){}[0]
+
+        final val error // dev.keliver.portal.document/UiDocument.TryBatch.error|{}error[0]
+            final fun <get-error>(): kotlin/String? // dev.keliver.portal.document/UiDocument.TryBatch.error.<get-error>|<get-error>(){}[0]
+        final val result // dev.keliver.portal.document/UiDocument.TryBatch.result|{}result[0]
+            final fun <get-result>(): dev.keliver.portal.document/UiDocument.BatchResult? // dev.keliver.portal.document/UiDocument.TryBatch.result.<get-result>|<get-result>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/UiDocument.BatchResult? // dev.keliver.portal.document/UiDocument.TryBatch.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/UiDocument.TryBatch.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/UiDocument.BatchResult? = ..., kotlin/String? = ...): dev.keliver.portal.document/UiDocument.TryBatch // dev.keliver.portal.document/UiDocument.TryBatch.copy|copy(dev.keliver.portal.document.UiDocument.BatchResult?;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/UiDocument.TryBatch.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/UiDocument.TryBatch.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/UiDocument.TryBatch.toString|toString(){}[0]
+    }
+
+    final class TryResult { // dev.keliver.portal.document/UiDocument.TryResult|null[0]
+        constructor <init>(dev.keliver.portal.document/UiDocument.ApplyResult?, kotlin/String?) // dev.keliver.portal.document/UiDocument.TryResult.<init>|<init>(dev.keliver.portal.document.UiDocument.ApplyResult?;kotlin.String?){}[0]
+
+        final val error // dev.keliver.portal.document/UiDocument.TryResult.error|{}error[0]
+            final fun <get-error>(): kotlin/String? // dev.keliver.portal.document/UiDocument.TryResult.error.<get-error>|<get-error>(){}[0]
+        final val result // dev.keliver.portal.document/UiDocument.TryResult.result|{}result[0]
+            final fun <get-result>(): dev.keliver.portal.document/UiDocument.ApplyResult? // dev.keliver.portal.document/UiDocument.TryResult.result.<get-result>|<get-result>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/UiDocument.ApplyResult? // dev.keliver.portal.document/UiDocument.TryResult.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/UiDocument.TryResult.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/UiDocument.ApplyResult? = ..., kotlin/String? = ...): dev.keliver.portal.document/UiDocument.TryResult // dev.keliver.portal.document/UiDocument.TryResult.copy|copy(dev.keliver.portal.document.UiDocument.ApplyResult?;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/UiDocument.TryResult.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/UiDocument.TryResult.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/UiDocument.TryResult.toString|toString(){}[0]
+    }
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/UiDocument> { // dev.keliver.portal.document/UiDocument.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/UiDocument.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/UiDocument.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/UiDocument.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/UiDocument.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/UiDocument) // dev.keliver.portal.document/UiDocument.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.UiDocument){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/UiDocument.Companion|null[0]
+        final val $childSerializers // dev.keliver.portal.document/UiDocument.Companion.$childSerializers|{}$childSerializers[0]
+
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/UiDocument> // dev.keliver.portal.document/UiDocument.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final value class dev.keliver.portal.document/Handle { // dev.keliver.portal.document/Handle|null[0]
+    constructor <init>(kotlin/Long) // dev.keliver.portal.document/Handle.<init>|<init>(kotlin.Long){}[0]
+
+    final val v // dev.keliver.portal.document/Handle.v|{}v[0]
+        final fun <get-v>(): kotlin/Long // dev.keliver.portal.document/Handle.v.<get-v>|<get-v>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/Handle.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.document/Handle.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.document/Handle.toString|toString(){}[0]
+
+    final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/Handle> { // dev.keliver.portal.document/Handle.$serializer|null[0]
+        final val descriptor // dev.keliver.portal.document/Handle.$serializer.descriptor|{}descriptor[0]
+            final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/Handle.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+        final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/Handle.$serializer.childSerializers|childSerializers(){}[0]
+        final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/Handle // dev.keliver.portal.document/Handle.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+        final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/Handle) // dev.keliver.portal.document/Handle.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.Handle){}[0]
+    }
+
+    final object Companion { // dev.keliver.portal.document/Handle.Companion|null[0]
+        final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/Handle> // dev.keliver.portal.document/Handle.Companion.serializer|serializer(){}[0]
+    }
+}
+
+final val dev.keliver.portal.document/DocJson // dev.keliver.portal.document/DocJson|{}DocJson[0]
+    final fun <get-DocJson>(): kotlinx.serialization.json/Json // dev.keliver.portal.document/DocJson.<get-DocJson>|<get-DocJson>(){}[0]
+
+final fun (dev.keliver.portal.document/PropValue.Lit).dev.keliver.portal.document/toAny(): kotlin/Any? // dev.keliver.portal.document/toAny|toAny@dev.keliver.portal.document.PropValue.Lit(){}[0]
+final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/toWidgetTree(kotlin.collections/Map<kotlin/String, kotlin/Any?> = ..., kotlin/Boolean = ...): dev.keliver.portal/WidgetNode // dev.keliver.portal.document/toWidgetTree|toWidgetTree@dev.keliver.portal.document.UiDocument(kotlin.collections.Map<kotlin.String,kotlin.Any?>;kotlin.Boolean){}[0]
+final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.document/toDocNode(): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/toDocNode|toDocNode@dev.keliver.portal.WidgetNode(){}[0]
+final fun dev.keliver.portal.document/lit(kotlin/Any?): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/lit|lit(kotlin.Any?){}[0]

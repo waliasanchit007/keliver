@@ -6,6 +6,11 @@ apply plugin: 'org.jetbrains.kotlin.multiplatform'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 
+// Published: the reusable editor shell a consumer app builds its editor from.
+redwoodBuild {
+  publishing()
+}
+
 kotlin {
   wasmJs { browser() }
   sourceSets {

@@ -9,9 +9,9 @@ package dev.keliver.portal
  * Takes primitives (routes map + trees), not FlowSpec, so portal-core needs no
  * dependency on :portal-flow — the relay marries the two.
  */
-data class FlowEdge(val from: String, val key: String, val to: String)
+public data class FlowEdge(val from: String, val key: String, val to: String)
 
-fun deriveFlowEdges(routes: Map<String, String>, screens: Map<String, WidgetNode>): List<FlowEdge> {
+public fun deriveFlowEdges(routes: Map<String, String>, screens: Map<String, WidgetNode>): List<FlowEdge> {
   val edges = LinkedHashSet<FlowEdge>()
   fun walk(screen: String, n: WidgetNode) {
     for (v in n.props.values) {

@@ -1,0 +1,11 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-material-protocol-guest-web>
+final object dev.keliver.material.protocol.guest/KeliverMaterialProtocolWidgetSystemFactory : dev.keliver.protocol.guest/ProtocolWidgetSystemFactory { // dev.keliver.material.protocol.guest/KeliverMaterialProtocolWidgetSystemFactory|null[0]
+    final fun create(dev.keliver.protocol.guest/GuestProtocolAdapter, dev.keliver.protocol.guest/ProtocolMismatchHandler): dev.keliver.material.widget/KeliverMaterialWidgetSystem<kotlin/Unit> // dev.keliver.material.protocol.guest/KeliverMaterialProtocolWidgetSystemFactory.create|create(dev.keliver.protocol.guest.GuestProtocolAdapter;dev.keliver.protocol.guest.ProtocolMismatchHandler){}[0]
+}

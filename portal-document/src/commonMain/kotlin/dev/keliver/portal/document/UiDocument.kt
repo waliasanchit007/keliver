@@ -9,34 +9,34 @@ import kotlinx.serialization.Serializable
  * (clients send handle 0 in inserted subtrees).
  */
 @Serializable
-data class UiDocument(
+public data class UiDocument(
   val screen: String,
   val root: DocNode,
   val contract: Contract,
   val version: Long,
   val nextHandle: Long,
 ) {
-  data class ApplyResult(val doc: UiDocument, val inverse: DocOp?)
-  data class TryResult(val result: ApplyResult?, val error: String?)
-  data class BatchResult(val doc: UiDocument, val inverseBatch: List<DocOp>)
-  data class TryBatch(val result: BatchResult?, val error: String?)
+  public data class ApplyResult(val doc: UiDocument, val inverse: DocOp?)
+  public data class TryResult(val result: ApplyResult?, val error: String?)
+  public data class BatchResult(val doc: UiDocument, val inverseBatch: List<DocOp>)
+  public data class TryBatch(val result: BatchResult?, val error: String?)
 
-  fun find(h: Handle): DocNode? = findIn(root, h)
+  public fun find(h: Handle): DocNode? = findIn(root, h)
 
   /** Apply or throw — internal replay + tests. */
-  fun apply(op: DocOp): ApplyResult {
+  public fun apply(op: DocOp): ApplyResult {
     val t = tryApply(op)
     return t.result ?: throw IllegalArgumentException(t.error)
   }
 
   /** Replay a stored (inverse) batch in order. */
-  fun replay(ops: List<DocOp>): UiDocument {
+  public fun replay(ops: List<DocOp>): UiDocument {
     var d = this
     ops.forEach { d = d.apply(it).doc }
     return d
   }
 
-  fun tryApply(op: DocOp): TryResult {
+  public fun tryApply(op: DocOp): TryResult {
     fun err(m: String) = TryResult(null, m)
     return when (op) {
       is DocOp.InsertNode -> {
@@ -121,7 +121,7 @@ data class UiDocument(
   }
 
   /** All-or-nothing; inverses in reverse order = one undo entry. */
-  fun applyBatch(ops: List<DocOp>): TryBatch {
+  public fun applyBatch(ops: List<DocOp>): TryBatch {
     var d = this
     val inverses = mutableListOf<DocOp>()
     for (op in ops) {

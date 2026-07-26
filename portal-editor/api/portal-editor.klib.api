@@ -1,0 +1,73 @@
+// Klib ABI Dump
+// Targets: [wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:portal-editor>
+final class /CapStatus { // /CapStatus|null[0]
+    constructor <init>(kotlin/String, kotlin/Boolean, kotlin/String) // /CapStatus.<init>|<init>(kotlin.String;kotlin.Boolean;kotlin.String){}[0]
+
+    final val name // /CapStatus.name|{}name[0]
+        final fun <get-name>(): kotlin/String // /CapStatus.name.<get-name>|<get-name>(){}[0]
+    final val note // /CapStatus.note|{}note[0]
+        final fun <get-note>(): kotlin/String // /CapStatus.note.<get-note>|<get-note>(){}[0]
+    final val real // /CapStatus.real|{}real[0]
+        final fun <get-real>(): kotlin/Boolean // /CapStatus.real.<get-real>|<get-real>(){}[0]
+
+    final fun component1(): kotlin/String // /CapStatus.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // /CapStatus.component2|component2(){}[0]
+    final fun component3(): kotlin/String // /CapStatus.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Boolean = ..., kotlin/String = ...): /CapStatus // /CapStatus.copy|copy(kotlin.String;kotlin.Boolean;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // /CapStatus.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // /CapStatus.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // /CapStatus.toString|toString(){}[0]
+}
+
+final class /PreviewSqlDriver : app.cash.sqldelight.db/SqlDriver { // /PreviewSqlDriver|null[0]
+    constructor <init>(/PreviewSqlHost) // /PreviewSqlDriver.<init>|<init>(PreviewSqlHost){}[0]
+
+    final fun <#A1: kotlin/Any?> executeQuery(kotlin/Int?, kotlin/String, kotlin/Function1<app.cash.sqldelight.db/SqlCursor, app.cash.sqldelight.db/QueryResult<#A1>>, kotlin/Int, kotlin/Function1<app.cash.sqldelight.db/SqlPreparedStatement, kotlin/Unit>?): app.cash.sqldelight.db/QueryResult<#A1> // /PreviewSqlDriver.executeQuery|executeQuery(kotlin.Int?;kotlin.String;kotlin.Function1<app.cash.sqldelight.db.SqlCursor,app.cash.sqldelight.db.QueryResult<0:0>>;kotlin.Int;kotlin.Function1<app.cash.sqldelight.db.SqlPreparedStatement,kotlin.Unit>?){0§<kotlin.Any?>}[0]
+    final fun addListener(kotlin/Array<out kotlin/String>..., app.cash.sqldelight/Query.Listener) // /PreviewSqlDriver.addListener|addListener(kotlin.Array<out|kotlin.String>...;app.cash.sqldelight.Query.Listener){}[0]
+    final fun close() // /PreviewSqlDriver.close|close(){}[0]
+    final fun currentTransaction(): app.cash.sqldelight/Transacter.Transaction? // /PreviewSqlDriver.currentTransaction|currentTransaction(){}[0]
+    final fun execute(kotlin/Int?, kotlin/String, kotlin/Int, kotlin/Function1<app.cash.sqldelight.db/SqlPreparedStatement, kotlin/Unit>?): app.cash.sqldelight.db/QueryResult<kotlin/Long> // /PreviewSqlDriver.execute|execute(kotlin.Int?;kotlin.String;kotlin.Int;kotlin.Function1<app.cash.sqldelight.db.SqlPreparedStatement,kotlin.Unit>?){}[0]
+    final fun newTransaction(): app.cash.sqldelight.db/QueryResult<app.cash.sqldelight/Transacter.Transaction> // /PreviewSqlDriver.newTransaction|newTransaction(){}[0]
+    final fun notifyListeners(kotlin/Array<out kotlin/String>...) // /PreviewSqlDriver.notifyListeners|notifyListeners(kotlin.Array<out|kotlin.String>...){}[0]
+    final fun removeListener(kotlin/Array<out kotlin/String>..., app.cash.sqldelight/Query.Listener) // /PreviewSqlDriver.removeListener|removeListener(kotlin.Array<out|kotlin.String>...;app.cash.sqldelight.Query.Listener){}[0]
+}
+
+final class /PreviewSqlHost { // /PreviewSqlHost|null[0]
+    constructor <init>() // /PreviewSqlHost.<init>|<init>(){}[0]
+
+    final fun execute(kotlin/String, kotlin.collections/List<kotlin/String?>): kotlin.collections/List<kotlin.collections/List<kotlin/String?>> // /PreviewSqlHost.execute|execute(kotlin.String;kotlin.collections.List<kotlin.String?>){}[0]
+}
+
+final object /PreviewCapabilities { // /PreviewCapabilities|null[0]
+    final val sqlAvailable // /PreviewCapabilities.sqlAvailable|{}sqlAvailable[0]
+        final fun <get-sqlAvailable>(): kotlin/Boolean // /PreviewCapabilities.sqlAvailable.<get-sqlAvailable>|<get-sqlAvailable>(){}[0]
+
+    final fun isFullFidelity(kotlin.collections/List<kotlin/String>): kotlin/Boolean // /PreviewCapabilities.isFullFidelity|isFullFidelity(kotlin.collections.List<kotlin.String>){}[0]
+    final fun report(kotlin.collections/List<kotlin/String>): kotlin.collections/List</CapStatus> // /PreviewCapabilities.report|report(kotlin.collections.List<kotlin.String>){}[0]
+    final fun statusOf(kotlin/String): /CapStatus // /PreviewCapabilities.statusOf|statusOf(kotlin.String){}[0]
+}
+
+final val /BrowserFetchFetcher$stableprop // /BrowserFetchFetcher$stableprop|#static{}BrowserFetchFetcher$stableprop[0]
+final val /BrowserFetchFetcher_Factory$stableprop // /BrowserFetchFetcher_Factory$stableprop|#static{}BrowserFetchFetcher_Factory$stableprop[0]
+final val /CapStatus$stableprop // /CapStatus$stableprop|#static{}CapStatus$stableprop[0]
+final val /LiveEngine$stableprop // /LiveEngine$stableprop|#static{}LiveEngine$stableprop[0]
+final val /PreviewCapabilities$stableprop // /PreviewCapabilities$stableprop|#static{}PreviewCapabilities$stableprop[0]
+final val /PreviewSqlDriver$stableprop // /PreviewSqlDriver$stableprop|#static{}PreviewSqlDriver$stableprop[0]
+final val /PreviewSqlHost$stableprop // /PreviewSqlHost$stableprop|#static{}PreviewSqlHost$stableprop[0]
+final val /Ui$stableprop // /Ui$stableprop|#static{}Ui$stableprop[0]
+
+final fun /BrowserFetchFetcher$stableprop_getter(): kotlin/Int // /BrowserFetchFetcher$stableprop_getter|BrowserFetchFetcher$stableprop_getter(){}[0]
+final fun /BrowserFetchFetcher_Factory$stableprop_getter(): kotlin/Int // /BrowserFetchFetcher_Factory$stableprop_getter|BrowserFetchFetcher_Factory$stableprop_getter(){}[0]
+final fun /CapStatus$stableprop_getter(): kotlin/Int // /CapStatus$stableprop_getter|CapStatus$stableprop_getter(){}[0]
+final fun /LiveEngine$stableprop_getter(): kotlin/Int // /LiveEngine$stableprop_getter|LiveEngine$stableprop_getter(){}[0]
+final fun /PreviewCapabilities$stableprop_getter(): kotlin/Int // /PreviewCapabilities$stableprop_getter|PreviewCapabilities$stableprop_getter(){}[0]
+final fun /PreviewSqlDriver$stableprop_getter(): kotlin/Int // /PreviewSqlDriver$stableprop_getter|PreviewSqlDriver$stableprop_getter(){}[0]
+final fun /PreviewSqlHost$stableprop_getter(): kotlin/Int // /PreviewSqlHost$stableprop_getter|PreviewSqlHost$stableprop_getter(){}[0]
+final fun /Ui$stableprop_getter(): kotlin/Int // /Ui$stableprop_getter|Ui$stableprop_getter(){}[0]
+final fun /runPortalEditor(dev.keliver.portal.render/AppPreviewEntry, dev.keliver.portal.render/AppFlowEntry? = ...) // /runPortalEditor|runPortalEditor(dev.keliver.portal.render.AppPreviewEntry;dev.keliver.portal.render.AppFlowEntry?){}[0]

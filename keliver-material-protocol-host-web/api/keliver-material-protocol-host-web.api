@@ -1,0 +1,14 @@
+public final class dev/keliver/material/protocol/host/KeliverMaterialHostProtocol : dev/keliver/protocol/host/GeneratedHostProtocol {
+	public static final field Factory Ldev/keliver/material/protocol/host/KeliverMaterialHostProtocol$Factory;
+	public synthetic fun <init> (Lkotlinx/serialization/json/Json;Ldev/keliver/protocol/host/ProtocolMismatchHandler;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun createModifier (Ldev/keliver/protocol/ModifierElement;)Ldev/keliver/Modifier;
+	public fun getJson ()Lkotlinx/serialization/json/Json;
+	public fun getMismatchHandler ()Ldev/keliver/protocol/host/ProtocolMismatchHandler;
+	public fun widget-BcInUtQ (I)Ldev/keliver/protocol/host/WidgetHostProtocol;
+}
+
+public final class dev/keliver/material/protocol/host/KeliverMaterialHostProtocol$Factory : dev/keliver/protocol/host/HostProtocol$Factory {
+	public fun create (Lkotlinx/serialization/json/Json;Ldev/keliver/protocol/host/ProtocolMismatchHandler;)Ldev/keliver/material/protocol/host/KeliverMaterialHostProtocol;
+	public synthetic fun create (Lkotlinx/serialization/json/Json;Ldev/keliver/protocol/host/ProtocolMismatchHandler;)Ldev/keliver/protocol/host/HostProtocol;
+}
+

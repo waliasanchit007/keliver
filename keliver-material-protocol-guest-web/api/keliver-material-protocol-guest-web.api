@@ -1,0 +1,6 @@
+public final class dev/keliver/material/protocol/guest/KeliverMaterialProtocolWidgetSystemFactory : dev/keliver/protocol/guest/ProtocolWidgetSystemFactory {
+	public static final field INSTANCE Ldev/keliver/material/protocol/guest/KeliverMaterialProtocolWidgetSystemFactory;
+	public fun create (Ldev/keliver/protocol/guest/GuestProtocolAdapter;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;)Ldev/keliver/material/widget/KeliverMaterialWidgetSystem;
+	public synthetic fun create (Ldev/keliver/protocol/guest/GuestProtocolAdapter;Ldev/keliver/protocol/guest/ProtocolMismatchHandler;)Ldev/keliver/widget/WidgetSystem;
+}
+

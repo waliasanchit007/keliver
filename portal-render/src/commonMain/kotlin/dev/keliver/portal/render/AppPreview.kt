@@ -21,45 +21,45 @@ import androidx.compose.runtime.Composable
  *  - [PreviewFrame.dispatch]: portal actions (canvas taps, ⚡ console) are
  *    delivered here; the app routes them to the real bindings members.
  */
-fun interface ScreenPreview {
+public fun interface ScreenPreview {
   @Composable
-  fun present(env: PreviewEnv): PreviewFrame
+  public fun present(env: PreviewEnv): PreviewFrame
 }
 
 /** What the editor provides to a presenting screen. */
-class PreviewEnv(
+public class PreviewEnv(
   /** Log a line into the editor's action console (e.g. navigation intents). */
-  val log: (String) -> Unit,
+  public val log: (String) -> Unit,
   /**
    * #13 F4: for a FLOW preview, the screen to START the walkthrough on (null =
    * the flow's declared start). A FlowPreview inits its back-stack from this, so
    * the editor can preview a flow from ANY node (deep-link / mid-flow state),
    * not only the entry screen.
    */
-  val flowStart: String? = null,
+  public val flowStart: String? = null,
 )
 
-class PreviewFrame(
-  val values: Map<String, String>,
-  val dispatch: (action: String, arg: String?) -> Unit,
+public class PreviewFrame(
+  public val values: Map<String, String>,
+  public val dispatch: (action: String, arg: String?) -> Unit,
 )
 
-interface AppPreviewEntry {
+public interface AppPreviewEntry {
   /** portal screen name (doc name, e.g. "feed") -> its live presenter wiring. */
-  val screens: Map<String, ScreenPreview>
+  public val screens: Map<String, ScreenPreview>
   /** Shown in the fidelity panel, e.g. "portal-app-lib (Field Notes)". */
-  val label: String get() = "app preview entry"
+  public val label: String get() = "app preview entry"
 }
 
 /** Set once by the per-app editor build's main(); null = mock tier only. */
-var appPreviewEntry: AppPreviewEntry? = null
+public var appPreviewEntry: AppPreviewEntry? = null
 
 /**
  * Helper for list-of-rows contract fields: emits the row COUNT under [field]
  * (drives [PreviewBindings.rowCount]) and each row field's values pipe-joined
  * under "item.field" keys (drives [resolveItemRow]).
  */
-fun MutableMap<String, String>.putRows(
+public fun MutableMap<String, String>.putRows(
   field: String,
   itemVar: String,
   rows: List<Map<String, String>>,

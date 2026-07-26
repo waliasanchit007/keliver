@@ -96,7 +96,7 @@ import dev.keliver.material.compose.size
 
 /** Interprets a portal WidgetNode tree as live keliver composables. */
 @Composable
-fun RenderNode(node: WidgetNode) {
+public fun RenderNode(node: WidgetNode) {
   when (node.type) {
     "Condition" -> {
       val field = (node.props["field"] as? String) ?: ""

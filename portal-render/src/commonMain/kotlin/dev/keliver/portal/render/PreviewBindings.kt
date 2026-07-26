@@ -1,6 +1,7 @@
 package dev.keliver.portal.render
 
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.WidgetNode
@@ -11,26 +12,27 @@ import dev.keliver.portal.resolveItemRow
  * the *B getters parse per expected kind) and hooks [actionSink] to its action
  * console. Compose-observable so mock edits recompose the preview live.
  */
-object PreviewBindings {
-  val mocks = mutableStateMapOf<String, String>()
-  var actionSink: (String, String?) -> Unit = { _, _ -> }
+public object PreviewBindings {
+  public val mocks: SnapshotStateMap<String, String> = mutableStateMapOf()
+  public var actionSink: (String, String?) -> Unit = { _, _ -> }
 
-  fun fire(action: Action, eventValue: Any? = null) = actionSink(action.name, action.previewArg(eventValue))
+  public fun fire(action: Action, eventValue: Any? = null): Unit =
+    actionSink(action.name, action.previewArg(eventValue))
 
   /** Mocked preview row count for a Repeat: the ITEMS field's mock parses as an int (default 3, clamped 0..10). */
-  fun rowCount(itemsField: String): Int = mocks[itemsField]?.trim()?.toIntOrNull()?.coerceIn(0, 10) ?: 3
+  public fun rowCount(itemsField: String): Int = mocks[itemsField]?.trim()?.toIntOrNull()?.coerceIn(0, 10) ?: 3
 
   /** One preview row: item binds resolved against the mocks map ("a|b|c" = per-row
    *  values), namespaced by [itemsField] so lists sharing an itemVar don't collide. */
-  fun mockItemRow(node: WidgetNode, itemVar: String, itemsField: String, index: Int): WidgetNode =
+  public fun mockItemRow(node: WidgetNode, itemVar: String, itemsField: String, index: Int): WidgetNode =
     resolveItemRow(node, itemVar, itemsField, index, mocks::get)
 }
 
 /** The Action wired to an event prop, or null. */
-fun WidgetNode.actionOf(key: String): Action? = props[key] as? Action
+public fun WidgetNode.actionOf(key: String): Action? = props[key] as? Action
 
 /** Resolve the source-shaped Action.arg into the value a real presenter receives. */
-fun Action.previewArg(eventValue: Any?): String? {
+public fun Action.previewArg(eventValue: Any?): String? {
   val sourceArg = arg
   return when (sourceArg) {
     null -> null
@@ -50,25 +52,25 @@ private fun String.decodePreviewLiteral(): String {
 
 // Bind-aware getters: resolve Bind via mocks, else use the literal, else default.
 
-fun WidgetNode.strB(key: String, default: String = ""): String = when (val v = props[key]) {
+public fun WidgetNode.strB(key: String, default: String = ""): String = when (val v = props[key]) {
   is Bind -> PreviewBindings.mocks[v.field] ?: "{${v.field}}"
   is String -> v
   else -> default
 }
 
-fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = props[key]) {
+public fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = props[key]) {
   is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
   is Int -> v
   else -> default
 }
 
-fun WidgetNode.boolB(key: String, default: Boolean = false): Boolean = when (val v = props[key]) {
+public fun WidgetNode.boolB(key: String, default: Boolean = false): Boolean = when (val v = props[key]) {
   is Bind -> PreviewBindings.mocks[v.field]?.toBooleanStrictOrNull() ?: default
   is Boolean -> v
   else -> default
 }
 
-fun WidgetNode.dblB(key: String, default: Double = 0.0): Double = when (val v = props[key]) {
+public fun WidgetNode.dblB(key: String, default: Double = 0.0): Double = when (val v = props[key]) {
   is Bind -> PreviewBindings.mocks[v.field]?.toDoubleOrNull() ?: default
   is Double -> v
   is Int -> v.toDouble()
