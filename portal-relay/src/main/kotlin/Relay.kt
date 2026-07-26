@@ -69,6 +69,12 @@ private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")
 private val bundlesDir = File(root, "bundles")
 private val httpReplayService = HttpReplayService(repoDir, config)
+private val httpRecordingService = HttpRecordingService(
+  repoDir = repoDir,
+  config = config,
+  storeDir = root,
+  enabledByEnvironment = System.getenv("PORTAL_HTTP_RECORD") == "1",
+)
 
 /** project/screen names are path segments — restrict to a safe charset. */
 private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_").ifEmpty { "unnamed" }
@@ -206,6 +212,45 @@ private fun handle(ex: HttpExchange, block: () -> Unit) {
   runCatching(block).onFailure {
     println("portal-server: ${ex.requestURI} failed: $it")
     runCatching { respond(ex, 500, "{\"error\":\"${it.message}\"}") }
+  }
+}
+
+private fun handleRecording(ex: HttpExchange, block: () -> Unit) {
+  val origin = ex.requestHeaders.getFirst("Origin")
+  val loopback = ex.remoteAddress.address?.isLoopbackAddress == true
+  if (ex.requestMethod == "OPTIONS") {
+    if (!httpRecordingService.enabled || !loopback || !httpRecordingService.isAllowedOrigin(origin)) {
+      respond(ex, 404)
+      return
+    }
+    origin?.let { ex.responseHeaders.add("Access-Control-Allow-Origin", it) }
+    ex.responseHeaders.add("Vary", "Origin")
+    ex.responseHeaders.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+    ex.responseHeaders.add("Access-Control-Allow-Headers", "Content-Type, X-Portal-Record-Token")
+    respond(ex, 204)
+    return
+  }
+  val suppliedToken = ex.requestHeaders.getFirst("X-Portal-Record-Token")
+  if (!httpRecordingService.authorize(ex.remoteAddress.address, origin, suppliedToken)) {
+    respond(ex, 404)
+    return
+  }
+  origin?.let { ex.responseHeaders.add("Access-Control-Allow-Origin", it) }
+  ex.responseHeaders.add("Vary", "Origin")
+  runCatching(block).onFailure {
+    println("portal-server: HTTP recording request failed safely")
+    runCatching { respond(ex, 500, """{"error":"recording_failed","reason":"internal"}""") }
+  }
+}
+
+private fun respondRecording(ex: HttpExchange, result: HttpRecordingResult) {
+  when (result) {
+    is HttpRecordingResult.Success -> respond(ex, result.status, result.body)
+    is HttpRecordingResult.Failure -> respond(
+      ex,
+      result.status,
+      httpRecordingService.errorJson(result.error),
+    )
   }
 }
 
@@ -432,6 +477,7 @@ fun main(args: Array<String>) {
   }
   println("portal-server: repo=$repoDir (via $repoDirSource)")
   ensureDefaults()
+  httpRecordingService.startupMessage()?.let(::println)
   bootScan()
   startKotlinWatcher()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
@@ -522,6 +568,57 @@ fun main(args: Array<String>) {
           httpReplayService.errorJson(result.error),
         )
       }
+    }
+  }
+
+  // #16 H2: explicit, loopback-only recording. Unlike normal editor routes,
+  // these never receive wildcard CORS and return 404 for every failed guard.
+  server.createContext("/http-record/sessions") { ex ->
+    handleRecording(ex) {
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handleRecording
+      }
+      val body = runCatching { readBoundedBody(ex, 64 * 1024) }.getOrElse {
+        respond(ex, 413, """{"error":"recording_failed","reason":"request_too_large"}""")
+        return@handleRecording
+      }
+      val command = runCatching { httpRecordingService.decodeSessionCommand(body) }.getOrElse {
+        respond(ex, 400, """{"error":"recording_failed","reason":"invalid_request"}""")
+        return@handleRecording
+      }
+      respondRecording(ex, httpRecordingService.createSession(command))
+    }
+  }
+
+  server.createContext("/http-record/close") { ex ->
+    handleRecording(ex) {
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handleRecording
+      }
+      respondRecording(ex, httpRecordingService.close(query(ex)["session"].orEmpty()))
+    }
+  }
+
+  server.createContext("/http-record") { ex ->
+    handleRecording(ex) {
+      if (ex.requestMethod != "POST") {
+        respond(ex, 405)
+        return@handleRecording
+      }
+      val body = runCatching { readBoundedBody(ex, 1024 * 1024) }.getOrElse {
+        respond(ex, 413, """{"error":"recording_failed","reason":"request_too_large"}""")
+        return@handleRecording
+      }
+      val request = runCatching { httpRecordingService.decodeRequest(body) }.getOrElse {
+        respond(ex, 400, """{"error":"recording_failed","reason":"invalid_request"}""")
+        return@handleRecording
+      }
+      respondRecording(
+        ex,
+        httpRecordingService.record(query(ex)["session"].orEmpty(), request),
+      )
     }
   }
 

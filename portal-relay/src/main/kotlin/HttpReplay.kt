@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 Square, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 import dev.keliver.capabilities.HostHttpRequest
 import dev.keliver.capabilities.HostHttpResponse
 import java.io.File
@@ -19,7 +34,7 @@ private const val MAX_HTTP_BODY_BYTES = 1024 * 1024
 private const val MAX_REPLAY_CURSORS = 4096
 private const val REPLAY_CURSOR_TTL_MILLIS = 30 * 60 * 1000L
 private val SAFE_REPLAY_NAME = Regex("[A-Za-z0-9._-]{1,128}")
-private val SENSITIVE_HEADERS = setOf(
+internal val SENSITIVE_HTTP_HEADERS = setOf(
   "authorization",
   "proxy-authorization",
   "cookie",
@@ -28,9 +43,31 @@ private val SENSITIVE_HEADERS = setOf(
   "x-auth-token",
 )
 private val SENSITIVE_KEYS = Regex(
-  "(?:^|[_-])(token|secret|password|session|authorization|api[_-]?key)(?:$|[_-])",
+  "(?:^|[_-])(token|secret|password|session|authorization|api[_-]?key|email|phone|account|card|ssn|dob)(?:$|[_-])",
   RegexOption.IGNORE_CASE,
 )
+
+internal fun isSensitiveHttpKey(key: String, additionalKeys: Set<String> = emptySet()): Boolean =
+  key.lowercase() in additionalKeys || SENSITIVE_KEYS.containsMatchIn(key)
+
+internal fun redactSensitiveJson(
+  body: String,
+  additionalKeys: Set<String> = emptySet(),
+): String {
+  val element = runCatching { Json.parseToJsonElement(body) }.getOrNull() ?: return body
+
+  fun redact(value: JsonElement): JsonElement = when (value) {
+    is JsonObject -> JsonObject(
+      value.mapValues { (key, child) ->
+        if (isSensitiveHttpKey(key, additionalKeys)) JsonPrimitive("<redacted>") else redact(child)
+      },
+    )
+    is JsonArray -> JsonArray(value.map(::redact))
+    is JsonPrimitive -> value
+  }
+
+  return Json.encodeToString(JsonElement.serializer(), redact(element))
+}
 
 @Serializable
 internal data class HttpFixtureSetFile(
@@ -200,28 +237,18 @@ internal class HttpReplayService(
 
   fun decodeRequest(body: String): HostHttpRequest = json.decodeFromString(body)
 
+  fun validateCandidate(fixture: HttpFixtureSetFile) {
+    validateFixture(fixture)
+  }
+
   private fun load(id: String, file: File): LoadedFixtureSet {
     require(SAFE_REPLAY_NAME.matches(id)) { "invalid fixture-set filename: ${file.name}" }
     val bytes = file.readBytes()
     require(bytes.size <= MAX_HTTP_BODY_BYTES * 4) { "fixture file exceeds 4 MiB" }
     val fixture = json.decodeFromString<HttpFixtureSetFile>(bytes.decodeToString())
-    require(fixture.formatVersion == 1) { "unsupported formatVersion ${fixture.formatVersion}" }
-    Instant.parse(fixture.recordedAt)
-    val expiresAt = fixture.expiresAt?.let(Instant::parse)
-    require(fixture.entries.isNotEmpty()) { "fixture set has no entries" }
-
+    val expiresAt = validateFixture(fixture)
     val matchHeaders = fixture.matchHeaders.map { it.lowercase() }
-    require(matchHeaders.distinct().size == matchHeaders.size) { "matchHeaders must be unique" }
-    require(matchHeaders.none { it in SENSITIVE_HEADERS }) {
-      "sensitive headers cannot participate in matching"
-    }
-    fixture.entries.forEach(::validateEntry)
     val entriesByKey = fixture.entries.groupBy { canonicalRequest(it.request, matchHeaders) }
-    entriesByKey.forEach { (_, entries) ->
-      require(entries.dropLast(1).none { it.reuse }) {
-        "reuse=true is allowed only on the final duplicate request"
-      }
-    }
     return LoadedFixtureSet(
       id = id,
       revision = revision(bytes),
@@ -229,6 +256,27 @@ internal class HttpReplayService(
       expiresAt = expiresAt,
       entriesByKey = entriesByKey,
     )
+  }
+
+  private fun validateFixture(fixture: HttpFixtureSetFile): Instant? {
+    require(fixture.formatVersion == 1) { "unsupported formatVersion ${fixture.formatVersion}" }
+    Instant.parse(fixture.recordedAt)
+    val expiresAt = fixture.expiresAt?.let(Instant::parse)
+    require(fixture.entries.isNotEmpty()) { "fixture set has no entries" }
+
+    val matchHeaders = fixture.matchHeaders.map { it.lowercase() }
+    require(matchHeaders.distinct().size == matchHeaders.size) { "matchHeaders must be unique" }
+    require(matchHeaders.none { it in SENSITIVE_HTTP_HEADERS }) {
+      "sensitive headers cannot participate in matching"
+    }
+    fixture.entries.forEach(::validateEntry)
+    fixture.entries.groupBy { canonicalRequest(it.request, matchHeaders) }
+      .forEach { (_, entries) ->
+        require(entries.dropLast(1).none { it.reuse }) {
+          "reuse=true is allowed only on the final duplicate request"
+        }
+      }
+    return expiresAt
   }
 
   private fun validateEntry(entry: HttpFixtureEntry) {
@@ -239,7 +287,7 @@ internal class HttpReplayService(
     validateHeaders(request.headers, "request")
     validateHeaders(entry.response.headers, "response")
     request.query.forEach { (key, value) ->
-      require(!SENSITIVE_KEYS.containsMatchIn(key) || value == "<redacted>") {
+      require(!isSensitiveHttpKey(key) || value == "<redacted>") {
         "sensitive query key '$key' must be redacted"
       }
     }
@@ -248,7 +296,7 @@ internal class HttpReplayService(
   }
 
   private fun validateHeaders(headers: Map<String, String>, scope: String) {
-    val sensitive = headers.keys.firstOrNull { it.lowercase() in SENSITIVE_HEADERS }
+    val sensitive = headers.keys.firstOrNull { it.lowercase() in SENSITIVE_HTTP_HEADERS }
     require(sensitive == null) { "$scope contains forbidden header '$sensitive'" }
   }
 
@@ -266,7 +314,7 @@ internal class HttpReplayService(
   private fun requireNoSensitiveJson(element: JsonElement) {
     when (element) {
       is JsonObject -> element.forEach { (key, value) ->
-        if (SENSITIVE_KEYS.containsMatchIn(key)) {
+        if (isSensitiveHttpKey(key)) {
           require(value is JsonPrimitive && value.jsonPrimitive.content == "<redacted>") {
             "sensitive JSON key '$key' must be redacted"
           }
@@ -280,16 +328,20 @@ internal class HttpReplayService(
 
   private fun canonicalRequest(request: HostHttpRequest, matchHeaders: List<String>): String {
     val headers = request.headers.entries.associate { it.key.lowercase() to it.value }
+    val query = request.query.mapValues { (key, value) ->
+      if (isSensitiveHttpKey(key)) "<redacted>" else value
+    }
+    val body = request.body?.let(::redactSensitiveJson).orEmpty()
     return buildString {
       append(request.method.uppercase())
       append('\n')
       append(request.path)
       append('\n')
-      append(request.query.entries.sortedBy { it.key }.joinToString("&") { "${it.key}=${it.value}" })
+      append(query.entries.sortedBy { it.key }.joinToString("&") { "${it.key}=${it.value}" })
       append('\n')
       append(matchHeaders.sorted().joinToString("&") { "$it=${headers[it].orEmpty()}" })
       append('\n')
-      append(request.body.orEmpty())
+      append(body)
     }
   }
 

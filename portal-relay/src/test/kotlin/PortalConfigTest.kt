@@ -102,4 +102,53 @@ class PortalConfigTest {
       repo.deleteRecursively()
     }
   }
+
+  @Test fun secureRecordingConfigAcceptsReviewedHttpsUpstream() {
+    val config = HttpRecordingConfig(
+      allowedOrigins = listOf("http://localhost:8096"),
+      upstreams = mapOf(
+        "profile-api" to HttpRecordingUpstream(
+          baseUrl = "https://api.example.com/v1/",
+          allowedMethods = listOf("GET", "POST"),
+          authEnv = "PROFILE_API_TOKEN",
+        ),
+      ),
+    )
+
+    assertEquals("https://api.example.com/v1/", config.upstreams.getValue("profile-api").baseUrl)
+  }
+
+  @Test fun secureRecordingRejectsUnsafeTargetsAndHeaders() {
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingUpstream(baseUrl = "http://api.example.com")
+    }
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingUpstream(baseUrl = "https://127.0.0.1/")
+    }
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingUpstream(
+        baseUrl = "https://api.example.com/",
+        forwardHeaders = listOf("authorization"),
+      )
+    }
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingUpstream(
+        baseUrl = "https://api.example.com/",
+        allowedMethods = listOf("CONNECT"),
+      )
+    }
+  }
+
+  @Test fun secureRecordingOriginsMustBeExactLoopbackOrigins() {
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingConfig(
+        allowedOrigins = listOf("https://editor.example.com"),
+      )
+    }
+    assertFailsWith<IllegalArgumentException> {
+      HttpRecordingConfig(
+        allowedOrigins = listOf("http://localhost:8096/path"),
+      )
+    }
+  }
 }
