@@ -124,6 +124,37 @@ fresh capability graph, so mutable fixture, SQL, and navigation state cannot
 leak between personas. Apps that declare no personas keep the existing editor
 UI and behavior.
 
+### Deterministic HTTP replay
+
+Real presenters can take the portable `HostHttp` capability and keep endpoints
+and DTOs in common app Kotlin. A persona selects an app-owned fixture set with
+`PreviewPersona(httpFixtureSet = "field-researcher")`; during Live preview the
+editor routes requests to the relay and shows the selected set, exchange count,
+and any replay miss in **Preview fidelity**.
+
+Configure the checked-in fixture directory relative to the app repository:
+
+```json
+"httpFixturesDir": "portal-fixtures/http"
+```
+
+Each `<id>.json` file contains `formatVersion`, `recordedAt`, optional
+`expiresAt`, `matchHeaders`, and request/response `entries`. Matching is exact
+over normalized method, relative path, sorted query, selected lowercase
+headers, and body. Duplicate requests replay in file order within one Live
+session; only a final entry marked `reuse: true` can repeat.
+
+The relay validates fixture paths, sizes, expiry, forbidden auth/cookie headers,
+and sensitive query/JSON keys. A miss returns 424 and never contacts a real
+server. `GET /http-fixtures` exposes catalog metadata; `POST /http-replay` is
+the preview/device replay transport. Stopping Live or changing persona creates a
+fresh replay session.
+
+This is deterministic replay, not recording. The relay has no outbound HTTP
+fallback. Secure capture is a separate H2 milestone with explicit record mode,
+allowlisted upstreams, pre-persistence redaction, SSRF defenses, and human
+review.
+
 ## Ship it (Publish)
 
 Hit **Publish** (or `curl -X POST localhost:8077/publish`). This compiles the
@@ -141,9 +172,9 @@ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.Mai
 `keliver.portal.json` at the repo root tells the portal-server everything about
 the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
-`previewDist`, `previewServeDir`, and `appRuntime`. Path fields default relative to
-`screensDir`, so the file can stay small. `PORTAL_REPO` can point one relay at
-an external app checkout.
+`previewDist`, `previewServeDir`, `httpFixturesDir`, and `appRuntime`. Path
+fields default relative to `screensDir`, so the file can stay small.
+`PORTAL_REPO` can point one relay at an external app checkout.
 
 Declare the app/device runtime target explicitly; the editor cannot infer it
 reliably from Gradle catalogs, BOMs, or composite substitution:

@@ -206,13 +206,18 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     whose bodies are grammar (sections: `Profile ▸ OffersSection`). One feature
     buys feature composition.
 16. **Capability vocabulary + personas + recorded HTTP** — CAPABILITY
-    VOCABULARY + PERSONAS COMPLETE 2026-07-27. The publishable
+    VOCABULARY + PERSONAS + DETERMINISTIC REPLAY (H1) COMPLETE 2026-07-27.
+    The publishable
     `keliver-capabilities` module provides versioned HostAuth/HostFlags/
     HostAnalytics contracts and fixtures; apps own named `PreviewPersona`
     catalogs, and the editor live-switches them with cold-start isolation and
-    fidelity reporting. HAR record/replay remains a separate design because it
-    needs matching, redaction, privacy, lifecycle, miss, and trust-boundary
-    rules.
+    fidelity reporting. `HostHttp@1` now replays app-owned, privacy-linted
+    fixture sets through a deterministic per-Live-session relay with no network
+    fallback; the real Settings presenter was live-verified against a checked-in
+    profile response. **H2 secure recording remains open**: allowlisted
+    upstreams, pre-persistence redaction, explicit record mode/token, SSRF
+    defenses, candidate-file review, and body-free audit output must be designed
+    and delivered before item #16 is fully closed.
 17. **@PortalComponent catalog codegen** — annotation → palette entry with typed
     props/thumbnail; the consumer app's design system becomes the palette.
 18. **Presenter lint pack** — @Composable-presenter footguns (state in companions,
@@ -250,14 +255,19 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    fixture fidelity, and cold-starts real presenters/flows on change. The
    dogfood settings presenter and persona-scoped Field Notes flow were
    live-verified on web; Android and iOS guest paths were rebuilt and rendered.
-   **Recorded HTTP replay** remains the next product-depth arc and requires its
-   own design before implementation.
-7. ✅ **Explicit runtime-version metadata (K4)** — COMPLETE 2026-07-27.
+7. ✅ **Deterministic recorded HTTP replay (H1)** — COMPLETE 2026-07-27.
+   `HostHttp@1`, app-owned fixture catalogs, canonical matching, duplicate
+   sequencing, session isolation, expiry/privacy validation, fail-closed relay
+   endpoints, editor fidelity, and Android/iOS host adapters are delivered.
+   The Field Researcher persona visibly rendered `Maya Chen · recorded API`
+   through the real presenter. H2 secure recording is the remaining #16 work.
+8. ✅ **Explicit runtime-version metadata (K4)** — COMPLETE 2026-07-27.
    The running editor reports its build-embedded Keliver/widget versions and
    compares them with the app-owned `keliver.portal.json` declaration from the
    relay. Match, SemVer skew, widget mismatch, missing, and unavailable states
    are explicit in mock and Live fidelity; no Gradle parsing is involved.
-8. Scripted tri-platform layout evidence (K3), Presenter/FlowScope linting,
+9. Scripted tri-platform layout evidence (K3), H2 secure HTTP recording,
+   Presenter/FlowScope linting,
    transparent local composables, and component metadata/thumbnails follow
    after those adoption-critical gaps.
 

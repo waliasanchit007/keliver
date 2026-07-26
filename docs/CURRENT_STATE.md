@@ -401,5 +401,49 @@ Verification evidence:
   simulator captures both visibly rendered the Field Notes guest.
 
 The next consistency milestone is K3's scripted, committed tri-platform layout
-evidence. The next major product-depth arc remains recorded HTTP replay, which
-still requires its own privacy/matching/lifecycle design before implementation.
+evidence. At K4 delivery the next major product-depth arc was recorded HTTP
+replay; the following section records its bounded H1 delivery.
+
+## Post-snapshot: deterministic recorded HTTP replay (H1) — 2026-07-27
+
+The deterministic-replay half of roadmap item #16 is complete. A Zipline-free
+`HostHttp@1` request/response contract now lives in `keliver-capabilities`;
+`keliver-http` adapts the existing device-edge `HostHttpProvider` rather than
+creating endpoint-specific host services. Browser preview and both native hosts
+therefore bind one generic transport while endpoint and DTO ownership remains
+in app Kotlin.
+
+The relay loads app-owned fixture sets from the confined
+`httpFixturesDir`, validates size, expiry, paths, headers, query/body privacy,
+and matches canonical requests without any outbound-network fallback.
+Duplicate requests are sequenced per bounded, expiring Live session; reusable
+terminal responses support idempotent reads. `GET /http-fixtures` exposes only
+catalog metadata, and `POST /http-replay` returns stable 400/404/410/413/422/424
+failures rather than fabricating responses.
+
+The Field Researcher persona selects `field-researcher.json`. Its real
+`SettingsPresenter` calls `ProfileSummaryApi(HostHttp)` and the production Wasm
+editor visibly rendered `Maya Chen · recorded API`. Preview fidelity reported
+`HostHttp@1 — replay: field-researcher (1 exchanges)` and Full fidelity. A
+controlled unmatched request returned the stable `replay_miss` 424 response;
+Wasm tests pin the corresponding reduced-fidelity state.
+
+Mechanical and runtime evidence:
+
+- capability and HTTP JVM tests, relay tests, render/editor Wasm tests, and
+  app-lib JS/Wasm tests passed;
+- capability, HTTP, render, and editor API checks passed;
+- the production Wasm distribution built and was exercised against a fresh
+  relay;
+- the Android debug APK installed on Pixel 9, loaded 45 OTA modules, and
+  rendered Field Notes;
+- the Kotlin iOS simulator framework linked, the SwiftUI host built and
+  installed on iPhone 16 Pro, and rendered the same guest path; and
+- implementation is commit `e472c9ffd`, following design commit `0ba6d0b27`.
+
+H2 remains deliberately open. The relay still has no outbound HTTP client.
+Secure recording must separately deliver allowlisted upstreams, explicit record
+mode and per-run authorization, environment-only auth injection, redaction
+before hashing/logging/persistence, SSRF and redirect defenses, atomic candidate
+files with human review, and body-free audit output. K3 scripted visual evidence
+remains the next independent consistency milestone.

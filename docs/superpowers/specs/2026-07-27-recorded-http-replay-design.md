@@ -294,3 +294,37 @@ H2 may start only after a separate implementation section pins:
 
 Until H2 exists, the relay has no outbound HTTP code and no endpoint can turn a
 replay miss into a real request.
+
+## 12. H1 delivery evidence — 2026-07-27
+
+H1 shipped in `e472c9ffd` after design commit `0ba6d0b27`.
+
+Delivered:
+
+- portable `HostHttp@1` contracts and the existing `HostHttpProvider` adapter;
+- confined, privacy-linted fixture loading with revisioned, bounded,
+  per-session deterministic matching and no network fallback;
+- fixture catalog and replay relay endpoints with stable client/miss errors;
+- persona fixture selection, Live-session isolation, and fidelity downgrade on
+  replay miss;
+- a relay-backed Wasm preview provider and Android/iOS native bindings; and
+- Field Researcher dogfood through the real Settings presenter.
+
+Verification:
+
+- `:keliver-capabilities:jvmTest`, `:keliver-http:jvmTest`,
+  `:portal-relay:test`, `:portal-render:wasmJsTest`,
+  `:portal-editor:wasmJsBrowserTest`, `:portal-app-lib:jsTest`, and
+  `:portal-app-lib:wasmJsBrowserTest` passed;
+- capability, HTTP, render, and editor `apiCheck` tasks passed;
+- Android APK assembly and iOS simulator framework linking passed;
+- a fresh production Wasm editor visibly showed
+  `Maya Chen · recorded API`, Full fidelity, and
+  `HostHttp@1 — replay: field-researcher (1 exchanges)`;
+- relay probes returned 200 for the checked-in match, 424 `replay_miss` for an
+  unmatched request, and 400 for malformed JSON; and
+- rebuilt Android and iOS hosts installed, loaded the OTA guest, and visibly
+  rendered Field Notes on Pixel 9 and iPhone 16 Pro simulators.
+
+H2 is not implied by this delivery. The recording constraints in §11 remain the
+next #16 implementation boundary.
