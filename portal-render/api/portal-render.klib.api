@@ -24,8 +24,12 @@ abstract interface dev.keliver.portal.render/AppFlowEntry { // dev.keliver.porta
 abstract interface dev.keliver.portal.render/AppPreviewEntry { // dev.keliver.portal.render/AppPreviewEntry|null[0]
     abstract val screens // dev.keliver.portal.render/AppPreviewEntry.screens|{}screens[0]
         abstract fun <get-screens>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.render/ScreenPreview> // dev.keliver.portal.render/AppPreviewEntry.screens.<get-screens>|<get-screens>(){}[0]
+    open val defaultPersonaId // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId|{}defaultPersonaId[0]
+        open fun <get-defaultPersonaId>(): kotlin/String? // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId.<get-defaultPersonaId>|<get-defaultPersonaId>(){}[0]
     open val label // dev.keliver.portal.render/AppPreviewEntry.label|{}label[0]
         open fun <get-label>(): kotlin/String // dev.keliver.portal.render/AppPreviewEntry.label.<get-label>|<get-label>(){}[0]
+    open val personas // dev.keliver.portal.render/AppPreviewEntry.personas|{}personas[0]
+        open fun <get-personas>(): kotlin.collections/List<dev.keliver.portal.render/PreviewPersona> // dev.keliver.portal.render/AppPreviewEntry.personas.<get-personas>|<get-personas>(){}[0]
 }
 
 final class <#A: kotlin/Any?> dev.keliver.portal.render/FlowNav { // dev.keliver.portal.render/FlowNav|null[0]
@@ -53,12 +57,14 @@ final class dev.keliver.portal.render/FlowFrame { // dev.keliver.portal.render/F
 }
 
 final class dev.keliver.portal.render/PreviewEnv { // dev.keliver.portal.render/PreviewEnv|null[0]
-    constructor <init>(kotlin/Function1<kotlin/String, kotlin/Unit>, kotlin/String? = ...) // dev.keliver.portal.render/PreviewEnv.<init>|<init>(kotlin.Function1<kotlin.String,kotlin.Unit>;kotlin.String?){}[0]
+    constructor <init>(kotlin/Function1<kotlin/String, kotlin/Unit>, kotlin/String? = ..., dev.keliver.portal.render/PreviewPersona? = ...) // dev.keliver.portal.render/PreviewEnv.<init>|<init>(kotlin.Function1<kotlin.String,kotlin.Unit>;kotlin.String?;dev.keliver.portal.render.PreviewPersona?){}[0]
 
     final val flowStart // dev.keliver.portal.render/PreviewEnv.flowStart|{}flowStart[0]
         final fun <get-flowStart>(): kotlin/String? // dev.keliver.portal.render/PreviewEnv.flowStart.<get-flowStart>|<get-flowStart>(){}[0]
     final val log // dev.keliver.portal.render/PreviewEnv.log|{}log[0]
         final fun <get-log>(): kotlin/Function1<kotlin/String, kotlin/Unit> // dev.keliver.portal.render/PreviewEnv.log.<get-log>|<get-log>(){}[0]
+    final val persona // dev.keliver.portal.render/PreviewEnv.persona|{}persona[0]
+        final fun <get-persona>(): dev.keliver.portal.render/PreviewPersona? // dev.keliver.portal.render/PreviewEnv.persona.<get-persona>|<get-persona>(){}[0]
 }
 
 final class dev.keliver.portal.render/PreviewFrame { // dev.keliver.portal.render/PreviewFrame|null[0]
@@ -68,6 +74,36 @@ final class dev.keliver.portal.render/PreviewFrame { // dev.keliver.portal.rende
         final fun <get-dispatch>(): kotlin/Function2<kotlin/String, kotlin/String?, kotlin/Unit> // dev.keliver.portal.render/PreviewFrame.dispatch.<get-dispatch>|<get-dispatch>(){}[0]
     final val values // dev.keliver.portal.render/PreviewFrame.values|{}values[0]
         final fun <get-values>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewFrame.values.<get-values>|<get-values>(){}[0]
+}
+
+final class dev.keliver.portal.render/PreviewPersona { // dev.keliver.portal.render/PreviewPersona|null[0]
+    constructor <init>(kotlin/String, kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.portal.render/PreviewPersona.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+    final val auth // dev.keliver.portal.render/PreviewPersona.auth|{}auth[0]
+        final fun <get-auth>(): dev.keliver.capabilities/AuthState // dev.keliver.portal.render/PreviewPersona.auth.<get-auth>|<get-auth>(){}[0]
+    final val description // dev.keliver.portal.render/PreviewPersona.description|{}description[0]
+        final fun <get-description>(): kotlin/String // dev.keliver.portal.render/PreviewPersona.description.<get-description>|<get-description>(){}[0]
+    final val flags // dev.keliver.portal.render/PreviewPersona.flags|{}flags[0]
+        final fun <get-flags>(): kotlin.collections/Map<kotlin/String, kotlin/Boolean> // dev.keliver.portal.render/PreviewPersona.flags.<get-flags>|<get-flags>(){}[0]
+    final val id // dev.keliver.portal.render/PreviewPersona.id|{}id[0]
+        final fun <get-id>(): kotlin/String // dev.keliver.portal.render/PreviewPersona.id.<get-id>|<get-id>(){}[0]
+    final val label // dev.keliver.portal.render/PreviewPersona.label|{}label[0]
+        final fun <get-label>(): kotlin/String // dev.keliver.portal.render/PreviewPersona.label.<get-label>|<get-label>(){}[0]
+    final val states // dev.keliver.portal.render/PreviewPersona.states|{}states[0]
+        final fun <get-states>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewPersona.states.<get-states>|<get-states>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.portal.render/PreviewPersona.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.portal.render/PreviewPersona.component2|component2(){}[0]
+    final fun component3(): kotlin/String // dev.keliver.portal.render/PreviewPersona.component3|component3(){}[0]
+    final fun component4(): dev.keliver.capabilities/AuthState // dev.keliver.portal.render/PreviewPersona.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Map<kotlin/String, kotlin/Boolean> // dev.keliver.portal.render/PreviewPersona.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewPersona.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.portal.render/PreviewPersona // dev.keliver.portal.render/PreviewPersona.copy|copy(kotlin.String;kotlin.String;kotlin.String;dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun createCapabilityFixtures(): dev.keliver.capabilities/CapabilityFixtures // dev.keliver.portal.render/PreviewPersona.createCapabilityFixtures|createCapabilityFixtures(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.render/PreviewPersona.equals|equals(kotlin.Any?){}[0]
+    final fun fixtureStates(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.render/PreviewPersona.fixtureStates|fixtureStates(){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal.render/PreviewPersona.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal.render/PreviewPersona.toString|toString(){}[0]
 }
 
 final object dev.keliver.portal.render/PreviewBindings { // dev.keliver.portal.render/PreviewBindings|null[0]
@@ -88,6 +124,7 @@ final val dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop
 final val dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop|#static{}dev_keliver_portal_render_PreviewBindings$stableprop[0]
 final val dev.keliver.portal.render/dev_keliver_portal_render_PreviewEnv$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_PreviewEnv$stableprop|#static{}dev_keliver_portal_render_PreviewEnv$stableprop[0]
 final val dev.keliver.portal.render/dev_keliver_portal_render_PreviewFrame$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_PreviewFrame$stableprop|#static{}dev_keliver_portal_render_PreviewFrame$stableprop[0]
+final val dev.keliver.portal.render/dev_keliver_portal_render_PreviewPersona$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_PreviewPersona$stableprop|#static{}dev_keliver_portal_render_PreviewPersona$stableprop[0]
 
 final var dev.keliver.portal.render/appFlowEntry // dev.keliver.portal.render/appFlowEntry|{}appFlowEntry[0]
     final fun <get-appFlowEntry>(): dev.keliver.portal.render/AppFlowEntry? // dev.keliver.portal.render/appFlowEntry.<get-appFlowEntry>|<get-appFlowEntry>(){}[0]
@@ -99,6 +136,8 @@ final var dev.keliver.portal.render/componentPreview // dev.keliver.portal.rende
     final fun <get-componentPreview>(): kotlin/Function3<dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>? // dev.keliver.portal.render/componentPreview.<get-componentPreview>|<get-componentPreview>(){}[0]
     final fun <set-componentPreview>(kotlin/Function3<dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?) // dev.keliver.portal.render/componentPreview.<set-componentPreview>|<set-componentPreview>(kotlin.Function3<dev.keliver.portal.WidgetNode,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?){}[0]
 
+final fun (dev.keliver.portal.render/AppPreviewEntry).dev.keliver.portal.render/resolvePersona(kotlin/String?): dev.keliver.portal.render/PreviewPersona? // dev.keliver.portal.render/resolvePersona|resolvePersona@dev.keliver.portal.render.AppPreviewEntry(kotlin.String?){}[0]
+final fun (dev.keliver.portal.render/AppPreviewEntry).dev.keliver.portal.render/validatePersonaCatalog() // dev.keliver.portal.render/validatePersonaCatalog|validatePersonaCatalog@dev.keliver.portal.render.AppPreviewEntry(){}[0]
 final fun (dev.keliver.portal/Action).dev.keliver.portal.render/previewArg(kotlin/Any?): kotlin/String? // dev.keliver.portal.render/previewArg|previewArg@dev.keliver.portal.Action(kotlin.Any?){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/actionOf(kotlin/String): dev.keliver.portal/Action? // dev.keliver.portal.render/actionOf|actionOf@dev.keliver.portal.WidgetNode(kotlin.String){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/boolB(kotlin/String, kotlin/Boolean = ...): kotlin/Boolean // dev.keliver.portal.render/boolB|boolB@dev.keliver.portal.WidgetNode(kotlin.String;kotlin.Boolean){}[0]
@@ -115,5 +154,6 @@ final fun dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop
 final fun dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop_getter|dev_keliver_portal_render_PreviewBindings$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/dev_keliver_portal_render_PreviewEnv$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_PreviewEnv$stableprop_getter|dev_keliver_portal_render_PreviewEnv$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/dev_keliver_portal_render_PreviewFrame$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_PreviewFrame$stableprop_getter|dev_keliver_portal_render_PreviewFrame$stableprop_getter(){}[0]
+final fun dev.keliver.portal.render/dev_keliver_portal_render_PreviewPersona$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_PreviewPersona$stableprop_getter|dev_keliver_portal_render_PreviewPersona$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/mainAxisOf(kotlin/Int): dev.keliver.layout.api/MainAxisAlignment // dev.keliver.portal.render/mainAxisOf|mainAxisOf(kotlin.Int){}[0]
 final fun dev.keliver.portal.render/overflowOf(kotlin/Int): dev.keliver.layout.api/Overflow // dev.keliver.portal.render/overflowOf|overflowOf(kotlin.Int){}[0]

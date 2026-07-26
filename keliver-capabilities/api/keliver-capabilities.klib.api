@@ -1,0 +1,113 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, iosX64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <dev.keliver:keliver-capabilities>
+abstract fun interface dev.keliver.capabilities/HostAnalytics { // dev.keliver.capabilities/HostAnalytics|null[0]
+    abstract fun track(dev.keliver.capabilities/AnalyticsEvent) // dev.keliver.capabilities/HostAnalytics.track|track(dev.keliver.capabilities.AnalyticsEvent){}[0]
+}
+
+abstract interface dev.keliver.capabilities/HostAuth { // dev.keliver.capabilities/HostAuth|null[0]
+    abstract val state // dev.keliver.capabilities/HostAuth.state|{}state[0]
+        abstract fun <get-state>(): kotlinx.coroutines.flow/StateFlow<dev.keliver.capabilities/AuthState> // dev.keliver.capabilities/HostAuth.state.<get-state>|<get-state>(){}[0]
+}
+
+abstract interface dev.keliver.capabilities/HostFlags { // dev.keliver.capabilities/HostFlags|null[0]
+    abstract val values // dev.keliver.capabilities/HostFlags.values|{}values[0]
+        abstract fun <get-values>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, kotlin/Boolean>> // dev.keliver.capabilities/HostFlags.values.<get-values>|<get-values>(){}[0]
+
+    open fun isEnabled(kotlin/String): kotlin/Boolean // dev.keliver.capabilities/HostFlags.isEnabled|isEnabled(kotlin.String){}[0]
+}
+
+sealed interface dev.keliver.capabilities/AuthState { // dev.keliver.capabilities/AuthState|null[0]
+    final class SignedIn : dev.keliver.capabilities/AuthState { // dev.keliver.capabilities/AuthState.SignedIn|null[0]
+        constructor <init>(kotlin/String, kotlin/String? = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.capabilities/AuthState.SignedIn.<init>|<init>(kotlin.String;kotlin.String?;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+        final val attributes // dev.keliver.capabilities/AuthState.SignedIn.attributes|{}attributes[0]
+            final fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.capabilities/AuthState.SignedIn.attributes.<get-attributes>|<get-attributes>(){}[0]
+        final val displayName // dev.keliver.capabilities/AuthState.SignedIn.displayName|{}displayName[0]
+            final fun <get-displayName>(): kotlin/String? // dev.keliver.capabilities/AuthState.SignedIn.displayName.<get-displayName>|<get-displayName>(){}[0]
+        final val subject // dev.keliver.capabilities/AuthState.SignedIn.subject|{}subject[0]
+            final fun <get-subject>(): kotlin/String // dev.keliver.capabilities/AuthState.SignedIn.subject.<get-subject>|<get-subject>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.capabilities/AuthState.SignedIn.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.capabilities/AuthState.SignedIn.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.capabilities/AuthState.SignedIn.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.capabilities/AuthState.SignedIn // dev.keliver.capabilities/AuthState.SignedIn.copy|copy(kotlin.String;kotlin.String?;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.capabilities/AuthState.SignedIn.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.capabilities/AuthState.SignedIn.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.capabilities/AuthState.SignedIn.toString|toString(){}[0]
+    }
+
+    final object SignedOut : dev.keliver.capabilities/AuthState { // dev.keliver.capabilities/AuthState.SignedOut|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.capabilities/AuthState.SignedOut.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.capabilities/AuthState.SignedOut.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.capabilities/AuthState.SignedOut.toString|toString(){}[0]
+    }
+}
+
+final class dev.keliver.capabilities/AnalyticsEvent { // dev.keliver.capabilities/AnalyticsEvent|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.capabilities/AnalyticsEvent.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+    final val name // dev.keliver.capabilities/AnalyticsEvent.name|{}name[0]
+        final fun <get-name>(): kotlin/String // dev.keliver.capabilities/AnalyticsEvent.name.<get-name>|<get-name>(){}[0]
+    final val properties // dev.keliver.capabilities/AnalyticsEvent.properties|{}properties[0]
+        final fun <get-properties>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.capabilities/AnalyticsEvent.properties.<get-properties>|<get-properties>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.capabilities/AnalyticsEvent.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.capabilities/AnalyticsEvent.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.capabilities/AnalyticsEvent // dev.keliver.capabilities/AnalyticsEvent.copy|copy(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.capabilities/AnalyticsEvent.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.capabilities/AnalyticsEvent.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.capabilities/AnalyticsEvent.toString|toString(){}[0]
+}
+
+final class dev.keliver.capabilities/CapabilityFixtures { // dev.keliver.capabilities/CapabilityFixtures|null[0]
+    constructor <init>(dev.keliver.capabilities/AuthState = ..., kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ...) // dev.keliver.capabilities/CapabilityFixtures.<init>|<init>(dev.keliver.capabilities.AuthState;kotlin.collections.Map<kotlin.String,kotlin.Boolean>){}[0]
+
+    final val analytics // dev.keliver.capabilities/CapabilityFixtures.analytics|{}analytics[0]
+        final fun <get-analytics>(): dev.keliver.capabilities/RecordingHostAnalytics // dev.keliver.capabilities/CapabilityFixtures.analytics.<get-analytics>|<get-analytics>(){}[0]
+    final val auth // dev.keliver.capabilities/CapabilityFixtures.auth|{}auth[0]
+        final fun <get-auth>(): dev.keliver.capabilities/FixtureHostAuth // dev.keliver.capabilities/CapabilityFixtures.auth.<get-auth>|<get-auth>(){}[0]
+    final val flags // dev.keliver.capabilities/CapabilityFixtures.flags|{}flags[0]
+        final fun <get-flags>(): dev.keliver.capabilities/FixtureHostFlags // dev.keliver.capabilities/CapabilityFixtures.flags.<get-flags>|<get-flags>(){}[0]
+}
+
+final class dev.keliver.capabilities/FixtureHostAuth : dev.keliver.capabilities/HostAuth { // dev.keliver.capabilities/FixtureHostAuth|null[0]
+    constructor <init>(dev.keliver.capabilities/AuthState = ...) // dev.keliver.capabilities/FixtureHostAuth.<init>|<init>(dev.keliver.capabilities.AuthState){}[0]
+
+    final val state // dev.keliver.capabilities/FixtureHostAuth.state|{}state[0]
+        final fun <get-state>(): kotlinx.coroutines.flow/StateFlow<dev.keliver.capabilities/AuthState> // dev.keliver.capabilities/FixtureHostAuth.state.<get-state>|<get-state>(){}[0]
+
+    final fun set(dev.keliver.capabilities/AuthState) // dev.keliver.capabilities/FixtureHostAuth.set|set(dev.keliver.capabilities.AuthState){}[0]
+}
+
+final class dev.keliver.capabilities/FixtureHostFlags : dev.keliver.capabilities/HostFlags { // dev.keliver.capabilities/FixtureHostFlags|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/Boolean> = ...) // dev.keliver.capabilities/FixtureHostFlags.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.Boolean>){}[0]
+
+    final val values // dev.keliver.capabilities/FixtureHostFlags.values|{}values[0]
+        final fun <get-values>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, kotlin/Boolean>> // dev.keliver.capabilities/FixtureHostFlags.values.<get-values>|<get-values>(){}[0]
+
+    final fun replace(kotlin.collections/Map<kotlin/String, kotlin/Boolean>) // dev.keliver.capabilities/FixtureHostFlags.replace|replace(kotlin.collections.Map<kotlin.String,kotlin.Boolean>){}[0]
+    final fun set(kotlin/String, kotlin/Boolean) // dev.keliver.capabilities/FixtureHostFlags.set|set(kotlin.String;kotlin.Boolean){}[0]
+}
+
+final class dev.keliver.capabilities/RecordingHostAnalytics : dev.keliver.capabilities/HostAnalytics { // dev.keliver.capabilities/RecordingHostAnalytics|null[0]
+    constructor <init>() // dev.keliver.capabilities/RecordingHostAnalytics.<init>|<init>(){}[0]
+
+    final val events // dev.keliver.capabilities/RecordingHostAnalytics.events|{}events[0]
+        final fun <get-events>(): kotlin.collections/List<dev.keliver.capabilities/AnalyticsEvent> // dev.keliver.capabilities/RecordingHostAnalytics.events.<get-events>|<get-events>(){}[0]
+
+    final fun clear() // dev.keliver.capabilities/RecordingHostAnalytics.clear|clear(){}[0]
+    final fun track(dev.keliver.capabilities/AnalyticsEvent) // dev.keliver.capabilities/RecordingHostAnalytics.track|track(dev.keliver.capabilities.AnalyticsEvent){}[0]
+}
+
+final const val dev.keliver.capabilities/HOST_ANALYTICS_CAPABILITY // dev.keliver.capabilities/HOST_ANALYTICS_CAPABILITY|{}HOST_ANALYTICS_CAPABILITY[0]
+    final fun <get-HOST_ANALYTICS_CAPABILITY>(): kotlin/String // dev.keliver.capabilities/HOST_ANALYTICS_CAPABILITY.<get-HOST_ANALYTICS_CAPABILITY>|<get-HOST_ANALYTICS_CAPABILITY>(){}[0]
+final const val dev.keliver.capabilities/HOST_AUTH_CAPABILITY // dev.keliver.capabilities/HOST_AUTH_CAPABILITY|{}HOST_AUTH_CAPABILITY[0]
+    final fun <get-HOST_AUTH_CAPABILITY>(): kotlin/String // dev.keliver.capabilities/HOST_AUTH_CAPABILITY.<get-HOST_AUTH_CAPABILITY>|<get-HOST_AUTH_CAPABILITY>(){}[0]
+final const val dev.keliver.capabilities/HOST_FLAGS_CAPABILITY // dev.keliver.capabilities/HOST_FLAGS_CAPABILITY|{}HOST_FLAGS_CAPABILITY[0]
+    final fun <get-HOST_FLAGS_CAPABILITY>(): kotlin/String // dev.keliver.capabilities/HOST_FLAGS_CAPABILITY.<get-HOST_FLAGS_CAPABILITY>|<get-HOST_FLAGS_CAPABILITY>(){}[0]

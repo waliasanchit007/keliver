@@ -1,0 +1,25 @@
+import dev.keliver.buildsupport.WasmJs
+import static dev.keliver.buildsupport.TargetGroup.Common
+
+// Roadmap #16: pure capability interfaces used by production adapters,
+// browser preview, and presenter tests. Zipline deliberately stays at the
+// device edge so this module can compile into the Wasm editor.
+redwoodBuild {
+  targets(Common + WasmJs.Browser)
+  publishing()
+}
+
+kotlin {
+  sourceSets {
+    commonMain {
+      dependencies {
+        api libs.kotlinx.coroutines.core
+      }
+    }
+    commonTest {
+      dependencies {
+        implementation libs.kotlin.test
+      }
+    }
+  }
+}

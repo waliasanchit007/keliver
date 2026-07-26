@@ -49,6 +49,7 @@ kotlin {
     commonMain {
       dependencies {
         api projects.portalCore
+        api projects.keliverCapabilities
         api projects.keliverMaterialCompose
         api projects.keliverLayoutCompose
         implementation libs.jetbrains.compose.runtime

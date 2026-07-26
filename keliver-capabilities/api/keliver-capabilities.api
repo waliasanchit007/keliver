@@ -1,0 +1,92 @@
+public final class dev/keliver/capabilities/AnalyticsEvent {
+	public fun <init> (Ljava/lang/String;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/util/Map;)Ldev/keliver/capabilities/AnalyticsEvent;
+	public static synthetic fun copy$default (Ldev/keliver/capabilities/AnalyticsEvent;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Ldev/keliver/capabilities/AnalyticsEvent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getProperties ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class dev/keliver/capabilities/AuthState {
+}
+
+public final class dev/keliver/capabilities/AuthState$SignedIn : dev/keliver/capabilities/AuthState {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Ldev/keliver/capabilities/AuthState$SignedIn;
+	public static synthetic fun copy$default (Ldev/keliver/capabilities/AuthState$SignedIn;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Ldev/keliver/capabilities/AuthState$SignedIn;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttributes ()Ljava/util/Map;
+	public final fun getDisplayName ()Ljava/lang/String;
+	public final fun getSubject ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/capabilities/AuthState$SignedOut : dev/keliver/capabilities/AuthState {
+	public static final field INSTANCE Ldev/keliver/capabilities/AuthState$SignedOut;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/capabilities/CapabilitiesKt {
+	public static final field HOST_ANALYTICS_CAPABILITY Ljava/lang/String;
+	public static final field HOST_AUTH_CAPABILITY Ljava/lang/String;
+	public static final field HOST_FLAGS_CAPABILITY Ljava/lang/String;
+}
+
+public final class dev/keliver/capabilities/CapabilityFixtures {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/capabilities/AuthState;Ljava/util/Map;)V
+	public synthetic fun <init> (Ldev/keliver/capabilities/AuthState;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAnalytics ()Ldev/keliver/capabilities/RecordingHostAnalytics;
+	public final fun getAuth ()Ldev/keliver/capabilities/FixtureHostAuth;
+	public final fun getFlags ()Ldev/keliver/capabilities/FixtureHostFlags;
+}
+
+public final class dev/keliver/capabilities/FixtureHostAuth : dev/keliver/capabilities/HostAuth {
+	public fun <init> ()V
+	public fun <init> (Ldev/keliver/capabilities/AuthState;)V
+	public synthetic fun <init> (Ldev/keliver/capabilities/AuthState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun set (Ldev/keliver/capabilities/AuthState;)V
+}
+
+public final class dev/keliver/capabilities/FixtureHostFlags : dev/keliver/capabilities/HostFlags {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getValues ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun replace (Ljava/util/Map;)V
+	public final fun set (Ljava/lang/String;Z)V
+}
+
+public abstract interface class dev/keliver/capabilities/HostAnalytics {
+	public abstract fun track (Ldev/keliver/capabilities/AnalyticsEvent;)V
+}
+
+public abstract interface class dev/keliver/capabilities/HostAuth {
+	public abstract fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+}
+
+public abstract interface class dev/keliver/capabilities/HostFlags {
+	public abstract fun getValues ()Lkotlinx/coroutines/flow/StateFlow;
+	public fun isEnabled (Ljava/lang/String;)Z
+}
+
+public final class dev/keliver/capabilities/RecordingHostAnalytics : dev/keliver/capabilities/HostAnalytics {
+	public fun <init> ()V
+	public final fun clear ()V
+	public final fun getEvents ()Ljava/util/List;
+	public fun track (Ldev/keliver/capabilities/AnalyticsEvent;)V
+}
+
