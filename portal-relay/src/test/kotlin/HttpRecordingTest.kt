@@ -102,7 +102,10 @@ class HttpRecordingTest {
     val created = assertIs<HttpRecordingResult.Success>(
       service.createSession(HttpRecordSessionCommand("profile-api", "field-researcher")),
     )
-    val session = Json.decodeFromString<HttpRecordSessionCreated>(created.body).session
+    val descriptor = Json.decodeFromString<HttpRecordSessionCreated>(created.body)
+    val session = descriptor.session
+    assertTrue(descriptor.candidate.startsWith("portal-fixtures/http/.candidates/"))
+    assertFalse(descriptor.candidate.contains(".."))
 
     val recorded = assertIs<HttpRecordingResult.Success>(
       service.record(

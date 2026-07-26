@@ -159,6 +159,7 @@ internal class HttpRecordingService(
     ignoreUnknownKeys = false
   }
   private val replayService = HttpReplayService(repoDir, config, clock)
+  private val canonicalRepoDir = repoDir.canonicalFile
   private val fixturesDir = config.resolvedHttpFixturesDir(repoDir)
   private val candidatesDir = File(fixturesDir, ".candidates")
   private val auditFile = File(storeDir, "http-record-audit.jsonl")
@@ -237,7 +238,7 @@ internal class HttpRecordingService(
         json.encodeToString(
           HttpRecordSessionCreated(
             session = id,
-            candidate = candidate.relativeTo(repoDir).invariantSeparatorsPath,
+            candidate = candidate.relativeTo(canonicalRepoDir).invariantSeparatorsPath,
           ),
         ),
       )
@@ -389,7 +390,7 @@ internal class HttpRecordingService(
       200,
       json.encodeToString(
         HttpRecordClosed(
-          candidate = session.candidate.relativeTo(repoDir).invariantSeparatorsPath,
+          candidate = session.candidate.relativeTo(canonicalRepoDir).invariantSeparatorsPath,
           entries = session.entries.size,
           revision = revision(bytes),
           expiresAt = expiresAt,
