@@ -101,10 +101,10 @@ public fun RenderNode(node: WidgetNode) {
     "Condition" -> {
       val field = (node.props["field"] as? String) ?: ""
       if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {
-        Column { node.children.forEach { RenderNode(it) } }
+        node.children.forEach { RenderNode(it) }
       }
     }
-    "Repeat" -> Column {
+    "Repeat" -> {
       val itemVar = (node.props["item"] as? String) ?: "item"
       val itemsField = (node.props["items"] as? String) ?: "items"
       repeat(PreviewBindings.rowCount(itemsField)) { i ->

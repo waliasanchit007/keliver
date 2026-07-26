@@ -54,13 +54,21 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("  when (node.type) {")
   // M5/P2: Condition honors a boolean mock (default shown); Repeat renders
   // rowCount() mock rows with item binds resolved per row.
+  //
+  // FIDELITY: neither emits a wrapper container. On a DEVICE these logic nodes
+  // do not exist at runtime — the guest runs the real `if` / `forEach`, so the
+  // children land directly in the enclosing layout. A wrapper Column here would
+  // default to wrap-content and silently shrink children that fill their parent
+  // (observed: Repeat-generated ListItems stopped short of the card width on web
+  // while filling on Android/iOS). Emitting straight into the parent slot keeps
+  // the preview structurally identical to the device.
   appendLine("    \"Condition\" -> {")
   appendLine("      val field = (node.props[\"field\"] as? String) ?: \"\"")
   appendLine("      if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {")
-  appendLine("        Column { node.children.forEach { RenderNode(it) } }")
+  appendLine("        node.children.forEach { RenderNode(it) }")
   appendLine("      }")
   appendLine("    }")
-  appendLine("    \"Repeat\" -> Column {")
+  appendLine("    \"Repeat\" -> {")
   appendLine("      val itemVar = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val itemsField = (node.props[\"items\"] as? String) ?: \"items\"")
   appendLine("      repeat(PreviewBindings.rowCount(itemsField)) { i ->")
