@@ -270,9 +270,15 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    compares them with the app-owned `keliver.portal.json` declaration from the
    relay. Match, SemVer skew, widget mismatch, missing, and unavailable states
    are explicit in mock and Live fidelity; no Gradle parsing is involved.
-9. Scripted tri-platform layout evidence (K3), Presenter/FlowScope linting,
-   transparent local composables, and component metadata/thumbnails follow
-   after those adoption-critical gaps.
+9. ✅ **Scripted tri-platform layout evidence (K3)** — COMPLETE 2026-07-27.
+   One recognized kitchen-sink tree now has committed web, Pixel 9, and iPhone
+   16 Pro evidence plus a machine-readable manifest. The repeatable runner owns
+   builds, services, device state, guest-load/error checks, screenshot/content
+   validation, and relay-state restoration. Delivery fixed iOS safe-area
+   handling and hardened Wasm/headless evidence capture.
+10. Presenter/FlowScope linting, transparent local composables, and component
+    metadata/thumbnails are now the leading depth candidates. K2b API
+    convergence remains a separately versioned decision, not a prerequisite.
 
 ## P4 — Platform debt (tracked, not urgent)
 

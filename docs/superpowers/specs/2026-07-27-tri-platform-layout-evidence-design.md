@@ -1,7 +1,7 @@
 # Tri-platform layout evidence (K3)
 
 **Date:** 2026-07-27
-**Status:** implementation-ready
+**Status:** delivered 2026-07-27
 **Roadmap:** UI consistency K3
 **Predecessor:** `2026-07-24-ui-consistency-plan.md`
 
@@ -143,3 +143,36 @@ documented as an intentional platform convention.
 - recording dynamic product screens;
 - changing production routing; or
 - hiding a known platform divergence behind crops or normalization.
+
+## 9. Implementation result
+
+K3 v1 is delivered by:
+
+- `portal-app-lib/src/commonMain/kotlin/screens/layout_evidence.kt`, recognized
+  into a zero-`RawCode` relay tree;
+- evidence-only web and device-preview seams that leave normal editing and
+  compiled-first device behavior unchanged;
+- `scripts/keliver-capture-layout-evidence.sh`, which builds every target,
+  controls the capture environment, requires successful guest loads, rejects
+  post-load failures and wrong-app screenshots, validates PNG structure and K3
+  color sentinels, writes the manifest, and restores the previous active screen;
+  and
+- committed evidence under
+  `docs/superpowers/evidence/k3/0.3.1-SNAPSHOT/`.
+
+The first complete runs caught three real boundary problems before evidence
+could be accepted:
+
+1. a nested scroll container received unbounded height in the native overlay;
+2. Wasm evidence parameters were read too early during module initialization;
+3. the iOS host rendered under the Dynamic Island because its root did not
+   consume safe-drawing insets.
+
+They also caught two capture/fixture false positives: GPU-disabled headless
+Chrome produced a blank Skia canvas, and cross-axis stretch erased the intended
+wrap case. The final runner passes only after all five are corrected.
+
+Human review of the final web, Pixel 9, and iPhone 16 Pro captures confirms all
+seven review-contract points. Font metrics and system chrome differ as expected;
+the labeled fill/wrap, alignment, nesting/modifier, text, image-geometry, and
+final-marker relationships agree.

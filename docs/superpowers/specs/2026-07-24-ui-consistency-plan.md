@@ -1,6 +1,6 @@
 # UI consistency & predictability — concrete plan
 
-**Status:** K1 + K2a COMPLETE; K3 is the next consistency-lane item.
+**Status:** K1 + K2a + K3 + K4 COMPLETE; K2b remains a versioned API decision.
 Technical-review corrections and delivered results are recorded in §8–§10.
 **Author:** agent, 2026-07-24.
 **Trigger:** repeated `forEach` rows filled their card on Android/iOS but stopped
@@ -198,8 +198,8 @@ two suites, no shared target.
    zero/multiple rows, one integrated fixture; + the golden-tree bridge; +
    separate action-sink tests for event wiring.
 3. ✅ **K2a** — document AND unit-test the current layout contract. No deprecations.
-4. **K3** — scripted tri-platform kitchen-sink evidence.
-5. **K4** — explicit runtime-version metadata handshake.
+4. ✅ **K3** — scripted tri-platform kitchen-sink evidence.
+5. ✅ **K4** — explicit runtime-version metadata handshake.
 6. **K2b** — staged API convergence, next minor.
 
 K1 precedes personas. K2b must NOT block the personas/capability arc once the
@@ -256,3 +256,21 @@ New direct measurement tests run through the real Compose/Yoga host and pin:
 No API changed and no deprecation landed. K2b stays deferred to a versioned
 release decision. Named personas/capability fixtures can now resume as the next
 product-depth arc; K3 remains the next consistency-lane item and release gate.
+
+## 11. K3 implementation result — 2026-07-27
+
+K3 is complete. One literal-only `layout_evidence.kt` source is recognized into
+the relay tree and rendered through web, Android, and iOS hosts. The committed
+0.3.1-SNAPSHOT evidence contains three PNGs plus a manifest with source commit,
+runtime/device/browser metadata, dimensions, and SHA-256 hashes.
+
+The capture runner owns JDK/build/service readiness, active-screen selection,
+web viewport, Android theme/font/animation state, iOS appearance/status bar,
+fresh installs, guest `codeLoadSuccess`, post-load crash detection, structural
+PNG validation, content-sentinel validation, and previous-screen restoration.
+
+K3 found and fixed native unbounded-scroll failure, early Wasm query-state
+capture, blank GPU-disabled headless canvas capture, a fixture alignment mistake,
+and missing iOS safe-drawing insets. Final human review confirms matching labeled
+geometry across all three hosts. K1 now covers schema semantics, K2a pins the
+layout rules, K3 supplies per-host evidence, and K4 surfaces version skew.

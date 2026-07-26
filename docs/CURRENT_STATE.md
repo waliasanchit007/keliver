@@ -491,3 +491,34 @@ Evidence:
   framework regression matrix passed (`881 actionable tasks`);
 - design is commit `c1a492c83`; implementation is `0b45f7d0e`, with live-found
   canonical-path and complete-audit fixes in `bb7d40f1d` and `736951450`.
+
+## Post-snapshot: scripted tri-platform layout evidence (K3) — 2026-07-27
+
+K3 of the UI-consistency plan is complete. The portal now owns one
+literal-only, zero-`RawCode` `layout_evidence.kt` kitchen sink covering fill
+versus wrap, row alignment, nested layout and modifier order, ellipsis versus
+wrapping, fixed image geometry, and an explicit final clipping marker.
+
+Web evidence mode uses the real editor initialization and relay tree while
+hiding editor chrome. Android and iOS use the same development guest/tree
+through an evidence-only overlay path that does not change normal compiled-first
+behavior. The iOS host now consumes safe-drawing insets, fixing the pre-existing
+case where app content rendered under the Dynamic Island.
+
+`scripts/keliver-capture-layout-evidence.sh` builds the relay/editor/guest and
+both native hosts, owns deterministic platform settings, requires guest
+`codeLoadSuccess`, rejects post-load exceptions and wrong-app captures, validates
+PNG structure plus four visual sentinels, records full metadata and hashes, and
+restores the previous active screen. The final accepted artifacts are:
+
+- `docs/superpowers/evidence/k3/0.3.1-SNAPSHOT/layout-evidence-web.png`;
+- `docs/superpowers/evidence/k3/0.3.1-SNAPSHOT/layout-evidence-android.png`;
+- `docs/superpowers/evidence/k3/0.3.1-SNAPSHOT/layout-evidence-ios.png`; and
+- `docs/superpowers/evidence/k3/0.3.1-SNAPSHOT/manifest.json`.
+
+The final run used Chrome 150 at 402×874 CSS pixels, Android API 37 on the
+Pixel_9 AVD, and iOS 18.2 on iPhone 16 Pro. Human review confirmed the labeled
+geometry agrees across all hosts; native font metrics and system chrome remain
+intentional platform differences. K1, K2a, K3, and K4 now form a complete
+semantic/layout/evidence/version consistency lane. K2b remains deferred to a
+versioned API-convergence decision.

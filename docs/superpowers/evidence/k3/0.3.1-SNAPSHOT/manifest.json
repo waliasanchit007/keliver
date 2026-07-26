@@ -1,0 +1,70 @@
+{
+  "formatVersion": 1,
+  "capturedAt": "2026-07-26T22:25:04Z",
+  "runtime": {
+    "keliverVersion": "0.3.1-SNAPSHOT",
+    "widgetVersion": 1
+  },
+  "source": {
+    "commit": "5cea75755f93c51467603db1bdc1405d9c85d826",
+    "screen": "portal-app-lib/src/commonMain/kotlin/screens/layout_evidence.kt",
+    "project": "default",
+    "relayScreen": "layout_evidence"
+  },
+  "environment": {
+    "theme": "light",
+    "locale": "en-US",
+    "fontScale": 1.0,
+    "animations": "disabled where host controls permit"
+  },
+  "captures": {
+    "web": {
+      "file": "layout-evidence-web.png",
+      "sha256": "f7769e20c3a022be4b7535af358c509cd4317a156cddff3922dc46c0699eebbc",
+      "browser": "Google Chrome 150.0.7871.186 ",
+      "viewportCssPixels": {
+        "width": 402,
+        "height": 874
+      },
+      "screenshotPixels": {
+        "width": 402,
+        "height": 874
+      },
+      "deviceScaleFactor": 1
+    },
+    "android": {
+      "file": "layout-evidence-android.png",
+      "sha256": "5d4f4c72f61dc6341bf100ea015b9881969df0a1e4cf8d054adc6e8c765a475d",
+      "avd": "Pixel_9",
+      "serial": "emulator-5554",
+      "model": "sdk_gphone16k_arm64",
+      "api": "37",
+      "screenshotPixels": {
+        "width": 1080,
+        "height": 2424
+      },
+      "densityDpi": "420",
+      "locale": "en-US",
+      "theme": "light",
+      "fontScale": "1.0"
+    },
+    "ios": {
+      "file": "layout-evidence-ios.png",
+      "sha256": "88e8299ba8df88745c365b0af9fd21f4529fa4f8242abbc4828b7252040a00df",
+      "model": "iPhone 16 Pro",
+      "runtime": "iOS 18.2",
+      "udid": "2CC81833-A4F4-46D4-919E-0CAEC06EC9CA",
+      "screenshotPixels": {
+        "width": 1206,
+        "height": 2622
+      },
+      "locale": "en-US",
+      "theme": "light"
+    }
+  },
+  "assumptions": [
+    "All hosts render the relay-recognized layout_evidence tree.",
+    "The image has fixed geometry; image payload timing does not affect layout.",
+    "Review compares labeled geometry, not font rasterization or raw pixel equality."
+  ]
+}
