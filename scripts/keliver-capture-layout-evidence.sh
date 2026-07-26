@@ -27,6 +27,8 @@ readonly ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 readonly ADB="$ANDROID_HOME/platform-tools/adb"
 readonly EMULATOR="$ANDROID_HOME/emulator/emulator"
 readonly CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+readonly BUNDLED_NODE="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"
+readonly NODE="${K3_NODE:-$(command -v node 2>/dev/null || printf '%s' "$BUNDLED_NODE")}"
 readonly KELIVER_VERSION="${K3_KELIVER_VERSION:-$(jq -r '.appRuntime.keliverVersion' keliver.portal.json)}"
 readonly WIDGET_VERSION="$(jq -r '.appRuntime.widgetVersion' keliver.portal.json)"
 readonly OUTPUT_DIR="${K3_OUTPUT_DIR:-$ROOT/docs/superpowers/evidence/k3/$KELIVER_VERSION}"
@@ -86,6 +88,9 @@ require_tools() {
   [[ -x "$ADB" ]] || fail "adb not found at $ADB"
   [[ -x "$EMULATOR" ]] || fail "Android emulator not found at $EMULATOR"
   [[ -x "$CHROME" ]] || fail "Google Chrome not found at $CHROME"
+  [[ -n "$NODE" && -x "$NODE" ]] || fail "Node.js 22+ is required (override with K3_NODE)"
+  [[ "$("$NODE" -p 'typeof WebSocket')" == "function" ]] ||
+    fail "Node.js 22+ with built-in WebSocket support is required"
   command -v jq >/dev/null || fail "jq is required"
   command -v xcrun >/dev/null || fail "Xcode command-line tools are required"
   command -v sips >/dev/null || fail "sips is required"
@@ -164,7 +169,8 @@ select_evidence_screen() {
 
 capture_web() {
   step "Capturing web at 402 × 874 CSS pixels"
-  local profile="$ROOT/build/k3-chrome-profile"
+  local profile="$ROOT/build/k3-chrome-profile-$$"
+  local chrome_pid devtools_port i
   mkdir -p "$profile"
   "$CHROME" \
     --headless=new \
@@ -173,11 +179,92 @@ capture_web() {
     --no-first-run \
     --force-device-scale-factor=1 \
     --window-size=402,874 \
-    --virtual-time-budget=8000 \
+    --remote-debugging-port=0 \
+    "--remote-allow-origins=*" \
     --user-data-dir="$profile" \
-    --screenshot="$WEB_PNG" \
     "http://127.0.0.1:$EDITOR_PORT/?evidence=1&width=402&height=874" \
-    >/dev/null 2>&1
+    >"$ROOT/build/k3-chrome.log" 2>&1 &
+  chrome_pid=$!
+  owned_pids+=("$chrome_pid")
+
+  for ((i = 1; i <= 30; i++)); do
+    [[ -s "$profile/DevToolsActivePort" ]] && break
+    sleep 1
+  done
+  [[ -s "$profile/DevToolsActivePort" ]] || fail "Chrome DevTools endpoint did not start"
+  devtools_port="$(head -1 "$profile/DevToolsActivePort")"
+
+  "$NODE" - "$devtools_port" "$WEB_PNG" <<'NODE'
+const fs = require("node:fs");
+
+(async () => {
+const port = process.argv[2];
+const output = process.argv[3];
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const pages = await fetch(`http://127.0.0.1:${port}/json`).then((response) => response.json());
+const page = pages.find((candidate) => candidate.type === "page");
+if (!page) throw new Error("Chrome did not expose a page target");
+
+const socket = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((resolve, reject) => {
+  socket.addEventListener("open", resolve, {once: true});
+  socket.addEventListener("error", reject, {once: true});
+});
+
+let nextId = 0;
+const pending = new Map();
+socket.addEventListener("message", (event) => {
+  const message = JSON.parse(event.data);
+  if (!message.id || !pending.has(message.id)) return;
+  const {resolve, reject} = pending.get(message.id);
+  pending.delete(message.id);
+  if (message.error) reject(new Error(JSON.stringify(message.error)));
+  else resolve(message.result);
+});
+const command = (method, params = {}) => new Promise((resolve, reject) => {
+  const id = ++nextId;
+  pending.set(id, {resolve, reject});
+  socket.send(JSON.stringify({id, method, params}));
+});
+
+await command("Page.enable");
+await command("Runtime.enable");
+await command("Emulation.setDeviceMetricsOverride", {
+  width: 402,
+  height: 874,
+  deviceScaleFactor: 1,
+  mobile: false,
+});
+await command("Runtime.evaluate", {
+  expression: `new Promise((resolve, reject) => {
+    const deadline = Date.now() + 30000;
+    const poll = () => {
+      const canvas = document.querySelector("canvas");
+      if (canvas && canvas.width > 0 && canvas.height > 0) resolve(true);
+      else if (Date.now() > deadline) reject(new Error("Compose canvas did not mount"));
+      else setTimeout(poll, 100);
+    };
+    poll();
+  })`,
+  awaitPromise: true,
+  returnByValue: true,
+});
+await sleep(8000);
+const capture = await command("Page.captureScreenshot", {
+  format: "png",
+  fromSurface: true,
+  captureBeyondViewport: false,
+});
+fs.writeFileSync(output, Buffer.from(capture.data, "base64"));
+socket.close();
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+NODE
+
+  kill -TERM "$chrome_pid" >/dev/null 2>&1 || true
 }
 
 find_android_serial() {
