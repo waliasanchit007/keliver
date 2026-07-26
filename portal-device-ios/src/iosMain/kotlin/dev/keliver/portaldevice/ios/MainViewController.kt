@@ -11,7 +11,11 @@
 
 package dev.keliver.portaldevice.ios
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
@@ -87,11 +91,13 @@ public fun MainViewController() = ComposeUIViewController {
       override fun get(app: PortalPresenter) = app.launch()
     }
   }
-  TreehouseContent(
-    treehouseApp = app,
-    widgetSystem = widgetSystem,
-    contentSource = contentSource,
-  )
+  Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+    TreehouseContent(
+      treehouseApp = app,
+      widgetSystem = widgetSystem,
+      contentSource = contentSource,
+    )
+  }
 }
 
 private fun isProdMode(): Boolean =
