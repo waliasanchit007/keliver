@@ -1,6 +1,6 @@
 # Capability vocabulary and named personas
 
-**Status:** implementation-ready design, 2026-07-26.
+**Status:** delivered and live-verified, 2026-07-27.
 **Roadmap:** item #16, personas/capability fixtures only.
 **Explicitly separate:** recorded HTTP/HAR replay.
 
@@ -260,3 +260,19 @@ HAR replay is a separate design after personas are proven. It must define:
 
 Personas may later select an HTTP fixture set by name, but no HAR concern is
 allowed to distort this slice's typed capability and lifecycle contract.
+
+## 10. Delivery evidence
+
+The work landed in three bounded commits:
+
+- `7ad9aad9e` — the implementation-ready contract;
+- `4b6f042c2` — the typed capability module and preview API; and
+- `cd87a2778` — editor selection, lifecycle isolation, fidelity reporting, and
+  the real dogfood presenter.
+
+JS and Wasm tests cover fixture behavior, catalog resolution, and presenter
+output. The fresh web distribution was then exercised through its relay:
+switching among `field-researcher`, `signed-out`, and `kyc-pending` changed the
+real Settings presenter and fidelity state, and the open action recorded
+analytics. Android and iOS builds also installed and rendered the OTA Field
+Notes guest path in their simulators, closing the native regression check.

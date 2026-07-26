@@ -1,10 +1,10 @@
 # Keliver — Roadmap & improvement backlog
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
-its evidence — nothing here is speculative. Status: 2026-07-23, after the
-Stashfin tri-platform loop, Project Components C1-C4, real-presenter preview,
-and the complete flow-authoring/preview loop. See `CURRENT_STATE.md` for the
-factual handoff snapshot.
+its evidence — nothing here is speculative. Status: 2026-07-27, after the
+Stashfin tri-platform loop, Project Components C1-C4, real-presenter and persona
+preview, and the complete flow-authoring/preview loop. See `CURRENT_STATE.md`
+for the dated baseline and post-snapshot delivery ledger.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
@@ -205,9 +205,14 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 15. **Transparent components** — recognizer descends into local @Composable calls
     whose bodies are grammar (sections: `Profile ▸ OffersSection`). One feature
     buys feature composition.
-16. **Capability vocabulary + personas + recorded HTTP** — HostAuth/HostFlags/
-    HostAnalytics interfaces + named capability-state fixtures ("logged-in,
-    KYC-pending") + HAR record/replay at the relay proxy.
+16. **Capability vocabulary + personas + recorded HTTP** — CAPABILITY
+    VOCABULARY + PERSONAS COMPLETE 2026-07-27. The publishable
+    `keliver-capabilities` module provides versioned HostAuth/HostFlags/
+    HostAnalytics contracts and fixtures; apps own named `PreviewPersona`
+    catalogs, and the editor live-switches them with cold-start isolation and
+    fidelity reporting. HAR record/replay remains a separate design because it
+    needs matching, redaction, privacy, lifecycle, miss, and trust-boundary
+    rules.
 17. **@PortalComponent catalog codegen** — annotation → palette entry with typed
     props/thumbnail; the consumer app's design system becomes the palette.
 18. **Presenter lint pack** — @Composable-presenter footguns (state in companions,
@@ -240,10 +245,13 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    Constraint, Yoga child layout, ordered universal modifiers, and the two
    widget-specific `fillWidth` properties. Direct Compose/Yoga measurement tests
    pin Wrap/Fill, boundedness/precedence, stretch, and modifier order.
-6. **Named personas and capability fixtures**, then **recorded HTTP replay** as
-   a separate design: auth/flags/domain state can use `PreviewEnv.flowStart` as
-   the start-state seam, while HTTP replay additionally needs matching,
-   redaction, privacy, and fixture lifecycle rules.
+6. ✅ **Named personas and capability fixtures** — COMPLETE 2026-07-27.
+   Apps declare typed, named fixtures; the editor persists selection, exposes
+   fixture fidelity, and cold-starts real presenters/flows on change. The
+   dogfood settings presenter and persona-scoped Field Notes flow were
+   live-verified on web; Android and iOS guest paths were rebuilt and rendered.
+   **Recorded HTTP replay** remains the next product-depth arc and requires its
+   own design before implementation.
 7. Scripted tri-platform layout evidence (K3), explicit runtime-version
    metadata (K4), Presenter/FlowScope linting, transparent local composables,
    and component metadata/thumbnails follow after those adoption-critical gaps.

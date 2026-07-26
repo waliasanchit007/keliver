@@ -116,6 +116,14 @@ auto-substitutes a preview implementation per host capability
 stubbed ones (Camera/BLE/…). The **State inspector** shows the live binding
 values; **⚡ action** buttons fire wired actions.
 
+Apps can also expose named preview personas through `AppPreviewEntry.personas`.
+The app owns each persona's typed capability fixtures; the editor only remembers
+the selected persona ID and reports its fixture state in **Preview fidelity**.
+Changing persona while Live is active cold-starts the presenter or flow with a
+fresh capability graph, so mutable fixture, SQL, and navigation state cannot
+leak between personas. Apps that declare no personas keep the existing editor
+UI and behavior.
+
 ## Ship it (Publish)
 
 Hit **Publish** (or `curl -X POST localhost:8077/publish`). This compiles the

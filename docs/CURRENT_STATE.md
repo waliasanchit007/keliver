@@ -333,3 +333,40 @@ pre-existing Paparazzi layout matrix remains in place.
 The next product-depth milestone is named personas/capability fixtures. K3
 scripted Android/iOS/web layout evidence remains the next consistency-lane
 milestone and a release gate; K2b API convergence remains deferred.
+
+## Post-snapshot: capability vocabulary and named personas — 2026-07-27
+
+The persona half of roadmap item #16 is complete. The new publishable
+`keliver-capabilities` module defines versioned `HostAuth`, `HostFlags`, and
+`HostAnalytics` contracts plus deterministic fixture implementations.
+`AppPreviewEntry` now exposes an app-owned `PreviewPersona` catalog, and
+`PreviewEnv.persona` supplies the selected persona to both screen and flow
+previews.
+
+The reusable editor shell validates the catalog, persists the selected ID,
+shows a persona selector and fixture details, and treats persona-backed
+capabilities as full-fidelity implementations. Switching persona while Live is
+active rekeys and cold-starts the presenter or flow with a fresh app capability
+graph. The Field Notes SQL driver is also keyed by persona, preventing mutable
+state from crossing persona boundaries while preserving state during navigation
+inside one flow.
+
+The dogfood app declares `signed-out`, `field-researcher`, and `kyc-pending`.
+Its real `SettingsPresenter` consumes the typed auth/flag/analytics fixtures:
+the browser verified `Maya Chen · beta`, `Signed out`, and `Ari Patel` as the
+personas changed, and verified that the live open action recorded analytics.
+
+Mechanical and runtime evidence:
+
+- capability, portal-render, and presenter tests passed on JS and Wasm;
+- the editor and dogfood Wasm distributions compiled successfully;
+- the fresh web distribution was exercised live through a dedicated relay;
+- Android loaded 45 OTA modules and rendered Field Notes in a Pixel 9 emulator;
+  and
+- the iOS simulator framework/app build installed, launched, and rendered the
+  same Field Notes guest path on an iPhone 16 Pro simulator.
+
+Recorded HTTP/HAR replay remains deliberately separate: its next design must
+settle matching, redaction, privacy, fixture lifecycle, misses, and proxy trust
+boundaries. K3 scripted visual evidence and K4 explicit runtime-version metadata
+remain independent consistency work; K2b API convergence remains deferred.
