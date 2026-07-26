@@ -229,12 +229,21 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    ran in-browser against dev.keliver:*:0.3.1-SNAPSHOT from mavenLocal with the
    real presenter + slotted SectionCard. The Maven Central push is IRREVERSIBLE
    and remains user-triggered — checklist in the design doc.
-4. **Named personas and capability fixtures**, then **recorded HTTP replay** as
+4. ✅ **Preview↔device semantic parity gate (K1)** — COMPLETE 2026-07-26.
+   Shared Kotlin fixtures + checked-in trees bridge the JVM recognizer to Wasm
+   compiled/interpreted `WidgetValue` comparison in Chrome. Coverage includes
+   control flow, components/slots/nesting, modifiers, repeat cardinality, and
+   action arguments. The gate found and fixed a false component-cycle diagnosis
+   for wrapper reuse from slot content.
+5. **Current layout contract (K2a)** — document each sizing layer and pin its
+   existing semantics in layout tests; no API deprecations in this step.
+6. **Named personas and capability fixtures**, then **recorded HTTP replay** as
    a separate design: auth/flags/domain state can use `PreviewEnv.flowStart` as
    the start-state seam, while HTTP replay additionally needs matching,
    redaction, privacy, and fixture lifecycle rules.
-5. Presenter/FlowScope linting, transparent local composables, and component
-   metadata/thumbnails follow after those adoption-critical gaps.
+7. Scripted tri-platform layout evidence (K3), explicit runtime-version
+   metadata (K4), Presenter/FlowScope linting, transparent local composables,
+   and component metadata/thumbnails follow after those adoption-critical gaps.
 
 ## P4 — Platform debt (tracked, not urgent)
 

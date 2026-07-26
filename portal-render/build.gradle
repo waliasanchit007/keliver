@@ -10,6 +10,38 @@ redwoodBuild {
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 
+def parityFixtureRoot = rootProject.file('portal-parity-fixtures')
+def generatedParityFixtureDir = layout.buildDirectory.dir('generated/parity-fixtures/wasmJsTest/kotlin')
+def generateParityFixtureSources = tasks.register('generateParityFixtureSources') {
+  inputs.dir(new File(parityFixtureRoot, 'goldens'))
+  outputs.dir(generatedParityFixtureDir)
+  doLast {
+    def outDir = new File(
+      generatedParityFixtureDir.get().asFile,
+      'dev/keliver/portal/render/fixture',
+    )
+    outDir.mkdirs()
+    def out = new File(outDir, 'ParityGoldenJson.kt')
+    def goldens = new File(parityFixtureRoot, 'goldens')
+      .listFiles()
+      .findAll { it.name.endsWith('.json') }
+      .sort { it.name }
+    def source = new StringBuilder()
+    source.append('package dev.keliver.portal.render.fixture\n\n')
+    source.append('// Generated from the checked-in cross-target parity goldens.\n')
+    goldens.each { golden ->
+      def basename = golden.name.substring(0, golden.name.length() - '.json'.length())
+      def constant = basename
+        .replaceAll('[^A-Za-z0-9]', '_')
+        .toUpperCase(Locale.ROOT) + '_JSON'
+      source.append("internal const val ${constant}: String = \"\"\"")
+      source.append(golden.getText('UTF-8').trim())
+      source.append('"""\n')
+    }
+    out.setText(source.toString(), 'UTF-8')
+  }
+}
+
 kotlin {
   js { browser() }
   wasmJs { browser() }
@@ -32,10 +64,16 @@ kotlin {
     // Kotlin/JS IR backend (ExternalPropertyOverridingLowering) when pulled
     // into the js test compilation.
     wasmJsTest {
+      kotlin.srcDir(new File(parityFixtureRoot, 'kotlin'))
+      kotlin.srcDir(generatedParityFixtureDir)
       dependencies {
         implementation projects.keliverMaterialTesting
         implementation libs.kotlinx.coroutines.test
       }
     }
   }
+}
+
+tasks.named('compileTestKotlinWasmJs').configure {
+  dependsOn(generateParityFixtureSources)
 }

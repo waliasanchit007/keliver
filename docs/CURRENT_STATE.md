@@ -294,3 +294,24 @@ ProfilePresenter and the slotted SectionCard component.
 Publication to Maven Central is intentionally NOT performed here; it is
 irreversible and remains a user-triggered release step. The checklist lives in
 `docs/superpowers/specs/2026-07-24-editor-distribution-design.md`.
+
+## Post-snapshot: preview/device semantic parity gate — 2026-07-26
+
+K1 of the UI-consistency plan is complete. Shared Kotlin fixtures now compile
+as the production/device semantic path while the JVM recognizer locks those
+same sources to checked-in canonical trees; Wasm Chrome tests deserialize the
+goldens through `RenderNode` and compare full generated `WidgetValue` trees.
+
+Coverage includes `Repeat` zero/multiple rows, `Condition` true/false, leaf and
+slotted components, nested components, layout constraints, ordered universal
+modifiers, and an integrated screen. Separate callback tests verify
+zero-argument, literal, repeated-item, and callback-payload action arguments.
+
+The first full gate found and fixed a real preview-only defect: component
+expansion incorrectly inherited a slot wrapper into the definition-cycle stack,
+so a finite child whose body reused that wrapper rendered a false cycle chip.
+A focused unit test now pins the corrected call-site semantics.
+
+This is a semantic tree gate, not visual platform evidence. The next bounded
+milestone is K2a: document and unit-test the current sizing/layout contract
+without deprecating APIs. Scripted Android/iOS/web layout evidence remains K3.

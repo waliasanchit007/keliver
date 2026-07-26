@@ -1,7 +1,7 @@
 # UI consistency & predictability — concrete plan
 
-**Status:** REVISED after technical review — building in the revised order.
-Review corrected two errors in the first draft; both are recorded in §8.
+**Status:** K1 COMPLETE (K1a + K1b); K2a is next.
+Technical-review corrections and the delivered shape are recorded in §8–§9.
 **Author:** agent, 2026-07-24.
 **Trigger:** repeated `forEach` rows filled their card on Android/iOS but stopped
 short on web (fixed in 37f94f239). The bug was NOT a platform difference — it
@@ -40,26 +40,32 @@ quietly diverges.
 
 **Mechanically assert that B produces the same widget tree as A.**
 
-Both are `@Composable` over the same widget system, and `keliver-*-testing`
-already generates `WidgetValue` classes (`StyledTextValue`, `SurfaceValue`, …)
-plus `toChangeList`. So this runs headless, in milliseconds, no device:
+The target split requires two linked suites rather than one test process:
 
 ```
-compiled     = render { ProfileScreen(fakeBindings) }        // path A
-interpreted  = render { RenderNode(recognize(src).tree) }    // path B, mocks == fakeBindings
-assertEquals(compiled, interpreted)                          // modulo preview-only decoration
+portal-ingest/JVM:
+  shared Kotlin source -> PSI recognition -> canonical tree == checked-in golden
+
+portal-render/Wasm:
+  compile the same Kotlin source -> WidgetValue tree
+  deserialize the same golden -> RenderNode -> WidgetValue tree
+  assertEquals(compiled, interpreted)
 ```
 
-Normalisation: strip the portal-internal `SelectionTag` modifier and
-editor-only handles before comparing; everything else must match exactly.
+`KeliverMaterialTester` renders both Wasm paths through
+`TestRedwoodComposition`. Semantic parity does not install `SelectionTag`, so
+no decoration normalisation is necessary. Generated Kotlin constants embed the
+goldens into the Wasm test binary; the fixtures remain one source of truth
+without making the JVM-only recognizer a Wasm dependency.
 
 **Fixture matrix** (each is a past or plausible drift point):
 `Repeat` · `Condition` · leaf component · **slotted** component · nested
 components · universal modifiers · a screen combining all of them.
 
-Deliverables: a `portal-parity-test` source set, the fixtures, CI wiring.
-Also re-evaluate `ListItem.fillMaxWidth()` under this gate — with the real cause
-fixed it may now be redundant or actively wrong.
+Deliverables: shared `portal-parity-fixtures`, the JVM recognition/golden gate,
+the Wasm compiled/interpreted gate, and separate action-sink assertions.
+`ListItem.fillMaxWidth()` is explicitly outside K1 because host layout details
+are not represented in `WidgetValue`; it belongs to K2a/K3.
 
 **Why first:** it prevents recurrence of the entire class, and it transitively
 gates the recognizer, the interpreter, component expansion and the composables
@@ -120,13 +126,14 @@ of false bug reports.
 
 ## 7. Open questions
 
-1. Where should the parity tests live — a new `portal-parity-test` module, or
-   inside `portal-render`'s test source set? (Proposal: new module, so it can
-   depend on both the app-lib fixtures and the testing widget system.)
-2. K3 automation: is `keliver-snapshot-testing` usable for wasm/iOS, or is
-   committed-screenshot evidence the pragmatic v1? (Proposal: evidence v1.)
-3. K2 convergence target — confirm universal modifiers as canonical before any
-   deprecation lands.
+Resolved:
+
+1. K1 lives in existing `portal-ingest` JVM tests and `portal-render`
+   `wasmJsTest`, bridged by shared source fixtures and checked-in golden trees.
+2. K3 v1 is scripted committed evidence; snapshot testing has no Wasm capture
+   path today.
+3. K2 targets one mechanism per semantic layer, as defined in §8. No
+   deprecation lands before K2a documents and pins the existing contract.
 
 
 ## 8. Review corrections (accepted) — 2026-07-24
@@ -185,9 +192,9 @@ two suites, no shared target.
 
 ### Revised order (superseding §6)
 
-1. **K1a** — ONE Repeat regression fixture proving compiled-vs-interpreted
+1. ✅ **K1a** — ONE Repeat regression fixture proving compiled-vs-interpreted
    `WidgetValue` comparison works at all (harness before matrix).
-2. **K1b** — Condition, leaf + slotted components, nesting, modifiers,
+2. ✅ **K1b** — Condition, leaf + slotted components, nesting, modifiers,
    zero/multiple rows, one integrated fixture; + the golden-tree bridge; +
    separate action-sink tests for event wiring.
 3. **K2a** — document AND unit-test the current layout contract. No deprecations.
@@ -197,3 +204,31 @@ two suites, no shared target.
 
 K1 precedes personas. K2b must NOT block the personas/capability arc once the
 parity gates and the layout contract exist.
+
+## 9. K1 implementation result — 2026-07-26
+
+K1a and K1b are complete. The integrated fixture covers:
+
+- `Condition` true/false and `Repeat` zero/multiple rows;
+- leaf, single-content-slot, and nested components;
+- layout constraints plus ordered universal modifiers;
+- zero-argument, literal-argument, repeated-item, and callback-payload actions.
+
+The first full Chrome run caught a real semantic bug: expansion inherited a
+slot wrapper's component stack into call-site content, falsely diagnosing the
+finite `ParitySection { ParityPanel() }` / `ParityPanel -> ParitySection`
+composition as a cycle. Slot content now keeps the caller's definition stack
+without adding the wrapper, with a focused regression test.
+
+Acceptance evidence:
+
+- `:portal-ingest:test` recognizes the shared sources into the exact canonical
+  golden trees;
+- `:portal-render:wasmJsBrowserTest` runs the compiled and interpreted paths in
+  ChromeHeadless and compares their full `WidgetValue` trees;
+- the event test invokes captured widget callbacks and verifies exact
+  `PreviewBindings.actionSink` name/argument pairs;
+- global preview mocks, sinks, and component hooks reset after every test.
+
+Boundary: K1 proves semantic schema-tree parity. Native/host layout parity
+remains K2a + K3 work.

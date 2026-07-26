@@ -46,7 +46,11 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
 
   fun substituteSlotContent(n: WidgetNode): WidgetNode {
     if (registry.isComponent(n.type)) {
-      return when (val r = expandForPreview(n, registry, stack + name)) {
+      // Slot children execute at the component call site, not inside the
+      // wrapper's definition. Carry the caller's definition stack, but do not
+      // add the wrapper itself: Wrapper { Child() } is finite even when Child's
+      // own body uses Wrapper.
+      return when (val r = expandForPreview(n, registry, stack)) {
         is Expansion.Transparent -> source(r.tree, n.id)
         is Expansion.Opaque -> source(placeholder(r.name, r.reason), n.id)
         is Expansion.Cycle -> source(cycleChip(r.path), n.id)

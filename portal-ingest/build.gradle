@@ -11,3 +11,10 @@ dependencies {
   testImplementation libs.junit
   testImplementation libs.kotlin.test.junit
 }
+
+tasks.named('test').configure {
+  systemProperty(
+    'dev.keliver.portal.parityFixtures',
+    rootProject.file('portal-parity-fixtures').absolutePath,
+  )
+}

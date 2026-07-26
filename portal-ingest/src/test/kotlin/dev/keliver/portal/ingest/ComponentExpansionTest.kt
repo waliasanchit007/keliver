@@ -126,6 +126,41 @@ class ComponentExpansionTest {
     assertEquals(child.id, expanded.children.single().props[COMPONENT_SOURCE_HANDLE_PROP])
   }
 
+  @Test fun slotChildMayReuseItsWrapperWithoutAFalseCycle() {
+    val wrapper = ComponentSpec(
+      "Wrapper",
+      emptyList(),
+      emptyList(),
+      mapOf("content" to "@Composable () -> Unit"),
+      slots = listOf(dev.keliver.portal.ComponentSlotSpec("content")),
+      body = WidgetNode("Column", children = listOf(
+        WidgetNode("Slot", mapOf("name" to "content")),
+      )),
+      transparent = true,
+    )
+    val child = ComponentSpec(
+      "Child",
+      emptyList(),
+      emptyList(),
+      emptyMap(),
+      body = WidgetNode("Wrapper", children = listOf(
+        WidgetNode("StyledText", mapOf("text" to "finite")),
+      )),
+      transparent = true,
+      dependencies = setOf("Wrapper"),
+    )
+    val reg = MapComponentRegistry(listOf(wrapper, child))
+
+    val expanded = tree(expandForPreview(
+      WidgetNode("Wrapper", children = listOf(WidgetNode("Child"))),
+      reg,
+    ))
+
+    val nestedWrapper = expanded.children.single()
+    assertEquals("Column", nestedWrapper.type)
+    assertEquals("finite", nestedWrapper.children.single().props["text"])
+  }
+
   @Test fun opaqueComponentYieldsPlaceholder() {
     val opaque = ComponentSpec("Fancy", emptyList(), emptyList(), emptyMap(), transparent = false, diagnostic = "has effects")
     val reg = MapComponentRegistry(listOf(opaque))
