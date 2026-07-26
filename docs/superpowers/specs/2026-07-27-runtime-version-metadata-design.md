@@ -1,6 +1,6 @@
 # Runtime-version metadata handshake
 
-**Status:** implementation-ready design, 2026-07-27.
+**Status:** delivered and live-verified, 2026-07-27.
 **Roadmap:** UI-consistency K4.
 
 ## 1. Problem
@@ -117,3 +117,21 @@ Mechanical gates:
 
 The controlled mismatch is test configuration only. The repository finishes
 with its truthful runtime declaration and a clean verification process set.
+
+## 7. Delivery evidence
+
+The contract and implementation landed in two bounded commits:
+
+- `8dd942b1a` — explicit handshake design; and
+- `553d32ab6` — relay metadata, editor comparison/UI, tests, and the dogfood
+  runtime declaration.
+
+`portal-relay:test`, six editor Wasm browser tests, editor API check, and the
+fresh dogfood development distribution passed. Live browser verification
+observed an exact `0.3.1-SNAPSHOT`/widgets-v1 match in mock and Live modes. A
+separate temporary relay declared app version `0.3.0` and produced the expected
+Keliver-skew warning with both values visible.
+
+The Android and iOS build gates also passed. Android reported
+`codeLoadSuccess modules=45`; Pixel 9 and iPhone 16 Pro simulator captures
+visibly rendered the Field Notes guest, closing the native regression pass.

@@ -368,5 +368,38 @@ Mechanical and runtime evidence:
 
 Recorded HTTP/HAR replay remains deliberately separate: its next design must
 settle matching, redaction, privacy, fixture lifecycle, misses, and proxy trust
-boundaries. K3 scripted visual evidence and K4 explicit runtime-version metadata
-remain independent consistency work; K2b API convergence remains deferred.
+boundaries. K3 scripted visual evidence remains independent consistency work;
+K2b API convergence remains deferred.
+
+## Post-snapshot: explicit runtime-version metadata — 2026-07-27
+
+K4 of the UI-consistency plan is complete. The editor now derives its own
+Keliver version from the build-generated `guestRedwoodVersion` embedded in the
+running Wasm binary and uses the same centralized widget version as its
+`ProtocolRedwoodComposition`.
+
+The app/device target is not guessed from Gradle. `keliver.portal.json` owns an
+explicit `appRuntime` declaration, and the relay exposes it through
+`GET /runtime-metadata`. Older configs remain loadable with null metadata, but
+the editor reports that state as undeclared rather than implying compatibility.
+
+The Preview fidelity panel shows both Keliver and widget versions in mock and
+Live modes. Exact match, Keliver SemVer skew, widget-protocol mismatch,
+undeclared metadata, and unavailable relay metadata have distinct statuses.
+Capability fidelity remains separate from runtime compatibility.
+
+Verification evidence:
+
+- relay tests cover config parsing, validation, absence, and the wire shape;
+- six Wasm browser tests cover parsing plus match/skew/mismatch precedence;
+- editor API check and a fresh dogfood development distribution passed;
+- a live matching relay showed `0.3.1-SNAPSHOT`/widgets v1 on both sides in
+  mock and Live modes;
+- a temporary `0.3.0` relay produced the intended Keliver-skew warning without
+  changing the committed app target; and
+- Android loaded 45 OTA modules on Pixel 9, while Android and iPhone 16 Pro
+  simulator captures both visibly rendered the Field Notes guest.
+
+The next consistency milestone is K3's scripted, committed tri-platform layout
+evidence. The next major product-depth arc remains recorded HTTP replay, which
+still requires its own privacy/matching/lifecycle design before implementation.

@@ -252,9 +252,14 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    live-verified on web; Android and iOS guest paths were rebuilt and rendered.
    **Recorded HTTP replay** remains the next product-depth arc and requires its
    own design before implementation.
-7. Scripted tri-platform layout evidence (K3), explicit runtime-version
-   metadata (K4), Presenter/FlowScope linting, transparent local composables,
-   and component metadata/thumbnails follow after those adoption-critical gaps.
+7. ✅ **Explicit runtime-version metadata (K4)** — COMPLETE 2026-07-27.
+   The running editor reports its build-embedded Keliver/widget versions and
+   compares them with the app-owned `keliver.portal.json` declaration from the
+   relay. Match, SemVer skew, widget mismatch, missing, and unavailable states
+   are explicit in mock and Live fidelity; no Gradle parsing is involved.
+8. Scripted tri-platform layout evidence (K3), Presenter/FlowScope linting,
+   transparent local composables, and component metadata/thumbnails follow
+   after those adoption-critical gaps.
 
 ## P4 — Platform debt (tracked, not urgent)
 

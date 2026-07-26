@@ -141,9 +141,25 @@ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.Mai
 `keliver.portal.json` at the repo root tells the portal-server everything about
 the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
-`previewDist`, and `previewServeDir`. Path fields default relative to
+`previewDist`, `previewServeDir`, and `appRuntime`. Path fields default relative to
 `screensDir`, so the file can stay small. `PORTAL_REPO` can point one relay at
 an external app checkout.
+
+Declare the app/device runtime target explicitly; the editor cannot infer it
+reliably from Gradle catalogs, BOMs, or composite substitution:
+
+```json
+"appRuntime": {
+  "keliverVersion": "0.3.1-SNAPSHOT",
+  "widgetVersion": 1
+}
+```
+
+The **Preview fidelity** panel compares that declaration with the running
+editor's build-embedded Keliver and widget versions in both mock and Live
+modes. It distinguishes an exact match, Keliver-version skew, widget-protocol
+mismatch, and undeclared metadata. `GET /runtime-metadata` exposes the relay
+side of the handshake.
 
 ```bash
 scripts/keliver-new-screen.sh Profile   # scaffolds screens/profile.kt + logic/ProfilePresenter.kt
