@@ -145,6 +145,8 @@ class HttpRecordingTest {
     assertFalse(audit.contains("/profile"))
     assertFalse(audit.contains("secret"))
     assertFalse(audit.contains("example.com"))
+    assertContains(audit, """"durationBucket":""")
+    assertContains(audit, """"responseStatus":200""")
 
     val closed = assertIs<HttpRecordingResult.Success>(service.close(session))
     assertContains(closed.body, """"entries":1""")

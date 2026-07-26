@@ -269,13 +269,14 @@ internal class HttpRecordingService(
       return failure(422, "unredactable_request")
     }
     val normalizedRequest = request.copy(method = method, path = safePath)
+    val startedNanos = System.nanoTime()
     val addresses = runCatching { dnsResolver.resolve(URI(upstream.baseUrl).host) }
       .getOrElse {
-        audit(session, method, safePath, "dns_failure", 0, 0, null)
+        audit(session, method, safePath, "dns_failure", 0, 0, null, startedNanos)
         return failure(422, "dns_failure")
       }
     if (addresses.isEmpty() || addresses.any { !isGlobalAddress(it) }) {
-      audit(session, method, safePath, "non_global_address", 0, 0, null)
+      audit(session, method, safePath, "non_global_address", 0, 0, null, startedNanos)
       return failure(422, "non_global_address")
     }
     val authValue = upstream.authEnv?.let(environment)
@@ -296,13 +297,13 @@ internal class HttpRecordingService(
     val rawResponse = try {
       outbound!!.execute(upstream, outboundRequest, addresses.toList(), authValue)
     } catch (_: RecordingBodyTooLargeException) {
-      audit(session, method, safePath, "response_too_large", bodySize(request.body), 0, null)
+      audit(session, method, safePath, "response_too_large", bodySize(request.body), 0, null, startedNanos)
       return failure(413, "response_too_large")
     } catch (_: java.net.SocketTimeoutException) {
-      audit(session, method, safePath, "timeout", bodySize(request.body), 0, null)
+      audit(session, method, safePath, "timeout", bodySize(request.body), 0, null, startedNanos)
       return failure(504, "timeout")
     } catch (_: Exception) {
-      audit(session, method, safePath, "network_failure", bodySize(request.body), 0, null)
+      audit(session, method, safePath, "network_failure", bodySize(request.body), 0, null, startedNanos)
       return failure(502, "network_failure")
     }
     if (
@@ -318,6 +319,7 @@ internal class HttpRecordingService(
         bodySize(request.body),
         bodySize(rawResponse.body),
         null,
+        startedNanos,
       )
       return failure(422, "unredactable_response")
     }
@@ -348,6 +350,7 @@ internal class HttpRecordingService(
         bodySize(request.body),
         bodySize(rawResponse.body),
         null,
+        startedNanos,
       )
       return failure(422, "candidate_rejected")
     }
@@ -359,6 +362,8 @@ internal class HttpRecordingService(
       bodySize(request.body),
       bodySize(rawResponse.body),
       session.candidate.name,
+      startedNanos,
+      rawResponse.status,
     )
     return success(200, json.encodeToString(redactedResponse))
   }
@@ -493,8 +498,17 @@ internal class HttpRecordingService(
     requestBytes: Int,
     responseBytes: Int,
     candidate: String?,
+    startedNanos: Long,
+    responseStatus: Int? = null,
   ) {
     val pathHash = revision(path.encodeToByteArray())
+    val durationBucket = when (System.nanoTime() - startedNanos) {
+      in Long.MIN_VALUE until 10_000_000L -> "lt10ms"
+      in 10_000_000L until 100_000_000L -> "lt100ms"
+      in 100_000_000L until 1_000_000_000L -> "lt1s"
+      in 1_000_000_000L until 5_000_000_000L -> "lt5s"
+      else -> "gte5s"
+    }
     val line = buildString {
       append("""{"at":"${clock.instant()}"""")
       append(""","session":"${session.id.takeLast(8)}"""")
@@ -503,6 +517,8 @@ internal class HttpRecordingService(
       append(""","pathHash":"$pathHash"""")
       append(""","outcome":"$outcome"""")
       append(""","requestBytes":$requestBytes,"responseBytes":$responseBytes""")
+      append(""","durationBucket":"$durationBucket"""")
+      responseStatus?.let { append(""","responseStatus":$it""") }
       candidate?.let { append(""","candidate":"$it"""") }
       append("}\n")
     }
