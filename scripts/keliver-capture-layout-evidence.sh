@@ -94,6 +94,7 @@ require_tools() {
   command -v jq >/dev/null || fail "jq is required"
   command -v xcrun >/dev/null || fail "Xcode command-line tools are required"
   command -v sips >/dev/null || fail "sips is required"
+  command -v swift >/dev/null || fail "Swift is required for screenshot content validation"
 }
 
 wait_for_url() {
@@ -330,6 +331,17 @@ capture_android() {
     if "$ADB" -s "$android_serial" logcat -d -s PortalDevice:D '*:S' |
       grep -q "codeLoadSuccess"; then
       sleep 3
+      local android_log resumed_activity
+      android_log="$("$ADB" -s "$android_serial" logcat -d)"
+      if grep -Eq "codeLoadFailed|uncaughtException|FATAL EXCEPTION|IllegalStateException" \
+        <<<"$android_log"; then
+        printf '%s\n' "$android_log" >"$ROOT/build/k3-android-log.txt"
+        fail "Android guest reported a post-load failure (see build/k3-android-log.txt)"
+      fi
+      resumed_activity="$("$ADB" -s "$android_serial" shell dumpsys activity activities |
+        grep -m1 "mResumedActivity" || true)"
+      [[ "$resumed_activity" == *"dev.keliver.portaldevice"* ]] ||
+        fail "Android evidence app is not the resumed activity: $resumed_activity"
       "$ADB" -s "$android_serial" exec-out screencap -p >"$ANDROID_PNG"
       return
     fi
@@ -397,7 +409,8 @@ capture_ios() {
   local stderr_log="$ROOT/build/k3-ios-stderr.log"
   : >"$stdout_log"
   : >"$stderr_log"
-  xcrun simctl launch \
+  local launch_result ios_pid
+  launch_result="$(xcrun simctl launch \
     --stdout="$stdout_log" \
     --stderr="$stderr_log" \
     --terminate-running-process \
@@ -405,12 +418,20 @@ capture_ios() {
     "$IOS_BUNDLE_ID" \
     -AppleLanguages "(en)" \
     -AppleLocale "en_US" \
-    >/dev/null
+    )"
+  ios_pid="${launch_result##*: }"
 
   local i
   for ((i = 1; i <= 90; i++)); do
     if grep -q "codeLoadSuccess" "$stdout_log" "$stderr_log" 2>/dev/null; then
       sleep 3
+      if grep -Eq \
+        "codeLoadFailed|Uncaught Kotlin exception|IllegalStateException|fatal error" \
+        "$stdout_log" "$stderr_log"; then
+        fail "iOS guest reported a post-load failure (see build/k3-ios-*.log)"
+      fi
+      ps -p "$ios_pid" >/dev/null ||
+        fail "iOS evidence app exited after codeLoadSuccess"
       xcrun simctl io "$IOS_UDID" screenshot "$IOS_PNG" >/dev/null
       return
     fi
@@ -434,6 +455,70 @@ validate_png() {
   [[ "$(stat -f %z "$file")" -ge 20000 ]] || fail "capture is implausibly small: $file"
   [[ "$(png_width "$file")" -ge 320 ]] || fail "capture width is implausible: $file"
   [[ "$(png_height "$file")" -ge 480 ]] || fail "capture height is implausible: $file"
+}
+
+validate_evidence_colors() {
+  local file=$1
+  swift - "$file" <<'SWIFT'
+import CoreGraphics
+import Foundation
+import ImageIO
+
+let path = CommandLine.arguments[1]
+let url = URL(fileURLWithPath: path) as CFURL
+guard
+  let source = CGImageSourceCreateWithURL(url, nil),
+  let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+else {
+  fputs("cannot decode \(path)\n", stderr)
+  exit(2)
+}
+
+let width = image.width
+let height = image.height
+let bytesPerRow = width * 4
+var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+guard
+  let context = CGContext(
+    data: &pixels,
+    width: width,
+    height: height,
+    bitsPerComponent: 8,
+    bytesPerRow: bytesPerRow,
+    space: CGColorSpaceCreateDeviceRGB(),
+    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+  )
+else {
+  fputs("cannot allocate bitmap context for \(path)\n", stderr)
+  exit(2)
+}
+context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+let targets: [(String, Int, Int, Int)] = [
+  ("blue", 0x25, 0x63, 0xEB),
+  ("purple", 0x93, 0x33, 0xEA),
+  ("rose", 0xE1, 0x1D, 0x48),
+  ("navy", 0x0F, 0x17, 0x2A),
+]
+var counts = [Int](repeating: 0, count: targets.count)
+for offset in stride(from: 0, to: pixels.count, by: 4) {
+  for (index, target) in targets.enumerated() {
+    if abs(Int(pixels[offset]) - target.1) <= 16,
+       abs(Int(pixels[offset + 1]) - target.2) <= 16,
+       abs(Int(pixels[offset + 2]) - target.3) <= 16 {
+      counts[index] += 1
+    }
+  }
+}
+
+for (index, target) in targets.enumerated() where counts[index] < 50 {
+  fputs(
+    "\(path) lacks the K3 \(target.0) sentinel (found \(counts[index]) pixels)\n",
+    stderr
+  )
+  exit(1)
+}
+SWIFT
 }
 
 write_manifest() {
@@ -553,6 +638,9 @@ main() {
   validate_png "$WEB_PNG"
   validate_png "$ANDROID_PNG"
   validate_png "$IOS_PNG"
+  validate_evidence_colors "$WEB_PNG"
+  validate_evidence_colors "$ANDROID_PNG"
+  validate_evidence_colors "$IOS_PNG"
   write_manifest
 
   printf "\n\033[1;32m✓ K3 evidence captured\033[0m\n"

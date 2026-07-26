@@ -10,7 +10,6 @@ import dev.keliver.layout.compose.Row
 import dev.keliver.layout.compose.Spacer
 import dev.keliver.material.compose.AsyncImage
 import dev.keliver.material.compose.Divider
-import dev.keliver.material.compose.ScrollableColumn
 import dev.keliver.material.compose.StyledBox
 import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.background
@@ -32,7 +31,7 @@ fun LayoutEvidenceScreen() {
     paddingDp = 16,
     colorArgb = -460036,
   ) {
-    ScrollableColumn {
+    Column {
       StyledText(
         text = "K3 · LAYOUT EVIDENCE · V1",
         fontSize = 22,
