@@ -87,6 +87,37 @@ jobs:
           apiCheck
           -DRELEASE_SIGNING_ENABLED=false
 
+      # The `test` aggregate above only reaches projects that HAVE a `test`
+      # task — i.e. the `kotlin.jvm` ones (portal-ingest, portal-relay,
+      # portal-schema-codegen). Every multiplatform portal module registers
+      # `jsTest`/`wasmJsTest`/`jvmTest` instead and NO `test`, so Gradle
+      # silently skipped them: `:portal-render:test` fails with "task 'test'
+      # not found in project ':portal-render'".
+      #
+      # That meant the two suites that guard the riskiest invariants had never
+      # run in CI:
+      #   - portal-render wasmJsTest = the K1 preview-vs-device parity gates
+      #     (Repeat/Condition/modifiers/action wiring). This is what catches a
+      #     regression of the wrapper-Column bug that made forEach rows
+      #     wrap-content in the editor but fill-width on device.
+      #   - portal-document = the UiDocument apply/invert engine behind
+      #     portal write-back to canonical .kt files.
+      #
+      # List the tasks EXPLICITLY. Do not "simplify" this to `allTests`: that
+      # also drags in the gated test-app JS modules, whose npm dependency
+      # superset conflicts with the strict yarn.lock check in the build above.
+      - name: Test (portal multiplatform modules)
+        run: >
+          ./gradlew
+          :portal-render:wasmJsTest
+          :portal-render:jsTest
+          :portal-document:jvmTest
+          :portal-document:jsTest
+          :portal-editor:wasmJsTest
+          :portal-app-lib:wasmJsTest
+          :portal-sql:jvmTest
+          -DRELEASE_SIGNING_ENABLED=false
+
       # The full inherited Redwood test suite that asserts against the
       # recovered `test-app` fixture (gated behind -PkeliverWithTestApp;
       # see docs/KNOWN_BUGS.md U13). Both halves now run:

@@ -14,6 +14,18 @@ PKG="$(echo "$PROJECT" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')"  # ko
 KELIVER_VERSION="${KELIVER_VERSION:-0.3.0}"
 [ -e "$DIR" ] && { echo "refusing to overwrite existing path: $DIR"; exit 1; }
 
+# Scaffolded apps resolve keliver from Maven Central, which is what a real
+# adopter wants. But the release preflight has to prove a CANDIDATE version —
+# one staged in mavenLocal and deliberately not yet on Central, because the
+# push there is irreversible. Opt in with KELIVER_USE_MAVEN_LOCAL=1 so the
+# proof can resolve it. mavenLocal() goes FIRST so the candidate wins over any
+# same-coordinate artifact already published.
+MAVEN_LOCAL=""
+if [ "${KELIVER_USE_MAVEN_LOCAL:-0}" = "1" ]; then
+  MAVEN_LOCAL="mavenLocal(); "
+  echo "==> resolving keliver from mavenLocal first (KELIVER_USE_MAVEN_LOCAL=1)"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The gradle wrapper ships beside this script in the tools bundle (../wrapper),
 # or lives at the repo root when run from a keliver checkout.
@@ -27,7 +39,7 @@ mkdir -p "$DIR/src/jsMain/kotlin/screens" "$DIR/src/jsMain/kotlin/logic"
 
 cat > "$DIR/settings.gradle" <<EOF
 pluginManagement {
-  repositories { gradlePluginPortal(); mavenCentral(); google() }
+  repositories { ${MAVEN_LOCAL}gradlePluginPortal(); mavenCentral(); google() }
   plugins {
     id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
     id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
@@ -35,7 +47,7 @@ pluginManagement {
   }
 }
 dependencyResolutionManagement {
-  repositories { mavenCentral(); google() }
+  repositories { ${MAVEN_LOCAL}mavenCentral(); google() }
 }
 rootProject.name = '${PROJECT}'
 EOF

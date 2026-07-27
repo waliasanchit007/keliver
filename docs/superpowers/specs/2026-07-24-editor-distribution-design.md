@@ -115,11 +115,41 @@ that failure actually occurs.
 **Release checklist (IRREVERSIBLE — user-triggered, same as 0.3.0):**
 
 1. Decide the version; bump `KELIVER_VERSION` in `RedwoodBuildPlugin.kt`.
-2. Pre-gate locally: `apiCheck` + `publishToMavenLocal -PkeliverVersion=X.Y.Z
-   -DRELEASE_SIGNING_ENABLED=false` (note: signing is a `-D` sysprop, not `-P`).
-3. Re-run the D4 proof against that version from mavenLocal.
-4. Tag `vX.Y.Z`, then `gh workflow run publish-maven-central.yml -f ref=vX.Y.Z`
+2. Pre-gate locally: `scripts/keliver-release-preflight.sh X.Y.Z`. One command,
+   and it is the same script the workflow's `preflight` job runs — steps 2 and 3
+   of the old manual checklist are now inside it (versioned `publishToMavenLocal`,
+   codegen freshness, `test` + `apiCheck`, the portal multiplatform suites, the
+   wasm host, and the zero-checkout consumer proof against the staged candidate).
+   Note: signing is a `-D` sysprop, not `-P` — the script already gets this right.
+3. Tag `vX.Y.Z`, then `gh workflow run publish-maven-central.yml -f ref=vX.Y.Z`
    (the workflow guards tag == the constant; runner is self-hosted `keliver-mac`;
    use `GH_REPO=waliasanchit007/keliver` since `gh` resolves upstream).
-5. After release, drop `mavenLocal()` from consumer editor settings (or keep it
+4. After release, drop `mavenLocal()` from consumer editor settings (or keep it
    for snapshot testing) and bump the scaffold's `KELIVER_VERSION` default.
+
+**What the 0.3.1 hardening pass fixed (and why it mattered):**
+
+The publish job had no `needs:`, so a tag could reach the irreversible Central
+upload having run zero gates. It now depends on a `preflight` job.
+
+While wiring that, a larger hole surfaced: CI's root `./gradlew test` only
+reaches projects that *have* a `test` task — the `kotlin.jvm` ones. Every
+multiplatform portal module registers `jsTest`/`wasmJsTest`/`jvmTest` and no
+`test`, so Gradle skipped them silently (`:portal-render:test` → "task 'test'
+not found in project ':portal-render'"). Two suites guarding the riskiest
+invariants had therefore *never* run in CI:
+
+- `:portal-render:wasmJsTest` — the K1 preview-vs-device parity gates, i.e. the
+  regression guard for the wrapper-`Column` bug that made `forEach` rows
+  wrap-content in the editor but fill-width on device.
+- `:portal-document:jvmTest` — the UiDocument apply/invert engine behind portal
+  write-back to canonical `.kt` files.
+
+Both are now explicit steps in `ci.yml` and in the preflight script. Do not
+collapse them to `allTests`: that pulls in the gated test-app JS modules, whose
+npm dependency superset conflicts with the strict `yarn.lock` check.
+
+Separately, `keliver-init` scaffolded `mavenCentral()` only, so a scaffolded app
+could never resolve a release candidate — the consumer proof could only ever
+test an already-published version, which is backwards. `KELIVER_USE_MAVEN_LOCAL=1`
+now injects `mavenLocal()` first; the default scaffold is unchanged.
