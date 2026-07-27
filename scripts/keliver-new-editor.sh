@@ -12,6 +12,9 @@
 #                   compiled straight into the editor via kotlin.srcDir — e.g.
 #                   guest/src/jsMain/kotlin/com/acme/guest/logic
 #
+# Set KELIVER_USE_MAVEN_LOCAL=1 only when validating an unpublished candidate.
+# Normal adopters resolve exclusively from Maven Central.
+#
 # Requires: the app on the SAME Kotlin/Compose/Gradle versions as the consumed
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
@@ -23,6 +26,12 @@ LOGIC_DIR="${2:-}"
 [[ "$NAME" =~ ^[A-Z][A-Za-z0-9]*$ ]] || { echo "AppName must be UpperCamelCase (got: $NAME)"; exit 1; }
 [ -f "$APP/keliver.portal.json" ] || echo "note: no keliver.portal.json here — the relay will use defaults"
 [ -e "$APP/editor" ] && { echo "refusing to overwrite $APP/editor"; exit 1; }
+
+MAVEN_LOCAL=""
+if [ "${KELIVER_USE_MAVEN_LOCAL:-0}" = "1" ]; then
+  MAVEN_LOCAL="mavenLocal(); "
+  echo "resolving keliver from mavenLocal first (KELIVER_USE_MAVEN_LOCAL=1)"
+fi
 
 LOWER="$(echo "$NAME" | tr '[:upper:]' '[:lower:]')"
 mkdir -p "$APP/editor/src/wasmJsMain/kotlin" "$APP/editor/src/wasmJsMain/resources"
@@ -37,6 +46,7 @@ rootProject.name = "$LOWER-editor"
 
 pluginManagement {
   repositories {
+    ${MAVEN_LOCAL}
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google { mavenContent { includeGroupAndSubgroups("androidx"); includeGroupAndSubgroups("com.android"); includeGroupAndSubgroups("com.google") } }
     mavenCentral()
@@ -46,7 +56,7 @@ pluginManagement {
 
 dependencyResolutionManagement {
   repositories {
-    mavenLocal() // pre-release: a locally published dev.keliver snapshot
+    ${MAVEN_LOCAL}
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     google { mavenContent { includeGroupAndSubgroups("androidx"); includeGroupAndSubgroups("com.android"); includeGroupAndSubgroups("com.google") } }
     mavenCentral()
@@ -78,6 +88,9 @@ kotlin {
 $( [ -n "$LOGIC_DIR" ] && printf '      // The app'\''s REAL pure-Kotlin presenters/contracts — one source, no copy.\n      kotlin.srcDir("../%s")\n' "$LOGIC_DIR" )
       dependencies {
         implementation("dev.keliver:portal-editor:$KELIVER_VERSION")
+        // Apps compile flow{} declarations into the editor alongside their
+        // presenters. portal-flow is deliberately independent of the shell.
+        implementation("dev.keliver:portal-flow:$KELIVER_VERSION")
         implementation(compose.runtime)
       }
     }

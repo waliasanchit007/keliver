@@ -121,8 +121,11 @@ run_gradle "compile Compose-for-Web (Wasm) host" \
 
 # --------------------------------------------------- 5. zero-checkout consumer
 # The claim the release makes is "an adopter with no keliver checkout can build
-# against these coordinates." Prove it against the CANDIDATE staged in
-# mavenLocal, not against whatever is already on Central.
+# both a guest and its portal editor against these coordinates." Prove it
+# against the CANDIDATE staged in mavenLocal, not against whatever is already
+# on Central. The full editor distribution links portal-editor and its five new
+# transitive artifacts; keliver-new-editor also depends on the deliberately
+# standalone portal-flow, so this exercises all seven 0.3.1 additions.
 if [ "${PREFLIGHT_SKIP_CONSUMER:-0}" != "1" ]; then
   CONSUMER_DIR="$(mktemp -d)/preflight"
   trap 'rm -rf "$(dirname "$CONSUMER_DIR")"' EXIT
@@ -133,7 +136,41 @@ if [ "${PREFLIGHT_SKIP_CONSUMER:-0}" != "1" ]; then
     scripts/keliver-init Preflight "$CONSUMER_DIR"
 
   ( cd "$CONSUMER_DIR" && ./gradlew --console=plain compileKotlinJs )
-  echo "==> consumer compiled against dev.keliver:*:$VERSION"
+
+  (
+    cd "$CONSUMER_DIR"
+    KELIVER_USE_MAVEN_LOCAL=1 KELIVER_VERSION="$VERSION" \
+      "$ROOT/scripts/keliver-new-editor.sh" Preflight
+  )
+  if grep -Rqs 'includeBuild' "$CONSUMER_DIR/editor"; then
+    echo "ERROR: generated editor uses a composite build; consumer proof is not zero-checkout." >&2
+    exit 1
+  fi
+  DEPENDENCY_REPORT="$CONSUMER_DIR/editor-dependencies.txt"
+  (
+    cd "$CONSUMER_DIR/editor"
+    ./gradlew --console=plain dependencies --configuration wasmJsCompileClasspath
+  ) | tee "$DEPENDENCY_REPORT"
+  for artifact in \
+    portal-core \
+    portal-document \
+    portal-render \
+    portal-flow \
+    portal-editor \
+    keliver-material-protocol-host-web \
+    keliver-material-protocol-guest-web
+  do
+    if ! grep -Fq "dev.keliver:$artifact:$VERSION" "$DEPENDENCY_REPORT"; then
+      echo "ERROR: candidate editor graph did not resolve dev.keliver:$artifact:$VERSION." >&2
+      exit 1
+    fi
+  done
+  (
+    cd "$CONSUMER_DIR/editor"
+    ./gradlew --console=plain wasmJsBrowserDistribution
+  )
+  test -f "$CONSUMER_DIR/editor/build/dist/wasmJs/productionExecutable/preflight-editor.js"
+  echo "==> guest + full editor distribution linked against dev.keliver:*:$VERSION"
 fi
 
 echo

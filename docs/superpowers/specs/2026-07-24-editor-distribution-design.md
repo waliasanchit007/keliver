@@ -119,7 +119,11 @@ that failure actually occurs.
    and it is the same script the workflow's `preflight` job runs — steps 2 and 3
    of the old manual checklist are now inside it (versioned `publishToMavenLocal`,
    codegen freshness, `test` + `apiCheck`, the portal multiplatform suites, the
-   wasm host, and the zero-checkout consumer proof against the staged candidate).
+   wasm host, and zero-checkout guest + full editor distribution proofs against
+   the staged candidate). The editor link resolves `portal-editor` and its five
+   new transitive artifacts plus the standalone `portal-flow`, exercising all
+   seven new coordinates without a composite build; the preflight asserts all
+   seven exact-version coordinates are present in the resolved Wasm classpath.
    Note: signing is a `-D` sysprop, not `-P` — the script already gets this right.
 3. Tag `vX.Y.Z`, then `gh workflow run publish-maven-central.yml -f ref=vX.Y.Z`
    (the workflow guards tag == the constant; runner is self-hosted `keliver-mac`;
@@ -130,7 +134,9 @@ that failure actually occurs.
 **What the 0.3.1 hardening pass fixed (and why it mattered):**
 
 The publish job had no `needs:`, so a tag could reach the irreversible Central
-upload having run zero gates. It now depends on a `preflight` job.
+upload having run zero gates. It now depends on a `preflight` job. The workflow
+also refuses to publish a stable version from anything except its exact
+`vX.Y.Z` tag, and its preflight no longer bypasses the clean-tree check.
 
 While wiring that, a larger hole surfaced: CI's root `./gradlew test` only
 reaches projects that *have* a `test` task — the `kotlin.jvm` ones. Every
@@ -152,4 +158,7 @@ npm dependency superset conflicts with the strict `yarn.lock` check.
 Separately, `keliver-init` scaffolded `mavenCentral()` only, so a scaffolded app
 could never resolve a release candidate — the consumer proof could only ever
 test an already-published version, which is backwards. `KELIVER_USE_MAVEN_LOCAL=1`
-now injects `mavenLocal()` first; the default scaffold is unchanged.
+now injects `mavenLocal()` first in both guest and editor scaffolds; their
+defaults remain Central-only. The proof compiles the generated guest and links
+the editor's complete production Wasm distribution, rather than stopping at a
+guest compile that never touched the new portal/editor artifacts.

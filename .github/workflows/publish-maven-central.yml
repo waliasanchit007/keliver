@@ -30,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Tag or commit to publish (use a release tag for canonical releases)"
+        description: "Release tag to publish (commit allowed only for a SNAPSHOT)"
         required: true
 
 env:
@@ -85,17 +85,21 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      # Sanity check: if publishing from a `v*` tag, ensure it matches the
-      # build's KELIVER_VERSION (same guard as publish.yml).
-      - name: Verify tag matches build version
-        if: startsWith(inputs.ref, 'v')
+      # Stable releases are immutable and must be traceable to their exact
+      # canonical tag. SNAPSHOT builds may still be preflighted from a commit.
+      - name: Verify release ref matches build version
         run: |
+          ref="${{ inputs.ref }}"
           tag_version="${{ inputs.ref }}"
           tag_version="${tag_version#v}"
           build_version=$(grep 'KELIVER_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-          echo "Tag version:   $tag_version"
+          echo "Release ref:   $ref"
           echo "Build version: $build_version"
-          if [ "$tag_version" != "$build_version" ]; then
+          if [[ "$build_version" != *-SNAPSHOT && "$ref" != "v$build_version" ]]; then
+            echo "::error::Stable release $build_version must be published from its exact v$build_version tag."
+            exit 1
+          fi
+          if [[ "$ref" == v* && "$tag_version" != "$build_version" ]]; then
             echo "::error::Tag $tag_version doesn't match KELIVER_VERSION $build_version. Bump the constant before tagging."
             exit 1
           fi
@@ -107,11 +111,8 @@ jobs:
       # document write-back engine), the wasm render host, and the
       # zero-checkout consumer proof against the staged candidate.
       #
-      # The checkout is clean by construction, but `actions/checkout` can leave
-      # LFS/CRLF noise on some runners, so allow-dirty here; the tag guard above
-      # is what pins WHAT is being published.
       - name: Release preflight
-        run: PREFLIGHT_ALLOW_DIRTY=1 scripts/keliver-release-preflight.sh
+        run: scripts/keliver-release-preflight.sh
 
   publish:
     name: Publish to Maven Central
@@ -153,17 +154,19 @@ jobs:
           java-version-file: .github/workflows/.java-version
       - uses: gradle/actions/setup-gradle@v4
 
-      # Sanity check: if publishing from a `v*` tag, ensure it matches the
-      # build's KELIVER_VERSION (same guard as publish.yml).
-      - name: Verify tag matches build version
-        if: startsWith(inputs.ref, 'v')
+      - name: Verify release ref matches build version
         run: |
+          ref="${{ inputs.ref }}"
           tag_version="${{ inputs.ref }}"
           tag_version="${tag_version#v}"
           build_version=$(grep 'KELIVER_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
-          echo "Tag version:   $tag_version"
+          echo "Release ref:   $ref"
           echo "Build version: $build_version"
-          if [ "$tag_version" != "$build_version" ]; then
+          if [[ "$build_version" != *-SNAPSHOT && "$ref" != "v$build_version" ]]; then
+            echo "::error::Stable release $build_version must be published from its exact v$build_version tag."
+            exit 1
+          fi
+          if [[ "$ref" == v* && "$tag_version" != "$build_version" ]]; then
             echo "::error::Tag $tag_version doesn't match KELIVER_VERSION $build_version. Bump the constant before tagging."
             exit 1
           fi
