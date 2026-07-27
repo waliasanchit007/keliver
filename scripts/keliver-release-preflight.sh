@@ -22,7 +22,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+# The repo requires Java 17. Do not preserve an inherited JAVA_HOME blindly:
+# Android Studio shells commonly export JDK 11, which lets the preflight start
+# but makes Gradle fail before the first real gate.
+export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
 
 VERSION_CONST_FILE="build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt"
 VERSION="${1:-$(grep 'KELIVER_VERSION' "$VERSION_CONST_FILE" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')}"
