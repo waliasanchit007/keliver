@@ -18,7 +18,7 @@
 # Requires: the app on the SAME Kotlin/Compose/Gradle versions as the consumed
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.1-SNAPSHOT}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.1}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [logicSrcDir]}"

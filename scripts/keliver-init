@@ -11,7 +11,7 @@ NAME="${1:?usage: keliver-init <AppName> [target-dir]}"
 DIR="${2:-$(echo "$NAME" | tr '[:upper:]' '[:lower:]')}"
 PROJECT="$(basename "$DIR")"            # gradle rootProject.name (no path separators)
 PKG="$(echo "$PROJECT" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')"  # kotlin package segment
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.0}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.1}"
 [ -e "$DIR" ] && { echo "refusing to overwrite existing path: $DIR"; exit 1; }
 
 # Scaffolded apps resolve keliver from Maven Central, which is what a real

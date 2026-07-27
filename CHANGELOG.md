@@ -10,6 +10,31 @@
 
 _Nothing yet._
 
+## [0.3.1] - 2026-07-27
+
+Portal authoring and preview:
+
+- Added flow declarations, derived navigation graphs, live walkthroughs with
+  real presenters, preserved flow state, and start-from-any-node deep links.
+- Added Project Components v2 with one required content slot, including
+  recognition, expansion, editing, write-back, and tri-platform rendering.
+- Added named preview personas, versioned host capability fixtures,
+  deterministic HTTP replay, and an opt-in secure recording workflow that
+  writes redacted candidates for explicit review.
+
+Distribution and correctness:
+
+- Published the reusable editor dependency graph as standalone artifacts and
+  added zero-checkout guest/editor scaffolds. The release gate now proves a
+  full production Wasm editor against all seven new portal/editor coordinates.
+- Added compiled-versus-interpreted semantic parity gates for control flow,
+  components, slots, modifiers, nesting, and action arguments.
+- Added explicit runtime-version skew reporting and repeatable web, Android,
+  and iOS layout evidence.
+- Hardened Maven Central publishing with exact stable tags, clean-tree checks,
+  Java 17 enforcement, explicit portal multiplatform CI tests, API checks, and
+  a preflight job that must pass before upload.
+
 ## [0.2.0] - 2026-06-21
 
 First Maven Central release to bundle the **`keliver-material`** widget library
