@@ -47,6 +47,24 @@ if [ -z "${ANDROID_HOME:-}" ]; then
   exit 1
 fi
 
+# Same class of trap, different cause. On a network with a TLS-inspecting proxy
+# (Netskope/Zscaler), the FixtureTest sub-builds fetch their own Kotlin plugin
+# from Maven Central in a FRESH JVM that does not inherit the outer build's
+# already-warm Gradle cache. They fail with
+#   PKIX path building failed: unable to find valid certification path
+# and it surfaces as a dozen failing :keliver-gradle-plugin:test cases — which
+# reads like a real regression in the plugin, not a certificate problem. The
+# outer build can be perfectly green because everything it needs is cached.
+# Probe an uncached coordinate directly and say so up front.
+if ! curl -sf -m 15 -o /dev/null https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-gradle-plugin/maven-metadata.xml 2>/dev/null; then
+  echo "WARNING: cannot reach Maven Central over HTTPS — the fixture sub-builds will fail." >&2
+elif [ -z "${JAVA_TOOL_OPTIONS:-}" ] && ! "$JAVA_HOME/bin/keytool" -list \
+       -keystore "$JAVA_HOME/lib/security/cacerts" -storepass changeit >/dev/null 2>&1; then
+  echo "WARNING: default JDK truststore unreadable; if you are behind a TLS-inspecting" >&2
+  echo "         proxy, export JAVA_TOOL_OPTIONS with -Djavax.net.ssl.trustStore=… so the" >&2
+  echo "         nested TestKit builds trust it. See docs/CI_RUNNER_SETUP.md." >&2
+fi
+
 # Every gradle invocation goes through this. --console=plain is not cosmetic:
 # the rich console collapses `e:` compiler lines and has produced false greens
 # in this repo. `set -e` plus gradle's exit code is what actually gates.

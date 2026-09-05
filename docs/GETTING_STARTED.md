@@ -41,7 +41,7 @@ sample/
 
 > Adding Keliver to a *new* project instead? Copy the version catalog from
 > [USAGE.md → "Copy-paste version catalog"](USAGE.md) (the published artifacts
-> are `dev.keliver:keliver-*:0.3.1` on Maven Central).
+> are `dev.keliver:keliver-*:0.3.2` on Maven Central).
 
 ## 2. Run it
 

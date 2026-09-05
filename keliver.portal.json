@@ -7,7 +7,7 @@
   "store": "~/.keliver-portal",
   "httpFixturesDir": "portal-fixtures/http",
   "appRuntime": {
-    "keliverVersion": "0.3.1",
+    "keliverVersion": "0.3.2",
     "widgetVersion": 1
   }
 }

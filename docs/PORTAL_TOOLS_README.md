@@ -35,7 +35,7 @@ keliver-portal .                   # open http://localhost:8096
 
 `keliver-init` creates a standalone Gradle project whose screens
 (`src/jsMain/kotlin/screens/`) are real Kotlin Compose against the published
-`dev.keliver:*:0.3.1` artifacts — edit them in your IDE (native completion) or
+`dev.keliver:*:0.3.2` artifacts — edit them in your IDE (native completion) or
 visually in the browser; both stay in sync via `keliver.portal.json`.
 
 No install at all? The hosted playground: **http://keliver.me/keliver/**

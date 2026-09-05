@@ -18,7 +18,7 @@ The short version:
   the View / UIView / DOM toolkits — see "What's removed" below).
 
 > **Status:** Keliver is public. The current pre-1.0 artifacts are
-> `dev.keliver:*:0.3.1` on Maven Central; no GitHub Packages credentials are
+> `dev.keliver:*:0.3.2` on Maven Central; no GitHub Packages credentials are
 > required. This guide retains some `1.0.0-caliclan.N` references only as
 > historical version context.
 
@@ -92,9 +92,9 @@ For most adopters the entire upper block collapses into:
 
 ```kotlin
 // host module
-implementation("dev.keliver:keliver-host:0.3.1")
+implementation("dev.keliver:keliver-host:0.3.2")
 // guest module
-implementation("dev.keliver:keliver-guest:0.3.1")
+implementation("dev.keliver:keliver-guest:0.3.2")
 ```
 
 See [`docs/USAGE.md`](./USAGE.md) "API calls from the guest" and
@@ -357,7 +357,7 @@ class QuotesScreen : Screen {
 
    ```toml
    [versions]
-   keliver = "0.3.1"
+   keliver = "0.3.2"
 
    [libraries]
    keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }

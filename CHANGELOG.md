@@ -10,6 +10,52 @@
 
 _Nothing yet._
 
+## [0.3.2] - 2026-09-05
+
+A developer-experience release. No runtime, wire-format, or widget changes —
+guest bundles built against 0.3.1 are unaffected.
+
+Adopter tooling:
+
+- Fixed `keliver-new-editor.sh` generating an editor that cannot compile. A
+  presenter returns its screen's `Bindings` interface, which `keliver-init`
+  declares in `screens/<name>.kt` next to the widget-using composable, but the
+  editor scaffolder wired only `logic/` as a source dir — so the build failed
+  with `Unresolved reference` and `overrides nothing`. It now accepts any
+  number of source dirs, adds a sibling `screens/` automatically, and emits the
+  `keliver-material-compose` / `keliver-layout-compose` dependencies that app
+  source needs. Found by running the published adopter path end to end for the
+  first time; each scaffolder worked in isolation.
+- `keliver-portal` waits for the portal server to answer before reporting
+  success, and prints the server log and exits non-zero if it does not. It
+  previously slept three seconds and printed working URLs for a server that had
+  already died.
+- Added `keliver-portal stop` and `keliver-portal status`, backed by per-app
+  run state, so an instance can be managed from another shell.
+- `keliver-portal` no longer kills whatever happens to hold its ports on
+  shutdown. A port owned by an unrelated project is reported, not killed, and
+  startup refuses rather than fighting for it.
+- `keliver-portal` builds and serves the app's own `editor/` when present, so
+  the preview runs real presenters, falling back to the bundled editor if that
+  build fails. Added `--rerun-tasks` and `--no-editor-build`.
+- Fixed a 100% CPU busy-spin in `keliver-portal` and `keliver-dev.sh`. Both
+  ended with `while true; do wait || break; done`, which never breaks once the
+  last child exits because `wait` then returns 0 immediately. It reproduced
+  whenever the portal was stopped out-of-band or both services crashed.
+
+Documentation:
+
+- Reconciled the docs after the development machine was lost. Version claims
+  across eleven files pointed at up to three releases back; `CURRENT_STATE.md`
+  contradicted itself, reporting six open live-preview issues when five had
+  been closed with acceptance evidence; and the reference adoption it named no
+  longer exists.
+- The portal is now part of the onboarding path. It had zero mentions in
+  `GETTING_STARTED.md` and none in `USAGE.md`, so a newcomer following the
+  documented path never encountered the visual editor.
+- Documented the corporate TLS-inspecting proxy failure mode, including that
+  Kotlin/Wasm builds surface a rejected certificate as a missing npm package.
+
 ## [0.3.1] - 2026-07-27
 
 Portal authoring and preview:

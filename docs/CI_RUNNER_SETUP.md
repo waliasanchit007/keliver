@@ -1,8 +1,27 @@
 # Self-hosted GitHub Actions runner setup
 
+> **Status 2026-09-05: CI runs on GitHub-hosted `macos-latest`, and that is
+> the recommended configuration. `CI_RUNNER` is set to `macos-latest`.**
+> This document is kept for the case where self-hosting is needed again.
+>
+> The original reason to self-host was the 10× macOS minute multiplier **on
+> private repos**. Keliver is public now, and standard GitHub-hosted runners
+> are free for public repositories — so the problem this solved no longer
+> exists, while the costs are real and were all observed in a single day:
+> four distinct manifestations of a corporate TLS-inspecting proxy (Node,
+> yarn, nested TestKit builds, and the release preflight), an unset
+> `ANDROID_HOME`, 81 GB of disk pressure, fork PRs executing on a personal
+> machine, and finally a network block on `release-assets.githubusercontent.com`
+> that stopped a release outright because CI had nowhere else to run.
+>
+> A self-hosted runner puts your CI on the critical path of your own laptop's
+> network, disk, and certificate chain. Reach for it only when there is a
+> billing or hardware reason that cloud runners cannot meet.
+
 By default Keliver's CI runs on GitHub-provided `macos-latest` runners.
 macOS minutes count against the GitHub Actions quota at a 10× multiplier
-on private repos, which the project hit during heavy adopter onboarding.
+on private repos, which the project hit during heavy adopter onboarding
+while the repo was still private.
 
 The two CI workflows (`.github/workflows/ci.yml` and
 `.github/workflows/publish.yml`) honor an optional repo variable
