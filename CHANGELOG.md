@@ -10,7 +10,48 @@
 
 _Nothing yet._
 
-## [0.3.2] - 2026-09-05
+## [0.3.3] - 2026-09-05
+
+Everything in 0.3.2 (which was tagged but **never published to Maven
+Central** — its release preflight hit a 60-minute CI ceiling), plus six
+first-run defects found by running the portal against an app scaffolded by
+`keliver-init`, from outside this repo. Central goes 0.3.1 -> 0.3.3.
+
+Still no runtime, wire-format, or widget changes.
+
+The portal's first run no longer writes files into your repository:
+
+- A parameterless `GET /doc` — which is just opening the editor — created
+  `main.kt` and `Compiled_main.kt` inside the app's screens directory,
+  because `docFor()` defaulted to a screen literally named "main"
+  independently of the active screen, and the document engine materializes
+  its backing file. It now defaults to the active screen.
+- A newly created screen declared `package dev.keliver.portalpublished.screens`
+  — Keliver's own namespace — so the generated file did not match its
+  directory and did not compile. The package is now inferred from a sibling
+  screen.
+- The editor opened on an empty document: a "main" screen was seeded and
+  activated before the repo was scanned, while `keliver-init` writes
+  `home.kt`. Seeding and activation now happen after the boot scan and
+  select a screen that exists.
+- `previewBuildTask` / `previewDist` defaulted to `:web-spike:`, Keliver's
+  own dogfood editor, so every consumer saw `project 'web-spike' not found`
+  and a red "preview build failed" chip immediately. The defaults are now
+  empty, meaning "no per-app editor", and the relay reports `enabled:false`
+  instead of a failure.
+- The preview cache-bust only stamped `web-spike.js`, so consumers whose
+  editor is `<app>-editor.js` kept a cached loader with a stale wasm hash.
+  The loader name now comes from the page.
+- `/projects` listed the relay's own storage directories — including
+  `keys/`, which holds the signing keypair — as selectable projects.
+- `keliver-init` now scaffolds `appRuntime`.
+
+## [0.3.2] - 2026-09-05 — tagged, never published
+
+Superseded by 0.3.3 before it reached Maven Central. The tag and its GitHub
+release exist; the artifacts were never uploaded. Do not expect
+`dev.keliver:*:0.3.2` to resolve.
+
 
 A developer-experience release. No runtime, wire-format, or widget changes —
 guest bundles built against 0.3.1 are unaffected.

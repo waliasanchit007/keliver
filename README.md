@@ -8,9 +8,9 @@ ship UI updates without an app-store release.
 the visual editor with a live canvas, 60+ widgets, data bindings with mock
 previews, and one-click **Export Kotlin** (the output is real code).
 
-> **Status: public on Maven Central — `0.3.2`.** Add `mavenCentral()` and
-> depend on `dev.keliver:keliver-host:0.3.2` (host) /
-> `dev.keliver:keliver-guest:0.3.2` (guest) — no GitHub PAT, no extra repo.
+> **Status: public on Maven Central — `0.3.3`.** Add `mavenCentral()` and
+> depend on `dev.keliver:keliver-host:0.3.3` (host) /
+> `dev.keliver:keliver-guest:0.3.3` (guest) — no GitHub PAT, no extra repo.
 > `keliver-material` is a Compose/Material3-parity widget library (76 widgets —
 > see [`docs/WIDGET_PARITY.md`](./docs/WIDGET_PARITY.md)) so you build
 > server-driven screens without authoring a schema. `0.3.0` adds Icon +
@@ -183,7 +183,7 @@ uses it for two screens out of ~10.
 ```bash
 export PATH="$PWD/keliver-portal-tools/bin:$PATH"
 keliver-init Acme && cd acme
-./gradlew compileKotlinJs     # your screens, type-checked against keliver 0.3.2
+./gradlew compileKotlinJs     # your screens, type-checked against keliver 0.3.3
 keliver-portal .              # visual editor + live preview → http://localhost:8096
 ```
 

@@ -1,7 +1,7 @@
 # keliver — agent & engineer context
 
 **What this is:** keliver (fork of Cash App Redwood, ns `dev.keliver`, Maven
-Central `dev.keliver:*:0.3.2`) — write screens once in Kotlin, ship them OTA as
+Central `dev.keliver:*:0.3.3`) — write screens once in Kotlin, ship them OTA as
 compiled signed Zipline bundles, render natively on Android/iOS/web, and edit
 them visually in a web portal that round-trips to the .kt files in git.
 

@@ -90,7 +90,7 @@ same `SampleHostApp` composable.
 1. **JDK 17+** on your PATH.
 2. **Android SDK** (`ANDROID_HOME` set) for `:host-android`.
 3. **No credentials needed.** Keliver is published on **Maven Central**
-   (`dev.keliver:keliver-*:0.3.2`), so `mavenCentral()` in
+   (`dev.keliver:keliver-*:0.3.3`), so `mavenCentral()` in
    `settings.gradle.kts` resolves every artifact — no GitHub token, no
    `gpr.user`/`gpr.token`. Just clone and build.
 
@@ -304,7 +304,7 @@ documented in the main Keliver repo under `docs/` if you need them:
 
 This sample is a standalone Gradle build inside the Keliver repo —
 its `settings.gradle.kts` is independent of the parent. By default it
-resolves the released `dev.keliver:*:0.3.2` artifacts from Maven
+resolves the released `dev.keliver:*:0.3.3` artifacts from Maven
 Central, so it builds with no extra setup.
 
 If you're hacking on Keliver itself and want the sample to pick up

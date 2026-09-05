@@ -9,7 +9,7 @@
   "previewBuildTask": ":web-spike:wasmJsBrowserDistribution",
   "previewDist": "web-spike/build/dist/wasmJs/productionExecutable",
   "appRuntime": {
-    "keliverVersion": "0.3.2",
+    "keliverVersion": "0.3.3",
     "widgetVersion": 1
   }
 }
