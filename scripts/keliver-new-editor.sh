@@ -6,11 +6,19 @@
 # and no composite build. Modeled 1:1 on the verified stashfin-sdui/editor.
 #
 # Usage (from the APP repo root):
-#   /path/to/keliver/scripts/keliver-new-editor.sh <AppName> [logicSrcDir]
+#   /path/to/keliver/scripts/keliver-new-editor.sh <AppName> [srcDir...]
 #     <AppName>     UpperCamelCase, e.g. Stashfin  -> StashfinPreview / main()
-#     [logicSrcDir] optional app source dir (pure-Kotlin presenters/contracts)
-#                   compiled straight into the editor via kotlin.srcDir — e.g.
+#     [srcDir...]   optional app source dirs compiled straight into the editor
+#                   via kotlin.srcDir — e.g.
 #                   guest/src/jsMain/kotlin/com/acme/guest/logic
+#
+#                   Pass every dir the presenters need to COMPILE, not just the
+#                   presenters. A presenter returns its screen's Bindings
+#                   interface, and in the keliver-init layout that interface is
+#                   declared in screens/<name>.kt alongside the widget-using
+#                   composable — so a logic-only editor fails with
+#                   "Unresolved reference 'screens'" / "overrides nothing".
+#                   A sibling screens/ dir is therefore added automatically.
 #
 # Set KELIVER_USE_MAVEN_LOCAL=1 only when validating an unpublished candidate.
 # Normal adopters resolve exclusively from Maven Central.
@@ -21,9 +29,30 @@ set -euo pipefail
 KELIVER_VERSION="${KELIVER_VERSION:-0.3.1}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
-NAME="${1:?usage: keliver-new-editor.sh <AppName> [logicSrcDir]}"
-LOGIC_DIR="${2:-}"
+NAME="${1:?usage: keliver-new-editor.sh <AppName> [srcDir...]}"
+shift || true
+SRC_DIRS=("$@")
 [[ "$NAME" =~ ^[A-Z][A-Za-z0-9]*$ ]] || { echo "AppName must be UpperCamelCase (got: $NAME)"; exit 1; }
+
+# A presenter's return type is its screen's Bindings interface, which the
+# keliver-init layout declares in screens/ next to the composable. Compiling
+# logic/ alone therefore fails. Pull in the sibling screens/ dir when it exists.
+for d in "${SRC_DIRS[@]:-}"; do
+  [ -n "$d" ] || continue
+  case "$d" in */logic|logic) ;; *) continue ;; esac
+  sib="$(dirname "$d")/screens"; [ "$sib" = "./screens" ] && sib="screens"
+  [ -d "$APP/$sib" ] || continue
+  already=false
+  for e in "${SRC_DIRS[@]}"; do [ "$e" = "$sib" ] && already=true; done
+  $already || { SRC_DIRS+=("$sib"); echo "note: also compiling $sib (it declares the Bindings contracts your presenters return)"; }
+done
+
+# Any app source dir may reference the widget libraries, so the editor needs
+# them on its compile classpath — portal-editor does not bring them in.
+APP_SRC_DEPS=""
+if [ "${#SRC_DIRS[@]}" -gt 0 ] && [ -n "${SRC_DIRS[0]:-}" ]; then
+  APP_SRC_DEPS=$(printf '        implementation("dev.keliver:keliver-material-compose:%s")\n        implementation("dev.keliver:keliver-layout-compose:%s")\n' "$KELIVER_VERSION" "$KELIVER_VERSION")
+fi
 [ -f "$APP/keliver.portal.json" ] || echo "note: no keliver.portal.json here — the relay will use defaults"
 [ -e "$APP/editor" ] && { echo "refusing to overwrite $APP/editor"; exit 1; }
 
@@ -85,8 +114,9 @@ kotlin {
   }
   sourceSets {
     val wasmJsMain by getting {
-$( [ -n "$LOGIC_DIR" ] && printf '      // The app'\''s REAL pure-Kotlin presenters/contracts — one source, no copy.\n      kotlin.srcDir("../%s")\n' "$LOGIC_DIR" )
+$( for d in "${SRC_DIRS[@]:-}"; do [ -n "$d" ] && printf '      kotlin.srcDir("../%s")\n' "$d"; done )
       dependencies {
+$( [ -n "$APP_SRC_DEPS" ] && printf '%s' "$APP_SRC_DEPS" )
         implementation("dev.keliver:portal-editor:$KELIVER_VERSION")
         // Apps compile flow{} declarations into the editor alongside their
         // presenters. portal-flow is deliberately independent of the shell.

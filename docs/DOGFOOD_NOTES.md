@@ -115,3 +115,102 @@ are preview-only.
 Grammar note for app authors: events accept exactly three shapes —
 `{ b.action() }`, `{ b.action(it) }`, and `{ b.action(item.field) }` (inside
 that item's `Repeat`). Anything else makes the widget `RawCode` on purpose.
+
+---
+
+# Dogfood 2: the zero-checkout adopter path (2026-09-05)
+
+The first run of the adopter path **as an adopter actually experiences it**:
+the published `keliver-portal-tools-0.3.1.zip` from the GitHub release, no
+Keliver checkout, artifacts resolved from Maven Central only, and a fresh
+`GRADLE_USER_HOME` so nothing came from a warm cache.
+
+This mattered because the path had never been verified this way. The one
+recorded verification (*Post-snapshot: editor distribution productization*,
+2026-07-24) used **locally published `0.3.1-SNAPSHOT` artifacts** inside
+`stashfin-sdui` — a project that no longer exists. Central was never the
+resolution source, and `mavenLocal` on this machine already held
+`dev.keliver:*:0.3.1` from a CI run, so a careless test would have passed
+against local artifacts and proven nothing. Verified first that
+`keliver-init`'s generated `settings.gradle` contains **no** `mavenLocal()`
+— it is injected only under `KELIVER_USE_MAVEN_LOCAL=1`.
+
+## What worked with zero intervention
+
+- `keliver-init Acme` — scaffolded first try.
+- Cold `./gradlew compileKotlinJs` against Central — **BUILD SUCCESSFUL in
+  1m 11s**, including the Gradle distribution download.
+- `keliver-new-editor.sh Acme <logicDir>` — scaffolded first try.
+
+**The core claim holds: an adopter can go from a released zip to compiling
+Kotlin screens against Maven Central with no Keliver checkout.**
+
+## Friction 1 — the two scaffolders disagree about where contracts live (FIXED)
+
+`keliver-new-editor.sh Acme src/jsMain/kotlin/logic` produced an editor that
+could not compile:
+
+```
+e: HomePresenter.kt:4:13 Unresolved reference 'screens'.
+e: HomePresenter.kt:9:22 Unresolved reference 'HomeScreenBindings'.
+e: HomePresenter.kt:10:3 'subtitle' overrides nothing.
+```
+
+Cause: a presenter's return type is its screen's `Bindings` interface, and
+`keliver-init` declares that interface in `screens/home.kt` — next to the
+widget-using composable. The editor scaffolder wired only `logic/` as a
+`kotlin.srcDir`, so `acme.screens.*` was off the compile path. Adding
+`screens/` alone is still not enough: those files import
+`dev.keliver.material.compose.*` / `layout.compose.*`, which `portal-editor`
+does not bring in.
+
+So two scaffolders shipped in the same bundle produced a combination that
+does not build. This is the kind of defect that only appears when someone
+runs the whole path end to end rather than each half in isolation.
+
+**Fixed in `scripts/keliver-new-editor.sh`:** it now takes any number of
+source dirs, auto-adds a sibling `screens/` when a `logic/` dir is passed
+(announcing it), and emits the `keliver-material-compose` /
+`keliver-layout-compose` dependencies whenever app source is compiled in.
+Verified by deleting `editor/` and regenerating: the scaffolded project
+builds **unmodified** and produces a real 15 MB Wasm distribution.
+
+## Friction 2 — Kotlin/Wasm behind a TLS-inspecting proxy reports a lie
+
+On a corporate network (Netskope here), the editor build fails at
+`:kotlinWasmNpmInstall` with:
+
+```
+error Couldn't find package "@js-joda/core@3.2.0" ... on the "npm" registry.
+error Couldn't find package "format-util@^1.0.5" ... on the "npm" registry.
+```
+
+Those packages exist. The real error is `SELF_SIGNED_CERT_IN_CHAIN` — yarn
+reports a TLS rejection as a missing package. `NODE_EXTRA_CA_CERTS` pointed
+at the **full chain** (not just the leaf CA) fixes it. Any adopter on a
+corporate network hits this, and the message sends them hunting a dependency
+problem that does not exist. Documented in `CI_RUNNER_SETUP.md`.
+
+Not a Keliver defect, but it is squarely in the adopter's path, so it is
+Keliver's problem to warn about.
+
+## Intervention count
+
+Two, both real: one framework defect (friction 1), one environment trap the
+docs did not cover (friction 2). Neither would have been caught by testing
+`keliver-init` and `keliver-new-editor.sh` separately.
+
+**Caveat on this number.** I am not a fair proxy for an outside developer — I
+already knew the codebase and set the proxy CA reflexively before the first
+build. A real M2 participant would have stalled on friction 2 with no idea
+why. Treat two as a floor.
+
+## Not yet covered
+
+The path was exercised as far as *a built editor distribution*. Still
+unverified from a pure adopter position: running `keliver-portal` against the
+app, editing a screen in the browser, and the surgical write-back round-trip
+to `.kt`. Note also that the published `keliver-portal-tools-0.3.1.zip` was
+built from `c1e9546`, so it ships the **old** launcher — without the
+health-wait, `stop`/`status`, or the busy-spin fix. Adopters get those only
+in the next release.
