@@ -14,3 +14,11 @@ is what corrected it.
 Not captured, and needed before any of run 1's conclusions can be relied on:
 a device render, an interaction trace showing whether a control fires, and a
 failure-and-fix assertion per case.
+
+## Do not use these as participant fixtures
+
+`planted-home.kt` labels every defect in a comment (`// F2: literal that
+happens to equal…`). It is the historical record of what run 1 actually
+executed and must not be edited — but handing it, or this directory, to an
+agent would leak the answers. A blind run needs separate neutral fixtures.
+See *Procedural safeguards for the blind run* in the design spec.

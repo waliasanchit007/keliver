@@ -260,13 +260,41 @@ without executing the presenter. Unchanged.
 - **Captured artifacts per case**: device render, interaction trace, `/doc`
   response, and the failing assertion.
 
+### Procedural safeguards for the blind run
+
+Two ways this experiment can quietly invalidate itself. Both must be closed
+before an agent sees anything.
+
+**1. No answer leakage in participant fixtures.** The run-1 fixture archived
+in `../evidence/m4-run1/planted-home.kt` labels each defect in a comment
+(`// F2: literal that happens to equal…`) and the surrounding prose explains
+the intended failure. That artifact is kept as the historical record of what
+was actually run and must not be edited — but it is unusable as a participant
+input. Build **separate, neutral fixtures**: no case labels, no explanatory
+comments, defect sites indistinguishable from ordinary code, and plausible
+decoys so "the commented bit is the bug" is not a strategy. Agents get the
+fixture and the task only — never this document, never the evidence
+directory.
+
+**2. Scoring must not depend on the agent's own verification.** Write the
+failing and passing checks **before** the run, from the requirement, and keep
+them out of the agent's reach. Score a fix by executing those checks against
+the agent's output. An agent asserting that it verified its own fix is a
+claim, not evidence — and the whole thesis under test is that self-reported
+verification is unreliable, so accepting it here would assume the conclusion.
+
+Corollary: a case whose check cannot be written in advance is not
+well-specified enough to include.
+
 Until those exist, the set cannot support a pass or a fail, and the
 pre-registered 4-of-5 rule cannot be applied.
 
 ## Honesty note
 
 The pre-registration did its job twice. It caught F1 — the most compelling
-case on paper, and not a defect — before an agent loop was built on it. It
+case on paper, and the one whose proposed failure mechanism was rejected —
+before an agent loop was built on it. (Whether that control fires at runtime
+is still untested; "not a defect" would overstate what was shown.) It
 then caught this section's own overreach: having found one case that survived,
 the instinct was to promote it to a result and rebuild the set around it,
 which would have converted a null result into a narrower thesis quietly
