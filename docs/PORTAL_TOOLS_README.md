@@ -7,10 +7,23 @@ and **python3**.
 ```
 bin/keliver-init <AppName> [dir]   # scaffold a new keliver SDUI project
 bin/keliver-portal [app-dir]       # run the visual editor + server against an app
+bin/keliver-portal stop [app-dir]  # stop a running instance
+bin/keliver-portal status [app-dir]# is it up?
 relay/bin/portal-relay             # the portal server alone
 mcp/bin/portal-mcp                 # stdio MCP surface (for AI agents)
 editor/                            # the wasm editor (static)
 ```
+
+`keliver-portal` waits for the server to actually answer before reporting
+success, and prints the server log if it doesn't — it will not hand you a URL
+for a server that failed to boot. If the app has its own editor (see
+`keliver-new-editor.sh`), it is rebuilt and served so the preview runs your
+**real presenters**; if that build fails the bundled generic editor is served
+instead and the failure is reported. Add `--rerun-tasks` to force a clean editor
+rebuild when webpack serves a stale distribution, or `--no-editor-build` to skip
+it. Run state and logs live under `$TMPDIR/keliver-portal/<hash of app dir>`,
+which is how `stop` shuts down exactly the processes this app started — a port
+held by an unrelated project is reported, never killed.
 
 ## Quick start
 
@@ -22,7 +35,7 @@ keliver-portal .                   # open http://localhost:8096
 
 `keliver-init` creates a standalone Gradle project whose screens
 (`src/jsMain/kotlin/screens/`) are real Kotlin Compose against the published
-`dev.keliver:*:0.3.0` artifacts — edit them in your IDE (native completion) or
+`dev.keliver:*:0.3.1` artifacts — edit them in your IDE (native completion) or
 visually in the browser; both stay in sync via `keliver.portal.json`.
 
 No install at all? The hosted playground: **http://keliver.me/keliver/**

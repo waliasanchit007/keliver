@@ -25,8 +25,8 @@ consumer.
 #    (most projects already have it). No git submodule, no GitHub PAT.
 
 # 2. Depend on the single-import facades in your module build.gradle.kts:
-#      implementation("dev.keliver:keliver-host:0.2.0")    // host side
-#      implementation("dev.keliver:keliver-guest:0.2.0")   // guest module
+#      implementation("dev.keliver:keliver-host:0.3.1")    // host side
+#      implementation("dev.keliver:keliver-guest:0.3.1")   // guest module
 
 # 3. If you build for iOS, add kotlin.native.cacheKind=none to your
 #    gradle.properties (CMP-8845 workaround).
@@ -113,9 +113,9 @@ modules.
 ## The fast path — `keliver-material` (no schema authoring) — NEW in 0.2.0
 
 Steps 1–4 below describe authoring **your own** schema (the
-ServerDrivenUI/DevoStatus reference path). Most adopters don't need to: **0.2.0
-ships `keliver-material`, a batteries-included library of ~60 Compose/Material3
--parity widgets** so you can write server-driven screens that read like native
+ServerDrivenUI/DevoStatus reference path). Most adopters don't need to: **the
+current line ships `keliver-material`, a batteries-included library of 76
+Compose/Material3-parity widgets** so you can write server-driven screens that read like native
 Compose *without defining a single widget*. This is the recommended starting
 point.
 
@@ -193,7 +193,7 @@ verified end-to-end (Android APK + guest bundle) against Central `0.2.0`.
 
 ```toml
 [versions]
-keliver = "0.2.0"
+keliver = "0.3.1"
 
 [libraries]
 keliver-material-schema     = { module = "dev.keliver:keliver-material-schema",     version.ref = "keliver" }
@@ -333,7 +333,7 @@ android.useAndroidX=true
 
 ### Maven Central (no auth)
 
-Keliver `0.2.0` is published to **Maven Central** under `dev.keliver:keliver-*`.
+Keliver `0.3.1` is published to **Maven Central** under `dev.keliver:keliver-*`.
 If your build already has `mavenCentral()` in `dependencyResolutionManagement`
 (most do), there's **nothing to set up** — no GitHub PAT, no `gpr.user`/
 `gpr.token`, no private repo, and no content-filter workaround:
@@ -350,13 +350,14 @@ dependencyResolutionManagement {
 Then depend on the single-import facades:
 
 ```kotlin
-implementation("dev.keliver:keliver-host:0.2.0")    // host side
-implementation("dev.keliver:keliver-guest:0.2.0")   // guest module
+implementation("dev.keliver:keliver-host:0.3.1")    // host side
+implementation("dev.keliver:keliver-guest:0.3.1")   // guest module
 ```
 
-(`0.2.x` is the current line — `0.1.0` was the first public release, and `0.2.0`
-adds the **`keliver-material`** batteries-included widget library (see the next
-section). Pre-`1.0`, so the API may still evolve; the Zipline wire format is
+(`0.3.x` is the current line — `0.1.0` was the first public release, `0.2.0`
+added the **`keliver-material`** batteries-included widget library (see the next
+section), and `0.3.0` added Icon + ListItem, DropdownMenu/SegmentedButtonRow in
+the portal, and `dev.keliver:portal-sql`. Pre-`1.0`, so the API may still evolve; the Zipline wire format is
 stable within a line. Kotlin package names stay `dev.keliver.*`, so `import`
 statements don't change.)
 
@@ -366,7 +367,7 @@ Keliver publishes a Bill-of-Materials that pins every `keliver-*` artifact to on
 version. Import it as a `platform` and omit versions on the individual deps:
 
 ```kotlin
-implementation(platform("dev.keliver:keliver-bom:0.2.0"))
+implementation(platform("dev.keliver:keliver-bom:0.3.1"))
 
 implementation("dev.keliver:keliver-host")            // version comes from the BOM
 implementation("dev.keliver:keliver-treehouse-host")
@@ -378,7 +379,7 @@ the BOM (one coordinate to bump) is the recommended way to keep them in lock-ste
 
 ### Toolchain — what your build must use
 
-Keliver `0.2.0` is compiled with **Kotlin 2.2.0** (KSP `2.2.0-2.0.2`, Coroutines
+Keliver `0.3.1` is compiled with **Kotlin 2.2.0** (KSP `2.2.0-2.0.2`, Coroutines
 `1.10.2`, Serialization `1.9.0`, AGP `8.12`). Kotlin's metadata rule means a
 consumer on an **older** Kotlin than 2.2.0 can't read keliver's classes — the
 symptom is `Cannot access class '…' — missing or conflicting dependencies` — so
@@ -399,13 +400,14 @@ Consequences:
 
 ### Copy-paste version catalog
 
-This `gradle/libs.versions.toml` is the exact toolchain that built a real
-multi-module Compose Multiplatform consumer against keliver `0.2.0` end-to-end
-(Android APK + iOS framework). Paste it and trim what you don't use:
+This `gradle/libs.versions.toml` is the toolchain that built a real multi-module
+Compose Multiplatform consumer end-to-end (Android APK + iOS framework),
+originally verified against keliver `0.2.0` and unchanged since — `keliver` is
+pinned to the current `0.3.1` line. Paste it and trim what you don't use:
 
 ```toml
 [versions]
-keliver = "0.2.0"
+keliver = "0.3.1"
 kotlin = "2.2.0"            # keliver's metadata floor; see the Toolchain note
 ksp = "2.2.0-2.0.2"         # bump to a 2.3.10-line KSP for a warning-free log
 zipline = "1.26.0"          # NOTE: floats the build's Kotlin compiler to 2.3.10
@@ -710,7 +712,7 @@ The `libs.keliver.host` reference assumes a version catalog entry:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-keliver = "0.2.0"
+keliver = "0.3.1"
 
 [libraries]
 keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
@@ -1760,7 +1762,7 @@ them:
   dispatcher pattern as gotcha #12. Pattern works but no example yet.
 
 Already shipped (these used to be listed here): **Maven Central publishing**
-(`dev.keliver:keliver-*:0.2.0`, no auth — see the Maven Central section above),
+(`dev.keliver:keliver-*:0.3.1`, no auth — see the Maven Central section above),
 the **single-import facades** (`keliver-host` / `keliver-guest`), and the
 **`keliver-material` widget library** (no schema authoring — see the fast-path
 section above).

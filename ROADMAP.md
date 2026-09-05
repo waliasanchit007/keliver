@@ -9,11 +9,23 @@ expect from Keliver over the next two release cycles, what's
 deliberately out of scope, and what stability commitments come with
 each piece.
 
-> **Current release note (2026-07-23):** the public pre-1.0 line is
-> `dev.keliver:*:0.3.0` on Maven Central. Older `1.0.0-caliclan.N` headings below
+> **Current release note (updated 2026-09-05):** the public pre-1.0 line is
+> `dev.keliver:*:0.3.1` on Maven Central (verified live, including the five
+> `portal-*` editor artifacts). Older `1.0.0-caliclan.N` headings below
 > are retained release-planning history; they must not be read as the current
 > distribution instructions. Portal priorities live in
 > [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+
+> **⚠ Read this before picking work (2026-09-05).** The development machine was
+> lost and `stashfin-sdui` — the reference adoption every "Stashfin" gate in this
+> repo was recorded against — is gone. **There is no external adopter right now.**
+> The current milestone sequence, the decision gate, and the freeze list live in
+> *Post-snapshot: machine loss and restart* in
+> [`docs/CURRENT_STATE.md`](./docs/CURRENT_STATE.md). The headline: the next
+> question is not "what should Keliver support next?" but **"what is the smallest
+> experiment that can falsify our belief that Keliver is a dramatically better way
+> to build mobile apps?"** — which currently points at getting one developer who
+> isn't the author to build a real feature, not at more capability.
 
 This is a living document. Items move from "Up Next" → "In Progress" →
 "Released" as work lands. The release log itself lives in
@@ -23,7 +35,7 @@ This is a living document. Items move from "Up Next" → "In Progress" →
 
 ## Released — adopter-facing API surface today
 
-Current public line: `0.3.0`. The list below records the earlier
+Current public line: `0.3.1`. The list below records the earlier
 `1.0.0-caliclan.4-SNAPSHOT` planning snapshot.
 
 **Adopter ergonomics**
@@ -89,7 +101,7 @@ Next cycle, in rough priority order (impact-first, informed by the
 "adopter friction is invisible from inside" lesson):
 
 ### A. Maven Central publishing — ✅ complete
-`dev.keliver:*:0.3.0` is public on Maven Central. Adopters need only
+`dev.keliver:*:0.3.1` is public on Maven Central. Adopters need only
 `mavenCentral()`; GitHub credentials are no longer part of setup. The original
 release procedure remains in
 [`docs/MAVEN_CENTRAL_SETUP.md`](./docs/MAVEN_CENTRAL_SETUP.md).

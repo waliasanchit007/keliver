@@ -93,6 +93,17 @@ printf "  Edit screens in the browser, in portal-app-lib/src/jsMain/kotlin/scree
 printf "  or via the MCP agent — all three stay in sync. Publish signs a versioned bundle.\n\n"
 printf "  Ctrl-C to stop.\n"
 
-# Block until a signal (the INT/TERM trap does the real shutdown). `wait` returns
-# when a trapped signal arrives; loop guards against a transient child exit.
-while true; do wait || break; done
+# Block until a signal (the INT/TERM trap does the real shutdown), or until our
+# children are gone. NOTE: do NOT use `while true; do wait || break; done` here —
+# once the last child has exited, `wait` returns 0 immediately with nothing left
+# to wait for, so the loop never breaks and spins at 100% CPU.
+while :; do
+  alive=false
+  for pid in "${pids[@]:-}"; do
+    [ -n "$pid" ] || continue
+    if kill -0 "$pid" 2>/dev/null; then alive=true; break; fi
+  done
+  $alive || break
+  sleep 1
+done
+echo "keliver-dev: all services exited"

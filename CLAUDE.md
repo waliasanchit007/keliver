@@ -1,7 +1,7 @@
 # keliver — agent & engineer context
 
 **What this is:** keliver (fork of Cash App Redwood, ns `dev.keliver`, Maven
-Central `dev.keliver:*:0.3.0`) — write screens once in Kotlin, ship them OTA as
+Central `dev.keliver:*:0.3.1`) — write screens once in Kotlin, ship them OTA as
 compiled signed Zipline bundles, render natively on Android/iOS/web, and edit
 them visually in a web portal that round-trips to the .kt files in git.
 
@@ -10,15 +10,19 @@ them visually in a web portal that round-trips to the .kt files in git.
 - `docs/ROADMAP.md` — prioritized backlog with evidence. Pick work from here.
 - `docs/SCREEN_ARCHITECTURE.md` — Style B (Screen/Presenter/Bindings) in detail.
 - `docs/PORTAL_USAGE.md`, `docs/KNOWN_BUGS.md`.
-- Reference adoption (real app, patterns to copy): `~/StudioProjects/stashfin-sdui`
-  — its CLAUDE.md/docs mirror this from the consumer side.
+- Reference adoption: **there is currently no external adopter.** `stashfin-sdui`
+  (the app every historical "Stashfin" gate below was recorded against) was lost
+  with the previous machine and was never pushed. Treat those gates as evidence
+  that the path worked, not as something you can re-run. The in-repo
+  [`sample/`](sample) is the only runnable reference today.
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
 command. `gh` resolves to upstream cashapp/redwood — use
-`GH_REPO=waliasanchot007/keliver` (repo: waliasanchit007/keliver). CI runs on the
-self-hosted `keliver-mac` runner.
+`GH_REPO=waliasanchit007/keliver`. CI runs on the self-hosted `keliver-mac`
+runner. `git-lfs` is required before cloning — `*.png` is LFS-tracked, and a
+clone without it fails checkout partway.
 
-**Key modules:** `keliver-material*` (60-widget lib + schema), `portal-relay`
+**Key modules:** `keliver-material*` (76-widget lib + schema), `portal-relay`
 (:8077 server — ingest/write-back/publish; needs `PORTAL_REPO=<app repo>` env),
 `portal-ingest` (PSI recognizer/reconciler), `portal-core`/`portal-document`
 (tree + ops engine), `portal-render` (shared RenderNode), `portal-editor` (the
