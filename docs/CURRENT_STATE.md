@@ -1,6 +1,7 @@
 # Keliver current state
 
-**Snapshot date:** 2026-07-23
+**Base snapshot date:** 2026-07-23
+**Last updated:** 2026-09-05 (see the `Post-snapshot:` sections)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -8,10 +9,19 @@ milestone. It describes what is present and what has been recorded as verified;
 it does not replace the architectural decisions in `DECISIONS.md` or the two
 forward-looking roadmaps.
 
+> **How to read this document.** Everything above the first `## Post-snapshot`
+> heading is the 2026-07-23 base snapshot. **Ten `Post-snapshot:` sections
+> follow it, running through 2026-07-27, and several of them close items the
+> base snapshot lists as open.** Reading only the base snapshot will overstate
+> what is outstanding — in particular all six live-preview issues and three of
+> the six product gaps below are already resolved. Where that happens
+> the base section now carries a status banner; trust the banner and the dated
+> section it points to.
+
 ## Product state
 
 Keliver is a public, pre-1.0 Compose Multiplatform SDUI framework. The current
-published line is `dev.keliver:*:0.3.0` on Maven Central. Guest UI is compiled
+published line is `dev.keliver:*:0.3.1` on Maven Central. Guest UI is compiled
 Kotlin/JS executed by Zipline and rendered as native Compose widgets on Android
 and iOS. Production bundles are versioned, Ed25519-signed, widget/capability
 gated, and verified by hosts before execution.
@@ -27,8 +37,11 @@ The visual portal is bidirectional:
 - Development devices use a live interpreter overlay while canonical Kotlin
   recompiles; production always executes compiled code.
 
-The reference adoption is `~/StudioProjects/stashfin-sdui`. It has recorded
-Android, iOS, and web verification against a real application integration.
+The reference adoption **was** `stashfin-sdui`, which recorded Android, iOS, and
+web verification against a real application integration. It was lost with the
+2026-09-05 machine failure and never pushed; **there is currently no external
+adopter.** Its recorded gates stand as evidence that the integration worked, but
+they cannot be re-run — see *Post-snapshot: machine loss and restart*.
 
 ## Delivered portal capabilities
 
@@ -94,8 +107,9 @@ later work.
 - The relay watches logic, debounces and serializes rebuilds, rejects stale
   results, and promotes only successful editor distributions.
 - Failed builds retain the last-known-good preview.
-- Stashfin owns a standalone editor composite build that compiles its real
-  Profile presenter without copying it.
+- Stashfin owned a standalone editor composite build that compiled its real
+  Profile presenter without copying it. That project no longer exists (2026-09-05);
+  the pattern is recorded, the build is not recoverable.
 
 Recorded live gates include real presenter values, state-changing actions,
 SQLite-backed list updates, and rendering through project components.
@@ -132,27 +146,45 @@ Capability personas were separated into their own future milestone.
 - App-facing flow/data seams: `portal-flow`, `portal-sql`.
 - Dogfood application: `portal-app-lib` plus device host modules.
 
-`portal-editor`, `portal-core`, `portal-document`, `portal-render`,
+> **Superseded 2026-07-24 / 2026-07-27.** The paragraph below described the
+> 2026-07-23 base snapshot. `portal-editor`, `portal-core`, `portal-document`,
+> `portal-render` and `portal-flow` **are now published on Maven Central at
+> `0.3.1`** (verified 2026-09-05), so a consumer-owned live editor no longer
+> needs a Keliver checkout or composite build.
+
+~~`portal-editor`, `portal-core`, `portal-document`, `portal-render`,
 `portal-flow`, and the web protocol modules are not currently configured as a
 coherent published artifact graph. Consumer-owned live editors therefore use a
 Keliver composite build. Publishing the editor is a productization milestone,
-not only a version bump.
+not only a version bump.~~
 
 ## Known open correctness and developer-loop issues
 
-The current roadmap records these live-preview fast-follows:
+> **Status — ALL SIX ARE RESOLVED.** Items 1–5 were closed by the bounded
+> consolidation pass recorded below in
+> [Post-snapshot consolidation result — 2026-07-23](#post-snapshot-consolidation-result--2026-07-23),
+> with acceptance evidence; item 6 was closed on 2026-09-05 (ROADMAP item 23).
+> **The M0 "deterministic preview" milestone is complete.** The list is kept for
+> provenance — read it with this banner, not on its own.
 
-1. Component-expanded bindings can miss the first live frame until a later
-   recomposition.
-2. Canvas event payloads can arrive as a null argument.
-3. Presenter composition failures are not caught by the existing dispatch
-   error guard.
-4. The State Inspector can lag one frame and retain values after a screen
-   switch.
-5. Some consumer wasm distributions require `--rerun-tasks` before webpack
-   produces a fresh output.
-6. The bundled launcher has not fully absorbed the health-wait, supervision,
-   and editor auto-build behavior proven in the Stashfin development script.
+The roadmap recorded these live-preview fast-follows as of the 2026-07-23
+snapshot:
+
+1. ~~Component-expanded bindings can miss the first live frame until a later
+   recomposition.~~ **Resolved.**
+2. ~~Canvas event payloads can arrive as a null argument.~~ **Resolved.**
+3. ~~Presenter composition failures are not caught by the existing dispatch
+   error guard.~~ **Resolved.**
+4. ~~The State Inspector can lag one frame and retain values after a screen
+   switch.~~ **Resolved.**
+5. ~~Some consumer wasm distributions require `--rerun-tasks` before webpack
+   produces a fresh output.~~ **Resolved.**
+6. ~~The bundled launcher has not fully absorbed the health-wait, supervision,
+   and editor auto-build behavior proven in the Stashfin development script.~~
+   **Resolved 2026-09-05** (ROADMAP item 23) — re-derived from
+   `scripts/keliver-dev.sh`, since the Stashfin script was lost. See
+   *Post-snapshot: launcher supervision* below. **With this, all six are
+   closed.**
 
 Upstream/runtime constraints remain tracked in `KNOWN_BUGS.md`, notably silent
 Zipline service-shape failures and dispatcher requirements. Most have Keliver
@@ -174,19 +206,23 @@ reconciliation is part of the next consolidation milestone.
 
 ## Evidence-backed remaining product gaps
 
-1. **Current-loop correctness and documentation consolidation.** These are
-   known defects and contradictions in already-delivered behavior.
-2. **Editor/flow distribution productization.** External per-app editors should
-   not require a Keliver checkout or composite build.
-3. **Named personas and capability fixtures.** Real presenters need
-   reproducible auth/flag/domain states in preview.
-4. **Recorded HTTP replay.** Valuable for real API-backed screens, but separate
-   from personas because request matching, redaction, privacy, and fixture
-   lifecycle need their own design.
-5. **Presenter/FlowScope linting.** Becomes more important as real presenter
-   adoption scales.
-6. **Transparent local composables and component metadata polish.** Useful
-   authoring depth, but lower priority than the gaps above.
+> **Status — gaps 2, 3 and 4 are CLOSED** by the dated `Post-snapshot:` sections
+> below. **Gaps 1, 5 and 6 remain open.**
+
+1. **OPEN — Current-loop correctness and documentation consolidation.** These
+   are known defects and contradictions in already-delivered behavior. The
+   correctness half is done (live-preview items 1–5 above); the documentation
+   half was partially addressed on 2026-09-05.
+2. ~~**Editor/flow distribution productization.**~~ **Closed 2026-07-24** —
+   see *Post-snapshot: editor distribution productization*.
+3. ~~**Named personas and capability fixtures.**~~ **Closed 2026-07-27** — see
+   *Post-snapshot: capability vocabulary and named personas*.
+4. ~~**Recorded HTTP replay.**~~ **Closed 2026-07-27** — see *Post-snapshot:
+   deterministic recorded HTTP replay (H1)* and *secure HTTP recording (H2)*.
+5. **OPEN — Presenter/FlowScope linting.** Becomes more important as real
+   presenter adoption scales.
+6. **OPEN — Transparent local composables and component metadata polish.**
+   Useful authoring depth, but lower priority than the gaps above.
 
 ## Next milestone decision
 
@@ -522,3 +558,174 @@ geometry agrees across all hosts; native font metrics and system chrome remain
 intentional platform differences. K1, K2a, K3, and K4 now form a complete
 semantic/layout/evidence/version consistency lane. K2b remains deferred to a
 versioned API-convergence decision.
+
+## Post-snapshot: machine loss and restart — 2026-09-05
+
+The development machine died. The repository survived on GitHub through
+`c1e9546` (`chore(release): prepare 0.3.1`, 2026-07-27); nothing unpushed
+survived. This section records what that costs and what the plan is now. It
+supersedes nothing in `DECISIONS.md` — D1–D15 stand.
+
+**Lost.** `stashfin-sdui`, the reference adoption every "Stashfin" gate in the
+sections above was recorded against, together with `MenuRow` / `SectionHeader` /
+`SectionCard` and the standalone editor composite build. **There is currently no
+external adopter.** Those gates remain valid evidence that the path worked; they
+are not re-runnable. The in-repo `sample/` is the only runnable reference.
+
+**Survived.** The GPG key and the four Maven Central secrets are GitHub repo
+secrets, so CI can still publish. The Ed25519 bundle keypair regenerates in
+`Relay.kt#ensureKeys()`, and no surviving host pins the old public key.
+
+**Mined, not revived.** `github.com/waliasanchit007/ServerDrivenUI` (Caliclan,
+tip `konduit-main` @ 2026-05-19) pins `1.0.0-caliclan.4-SNAPSHOT` from
+mavenLocal, predates the `dev.keliver` rename, predates the portal, and its
+screens predate D5 Style B. Take its docs and schema/widget definitions; do not
+migrate it — that costs about as much as a fresh adopter and drags along an
+architecture predating half of `DECISIONS.md`.
+
+**Prior agent work is recoverable in-repo:** `docs/superpowers/plans/` (20
+execution plans, 2026-06-10 → 2026-07-12), `docs/superpowers/specs/` (20 design
+specs, → 2026-07-27), and `docs/superpowers/evidence/` (the k3 captures and the
+Android/iOS gallery screenshots). Read plans in date order for how the portal
+was built, specs for the reasoning, `DECISIONS.md` for settled conclusions.
+
+### Fresh-machine bring-up, verified 2026-09-05
+
+- `git-lfs` must be installed **before** cloning — `*.png` is LFS-tracked and a
+  clone without it fails checkout partway through.
+- JDK 17 is required and is usually not the default JVM; export
+  `JAVA_HOME=$(/usr/libexec/java_home -v 17)`.
+- Cold `./gradlew :guest:compileDevelopmentExecutableKotlinJs` in `sample/`:
+  **BUILD SUCCESSFUL in 6m 55s**, 43 tasks, no errors. The newcomer build path
+  works on a clean machine.
+
+### Corrected milestone sequence
+
+Single-threaded. Each phase earns the right to start the next.
+
+**Positioning:** *AI can write mobile code. Keliver lets it see whether the code
+actually worked.* Cross-platform is enabling technology, not the headline.
+**Wedge:** teams with large existing native Android + iOS apps; adopt one
+feature, then five, no rewrite (this is D12). **Primary metric:** time from
+intent → verified running change. **Secondary:** author-intervention count —
+how many times another developer needs the framework author to ship a normal
+feature. Target zero.
+
+- **M0 — Deterministic preview. COMPLETE (2026-09-05).** Live-preview issues 1–5
+  were closed by the 2026-07-23 consolidation pass — the original plan for this
+  milestone assumed all six were open, which reading only the base snapshot of
+  this document will suggest. Issue 6, the bundled launcher, was closed on
+  2026-09-05; see *Post-snapshot: launcher supervision*.
+  **Test-design constraint:** the defects in this class are *temporal* — they
+  resolve on a later recomposition. A harness that acts, waits for convergence,
+  then asserts agreement will pass while every one of these bugs is present,
+  because it measures a steady state that was never broken. Assert on the frame
+  the action lands and the frame after a screen switch, bounded by frames, not
+  by a settle.
+- **M1 — Newcomer path.** Version drift, the portal's absence from onboarding,
+  and the stale reference-adoption pointers. Addressed 2026-09-05.
+- **M2 — One developer who isn't you.** Not a team: one person in a sandbox
+  building a real feature without the author touching the implementation. Run
+  the intervention counter and classify every question — "how do I" = missing
+  docs, "I don't understand" = bad abstraction, "this seems complicated" = DX
+  problem, "I can't do" = capability gap. **M2 does not depend on M3**, and with
+  M0 nearly closed it is now the cheapest remaining experiment.
+- **M3 — Production survivability minimum.** Source-mapped Kotlin guest stack
+  traces, crash reporting, staged rollout percentages, kill switch,
+  last-known-good rollback. Not an enterprise control plane.
+- **M4 — One closed AI verification loop.** Narrow: read Kotlin → read semantic
+  tree → edit → render → interact → read resulting semantics → compare to
+  requirement → fix → return a verified diff. **Define the falsification set
+  before building it:** pick five tasks where a semantics-driven agent should
+  win and a screenshot-driven one should fail — bindings that render but don't
+  fire, state that looks right and isn't, a component prop silently ignored. If
+  a screenshot agent gets four of five, the thesis is weaker than it looks.
+
+### Decision gate
+
+Not "is Keliver a company" but "has it earned the right to become one." Four
+proofs: **technical** (a reasonably complex feature builds without architectural
+contortions), **UX** (someone besides the author materially prefers the
+workflow), **AI** (an agent performs a meaningful mobile UI task and verifies
+itself better than the screenshot baseline), and **demand** (someone asks "can I
+use this?" — better, "can my team?"; best, "how much?"). Two or three serious
+developers using it repeatedly beats 5,000 stars. Cloud infrastructure, team,
+pricing, multi-tenant and enterprise governance come only after this gate.
+
+### Open items this plan does not yet cover
+
+- **Distribution.** Every developer in the sequence above is hand-recruited.
+  Hand-recruited people are polite and motivated; they do not produce demand
+  signal. Nothing here puts Keliver in front of strangers who owe it nothing.
+  The AI-verification framing is genuinely interesting to mobile engineers right
+  now and writing it up is cheap — it needs an owner and a slot.
+- **Stashfin IP boundary.** `stashfin-sdui` was built while employed there, so
+  the question is partly retrospective rather than cleanly prospective. Worth
+  real legal advice before Keliver is public-facing enough that someone else
+  asks first. Keliver should stay viable independently of Stashfin governance
+  approval either way.
+
+### Freeze list
+
+Not until a pilot proves need: more widgets, a DOM renderer, arbitrary animation
+systems, every native capability, total navigation replacement, multi-bundle
+federation, a giant visual designer, complete arbitrary-Kotlin round-tripping,
+every DI framework, every database abstraction. Target 80% elegantly + 20% via
+native capability/component escape hatches (D6); a production app decides which
+of the remaining 20% is worth solving.
+
+The question to ask is no longer "what should Keliver support next?" It is:
+**what is the smallest experiment that can falsify our belief that Keliver is a
+dramatically better way to build mobile apps?**
+
+## Post-snapshot: launcher supervision — 2026-09-05
+
+The last open live-preview/developer-loop item (#6 above, ROADMAP item 23) is
+closed. **The M0 "deterministic preview" milestone is now complete.**
+
+The reference implementation was `stashfin-sdui/scripts/dev.sh`, which was lost
+with the machine, so the behaviour was re-derived from the in-repo
+`scripts/keliver-dev.sh` instead of ported.
+
+`scripts/keliver-portal` (the launcher that ships in `keliver-portal-tools`) now:
+
+- **Health-waits** on `GET /devstate` instead of a blind `sleep 3`, and fails
+  fast — if the relay exits during startup the launcher prints the tail of the
+  server log and returns non-zero. Previously it printed working URLs for a
+  server that had already died.
+- **Stops properly.** `keliver-portal stop [app-dir]` and
+  `keliver-portal status [app-dir]` work from any shell, backed by per-app run
+  state under `$TMPDIR/keliver-portal/<hash of app dir>`. Shutdown kills the
+  tracked process subtree with TERM then KILL, and is idempotent.
+- **Never kills a stranger's port.** The old cleanup ran
+  `lsof -ti :PORT | xargs kill` on both ports, which would kill any unrelated
+  process holding them — the same class of collision already recorded in this
+  document, where another project occupied 8080 with a valid but incompatible
+  Zipline manifest. Ports not owned by this app dir are now reported, not killed,
+  and startup refuses to run rather than fighting for an occupied port.
+- **Auto-builds the app's editor.** If `<app>/editor` exists (from
+  `keliver-new-editor.sh`) it is built and served, so the preview runs the app's
+  real presenters; a failed build falls back to the bundled generic editor and
+  says so, mirroring the relay's existing last-known-good promotion.
+  `--rerun-tasks` forces a clean rebuild (webpack can otherwise serve a stale
+  distribution — the same trap as live-preview issue 5); `--no-editor-build`
+  skips it.
+
+**Defect found and fixed while doing this.** Both `keliver-portal` and
+`keliver-dev.sh` ended with `while true; do wait || break; done`. Once the last
+child has exited, `wait` returns 0 immediately because there is nothing left to
+wait for, so `|| break` never fires and the loop spins at **100% CPU
+indefinitely**. It reproduces whenever the portal is stopped out-of-band or both
+services crash. Measured at 99% CPU before the fix; both scripts now poll their
+tracked pids and exit when none remain.
+
+Acceptance evidence — the launcher was exercised against a synthetic bundle
+covering each path: `status` when down (exit 1) and up (exit 0); `stop` with
+nothing running; a relay that crashes on boot (**failed in 1s with the log tail
+and exit 1**, versus the old blind sleep reporting success); a relay with a slow
+boot (health-wait held until it answered); double-start refusal; out-of-band
+`stop` from a second shell freeing both ports and letting the launcher exit
+cleanly instead of spinning; app-editor build success (the app's distribution
+served, banner reporting "your real presenters"); and app-editor build failure
+(warned with the compiler error, fell back to the bundled editor, portal still
+came up).

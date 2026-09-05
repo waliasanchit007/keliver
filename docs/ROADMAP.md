@@ -287,11 +287,25 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
     document permanently in the shapes plugin lint.
 21. @Modifier lambdas broken on JS (widget @Property events only).
 22. WebSocket code-push for the web target (dev experience only; runtime is local).
-23. keliver-portal launcher: fold the stashfin `scripts/dev.sh` improvements back
-    into the bundled launcher (health-wait, stop, editor auto-build).
+23. ~~keliver-portal launcher: fold the stashfin `scripts/dev.sh` improvements
+    back into the bundled launcher (health-wait, stop, editor auto-build).~~
+    **Done 2026-09-05.** `stashfin-sdui` was gone, so the behaviour was
+    re-derived from `scripts/keliver-dev.sh` rather than ported. `keliver-portal`
+    now health-waits on `/devstate` (failing fast with the server log instead of
+    a blind `sleep 3`), gains `stop`/`status` subcommands backed by per-app-dir
+    run state, refuses to double-start, builds and serves the app's own
+    `editor/` when present (falling back to the bundled editor on build
+    failure), and supports `--rerun-tasks` / `--no-editor-build`. Also fixed a
+    pre-existing 100%-CPU busy-spin in **both** `keliver-portal` and
+    `keliver-dev.sh`: `while true; do wait || break; done` never breaks once the
+    last child exits, because `wait` then returns 0 immediately.
+    **This closes the M0 "deterministic preview" milestone** — live-preview
+    issues 1–5 were closed by the 2026-07-23 consolidation pass.
 
 ## Recently completed (context for readers)
 
+- 0.3.1 on Maven Central (2026-07-27), including the five publishable `portal-*`
+  editor artifacts — consumer editors no longer need a Keliver checkout.
 - 0.3.0 on Maven Central; keliver-init scaffolder; portal tools bundle (R1–R6).
 - Stashfin adoption: real app on Android + iOS + web from one guest source;
   Profile ported to Style B with 0 RawCode; hot reload verified ~15–25s (S1–S6).
