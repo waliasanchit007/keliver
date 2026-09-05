@@ -310,92 +310,82 @@ archived so the next reader can check rather than trust.
 
 ---
 
-# Run 2 design — BLOCKED, and why that is the finding
+# Run 2 planning — 2026-09-06
 
-**Case construction did not proceed. The blocker is structural, not a
-shortage of imagination, and it is worth more than five cases would have
-been.**
+An earlier version of this section claimed run 2 was **structurally blocked**
+because MCP was "entirely static" with "no runtime channel". **That claim is
+retracted in full.** It was wrong three separate ways; see *Retraction*
+below.
 
-## What the semantic condition can actually see
+## What the tool surface actually is
 
-The agent-facing surface is `portal-mcp`, and it is entirely static:
+The complete `portal-mcp` inventory is nine tools:
 
-| tool | what it returns |
+| tool | kind |
 |---|---|
-| `get_catalog` | generated widget/modifier catalog + op schema |
-| `get_document` | the parsed `UiDocument` for one screen |
-| `find_usages` | where a field or action name appears across screens |
-| `list_projects` / `list_screens` | names |
-| `apply_ops` / `undo` / `redo` | writes |
-| `get_guide` | prose |
+| `get_catalog`, `get_document`, `list_screens`, `get_guide` | static queries |
+| `find_usages` | typed traversal of `PropValue.Bind` / `PropValue.Action` across screens |
+| `apply_ops`, `undo`, `redo` | writes |
+| **`device_screenshot`** | **runtime** — ADB `screencap` of the connected device |
 
-**There is no runtime channel.** The State Inspector — the one component
-that observes a live presenter's values — exists only inside the editor's
-wasm UI (`portal-editor/src/wasmJsMain/kotlin/Portal.kt`). It is not served
-by the relay to agents. Of the relay's endpoints, MCP reaches `/doc`,
-`/projects`, `/screens`, `/ops`, `/undo`, `/redo`; it does not reach
-`/devstate`, `/tree`, `/capabilities`, `/preview-build` or anything else that
-describes a running application.
+The defensible statement is narrow: **Keliver exposes static semantic
+queries and device screenshots, but no structured live-presenter-state API.
+Whether its existing tools improve defect detection remains untested.**
 
-## Why that blocks the set
+Note also that exposing the State Inspector would *not* by itself supply a
+runtime correctness oracle. `PreviewFrame.values` is an **app-provided,
+stringified projection** of contract fields (`AppPreview.kt`) — what the
+application chose to expose, as strings, not ground truth about its state.
+Such a capability would need its own validation, so it should not be
+commissioned on the strength of the retracted argument.
 
-The Method gives the **baseline** source access plus build, run and
-screenshots. So:
+## Retraction
 
-- Every fact in `get_document` is *derived from source the baseline already
-  has*. The document is a normalised parse, not new information.
-- `find_usages` is grep.
-- `get_catalog` describes the framework, which is public.
-- Runtime behaviour — the only thing the baseline has that the document does
-  not — is **absent from the semantic condition entirely**.
+1. **The inventory was incomplete because of how I searched.** I grepped
+   `"(get|apply|find|list|set)_[a-z_]+"`, a pattern that presupposed the
+   naming convention, and `device_screenshot` fell outside it. I then
+   reported the filtered result as the complete surface. The error is not
+   the missed tool; it is drawing a completeness claim from a search whose
+   shape encoded the conclusion.
+2. **I changed the experimental conditions and then reasoned from the
+   change.** The Method gives the semantic condition MCP **additionally** —
+   it keeps source access, builds, execution and screenshots. Writing that
+   runtime behaviour is "absent from the semantic condition entirely"
+   invented a restriction that the design does not impose, converting an
+   additive comparison into unequal toolsets and deriving impossibility from
+   the invention.
+3. **Derivability is not detectability.** Even where a fact is present in
+   source, a structured representation can make it faster and more reliable
+   to find under limited time and attention — which is *precisely* the
+   incremental benefit the experiment measures. Dismissing `find_usages` as
+   "grep" compounded this: it decodes each screen's `UiDocument` and walks
+   typed binding and action nodes, which is the distinction under
+   evaluation, not a synonym for text search.
 
-A case where the semantic agent detects a *runtime* application defect that a
-building, screenshotting baseline misses is therefore not constructible with
-this tool surface. Not difficult: not possible. And a case detectable
-*statically* is, by construction, available to a source-reading baseline.
+The through-line: each step replaced a measurement with an argument, and the
+argument reached a conclusion the measurement had not.
 
-This is the general form of what killed the run-1 cases one at a time. F1
-was really "the portal classified this as RawCode" — a fact about the parser,
-not the app. F4 was really "the preview renders mocks" — a fact about the
-preview. Both are facts about Keliver's own tooling that got mistaken for
-facts about the application under test.
+## How run 2 should proceed
 
-## What is still plausibly true, and how it would be tested
+Bounded, and one case at a time.
 
-The residual claim is smaller and probably correct: **a normalised parse
-makes certain static facts cheap and reliable to extract at scale.** Whether
-a prop is literal or bound, whether a node is unrecognised, what the contract
-requires — a source-reading agent must re-derive all of it, and may do so
-wrongly across many screens or subtle grammar.
+1. **Build one application-defect fixture** meeting the bar: an independently
+   checked runtime failure, with failing and passing checks authored in
+   advance. Example shape — a label that does not update after a state
+   change, where the runtime check is objective and `Lit` / `Bind`
+   classification may help locate the cause.
+2. **Validate the machinery on that one case**: neutral fixture, hidden
+   checks, both conditions run, scoring independent of any agent's
+   self-report. One case validates the experimental machinery. It does not
+   validate the thesis.
+3. **Only then attempt the remaining four.** If five cannot be constructed
+   within a bounded effort, that documents a **feasibility limitation of
+   this experiment** — not proof that qualifying cases cannot exist. Record
+   it that way.
 
-That is an *accuracy-and-cost* claim, not a *visibility* claim, and it needs
-a different experiment: both conditions extract the same static facts across
-a corpus of screens; score precision, recall and effort. Planted runtime
-defects cannot test it.
+Both conditions keep source, build, run and screenshots throughout. The
+semantic condition adds MCP. Nothing about the comparison is subtractive.
 
-## The product implication, which matters more
+## Consequence for M2
 
-The positioning is *"AI can write mobile code. Keliver lets it see whether
-the code actually worked."* The second sentence is about **runtime**. The
-agent surface has no runtime channel — an agent using Keliver today cannot
-observe a running presenter's state at all, while a screenshot-driven agent
-at least sees rendered output.
-
-The State Inspector already computes what is needed. It is simply not
-exposed. **Until live presenter state is served to agents, the differentiator
-in the positioning is not implemented**, and no falsification set can
-demonstrate it, because the capability under test does not yet exist on the
-agent path.
-
-That is the finding: not that the thesis is wrong, but that the experiment
-was scheduled against a capability that has not been built.
-
-## Recommendation
-
-1. Do not build a run-2 set against the current surface.
-2. Decide whether to expose runtime state to agents (State Inspector data
-   over the relay/MCP). That is the load-bearing piece of the positioning.
-3. If yes, the falsification set becomes constructible and should be
-   redesigned then, under the safeguards above.
-4. If no, revise the positioning to the static-extraction claim, which is
-   defensible and much smaller.
+None. Recruiting is independent of this and should keep moving.

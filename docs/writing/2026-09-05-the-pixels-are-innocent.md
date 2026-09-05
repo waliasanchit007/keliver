@@ -21,14 +21,7 @@ The picture is the problem.
 
 ## A screenshot is a weak oracle
 
-Here are five ways a mobile UI change can be wrong while looking perfect.
-None are hypothetical; each is a failure mode I've hit building a
-server-driven UI framework.
-
-**The button that doesn't do anything.** The agent writes an `onClick`. It
-compiles. It renders. The handler is shaped in a way the surrounding
-machinery doesn't recognise, so nothing is wired to it. The screenshot
-shows a beautiful button.
+Here are four ways a mobile UI change can be wrong while looking perfect.
 
 **The label that isn't bound.** The agent needs to display
 `user.displayName`. It writes the literal `"Sanchit Walia"` because that's
@@ -89,13 +82,16 @@ thesis was weaker than it sounded and I'd say so.
 The set never got that far. It collapsed on contact, and not where I
 expected.
 
-**Two of the five were not defects.** My favourite case — an event handler
-the parser can't recognise — assumed the button would render but never
-fire. Wrong: the unrecognised source is preserved verbatim and the device
-build compiles it, so the button works fine. What's lost is *editability in
-the portal*, which is a deliberate, documented property. Another case
-couldn't be planted at all, because the failure it described is a compile
-error in any real app.
+**Two of the five did not survive as tests.** My favourite case assumed a
+handler the parser can't recognise would render but never fire. That
+mechanism is wrong: the unrecognised source is preserved verbatim and the
+device build compiles it, so the handler is not discarded the way I'd
+claimed. Whether the button actually fires I never checked — I inferred it
+from reading the source, which is the same shortcut this essay is about, so
+I'm not going to assert it. What is clearly lost is *editability in the
+portal*, which is deliberate and documented. Another case couldn't be
+planted at all: the failure it described is a compile error in any real
+app.
 
 **One case I called a strong win, then withdrew.** A list preview renders
 three placeholder rows even when the real list is empty, so a screenshot of
@@ -110,25 +106,37 @@ about. Each mistaken case was a fact about *my tooling* — how the parser
 classified something, what the preview chose to draw — that I mistook for a
 fact about the application under test.
 
-## The structural problem underneath
+## Then I got the diagnosis wrong too
 
-Then the real blocker. The baseline agent in my design gets source access,
-plus build and run and screenshots. The semantic agent gets the document.
+I concluded from all this that the experiment was impossible: that the
+agent-facing tools were purely static, so there was no way for semantics to
+catch a runtime failure a screenshotting baseline would miss. I wrote it up
+as a structural finding.
 
-But the document is *derived from* that source. Cross-referencing usages is
-grep. The catalog describes a public framework. And the one thing the
-baseline has that the document doesn't — **what the running application is
-actually doing** — isn't in the agent's reach at all. Keliver has a state
-inspector that watches a live presenter's values, and it lives entirely
-inside the browser editor's UI. No API serves it to an agent.
+It was wrong three ways, and review caught all three.
 
-So the sentence I opened with — *lets it see whether the code actually
-worked* — is about runtime, and the runtime channel isn't wired to agents
-yet. The capability the pitch rests on isn't implemented on the path that
-would use it. That isn't a falsified thesis; it's an experiment scheduled
-against something that doesn't exist. The honest smaller claim that survives
-is that a normalised parse makes certain static facts cheap and reliable to
-extract at scale — useful, and much less exciting.
+I'd built my inventory of the agent tools with a search pattern that assumed
+how they'd be named, then reported the filtered result as complete. It
+missed one that takes a screenshot of the connected device — a runtime tool,
+sitting in the list I'd just declared static.
+
+Worse, I'd quietly changed the experiment. My own design gives the semantic
+agent the portal **in addition to** everything the baseline has: source,
+builds, execution, screenshots. I wrote as though it had only the document,
+then derived impossibility from a restriction I'd invented.
+
+And the underlying inference doesn't hold anyway. That a fact is *derivable*
+from source doesn't tell you how quickly or reliably an agent will find it
+under limited attention — which is exactly the difference the experiment
+exists to measure. I'd dismissed the cross-reference tool as "grep" when it
+actually walks typed binding and action nodes; that distinction is the thing
+under test, and I'd defined it away.
+
+What survives is narrow and worth stating plainly: **Keliver exposes static
+semantic queries and device screenshots, but no structured API for a running
+presenter's state. Whether its existing tools help an agent find defects
+faster is untested.** Not disproved. Untested — I have not yet built a single
+fixture that could measure it.
 
 ## Where this actually is
 
@@ -144,7 +152,7 @@ to real Kotlin, a verification loop that is *not* built, and a falsification
 plan that has so far mostly falsified my own instrument.
 
 If you build mobile UI and you've watched an agent converge confidently on
-something wrong — I'd like to know which of the five failure modes you've
+something wrong — I'd like to know which of the four failure modes you've
 hit, and which one I'm missing. Especially the last part.
 
 ---
