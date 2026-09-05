@@ -307,3 +307,95 @@ the instinct was to promote it to a result and rebuild the set around it,
 which would have converted a null result into a narrower thesis quietly
 substituted for the original one. Review caught that; the artifacts are now
 archived so the next reader can check rather than trust.
+
+---
+
+# Run 2 design — BLOCKED, and why that is the finding
+
+**Case construction did not proceed. The blocker is structural, not a
+shortage of imagination, and it is worth more than five cases would have
+been.**
+
+## What the semantic condition can actually see
+
+The agent-facing surface is `portal-mcp`, and it is entirely static:
+
+| tool | what it returns |
+|---|---|
+| `get_catalog` | generated widget/modifier catalog + op schema |
+| `get_document` | the parsed `UiDocument` for one screen |
+| `find_usages` | where a field or action name appears across screens |
+| `list_projects` / `list_screens` | names |
+| `apply_ops` / `undo` / `redo` | writes |
+| `get_guide` | prose |
+
+**There is no runtime channel.** The State Inspector — the one component
+that observes a live presenter's values — exists only inside the editor's
+wasm UI (`portal-editor/src/wasmJsMain/kotlin/Portal.kt`). It is not served
+by the relay to agents. Of the relay's endpoints, MCP reaches `/doc`,
+`/projects`, `/screens`, `/ops`, `/undo`, `/redo`; it does not reach
+`/devstate`, `/tree`, `/capabilities`, `/preview-build` or anything else that
+describes a running application.
+
+## Why that blocks the set
+
+The Method gives the **baseline** source access plus build, run and
+screenshots. So:
+
+- Every fact in `get_document` is *derived from source the baseline already
+  has*. The document is a normalised parse, not new information.
+- `find_usages` is grep.
+- `get_catalog` describes the framework, which is public.
+- Runtime behaviour — the only thing the baseline has that the document does
+  not — is **absent from the semantic condition entirely**.
+
+A case where the semantic agent detects a *runtime* application defect that a
+building, screenshotting baseline misses is therefore not constructible with
+this tool surface. Not difficult: not possible. And a case detectable
+*statically* is, by construction, available to a source-reading baseline.
+
+This is the general form of what killed the run-1 cases one at a time. F1
+was really "the portal classified this as RawCode" — a fact about the parser,
+not the app. F4 was really "the preview renders mocks" — a fact about the
+preview. Both are facts about Keliver's own tooling that got mistaken for
+facts about the application under test.
+
+## What is still plausibly true, and how it would be tested
+
+The residual claim is smaller and probably correct: **a normalised parse
+makes certain static facts cheap and reliable to extract at scale.** Whether
+a prop is literal or bound, whether a node is unrecognised, what the contract
+requires — a source-reading agent must re-derive all of it, and may do so
+wrongly across many screens or subtle grammar.
+
+That is an *accuracy-and-cost* claim, not a *visibility* claim, and it needs
+a different experiment: both conditions extract the same static facts across
+a corpus of screens; score precision, recall and effort. Planted runtime
+defects cannot test it.
+
+## The product implication, which matters more
+
+The positioning is *"AI can write mobile code. Keliver lets it see whether
+the code actually worked."* The second sentence is about **runtime**. The
+agent surface has no runtime channel — an agent using Keliver today cannot
+observe a running presenter's state at all, while a screenshot-driven agent
+at least sees rendered output.
+
+The State Inspector already computes what is needed. It is simply not
+exposed. **Until live presenter state is served to agents, the differentiator
+in the positioning is not implemented**, and no falsification set can
+demonstrate it, because the capability under test does not yet exist on the
+agent path.
+
+That is the finding: not that the thesis is wrong, but that the experiment
+was scheduled against a capability that has not been built.
+
+## Recommendation
+
+1. Do not build a run-2 set against the current surface.
+2. Decide whether to expose runtime state to agents (State Inspector data
+   over the relay/MCP). That is the load-bearing piece of the positioning.
+3. If yes, the falsification set becomes constructible and should be
+   redesigned then, under the safeguards above.
+4. If no, revise the positioning to the static-extraction claim, which is
+   defensible and much smaller.
