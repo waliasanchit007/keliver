@@ -28,6 +28,23 @@ class PreviewBuilderTest {
     assertTrue(cond(), "condition not met within ${ms}ms")
   }
 
+  /**
+   * An app with no editor of its own (empty previewBuildTask) must not attempt
+   * a build. Consumers used to inherit this repo's `:web-spike:` default and
+   * got a permanent red "preview build failed" chip on their very first run,
+   * against a Gradle project that does not exist in their build.
+   */
+  @Test fun disabledBuilderNeverBuildsAndStaysIdle() {
+    val runner = FakeRunner(mutableListOf(null))
+    val b = PreviewBuilder(runner, debounceMs = 50, enabled = false)
+    repeat(3) { b.trigger() }
+    Thread.sleep(250)
+    assertEquals(0, runner.builds.get(), "disabled builder must not run gradle")
+    assertEquals(0, runner.promotes.get())
+    assertEquals("idle", b.status.state, "disabled must not look like a failure")
+    assertTrue(b.statusJson().contains("\"enabled\":false"))
+  }
+
   @Test fun rapidTriggersCoalesceIntoOneBuild() {
     val runner = FakeRunner(mutableListOf(null))
     val b = PreviewBuilder(runner, debounceMs = 100)

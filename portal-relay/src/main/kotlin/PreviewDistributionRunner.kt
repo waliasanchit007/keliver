@@ -42,10 +42,19 @@ class PreviewDistributionRunner(
 
     // Cache-bust the stable loader filename before the swap, so the promoted
     // tree is complete at every point visible to the HTTP server.
+    //
+    // The loader name is derived from the page, NOT hardcoded. It used to be
+    // literally `web-spike.js`, which is this repo's own dogfood editor —
+    // `keliver-new-editor.sh` emits `<app>-editor.js`, so for every consumer
+    // the replace matched nothing, no `?v=` was stamped, and the browser kept
+    // running the previously cached loader with its stale baked-in wasm hash.
+    // That is the CACHE TRAP in CLAUDE.md, and it was invisible here because
+    // web-spike.js is the one name that did match.
     val index = File(tmp, "index.html")
-    val stamped = index.readText().replace(
-      Regex("""web-spike\.js(\?v=\d+)?"""), "web-spike.js?v=${System.currentTimeMillis()}",
-    )
+    val text = index.readText()
+    val stamp = System.currentTimeMillis()
+    val stamped = Regex("""(<script[^>]*\ssrc=")([^"?]+\.js)(\?v=\d+)?(")""")
+      .replace(text) { m -> "${m.groupValues[1]}${m.groupValues[2]}?v=$stamp${m.groupValues[4]}" }
     index.writeText(stamped)
 
     dst.deleteRecursively()

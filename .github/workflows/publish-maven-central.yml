@@ -50,7 +50,13 @@ jobs:
   preflight:
     name: Preflight (gates the irreversible publish)
     runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
-    timeout-minutes: 60
+    # 120, not 60: the full preflight (build + publishToMavenLocal + tests +
+    # apiCheck + portal multiplatform + wasm host + zero-checkout consumer
+    # proof) took 60m29s on a GitHub-hosted macOS runner and was killed at
+    # the 60m ceiling, which surfaces as `conclusion: cancelled` and looks
+    # like a manual stop rather than a timeout. It gates an irreversible
+    # publish, so it must be allowed to finish.
+    timeout-minutes: 120
     permissions:
       contents: read
 

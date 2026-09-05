@@ -179,8 +179,20 @@ data class PortalConfig(
   val logicDirs: List<String>? = null,
   /** #13 F1: flow declarations (flow{} DSL). Null = a `flows` sibling of [screensDir]. */
   val flowsDir: String? = null,
-  val previewBuildTask: String = ":web-spike:wasmJsBrowserDistribution",
-  val previewDist: String = "web-spike/build/dist/wasmJs/productionExecutable",
+  /**
+   * The per-app editor build. EMPTY = this app has no editor of its own, so
+   * the relay does not attempt a preview build at all and the bundled generic
+   * editor is served instead.
+   *
+   * These used to default to `:web-spike:…` — THIS repo's dogfood editor.
+   * Every consumer inherited that, and since `web-spike` does not exist in
+   * their build, the relay reported `project 'web-spike' not found` and a red
+   * "preview build failed" chip from the first second of their first run.
+   * Keliver's own `keliver.portal.json` now sets these explicitly; the default
+   * is the case a consumer is actually in.
+   */
+  val previewBuildTask: String = "",
+  val previewDist: String = "",
   val previewServeDir: String = "build/portal-editor-live",
   /**
    * #16 H1: app-owned, reviewed HTTP replay fixtures. The resolved directory

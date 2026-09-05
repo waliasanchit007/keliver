@@ -83,10 +83,14 @@ kotlin {
 }
 EOF
 
-cat > "$DIR/keliver.portal.json" <<'EOF'
+cat > "$DIR/keliver.portal.json" <<EOF
 {
   "screensDir": "src/jsMain/kotlin/screens",
-  "port": 8077
+  "port": 8077,
+  "appRuntime": {
+    "keliverVersion": "$KELIVER_VERSION",
+    "widgetVersion": 1
+  }
 }
 EOF
 

@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicLong
 class PreviewBuilder(
   private val runner: Runner,
   private val debounceMs: Long = 1500,
+  /** False when the app declares no per-app editor build (empty previewBuildTask). */
+  private val enabled: Boolean = true,
 ) {
   interface Runner {
     /** Run the build; return null on success or an error summary on failure. May block. */
@@ -45,6 +47,12 @@ class PreviewBuilder(
     private set
 
   fun trigger() {
+    // No per-app editor configured (empty previewBuildTask) — there is nothing
+    // to build, and attempting it is how consumers used to get a permanent red
+    // "preview build failed" chip against THIS repo's `web-spike` module.
+    // Stays "idle" so existing editors render it neutrally; `enabled` in the
+    // status JSON is the explicit signal.
+    if (!enabled) return
     val id = ids.incrementAndGet()
     pending?.cancel(false)
     pending = exec.schedule({ run(id) }, debounceMs, TimeUnit.MILLISECONDS)
@@ -72,7 +80,7 @@ class PreviewBuilder(
 
   fun statusJson(): String {
     val e = status.error?.replace("\\", "\\\\")?.replace("\"", "\\\"")?.replace("\n", "\\n")
-    return "{\"id\":${status.id},\"promotedId\":$promotedId,\"state\":\"${status.state}\"" +
+    return "{\"id\":${status.id},\"promotedId\":$promotedId,\"enabled\":$enabled,\"state\":\"${status.state}\"" +
       (e?.let { ",\"error\":\"$it\"" } ?: "") + ",\"at\":${status.atMillis}}"
   }
 }

@@ -81,6 +81,13 @@ private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), 
 
 private fun screenFile(project: String, screen: String) = File(File(root, safe(project)), "${safe(screen)}.json")
 
+/** Relay-owned storage that sits beside the projects under [root]. Never a project. */
+private val RESERVED_ROOT_DIRS = setOf("bundles", "keys", "kotlin")
+
+private fun projectNames(): List<String> =
+  root.listFiles { f -> f.isDirectory && f.name !in RESERVED_ROOT_DIRS }
+    ?.map { it.name }?.sorted() ?: emptyList()
+
 private fun activeScreen(): Pair<String, String> {
   val lines = runCatching { activeFile.readLines() }.getOrDefault(emptyList())
   return (lines.getOrNull(0) ?: "default") to (lines.getOrNull(1) ?: "main")
@@ -90,11 +97,48 @@ private fun setActive(project: String, screen: String) {
   activeFile.writeText("${safe(project)}\n${safe(screen)}\n")
 }
 
+private fun screenNames(project: String): List<String> =
+  File(root, safe(project)).listFiles { f -> f.name.endsWith(".json") }
+    ?.map { it.name.removeSuffix(".json") }?.sorted() ?: emptyList()
+
+/**
+ * Seed an empty project and point `active` at a screen that really exists.
+ *
+ * Runs AFTER [bootScan], so it can see the app's actual screens. Previously
+ * [ensureDefaults] created a `main` screen and activated it before the repo
+ * was scanned; `keliver-init` scaffolds `home.kt`, so an adopter's first view
+ * was an empty phantom `main` with their real screen sitting unselected in a
+ * dropdown that showed no selection at all.
+ */
+private fun reconcileStore() {
+  val projects = projectNames()
+  val (project, screen) = activeScreen()
+  val p = if (project in projects) project else projects.firstOrNull() ?: "default"
+
+  var screens = screenNames(p)
+  if (screens.isEmpty()) {
+    // Genuinely empty app: give it something to edit, as before.
+    val main = screenFile(p, "main")
+    main.parentFile.mkdirs()
+    if (!main.exists()) main.writeText("{}")
+    screens = listOf("main")
+  }
+  if (p == project && screen in screens) return
+
+  val target = screens.first()
+  setActive(p, target)
+  println("portal-server: active screen '$project/$screen' not found; selected '$p/$target'")
+}
+
 private fun ensureDefaults() {
   root.mkdirs()
-  val main = screenFile("default", "main")
-  if (!main.exists()) { main.parentFile.mkdirs(); main.writeText("{}") }
-  if (!activeFile.exists()) setActive("default", "main")
+  screenFile("default", "main").parentFile.mkdirs()
+  // NOTE: deliberately does NOT seed a `main` screen here. It used to, before
+  // anything was known about the repo, and then pointed `active` at it — so an
+  // app scaffolded by `keliver-init` (which writes home.kt, not main.kt) opened
+  // the editor on an empty phantom document with its real screen unselected.
+  // Seeding and activation now happen in [reconcileStore], after the boot scan
+  // knows which screens actually exist.
   ensureKeys()
   bundlesDir.mkdirs()
 }
@@ -277,19 +321,53 @@ private fun flowsDirFor(project: String): File =
   else File(screensDirFor(project).parentFile, "flows")
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
-private val previewBuilder = PreviewBuilder(PreviewDistributionRunner(repoDir, config))
+private val previewBuilder = PreviewBuilder(
+  PreviewDistributionRunner(repoDir, config),
+  enabled = config.previewBuildTask.isNotBlank(),
+)
 
 private fun componentsDirFor(project: String): File =
   if (project == "default") appComponentsDir
   else File(screensDirFor(project).parentFile, "components")
+
+/**
+ * The package a NEWLY created screen file should declare.
+ *
+ * This was hardcoded to `dev.keliver.portalpublished.screens` — this repo's own
+ * dogfood package — for every app whose screens dir is the configured one,
+ * which is every adopter. A screen created by the portal therefore landed in
+ * the consumer's source tree declaring Keliver's internal namespace, which does
+ * not match their directory and does not compile. Infer it from a sibling
+ * screen instead; fall back to the dogfood package only when there is nothing
+ * to learn from.
+ */
+private fun screensPackageFor(project: String): String {
+  val dir = screensDirFor(project)
+  val sibling = dir.listFiles { f -> f.name.endsWith(".kt") }
+    ?.sortedBy { it.name }
+    ?.firstNotNullOfOrNull { f ->
+      Regex("""^\s*package\s+([A-Za-z_][A-Za-z0-9_.]*)""", RegexOption.MULTILINE)
+        .find(runCatching { f.readText() }.getOrDefault(""))
+        ?.groupValues?.get(1)
+    }
+  return sibling ?: "dev.keliver.portalpublished.screens"
+}
 
 private fun screenFunctionName(screen: String): String =
   screen.replaceFirstChar { it.uppercase() } + "Screen"
 
 /** One engine per screen; projection feeds the EXISTING draft file (devices + /tree unchanged). */
 private fun docFor(q: Map<String, String>): DocumentService {
-  val project = safe(q["project"] ?: "default")
-  val screen = safe(q["screen"] ?: "main")
+  // Default to the ACTIVE screen, not a literal "main". These defaults were
+  // independent of /active, so a parameterless GET /doc addressed a screen
+  // named "main" whether or not the app had one — and because the engine
+  // materializes its backing file, that single read CREATED main.kt (plus a
+  // Compiled_main.kt) inside the consumer's screens directory, in a package
+  // that is not theirs. An adopter got junk in their git working tree from
+  // merely opening the editor.
+  val (activeProject, activeScreenName) = activeScreen()
+  val project = safe(q["project"] ?: activeProject)
+  val screen = safe(q["screen"] ?: activeScreenName)
   return documents.getOrPut("$project/$screen") {
     val f = screenFile(project, screen)
     val inProject = screensDirFor(project) == appScreensDir
@@ -302,7 +380,7 @@ private fun docFor(q: Map<String, String>): DocumentService {
       },
       kotlinFile = File(screensDirFor(project), "$screen.kt"),
       functionName = screenFunctionName(screen),
-      packageName = if (inProject) "dev.keliver.portalpublished.screens" else null,
+      packageName = if (inProject) screensPackageFor(project) else null,
       components = { Components.registry(project) },
     ).also { it.ensureKotlinFile() }
   }
@@ -479,13 +557,19 @@ fun main(args: Array<String>) {
   ensureDefaults()
   httpRecordingService.startupMessage()?.let(::println)
   bootScan()
+  reconcileStore()
   startKotlinWatcher()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
 
   server.createContext("/projects") { ex ->
     handle(ex) {
       when (ex.requestMethod) {
-        "GET" -> respond(ex, 200, jsonList(root.listFiles { f -> f.isDirectory }?.map { it.name }?.sorted() ?: emptyList()))
+        // Reserved: the relay's OWN storage lives beside the projects under
+        // `root`. Listing raw directories exposed `bundles`, `keys` and
+        // `kotlin` in the editor's project picker as if they were projects —
+        // and `keys` holds the Ed25519 signing keypair, so selecting it would
+        // have written screen JSON into the key directory.
+        "GET" -> respond(ex, 200, jsonList(projectNames()))
         "POST" -> {
           val name = safe(ex.requestBody.readBytes().decodeToString().trim())
           val main = screenFile(name, "main")

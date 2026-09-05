@@ -6,6 +6,8 @@
   "publishOutput": "portal-published-guest/build/zipline/Development",
   "store": "~/.keliver-portal",
   "httpFixturesDir": "portal-fixtures/http",
+  "previewBuildTask": ":web-spike:wasmJsBrowserDistribution",
+  "previewDist": "web-spike/build/dist/wasmJs/productionExecutable",
   "appRuntime": {
     "keliverVersion": "0.3.2",
     "widgetVersion": 1
