@@ -729,3 +729,82 @@ cleanly instead of spinning; app-editor build success (the app's distribution
 served, banner reporting "your real presenters"); and app-editor build failure
 (warned with the compiler error, fell back to the bundled editor, portal still
 came up).
+
+## Post-snapshot: adopter clearance, 0.3.3, and CI reversal — 2026-09-06
+
+**Published line is now `dev.keliver:*:0.3.3` on Maven Central**, verified by
+resolving and compiling a clean `keliver-init` scaffold from Central alone.
+`0.3.2` was tagged but **never published**: its release preflight was killed
+at a 60-minute CI ceiling before the upload step. Its GitHub release is
+retitled accordingly; `dev.keliver:*:0.3.2` does not resolve.
+
+### The adopter path was exercised end to end for the first time
+
+Previously the zero-checkout path had only been verified against *locally
+published* snapshots inside `stashfin-sdui`, which no longer exists. Running
+it as an adopter actually experiences it — released zip, Central only, no
+Keliver checkout — established two things.
+
+**The engine works.** `keliver-init` → cold `compileKotlinJs` against Central
+succeeds. The bidirectional round-trip is real and surgical: a `SetProp` over
+`/ops` changed exactly one line of `screens/home.kt`, leaving comments,
+imports and the hand-owned Bindings interface untouched, and a subsequent
+hand edit to the `.kt` was ingested back with the earlier change preserved.
+
+**Everything between an adopter and that engine was broken.** Nine defects,
+none in the runtime, all invisible from inside this repo — where `web-spike`
+exists, `main` is the real screen, and the dogfood app is the only consumer.
+Full detail in `DOGFOOD_NOTES.md` (Dogfood 2 and 3). The worst: opening the
+editor wrote `main.kt` and `Compiled_main.kt` into the adopter's own source
+tree, declaring `dev.keliver.portalpublished.screens` — this repo's
+namespace, in a package that does not match its directory and does not
+compile.
+
+Also fixed: the editor scaffolder generated a project that could not compile
+(`logic/` on the source path without the `screens/` that declares the
+Bindings contracts); the preview build failed by construction for every
+consumer; the promote() cache-bust only matched this repo's own loader name;
+and `/projects` listed the relay's storage — including the signing-key
+directory — as selectable projects.
+
+### CI returned to GitHub-hosted runners
+
+The self-hosted runner was rebuilt, then retired the same day. Its
+justification — the 10x macOS minute multiplier **on private repos** — expired
+when the repo went public, while its costs did not: four distinct
+manifestations of a TLS-inspecting corporate proxy, an unset `ANDROID_HOME`,
+81 GB of disk pressure, fork PRs executing on a personal machine, and finally
+an unreachable release CDN that blocked a release outright because CI had
+nowhere else to run. `CI_RUNNER` is now `macos-latest`; the runner is
+installed but stopped. Workflow timeouts were raised to 60/120 for the slower
+hosted runners. Fork-PR approval is `all_external_contributors`.
+
+### M4 falsification set: run 1 was inconclusive
+
+The pre-registered experiment was run early and **did not validate the
+instrument**. Two of five cases turned out not to be valid tests at all — F1's
+proposed mechanism was rejected (RawCode preserves the source, so the control
+is not unwired), and F3 cannot be planted at adopter level (a Kotlin compile
+error). No case was shown to discriminate, and no baseline agent was run.
+
+An initial write-up called F4 a strong result and proposed rebuilding the set
+around it; that was withdrawn under review as a null result being converted
+into a narrower thesis. Artifacts are archived in
+`superpowers/evidence/m4-run1/`. Run 2 requires a behavioural
+failure-and-fix check per case, neutral fixtures without answer labels, and
+scoring independent of any agent's self-report. See the design spec.
+
+**Nothing here supports a claim about where semantic access wins.** The
+thesis under test — the incremental benefit of semantic access over source
+plus build/run/screenshots — remains untested.
+
+### Where the milestones stand
+
+- **M0** complete.
+- **M1** complete.
+- **M2** unblocked and not started: the recruiting ask is drafted
+  (`writing/2026-09-05-m2-recruiting-ask.md`) and its release gate has passed.
+  Still **no external adopter**, so decision-gate proofs 2 and 4 remain
+  unevidenced.
+- **M3** deliberately not started.
+- **M4** blocked on a set that can decide something.
