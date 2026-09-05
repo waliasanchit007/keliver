@@ -250,6 +250,29 @@ needed separately because the JDK `setup-java` installs has a stock
 `cacerts` with no corporate CA, so Gradle's dependency resolution
 against Maven Central fails even after Node is fixed.
 
+**A third place this bites, with a disguised error.** Any Kotlin/Wasm or
+Kotlin/JS build shells out to `yarn` for its npm dependencies, and yarn
+reports a TLS rejection as a *missing package*:
+
+```
+error Couldn't find package "@js-joda/core@3.2.0" required by "…" on the "npm" registry.
+error Couldn't find package "format-util@^1.0.5" required by "…" on the "npm" registry.
+```
+
+Those packages exist. The real failure is `SELF_SIGNED_CERT_IN_CHAIN`,
+and `NODE_EXTRA_CA_CERTS` fixes it. Confirm in one line:
+
+```bash
+node -e "require('https').get('https://registry.yarnpkg.com/format-util',r=>console.log(r.statusCode)).on('error',e=>console.log('ERR',e.code))"
+# ERR SELF_SIGNED_CERT_IN_CHAIN   -> CA not trusted
+# 200                             -> fine
+```
+
+This one is worth knowing about beyond CI: it hits **adopters** building
+their own portal editor (`keliver-new-editor.sh` →
+`wasmJsBrowserDistribution`) on any corporate network, and the error text
+sends you hunting for a dependency problem that does not exist.
+
 To confirm a bundle actually contains the whole chain:
 
 ```bash
