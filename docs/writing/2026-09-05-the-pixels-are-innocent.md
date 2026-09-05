@@ -57,74 +57,95 @@ report success, because by its own oracle it succeeded.
 This isn't an argument that agents are bad at mobile. It's an argument
 that we handed them the one signal that can't distinguish these cases.
 
-## What a stronger signal looks like
+## What a stronger signal would look like
 
 If the UI has a **semantic representation** — a real tree describing what
-each node is, which props are literal versus bound, which events resolve
-to which handlers, what the presenter's state actually holds — then every
-one of those five failures is directly observable. Not inferred from
-pixels. Read.
+each node is, which props are literal versus bound, which events resolve to
+which handlers — then some of those failures stop being guesswork. Not
+inferred from pixels. Read.
 
-- Is `onClick` wired, or preserved as unrecognised code? *Read it.*
-- Is that label bound to a field, or a literal? *Read it.*
-- Does the catalog even have that prop? *Ask it.*
-- Are those three rows real data, or preview mocks? *Different fields.*
-- Is the branch missing because of state, or a preview flag? *Both are in
-  the tree.*
+- Is that label bound to a field, or a literal? *Read it.* One says
+  `BIND(title)`, the other `LIT("3 notes")`.
+- Did the parser even recognise this widget, or preserve it as opaque
+  source? *Read it.*
+- Does the catalog have that prop at all? *Ask it.*
 
-This is what Keliver is. Screens are written once in Kotlin, compiled to a
-bundle, and rendered with native widgets on Android and iOS. That part is
-ordinary server-driven UI. The part I care about is that the same screens
-have one semantic representation shared by the running app, a visual
-editor in the browser, and an agent over MCP — and that editing any of
-those three writes back to the same `.kt` files in git, as a surgical
-diff rather than a generated blob.
+That is what Keliver has: screens written once in Kotlin, rendered as native
+widgets on Android and iOS, with one semantic document shared by the browser
+editor and by an agent over MCP — and edits from any of them writing back to
+the same `.kt` file as a surgical diff rather than a generated blob. I
+checked that last part end to end this week: one `SetProp` over the API
+changed exactly one line of the file, comments and hand-written interfaces
+untouched.
 
-The cross-platform story is the enabling technology. The point is that
-there is finally something for an agent to *read back*.
+Now the part that costs me the pitch.
 
-## How I'd know I'm wrong
+## I pre-registered a test of this and it failed in a way I didn't expect
 
-I don't think you should believe the above yet, because I haven't proven
-it. So here's the disproof I've committed to before running it.
+I wrote down five planted defects before building anything, with a rule
+fixed in advance: if a screenshot-driven agent caught four of five, the
+thesis was weaker than it sounded and I'd say so.
 
-Take the five failure classes. Plant each in a real screen. Give the same
-task to two agents: one with a build, an emulator, and screenshots; one
-that can additionally read the semantic tree. Score detection, not fixing
-— fixing is easy once you can see the problem.
+The set never got that far. It collapsed on contact, and not where I
+expected.
 
-**If the screenshot agent catches four of five, this thesis is much weaker
-than it sounds and I should say so.**
+**Two of the five were not defects.** My favourite case — an event handler
+the parser can't recognise — assumed the button would render but never
+fire. Wrong: the unrecognised source is preserved verbatim and the device
+build compiles it, so the button works fine. What's lost is *editability in
+the portal*, which is a deliberate, documented property. Another case
+couldn't be planted at all, because the failure it described is a compile
+error in any real app.
 
-Two of the five are arguably unfair — they exploit the gap between preview
-and device, and an agent screenshotting the real device sidesteps both. So
-that's how I'll run the baseline. Another two might be catchable from
-source alone by an agent that greps carefully, which is a legitimate win
-for the baseline and gets counted as one.
+**One case I called a strong win, then withdrew.** A list preview renders
+three placeholder rows even when the real list is empty, so a screenshot of
+the preview shows a healthy feed that doesn't exist. True, and misleading —
+but it isn't *detection*. Nothing in the document says the runtime list is
+empty. I'd also claimed the semantic tree carried the mock row count; it
+doesn't. I'd read that off the editor's UI panel and attributed it to the
+API. My own captured response disproved me.
 
-That leaves the literal-instead-of-binding case as the cleanest test:
-identical pixels, no textual tell, and it's the single easiest way for a
-generating agent to pass a visual check while having wired nothing.
+The pattern in my errors is the same one I opened this essay complaining
+about. Each mistaken case was a fact about *my tooling* — how the parser
+classified something, what the preview chose to draw — that I mistook for a
+fact about the application under test.
 
-Five planted defects in one codebase is a small sample and I'll treat a
-narrow split as noise. But it's a real experiment with a pre-registered
-failure condition, which is more than "it feels faster."
+## The structural problem underneath
+
+Then the real blocker. The baseline agent in my design gets source access,
+plus build and run and screenshots. The semantic agent gets the document.
+
+But the document is *derived from* that source. Cross-referencing usages is
+grep. The catalog describes a public framework. And the one thing the
+baseline has that the document doesn't — **what the running application is
+actually doing** — isn't in the agent's reach at all. Keliver has a state
+inspector that watches a live presenter's values, and it lives entirely
+inside the browser editor's UI. No API serves it to an agent.
+
+So the sentence I opened with — *lets it see whether the code actually
+worked* — is about runtime, and the runtime channel isn't wired to agents
+yet. The capability the pitch rests on isn't implemented on the path that
+would use it. That isn't a falsified thesis; it's an experiment scheduled
+against something that doesn't exist. The honest smaller claim that survives
+is that a normalised parse makes certain static facts cheap and reliable to
+extract at scale — useful, and much less exciting.
 
 ## Where this actually is
 
-Pre-1.0, public on Maven Central, one maintainer. Kotlin → browser →
-Android → iOS works today; you can open the editor in a browser with no
-install. There is currently **no external adopter** — the reference app
-this was built against was lost with a dead laptop and never pushed,
-which is its own lesson.
+Pre-1.0, public on Maven Central, one maintainer, **no external adopter**.
+The reference app it was built against was lost with a dead laptop and never
+pushed, which is its own lesson. The week I spent getting back to a clean
+build turned up nine defects that were invisible from inside my own repo,
+including the portal writing stray files into a user's source tree the
+moment they opened the editor.
 
-So this is not a pitch. The verification loop above is not built yet;
-what exists is the representation that would make it possible, and a
-falsification plan I intend to run honestly.
+So: not a pitch. What exists is a semantic representation that round-trips
+to real Kotlin, a verification loop that is *not* built, and a falsification
+plan that has so far mostly falsified my own instrument.
 
-If you build mobile UI and you've watched an agent confidently converge
-on something wrong, I'd like to hear which of the five you've hit — and
-which one I'm missing.
+If you build mobile UI and you've watched an agent converge confidently on
+something wrong — I'd like to know which of the five failure modes you've
+hit, and which one I'm missing. Especially the last part.
 
 ---
 
