@@ -214,3 +214,121 @@ to `.kt`. Note also that the published `keliver-portal-tools-0.3.1.zip` was
 built from `c1e9546`, so it ships the **old** launcher — without the
 health-wait, `stop`/`status`, or the busy-spin fix. Adopters get those only
 in the next release.
+
+---
+
+# Dogfood 3: the portal loop, from an adopter's position (2026-09-05)
+
+Continues Dogfood 2 past "a built editor distribution" into the part the
+product thesis actually rests on: run the portal against a scaffolded app,
+edit a screen, and confirm the write-back round-trip. Run with the shipped
+`keliver-portal-tools-0.3.2` bundle from the GitHub release. (Artifacts came
+from mavenLocal because the 0.3.2 Central publish was still in preflight;
+Dogfood 2 already proved Central resolution, and this run is about the loop.)
+
+## The headline: the round-trip works, and it is genuinely surgical
+
+`POST /ops` with a single `SetProp` on the title's literal produced exactly
+this diff in `screens/home.kt`:
+
+```diff
+-      text = "Loopy",
++      text = "Loopy Renamed",
+```
+
+One line. Comments, imports, formatting, and the hand-owned
+`HomeScreenBindings` interface all untouched. Then editing the `.kt` by hand
+(`fontSize = 28` → `32`) was ingested back into the document within seconds,
+at version 3, with the earlier API-driven change preserved.
+
+**This is the first time the bidirectional loop has been verified from
+outside the Keliver repo.** It is the strongest evidence the project has.
+
+The semantic tree also delivers what the M4 thesis needs. The document
+distinguishes, in queryable form:
+
+```
+StyledText handle=2  text -> PropValue.Lit  "Loopy"
+StyledText handle=3  text -> PropValue.Bind field="subtitle"
+```
+
+Literal versus bound, visible to an agent and invisible in a screenshot —
+falsification case F2 is directly observable in the shipped artifact.
+
+## Five first-run defects, all M2-blocking
+
+Every one of these is what a recruited developer sees in their first minute.
+
+### 1. The portal opens on an empty screen
+
+`ensureDefaults()` (`Relay.kt:97`) unconditionally sets the active screen to
+`main` on first boot, while `keliver-init` scaffolds `home.kt`. The adopter's
+first view is a blank canvas with a bare `Column`, their real screen
+unselected, and the screen dropdown showing no selection. Their work is
+present and reachable — but nothing says so.
+
+### 2. The preview build is guaranteed to fail
+
+`previewBuildTask` / `previewDist` default to `:web-spike:…`, which is
+**Keliver's own dogfood module**. `keliver-init` writes only `screensDir` and
+`port`, so every adopter inherits those defaults and the relay reports:
+
+```
+Cannot locate tasks that match ':web-spike:wasmJsBrowserDistribution'
+as project 'web-spike' not found in root project 'loopy'.
+```
+
+A red "✗ preview build failed" chip sits in the toolbar from the first
+second. The keys are documented in `PORTAL_USAGE.md`; the scaffolder just
+never writes them.
+
+### 3. The cache-bust is hardcoded to Keliver's own artifact name
+
+`PreviewDistributionRunner.kt:47` stamps `?v=<millis>` onto `web-spike.js`.
+`keliver-new-editor.sh` generates `<app>-editor.js`. So for every adopter who
+*does* configure their own editor, the cache-bust silently matches nothing —
+reviving the CACHE TRAP that `CLAUDE.md` documents at length ("your fix
+appears to 'not work'"), permanently, and only for consumers.
+
+This is the sharpest example of the pattern in this repo: the fix was made
+and verified against Keliver's own module, and is structurally inapplicable
+to everyone else.
+
+### 4. `/projects` lists the relay's internal state as projects
+
+`Relay.kt:488` returns every directory under the relay root:
+
+```
+["bundles","default","keys","kotlin"]
+```
+
+`bundles/`, `keys/` and `kotlin/` are relay storage, not projects — and
+`keys/` holds `ed25519.priv`, the project signing key. They appear in the
+adopter's project dropdown as selectable, and selecting one would create
+screen JSON inside the key directory.
+
+### 5. `appRuntime` is never scaffolded
+
+`keliver-init` omits it, so the editor shows "App runtime not declared …
+version match is unknown" on first run. Cosmetic next to the others, but it
+lands in the same first impression.
+
+## Also noted
+
+`POST /active` reads query params and silently defaults a missing `screen` to
+`main`, so a wrong-shaped call returns `204` while setting the opposite of
+what was asked. `GET /doc` likewise defaults to `main` from its own query
+param and ignores the active screen entirely — the two endpoints are
+unrelated despite appearing to be about the same thing.
+
+## Verdict
+
+The engine is sound and the round-trip is real. What is broken is everything
+between an adopter and that engine: they land on a blank screen, with a red
+failure chip, and a project dropdown offering the signing-key directory.
+None of it touches the runtime; all of it is first-run wiring, and all of it
+is invisible from inside the Keliver repo, where `web-spike` exists, `main`
+is the real screen, and the dogfood app is the only consumer.
+
+**Fix 1, 2 and 4 before putting a person on M2.** 3 matters as soon as they
+scaffold their own editor.
