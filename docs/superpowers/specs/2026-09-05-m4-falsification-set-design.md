@@ -144,109 +144,131 @@ exist any more (see *Post-snapshot: machine loss and restart* in
 
 ---
 
-# Run 1 results — 2026-09-05
 
-**Verdict: the set as designed cannot decide the question. Two of the five
-cases are not defects at all, one is inapplicable, one is weak, and one is
-strong. Redesign before building M4.**
+# Run 1 results — 2026-09-05 (revised 2026-09-06 after review)
 
-## What was actually run
+**Verdict: instrument validation was INCONCLUSIVE. No case was shown to
+discriminate. Two cases were shown not to be valid tests. Nothing here
+supports a claim about where semantics win.**
 
-The five cases were planted in a real screen in an app scaffolded by
-`keliver-init`, served by the relay, and rendered in the portal editor.
-Both channels were captured for the same screen: the rendered canvas, and
-`GET /doc`.
+An earlier version of this section called F4 a strong result and proposed
+redesigning the set around it. Both are withdrawn; see *Corrections* below.
 
-This measures **information availability** — is the defect present in each
-channel — not agent skill. It is a necessary condition for the semantic
-agent's advantage and an upper bound on the screenshot agent's. It is *not*
-the two-agent comparison the design calls for: the author knew where the
-defects were, so no honest blind detection was possible in this run.
+## What was actually run, and what that can support
+
+The cases were planted in a real screen in a `keliver-init` app, served by
+the relay, and rendered in the portal editor. Captured artifacts are in
+[`../evidence/m4-run1/`](../evidence/m4-run1/) — read `doc-response.json`
+before trusting any claim about the semantic channel.
+
+This run compared **what two channels display for one configuration**. It is
+not the two-agent comparison the Method specifies, and it is not a detection
+result:
+
+- The author knew where every defect was, so no blind detection occurred.
+- No baseline agent was run. The Method gives the baseline **source access
+  and device builds**; neither was exercised.
+- No device render, no interaction trace, no assertion that any planted
+  defect actually manifests at runtime.
+
+Consequently every statement below is about *artifact contents*, not about
+whether a defect exists or whether an agent would find it.
 
 ## Per-case outcome
 
-### F1 — event preserved as RawCode → **INVALID, not a defect**
+### F1 — event preserved as RawCode → proposed mechanism REJECTED
 
-The premise was "renders but never fires". It is wrong. `RawCode` preserves
-the original source verbatim, and the compiled device path compiles the
-canonical `.kt` — so the button renders *and fires correctly at runtime*.
-What is lost is portal-editability, which is a documented, deliberate
-property, not a silent failure.
+The premise was "renders but never fires". The mechanism is wrong: `RawCode`
+preserves the original source verbatim — verified by diffing `home.kt` after
+ingest — and the device path compiles the canonical `.kt`.
 
-It is also loud rather than silent: the canvas draws an explicit `RawCode`
-chip where the Button would be, and the outline lists
-`RawCode "Button( text = "Re…"`. A screenshot agent would notice the button
-was missing before a semantic agent finished parsing.
+**But that is a source-based inference, not an observation.** The button was
+never rendered on a device and never clicked. What is established is that the
+*stated mechanism* (source discarded, handler unwired) does not occur. Whether
+the control fires is untested.
 
-Verified: after ingest, `home.kt` still contains the Button unchanged.
+It is also not silent: the canvas draws an explicit `RawCode` chip where the
+Button would be, and the outline lists it.
 
-### F2 — literal instead of a binding → **conditional discriminator**
+### F2 — literal instead of a binding → UNDETERMINED, one configuration tested
 
-- Semantic tree: unambiguous — `text=LIT(3 notes)` beside `text=BIND(title)`.
-- **Portal canvas: also visible.** In mock mode a bound field renders as a
-  `{title}` placeholder, so bound and literal look different on screen.
-- Device screenshot with real data: indistinguishable.
+- `doc-response.json` distinguishes `text=LIT("3 notes")` from
+  `text=BIND(title)`.
+- The canvas rendered `{title}` for the bound field — **but only because no
+  mock was set for it.** `strB` resolves a `Bind` as
+  `mocks[field] ?: "{field}"` (`PreviewBindings.kt`), so a mock equal to the
+  literal makes both render identically in the portal as well.
 
-So F2 discriminates against a *device* screenshot, and not against Keliver's
-own canvas. That distinction was not in the original design.
+The earlier claim that F2 "works only against a device screenshot" is
+withdrawn: that generalised from a single unmocked configuration. Both
+configurations need testing, and a source-reading baseline may find it in
+either.
 
-### F3 — prop dropped because it is unregistered in `@Schema` → **inapplicable**
+### F3 — prop unregistered in `@Schema` → cannot be planted
 
-At adopter level this cannot happen silently: an unknown named argument is a
-Kotlin compile error. The failure mode is real but belongs to framework and
-schema authors, not to the consumers an agent would be working for. It
-cannot be planted in the codebase the experiment targets.
+An unknown named argument is a Kotlin compile error at adopter level. The
+failure belongs to schema authors, not to the consumers an agent works for.
+Unchanged from the earlier version, and the one conclusion that holds.
 
-### F4 — `forEach` over an empty list → **strong, and the preview is the liar**
+### F4 — `forEach` over an empty list → NOT A DETECTION RESULT (withdrawn)
 
-The canvas rendered three tinted mock rows ("Title 1/2/3") for a list that is
-empty at runtime, and the Bindings panel labelled it `items: rows — row
-count (3)`. An agent screenshotting the preview does not merely fail to see a
-problem; it sees a populated, healthy list that does not exist.
+Previously called the strongest case. Withdrawn on two grounds.
 
-The semantic tree carries `Repeat items=LIT(items)` plus the mock row count,
-so the mock-versus-data distinction is recoverable.
+**It did not detect anything.** The canvas rendered three mock rows. Nothing
+in either channel establishes that the runtime list is empty, or that
+emptiness violates a requirement — that is a fact about the presenter and the
+data, not about the document. What was observed is that a preview renders
+mocks, which is its documented purpose.
 
-This is the one case that works as designed.
+**The supporting claim was false.** The earlier text said the semantic tree
+carries "the mock row count". It does not. `doc-response.json` contains no
+mock values: the `Repeat` node carries only `items` and `item` field names.
+Row counts live in `PreviewBindings.mocks`, editor-side state read by the
+Bindings panel, not in the `UiDocument` that `/doc` returns. The "row count
+(3)" cited earlier was read off the editor UI and misattributed to the tree.
 
-### F5 — branch suppressed by a Condition mock → **weak**
+### F5 — branch suppressed by a Condition mock → does not discriminate
 
-The canvas rendered the branch; the tree shows the `Condition` node exists.
-Both channels show the same thing, and neither reveals the true runtime value
-without executing the presenter. It does not discriminate.
+Both channels show the branch exists; neither reveals the true runtime value
+without executing the presenter. Unchanged.
 
-## The meta-finding, which matters more than the tally
+## Corrections to the earlier version of this section
 
-**The portal canvas is not a naive screenshot.** It is a semantically
-enriched render: `{field}` placeholders for bindings, tinted mock rows,
-explicit `RawCode` chips, a Bindings panel naming every field and its mock.
-Much of what the semantic tree "uniquely" exposes is already drawn on screen.
+1. **"F4 is strong / shows where semantics win" — withdrawn.** It shows mock
+   rendering, not detection, and its supporting claim about the tree carrying
+   the row count was factually wrong.
+2. **"Redesign around the F4 archetype" — withdrawn.** Recruiting more
+   "the preview lies" cases selects for exactly the narrowed claim this
+   document already warned about under *Honest weaknesses*: that Keliver can
+   expose its own preview's limitations. That is a much smaller thesis than
+   the one under test.
+3. **"The fair baseline is an agent without the portal" — not a finding.**
+   The Method already specifies exactly that. It was restated as though newly
+   discovered; the actual gap is that the specified baseline was never run.
+4. **F2's limitation was overstated** — see above.
 
-So "screenshot versus semantic tree" is the wrong axis *within Keliver*. A
-fair baseline is a screenshot loop that does **not** have the portal — an
-agent driving a device build, or a competing tool — because that is the
-actual alternative a mobile engineer would use.
+## What run 2 requires before it can decide anything
 
-## Consequence for M4
+- **A behavioural failure-and-fix check per case.** Each replacement case must
+  demonstrate, at runtime, that the application misbehaves before the fix and
+  behaves after it. A case that cannot fail observably is not a defect and
+  does not belong in the set.
+- **Independently verifiable application failures**, not preview/device
+  divergence. Preserve the Method's baseline unchanged: source access, device
+  builds, no portal.
+- **Both mock configurations** for any binding-shaped case.
+- **Captured artifacts per case**: device render, interaction trace, `/doc`
+  response, and the failing assertion.
 
-Do not build the loop against this set. Specifically:
-
-1. Drop F1 and F3. One is not a defect; the other cannot be planted.
-2. Keep F4, and treat it as the archetype: cases where the *preview itself
-   asserts something false* are where semantics win, because there the
-   screenshot is not neutral but actively wrong.
-3. Re-scope F2 and F5 against a device render rather than the canvas.
-4. Find at least three more cases in the F4 mould before running anything.
+Until those exist, the set cannot support a pass or a fail, and the
+pre-registered 4-of-5 rule cannot be applied.
 
 ## Honesty note
 
-The pre-registered rule was "if the baseline detects 4 or 5 of 5, the thesis
-is materially weaker than it looks". That rule cannot be applied, because two
-cases were never valid tests and no blind baseline was run. The correct
-reading is neither pass nor fail: **the instrument was miscalibrated, and
-running it early is what revealed that** — at the cost of an afternoon rather
-than a built agent loop.
-
-Worth noting what would have happened otherwise: F1 was the case that felt
-most compelling when written, and it would have produced a confident, wrong
-demonstration of a defect that does not exist.
+The pre-registration did its job twice. It caught F1 — the most compelling
+case on paper, and not a defect — before an agent loop was built on it. It
+then caught this section's own overreach: having found one case that survived,
+the instinct was to promote it to a result and rebuild the set around it,
+which would have converted a null result into a narrower thesis quietly
+substituted for the original one. Review caught that; the artifacts are now
+archived so the next reader can check rather than trust.
