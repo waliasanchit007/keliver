@@ -278,10 +278,17 @@ directory.
 
 **2. Scoring must not depend on the agent's own verification.** Write the
 failing and passing checks **before** the run, from the requirement, and keep
-them out of the agent's reach. Score a fix by executing those checks against
-the agent's output. An agent asserting that it verified its own fix is a
-claim, not evidence — and the whole thesis under test is that self-reported
-verification is unreliable, so accepting it here would assume the conclusion.
+them out of the agent's reach. Record each agent's verification claim, then
+independently score correctness against the pre-authored checks. Compare
+outcomes between the baseline and semantic conditions.
+
+This is a safeguard for the comparison, not the hypothesis. The thesis under
+test is the **incremental benefit of semantic access over source plus
+build/run/screenshots** — not whether agents self-report accurately. Scoring
+both conditions the same way is what keeps that comparison meaningful; a
+self-reported "verified" from either side would corrupt it equally. (The gap
+between an agent's claim and the check's result is worth recording as a
+secondary observation, but it is not what the experiment is for.)
 
 Corollary: a case whose check cannot be written in advance is not
 well-specified enough to include.

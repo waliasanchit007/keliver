@@ -5,9 +5,35 @@ For: one mobile engineer, one colleague in a sandbox, one person with a
 side project. **Not a team, and not several people at once** — the point is
 depth of observation, not sample size.
 
-Do not send this until `dev.keliver:*:0.3.3` resolves from Maven Central.
+## Do not send until the release gate passes
+
 Pointing someone at a version they cannot download is the exact failure this
-milestone exists to catch.
+milestone exists to catch. A green publish workflow does **not** establish
+availability, and one resolvable POM does not establish that the scaffold
+builds. The gate is:
+
+1. **Every coordinate the scaffold needs returns 200** on Central — not just
+   `keliver-host`. `keliver-init` generates dependencies on
+   `keliver-material-compose`, `keliver-layout-compose` and `portal-sql`:
+   ```bash
+   for a in keliver-host keliver-guest keliver-material-compose \
+            keliver-layout-compose portal-sql; do
+     curl -s -o /dev/null -w "$a %{http_code}\n" \
+       "https://repo1.maven.org/maven2/dev/keliver/$a/0.3.3/$a-0.3.3.pom"
+   done
+   ```
+2. **A clean scaffold resolves and compiles from Central alone.**
+   `KELIVER_USE_MAVEN_LOCAL` unset, and a **fresh `GRADLE_USER_HOME`** — this
+   machine's `~/.m2` contains a locally published `0.3.3` from the release
+   preflight, and a warm Gradle cache would happily serve it. Resolving the
+   graph is the point; a cached hit proves nothing.
+   ```bash
+   keliver-init Gatecheck && cd gatecheck
+   GRADLE_USER_HOME=$(mktemp -d) ./gradlew compileKotlinJs
+   ```
+
+Only when step 2 is green is 0.3.3 adopter-ready. Until then this document
+stays unsent.
 
 ---
 
