@@ -23,14 +23,27 @@ builds. The gate is:
    done
    ```
 2. **A clean scaffold resolves and compiles from Central alone.**
-   `KELIVER_USE_MAVEN_LOCAL` unset, and a **fresh `GRADLE_USER_HOME`** — this
-   machine's `~/.m2` contains a locally published `0.3.3` from the release
-   preflight, and a warm Gradle cache would happily serve it. Resolving the
-   graph is the point; a cached hit proves nothing.
    ```bash
-   keliver-init Gatecheck && cd gatecheck
+   env -u KELIVER_USE_MAVEN_LOCAL KELIVER_VERSION=0.3.3 keliver-init Gatecheck
+   cd gatecheck
    GRADLE_USER_HOME=$(mktemp -d) ./gradlew compileKotlinJs
    ```
+   Two hazards, both of which silently produce a false pass:
+
+   - **`env -u` is not decoration.** `keliver-init` injects `mavenLocal()`
+     into the generated `settings.gradle` when `KELIVER_USE_MAVEN_LOCAL=1`,
+     at scaffold time. An inherited `1` therefore bakes a local repository
+     into the project, and a fresh Gradle cache does not undo it — the repo
+     list itself is wrong. Merely *documenting* "must be unset" is not
+     enough; unset it in the command. (Sessions that ran the earlier dogfood
+     have this exported.)
+   - **A fresh `GRADLE_USER_HOME`** because this machine's `~/.m2` holds a
+     locally published `0.3.3` from the release preflight, and a warm Gradle
+     cache would serve it. Resolving the graph from Central is the point; a
+     cached hit proves nothing.
+
+   Pinning `KELIVER_VERSION=0.3.3` makes the check independent of whichever
+   `keliver-init` happens to be on `PATH`.
 
 Only when step 2 is green is 0.3.3 adopter-ready. Until then this document
 stays unsent.
