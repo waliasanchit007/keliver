@@ -18,6 +18,8 @@ kotlin {
       dependencies {
         implementation 'org.jetbrains.kotlin:kotlin-test'
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+        implementation 'dev.keliver:keliver-material-testing:0.3.3'
+        implementation 'dev.keliver:keliver-testing:0.3.3'
       }
     }
     jsMain {
