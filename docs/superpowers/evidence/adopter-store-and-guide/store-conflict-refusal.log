@@ -1,0 +1,15 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/home
+Exception in thread "main" java.lang.ExceptionInInitializerError
+Caused by: java.lang.IllegalStateException: portal store conflict: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/shared-store already belongs to another app.
+  owner: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/apps/appx
+  this:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/apps/appy
+Two apps must not share one document store — the boot scan retires
+mirrors that do not match the app it is serving, which would delete the
+other app's documents, and opening a foreign screen writes its .kt into
+this app's source tree.
+Fix: remove "store" from this app's keliver.portal.json to get its own
+store, or point it at a directory this app alone uses.
+
+	at PortalConfigKt.claimStoreFor(PortalConfig.kt:305)
+	at RelayKt.resolveStore(Relay.kt:78)
+	at RelayKt.<clinit>(Relay.kt:67)
