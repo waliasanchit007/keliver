@@ -1,0 +1,35 @@
+Verified on the emulator: label went **0 → 1 → 2 items** across taps.
+
+---
+
+VERDICT: no (before fix); yes (after fix)
+
+DIAGNOSIS:
+`src/jsMain/kotlin/screens/home.kt:17` — the basket summary `StyledText` was hardcoded to the literal `text = "0 items"` and never read `b.summary`. The presenter (`src/jsMain/kotlin/logic/HomePresenter.kt`) correctly maintains `count` as Compose state and exposes `summary = "$count items"`, but the screen ignored it, so the label was frozen at "0 items" regardless of taps.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ fun HomeScreen(b: HomeScreenBindings) {
+     )
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+```
+Only the screen was changed. The presenter already produces the right string: each tap does `count += 1`, which invalidates the enclosing composition; `HomePresenter()` re-runs, `remember` retains the state, and a fresh bindings object with the updated `summary` is handed to `HomeScreen`, which now reads it.
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` succeeded. Served the build (`serveDevelopmentZipline`, `manifest.zipline.json` returned 200), force-stopped and restarted `dev.keliver.portaldevice`, waited ~15s. `uiautomator dump` showed "Basket" + "0 items" + "Add item" on launch. Tapped "Add item" (136,231): label became "1 items". Tapped again: "2 items".
+- INFERRED FROM READING CODE: That the root cause was the hardcoded literal rather than a presenter/state bug — `HomePresenter.kt` uses `mutableStateOf`/`remember` and `addItem()` increments it; the interface already declared `val summary`. The screen was the only place the wiring was missing.
+
+CONFIDENCE: high. The defect and the fix are one line, the mechanism is straightforward Compose state flow, and I watched the corrected label update live on the emulator through two taps.
+
+TOOLS:
+- Read/Edit — read the three source files and applied the one-line fix; essential.
+- Bash (gradle) — `compileKotlinJs` and `serveDevelopmentZipline`; confirmed the fix type-checks and served the bundle. Helped.
+- Bash (adb: am, uiautomator, input tap) — restarted the host and drove/observed the UI; this is what confirmed the behavior end-to-end. Helped.
+- `find` — confirmed there is a single screen (`home.kt`, package `basket.screens`, function `HomeScreen`) acting as the Basket screen; helped rule out a separate missing Basket file.
+- Did not use: screencap (uiautomator text dump was sufficient), Grep/Glob, subagents.

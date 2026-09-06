@@ -1,0 +1,30 @@
+VERDICT: no (as originally written; fixed and now passing)
+
+DIAGNOSIS:
+`src/jsMain/kotlin/screens/home.kt:17` — the summary label's text was a hard-coded string literal `"0 items"` instead of the binding value `b.summary`. The `HomeScreenBindings` interface exposes `val summary` (correctly implemented in `src/jsMain/kotlin/logic/HomePresenter.kt:14` as `"$count items"`), and `HomePresenter` correctly increments `count` on `addItem()`, but the screen never read `summary`, so the label was frozen at "0 items" no matter the count.
+The presenter (`HomePresenter.kt`) is fine: `HomePresenter()` is `@Composable` and reads `count` while building the bindings object, so it recomposes and rebuilds `summary` on every tap. No change needed there.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ fun HomeScreen(b: HomeScreenBindings) {
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- INFERRED from reading code: `home.kt` hard-coded the label; the `summary` binding existed but was unused; the presenter already updates count and derives `summary` from it.
+- INFERRED from the keliver-portal MCP semantic document (`get_document` for screen `home`): the second `StyledText`'s `text` prop was `PropValue.Lit "0 items"` (a literal), while the contract exposed `summary: String` and `addItem` — i.e. the literal should have been a Bind to `summary`.
+- OBSERVED RUNNING: Rebuilt with `./gradlew compileKotlinJs --no-daemon` (BUILD SUCCESSFUL — the plain `./gradlew` invocation hit an unrelated stale-daemon `FileUtils.canonicalize` "Operation not permitted"; `--no-daemon` after `./gradlew --stop` worked). Started `serveDevelopmentZipline`; `curl http://localhost:8080/manifest.zipline.json` returned 200. No `emulator-5554` was present, so I booted the `Medium_Phone` AVD (`dev.keliver.portaldevice` was already installed on it), then force-stopped and restarted the host. `uiautomator dump` showed "Basket" / "0 items" / "Add item". Tapped "Add item" → label read "1 items". Tapped again → "2 items" (also confirmed by screenshot). Requirement met.
+
+CONFIDENCE: high. The defect and fix are a single unambiguous line, the fix is the minimal idiomatic change (use the existing binding), and I watched the label go 0 → 1 → 2 on the running app against the freshly built bundle.
+
+TOOLS:
+- Read / Edit / Glob / Grep — located and inspected the three source files and made the one-line fix. Helped.
+- keliver-portal MCP (`list_screens`, `get_document`) — confirmed the summary prop was a literal, not a binding, and showed the Bindings contract. Helped (independent confirmation of the diagnosis).
+- Bash (gradle, adb, curl, emulator) — built, served, booted an emulator, drove the app, and read back on-screen state. Helped; needed a workaround for the gradle daemon error and had to boot an emulator myself since none was running.
+- `get_catalog` was available but not needed.

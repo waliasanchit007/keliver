@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "keliver-portal": {
+      "command": "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/pilot/runtime/portal-mcp/bin/portal-mcp",
+      "args": [],
+      "env": { "PORTAL_REPO": "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/pilot/semantic", "PORTAL_SERVER": "http://localhost:8477" }
+    }
+  }
+}
