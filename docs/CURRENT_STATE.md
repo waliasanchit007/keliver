@@ -957,3 +957,20 @@ from the code and has not been run.
 Unchanged: **M0**, **M1** complete; **M2** unblocked with no external adopter;
 **M3** not started; **M4** still without a set that decides anything. No M4
 runs were performed in this block.
+
+### Follow-up: adopters' git working trees — 2026-09-07
+
+The store pointer fixed the key-location mismatch and left a smaller problem
+behind: `keliver-init` shipped no `.gitignore`, so a scaffolded app's first
+`git status` after using the portal showed `?? .gradle/`, and `?? build/` after
+a build. Fixed in `b890abca0`.
+
+`scripts/keliver-adopter-tree-check.sh` now tests the property this project has
+broken three times — the portal writing into someone else's repository
+(`main.kt` from a parameterless `/doc`, `feed.kt` from the shared store, the
+pointer) — by requiring a scaffolded, committed app to have an empty
+`git status` after an ordinary portal run and a build. Before: 5 failures.
+After: 8/0, and 8/0 again through the bundled scaffolder and relay.
+
+Apps scaffolded by an older `keliver-init` are unaffected by the fix and will
+still show `.gradle/` as untracked.

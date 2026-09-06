@@ -955,8 +955,12 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   where it is and is no longer read. Nothing is deleted; the adopt route or an
   explicit `store` brings it back for the one app that owns it.
 * The `.gradle/keliver-store-path` pointer lives in the app's `.gradle`
-  directory. `keliver-init` does not scaffold a `.gitignore`, so an adopter who
-  has not ignored `.gradle` will see it alongside Gradle's own files there.
+  directory. **Resolved in `b890abca0`**: `keliver-init` now scaffolds a
+  `.gitignore`, and `scripts/keliver-adopter-tree-check.sh` asserts a
+  scaffolded app's `git status` stays empty across an ordinary portal run and a
+  build (before: 5 failures; after: 8/0, and 8/0 from the bundle). An app
+  scaffolded by an OLDER keliver-init still has no `.gitignore` and will show
+  `.gradle/` as untracked.
 * Verified on macOS only. The `user.home`-versus-`HOME` divergence that caused
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
