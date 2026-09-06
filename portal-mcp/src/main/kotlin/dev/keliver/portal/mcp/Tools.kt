@@ -139,6 +139,26 @@ object Tools {
     )
   }
 
+  /**
+   * The usage guide.
+   *
+   * It used to be read only from `<PORTAL_REPO>/docs/PORTAL_USAGE.md` — a path
+   * that exists in the Keliver repository and in no adopter's app — so the tool
+   * worked when run from this checkout and answered "guide not found" for
+   * everyone else. The canonical copy now ships inside the package as a
+   * classpath resource; an app that keeps its own `docs/PORTAL_USAGE.md` still
+   * wins, so a team can document its own portal conventions.
+   */
+  internal fun guideText(
+    repo: String? = System.getenv("PORTAL_REPO"),
+    resource: () -> java.io.InputStream? = { Tools::class.java.getResourceAsStream("PORTAL_USAGE.md") },
+  ): String {
+    val override = File(repo ?: ".", "docs/PORTAL_USAGE.md")
+    if (override.isFile) return override.readText()
+    resource()?.use { return it.readBytes().decodeToString() }
+    return "guide unavailable: no docs/PORTAL_USAGE.md in this app and no copy bundled in this build"
+  }
+
   val registry: List<Tool> = listOf(
     Tool(
       "get_catalog",
@@ -150,10 +170,7 @@ object Tools {
       "get_guide",
       "The portal usage guide (architecture, edit loops, publish).",
       emptyMap(),
-    ) {
-      val f = File(System.getenv("PORTAL_REPO") ?: ".", "docs/PORTAL_USAGE.md")
-      toolText(if (f.exists()) f.readText() else "guide not found at ${f.absolutePath}")
-    },
+    ) { toolText(guideText()) },
 
     Tool("list_projects", "List portal projects.", emptyMap()) { toolText(get("/projects")) },
 

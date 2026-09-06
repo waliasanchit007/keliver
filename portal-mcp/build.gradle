@@ -19,3 +19,15 @@ dependencies {
 }
 
 tasks.named('test') { useJUnit() }
+
+// Ship the usage guide INSIDE the package. get_guide used to read
+// <PORTAL_REPO>/docs/PORTAL_USAGE.md, a path that only exists in this
+// repository, so the tool worked for us and returned "guide not found" for
+// every adopter. Copied at build time rather than duplicated in the source
+// tree, so it cannot drift from docs/PORTAL_USAGE.md.
+def bundleGuide = tasks.register('bundlePortalGuide', Copy) {
+  from(rootProject.file('docs/PORTAL_USAGE.md'))
+  into(layout.buildDirectory.dir('generated/guide/dev/keliver/portal/mcp'))
+}
+sourceSets.main.resources.srcDir(bundleGuide.map { it.destinationDir.parentFile.parentFile.parentFile.parentFile })
+tasks.named('processResources') { dependsOn(bundleGuide) }

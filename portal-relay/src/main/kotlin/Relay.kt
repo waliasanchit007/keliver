@@ -64,7 +64,20 @@ private val config = loadPortalConfig(repoDir)
 
 private val PORT = config.port
 
-private val root = config.storeDir()
+private val root = resolveStore()
+
+/**
+ * The store, claimed for this repo. PORTAL_STORE is an explicit override for
+ * one run (CI, a throwaway trial); it used to be silently ignored, which reads
+ * as "isolated" and is not.
+ */
+private fun resolveStore(): File {
+  val env = System.getenv("PORTAL_STORE")?.takeIf { it.isNotBlank() }
+  val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir)
+  dir.mkdirs()
+  claimStoreFor(dir, repoDir)
+  return dir
+}
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")
 private val bundlesDir = File(root, "bundles")
@@ -254,8 +267,11 @@ private fun handle(ex: HttpExchange, block: () -> Unit) {
   cors(ex)
   if (ex.requestMethod == "OPTIONS") { respond(ex, 204); return }
   runCatching(block).onFailure {
+    // A named screen that does not exist is a client error, and saying so is
+    // the point: it used to be answered by inventing the screen.
+    val code = if (it is UnknownScreen) 404 else 500
     println("portal-server: ${ex.requestURI} failed: $it")
-    runCatching { respond(ex, 500, "{\"error\":\"${it.message}\"}") }
+    runCatching { respond(ex, code, "{\"error\":\"${it.message?.replace("\"", "'")}\"}") }
   }
 }
 
@@ -356,6 +372,24 @@ private fun screensPackageFor(project: String): String {
 private fun screenFunctionName(screen: String): String =
   screen.replaceFirstChar { it.uppercase() } + "Screen"
 
+/** Raised when a request names a screen the app does not have. */
+class UnknownScreen(val project: String, val screen: String, val known: List<String>) :
+  IllegalArgumentException(
+    "no screen '$screen' in project '$project'" +
+      if (known.isEmpty()) " (this app has no screens yet)"
+      else "; known screens: ${known.joinToString(", ")}",
+  )
+
+/**
+ * True when the screen exists either as a store document or as a `.kt` in the
+ * app's screens dir. The `.kt` check matters on a cold store: the boot scan has
+ * ingested by then, but a screen added while the relay is up must still resolve.
+ */
+private fun knownScreen(project: String, screen: String): Boolean =
+  screenFile(project, screen).exists() ||
+    File(screensDirFor(project), "$screen.kt").exists() ||
+    documents.containsKey("$project/$screen")
+
 /** One engine per screen; projection feeds the EXISTING draft file (devices + /tree unchanged). */
 private fun docFor(q: Map<String, String>): DocumentService {
   // Default to the ACTIVE screen, not a literal "main". These defaults were
@@ -368,6 +402,12 @@ private fun docFor(q: Map<String, String>): DocumentService {
   val (activeProject, activeScreenName) = activeScreen()
   val project = safe(q["project"] ?: activeProject)
   val screen = safe(q["screen"] ?: activeScreenName)
+  // A screen this app does not have is an ERROR, not an invitation to invent
+  // one. Minting on read is how a foreign screen name — from a shared store, a
+  // stale link, or a typo — ended up materialised as <screen>.kt plus
+  // Compiled_<screen>.kt inside an app's source tree. The engine writes its
+  // backing file, so "just reading" a document creates source.
+  if (!knownScreen(project, screen)) throw UnknownScreen(project, screen, screenNames(project))
   return documents.getOrPut("$project/$screen") {
     val f = screenFile(project, screen)
     val inProject = screensDirFor(project) == appScreensDir

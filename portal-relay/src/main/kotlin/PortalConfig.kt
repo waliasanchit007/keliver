@@ -169,7 +169,25 @@ data class PortalConfig(
   val componentsDir: String? = null,
   val publishTask: String = ":portal-published-guest:compileDevelopmentZipline",
   val publishOutput: String = "portal-published-guest/build/zipline/Development",
-  val store: String = "~/.keliver-portal",
+  /**
+   * Document store location. **Null (the default) means "one store per app,
+   * derived from the repo path"** — see [storeDir].
+   *
+   * It used to default to the literal `~/.keliver-portal`, a MACHINE-GLOBAL
+   * directory shared by every app on the machine. Two apps then shared one
+   * store, and both of the store's own invariants turned destructive:
+   *
+   *   * `bootScan` retires store mirrors whose `.kt` is missing from THIS
+   *     app's screens dir, so starting app B deleted app A's documents;
+   *   * with both running, app B's `/screens` listed app A's screens, and
+   *     opening one materialised app A's screen as a `.kt` (plus its
+   *     `Compiled_*.kt`) inside app B's source tree.
+   *
+   * An explicit value is still honoured — it is the supported way to place the
+   * store — but a store records the repo that owns it and refuses to serve a
+   * different one.
+   */
+  val store: String? = null,
   /**
    * P3-12 live-presenter preview: logic dirs to watch (null = a `logic` sibling
    * of screensDir), the gradle task that rebuilds the per-app editor, where its
@@ -239,8 +257,66 @@ fun loadPortalConfig(repoDir: File): PortalConfig {
   return Json { ignoreUnknownKeys = true }.decodeFromString(PortalConfig.serializer(), f.readText())
 }
 
-fun PortalConfig.storeDir(): File =
-  if (store.startsWith("~/")) File(System.getProperty("user.home"), store.removePrefix("~/")) else File(store)
+/** The global root that per-app stores live under. */
+private fun portalHome(): File = File(System.getProperty("user.home"), ".keliver-portal")
+
+/** Stable, readable per-repo directory name: <dir-name>-<8 hex of the abs path>. */
+internal fun appStoreName(repoDir: File): String {
+  val abs = repoDir.absoluteFile.canonicalFile.path
+  val digest = java.security.MessageDigest.getInstance("SHA-256").digest(abs.toByteArray())
+  val hash = digest.take(4).joinToString("") { "%02x".format(it) }
+  val slug = repoDir.absoluteFile.name.lowercase().replace(Regex("[^a-z0-9._-]"), "-").ifEmpty { "app" }
+  return "$slug-$hash"
+}
+
+/**
+ * Where this repo's documents live.
+ *
+ * Default: `~/.keliver-portal/apps/<slug>-<hash>` — inside the familiar global
+ * root, but owned by exactly one repo. Never inside the app's source tree.
+ * An explicit [store] is honoured verbatim (`~/` expanded, relative paths
+ * resolved against the repo).
+ */
+fun PortalConfig.storeDir(repoDir: File): File {
+  val s = store ?: return File(File(portalHome(), "apps"), appStoreName(repoDir))
+  return when {
+    s.startsWith("~/") -> File(System.getProperty("user.home"), s.removePrefix("~/"))
+    File(s).isAbsolute -> File(s)
+    else -> File(repoDir, s)
+  }
+}
+
+/**
+ * A store belongs to one repo. The marker is written on first use and checked
+ * on every start: sharing a store between repos is the defect this closes, so
+ * it fails fast and says how to fix it rather than silently serving the wrong
+ * documents.
+ */
+fun claimStoreFor(storeDir: File, repoDir: File) {
+  val owner = File(storeDir, "owner")
+  val me = repoDir.absoluteFile.canonicalFile.path
+  if (!owner.exists()) {
+    storeDir.mkdirs()
+    owner.writeText(me + "\n")
+    return
+  }
+  val theirs = owner.readText().trim()
+  if (theirs != me) {
+    throw IllegalStateException(
+      buildString {
+        appendLine("portal store conflict: $storeDir already belongs to another app.")
+        appendLine("  owner: $theirs")
+        appendLine("  this:  $me")
+        appendLine("Two apps must not share one document store — the boot scan retires")
+        appendLine("mirrors that do not match the app it is serving, which would delete the")
+        appendLine("other app's documents, and opening a foreign screen writes its .kt into")
+        appendLine("this app's source tree.")
+        appendLine("Fix: remove \"store\" from this app's keliver.portal.json to get its own")
+        appendLine("store, or point it at a directory this app alone uses.")
+      },
+    )
+  }
+}
 
 fun PortalConfig.runtimeMetadataJson(): String =
   Json.encodeToString(
