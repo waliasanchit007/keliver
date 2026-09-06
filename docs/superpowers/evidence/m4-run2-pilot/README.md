@@ -1,81 +1,95 @@
-# M4 pilot comparison — one case, two conditions (2026-09-06)
+# M4 pilot comparison — one case, two conditions
 
-**This is a pilot of the experimental machinery. It is one case and it does
-not validate the general thesis. The five-case decision rule is NOT invoked.**
+**Pilot of the experimental machinery. One case. Not validation of the
+thesis. The five-case decision rule is NOT invoked.**
+
+Two runs happened. **Run 2 is the one that counts**; run 1 is retained below
+because its deviations are instructive.
+
+---
+
+# Run 2 — corrected conditions (2026-09-06)
+
+Both conditions were fresh `claude -p` processes (no shared context with the
+work that built the fixture), same model, same task file, isolated copies of
+the same defective app, `Bash`/`Read`/`Edit`/`Write`/`Glob`/`Grep` granted to
+both. The semantic condition **additionally** got the real `portal-mcp` server
+over stdio — `get_catalog`, `get_document`, `list_screens`, `find_usages`,
+`get_guide`, `device_screenshot` — against its own relay (port 8377, store
+`~/.keliver-m4run2`). No baseline capability was removed.
 
 ## Result
 
 | | baseline | semantic |
 |---|---|---|
-| detected the defect | **yes** | **yes** |
-| diagnosis correct | yes (file + line) | yes (file + line) |
-| fix | `text = b.summary` | `text = b.summary` (identical) |
-| independent check on final diff | **PASS** | **PASS** |
-| wall-clock | 49s | 51s |
-| tool calls | 5 | 6 |
-| tokens | 58,486 | 59,366 |
-| observed runtime UI behaviour | **no** — labelled inference | **no** — labelled inference |
-| self-reported confidence | high dx / medium-high runtime | high |
+| detected | **yes** | **yes** |
+| diagnosis | correct, file + line | correct, file + line |
+| fix | `text = b.summary` | identical |
+| **independent check on final diff** | **PASS** | **PASS** |
+| compiled it themselves | yes | yes |
+| **observed the app running** | **no** | **no** (attempted) |
+| self-reported confidence | high | high |
+| wall clock | **85s** | **102s** |
 
-**On this case the semantic condition showed no detection advantage.** Both
-found it, produced byte-identical fixes, and finished within two seconds of
-each other. The baseline found it by reading two short files; at this scale
-there was nothing for a structured representation to make cheaper.
+**No detection advantage, and the semantic condition was 17s slower.**
 
-## How each one actually found it
+## What the MCP tools actually did
 
-**Baseline** read `home.kt` and `HomePresenter.kt`, saw the literal where a
-binding was expected, and grepped for other call sites. Source reading was
-sufficient — as the review of the original design predicted it might be.
+The semantic participant used `get_document` before and after its fix: node
+handle 3's `text` was `PropValue.Lit "0 items"`, and afterwards
+`PropValue.Bind field="summary"`, with the contract still exposing
+`summary: String` and action `addItem`. It rated this "helped (strong
+corroboration)". `get_catalog` and `get_guide` were loaded but unused.
 
-**Semantic** read the same source, then corroborated with `GET /doc`: the prop
-came back `PropValue.Lit "0 items"` while `summary` sat in the contract
-unused. After fixing, it re-queried and observed the prop had become
-`PropValue.Bind field=summary` with the document version incrementing 1 → 2.
-It reported the endpoints as "directly useful" for pinpointing the defect.
+**The interesting one is `device_screenshot`.** The semantic participant
+reached for it to verify at runtime — the right instinct, and the tool the
+first run's design had wrongly assumed did not exist. It returned a black
+screen because no live app was attached to that screen, so the participant
+recorded: *"I did not watch the label change from '0 items' to '1 items' at
+runtime."*
 
-That is corroboration, not detection: it confirmed a conclusion the source had
-already yielded. Whether that changes outcomes at a scale where source reading
-is expensive — many screens, unfamiliar code, tight budgets — this case cannot
-say.
+So the one runtime tool in the semantic surface was available, was used, and
+did not help **in this setup** — because nothing was running to screenshot.
+That is a fact about how this pilot was staged, not a property of the tool.
+A comparison that wants to test runtime verification must attach a live app
+first.
 
 ## What neither condition did
 
-**Neither observed the app actually running.** Both verified by compiling and
-both explicitly labelled the runtime behaviour as an inference. The semantic
-condition's extra evidence was a re-parse of source, not an execution.
+Neither observed the app running. Both compiled and both explicitly labelled
+the runtime behaviour as inference from Compose semantics. The only runtime
+observation in this experiment remains the evaluator's own check.
 
-So on the question the positioning cares about — *did the code actually
-work?* — both conditions stopped at "it compiles and the source looks right",
-which is precisely the shortcut the thesis claims to remove. The independent
-check, run by the evaluator afterwards, is the only thing here that observed
-runtime behaviour.
+## Isolation
 
-## Conditions
+Participants ran as separate processes with cwd set to their own app copy,
+which contained no git history and no evaluator material. Neither final report
+references the check, the reference fix, or the evidence directories.
 
-Both received the identical task, requirement, source access, build and
-execution capability, and a ~25 minute budget on the same model. The semantic
-condition additionally received a portal relay for its own app copy. No
-baseline capability was removed. Isolated source directories; the semantic
-relay used a distinct port (8277) and store (`~/.keliver-m4-semantic`) so the
-two could not interfere.
+**Still imperfect, and stated plainly:** the filesystem was not sandboxed, so
+reaching the main repository was technically possible. The semantic
+condition's MCP binary lives inside that repository, so its process
+necessarily touched a path there. Isolation is therefore "separate working
+copies plus post-hoc inspection of the reports", not enforcement.
 
-## Limitations — read these before citing the result
+## Limitations
 
-- **One case.** Nothing here generalises.
-- **The semantic condition used the relay's HTTP API, not `portal-mcp`
-  itself.** The MCP server wraps these same endpoints, but it was not
-  registered as a tool surface for the participant, so `get_catalog`,
-  `find_usages` and `apply_ops` were not exercised. The substitution is
-  recorded rather than glossed.
-- **Isolation was procedural, not enforced.** Participants ran with filesystem
-  access to the machine; they were scoped by instruction to their own
-  directory and both reported reading nothing outside it. That is a
-  self-report. The evaluator materials were not in their directories and
-  their copies carried no git history, but a determined participant could
-  have reached the main repository.
-- **The task named the requirement precisely.** Real defect-finding rarely
-  arrives with the requirement pre-stated, and stating it narrows the search
-  dramatically for both conditions.
-- **The defect was in a two-file app.** This is the regime least favourable to
-  a structured representation, and most favourable to reading the source.
+- One case, in a two-file app — the regime least favourable to a structured
+  representation and most favourable to reading the source.
+- The requirement was stated precisely. Real defect-finding rarely arrives
+  pre-specified, and stating it narrows the search for both conditions.
+- Runtime verification was available to the semantic condition but untestable
+  here because no app was attached.
+- Wall-clock differences of ~17s on a ~90s task are not a meaningful
+  performance signal.
+
+---
+
+# Run 1 — superseded, deviated from the assignment
+
+Recorded because the deviations matter. Run 1 gave the semantic condition the
+relay's **HTTP endpoints via curl instead of the MCP server**, and its
+isolation was instruction-only. Both violated the specified design, so its
+result — also "both detected, identical fixes, 49s vs 51s" — supports only an
+exploratory source-vs-source-plus-document exercise. It does **not** establish
+anything about the MCP toolset, which run 2 exercises properly.

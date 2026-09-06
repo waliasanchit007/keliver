@@ -1,0 +1,30 @@
+You are working on a small Kotlin Multiplatform mobile app in the current directory.
+
+BACKGROUND
+The app uses a framework called Keliver. A "screen" is a @Composable in
+src/jsMain/kotlin/screens/ taking a Bindings interface. A "presenter" in
+src/jsMain/kotlin/logic/ implements that interface and holds the state.
+
+To build:
+  export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+  export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$HOME/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit"
+  ./gradlew compileKotlinJs --console=plain
+Do NOT set KELIVER_USE_MAVEN_LOCAL.
+
+THE REQUIREMENT
+The Basket screen shows a summary label of how many items are in the basket.
+Tapping "Add item" adds one item. The summary label must always reflect the
+current count: with zero items it reads "0 items", and after one tap it must
+read "1 items".
+
+YOUR TASK
+1. Decide whether the app meets that requirement.
+2. If not, fix it minimally and idiomatically.
+
+FINAL REPORT, exactly these headings:
+VERDICT: yes or no
+DIAGNOSIS: what is wrong and where (file + line)
+FIX: the diff you made, or none
+VERIFICATION: what you did to verify. Separate what you OBSERVED RUNNING from what you INFERRED from reading code.
+CONFIDENCE: high/medium/low and why
+TOOLS: which tools you used and whether each helped

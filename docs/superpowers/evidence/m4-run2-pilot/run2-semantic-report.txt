@@ -1,0 +1,36 @@
+VERDICT: no
+
+DIAGNOSIS:
+The Basket screen never binds the summary label to the presenter's state.
+
+- `src/jsMain/kotlin/screens/home.kt:17` — the summary `StyledText` is `text = "0 items"`, a hardcoded string literal. The `HomeScreenBindings.summary` field (declared at `home.kt:28`) is never read by the screen, so the label is frozen at "0 items" regardless of how many times "Add item" is tapped.
+- The presenter side is actually correct: `src/jsMain/kotlin/logic/HomePresenter.kt:12,14-15` keeps `count` in `mutableStateOf`, exposes `summary = "$count items"`, and increments in `addItem()`. Reading `count` inside the `@Composable HomePresenter` body subscribes it to changes, so a new bindings object with an updated `summary` is produced on each tap. That value simply had no consumer.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ fun HomeScreen(b: HomeScreenBindings) {
+     )
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+```
+One-line change; the presenter was left untouched.
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs --console=plain` — BUILD SUCCESSFUL before and after the change (the `b.summary` reference type-checks against the `HomeScreenBindings` contract).
+- OBSERVED RUNNING: `keliver-portal` `get_document` for the `home` screen. Before the fix, node handle 3's `text` prop was `PropValue.Lit "0 items"`. After the fix it is `PropValue.Bind field="summary"`, and the Bindings contract still exposes `summary: String` + action `addItem`. So the label is now wired to presenter state in the parsed semantic model.
+- NOT OBSERVED: I could not exercise an actual tap. `device_screenshot` returned a black screen (no live app attached to this screen), so I did not watch the label change from "0 items" to "1 items" at runtime.
+- INFERRED from reading code: On tap, `count += 1` mutates the snapshot state; `HomePresenter` recomposes because its body reads `count`, yielding a fresh bindings instance with `summary == "1 items"`; `HomeScreen` receives the new (unstable) `b` and recomposes, so `StyledText` now renders "1 items". Zero-state renders "0 items" because `count` starts at 0. Note the label uses the literal plural form, so "1 items" is exactly what the requirement asks for.
+
+CONFIDENCE: high. The defect is unambiguous (literal where a bind belongs), the fix is the minimal idiomatic Keliver pattern (other dynamic props in this codebase use `b.<field>`), it compiles, and the semantic document confirms the binding. Slightly short of full certainty only because I could not watch the increment on a running device.
+
+TOOLS:
+- Read / Edit / Bash(find) — core inspection and the fix; helped.
+- Bash(`./gradlew compileKotlinJs`) — confirmed both baseline and post-fix compile; helped.
+- keliver-portal `get_document` / `list_screens` — confirmed the Lit→Bind change and the Bindings contract at the semantic level; helped (strong corroboration).
+- keliver-portal `device_screenshot` — attempted runtime verification; did not help (black screen, no attached app).
+- keliver-portal `get_catalog` / `get_guide` schemas were loaded but not needed.

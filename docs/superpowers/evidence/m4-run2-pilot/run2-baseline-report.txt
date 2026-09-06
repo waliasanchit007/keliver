@@ -1,0 +1,42 @@
+## VERDICT: no
+
+## DIAGNOSIS
+`src/jsMain/kotlin/screens/home.kt:17` — the summary `StyledText` is hardcoded:
+
+```kotlin
+StyledText(
+  text = "0 items",   // <-- never changes
+  fontSize = 14,
+)
+```
+
+The screen never reads `b.summary`, so the label is a constant string. It reads "0 items" at zero items *by coincidence* and stays "0 items" forever after taps.
+
+The presenter (`src/jsMain/kotlin/logic/HomePresenter.kt`) is actually correct: `count` is `mutableStateOf`, `addItem()` increments it, and `summary` (`"$count items"`) is re-evaluated on each recomposition because the anonymous object is rebuilt every time `HomePresenter` recomposes (it is not `remember`ed, and the `summary` initializer reads `count`, so the state read is tracked). It already produces "0 items" / "1 items".
+
+## FIX
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ fun HomeScreen(b: HomeScreenBindings) {
+     )
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+     Button(
+```
+
+## VERIFICATION
+- **OBSERVED RUNNING:** `./gradlew compileKotlinJs --console=plain` (with the prescribed JAVA_HOME / JAVA_TOOL_OPTIONS) → `BUILD SUCCESSFUL`. The screen type-checks against the `HomeScreenBindings` interface after the change (`summary: String` exists on it).
+- **INFERRED FROM READING CODE:** Runtime behavior. I did not launch the app / Keliver portal, so I did not visually watch the label change. By Compose snapshot semantics: `addItem()` writes `count` → invalidates `HomePresenter`'s recompose scope (it read `count` via the `summary` initializer) → `HomePresenter` re-runs, `remember` preserves `count=1`, a new bindings object with `summary = "1 items"` is returned → `HomeScreen` recomposes and now renders `b.summary`. Initial render: `count=0` → "0 items".
+
+## CONFIDENCE: high
+The defect is unambiguous (a literal where a binding read belongs), the fix is the obvious one-line wiring, it compiles, and the presenter already yields exactly the required strings. Slightly short of "certain" only because I verified recomposition by reasoning about Compose semantics rather than watching the running UI. Note (not fixed, minimal-change): the presenter's `override val summary = "$count items"` works only because the object isn't `remember`ed; `get() = "$count items"` would be more robust, but it is not currently broken.
+
+## TOOLS
+- **Bash** (`find`, `ls`, `gradlew`): helped — located the two source files and confirmed the build passes.
+- **Read**: helped — exposed the hardcoded string and confirmed the presenter's state handling.
+- **Edit**: helped — applied the one-line fix.
+- ToolSearch / MCP servers (Figma, Atlassian, etc.): not used — irrelevant to this task.
