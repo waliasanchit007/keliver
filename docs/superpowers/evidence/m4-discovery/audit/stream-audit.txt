@@ -1,0 +1,29 @@
+=== a-r1  12 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-a/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== a-r2  19 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-a/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== a-r3  14 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-a/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== b-r1  14 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-b/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== b-r2  14 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-b/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== b-r3  12 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-b/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== c-r1  11 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-c/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== c-r2  12 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-c/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+=== c-r3  14 tool calls, 1 edit(s), 1 successful edit(s) to screens/cart.kt
+      Edit   ok  ...scovery/ws-c/src/jsMain/kotlin/screens/cart.kt
+      VERDICT: REPLAYABLE
+
+REPLAYABLE=9  CAVEAT=0  NOT-ESTABLISHED=0

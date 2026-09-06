@@ -1,0 +1,9 @@
+aa68015a1485dcd6ef739b87b01d174adc6d82c2  a-r3-CartPresenter.kt
+2d304064437a7cb95d2103c42ead020ba84cb6aa  a-r3-Main.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  a-r3-cart.kt
+aa68015a1485dcd6ef739b87b01d174adc6d82c2  b-r3-CartPresenter.kt
+2d304064437a7cb95d2103c42ead020ba84cb6aa  b-r3-Main.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  b-r3-cart.kt
+aa68015a1485dcd6ef739b87b01d174adc6d82c2  c-r3-CartPresenter.kt
+2d304064437a7cb95d2103c42ead020ba84cb6aa  c-r3-Main.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  c-r3-cart.kt

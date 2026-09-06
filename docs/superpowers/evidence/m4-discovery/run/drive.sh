@@ -20,6 +20,15 @@ EXTRA=(); [ "$ARM" = c ] && EXTRA=(--listed)
 ( sleep 2700; kill -9 $RP 2>/dev/null ) & W=$!
 wait $RP; rc=$?; kill $W 2>/dev/null
 grep -E "listing:|resolved model|exit " "$D/reports/run-$ARM-r$REP.log"
+# Retain this participant's complete relevant output BEFORE anything restores
+# the workspace. Without this the next replicate's readiness overwrites the
+# screen and the final state has to be reconstructed from the stream.
+OUT="$D/outputs/$ARM-r$REP"
+mkdir -p "$OUT"
+( cd "$D/ws-$ARM" && find src -type f -print0 | sort -z | xargs -0 shasum ) > "$OUT/SHA1SUMS.txt"
+( cd "$D/ws-$ARM" && tar cf - src ) | ( cd "$OUT" && tar xf - )
+echo "  retained $(wc -l < "$OUT/SHA1SUMS.txt" | tr -d ' ') source files with hashes -> $OUT"
+
 for f in report toolcalls config stream err; do
   ext=txt; [ "$f" = config ] && ext=json; [ "$f" = stream ] && ext=jsonl
   [ -e "$D/reports/$ARM-$f.$ext" ] && mv "$D/reports/$ARM-$f.$ext" "$D/reports/$ARM-r$REP-$f.$ext"

@@ -1,0 +1,12 @@
+SCORE a-r1:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE a-r2:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE a-r3:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE b-r1:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE b-r2:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE b-r3:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE c-r1:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE c-r2:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE c-r3:                PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE a-r3 RETAINED:       PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE b-r3 RETAINED:       PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
+SCORE c-r3 RETAINED:       PASS — Total line reads subtotal + shipping after tapping Add item   exit=0
