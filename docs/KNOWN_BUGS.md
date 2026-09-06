@@ -878,6 +878,39 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U16. `get_document` silently returns an empty document for a qualified screen id
+
+**What.** `list_screens` returns bare names (`["home"]`), and
+`get_document` expects that bare form. The relay's own boot log prints
+the qualified form (`selected 'default/home'`), and passing that back
+to `get_document` does **not** error — it returns a *different*,
+empty document under the double-prefixed name `default/default_home`:
+
+```json
+{"screen":"default/default_home","root":{"type":"Column"},"contract":{},"version":0}
+```
+
+Called correctly (`{"screen":"home"}`) it returns the real tree, which
+is exactly the signal the semantic channel exists to provide — e.g.
+`text: PropValue.Bind(field=summary)` after the M4 fix versus
+`PropValue.Lit("0 items")` with the defect present.
+
+**Why it matters.** An agent that copies the id out of the relay log,
+or that qualifies the name by analogy with `apply_ops`, gets a
+plausible-looking empty `Column` and concludes the screen is empty.
+That is a wrong answer presented as a successful call — the worst
+shape for a tool an agent is meant to trust. Observed while verifying
+the semantic condition of the M4 pilot
+(`docs/superpowers/evidence/m4-pilot-trial/`).
+
+**Fix.** Normalise the id (strip a leading `<project>/` that matches
+the resolved project) or reject an unknown screen with an error naming
+the valid ids. Do not return an empty document for a name that does
+not exist. Regression: assert `get_document{"screen":"default/home"}`
+and `get_document{"screen":"home"}` return the same tree, and that an
+unknown screen errors.
+
+
 ### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
 
 **What.** A May-2026 test-completeness audit found that `./gradlew
