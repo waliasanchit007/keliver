@@ -1,0 +1,32 @@
+VERDICT: no (before my fix); yes (after)
+
+DIAGNOSIS:
+`src/jsMain/kotlin/screens/home.kt:17` — the summary label's text was hard-coded as the string literal `"0 items"`. The screen never read `b.summary`, so the label was frozen at "0 items" no matter how many times "Add item" was tapped.
+
+The rest of the wiring was already correct: `HomeScreenBindings.summary` exists (`home.kt:28`), and `HomePresenter` (`src/jsMain/kotlin/logic/HomePresenter.kt`) holds `count` in `mutableStateOf` and exposes `summary = "$count items"`. Because `HomePresenter()` is a non-Unit (non-restartable) composable, a change to `count` re-runs it and rebuilds the bindings object with a fresh `summary`, so once the screen actually reads `b.summary` the label tracks the count.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ fun HomeScreen(b: HomeScreenBindings) {
+     )
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` → BUILD SUCCESSFUL. Started `serveDevelopmentZipline`; `curl` of `manifest.zipline.json` returned 200. Force-stopped and restarted `dev.keliver.portaldevice` host on emulator-5554. `uiautomator` dump showed `text="0 items"` on launch (0 items). Tapped "Add item" (coords 136,231 from the dump bounds `[63,205][210,258]`) → dump showed `text="1 items"`. Tapped twice more → dump showed `text="3 items"`. Label tracks the count in all observed states.
+- INFERRED FROM READING CODE: that `HomePresenter`'s `val summary = "$count items"` refreshes on each tap — it works because the returning composable is non-restartable and re-executes when `count` changes; the emulator behavior is consistent with this.
+
+CONFIDENCE: high. The bug is a one-line literal, the fix is the obvious idiomatic binding read, and I saw the corrected label increment 0 → 1 → 3 on the actual emulator.
+
+TOOLS:
+- Bash (find, cat) — helped: read the three source files.
+- Edit — helped: applied the one-line fix.
+- Bash (gradlew compileKotlinJs / serveDevelopmentZipline, curl) — helped: confirmed the build and served the new bundle.
+- Bash (adb: am force-stop/start, uiautomator dump, grep, input tap) — helped: confirmed 0→1→3 behavior live on the emulator.
+- ToolSearch/MCP/Agent tools — not used; not relevant.

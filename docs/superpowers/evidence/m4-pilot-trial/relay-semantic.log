@@ -1,0 +1,17 @@
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/Users/sanchit.walia/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit
+portal-server: repo=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic (via PORTAL_REPO env)
+portal-server: generated Ed25519 signing keypair in /Users/sanchit.walia/.keliver-trial-semantic/keys
+ingest: default/home -> v1 (file edit)
+portal-server: boot scan ingested 1 screen(s) from /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic/src/jsMain/kotlin/screens
+portal-server: active screen 'default/main' not found; selected 'default/home'
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+portal-server: watching /Users/sanchit.walia/.keliver-trial-semantic/kotlin (edits in ANY editor go live)
+portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic/src/jsMain/kotlin/screens (edits in ANY editor go live)
+portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic/src/jsMain/kotlin/components (edits in ANY editor go live)
+portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic/src/jsMain/kotlin/flows (edits in ANY editor go live)
+portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic/src/jsMain/kotlin/logic (edits in ANY editor go live)
+portal-server: :8577 — store=/Users/sanchit.walia/.keliver-trial-semantic repo=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic  active=(default, home)
+portal-server: endpoints /projects /screens /draft /active /tree /publickey /publish /bundles
+ingest: default/home -> v2 (file edit)
