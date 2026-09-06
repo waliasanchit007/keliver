@@ -110,23 +110,37 @@ fresh scaffold, PORTAL_REPO set   -> ok, 14156 chars, "# Keliver Portal — Usag
 bundled portal-mcp-0.3.3.jar      -> dev/keliver/portal/mcp/PORTAL_USAGE.md present
 ```
 
-## Damage I caused, and repaired
+## Damage I caused — partially repaired
 
 My first reproduction set `HOME` to a disposable directory and assumed that
 redirected the store. **It does not**: `storeDir()` expands `~/` through the
 JVM's `user.home` system property, which macOS derives from the passwd entry,
-not from `$HOME`. That run therefore wrote into the developer's real
-`~/.keliver-portal`: it created `default/profile.json` and overwrote `active`.
+not from `$HOME`. That run wrote into the developer's real
+`~/.keliver-portal`.
 
-Repaired: the created `default/` was removed and the overwritten `active` was
-deleted so the relay reselects on next boot. The signing keys (dated Sep 5) were
-never touched. **The prior content of `active` is unrecoverable** — it is not
-in version control and no backup exists; what my run left is kept as
-[`real-store-damage-active.txt`](real-store-damage-active.txt). Every later run
-in this block used `-Duser.home=<disposable>` and verified the real store's
-checksum was unchanged afterwards.
+**Partially repaired**, and the parts differ:
 
-This is also why the regression script sets the system property, not just `HOME`.
+| what | state |
+|---|---|
+| **Signing keys** (`keys/ed25519.priv`, `.pub`, dated Sep 5) | **never touched** — not read, not written, not inspected |
+| **Bundles** (`bundles/`) | **never touched** — the directory was and is empty |
+| **Documents** | none existed before; my run created `default/profile.json`, which I **deleted**. No pre-existing document was altered |
+| **Active selection** (`active`) | **overwritten, and NOT recovered.** My run replaced its contents; I deleted the file so the relay reselects on next boot. Its prior content is unrecoverable — not in version control, no backup |
+
+So: keys, bundles and documents are intact; the **active screen selection is
+lost**. The practical effect is that the next relay start against that store
+picks a screen rather than restoring the previously selected one.
+
+What my run left in `active` is kept as
+[`real-store-damage-active.txt`](real-store-damage-active.txt). No further
+cleanup or guessed restoration has been attempted, and none should be.
+
+Every later run used `-Duser.home=<disposable>` and verified the real store's
+checksum afterwards. That is now enforced rather than remembered:
+`scripts/keliver-test-isolation-guard.sh` refuses to launch a test relay unless
+the JVM's effective `user.home` **and** the resolved store are inside the
+disposable root, and it explicitly rejects any path under the real
+`~/.keliver-portal`.
 
 ## Files
 

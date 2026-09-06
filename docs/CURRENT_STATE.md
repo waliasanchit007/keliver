@@ -882,3 +882,78 @@ failure or a predicted semantic win.
 
 Unchanged: **M0** and **M1** complete, **M2** unblocked with still no external
 adopter, **M3** not started, **M4** still without a set that decides anything.
+
+## Post-snapshot: store contract, concurrency and upgrade path — 2026-09-07
+
+Relocating the document store to a per-app directory (U17) fixed isolation and
+broke four things that had quietly depended on the old location. Commit
+`546164fc2`; evidence in `superpowers/evidence/adopter-store-and-guide/`.
+
+### One contract, and it is checked
+
+`portal-published-guest` signed with `~/.keliver-portal/keys`, both device
+hosts embedded the public key from there, and `keliver-record-http.sh`
+resolved the old default — while the relay generated the keys somewhere else.
+Reproduced with disposable state: the relay minted an identity in the per-app
+store and the publisher then emitted an **unsigned** bundle.
+
+`scripts/keliver-store-path.sh` is now the single resolver (`PORTAL_STORE` →
+`keliver.portal.json` `store` → the pointer the relay writes to
+`.gradle/keliver-store-path` → `~/.keliver-portal/apps/<slug>-<hash>`), used by
+the root build for all three Gradle modules and by the recording client.
+`StoreContractTest` asserts the shell mirror agrees with
+`PortalConfig.storeDir()`.
+
+**Signing is verified, not asserted.** The same scenario now produces a bundle
+signed `portal-ed25519` that verifies against the store's public key through
+Zipline's own `ManifestVerifier` with signature checks on; a tampered manifest
+is rejected, so the check is not vacuous. An unsigned bundle fails the test.
+
+### Startup is safe under a race
+
+`claimStoreFor` was `exists()` then `writeText()` — a 16-thread test showed
+**16 of 16** simultaneous claimants winning an unowned store. `CREATE_NEW`
+makes acquisition atomic. At process level exactly one relay survives, the
+loser refuses with the conflict error and changes neither the owner marker nor
+any source file, and the legitimate owner still restarts.
+
+### Upgrade is announced, never guessed
+
+The relay reports what a legacy `~/.keliver-portal` still holds — signing
+identity, bundles, documents — and points at
+`scripts/keliver-adopt-legacy-store.sh`, which copies per file into one
+**named** app. Nothing is moved, deleted, overwritten without `--force`, or
+attributed to a repo on its own, because a shared global store cannot be
+attributed. 14 checks against disposable fixtures.
+
+### Test isolation is enforced before startup
+
+`scripts/keliver-test-isolation-guard.sh` refuses to launch a test relay unless
+the JVM's effective `user.home` **and** the resolved store are inside the
+disposable root, and rejects anything under the real `~/.keliver-portal`.
+Setting `HOME` is not enough — the JVM takes `user.home` from the passwd entry
+— and that is exactly how the real store was written to earlier.
+
+The earlier incident is restated as **partially repaired**: signing keys and
+bundles were never touched, the one document my run created was deleted, and
+the **active screen selection was overwritten and is not recoverable**. No
+further restoration has been attempted.
+
+### Verified, and not
+
+Executed: relay unit suite (34), MCP unit suite (12), `apiCheck`, legacy
+compatibility 14/14, store integration 9/9, two-app contamination 9/9,
+signed-bundle verification 2/2, and the bundled scripts exercised from a fresh
+`0.3.3-local` package outside the repository.
+
+Established only by inspection: nothing in this block's behaviour claims —
+each was executed. **Platform coverage is macOS only.** The
+`user.home`-versus-`HOME` divergence is macOS-specific in its details; Linux
+and CI behaviour of the resolver, the guard and atomic acquisition is inferred
+from the code and has not been run.
+
+### Milestones
+
+Unchanged: **M0**, **M1** complete; **M2** unblocked with no external adopter;
+**M3** not started; **M4** still without a set that decides anything. No M4
+runs were performed in this block.

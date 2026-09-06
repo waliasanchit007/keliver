@@ -919,14 +919,47 @@ inside the app's source tree; persists across restarts; an explicit store (or
 `PORTAL_STORE`, which used to be **silently ignored**) is honoured but records
 its owner and refuses a second repo with an actionable error.
 
-Regression: `scripts`-adjacent two-app script (2 failures before, 9 passes
-after) plus `PortalStoreOwnershipTest` (5 cases).
+Regression: two-app script (2 failures before, 9 passes after) plus
+`PortalStoreOwnershipTest` (5 cases).
 
-**Remaining limitation.** Existing top-level content in a developer's
-`~/.keliver-portal` (documents written before this change) is left where it is
-and is no longer read, because the store a repo now uses is
-`~/.keliver-portal/apps/…`. Nothing is deleted; a developer who wants the old
-documents can point `store` at the legacy path for the one repo that owns them.
+**Follow-ups completed in `546164fc2`:**
+
+* **Consumers unified.** Relocating the store left four behind:
+  `portal-published-guest` signed with `~/.keliver-portal/keys`, both device
+  hosts embedded the public key from there, and `keliver-record-http.sh`
+  resolved the old default. Reproduced with disposable state — the relay minted
+  an identity in the per-app store and the publisher produced an **unsigned
+  bundle**. All four now use `scripts/keliver-store-path.sh`;
+  `StoreContractTest` asserts that script agrees with `PortalConfig.storeDir()`.
+  Verified by publishing a bundle signed `portal-ed25519` and checking it with
+  Zipline's own `ManifestVerifier` against the store's public key, checks ON,
+  plus a tamper case that must fail.
+* **Ownership acquisition made atomic.** `claimStoreFor` was `exists()` then
+  `writeText()`; a 16-thread test showed **16 of 16** simultaneous claimants
+  winning an unowned store. Now `CREATE_NEW`. `StoreClaimRaceTest` (3 cases)
+  and a process-level check: exactly one relay survives, the loser alters
+  neither marker nor sources, and the owner still restarts.
+* **Upgrade path.** The relay reports what a legacy `~/.keliver-portal` still
+  holds and points at `scripts/keliver-adopt-legacy-store.sh`, which copies per
+  file into one **named** app — never moving, deleting, overwriting without
+  `--force`, or guessing which repo owns an ambiguous global store.
+  `keliver-legacy-compat-check.sh`, 14 cases on disposable fixtures.
+* **Test isolation enforced.** `scripts/keliver-test-isolation-guard.sh`
+  refuses to start a test relay unless the JVM's effective `user.home` and the
+  resolved store are both inside the disposable root. Setting `HOME` is not
+  enough — that is how the real store was written to.
+
+**Remaining limitations.**
+
+* Pre-relocation content in a developer's `~/.keliver-portal` top level is left
+  where it is and is no longer read. Nothing is deleted; the adopt route or an
+  explicit `store` brings it back for the one app that owns it.
+* The `.gradle/keliver-store-path` pointer lives in the app's `.gradle`
+  directory. `keliver-init` does not scaffold a `.gitignore`, so an adopter who
+  has not ignored `.gradle` will see it alongside Gradle's own files there.
+* Verified on macOS only. The `user.home`-versus-`HOME` divergence that caused
+  the incident is macOS-specific in its details; Linux and CI behaviour is
+  **inferred from the code**, not executed.
 
 ### U18. `get_guide` returned "guide not found" for every adopter — FIXED
 
