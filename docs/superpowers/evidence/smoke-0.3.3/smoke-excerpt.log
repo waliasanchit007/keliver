@@ -1,0 +1,60 @@
+[1;35m==> keliver consumer smoke — 0.3.3[0m
+    log:     /tmp/smoke-033/smoke.log
+    workdir: /tmp/smoke-033
+[1;35m==> prerequisites[0m
+    scaffolder: /Users/sanchit.walia/NonWork/Keliver/scripts/keliver-init
+    JAVA_HOME:  /Users/sanchit.walia/.local/Homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home
+[1;35m==> artifact availability (preliminary signal)[0m
+    keliver-host                 200
+    keliver-guest                200
+    keliver-material-compose     200
+    keliver-layout-compose       200
+    portal-sql                   200
+[1;35m==> scaffold (KELIVER_USE_MAVEN_LOCAL stripped, version pinned)[0m
+==> scaffolding Smoke into smoke (keliver 0.3.3)
+==> created smoke/
+    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver 0.3.3) · keliver.portal.json
+next:
+  cd smoke && ./gradlew compileKotlinJs     # type-check your screens
+  keliver-portal .                         # visual editor (from keliver-portal-tools)
+[1;35m==> verify generated repository configuration[0m
+    no mavenLocal() in the generated project
+    dependencies pinned to 0.3.3
+[1;35m==> resolve and compile from Central (fresh GRADLE_USER_HOME)[0m
+    GRADLE_USER_HOME: /tmp/smoke-033/gradle-home
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/Users/sanchit.walia/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit
+Downloading https://services.gradle.org/distributions/gradle-9.0.0-bin.zip
+............10%.............20%.............30%.............40%.............50%............60%.............70%.............80%.............90%.............100%
+Welcome to Gradle 9.0.0!
+Here are the highlights of this release:
+ - Configuration Cache is the recommended execution mode
+ - Gradle requires JVM 17 or higher to run
+ - Build scripts use Kotlin 2.2 and Groovy 4.0
+ - Improved Kotlin DSL script compilation avoidance
+For more details see https://docs.gradle.org/9.0.0/release-notes.html
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :generateResourceAccessorsForCommonMain SKIPPED
+> Task :convertXmlValueResourcesForJsMain NO-SOURCE
+> Task :copyNonXmlValueResourcesForJsMain NO-SOURCE
+> Task :prepareComposeResourcesTaskForJsMain NO-SOURCE
+> Task :generateResourceAccessorsForJsMain SKIPPED
+> Task :generateActualResourceCollectorsForJsMain SKIPPED
+> Task :generateComposeResClass SKIPPED
+> Task :generateExpectResourceCollectorsForCommonMain SKIPPED
+> Task :compileKotlinJs
+BUILD SUCCESSFUL in 54s
+1 actionable task: 1 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.0.0/userguide/configuration_cache_enabling.html
+[1;35m==> verify compilation output[0m
+    KLIB manifest + 9 IR files
+    manifest resolves the expected dependency graph
+    dev.keliver modules downloaded into the fresh cache: 30
+version:   0.3.3
+started:   2026-09-06T03:54:43Z
+finished:  2026-09-06T03:55:39Z
+scaffolder:/Users/sanchit.walia/NonWork/Keliver/scripts/keliver-init
