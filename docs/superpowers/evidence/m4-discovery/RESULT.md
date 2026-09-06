@@ -14,13 +14,19 @@ the tools were listed in front of them.**
 | **B** deferred, availability only | deferred | availability only | **0/3** | 0/3 | correct 3/3 |
 | **C** listed, availability only | **listed** | identical to B | **0/3** | n/a | correct 3/3 |
 
-All nine exited 0. All nine produced a **byte-identical** final screen, equal to
-the reference fix (`shasum 7e297d99…`), so one scoring run covers all nine:
+All nine exited 0 and produced the expected screen fix. **Each of the nine was
+executed by the scorer individually** — twelve executions in all, including the
+three retained artifacts scored from their own copies — and every one passed;
+the unfixed control fails the same check:
 
 ```
-SCORE all-nine-runs (byte-identical): PASS
-SCORE control-defective:              FAIL — Expected <[…, Total, $17.00]>, actual <[…, $12.00]>
+a-r1..3 PASS   b-r1..3 PASS   c-r1..3 PASS   (+ 3 retained copies PASS)
+control-defective FAIL — Expected <[…, Total, $17.00]>, actual <[…, $12.00]>
 ```
+
+Provenance of each output — retained, reconstructed, or unestablished — is in
+[`AUDIT.md`](AUDIT.md): 3 retained, 6 reconstructed with the replay validated
+against ground truth, 0 unestablished.
 
 Per-run detail in [`run/summary.txt`](run/summary.txt); wall clock 88–149 s,
 11–19 tool calls.
@@ -44,28 +50,42 @@ still not used. ([`manipulation-check/`](manipulation-check/))
 effect** — `ToolSearch` still preceded the call. Recorded because the obvious
 knob is the wrong one.
 
-## What this answers, and what it does not
+## What is supported, and what is not
 
-Case 2 could not distinguish **not discovered** from **considered and
-declined**. Arm C settles it for this case: the tools were visible and were
-declined. All nine reports say so explicitly and consistently with their
-traces — e.g. *"keliver-portal MCP tools: not used; the fix was a plain source
-edit and didn't need them."*
+**This is three arms with three repetitions each — nine runs on ONE fixture,
+not nine independent defect cases.** The arms and their repetitions are kept
+distinct throughout; nothing here is a sample of nine defects.
 
-What it does **not** show:
+**Supported.** On this one fixture, all nine participants produced the expected
+screen fix, and none invoked a portal tool — including the three runs where the
+tools were listed upfront rather than behind deferred discovery.
 
-* not that the tools are useless — the separately labelled exercise in
-  [`../m4-case2/DIAGNOSTIC.md`](../m4-case2/DIAGNOSTIC.md) reached the same
-  diagnosis through them
-* not anything about baseline vs semantic — that stays as
-  [`../m4-case2/RESULT.md`](../m4-case2/RESULT.md) reports it
-* not that listing never matters — one fixture, one model, one defect shape
-* the how-to-discover sentence made no difference either (A vs B), but with
-  0/3 in both arms there is no contrast to interpret
+**Not supported, and previously overstated here.** An earlier version of this
+document said arm C "settles" why the earlier deferred participants did not use
+the tools, in favour of *considered and declined*. **It does not.** The listed
+participants' explanations are self-reports; they are consistent with their
+traces, but a trace can only show that no tool was called, never why. They are
+evidence about *these three participants*, and they cannot establish the
+decision process of the case-2 participant or of arms A and B, who were
+differently situated. The distinction case 2 opened — *not discovered* versus
+*considered and declined* — remains **unresolved** for the deferred runs.
 
-The uniformity is itself the finding: on a defect visible in three files of
-source, a capable agent that has read those files does not reach for a
-semantic query, whether it has to search for it or is looking straight at it.
+What the study does add is narrower and still worth having: with the tools
+plainly in view, three participants still did not call them. Visibility alone
+did not produce use here.
+
+Also not shown:
+
+* **not** that the tools are useless. The separately labelled forced-use
+  exercise ([`../m4-case2/DIAGNOSTIC.md`](../m4-case2/DIAGNOSTIC.md))
+  demonstrates that the queries **expose useful binding information** —
+  `get_document` gives field identity, `find_usages` shows `total` bound by
+  nothing. It does **not** establish that using the tools improves outcomes.
+* **not** anything about baseline vs semantic — that stays as
+  [`../m4-case2/RESULT.md`](../m4-case2/RESULT.md) reports it.
+* **not** that listing never matters — one fixture, one model, one defect shape.
+* A vs B (the how-to-discover sentence) shows 0/3 in both arms. With no
+  variation in either, there is no contrast to interpret.
 
 ## Every knob, recorded
 

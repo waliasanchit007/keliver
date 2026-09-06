@@ -17,9 +17,13 @@ was told the portal tools existed and how to find them, and **never looked** —
 no tool-search call, no MCP call.
 
 A third, separately labelled participant *required* to diagnose through the
-tools did so successfully before reading any screen source. That answers
-whether the channel *can* diagnose this defect. It is not evidence about the
-comparison and is not merged with it.
+tools did so successfully before reading any screen source, showing the queries
+expose useful binding information. It is not evidence about the comparison, is
+not merged with it, and does not show that using the tools improves outcomes.
+
+A follow-on study ([`../m4-discovery/`](../m4-discovery/)) put the tools in the
+listed tool set for three further runs; they were still not used. That does not
+establish why *this* participant did not use them.
 
 ## Scale of the case
 
