@@ -101,6 +101,29 @@ cat > "$DIR/keliver.portal.json" <<EOF
 }
 EOF
 
+# A scaffolded app is usually committed straight away, so ship the ignore file
+# with it. Without one the first portal run and the first build leave `.gradle/`
+# and `build/` as untracked noise in the adopter's very first `git status` —
+# and `.gradle/` now also holds keliver-store-path, the pointer the relay writes
+# to tell the publisher and the device hosts where this app's document store is.
+# That pointer is build state, not source: it is machine-specific and must not
+# be committed.
+cat > "$DIR/.gitignore" <<'EOF'
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Keliver: the relay records this app's resolved document store here. Machine
+# specific — do not commit.
+.gradle/keliver-store-path
+
+# Editors / OS
+.DS_Store
+*.iml
+.idea/
+EOF
+
 cat > "$DIR/src/jsMain/kotlin/screens/home.kt" <<EOF
 package ${PKG}.screens
 
@@ -197,7 +220,7 @@ if [ -n "$WRAPPER" ]; then
 fi
 
 echo "==> created $DIR/"
-echo "    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver $KELIVER_VERSION) · keliver.portal.json"
+echo "    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver $KELIVER_VERSION) · keliver.portal.json · .gitignore"
 echo ""
 echo "next:"
 echo "  cd $DIR && ./gradlew compileKotlinJs     # type-check your screens"

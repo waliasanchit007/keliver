@@ -142,6 +142,35 @@ the JVM's effective `user.home` **and** the resolved store are inside the
 disposable root, and it explicitly rejects any path under the real
 `~/.keliver-portal`.
 
+## Follow-up: the adopter's git working tree
+
+The store pointer the relay writes (`.gradle/keliver-store-path`) closed the
+key-location mismatch, but `keliver-init` shipped no `.gitignore`, so a
+scaffolded app's very first `git status` after using the portal showed
+untracked noise:
+
+```
+BEFORE   ?? .gradle/          (after an ordinary portal run)
+         ?? build/            (after a build)
+```
+
+`keliver-init` now scaffolds a `.gitignore` covering `.gradle/`, `build/`,
+`local.properties` and editor/OS files, with the store pointer called out by
+name as machine-specific build state.
+
+`keliver-adopter-tree-check.sh` tests the **property**, not the individual
+files: scaffold, `git init`, commit, use the portal the ordinary way, build —
+`git status` must be empty. This is the third time this project has left files
+in someone else's repository (`main.kt` from a parameterless `/doc`, `feed.kt`
+from the shared store, now the pointer), so the check is written to catch the
+next mechanism rather than these three.
+
+| | before | after |
+|---|---|---|
+| scaffolder without `.gitignore` | 3 passed, **5 failed** | — |
+| current scaffolder | — | **8 passed, 0 failed** |
+| bundled scaffolder + relay (`0.3.3-local`) | — | **8 passed, 0 failed** |
+
 ## Files
 
 [`repro-contamination.sh`](repro-contamination.sh) — the two-app regression;
