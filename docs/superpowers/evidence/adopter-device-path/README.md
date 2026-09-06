@@ -89,3 +89,31 @@ host routes all guest HTTP through the relay's `/http-replay`.
 
 Note for fixture authors: `KeliverHttp.get()` sends **no headers** by default,
 so a fixture with `matchHeaders: ["accept"]` never matches. Use `[]`.
+
+## Implemented: `scripts/keliver-new-device-target.sh`
+
+The four manual additions above are now scaffolded. Run from an app root:
+
+```
+$ keliver-new-device-target.sh
+==> app package: kiosk   screen: HomeScreen   presenter: HomePresenter
+    settings.gradle: zipline 1.22.0 pinned
+    build.gradle: plugin applied, executable binary, guest deps
+    src/jsMain/kotlin/device/Main.kt
+```
+
+It infers the package, screen composable and presenter from the existing
+sources (`--screen` / `--presenter` override). It does **not** generate an
+Android application module — it wires the app to the already-published generic
+host. For a bespoke host, `sample/host-android` remains the route.
+
+**Verified end to end on a scaffolder-only app:** `keliver-init Kiosk`, then
+`keliver-new-device-target.sh`, then build + serve + launch, with no hand
+edits. On the emulator: `Kiosk`, the starter subtitle, `First item`,
+`Second item`, `Refresh` (`device-scaffolded-kiosk.png`).
+
+One bug found while testing it: the first version anchored the plugins-block
+edit on `id 'org.jetbrains.compose'\n}`, which silently stopped matching once
+`keliver-init` gained the serialization plugin — the build still compiled, and
+only `serveDevelopmentZipline` going missing revealed it. It now appends by the
+block's closing brace and fails loudly if the block cannot be found.
