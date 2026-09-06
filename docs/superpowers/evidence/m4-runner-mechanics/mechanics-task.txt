@@ -1,0 +1,8 @@
+Do exactly these three things and then stop. Do not explore the project.
+
+1. Run `echo mechanics-ok` with Bash.
+2. If a tool for reading the portal UI document is available to you, call it
+   once for the screen named `home`. If no such tool exists, skip this step.
+3. Reply with a single line: DONE
+
+Do not edit any file. Do not build anything.

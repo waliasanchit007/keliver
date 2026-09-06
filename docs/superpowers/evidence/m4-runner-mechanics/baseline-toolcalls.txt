@@ -1,0 +1,10 @@
+condition:      baseline
+total calls:    1
+unparsed lines: 0
+
+     1  Bash
+
+portal MCP calls: NONE
+
+Call order:
+    1. Bash
