@@ -48,3 +48,21 @@ success and consumer readiness as separate facts.
 
 Not wired into CI. The local script works; proposing CI integration should
 wait until there is a demonstrated need, and a release cadence to hang it on.
+
+## Defects found in review and fixed (2026-09-06)
+
+**Cache was not guaranteed fresh.** The script used `$OUT_DIR/gradle-home`
+with `mkdir -p`, which silently accepts existing contents. Re-running with the
+same `--out` after deleting only the scaffold could therefore reuse cached
+dependencies while still reporting cold resolution from Central. A reviewer
+pre-seeded a marker there and the script returned PASS with the marker intact.
+
+Now allocates a unique `mktemp -d` cache and refuses to proceed if it is
+non-empty. Re-verified with the same pre-seeded directory: the run passed,
+`GRADLE_USER_HOME` was a fresh temp dir, and the seeded directory still
+contains only `PRE_EXISTING_MARKER` — it was never used.
+
+**A missing option value looped forever.** `--out` with no argument left
+`shift 2` failing without changing `$#`, so the `while` loop spun. Both
+options now check `[ $# -ge 2 ]` and exit 2. Verified: prints
+`--out needs a value` and exits 2 immediately.

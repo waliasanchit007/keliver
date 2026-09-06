@@ -40,8 +40,10 @@ SCAFFOLDER=""
 OUT_DIR=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --scaffolder) SCAFFOLDER="${2:-}"; shift 2 ;;
-    --out)        OUT_DIR="${2:-}"; shift 2 ;;
+    --scaffolder) [ $# -ge 2 ] || { echo "--scaffolder needs a value" >&2; exit 2; }
+                  SCAFFOLDER="$2"; shift 2 ;;
+    --out)        [ $# -ge 2 ] || { echo "--out needs a value" >&2; exit 2; }
+                  OUT_DIR="$2"; shift 2 ;;
     -h|--help)    sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)            echo "unknown option: $1" >&2; exit 2 ;;
   esac
@@ -146,9 +148,13 @@ info "dependencies pinned to $VERSION"
 
 # ------------------------------------------------------ resolve + compile --
 say "resolve and compile from Central (fresh GRADLE_USER_HOME)"
-GUH="$OUT_DIR/gradle-home"
-mkdir -p "$GUH"
-info "GRADLE_USER_HOME: $GUH"
+# A UNIQUE cache, not $OUT_DIR/gradle-home. `mkdir -p` accepts an existing
+# directory, so re-running with the same --out could reuse previously
+# downloaded dependencies while the script still claimed cold resolution from
+# Central. mktemp -d cannot collide with a previous run.
+GUH="$(mktemp -d "${TMPDIR:-/tmp}/keliver-smoke-cache-XXXXXX")"
+[ -z "$(ls -A "$GUH" 2>/dev/null)" ] || finish 1 "FAIL: cache dir $GUH is not empty; refusing to claim cold resolution"
+info "GRADLE_USER_HOME: $GUH (fresh, empty)"
 cd "$APP"
 if ! env -u KELIVER_USE_MAVEN_LOCAL GRADLE_USER_HOME="$GUH" \
        ./gradlew compileKotlinJs --console=plain --no-daemon >>"$LOG" 2>&1; then
