@@ -66,3 +66,42 @@ contains only `PRE_EXISTING_MARKER` — it was never used.
 `shift 2` failing without changing `$#`, so the `while` loop spun. Both
 options now check `[ $# -ge 2 ]` and exit 2. Verified: prints
 `--out needs a value` and exits 2 immediately.
+
+## Regression suite (2026-09-06)
+
+`scripts/keliver-consumer-smoke-selftest.sh [version]` — **7/7 passing**
+(`selftest-results.log`). It pins every way the script previously could, or
+could still, report a false pass:
+
+| case | expected |
+|---|---|
+| missing `--out` value | exits 2, does not hang |
+| missing `--scaffolder` value | exits 2, does not hang |
+| unusable scaffolder (failed scaffolding step) | exits 1 |
+| version absent from Central (failed resolution) | exits 1 |
+| snapshot version | refused up front, exits 2 |
+| **pre-existing output/cache directory** | passes, and the seeded cache is provably untouched |
+| hostile `KELIVER_USE_MAVEN_LOCAL=1` | stripped; generated settings contain no `mavenLocal()` |
+
+The two hang cases are wall-clock guarded, so a regression reintroducing the
+infinite `shift` loop fails rather than stalling the suite.
+
+### One further correction the suite surfaced
+
+Making the cache unique initially broke the happy path: with a wholly fresh
+`GRADLE_USER_HOME` the wrapper must fetch the ~130 MB Gradle distribution, and
+it timed out at the wrapper's 10s limit —
+
+```
+Downloading https://services.gradle.org/distributions/gradle-9.0.0-bin.zip
+failed: timeout (10000ms)
+```
+
+Only the **dependency** cache needs to be cold; that is what proves resolution
+came from Central. The distribution does not. The script now symlinks
+`$GUH/wrapper` to `~/.gradle/wrapper` when one exists and asserts
+`caches/modules-2` is absent before resolving.
+
+Verified on a passing run: `dependency cache empty` at start, and 30
+`dev.keliver:*:0.3.3` modules present in that fresh cache afterwards — so the
+artifacts were fetched during the run, not inherited.

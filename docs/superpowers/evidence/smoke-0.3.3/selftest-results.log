@@ -1,0 +1,14 @@
+keliver-consumer-smoke self-test  (version under test: 0.3.3)
+workdir: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//smoke-selftest-uG0pWM
+  PASS  missing --out value exits, does not hang       (exit 2) 
+./scripts/keliver-consumer-smoke-selftest.sh: line 33: 97918 Terminated: 15          ( sleep 15; kill -9 $p 2> /dev/null )
+  PASS  missing --scaffolder value exits, does not hang (exit 2) 
+./scripts/keliver-consumer-smoke-selftest.sh: line 38: 97921 Terminated: 15          ( sleep 15; kill -9 $p 2> /dev/null )
+  PASS  unusable scaffolder fails                      (exit 1) 
+  PASS  version absent from Central fails              (exit 1) 
+  PASS  snapshot version refused                       (exit 2) 
+  PASS  pre-existing cache dir not reused; still passes (exit 0) (seeded cache untouched)
+  PASS  hostile env stripped from scaffold            
+
+passed: 7   failed: 0
+artifacts: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//smoke-selftest-uG0pWM

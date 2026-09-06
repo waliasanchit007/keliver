@@ -154,7 +154,18 @@ say "resolve and compile from Central (fresh GRADLE_USER_HOME)"
 # Central. mktemp -d cannot collide with a previous run.
 GUH="$(mktemp -d "${TMPDIR:-/tmp}/keliver-smoke-cache-XXXXXX")"
 [ -z "$(ls -A "$GUH" 2>/dev/null)" ] || finish 1 "FAIL: cache dir $GUH is not empty; refusing to claim cold resolution"
-info "GRADLE_USER_HOME: $GUH (fresh, empty)"
+
+# The DEPENDENCY cache must be cold — that is what proves resolution came from
+# Central. The Gradle DISTRIBUTION need not be: re-downloading ~130MB per run
+# just to prove that adds nothing and made the wrapper time out at its 10s
+# limit. Reuse the distribution if one is already on the machine; never reuse
+# module metadata or artifacts.
+if [ -d "$HOME/.gradle/wrapper" ]; then
+  ln -s "$HOME/.gradle/wrapper" "$GUH/wrapper"
+  info "reusing the Gradle distribution from ~/.gradle/wrapper (dependencies still cold)"
+fi
+[ -e "$GUH/caches/modules-2" ] && finish 1 "FAIL: dependency cache is not empty before resolution"
+info "GRADLE_USER_HOME: $GUH (dependency cache empty)"
 cd "$APP"
 if ! env -u KELIVER_USE_MAVEN_LOCAL GRADLE_USER_HOME="$GUH" \
        ./gradlew compileKotlinJs --console=plain --no-daemon >>"$LOG" 2>&1; then
