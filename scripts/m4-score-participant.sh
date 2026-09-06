@@ -10,13 +10,29 @@
 # same check scores every condition, so scoring is independent of what any
 # participant said about its own verification.
 #
-# Exit 0 = the requirement holds at runtime. Exit 1 = it does not.
+# THREE OUTCOMES, NEVER TWO. An earlier version treated any nonzero Gradle exit
+# as "requirement not met at runtime": given the known-correct reference fix
+# and an unusable Gradle distribution, it reported an application failure for
+# code it never executed. Infrastructure that could not run the check is not
+# evidence about the participant.
+#
+#   PASS  (exit 0) — the named test ran in this invocation and passed
+#   FAIL  (exit 1) — the named test ran in this invocation and its assertion failed
+#   ERROR (exit 4) — the check did not run; nothing is claimed about the participant
+#
+# Freshness is enforced, not assumed: the result file for this test is deleted
+# before the run, and a result that is absent afterwards is an ERROR rather
+# than being silently inherited from a previous invocation.
 #
 set -uo pipefail
 SRC="${1:-}"; LABEL="${2:-participant}"
 [ -f "$SRC" ] || { echo "usage: $0 <final-screen.kt> <label>" >&2; exit 2; }
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 FIX="$ROOT/portal-parity-fixtures/kotlin/dev/keliver/portal/render/fixture/M4CounterScreen.kt"
+CLASS="dev.keliver.portal.render.M4LabelUpdateCheck"
+TEST="summaryLabelReflectsStateAfterTransition"
+XML="$ROOT/portal-render/build/test-results/wasmJsBrowserTest/TEST-$CLASS.xml"
+
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/m4-score-XXXXXX")"
 BAK="$WORK/M4CounterScreen-orig.kt"
 cp "$FIX" "$BAK"
@@ -38,14 +54,54 @@ PY
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null)}"
 export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-$HOME/.android-certs/full-ca-bundle.pem}"
 LOG="$WORK/gradle.log"
+
+# Freshness: no stale result can be mistaken for this run's.
+rm -f "$XML"
+
+# --tests is not supported on the wasmJs Karma task, so the whole target runs
+# and the named test is selected out of the result XML afterwards.
 ( cd "$ROOT" && env -u KELIVER_USE_MAVEN_LOCAL ./gradlew :portal-render:wasmJsTest \
     --rerun-tasks --console=plain >"$LOG" 2>&1 )
-rc=$?
-if [ $rc -eq 0 ]; then
-  echo "SCORE $LABEL: PASS — summary label reflects state after addItem()"
-else
-  echo "SCORE $LABEL: FAIL — requirement not met at runtime"
-  grep -A3 "REQUIREMENT\|summaryLabelReflectsStateAfterTransition" "$LOG" | head -20
+GRADLE_RC=$?
+
+verdict() { # VERDICT, detail, exit
+  printf 'SCORE %-20s %s\n' "$LABEL:" "$1${2:+ — $2}"
+  echo "  test: $CLASS.$TEST"
+  echo "  log:  $LOG"
+  exit "$3"
+}
+
+if [ ! -f "$XML" ]; then
+  verdict "ERROR" "the check did not run (no fresh result for $CLASS; gradle exit $GRADLE_RC) — nothing is claimed about this participant$(
+    grep -m1 -iE 'could not (install|download)|no such file|compilation error|error:|FAILURE:' "$LOG" \
+      | sed 's/^/\n        first error: /')" 4
 fi
-echo "  log: $LOG"
-exit $rc
+
+OUT="$(python3 - "$XML" "$TEST" <<'PY'
+import sys, xml.etree.ElementTree as ET
+xml, test = sys.argv[1], sys.argv[2]
+try:
+    root = ET.parse(xml).getroot()
+except Exception as e:
+    print(f"ERROR|could not parse the result file: {e}"); raise SystemExit(0)
+cases = [c for c in root.iter('testcase') if c.get('name', '').startswith(test)]
+if not cases:
+    print(f"ERROR|{test} is absent from the fresh result file"); raise SystemExit(0)
+for c in cases:
+    err = c.find('error')
+    if err is not None:
+        print("ERROR|the test errored before asserting: " + (err.get('message') or '').strip()[:200]); raise SystemExit(0)
+for c in cases:
+    f = c.find('failure')
+    if f is not None:
+        print("FAIL|" + (f.get('message') or '').strip().splitlines()[0][:200]); raise SystemExit(0)
+print("PASS|summary label reflects state after addItem()")
+PY
+)"
+STATUS="${OUT%%|*}"; DETAIL="${OUT#*|}"
+case "$STATUS" in
+  PASS)  [ "$GRADLE_RC" != 0 ] && DETAIL="$DETAIL (note: other tests in the target failed; this one passed)"
+         verdict "PASS"  "$DETAIL" 0 ;;
+  FAIL)  verdict "FAIL"  "$DETAIL" 1 ;;
+  *)     verdict "ERROR" "$DETAIL — nothing is claimed about this participant" 4 ;;
+esac
