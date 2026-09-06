@@ -105,3 +105,54 @@ came from Central. The distribution does not. The script now symlinks
 Verified on a passing run: `dependency cache empty` at start, and 30
 `dev.keliver:*:0.3.3` modules present in that fresh cache afterwards — so the
 artifacts were fetched during the run, not inherited.
+
+## Self-test could not fail — fixed (2026-09-06)
+
+The suite printed 7/7 even when its invariants were violated. Two assertions
+were inert:
+
+- the pre-existing-cache check computed a note (`seeded cache untouched` vs
+  `SEEDED CACHE WAS USED`) and **never incremented the failure count**;
+- `grep -q "mavenLocal" … 2>/dev/null` on a **missing** evidence file returns
+  nonzero, and the `else` branch reported PASS — a missing file proved success.
+
+### Now
+
+- cache reuse, alteration or deletion each fail, checked by content hash **and**
+  by the directory containing nothing but the seed;
+- every evidence file (`generated-settings.gradle`, `result.txt`, `smoke.log`)
+  must exist and be readable, else fail — no grep error is treated as absence;
+- **failed scaffolding** and **failed compilation** are separate cases: the
+  first uses a scaffolder that exits nonzero, the second one that succeeds and
+  emits a project that cannot build;
+- `result.txt` must record a PASS and `smoke.log` must show the dependency
+  cache started empty.
+
+**11/11** — `selftest-results.log`.
+
+### The suite is itself validated (`--meta`)
+
+`keliver-consumer-smoke-selftest.sh --meta` runs the suite against four
+deliberately broken smoke implementations and asserts it rejects each, then
+asserts it still accepts the real one. **5/5** —
+`selftest-meta-broken-impls.log`:
+
+| broken implementation | must be rejected because |
+|---|---|
+| `always-pass` | exits 0 always, produces no evidence |
+| `eats-cache` | writes into and clobbers the seeded cache directory |
+| `leaks-mavenlocal` | emits a project containing `mavenLocal()` |
+| `never-fails` | exits 0 for bad args, snapshots and absent versions |
+
+These are kept in the script as regression coverage, not run once and deleted.
+
+### Real run, hostile parent environment
+
+`KELIVER_USE_MAVEN_LOCAL=1 scripts/keliver-consumer-smoke.sh 0.3.3` → **exit 0**
+
+- generated project: `mavenLocal` count **0**; repositories are
+  `gradlePluginPortal(); mavenCentral(); google()` and `mavenCentral(); google()`
+- `GRADLE_USER_HOME: …keliver-smoke-cache-lfXC6g (dependency cache empty)`,
+  Gradle *distribution* reused (allowed), dependencies cold
+- output: KLIB manifest + 9 IR files, 30 `dev.keliver` modules downloaded into
+  that fresh cache
