@@ -39,7 +39,11 @@ T="$(cd "$T" && pwd -P)"
 
 WS="$T/ws-$COND"
 PROFILE="$T/sandbox-$COND.sb"
-TASK="$T/evaluator/task.txt"
+# Per-condition prompt when one exists, so a documented capability difference
+# (e.g. telling the semantic condition that deferred tools exist) can be stated
+# without editing the shared task. Falls back to the shared file.
+TASK="$T/evaluator/task-$COND.txt"
+[ -f "$TASK" ] || TASK="$T/evaluator/task.txt"
 for f in "$WS" "$PROFILE" "$TASK"; do
   [ -e "$f" ] || { echo "missing: $f" >&2; exit 2; }
 done
@@ -80,6 +84,7 @@ echo "m4 participant: $COND"
 echo "  model:   $MODEL (pinned; identical for both conditions)"
 echo "  tools:   ${TOOLS[*]}"
 echo "  mcp:     $MCP_CONFIG"
+echo "  prompt:  $TASK"
 echo "  stream:  $STREAM"
 
 START=$(date +%s)

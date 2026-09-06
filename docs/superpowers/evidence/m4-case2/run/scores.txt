@@ -1,0 +1,12 @@
+SCORE control-defective:   FAIL — AssertionError: REQUIREMENT: after adding a $12.00 item the Total line must read $17.00 (subtotal + $5.00 shipping). Expected <[Cart, Subtotal, $12.00, Total, $17.00]>, actual <[Cart, Subtotal, $12.00
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-4Ha1Ob/gradle.log
+   exit=1
+SCORE baseline-final:      PASS — Total line reads subtotal + shipping after tapping Add item
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-5qbYHv/gradle.log
+   exit=0
+SCORE semantic-final:      PASS — Total line reads subtotal + shipping after tapping Add item
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-R9ztJv/gradle.log
+   exit=0

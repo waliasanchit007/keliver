@@ -1,0 +1,33 @@
+VERDICT: no (before fix); yes (after fix)
+
+DIAGNOSIS: `src/jsMain/kotlin/screens/cart.kt:29` — the `StyledText` that renders the value under the "Total" label was bound to `b.subtotal` instead of `b.total`. The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was correct: `subtotalCents = items * 1200`, `totalCents = if (items == 0) 0 else subtotalCents + 500`, and `money()` formats correctly. So the Total figure was computed right but never displayed — the screen showed the subtotal twice.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@
+     StyledText(
+       text = "Total",
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` succeeded. Rebuilt the Zipline bundle, served it (`manifest.zipline.json` → 200), force-stopped and restarted the Keliver host on emulator-5554. Read the screen via `uiautomator dump`:
+  - Empty cart: Subtotal `$0.00`, Total `$0.00`
+  - After 1 tap on "Add item": Subtotal `$12.00`, Total `$17.00`
+  - After 2 taps: Subtotal `$24.00`, Total `$29.00`
+  All three match the requirement exactly.
+- INFERRED FROM READING CODE: That the sole defect was the wrong binding on line 29 (the presenter arithmetic and `money()` formatting are correct by inspection). Also confirmed in the generated JS (`build/compileSync/.../shopcart.js`) that the two value lines now call `get_subtotal` and `get_total` respectively.
+
+CONFIDENCE: high — the bug is a single obvious mis-binding, the fix is minimal and idiomatic (mirrors the adjacent subtotal line), and all three required states were observed correct on the running emulator.
+
+TOOLS: 
+- Built-in Read/Edit/Bash/Grep — used for diagnosis, the one-line fix, build, and driving the emulator via adb; all helpful.
+- `keliver-portal` MCP tools — not used; the built-in file tools and adb workflow were sufficient.
