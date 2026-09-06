@@ -878,38 +878,44 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U16. `get_document` silently returns an empty document for a qualified screen id
+### U16. `get_document` silently returned an empty document for a qualified screen id — FIXED at the MCP layer
 
 **What.** `list_screens` returns bare names (`["home"]`), and
-`get_document` expects that bare form. The relay's own boot log prints
+`get_document` expected that bare form. The relay's own boot log prints
 the qualified form (`selected 'default/home'`), and passing that back
-to `get_document` does **not** error — it returns a *different*,
-empty document under the double-prefixed name `default/default_home`:
+did **not** error — it returned a *different*, empty document under the
+double-prefixed name `default/default_home`:
 
 ```json
 {"screen":"default/default_home","root":{"type":"Column"},"contract":{},"version":0}
 ```
 
-Called correctly (`{"screen":"home"}`) it returns the real tree, which
-is exactly the signal the semantic channel exists to provide — e.g.
-`text: PropValue.Bind(field=summary)` after the M4 fix versus
-`PropValue.Lit("0 items")` with the defect present.
-
-**Why it matters.** An agent that copies the id out of the relay log,
-or that qualifies the name by analogy with `apply_ops`, gets a
-plausible-looking empty `Column` and concludes the screen is empty.
-That is a wrong answer presented as a successful call — the worst
-shape for a tool an agent is meant to trust. Observed while verifying
-the semantic condition of the M4 pilot
+**Why it mattered.** An agent that copied the id out of the relay log,
+or qualified the name by analogy with `apply_ops`, got a
+plausible-looking empty `Column` and concluded the screen was empty.
+That is a wrong answer presented as a successful call — the worst shape
+for a tool an agent is meant to trust. Observed while verifying the
+semantic condition of the M4 pilot
 (`docs/superpowers/evidence/m4-pilot-trial/`).
 
-**Fix.** Normalise the id (strip a leading `<project>/` that matches
-the resolved project) or reject an unknown screen with an error naming
-the valid ids. Do not return an empty document for a name that does
-not exist. Regression: assert `get_document{"screen":"default/home"}`
-and `get_document{"screen":"home"}` return the same tree, and that an
-unknown screen errors.
+**Fixed** in `portal-mcp` `Tools.normalizeScreen` + `rejectUnknownScreen`:
+the tool strips a leading `<project>/` that matches the resolved
+project, and an unknown screen now returns `isError` naming the valid
+ids instead of an empty document. Applied to `get_document`,
+`apply_ops`, `undo` and `redo` so the id contract is the same across all
+of them. Regression: `portal-mcp/src/test/.../ScreenIdTest.kt`, 7 cases.
+Verified live against a relay: `screen=home` and `screen=default/home`
+now return the same real document
+(`text: PropValue.Bind(field=summary)`), and `screen=nosuchscreen`
+returns `no screen 'nosuchscreen' in project 'default'. Known screens:
+…`.
 
+**Still open, server side.** `GET /doc?screen=<unknown>` answers with an
+empty document rather than 404, so the trap is only closed for callers
+that go through the MCP tools. The relay should 404 an unknown screen.
+Related: the relay ignores `PORTAL_STORE` and resolves its store some
+other way — a launcher that sets it gets a different store than it
+thinks.
 
 ### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
 

@@ -12,4 +12,10 @@ dependencies {
   implementation projects.portalCore      // generated catalog for get_catalog
   implementation projects.portalDocument  // op/document types
   implementation libs.kotlinx.serialization.json
+
+  testImplementation libs.kotlin.test
+  testImplementation libs.kotlin.test.junit
+  testImplementation libs.junit
 }
+
+tasks.named('test') { useJUnit() }
