@@ -1,0 +1,75 @@
+You are working on a small Kotlin Multiplatform mobile app in the current directory.
+
+BACKGROUND
+The app uses a framework called Keliver. A "screen" is a @Composable in
+src/jsMain/kotlin/screens/ taking a Bindings interface. A "presenter" in
+src/jsMain/kotlin/logic/ implements that interface and holds state.
+src/jsMain/kotlin/device/Main.kt packages the app for an Android host.
+
+HOW TO BUILD
+  export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+  export NODE_EXTRA_CA_CERTS="$HOME/.android-certs/full-ca-bundle.pem"
+  export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=$HOME/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit"
+  ./gradlew compileKotlinJs --console=plain
+Do NOT set KELIVER_USE_MAVEN_LOCAL.
+
+HOW TO RUN IT ON THE ANDROID EMULATOR
+An emulator is running and a generic Keliver host app is already installed.
+It loads your app's bundle over HTTP. Port 8080 is free.
+
+  1. Serve your build (leave it running in the background):
+       ./gradlew serveDevelopmentZipline --console=plain &
+     Wait until this returns 200:
+       curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/manifest.zipline.json
+  2. (Re)start the host so it reloads your bundle:
+       adb -s emulator-5554 shell am force-stop dev.keliver.portaldevice
+       adb -s emulator-5554 shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
+     Give it ~15 seconds.
+  3. Read what is on screen:
+       adb -s emulator-5554 shell uiautomator dump /sdcard/ui.xml
+       adb -s emulator-5554 shell cat /sdcard/ui.xml | grep -oE 'text="[^"]+"'
+     Screenshot:
+       adb -s emulator-5554 exec-out screencap -p > shot.png
+  4. Tap something. Get its bounds from the uiautomator dump, then:
+       adb -s emulator-5554 shell input tap <x> <y>
+
+After changing Kotlin you must rebuild AND restart the host (steps 1-2) for the
+change to reach the device. If a gradle command fails with a permissions error
+about a lock file, add --no-daemon.
+
+THE REQUIREMENT
+The cart screen shows a Subtotal line and a Total line.
+
+  * Each "Add item" tap adds one $12.00 item to the cart.
+  * Shipping is a flat $5.00 and applies only once the cart is NOT empty.
+  * Therefore: with an empty cart, Subtotal reads "$0.00" and Total reads
+    "$0.00". After one tap, Subtotal reads "$12.00" and Total reads "$17.00".
+    After two taps, Subtotal reads "$24.00" and Total reads "$29.00".
+
+HOW YOU MUST DIAGNOSE (this is a constraint on method, not a hint)
+Tools from a server named `keliver-portal` are available in this session. They
+are not listed up front — discover them with the tool-search mechanism your
+harness provides.
+
+You must reach your diagnosis using those tools. Until you have written the
+DIAGNOSIS section you may not open any file under src/jsMain/kotlin/screens/,
+and you may not read the app's compiled JavaScript. Reading
+src/jsMain/kotlin/logic/ is allowed, as is building and running the app.
+
+After you have stated the diagnosis, work normally: edit whatever you need and
+verify on the emulator.
+
+Also report, under a final heading TOOL FINDINGS: for each portal tool you
+called, what it returned and whether it moved you toward the diagnosis.
+
+YOUR TASK
+1. Decide whether the app meets that requirement.
+2. If not, fix it minimally and idiomatically.
+
+FINAL REPORT, exactly these headings:
+VERDICT: yes or no
+DIAGNOSIS: what is wrong and where (file + line)
+FIX: the diff you made, or none
+VERIFICATION: what you did. Separate what you OBSERVED RUNNING (including anything you saw on the emulator) from what you INFERRED from reading code.
+CONFIDENCE: high/medium/low and why
+TOOLS: which tools you used and whether each helped

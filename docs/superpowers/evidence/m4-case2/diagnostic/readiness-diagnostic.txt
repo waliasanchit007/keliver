@@ -1,0 +1,4 @@
+condition: diagnostic
+manifest_sha: 7c37bb17ccc70348fafa3739d061e83733d5d4bd
+initial: text="Cart" text="Subtotal" text="$0.00" text="Total" text="$0.00" text="Add item"
+after_tap: text="Cart" text="Subtotal" text="$12.00" text="Total" text="$12.00" text="Add item"

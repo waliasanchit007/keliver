@@ -34,7 +34,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$T" ] && [ -d "$T" ] || { echo "usage: $0 <trial-dir> <baseline|semantic> [--model M]" >&2; exit 2; }
-case "$COND" in baseline|semantic) ;; *) echo "condition must be baseline or semantic" >&2; exit 2 ;; esac
+# `diagnostic` is NOT a comparison condition. It exists for separately labelled
+# exercises that require MCP use, whose results are never merged with a paired
+# baseline/semantic run.
+case "$COND" in baseline|semantic|diagnostic) ;; *) echo "condition must be baseline, semantic or diagnostic" >&2; exit 2 ;; esac
 T="$(cd "$T" && pwd -P)"
 
 WS="$T/ws-$COND"
@@ -55,8 +58,9 @@ DISALLOWED=(WebSearch WebFetch)
 # Baseline gets an EMPTY mcp config rather than no flag at all, so both
 # conditions run the same code path and --strict-mcp-config keeps the operator's
 # own global MCP servers out of either one.
-if [ "$COND" = semantic ]; then
+if [ "$COND" = semantic ] || [ "$COND" = diagnostic ]; then
   MCP_CONFIG="$T/runtime/mcp-config.json"
+  [ "$COND" = diagnostic ] && MCP_CONFIG="$T/runtime/mcp-config-diagnostic.json"
   [ -f "$MCP_CONFIG" ] || { echo "missing mcp config: $MCP_CONFIG" >&2; exit 2; }
   TOOLS+=(mcp__keliver-portal)
 else

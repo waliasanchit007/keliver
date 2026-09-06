@@ -1,0 +1,43 @@
+condition:      diagnostic
+total calls:    19
+unparsed lines: 0
+
+     7  Bash
+     3  Read
+     2  mcp__keliver-portal__find_usages
+     1  ToolSearch
+     1  mcp__keliver-portal__get_guide
+     1  mcp__keliver-portal__list_projects
+     1  mcp__keliver-portal__list_screens
+     1  mcp__keliver-portal__get_catalog
+     1  mcp__keliver-portal__get_document
+     1  Edit
+
+portal MCP calls: 
+     1  mcp__keliver-portal__get_guide
+     1  mcp__keliver-portal__list_projects
+     1  mcp__keliver-portal__list_screens
+     1  mcp__keliver-portal__get_catalog
+     1  mcp__keliver-portal__get_document
+     2  mcp__keliver-portal__find_usages
+
+Call order:
+    1. ToolSearch
+    2. mcp__keliver-portal__get_guide
+    3. mcp__keliver-portal__list_projects
+    4. Bash
+    5. mcp__keliver-portal__list_screens
+    6. Read
+    7. mcp__keliver-portal__get_catalog
+    8. mcp__keliver-portal__get_document
+    9. mcp__keliver-portal__find_usages
+   10. mcp__keliver-portal__find_usages
+   11. Read
+   12. Read
+   13. Edit
+   14. Bash
+   15. Bash
+   16. Bash
+   17. Bash
+   18. Bash
+   19. Bash
