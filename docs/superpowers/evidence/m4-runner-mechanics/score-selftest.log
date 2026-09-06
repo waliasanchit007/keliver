@@ -1,0 +1,19 @@
+m4-score-participant self-test
+workdir: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-selftest-DjdUGZ
+  PASS  reference fix scores PASS (exit 0)
+  PASS  reference: fixture restored
+  PASS  known defect scores FAIL (exit 1)
+  PASS  defective: fixture restored
+  PASS  FAIL cites the assertion, not a generic build failure
+  PASS  unusable Gradle scores ERROR, not FAIL (exit 4)
+  PASS  infra: fixture restored
+  PASS  ERROR says explicitly that nothing is claimed
+  PASS  ERROR reports no runtime verdict
+  PASS  uncompilable screen scores ERROR (exit 4)
+  PASS  uncompilable: fixture restored
+  PASS  a passing run leaves a result file (staleness is possible)
+  PASS  a stale PASS is not inherited (exit 4)
+  PASS  stale: fixture restored
+
+passed: 14   failed: 0
+artifacts: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-selftest-DjdUGZ
