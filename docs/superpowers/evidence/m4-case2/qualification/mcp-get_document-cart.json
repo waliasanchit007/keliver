@@ -1,0 +1,125 @@
+{
+    "screen": "default/cart",
+    "root": {
+        "kind": "dev.keliver.portal.document.DocNode.Widget",
+        "handle": 1,
+        "type": "Column",
+        "children": [
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 2,
+                "type": "StyledText",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "s",
+                        "s": "Cart"
+                    },
+                    "fontSize": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "i",
+                        "i": 20
+                    },
+                    "bold": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "b",
+                        "b": true
+                    }
+                }
+            },
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 3,
+                "type": "StyledText",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "s",
+                        "s": "Subtotal"
+                    },
+                    "fontSize": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "i",
+                        "i": 12
+                    }
+                }
+            },
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 4,
+                "type": "StyledText",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Bind",
+                        "field": "subtotal"
+                    },
+                    "fontSize": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "i",
+                        "i": 14
+                    }
+                }
+            },
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 5,
+                "type": "StyledText",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "s",
+                        "s": "Total"
+                    },
+                    "fontSize": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "i",
+                        "i": 12
+                    }
+                }
+            },
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 6,
+                "type": "StyledText",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Bind",
+                        "field": "subtotal"
+                    },
+                    "fontSize": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "i",
+                        "i": 14
+                    }
+                }
+            },
+            {
+                "kind": "dev.keliver.portal.document.DocNode.Widget",
+                "handle": 7,
+                "type": "Button",
+                "props": {
+                    "text": {
+                        "kind": "dev.keliver.portal.document.PropValue.Lit",
+                        "tag": "s",
+                        "s": "Add item"
+                    },
+                    "onClick": {
+                        "kind": "dev.keliver.portal.document.PropValue.Action",
+                        "name": "addItem"
+                    }
+                }
+            }
+        ]
+    },
+    "contract": {
+        "fields": {
+            "subtotal": "String",
+            "total": "String"
+        },
+        "actions": [
+            "addItem"
+        ]
+    },
+    "version": 1,
+    "nextHandle": 8
+}

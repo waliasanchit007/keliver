@@ -1,0 +1,3 @@
+cart: StyledText#4.text binds field 'subtotal'
+cart: StyledText#6.text binds field 'subtotal'
+

@@ -1,0 +1,1 @@
+no usages of 'total' in project 'default'

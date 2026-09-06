@@ -3,7 +3,10 @@
 # m4-score-participant — score one M4 participant's final screen with the
 # evaluator's own behavioural check.
 #
-#   scripts/m4-score-participant.sh <final-screen.kt> <label>
+#   scripts/m4-score-participant.sh <final-screen.kt> <label> [--case NAME]
+#
+# --case selects which evaluator check scores the screen. Defaults to `counter`
+# (the literal-label pilot). `cart` is M4 case 2, the wrong-field binding.
 #
 # Substitutes the participant's final screen body into the parity fixture that
 # M4LabelUpdateCheck composes, runs the check, and restores the fixture. The
@@ -25,12 +28,34 @@
 # than being silently inherited from a previous invocation.
 #
 set -uo pipefail
-SRC="${1:-}"; LABEL="${2:-participant}"
-[ -f "$SRC" ] || { echo "usage: $0 <final-screen.kt> <label>" >&2; exit 2; }
+SRC="${1:-}"; LABEL="${2:-participant}"; shift 2 2>/dev/null || true
+CASE="counter"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --case) [ $# -ge 2 ] || { echo "--case needs a value" >&2; exit 2; }; CASE="$2"; shift 2 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+[ -f "$SRC" ] || { echo "usage: $0 <final-screen.kt> <label> [--case counter|cart]" >&2; exit 2; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-FIX="$ROOT/portal-parity-fixtures/kotlin/dev/keliver/portal/render/fixture/M4CounterScreen.kt"
-CLASS="dev.keliver.portal.render.M4LabelUpdateCheck"
-TEST="summaryLabelReflectsStateAfterTransition"
+FIXDIR="$ROOT/portal-parity-fixtures/kotlin/dev/keliver/portal/render/fixture"
+case "$CASE" in
+  counter)
+    FIX="$FIXDIR/M4CounterScreen.kt"
+    CLASS="dev.keliver.portal.render.M4LabelUpdateCheck"
+    TEST="summaryLabelReflectsStateAfterTransition"
+    SCREEN_FN="HomeScreen"; BINDINGS="HomeScreenBindings"
+    FIX_FN="M4CounterScreen"; FIX_BINDINGS="M4CounterBindings"
+    PASS_MSG="summary label reflects state after addItem()" ;;
+  cart)
+    FIX="$FIXDIR/M4CartScreen.kt"
+    CLASS="dev.keliver.portal.render.M4CartTotalCheck"
+    TEST="totalIncludesShippingAfterAdd"
+    SCREEN_FN="CartScreen"; BINDINGS="CartScreenBindings"
+    FIX_FN="M4CartScreen"; FIX_BINDINGS="M4CartBindings"
+    PASS_MSG="Total line reads subtotal + shipping after tapping Add item" ;;
+  *) echo "unknown case: $CASE (counter|cart)" >&2; exit 2 ;;
+esac
 XML="$ROOT/portal-render/build/test-results/wasmJsBrowserTest/TEST-$CLASS.xml"
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/m4-score-XXXXXX")"
@@ -42,12 +67,13 @@ trap restore EXIT
 
 # Rename the participant's screen/bindings onto the fixture's names. The
 # fixture package and the check are untouched.
-python3 - "$SRC" "$FIX" <<'PY'
+python3 - "$SRC" "$FIX" "$BINDINGS" "$FIX_BINDINGS" "$SCREEN_FN" "$FIX_FN" <<'PY'
 import re, sys
-src, dst = sys.argv[1], sys.argv[2]
+src, dst, bindings, fix_bindings, screen_fn, fix_fn = sys.argv[1:7]
 s = open(src).read()
 s = re.sub(r'^package .*$', 'package dev.keliver.portal.render.fixture', s, count=1, flags=re.M)
-s = s.replace('HomeScreenBindings', 'M4CounterBindings').replace('HomeScreen', 'M4CounterScreen')
+# bindings first: the screen name is a prefix of the bindings name
+s = s.replace(bindings, fix_bindings).replace(screen_fn, fix_fn)
 open(dst, 'w').write(s)
 PY
 
@@ -77,9 +103,9 @@ if [ ! -f "$XML" ]; then
       | sed 's/^/\n        first error: /')" 4
 fi
 
-OUT="$(python3 - "$XML" "$TEST" <<'PY'
+OUT="$(python3 - "$XML" "$TEST" "$PASS_MSG" <<'PY'
 import sys, xml.etree.ElementTree as ET
-xml, test = sys.argv[1], sys.argv[2]
+xml, test, pass_msg = sys.argv[1], sys.argv[2], sys.argv[3]
 try:
     root = ET.parse(xml).getroot()
 except Exception as e:
@@ -95,7 +121,7 @@ for c in cases:
     f = c.find('failure')
     if f is not None:
         print("FAIL|" + (f.get('message') or '').strip().splitlines()[0][:200]); raise SystemExit(0)
-print("PASS|summary label reflects state after addItem()")
+print("PASS|" + pass_msg)
 PY
 )"
 STATUS="${OUT%%|*}"; DETAIL="${OUT#*|}"
