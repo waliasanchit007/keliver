@@ -1,0 +1,27 @@
+keliver-new-device-target self-test   (compile checks: on)
+workdir: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//devtarget-selftest-5tRl5E
+  PASS  single-screen starter succeeds (exit 0)
+  PASS  single-screen: exactly one package line
+  PASS  single-screen: package is 'single.device'
+  PASS  single-screen: package has no filename
+  PASS  two screens with explicit selection succeeds (exit 0)
+  PASS  two-screen: exactly one package line
+  PASS  two-screen: package correct
+  PASS  two-screen: imports the SELECTED screen
+  PASS  two-screen: imports the SELECTED presenter
+  PASS  two-screen: unselected screen absent
+  PASS  ambiguous selection rejected (exit 3)
+  PASS  ambiguous: app left unchanged
+  PASS  ambiguous: no device dir
+  PASS  missing presenter rejected (exit 3)
+  PASS  missing presenter: app unchanged
+  PASS  missing screen rejected (exit 3)
+  PASS  unsupported build-file structure rejected (exit 3)
+  PASS  unsupported structure: app unchanged
+  PASS  unknown --screen rejected (exit 3)
+  PASS  existing device dir not overwritten (exit 1)
+  PASS  single-screen generated output COMPILES (exit 0)
+  PASS  two-screen generated output COMPILES (exit 0)
+
+passed: 22   failed: 0
+artifacts: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//devtarget-selftest-5tRl5E
