@@ -1,0 +1,5 @@
+feed.logic.FeedRepositoryTest: tests=4 failures=0 skipped=0
+   populated[js, browser, ChromeHeadless152.0.0.0, MacOS10.15.7] ok
+   empty[js, browser, ChromeHeadless152.0.0.0, MacOS10.15.7] ok
+   errorStatusRaises[js, browser, ChromeHeadless152.0.0.0, MacOS10.15.7] ok
+   retryAfterFailureSucceeds[js, browser, ChromeHeadless152.0.0.0, MacOS10.15.7] ok
