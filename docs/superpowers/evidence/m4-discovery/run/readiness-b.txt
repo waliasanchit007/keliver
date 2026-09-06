@@ -1,0 +1,4 @@
+condition: b
+manifest_sha: dcd000eddcd69a85eb103afbf82c1e6154a233a8
+initial: text="Cart" text="Subtotal" text="$0.00" text="Total" text="$0.00" text="Add item"
+after_tap: text="Cart" text="Subtotal" text="$12.00" text="Total" text="$12.00" text="Add item"

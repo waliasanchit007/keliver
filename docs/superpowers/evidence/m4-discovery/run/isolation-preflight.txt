@@ -1,0 +1,45 @@
+M4 isolation preflight
+trial:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery
+run id: 95044-1788709219
+--- a
+  PASS  a: evaluator area — denied
+  PASS  a: controller repository — denied
+  PASS  a: b's report — denied
+  PASS  a: b's workspace — denied
+  PASS  a: c's report — denied
+  PASS  a: c's workspace — denied
+  PASS  a: own report location — denied
+  PASS  a: prior experiment output — denied
+  PASS  a: controller git history denied
+  PASS  a: own workspace readable
+--- b
+  PASS  b: evaluator area — denied
+  PASS  b: controller repository — denied
+  PASS  b: a's report — denied
+  PASS  b: a's workspace — denied
+  PASS  b: c's report — denied
+  PASS  b: c's workspace — denied
+  PASS  b: own report location — denied
+  PASS  b: prior experiment output — denied
+  PASS  b: controller git history denied
+  PASS  b: own workspace readable
+--- c
+  PASS  c: evaluator area — denied
+  PASS  c: controller repository — denied
+  PASS  c: a's report — denied
+  PASS  c: a's workspace — denied
+  PASS  c: b's report — denied
+  PASS  c: b's workspace — denied
+  PASS  c: own report location — denied
+  PASS  c: prior experiment output — denied
+  PASS  c: controller git history denied
+  PASS  c: own workspace readable
+--- runtime
+  PASS  a can build its own fixture inside the sandbox
+  PASS  c can run the staged MCP server (get_document offered)
+--- non-destructiveness
+  PASS  reports/ unchanged by this preflight
+  PASS  evaluator/ unchanged by this preflight
+  PASS  sentinels removed
+
+passed: 35   failed: 0

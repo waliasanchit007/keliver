@@ -1,0 +1,34 @@
+VERDICT: no (before fix); yes (after fix)
+
+DIAGNOSIS:
+`src/jsMain/kotlin/screens/cart.kt:29` — the "Total" value line rendered `b.subtotal` instead of `b.total`. The screen showed the subtotal string twice; the Total line never displayed the shipping-inclusive figure. The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was already correct: subtotal = items × $12.00, total = subtotal + $5.00 shipping when the cart is non-empty, 0 when empty, and `money()` formats cents correctly.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@ fun CartScreen(b: CartScreenBindings) {
+     StyledText(
+       text = "Total",
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` succeeded. Started `serveDevelopmentZipline` (waited for `manifest.zipline.json` → 200), force-stopped and restarted the host on emulator-5554, waited ~15s. Read the screen via `uiautomator dump` at each step:
+  - Empty cart: Subtotal `$0.00`, Total `$0.00`.
+  - After 1 tap on "Add item": Subtotal `$12.00`, Total `$17.00`.
+  - After 2 taps: Subtotal `$24.00`, Total `$29.00`.
+  All three match the requirement exactly.
+- INFERRED FROM READING CODE: that the sole defect was the wrong binding reference on line 29, since `CartPresenter` already computed `total` with the conditional $5.00 shipping and `money()` formats correctly. The running emulator confirmed this inference.
+
+CONFIDENCE: high. The bug and fix are a one-token binding reference, and all three required states were observed correct on the device after the change.
+
+TOOLS:
+- Read / Edit / Bash (build, adb, curl): used throughout; essential and sufficient.
+- `keliver-portal` MCP tools: not used. The standard build/adb workflow covered diagnosis and verification, so they were unnecessary.

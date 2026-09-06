@@ -1,0 +1,28 @@
+VERDICT: no
+
+DIAGNOSIS: `src/jsMain/kotlin/screens/cart.kt:29` — the value line under the "Total" label rendered `b.subtotal` instead of `b.total`. So the Total line always mirrored the Subtotal ($0.00 empty, $12.00 after one tap, $24.00 after two), never adding the $5.00 shipping. The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was already correct: `totalCents = if (items == 0) 0 else subtotalCents + SHIPPING_CENTS`, and `money()` formats the required values correctly.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@ fun CartScreen(b: CartScreenBindings) {
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+     Button(
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` → BUILD SUCCESSFUL. Served the new bundle (`serveDevelopmentZipline`, `manifest.zipline.json` → 200), force-stopped and relaunched the host on emulator-5554. Via `uiautomator dump`: empty cart showed Subtotal `$0.00` / Total `$0.00`; after one "Add item" tap, Subtotal `$12.00` / Total `$17.00`; after a second tap, Subtotal `$24.00` / Total `$29.00`. Screenshot confirms the two-tap state. All three required states match exactly.
+- INFERRED FROM READING CODE: That the pre-fix build failed the requirement only on the Total line (presenter math and `money()` formatting were sound by inspection). That the `@Composable` presenter returning a fresh bindings object per recomposition propagates state updates to the screen — consistent with what I then observed live (values updated on each tap).
+
+CONFIDENCE: high — single obvious wired-to-wrong-field bug, minimal fix, and the exact required numbers were observed on the device for all three states.
+
+TOOLS:
+- Read / Edit / Bash (gradle, adb, curl): used throughout; essential for the fix and live verification.
+- `keliver-portal` MCP tools: not used. The bug was a plain Kotlin field reference and adb/uiautomator already gave direct on-device confirmation, so they weren't needed.

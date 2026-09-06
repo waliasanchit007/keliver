@@ -1,0 +1,31 @@
+VERDICT: no (before fix); yes (after fix)
+
+DIAGNOSIS: `src/jsMain/kotlin/screens/cart.kt:29` — the `StyledText` under the "Total" label rendered `text = b.subtotal` instead of `text = b.total`. So the screen showed the subtotal value on both the Subtotal and Total lines. The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was already correct: `subtotalCents = items * 1200`, `totalCents = if (items == 0) 0 else subtotalCents + 500`, and `money()` formats cents correctly.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@ fun CartScreen(b: CartScreenBindings) {
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` → BUILD SUCCESSFUL. Started `serveDevelopmentZipline` (manifest returned 200), force-stopped and restarted the Keliver host on emulator-5554, waited ~16s. uiautomator dumps showed:
+  - Empty cart: Subtotal `$0.00`, Total `$0.00`
+  - After 1 tap of "Add item": Subtotal `$12.00`, Total `$17.00`
+  - After 2 taps: Subtotal `$24.00`, Total `$29.00`
+  All three match the requirement exactly.
+- INFERRED FROM READING CODE: that the sole defect was the wrong binding reference on the Total line; the presenter arithmetic and `money()` formatting were correct by inspection (e.g. 1700 cents → `"$17.00"`, 0 → `"$0.00"`), consistent with what the emulator then showed.
+
+CONFIDENCE: high. Single-line, localized change; the fix was confirmed live on the emulator across all three specified cart states, not just reasoned about.
+
+TOOLS:
+- Read / Edit / Bash (build, adb, curl): used throughout; essential.
+- `keliver-portal` MCP tools (get_document, list_screens, apply_ops, device_screenshot, etc.): not used. The bug was obvious from the source and direct file edit + gradle build + adb verification was sufficient; these tools were optional and would not have added confidence here.

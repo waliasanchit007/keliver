@@ -1,0 +1,42 @@
+VERDICT: no (before my fix); yes (after)
+
+DIAGNOSIS
+`src/jsMain/kotlin/screens/cart.kt:29` — the `StyledText` rendering the value under the "Total" label was bound to `b.subtotal` instead of `b.total`. So the Total line always mirrored the Subtotal number ($0.00 / $12.00 / $24.00) and never showed shipping.
+
+The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was already correct: `$12.00` item price, flat `$5.00` shipping added only when `items != 0`, and `money()` formats cents properly.
+
+FIX
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@
+     StyledText(
+       text = "Total",
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION
+OBSERVED RUNNING:
+- `./gradlew compileKotlinJs` → BUILD SUCCESSFUL after the edit.
+- Served the bundle (`serveDevelopmentZipline`, `manifest.zipline.json` returned 200), force-stopped and restarted the Keliver host on emulator-5554.
+- uiautomator dump, empty cart: `Subtotal $0.00`, `Total $0.00`.
+- After one "Add item" tap: `Subtotal $12.00`, `Total $17.00`.
+- After a second tap: `Subtotal $24.00`, `Total $29.00`.
+All three match the requirement exactly.
+
+INFERRED FROM READING CODE:
+- That the sole defect was the wrong binding on line 29 (the label "Total" directly precedes it; presenter arithmetic and `money()` were sound).
+- That recomposition propagates correctly because `CartPresenter` is a `@Composable` reading `items` state and returning a fresh bindings object each recomposition — later confirmed by the live taps updating the screen.
+
+CONFIDENCE: high. The bug is a one-token mismatch against an explicit spec, and the emulator showed the exact required values in all three cart states.
+
+TOOLS
+- Bash (gradle build, adb, curl): essential — did the build and on-device verification.
+- Read / Edit / Glob: essential — located and fixed the bug.
+- keliver-portal MCP tools: not used; the fix was a plain source edit and the standard build/run loop covered verification.

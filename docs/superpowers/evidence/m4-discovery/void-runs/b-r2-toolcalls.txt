@@ -1,0 +1,16 @@
+condition:      b
+listing:        deferred
+discovery:      0 ToolSearch call(s)
+total calls:    4
+unparsed lines: 0
+
+     3  Read
+     1  Bash
+
+portal MCP calls: NONE
+
+Call order:
+    1. Bash
+    2. Read
+    3. Read
+    4. Read

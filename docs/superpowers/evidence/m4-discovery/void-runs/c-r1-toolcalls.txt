@@ -1,0 +1,17 @@
+condition:      c
+listing:        listed
+discovery:      0 ToolSearch call(s)
+total calls:    5
+unparsed lines: 0
+
+     3  Read
+     2  Bash
+
+portal MCP calls: NONE
+
+Call order:
+    1. Bash
+    2. Read
+    3. Read
+    4. Read
+    5. Bash

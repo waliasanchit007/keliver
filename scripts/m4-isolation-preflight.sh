@@ -68,7 +68,16 @@ SENTINELS=("$EVAL_SENT" "$PRIOR_SENT" "$CTRL_SENT")
 echo "$S evaluator"        > "$EVAL_SENT"
 echo "$S prior-experiment" > "$PRIOR_SENT"
 echo "$S controller-repo"  > "$CTRL_SENT"
-for c in baseline semantic; do
+# Conditions are whatever sandbox profiles the trial defines, so a trial with
+# more than two arms is covered without editing this script.
+CONDS=()
+for prof in "$T"/sandbox-*.sb; do
+  [ -e "$prof" ] || continue
+  n="$(basename "$prof" .sb)"; CONDS+=("${n#sandbox-}")
+done
+[ ${#CONDS[@]} -gt 0 ] || { echo "no sandbox-*.sb profiles in $T" >&2; exit 2; }
+
+for c in "${CONDS[@]}"; do
   RS="$(sent "$T/reports" "$c-report")"
   SENTINELS+=("$RS")
   echo "$S report-$c" > "$RS"
@@ -106,22 +115,26 @@ echo "M4 isolation preflight"
 echo "trial:  $T"
 echo "run id: $RUNID"
 
-for c in baseline semantic; do
+for c in "${CONDS[@]}"; do
   P="$T/sandbox-$c.sb"
-  other=$([ "$c" = baseline ] && echo semantic || echo baseline)
+  # "the other participant" = every condition that is not this one
+  others=(); for o in "${CONDS[@]}"; do [ "$o" = "$c" ] || others+=("$o"); done
+  other="${others[0]:-$c}"
   [ -f "$P" ] || { bad "$c: no sandbox profile"; continue; }
   echo "--- $c"
   deny_read "$c: evaluator area"                "$P" "$EVAL_SENT"
   deny_read "$c: controller repository"         "$P" "$CTRL_SENT"
-  deny_path "$c: other participant workspace"   "$P" "$T/ws-$other/keliver.portal.json"
-  deny_read "$c: other participant's report"    "$P" "$(sent "$T/reports" "$other-report")"
+  for o in ${others[@]+"${others[@]}"}; do
+    deny_read "$c: $o's report"                 "$P" "$(sent "$T/reports" "$o-report")"
+    deny_path "$c: $o's workspace"              "$P" "$T/ws-$o/keliver.portal.json"
+  done
   deny_read "$c: own report location"           "$P" "$(sent "$T/reports" "$c-report")"
   deny_read "$c: prior experiment output"       "$P" "$PRIOR_SENT"
 
   # The REAL report paths, when a trial has already produced them. The sentinel
   # checks above prove the directory is denied; these prove the actual
   # artifacts are, without the preflight ever having written to them.
-  for r in "$c" "$other"; do
+  for r in "$c" ${others[@]+"${others[@]}"}; do
     RP="$T/reports/$r-report.txt"
     [ -f "$RP" ] && deny_path "$c: real $r report on disk" "$P" "$RP"
   done
@@ -144,19 +157,21 @@ else
 echo "--- runtime"
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null)}"
 export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-$HOME/.android-certs/full-ca-bundle.pem}"
-if ( cd "$T/ws-baseline" && sandbox-exec -f "$T/sandbox-baseline.sb" \
+BUILD_C="${CONDS[0]}"
+if ( cd "$T/ws-$BUILD_C" && sandbox-exec -f "$T/sandbox-$BUILD_C.sb" \
        env -u KELIVER_USE_MAVEN_LOCAL ./gradlew compileKotlinJs --console=plain >/dev/null 2>&1 ); then
-  ok "baseline can build its own fixture inside the sandbox"
-else bad "baseline CANNOT build inside the sandbox"; fi
+  ok "$BUILD_C can build its own fixture inside the sandbox"
+else bad "$BUILD_C CANNOT build inside the sandbox"; fi
 
+MCP_C="${CONDS[${#CONDS[@]}-1]}"
 if [ -x "$T/runtime/portal-mcp/bin/portal-mcp" ]; then
   probe=$(printf '%s\n' \
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"p","version":"1"}}}' \
     '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-    | sandbox-exec -f "$T/sandbox-semantic.sb" "$T/runtime/portal-mcp/bin/portal-mcp" 2>/dev/null \
+    | sandbox-exec -f "$T/sandbox-$MCP_C.sb" "$T/runtime/portal-mcp/bin/portal-mcp" 2>/dev/null \
     | grep -c '"name":"get_document"')
-  [ "${probe:-0}" -ge 1 ] && ok "semantic can run the staged MCP server (get_document offered)" \
-                          || bad "semantic CANNOT run the staged MCP server"
+  [ "${probe:-0}" -ge 1 ] && ok "$MCP_C can run the staged MCP server (get_document offered)" \
+                          || bad "$MCP_C CANNOT run the staged MCP server"
 else bad "staged MCP binary missing at $T/runtime/portal-mcp/bin/portal-mcp"; fi
 fi
 

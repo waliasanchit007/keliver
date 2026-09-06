@@ -3,7 +3,17 @@
 # m4-run-participant — launch ONE M4 participant with a pinned, recorded
 # configuration and a retained tool-call trace.
 #
-#   scripts/m4-run-participant.sh <trial-dir> <baseline|semantic> [--model M]
+#   scripts/m4-run-participant.sh <trial-dir> <condition> [--model M] [--listed] [--mcp PATH]
+#
+# <condition> names ws-<condition>/ and sandbox-<condition>.sb. `baseline`,
+# `semantic` and `diagnostic` keep their historical defaults so earlier runs
+# stay reproducible; any other name needs --mcp (or gets the empty config).
+#
+# --listed restricts the AVAILABLE built-in set to the six this experiment
+# permits. That is not cosmetic: with the default built-in set the portal tools
+# are deferred behind ToolSearch, and with the restricted set they appear in the
+# listing directly. It is the manipulation in the discovery study; see
+# docs/superpowers/evidence/m4-discovery/PREREGISTRATION.md.
 #
 # WHY THIS EXISTS. The first pilot launched its two participants by hand and
 # they were not comparable: baseline ran `--model sonnet` with an explicit
@@ -26,10 +36,12 @@
 #
 set -uo pipefail
 T="${1:-}"; COND="${2:-}"; shift 2 2>/dev/null || true
-MODEL="sonnet"
+MODEL="sonnet"; LISTED=0; MCP_OVERRIDE=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --model) [ $# -ge 2 ] || { echo "--model needs a value" >&2; exit 2; }; MODEL="$2"; shift 2 ;;
+    --model)  [ $# -ge 2 ] || { echo "--model needs a value" >&2; exit 2; }; MODEL="$2"; shift 2 ;;
+    --mcp)    [ $# -ge 2 ] || { echo "--mcp needs a value" >&2; exit 2; }; MCP_OVERRIDE="$2"; shift 2 ;;
+    --listed) LISTED=1; shift ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -37,7 +49,7 @@ done
 # `diagnostic` is NOT a comparison condition. It exists for separately labelled
 # exercises that require MCP use, whose results are never merged with a paired
 # baseline/semantic run.
-case "$COND" in baseline|semantic|diagnostic) ;; *) echo "condition must be baseline, semantic or diagnostic" >&2; exit 2 ;; esac
+case "$COND" in *[!A-Za-z0-9_-]*|"") echo "condition must be a plain name" >&2; exit 2 ;; esac
 T="$(cd "$T" && pwd -P)"
 
 WS="$T/ws-$COND"
@@ -58,7 +70,11 @@ DISALLOWED=(WebSearch WebFetch)
 # Baseline gets an EMPTY mcp config rather than no flag at all, so both
 # conditions run the same code path and --strict-mcp-config keeps the operator's
 # own global MCP servers out of either one.
-if [ "$COND" = semantic ] || [ "$COND" = diagnostic ]; then
+if [ -n "$MCP_OVERRIDE" ]; then
+  MCP_CONFIG="$MCP_OVERRIDE"
+  [ -f "$MCP_CONFIG" ] || { echo "missing mcp config: $MCP_CONFIG" >&2; exit 2; }
+  TOOLS+=(mcp__keliver-portal)
+elif [ "$COND" = semantic ] || [ "$COND" = diagnostic ]; then
   MCP_CONFIG="$T/runtime/mcp-config.json"
   [ "$COND" = diagnostic ] && MCP_CONFIG="$T/runtime/mcp-config-diagnostic.json"
   [ -f "$MCP_CONFIG" ] || { echo "missing mcp config: $MCP_CONFIG" >&2; exit 2; }
@@ -89,13 +105,18 @@ echo "  model:   $MODEL (pinned; identical for both conditions)"
 echo "  tools:   ${TOOLS[*]}"
 echo "  mcp:     $MCP_CONFIG"
 echo "  prompt:  $TASK"
+echo "  listing: $([ "$LISTED" = 1 ] && echo "portal tools LISTED (--tools restricted)" || echo "portal tools DEFERRED (default built-in set)")"
 echo "  stream:  $STREAM"
+
+LISTED_ARGS=()
+[ "$LISTED" = 1 ] && LISTED_ARGS=(--tools "Bash,Read,Edit,Write,Glob,Grep")
 
 START=$(date +%s)
 ( cd "$WS" && sandbox-exec -f "$PROFILE" \
     env -u KELIVER_USE_MAVEN_LOCAL \
     claude -p "$(cat "$TASK")" \
       --model "$MODEL" \
+      ${LISTED_ARGS[@]+"${LISTED_ARGS[@]}"} \
       --allowedTools "${TOOLS[@]}" \
       --disallowedTools "${DISALLOWED[@]}" \
       --mcp-config "$MCP_CONFIG" \
@@ -107,9 +128,10 @@ RC=$?
 ELAPSED=$(( $(date +%s) - START ))
 
 # --- derive the report, the trace and the resolved configuration --------------
-python3 - "$STREAM" "$REPORT" "$TRACE" "$CONFIG" "$COND" "$MODEL" "$RC" "$ELAPSED" <<'PY'
+python3 - "$STREAM" "$REPORT" "$TRACE" "$CONFIG" "$COND" "$MODEL" "$RC" "$ELAPSED" \
+         "$([ "$LISTED" = 1 ] && echo listed || echo deferred)" <<'PY'
 import json, sys, collections
-stream, report, trace, config, cond, asked_model, rc, elapsed = sys.argv[1:9]
+stream, report, trace, config, cond, asked_model, rc, elapsed, listing = sys.argv[1:10]
 events, bad = [], 0
 for line in open(stream, encoding='utf-8', errors='replace'):
     line = line.strip()
@@ -136,12 +158,17 @@ for e in events:
 
 counts = collections.Counter(calls)
 mcp = {k: v for k, v in counts.items() if k.startswith('mcp__')}
+discovery = counts.get('ToolSearch', 0)
+first_mcp = next((i for i, n in enumerate(calls, 1) if n.startswith('mcp__')), None)
+first_edit = next((i for i, n in enumerate(calls, 1) if n in ('Edit', 'Write')), None)
 
 with open(report, 'w') as f:
     f.write(result_text or '(no result event in the stream)\n')
 
 with open(trace, 'w') as f:
     f.write(f"condition:      {cond}\n")
+    f.write(f"listing:        {listing}\n")
+    f.write(f"discovery:      {discovery} ToolSearch call(s)\n")
     f.write(f"total calls:    {len(calls)}\n")
     f.write(f"unparsed lines: {bad}\n\n")
     for name, n in counts.most_common():
@@ -154,10 +181,15 @@ with open(trace, 'w') as f:
 
 json.dump({
     "condition": cond,
+    "listing": listing,
     "model_requested": asked_model,
     "model_resolved": resolved_model,
     "exit_code": int(rc),
     "elapsed_seconds": int(elapsed),
+    "discovery_calls": discovery,
+    "first_mcp_call_index": first_mcp,
+    "first_edit_index": first_edit,
+    "mcp_preceded_edit": (first_mcp is not None and first_edit is not None and first_mcp < first_edit),
     "tool_calls_total": len(calls),
     "tool_calls_by_name": dict(counts),
     "portal_mcp_calls": mcp,

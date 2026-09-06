@@ -1,0 +1,29 @@
+VERDICT: no (the app did not meet the requirement; now fixed)
+
+DIAGNOSIS: `src/jsMain/kotlin/screens/cart.kt:29` — the `StyledText` that renders the Total *value* was bound to `b.subtotal` instead of `b.total`. The "Total" label (line 25) was correct, but the line under it re-displayed the subtotal. The presenter (`src/jsMain/kotlin/logic/CartPresenter.kt`) was already correct: `totalCents = if (items == 0) 0 else subtotalCents + SHIPPING_CENTS`, with `ITEM_PRICE_CENTS = 1200` and `SHIPPING_CENTS = 500`.
+
+FIX:
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@ fun CartScreen(b: CartScreenBindings) {
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+
+VERIFICATION:
+- OBSERVED RUNNING: `./gradlew compileKotlinJs` succeeded. Served the build (`serveDevelopmentZipline`, `manifest.zipline.json` returned 200), force-stopped and restarted the Keliver host on `emulator-5554`, and read the screen via `uiautomator dump`:
+  - Empty cart: Subtotal `$0.00`, Total `$0.00`.
+  - After 1 tap of "Add item": Subtotal `$12.00`, Total `$17.00`.
+  - After 2 taps: Subtotal `$24.00`, Total `$29.00`.
+  All three match the requirement exactly.
+- INFERRED FROM READING CODE: that the sole defect was the wrong binding on line 29 (the presenter arithmetic and the empty-cart shipping guard were already correct); the emulator run confirmed this.
+
+CONFIDENCE: high. One-line, self-evident mislabeling; corrected build observed producing all three required states on the emulator.
+
+TOOLS: Read/Edit/Bash (build, adb, curl) — all essential. The `keliver-portal` MCP tools were available but I did not use them; the standard build + adb workflow was sufficient to both diagnose and verify.
