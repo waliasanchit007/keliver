@@ -19,5 +19,8 @@ dependencies {
   implementation libs.okhttp // #16 H2: bounded, DNS-pinned secure recording transport
   implementation 'io.methvin:directory-watcher:0.19.0' // V2 M3: fsevents file-watch (JDK WatchService = 2s polling on macOS)
   testImplementation libs.junit
+  // Verify a REAL signed bundle with Zipline's own verifier rather than a
+  // hand-rolled check. Test-only.
+  testImplementation libs.zipline.loader
   testImplementation libs.kotlin.test.junit
 }

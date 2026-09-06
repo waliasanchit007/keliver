@@ -76,7 +76,27 @@ private fun resolveStore(): File {
   val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir)
   dir.mkdirs()
   claimStoreFor(dir, repoDir)
+  writeStorePointer(repoDir, dir)
+  legacyStoreOrNull(dir)?.let { println(it.describe()) }
   return dir
+}
+
+/**
+ * Tell the rest of the toolchain where this repo's store is.
+ *
+ * The publisher signs with `<store>/keys/ed25519.priv` and the device hosts
+ * embed `<store>/keys/ed25519.pub`, but they are Gradle builds that cannot ask
+ * the relay. Rather than duplicating the path derivation in three build files,
+ * the relay records the resolved path and they read it. `.gradle/` because it
+ * is build state, is gitignored by convention, and survives `clean`.
+ */
+private fun writeStorePointer(repo: File, store: File) {
+  runCatching {
+    val f = File(File(repo, ".gradle"), "keliver-store-path")
+    f.parentFile.mkdirs()
+    val line = store.absolutePath + "\n"
+    if (!f.exists() || f.readText() != line) f.writeText(line)
+  }.onFailure { println("portal-server: could not record the store pointer: $it") }
 }
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")

@@ -31,9 +31,17 @@ cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
 # Scaffolders so external app repos get the same DX (C1 new-component; ② new-editor).
 cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh "$STAGE/bin/"
+# The store contract has to travel with the tools. keliver-record-http.sh asks
+# keliver-store-path.sh where this app's store is; without both, an adopter's
+# recording client looks for its token in a directory that stopped being the
+# store. keliver-adopt-legacy-store.sh is the documented upgrade route.
+cp scripts/keliver-store-path.sh scripts/keliver-record-http.sh \
+   scripts/keliver-adopt-legacy-store.sh "$STAGE/bin/"
 chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
   "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
-  "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh"
+  "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh" \
+  "$STAGE/bin/keliver-store-path.sh" "$STAGE/bin/keliver-record-http.sh" \
+  "$STAGE/bin/keliver-adopt-legacy-store.sh"
 
 # The device host APK, so `keliver-new-device-target.sh` has somewhere to run.
 # This is a LOCALLY BUILT artifact shipped inside this bundle — it is NOT
