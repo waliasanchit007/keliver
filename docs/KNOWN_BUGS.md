@@ -878,44 +878,68 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U16. `get_document` silently returned an empty document for a qualified screen id — FIXED at the MCP layer
+### U16. `get_document` silently returned an empty document for a qualified screen id — FIXED (both halves)
 
-**What.** `list_screens` returns bare names (`["home"]`), and
-`get_document` expected that bare form. The relay's own boot log prints
-the qualified form (`selected 'default/home'`), and passing that back
-did **not** error — it returned a *different*, empty document under the
-double-prefixed name `default/default_home`:
+**What.** `list_screens` returns bare names (`["home"]`), and `get_document`
+expected that bare form. Passing the qualified form the relay's own log prints
+(`default/home`) returned a *different*, empty document under the
+double-prefixed name `default/default_home`, with no error.
 
-```json
-{"screen":"default/default_home","root":{"type":"Column"},"contract":{},"version":0}
-```
+**Fixed at the MCP layer** in `portal-mcp` `Tools.normalizeScreen` +
+`rejectUnknownScreen`: a leading `<project>/` matching the resolved project is
+stripped, and an unknown screen returns `isError` naming the valid ids.
+Applied to `get_document`, `apply_ops`, `undo` and `redo`.
+Regression: `ScreenIdTest`, 7 cases.
 
-**Why it mattered.** An agent that copied the id out of the relay log,
-or qualified the name by analogy with `apply_ops`, got a
-plausible-looking empty `Column` and concluded the screen was empty.
-That is a wrong answer presented as a successful call — the worst shape
-for a tool an agent is meant to trust. Observed while verifying the
-semantic condition of the M4 pilot
-(`docs/superpowers/evidence/m4-pilot-trial/`).
+**Fixed at the relay layer** in `a3b9651ad`: `GET /doc` for a screen the app
+does not have is now **404** naming the known screens. It used to mint the
+document — and because the engine materialises a document's backing file, that
+"read" created `<screen>.kt` and `Compiled_<screen>.kt` inside the app's source
+tree. Verified through the packaged relay from a fresh scaffold:
+`HTTP 404 {"error":"no screen 'invoice' in project 'default'; known screens: home"}`
+with the source tree unchanged. See
+`docs/superpowers/evidence/adopter-store-and-guide/`.
 
-**Fixed** in `portal-mcp` `Tools.normalizeScreen` + `rejectUnknownScreen`:
-the tool strips a leading `<project>/` that matches the resolved
-project, and an unknown screen now returns `isError` naming the valid
-ids instead of an empty document. Applied to `get_document`,
-`apply_ops`, `undo` and `redo` so the id contract is the same across all
-of them. Regression: `portal-mcp/src/test/.../ScreenIdTest.kt`, 7 cases.
-Verified live against a relay: `screen=home` and `screen=default/home`
-now return the same real document
-(`text: PropValue.Bind(field=summary)`), and `screen=nosuchscreen`
-returns `no screen 'nosuchscreen' in project 'default'. Known screens:
-…`.
+### U17. One document store was shared by every app on the machine — FIXED
 
-**Still open, server side.** `GET /doc?screen=<unknown>` answers with an
-empty document rather than 404, so the trap is only closed for callers
-that go through the MCP tools. The relay should 404 an unknown screen.
-Related: the relay ignores `PORTAL_STORE` and resolves its store some
-other way — a launcher that sets it gets a different store than it
-thinks.
+**What.** `storeDir()` defaulted to `~/.keliver-portal`, a machine-global
+directory. Nothing tied a store to a repo, so with two scaffolded apps running:
+
+* app B's `/screens` listed app A's screens, and opening one wrote
+  `<screen>.kt` + `Compiled_<screen>.kt` into **app B's** source tree;
+* starting app B **deleted** app A's documents, because `bootScan` retires
+  store mirrors whose `.kt` is missing from the app it is serving.
+
+This is what put `feed.kt` into a freshly scaffolded cart app during the M4
+case-2 setup.
+
+**Fixed** in `a3b9651ad`. Ownership rules: a store belongs to exactly one repo;
+the default is `~/.keliver-portal/apps/<slug>-<hash of the repo path>`; never
+inside the app's source tree; persists across restarts; an explicit store (or
+`PORTAL_STORE`, which used to be **silently ignored**) is honoured but records
+its owner and refuses a second repo with an actionable error.
+
+Regression: `scripts`-adjacent two-app script (2 failures before, 9 passes
+after) plus `PortalStoreOwnershipTest` (5 cases).
+
+**Remaining limitation.** Existing top-level content in a developer's
+`~/.keliver-portal` (documents written before this change) is left where it is
+and is no longer read, because the store a repo now uses is
+`~/.keliver-portal/apps/…`. Nothing is deleted; a developer who wants the old
+documents can point `store` at the legacy path for the one repo that owns them.
+
+### U18. `get_guide` returned "guide not found" for every adopter — FIXED
+
+**What.** The tool read `<PORTAL_REPO>/docs/PORTAL_USAGE.md`. That path exists
+in this repository and in no app scaffolded by `keliver-init`, and the MCP
+package shipped no markdown, so the tool worked from this checkout and failed
+everywhere else. Reported as unhelpful by an M4 participant.
+
+**Fixed** in `a3b9651ad`: the guide is copied into the package at build time
+from `docs/PORTAL_USAGE.md`, so it cannot drift. An app's own
+`docs/PORTAL_USAGE.md` still wins. Verified through the packaged server from a
+fresh scaffold and from a directory with no app at all. Regression: `GuideTest`,
+5 cases.
 
 ### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
 

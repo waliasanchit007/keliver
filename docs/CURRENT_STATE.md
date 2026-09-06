@@ -808,3 +808,77 @@ plus build/run/screenshots — remains untested.
   unevidenced.
 - **M3** deliberately not started.
 - **M4** blocked on a set that can decide something.
+
+## Post-snapshot: adopter isolation fixes and the M4 discovery study — 2026-09-07
+
+### Two adopter defects closed
+
+Both were found by running the portal against apps scaffolded by
+`keliver-init` from outside this checkout, and both were reproduced before
+being fixed. Commit `a3b9651ad`; evidence in
+`superpowers/evidence/adopter-store-and-guide/`.
+
+**One document store was shared by every app on the machine** (`U17`).
+`storeDir()` defaulted to `~/.keliver-portal`, so with two apps running, app B
+listed app A's screens and opening one wrote `<screen>.kt` plus
+`Compiled_<screen>.kt` into app B's source tree; starting app B also deleted
+app A's documents. A store now belongs to exactly one repo
+(`~/.keliver-portal/apps/<slug>-<hash>` by default), is never inside the app's
+source tree, persists across restarts, and refuses to serve a second repo.
+`PORTAL_STORE` is now honoured — it used to be silently ignored, which reads
+as isolation and is not.
+
+The mechanism that actually created the file is closed too: `GET /doc` for a
+screen the app does not have is now 404 rather than minting a document whose
+backing `.kt` gets materialised. That is the relay half of `U16`.
+
+**`get_guide` returned "guide not found" for every adopter** (`U18`). It read
+`<PORTAL_REPO>/docs/PORTAL_USAGE.md`, a path only this repository has. The
+guide now ships inside the MCP package, copied at build time so it cannot
+drift; an app's own copy still wins.
+
+Verified from the `0.3.3-local` candidate bundle with two freshly scaffolded
+apps outside the repository. Regression: 2 failures before / 9 passes after in
+the two-app script, plus 10 unit tests.
+
+### M4: what the runs support
+
+Three separate things, deliberately kept apart.
+
+1. **Case 2 (paired comparison)** — one wrong-field-binding fixture, baseline
+   vs semantic. Both produced the identical correct fix, both independently
+   scored PASS. The semantic participant never opened the channel.
+2. **Forced-use diagnostic** (separately labelled, not part of the comparison)
+   — required to diagnose through the portal tools, a participant did so.
+   That shows the queries **expose useful binding information**. It does
+   **not** show that using them improves outcomes.
+3. **Discovery study** — three arms with three repetitions each, on the same
+   one fixture. **Nine runs, not nine independent defect cases.** All nine
+   produced the expected fix; none invoked a portal tool, including three runs
+   with the tools listed upfront.
+
+An earlier write-up claimed the listed arm settled *why* the deferred
+participants declined. **Withdrawn**: those are self-reports, consistent with
+their traces but unable to establish another participant's decision process.
+The distinction stays open.
+
+Output provenance was audited rather than assumed: 3 outputs retained
+directly, 6 reconstructed from captured `Edit` calls with the replay validated
+against the three that survived, 0 unestablished. Every output was executed by
+the scorer individually — the earlier single shared score is gone.
+
+**Still true: nothing here supports a claim about where semantic access wins.**
+
+### Recorded, not built: a round-trip consistency test
+
+A possible separate test — **not** an M4 case, and not constructed — is
+source/document divergence: a screen whose `.kt` and whose live portal document
+disagree, e.g. after an editor write-back or a stale `Compiled_*` artifact.
+That belongs with the round-trip gate (D14), not with M4's comparison.
+**M4's inclusion criteria are unchanged**: they must not require baseline
+failure or a predicted semantic win.
+
+### Where the milestones stand
+
+Unchanged: **M0** and **M1** complete, **M2** unblocked with still no external
+adopter, **M3** not started, **M4** still without a set that decides anything.
