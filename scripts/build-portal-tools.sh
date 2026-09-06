@@ -14,23 +14,34 @@ OUT="$ROOT/build/portal-tools"
 STAGE="$OUT/keliver-portal-tools-$VERSION"
 echo "==> building keliver-portal-tools $VERSION"
 
-echo "==> gradle: relay + mcp installDist, editor wasm dist"
+echo "==> gradle: relay + mcp installDist, editor wasm dist, device host APK"
 ./gradlew -q \
   :portal-relay:installDist \
   :portal-mcp:installDist \
-  :web-spike:wasmJsBrowserDistribution
+  :web-spike:wasmJsBrowserDistribution \
+  :portal-device-android:assembleDebug
 
 rm -rf "$STAGE"
-mkdir -p "$STAGE/relay" "$STAGE/mcp" "$STAGE/editor" "$STAGE/bin" "$STAGE/wrapper/gradle/wrapper"
+mkdir -p "$STAGE/relay" "$STAGE/mcp" "$STAGE/editor" "$STAGE/bin" "$STAGE/wrapper/gradle/wrapper" "$STAGE/host"
 
 cp -R portal-relay/build/install/portal-relay/. "$STAGE/relay/"
 cp -R portal-mcp/build/install/portal-mcp/. "$STAGE/mcp/"
 cp -R web-spike/build/dist/wasmJs/productionExecutable/. "$STAGE/editor/"
 cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
 # Scaffolders so external app repos get the same DX (C1 new-component; ② new-editor).
-cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh "$STAGE/bin/"
+cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
+   scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh "$STAGE/bin/"
 chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
-  "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh"
+  "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
+  "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh"
+
+# The device host APK, so `keliver-new-device-target.sh` has somewhere to run.
+# This is a LOCALLY BUILT artifact shipped inside this bundle — it is NOT
+# published anywhere, and nothing fetches it from a store or a release page.
+cp portal-device-android/build/outputs/apk/debug/portal-device-android-debug.apk \
+   "$STAGE/host/keliver-device-host-$VERSION.apk"
+( cd "$STAGE/host" && shasum -a 256 "keliver-device-host-$VERSION.apk" > "keliver-device-host-$VERSION.apk.sha256" )
+cp docs/DEVICE_HOST.md "$STAGE/host/README.md"
 # The gradle wrapper so `keliver-init` scaffolds immediately-buildable projects.
 cp gradlew gradlew.bat "$STAGE/wrapper/" 2>/dev/null || true
 cp gradle/wrapper/* "$STAGE/wrapper/gradle/wrapper/"
