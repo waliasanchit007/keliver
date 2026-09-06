@@ -1,0 +1,10 @@
+{
+  "screensDir": "src/jsMain/kotlin/screens",
+  "port": 8077,
+  "appRuntime": {
+    "keliverVersion": "0.3.3",
+    "widgetVersion": 1
+  },
+  "store": "~/.keliver-newsstand",
+  "httpFixturesDir": "portal-fixtures/http"
+}

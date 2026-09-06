@@ -1,0 +1,14 @@
+pluginManagement {
+  repositories { gradlePluginPortal(); mavenCentral(); google() }
+  plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
+    id 'org.jetbrains.compose' version '1.8.2'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
+    id 'app.cash.zipline' version '1.22.0'
+  }
+}
+dependencyResolutionManagement {
+  repositories { mavenCentral(); google() }
+}
+rootProject.name = 'newsstand'

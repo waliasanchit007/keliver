@@ -1,0 +1,39 @@
+// Newsstand — keliver server-driven-UI screens (the guest). Author screens in
+// src/jsMain/kotlin/screens/ (visually via keliver-portal, or here in your IDE
+// with native Compose completion). Compiles to JS; ships OTA as a signed bundle.
+plugins {
+  id 'org.jetbrains.kotlin.multiplatform'
+  id 'org.jetbrains.kotlin.plugin.compose'
+  id 'org.jetbrains.compose'
+  // @Serializable API types need this at RUNTIME on Kotlin/JS. Without it the
+  // code still COMPILES and then fails in the browser with
+  //   SerializationException: Serializer for class 'X' is not found
+  // which is why it ships enabled rather than as a commented hint.
+  id 'org.jetbrains.kotlin.plugin.serialization'
+  id 'app.cash.zipline'
+}
+
+kotlin {
+  js {
+    outputModuleName = 'newsstand-guest'
+    browser()
+    binaries.executable()   // required for the Zipline bundle + serveDevelopmentZipline
+  }
+  sourceSets {
+    jsMain {
+      dependencies {
+        api 'dev.keliver:keliver-material-compose:0.3.3'   // StyledText/Button/Icon/ListItem/…
+        api 'dev.keliver:keliver-layout-compose:0.3.3'     // Column/Row/Spacer
+        api 'dev.keliver:portal-sql:0.3.3'                 // HostSqlDriver data layer
+        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+        api 'dev.keliver:keliver-http:0.3.3'
+        api 'dev.keliver:keliver-treehouse-guest:0.3.3'
+        api 'dev.keliver:keliver-treehouse-guest-compose:0.3.3'
+        implementation 'dev.keliver:keliver-material-protocol-guest-web:0.3.3'
+        implementation 'app.cash.zipline:zipline:1.22.0'
+      }
+    }
+  }
+}
