@@ -24,6 +24,29 @@ class GuideTest {
   }
 
   @Test
+  fun theBundledGuideIsTheADOPTERGuideNotTheContributorOne() {
+    val text = Tools.guideText(repo = null)
+    // things only the packaged workflow has
+    for (needle in listOf("keliver-portal-tools", "keliver-init", "keliver-store-path.sh", "apply_ops")) {
+      assertTrue(needle in text, "the bundled guide should mention '$needle'")
+    }
+    // things that exist only inside the Keliver repository
+    for (repoOnly in listOf("scripts/keliver-dev.sh", "portal-app-lib/", ":portal-device-guest:")) {
+      assertFalse(
+        repoOnly in text,
+        "the bundled guide tells adopters to use '$repoOnly', which their app does not have",
+      )
+    }
+  }
+
+  @Test
+  fun theBundledGuideDistinguishesPreviewMocksFromRuntimeValues() {
+    val text = Tools.guideText(repo = null)
+    assertTrue("placeholder" in text || "mock" in text.lowercase())
+    assertTrue("not evidence" in text || "layout checks only" in text)
+  }
+
+  @Test
   fun anAppWithoutTheGuideStillGetsOne() {
     val app = createTempDir()          // a scaffolded app: no docs/ at all
     val text = Tools.guideText(repo = app.path)

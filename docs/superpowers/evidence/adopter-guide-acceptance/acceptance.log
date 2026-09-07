@@ -1,0 +1,33 @@
+package: 210a7abb4106914833745f97c152a8cce2b695c8c45facf384236121fe42e8a0
+  PASS  keliver-init scaffolded the app
+  guard ok: user.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/accept-final/home
+  guard ok: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/accept-final/home/.keliver-portal/apps/myapp-bf3f12da
+  PASS  keliver-portal started and answers
+  PASS  get_guide returns the adopter guide (9978 bytes)
+  PASS  the guide names no Keliver-repo-only commands
+  PASS  get_document returned the screen (version 1, title 'MyApp')
+  PASS  apply_ops dry run validated: {"ok":true,"version":1}
+  PASS  apply_ops committed: {"ok":true,"version":2}
+  PASS  the screen source now reads the edited title
+  PASS  exactly one tracked file changed: src/jsMain/kotlin/screens/home.kt
+  PASS  hand-owned logic is byte-identical
+  PASS  the generated version stamp appeared, as the guide says
+  PASS  ./gradlew compileKotlinJs succeeds
+  PASS  keliver-new-device-target.sh added the device target
+  PASS  keliver-install-device-host.sh installed the host
+  PASS  serveDevelopmentZipline is serving the bundle
+  PASS  the edited title is on the device: text="My Inbox" text="Edit screens/home.kt — or run keliver-portal for the visual editor." text="First item" text="Second item" text="Refresh" 
+  PASS  stop then start works
+  PASS  the edit persists in the document after restart
+  PASS  the edit persists in the source after restart
+  ---- source fingerprint delta ----
+        0a1
+        > 17c31d9d17250a71b88eacca58d068380d983a4b  src/jsMain/kotlin/device/Main.kt
+        2c3,4
+        < 91b8dea9a4fa80ba42b07b269d1efe0f17b73e6f  src/jsMain/kotlin/screens/home.kt
+        ---
+        > e4309817538f102b9b6f40a9536da14308211f92  src/jsMain/kotlin/screens/Compiled_home.kt
+        > 0f4a9f6aa255cccb303c2f764bcc0b3e8c9b6975  src/jsMain/kotlin/screens/home.kt
+  PASS  the store is outside the app: myapp-bf3f12da
+
+passed: 20   failed: 0

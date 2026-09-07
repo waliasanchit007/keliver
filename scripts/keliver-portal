@@ -22,6 +22,15 @@ RELAY="$BUNDLE/relay/bin/portal-relay"
 BUNDLED_EDITOR="$BUNDLE/editor"
 
 CMD="start"
+# Is something LISTENING on this port?
+#
+# This used to be `lsof -ti ":$p"`, which matches every socket on the port —
+# including client connections in TIME_WAIT. A health check against the portal
+# leaves such sockets behind for a minute or two, so `keliver-portal stop` then
+# `keliver-portal start` refused to start with "port already in use" when
+# nothing was listening at all.
+port_in_use() { lsof -ti ":$1" -sTCP:LISTEN >/dev/null 2>&1; }
+
 case "${1:-}" in
   stop|status) CMD="$1"; shift ;;
 esac
@@ -99,7 +108,7 @@ case "$CMD" in
     echo "keliver-portal: nothing to stop for $APP_DIR"
     # A foreign process may still hold the ports; say so rather than killing it.
     for p in "$PORT" "$EDITOR_PORT"; do
-      if lsof -ti ":$p" >/dev/null 2>&1; then
+      if port_in_use "$p"; then
         warn "port $p is in use by another process (not started by this app dir) — left alone"
       fi
     done
@@ -117,7 +126,7 @@ if healthy; then
 fi
 if stop_instance; then warn "cleaned up a previous instance that had exited uncleanly"; fi
 for p in "$PORT" "$EDITOR_PORT"; do
-  if lsof -ti ":$p" >/dev/null 2>&1; then
+  if port_in_use "$p"; then
     die "port $p is already in use by another process. Free it, or change 'port' in keliver.portal.json."
   fi
 done

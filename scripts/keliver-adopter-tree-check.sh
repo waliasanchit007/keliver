@@ -71,6 +71,28 @@ STATUS="$( cd "$APP" && git status --porcelain )"
 [ -z "$STATUS" ] && ok "clean after a build" \
   || { bad "the build left tracked-visible files:"; printf '%s\n' "$STATUS" | sed 's/^/        /'; }
 
+# stop -> immediate start must work: the port check used to match client
+# sockets in TIME_WAIT left by a health check, so this refused with
+# "port already in use" when nothing was listening.
+#
+# keliver-portal only runs from an unpacked bundle (it resolves the relay as
+# <bundle>/relay/bin/portal-relay), so this is exercised when --relay points
+# into one and skipped otherwise.
+BUNDLE_BIN="$(cd "$(dirname "$RELAY")/../../bin" 2>/dev/null && pwd -P || true)"
+if [ -n "$BUNDLE_BIN" ] && [ -x "$BUNDLE_BIN/keliver-portal" ]; then
+  cyc=0
+  for _ in 1 2; do
+    ( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL "$BUNDLE_BIN/keliver-portal" . > "$DISP/cycle.log" 2>&1 & )
+    for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && break; sleep 3; done
+    curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && cyc=$((cyc+1))
+    ( cd "$APP" && "$BUNDLE_BIN/keliver-portal" stop . >/dev/null 2>&1 )
+  done
+  [ "$cyc" -eq 2 ] && ok "stop then immediate start works twice" \
+    || bad "a stop/start cycle failed ($cyc of 2 started; see $DISP/cycle.log)"
+else
+  echo "  SKIP  stop/start cycle (needs --relay inside an unpacked bundle)"
+fi
+
 # the store pointer exists but is invisible to git
 [ -f "$APP/.gradle/keliver-store-path" ] && ok "the store pointer was written" || bad "no store pointer"
 ( cd "$APP" && git check-ignore -q .gradle/keliver-store-path ) \

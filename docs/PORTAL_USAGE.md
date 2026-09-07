@@ -1,4 +1,11 @@
-# Keliver Portal — Usage Guide
+# Keliver Portal — Usage Guide (contributors, inside this repository)
+
+> **This guide is for work inside the Keliver repository.** It uses
+> `scripts/keliver-dev.sh`, `portal-app-lib/` and the `:portal-*` Gradle
+> modules, none of which exist in an app built with the
+> `keliver-portal-tools` package. Adopters want
+> [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md), which is also what the
+> packaged `get_guide` tool returns.
 
 > **V2 update:** the portal is now **bidirectional** — the visual editor, any
 > code editor, and AI agents all edit the same screen (one `UiDocument`, with
