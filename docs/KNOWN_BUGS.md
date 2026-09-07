@@ -878,40 +878,71 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U19. Live preview discards presenter state between dispatches
+### U19. Live preview did not re-render after a presenter action — FIXED
 
-**What.** With a per-app editor registered and ▶ Live pressed, the first action
-runs the real presenter and the value changes — but a second action does not
-build on the first. State held in `remember { mutableStateOf(...) }` inside
-`ScreenPreview.present` appears to be discarded between dispatches, so every
-action restarts from the initial state.
+**The earlier causal wording here was wrong and is withdrawn.** It said state
+was "discarded between dispatches". State was never discarded.
 
-**Reproduced** with one app on both surfaces (same screen, same presenter,
-same `add()`):
+**What actually happened.** The editor runs the live-preview guest composition
+on its own `BroadcastFrameClock` and ticks it from the HOST's frames
+(`EditorShell.kt`, the `while (true) { withFrameNanos { guestClock.sendFrame } }`
+loop). That is one-directional. A preview action wrote presenter state, which
+invalidated the **guest** composition — and the guest then waited for a frame
+that never came, because an idle host schedules no frames and nothing told it
+otherwise. The presenter's own state advanced correctly the whole time; the
+canvas kept showing the first frame until some unrelated event (a document
+edit, a tree reload) happened to re-render the host.
 
-| | initial | tap 1 | tap 2 | tap 3 |
-|---|---|---|---|---|
-| device (`serveDevelopmentZipline` + generic host) | `0 tallied` | `1 tallied` | `2 tallied` | `3 tallied` |
-| preview, ▶ Live | `0 tallied` | `1 tallied` | `1 tallied` | `1 tallied` |
+**Evidence that separated the explanations.** A temporary instrumented preview
+logged presenter identity, state before/after each action, and each frame:
 
-The action console logged `⚡ add → real presenter` for **all three** preview
-taps, so the dispatches arrive; only the accumulated state is lost. The
-presenter itself is correct — the device proves it.
+```
+compose: presenter#1 count=0        <- exactly ONE composition, ever
+frame#1 tally=0 tallied
+route: frame#1 action=add           <- canvas tap
+dispatch: presenter#1 count 0 -> 1  <- state DID advance
+route: frame#1 action=add           <- State Inspector, SAME frame + presenter
+dispatch: presenter#1 count 1 -> 2  <- and advanced again
+```
 
-**What the evidence points at.** The value returns to the initial state and
-then advances by one, which is what a torn-down and rebuilt composition looks
-like (`remember` reseeded, then `add()` applied). A stale `PreviewFrame`
-holding an earlier bindings object would instead keep incrementing the same
-state and reach 2. `LivePresenterHost` keys the presenter on
-`"$screen:$personaId"`, which does not change between dispatches, so the
-teardown is somewhere else on the dispatch → `sendApplyNotifications` →
-re-render path. **Not root-caused**; investigating further means changing the
-live preview engine, which was out of scope for the block that found this.
+State inspector still read `0 tallied` throughout. Both dispatch routes reached
+the same live presenter. So: not a presenter reset, not a stale callback, not a
+registration mistake — a stale **display**. Applying an unrelated document edit
+then made the canvas jump straight to `2 tallied`, confirming the value was
+there all along.
 
-**Impact.** The live preview is trustworthy for "is this screen wired to the
-right fields and actions" and for a single transition. It must not be used to
-judge multi-step behaviour; the device route is correct there. The adopter
-guide says exactly this.
+The earlier `0 → 1 → 1 → 1` reading is explained too: the first tap also
+changed the selection, which re-rendered the host and produced the one frame
+that showed `1`.
+
+**Fix** (`portal-editor`): `HostWakeSignal` — a state the host composition
+reads, bumped by `LiveEngine.dispatch`. A live dispatch now invalidates the
+host, the host schedules a frame, the loop ticks the guest clock, and the
+presenter's new frame is composed. Two lines of behaviour, in the module that
+owns the coupling. Both dispatch routes go through `LiveEngine.dispatch`, so
+canvas taps and the State Inspector's ⚡ buttons are both covered.
+
+**Intended resets are preserved**: `LivePresenterHost` still keys the presenter
+on `"screen:persona"`, so changing screen or persona starts fresh, and
+`LiveEngine.stop()` still ends the session and clears live values.
+
+**Regression**: `portal-editor/src/wasmJsTest/.../LivePreviewDispatchTest.kt`,
+2 tests. `threeActionsAdvanceThePreviewedValue` drives the real
+`LivePresenterHost` + `LiveEngine.dispatch` + `PreviewBindings` path under the
+editor's actual two-clock arrangement, with a host that only produces frames
+when woken, and requires `0 → 1 → 2 → 3`. **Failing before the fix** with
+`actual <[0 tallied, 0 tallied, 0 tallied, 0 tallied]>`.
+`intendedResetBoundariesStillReset` covers screen change, session stop, and
+restart.
+
+**Verified from a fresh external app** built against a local candidate
+`portal-editor`: browser preview `0 → 1 → 2 → 3`, and the same unchanged
+presenter on the device `0 → 1 → 2 → 3`.
+
+**Still true in published 0.3.3.** The fix is in `portal-editor`, a **Maven**
+artifact. Until it is released, any adopter whose editor resolves
+`dev.keliver:portal-editor:0.3.3` from Central still sees a preview that stops
+updating after the first action. The tools bundle does not carry it.
 
 Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
 

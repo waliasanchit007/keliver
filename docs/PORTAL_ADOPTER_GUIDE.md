@@ -281,26 +281,29 @@ panel then reads *"real presenter — <your label>"*, the state inspector lists
 each contract field with its live value, and the action console logs
 `⚡ <action> → real presenter` for every tap.
 
-### Known limitation: preview state does not accumulate
+### Multi-step behaviour in the preview
 
-Verified on this route with one app, one presenter, both surfaces:
+Repeated actions accumulate, so a three-tap sequence reads `0 → 1 → 2 → 3` in
+the preview, the same as on the device.
 
-| | initial | tap 1 | tap 2 | tap 3 |
-|---|---|---|---|---|
-| **device** (`serveDevelopmentZipline` + host) | `0 tallied` | `1 tallied` | `2 tallied` | `3 tallied` |
-| **preview, ▶ Live** | `0 tallied` | `1 tallied` | `1 tallied` | `1 tallied` |
+That was **not** true before: the preview showed the first transition and then
+stopped updating, because a presenter action invalidated the preview
+composition without waking the editor's frame loop. The presenter's own state
+was always correct — the canvas was stale. Fixed in `portal-editor`
+(`KNOWN_BUGS.md` U19).
 
-The first transition is real: the tap reaches your presenter, the value it
-returns changes, and the console records the dispatch. But **repeated actions
-do not accumulate** — state held in `remember { mutableStateOf(...) }` appears
-to be discarded between dispatches, so each action restarts from the initial
-state. The same presenter accumulates correctly on the device.
+**Which build you need.** The fix ships in the **Maven artifact**
+`dev.keliver:portal-editor`, not in the tools bundle. If your editor resolves
+`portal-editor:0.3.3` from Maven Central — the currently published version —
+you still have the old behaviour: the preview stops updating after the first
+action, and multi-step sequences must be checked on the device. Check the
+version in `editor/build.gradle.kts`.
 
-So use the live preview to check that a screen is wired to the right fields and
-actions. **Do not use it to judge multi-step behaviour** — take that to the
-device. Tracked as `U19` in `KNOWN_BUGS.md`.
+Independently of that, the live preview remains a **wiring** check. It runs
+your presenter, but a passing preview is not a guarantee of runtime
+correctness, and the device remains the place to confirm real behaviour.
 
-## The document store## The document store
+## The document store## The document store## The document store
 
 Your documents, signing keys and published bundles live **outside** your source
 tree, in a store owned by exactly one app:

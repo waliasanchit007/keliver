@@ -48,6 +48,11 @@ internal object LiveEngine {
     val f = frame ?: return
     runCatching { f.dispatch(action, arg) }
       .onFailure { onError("presenter error on '$action': ${it.message}") }
+    // U19: the presenter's write invalidates the GUEST composition, which runs
+    // on a clock ticked by the host. An idle host produces no frames, so
+    // without this the new frame is never composed and the canvas keeps showing
+    // the previous value while the presenter's state moves on.
+    HostWakeSignal.wake()
   }
 
   internal fun applyValues(values: Map<String, String>) {

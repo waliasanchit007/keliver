@@ -194,6 +194,12 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       }
     }
 
+    // U19: reading the wake signal here is what couples a guest-side
+    // invalidation to a host frame. A live dispatch bumps it, this content
+    // recomposes, the host schedules a frame, and the loop above ticks the
+    // guest clock so the presenter's new frame is actually composed.
+    HostWakeSignal.state.value
+
     // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
     // just shows the live preview.
     root.Render()

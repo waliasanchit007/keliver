@@ -51,6 +51,8 @@ kotlin {
     wasmJsTest {
       dependencies {
         implementation libs.kotlin.test
+        // U19 regression drives a real composition on a controlled clock.
+        implementation libs.kotlinx.coroutines.test
       }
     }
   }
