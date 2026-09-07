@@ -1116,3 +1116,71 @@ covers the Live-mode transition.
 
 Unchanged: **M0**, **M1** complete; **M2** unblocked, still no external adopter;
 **M3** not started; **M4** untouched — no participant runs this block.
+
+## Post-snapshot: U19 root-caused and fixed — 2026-09-08
+
+Commits `1db77c27c` (fix + regression + evidence) and `d175d2c52` (API dump).
+Detail in `superpowers/evidence/adopter-preview-route/U19-ROOT-CAUSE.md`.
+
+### The earlier causal claim was wrong
+
+U19 was recorded as "preview state discarded between dispatches". **It was
+not.** State accumulated correctly throughout; the canvas was stale. That
+wording is withdrawn from the bug register and the adopter guide.
+
+Instrumenting presenter identity, per-action state, and each frame showed one
+composition for the whole session, both dispatch routes reaching the same live
+presenter, and state moving `0 → 1 → 2` while the inspector still read
+`0 tallied`. An unrelated document edit then made the canvas jump to
+`2 tallied`. That ruled out presenter reset, stale callbacks and registration
+mistakes, and left a stale display.
+
+### Root cause
+
+`EditorShell` runs the live-preview guest composition on its own
+`BroadcastFrameClock`, ticked from the host's frames. The coupling is
+one-directional: a presenter write invalidates the **guest** recomposer, which
+waits for a frame that an idle host never schedules.
+
+`HostWakeSignal` supplies the missing link — a state the host composition
+reads, bumped by `LiveEngine.dispatch`, which both the canvas and the State
+Inspector routes already funnel through.
+
+### Verified
+
+`LivePreviewDispatchTest` drives the real preview path and requires
+`0 → 1 → 2 → 3`; before the fix it fails with
+`[0 tallied, 0 tallied, 0 tallied, 0 tallied]`. A second test holds the intended
+resets (screen change, persona change, stop/restart).
+
+From a fresh external app against a candidate `portal-editor` — published to a
+disposable file repo, shadowing Central for that one coordinate, the real
+`~/.m2` untouched — the browser preview stepped `0 → 1 → 2 → 3` through real
+clicks, and the same unchanged presenter on the device did the same.
+
+One passing fixture is **not** a runtime-correctness guarantee. The preview runs
+the real presenter; it does not certify an app's behaviour.
+
+### Release scope — which channel carries what
+
+| change | channel | state |
+|---|---|---|
+| U19 preview fix | **Maven** `dev.keliver:portal-editor` | built and verified locally; **unreleased** |
+| adopter guide, `get_guide` contents | tools bundle | unreleased |
+| `keliver-init` `.gitignore`, `keliver-portal` port fix | tools bundle | unreleased |
+| store ownership, `/doc` 404, legacy adopt route | tools bundle (`portal-relay`/`portal-mcp` binaries) | unreleased |
+
+**Until a Maven release, every adopter whose editor resolves
+`portal-editor:0.3.3` from Central still has the U19 defect** — the preview
+stops updating after the first action. A tools-bundle release does not fix it.
+
+### Limits
+
+macOS only, one app, one presenter, Chrome. The editor's DOM panels update one
+host frame behind an action, so a read taken immediately after a click can show
+the previous value; canvas and inspector agree once a frame has run.
+
+### Milestones
+
+Unchanged: **M0**, **M1** complete; **M2** unblocked, no external adopter;
+**M3** not started; **M4** untouched — no participant runs.
