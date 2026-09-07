@@ -205,18 +205,102 @@ address. A physical device needs its own reachable host URL; see
 The editor's preview and the running app show different things, deliberately.
 
 * **Out of the box** the preview renders the **bundled generic editor**: real
-  layout and real widgets, but **placeholder values** for every `Bind` and no
-  real presenter. `Refresh` does nothing there.
+  layout and real widgets, but **placeholder values** for every `Bind` — a
+  `Bind` to `tally` draws literally as `{tally}` — and no presenter at all.
 * **The running app** uses your presenter. That is the only place a `Bind`
   shows a real value and an `Action` runs your code.
 
-To preview your *real* presenters, scaffold the app's own editor with
-`$KP/keliver-new-editor.sh <AppName> <src dirs…>`, which compiles them into the
-preview. Until you do, treat preview values as layout checks only.
-
 **A screenshot of the preview is not evidence that behaviour is correct.**
 
-## The document store
+### Previewing your real presenters
+
+This takes four steps, not one. `keliver-new-editor.sh` scaffolds an editor
+whose screen map is **empty** — every entry is commented out — so on its own it
+previews nothing.
+
+**1. Scaffold**, passing every source directory the presenters need to compile.
+A presenter returns its screen's `Bindings` interface, and that interface is
+declared in `screens/<name>.kt`, so a logic-only editor fails to compile:
+
+```bash
+$KP/keliver-new-editor.sh MyApp src/jsMain/kotlin/logic src/jsMain/kotlin/screens
+```
+
+**2. Register the screen and presenter** in
+`editor/src/wasmJsMain/kotlin/MyAppPreview.kt`. The map key is the **portal
+screen name** — the `.kt` basename the relay ingests, so `home` for
+`screens/home.kt`. Map each contract field to its current value, and route each
+action back into the same bindings object:
+
+```kotlin
+import dev.keliver.portal.render.AppPreviewEntry
+import dev.keliver.portal.render.PreviewFrame
+import dev.keliver.portal.render.ScreenPreview
+import myapp.logic.HomePresenter
+
+object MyAppPreview : AppPreviewEntry {
+  override val label = "myapp (real presenter)"
+
+  override val screens: Map<String, ScreenPreview> = mapOf(
+    "home" to ScreenPreview { env ->
+      val b = HomePresenter()                   // your real presenter
+      PreviewFrame(
+        values = mapOf("tally" to b.tally),     // contract field -> current value
+        dispatch = { action, _ ->               // portal action -> your bindings
+          when (action) {
+            "add" -> b.add()
+            else -> env.log("unhandled action: $action")
+          }
+        },
+      )
+    },
+  )
+}
+```
+
+Values are **strings**, matching the mock transport. For a list field use
+`putRows(field, itemVar, rows)` instead of a plain entry.
+
+**3. Build the editor:**
+
+```bash
+cd editor && ./gradlew wasmJsBrowserDistribution && cd ..
+```
+
+It resolves `dev.keliver:portal-editor` from Maven Central, so this needs
+network access the first time. Expect a couple of minutes.
+
+**4. Launch.** `keliver-portal .` detects `<app>/editor` and serves **your**
+editor instead of the bundled one. It prints
+`Preview → …/editor/build/dist/… (your real presenters)` when it does.
+
+**5. Press ▶ Live.** The editor opens in **mock mode even when your editor is
+loaded** — the fidelity panel says *"Mock mode — press ▶ Live to run real
+logic"*. Only after pressing ▶ Live does the canvas show presenter values; the
+panel then reads *"real presenter — <your label>"*, the state inspector lists
+each contract field with its live value, and the action console logs
+`⚡ <action> → real presenter` for every tap.
+
+### Known limitation: preview state does not accumulate
+
+Verified on this route with one app, one presenter, both surfaces:
+
+| | initial | tap 1 | tap 2 | tap 3 |
+|---|---|---|---|---|
+| **device** (`serveDevelopmentZipline` + host) | `0 tallied` | `1 tallied` | `2 tallied` | `3 tallied` |
+| **preview, ▶ Live** | `0 tallied` | `1 tallied` | `1 tallied` | `1 tallied` |
+
+The first transition is real: the tap reaches your presenter, the value it
+returns changes, and the console records the dispatch. But **repeated actions
+do not accumulate** — state held in `remember { mutableStateOf(...) }` appears
+to be discarded between dispatches, so each action restarts from the initial
+state. The same presenter accumulates correctly on the device.
+
+So use the live preview to check that a screen is wired to the right fields and
+actions. **Do not use it to judge multi-step behaviour** — take that to the
+device. Tracked as `U19` in `KNOWN_BUGS.md`.
+
+## The document store## The document store
 
 Your documents, signing keys and published bundles live **outside** your source
 tree, in a store owned by exactly one app:

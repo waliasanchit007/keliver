@@ -878,6 +878,43 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U19. Live preview discards presenter state between dispatches
+
+**What.** With a per-app editor registered and ▶ Live pressed, the first action
+runs the real presenter and the value changes — but a second action does not
+build on the first. State held in `remember { mutableStateOf(...) }` inside
+`ScreenPreview.present` appears to be discarded between dispatches, so every
+action restarts from the initial state.
+
+**Reproduced** with one app on both surfaces (same screen, same presenter,
+same `add()`):
+
+| | initial | tap 1 | tap 2 | tap 3 |
+|---|---|---|---|---|
+| device (`serveDevelopmentZipline` + generic host) | `0 tallied` | `1 tallied` | `2 tallied` | `3 tallied` |
+| preview, ▶ Live | `0 tallied` | `1 tallied` | `1 tallied` | `1 tallied` |
+
+The action console logged `⚡ add → real presenter` for **all three** preview
+taps, so the dispatches arrive; only the accumulated state is lost. The
+presenter itself is correct — the device proves it.
+
+**What the evidence points at.** The value returns to the initial state and
+then advances by one, which is what a torn-down and rebuilt composition looks
+like (`remember` reseeded, then `add()` applied). A stale `PreviewFrame`
+holding an earlier bindings object would instead keep incrementing the same
+state and reach 2. `LivePresenterHost` keys the presenter on
+`"$screen:$personaId"`, which does not change between dispatches, so the
+teardown is somewhere else on the dispatch → `sendApplyNotifications` →
+re-render path. **Not root-caused**; investigating further means changing the
+live preview engine, which was out of scope for the block that found this.
+
+**Impact.** The live preview is trustworthy for "is this screen wired to the
+right fields and actions" and for a single transition. It must not be used to
+judge multi-step behaviour; the device route is correct there. The adopter
+guide says exactly this.
+
+Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
+
 ### U16. `get_document` silently returned an empty document for a qualified screen id — FIXED (both halves)
 
 **What.** `list_screens` returns bare names (`["home"]`), and `get_document`
