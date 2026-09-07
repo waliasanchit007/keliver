@@ -974,3 +974,71 @@ After: 8/0, and 8/0 again through the bundled scaffolder and relay.
 
 Apps scaffolded by an older `keliver-init` are unaffected by the fix and will
 still show `.gradle/` as untracked.
+
+## Post-snapshot: the adopter guide, executed from a package — 2026-09-07
+
+Commit `4a3935701`. Evidence in
+`superpowers/evidence/adopter-guide-acceptance/`.
+
+### The guide an adopter actually gets
+
+`get_guide` was fixed for availability earlier but shipped the **contributor**
+guide, which tells an adopter to run Keliver's own dev script and edit
+`portal-app-lib/` — neither exists in their app. The package now carries
+`docs/PORTAL_ADOPTER_GUIDE.md`, written only against packaged commands and
+covering: prerequisites and scaffolding, who owns `screens/` versus `logic/`,
+MCP setup and tool discovery, inspecting a screen, one supported `apply_ops`
+edit with its resulting source diff, building and running on a device, preview
+mocks versus runtime values, and store ownership including the
+never-automatic legacy route. `PORTAL_USAGE.md` is now marked contributor-only.
+The app-local `docs/PORTAL_USAGE.md` override still wins, so a team can ship
+its own conventions to agents.
+
+`GuideTest` fails if the bundled text names a repo-only path or drops the
+preview-versus-runtime warning.
+
+### Executed, not asserted
+
+Candidate package
+`sha256 210a7abb4106914833745f97c152a8cce2b695c8c45facf384236121fe42e8a0`,
+a disposable app outside this checkout, guide commands followed literally:
+scaffold → start → `get_guide` → `get_document` → `apply_ops` dry run → commit
+→ one-line source diff → compile → device target → host install → serve →
+**the edited title observed on the emulator** → stop → restart → the edit
+still in both the document and the source. **20/20**
+(`scripts/keliver-adopter-acceptance.sh`).
+
+Ownership was checked by source fingerprint rather than `git status`: the
+screen changed, the device target and the generated `Compiled_home.kt` stamp
+appeared as documented, and `logic/HomePresenter.kt` was byte-identical.
+
+### Fixed on this route
+
+`keliver-portal`'s port check used `lsof -ti ":$p"`, matching client sockets in
+`TIME_WAIT`, so `stop` followed by `start` refused with "port already in use"
+while nothing was listening — the same over-broad match that once killed an
+emulator here. Now listener-only, with a stop/start cycle in
+`keliver-adopter-tree-check.sh`.
+
+Five guide errors were corrected from what the run did: JDK 17-**or-later**
+(17 and 21 verified), the `Compiled_<screen>.kt` stamp, version numbering
+restarting after a portal restart, the build files the device scaffolder edits,
+and the fixed editor port that prevents two portals running at once.
+
+### Candidate versus published
+
+Everything above is **locally built candidate behaviour**. The published
+`dev.keliver:*:0.3.3` on Maven Central contains none of it — not the adopter
+guide, not the store contract, not the port fix. Nothing has been released.
+
+### Limits
+
+macOS only; one emulator; one app. The device route is emulator-specific
+(`10.0.2.2`) and a physical device was not exercised. The per-app editor
+(`keliver-new-editor.sh`) is documented but was not built or run, so the
+"preview with your real presenters" path is **described, not verified**.
+
+### Milestones
+
+Unchanged: **M0**, **M1** complete; **M2** unblocked with no external adopter;
+**M3** not started; **M4** untouched this block — no participant runs.
