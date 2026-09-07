@@ -95,3 +95,28 @@ keliver_require_isolated_store() {
   echo "  guard ok: store=$store"
   return 0
 }
+
+# --- run directories ---------------------------------------------------------
+#
+# Create a UNIQUE run directory beneath a caller-selected parent, and never
+# erase anything the caller supplied.
+#
+# The acceptance script used to begin with `rm -rf "$DISP"` on its first
+# argument — before any isolation check. A mistyped or reused path (a home
+# directory, a work tree, a directory holding earlier evidence) was deleted
+# outright, and it happened before the guard that exists to prevent exactly
+# that class of damage.
+#
+# Usage:  RUN="$(keliver_make_run_dir "$PARENT" acceptance)"
+keliver_make_run_dir() {
+  local parent="$1" name="${2:-run}"
+  [ -n "$parent" ] || { echo "keliver_make_run_dir: no parent given" >&2; return 2; }
+  if [ -e "$parent" ] && [ ! -d "$parent" ]; then
+    echo "keliver_make_run_dir: $parent exists and is not a directory" >&2; return 2
+  fi
+  mkdir -p "$parent" || return 1
+  parent="$(cd "$parent" && pwd -P)" || return 1
+  local dir
+  dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")" || return 1
+  printf '%s' "$dir"
+}

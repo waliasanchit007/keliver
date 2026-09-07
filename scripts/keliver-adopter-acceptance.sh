@@ -3,7 +3,7 @@
 # keliver-adopter-acceptance — execute the adopter guide, literally, from a
 # packaged build.
 #
-#   scripts/keliver-adopter-acceptance.sh <disposable-root> <package.zip> [--serial S]
+#   scripts/keliver-adopter-acceptance.sh <parent-dir> <package.zip> [--serial S]
 #
 # This is a WORKFLOW ACCEPTANCE CHECK. It is not an M4 comparison and is not
 # evidence that semantic access outperforms editing source.
@@ -12,10 +12,14 @@
 # scripts from a Keliver checkout, no undocumented configuration. The device
 # steps are skipped when no serial is given.
 #
+# <parent-dir> is a PARENT. A uniquely named run directory is created beneath
+# it and nothing the caller supplied is ever deleted. This script used to start
+# with `rm -rf` on that argument, before the isolation guard ran.
+#
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-DISP="${1:?usage: $0 <disposable-root> <package.zip> [--serial S]}"
-ZIP="${2:?usage: $0 <disposable-root> <package.zip> [--serial S]}"
+PARENT="${1:?usage: $0 <parent-dir> <package.zip> [--serial S]}"
+ZIP="${2:?usage: $0 <parent-dir> <package.zip> [--serial S]}"
 shift 2
 SERIAL=""
 while [ $# -gt 0 ]; do
@@ -23,7 +27,18 @@ while [ $# -gt 0 ]; do
 done
 ZIP="$(cd "$(dirname "$ZIP")" && pwd -P)/$(basename "$ZIP")"   # the script cd's away
 [ -f "$ZIP" ] || { echo "no package at $ZIP" >&2; exit 2; }
-rm -rf "$DISP"; mkdir -p "$DISP/home" "$DISP/pkg" "$DISP/work"; DISP="$(cd "$DISP" && pwd -P)"
+
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+DISP="$(keliver_make_run_dir "$PARENT" acceptance)" || exit 1
+mkdir -p "$DISP/home" "$DISP/pkg" "$DISP/work"
+echo "run dir: $DISP"
+
+# Only ever stop what THIS invocation started.
+STARTED_PIDS=""
+track(){ STARTED_PIDS="$STARTED_PIDS $1"; }
+stop_started(){ for pid in $STARTED_PIDS; do kill "$pid" 2>/dev/null; done; }
+trap stop_started EXIT
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); }
@@ -45,8 +60,6 @@ APP="$DISP/work/myapp"
 ( cd "$APP" && find src -type f | sort | xargs shasum ) > "$DISP/fingerprint-before.txt"
 LOGIC_BEFORE="$(shasum "$APP/src/jsMain/kotlin/logic/HomePresenter.kt" | awk '{print $1}')"
 
-# shellcheck source=/dev/null
-. "$ROOT/scripts/keliver-test-isolation-guard.sh"
 keliver_require_isolated_store "$DISP" "$APP" || exit 1
 
 PORT="$(python3 -c "import json;print(json.load(open('$APP/keliver.portal.json')).get('port',8077))")"
@@ -110,8 +123,14 @@ if [ -n "$SERIAL" ]; then
     && ok "keliver-new-device-target.sh added the device target" || bad "device target failed"
   ( cd "$APP" && "$KP/keliver-install-device-host.sh" --serial "$SERIAL" >"$DISP/install.log" 2>&1 ) \
     && ok "keliver-install-device-host.sh installed the host" || bad "host install failed"
-  lsof -ti :8080 -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; sleep 2
-  ( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL ./gradlew serveDevelopmentZipline --console=plain >"$DISP/serve.log" 2>&1 & )
+  # Do NOT clear port 8080 blindly — a foreign process there is not ours to
+  # kill. Fail loudly instead, and track the serve we start so cleanup only
+  # ever stops this invocation's own process.
+  if lsof -ti :8080 -sTCP:LISTEN >/dev/null 2>&1; then
+    bad "port 8080 is already in use by another process; free it and re-run"
+  fi
+  ( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL ./gradlew serveDevelopmentZipline --console=plain >"$DISP/serve.log" 2>&1 ) &
+  track $!
   for _ in $(seq 1 60); do curl -sf -m 3 -o /dev/null http://localhost:8080/manifest.zipline.json && break; sleep 5; done
   curl -sf -m 3 -o /dev/null http://localhost:8080/manifest.zipline.json \
     && ok "serveDevelopmentZipline is serving the bundle" || bad "the bundle server never answered"
@@ -122,7 +141,7 @@ if [ -n "$SERIAL" ]; then
   SCREEN="$(adb -s "$SERIAL" shell cat /sdcard/acc.xml | grep -oE 'text="[^"]+"' | tr '\n' ' ')"
   case "$SCREEN" in *"My Inbox"*) ok "the edited title is on the device: $SCREEN" ;;
                     *) bad "the device does not show the edit: $SCREEN" ;; esac
-  lsof -ti :8080 -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null
+  stop_started; STARTED_PIDS=""
 else
   note "device steps skipped (no --serial)"
 fi

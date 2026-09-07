@@ -26,7 +26,11 @@ while [ $# -gt 0 ]; do
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
-rm -rf "$DISP"; mkdir -p "$DISP/home"; DISP="$(cd "$DISP" && pwd -P)"
+# A unique run dir beneath the caller's parent; never erase what the caller
+# supplied. See keliver_make_run_dir.
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+DISP="$(keliver_make_run_dir "$DISP" tree-check)" || exit 1
+mkdir -p "$DISP/home"
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
