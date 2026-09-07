@@ -1042,3 +1042,77 @@ macOS only; one emulator; one app. The device route is emulator-specific
 
 Unchanged: **M0**, **M1** complete; **M2** unblocked with no external adopter;
 **M3** not started; **M4** untouched this block — no participant runs.
+
+## Post-snapshot: safe acceptance entry point, and the real-presenter preview — 2026-09-07
+
+Commits `24708c550` (safety) and `1b2e3eaef` (preview route). Evidence in
+`superpowers/evidence/adopter-preview-route/`.
+
+### The acceptance script no longer deletes what it is given
+
+`keliver-adopter-acceptance.sh` began with `rm -rf "$1"` — **before** the
+isolation guard ran, so a reused or mistyped path was erased by the very script
+whose guard exists to prevent that. The argument is now a *parent*;
+`keliver_make_run_dir` creates a uniquely named directory beneath it and nothing
+the caller supplied is ever removed. Cleanup stops only processes that
+invocation started, and a foreign process on port 8080 is reported rather than
+killed.
+
+`keliver-acceptance-safety-check.sh` is the regression (8/8): it reproduces the
+old destruction with a stub inside a throwaway directory, then requires sentinel
+files to survive a refused run and a run that fails after unpacking, each run to
+get its own directory, the guard to precede relay startup, and no blanket port
+kills to remain. The same two-line change went to the three sibling checks.
+
+### The real-presenter preview is now a documented, executed route
+
+`keliver-new-editor.sh` scaffolds an editor whose `screens` map is entirely
+commented out, and the editor opens in **mock mode** regardless — so the guide's
+one-line "scaffold the app's own editor" implied a working preview that did not
+exist. The guide now covers all five steps, including registering the screen
+under its portal name, mapping contract fields to values, routing actions back
+into the bindings, and pressing ▶ Live.
+
+Executed from the package on a disposable app with the app's own stateful
+presenter: mock mode drew the binding as `{tally}`; after ▶ Live the canvas read
+`0 tallied` **from the presenter**; tapping the preview button moved it to
+`1 tallied` with the console logging `⚡ add → real presenter`. Nine lines of
+wiring, no parallel mock logic.
+
+### A real defect the comparison found — U19
+
+The same app on the device accumulates `0 → 1 → 2 → 3` across taps; the preview
+returns `1` every time, though all three taps dispatched. Preview state held in
+`remember` is discarded between dispatches. **Not root-caused** — that means
+changing the live preview engine, which was out of scope. The guide now says the
+live preview is trustworthy for wiring and a single transition, and that
+multi-step behaviour belongs on the device.
+
+### Distribution channels
+
+Two channels, and they are not the same thing:
+
+* **Tools bundle** (`keliver-portal-tools`, built locally, **not published
+  anywhere**): the adopter guide and `get_guide` contents, `keliver-init` and
+  its `.gitignore`, `keliver-portal` and its port fix, the store resolver,
+  the legacy-adopt route, the recording client, the device scripts.
+* **Maven Central** (`dev.keliver:*`): the runtime and editor artifacts. The
+  preview route resolves `portal-editor`, `portal-render`, `portal-core` and
+  `portal-document` at **0.3.3 from Central** — verified HTTP 200 — so it needs
+  no local candidate artifacts. The store-ownership and `/doc` 404 changes live
+  in `portal-relay`/`portal-mcp`, which ship in the **bundle**, not in the
+  published Maven artifacts an app compiles against.
+
+So "not in published Maven 0.3.3" is the wrong description of most pending work:
+it is undistributed **tooling**, awaiting a bundle release, not a Maven release.
+
+### Limits
+
+macOS only. One app, one presenter, one emulator. U19 is reproduced but not
+diagnosed. The preview was driven through a browser; no automated regression
+covers the Live-mode transition.
+
+### Milestones
+
+Unchanged: **M0**, **M1** complete; **M2** unblocked, still no external adopter;
+**M3** not started; **M4** untouched — no participant runs this block.
