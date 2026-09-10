@@ -1232,3 +1232,45 @@ disposable repo under the run directory.
 macOS only, Chrome 152 only, one app, one presenter; no device run this round.
 The BINDINGS panel's mock-value inputs keep the value they were last filled with
 and do not follow later live updates — the State Inspector is the live panel.
+
+## Post-snapshot: U19 reconciled — the harness was wrong — 2026-09-11
+
+Investigation only; no production code changed.
+
+**What the host clock does.** `EditorShell`'s frame pump is a `LaunchedEffect`
+inside the host composition, so its `withFrameNanos` resolves to the host
+Recomposer's own `broadcastFrameClock` (`Recomposer.kt:295`). A parked awaiter
+there makes `hasBroadcastFrameClockAwaiters` true, so `awaitWorkAvailable()`
+returns immediately and the recomposer asks its parent clock for a frame — every
+frame, with no invalidation anywhere. On web the parent is `BaseComposeScene`'s
+`BroadcastFrameClock(onNewAwaiters = ::updateInvalidations)`, whose invalidate is
+`SkiaLayer::needRedraw`, a `requestAnimationFrame`. Nothing pauses it: the web
+host never calls `pauseCompositionFrameClock` and has no visibility handling.
+
+**Measured**, with identical instrumentation on three published variants (v0.3.3
+with no wake, part 1, part 2), same app, separate origins, fresh Chrome profiles,
+zero service workers, empty cache storage: **~60 host frames per second in every
+state** — before Live, while Live runs with an idle presenter, after Stop — with
+zero recompositions of the host content. All three arms behave identically;
+published v0.3.3 handles synchronous actions and async completions correctly.
+The two patches add host recompositions (1 per action for part 1; 1–2 per action
+plus 2 per async completion for part 2) and change nothing else.
+
+**So both "failing before" results are withdrawn.** The old harness ran the pump
+as a plain coroutine on the parent clock, so its awaiter never counted toward
+`hasPendingWork` and the driver withheld frames production delivers. Corrected in
+`PreviewTestEditor.kt`; all five live-preview tests now pass with **both** wake
+mechanisms removed.
+
+**U19's original observation is unresolved.** `0 → 1 → 1 → 1` has not reproduced
+in two apps, headless and headed Chrome, polled and quiet observation, published
+and candidate artifacts. Leading unruled-out candidate: the editor's documented
+cache trap (constant-named loader, stale wasm).
+
+**Recommendation: remove both wake changes from the release candidate** — revert
+the production parts of `1db77c27c` and `3b3489805`, keep the tests. Left to the
+maintainer. Detail:
+`docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
+
+**Also recorded, not acted on:** the editor consumes a frame every ~16 ms
+permanently, including before Live is pressed and after it is stopped.

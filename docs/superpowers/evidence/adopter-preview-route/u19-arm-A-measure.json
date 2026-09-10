@@ -1,0 +1,74 @@
+{
+  "label": "A",
+  "provenance": {
+    "serviceWorkers": "unknown",
+    "caches": "unknown",
+    "resources": [
+      {
+        "name": "ledger-editor.js",
+        "size": 0,
+        "from": "cache"
+      },
+      {
+        "name": "8bc1b48ee28fd6b51bb9.wasm",
+        "size": 0,
+        "from": "cache"
+      },
+      {
+        "name": "da1de314574001d62f00.wasm",
+        "size": 0,
+        "from": "cache"
+      }
+    ],
+    "probe": "object"
+  },
+  "serviceWorkers": 0,
+  "cacheStorage": [],
+  "idleBeforeLive": {
+    "hostFrames": 181,
+    "hostContent": 0,
+    "presenterFrames": 0,
+    "ms": 3005,
+    "fps": 60.2
+  },
+  "idleLiveWaitingOnGate": {
+    "hostFrames": 180,
+    "hostContent": 0,
+    "presenterFrames": 0,
+    "ms": 3004,
+    "fps": 59.9
+  },
+  "asyncCompletion": {
+    "ms": 154,
+    "hostFrames": 9,
+    "hostContent": 0,
+    "presenterFrames": 1
+  },
+  "taps": [
+    {
+      "i": 1,
+      "ms": 11,
+      "hostContent": 0,
+      "presenterFrames": 1
+    },
+    {
+      "i": 2,
+      "ms": 154,
+      "hostContent": 0,
+      "presenterFrames": 1
+    },
+    {
+      "i": 3,
+      "ms": 152,
+      "hostContent": 0,
+      "presenterFrames": 1
+    }
+  ],
+  "idleAfterStop": {
+    "hostFrames": 180,
+    "hostContent": 0,
+    "presenterFrames": 0,
+    "ms": 3003,
+    "fps": 59.9
+  }
+}

@@ -878,12 +878,30 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U19. Live preview did not re-render after a presenter action — FIXED
+### U19. Live preview appeared not to re-render after a presenter action — CAUSE UNRESOLVED
+
+> **Read this first (2026-09-11).** Two causal explanations have now been
+> written here and both are withdrawn. The second one — "an idle host schedules
+> no frames" — was measured and is **false**: the editor's host delivers 60
+> frames per second continuously, driven by the editor's own frame pump, in
+> every state including before Live is pressed. Published `portal-editor:0.3.3`
+> handles both synchronous actions and asynchronous presenter completions
+> correctly. The original `0 → 1 → 1 → 1` observation has not reproduced under
+> any condition tried and its **cause is unknown**.
+>
+> The two `HostWakeSignal` changes below are therefore **unproven** and
+> recommended for removal from the release candidate. Full trace, per-arm
+> measurements and the recommendation:
+> `docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
+>
+> Everything below is preserved as the record of what was observed and claimed,
+> in order, including the parts now known to be wrong.
 
 **The earlier causal wording here was wrong and is withdrawn.** It said state
 was "discarded between dispatches". State was never discarded.
 
-**What actually happened.** The editor runs the live-preview guest composition
+**What was believed to have happened — also withdrawn, see the note above.**
+The editor runs the live-preview guest composition
 on its own `BroadcastFrameClock` and ticks it from the HOST's frames
 (`EditorShell.kt`, the `while (true) { withFrameNanos { guestClock.sendFrame } }`
 loop). That is one-directional. A preview action wrote presenter state, which
@@ -986,6 +1004,33 @@ idle. See `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md`.
 
 **Release scope.** Both parts are in `portal-editor`, a **Maven** artifact; the
 tools bundle does not carry them. Neither is released.
+
+---
+
+**Part 3 — the reconciliation (2026-09-11).** The harness that produced both
+"failing before" results was traced against Compose 1.8.2's actual sources and
+found to withhold frames production delivers: its pump awaited the parent clock
+directly, so the pump's awaiter never counted toward
+`Recomposer.hasBroadcastFrameClockAwaiters`, and the driver refused to send
+frames. Production's pump is a `LaunchedEffect` inside the host composition, so
+its awaiter makes the recomposer request a browser frame every frame, forever.
+
+Measured with identical instrumentation across three published variants
+(`v0.3.3` with no wake, part 1, part 2), same app and browser, separate origins,
+fresh profiles, no service workers, empty cache storage:
+
+| | before Live | Live idle | after Stop | async completion | tap |
+|---|---|---|---|---|---|
+| v0.3.3, no wake | 60.2 frames/s | 59.9/s | 59.9/s | 154 ms, +0 host recompositions | +0 |
+| part 1 | 60.0/s | 59.9/s | 59.9/s | 155 ms, +0 | +1 each |
+| part 2 | 59.9/s | 59.9/s | 60.3/s | 155 ms, +2 | +1 to +2 |
+
+Both patches are behaviourally indistinguishable from doing nothing, and add
+recomposition. The corrected harness (`PreviewTestEditor.kt`) passes all five
+live-preview tests with **both** wake mechanisms removed.
+
+**Status: cause unresolved, no production defect reproduced, wake changes
+recommended for removal.**
 
 Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
 

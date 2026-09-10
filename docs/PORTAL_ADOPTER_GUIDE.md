@@ -300,14 +300,15 @@ Verified from a scaffolded app in Chrome — see
 `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md` for the exact
 sequence and its limits.
 
-**Which build you need.** Both halves of this behaviour are guaranteed by the
-**Maven artifact** `dev.keliver:portal-editor`, not by the tools bundle, and
-neither is released yet. Editors resolving `portal-editor:0.3.3` from Maven
-Central depend on the browser scheduling a frame of its own accord: in testing
-that happened reliably, but it is not something the published editor
-guarantees. Check the version in `editor/build.gradle.kts`, and if a preview
-value ever looks stuck, confirm the behaviour on the device before hunting for
-a bug in your presenter (`KNOWN_BUGS.md` U19).
+**Which build you need.** The published `dev.keliver:portal-editor:0.3.3` — the
+version an adopter gets from Maven Central today. Both behaviours were measured
+against it directly. An earlier revision of this guide said the published editor
+had a defect here and that an unreleased fix was required; that was wrong, and
+the fix in question turned out to change nothing observable
+(`KNOWN_BUGS.md` U19). If a preview value ever does look stuck, hard-reload
+first — the editor's loader has a constant filename, so a browser can keep
+running a stale one — and confirm on the device before hunting for a bug in your
+presenter.
 
 Independently of that, the live preview remains a **wiring** check. It runs
 your presenter, but a passing preview is not a guarantee of runtime
