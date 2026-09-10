@@ -150,7 +150,7 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
 
       // The guest composition runs on its own frame clock, which we tick from the
       // host's real frames — so guest recomposition AND animations stay in sync.
-      val guestClock = BroadcastFrameClock()
+      val guestClock = newGuestFrameClock()
       // Keep a bad consumer presenter/render from cancelling the editor shell.
       // Compose does not permit a try/catch directly around @Composable calls;
       // its recomposer reports the failure through this isolated child scope.

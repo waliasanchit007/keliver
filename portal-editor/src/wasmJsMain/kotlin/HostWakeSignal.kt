@@ -1,3 +1,4 @@
+import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.mutableStateOf
 
 /**
@@ -23,3 +24,15 @@ internal object HostWakeSignal {
     state.value = state.value + 1
   }
 }
+
+/**
+ * The clock EditorShell runs the guest composition on.
+ *
+ * [BroadcastFrameClock] reports the moment it gains its first awaiter — which is
+ * precisely the moment the guest has work it cannot do without a frame, whether
+ * that work came from an action, from a coroutine a presenter started, or from a
+ * guest animation. Waking the host there covers every guest invalidation, not
+ * just the ones that arrive through [LiveEngine.dispatch]. It is edge-triggered:
+ * once the frame is delivered the awaiter is gone, so an idle editor stays idle.
+ */
+internal fun newGuestFrameClock(): BroadcastFrameClock = BroadcastFrameClock { HostWakeSignal.wake() }
