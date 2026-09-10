@@ -1184,3 +1184,51 @@ the previous value; canvas and inspector agree once a frame has run.
 
 Unchanged: **M0**, **M1** complete; **M2** unblocked, no external adopter;
 **M3** not started; **M4** untouched — no participant runs.
+
+## Post-snapshot: U19 part 2 — asynchronous presenter updates — 2026-09-11
+
+`HostWakeSignal` was bumped by `LiveEngine.dispatch`, so it covered only state
+written *inside* an action. A presenter also writes state from a coroutine that
+completes on its own, with no dispatch to wake anything. Under a host that
+frames only when invalidated, that update asked for **no frame at all**.
+
+Fixed at the boundary that owns the question: the guest clock is now
+`BroadcastFrameClock { HostWakeSignal.wake() }` (`newGuestFrameClock()`), so the
+moment the guest gains a frame awaiter — an action, a coroutine, an animation —
+the host is asked for a frame. Edge-triggered: an idle editor stays idle.
+`LivePreviewAsyncTest` (3 tests) drives a host recomposer, the editor's real
+frame pump, and a driver that frames only while the host has pending work;
+before the change the first case fails with *"the completion must ask the host
+for a frame; it asked for none"*.
+
+### A correction to the entry above
+
+Running the whole route again from a fresh external app against **published**
+`portal-editor:0.3.3`, every case passed — three canvas taps `0 → 1 → 2 → 3`,
+and an async completion reaching canvas and inspector after six seconds of
+complete quiet, in Chrome both headless and headed. The published editor did not
+reproduce U19 in that app.
+
+So "every adopter … still has the U19 defect" is **withdrawn as stated**. The
+scheduling hole is real and is demonstrated in the harness; whether a browser
+leaves the host idle is not established, and the earlier `0 → 1 → 1 → 1` browser
+reading is currently unexplained. Detail and artifact hashes:
+`docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md`.
+
+There is also **no `~/.m2` on this machine** today, so the earlier note that the
+real `~/.m2` kept its `portal-editor/0.3.3` does not describe its current state.
+This session created no `~/.m2` and deleted nothing; the candidate went to a
+disposable repo under the run directory.
+
+### Release scope — unchanged in shape
+
+| change | channel | state |
+|---|---|---|
+| U19 parts 1 **and** 2 | **Maven** `dev.keliver:portal-editor` | verified locally; **unreleased** |
+| adopter guide (incl. the async section) | tools bundle | unreleased |
+
+### Limits
+
+macOS only, Chrome 152 only, one app, one presenter; no device run this round.
+The BINDINGS panel's mock-value inputs keep the value they were last filled with
+and do not follow later live updates — the State Inspector is the live panel.

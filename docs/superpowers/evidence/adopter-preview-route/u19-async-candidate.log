@@ -1,0 +1,15 @@
+[candidate2] canvas mounted
+[candidate2] before Live: "Mock mode — press ▶ Live to run real logic"
+[candidate2] live started: status="Loading…" tally="0 entries" (+204ms)
+[candidate2] before release: held 4000ms, distinct states = ["Loading…|0 entries"]
+[candidate2] async completion (no interaction): status="loaded 42 entries" tally="0 entries" (+203ms)
+[candidate2] canvas tap 1: status="loaded 42 entries" tally="1 entries" (+209ms)
+[candidate2] canvas tap 2: status="loaded 42 entries" tally="2 entries" (+204ms)
+[candidate2] canvas tap 3: status="loaded 42 entries" tally="3 entries" (+204ms)
+[candidate2] refresh dispatched: status="refreshing…" tally="3 entries" (+203ms)
+[candidate2] host idle while the request is outstanding: held 4000ms, distinct states = ["refreshing…|3 entries"]
+[candidate2] delayed completion (no interaction): status="refreshed 1" tally="3 entries" (+204ms)
+[candidate2] after Stop: {"status":null,"tally":null}
+[candidate2] restarted: status="Loading…" tally="0 entries" (+204ms)
+[candidate2] restarted session holds its own state: held 3000ms, distinct states = ["Loading…|0 entries"]
+[candidate2] canvas box {"x":0,"y":0,"w":0,"h":0}

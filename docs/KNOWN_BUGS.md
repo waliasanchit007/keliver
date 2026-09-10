@@ -939,10 +939,53 @@ restart.
 `portal-editor`: browser preview `0 → 1 → 2 → 3`, and the same unchanged
 presenter on the device `0 → 1 → 2 → 3`.
 
-**Still true in published 0.3.3.** The fix is in `portal-editor`, a **Maven**
-artifact. Until it is released, any adopter whose editor resolves
-`dev.keliver:portal-editor:0.3.3` from Central still sees a preview that stops
-updating after the first action. The tools bundle does not carry it.
+**Part 2 — asynchronous presenter state (2026-09-11).** `HostWakeSignal` was
+bumped by `LiveEngine.dispatch`, which covers only state written *inside* an
+action. A presenter also writes state from a coroutine: a `LaunchedEffect`
+completes and there is no dispatch to wake anything. Under a host that only
+frames when invalidated, that update asked for **no frame at all**.
+
+Fixed by moving the wake to the guest clock itself:
+`newGuestFrameClock()` = `BroadcastFrameClock { HostWakeSignal.wake() }`
+(`portal-editor/src/wasmJsMain/kotlin/HostWakeSignal.kt`). A
+`BroadcastFrameClock` reports the moment it gains its first awaiter, which is
+exactly the moment the guest has work it cannot do without a frame — an action,
+a coroutine, or a guest animation alike. It is edge-triggered, so an idle
+editor stays idle: no polling, no unconditional animation loop.
+
+**Regression**: `LivePreviewAsyncTest.kt`, 3 tests, driving the host as well as
+the guest — a host recomposer, the editor's frame pump, and a driver that
+produces a frame only while the host has pending work. Failing before the
+change:
+
+```
+anAsyncCompletionReachesThePreviewWithNoInteraction
+    the completion must ask the host for a frame; it asked for none
+workStartedByAnActionLandsAfterTheDispatchRenderSettles
+    the action's own rendering. Expected <loading>, actual <idle>
+pendingWorkFromAnEndedSessionIsNeverDelivered
+    the presenter's own async start reached the preview. Expected <loading>, actual <idle>
+```
+
+**A correction to the paragraph above.** "Still true in published 0.3.3" is not
+supported by what a browser actually does, and is withdrawn as stated. Running
+the whole route again from a fresh external app (`ledger`) against **published**
+`dev.keliver:portal-editor:0.3.3` from Central, in Chrome 152 both headless and
+headed, every case passed: three canvas taps gave `0 → 1 → 2 → 3`, and an async
+completion reached the canvas and the State Inspector with no interaction — the
+last measured after six seconds of complete quiet, with no polling of the page
+at all. The published editor did **not** reproduce U19 in that app.
+
+So the mechanism is real (the harness above shows the guest asking for zero
+frames), but the browser condition it depends on — a host composition that goes
+idle while the guest has work — was not reproduced here, and the earlier
+`0 → 1 → 1 → 1` browser reading remains unexplained. What the fix guarantees is
+that a guest invalidation asks for a frame **regardless of the host's scheduling
+policy**; what it does not establish is how often a browser leaves the host
+idle. See `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md`.
+
+**Release scope.** Both parts are in `portal-editor`, a **Maven** artifact; the
+tools bundle does not carry them. Neither is released.
 
 Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
 

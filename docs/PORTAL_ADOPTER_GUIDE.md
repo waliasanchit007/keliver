@@ -286,24 +286,34 @@ each contract field with its live value, and the action console logs
 Repeated actions accumulate, so a three-tap sequence reads `0 → 1 → 2 → 3` in
 the preview, the same as on the device.
 
-That was **not** true before: the preview showed the first transition and then
-stopped updating, because a presenter action invalidated the preview
-composition without waking the editor's frame loop. The presenter's own state
-was always correct — the canvas was stale. Fixed in `portal-editor`
-(`KNOWN_BUGS.md` U19).
+### Presenter state that arrives later
 
-**Which build you need.** The fix ships in the **Maven artifact**
-`dev.keliver:portal-editor`, not in the tools bundle. If your editor resolves
-`portal-editor:0.3.3` from Maven Central — the currently published version —
-you still have the old behaviour: the preview stops updating after the first
-action, and multi-step sequences must be checked on the device. Check the
-version in `editor/build.gradle.kts`.
+State your presenter writes from a coroutine — a load that completes, a
+`LaunchedEffect` that finishes — shows up on its own. A screen that starts on
+`Loading…` and resolves reaches the canvas and the State Inspector with no
+click, no selection change and no document edit, and an action that *starts* a
+request still shows the response when it lands, long after the action's own
+render settled. Stopping Live cancels work in flight; a restarted session, or a
+different screen or persona, never inherits a value from the previous one.
+
+Verified from a scaffolded app in Chrome — see
+`docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md` for the exact
+sequence and its limits.
+
+**Which build you need.** Both halves of this behaviour are guaranteed by the
+**Maven artifact** `dev.keliver:portal-editor`, not by the tools bundle, and
+neither is released yet. Editors resolving `portal-editor:0.3.3` from Maven
+Central depend on the browser scheduling a frame of its own accord: in testing
+that happened reliably, but it is not something the published editor
+guarantees. Check the version in `editor/build.gradle.kts`, and if a preview
+value ever looks stuck, confirm the behaviour on the device before hunting for
+a bug in your presenter (`KNOWN_BUGS.md` U19).
 
 Independently of that, the live preview remains a **wiring** check. It runs
 your presenter, but a passing preview is not a guarantee of runtime
 correctness, and the device remains the place to confirm real behaviour.
 
-## The document store## The document store## The document store
+## The document store
 
 Your documents, signing keys and published bundles live **outside** your source
 tree, in a store owned by exactly one app:
