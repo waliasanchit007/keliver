@@ -61,7 +61,21 @@ ingest round-trip on a real screen + (widget changes) device render. The
 universal screen bar is D14 in DECISIONS.md: compile → 0 RawCode ingest → device
 screenshot → surgical write-back round-trip.
 
-**Releases:** bump `KELIVER_VERSION` in RedwoodBuildPlugin.kt, tag `vX.Y.Z`,
-`gh workflow run publish-maven-central.yml -f ref=vX.Y.Z` (guards tag==const).
-Pre-gate locally: `publishToMavenLocal -PkeliverVersion=X.Y.Z
+**Releases — two independent lines. Do not bump one to name the other.**
+
+*Libraries* (Maven Central + GitHub Packages): bump `KELIVER_VERSION` in
+RedwoodBuildPlugin.kt, tag `vX.Y.Z`, `gh workflow run
+publish-maven-central.yml -f ref=vX.Y.Z` (guards tag==const). `v*` also fires
+publish.yml. Pre-gate locally: `publishToMavenLocal -PkeliverVersion=X.Y.Z
 -DRELEASE_SIGNING_ENABLED=false` + `apiCheck`.
+
+*Tools bundle* (`keliver-portal-tools-X.Y.Z.zip`, a GitHub release asset): bump
+`build-support/portal-tools.version`, tag **`portal-tools-vX.Y.Z`**. That tag
+fires portal-tools.yml only — it does not match the `v*` pattern publish.yml
+listens on, so a tools release cannot publish a library. The workflow guards
+tag==file and builds the exact tagged commit; the zip carries `VERSION.json`
+with the tools version, source commit and the Maven dependency version its
+scaffolders wire in. Pre-gate locally: `scripts/build-portal-tools.sh`, then
+`scripts/keliver-adopter-acceptance.sh <parent> <zip>` **and**
+`scripts/keliver-acceptance-identity-check.sh <parent> <zip>` (U21: the
+acceptance must refuse a portal it did not start).

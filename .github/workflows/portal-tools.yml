@@ -1,37 +1,79 @@
-# Builds keliver-portal-tools (server + editor + mcp + keliver-init/keliver-portal
-# launchers) and attaches the zip to the GitHub Release for the tag. No signing
-# secrets needed — free on ubuntu-latest for a public repo.
+# Builds keliver-portal-tools (relay + editor + mcp + device host APK +
+# keliver-init/keliver-portal launchers) and attaches the zip to its own GitHub
+# Release. No signing secrets needed.
+#
+# TOOLS TAGS ARE SEPARATE FROM LIBRARY TAGS.
+#
+#   library:  v0.3.3               -> publish.yml (GitHub Packages) and, manually,
+#                                     publish-maven-central.yml
+#   tools:    portal-tools-v0.3.4  -> this workflow, and ONLY this workflow
+#
+# `portal-tools-v*` does not match the `v*` pattern publish.yml listens on, so a
+# tools release cannot publish libraries. That is the point of the convention:
+# naming a ZIP must never move a published Maven coordinate.
+#
+# The version comes from build-support/portal-tools.version and the tag must
+# agree with it, the same guard publish-maven-central.yml uses for the library
+# version. The checkout is the exact commit the tag points at.
 name: portal-tools
 on:
   push:
-    tags: ["v*"]
+    tags: ["portal-tools-v*"]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version label for the bundle (e.g. 0.3.0)"
+      ref:
+        description: "Tag or commit to build (use a portal-tools-v* tag for releases)"
         required: true
 permissions:
   contents: write
 jobs:
   bundle:
+    # Prerequisites this job actually needs: JDK 17, the Android SDK (the bundle
+    # ships a device-host APK built by :portal-device-android:assembleDebug),
+    # Node/Yarn for the Kotlin/Wasm editor build, python3 and zip.
+    # ubuntu-latest carries all of them. NOTE: as of the 0.3.4 candidate this
+    # job has NOT been executed on Linux — see docs/RELEASE_REVIEW.md.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The tag names the commit; build that commit and nothing else.
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Resolve version
+      - name: Resolve and verify the tools version
         id: v
         run: |
-          v="${{ github.event.inputs.version }}"
-          [ -z "$v" ] && v="${GITHUB_REF_NAME#v}"
-          echo "version=$v" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          file="$(tr -d ' \n' < build-support/portal-tools.version)"
+          echo "recorded tools version: $file"
+          echo "building commit: $(git rev-parse HEAD)"
+          case "${GITHUB_REF_TYPE:-}" in
+            tag)
+              tag="${GITHUB_REF_NAME#portal-tools-v}"
+              if [ "$tag" != "$file" ]; then
+                echo "::error::tag portal-tools-v$tag does not match build-support/portal-tools.version ($file)"
+                exit 1
+              fi
+              ;;
+            *) echo "not a tag build; using the recorded version" ;;
+          esac
+          echo "version=$file" >> "$GITHUB_OUTPUT"
       - name: Build the tools bundle
         run: scripts/build-portal-tools.sh "${{ steps.v.outputs.version }}"
-      - name: Attach to the release
+      - name: Show what was packaged
+        run: |
+          unzip -p build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip \
+            '*/VERSION.json'
+          shasum -a 256 build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+      - name: Attach to the tools release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           files: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
-          tag_name: v${{ steps.v.outputs.version }}
+          # Its OWN release. Existing v* releases and their assets are untouched.
+          tag_name: portal-tools-v${{ steps.v.outputs.version }}
           fail_on_unmatched_files: true
