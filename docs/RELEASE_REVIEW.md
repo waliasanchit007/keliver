@@ -1,205 +1,181 @@
-# Release review — keliver-portal-tools 0.3.3 candidate
+# Release review — keliver-portal-tools 0.3.4 candidate
 
-Prepared 2026-09-11. **Nothing has been pushed, tagged, published or sent.** This
-is a candidate built locally from a clean tree, for review.
+Prepared 2026-09-11. **Nothing has been pushed, tagged, uploaded or dispatched,
+and no published bytes have been replaced.** This is a candidate built locally
+from a clean tree, for a release decision.
 
 ## Candidate
 
 | | |
 |---|---|
-| commit | `14b1b00c16eedff765a20b1065e65c3f219d9cbf` (`main`, working tree clean at build time) |
-| package | `build/portal-tools/keliver-portal-tools-0.3.3.zip` |
-| sha256 | `0232d86f3fa39589ec23b81adef92ffec102ebb0656d654141984e66c3561bb0` |
-| size | 90,305,446 bytes (published 0.3.3 asset: 70,002,032 bytes) |
-| contents | `bin/` `relay/` `mcp/` `editor/` `host/` `wrapper/` |
-| built by | `scripts/build-portal-tools.sh` |
+| tools version | **0.3.4** (`build-support/portal-tools.version`) |
+| source commit | `ca95f1bab8878a597fe0284c0e67626962f22496`, clean tree |
+| package | `build/portal-tools/keliver-portal-tools-0.3.4.zip` |
+| sha256 | `c023deb98fbc01569c5ba72a69f3b8e28a1bea2abc3860cf869bf738b9469513` |
+| size | 90,306,099 bytes |
+| Maven dependency version | **0.3.3, unchanged** — what the bundled scaffolders write into new projects |
+| recorded in the package | `VERSION.json` and `VERSION` at the bundle root |
 
-## No Maven release is needed
+The two version lines are now independent. `portal-tools-v*` does not match the
+`v*` pattern `publish.yml` listens on, so a tools release cannot publish a
+library; no `portal-tools-*` tag exists yet, so the convention is free. The
+existing `v0.3.3` release and its `keliver-portal-tools-0.3.3.zip` asset are
+untouched and stay that way.
 
-Established from the diff, not assumed. Modules published on Central
-(`portal-editor`, `portal-render`, `portal-core`, `portal-document`, and the
-`keliver-*` libraries — each verified HTTP 200 at `0.3.3`):
+**No Maven release is needed or implied.** Every Central-published module's
+production sources and klib dump are unchanged since `v0.3.3`
+(`git diff v0.3.3 HEAD -- <module>/src/*Main <module>/api` is empty for each);
+the only build change to one is a `wasmJsTest` dependency, which is not part of
+a published artifact. `portal-relay`, `portal-mcp` and `portal-published-guest`
+are not on Central at all.
 
-```
-git diff v0.3.3 HEAD -- <module>/src/*Main <module>/api     →  empty for every one
-```
+## Release notes
 
-The only change touching a published module is a `wasmJsTest` dependency in
-`portal-editor/build.gradle` (`kotlinx.coroutines.test`), which is a test source
-set and is not part of the published artifact.
+Adopter-visible changes since the published 0.3.3 tools bundle. Each line names
+the check that actually covers it.
 
-`portal-relay`, `portal-mcp` and `portal-published-guest` return **404** on
-Central — they ship only in the tools bundle.
+- **A document request for an unknown screen returns 404 and creates nothing.**
+  Reading a document used to *mint* it: the engine materialised `<screen>.kt`
+  and `Compiled_<screen>.kt` in the app's source tree, in a package that was not
+  theirs, so merely opening the editor — or a typo, or a stale link — left junk
+  in the working tree. `GET /doc?screen=<unknown>` now answers
+  `404 {"error":"no screen 'nope' in project 'default'; known screens: home"}`.
+  *Covered by:* a direct check against this candidate's packaged relay (404
+  returned, source tree byte-identical, only `home.kt` present). There is **no
+  automated test** for this path — see Blockers.
+- **`get_document` accepts project-qualified screen ids.** It previously
+  returned an empty document for ids like `default/home`; the id is now
+  normalised before lookup. Note this is about what it *accepts*, not about the
+  form it returns. *Covered by:* `ScreenIdTest` (7 tests — bare names pass
+  through, an own-project prefix is stripped, a foreign project prefix is not,
+  normalisation is stable, stray slashes tolerated, an empty suffix is not a
+  screen).
+- **Each app owns its own document store.** One store per machine used to be
+  shared by every app, so two projects overwrote each other's documents. The
+  store is now keyed to the app path and claimed atomically.
+  *Covered by:* `PortalStoreOwnershipTest` (5), `StoreClaimRaceTest` (3, the
+  concurrent claim), `StoreContractTest` (6, the shell resolver and
+  `PortalConfig.storeDir()` agree), `PortalConfigTest` (9). The adopter
+  acceptance additionally confirms the store lands outside the app tree for a
+  single app — **it runs one app and therefore proves nothing about
+  concurrency**; the race is the unit tests' claim, not the acceptance's.
+- **`get_guide` works outside a Keliver checkout.** It read a repo-only path and
+  answered "guide not found" for every real adopter; the guide now ships as a
+  classpath resource in the MCP binary, and an app keeping its own
+  `docs/PORTAL_USAGE.md` still wins. *Covered by:* `GuideTest` (7) and the
+  acceptance (14,185 bytes returned, no Keliver-repo-only commands named).
+- **`keliver-portal` refuses an occupied port** instead of appearing to start.
+  *Covered by:* the new refusal regression below, which observes the refusal.
+- **Scaffolder fixes:** `keliver-init` writes a `.gitignore`; a documented route
+  exists for adopting a pre-existing store. *Covered by:* the acceptance's
+  scaffold and ownership steps.
 
-**So `dev.keliver:*:0.3.3` on Maven Central does not need replacing.** Adopters
-keep resolving exactly what they resolve today.
-
-## What is in this candidate
-
-Everything unreleased since the `v0.3.3` tag, grouped by what it actually is.
-
-### Tools bundle — the whole of the change
-
-Three production files, both binaries that ship in the bundle:
-
-- `portal-relay/src/main/kotlin/PortalConfig.kt` (+143) and `Relay.kt` (+64)
-- `portal-mcp/src/main/kotlin/dev/keliver/portal/mcp/Tools.kt` (+84)
-
-plus the build-script store contract (root `build.gradle`) and the device host
-build files, which affect the bundled APK rather than any library.
-
-Adopter-visible fixes, all verified by the packaged acceptance below:
-
-1. **One document store per app** (U17). A single store on the machine used to
-   be shared by every app, so two projects overwrote each other's documents.
-   Each app now owns a store keyed to its path (`myapp-8b8e4fa1`), claimed
-   atomically, and the acceptance asserts the store lives outside the app tree.
-2. **`get_guide` works outside the Keliver checkout** (U18). It used to read a
-   repo-only path and answer "guide not found" for every real adopter; the guide
-   now ships as a classpath resource in the MCP binary (14,185 bytes returned in
-   the acceptance), and an app that keeps its own `docs/PORTAL_USAGE.md` still
-   wins.
-3. **`get_document` returns qualified screen ids** (U16), which previously came
-   back as an empty document.
-4. **`keliver-portal` refuses an occupied port** instead of appearing to start.
-   Observed directly during this review — see Blockers.
-5. Scaffolder fixes: `keliver-init` writes a `.gitignore`; `/doc` no longer
-   404s; a documented route exists for adopting a pre-existing store.
-
-### Documentation
-
-`PORTAL_ADOPTER_GUIDE.md` (which is what `get_guide` serves), `KNOWN_BUGS.md`,
-`CURRENT_STATE.md`, and the evidence set under
-`docs/superpowers/evidence/adopter-preview-route/`.
-
-### Tests and evidence
-
-`PreviewTestEditor.kt` and five preview tests; the U19 investigation record.
-No adopter-facing effect.
-
-## U19 — do not describe this as a fix
-
-The release notes must not say the preview was fixed, and must not say Maven
-`0.3.3` needs replacing because of it.
-
-A preview defect was observed (`0 → 1 → 1 → 1` where the device showed
-`0 → 1 → 2 → 3`) and two fixes were written for it. Both were then **removed**
-(`b4102945f`) because measurement showed they changed nothing: the editor's host
-requests a browser frame every ~16 ms regardless, so the frame they asked for was
-already being asked for. `portal-editor`'s production sources and klib dump are
-identical to `v0.3.3`.
-
-**Status: previously observed, currently unreproduced, cause unresolved.** Not
-fixed, and not "never happened". Detail:
-`docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
+Not in these notes, deliberately: **U19 is not fixed.** A preview defect was
+observed, two fixes were written, and both were removed once measurement showed
+they changed nothing. `portal-editor` is identical to `v0.3.3`. U19 stands as
+*previously observed, currently unreproduced, cause unresolved*.
 
 ## Evidence
 
-### Test gate, at the candidate commit
-
-`./gradlew :portal-editor:wasmJsTest :portal-relay:test :portal-mcp:test apiCheck`
-→ **BUILD SUCCESSFUL**, 194 tests, 0 failures across the suite, including:
-
-| suite | tests |
+| check | result |
 |---|---|
-| `LivePreviewDispatchTest` / `LivePreviewAsyncTest` | 2 / 3 |
-| `PortalConfigTest`, `PortalStoreOwnershipTest`, `StoreClaimRaceTest`, `StoreContractTest` | 9 / 5 / 3 / 6 |
-| `GuideTest`, `ScreenIdTest` | 7 / 7 |
-| `SignedBundleVerificationTest`, `PreviewDistributionRunnerTest` | 2 / 3 |
-| `apiCheck` | clean |
+| `:portal-editor:wasmJsTest :portal-relay:test :portal-mcp:test apiCheck` | BUILD SUCCESSFUL, **194 tests, 0 failures** |
+| `keliver-adopter-acceptance.sh` vs this zip | **16 passed, 0 failed** |
+| `keliver-acceptance-identity-check.sh` vs this zip | **6 passed, 0 failed** |
+| unknown-screen `/doc` against the packaged relay | 404, source tree unchanged |
+| packaged APK contents | no `assets/portal_ed25519.pub` — see Blockers |
+| device / emulator route | **NOT RUN — verification incomplete** |
 
-### Packaged adopter acceptance, against this exact zip
+The acceptance gate itself was repaired first (U21). It used to launch
+`keliver-portal` in the background, ignore its result, and accept any server
+answering the port; during the previous review a leftover relay answered and the
+whole run — including the mutation — went to a different app while reporting
+PASS. It now requires that `keliver-portal` itself started, and that the process
+listening on the port is a descendant of a pid recorded in that app's
+`keliver-portal` run directory, before any document request, and again after the
+restart. A matching screen title is explicitly *not* accepted as identity: both
+apps scaffold the same tree, so the title would have matched.
 
-`scripts/keliver-adopter-acceptance.sh <parent> build/portal-tools/keliver-portal-tools-0.3.3.zip`
-— the guide executed literally from the package, nothing from a checkout:
+`keliver-acceptance-identity-check.sh` is the regression: a foreign relay on the
+expected port, pointed at its own disposable app. It requires the acceptance to
+exit nonzero at the startup/identity gate, issue no mutation, leave the foreign
+app's **source and store byte-identical**, and leave the foreign relay
+**running**.
 
-```
-package: 0232d86f3fa39589ec23b81adef92ffec102ebb0656d654141984e66c3561bb0
-passed: 16   failed: 0
-```
+## Build path
 
-covering: scaffold → portal starts → `get_guide` (14,185 bytes, no repo-only
-commands) → `get_document` (version 1, title `MyApp`) → `apply_ops` dry-run then
-commit (version 2) → the source now reads the edited title → exactly one tracked
-file changed → hand-owned logic byte-identical → `compileKotlinJs` succeeds →
-stop/start → the edit persists in both document and source → the store is
-outside the app.
+`portal-tools.yml` runs on `ubuntu-latest`. The job's real prerequisites, from
+the script rather than the YAML: JDK 17; the Android SDK, because the bundle
+ships a device-host APK built by `:portal-device-android:assembleDebug`;
+Node/Yarn for the Kotlin/Wasm editor distribution; `python3` and `zip`. Nothing
+in the bundle requires macOS — no iOS or native target is built.
 
-Device steps were **skipped** (no `--serial`).
+**This candidate was built on macOS 15 (Darwin 25.5.0) with JDK 17. The workflow
+has not been executed on Linux, in this block or any previous one.** The
+workflow file has been corrected for the new tag convention, but a corrected
+YAML is not evidence that it runs.
 
-### Browser check, final artifact
+Supported path, by the evidence available: **build locally on macOS** as this
+candidate was, and treat the Linux workflow as unverified.
 
-App editor rebuilt with `--refresh-dependencies` resolving `portal-editor:0.3.3`
-from Central; the page loaded `0a6d7167e222132265b6.wasm`
-(sha256 `33710124a18f5f34…`), `serviceWorkers: 0`, `caches.keys(): []`, no
-diagnostic probe present. Three synchronous canvas taps `0 → 1 → 2 → 3`; an
-asynchronous completion reaching canvas and State Inspector with no interaction;
-Stop clears the live values and a restart is fresh with no stale value.
-
-## Distribution
-
-**Destination**: a GitHub release asset on `waliasanchit007/keliver`, which is
-where `keliver-portal-tools-0.3.1/0.3.2/0.3.3.zip` were published. No Maven
-Central step.
-
-**Steps** (none performed):
-
-1. Decide the version — see the open decision below.
-2. Tag if the version changes; `KELIVER_VERSION` lives in
-   `build-support/.../RedwoodBuildPlugin.kt` and the release workflow guards
-   `tag == const`.
-3. `scripts/build-portal-tools.sh` on the release commit.
-4. Attach the zip to the release and publish it.
-
-### Open decision — the only one blocking a release
-
-**This candidate is version `0.3.3`, and a `keliver-portal-tools-0.3.3.zip` is
-already attached to the `v0.3.3` release** (uploaded 2026-09-05, 70,002,032
-bytes). This one is a different, larger artifact with the same name and version.
-
-Someone has to choose:
-
-- **replace** the existing 0.3.3 asset — same coordinate, different bytes, and
-  anyone who already downloaded 0.3.3 has something else; or
-- **cut 0.3.4** for the tools bundle — which means bumping `KELIVER_VERSION` and
-  so also implies Maven artifacts at `0.3.4` that are byte-for-byte equivalent to
-  `0.3.3`, unless the tools bundle is versioned separately.
-
-The second is the honest one, but it forces a question this repo has not
-answered: whether the tools bundle and the Maven libraries share a version line.
-That is a maintainer decision, not a technical blocker.
+**Required CI gate before trusting the workflow** (not authorized here, no
+remote execution in this block): dispatch `portal-tools.yml` on a branch, and
+require that it (a) builds the zip, (b) prints a `VERSION.json` whose
+`sourceCommit` matches the dispatched ref, and (c) produces an APK — the Android
+SDK on the runner is the piece most likely to be missing. Then re-run the two
+acceptance scripts against the Linux-built zip on a machine that can run them.
+Until that has passed, releases should be cut from the macOS build.
 
 ## Blockers and limitations
 
-**No product blockers were found within the checks performed.**
+**Two findings that need a decision before publishing:**
 
-One **verification-harness** defect was found, and it is worth fixing before the
-acceptance is trusted again:
+1. **The device route is unverified for a release that ships an APK.** There is
+   no AVD, no system image, no `sdkmanager` and no attached device on this
+   machine, so the emulator route could not be exercised. The acceptance's
+   device steps were *skipped*, not passed. This candidate ships
+   `host/keliver-device-host-0.3.4.apk` that nobody has installed or launched.
+2. **A locally built bundle can embed the builder's portal public key.**
+   `:portal-device-android:assembleDebug` copies
+   `<store>/keys/ed25519.pub` into `assets/portal_ed25519.pub` when the build
+   machine has a portal store with keys. The first 0.3.4 build did exactly that
+   with this machine's key, which would have shipped one developer's portal
+   identity inside a public artifact and made prod-mode verification fail for
+   every adopter signing with their own key. The candidate above was rebuilt
+   with `PORTAL_STORE` pointed at an empty directory and contains **no**
+   embedded key, matching what a clean CI machine produces — but nothing
+   enforces that, and a future local build will silently re-embed. Recorded as
+   U22.
 
-- `scripts/keliver-adopter-acceptance.sh` reports "keliver-portal started and
-  answers" when *anything* answers on the port. During this review a relay left
-  running from an earlier step occupied `:8077`; `keliver-portal` correctly
-  refused to start ("a portal server is already answering on :8077"), but the
-  acceptance treated the foreign server's reply as success and drove every
-  subsequent MCP call against a **different app**, editing that app's source.
-  It reported 12 passed / 3 failed with `title 'Ledger'` in a run that had
-  scaffolded `MyApp`. Re-run with the port free: 16/0. The harness needs to fail
-  when `keliver-portal` reports it did not start; it has not been changed here.
+**Other limitations:**
 
-Limitations of what was verified:
+- macOS only; Linux inferred from the script, not executed.
+- The acceptance runs a single app: it says nothing about concurrent store
+  isolation, which rests on the unit tests named above.
+- `/doc` unknown-screen behaviour has no automated test; it was checked by hand
+  against this candidate.
+- U20 remains open and unassessed: the editor asks the browser for a frame every
+  ~16 ms for the life of the page. Pre-existing, not optimised here.
+- Prerequisites for an adopter are unchanged and untested off this machine:
+  JDK 17, `python3`, and `adb` for the device path. Behind a TLS-inspecting
+  proxy, `NODE_EXTRA_CA_CERTS` and a Gradle truststore are needed — and
+  isolating `user.home` without keeping `GRADLE_USER_HOME` on the real one loses
+  that truststore and every download fails PKIX.
 
-- **macOS only** (Darwin 25.5.0, JDK 17). Linux and the self-hosted CI runner are
-  inferred from code, not executed.
-- **No device run** this round — the acceptance's device steps were skipped, and
-  the bundled host APK was built but not installed or exercised.
-- The browser check is Chrome 152 headless, one app, one presenter.
-- U20 is open and unassessed: the editor asks the browser for a frame every
-  ~16 ms for the whole life of the page, in every state including before Live is
-  pressed and after it is stopped. Pre-existing, not introduced here, and
-  deliberately not optimised.
-- Bundle prerequisites are unchanged and untested outside this machine: JDK 17,
-  `python3` (the editor is served by `http.server`), and for the device path
-  `adb`. Behind a TLS-inspecting proxy, `NODE_EXTRA_CA_CERTS` and a Gradle
-  truststore are required — and note that isolating `user.home` without keeping
-  `GRADLE_USER_HOME` pointed at the real one loses that truststore and every
-  download fails PKIX.
+## Exact release actions, awaiting authorization
+
+None of these has been performed.
+
+1. Decide on the two blockers: run the device route (or accept shipping an
+   unexercised APK), and decide whether the APK must be built with an empty
+   `PORTAL_STORE` by construction rather than by convention.
+2. `git tag portal-tools-v0.3.4 ca95f1bab` — the tag must name the commit the
+   package was built from.
+3. `git push origin portal-tools-v0.3.4` — this fires `portal-tools.yml` only.
+   It will *rebuild* the zip on `ubuntu-latest`, which is the unverified path;
+   if that is not wanted yet, create the GitHub release manually and upload the
+   locally built zip instead, leaving the tag push for when the CI gate passes.
+4. Verify the published asset's sha256 against the candidate above if the local
+   zip is uploaded; expect a *different* hash if CI rebuilds it, and re-run the
+   acceptance against whatever is actually published.
+5. Leave `v0.3.3` and its asset alone. No Maven action of any kind.

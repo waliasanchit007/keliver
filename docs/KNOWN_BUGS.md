@@ -1127,7 +1127,7 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
-### U21. The packaged adopter acceptance passes when a FOREIGN portal answers the port — OPEN
+### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
 
 `scripts/keliver-adopter-acceptance.sh` starts `keliver-portal` and then health-
 waits with `curl -sf http://localhost:$PORT/screens`. It treats any answer as
@@ -1152,8 +1152,24 @@ With the port free the same package scores 16/0, so this is purely a harness
 defect — but it is the harness the release evidence rests on, and it fails
 towards a **false pass**.
 
-**Fix**: the script must fail when `keliver-portal` reports it did not start,
-rather than inferring liveness from the port. Not changed yet.
+**Fixed** (`5457bd42d`). Before any document request, and again after the
+restart, the acceptance requires both:
+
+1. `keliver-portal` itself started — its own exit is the authority, and it
+   already refuses an occupied port;
+2. the process listening on the port is a **descendant of a pid this run
+   recorded** in that app's `keliver-portal` run directory.
+
+A matching screen title is deliberately not accepted as identity: both apps
+scaffold the same tree, so the title matched in the incident above. Ancestry is
+walked because keliver-portal records the launcher it forked and the relay JVM
+is that launcher's child.
+
+**Regression**: `scripts/keliver-acceptance-identity-check.sh` stands a foreign
+relay on the expected port with its own disposable app and requires the
+acceptance to exit nonzero at the startup/identity gate, issue no mutation,
+leave the foreign app's source and store byte-identical, and leave the foreign
+relay running. 6/6; the normal run is unaffected at 16/0.
 
 ### U20. The editor asks the browser for a frame every ~16 ms, for the page's whole life — MEASURED, NOT ASSESSED
 
@@ -1188,6 +1204,34 @@ reintroducing the coupling problems that
 describes. Deliberately not acted on: the editor works, and changing frame
 scheduling on the strength of one idle-state measurement is how U19's two
 withdrawn "fixes" happened.
+
+### U22. A locally built tools bundle can embed the builder's portal public key — OPEN
+
+`:portal-device-android:assembleDebug` copies `<store>/keys/ed25519.pub` into
+the device host's `assets/portal_ed25519.pub` whenever the build machine has a
+portal store with keys (`copyPortalKey`, `onlyIf { portalPubKey.exists() }`).
+The intent is local dev: the host verifies signed manifests against the portal
+that signed them.
+
+On a release build that is wrong. The first `keliver-portal-tools-0.3.4` build
+on this machine embedded **this developer's** portal public key, 64 bytes at
+`assets/portal_ed25519.pub`. Shipped publicly that would:
+
+* put one machine's portal identity inside a public artifact, and
+* make prod-mode verification **fail** for every adopter whose bundles are
+  signed by their own portal.
+
+A clean CI machine has no store, so `onlyIf` is false and the APK ships without
+a key — meaning the artifact's contents depend on who built it, which is also
+how this went unnoticed.
+
+**Worked around, not fixed**: the 0.3.4 candidate was rebuilt with
+`PORTAL_STORE` pointed at an empty directory and contains no embedded key. That
+is a convention, and the next local build without it will silently re-embed.
+
+**Fix direction (not implemented)**: make the release build refuse to embed a
+key — e.g. a `keliver.release` flag that skips `copyPortalKey` and fails if the
+asset is present — so the property is enforced rather than remembered.
 
 ### U18. `get_guide` returned "guide not found" for every adopter — FIXED
 

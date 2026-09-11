@@ -1274,3 +1274,43 @@ maintainer. Detail:
 
 **Also recorded, not acted on:** the editor consumes a frame every ~16 ms
 permanently, including before Live is pressed and after it is stopped.
+
+## Post-snapshot: tools 0.3.4 candidate, independent of the library line — 2026-09-11
+
+**U21 fixed first** (`5457bd42d`), because the previous review's evidence came
+from the gate it broke. The acceptance now requires that `keliver-portal` itself
+started and that the process holding the port is a descendant of a pid this run
+recorded, before any document request and again after the restart.
+`scripts/keliver-acceptance-identity-check.sh` is the regression: a foreign
+relay on the expected port must produce a nonzero exit at the startup/identity
+gate, no mutation, a byte-identical foreign app and store, and a still-running
+foreign relay. 6/6.
+
+**The tools bundle has its own version line** (`ca95f1bab`).
+`build-support/portal-tools.version` = 0.3.4; `KELIVER_VERSION` stays 0.3.3 and
+the scaffolders keep wiring adopters to it. `portal-tools.yml` triggers on
+`portal-tools-v*`, which does not match `publish.yml`'s `v*`, so a tools release
+cannot publish a library; it guards tag == recorded version and builds the
+tagged commit. `v0.3.3` and its asset are untouched. The package records its
+own identity in `VERSION.json`.
+
+**Candidate**: commit `ca95f1bab`, sha256
+`c023deb98fbc01569c5ba72a69f3b8e28a1bea2abc3860cf869bf738b9469513`. Gate 194/0;
+adopter acceptance 16/0; refusal regression 6/6; unknown-screen `/doc` returns
+404 and creates no source, checked by hand against the packaged relay.
+
+**Two open blockers** — `docs/RELEASE_REVIEW.md` has the detail:
+
+- **Device verification incomplete.** No AVD, system image, `sdkmanager` or
+  attached device on this machine, so the bundled APK has not been installed or
+  launched. Skipped steps are not passes.
+- **U22**: a local build embeds the builder's portal public key in the device
+  host APK unless `PORTAL_STORE` points somewhere empty. The candidate was
+  rebuilt that way and carries no key, but nothing enforces it.
+
+**Build path**: macOS only. `portal-tools.yml` targets `ubuntu-latest` and has
+never been executed; its real prerequisites are JDK 17, the Android SDK,
+Node/Yarn, python3 and zip. The required CI gate is recorded and was not run —
+no remote execution was authorized.
+
+**No Maven release is needed**, re-confirmed against the published baselines.
