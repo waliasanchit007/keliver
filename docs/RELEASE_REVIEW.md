@@ -93,6 +93,53 @@ observed, two fixes were written, and both were removed once measurement showed
 they changed nothing. `portal-editor` is identical to `v0.3.3`. U19 stands as
 *previously observed, currently unreproduced, cause unresolved*.
 
+## Two artifacts, not one
+
+The same source commit was built twice. **They are not byte-identical** — do not
+assume they would be.
+
+| | built on | zip sha256 | APK sha256 | size |
+|---|---|---|---|---|
+| local candidate | macOS 15, arm64 | `aecb3737c1d49591311fde2d9729bc5918b849b318a2dbaf76ab1d360a94788c` | `5ca96302df46fc4815a76d4487b0913ba5d160589f3f166f4defbb656b2c5a44` | 90,314,622 |
+| **CI candidate** | `ubuntu-24.04` (runner image `ubuntu24/20260907.300`) | `2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98` | `d4fb1605137342f6744628f1129ddaee746cb9c8a3288639f70bf7669ac76ebf` | 90,315,306 |
+
+Both carry `VERSION.json` naming `ec10e191aa0fc04ce6663342b23b2ccf2ce76891`,
+tools `0.3.4`, Maven dependency `0.3.3`; both APKs carry no
+`assets/portal_ed25519.pub`, and both contain `lib/{arm64-v8a, armeabi-v7a,
+x86_64, x86}`.
+
+The CI artifact is **retained** (30 days) on run
+[`34587245714`](https://github.com/waliasanchit007/keliver/actions/runs/34587245714),
+so whichever is chosen can be published without a silent rebuild. Whichever is
+chosen must be the one the remaining device check runs against.
+
+## Linux CI — build and portable checks, no publication
+
+Run `34587245714`, `workflow_dispatch` on branch `review/portal-tools-0.3.4`
+(workflow commit `caca47383`), checking out the candidate commit.
+
+Before dispatch the workflow was made least-privilege: the default is
+`contents: read`, the `bundle` job is `contents: read`, and a separate `release`
+job — `contents: write` — is gated on `github.event_name == 'push' &&
+startsWith(github.ref, 'refs/tags/portal-tools-v')`. In this run `release` shows
+**skipped**. A branch build or a manual dispatch cannot create a release, attach
+an asset, publish a package or move a tag.
+
+Executed on Linux, all passing:
+
+| check | result |
+|---|---|
+| checkout identity | `building commit: ec10e191aa0fc04ce6663342b23b2ccf2ce76891` |
+| `VERSION.json` vs checkout | `tools=0.3.4  maven=0.3.3  sourceCommit=ec10e191a…  checkout=ec10e191a…` |
+| packaged APK key check | `no assets/portal_ed25519.pub - ok` |
+| `:portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest` | BUILD SUCCESSFUL |
+| `keliver-device-host-hygiene-check.sh` | passed: 5 failed: 0 |
+| `keliver-adopter-acceptance.sh` (against the CI-built zip) | passed: 19 failed: 0 |
+| `keliver-acceptance-identity-check.sh` | passed: 6 failed: 0 |
+
+**A green Linux build is not runtime acceptance.** Nothing in that run installs
+or launches the APK; `:portal-editor:wasmJsTest` was not part of it either.
+
 ## Evidence
 
 | check | result |
@@ -150,18 +197,30 @@ Until that has passed, releases should be cut from the macOS build.
 
 **Two findings that need a decision before publishing:**
 
-1. **The device route is unverified for a release that ships an APK.** There is
-   no AVD, no system image, no `sdkmanager` and no attached device on this
-   machine, so the emulator route could not be exercised. The acceptance's
-   device steps were *skipped*, not passed. This candidate ships
-   `host/keliver-device-host-0.3.4.apk` that **nobody has installed or
-   launched**. That now covers the U22 behaviour too: the production refusal and
-   the development route have unit coverage and the APK has been inspected, but
-   APK inspection and unit tests are not a substitute for installing the binary
-   and starting it. Unblocking needs a system image plus `sdkmanager` (or a
-   physical device), then
-   `keliver-adopter-acceptance.sh <parent> <zip> --serial <serial>` and a manual
-   `--es mode prod` launch to see the refusal on screen.
+1. **The device route is still unverified, and remains the one blocker.** The
+   APK has never been installed or launched. An isolated SDK, an `aosp_atd`
+   arm64 system image and an AVD were installed and configured here — see
+   `docs/superpowers/evidence/tools-0.3.4/emulator-attempt.md` — but the boot
+   was stopped rather than run: the machine's single APFS container was at 100%
+   with ~3.3 GB free, the emulator wants ~7.4 GB at the default partition size
+   (~3 GB at `disk.dataPartition.size = 800M`), and the `--serial` acceptance
+   additionally runs Gradle inside a scaffolded app. The isolated SDK was then
+   removed rather than left holding 5.5 GB of a full disk (free space went
+   7.6 GB → 13 GB); nothing outside that isolated tree was touched.
+
+   **A CI route is prepared and NOT dispatched**:
+   `.github/workflows/portal-tools-device.yml`, `workflow_dispatch` only,
+   `contents: read` + `actions: read`, no release step. It downloads the
+   *retained* artifact from a nominated run, checks the APK's sha256 against an
+   expected value, refuses an APK carrying a portal key, boots an x86_64
+   emulator (the APK ships `lib/x86_64`, so this is possible), runs the packaged
+   acceptance with `--serial`, then asserts that `--es mode prod` is refused on
+   screen with no manifest or bundle request, and that the development route
+   still starts afterwards. Screenshots and logcat are uploaded as evidence.
+
+   That workflow has **never been run**: KVM availability and emulator disk
+   headroom on a hosted runner are expectations, not measurements. Its first run
+   is the experiment, and it needs your authorization.
 2. ~~A locally built bundle can embed the builder's portal public key.~~
    **Fixed** (U22, `8751ad333`) — see the release note above. The property is
    now enforced by the build (`-Pkeliver.devOnlyHost=true`, plus a packaging
