@@ -9,19 +9,18 @@ from a clean tree, for a release decision.
 | | |
 |---|---|
 | tools version | **0.3.4** (`build-support/portal-tools.version`) |
-| source commit | `ca95f1bab8878a597fe0284c0e67626962f22496`, clean tree |
+| source commit | `ec10e191aa0fc04ce6663342b23b2ccf2ce76891`, clean tree |
 | package | `build/portal-tools/keliver-portal-tools-0.3.4.zip` |
-| sha256 | `c023deb98fbc01569c5ba72a69f3b8e28a1bea2abc3860cf869bf738b9469513` |
-| size | 90,306,099 bytes |
+| zip sha256 | `aecb3737c1d49591311fde2d9729bc5918b849b318a2dbaf76ab1d360a94788c` |
+| size | 90,314,622 bytes |
+| device host APK sha256 | `5ca96302df46fc4815a76d4487b0913ba5d160589f3f166f4defbb656b2c5a44` (development-only, **no embedded key**) |
 | Maven dependency version | **0.3.3, unchanged** — what the bundled scaffolders write into new projects |
 | recorded in the package | `VERSION.json` and `VERSION` at the bundle root |
 
-The package was built at `ca95f1bab`. The commits after it touch only
-`CURRENT_STATE.md`, `KNOWN_BUGS.md` and this file — none of which the bundle
-contains — so tagging a later commit would produce a byte-identical package
-apart from `sourceCommit` in `VERSION.json`. Tag `ca95f1bab` to match the
-artifact exactly, or tag the tip and rebuild; either is defensible, but say
-which one the published asset came from.
+The package was built at `ec10e191a`. Only this file has changed since — it is
+not in the bundle — so tagging the tip and rebuilding yields the same package
+apart from `sourceCommit` in `VERSION.json`. Tag `ec10e191a` to match the
+artifact byte-for-byte.
 
 The two version lines are now independent. `portal-tools-v*` does not match the
 `v*` pattern `publish.yml` listens on, so a tools release cannot publish a
@@ -47,9 +46,9 @@ the check that actually covers it.
   theirs, so merely opening the editor — or a typo, or a stale link — left junk
   in the working tree. `GET /doc?screen=<unknown>` now answers
   `404 {"error":"no screen 'nope' in project 'default'; known screens: home"}`.
-  *Covered by:* a direct check against this candidate's packaged relay (404
-  returned, source tree byte-identical, only `home.kt` present). There is **no
-  automated test** for this path — see Blockers.
+  *Covered by:* the adopter acceptance, which now asserts all three parts
+  automatically — the 404, that no source file appeared, and that no store
+  document was created.
 - **`get_document` accepts project-qualified screen ids.** It previously
   returned an empty document for ids like `default/home`; the id is now
   normalised before lookup. Note this is about what it *accepts*, not about the
@@ -73,6 +72,18 @@ the check that actually covers it.
   acceptance (14,185 bytes returned, no Keliver-repo-only commands named).
 - **`keliver-portal` refuses an occupied port** instead of appearing to start.
   *Covered by:* the new refusal regression below, which observes the refusal.
+- **The bundled device host is development-only, and cannot be talked into
+  production mode.** It previously embedded whatever portal key the *build
+  machine* had — a locally built bundle shipped its builder's portal identity,
+  which would make signature verification fail for every adopter signing with
+  their own key — and, asked for production without a key, it logged a warning
+  and loaded the bundle **unverified**. The shipped APK now carries no key
+  (verified: no `assets/portal_ed25519.pub`), `build-portal-tools.sh` refuses to
+  package one that does, and a production request is refused on screen before
+  anything is fetched. An adopter's own production host is unchanged: its key is
+  embedded and verification stays on. *Covered by:* `HostTrustPolicyTest` (6),
+  `keliver-device-host-hygiene-check.sh` (5), and APK inspection — **not** by
+  any on-device run.
 - **Scaffolder fixes:** `keliver-init` writes a `.gitignore`; a documented route
   exists for adopting a pre-existing store. *Covered by:* the acceptance's
   scaffold and ownership steps.
@@ -86,12 +97,14 @@ they changed nothing. `portal-editor` is identical to `v0.3.3`. U19 stands as
 
 | check | result |
 |---|---|
-| `:portal-editor:wasmJsTest :portal-relay:test :portal-mcp:test apiCheck` | BUILD SUCCESSFUL, **194 tests, 0 failures** |
-| `keliver-adopter-acceptance.sh` vs this zip | **16 passed, 0 failed** |
+| `:portal-editor:wasmJsTest :portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest apiCheck` | BUILD SUCCESSFUL, **200 tests, 0 failures** |
+| `keliver-adopter-acceptance.sh` vs this zip | **19 passed, 0 failed** |
 | `keliver-acceptance-identity-check.sh` vs this zip | **6 passed, 0 failed** |
-| unknown-screen `/doc` against the packaged relay | 404, source tree unchanged |
-| packaged APK contents | no `assets/portal_ed25519.pub` — see Blockers |
-| device / emulator route | **NOT RUN — verification incomplete** |
+| `keliver-device-host-hygiene-check.sh` | **5 passed, 0 failed** |
+| `:portal-device-android:testDebugUnitTest` (`HostTrustPolicyTest`) | **6 tests, 0 failures** |
+| unknown-screen `/doc` | now **automated inside the acceptance**: 404, no source created, no store document created |
+| packaged APK contents | no `assets/portal_ed25519.pub` |
+| device / emulator route | **NOT RUN — verification incomplete, see Blockers** |
 
 The acceptance gate itself was repaired first (U21). It used to launch
 `keliver-portal` in the background, ignore its result, and accept any server
@@ -141,26 +154,26 @@ Until that has passed, releases should be cut from the macOS build.
    no AVD, no system image, no `sdkmanager` and no attached device on this
    machine, so the emulator route could not be exercised. The acceptance's
    device steps were *skipped*, not passed. This candidate ships
-   `host/keliver-device-host-0.3.4.apk` that nobody has installed or launched.
-2. **A locally built bundle can embed the builder's portal public key.**
-   `:portal-device-android:assembleDebug` copies
-   `<store>/keys/ed25519.pub` into `assets/portal_ed25519.pub` when the build
-   machine has a portal store with keys. The first 0.3.4 build did exactly that
-   with this machine's key, which would have shipped one developer's portal
-   identity inside a public artifact and made prod-mode verification fail for
-   every adopter signing with their own key. The candidate above was rebuilt
-   with `PORTAL_STORE` pointed at an empty directory and contains **no**
-   embedded key, matching what a clean CI machine produces — but nothing
-   enforces that, and a future local build will silently re-embed. Recorded as
-   U22.
+   `host/keliver-device-host-0.3.4.apk` that **nobody has installed or
+   launched**. That now covers the U22 behaviour too: the production refusal and
+   the development route have unit coverage and the APK has been inspected, but
+   APK inspection and unit tests are not a substitute for installing the binary
+   and starting it. Unblocking needs a system image plus `sdkmanager` (or a
+   physical device), then
+   `keliver-adopter-acceptance.sh <parent> <zip> --serial <serial>` and a manual
+   `--es mode prod` launch to see the refusal on screen.
+2. ~~A locally built bundle can embed the builder's portal public key.~~
+   **Fixed** (U22, `8751ad333`) — see the release note above. The property is
+   now enforced by the build (`-Pkeliver.devOnlyHost=true`, plus a packaging
+   refusal if the asset is present) rather than by remembering to set
+   `PORTAL_STORE`, and `keliver-device-host-hygiene-check.sh` holds it across a
+   warm build directory.
 
 **Other limitations:**
 
 - macOS only; Linux inferred from the script, not executed.
 - The acceptance runs a single app: it says nothing about concurrent store
   isolation, which rests on the unit tests named above.
-- `/doc` unknown-screen behaviour has no automated test; it was checked by hand
-  against this candidate.
 - U20 remains open and unassessed: the editor asks the browser for a frame every
   ~16 ms for the life of the page. Pre-existing, not optimised here.
 - Prerequisites for an adopter are unchanged and untested off this machine:
@@ -173,10 +186,9 @@ Until that has passed, releases should be cut from the macOS build.
 
 None of these has been performed.
 
-1. Decide on the two blockers: run the device route (or accept shipping an
-   unexercised APK), and decide whether the APK must be built with an empty
-   `PORTAL_STORE` by construction rather than by convention.
-2. `git tag portal-tools-v0.3.4 ca95f1bab` — the tag must name the commit the
+1. Decide the remaining blocker: run the device route, or accept shipping an
+   APK nobody has launched.
+2. `git tag portal-tools-v0.3.4 ec10e191a` — the tag must name the commit the
    package was built from.
 3. `git push origin portal-tools-v0.3.4` — this fires `portal-tools.yml` only.
    It will *rebuild* the zip on `ubuntu-latest`, which is the unverified path;
