@@ -1127,6 +1127,34 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
+### U21. The packaged adopter acceptance passes when a FOREIGN portal answers the port — OPEN
+
+`scripts/keliver-adopter-acceptance.sh` starts `keliver-portal` and then health-
+waits with `curl -sf http://localhost:$PORT/screens`. It treats any answer as
+proof that its own portal started.
+
+Observed 2026-09-11 during the tools-bundle release review. A relay left running
+from an earlier step held `:8077`. `keliver-portal` behaved correctly and
+refused:
+
+```
+✗ a portal server is already answering on :8077 — 'keliver-portal stop' first,
+  or use a different port in keliver.portal.json
+```
+
+The acceptance recorded `PASS  keliver-portal started and answers` anyway and
+drove every subsequent MCP call against the other app — `get_document` returned
+`title 'Ledger'` in a run that had scaffolded `MyApp`, and `apply_ops` edited
+that other app's source file. It finished 12 passed / 3 failed, and the three
+failures pointed at the scaffolded app rather than at the real cause.
+
+With the port free the same package scores 16/0, so this is purely a harness
+defect — but it is the harness the release evidence rests on, and it fails
+towards a **false pass**.
+
+**Fix**: the script must fail when `keliver-portal` reports it did not start,
+rather than inferring liveness from the port. Not changed yet.
+
 ### U20. The editor asks the browser for a frame every ~16 ms, for the page's whole life — MEASURED, NOT ASSESSED
 
 **Not a defect report.** A measurement recorded here so it is not lost, and so
