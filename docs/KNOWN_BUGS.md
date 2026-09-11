@@ -1205,7 +1205,7 @@ describes. Deliberately not acted on: the editor works, and changing frame
 scheduling on the strength of one idle-state measurement is how U19's two
 withdrawn "fixes" happened.
 
-### U22. A locally built tools bundle can embed the builder's portal public key — OPEN
+### U22. A locally built tools bundle embedded the builder's portal public key — FIXED
 
 `:portal-device-android:assembleDebug` copies `<store>/keys/ed25519.pub` into
 the device host's `assets/portal_ed25519.pub` whenever the build machine has a
@@ -1225,13 +1225,41 @@ A clean CI machine has no store, so `onlyIf` is false and the APK ships without
 a key — meaning the artifact's contents depend on who built it, which is also
 how this went unnoticed.
 
-**Worked around, not fixed**: the 0.3.4 candidate was rebuilt with
-`PORTAL_STORE` pointed at an empty directory and contains no embedded key. That
-is a convention, and the next local build without it will silently re-embed.
+A second defect sat behind it: asked for prod mode with no key, `MainActivity`
+logged `prod mode WITHOUT embedded public key — falling back to
+NO_SIGNATURE_CHECKS` and **loaded the production bundle anyway**. A request to
+verify became a request to load anything.
 
-**Fix direction (not implemented)**: make the release build refuse to embed a
-key — e.g. a `keliver.release` flag that skips `copyPortalKey` and fails if the
-asset is present — so the property is enforced rather than remembered.
+**Fixed** (`8751ad333`), as an explicit build input rather than a property of
+the build machine:
+
+* `-Pkeliver.devOnlyHost=true` builds the **generic development host**: no key
+  embedded, `BuildConfig.DEV_ONLY=true`. `build-portal-tools.sh` passes it and
+  **refuses to package** an APK containing `assets/portal_ed25519.pub`.
+* `decideHostTrust` (`HostTrustPolicy.kt`) decides before any factory, fetch or
+  bundle load. A dev-only host refuses prod mode and says what to build
+  instead; any host asked for prod without a usable key refuses instead of
+  downgrading. The refusal renders on the device, it is not just logged.
+* an adopter's **production host is unchanged**: its key is embedded and
+  signature verification stays on.
+* `copyPortalKey` was a `Copy` with `onlyIf`, so a key copied by an earlier
+  build survived in the output directory once its input disappeared — a warm
+  build directory could smuggle it into a later APK. It is a `Sync` now, so the
+  directory matches the inputs exactly.
+* `zip` updates an archive in place, so the release zip is deleted before it is
+  rebuilt and cannot retain obsolete entries.
+
+**Regressions.** `HostTrustPolicyTest` (6 tests) covers the behaviour; against
+the previous logic five fail, including *"missing key must refuse, got
+DevelopmentUnsigned"*. `scripts/keliver-device-host-hygiene-check.sh` covers
+packaging across a warm build directory — key A, then dev-only, then key B,
+then no key — and against the previous wiring fails with *"THE DEVELOPMENT HOST
+CARRIES A KEY: 'aaaaaaaa'"* and a later build still carrying key B.
+
+**Not verified on a device.** The refusal path and the development route have
+unit coverage and the APK has been inspected, but nothing has been installed or
+launched — there is no emulator or device available here. See
+`docs/RELEASE_REVIEW.md`.
 
 ### U18. `get_guide` returned "guide not found" for every adopter — FIXED
 
