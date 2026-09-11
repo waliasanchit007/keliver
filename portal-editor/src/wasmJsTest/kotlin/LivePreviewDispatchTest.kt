@@ -18,8 +18,9 @@ import kotlinx.coroutines.promise
  * presenter's own state.
  *
  * **A correction.** This file used to model the host as producing frames only
- * when something woke it, and its failure without `HostWakeSignal` was reported
- * as proof of a production scheduling defect. That model was wrong: the editor's
+ * when something woke it, and its failure without the wake mechanism then in
+ * place — since removed — was reported as proof of a production scheduling
+ * defect. That model was wrong: the editor's
  * frame pump parks in `withFrameNanos` on the host recomposer's clock, which
  * makes the recomposer request a browser frame every frame regardless of
  * invalidation — measured at 60/s in a real editor. The old failure was the

@@ -150,7 +150,7 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
 
       // The guest composition runs on its own frame clock, which we tick from the
       // host's real frames — so guest recomposition AND animations stay in sync.
-      val guestClock = newGuestFrameClock()
+      val guestClock = BroadcastFrameClock()
       // Keep a bad consumer presenter/render from cancelling the editor shell.
       // Compose does not permit a try/catch directly around @Composable calls;
       // its recomposer reports the failure through this isolated child scope.
@@ -193,12 +193,6 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         guestAdapter.emitChanges() // flush whatever the recomposition produced
       }
     }
-
-    // U19: reading the wake signal here is what couples a guest-side
-    // invalidation to a host frame. A live dispatch bumps it, this content
-    // recomposes, the host schedules a frame, and the loop above ticks the
-    // guest clock so the presenter's new frame is actually composed.
-    HostWakeSignal.state.value
 
     // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
     // just shows the live preview.

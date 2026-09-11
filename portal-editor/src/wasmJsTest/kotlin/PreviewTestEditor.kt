@@ -50,8 +50,8 @@ internal class PreviewTestEditor {
   /** Stands in for the browser's rAF clock — the recomposer's PARENT clock. */
   private val hostClock = BroadcastFrameClock()
 
-  /** From production: whatever coupling the editor ships is what runs here. */
-  private val guestClock = newGuestFrameClock()
+  /** As EditorShell constructs it. */
+  private val guestClock = BroadcastFrameClock()
 
   private val hostRecomposer = Recomposer(Dispatchers.Unconfined + hostJob + hostClock)
   private val guestRecomposer = Recomposer(Dispatchers.Unconfined + guestJob + guestClock)
@@ -80,8 +80,7 @@ internal class PreviewTestEditor {
 
     val host = Composition(UnitApplier(), hostRecomposer)
     host.setContent {
-      // Both of runPortalEditor's relevant pieces: the wake read, and the pump.
-      HostWakeSignal.state.value
+      // The piece of runPortalEditor that matters for scheduling: the pump.
       LaunchedEffect(Unit) {
         while (true) {
           withFrameNanos { nanos -> guestClock.sendFrame(nanos) }

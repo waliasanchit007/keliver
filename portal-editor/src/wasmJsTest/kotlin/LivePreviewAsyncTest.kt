@@ -24,12 +24,11 @@ import kotlinx.coroutines.yield
  *
  * **What these tests are, and are not.** They are integration tests of the
  * projection path — presenter state → [PreviewBindings] → a composable resolving
- * a `Bind`. They are *not* evidence for any particular host/guest wake
- * mechanism. An earlier version of them failed without the wake, but only
- * because its harness withheld frames that production delivers; see
- * [PreviewTestEditor] and
+ * a `Bind`. They are *not* evidence for any host/guest wake mechanism. An
+ * earlier version of them failed without the wake mechanism that was then in
+ * place — since removed — but only because its harness withheld frames that
+ * production delivers. See [PreviewTestEditor] and
  * `docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
- * Under the corrected harness they pass with the wake and without it.
  */
 class LivePreviewAsyncTest {
 
