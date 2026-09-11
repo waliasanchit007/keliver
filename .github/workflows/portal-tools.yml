@@ -24,10 +24,16 @@ on:
       ref:
         description: "Tag or commit to build (use a portal-tools-v* tag for releases)"
         required: true
+# Least privilege, split by job. The BUILD job is read-only, so a branch build
+# or a manual dispatch physically cannot create a release, attach an asset,
+# publish a package or move a tag. Only the RELEASE job can write, and it runs
+# exclusively on a portal-tools-v* tag push.
 permissions:
-  contents: write
+  contents: read
 jobs:
   bundle:
+    permissions:
+      contents: read
     # Prerequisites this job actually needs: JDK 17, the Android SDK (the bundle
     # ships a device-host APK built by :portal-device-android:assembleDebug),
     # Node/Yarn for the Kotlin/Wasm editor build, python3 and zip.
@@ -64,16 +70,68 @@ jobs:
           echo "version=$file" >> "$GITHUB_OUTPUT"
       - name: Build the tools bundle
         run: scripts/build-portal-tools.sh "${{ steps.v.outputs.version }}"
-      - name: Show what was packaged
+      - name: Identify what was packaged
         run: |
-          unzip -p build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip \
-            '*/VERSION.json'
-          shasum -a 256 build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+          set -euo pipefail
+          zip="build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip"
+          echo "--- VERSION.json"
+          unzip -p "$zip" '*/VERSION.json' | tee version.json
+          get() { python3 -c "import json,sys;print(json.load(open('version.json'))[sys.argv[1]])" "$1"; }
+          tv="$(get toolsVersion)"; mv="$(get mavenDependencyVersion)"; sc="$(get sourceCommit)"
+          echo "tools=$tv  maven=$mv  sourceCommit=$sc  checkout=$(git rev-parse HEAD)"
+          test "$tv" = "0.3.4"                 # the tools line
+          test "$mv" = "0.3.3"                 # the Maven line must NOT move
+          test "$sc" = "$(git rev-parse HEAD)" # the package names the commit actually built
+          echo "--- hashes"
+          sha256sum "$zip"
+          unzip -p "$zip" '*/host/*.apk' > host.apk
+          sha256sum host.apk
+          echo "--- the bundled host must be development-only and key-free (U22)"
+          if unzip -l host.apk | grep -q 'assets/portal_ed25519.pub'; then
+            echo "::error::the packaged APK embeds a portal key"; exit 1
+          fi
+          echo "no assets/portal_ed25519.pub - ok"
+      - name: Portable checks on Linux
+        run: |
+          set -euo pipefail
+          zip="$PWD/build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip"
+          echo "::group::unit tests"
+          ./gradlew --console=plain :portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest
+          echo "::endgroup::"
+          echo "::group::device-host packaging hygiene (U22)"
+          scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
+          echo "::endgroup::"
+          echo "::group::packaged adopter acceptance (includes the U21 identity gate)"
+          scripts/keliver-adopter-acceptance.sh "$RUNNER_TEMP/acceptance" "$zip"
+          echo "::endgroup::"
+          echo "::group::foreign-relay refusal regression"
+          scripts/keliver-acceptance-identity-check.sh "$RUNNER_TEMP/identity" "$zip"
+          echo "::endgroup::"
+      - name: Keep the artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keliver-portal-tools-${{ steps.v.outputs.version }}-${{ github.sha }}
+          path: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  # The ONLY job that may write, and only for a real tools tag. A branch build
+  # or a manual dispatch never reaches it.
+  release:
+    needs: bundle
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/portal-tools-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: keliver-portal-tools-*
+          merge-multiple: true
       - name: Attach to the tools release
-        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          files: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+          files: keliver-portal-tools-*.zip
           # Its OWN release. Existing v* releases and their assets are untouched.
-          tag_name: portal-tools-v${{ steps.v.outputs.version }}
+          tag_name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
