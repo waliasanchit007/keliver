@@ -27,7 +27,13 @@ echo "    maven dependency version: $MAVEN_VERSION (unchanged by this script)"
 echo "    source commit: $SOURCE_COMMIT${SOURCE_DIRTY:+ (+$SOURCE_DIRTY uncommitted)}"
 
 echo "==> gradle: relay + mcp installDist, editor wasm dist, device host APK"
-./gradlew -q \
+# U22: the bundled APK is the GENERIC DEVELOPMENT HOST. -Pkeliver.devOnlyHost=true
+# is what makes it one: no portal key is embedded and BuildConfig.DEV_ONLY is
+# true, so it refuses production mode instead of running it unverified. This is
+# an explicit build input — it must NOT depend on whether the build machine
+# happens to have a portal store, which is how a developer's own key ended up
+# inside a candidate bundle.
+./gradlew -q -Pkeliver.devOnlyHost=true \
   :portal-relay:installDist \
   :portal-mcp:installDist \
   :web-spike:wasmJsBrowserDistribution \
@@ -58,8 +64,14 @@ chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
 # The device host APK, so `keliver-new-device-target.sh` has somewhere to run.
 # This is a LOCALLY BUILT artifact shipped inside this bundle — it is NOT
 # published anywhere, and nothing fetches it from a store or a release page.
-cp portal-device-android/build/outputs/apk/debug/portal-device-android-debug.apk \
-   "$STAGE/host/keliver-device-host-$VERSION.apk"
+APK_SRC=portal-device-android/build/outputs/apk/debug/portal-device-android-debug.apk
+# Fail the build rather than ship a host carrying somebody's portal identity.
+if unzip -l "$APK_SRC" | grep -q 'assets/portal_ed25519.pub'; then
+  echo "REFUSING to package: $APK_SRC embeds assets/portal_ed25519.pub." >&2
+  echo "The bundled host must be development-only and key-free (U22)." >&2
+  exit 1
+fi
+cp "$APK_SRC" "$STAGE/host/keliver-device-host-$VERSION.apk"
 ( cd "$STAGE/host" && shasum -a 256 "keliver-device-host-$VERSION.apk" > "keliver-device-host-$VERSION.apk.sha256" )
 cp docs/DEVICE_HOST.md "$STAGE/host/README.md"
 # The gradle wrapper so `keliver-init` scaffolds immediately-buildable projects.
@@ -82,6 +94,9 @@ JSON
 printf 'keliver-portal-tools %s\nsource commit %s\nmaven dependency version %s\n' \
   "$TOOLS_VERSION" "$SOURCE_COMMIT" "$MAVEN_VERSION" > "$STAGE/VERSION"
 
+# zip UPDATES an existing archive, so a stale zip keeps entries that no longer
+# exist in the staging tree. Remove it first; $STAGE is already rebuilt above.
+rm -f "$OUT/keliver-portal-tools-$VERSION.zip"
 ( cd "$OUT" && zip -qr "keliver-portal-tools-$VERSION.zip" "keliver-portal-tools-$VERSION" )
 echo "==> bundle: $OUT/keliver-portal-tools-$VERSION.zip"
 ls -lh "$OUT/keliver-portal-tools-$VERSION.zip" | awk '{print "    "$5}'

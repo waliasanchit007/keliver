@@ -177,6 +177,24 @@ VER="$(printf '%s' "$D" | python3 -c 'import sys,json;print(json.load(sys.stdin)
 TITLE="$(printf '%s' "$D" | python3 -c 'import sys,json;print(json.load(sys.stdin)["root"]["children"][0]["props"]["text"]["s"])' 2>/dev/null)"
 [ -n "$VER" ] && ok "get_document returned the screen (version $VER, title '$TITLE')" || bad "get_document failed"
 
+# --- a screen this app does not have is an ERROR, not an invitation ----------
+# Reading a document used to MINT it: the engine materialised <screen>.kt and
+# Compiled_<screen>.kt in the adopter's source tree, in a package that was not
+# theirs, so a typo or a stale link left junk in their working tree.
+SRC_BEFORE_404="$( cd "$APP" && find src -type f | sort | xargs shasum )"
+STORE_DIR="$("$KP/keliver-store-path.sh" "$APP")"
+STORE_BEFORE_404="$(find "$STORE_DIR" -type f 2>/dev/null | sort | xargs shasum 2>/dev/null)"
+CODE_404="$(curl -s -o "$DISP/unknown-screen.json" -w '%{http_code}' "http://localhost:$PORT/doc?screen=definitely-not-a-screen")"
+[ "$CODE_404" = "404" ] \
+  && ok "an unknown screen is 404: $(head -c 90 "$DISP/unknown-screen.json")" \
+  || bad "GET /doc for an unknown screen returned $CODE_404, expected 404"
+[ "$SRC_BEFORE_404" = "$( cd "$APP" && find src -type f | sort | xargs shasum )" ] \
+  && ok "the unknown screen created no source" \
+  || bad "AN UNKNOWN SCREEN CREATED SOURCE: $( cd "$APP" && git status --porcelain )"
+[ "$STORE_BEFORE_404" = "$(find "$STORE_DIR" -type f 2>/dev/null | sort | xargs shasum 2>/dev/null)" ] \
+  && ok "the unknown screen created no store document" \
+  || bad "AN UNKNOWN SCREEN CREATED A STORE DOCUMENT under $STORE_DIR"
+
 # --- guide: one supported edit ----------------------------------------------
 BATCH="{\"baseVersion\":$VER,\"envelope\":{\"session\":\"agent\",\"atMillis\":0},\"ops\":[{\"kind\":\"dev.keliver.portal.document.DocOp.SetProp\",\"target\":2,\"name\":\"text\",\"value\":{\"kind\":\"dev.keliver.portal.document.PropValue.Lit\",\"tag\":\"s\",\"s\":\"My Inbox\"}}]}"
 req(){ python3 -c "
