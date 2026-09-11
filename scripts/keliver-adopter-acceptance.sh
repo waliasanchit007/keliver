@@ -37,7 +37,15 @@ echo "run dir: $DISP"
 # Only ever stop what THIS invocation started.
 STARTED_PIDS=""
 track(){ STARTED_PIDS="$STARTED_PIDS $1"; }
-stop_started(){ for pid in $STARTED_PIDS; do kill "$pid" 2>/dev/null; done; }
+stop_started(){
+  for pid in $STARTED_PIDS; do kill "$pid" 2>/dev/null; done
+  # keliver-portal's own stop only ever touches the pids it recorded for THIS
+  # app path, so an early exit does not leave our relay behind — and cannot
+  # reach anyone else's.
+  [ -n "${APP:-}" ] && [ -x "${KP:-}/keliver-portal" ] &&
+    ( cd "$APP" && "$KP/keliver-portal" stop . >/dev/null 2>&1 )
+  return 0
+}
 trap stop_started EXIT
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); }
@@ -63,10 +71,91 @@ LOGIC_BEFORE="$(shasum "$APP/src/jsMain/kotlin/logic/HomePresenter.kt" | awk '{p
 keliver_require_isolated_store "$DISP" "$APP" || exit 1
 
 PORT="$(python3 -c "import json;print(json.load(open('$APP/keliver.portal.json')).get('port',8077))")"
-( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL "$KP/keliver-portal" . >"$DISP/portal.log" 2>&1 & )
-for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && break; sleep 3; done
-curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" \
-  && ok "keliver-portal started and answers" || { bad "the portal did not start"; tail -5 "$DISP/portal.log"; exit 1; }
+
+# U21. This used to be "start it in the background, then curl the port, and if
+# anything answers, pass". A relay left running by something else answered, and
+# the whole run — every MCP call, including the mutation — went to a DIFFERENT
+# app, editing its source, while the output said PASS.
+#
+# Two things have to hold before any document request is issued:
+#   1. keliver-portal itself started. Its own exit is the authority; it already
+#      refuses an occupied port, and that refusal must fail this script.
+#   2. The process answering $PORT is one THIS invocation started. keliver-portal
+#      records its children in a run directory keyed to the app path, so that
+#      pid list is the identity — not the port, and not what the app looks like.
+#      A screen title would be a guess; a pid is the process.
+PORTAL_RUN_DIR="${TMPDIR:-/tmp}/keliver-portal/$(printf '%s' "$APP" | shasum | cut -c1-12)"
+PORTAL_PIDFILE="$PORTAL_RUN_DIR/pids"
+
+# The pids listening on $PORT right now, or empty if we cannot tell.
+port_listeners() { lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | sort -u; }
+
+# Start the portal and prove it is OURS. Fails the run immediately otherwise.
+portal_up() {
+  local log="$1" label="$2" pid listeners ours matched
+  : >"$log"
+  ( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL "$KP/keliver-portal" . >"$log" 2>&1 ) &
+  pid=$!
+  track "$pid"
+  # keliver-portal stays in the foreground while the portal runs. If it exits
+  # during startup it failed — an occupied port is exactly that case.
+  for _ in $(seq 1 40); do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      bad "$label: keliver-portal exited during startup"
+      sed 's/^/        /' "$log" | tail -5
+      return 1
+    fi
+    curl -sf -m 2 -o /dev/null "http://localhost:$PORT/devstate" && break
+    sleep 3
+  done
+  if ! curl -sf -m 2 -o /dev/null "http://localhost:$PORT/devstate"; then
+    bad "$label: the portal never answered on :$PORT"
+    tail -5 "$log" | sed 's/^/        /'
+    return 1
+  fi
+  # Something answered — but the loop breaks on the first answer, and a foreign
+  # relay answers instantly, so re-check that OUR launcher is still alive before
+  # reading anything into that answer.
+  if ! kill -0 "$pid" 2>/dev/null; then
+    bad "$label: keliver-portal exited during startup, yet :$PORT is answering — that relay is not ours"
+    tail -5 "$log" | sed 's/^/        /'
+    return 1
+  fi
+  # Identity. No pid file, or no overlap with the listeners, means the thing
+  # answering is not ours, and nothing further may be sent to it.
+  if [ ! -s "$PORTAL_PIDFILE" ]; then
+    bad "$label: no portal pid file at $PORTAL_PIDFILE — cannot establish whose relay is on :$PORT"
+    return 1
+  fi
+  listeners="$(port_listeners)"
+  if [ -z "$listeners" ]; then
+    bad "$label: cannot list the process holding :$PORT (lsof unavailable) — refusing to continue"
+    return 1
+  fi
+  ours="$(tr -d '\r' <"$PORTAL_PIDFILE" | sed '/^$/d' | sort -u)"
+  # keliver-portal records the launcher it forked; the relay JVM is that
+  # launcher's child, so the listening pid is a DESCENDANT of a recorded pid,
+  # not one of them. Walk up from the listener.
+  matched=""; local p depth
+  for l in $listeners; do
+    p="$l"; depth=0
+    while [ -n "$p" ] && [ "$p" != "0" ] && [ "$p" != "1" ] && [ "$depth" -lt 8 ]; do
+      for o in $ours; do [ "$p" = "$o" ] && matched="$l"; done
+      [ -n "$matched" ] && break
+      p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')"
+      depth=$((depth + 1))
+    done
+    [ -n "$matched" ] && break
+  done
+  if [ -z "$matched" ]; then
+    bad "$label: :$PORT is held by pid(s) $(echo $listeners) which this run did not start (ours: $(echo $ours)) — REFUSING to send any request"
+    return 1
+  fi
+  ok "$label: the portal this run started owns :$PORT (pid $matched)"
+  return 0
+}
+
+portal_up "$DISP/portal.log" "keliver-portal started and answers" || exit 1
 
 mcp(){ printf '%s\n' \
  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"acc","version":"1"}}}' \
@@ -148,10 +237,9 @@ fi
 
 # --- guide: restart, and the edit persists -----------------------------------
 ( cd "$APP" && "$KP/keliver-portal" stop . >/dev/null 2>&1 )
-( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL "$KP/keliver-portal" . >"$DISP/portal2.log" 2>&1 & )
-for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && break; sleep 3; done
-curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" \
-  && ok "stop then start works" || { bad "restart failed"; tail -3 "$DISP/portal2.log"; }
+# Same two checks after the restart: a foreign relay can take the port in the
+# gap between stop and start just as easily as before it.
+portal_up "$DISP/portal2.log" "stop then start works" || exit 1
 D2="$(mcp '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"get_document","arguments":{"screen":"home"}}}' | text)"
 T2="$(printf '%s' "$D2" | python3 -c 'import sys,json;print(json.load(sys.stdin)["root"]["children"][0]["props"]["text"]["s"])' 2>/dev/null)"
 [ "$T2" = "My Inbox" ] && ok "the edit persists in the document after restart" || bad "after restart the title is '$T2'"
