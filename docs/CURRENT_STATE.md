@@ -1314,3 +1314,35 @@ Node/Yarn, python3 and zip. The required CI gate is recorded and was not run —
 no remote execution was authorized.
 
 **No Maven release is needed**, re-confirmed against the published baselines.
+
+## Post-snapshot: U22 fixed — the bundled device host is development-only — 2026-09-11
+
+The tools bundle shipped whatever portal key the build machine had, and the host
+handled a missing key by logging a warning and loading the production bundle
+with `ManifestVerifier.NO_SIGNATURE_CHECKS`. Both are gone (`8751ad333`):
+
+- `-Pkeliver.devOnlyHost=true` builds the generic host — no key,
+  `BuildConfig.DEV_ONLY=true` — and `build-portal-tools.sh` passes it and
+  refuses to package an APK containing `assets/portal_ed25519.pub`.
+- `decideHostTrust` decides before any fetch: a dev-only host refuses prod mode
+  with an on-screen message; any host asked for prod without a usable key
+  refuses rather than downgrading. An adopter's production host keeps its key
+  and its verification.
+- `copyPortalKey` became a `Sync`, so a warm build directory cannot carry an
+  earlier build's key into a later APK, and the release zip is deleted before it
+  is rebuilt so it cannot retain obsolete entries.
+
+`HostTrustPolicyTest` (6) and `keliver-device-host-hygiene-check.sh` (5) are the
+regressions; five and three of them respectively fail against the previous code.
+The acceptance also gained an automated unknown-screen `/doc` check (404, no
+source, no store document) and is now 19/0.
+
+**Final candidate**: commit `ec10e191a`, zip sha256
+`aecb3737c1d49591311fde2d9729bc5918b849b318a2dbaf76ab1d360a94788c`, APK sha256
+`5ca96302df46fc4815a76d4487b0913ba5d160589f3f166f4defbb656b2c5a44`, tools 0.3.4,
+Maven dependency version 0.3.3 unchanged.
+
+**Still blocked**: device verification. No AVD, system image, `sdkmanager` or
+device here, so the APK has never been installed or launched — APK inspection
+and unit tests do not substitute. The Linux CI path for `portal-tools.yml`
+remains unexecuted.
