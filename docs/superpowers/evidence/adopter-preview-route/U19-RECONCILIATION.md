@@ -7,7 +7,9 @@ reported as proof of a production scheduling defect were the harness withholding
 frames production delivers. U19's original browser observation is
 **unresolved**, and neither wake change has evidence supporting it.
 
-Timeboxed investigation, 2026-09-11. No production code was changed.
+Timeboxed investigation, 2026-09-11. No production code was changed while
+investigating; the wake mechanisms were removed afterwards in `b4102945f`, once
+the measurements below were in.
 
 ---
 
@@ -193,33 +195,32 @@ projection path, not evidence for a wake mechanism.
 The `0 → 1 → 1 → 1` reading that started this remains unexplained. It was taken
 in a different app, through the Chrome extension MCP, and has not reproduced
 since under any condition tried: two apps, headless and headed Chrome, polled and
-completely quiet observation, published and candidate artifacts. Candidates not
-ruled out, in rough order of plausibility:
+completely quiet observation, published and candidate artifacts.
 
-1. the documented editor cache trap — a constant-named loader keeping a stale
-   wasm, so the page under observation was not the build assumed;
-2. an occluded or hidden tab suspending `requestAnimationFrame` during the
-   observations (this would stall the preview and heal on return, and no wake
-   would help, since the recomposer also needs a real rAF);
-3. a mis-registered dispatch route specific to that app's tree.
-
-None of these is evidence. The honest position is that the symptom was recorded
-faithfully and its cause is unknown.
+Status: **previously observed, currently unreproduced, cause unresolved.** The
+symptom was recorded faithfully; nothing since explains it. Untested conditions
+that would have to be excluded before any explanation could be offered include
+the identity of the assets the observed page actually loaded, the page's
+visibility during the observations, and that app's own dispatch wiring. None of
+these has evidence for or against it, and none is claimed here as more likely
+than another.
 
 ## 5. Recommendation
 
-**Remove both wake changes from the release candidate.** Nothing supports them:
+**Done — both wake changes were removed** in `b4102945f`, after this
+investigation. Nothing supported them:
 production never needed the frame they request, the browser cannot tell the arms
 apart, and they add recomposition on every action. Calling them "hardening"
 would be relabelling an unproven change, which is what the previous two blocks
 did twice.
 
-Concretely that means reverting the production parts of `1db77c27c` (part 1) and
-`3b3489805` (part 2) — `HostWakeSignal.kt` including `newGuestFrameClock`, the
-wake call in `LiveEngine.dispatch`, the signal read in `EditorShell`, and the
-`portal-editor.klib.api` line the signal added — while keeping
-`PreviewTestEditor.kt` and the five tests, which stand on their own. That
-decision is left to the maintainer; no production code was changed in this block.
+The revert removed the production parts of `1db77c27c` (part 1) and `3b3489805`
+(part 2) — `HostWakeSignal.kt` including `newGuestFrameClock`, the wake call in
+`LiveEngine.dispatch`, the signal read in `EditorShell`, and the two
+`portal-editor.klib.api` entries the signal added — and kept
+`PreviewTestEditor.kt` and the five tests, which stand on their own.
+`git diff v0.3.3 -- portal-editor/src/wasmJsMain portal-editor/api` is now
+**empty**.
 
 ### Reproducing this
 

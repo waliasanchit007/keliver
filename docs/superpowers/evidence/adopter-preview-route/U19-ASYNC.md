@@ -1,5 +1,13 @@
 # U19 part 2 — asynchronous presenter updates
 
+> **Superseded, 2026-09-11.** The fix this document describes was removed in
+> `b4102945f`: the harness that produced its "failing before" output withheld
+> frames that production delivers, and the defect it claimed does not reproduce.
+> Read `U19-RECONCILIATION.md` first. What remains valid here is section 4 — the
+> external browser run, including the finding that published 0.3.3 passes every
+> case — and the isolation and artifact-attribution procedure. Sections 1–3
+> describe a mechanism that is no longer in the tree.
+
 **Question.** The part-1 fix wakes the host from `LiveEngine.dispatch`. Presenter
 state also changes with no action behind it. Does the preview follow?
 

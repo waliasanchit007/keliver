@@ -889,10 +889,14 @@ threading bug rather than a wiring bug.
 > correctly. The original `0 → 1 → 1 → 1` observation has not reproduced under
 > any condition tried and its **cause is unknown**.
 >
-> The two `HostWakeSignal` changes below are therefore **unproven** and
-> recommended for removal from the release candidate. Full trace, per-arm
-> measurements and the recommendation:
+> The two `HostWakeSignal` changes below were unproven and have been
+> **removed** (`b4102945f`); `portal-editor`'s wasmJsMain sources and klib dump
+> are identical to `v0.3.3` again. Full trace and per-arm measurements:
 > `docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
+>
+> Status is **previously observed, currently unreproduced, cause unresolved** —
+> not "fixed", and not "never happened". The observation was recorded faithfully
+> and has not been explained.
 >
 > Everything below is preserved as the record of what was observed and claimed,
 > in order, including the parts now known to be wrong.
@@ -1029,8 +1033,10 @@ Both patches are behaviourally indistinguishable from doing nothing, and add
 recomposition. The corrected harness (`PreviewTestEditor.kt`) passes all five
 live-preview tests with **both** wake mechanisms removed.
 
-**Status: cause unresolved, no production defect reproduced, wake changes
-recommended for removal.**
+**Status: previously observed, currently unreproduced, cause unresolved.** No
+production defect was reproduced; the wake changes were removed in `b4102945f`.
+No hypothesis for the original observation has supporting evidence, so none is
+recorded here as more or less likely than another.
 
 Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
 
@@ -1120,6 +1126,40 @@ Regression: two-app script (2 failures before, 9 passes after) plus
 * Verified on macOS only. The `user.home`-versus-`HOME` divergence that caused
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
+
+### U20. The editor asks the browser for a frame every ~16 ms, for the page's whole life — MEASURED, NOT ASSESSED
+
+**Not a defect report.** A measurement recorded here so it is not lost, and so
+that any future work on it starts from data rather than from the assumption that
+the editor idles.
+
+`EditorShell` parks a coroutine in `withFrameNanos` inside the host composition.
+Per Compose 1.8.2, that awaiter keeps `Recomposer.hasBroadcastFrameClockAwaiters`
+true, so the recomposer requests a frame from its parent clock every frame, and
+on web that parent schedules a `requestAnimationFrame`. The loop is
+self-sustaining and has no off state.
+
+Measured in a scaffolded app, published `portal-editor:0.3.3`, headless Chrome
+152, with a counter on the pump itself:
+
+| state | host frames |
+|---|---|
+| editor loaded, **before ▶ Live** | 60.2 / s |
+| Live running, presenter idle | 59.9 / s |
+| **after ■ Stop** | 59.9 / s |
+
+with zero recompositions of the host content throughout. Same figures on the two
+reverted variants, so this is not something recent work introduced — it is how
+the editor has always run.
+
+**What is not known:** what this costs an adopter in practice (battery, CPU on a
+laptop with the editor open in a background tab, interaction with the browser's
+own rAF throttling), and whether the pump could be made demand-driven without
+reintroducing the coupling problems that
+`docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`
+describes. Deliberately not acted on: the editor works, and changing frame
+scheduling on the strength of one idle-state measurement is how U19's two
+withdrawn "fixes" happened.
 
 ### U18. `get_guide` returned "guide not found" for every adopter — FIXED
 
