@@ -16,6 +16,13 @@ from a clean tree, for a release decision.
 | Maven dependency version | **0.3.3, unchanged** — what the bundled scaffolders write into new projects |
 | recorded in the package | `VERSION.json` and `VERSION` at the bundle root |
 
+The package was built at `ca95f1bab`. The commits after it touch only
+`CURRENT_STATE.md`, `KNOWN_BUGS.md` and this file — none of which the bundle
+contains — so tagging a later commit would produce a byte-identical package
+apart from `sourceCommit` in `VERSION.json`. Tag `ca95f1bab` to match the
+artifact exactly, or tag the tip and rebuild; either is defensible, but say
+which one the published asset came from.
+
 The two version lines are now independent. `portal-tools-v*` does not match the
 `v*` pattern `publish.yml` listens on, so a tools release cannot publish a
 library; no `portal-tools-*` tag exists yet, so the convention is free. The
