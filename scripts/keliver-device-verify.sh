@@ -190,6 +190,11 @@ grep -q "mode=dev" "$EV/dev-after.log" \
 grep -q "refusing production mode" "$EV/dev-after.log" \
   && bad "the development route was itself refused" \
   || ok "the development route was not refused"
+# Guard the assertion below: an EMPTY dump would satisfy "the refusal is gone"
+# without anything being on screen at all.
+grep -q 'package="dev.keliver.portaldevice"' "$EV/dev-after.xml" \
+  && ok "the development route's foreground window belongs to the host" \
+  || bad "no host window was dumped on the development route"
 on_screen "$EV/dev-after.xml" "Production mode refused" \
   && bad "the host is still showing the refusal screen on the development route" \
   || ok "the refusal screen is gone on the development route"
