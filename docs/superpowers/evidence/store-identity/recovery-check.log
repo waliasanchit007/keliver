@@ -1,0 +1,52 @@
+=== store recovery outcomes
+    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k
+    bundle:          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/bundle
+
+--- C1  a bundle signed before the move still verifies after it
+        store:    /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/home/.keliver-portal/apps/checkout-f4b4ab02
+        identity: 195893e66aad983f
+  PASS  C1 a real Zipline manifest was signed with this store's identity
+  PASS  C1 the moved app was refused before any identity was minted
+  PASS  C1 the packaged recovery command accepted the move
+        identity before: 195893e66aad983f
+        identity after:  195893e66aad983f
+  PASS  C1 the moved app is serving from its original store
+  PASS  C1 the public-key fingerprint is unchanged (195893e66aad983f)
+        tests="2" skipped="0" failures="0" errors="0"
+  PASS  C1 the pre-move signed bundle verifies against the post-move public key
+
+--- C2  the recovered app restarts normally
+  PASS  C2 a second start after recovery is uneventful
+
+--- C3  an unrelated app is unaffected, and still refused this store
+  PASS  C3 the unrelated app took a store of its own
+  PASS  C3 it has its own signing identity
+  PASS  C3 the foreign claim was refused
+  PASS  C3 the refused claim changed nothing in the store
+  PASS  C3 recovery refused an unrelated app while the owner is live
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/apps/other
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/home/.keliver-portal/apps/checkout-f4b4ab02
+        identity before: 195893e66aad983f
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/apps/checkout-renamed
+        ✗ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/apps/checkout-renamed still exists and still uses this store. That is two apps, not a relocation.
+          Nothing was changed. If that directory is a leftover copy, remove it (or its
+          .gradle/keliver-store-path) first, then re-run.
+  PASS  C3 the refused recovery changed nothing in the store
+  PASS  C3 the unrelated app's own store is untouched
+
+--- C4  two plausible claimants race to recover one store
+        race-a exit=0  race-b exit=1
+  PASS  C4 exactly one claimant won
+  PASS  C4 the marker names exactly one of the claimants
+  PASS  C4 nothing but the owner marker changed
+  PASS  C4 the identity survived the race (1382dd01272dc37f)
+  PASS  C4 the losing app is still refused
+
+--- C5  the packaged keliver-portal starts the recovered app
+          guard ok: user.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/home
+          guard ok: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k/home/.keliver-portal/apps/checkout-f4b4ab02
+  PASS  C5 the packaged launcher started the recovered app
+  PASS  C5 the packaged launcher stopped it again
+
+passed: 21   failed: 0
+evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-recovery-JHR81k

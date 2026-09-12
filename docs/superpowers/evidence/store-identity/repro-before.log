@@ -1,0 +1,41 @@
+=== store identity reproductions
+    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3
+    relay:           /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/before-tree/portal-relay/build/install/portal-relay/bin/portal-relay
+
+--- R1  renaming an app directory must not silently mint a new identity
+        before: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/myapp-62926bcd
+        before: identity=a3e5093a257554ad
+        after:  store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/renamed-58544b56
+        after:  identity=f4f75f17fac92d27
+  FAIL  R1 the renamed app silently got a DIFFERENT identity (a3e5093a257554ad -> f4f75f17fac92d27)
+  PASS  R1 the original store still exists (nothing was destroyed)
+
+--- R2a  the refusal must name a recovery that works
+  FAIL  R2a refused with no way forward - this is U24
+        Caused by: java.lang.IllegalStateException: portal store conflict: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/myapp-62926bcd already belongs to another app.
+          owner: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/apps/myapp
+          this:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/apps/renamed
+        Fix: remove "store" from this app's keliver.portal.json to get its own
+
+--- R2b  the named recovery preserves the identity
+        scripts/keliver-store-identity-repro.sh: line 185: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/before-tree/scripts/keliver-store-recover.sh: No such file or directory
+  FAIL  R2b the recovery command refused a genuine relocation
+  FAIL  R2b the moved app resolved /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/renamed-58544b56, not /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/myapp-62926bcd
+  FAIL  R2b the identity changed across recovery (a3e5093a257554ad -> f4f75f17fac92d27)
+
+--- R3  a symlink and the real path are one app, so one store
+        via real path: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/app-v2-a865d59d
+        via symlink:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/current-a865d59d
+  FAIL  R3 one app split across two stores, chosen by which path was typed
+        identities: 7bca8b14aaca9fae vs fe43ac48e26de59e
+
+--- R4  the Kotlin resolver and the shell mirror must agree
+        symlinked path kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/live-ca226d3e
+        symlinked path shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/app-v3-ca226d3e
+  FAIL  R4 symlinked path DISAGREES
+        unicode name kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/caf----169badf7
+        unicode name shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3/home/.keliver-portal/apps/café---169badf7
+  FAIL  R4 unicode name DISAGREES
+
+passed: 1   failed: 8
+evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence-before/keliver-store-identity-qHUUn3
