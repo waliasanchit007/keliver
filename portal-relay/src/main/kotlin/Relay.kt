@@ -80,20 +80,42 @@ private fun resolveStore(): File {
     kotlin.system.exitProcess(70)
   }
   dir.mkdirs()
-  try {
-    claimStoreFor(dir, repoDir)
-  } catch (e: StoreOwnershipException) {
-    // A refusal is an answer, not a crash. This used to surface as an
-    // ExceptionInInitializerError stack trace with the actionable part buried
-    // in the middle of it.
-    System.err.println(e.message)
+
+  // Claiming the store and recording the pointer are the same two-sided update
+  // keliver-store-recover.sh performs, so they happen under the same app lock.
+  // Without it a recovery running at this moment can interleave with startup
+  // and leave the store owned by this app while the pointer names another.
+  val failure: String? = withStoreLock(
+    repoDir,
+    onUnlocked = ::println,
+    onBusy = { lock ->
+      System.err.println(
+        "portal-server: a store recovery is in progress for this app (lock: $lock).\n" +
+          "  Wait for keliver-store-recover.sh to finish and start again. If nothing is\n" +
+          "  running, remove that directory.",
+      )
+      kotlin.system.exitProcess(70)
+    },
+  ) {
+    try {
+      claimStoreFor(dir, repoDir)
+      // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app.
+      // Other consumers already see it: PORTAL_STORE is step 1 of the shell
+      // resolver too, and it is an environment variable, so a build in the
+      // same environment resolves it without any pointer.
+      if (env == null) writeStorePointer(repoDir, dir)
+      null
+    } catch (e: StoreOwnershipException) {
+      // A refusal is an answer, not a crash. This used to surface as an
+      // ExceptionInInitializerError stack trace with the actionable part
+      // buried in the middle of it. Reported AFTER the lock is released.
+      e.message ?: "portal store: refused"
+    }
+  }
+  if (failure != null) {
+    System.err.println(failure)
     kotlin.system.exitProcess(70)
   }
-  // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app. Other
-  // consumers already see it: `PORTAL_STORE` is step 1 of the shell resolver
-  // too, and it is an environment variable, so a build in the same environment
-  // resolves it without any pointer.
-  if (env == null) writeStorePointer(repoDir, dir)
   legacyStoreOrNull(dir)?.let { println(it.describe()) }
   return dir
 }

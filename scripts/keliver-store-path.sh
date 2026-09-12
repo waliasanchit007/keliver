@@ -2,7 +2,7 @@
 #
 # keliver-store-path — print the document store an app repo resolves to.
 #
-#   scripts/keliver-store-path.sh <app-dir> [--home DIR] [--default]
+#   scripts/keliver-store-path.sh <app-dir> [--home DIR] [--default] [--explain]
 #
 # THE STORE CONTRACT, in one place. Every consumer must agree on it: the relay
 # (which generates the signing keys), the publisher (which signs with them),
@@ -20,6 +20,12 @@
 # --default reports step 4 only, ignoring 1-3. The recovery command uses it to
 # ask "what store would this app take if it had no binding?".
 #
+# --explain prints "<step>\t<path>" instead of the bare path, where <step> is
+# env, config, pointer, default or adopted. keliver-store-recover.sh needs it:
+# "the app resolves somewhere else" and "the app is PINNED somewhere else by a
+# committed setting" call for different answers, and re-deriving the precedence
+# in a second place is how the rules drifted the first time.
+#
 # The authoritative implementation is PortalConfig.storeDir(); StoreContractTest
 # asserts this script agrees with it. The rules the two of them share are in
 # docs/STORE_IDENTITY.md.
@@ -31,11 +37,13 @@ set -uo pipefail
 APP="${1:?usage: $0 <app-dir> [--home DIR] [--default]}"
 HOME_DIR=""
 ONLY_DEFAULT=0
+EXPLAIN=0
 shift
 while [ $# -gt 0 ]; do
   case "$1" in
     --home) HOME_DIR="${2:?--home needs a value}"; shift 2 ;;
     --default) ONLY_DEFAULT=1; shift ;;
+    --explain) EXPLAIN=1; shift ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -43,10 +51,15 @@ done
   | awk -F'= ' '/^ *user\.home/ {print $2; exit}')"
 [ -n "$HOME_DIR" ] || HOME_DIR="$HOME"
 
-python3 - "$APP" "$HOME_DIR" "${PORTAL_STORE:-}" "$ONLY_DEFAULT" <<'PY'
+python3 - "$APP" "$HOME_DIR" "${PORTAL_STORE:-}" "$ONLY_DEFAULT" "$EXPLAIN" <<'PY'
 import json, os, sys, hashlib
 app, home, env = os.path.abspath(sys.argv[1]), sys.argv[2].strip(), sys.argv[3]
 only_default = sys.argv[4] == "1"
+explain = sys.argv[5] == "1"
+
+def answer(step, path):
+    print("%s\t%s" % (step, path) if explain else path)
+    raise SystemExit
 
 def expand(s):
     if s.startswith("~/"):
@@ -55,7 +68,7 @@ def expand(s):
 
 if not only_default:
     if env:
-        print(os.path.abspath(env)); raise SystemExit
+        answer("env", os.path.abspath(env))
 
     cfg = os.path.join(app, "keliver.portal.json")
     if os.path.isfile(cfg):
@@ -64,13 +77,13 @@ if not only_default:
         except Exception:
             store = None
         if store:
-            print(expand(store)); raise SystemExit
+            answer("config", expand(store))
 
     pointer = os.path.join(app, ".gradle", "keliver-store-path")
     if os.path.isfile(pointer):
         p = open(pointer).read().strip()
         if p:
-            print(p); raise SystemExit
+            answer("pointer", p)
 
 # --- step 4: the default -----------------------------------------------------
 # Both halves derive from the CANONICAL path. The slug is computed over UTF-8
@@ -111,13 +124,15 @@ except OSError:
     existing = []
 
 if not existing:
-    print(preferred)
+    answer("default", preferred)
 elif len(existing) == 1:
-    print(existing[0])
+    answer("default" if existing[0] == preferred else "adopted", existing[0])
 else:
     sys.stderr.write(
         "portal store split: %d stores exist for %s.\n" % (len(existing), real)
-        + "".join("  - %s\n" % os.path.basename(e) for e in existing)
+        # Full, symlink-resolved paths: keliver-store-recover.sh matches
+        # --store against these lines, and a basename can collide.
+        + "".join("  - %s\n" % os.path.realpath(e) for e in existing)
         + "  the name a first boot would choose today is %s\n" % os.path.basename(preferred)
         + "Choose the one to keep (its identity is the one your published bundles\n"
         + "verify against) and bind this app to it:\n"

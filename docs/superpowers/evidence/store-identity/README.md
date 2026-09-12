@@ -31,15 +31,20 @@ that commit — which is the point of U24.
 
 ## The outcomes, through the packaged commands
 
-[`recovery-check.log`](recovery-check.log) —
-`scripts/keliver-store-recovery-check.sh`, **21 passed / 0 failed**. It runs the
-commands from a bundle-shaped staging directory (`bin/` + `relay/`, assembled the
-way `build-portal-tools.sh` does) against apps outside the repository.
+`scripts/keliver-store-recovery-check.sh` runs the commands from a bundle-shaped
+staging directory (`bin/` + `relay/`, assembled the way `build-portal-tools.sh`
+does) against apps outside the repository. The same script, both sides:
+
+| run | code | result |
+| --- | --- | --- |
+| [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command, before the review | **29 passed / 18 failed** |
+| [`recovery-check.log`](recovery-check.log) | this branch | **47 passed / 0 failed** |
 
 * **C1** a real Zipline manifest signed with the store's key before a move
   verifies, with Zipline's own `ManifestVerifier`, against the public key the
-  app resolves *after* the move. The result XML is checked for
-  `skipped="0"` — see U26, where this same gate used to skip and report success.
+  app resolves *after* the move. The result XML is checked for `skipped="0"`
+  and for both tests having run — see U26, where this gate used to skip and
+  report success.
 * **C2** the recovered app restarts normally.
 * **C3** an unrelated app keeps its own identity, is refused the recovered app's
   store, and recovery refuses it too while the owner is live. Both stores are
@@ -48,6 +53,46 @@ way `build-portal-tools.sh` does) against apps outside the repository.
   nothing but the `owner` marker changes, the identity survives, and the loser
   is still refused.
 * **C5** `bin/keliver-portal` starts and stops the recovered app.
+* **C6** success means the binding works: an unusable pointer destination is
+  refused before anything is mutated, a failure *during* the update rolls the
+  owner marker back, and the positive case is checked by re-resolving rather
+  than by exit status.
+* **C7** precedence: a store pinned in `keliver.portal.json` is not overridden,
+  a pointer to another identity is not ignored, a resolver refusal is reported
+  rather than read as "no store", and `PORTAL_STORE` is announced and ignored.
+* **C8** the same-owner split — both stores record the same canonical path —
+  is recoverable, and is checked by resolving and starting the relay, not by
+  the command's exit status. The unselected store is untouched.
+* **C9** two recoveries targeting *different* stores for one app: at most one
+  succeeds, at most one owner marker names the app, and the pointer agrees with
+  it. Before the fix **both** succeeded and both stores claimed the app.
+* **C10** recovery and relay startup share the app lock, and a lock whose
+  holder is gone is taken over rather than blocking forever.
+
+What the before-run shows, in its own words:
+
+```
+C6a recovery reported success with no writable pointer destination
+C6a the owner was rewritten anyway
+C7a recovery bound a store the app does not resolve to
+C7c a resolver refusal was swallowed and read as 'no store'
+C8  resolution selects '<refused>', not …/apps/current-05a3ae07
+C9  both reported success on different stores
+C9  both stores claim this app
+C10 the relay did not start, but not because of the lock
+```
+
+## A note on the before-runs
+
+Both before-runs build the earlier commit in a throwaway `git worktree` and run
+the CURRENT check script against it, so the assertions are identical on both
+sides. `repro-before.log` predates two cosmetic changes to its script (a
+portable `sha256sum`/`shasum` selection, and the R2 section being split into
+R2a/R2b once a recovery command existed to name); none of its assertions
+changed. One assertion in an earlier draft of C10 matched the word "recovery"
+anywhere in the relay log and so matched the disposable run directory's name —
+it passed for the wrong reason. It now matches the refusal's own words, and
+both runs above were redone with the tightened version.
 
 ## What was not touched
 

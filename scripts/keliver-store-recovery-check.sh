@@ -72,13 +72,32 @@ interface HomeScreenBindings { val t: String }
 KT
 }
 
+# sha256sum on Linux, shasum on macOS. Resolved to a COMMAND, not a shell
+# function: `xargs -0 sha256` below cannot call a function, and macOS has a
+# /sbin/sha256 binary that would silently answer for it in a different output
+# format — while Linux, where CI runs, has no such binary at all.
+if command -v sha256sum >/dev/null 2>&1; then SHA256_CMD="sha256sum"; else SHA256_CMD="shasum -a 256"; fi
+sha256(){ $SHA256_CMD "$@"; }
+
 fingerprint() {
-  if [ -r "$1/keys/ed25519.pub" ]; then shasum -a 256 "$1/keys/ed25519.pub" | cut -c1-16
+  if [ -r "$1/keys/ed25519.pub" ]; then sha256 "$1/keys/ed25519.pub" | cut -c1-16
   elif [ -d "$1" ]; then echo "none yet"; else echo "(no store)"; fi
 }
 
 # Snapshot a directory's content, key material included BY HASH ONLY.
-snapshot() { [ -d "$1" ] && (cd "$1" && find . -type f -print0 | sort -z | xargs -0 shasum -a 256) 2>/dev/null || echo "(absent)"; }
+snapshot() { [ -d "$1" ] && (cd "$1" && find . -type f -print0 | sort -z | xargs -0 $SHA256_CMD) 2>/dev/null || echo "(absent)"; }
+
+# A disposable store that looks like a real one: an owner marker and a
+# throwaway public key. No private key is written, so nothing here can sign.
+mkstore() { # dir, owner-path, pubkey-hex
+  mkdir -p "$1/keys"
+  printf '%s\n' "$2" > "$1/owner"
+  printf '%s' "$3" > "$1/keys/ed25519.pub"
+}
+
+# What the ORDINARY resolver selects for an app — the question every recovery
+# has to answer afterwards. Prints "" and returns non-zero when it refuses.
+effective() { "$RESOLVE" "$1" --home "$DISP/home"; }
 
 boot() {
   local app="$1" port="$2" tag="$3"
@@ -118,6 +137,22 @@ if [ ! -f "$SRC_MANIFEST" ]; then
   ( cd "$ROOT" && ./gradlew --console=plain -q :portal-device-guest:compileDevelopmentZipline \
       > "$DISP/guest-build.log" 2>&1 ) || note "guest build failed; see $DISP/guest-build.log"
 fi
+# A driven test that SKIPPED is not a passed test. -D reaches the Gradle JVM,
+# not the forked test JVM, unless the build forwards it (U26) — so every driven
+# step below is checked against its own result XML, not against `gradlew`'s
+# exit status.
+assert_ran() { # class-name, label
+  local xml="$ROOT/portal-relay/build/test-results/test/TEST-$1.xml"
+  if [ ! -f "$xml" ]; then bad "$2: no test result XML was produced"; return 1; fi
+  if grep -q "skipped (no " "$xml"; then bad "$2: the test SKIPPED — it proved nothing"; return 1; fi
+  local counts; counts="$(grep -oE 'tests="[0-9]+" skipped="[0-9]+" failures="[0-9]+" errors="[0-9]+"' "$xml" | head -1)"
+  case "$counts" in
+    *'tests="0"'*) bad "$2: no tests ran ($counts)"; return 1 ;;
+    *'failures="0" errors="0"'*) note "$counts"; return 0 ;;
+    *) bad "$2: $counts"; return 1 ;;
+  esac
+}
+
 SIGNED="$DISP/signed-manifest.json"
 if [ -f "$SRC_MANIFEST" ]; then
   ( cd "$ROOT" && ./gradlew --console=plain -q :portal-relay:test --rerun-tasks \
@@ -125,8 +160,11 @@ if [ -f "$SRC_MANIFEST" ]; then
       -Dkeliver.sign.privkey="$S/keys/ed25519.priv" \
       -Dkeliver.sign.manifest="$SRC_MANIFEST" \
       -Dkeliver.sign.out="$SIGNED" > "$DISP/sign.log" 2>&1 )
-  [ -s "$SIGNED" ] && ok "C1 a real Zipline manifest was signed with this store's identity" \
-                   || { bad "C1 signing produced nothing"; tail -20 "$DISP/sign.log" | sed 's/^/        /'; }
+  if assert_ran StoreRelocationSignatureTest "C1 signing" && [ -s "$SIGNED" ]; then
+    ok "C1 a real Zipline manifest was signed with this store's identity"
+  else
+    bad "C1 signing produced nothing usable"; tail -20 "$DISP/sign.log" | sed 's/^/        /'
+  fi
 else
   bad "C1 no Zipline manifest available to sign"
 fi
@@ -158,19 +196,12 @@ if [ -s "$SIGNED" ] && [ -n "$AFTER_STORE" ]; then
       -Dkeliver.verify.manifest="$SIGNED" \
       -Dkeliver.verify.pubkey="$AFTER_STORE/keys/ed25519.pub" > "$DISP/verify.log" 2>&1 )
   vrc=$?
-  XML="$ROOT/portal-relay/build/test-results/test/TEST-SignedBundleVerificationTest.xml"
   if [ $vrc -ne 0 ]; then
     bad "C1 the pre-move signed bundle does NOT verify after the move"
     tail -25 "$DISP/verify.log" | sed 's/^/        /'
-  elif grep -q "skipped (no manifest/pubkey properties)" "$XML" 2>/dev/null; then
-    # The properties are passed with -D, which reaches the Gradle JVM and not
-    # the forked test JVM unless the build forwards them. When it did not, this
-    # test took its skip branch and the build went green having verified
-    # nothing. Refuse to count that as a pass.
-    bad "C1 the verification SKIPPED — it proved nothing"
-  else
-    grep -oE 'tests="[0-9]+" skipped="[0-9]+" failures="[0-9]+" errors="[0-9]+"' "$XML" 2>/dev/null \
-      | sed 's/^/        /'
+  elif assert_ran SignedBundleVerificationTest "C1 verification"; then
+    # Two tests ran: the genuine verification and the tamper rejection. Both
+    # are required, so a vacuous "it verifies" cannot pass alone.
     ok "C1 the pre-move signed bundle verifies against the post-move public key"
   fi
 else
@@ -253,7 +284,9 @@ OWNER_NOW="$(tr -d '\n' < "$RS/owner")"
   && ok "C4 the marker names exactly one of the claimants" \
   || bad "C4 the owner marker is $OWNER_NOW"
 # Everything except the owner marker must be byte-identical.
-DIFF="$(diff <(echo "$RSNAP_BEFORE" | grep -v ' ./owner$') <(snapshot "$RS" | grep -v ' ./owner$') || true)"
+# Filter by path, not by line shape: sha256sum prints "<hash>  ./owner" and
+# BSD shasum can print "SHA256 (./owner) = <hash>".
+DIFF="$(diff <(echo "$RSNAP_BEFORE" | grep -v '\./owner') <(snapshot "$RS" | grep -v '\./owner') || true)"
 [ -z "$DIFF" ] && ok "C4 nothing but the owner marker changed" \
                || { bad "C4 the race modified more than the marker"; echo "$DIFF" | sed 's/^/        /'; }
 [ "$(fingerprint "$RS")" = "$RFP" ] && ok "C4 the identity survived the race ($RFP)" \
@@ -300,6 +333,262 @@ else
   note "8161 or 8096 is in use by something this run does not own; C5 skipped"
 fi
 
+
+# --- C6: a recovery that cannot write the pointer must not report success ----
+echo
+echo "--- C6  recovery reports success only when the binding actually works"
+c6_app() { # dir, store, [port] -> an app already pointing at <store>
+  local d="$1" store="$2" port="${3:-8164}"
+  mkapp "$d" "$port"
+  mkdir -p "$d/.gradle"
+  printf '%s\n' "$store" > "$d/.gradle/keliver-store-path"
+}
+# (a) a pre-existing invalid destination: .gradle is a regular FILE.
+A6="$DISP/apps/c6-file"
+S6="$DISP/home/.keliver-portal/apps/c6-store-aaaaaaa1"
+mkstore "$S6" "$DISP/apps/c6-gone" "$(printf 'ab%.0s' $(seq 1 32))"
+mkapp "$A6" 8164
+printf 'not a directory\n' > "$A6/.gradle"
+S6SNAP="$(snapshot "$S6")"
+if "$RECOVER" "$A6" --store "$S6" --home "$DISP/home" > "$DISP/c6a.log" 2>&1; then
+  bad "C6a recovery reported success with no writable pointer destination"
+  sed 's/^/        /' "$DISP/c6a.log"
+else
+  ok "C6a recovery refused when the pointer destination is unusable"
+fi
+[ "$(snapshot "$S6")" = "$S6SNAP" ] && ok "C6a the store was not modified" \
+                                    || bad "C6a the owner was rewritten anyway"
+
+# (b) a failure DURING the update. KELIVER_RECOVER_FAIL_POINTER is a fault
+# injector that exists for exactly this: the rollback path is otherwise
+# unreachable from outside the process, and untested rollback is not rollback.
+A6B="$DISP/apps/c6-midway"
+S6B="$DISP/home/.keliver-portal/apps/c6b-store-aaaaaaa2"
+mkstore "$S6B" "$DISP/apps/c6b-gone" "$(printf 'cd%.0s' $(seq 1 32))"
+c6_app "$A6B" "$S6B"
+OWNER_BEFORE="$(cat "$S6B/owner")"
+if KELIVER_RECOVER_FAIL_POINTER=1 "$RECOVER" "$A6B" --store "$S6B" --home "$DISP/home" \
+     > "$DISP/c6b.log" 2>&1; then
+  bad "C6b recovery reported success after the pointer write failed"
+else
+  ok "C6b recovery failed when the pointer write failed mid-update"
+fi
+[ "$(cat "$S6B/owner")" = "$OWNER_BEFORE" ] \
+  && ok "C6b the previous owner marker was restored" \
+  || bad "C6b the owner marker was left rewritten: $(cat "$S6B/owner")"
+
+# (c) the positive case must be checked by RESOLVING, not by exit status.
+A6C="$DISP/apps/c6-good"
+S6C="$DISP/home/.keliver-portal/apps/c6c-store-aaaaaaa3"
+mkstore "$S6C" "$DISP/apps/c6c-gone" "$(printf 'ef%.0s' $(seq 1 32))"
+c6_app "$A6C" "$S6C"
+if "$RECOVER" "$A6C" --store "$S6C" --home "$DISP/home" > "$DISP/c6c.log" 2>&1; then
+  ok "C6c a valid recovery succeeded"
+else
+  bad "C6c a valid recovery was refused"; sed 's/^/        /' "$DISP/c6c.log"
+fi
+[ "$(effective "$A6C")" = "$S6C" ] \
+  && ok "C6c the ordinary resolver now selects the recovered store" \
+  || bad "C6c the resolver selects $(effective "$A6C" || echo '<refused>'), not $S6C"
+
+# --- C7: the EFFECTIVE binding, not just the default -------------------------
+echo
+echo "--- C7  recovery respects configuration, the pointer, and precedence"
+# (a) the app is configured for store B; recovering A would leave it on B.
+A7="$DISP/apps/c7-configured"
+S7A="$DISP/home/.keliver-portal/apps/c7a-store-aaaaaaa4"
+S7B="$DISP/stores/c7-b"
+mkstore "$S7A" "$DISP/apps/c7-gone" "$(printf '11%.0s' $(seq 1 32))"
+mkstore "$S7B" "$DISP/apps/c7-configured" "$(printf '22%.0s' $(seq 1 32))"
+mkapp "$A7" 8164
+python3 - "$A7/keliver.portal.json" "$S7B" <<'PYEOF'
+import json, sys
+p, store = sys.argv[1], sys.argv[2]
+cfg = json.load(open(p)); cfg["store"] = store
+json.dump(cfg, open(p, "w"), indent=2)
+PYEOF
+S7A_SNAP="$(snapshot "$S7A")"; S7B_SNAP="$(snapshot "$S7B")"
+if "$RECOVER" "$A7" --store "$S7A" --home "$DISP/home" > "$DISP/c7a.log" 2>&1; then
+  bad "C7a recovery bound a store the app does not resolve to"
+  note "resolver still selects: $(effective "$A7" || echo '<refused>')"
+else
+  ok "C7a recovery refused a store the configuration overrides"
+fi
+[ "$(snapshot "$S7A")" = "$S7A_SNAP" ] && [ "$(snapshot "$S7B")" = "$S7B_SNAP" ] \
+  && ok "C7a neither store was modified" || bad "C7a a store was modified by a refused recovery"
+
+# (b) the app's pointer already names a DIFFERENT store that has an identity.
+A7B="$DISP/apps/c7-pointed"
+S7C="$DISP/home/.keliver-portal/apps/c7c-store-aaaaaaa5"
+S7D="$DISP/stores/c7-d"
+mkstore "$S7C" "$DISP/apps/c7b-gone" "$(printf '33%.0s' $(seq 1 32))"
+mkstore "$S7D" "$DISP/apps/c7-pointed" "$(printf '44%.0s' $(seq 1 32))"
+mkapp "$A7B" 8164
+mkdir -p "$A7B/.gradle"; printf '%s\n' "$S7D" > "$A7B/.gradle/keliver-store-path"
+S7C_SNAP="$(snapshot "$S7C")"
+if "$RECOVER" "$A7B" --store "$S7C" --home "$DISP/home" > "$DISP/c7b.log" 2>&1; then
+  bad "C7b recovery ignored an existing pointer to another identity"
+else
+  ok "C7b recovery refused while the pointer names another identity"
+fi
+[ "$(snapshot "$S7C")" = "$S7C_SNAP" ] && ok "C7b the target store was not modified" \
+                                       || bad "C7b the target store was modified"
+
+# (c) a resolver REFUSAL must not be read as "this app has no store".
+A7C="$DISP/apps/c7-split"
+mkapp "$A7C" 8164
+H7="$(python3 -c "import hashlib,os,sys;print(hashlib.sha256(os.path.realpath(sys.argv[1]).encode()).hexdigest()[:8])" "$A7C")"
+mkstore "$DISP/home/.keliver-portal/apps/one-$H7"  "$A7C" "$(printf '55%.0s' $(seq 1 32))"
+mkstore "$DISP/home/.keliver-portal/apps/two-$H7"  "$A7C" "$(printf '66%.0s' $(seq 1 32))"
+S7E="$DISP/home/.keliver-portal/apps/c7e-store-aaaaaaa6"
+# The recorded owner EXISTS and resolves somewhere else. That matters: checking
+# it runs the resolver a second time, and the split diagnosis below has to stay
+# about THIS app rather than about whatever the old owner resolves to.
+mkapp "$DISP/apps/c7e-other" 8164
+mkstore "$S7E" "$DISP/apps/c7e-other" "$(printf '77%.0s' $(seq 1 32))"
+if "$RECOVER" "$A7C" --store "$S7E" --home "$DISP/home" > "$DISP/c7c.log" 2>&1; then
+  bad "C7c a resolver refusal was swallowed and read as 'no store'"
+else
+  ok "C7c a resolver refusal was reported, not swallowed"
+  head -8 "$DISP/c7c.log" | sed 's/^/        /'
+fi
+grep -q "split across stores" "$DISP/c7c.log" \
+  && ok "C7c the refusal names the split, not the old owner's resolution" \
+  || bad "C7c the reported reason is not this app's split"
+
+# (d) PORTAL_STORE is a ONE-RUN override and must not decide a binding.
+A7D="$DISP/apps/c7-env"
+S7F="$DISP/home/.keliver-portal/apps/c7f-store-aaaaaaa7"
+S7G="$DISP/stores/c7-override"
+mkstore "$S7F" "$DISP/apps/c7f-gone" "$(printf '88%.0s' $(seq 1 32))"
+mkstore "$S7G" "$DISP/apps/c7-env" "$(printf '99%.0s' $(seq 1 32))"
+c6_app "$A7D" "$S7F"
+if PORTAL_STORE="$S7G" "$RECOVER" "$A7D" --home "$DISP/home" > "$DISP/c7d.log" 2>&1; then
+  POINTED="$(tr -d '\n' < "$A7D/.gradle/keliver-store-path" 2>/dev/null)"
+  [ "$POINTED" != "$S7G" ] && ok "C7d PORTAL_STORE did not become the binding" \
+                           || bad "C7d a one-run override was written into the pointer"
+else
+  ok "C7d recovery refused rather than let PORTAL_STORE decide"
+fi
+grep -qi "PORTAL_STORE" "$DISP/c7d.log" && ok "C7d the override was reported, not silently applied" \
+                                        || bad "C7d PORTAL_STORE was neither reported nor refused"
+
+# --- C8: the same-owner split ------------------------------------------------
+echo
+echo "--- C8  a split where BOTH markers already name this app"
+# claimStoreFor writes the CANONICAL path, so after a symlink split both stores
+# record the same owner. "owner == me" is therefore not evidence that the
+# app-side binding exists, or that it selects this store.
+A8="$DISP/apps/c8-app"
+mkapp "$A8" 8165
+H8="$(python3 -c "import hashlib,os,sys;print(hashlib.sha256(os.path.realpath(sys.argv[1]).encode()).hexdigest()[:8])" "$A8")"
+KEEP="$DISP/home/.keliver-portal/apps/current-$H8"
+OTHER="$DISP/home/.keliver-portal/apps/c8-app-$H8"
+mkstore "$KEEP"  "$A8" "$(printf 'aa%.0s' $(seq 1 32))"
+mkstore "$OTHER" "$A8" "$(printf 'bb%.0s' $(seq 1 32))"
+OTHER_FP="$(fingerprint "$OTHER")"; OTHER_SNAP="$(snapshot "$OTHER")"
+effective "$A8" > /dev/null 2>&1 && bad "C8 the split was not detected at all" \
+                                 || ok "C8 the resolver refuses the split before recovery"
+if "$RECOVER" "$A8" --store "$KEEP" --home "$DISP/home" > "$DISP/c8.log" 2>&1; then
+  ok "C8 recovery accepted an explicitly chosen store in a same-owner split"
+else
+  bad "C8 recovery refused the documented way out of a split"
+  sed 's/^/        /' "$DISP/c8.log"
+fi
+[ "$(effective "$A8" 2>/dev/null)" = "$KEEP" ] \
+  && ok "C8 ordinary resolution now selects the chosen store" \
+  || bad "C8 resolution selects '$(effective "$A8" 2>/dev/null || echo '<refused>')', not $KEEP"
+[ "$(fingerprint "$OTHER")" = "$OTHER_FP" ] && [ "$(snapshot "$OTHER")" = "$OTHER_SNAP" ] \
+  && ok "C8 the unselected store and its identity are untouched" \
+  || bad "C8 the unselected store was modified"
+boot "$A8" 8165 c8-boot || BOOT_RC=1
+[ "$BOOT_RC" = 0 ] && [ "$BOOT_STORE" = "$KEEP" ] \
+  && ok "C8 the relay starts and serves from the chosen store" \
+  || { bad "C8 the relay did not come up on the chosen store (got '$BOOT_STORE')"; tail -12 "$BOOT_LOG" | sed 's/^/        /'; }
+
+# --- C9: two recoveries, two DIFFERENT stores, one app -----------------------
+echo
+echo "--- C9  two recoveries targeting different stores for one app"
+# A per-store lock does not serialize these: they never contend for it.
+A9="$DISP/apps/c9-app"
+S9A="$DISP/home/.keliver-portal/apps/c9a-store-aaaaaab1"
+S9B="$DISP/home/.keliver-portal/apps/c9b-store-aaaaaab2"
+mkstore "$S9A" "$DISP/apps/c9-gone" "$(printf '1a%.0s' $(seq 1 32))"
+mkstore "$S9B" "$DISP/apps/c9-gone" "$(printf '2b%.0s' $(seq 1 32))"
+c6_app "$A9" "$S9A"
+"$RECOVER" "$A9" --store "$S9A" --home "$DISP/home" > "$DISP/c9-a.log" 2>&1 & p9a=$!
+"$RECOVER" "$A9" --store "$S9B" --home "$DISP/home" > "$DISP/c9-b.log" 2>&1 & p9b=$!
+wait "$p9a"; r9a=$?
+wait "$p9b"; r9b=$?
+note "target-A exit=$r9a  target-B exit=$r9b"
+W9=$(( (r9a == 0 ? 1 : 0) + (r9b == 0 ? 1 : 0) ))
+[ "$W9" -le 1 ] && ok "C9 at most one of the two reported success" \
+                || bad "C9 both reported success on different stores"
+CLAIMED=""
+[ "$(tr -d '\n' < "$S9A/owner")" = "$A9" ] && CLAIMED="$CLAIMED A"
+[ "$(tr -d '\n' < "$S9B/owner")" = "$A9" ] && CLAIMED="$CLAIMED B"
+note "stores whose owner now names this app:${CLAIMED:- none}"
+[ "$(echo $CLAIMED | wc -w | tr -d ' ')" -le 1 ] \
+  && ok "C9 at most one owner marker names this app" \
+  || bad "C9 both stores claim this app"
+P9="$(tr -d '\n' < "$A9/.gradle/keliver-store-path" 2>/dev/null)"
+if [ "$W9" = 1 ]; then
+  OWNED="$S9A"; [ "$CLAIMED" = " B" ] && OWNED="$S9B"
+  [ "$P9" = "$OWNED" ] && ok "C9 the pointer agrees with the owner marker" \
+                       || bad "C9 pointer=$P9 but the owner marker is on $OWNED"
+  [ "$(effective "$A9" 2>/dev/null)" = "$OWNED" ] \
+    && ok "C9 the resolver selects the store that was actually claimed" \
+    || bad "C9 the resolver selects something else"
+fi
+
+# --- C10: recovery versus relay startup --------------------------------------
+echo
+echo "--- C10  recovery and relay startup are serialized"
+# The relay claims the store and writes the pointer at startup. A lock only the
+# recovery command takes would not stop it.
+A10="$DISP/apps/c10-app"
+S10="$DISP/home/.keliver-portal/apps/c10-store-aaaaaab3"
+mkstore "$S10" "$DISP/apps/c10-gone" "$(printf '3c%.0s' $(seq 1 32))"
+c6_app "$A10" "$S10" 8166
+mkdir -p "$A10/.gradle/keliver-store.lock"      # stand in for a recovery in flight
+boot "$A10" 8166 c10-locked || true
+if [ "${BOOT_RC:-1}" = 0 ]; then
+  bad "C10 the relay started while a store recovery held the app lock"
+else
+  # Match the refusal's own words. `grep -i recovery` matched the disposable
+  # RUN DIRECTORY's name in the log's paths and passed for the wrong reason.
+  if grep -q "a store recovery is in progress" "$BOOT_LOG"; then
+    ok "C10 the relay refused while a recovery held the lock"
+  else
+    bad "C10 the relay did not start, but not because of the lock"
+    tail -8 "$BOOT_LOG" | sed 's/^/        /'
+  fi
+fi
+if "$RECOVER" "$A10" --store "$S10" --home "$DISP/home" > "$DISP/c10-locked.log" 2>&1; then
+  bad "C10 a second recovery ran while the app lock was held"
+else
+  ok "C10 a second recovery refused while the app lock was held"
+fi
+# A lock whose recorded holder is gone must not block forever: one SIGKILLed
+# relay would otherwise wedge every later start behind a manual rm.
+printf '999999\n' > "$A10/.gradle/keliver-store.lock/pid"
+if "$RECOVER" "$A10" --store "$S10" --home "$DISP/home" --dry-run > "$DISP/c10-stale.log" 2>&1; then
+  grep -q "taking over" "$DISP/c10-stale.log" \
+    && ok "C10 a lock whose holder is gone is taken over, not waited on forever" \
+    || bad "C10 the stale lock was not reported as taken over"
+else
+  bad "C10 a stale lock still blocked recovery"
+  sed 's/^/        /' "$DISP/c10-stale.log"
+fi
+rm -f  "$A10/.gradle/keliver-store.lock/pid" 2>/dev/null
+rmdir  "$A10/.gradle/keliver-store.lock" 2>/dev/null
+"$RECOVER" "$A10" --store "$S10" --home "$DISP/home" > "$DISP/c10-recover.log" 2>&1 \
+  && ok "C10 recovery proceeds once the lock is free" \
+  || { bad "C10 recovery still refused after the lock was released"; sed 's/^/        /' "$DISP/c10-recover.log"; }
+boot "$A10" 8166 c10-after || BOOT_RC=1
+[ "$BOOT_RC" = 0 ] && [ "$BOOT_STORE" = "$S10" ] \
+  && ok "C10 the relay starts normally afterwards" \
+  || { bad "C10 the relay did not start after recovery"; tail -12 "$BOOT_LOG" | sed 's/^/        /'; }
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

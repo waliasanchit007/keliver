@@ -1245,6 +1245,41 @@ restarts normally, an unrelated app is unaffected and still refused, and two
 plausible claimants racing to recover one store produce exactly one winner with
 nothing but the owner marker changed.
 
+**The first version of this command did not hold up, and the review that caught
+it is worth recording.** `keliver-store-recover.sh` as first written reported
+success in three situations where the binding did not exist:
+
+1. **`owner` and the pointer are two writes.** With `.gradle` a regular file —
+   or any other unusable pointer destination — `owner` was rewritten, the
+   pointer write failed, and the command exited 0. The store was then owned by
+   an app that did not resolve to it: U23's shape, reached through the tool
+   meant to fix it. The destination is now probe-written before anything is
+   mutated, both writes are rolled back if either fails, and success is
+   **defined by re-running the resolver**, not by exit status.
+2. **It checked the DEFAULT store, not the effective one.** An app pinned by
+   `"store"` in `keliver.portal.json`, or bound by a pointer, to store B could
+   "recover" store A and go on resolving B. Validation now asks the resolver
+   what the app selects *and by which rule* (`keliver-store-path.sh --explain`),
+   refuses when a committed setting outranks the command, and no longer reads a
+   resolver refusal as "this app has no store". `PORTAL_STORE` is ignored,
+   loudly, for the same reason: a one-run override must not decide a permanent
+   binding.
+3. **An `owner` already naming this app was treated as "nothing to do".**
+   `claimStoreFor` records the CANONICAL path, so after a symlink split BOTH
+   stores name the same app — see U25.1. The command exited 0, the pointer was
+   never written, and the relay went on refusing the split. The documented way
+   out of a split now works: the pointer is established and verified, and the
+   unselected store is untouched.
+
+A fourth item came out of the same review: a per-store lock does not serialize
+two recoveries aiming at *different* stores for one app, and does not serialize
+the relay, which performs the same two-sided update at startup. The lock is now
+the APP's (`<app>/.gradle/keliver-store.lock`, `mkdir`-created so the shell and
+the JVM share it) and the relay takes it too, waiting up to 20s and then
+refusing to start rather than interleaving. A relay that is ALREADY running
+still does not hold it — stop the portal before recovering. That limitation is
+documented in [`STORE_IDENTITY.md`](STORE_IDENTITY.md).
+
 ### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
@@ -1296,6 +1331,12 @@ none is a security hole.
    `keliver-store-recover.sh --store` is for. `StoreContractTest` gained real
    symlinked and Unicode directories, and `StoreIdentityTest` covers the slug
    rule directly.
+
+   Recovering out of an existing split is covered by C8 in
+   `keliver-store-recovery-check.sh`, and it is checked by *resolving and
+   starting the relay* afterwards rather than by the command's exit status —
+   the first version of the command exited 0 there while leaving the split in
+   place (see [U24]).
 2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
    exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
@@ -1345,10 +1386,23 @@ parts of that script establish — but the final gate was decorative.
 
 **Fixed** by forwarding exactly those properties to the test JVM in
 `portal-relay/build.gradle`. The same command now fails with
-`AssertionError: no manifest at /nonexistent/m.json`.
-`keliver-store-recovery-check.sh` additionally refuses to count a run whose
-result XML contains the skip message, so a future regression in the forwarding
-cannot quietly turn the check back into a no-op.
+`AssertionError: no manifest at /nonexistent/m.json`. Both tests also fail
+rather than skip when a driver supplies *some* of their properties, since
+partial configuration is a broken driver and not a reason to pass. Both drivers
+— `keliver-verify-signed-bundle.sh` and `keliver-store-recovery-check.sh` —
+assert against the result XML that the tests ran, did not skip, and that BOTH
+the genuine verification and the tamper rejection executed.
+
+**Which earlier claims this invalidates.** Anything that cited
+`keliver-verify-signed-bundle.sh` as evidence that a signed bundle verifies was
+reporting a test that did not run. The specific statement is in
+`docs/CURRENT_STATE.md` ("Signing is verified, not asserted… a tampered
+manifest is rejected, so the check is not vacuous"), now struck through in
+place with a superseding note. What that script *did* establish independently
+of the skipped test — that the relay, the publisher and the device hosts
+resolve the same store, and that an unsigned bundle was produced when they did
+not — is unaffected. A genuine verification exists now: see C1 in
+[`evidence/store-identity/recovery-check.log`](superpowers/evidence/store-identity/recovery-check.log).
 
 ### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
 

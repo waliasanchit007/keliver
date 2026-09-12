@@ -2,6 +2,7 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.ManifestSigner
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import okio.ByteString.Companion.decodeHex
 
@@ -21,12 +22,25 @@ import okio.ByteString.Companion.decodeHex
 class StoreRelocationSignatureTest {
   @Test
   fun signAManifestWithTheStoresIdentity() {
-    val privPath = System.getProperty("keliver.sign.privkey") ?: return
-    val srcPath = System.getProperty("keliver.sign.manifest") ?: return
-    val outPath = System.getProperty("keliver.sign.out") ?: return
+    val privPath = System.getProperty("keliver.sign.privkey")
+    val srcPath = System.getProperty("keliver.sign.manifest")
+    val outPath = System.getProperty("keliver.sign.out")
+    val given = listOfNotNull(privPath, srcPath, outPath).size
+    if (given == 0) {
+      // Only the ordinary fast run may skip. Partial configuration is a broken
+      // driver, not a reason to pass — see U26.
+      println("StoreRelocationSignatureTest: skipped (no signing properties)")
+      return
+    }
+    assertEquals(
+      3, given,
+      "driven signing is misconfigured: privkey=$privPath manifest=$srcPath out=$outPath. " +
+        "All three of -Dkeliver.sign.{privkey,manifest,out} are required.",
+    )
 
-    val src = File(srcPath)
+    val src = File(srcPath!!)
     assertTrue(src.isFile, "no manifest to sign at $src")
+    assertTrue(File(privPath!!).isFile, "no private key at $privPath")
     val manifest = ZiplineManifest.decodeJson(src.readText())
 
     val signer = ManifestSigner.Builder()
@@ -35,10 +49,11 @@ class StoreRelocationSignatureTest {
     val signed = signer.sign(manifest)
     assertTrue("portal-ed25519" in signed.signatures.keys, "signing produced no portal-ed25519 signature")
 
-    val out = File(outPath)
+    val out = File(outPath!!)
     out.parentFile?.mkdirs()
     // The BYTES are what a verifier checks, so write exactly what was signed.
     out.writeText(signed.encodeJson())
+    assertTrue(out.isFile && out.length() > 0, "nothing was written to $out")
     println("StoreRelocationSignatureTest: signed manifest written to $out")
   }
 }

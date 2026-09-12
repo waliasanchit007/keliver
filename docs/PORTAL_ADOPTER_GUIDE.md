@@ -364,16 +364,29 @@ signing key is created:
 $KP/keliver-store-recover.sh /abs/path/to/the/app
 ```
 
-That rewrites the store's owner marker and the app's pointer. It never reads,
-copies or regenerates key material — it prints the public-key fingerprint
-before and after so you can see the identity is the same one — and it never
-merges two stores. Bundles signed before the move still verify afterwards.
+**Stop the portal first.** The command takes a lock the relay also takes at
+startup, so a relay starting during a recovery is held off — but one that is
+already running will go on serving a store it no longer owns.
+
+That rewrites the store's owner marker and the app's pointer, then **runs the
+resolver and checks it selects that store**. If either write or the check
+fails, the previous binding is put back and the command exits non-zero — so a
+success message means the binding works, not merely that two files were
+written. It
+never reads, copies or regenerates key material — it prints the public-key
+fingerprint before and after so you can see the identity is the same one — and
+it never merges two stores. Bundles signed before the move still verify
+afterwards.
 
 It refuses, changing nothing, if the recorded owner still exists and still uses
-that store (that is two apps, not a move), or if this app already has a store of
-its own holding an identity or documents. If the directory is a **copy** rather
-than a move, delete the pointer it inherited instead and it will start its own
-store:
+that store (that is two apps, not a move), if this app already has a store of
+its own holding an identity or documents, or if `keliver.portal.json` pins it to
+a different store — a committed setting outranks this command, so change the
+file instead. `PORTAL_STORE` is ignored here and says so: a one-run override
+must not decide a permanent binding.
+
+If the directory is a **copy** rather than a move, delete the pointer it
+inherited instead and it will start its own store:
 
 ```bash
 rm /abs/path/to/the/copy/.gradle/keliver-store-path
@@ -382,6 +395,20 @@ rm /abs/path/to/the/copy/.gradle/keliver-store-path
 An owner path that no longer exists does not release the store. Absence is not
 proof of ownership, so the store is never handed over automatically — you run
 the command above and name both sides.
+
+### If the portal reports a store "split"
+
+If the same app was launched through both a symlink and the real directory
+before 0.3.5, it has two stores and two signing identities. The portal refuses
+to start and lists them with their public-key fingerprints. Pick the one your
+published bundles verify against and name it:
+
+```bash
+$KP/keliver-store-recover.sh /abs/path/to/the/app --store ~/.keliver-portal/apps/<the one to keep>
+```
+
+The other store is not read, moved or deleted; if you pick wrong, run the same
+command again naming the other one.
 
 ### Coming from an older Keliver
 

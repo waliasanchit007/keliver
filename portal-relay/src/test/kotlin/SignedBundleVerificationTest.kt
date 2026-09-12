@@ -21,12 +21,26 @@ class SignedBundleVerificationTest {
   private val manifestPath: String? = System.getProperty("keliver.verify.manifest")
   private val pubKeyPath: String? = System.getProperty("keliver.verify.pubkey")
 
+  /**
+   * Both properties or neither. A run that sets one of them is a misconfigured
+   * driver, and treating it as "skipped" is how this suite reported success
+   * while verifying nothing (U26) — the skip branch is only for the ordinary
+   * fast test run, where neither is set.
+   */
+  private fun skipUnlessDriven(): Boolean {
+    if (manifestPath != null && pubKeyPath != null) return false
+    assertTrue(
+      manifestPath == null && pubKeyPath == null,
+      "driven verification is misconfigured: manifest=$manifestPath pubkey=$pubKeyPath. " +
+        "Both -Dkeliver.verify.manifest and -Dkeliver.verify.pubkey are required.",
+    )
+    println("SignedBundleVerificationTest: skipped (no manifest/pubkey properties)")
+    return true
+  }
+
   @Test
   fun theBundleIsSignedAndVerifiesAgainstTheStoresPublicKey() {
-    if (manifestPath == null || pubKeyPath == null) {
-      println("SignedBundleVerificationTest: skipped (no manifest/pubkey properties)")
-      return
-    }
+    if (skipUnlessDriven()) return
     val manifestFile = File(manifestPath)
     val pubKeyFile = File(pubKeyPath)
     assertTrue(manifestFile.isFile, "no manifest at $manifestFile")
@@ -56,7 +70,7 @@ class SignedBundleVerificationTest {
 
   @Test
   fun aTamperedManifestIsRejected() {
-    if (manifestPath == null || pubKeyPath == null) return
+    if (skipUnlessDriven()) return
     val bytes = File(manifestPath).readBytes()
     val manifest = ZiplineManifest.decodeJson(bytes.decodeToString())
     val verifier = ManifestVerifier.Builder()

@@ -128,12 +128,12 @@ ownership.
 
 ### Two apps attempt to use one store concurrently
 
-Unchanged and already correct: `claimStoreFor` creates `owner` with
-`CREATE_NEW`, so exactly one first claimant wins and every other is refused
-without altering anything (`StoreClaimRaceTest`). Recovery takes the same kind
-of exclusive lock (`<store>/owner.lock`, `CREATE_NEW`), so two concurrent
-recoveries have one winner and the loser leaves both stores exactly as it found
-them.
+`claimStoreFor` creates `owner` with `CREATE_NEW`, so exactly one first claimant
+wins and every other is refused without altering anything
+(`StoreClaimRaceTest`). Recovery serializes through the app lock and a store
+lock — see [Recovery](#4-recovery) — so two concurrent recoveries have one
+winner and the loser leaves both stores exactly as it found them, whether they
+aim at the same store or at different ones.
 
 ## 4. Recovery
 
@@ -141,19 +141,104 @@ them.
 It rebinds an existing store to an app **without touching keys, documents or
 bundles** — no hand-editing of `owner`, which is what U24 forced.
 
-It refuses, changing nothing, when:
+### It is one two-sided update, and success means the binding works
+
+`owner` and the pointer are two writes. The command:
+
+1. checks the pointer's destination is usable **before** anything is mutated —
+   a probe write, not just `-w`, because the failure modes that matter are
+   "`.gradle` is a regular file" and "the pointer path is a directory";
+2. takes the app lock (below), then validates;
+3. writes `owner`, then the pointer, remembering the previous value of each;
+4. **runs the ordinary resolver** and requires it to select the intended store,
+   and `owner` to name this app;
+5. on any failure at 3 or 4, restores both sides and exits non-zero.
+
+An exit status of 0 therefore means the resolver agrees, not that two `printf`s
+were attempted. The first version of this command exited 0 having rewritten
+`owner` while the pointer write failed — leaving a store owned by an app that
+did not resolve to it.
+
+### It respects precedence, and does not invent it
+
+Validation asks the resolver *what this app selects today and by which rule*
+(`keliver-store-path.sh --explain`), rather than re-deriving the order in a
+second place. The answer decides:
+
+| the app resolves by | outcome |
+| --- | --- |
+| `config` — `"store"` in `keliver.portal.json` | **refused.** A committed setting outranks this command; recovering anything else would leave the app resolving elsewhere. Edit the file instead. |
+| `pointer` or `default`, to a store holding an identity or documents | **refused.** Adopting would abandon that identity, and two stores are never merged. |
+| `pointer` or `default`, to nothing that exists yet | allowed; the pointer is this command's to rewrite. |
+| a **refusal** (a split) | allowed only when `--store` names one of the split candidates. Any other refusal is reported, not swallowed. |
+
+A resolver refusal is never read as "this app has no store". That reading is
+what let a recovery proceed against an app that was already bound elsewhere.
+
+**`PORTAL_STORE` is ignored, loudly.** It is a one-run override, and a
+permanent binding must not be decided by a variable that will be gone by the
+next command. Every resolver call the recovery makes — including the final
+verification — runs with it unset, and a set `PORTAL_STORE` is reported on
+stderr so the result is never silently about a different store than the one the
+next ordinary run will select.
+
+### The same-owner split
+
+`claimStoreFor` records the **canonical** path, so after a symlink split both
+stores name the same app. `owner == me` is therefore not evidence that the
+app-side binding exists, or that it selects this store — and the first version
+of this command treated it as "already bound; nothing to do" and exited 0,
+leaving the split in place and the relay still refusing.
+
+When `--store` names one of the split candidates the recovery proceeds,
+establishes the pointer (the half that was missing), and verifies. The
+unselected store is not read, written or moved; its identity is untouched and
+remains available to `--store` later.
+
+### It refuses, changing nothing, when
 
 * the store has no `owner` marker — there is nothing to recover; just start;
 * the recorded owner path still exists **and** still resolves to this same
   store — that is two live apps, not a relocation;
-* the app already resolves to a *different* store that holds its own signing
-  identity or documents — adopting would abandon or merge an identity, and this
-  never merges two stores;
-* another recovery holds the lock.
+* precedence forbids it, per the table above;
+* the pointer destination is unusable;
+* another recovery, or a starting relay, holds the app lock.
 
 On success it prints the store's public-key fingerprint before and after
-(identical, by construction — nothing under `keys/` is read, written or moved),
-rewrites `owner` atomically, and rewrites the app's pointer.
+(identical, by construction — nothing under `keys/` is read, written or moved)
+and the resolver's verified answer.
+
+### The lock is the app's, and the relay takes it too
+
+`<app>/.gradle/keliver-store.lock`, created with `mkdir` so the shell and the
+JVM hold the same lock.
+
+It is the **app's** lock rather than the store's for two reasons. Two
+recoveries aiming at two *different* stores for one app never contend for a
+per-store lock, so a per-store lock cannot stop them producing an `owner` on
+one store and a pointer to the other. And the relay performs this same
+two-sided update at startup — it claims the store and writes the pointer — so a
+lock only recovery commands took would not serialize the writer most likely to
+be running.
+
+The relay waits up to 20 seconds for a recovery in flight and then refuses to
+start, naming the lock. If the lock directory cannot be created at all (a
+read-only app tree) the relay says so and starts unlocked, because refusing to
+start there would be the worse outcome. A store lock (`<store>/owner.lock`) is
+still taken inside the app lock, so two apps recovering the same store also
+serialize.
+
+**A lock must not outlive its holder.** Introducing a lock that blocks startup
+introduces a way to wedge the portal, so the holder records its pid inside the
+lock directory and a later claimant takes the lock over — once — when that
+process is gone. An *unreadable* pid means wait, not steal: the cost of waiting
+is a message, the cost of stealing is two writers. Pid reuse can defeat this;
+the bounded wait and a refusal naming the directory are the backstop.
+
+**Known limitation:** the lock covers relay *startup*. A relay that is already
+running does not hold it, and although it does not rewrite the pointer after
+startup, a recovery performed underneath a live relay leaves that process
+serving a store it no longer owns. Stop the portal before recovering.
 
 ## 5. Existing 0.3.4 stores
 

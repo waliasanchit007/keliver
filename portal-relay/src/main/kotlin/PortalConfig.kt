@@ -312,6 +312,88 @@ internal fun appStoreName(repoDir: File): String =
 internal fun storePointerFile(repoDir: File): File = File(File(repoDir, ".gradle"), "keliver-store-path")
 
 /**
+ * The app-side lock, shared with `keliver-store-recover.sh`.
+ *
+ * Claiming a store and writing the pointer are two writes, and the relay is not
+ * the only writer: the recovery command performs the same two-sided update. A
+ * lock held only by recovery commands would not serialize against a relay
+ * starting at that moment, which is how a store can end up owned by an app
+ * whose pointer names a different one. `mkdir` is the atomic create, so the
+ * shell and the JVM can hold the same lock.
+ */
+internal fun storeLockDir(repoDir: File): File = File(File(repoDir, ".gradle"), "keliver-store.lock")
+
+/**
+ * Run [block] holding the app lock.
+ *
+ * Waits [waitMillis] for a recovery in flight, then gives up rather than
+ * proceeding — a bounded wait is the point; two writers is the failure.
+ * If the lock directory cannot be created at all (a read-only app tree), the
+ * block runs unlocked and [onUnlocked] is told: refusing to start an app whose
+ * tree is read-only would be a worse outcome than an unsynchronised startup
+ * that nothing else is contending for.
+ */
+internal fun <T> withStoreLock(
+  repoDir: File,
+  waitMillis: Long = 20_000,
+  onUnlocked: (String) -> Unit = {},
+  onBusy: (File) -> Nothing,
+  block: () -> T,
+): T {
+  val lock = storeLockDir(repoDir)
+  val parentReady = runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)
+  if (!parentReady) {
+    onUnlocked("portal-server: could not create ${lock.parentFile}; starting without the store lock")
+    return block()
+  }
+  val deadline = System.currentTimeMillis() + waitMillis
+  var stolen = false
+  while (true) {
+    if (runCatching { lock.mkdir() }.getOrDefault(false)) break
+    if (!lock.exists()) {
+      // Cannot create it and it is not there: not a contention problem.
+      onUnlocked("portal-server: could not take $lock; starting without the store lock")
+      return block()
+    }
+    // A lock that outlived its holder must not block every future start. The
+    // holder records its pid; if that process is gone the lock is taken over,
+    // ONCE, so a pid that cannot be read (or is alive) still means "wait".
+    if (!stolen && !lockHolderAlive(lock)) {
+      stolen = true
+      onUnlocked("portal-server: taking over $lock — the process that held it is gone")
+      runCatching { File(lock, "pid").delete(); lock.delete() }
+      continue
+    }
+    if (System.currentTimeMillis() >= deadline) onBusy(lock)
+    Thread.sleep(200)
+  }
+  runCatching { File(lock, "pid").writeText(ProcessHandle.current().pid().toString()) }
+  fun release() { runCatching { File(lock, "pid").delete(); lock.delete() } }
+  // Best effort for a hard kill; the ordinary path releases in the finally.
+  val hook = Thread { release() }
+  Runtime.getRuntime().addShutdownHook(hook)
+  try {
+    return block()
+  } finally {
+    release()
+    runCatching { Runtime.getRuntime().removeShutdownHook(hook) }
+  }
+}
+
+/**
+ * Is the process that took this lock still running?
+ *
+ * "Unknown" answers TRUE: a lock with no readable pid is left alone rather than
+ * stolen, because the cost of waiting is a message and the cost of stealing is
+ * two writers. Pid reuse can make this wrong; a bounded wait followed by a
+ * refusal that names the directory is the backstop.
+ */
+private fun lockHolderAlive(lock: File): Boolean {
+  val pid = runCatching { File(lock, "pid").readText().trim().toLong() }.getOrNull() ?: return true
+  return runCatching { ProcessHandle.of(pid).map { it.isAlive }.orElse(false) }.getOrDefault(true)
+}
+
+/**
  * Step 4 of the contract: the first-boot default, plus the compatibility scan
  * that keeps an app that already has a store from being handed a new one.
  *

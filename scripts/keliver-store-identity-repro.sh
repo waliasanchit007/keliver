@@ -66,9 +66,11 @@ KT
 
 # The identity of a store, as a fingerprint of its PUBLIC key. Never touches
 # ed25519.priv. Prints "-" when the store has no identity yet.
+# sha256sum on Linux, shasum on macOS: CI runs on Linux and this runs on both.
+if command -v sha256sum >/dev/null 2>&1; then SHA256_CMD="sha256sum"; else SHA256_CMD="shasum -a 256"; fi
 fingerprint() {
   local pub="$1/keys/ed25519.pub"
-  if [ -r "$pub" ]; then shasum -a 256 "$pub" | cut -c1-16; else echo "-"; fi
+  if [ -r "$pub" ]; then $SHA256_CMD "$pub" | cut -c1-16; else echo "-"; fi
 }
 
 # Start the relay for an app and wait. Sets:

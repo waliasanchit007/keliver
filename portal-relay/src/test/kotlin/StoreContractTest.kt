@@ -172,6 +172,58 @@ class StoreContractTest {
   }
 
   @Test
+  fun explainNamesTheRuleThatDecided() {
+    // keliver-store-recover.sh branches on WHICH rule selected the store — a
+    // committed "store" outranks it, a pointer is its own to rewrite — so the
+    // labels are part of the contract, not a debugging aid. Re-deriving the
+    // precedence in the recovery script is how the rules drifted the first time.
+    val home = tmp("home")
+    val app = tmp("app")
+    fun explain(): Pair<String, String> {
+      val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--explain")
+      val p = pb.start()
+      val out = p.inputStream.bufferedReader().readText().trim()
+      val err = p.errorStream.bufferedReader().readText()
+      p.waitFor()
+      assertEquals(0, p.exitValue(), err)
+      val parts = out.split('\t')
+      assertEquals(2, parts.size, "expected '<step>\\t<path>', got '$out'")
+      return parts[0] to parts[1]
+    }
+
+    val (step1, path1) = explain()
+    assertEquals("default", step1)
+    assertEquals(withUserHome(home) { PortalConfig().storeDir(app) }.canonicalPath, File(path1).canonicalPath)
+
+    val pointed = tmp("pointed")
+    File(app, ".gradle").mkdirs()
+    File(app, ".gradle/keliver-store-path").writeText(pointed.absolutePath + "\n")
+    val (step2, path2) = explain()
+    assertEquals("pointer", step2)
+    assertEquals(pointed.canonicalPath, File(path2).canonicalPath)
+    assertEquals(File(path2).canonicalPath, withUserHome(home) { PortalConfig().storeDir(app) }.canonicalPath)
+
+    val explicit = tmp("explicit")
+    File(app, "keliver.portal.json").writeText("""{"store":"${explicit.absolutePath}"}""")
+    val (step3, path3) = explain()
+    assertEquals("config", step3)
+    assertEquals(explicit.canonicalPath, File(path3).canonicalPath)
+
+    // An existing store recorded under an older slug is reported as adopted,
+    // so the recovery can tell it from a first boot.
+    val app2 = tmp("app2")
+    val older = File(home, ".keliver-portal/apps/older-name-${withUserHome(home) { appStoreHash(app2) }}")
+    older.mkdirs()
+    val pb = ProcessBuilder(script.absolutePath, app2.absolutePath, "--home", home.absolutePath, "--explain")
+    val p = pb.start()
+    val out = p.inputStream.bufferedReader().readText().trim()
+    p.waitFor()
+    assertEquals(0, p.exitValue(), out)
+    assertEquals("adopted", out.substringBefore('\t'))
+    assertEquals(older.canonicalPath, File(out.substringAfter('\t')).canonicalPath)
+  }
+
+  @Test
   fun theDefaultIsNeverInsideTheApp() {
     val home = tmp("home")
     val app = tmp("app")
