@@ -309,7 +309,7 @@ files are in `docs/superpowers/evidence/tools-0.3.4/device-run-34670604791/`.
 **Both earlier findings are now closed.**
 
 1. ~~The device route is unverified.~~ **Done** — see *Device verification*
-   below. The local attempt was abandoned for disk (this machine's single APFS
+   above. The local attempt was abandoned for disk (this machine's single APFS
    container was at 100%; `docs/superpowers/evidence/tools-0.3.4/emulator-attempt.md`),
    and the isolated SDK was removed. The hosted-runner route replaced it and
    works: 80 GB free, KVM available, boot to `sys.boot_completed=1` in 36-38 s.
