@@ -1127,7 +1127,7 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
-### U23. Renaming or moving an app directory silently rotates its signing identity — OPEN
+### U23. Renaming or moving an app directory silently rotates its signing identity — FIXED, UNRELEASED
 
 **Symptoms:** your documents look empty, or a device rejects a bundle you just
 published, after the app directory was renamed or moved — or after you launched
@@ -1167,7 +1167,34 @@ is no external adopter and no deployed production bundle.
 
 **Recovery, and the trap in it — see U24.**
 
-### U24. `claimStoreFor` refuses the recovery its own error message recommends — OPEN
+**Fixed on `fix/store-identity-u23-u25`; not in any released bundle.** Two
+changes, both in the contract now written down in
+[`STORE_IDENTITY.md`](STORE_IDENTITY.md):
+
+1. `PortalConfig.storeDir()` now reads `<app>/.gradle/keliver-store-path`, the
+   pointer the relay writes after a successful claim. The shell mirror has
+   always documented and implemented that step; the function it calls
+   authoritative did not. The pointer travels with a renamed directory, so a
+   moved app now *finds* its own store instead of deriving a new name.
+2. Whether it may USE it is `claimStoreFor`'s decision, and a path mismatch is
+   still refused — the pointer cannot tell a move from a `cp -a`. What changed
+   is that the refusal is a clean message naming `keliver-store-recover.sh`
+   (and, for a copy, the pointer to delete), and the relay exits 70 with it
+   rather than throwing `ExceptionInInitializerError`.
+
+So a rename is now **loud and one command away** instead of silent. No new
+keypair is minted at any point.
+
+Observed before (relay at `ec10e191a`) and after, in
+`scripts/keliver-store-identity-repro.sh`:
+
+```
+before   R1 the renamed app silently got a DIFFERENT identity (8ca57a27… -> a1c40dcb…)
+after    R1 the renamed app was refused, and told how to recover
+         R2b the signing identity survived the relocation (6df6e8d8…)
+```
+
+### U24. `claimStoreFor` refuses the recovery its own error message recommends — FIXED, UNRELEASED
 
 Found by the same review; also shipped in 0.3.4, also unfixed here.
 
@@ -1192,10 +1219,33 @@ This is what makes U23 feel like corruption when it is not. **Manual recovery:**
 edit `<store>/owner` to the app's current canonical path (`cd <app> && pwd -P`),
 or copy `keys/` out of the old store into the new one.
 
-Suggested fix for both: when the recorded owner path no longer exists on disk,
-treat the claim as reclaimable with a printed notice rather than fatally.
+**Fixed on `fix/store-identity-u23-u25`; not in any released bundle.**
 
-### U25. Four smaller store/host issues found by the PR #74 review — OPEN
+The suggested fix above — reclaim when the recorded owner path no longer exists
+— was **deliberately not implemented**. Absence is not proof of ownership: an
+unmounted volume, a deleted-and-recreated directory, or any app that happens to
+sit at an unused path would all pass it, and the prize is a private signing key.
+`claimStoreFor` now says exactly that when the owner path is missing, and still
+refuses.
+
+What replaced it is an explicit operation, `scripts/keliver-store-recover.sh`,
+which every refusal now names. It rewrites `<store>/owner` and the app's pointer
+and does nothing else: no key is read, written, copied or generated (the
+public-key fingerprint is printed before and after), no documents or bundles are
+touched, and two stores are never merged. It refuses, changing nothing, when the
+recorded owner is still live on that store, when the app already has a store of
+its own holding an identity or documents, or when another recovery holds the
+`owner.lock`. The old advice — "point `store` at a directory this app alone
+uses" — is gone from the conflict message, because following it was the trap.
+
+Verified end to end through the packaged command in
+`scripts/keliver-store-recovery-check.sh`: a Zipline manifest signed before the
+move verifies against the public key the app resolves after it, the app
+restarts normally, an unrelated app is unaffected and still refused, and two
+plausible claimants racing to recover one store produce exactly one winner with
+nothing but the owner marker changed.
+
+### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
@@ -1229,6 +1279,23 @@ none is a security hole.
    structurally cannot catch either. Related: the Python slug uses
    Unicode-aware `isalnum()`, the Kotlin regex is ASCII `[^a-z0-9._-]`, so
    `café` slugs differently in each.
+
+   **FIXED, UNRELEASED** (`fix/store-identity-u23-u25`). The slug now comes from
+   the CANONICAL basename, and is computed over its **UTF-8 bytes** with runs of
+   `-` collapsed and the ends trimmed — Kotlin mapped UTF-16 code *units* and
+   Python code *points*, so an astral character produced `--` in one and `-` in
+   the other; bytes leave nothing to disagree about. Measured before the fix:
+   `caf----5f6f6b5b` (Kotlin) versus `café---5f6f6b5b` (shell) for `café-☕`;
+   after, both `caf-9c8fe456`.
+
+   Because only the slug can differ from an existing 0.3.4 store directory (the
+   hash was always canonical), the default resolution now scans for an existing
+   `apps` entry ending in `-<hash>`: none means a first boot, exactly one is
+   adopted with a printed notice, and **more than one is refused** rather than
+   guessed between — that is the split having already happened, and it is what
+   `keliver-store-recover.sh --store` is for. `StoreContractTest` gained real
+   symlinked and Unicode directories, and `StoreIdentityTest` covers the slug
+   rule directly.
 2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
    exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
@@ -1244,7 +1311,44 @@ none is a security hole.
    `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
    then sign with one identity while the relay uses another — the mismatch the
    helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
-   builds. Failing the build would be safer.
+   builds. Failing the build would be safer. **Still open** — but the U25.1 fix
+   added one new way for the resolver to exit non-zero (exit 3, a split store),
+   so `build.gradle` now fails the build on exit 3 specifically rather than
+   falling back. Every other failure still warns and falls back, unchanged.
+
+### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
+
+Found while building the U23/U24 regressions, in tooling that shipped in
+tools 0.3.4.
+
+`scripts/keliver-verify-signed-bundle.sh` ends by running
+`SignedBundleVerificationTest` and passing the manifest and public key as
+`-Dkeliver.verify.*` on the Gradle command line. That sets them on the **Gradle
+JVM**. Gradle forks a separate JVM for tests and does not pass its own system
+properties down, and `portal-relay/build.gradle` forwarded nothing — so the test
+read `null` for both, took its "skipped (no manifest/pubkey properties)" branch,
+and returned success. The script then printed
+
+> ==> signed bundle verifies against the store's public key
+
+having verified nothing at all. Demonstrated by pointing it at paths that do not
+exist:
+
+```
+$ ./gradlew :portal-relay:test --tests '*SignedBundleVerificationTest*' --rerun-tasks \
+    -Dkeliver.verify.manifest=/nonexistent/m.json -Dkeliver.verify.pubkey=/nonexistent/k.pub
+BUILD SUCCESSFUL in 9s
+```
+
+Nothing was mis-signed — the publisher and the hosts do agree, as the U26-free
+parts of that script establish — but the final gate was decorative.
+
+**Fixed** by forwarding exactly those properties to the test JVM in
+`portal-relay/build.gradle`. The same command now fails with
+`AssertionError: no manifest at /nonexistent/m.json`.
+`keliver-store-recovery-check.sh` additionally refuses to count a run whose
+result XML contains the skip message, so a future regression in the forwarding
+cannot quietly turn the check back into a no-op.
 
 ### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
 

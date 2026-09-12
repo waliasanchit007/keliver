@@ -347,6 +347,42 @@ keys; it is machine-specific and the scaffolded `.gitignore` excludes it.
 app, because two apps sharing a store delete each other's documents and can
 write one app's screens into the other's source tree.
 
+Both halves of the default name come from the app's **canonical** path, so a
+symlink and the real directory are one app with one store and one signing
+identity. (Before 0.3.5 the hash was canonical and the readable half was not:
+launching through `~/work/current -> ~/work/app-v2` gave you a second store and
+a second identity, chosen by which path you typed.)
+
+### If you move or rename an app
+
+Your identity lives in the store, and the store records the path it was claimed
+from. Move or rename the directory and the portal **refuses to start**, names
+the store, and tells you the command below. Nothing is deleted and no new
+signing key is created:
+
+```bash
+$KP/keliver-store-recover.sh /abs/path/to/the/app
+```
+
+That rewrites the store's owner marker and the app's pointer. It never reads,
+copies or regenerates key material — it prints the public-key fingerprint
+before and after so you can see the identity is the same one — and it never
+merges two stores. Bundles signed before the move still verify afterwards.
+
+It refuses, changing nothing, if the recorded owner still exists and still uses
+that store (that is two apps, not a move), or if this app already has a store of
+its own holding an identity or documents. If the directory is a **copy** rather
+than a move, delete the pointer it inherited instead and it will start its own
+store:
+
+```bash
+rm /abs/path/to/the/copy/.gradle/keliver-store-path
+```
+
+An owner path that no longer exists does not release the store. Absence is not
+proof of ownership, so the store is never handed over automatically — you run
+the command above and name both sides.
+
 ### Coming from an older Keliver
 
 Older versions kept everything in a single shared `~/.keliver-portal`. Nothing
