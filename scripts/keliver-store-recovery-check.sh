@@ -589,6 +589,225 @@ boot "$A10" 8166 c10-after || BOOT_RC=1
 [ "$BOOT_RC" = 0 ] && [ "$BOOT_STORE" = "$S10" ] \
   && ok "C10 the relay starts normally afterwards" \
   || { bad "C10 the relay did not start after recovery"; tail -12 "$BOOT_LOG" | sed 's/^/        /'; }
+
+# --- C11: interruption at transaction boundaries -----------------------------
+echo
+echo "--- C11  SIGINT/SIGTERM at each transaction boundary"
+# A trap that only released the locks was worse than none: bash RESUMES at the
+# interrupted statement once the handler returns, so a TERM between the two
+# writes released the locks and then went on to finish and report success.
+# KELIVER_RECOVER_PAUSE_AT stops the command at a NAMED boundary so the signal
+# lands there instead of being raced for.
+c11_app() { # dir, store -> an app bound to <store>, which is owned by nobody live
+  local d="$1" store="$2"
+  mkapp "$d" 8167
+  mkdir -p "$d/.gradle"
+  printf '%s\n' "$store" > "$d/.gradle/keliver-store-path"
+}
+# Run recovery paused at $1, wait until it says so, then send $2. Sets C11_RC.
+interrupt_at() { # boundary, signal, tag
+  local boundary="$1" sig="$2" tag="$3" i
+  # `set -m`: a background job started by a NON-interactive shell inherits
+  # SIGINT as SIG_IGN, and `trap` cannot override an inherited ignore — so
+  # without job control `kill -INT` here would do nothing and the command would
+  # sail past the boundary. Job control puts it in its own process group, where
+  # INT is deliverable exactly as it is when a person hits Ctrl-C.
+  set -m
+  KELIVER_RECOVER_PAUSE_AT="$boundary" KELIVER_RECOVER_PAUSE_S=20 \
+    "$RECOVER" "$C11_APP" --store "$C11_STORE" --home "$DISP/home" > "$DISP/$tag.log" 2>&1 &
+  local pid=$!
+  set +m
+  for i in $(seq 1 60); do
+    grep -q "paused at $boundary" "$DISP/$tag.log" 2>/dev/null && break
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.5
+  done
+  if ! grep -q "paused at $boundary" "$DISP/$tag.log" 2>/dev/null; then
+    wait "$pid" 2>/dev/null
+    C11_RC=99
+    note "the command never reached '$boundary' — it is not interruptible there"
+    return 0
+  fi
+  kill -"$sig" "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null; C11_RC=$?
+  return 0
+}
+
+# (a) TERM after the owner replacement, before the pointer replacement.
+C11_APP="$DISP/apps/c11-term"; C11_STORE="$DISP/home/.keliver-portal/apps/c11a-store-aaaaaac1"
+mkstore "$C11_STORE" "$DISP/apps/c11-gone" "$(printf '4d%.0s' $(seq 1 32))"
+c11_app "$C11_APP" "$C11_STORE"
+OWNER_WAS="$(cat "$C11_STORE/owner")"
+POINTER_WAS="$(cat "$C11_APP/.gradle/keliver-store-path")"
+interrupt_at after-owner TERM c11a
+[ "${C11_RC:-0}" -ne 0 ] && ok "C11a an interrupted recovery exits non-zero" \
+                         || bad "C11a the interrupted recovery reported success (rc=${C11_RC:-0})"
+[ "$(cat "$C11_STORE/owner")" = "$OWNER_WAS" ] \
+  && ok "C11a the owner marker was restored byte for byte" \
+  || bad "C11a the owner marker is now '$(cat "$C11_STORE/owner")'"
+[ "$(cat "$C11_APP/.gradle/keliver-store-path")" = "$POINTER_WAS" ] \
+  && ok "C11a the store pointer is unchanged" || bad "C11a the store pointer changed"
+[ -d "$C11_APP/.gradle/keliver-store.lock" ] \
+  && bad "C11a the app lock was left behind" || ok "C11a the locks were released"
+[ -d "$C11_STORE/owner.lock" ] && bad "C11a the store lock was left behind" \
+                               || ok "C11a the store lock was released"
+ls -d "$C11_APP/.gradle"/keliver-store-recover.backup.* >/dev/null 2>&1 \
+  && bad "C11a backup material was left behind after a clean rollback" \
+  || ok "C11a no backup material is left after a verified rollback"
+
+# (b) TERM after the transaction has committed: the rebinding stands.
+C11_APP="$DISP/apps/c11-after"; C11_STORE="$DISP/home/.keliver-portal/apps/c11b-store-aaaaaac2"
+mkstore "$C11_STORE" "$DISP/apps/c11b-gone" "$(printf '5e%.0s' $(seq 1 32))"
+c11_app "$C11_APP" "$C11_STORE"
+interrupt_at after-commit TERM c11b
+[ "$(tr -d '\n' < "$C11_STORE/owner")" = "$C11_APP" ] \
+  && ok "C11b a committed rebinding is not undone by a later signal" \
+  || bad "C11b the committed rebinding was rolled back"
+[ "$(effective "$C11_APP")" = "$C11_STORE" ] \
+  && ok "C11b and the resolver still selects it" || bad "C11b the resolver disagrees"
+
+# (c) INT before anything is written.
+C11_APP="$DISP/apps/c11-early"; C11_STORE="$DISP/home/.keliver-portal/apps/c11c-store-aaaaaac3"
+mkstore "$C11_STORE" "$DISP/apps/c11c-gone" "$(printf '6f%.0s' $(seq 1 32))"
+c11_app "$C11_APP" "$C11_STORE"
+OWNER_WAS="$(cat "$C11_STORE/owner")"
+interrupt_at before-owner INT c11c
+[ "${C11_RC:-0}" -ne 0 ] && ok "C11c an early interruption exits non-zero" \
+                         || bad "C11c the early interruption reported success"
+[ "$(cat "$C11_STORE/owner")" = "$OWNER_WAS" ] && ok "C11c nothing was written" \
+                                               || bad "C11c something was written before the boundary"
+
+# (d) cleanup must not remove a lock that now belongs to a LATER process.
+C11_APP="$DISP/apps/c11-lock"; C11_STORE="$DISP/home/.keliver-portal/apps/c11d-store-aaaaaac4"
+mkstore "$C11_STORE" "$DISP/apps/c11d-gone" "$(printf '70%.0s' $(seq 1 32))"
+c11_app "$C11_APP" "$C11_STORE"
+OWNER_WAS="$(cat "$C11_STORE/owner")"
+KELIVER_RECOVER_PAUSE_AT=after-owner KELIVER_RECOVER_PAUSE_S=20 \
+  "$RECOVER" "$C11_APP" --store "$C11_STORE" --home "$DISP/home" > "$DISP/c11d.log" 2>&1 &
+C11D_PID=$!
+for _ in $(seq 1 60); do grep -q "paused at after-owner" "$DISP/c11d.log" 2>/dev/null && break; sleep 0.5; done
+# A later process takes the lock over and records its own (live) pid.
+printf '%s\n' "$$" > "$C11_APP/.gradle/keliver-store.lock/pid"
+kill -TERM "$C11D_PID" 2>/dev/null; wait "$C11D_PID" 2>/dev/null
+if [ -d "$C11_APP/.gradle/keliver-store.lock" ] \
+   && [ "$(tr -d '\n' < "$C11_APP/.gradle/keliver-store.lock/pid")" = "$$" ]; then
+  ok "C11d cleanup left the lock that now belongs to another process"
+else
+  bad "C11d cleanup removed a lock it no longer owned"
+fi
+[ "$(cat "$C11_STORE/owner")" = "$OWNER_WAS" ] \
+  && ok "C11d the binding was still restored" || bad "C11d the binding was not restored"
+rm -f "$C11_APP/.gradle/keliver-store.lock/pid"; rmdir "$C11_APP/.gradle/keliver-store.lock" 2>/dev/null
+
+# --- C12: restoration itself failing -----------------------------------------
+echo
+echo "--- C12  when restoration fails, say what is actually true"
+A12="$DISP/apps/c12-app"; S12="$DISP/home/.keliver-portal/apps/c12-store-aaaaaac5"
+mkstore "$S12" "$DISP/apps/c12-gone" "$(printf '81%.0s' $(seq 1 32))"
+c11_app "$A12" "$S12"
+if KELIVER_RECOVER_FAIL_POINTER=1 KELIVER_RECOVER_FAIL_RESTORE=1 \
+     "$RECOVER" "$A12" --store "$S12" --home "$DISP/home" > "$DISP/c12.log" 2>&1; then
+  bad "C12 a failed restoration still reported success"
+else
+  ok "C12 a failed restoration exits non-zero"
+fi
+grep -q "COULD NOT BE RESTORED" "$DISP/c12.log" && ok "C12 the partial state is reported as partial" \
+                                                || bad "C12 the failure was not reported as a partial state"
+grep -qi "unchanged\|was not modified" "$DISP/c12.log" \
+  && { bad "C12 it claimed nothing changed while the state is partial"; grep -in "unchanged\|was not modified" "$DISP/c12.log" | sed 's/^/        /'; } \
+  || ok "C12 it does not claim the store is unchanged"
+BK="$(ls -d "$A12/.gradle"/keliver-store-recover.backup.* 2>/dev/null | head -1)"
+if [ -n "$BK" ] && [ -f "$BK/owner" ] && [ -f "$BK/pointer.existed" ]; then
+  ok "C12 the material needed to restore by hand was kept"
+  grep -q "$BK" "$DISP/c12.log" && ok "C12 and the report names it" || bad "C12 the report does not name the backup"
+else
+  bad "C12 the backup was deleted after a failed restoration"
+fi
+# The reported owner must match reality, not a hopeful claim.
+grep -qF "$(tr -d '\n' < "$S12/owner")" "$DISP/c12.log" \
+  && ok "C12 the reported owner marker matches what is on disk" \
+  || bad "C12 the reported state does not match the store"
+
+# --- C13: startup resolves under the lock ------------------------------------
+echo
+echo "--- C13  a startup that waits re-resolves; it does not use a stale answer"
+# Constructed interleaving: the relay resolves store A and blocks on the app
+# lock; the binding is then changed to store B exactly as a completed recovery
+# leaves it (the real command cannot be used here — it would block on the same
+# lock the relay is waiting for); the lock is released and the relay proceeds.
+A13="$DISP/apps/c13-app"
+S13A="$DISP/home/.keliver-portal/apps/c13a-store-aaaaaac6"
+S13B="$DISP/home/.keliver-portal/apps/c13b-store-aaaaaac7"
+mkapp "$A13" 8167
+mkstore "$S13A" "$A13" "$(printf '92%.0s' $(seq 1 32))"
+mkstore "$S13B" "$A13" "$(printf 'a3%.0s' $(seq 1 32))"
+mkdir -p "$A13/.gradle"; printf '%s\n' "$S13A" > "$A13/.gradle/keliver-store-path"
+S13A_SNAP="$(snapshot "$S13A")"
+if keliver_port_free_or_die 8167; then
+  mkdir -p "$A13/.gradle/keliver-store.lock"
+  printf '%s\n' "$$" > "$A13/.gradle/keliver-store.lock/pid"   # a LIVE holder, so it is not taken over
+  ( cd "$A13" && PORTAL_REPO="$A13" "$RELAY" > "$DISP/c13.log" 2>&1 ) & C13_PID=$!
+  sleep 8                                    # long enough to have resolved and be waiting
+  printf '%s\n' "$S13B" > "$A13/.gradle/keliver-store-path"
+  rm -f "$A13/.gradle/keliver-store.lock/pid"; rmdir "$A13/.gradle/keliver-store.lock"
+  C13_UP=0
+  for _ in $(seq 1 40); do
+    curl -sf -m 2 -o /dev/null http://localhost:8167/devstate && { C13_UP=1; break; }
+    kill -0 "$C13_PID" 2>/dev/null || break
+    sleep 1
+  done
+  kill -0 "$C13_PID" 2>/dev/null && keliver_kill_own 8167 "$C13_PID"
+  wait "$C13_PID" 2>/dev/null
+  for _ in $(seq 1 30); do lsof -nP -iTCP:8167 -sTCP:LISTEN -t >/dev/null 2>&1 || break; sleep 1; done
+  C13_PTR="$(tr -d '\n' < "$A13/.gradle/keliver-store-path")"
+  [ "$C13_UP" = 1 ] && ok "C13 the relay started after waiting for the lock" \
+                    || { bad "C13 the relay did not start"; tail -12 "$DISP/c13.log" | sed 's/^/        /'; }
+  [ "$C13_PTR" = "$S13B" ] \
+    && ok "C13 the pointer still names the store the recovery chose" \
+    || bad "C13 startup wrote back its stale answer (pointer is now $C13_PTR)"
+  grep -qF "store=$S13B" "$DISP/c13.log" \
+    && ok "C13 the relay is serving the re-resolved store" \
+    || bad "C13 the relay is serving something other than $S13B"
+  [ "$(snapshot "$S13A")" = "$S13A_SNAP" ] && ok "C13 the abandoned store was not touched" \
+                                           || bad "C13 the abandoned store was modified"
+  [ "$(effective "$A13")" = "$S13B" ] && ok "C13 ordinary resolution agrees" \
+                                      || bad "C13 ordinary resolution disagrees"
+  boot "$A13" 8167 c13-restart || BOOT_RC=1
+  [ "$BOOT_RC" = 0 ] && [ "$BOOT_STORE" = "$S13B" ] \
+    && ok "C13 and it restarts on the same store" \
+    || { bad "C13 the restart did not land on $S13B"; tail -10 "$BOOT_LOG" | sed 's/^/        /'; }
+else
+  note "8167 is in use by something this run does not own; C13 skipped"
+fi
+
+# --- C14: a claimed takeover is not completed by someone else ----------------
+echo
+echo "--- C14  stale-lock takeover cannot clobber another contender"
+A14="$DISP/apps/c14-app"; S14="$DISP/home/.keliver-portal/apps/c14-store-aaaaaac8"
+mkstore "$S14" "$DISP/apps/c14-gone" "$(printf 'b4%.0s' $(seq 1 32))"
+c11_app "$A14" "$S14"
+L14="$A14/.gradle/keliver-store.lock"
+# The state another contender leaves between claiming and recreating: the pid
+# marker renamed aside, the directory still there.
+mkdir -p "$L14"; printf '999999\n' > "$L14/pid.stale.4242"
+if "$RECOVER" "$A14" --store "$S14" --home "$DISP/home" --dry-run > "$DISP/c14a.log" 2>&1; then
+  bad "C14 a claimed takeover was completed by another process"
+else
+  ok "C14 a claimed takeover is left to the contender that claimed it"
+fi
+[ -d "$L14" ] && [ -f "$L14/pid.stale.4242" ] \
+  && ok "C14 the claiming contender's lock is intact" || bad "C14 the claim was destroyed"
+rm -f "$L14"/pid.stale.*; rmdir "$L14"
+# And a LIVE holder is never taken over.
+mkdir -p "$L14"; printf '%s\n' "$$" > "$L14/pid"
+if "$RECOVER" "$A14" --store "$S14" --home "$DISP/home" --dry-run > "$DISP/c14b.log" 2>&1; then
+  bad "C14 a live holder's lock was taken over"
+else
+  ok "C14 a live holder's lock is not taken over"
+fi
+[ -f "$L14/pid" ] && [ "$(tr -d '\n' < "$L14/pid")" = "$$" ] \
+  && ok "C14 the live holder's marker is untouched" || bad "C14 the live holder's marker changed"
+rm -f "$L14/pid"; rmdir "$L14"
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

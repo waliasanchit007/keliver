@@ -1,0 +1,43 @@
+--- /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/orig-recover.sh	2026-09-12 22:01:26
++++ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/life-before/scripts/keliver-store-recover.sh	2026-09-12 22:01:26
+@@ -168,6 +168,15 @@
+ }
+ trap release_locks EXIT INT TERM
+ 
++# TEST INSTRUMENTATION ONLY (added to the pre-fix script so an interruption can
++# be delivered at the same named boundary as in the fixed one). Inert unless set.
++pause_at() {
++  [ "${KELIVER_RECOVER_PAUSE_AT:-}" = "$1" ] || return 0
++  printf 'paused at %s\n' "$1"
++  sleep "${KELIVER_RECOVER_PAUSE_S:-5}"
++  return 0
++}
++
+ # --- 3. which store ----------------------------------------------------------
+ # What the app resolves to RIGHT NOW, and by which rule. Both matter: a store
+ # named in keliver.portal.json is a committed decision this command may not
+@@ -296,6 +305,7 @@
+ }
+ fail() { rollback; die "$1"; }
+ 
++pause_at before-owner
+ # owner
+ if [ "$OLD" != "$APP" ]; then
+   TMP="$STORE/.owner.recover.$$"
+@@ -309,6 +319,8 @@
+   say "note: the owner marker already names this app; establishing the app-side binding."
+ fi
+ 
++pause_at after-owner
++
+ # pointer. KELIVER_RECOVER_FAIL_POINTER is a fault injector for the rollback
+ # path, which is otherwise unreachable from outside the process. Inert unless
+ # set to 1.
+@@ -335,6 +347,7 @@
+ [ "$(tr -d '\n' < "$OWNER_FILE")" = "$APP" ] || fail "the owner marker does not name this app after the update.
+   The previous binding has been restored."
+ rm -f "$BACKUP"
++pause_at after-commit
+ 
+ say "identity after:  $(fingerprint "$STORE")"
+ say "verified:        $VERIFIED   (the ordinary resolver's answer)"

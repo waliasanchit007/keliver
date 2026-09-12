@@ -326,6 +326,11 @@ internal fun storeLockDir(repoDir: File): File = File(File(repoDir, ".gradle"), 
 /**
  * Run [block] holding the app lock.
  *
+ * EVERYTHING that decides or records the binding belongs inside [block] —
+ * resolution included. Resolving first and locking afterwards means the store
+ * this process claims can be the one a recovery replaced while it waited, and
+ * it then writes that stale answer back into the pointer, undoing the recovery.
+ *
  * Waits [waitMillis] for a recovery in flight, then gives up rather than
  * proceeding — a bounded wait is the point; two writers is the failure.
  * If the lock directory cannot be created at all (a read-only app tree), the
@@ -347,7 +352,6 @@ internal fun <T> withStoreLock(
     return block()
   }
   val deadline = System.currentTimeMillis() + waitMillis
-  var stolen = false
   while (true) {
     if (runCatching { lock.mkdir() }.getOrDefault(false)) break
     if (!lock.exists()) {
@@ -355,20 +359,15 @@ internal fun <T> withStoreLock(
       onUnlocked("portal-server: could not take $lock; starting without the store lock")
       return block()
     }
-    // A lock that outlived its holder must not block every future start. The
-    // holder records its pid; if that process is gone the lock is taken over,
-    // ONCE, so a pid that cannot be read (or is alive) still means "wait".
-    if (!stolen && !lockHolderAlive(lock)) {
-      stolen = true
+    if (claimStaleLock(lock)) {
       onUnlocked("portal-server: taking over $lock — the process that held it is gone")
-      runCatching { File(lock, "pid").delete(); lock.delete() }
       continue
     }
     if (System.currentTimeMillis() >= deadline) onBusy(lock)
     Thread.sleep(200)
   }
-  runCatching { File(lock, "pid").writeText(ProcessHandle.current().pid().toString()) }
-  fun release() { runCatching { File(lock, "pid").delete(); lock.delete() } }
+  runCatching { File(lock, "pid").writeText(ProcessHandle.current().pid().toString() + "\n") }
+  fun release() = runCatching { File(lock, "pid").delete(); lock.delete() }
   // Best effort for a hard kill; the ordinary path releases in the finally.
   val hook = Thread { release() }
   Runtime.getRuntime().addShutdownHook(hook)
@@ -381,16 +380,45 @@ internal fun <T> withStoreLock(
 }
 
 /**
- * Is the process that took this lock still running?
+ * Clear a lock whose holder is gone, so that the caller can retry `mkdir`.
  *
- * "Unknown" answers TRUE: a lock with no readable pid is left alone rather than
- * stolen, because the cost of waiting is a message and the cost of stealing is
- * two writers. Pid reuse can make this wrong; a bounded wait followed by a
- * refusal that names the directory is the backstop.
+ * The naive form — read the pid, see it is dead, delete the directory — can
+ * delete a lock a DIFFERENT contender acquired between those two steps, and
+ * then there are two writers. So the takeover is CLAIMED: the `pid` file is
+ * renamed aside, which exactly one contender can do, and the claim is checked
+ * to still hold the dead pid that was inspected. A live holder always writes
+ * its `pid` before doing anything, and a new holder can only exist after this
+ * same rename removed the old marker — so a successful, content-checked claim
+ * proves this is not somebody else's live lock.
+ *
+ * An UNREADABLE or MISSING pid returns false: the cost of waiting is a
+ * message, the cost of stealing is two writers.
+ *
+ * `keliver-store-recover.sh` implements the same protocol, so the shell and
+ * the JVM contend correctly with each other.
  */
-private fun lockHolderAlive(lock: File): Boolean {
-  val pid = runCatching { File(lock, "pid").readText().trim().toLong() }.getOrNull() ?: return true
-  return runCatching { ProcessHandle.of(pid).map { it.isAlive }.orElse(false) }.getOrDefault(true)
+internal fun claimStaleLock(lock: File, betweenCheckAndClaim: () -> Unit = {}): Boolean {
+  val pidFile = File(lock, "pid")
+  val recorded = runCatching { pidFile.readText().trim() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return false
+  val pid = recorded.toLongOrNull() ?: return false
+  val alive = runCatching { ProcessHandle.of(pid).map { it.isAlive }.orElse(false) }.getOrDefault(true)
+  if (alive) return false
+
+  // A seam, no-op in production: the window between deciding the holder is
+  // dead and claiming the marker is exactly where a racing contender can slip
+  // in, and StoreLockTest drives that interleaving through here rather than
+  // hoping to hit it by timing.
+  betweenCheckAndClaim()
+
+  val claim = File(lock, "pid.stale.${ProcessHandle.current().pid()}")
+  if (!runCatching { pidFile.renameTo(claim) }.getOrDefault(false)) return false
+  if (runCatching { claim.readText().trim() }.getOrNull() != recorded) {
+    // Not the marker that was inspected: put it back and wait rather than delete.
+    runCatching { claim.renameTo(pidFile) }
+    return false
+  }
+  runCatching { lock.listFiles()?.forEach { it.delete() } }
+  return runCatching { lock.delete() }.getOrDefault(false)
 }
 
 /**

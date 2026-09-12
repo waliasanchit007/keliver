@@ -159,6 +159,47 @@ were attempted. The first version of this command exited 0 having rewritten
 `owner` while the pointer write failed — leaving a store owned by an app that
 did not resolve to it.
 
+**The backup is files, not shell variables.** `$(cat f)` strips trailing
+newlines, so a marker restored from a variable is not necessarily the marker
+that was there; and whether the pointer *existed* is state of its own. Both
+sides are copied into `<app>/.gradle/keliver-store-recover.backup.<pid>/`
+(`owner`, `pointer`, `pointer.existed`, `meta`), every copy is verified with
+`cmp`, and restoration is verified the same way **before** it is described as
+having happened.
+
+**If restoration itself fails**, the backup is kept, the command prints the
+state as it actually is — both files, as they are on disk now — with the exact
+`cp` commands to put them back, and exits non-zero. It never says "unchanged"
+about a store it has changed.
+
+### Interruption
+
+| when | what happens |
+| --- | --- |
+| before either write | nothing had been written; the locks are released and it exits non-zero |
+| between the two writes, or before verification | the previous owner marker and pointer are restored **while the locks are still held**, the restoration is verified, then the locks are released and it exits non-zero |
+| after the transaction is verified | the rebinding stands; a late signal does not undo verified work |
+
+`SIGINT` and `SIGTERM` are handled explicitly, and the handler exits — it does
+not return. A trap that only released the locks was *worse than none*: bash
+resumes at the interrupted statement once a handler returns, so a `TERM`
+between the two writes released both locks and then went on to finish the
+update and report success. Further signals are ignored while unwinding, and
+every mutation re-checks an "aborting" flag, so nothing can run after cleanup
+has begun.
+
+Cleanup is idempotent, and it releases **only locks this process still holds**,
+identified by the pid marker it wrote. Without that check an interrupted run
+could remove a lock a *later* process had already taken over — the same
+two-writers failure the lock exists to prevent.
+
+**`SIGKILL` and power loss cannot be rolled back, and nothing here claims
+otherwise.** There is no handler for them, so the store can be left owned by
+the app with the pointer not yet written, or the reverse. What survives is the
+backup directory, which is deleted only once the transaction is verified: a
+later run reports any it finds and never overwrites one, and the lock's pid
+then belongs to a dead process, so the next contender takes the lock over.
+
 ### It respects precedence, and does not invent it
 
 Validation asks the resolver *what this app selects today and by which rule*
@@ -230,15 +271,35 @@ serialize.
 
 **A lock must not outlive its holder.** Introducing a lock that blocks startup
 introduces a way to wedge the portal, so the holder records its pid inside the
-lock directory and a later claimant takes the lock over — once — when that
-process is gone. An *unreadable* pid means wait, not steal: the cost of waiting
-is a message, the cost of stealing is two writers. Pid reuse can defeat this;
-the bounded wait and a refusal naming the directory are the backstop.
+lock directory and a later claimant takes the lock over when that process is
+gone. An *unreadable* pid means wait, not steal: the cost of waiting is a
+message, the cost of stealing is two writers.
 
-**Known limitation:** the lock covers relay *startup*. A relay that is already
-running does not hold it, and although it does not rewrite the pointer after
-startup, a recovery performed underneath a live relay leaves that process
-serving a store it no longer owns. Stop the portal before recovering.
+The takeover is **claimed, not just performed**. Seeing a dead pid and then
+deleting the directory can delete a lock a different contender acquired in
+between. Instead the `pid` file is renamed aside — exactly one contender can do
+that — and the claim is then checked to still hold the dead pid that was
+inspected; if it does not, it is put back and the contender waits. A live holder
+always writes its `pid` before doing anything, and a new holder can only exist
+after this same rename removed the old marker, so a successful content-checked
+claim proves this is not somebody else's live lock. `keliver-store-recover.sh`
+and `PortalConfig.withStoreLock` implement the same protocol, so the shell and
+the JVM contend correctly with each other. Pid reuse can still defeat the
+liveness test; the bounded wait and a refusal naming the directory are the
+backstop.
+
+Startup resolves the store **inside** the lock. It used to resolve first and
+lock afterwards, so a start that waited on a recovery in flight went on to
+claim the store it had selected *before* that recovery ran — and then wrote
+that stale answer back into the pointer, undoing the rebinding it had just
+waited for. Selecting, claiming and recording the binding are one transaction.
+
+**Known limitation, unchanged:** the lock covers relay *startup*. A relay that
+is already running does not hold it, and although it does not rewrite the
+pointer after startup, a recovery performed underneath a live relay leaves that
+process serving a store it no longer owns. Stop the portal before recovering.
+Recovery has deliberately **not** been broadened to support running underneath
+an active relay.
 
 ## 5. Existing 0.3.4 stores
 

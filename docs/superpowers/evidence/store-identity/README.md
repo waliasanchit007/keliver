@@ -37,8 +37,9 @@ does) against apps outside the repository. The same script, both sides:
 
 | run | code | result |
 | --- | --- | --- |
-| [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command, before the review | **29 passed / 18 failed** |
-| [`recovery-check.log`](recovery-check.log) | this branch | **47 passed / 0 failed** |
+| [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command | **29 passed / 18 failed** |
+| [`lifecycle-before.log`](lifecycle-before.log) | `43148d63e` — after that round, before the transaction-lifecycle round | **62 passed / 14 failed** |
+| [`recovery-check.log`](recovery-check.log) | this branch | **75 passed / 0 failed** |
 
 * **C1** a real Zipline manifest signed with the store's key before a move
   verifies, with Zipline's own `ManifestVerifier`, against the public key the
@@ -68,6 +69,45 @@ does) against apps outside the repository. The same script, both sides:
   it. Before the fix **both** succeeded and both stores claimed the app.
 * **C10** recovery and relay startup share the app lock, and a lock whose
   holder is gone is taken over rather than blocking forever.
+* **C11** interruption at each transaction boundary: before any write, between
+  the two writes, and after the commit. A trap that only released the locks was
+  worse than none — bash resumes at the interrupted statement once a handler
+  returns, so `TERM` between the writes used to release the locks and then go on
+  to finish and report success. Also: cleanup must not remove a lock that now
+  belongs to a later process.
+* **C12** when restoration itself fails, the backup is kept and the real partial
+  state is printed — never "unchanged".
+* **C13** a startup that waits for the lock re-resolves under it. Before the fix
+  it claimed the store it had selected *before* the recovery ran and wrote that
+  stale answer back into the pointer, undoing the rebinding it had waited for.
+* **C14** a stale-lock takeover already claimed by another contender is left
+  alone, and a live holder's lock is never taken over.
+
+What the lifecycle before-run shows, in its own words:
+
+```
+C11a the interrupted recovery reported success (rc=0)
+C11a the owner marker is now …/apps/c11-term
+C11d cleanup removed a lock it no longer owned
+C12  the backup was deleted after a failed restoration
+C12  it claimed nothing changed while the state is partial
+C13  startup wrote back its stale answer (pointer is now …/c13a-store-…)
+C13  the abandoned store was modified
+```
+
+`SIGINT` is delivered under job control (`set -m`), because a background job
+started by a non-interactive shell inherits `SIGINT` as `SIG_IGN` and `trap`
+cannot override an inherited ignore — without it the signal would silently do
+nothing and the case would pass for the wrong reason.
+
+The pre-fix recovery script has no pause hook, so it was instrumented with
+**only** that hook to make the same boundaries reachable;
+[`lifecycle-before-instrumentation.diff`](lifecycle-before-instrumentation.diff)
+is the complete change. Nothing else about the pre-fix script was touched.
+
+The relay-side lock protocol is additionally covered by `StoreLockTest`
+(10 tests), which drives the interleaving between the liveness check and the
+claim through a seam in `claimStaleLock` rather than hoping to hit it by timing.
 
 What the before-run shows, in its own words:
 

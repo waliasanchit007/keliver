@@ -73,18 +73,13 @@ private val root = resolveStore()
  */
 private fun resolveStore(): File {
   val env = System.getenv("PORTAL_STORE")?.takeIf { it.isNotBlank() }
-  val dir = try {
-    if (env != null) File(env).absoluteFile else config.storeDir(repoDir, ::println)
-  } catch (e: StoreOwnershipException) {
-    System.err.println(e.message)
-    kotlin.system.exitProcess(70)
-  }
-  dir.mkdirs()
 
-  // Claiming the store and recording the pointer are the same two-sided update
-  // keliver-store-recover.sh performs, so they happen under the same app lock.
-  // Without it a recovery running at this moment can interleave with startup
-  // and leave the store owned by this app while the pointer names another.
+  // RESOLUTION HAPPENS INSIDE THE LOCK. It used to happen before it, so a
+  // startup that waited on a recovery in flight went on to claim the store it
+  // had resolved BEFORE that recovery ran — and then wrote that stale answer
+  // back into the pointer, undoing the rebinding it had just waited for.
+  // Selecting, claiming and recording the binding are one transaction.
+  var resolved: File? = null
   val failure: String? = withStoreLock(
     repoDir,
     onUnlocked = ::println,
@@ -98,12 +93,15 @@ private fun resolveStore(): File {
     },
   ) {
     try {
+      val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir, ::println)
+      dir.mkdirs()
       claimStoreFor(dir, repoDir)
       // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app.
       // Other consumers already see it: PORTAL_STORE is step 1 of the shell
       // resolver too, and it is an environment variable, so a build in the
       // same environment resolves it without any pointer.
       if (env == null) writeStorePointer(repoDir, dir)
+      resolved = dir
       null
     } catch (e: StoreOwnershipException) {
       // A refusal is an answer, not a crash. This used to surface as an
@@ -116,6 +114,7 @@ private fun resolveStore(): File {
     System.err.println(failure)
     kotlin.system.exitProcess(70)
   }
+  val dir = resolved!!
   legacyStoreOrNull(dir)?.let { println(it.describe()) }
   return dir
 }

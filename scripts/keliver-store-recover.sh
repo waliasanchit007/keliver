@@ -44,6 +44,19 @@
 # running it and naming both sides; the checks above catch mistakes, they do
 # not establish ownership.
 #
+# INTERRUPTION. SIGINT and SIGTERM are handled explicitly. Before the
+# transaction commits they restore the previous owner marker and pointer WHILE
+# STILL HOLDING THE LOCKS, verify the restoration, and exit non-zero; after it
+# commits they leave the completed rebinding alone. A trap that only released
+# the locks was worse than none — bash resumes at the interrupted statement, so
+# the update went on to finish and report success.
+#
+# SIGKILL AND POWER LOSS CANNOT BE ROLLED BACK. There is no handler for them.
+# What survives instead is the backup directory under <app>/.gradle, which is
+# only deleted once the transaction is verified; a later run reports any it
+# finds and never overwrites one. The lock's pid then belongs to a dead
+# process, so the next contender takes the lock over.
+#
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -60,7 +73,7 @@ while [ $# -gt 0 ]; do
     --store)   STORE="${2:?--store needs a value}"; shift 2 ;;
     --home)    HOME_DIR="${2:?--home needs a value}"; shift 2 ;;
     --dry-run) DRY=1; shift ;;
-    -h|--help) sed -n '2,46p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -139,34 +152,127 @@ fi
 # and writes this same pointer at startup — is a third writer that has to be
 # kept out of the same window. The relay takes this lock too.
 APP_LOCK="$GRADLE_DIR/keliver-store.lock"
-# The holder records its pid. A lock that outlives its holder would otherwise
-# block every future recovery AND every relay start, so it is taken over once —
-# but only when the pid is readable and the process is gone. An unreadable pid
-# means "wait", because the cost of waiting is a message and the cost of
-# stealing is two writers.
-lock_holder_alive() {
-  local pid; pid="$(cat "$1/pid" 2>/dev/null)" || return 0
-  [ -n "$pid" ] || return 0
-  kill -0 "$pid" 2>/dev/null
+
+# TAKING OVER A LOCK WHOSE HOLDER IS GONE.
+#
+# The holder records its pid inside the lock directory. A lock that outlives
+# its holder would otherwise block every future recovery AND every relay start.
+# The naive form — see the pid is dead, then `rmdir` — can delete a lock that a
+# DIFFERENT contender acquired in between, and then there are two writers.
+#
+# So the takeover is CLAIMED, not just performed: the `pid` file is renamed
+# aside, which exactly one contender can do, and the claim is then checked to
+# still hold the dead pid we inspected. A live holder always has a `pid` file it
+# wrote before doing anything, and a new holder can only exist after this same
+# rename removed the old one — so a successful, content-checked claim proves we
+# are not looking at somebody else's live lock. An UNREADABLE pid means wait:
+# the cost of waiting is a message, the cost of stealing is two writers.
+#
+# The same protocol is implemented in PortalConfig.withStoreLock, so the shell
+# and the JVM contend correctly with each other.
+lock_take_over() { # lock-dir -> 0 when the directory was cleared for a retry
+  local lock="$1" pid claim
+  pid="$(cat "$lock/pid" 2>/dev/null)" || return 1   # unknown -> wait
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" 2>/dev/null && return 1             # alive -> wait
+  claim="$lock/pid.stale.$$"
+  mv "$lock/pid" "$claim" 2>/dev/null || return 1    # someone else claimed it
+  if [ "$(cat "$claim" 2>/dev/null)" != "$pid" ]; then
+    # Not the marker we inspected: put it back and wait rather than delete.
+    mv "$claim" "$lock/pid" 2>/dev/null
+    return 1
+  fi
+  rm -f "$lock"/pid.stale.* 2>/dev/null
+  rmdir "$lock" 2>/dev/null
+  return 0
 }
+
+APP_LOCK_HELD=0
 if ! mkdir "$APP_LOCK" 2>/dev/null; then
-  if lock_holder_alive "$APP_LOCK"; then
+  if lock_take_over "$APP_LOCK"; then
+    say "note: taking over $APP_LOCK — the process that held it is gone"
+    mkdir "$APP_LOCK" 2>/dev/null || die "could not take $APP_LOCK. Nothing was changed."
+  else
     die "this app is locked by another store recovery or a starting portal
   (lock: $APP_LOCK). Nothing was changed. If nothing is running, remove it."
   fi
-  say "note: taking over $APP_LOCK — the process that held it is gone"
-  rm -f "$APP_LOCK/pid"; rmdir "$APP_LOCK" 2>/dev/null
-  mkdir "$APP_LOCK" 2>/dev/null || die "could not take $APP_LOCK. Nothing was changed."
 fi
 printf '%s\n' "$$" > "$APP_LOCK/pid" 2>/dev/null
+APP_LOCK_HELD=1
 STORE_LOCK=""
+
+# Release ONLY locks this process still holds, identified by the pid marker it
+# wrote. Without that check an interrupted run could remove a lock a LATER
+# process had already taken over, which is the same two-writers failure the
+# lock exists to prevent. Idempotent: safe to call from the signal handler and
+# again from the EXIT trap.
 release_locks() {
-  [ -n "$STORE_LOCK" ] && rmdir "$STORE_LOCK" 2>/dev/null
-  rm -f "$APP_LOCK/pid" 2>/dev/null
-  rmdir "$APP_LOCK" 2>/dev/null
+  if [ -n "$STORE_LOCK" ] && [ "$(cat "$STORE_LOCK/pid" 2>/dev/null)" = "$$" ]; then
+    rm -f "$STORE_LOCK/pid" 2>/dev/null
+    rmdir "$STORE_LOCK" 2>/dev/null
+    STORE_LOCK=""
+  fi
+  if [ "$APP_LOCK_HELD" = 1 ] && [ "$(cat "$APP_LOCK/pid" 2>/dev/null)" = "$$" ]; then
+    rm -f "$APP_LOCK/pid" 2>/dev/null
+    rmdir "$APP_LOCK" 2>/dev/null
+    APP_LOCK_HELD=0
+  fi
   return 0
 }
-trap release_locks EXIT INT TERM
+
+# --- the transaction's lifecycle --------------------------------------------
+#
+# STATE is the only thing the signal handler needs:
+#   none      nothing has been written; there is nothing to undo
+#   mutating  at least one of the two writes has landed
+#   committed both writes landed AND the resolver agreed
+#
+# A trap that only released the locks was worse than none: bash RESUMES at the
+# interrupted statement after the handler returns, so a TERM between the owner
+# write and the pointer write released both locks and then went on to finish
+# the update and report success.
+STATE=none
+ABORTING=0
+
+on_signal() {
+  trap '' INT TERM          # no re-entry while unwinding
+  ABORTING=1
+  printf '\n✗ interrupted (SIG%s)\n' "$1" >&2
+  case "$STATE" in
+    mutating)
+      if restore_binding; then
+        printf '  the previous binding was restored; nothing was changed.\n' >&2
+      else
+        report_partial_state
+      fi
+      ;;
+    committed)
+      printf '  the rebinding had already completed and been verified; it stands.\n' >&2
+      ;;
+    *)
+      printf '  nothing had been written.\n' >&2
+      [ -n "${BACKUP:-}" ] && [ -d "${BACKUP:-}" ] && rm -rf "$BACKUP"
+      ;;
+  esac
+  release_locks
+  exit 1
+}
+trap 'on_signal INT' INT
+trap 'on_signal TERM' TERM
+trap 'release_locks' EXIT
+
+# Every mutation checks this first, so nothing can run after cleanup has begun
+# even if a handler were ever to return instead of exiting.
+not_aborting() { [ "$ABORTING" = 0 ] || { release_locks; exit 1; }; }
+
+# Deliberate pauses at transaction boundaries. Inert unless set; they exist so
+# an interruption can be delivered at a KNOWN point rather than by racing.
+pause_at() {
+  [ "${KELIVER_RECOVER_PAUSE_AT:-}" = "$1" ] || return 0
+  printf 'paused at %s\n' "$1"
+  sleep "${KELIVER_RECOVER_PAUSE_S:-5}"
+  return 0
+}
 
 # --- 3. which store ----------------------------------------------------------
 # What the app resolves to RIGHT NOW, and by which rule. Both matter: a store
@@ -270,71 +376,167 @@ fi
 
 # --- 5. the two-sided update -------------------------------------------------
 STORE_LOCK="$STORE/owner.lock"
-mkdir "$STORE_LOCK" 2>/dev/null || {
-  STORE_LOCK=""
-  die "another recovery is in progress on $STORE. Nothing was changed."
-}
+if ! mkdir "$STORE_LOCK" 2>/dev/null; then
+  if lock_take_over "$STORE_LOCK"; then
+    say "note: taking over $STORE_LOCK — the process that held it is gone"
+    mkdir "$STORE_LOCK" 2>/dev/null || { STORE_LOCK=""; die "could not take the store lock. Nothing was changed."; }
+  else
+    STORE_LOCK=""
+    die "another recovery is in progress on $STORE. Nothing was changed."
+  fi
+fi
+printf '%s\n' "$$" > "$STORE_LOCK/pid" 2>/dev/null
 
 # Re-read under the lock: the marker may have changed since it was inspected.
 NOW="$(tr -d '\n' < "$OWNER_FILE")"
 [ "$NOW" = "$OLD" ] || die "the owner marker changed while this ran ($OLD -> $NOW). Nothing was changed."
 
-# Everything needed to put the previous state back, captured before either
-# write. `set -e` would not help here: owner and pointer are two writes, and
-# the second failing has to undo the first.
-BACKUP="$(mktemp "${TMPDIR:-/tmp}/keliver-owner-backup.XXXXXX")"
-printf '%s\n' "$OLD" > "$BACKUP"
-POINTER_HAD=0; POINTER_WAS=""
-if [ -f "$POINTER" ]; then POINTER_HAD=1; POINTER_WAS="$(cat "$POINTER")"; fi
+# --- the backup -------------------------------------------------------------
+# Both sides are copied as FILES. `$(cat f)` strips trailing newlines, so a
+# marker restored from a shell variable is not necessarily the marker that was
+# there — and whether the pointer EXISTED is state in its own right.
+#
+# The directory is named per run, so a backup left behind by a killed process
+# is never silently overwritten.
+BACKUP="$GRADLE_DIR/keliver-store-recover.backup.$$"
+LEFTOVER="$(ls -d "$GRADLE_DIR"/keliver-store-recover.backup.* 2>/dev/null | head -3)"
+if [ -n "$LEFTOVER" ]; then
+  warn "a previous recovery left material behind; it is being kept:"
+  printf '%s\n' "$LEFTOVER" | sed 's/^/     /' >&2
+fi
+mkdir -p "$BACKUP" || die "cannot create $BACKUP. Nothing was changed."
+cp "$OWNER_FILE" "$BACKUP/owner" || { rmdir "$BACKUP" 2>/dev/null; die "cannot back up the owner marker. Nothing was changed."; }
+cmp -s "$OWNER_FILE" "$BACKUP/owner" || { rm -rf "$BACKUP"; die "the owner-marker backup does not match the original. Nothing was changed."; }
+if [ -f "$POINTER" ]; then
+  printf '1\n' > "$BACKUP/pointer.existed"
+  cp "$POINTER" "$BACKUP/pointer" || { rm -rf "$BACKUP"; die "cannot back up the store pointer. Nothing was changed."; }
+  cmp -s "$POINTER" "$BACKUP/pointer" || { rm -rf "$BACKUP"; die "the pointer backup does not match the original. Nothing was changed."; }
+else
+  printf '0\n' > "$BACKUP/pointer.existed"
+fi
+{ printf 'app=%s\nstore=%s\nowner_file=%s\npointer=%s\npid=%s\n' \
+    "$APP" "$STORE" "$OWNER_FILE" "$POINTER" "$$"; } > "$BACKUP/meta" \
+  || { rm -rf "$BACKUP"; die "cannot record the backup metadata. Nothing was changed."; }
 
-rollback() {
-  cp "$BACKUP" "$OWNER_FILE" 2>/dev/null
-  if [ "$POINTER_HAD" = 1 ]; then printf '%s' "$POINTER_WAS" > "$POINTER" 2>/dev/null
-  else rm -f "$POINTER" 2>/dev/null; fi
-  rm -f "$BACKUP"
+# Put both sides back exactly as they were, and PROVE it before saying so.
+# Returns non-zero without deleting anything when it cannot.
+RESTORE_REPORT=""
+restore_binding() {
+  local ok=1 had
+  if [ "${KELIVER_RECOVER_FAIL_RESTORE:-0}" = 1 ]; then
+    RESTORE_REPORT="restoration was refused by fault injection"
+    return 1
+  fi
+  if ! cp "$BACKUP/owner" "$OWNER_FILE" 2>/dev/null || ! cmp -s "$BACKUP/owner" "$OWNER_FILE"; then
+    RESTORE_REPORT="the owner marker at $OWNER_FILE could NOT be restored"
+    ok=0
+  fi
+  had="$(tr -d '\n' < "$BACKUP/pointer.existed" 2>/dev/null)"
+  if [ "$had" = 1 ]; then
+    if ! cp "$BACKUP/pointer" "$POINTER" 2>/dev/null || ! cmp -s "$BACKUP/pointer" "$POINTER"; then
+      RESTORE_REPORT="${RESTORE_REPORT:+$RESTORE_REPORT; }the store pointer at $POINTER could NOT be restored"
+      ok=0
+    fi
+  else
+    rm -f "$POINTER" 2>/dev/null
+    if [ -e "$POINTER" ]; then
+      RESTORE_REPORT="${RESTORE_REPORT:+$RESTORE_REPORT; }the store pointer at $POINTER could NOT be removed"
+      ok=0
+    fi
+  fi
+  [ "$ok" = 1 ] || return 1
+  rm -rf "$BACKUP"
   return 0
 }
-fail() { rollback; die "$1"; }
+
+# What to say when restoration itself failed. The backup is KEPT; the state is
+# described as it actually is, never as "unchanged".
+report_partial_state() {
+  {
+    printf '✗ THE PREVIOUS BINDING COULD NOT BE RESTORED.\n'
+    printf '  %s\n' "${RESTORE_REPORT:-restoration failed}"
+    printf '  This app is now in a PARTIAL state:\n'
+    printf '    owner marker  %s -> %s\n' "$OWNER_FILE" "$(tr -d '\n' < "$OWNER_FILE" 2>/dev/null || echo '(unreadable)')"
+    if [ -f "$POINTER" ]; then
+      printf '    store pointer %s -> %s\n' "$POINTER" "$(tr -d '\n' < "$POINTER" 2>/dev/null)"
+    else
+      printf '    store pointer %s -> (absent)\n' "$POINTER"
+    fi
+    printf '  The material needed to put it back by hand has been KEPT:\n'
+    printf '    %s/owner            the owner marker as it was\n' "$BACKUP"
+    printf '    %s/pointer          the store pointer as it was (if it existed)\n' "$BACKUP"
+    printf '    %s/pointer.existed  1 if there was a pointer, 0 if there was none\n' "$BACKUP"
+    printf '    %s/meta             the paths involved\n' "$BACKUP"
+    printf '  To restore by hand:\n'
+    printf '    cp %s/owner %s\n' "$BACKUP" "$OWNER_FILE"
+    printf '    cp %s/pointer %s      # or: rm -f %s, if pointer.existed is 0\n' "$BACKUP" "$POINTER" "$POINTER"
+    printf '  Then check: keliver-store-path.sh %s\n' "$APP"
+  } >&2
+}
+
+fail() {
+  if restore_binding; then
+    die "$1"
+  fi
+  report_partial_state
+  printf '✗ %s\n' "$1" >&2
+  exit 1
+}
+
+# The backup exists but nothing has been written yet, so an interruption here
+# is still "nothing had been written".
+pause_at before-owner
 
 # owner
+not_aborting
+STATE=mutating
 if [ "$OLD" != "$APP" ]; then
   TMP="$STORE/.owner.recover.$$"
-  printf '%s\n' "$APP" > "$TMP" || fail "cannot write inside $STORE. The previous binding is unchanged."
-  mv -f "$TMP" "$OWNER_FILE" || { rm -f "$TMP"; fail "could not replace the owner marker. The previous binding is unchanged."; }
+  printf '%s\n' "$APP" > "$TMP" || fail "cannot write inside $STORE."
+  mv -f "$TMP" "$OWNER_FILE" || { rm -f "$TMP"; fail "could not replace the owner marker."; }
 else
   # An owner marker that already names this app is NOT evidence that the
-  # app-side binding exists or selects this store — after a symlink split both
-  # stores record the same canonical path. The pointer below is the half that
-  # was missing.
+  # app-side binding exists, or that it selects this store — after a symlink
+  # split both stores record the same canonical path. The pointer below is the
+  # half that was missing.
   say "note: the owner marker already names this app; establishing the app-side binding."
 fi
 
-# pointer. KELIVER_RECOVER_FAIL_POINTER is a fault injector for the rollback
-# path, which is otherwise unreachable from outside the process. Inert unless
-# set to 1.
+pause_at after-owner
+
+# pointer. KELIVER_RECOVER_FAIL_POINTER and KELIVER_RECOVER_FAIL_RESTORE are
+# fault injectors for the rollback and the failed-rollback paths, which are
+# otherwise unreachable from outside the process. Inert unless set to 1.
+not_aborting
 PTMP="$GRADLE_DIR/.keliver-store-path.$$"
 if [ "${KELIVER_RECOVER_FAIL_POINTER:-0}" = 1 ]; then
   rm -f "$PTMP"
-  fail "the store pointer could not be written (fault injection). The previous binding is unchanged."
+  fail "the store pointer could not be written (fault injection)."
 fi
 printf '%s\n' "$STORE" > "$PTMP" 2>/dev/null \
-  || { rm -f "$PTMP"; fail "could not write $PTMP. The previous binding is unchanged."; }
+  || { rm -f "$PTMP"; fail "could not write $PTMP."; }
 mv -f "$PTMP" "$POINTER" 2>/dev/null \
-  || { rm -f "$PTMP"; fail "could not write $POINTER. The previous binding is unchanged."; }
+  || { rm -f "$PTMP"; fail "could not write $POINTER."; }
+
+pause_at after-pointer
 
 # --- 6. prove it ------------------------------------------------------------
-# Exit status is not the claim; the resolver's answer is.
+# Exit status is not the claim; the resolver's answer is. Until this passes the
+# transaction is still `mutating`, so an interruption here rolls it back.
+not_aborting
 if ! resolve "$APP"; then
   fail "after rebinding, the resolver still refuses:
-$RESOLVE_MSG
-  The previous binding has been restored."
+$RESOLVE_MSG"
 fi
 VERIFIED="$(cd "$RESOLVE_OUT" 2>/dev/null && pwd -P || printf '%s' "$RESOLVE_OUT")"
-[ "$VERIFIED" = "$STORE" ] || fail "after rebinding, this app still resolves to $VERIFIED, not $STORE.
-  The previous binding has been restored."
-[ "$(tr -d '\n' < "$OWNER_FILE")" = "$APP" ] || fail "the owner marker does not name this app after the update.
-  The previous binding has been restored."
-rm -f "$BACKUP"
+[ "$VERIFIED" = "$STORE" ] || fail "after rebinding, this app still resolves to $VERIFIED, not $STORE."
+[ "$(tr -d '\n' < "$OWNER_FILE")" = "$APP" ] || fail "the owner marker does not name this app after the update."
+
+# Both sides landed and the resolver agrees: the transaction is done. From here
+# an interruption leaves it in place rather than undoing verified work.
+STATE=committed
+pause_at after-commit
+rm -rf "$BACKUP"
 
 say "identity after:  $(fingerprint "$STORE")"
 say "verified:        $VERIFIED   (the ordinary resolver's answer)"

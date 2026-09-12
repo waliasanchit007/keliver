@@ -370,9 +370,12 @@ already running will go on serving a store it no longer owns.
 
 That rewrites the store's owner marker and the app's pointer, then **runs the
 resolver and checks it selects that store**. If either write or the check
-fails, the previous binding is put back and the command exits non-zero — so a
+fails — or you interrupt it with Ctrl-C — the previous binding is put back,
+byte for byte, and verified before the command says so; it exits non-zero. So a
 success message means the binding works, not merely that two files were
-written. It
+written. If the restoration itself cannot be completed, it keeps a backup under
+`<app>/.gradle/` and prints exactly what to copy back. A `kill -9` or a power
+cut cannot be rolled back; the same backup is what is left to work from. It
 never reads, copies or regenerates key material — it prints the public-key
 fingerprint before and after so you can see the identity is the same one — and
 it never merges two stores. Bundles signed before the move still verify

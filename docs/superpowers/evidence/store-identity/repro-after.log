@@ -1,47 +1,47 @@
 === store identity reproductions
-    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L
+    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK
     relay:           /Users/sanchit.walia/nonwork/keliver/portal-relay/build/install/portal-relay/bin/portal-relay
 
 --- R1  renaming an app directory must not silently mint a new identity
-        before: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/myapp-214b777f
-        before: identity=e97a5a2f8296b194
+        before: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/myapp-426cc3a7
+        before: identity=c07d5392e9aaf49f
   PASS  R1 the renamed app was refused, and told how to recover
         portal store: this app has moved.
   PASS  R1 the original store still exists (nothing was destroyed)
 
 --- R2a  the refusal must name a recovery that works
   PASS  R2a refused, and named a recovery command
-          keliver-store-recover.sh /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/apps/renamed
+          keliver-store-recover.sh /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/apps/renamed
 
 --- R2b  the named recovery preserves the identity
-        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/apps/renamed
-        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/myapp-214b777f
-        identity before: e97a5a2f8296b194
-        resolves to now: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/myapp-214b777f   (by pointer)
-        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/apps/myapp
-        identity after:  e97a5a2f8296b194
-        verified:        /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/myapp-214b777f   (the ordinary resolver's answer)
-        ✓ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/myapp-214b777f is now bound to /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/apps/renamed
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/apps/renamed
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/myapp-426cc3a7
+        identity before: c07d5392e9aaf49f
+        resolves to now: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/myapp-426cc3a7   (by pointer)
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/apps/myapp
+        identity after:  c07d5392e9aaf49f
+        verified:        /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/myapp-426cc3a7   (the ordinary resolver's answer)
+        ✓ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/myapp-426cc3a7 is now bound to /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/apps/renamed
           keys, documents and bundles were not read, copied or moved.
-          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/apps/myapp was not modified.
+          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/apps/myapp was not modified.
   PASS  R2b the recovery command accepted the relocation
   PASS  R2b the moved app is back on its original store
-  PASS  R2b the signing identity survived the relocation (e97a5a2f8296b194)
+  PASS  R2b the signing identity survived the relocation (c07d5392e9aaf49f)
 
 --- R3  a symlink and the real path are one app, so one store
-        via real path: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/app-v2-23816506
-        via symlink:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/app-v2-23816506
+        via real path: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/app-v2-0dfd791f
+        via symlink:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/app-v2-0dfd791f
   PASS  R3 both paths resolved the same store
   PASS  R3 both paths use the same signing identity
   PASS  R3 the store is named for the real directory
 
 --- R4  the Kotlin resolver and the shell mirror must agree
-        symlinked path kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/app-v3-9cc5a81f
-        symlinked path shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/app-v3-9cc5a81f
+        symlinked path kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/app-v3-22cd5455
+        symlinked path shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/app-v3-22cd5455
   PASS  R4 symlinked path agrees
-        unicode name kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/caf-39321d91
-        unicode name shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L/home/.keliver-portal/apps/caf-39321d91
+        unicode name kotlin: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/caf-009360ec
+        unicode name shell:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK/home/.keliver-portal/apps/caf-009360ec
   PASS  R4 unicode name agrees
 
 passed: 11   failed: 0
-evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-DFFA1L
+evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/store-evidence/keliver-store-identity-ZGIDxK

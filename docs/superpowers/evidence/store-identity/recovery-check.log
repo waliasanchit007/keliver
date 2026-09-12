@@ -1,18 +1,18 @@
 === store recovery outcomes
-    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9
-    bundle:          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/bundle
+    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe
+    bundle:          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/bundle
 
 --- C1  a bundle signed before the move still verifies after it
-        store:    /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/checkout-42579e16
-        identity: 8a9bf8067433dae4
+        store:    /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/checkout-8fa46e05
+        identity: d55e71359ad42e6d
         tests="1" skipped="0" failures="0" errors="0"
   PASS  C1 a real Zipline manifest was signed with this store's identity
   PASS  C1 the moved app was refused before any identity was minted
   PASS  C1 the packaged recovery command accepted the move
-        identity before: 8a9bf8067433dae4
-        identity after:  8a9bf8067433dae4
+        identity before: d55e71359ad42e6d
+        identity after:  d55e71359ad42e6d
   PASS  C1 the moved app is serving from its original store
-  PASS  C1 the public-key fingerprint is unchanged (8a9bf8067433dae4)
+  PASS  C1 the public-key fingerprint is unchanged (d55e71359ad42e6d)
         tests="2" skipped="0" failures="0" errors="0"
   PASS  C1 the pre-move signed bundle verifies against the post-move public key
 
@@ -25,28 +25,28 @@
   PASS  C3 the foreign claim was refused
   PASS  C3 the refused claim changed nothing in the store
   PASS  C3 recovery refused an unrelated app while the owner is live
-        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/other
-        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/checkout-42579e16
-        identity before: 8a9bf8067433dae4
-        resolves to now: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/checkout-42579e16   (by config)
-        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/checkout-renamed
-        ✗ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/checkout-renamed still exists and still uses this store. That is two apps, not a relocation.
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/other
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/checkout-8fa46e05
+        identity before: d55e71359ad42e6d
+        resolves to now: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/checkout-8fa46e05   (by config)
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/checkout-renamed
+        ✗ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/checkout-renamed still exists and still uses this store. That is two apps, not a relocation.
           Nothing was changed. If that directory is a leftover copy, remove it (or its
           .gradle/keliver-store-path) first, then re-run.
   PASS  C3 the refused recovery changed nothing in the store
   PASS  C3 the unrelated app's own store is untouched
 
 --- C4  two plausible claimants race to recover one store
-        race-a exit=0  race-b exit=1
+        race-a exit=1  race-b exit=0
   PASS  C4 exactly one claimant won
   PASS  C4 the marker names exactly one of the claimants
   PASS  C4 nothing but the owner marker changed
-  PASS  C4 the identity survived the race (31ea563ae2b1193e)
+  PASS  C4 the identity survived the race (87338adb7b3265e1)
   PASS  C4 the losing app is still refused
 
 --- C5  the packaged keliver-portal starts the recovered app
-          guard ok: user.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home
-          guard ok: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/checkout-42579e16
+          guard ok: user.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home
+          guard ok: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/checkout-8fa46e05
   PASS  C5 the packaged launcher started the recovered app
   PASS  C5 the packaged launcher stopped it again
 
@@ -64,14 +64,14 @@
   PASS  C7b recovery refused while the pointer names another identity
   PASS  C7b the target store was not modified
   PASS  C7c a resolver refusal was reported, not swallowed
-        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/c7-split
-        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/c7e-store-aaaaaaa6
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/c7-split
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/c7e-store-aaaaaaa6
         identity before: c0b6304bd6ce9b3e
         resolves to now: (refused)
-        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/c7e-other
-        ✗ this app is split across stores and /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/home/.keliver-portal/apps/c7e-store-aaaaaaa6 is not one of them:
-        portal store split: 2 stores exist for /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9/apps/c7-split.
-          - one-3aea5f9a
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/c7e-other
+        ✗ this app is split across stores and /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/c7e-store-aaaaaaa6 is not one of them:
+        portal store split: 2 stores exist for /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/apps/c7-split.
+          - /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe/home/.keliver-portal/apps/one-e9fa76d5
   PASS  C7c the refusal names the split, not the old owner's resolution
   PASS  C7d PORTAL_STORE did not become the binding
   PASS  C7d the override was reported, not silently applied
@@ -96,5 +96,41 @@
   PASS  C10 recovery proceeds once the lock is free
   PASS  C10 the relay starts normally afterwards
 
-passed: 47   failed: 0
-evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ra/keliver-store-recovery-zHPzg9
+--- C11  SIGINT/SIGTERM at each transaction boundary
+  PASS  C11a an interrupted recovery exits non-zero
+  PASS  C11a the owner marker was restored byte for byte
+  PASS  C11a the store pointer is unchanged
+  PASS  C11a the locks were released
+  PASS  C11a the store lock was released
+  PASS  C11a no backup material is left after a verified rollback
+  PASS  C11b a committed rebinding is not undone by a later signal
+  PASS  C11b and the resolver still selects it
+  PASS  C11c an early interruption exits non-zero
+  PASS  C11c nothing was written
+  PASS  C11d cleanup left the lock that now belongs to another process
+  PASS  C11d the binding was still restored
+
+--- C12  when restoration fails, say what is actually true
+  PASS  C12 a failed restoration exits non-zero
+  PASS  C12 the partial state is reported as partial
+  PASS  C12 it does not claim the store is unchanged
+  PASS  C12 the material needed to restore by hand was kept
+  PASS  C12 and the report names it
+  PASS  C12 the reported owner marker matches what is on disk
+
+--- C13  a startup that waits re-resolves; it does not use a stale answer
+  PASS  C13 the relay started after waiting for the lock
+  PASS  C13 the pointer still names the store the recovery chose
+  PASS  C13 the relay is serving the re-resolved store
+  PASS  C13 the abandoned store was not touched
+  PASS  C13 ordinary resolution agrees
+  PASS  C13 and it restarts on the same store
+
+--- C14  stale-lock takeover cannot clobber another contender
+  PASS  C14 a claimed takeover is left to the contender that claimed it
+  PASS  C14 the claiming contender's lock is intact
+  PASS  C14 a live holder's lock is not taken over
+  PASS  C14 the live holder's marker is untouched
+
+passed: 75   failed: 0
+evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/la2/keliver-store-recovery-nLTrOe

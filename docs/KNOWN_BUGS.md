@@ -1280,6 +1280,39 @@ refusing to start rather than interleaving. A relay that is ALREADY running
 still does not hold it — stop the portal before recovering. That limitation is
 documented in [`STORE_IDENTITY.md`](STORE_IDENTITY.md).
 
+**A second review round found the transaction lifecycle wrong as well.** Three
+more, all reproduced:
+
+5. **The signal trap made things worse, not better.** It released both locks
+   and returned — and bash RESUMES at the interrupted statement once a handler
+   returns, so a `TERM` between the owner write and the pointer write dropped
+   the locks and then went on to finish the update and report success. `INT`
+   and `TERM` are now handled explicitly: before the transaction commits they
+   restore both sides **while still holding the locks**, verify the
+   restoration, and exit non-zero; after it commits they leave it alone. The
+   handler exits rather than returning, further signals are ignored while
+   unwinding, and every mutation re-checks an aborting flag. `SIGKILL` is
+   stated as unrecoverable rather than papered over.
+6. **Restoration was neither exact nor verified.** The previous owner was held
+   in a shell variable via `$(...)`, which strips trailing newlines, and
+   whether the pointer existed was a boolean beside its text. Both sides are
+   now copied as FILES into a per-run backup directory under `<app>/.gradle`,
+   every copy and every restore is `cmp`-verified, and a restoration that fails
+   keeps the backup and reports the real partial state with the commands to fix
+   it by hand — instead of deleting the backup and printing "unchanged".
+7. **The relay resolved the store BEFORE taking the lock.** A start that waited
+   on a recovery in flight then claimed the store it had selected before that
+   recovery ran, and wrote that stale answer back into the pointer — undoing
+   the rebinding it had just waited for. Resolution, claim and pointer write
+   are now one transaction inside the lock.
+
+Also from that round: the stale-lock takeover added in item 4 could delete a
+lock a different contender had acquired between the liveness check and the
+deletion. The takeover is now *claimed* by renaming the `pid` marker aside —
+exactly one contender can — and the claim is content-checked before the
+directory is cleared. `StoreLockTest` drives that interleaving through a seam
+rather than hoping to hit it by timing.
+
 ### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
