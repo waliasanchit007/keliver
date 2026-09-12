@@ -50,6 +50,7 @@ keliver_require_isolated_store "$DISP" "$A" || exit 1
 SHARED="$DISP/shared-store"
 echo "=== 1. simultaneous startup against one store ==="
 SRC_A_BEFORE="$(cd "$A" && find src -type f | sort | xargs shasum)"
+for p in 8141 8142; do keliver_port_free_or_die "$p" || exit 2; done
 ( cd "$A" && PORTAL_REPO="$A" PORTAL_STORE="$SHARED" "$RELAY" > "$DISP/race-a.log" 2>&1 ) & pa=$!
 ( cd "$B" && PORTAL_REPO="$B" PORTAL_STORE="$SHARED" "$RELAY" > "$DISP/race-b.log" 2>&1 ) & pb=$!
 up=0
@@ -103,7 +104,9 @@ json.dump(c,open(p,"w"),indent=2)
 PY
 cp "$A/src/jsMain/kotlin/screens/alpha.kt" "$REC/src/jsMain/kotlin/screens/"
 cp "$ROOT/scripts/keliver-record-http.sh" "$ROOT/scripts/keliver-store-path.sh" "$REC/scripts/"
-( cd "$REC" && PORTAL_REPO="$REC" PORTAL_HTTP_RECORD=1 "$RELAY" > "$DISP/rec-relay.log" 2>&1 & )
+keliver_port_free_or_die 8143 || exit 2
+( cd "$REC" && PORTAL_REPO="$REC" PORTAL_HTTP_RECORD=1 "$RELAY" > "$DISP/rec-relay.log" 2>&1 ) &
+REC_PID=$!
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null http://localhost:8143/screens && break; sleep 2; done
 REC_STORE="$("$ROOT/scripts/keliver-store-path.sh" "$REC")"
 if [ -r "$REC_STORE/http-record.token" ]; then

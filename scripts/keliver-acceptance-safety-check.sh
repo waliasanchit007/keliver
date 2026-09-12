@@ -91,7 +91,10 @@ fi
 #
 # keliver-dev.sh is exempt: it is Keliver's OWN dev loop, and clearing the
 # ports it is about to bind is its documented job.
-BLIND="$(grep -rln 'lsof -ti *:[^|]*| *xargs kill' "$ROOT/scripts" 2>/dev/null \
+# The port may be written :8077, :$p or ":$p", and the kill may carry flags.
+# keliver-dev.sh uses the quoted form, so a future script copying from the one
+# exempt file is the likeliest way this returns — the pattern must see it.
+BLIND="$(grep -rlnE 'lsof[^|]*\| *xargs +(-[A-Za-z0-9-]+ +)*kill' "$ROOT/scripts" 2>/dev/null \
   | grep -v 'keliver-dev.sh' | grep -v "$(basename "${BASH_SOURCE[0]}")" || true)"
 if [ -n "$BLIND" ]; then
   bad "these scripts kill whatever holds a port:"

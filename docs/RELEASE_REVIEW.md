@@ -95,8 +95,15 @@ plainly so nobody assumes otherwise:
 | `.github/workflows/portal-tools.yml` | no |
 | `scripts/keliver-device-verify.sh` (new) | no — not copied by `build-portal-tools.sh` |
 | repo-only dev scripts (port-kill fixes) | no — `bin/` ships 10 scaffolder/launcher scripts, none of these |
-| `CLAUDE.md`, `docs/**` prose | no |
+| `CLAUDE.md`, and `docs/**` prose other than the three below | no |
 | **`docs/PORTAL_ADOPTER_GUIDE.md`** | **YES** — compiled into `portal-mcp-0.3.3.jar` as `PORTAL_USAGE.md` |
+
+**Three docs are packaging inputs**, and "it's only a doc" is exactly the
+reasoning that produced this finding. `build-portal-tools.sh` also copies
+`docs/DEVICE_HOST.md` → `host/README.md` and `docs/PORTAL_TOOLS_README.md` →
+`README.md`; `portal-mcp/build.gradle` compiles `docs/PORTAL_ADOPTER_GUIDE.md`
+into the jar. Only the guide changed here, so the table above is accurate for
+this diff — but editing any of the three changes the bundle.
 
 `portal-mcp/build.gradle` registers a `Copy` of `docs/PORTAL_ADOPTER_GUIDE.md`
 into the MCP resources, so editing that "doc" changes a published binary. Its

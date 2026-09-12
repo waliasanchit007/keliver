@@ -1127,6 +1127,101 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
+### U23. Renaming or moving an app directory silently rotates its signing identity — OPEN
+
+Found by independent review of PR #74, in code that **shipped in tools 0.3.4**.
+Not introduced by that PR and not fixed in it: the fix is a behaviour change in
+store resolution and needs its own verification and release.
+
+`PortalConfig.appStoreName` derives the default store from the app's canonical
+absolute path:
+
+```kotlin
+val abs = repoDir.absoluteFile.canonicalFile.path
+val digest = java.security.MessageDigest.getInstance("SHA-256").digest(abs.toByteArray())
+```
+
+Rename `~/work/myapp` to `~/work/checkout`, or move it to another disk, and the
+relay resolves a *different* store, finds no keys, and `ensureKeys()` mints a
+**fresh Ed25519 keypair**. Consequences:
+
+* bundles published before the move no longer verify against the new identity;
+* a production host built earlier embeds the old public key and will reject
+  newly signed manifests;
+* documents and drafts under the old store are orphaned.
+
+It is silent — `legacyStoreOrNull` deliberately excludes `apps`, so a sibling
+per-app store is never reported. Before 0.3.4 (one global store) a rename could
+not rotate the identity.
+
+**Nothing is deleted.** The old store, keypair included, is intact at
+`~/.keliver-portal/apps/<old-slug>-<oldhash>/`. Screen documents are derived
+state — the boot scan re-ingests them from the `.kt` files in git — so only
+unsaved drafts are genuinely at risk. Blast radius today is one machine: there
+is no external adopter and no deployed production bundle.
+
+**Recovery, and the trap in it — see U24.**
+
+### U24. `claimStoreFor` refuses the recovery its own error message recommends — OPEN
+
+Found by the same review; also shipped in 0.3.4, also unfixed here.
+
+The store-conflict error tells the user:
+
+> Fix: remove "store" from this app's keliver.portal.json to get its own
+> store, or point it at a directory this app alone uses.
+
+But the `owner` marker records the canonical repo path at claim time:
+
+```kotlin
+val me = repoDir.absoluteFile.canonicalFile.path
+```
+
+So after a rename (U23), pointing `"store"` back at the old directory to recover
+the identity and documents makes `me` the *new* path and `theirs` the *old*
+one. They differ, `claimStoreFor` throws, and the relay **refuses to boot**,
+reporting that the store "already belongs to another app" — which is the same
+app. The only way out is hand-editing the `owner` file, which nothing documents.
+
+This is what makes U23 feel like corruption when it is not. **Manual recovery:**
+edit `<store>/owner` to the app's current canonical path (`cd <app> && pwd -P`),
+or copy `keys/` out of the old store into the new one.
+
+Suggested fix for both: when the recorded owner path no longer exists on disk,
+treat the claim as reclaimable with a printed notice rather than fatally.
+
+### U25. Four smaller store/host issues found by the PR #74 review — OPEN
+
+All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
+none is a security hole.
+
+1. **The Kotlin and shell store resolvers disagree on a symlinked final path
+   component.** `PortalConfig` canonicalises the path for the *hash* but not for
+   the *slug*; `keliver-store-path.sh` canonicalises both. With
+   `current -> real-app-v2`, the relay resolves `apps/current-<h>` while the
+   script says `apps/real-app-v2-<h>`. Before the relay has ever booted there
+   (so `.gradle/keliver-store-path` does not exist yet) the guest build finds no
+   key and emits an **unsigned** bundle. Fails safe and self-heals once the
+   pointer is written. `StoreContractTest` uses only temp paths so cannot catch
+   it. Related: the Python slug uses Unicode-aware `isalnum()`, the Kotlin regex
+   is ASCII `[^a-z0-9._-]`, so `café` slugs differently in each.
+2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
+   exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
+   truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
+   throws in `onCreate` — a crash instead of the refusal screen. **Fail-closed**:
+   nothing is fetched and verification is never skipped, so the U22 claim holds.
+   Should be `^[0-9a-fA-F]{64}$`.
+3. **`-Pkeliver.devOnlyHost` accepts only the exact string `true`.** Groovy's
+   `String.toBoolean()` means a bare `-Pkeliver.devOnlyHost`, `=1` or `=yes`
+   silently yields `false` and a production-shaped host. Backstopped by
+   `build-portal-tools.sh`, which refuses to package an APK containing
+   `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+4. **`keliverStoreDir` warns and falls back to `~/.keliver-portal`** when
+   `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
+   then sign with one identity while the relay uses another — the mismatch the
+   helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
+   builds. Failing the build would be safer.
+
 ### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
 
 `scripts/keliver-adopter-acceptance.sh` starts `keliver-portal` and then health-

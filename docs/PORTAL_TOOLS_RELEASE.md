@@ -87,9 +87,21 @@ A tag push runs workflows **as they are defined at the tagged commit**, not as
 they are on `main`. An old commit can carry an old, more permissive workflow.
 
 ```bash
-git ls-tree --name-only <commit> .github/workflows/
-git show <commit>:.github/workflows/portal-tools.yml | grep -nE 'tags:|contents: write|softprops'
+# EVERY workflow at that commit, not just portal-tools.yml.
+for f in $(git ls-tree --name-only <commit> .github/workflows/); do
+  echo "== $f"
+  git show "<commit>:$f" | grep -nE \
+    'contents: *write|permissions: *write-all|packages: *write|softprops|ncipollo|create-release|upload-release|gh release|uploads\.github|api\.github'
+done
 ```
+
+Grepping only `portal-tools.yml` for `contents: write` and `softprops` is not
+enough. It misses `permissions: write-all` (a real form that grants
+`contents: write` without containing that string), a job-level rather than
+workflow-level permission, `ncipollo/release-action`,
+`actions/upload-release-asset`, a bare `gh release upload` inside a `run:`
+block, a `curl` to `uploads.github.com` — and any *other* workflow file present
+at that commit.
 
 For 0.3.4 this mattered: at `ec10e191a` the workflow still had workflow-level
 `contents: write` and an upload step gated only on `if: github.event_name ==

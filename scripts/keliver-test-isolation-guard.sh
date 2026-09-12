@@ -143,7 +143,10 @@ keliver_port_free_or_die() {
 # after keliver_port_free_or_die established nothing else was there.
 keliver_kill_own() {
   local port="$1" pid="$2" listener
-  listener="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | head -1)"
+  # `|| true`: with pipefail, lsof finding nothing propagates nonzero through
+  # head, and a bare assignment would abort a `set -e` caller. No caller uses
+  # -e today; this is a shared helper that will outlive them.
+  listener="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | head -1)" || true
   [ -n "$listener" ] && kill "$listener" 2>/dev/null
   [ -n "$pid" ] && kill "$pid" 2>/dev/null
   return 0
