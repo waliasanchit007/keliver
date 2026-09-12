@@ -73,10 +73,27 @@ private val root = resolveStore()
  */
 private fun resolveStore(): File {
   val env = System.getenv("PORTAL_STORE")?.takeIf { it.isNotBlank() }
-  val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir)
+  val dir = try {
+    if (env != null) File(env).absoluteFile else config.storeDir(repoDir, ::println)
+  } catch (e: StoreOwnershipException) {
+    System.err.println(e.message)
+    kotlin.system.exitProcess(70)
+  }
   dir.mkdirs()
-  claimStoreFor(dir, repoDir)
-  writeStorePointer(repoDir, dir)
+  try {
+    claimStoreFor(dir, repoDir)
+  } catch (e: StoreOwnershipException) {
+    // A refusal is an answer, not a crash. This used to surface as an
+    // ExceptionInInitializerError stack trace with the actionable part buried
+    // in the middle of it.
+    System.err.println(e.message)
+    kotlin.system.exitProcess(70)
+  }
+  // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app. Other
+  // consumers already see it: `PORTAL_STORE` is step 1 of the shell resolver
+  // too, and it is an environment variable, so a build in the same environment
+  // resolves it without any pointer.
+  if (env == null) writeStorePointer(repoDir, dir)
   legacyStoreOrNull(dir)?.let { println(it.describe()) }
   return dir
 }
@@ -89,6 +106,12 @@ private fun resolveStore(): File {
  * the relay. Rather than duplicating the path derivation in three build files,
  * the relay records the resolved path and they read it. `.gradle/` because it
  * is build state, is gitignored by convention, and survives `clean`.
+ *
+ * It is also the app half of the ownership binding (docs/STORE_IDENTITY.md):
+ * it travels with a renamed directory, which is how a moved app still finds
+ * its own store. NOT written for a PORTAL_STORE run — that override is for one
+ * run and must not rebind the app, and a build in the same environment reads
+ * the variable directly.
  */
 private fun writeStorePointer(repo: File, store: File) {
   runCatching {

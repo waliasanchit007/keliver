@@ -26,32 +26,22 @@ keliver_effective_jvm_home() {
 }
 
 # Print the store the relay would resolve for <app-dir>, without starting it.
+#
+# Delegates to keliver-store-path.sh rather than deriving the path again. This
+# used to be a third copy of the resolution rules and it had already drifted:
+# it did not know about <app>/.gradle/keliver-store-path, so it vouched for a
+# store that was not the one the relay would open.
 keliver_effective_store() {
-  local app="$1" home="$2"
+  local app="$1" home="$2" here script
   if [ -n "${PORTAL_STORE:-}" ]; then printf '%s' "$PORTAL_STORE"; return; fi
-  python3 - "$app" "$home" <<'PY'
-import json, os, sys, hashlib
-app, home = os.path.abspath(sys.argv[1]), sys.argv[2]
-cfg = os.path.join(app, "keliver.portal.json")
-store = None
-if os.path.isfile(cfg):
-    try:
-        store = json.load(open(cfg)).get("store")
-    except Exception:
-        store = None
-if store:
-    if store.startswith("~/"):
-        print(os.path.join(home, store[2:]))
-    elif os.path.isabs(store):
-        print(store)
-    else:
-        print(os.path.join(app, store))
-else:
-    real = os.path.realpath(app)
-    h = hashlib.sha256(real.encode()).hexdigest()[:8]
-    slug = "".join(c if c.isalnum() or c in "._-" else "-" for c in os.path.basename(real).lower()) or "app"
-    print(os.path.join(home, ".keliver-portal", "apps", f"{slug}-{h}"))
-PY
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  for script in "$here/keliver-store-path.sh" "$here/../scripts/keliver-store-path.sh"; do
+    [ -x "$script" ] || continue
+    "$script" "$app" --home "$home"
+    return $?
+  done
+  echo "guard: keliver-store-path.sh not found next to $here" >&2
+  return 1
 }
 
 # The gate. Exits non-zero (and says why) rather than letting a test run.
@@ -62,7 +52,11 @@ keliver_require_isolated_store() {
 
   local jvm_home store
   jvm_home="$(keliver_effective_jvm_home)"
-  store="$(keliver_effective_store "$app" "$jvm_home")"
+  if ! store="$(keliver_effective_store "$app" "$jvm_home")"; then
+    echo "guard: the store could not be resolved for $app (see above)." >&2
+    echo "guard: refusing to start a test relay." >&2
+    return 1
+  fi
 
   case "$jvm_home" in
     "$root"|"$root"/*) ;;
