@@ -81,7 +81,9 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: default
+          # aosp_atd is the smallest x86_64 image and is built for CI. API 33
+          # has no "default" (AOSP) x86_64 image, so that would not resolve.
+          target: aosp_atd
           arch: x86_64
           profile: pixel_5
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
