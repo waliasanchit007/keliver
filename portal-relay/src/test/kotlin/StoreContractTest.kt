@@ -81,6 +81,94 @@ class StoreContractTest {
     File(app, ".gradle").mkdirs()
     File(app, ".gradle/keliver-store-path").writeText(pointed.absolutePath + "\n")
     assertEquals(pointed.canonicalPath, File(viaScript(app, home)).canonicalPath)
+    // This step used to be asserted for the SCRIPT only, while the function it
+    // calls itself authoritative did not implement it at all (U23).
+    val kotlin = withUserHome(home) { PortalConfig().storeDir(app) }
+    assertEquals(pointed.canonicalPath, kotlin.canonicalPath)
+  }
+
+  @Test
+  fun aSymlinkAndTheRealPathAgree() {
+    // Every other case here uses a Files.createTempDirectory path, whose final
+    // component is never a symlink — which is precisely why this suite could
+    // not see U25.1.
+    val home = tmp("home")
+    val work = tmp("work")
+    val real = File(work, "app-v2").also { it.mkdirs() }
+    val link = File(work, "current")
+    java.nio.file.Files.createSymbolicLink(link.toPath(), real.toPath())
+
+    val kotlinReal = withUserHome(home) { PortalConfig().storeDir(real) }
+    val kotlinLink = withUserHome(home) { PortalConfig().storeDir(link) }
+    assertEquals(kotlinReal.canonicalPath, kotlinLink.canonicalPath)
+    assertEquals(kotlinLink.canonicalPath, File(viaScript(link, home)).canonicalPath)
+    assertEquals(kotlinReal.canonicalPath, File(viaScript(real, home)).canonicalPath)
+  }
+
+  @Test
+  fun aUnicodeDirectoryNameAgrees() {
+    val home = tmp("home")
+    val work = tmp("work")
+    // Kotlin's slug filter was ASCII and character-wise; Python's isalnum() is
+    // Unicode-aware and code-point-wise. They produced different names.
+    for (name in listOf("café-☕", "Ünïcödé", "a b", "a\uD83D\uDE00b")) {
+      val app = File(work, name).also { it.mkdirs() }
+      val kotlin = withUserHome(home) { PortalConfig().storeDir(app) }
+      assertEquals(kotlin.canonicalPath, File(viaScript(app, home)).canonicalPath, "for name '$name'")
+    }
+  }
+
+  @Test
+  fun theDefaultOnlyModeAgrees() {
+    val home = tmp("home")
+    val app = tmp("app")
+    // A pointer and an explicit store are both present; --default must ignore
+    // both, the way the recovery command needs it to.
+    File(app, ".gradle").mkdirs()
+    File(app, ".gradle/keliver-store-path").writeText(tmp("pointed").absolutePath + "\n")
+    File(app, "keliver.portal.json").writeText("""{"store":"${tmp("explicit").absolutePath}"}""")
+    val kotlin = withUserHome(home) { defaultStoreDir(app) }
+    val viaDefault = run {
+      val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--default")
+      pb.redirectErrorStream(true)
+      val p = pb.start()
+      val out = p.inputStream.bufferedReader().readText().trim()
+      p.waitFor()
+      assertEquals(0, p.exitValue(), out)
+      out
+    }
+    assertEquals(kotlin.canonicalPath, File(viaDefault).canonicalPath)
+  }
+
+  @Test
+  fun anExistingStoreUnderAnOlderSlugIsAdoptedByBoth() {
+    val home = tmp("home")
+    val app = tmp("app")
+    val hash = withUserHome(home) { appStoreHash(app) }
+    val older = File(home, ".keliver-portal/apps/whatever-it-was-called-$hash").also { it.mkdirs() }
+    val kotlin = withUserHome(home) { PortalConfig().storeDir(app) }
+    assertEquals(older.canonicalPath, kotlin.canonicalPath)
+    assertEquals(older.canonicalPath, File(viaScript(app, home)).canonicalPath)
+  }
+
+  @Test
+  fun aSplitStoreIsRefusedByBoth() {
+    val home = tmp("home")
+    val app = tmp("app")
+    val hash = withUserHome(home) { appStoreHash(app) }
+    File(home, ".keliver-portal/apps/current-$hash").mkdirs()
+    File(home, ".keliver-portal/apps/app-v2-$hash").mkdirs()
+
+    kotlin.test.assertFailsWith<StoreOwnershipException> {
+      withUserHome(home) { PortalConfig().storeDir(app) }
+    }
+    val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath)
+    pb.redirectErrorStream(true)
+    val p = pb.start()
+    val out = p.inputStream.bufferedReader().readText()
+    p.waitFor()
+    assertEquals(3, p.exitValue(), "the mirror must refuse a split store too, got: $out")
+    assertTrue("store split" in out, out)
   }
 
   @Test
