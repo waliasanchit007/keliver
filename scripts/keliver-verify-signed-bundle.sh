@@ -34,11 +34,31 @@ mkdir -p "$DISP/home" "$STORE"
 keliver_require_isolated_store "$DISP" "$ROOT" || exit 1
 
 echo "==> generating a disposable signing identity via the relay"
-( cd "$ROOT" && PORTAL_REPO="$ROOT" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" \
-    > "$DISP/relay.log" 2>&1 & )
 PORT="$(python3 -c "import json;print(json.load(open('$ROOT/keliver.portal.json')).get('port',8077))")"
+
+# A relay already on this port is NOT ours to talk to or to kill. The default
+# is 8077, the documented dev-loop port, so the likely occupant is the
+# developer's own portal: answering there would generate nothing here, and
+# killing it would stop their session while this script reported success.
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo "port $PORT is already in use; stop that process or free the port and re-run" >&2
+  exit 2
+fi
+
+( cd "$ROOT" && PORTAL_REPO="$ROOT" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" \
+    > "$DISP/relay.log" 2>&1 ) &
+RELAY_PID=$!
+# Kill only what this invocation started, and both halves of it: the launcher
+# subshell and the relay JVM it spawned.
+cleanup_relay(){
+  [ -n "${RELAY_LISTENER:-}" ] && kill "$RELAY_LISTENER" 2>/dev/null
+  [ -n "${RELAY_PID:-}" ] && kill "$RELAY_PID" 2>/dev/null
+  return 0
+}
+trap cleanup_relay EXIT
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && break; sleep 3; done
-lsof -ti :"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; sleep 2
+RELAY_LISTENER="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -1)"
+cleanup_relay; RELAY_PID=""; RELAY_LISTENER=""; sleep 2
 
 PRIV="$STORE/keys/ed25519.priv"; PUB="$STORE/keys/ed25519.pub"
 [ -s "$PRIV" ] && [ -s "$PUB" ] || { echo "no disposable keypair generated in $STORE" >&2; exit 1; }

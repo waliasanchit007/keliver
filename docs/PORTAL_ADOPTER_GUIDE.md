@@ -25,7 +25,10 @@ command here comes from that package or from your app's Gradle wrapper.
   export KP="$PWD/keliver-portal-tools-0.3.4/bin"
   ```
 
-  Expected: `2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98`.
+  The `.sha256` file is published beside the zip on the release page, so the
+  check above verifies the download against what was actually released. (This
+  document ships *inside* the bundle, so it deliberately does not quote the
+  hash of its own container.)
 
   The tools version and the library version are **separate lines**: tools 0.3.4
   scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The

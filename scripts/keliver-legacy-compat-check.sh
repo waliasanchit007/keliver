@@ -56,11 +56,13 @@ keliver_require_isolated_store "$DISP" "$APP" || { echo "guard refused"; exit 1;
 echo "legacy compatibility   legacy=$LEGACY"
 
 # --- 1. the relay must ANNOUNCE the legacy contents, not silently ignore them
+keliver_port_free_or_die 8131 || exit 2
 ( cd "$APP" && PORTAL_REPO="$APP" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" \
-    > "$DISP/relay.log" 2>&1 & )
+    > "$DISP/relay.log" 2>&1 ) &
+LEGACY_PID=$!
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null http://localhost:8131/screens && break; sleep 3; done
 curl -sf -m 2 -o /dev/null http://localhost:8131/screens || bad "relay did not start"
-lsof -ti :8131 -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; sleep 2
+keliver_kill_own 8131 "$LEGACY_PID"; sleep 2
 
 grep -q "legacy shared store" "$DISP/relay.log" && ok "the relay announces the legacy store" \
   || bad "the legacy store was not mentioned at all"

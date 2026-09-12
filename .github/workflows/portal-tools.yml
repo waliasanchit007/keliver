@@ -38,7 +38,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Tag or commit to build (use a portal-tools-v* tag for releases)"
+        description: "Commit to BUILD. Ignored by device verification, which tests the artifact named by device_run_id and runs the verifier from the dispatch branch."
         required: true
       device_run_id:
         description: "Set to a run id holding a retained candidate artifact to run DEVICE verification instead of a build"
@@ -55,8 +55,10 @@ permissions:
   contents: read
 jobs:
   # A dispatch either BUILDS a candidate or VERIFIES one on a device, never both.
-  # A tools tag push reaches this job too: it builds and verifies the tagged
-  # commit, and publishes nothing.
+  # A tools tag push reaches THIS job only: it builds the tagged commit and runs
+  # the portable Linux checks, and publishes nothing. Device verification is a
+  # separate dispatch against the retained artifact (see
+  # docs/PORTAL_TOOLS_RELEASE.md) — a tag push does not perform it.
   # (The device job lives here rather than in its own file because GitHub will
   # only dispatch a workflow whose filename already exists on the default
   # branch.)
@@ -152,6 +154,10 @@ jobs:
       actions: read
     runs-on: ubuntu-latest
     steps:
+      # Deliberately the DISPATCH branch, not `inputs.ref`: the verifier must be
+      # able to test a candidate whose commit predates it (ec10e191a has no
+      # keliver-device-verify.sh). What is pinned is the ARTIFACT, by
+      # device_run_id + device_apk_sha256 below.
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:

@@ -28,6 +28,18 @@ step against a named, retained artifact.
 Everything below was executed for 0.3.4 on 2026-09-12 and is written from that
 run.
 
+### 0. Update the bundled guide's download block
+
+`docs/PORTAL_ADOPTER_GUIDE.md` is **not just a doc** — `portal-mcp/build.gradle`
+copies it into the MCP jar's resources as `PORTAL_USAGE.md`, and that jar ships
+in the bundle. Its install block names a concrete version, so it describes the
+*previous* release until you update it.
+
+Bump the version in that block to the release you are about to cut, before the
+commit you tag. Do **not** put the zip's own sha256 there: the guide ships
+inside the zip it would be describing, so the claim falsifies itself on any
+rebuild. The published `.sha256` sidecar is what adopters check against.
+
 ### 1. Build and verify a candidate
 
 ```bash
@@ -46,6 +58,15 @@ gh workflow run portal-tools.yml --ref <branch> \
 
 Both must be green. The device job refuses to run against an APK whose sha256
 does not match, or one carrying an embedded portal key.
+
+Note what `--ref` and `-f ref=` each bind. The **artifact under test** is pinned
+by `device_run_id` + `device_apk_sha256`, which is the load-bearing gate. The
+**verification script** comes from `--ref`, the dispatch branch — deliberately,
+because a candidate commit can predate the verifier (`ec10e191a` has no
+`keliver-device-verify.sh`). `-f ref=` is consumed by the build job only; the
+device job ignores it. So the verifier and the verified can be different
+commits, by design. If that matters for a given release, say which branch the
+verifier came from in the release record.
 
 ### 2. Verify the retained artifact locally
 
@@ -132,6 +153,23 @@ gh workflow enable <workflow id>
 gh workflow list --all --json path,state     # compare against step 3
 ```
 
+**What this does not cover.** Re-enabling replays nothing and the tag push has
+already happened, so no *past* event can come back. But the protection is the
+tag staying put, not the workflow at the head:
+
+* `portal-tools-v0.3.4` points at `ec10e191a`, whose `portal-tools.yml` still
+  has workflow-level `contents: write` and `softprops/action-gh-release`.
+  Deleting and re-pushing that tag — or putting any new tag on that commit or
+  an earlier one — runs **that** workflow, rebuilds on Linux, and replaces the
+  verified asset with untested bytes.
+* The published asset is not immutable (`gh release view --json ...` reports
+  `isImmutable: false`), so it can be replaced by anything with `contents:
+  write`.
+
+Removing the `release` job at the head cannot change either fact. **Never move
+or recreate a released tools tag.** If a release must be re-cut, use a new
+version number.
+
 ## What a released tag guarantees
 
 The tag names the commit in `VERSION.json`. It does **not** guarantee the asset
@@ -143,3 +181,9 @@ scripts/keliver-adopter-acceptance.sh <parent> <zip>
 scripts/keliver-acceptance-identity-check.sh <parent> <zip>
 scripts/keliver-device-verify.sh <zip> <work> <evidence>   # needs a device
 ```
+
+These three live in this repository and are **not** shipped in the bundle
+(`bin/` carries the scaffolder and launcher scripts only), so re-verification
+needs a keliver checkout. Someone holding only the released zip can still check
+its `.sha256`, read `VERSION.json`, and confirm the APK carries no
+`assets/portal_ed25519.pub`.

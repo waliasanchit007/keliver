@@ -58,12 +58,31 @@ APP="$DISP/tree"
 keliver_require_isolated_store "$DISP" "$APP" || exit 1
 
 PORT="$(python3 -c "import json;print(json.load(open('$APP/keliver.portal.json')).get('port',8077))")"
-( cd "$APP" && PORTAL_REPO="$APP" "$RELAY" > "$DISP/relay.log" 2>&1 & )
+
+# keliver-init writes port 8077, the same port the documented dev loop uses, so
+# an occupant here is most likely the developer's own portal. Sending the
+# requests below to it would test the wrong app AND leave that app's tree
+# dirty, and killing it afterwards would stop their session — while this script
+# reported PASS. That is the U21 defect; refuse instead.
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo "port $PORT is already in use; stop that process or free the port and re-run" >&2
+  exit 2
+fi
+
+( cd "$APP" && PORTAL_REPO="$APP" "$RELAY" > "$DISP/relay.log" 2>&1 ) &
+RELAY_PID=$!
+cleanup_relay(){
+  [ -n "${RELAY_LISTENER:-}" ] && kill "$RELAY_LISTENER" 2>/dev/null
+  [ -n "${RELAY_PID:-}" ] && kill "$RELAY_PID" 2>/dev/null
+  return 0
+}
+trap cleanup_relay EXIT
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" && break; sleep 3; done
 curl -sf -m 2 -o /dev/null "http://localhost:$PORT/screens" || bad "the relay did not start"
+RELAY_LISTENER="$(lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t 2>/dev/null | head -1)"
 curl -s -o /dev/null "http://localhost:$PORT/doc"     # opening the editor
 sleep 3
-lsof -ti :"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; sleep 2
+cleanup_relay; RELAY_PID=""; RELAY_LISTENER=""; sleep 2
 
 STATUS="$( cd "$APP" && git status --porcelain )"
 [ -z "$STATUS" ] && ok "clean after an ordinary portal run" \

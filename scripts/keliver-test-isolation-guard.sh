@@ -120,3 +120,31 @@ keliver_make_run_dir() {
   dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")" || return 1
   printf '%s' "$dir"
 }
+
+# keliver_port_free_or_die PORT — refuse a port this invocation does not own.
+#
+# Piping a port lookup straight into a kill stops whatever is there, ours or
+# not. On the default 8077 that is most likely the developer's own portal: the
+# script then
+# talks to the wrong app and stops their session, while still reporting PASS.
+# That is the U21 defect. Refuse instead.
+keliver_port_free_or_die() {
+  local port="${1:?keliver_port_free_or_die needs a port}"
+  if lsof -nP -iTCP:"$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "port $port is already in use; stop that process or free the port and re-run" >&2
+    return 1
+  fi
+  return 0
+}
+
+# keliver_kill_own PORT PID — stop only what this invocation started: the
+# launcher subshell AND the JVM it spawned (killing the subshell alone leaves
+# the JVM holding the port). The listener is looked up only to kill OUR relay,
+# after keliver_port_free_or_die established nothing else was there.
+keliver_kill_own() {
+  local port="$1" pid="$2" listener
+  listener="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null | head -1)"
+  [ -n "$listener" ] && kill "$listener" 2>/dev/null
+  [ -n "$pid" ] && kill "$pid" 2>/dev/null
+  return 0
+}

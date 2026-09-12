@@ -70,7 +70,13 @@ profile baseline; profile semantic
 # relay + mcp config for the semantic condition
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null)}"
 PORT=8677
-lsof -ti :$PORT 2>/dev/null | xargs kill 2>/dev/null
+# Refuse an occupied port rather than clearing it. Without -sTCP:LISTEN this
+# also matched processes holding a CLIENT socket to the port, so the old line
+# could kill something that merely talked to :8677.
+if lsof -nP -iTCP:$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo "port $PORT is already in use; stop that process or free the port and re-run" >&2
+  exit 2
+fi
 PORTAL_REPO="$T/ws-semantic" PORTAL_STORE="$WORK/portal-store" \
   "$T/runtime/portal-relay/bin/portal-relay" > "$WORK/relay.log" 2>&1 &
 RELAY=$!

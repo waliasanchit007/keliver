@@ -71,18 +71,20 @@ grep -q "store conflict" "$LOSER_LOG" && ok "the loser refused with the conflict
   && ok "alpha's sources are unchanged" || bad "alpha's sources changed"
 DOCS="$(find "$SHARED" -name '*.json' -not -path '*/keys/*' | wc -l | tr -d ' ')"
 echo "      documents in the shared store: $DOCS (written only by the winner)"
-for p in 8141 8142; do lsof -ti :$p -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; done
+for p in 8141 8142; do keliver_kill_own "$p" ""; done
 kill $pa $pb 2>/dev/null; wait $pa $pb 2>/dev/null; sleep 2
 OWNER_AFTER="$(cat "$SHARED/owner" 2>/dev/null | tr -d '\n')"
 [ "$OWNER" = "$OWNER_AFTER" ] && ok "the loser never altered the marker" || bad "the marker changed"
 
 echo "=== 2. the legitimate owner restarts ==="
 WINPORT=8141; WINDIR="$A"; [ "$OWNER" = "$B" ] && { WINPORT=8142; WINDIR="$B"; }
-( cd "$WINDIR" && PORTAL_REPO="$WINDIR" PORTAL_STORE="$SHARED" "$RELAY" > "$DISP/restart.log" 2>&1 & )
+keliver_port_free_or_die "$WINPORT" || exit 2
+( cd "$WINDIR" && PORTAL_REPO="$WINDIR" PORTAL_STORE="$SHARED" "$RELAY" > "$DISP/restart.log" 2>&1 ) &
+WINPID=$!
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null "http://localhost:$WINPORT/screens" && break; sleep 2; done
 curl -sf -m 2 -o /dev/null "http://localhost:$WINPORT/screens" && ok "the owner restarted against its own store" \
   || bad "the owner could not restart"
-lsof -ti :$WINPORT -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null; sleep 2
+keliver_kill_own "$WINPORT" "$WINPID"; sleep 2
 
 echo "=== 3. the recording client, against the real relay token ==="
 REC="$DISP/rec"; mkdir -p "$REC/src/jsMain/kotlin/screens" "$REC/scripts"
@@ -119,7 +121,7 @@ else
   esac
 fi
 printf '%s' "$OUT" | grep -qiE '[0-9a-f]{32}' && bad "a token-like string appeared in output" || ok "no token material in output"
-lsof -ti :8143 -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null
+keliver_kill_own 8143 "${REC_PID:-}"
 
 echo
 echo "passed: $pass   failed: $fail"

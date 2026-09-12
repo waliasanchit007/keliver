@@ -56,10 +56,20 @@ below.
 | Maven dependency version | **0.3.3, unchanged** — what the bundled scaffolders write into new projects |
 | recorded in the package | `VERSION.json` and `VERSION` at the bundle root |
 
-The package was built at `ec10e191a`. Only this file has changed since — it is
+~~The package was built at `ec10e191a`. Only this file has changed since — it is
 not in the bundle — so tagging the tip and rebuilding yields the same package
-apart from `sourceCommit` in `VERSION.json`. Tag `ec10e191a` to match the
-artifact byte-for-byte.
+apart from `sourceCommit` in `VERSION.json`.~~
+
+> **Superseded.** That was true when written and is not true now, in two ways.
+> The build is not byte-reproducible at all — the same commit built on macOS
+> and on Linux produced different zips (see *Two artifacts, not one*). And a
+> later commit changed `docs/PORTAL_ADOPTER_GUIDE.md`, which **is** a packaging
+> input: `portal-mcp/build.gradle` copies it into the jar's resources as
+> `PORTAL_USAGE.md`, and that jar ships in the bundle. See *Divergence since
+> the release* below.
+
+Tag `ec10e191a` — it is the commit `VERSION.json` names. The released asset is
+the retained artifact uploaded byte-for-byte, not a rebuild of any tree.
 
 The two version lines are now independent. `portal-tools-v*` does not match the
 `v*` pattern `publish.yml` listens on, so a tools release cannot publish a
@@ -73,6 +83,37 @@ production sources and klib dump are unchanged since `v0.3.3`
 the only build change to one is a `wasmJsTest` dependency, which is not part of
 a published artifact. `portal-relay`, `portal-mcp` and `portal-published-guest`
 are not on Central at all.
+
+## Divergence since the release
+
+The released bytes came from `ec10e191a`. The integration branch has moved on,
+and **the head no longer rebuilds the released `portal-mcp` jar.** Stated
+plainly so nobody assumes otherwise:
+
+| changed since `ec10e191a` | in the shipped bundle? |
+|---|---|
+| `.github/workflows/portal-tools.yml` | no |
+| `scripts/keliver-device-verify.sh` (new) | no — not copied by `build-portal-tools.sh` |
+| repo-only dev scripts (port-kill fixes) | no — `bin/` ships 10 scaffolder/launcher scripts, none of these |
+| `CLAUDE.md`, `docs/**` prose | no |
+| **`docs/PORTAL_ADOPTER_GUIDE.md`** | **YES** — compiled into `portal-mcp-0.3.3.jar` as `PORTAL_USAGE.md` |
+
+`portal-mcp/build.gradle` registers a `Copy` of `docs/PORTAL_ADOPTER_GUIDE.md`
+into the MCP resources, so editing that "doc" changes a published binary. Its
+sha256 was `a50aab49…` at `ec10e191a` (byte-identical to the copy inside the
+released jar) and differs at the head.
+
+**What this means.** A 0.3.4 rebuild from the head would differ from the
+released artifact for a reason beyond `sourceCommit`, and `get_guide` would
+return different text. **No new release is required** — the released 0.3.4
+artifact is untouched and remains what was verified — but the next tools
+release ships the new guide, and its download block must be updated to that
+release first (step 0 of
+[`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md)).
+
+The guide change is prose only: an install block naming the 0.3.4 download and
+its checksum file. It was checked against every `GuideTest` assertion and
+`:portal-mcp:test` passes, but no acceptance run has exercised the new text.
 
 ## Release notes
 

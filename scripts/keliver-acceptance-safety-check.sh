@@ -81,11 +81,23 @@ else
   bad "the guard does not precede relay startup (guard=$GUARD_LINE relay=$RELAY_LINE)"
 fi
 
-# --- 6. no blanket port kills remain -----------------------------------------
-if grep -q 'lsof -ti :[0-9]* -sTCP:LISTEN | xargs kill' "$ACC"; then
-  bad "the script still kills whatever holds a port"
+# --- 6. no blanket port kills remain, IN ANY SCRIPT --------------------------
+#
+# This used to grep only the acceptance script. That was the gap: six sibling
+# scripts added alongside it still did `lsof -ti :PORT | xargs kill`, two of
+# them on the default 8077 — so running one while the documented dev loop was
+# up killed the developer's own relay and still reported PASS. Guard the whole
+# directory, not the one file the defect was first found in.
+#
+# keliver-dev.sh is exempt: it is Keliver's OWN dev loop, and clearing the
+# ports it is about to bind is its documented job.
+BLIND="$(grep -rln 'lsof -ti *:[^|]*| *xargs kill' "$ROOT/scripts" 2>/dev/null \
+  | grep -v 'keliver-dev.sh' | grep -v "$(basename "${BASH_SOURCE[0]}")" || true)"
+if [ -n "$BLIND" ]; then
+  bad "these scripts kill whatever holds a port:"
+  printf '%s\n' "$BLIND" | sed "s|$ROOT/|        |"
 else
-  ok "cleanup stops only processes this invocation started"
+  ok "no script kills a process it did not start"
 fi
 
 echo
