@@ -124,6 +124,13 @@ keliver_make_run_dir() {
 # That is the U21 defect. Refuse instead.
 keliver_port_free_or_die() {
   local port="${1:?keliver_port_free_or_die needs a port}"
+  # Without lsof this function would return 0 for every port — the U21 gate
+  # silently off, and keliver_kill_own unable to stop the relay it started.
+  # Refuse rather than degrade.
+  command -v lsof >/dev/null 2>&1 || {
+    echo "lsof is not available; this check cannot tell whether a port is in use" >&2
+    return 1
+  }
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo "port $port is already in use; stop that process or free the port and re-run" >&2
     return 1

@@ -66,7 +66,7 @@ class StoreIdentityTest {
     val viaReal = withUserHome(home) { PortalConfig().storeDir(real) }
     val viaLink = withUserHome(home) { PortalConfig().storeDir(link) }
     assertEquals(viaReal.path, viaLink.path)
-    assertTrue(viaReal.name.startsWith("app-v2-"), "named for the typed path, not the real one: ${viaReal.name}")
+    assertTrue(viaReal.name.startsWith("app-v2-"), "the store must be named for the REAL directory: ${viaReal.name}")
   }
 
   @Test
@@ -135,6 +135,21 @@ class StoreIdentityTest {
     val e = assertFailsWith<StoreOwnershipException> { withUserHome(home) { PortalConfig().storeDir(app) } }
     assertTrue("app-v2-$hash" in (e.message ?: ""), e.message ?: "")
     assertTrue("current-$hash" in (e.message ?: ""), e.message ?: "")
+  }
+
+  @Test
+  fun aBlankStoreSettingMeansNotSetAndNeverTheAppItself() {
+    // `{"store": ""}` used to take the relative-path branch and resolve to
+    // File(repoDir, "") — the source tree — while the shell mirror fell through
+    // to the default.
+    val home = tmp("home")
+    val a = app(tmp("work"), "blank")
+    val resolved = withUserHome(home) { PortalConfig(store = "").storeDir(a) }
+    assertEquals(withUserHome(home) { PortalConfig().storeDir(a) }.canonicalPath, resolved.canonicalPath)
+    assertTrue(
+      !resolved.canonicalPath.startsWith(a.canonicalPath),
+      "the store must never be the app's own tree: $resolved",
+    )
   }
 
   @Test

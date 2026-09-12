@@ -410,8 +410,15 @@ published bundles verify against and name it:
 $KP/keliver-store-recover.sh /abs/path/to/the/app --store ~/.keliver-portal/apps/<the one to keep>
 ```
 
-The other store is not read, moved or deleted; if you pick wrong, run the same
-command again naming the other one.
+The other store is not read, moved or deleted. **Picking again is not a
+re-run of the same command**, though: once the app is bound to one of them, that
+store holds the identity, and recovery refuses to abandon it. To change your
+mind, move the one you bound aside first:
+
+```bash
+mv ~/.keliver-portal/apps/<the one you bound> ~/.keliver-portal/apps/<same name>.abandoned
+$KP/keliver-store-recover.sh /abs/path/to/the/app --store ~/.keliver-portal/apps/<the other one>
+```
 
 ### Coming from an older Keliver
 

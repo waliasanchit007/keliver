@@ -39,12 +39,21 @@ and paths move. The contract below is what the two of them mean *together*.
 
 ## 2. Resolution order
 
-Every consumer resolves in exactly this order. There is one authoritative
-implementation, `PortalConfig.storeDir()`; `scripts/keliver-store-path.sh` is
-its mirror, asserted equal by `StoreContractTest`; every other consumer calls
-one of those two and none derives the path itself.
+Every consumer resolves in exactly this order. `PortalConfig.storeDir()` is the
+authoritative implementation of steps 2–4 (step 1 is applied by the relay, in
+`resolveStore`, since it is an environment variable rather than a property of
+the app); `scripts/keliver-store-path.sh` is the mirror of all four, asserted
+equal by `StoreContractTest`; every other consumer calls one of those two and
+none derives the path itself.
 
-1. `PORTAL_STORE` — explicit, one run.
+1. `PORTAL_STORE` — explicit, one run. "One run" is about the *binding*: the
+   relay does not write the pointer for such a run, so the app goes back to its
+   own store next time. It does still **claim** the store — the `owner` marker
+   is written and is permanent — because that is what stops two apps sharing one
+   explicit store (U17), and it is why a `PORTAL_STORE` directory should be a
+   throwaway one. A consequence worth knowing: after such a run the store is
+   owned by an app that no longer resolves to it, and `keliver-store-recover.sh`
+   will refuse to hand it to anything else while that app still exists.
 2. `store` in `<app>/keliver.portal.json` — explicit, committed.
 3. `<app>/.gradle/keliver-store-path` — the binding pointer.
 4. `~/.keliver-portal/apps/<slug>-<hash>` — the first-boot default.
@@ -350,6 +359,15 @@ an active relay.
   deleted.
 
 No migration step is required, and nothing rewrites an existing store.
+
+**A split blocks Gradle too, not only the relay.** `build.gradle`'s
+`keliverStoreDir` is called during configuration by `portal-published-guest`,
+`portal-device-android` and `portal-device-ios`, and it fails the build on the
+resolver's exit 3. So an app in the split state cannot run *any* Gradle task
+until `keliver-store-recover.sh --store` has chosen a store. That is deliberate
+— the alternative is signing a guest bundle with whatever identity the legacy
+global store happens to hold — but it is broader than "the portal will not
+start".
 
 ## 6. What this does not change
 

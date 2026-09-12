@@ -44,6 +44,14 @@
 # running it and naming both sides; the checks above catch mistakes, they do
 # not establish ownership.
 #
+# TEST-ONLY ENVIRONMENT VARIABLES, inert unless set, and not for adopters:
+# KELIVER_RECOVER_FAIL_POINTER=1 makes the pointer write fail,
+# KELIVER_RECOVER_FAIL_RESTORE=1 makes the rollback fail, and
+# KELIVER_RECOVER_PAUSE_AT=<boundary> [+ KELIVER_RECOVER_PAUSE_S] stops at a
+# named transaction boundary. They exist because the rollback and
+# failed-rollback paths are otherwise unreachable from outside the process.
+# Setting FAIL_RESTORE in a real environment disables rollback.
+#
 # INTERRUPTION. SIGINT and SIGTERM are handled explicitly. Before the
 # transaction commits they restore the previous owner marker and pointer WHILE
 # STILL HOLDING THE LOCKS, verify the restoration, and exit non-zero; after it
@@ -170,11 +178,26 @@ APP_LOCK="$GRADLE_DIR/keliver-store.lock"
 #
 # The same protocol is implemented in PortalConfig.withStoreLock, so the shell
 # and the JVM contend correctly with each other.
+# Is the process that recorded this marker gone? Only a DEFINITE "no such
+# process" counts. `kill -0` fails for a non-numeric pid as well as for a dead
+# one, so without the numeric guard a marker reading `xx` was read as dead and
+# the lock stolen; and it fails with EPERM for a LIVE process owned by another
+# user, which would steal a running relay's lock. Both mean wait.
+lock_holder_gone() { # pid -> 0 only when the process definitely does not exist
+  local pid="$1" err
+  case "$pid" in ''|*[!0-9]*) return 1 ;; esac      # unreadable -> wait
+  kill -0 "$pid" 2>/dev/null && return 1            # alive -> wait
+  err="$(kill -0 "$pid" 2>&1)"
+  case "$err" in
+    *"o such process"*) return 0 ;;                 # ESRCH: definitely gone
+    *) return 1 ;;                                  # EPERM or anything else: wait
+  esac
+}
+
 lock_take_over() { # lock-dir -> 0 when the directory was cleared for a retry
   local lock="$1" pid claim
   pid="$(cat "$lock/pid" 2>/dev/null)" || return 1   # unknown -> wait
-  [ -n "$pid" ] || return 1
-  kill -0 "$pid" 2>/dev/null && return 1             # alive -> wait
+  lock_holder_gone "$pid" || return 1
   claim="$lock/pid.stale.$$"
   mv "$lock/pid" "$claim" 2>/dev/null || return 1    # someone else claimed it
   if [ "$(cat "$claim" 2>/dev/null)" != "$pid" ]; then
@@ -200,26 +223,35 @@ fi
 # The marker identifies the holder. Without it nobody — including this script's
 # own cleanup, which releases only what the marker says is ours — can tell whose
 # lock this is, so failing to write it is failing to acquire.
+APP_LOCK_HELD=1
 if ! printf '%s\n' "$$" > "$APP_LOCK/pid" 2>/dev/null \
    || [ "$(cat "$APP_LOCK/pid" 2>/dev/null)" != "$$" ]; then
   rm -f "$APP_LOCK/pid" 2>/dev/null; rmdir "$APP_LOCK" 2>/dev/null
+  APP_LOCK_HELD=0
   die "could not record this process as the holder of $APP_LOCK. Nothing was changed."
 fi
-APP_LOCK_HELD=1
-STORE_LOCK=""
+STORE_LOCK=""; STORE_LOCK_MINE=0
 
 # Release ONLY locks this process still holds, identified by the pid marker it
 # wrote. Without that check an interrupted run could remove a lock a LATER
 # process had already taken over, which is the same two-writers failure the
 # lock exists to prevent. Idempotent: safe to call from the signal handler and
 # again from the EXIT trap.
+# A lock is ours to remove when we created it AND its marker either names this
+# process or was never written (a signal can land between the mkdir and the
+# marker write). A marker naming someone else is never ours — that is a lock
+# taken over after a hard kill, and deleting it is the two-writers failure.
+lock_is_ours() {
+  local recorded; recorded="$(cat "$1/pid" 2>/dev/null)"
+  [ -z "$recorded" ] || [ "$recorded" = "$$" ]
+}
 release_locks() {
-  if [ -n "$STORE_LOCK" ] && [ "$(cat "$STORE_LOCK/pid" 2>/dev/null)" = "$$" ]; then
+  if [ "${STORE_LOCK_MINE:-0}" = 1 ] && [ -n "$STORE_LOCK" ] && lock_is_ours "$STORE_LOCK"; then
     rm -f "$STORE_LOCK/pid" 2>/dev/null
     rmdir "$STORE_LOCK" 2>/dev/null
-    STORE_LOCK=""
+    STORE_LOCK=""; STORE_LOCK_MINE=0
   fi
-  if [ "$APP_LOCK_HELD" = 1 ] && [ "$(cat "$APP_LOCK/pid" 2>/dev/null)" = "$$" ]; then
+  if [ "$APP_LOCK_HELD" = 1 ] && lock_is_ours "$APP_LOCK"; then
     rm -f "$APP_LOCK/pid" 2>/dev/null
     rmdir "$APP_LOCK" 2>/dev/null
     APP_LOCK_HELD=0
@@ -270,7 +302,16 @@ trap 'release_locks' EXIT
 
 # Every mutation checks this first, so nothing can run after cleanup has begun
 # even if a handler were ever to return instead of exiting.
-not_aborting() { [ "$ABORTING" = 0 ] || { release_locks; exit 1; }; }
+not_aborting() {
+  [ "$ABORTING" = 0 ] && return 0
+  # Unreachable today (on_signal always exits), but if a handler ever returned
+  # in `mutating` state this must not exit leaving the partial state unsaid.
+  if [ "$STATE" = mutating ]; then
+    restore_binding || report_partial_state
+  fi
+  release_locks
+  exit 1
+}
 
 # Deliberate pauses at transaction boundaries. Inert unless set; they exist so
 # an interruption can be delivered at a KNOWN point rather than by racing.
@@ -388,14 +429,21 @@ if ! mkdir "$STORE_LOCK" 2>/dev/null; then
     say "note: taking over $STORE_LOCK — the process that held it is gone"
     mkdir "$STORE_LOCK" 2>/dev/null || { STORE_LOCK=""; die "could not take the store lock. Nothing was changed."; }
   else
+    LOCKMSG="another recovery is in progress on $STORE. Nothing was changed."
+    LOCKMSG="$LOCKMSG
+  (lock: $STORE_LOCK). If nothing is running, remove that directory."
     STORE_LOCK=""
-    die "another recovery is in progress on $STORE. Nothing was changed."
+    die "$LOCKMSG"
   fi
 fi
+STORE_LOCK_MINE=1
 if ! printf '%s\n' "$$" > "$STORE_LOCK/pid" 2>/dev/null \
    || [ "$(cat "$STORE_LOCK/pid" 2>/dev/null)" != "$$" ]; then
-  rmdir "$STORE_LOCK" 2>/dev/null; STORE_LOCK=""
-  die "could not record this process as the holder of the store lock. Nothing was changed."
+  rm -f "$STORE_LOCK/pid" 2>/dev/null       # or the rmdir below cannot succeed
+  rmdir "$STORE_LOCK" 2>/dev/null
+  STORE_LOCK=""; STORE_LOCK_MINE=0
+  die "could not record this process as the holder of $STORE/owner.lock.
+  Nothing was changed."
 fi
 
 # Re-read under the lock: the marker may have changed since it was inspected.
@@ -409,13 +457,16 @@ NOW="$(tr -d '\n' < "$OWNER_FILE")"
 #
 # The directory is named per run, so a backup left behind by a killed process
 # is never silently overwritten.
-BACKUP="$GRADLE_DIR/keliver-store-recover.backup.$$"
+# Unique per run: `mkdir -p` on a reused pid would overwrite the only material
+# that could undo a previous partial state, after the warning below had just
+# said it was being kept.
+BACKUP="$GRADLE_DIR/keliver-store-recover.backup.$$.$(date +%Y%m%d%H%M%S)"
 LEFTOVER="$(ls -d "$GRADLE_DIR"/keliver-store-recover.backup.* 2>/dev/null | head -3)"
 if [ -n "$LEFTOVER" ]; then
   warn "a previous recovery left material behind; it is being kept:"
   printf '%s\n' "$LEFTOVER" | sed 's/^/     /' >&2
 fi
-mkdir -p "$BACKUP" || die "cannot create $BACKUP. Nothing was changed."
+mkdir "$BACKUP" || die "cannot create $BACKUP. Nothing was changed."
 cp "$OWNER_FILE" "$BACKUP/owner" || { rmdir "$BACKUP" 2>/dev/null; die "cannot back up the owner marker. Nothing was changed."; }
 cmp -s "$OWNER_FILE" "$BACKUP/owner" || { rm -rf "$BACKUP"; die "the owner-marker backup does not match the original. Nothing was changed."; }
 if [ -f "$POINTER" ]; then
@@ -480,7 +531,11 @@ report_partial_state() {
     printf '    %s/meta             the paths involved\n' "$BACKUP"
     printf '  To restore by hand:\n'
     printf '    cp %s/owner %s\n' "$BACKUP" "$OWNER_FILE"
-    printf '    cp %s/pointer %s      # or: rm -f %s, if pointer.existed is 0\n' "$BACKUP" "$POINTER" "$POINTER"
+    if [ "$(tr -d '\n' < "$BACKUP/pointer.existed" 2>/dev/null)" = 1 ]; then
+      printf '    cp %s/pointer %s\n' "$BACKUP" "$POINTER"
+    else
+      printf '    rm -f %s        # there was no pointer before\n' "$POINTER"
+    fi
     printf '  Then check: keliver-store-path.sh %s\n' "$APP"
   } >&2
 }
@@ -546,8 +601,8 @@ VERIFIED="$(cd "$RESOLVE_OUT" 2>/dev/null && pwd -P || printf '%s' "$RESOLVE_OUT
 # Both sides landed and the resolver agrees: the transaction is done. From here
 # an interruption leaves it in place rather than undoing verified work.
 STATE=committed
+rm -rf "$BACKUP"      # before the pause: a verified transaction leaves nothing
 pause_at after-commit
-rm -rf "$BACKUP"
 
 say "identity after:  $(fingerprint "$STORE")"
 say "verified:        $VERIFIED   (the ordinary resolver's answer)"

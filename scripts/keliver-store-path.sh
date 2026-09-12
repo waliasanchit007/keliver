@@ -17,8 +17,9 @@
 #   3. <app>/.gradle/keliver-store-path                (the binding pointer)
 #   4. ~/.keliver-portal/apps/<slug>-<hash of repo>    (the default)
 #
-# --default reports step 4 only, ignoring 1-3. The recovery command uses it to
-# ask "what store would this app take if it had no binding?".
+# --default reports step 4 only, ignoring 1-3: "what store would this app take
+# if it had no binding?". Used by StoreContractTest; the recovery command asks
+# --explain instead, because WHICH rule decided is what it branches on.
 #
 # --explain prints "<step>\t<path>" instead of the bare path, where <step> is
 # env, config, pointer, default or adopted. keliver-store-recover.sh needs it:
@@ -53,7 +54,10 @@ done
 
 python3 - "$APP" "$HOME_DIR" "${PORTAL_STORE:-}" "$ONLY_DEFAULT" "$EXPLAIN" <<'PY'
 import json, os, sys, hashlib
-app, home, env = os.path.abspath(sys.argv[1]), sys.argv[2].strip(), sys.argv[3]
+# realpath, not abspath: abspath collapses ".." LEXICALLY, while the JVM (and
+# the kernel) resolve the symlink first. For $W/x/link/.. that is two different
+# app directories, and therefore two identities.
+app, home, env = os.path.realpath(sys.argv[1]), sys.argv[2].strip(), sys.argv[3]
 only_default = sys.argv[4] == "1"
 explain = sys.argv[5] == "1"
 
@@ -104,7 +108,7 @@ def slug(name):
     s = s.strip("-")
     return s if s and s not in (".", "..") else "app"
 
-real = os.path.realpath(app)
+real = app  # already realpath'd above
 h = hashlib.sha256(real.encode()).hexdigest()[:8]
 apps = os.path.join(home, ".keliver-portal", "apps")
 preferred = os.path.join(apps, "%s-%s" % (slug(os.path.basename(real)), h))

@@ -38,7 +38,13 @@ mkdir -p "$DISP/home"
 # exporting HOME would not isolate anything — and it would make the guard's
 # own "is this the developer's real store?" check compare against the fake
 # home and mis-report. -Duser.home is what actually moves the store.
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+# /usr/libexec/java_home is macOS-only; on Linux (CI) JAVA_HOME is already set
+# by setup-java. Falling through with an empty value would be worse than saying so.
+if [ -z "${JAVA_HOME:-}" ]; then
+  if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 2; }
+fi
+export JAVA_HOME
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 STORE_PATH_SH="$ROOT/scripts/keliver-store-path.sh"
 

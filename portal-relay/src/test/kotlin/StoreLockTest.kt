@@ -64,6 +64,26 @@ class StoreLockTest {
     }
   }
 
+  private fun <T> withStoreLockAttempt(
+    app: File,
+    waitMillis: Long = 400,
+    afterAcquire: () -> Unit,
+    block: () -> T,
+  ): T? {
+    refusal = null
+    return try {
+      withStoreLock(
+        app,
+        waitMillis = waitMillis,
+        onBusy = { refusal = "busy"; throw Refused() },
+        onUnavailable = { _, why -> refusal = "unavailable: $why"; throw Refused() },
+        afterAcquire = afterAcquire,
+      ) { block() }
+    } catch (_: Refused) {
+      null
+    }
+  }
+
   private class Refused : RuntimeException()
 
   @Test
@@ -266,14 +286,18 @@ class StoreLockTest {
   fun anUnwritableMarkerIsTreatedAsAFailedAcquisition() {
     // Holding a lock nobody can identify is worse than not holding one: no
     // contender can take it over and this process cannot safely release it.
+    //
+    // The marker write only happens AFTER this process owns the directory, so
+    // it cannot be made to fail from outside — an earlier version of this test
+    // pre-created the lock, which meant `mkdir` never succeeded and the run
+    // ended at onBusy instead, passing on the wrong branch. The seam puts the
+    // obstacle in place at the one moment it is reachable.
     val a = app()
-    val lock = lockOf(a)
-    lock.mkdirs()
-    // A directory where the `pid` file has to go: the write cannot succeed.
-    File(lock, "pid").mkdirs()
     var ran = false
-    assertEquals(null, attempt(a, waitMillis = 200) { ran = true })
+    val out = withStoreLockAttempt(a, afterAcquire = { File(lockOf(a), "pid").mkdirs() }) { ran = true }
+    assertEquals(null, out)
     assertFalse(ran, "the block must not run without an identifiable holder")
-    assertTrue(refusal != null, "it must have refused")
+    assertTrue(refusal!!.startsWith("unavailable"), "wrong refusal branch: $refusal")
+    assertTrue(refusal!!.contains("holder marker"), "wrong reason: $refusal")
   }
 }

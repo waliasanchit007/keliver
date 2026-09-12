@@ -146,6 +146,13 @@ jobs:
           # resolver and its shell mirror agree.
           scripts/keliver-store-identity-repro.sh "$RUNNER_TEMP/store-identity"
           echo "::endgroup::"
+          echo "::group::the guest bundle the recovery check signs"
+          # build-portal-tools.sh does not build this target, so on a fresh
+          # runner the check would trigger a Kotlin/JS + Zipline compile from
+          # inside itself, under a different JAVA_TOOL_OPTIONS and therefore a
+          # second Gradle daemon. Build it here so a failure is attributable.
+          ./gradlew --console=plain :portal-device-guest:compileDevelopmentZipline
+          echo "::endgroup::"
           echo "::group::store recovery outcomes, through the packaged commands"
           # Relocation end to end: a bundle signed before a move still verifies
           # after it, an unrelated app stays isolated, concurrent recoveries

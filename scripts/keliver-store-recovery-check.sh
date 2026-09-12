@@ -26,7 +26,13 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DISP_PARENT="${1:?usage: $0 <disposable-root>}"
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+# /usr/libexec/java_home is macOS-only; on Linux (CI) JAVA_HOME is already set
+# by setup-java. Falling through with an empty value would be worse than saying so.
+if [ -z "${JAVA_HOME:-}" ]; then
+  if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 2; }
+fi
+export JAVA_HOME
 
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
 DISP="$(keliver_make_run_dir "$DISP_PARENT" store-recovery)" || exit 1
@@ -584,7 +590,10 @@ else
 fi
 # A lock whose recorded holder is gone must not block forever: one SIGKILLed
 # relay would otherwise wedge every later start behind a manual rm.
-printf '999999\n' > "$A10/.gradle/keliver-store.lock/pid"
+# A pid that is certainly gone: a child this shell has already reaped. 999999
+# is a VALID pid on Linux (pid_max is 4194304) and could be live on the runner.
+( : ) & DEAD_PID=$!; wait "$DEAD_PID" 2>/dev/null
+printf '%s\n' "$DEAD_PID" > "$A10/.gradle/keliver-store.lock/pid"
 if "$RECOVER" "$A10" --store "$S10" --home "$DISP/home" --dry-run > "$DISP/c10-stale.log" 2>&1; then
   grep -q "taking over" "$DISP/c10-stale.log" \
     && ok "C10 a lock whose holder is gone is taken over, not waited on forever" \
@@ -637,13 +646,27 @@ interrupt_at() { # boundary, signal, tag
   done
   if ! grep -q "paused at $boundary" "$DISP/$tag.log" 2>/dev/null; then
     wait "$pid" 2>/dev/null
-    C11_RC=99
-    note "the command never reached '$boundary' — it is not interruptible there"
+    C11_RC=99; C11_DELIVERED=0
+    # NOT a note. Without this the whole interruption section passes vacuously:
+    # "exits non-zero" is satisfied by 99, and because nothing was written every
+    # follow-up assertion — owner restored, pointer unchanged, locks released —
+    # is trivially true. Green having tested nothing, on the platform where
+    # signal handling is least verified.
+    bad "C11 the command never reached '$boundary'; no signal was delivered"
+    tail -6 "$DISP/$tag.log" | sed 's/^/        /'
     return 0
   fi
+  C11_DELIVERED=1
   kill -"$sig" "$pid" 2>/dev/null
   wait "$pid" 2>/dev/null; C11_RC=$?
   return 0
+}
+
+# Every C11 assertion runs only when the signal actually landed.
+delivered() {
+  [ "${C11_DELIVERED:-0}" = 1 ] && return 0
+  bad "$1 (skipped: the signal was never delivered)"
+  return 1
 }
 
 # (a) TERM after the owner replacement, before the pointer replacement.
@@ -653,6 +676,7 @@ c11_app "$C11_APP" "$C11_STORE"
 OWNER_WAS="$(cat "$C11_STORE/owner")"
 POINTER_WAS="$(cat "$C11_APP/.gradle/keliver-store-path")"
 interrupt_at after-owner TERM c11a
+delivered "C11a the interruption assertions" && \
 [ "${C11_RC:-0}" -ne 0 ] && ok "C11a an interrupted recovery exits non-zero" \
                          || bad "C11a the interrupted recovery reported success (rc=${C11_RC:-0})"
 [ "$(cat "$C11_STORE/owner")" = "$OWNER_WAS" ] \
@@ -673,6 +697,7 @@ C11_APP="$DISP/apps/c11-after"; C11_STORE="$DISP/home/.keliver-portal/apps/c11b-
 mkstore "$C11_STORE" "$DISP/apps/c11b-gone" "$(printf '5e%.0s' $(seq 1 32))"
 c11_app "$C11_APP" "$C11_STORE"
 interrupt_at after-commit TERM c11b
+delivered "C11b the post-commit assertions" && \
 [ "$(tr -d '\n' < "$C11_STORE/owner")" = "$C11_APP" ] \
   && ok "C11b a committed rebinding is not undone by a later signal" \
   || bad "C11b the committed rebinding was rolled back"
@@ -685,6 +710,7 @@ mkstore "$C11_STORE" "$DISP/apps/c11c-gone" "$(printf '6f%.0s' $(seq 1 32))"
 c11_app "$C11_APP" "$C11_STORE"
 OWNER_WAS="$(cat "$C11_STORE/owner")"
 interrupt_at before-owner INT c11c
+delivered "C11c the early-interruption assertions" && \
 [ "${C11_RC:-0}" -ne 0 ] && ok "C11c an early interruption exits non-zero" \
                          || bad "C11c the early interruption reported success"
 [ "$(cat "$C11_STORE/owner")" = "$OWNER_WAS" ] && ok "C11c nothing was written" \
@@ -698,7 +724,12 @@ OWNER_WAS="$(cat "$C11_STORE/owner")"
 KELIVER_RECOVER_PAUSE_AT=after-owner KELIVER_RECOVER_PAUSE_S=20 \
   "$RECOVER" "$C11_APP" --store "$C11_STORE" --home "$DISP/home" > "$DISP/c11d.log" 2>&1 &
 C11D_PID=$!
-for _ in $(seq 1 60); do grep -q "paused at after-owner" "$DISP/c11d.log" 2>/dev/null && break; sleep 0.5; done
+C11D_PAUSED=0
+for _ in $(seq 1 60); do
+  grep -q "paused at after-owner" "$DISP/c11d.log" 2>/dev/null && { C11D_PAUSED=1; break; }
+  sleep 0.5
+done
+[ "$C11D_PAUSED" = 1 ] || bad "C11d the command never reached the boundary; the case below proves nothing"
 # A later process takes the lock over and records its own (live) pid.
 printf '%s\n' "$$" > "$C11_APP/.gradle/keliver-store.lock/pid"
 kill -TERM "$C11D_PID" 2>/dev/null; wait "$C11D_PID" 2>/dev/null
@@ -726,7 +757,7 @@ else
 fi
 grep -q "COULD NOT BE RESTORED" "$DISP/c12.log" && ok "C12 the partial state is reported as partial" \
                                                 || bad "C12 the failure was not reported as a partial state"
-grep -qi "unchanged\|was not modified" "$DISP/c12.log" \
+grep -qi "unchanged\|was not modified\|Nothing was changed" "$DISP/c12.log" \
   && { bad "C12 it claimed nothing changed while the state is partial"; grep -in "unchanged\|was not modified" "$DISP/c12.log" | sed 's/^/        /'; } \
   || ok "C12 it does not claim the store is unchanged"
 BK="$(ls -d "$A12/.gradle"/keliver-store-recover.backup.* 2>/dev/null | head -1)"
@@ -736,10 +767,13 @@ if [ -n "$BK" ] && [ -f "$BK/owner" ] && [ -f "$BK/pointer.existed" ]; then
 else
   bad "C12 the backup was deleted after a failed restoration"
 fi
-# The reported owner must match reality, not a hopeful claim.
-grep -qF "$(tr -d '\n' < "$S12/owner")" "$DISP/c12.log" \
+# The reported owner must match reality, not a hopeful claim — and it has to be
+# the line that REPORTS the marker, not the log's own "app: <path>" header,
+# which contains the same string and made this pass for any log at all.
+REPORTED="$(sed -n 's/^ *owner marker  .* -> //p' "$DISP/c12.log" | tail -1)"
+[ -n "$REPORTED" ] && [ "$REPORTED" = "$(tr -d '\n' < "$S12/owner")" ] \
   && ok "C12 the reported owner marker matches what is on disk" \
-  || bad "C12 the reported state does not match the store"
+  || bad "C12 reported '$REPORTED' but the store says '$(tr -d '\n' < "$S12/owner")'"
 
 # --- C13: startup resolves under the lock ------------------------------------
 echo
@@ -760,7 +794,17 @@ if keliver_port_free_or_die 8167; then
   mkdir -p "$A13/.gradle/keliver-store.lock"
   printf '%s\n' "$$" > "$A13/.gradle/keliver-store.lock/pid"   # a LIVE holder, so it is not taken over
   ( cd "$A13" && PORTAL_REPO="$A13" "$RELAY" > "$DISP/c13.log" 2>&1 ) & C13_PID=$!
-  sleep 8                                    # long enough to have resolved and be waiting
+  # Wait for the JVM to exist before assuming it has resolved and is waiting on
+  # the lock. A fixed sleep that is too short on a loaded runner makes every
+  # assertion below pass without the stale-answer path being taken at all.
+  C13_JVM=0
+  for _ in $(seq 1 60); do
+    pgrep -f "RelayKt" >/dev/null 2>&1 && { C13_JVM=1; break; }
+    kill -0 "$C13_PID" 2>/dev/null || break
+    sleep 1
+  done
+  [ "$C13_JVM" = 1 ] || bad "C13 the relay JVM never started; the interleaving below proves nothing"
+  sleep 5                                    # past resolution, into the lock wait
   printf '%s\n' "$S13B" > "$A13/.gradle/keliver-store-path"
   rm -f "$A13/.gradle/keliver-store.lock/pid"; rmdir "$A13/.gradle/keliver-store.lock"
   C13_UP=0
@@ -821,11 +865,26 @@ fi
 [ -f "$L14/pid" ] && [ "$(tr -d '\n' < "$L14/pid")" = "$$" ] \
   && ok "C14 the live holder's marker is untouched" || bad "C14 the live holder's marker changed"
 rm -f "$L14/pid"; rmdir "$L14"
+# An UNREADABLE marker means wait, not steal. `kill -0 xx` fails the same way
+# `kill -0 <dead pid>` does, so without a numeric guard this lock was taken over.
+mkdir -p "$L14"; printf 'xx\n' > "$L14/pid"
+if "$RECOVER" "$A14" --store "$S14" --home "$DISP/home" --dry-run > "$DISP/c14c.log" 2>&1; then
+  bad "C14 a lock with an unreadable holder marker was taken over"
+else
+  ok "C14 an unreadable holder marker means wait, not steal"
+fi
+[ -f "$L14/pid" ] && [ "$(tr -d '\n' < "$L14/pid")" = "xx" ] \
+  && ok "C14 and that lock is left exactly as it was" || bad "C14 the unreadable marker was disturbed"
+grep -q "If nothing is running, remove" "$DISP/c14c.log" \
+  && ok "C14 the refusal names the directory and the remedy" \
+  || bad "C14 the refusal offers no way out"
+rm -f "$L14/pid"; rmdir "$L14"
 # NOTE the shell's holder-marker check (a failed marker write is a failed
 # acquisition) is defensive and is NOT exercised here: by the time it runs, the
 # probe write into .gradle has already succeeded, so no external setup makes it
-# fail without an injector. The equivalent JVM check IS exercised, in
-# StoreLockTest.anUnwritableMarkerIsTreatedAsAFailedAcquisition.
+# fail without an injector. The JVM equivalent IS exercised, through a seam, in
+# StoreLockTest.anUnwritableMarkerIsTreatedAsAFailedAcquisition — which until
+# this round reached onBusy instead and passed on the wrong branch.
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

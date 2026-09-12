@@ -355,6 +355,7 @@ internal fun <T> withStoreLock(
   onUnavailable: (File, String) -> Nothing,
   onBusy: (File) -> Nothing,
   afterFailedCreate: () -> Unit = {},
+  afterAcquire: () -> Unit = {},
   block: () -> T,
 ): T {
   val lock = storeLockDir(repoDir)
@@ -392,6 +393,10 @@ internal fun <T> withStoreLock(
   // The marker identifies the holder. Without it nobody — including this
   // process's own cleanup — can tell whose lock this is, so a failure to write
   // it is a failure to acquire.
+  // Seam, no-op in production: the marker write can only fail once the
+  // directory is ours, which nothing outside the process can arrange.
+  afterAcquire()
+
   val me = ProcessHandle.current().pid().toString()
   val pidFile = File(lock, "pid")
   val marked = runCatching { pidFile.writeText(me + "\n"); pidFile.readText().trim() == me }.getOrDefault(false)
@@ -501,7 +506,11 @@ internal fun defaultStoreDir(repoDir: File, notify: (String) -> Unit = {}): File
     else -> throw StoreOwnershipException(
       buildString {
         appendLine("portal store split: ${existing.size} stores exist for this app.")
-        existing.forEach { appendLine("  - ${it.name}   identity ${publicKeyFingerprint(it)}") }
+        // FULL paths, not basenames: this message names a command whose
+        // --store argument is a directory, and an operator who copies a
+        // basename out of it gets "no store at one-13aa30ce". The shell
+        // resolver prints realpaths for the same reason.
+        existing.forEach { appendLine("  - ${it.canonicalPath}   identity ${publicKeyFingerprint(it)}") }
         appendLine("  app: ${repoDir.absoluteFile.canonicalFile.path}")
         appendLine("  the name a first boot would choose today is ${preferred.name}")
         appendLine("This happens when one app was launched through more than one path — a")
@@ -542,7 +551,12 @@ internal fun publicKeyFingerprint(storeDir: File): String {
  * fresh one. Whether it may then USE it is [claimStoreFor]'s decision.
  */
 fun PortalConfig.storeDir(repoDir: File, notify: (String) -> Unit = {}): File {
-  store?.let { s ->
+  // A BLANK value means "not set", exactly as `if store:` does in the mirror.
+  // Without this, `{"store": ""}` took the relative-path branch and resolved to
+  // `File(repoDir, "")` — the app's own source tree — while every Gradle
+  // consumer went on reading ~/.keliver-portal/apps/…: one identity signing and
+  // another verifying, which is the failure this contract exists to prevent.
+  store?.takeIf { it.isNotBlank() }?.let { s ->
     return when {
       s.startsWith("~/") -> File(System.getProperty("user.home"), s.removePrefix("~/"))
       File(s).isAbsolute -> File(s)

@@ -119,6 +119,22 @@ class StoreContractTest {
   }
 
   @Test
+  fun aPathContainingDotDotAgrees() {
+    // `abspath` collapses ".." lexically; the JVM resolves the symlink first.
+    // For work/x/link/.. that is two different app directories — one store each.
+    val home = tmp("home")
+    val work = tmp("work")
+    val target = File(work, "target").also { it.mkdirs() }
+    File(work, "x").mkdirs()
+    java.nio.file.Files.createSymbolicLink(File(work, "x/link").toPath(), target.toPath())
+    val viaDotDot = File(work, "x/link/..")
+    assertEquals(
+      withUserHome(home) { PortalConfig().storeDir(viaDotDot) }.canonicalPath,
+      File(viaScript(viaDotDot, home)).canonicalPath,
+    )
+  }
+
+  @Test
   fun theDefaultOnlyModeAgrees() {
     val home = tmp("home")
     val app = tmp("app")

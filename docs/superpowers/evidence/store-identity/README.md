@@ -39,7 +39,7 @@ does) against apps outside the repository. The same script, both sides:
 | --- | --- | --- |
 | [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command | **29 passed / 18 failed** |
 | [`lifecycle-before.log`](lifecycle-before.log) | `43148d63e` — after that round, before the transaction-lifecycle round | **62 passed / 14 failed** |
-| [`recovery-check.log`](recovery-check.log) | this branch | **77 passed / 0 failed** |
+| [`recovery-check.log`](recovery-check.log) | this branch | **80 passed / 0 failed** |
 
 * **C1** a real Zipline manifest signed with the store's key before a move
   verifies, with Zipline's own `ManifestVerifier`, against the public key the
@@ -152,6 +152,30 @@ changed. One assertion in an earlier draft of C10 matched the word "recovery"
 anywhere in the relay log and so matched the disposable run directory's name —
 it passed for the wrong reason. It now matches the refusal's own words, and
 both runs above were redone with the tightened version.
+
+## What an independent review then found
+
+A read-only reviewer inspected the whole diff at `de6a4c952` and returned two
+blockers and nine majors, all with file:line evidence and most of them
+measured. The two blockers were:
+
+* `interrupt_at` turned "the command never reached the boundary" into
+  `C11_RC=99`, which satisfies "exits non-zero" — and because nothing had been
+  written, every follow-up assertion was trivially true. The entire
+  interruption section could report green having tested nothing, on the
+  platform where signal handling is least verified. It now fails, and every
+  C11 assertion is gated on the signal actually landing.
+* the shell's `lock_take_over` read a marker of `xx` as a DEAD holder, because
+  `kill -0 xx` fails the same way `kill -0 <dead pid>` does — measured, the
+  lock was stolen. `kill -0` also fails with EPERM for a live process owned by
+  another user. Both now mean wait; only a definite "no such process" counts.
+
+Nine majors were fixed in the same round, including three of the same shape
+this branch exists to close — a documented or recommended route that does not
+work: the relay's split refusal printed basenames while the command it names
+takes a directory; the adopter guide said you could re-run recovery naming the
+other store, which the code refuses; and `{"store": ""}` resolved to the app's
+own source tree in Kotlin while the shell mirror fell through to the default.
 
 ## What was not touched
 

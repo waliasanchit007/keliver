@@ -113,9 +113,13 @@ private fun resolveStore(): File {
       // Other consumers already see it: PORTAL_STORE is step 1 of the shell
       // resolver too, and it is an environment variable, so a build in the
       // same environment resolves it without any pointer.
-      if (env == null) writeStorePointer(repoDir, dir)
-      resolved = dir
-      null
+      val pointerFailure = if (env == null) writeStorePointer(repoDir, dir) else null
+      if (pointerFailure != null) {
+        pointerFailure
+      } else {
+        resolved = dir
+        null
+      }
     } catch (e: StoreOwnershipException) {
       // A refusal is an answer, not a crash. This used to surface as an
       // ExceptionInInitializerError stack trace with the actionable part
@@ -147,13 +151,24 @@ private fun resolveStore(): File {
  * run and must not rebind the app, and a build in the same environment reads
  * the variable directly.
  */
-private fun writeStorePointer(repo: File, store: File) {
-  runCatching {
-    val f = File(File(repo, ".gradle"), "keliver-store-path")
+private fun writeStorePointer(repo: File, store: File): String? {
+  val f = File(File(repo, ".gradle"), "keliver-store-path")
+  val line = store.absolutePath + "\n"
+  return runCatching {
     f.parentFile.mkdirs()
-    val line = store.absolutePath + "\n"
     if (!f.exists() || f.readText() != line) f.writeText(line)
-  }.onFailure { println("portal-server: could not record the store pointer: $it") }
+    check(f.readText() == line) { "the pointer does not read back as written" }
+    null
+  }.getOrElse { e ->
+    // Not a warning. The pointer is half the binding: the publisher signs with
+    // the key in the store it names and the device hosts embed the public key
+    // from there, so a relay that serves without it hands the next build a
+    // different identity. This used to print and carry on.
+    "portal-server: the store pointer could not be written, so the portal will not start.\n" +
+      "  $f\n  $e\n" +
+      "  The store itself is unchanged and still belongs to this app. Make that path\n" +
+      "  writable (it must be a regular file, not a directory) and start again."
+  }
 }
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")
