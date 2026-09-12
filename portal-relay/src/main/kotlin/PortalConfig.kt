@@ -510,7 +510,13 @@ internal fun defaultStoreDir(repoDir: File, notify: (String) -> Unit = {}): File
         // --store argument is a directory, and an operator who copies a
         // basename out of it gets "no store at one-13aa30ce". The shell
         // resolver prints realpaths for the same reason.
-        existing.forEach { appendLine("  - ${it.canonicalPath}   identity ${publicKeyFingerprint(it)}") }
+        existing.forEach {
+          // absolutePath, not canonicalPath: the latter throws on a symlink
+          // loop, and throwing from inside the constructor of the refusal would
+          // replace the actionable message with a stack trace. These live
+          // directly under apps/, so the two agree.
+          appendLine("  - ${it.absolutePath}   identity ${publicKeyFingerprint(it)}")
+        }
         appendLine("  app: ${repoDir.absoluteFile.canonicalFile.path}")
         appendLine("  the name a first boot would choose today is ${preferred.name}")
         appendLine("This happens when one app was launched through more than one path — a")

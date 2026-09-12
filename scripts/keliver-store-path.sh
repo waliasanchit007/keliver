@@ -80,7 +80,11 @@ if not only_default:
             store = json.load(open(cfg)).get("store")
         except Exception:
             store = None
-        if store:
+        # `.strip()`: Kotlin drops a blank value as "not set", and a
+        # whitespace-only one used to be kept here and expanded to a directory
+        # INSIDE the app tree — the same failure as `""`, with the two sides
+        # swapped.
+        if store and store.strip():
             answer("config", expand(store))
 
     pointer = os.path.join(app, ".gradle", "keliver-store-path")

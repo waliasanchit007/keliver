@@ -119,6 +119,22 @@ class StoreContractTest {
   }
 
   @Test
+  fun aWhitespaceOnlyStoreAgrees() {
+    // Kotlin drops a blank value as "not set". The mirror kept a whitespace-only
+    // one and expanded it to a directory INSIDE the app tree — `""` all over
+    // again with the sides swapped.
+    val home = tmp("home")
+    val app = tmp("app")
+    File(app, "keliver.portal.json").writeText("""{"store":"   "}""")
+    val kotlin = withUserHome(home) { PortalConfig(store = "   ").storeDir(app) }
+    assertEquals(kotlin.canonicalPath, File(viaScript(app, home)).canonicalPath)
+    assertTrue(
+      !kotlin.canonicalPath.startsWith(app.canonicalPath),
+      "a blank store must never resolve inside the app: $kotlin",
+    )
+  }
+
+  @Test
   fun aPathContainingDotDotAgrees() {
     // `abspath` collapses ".." lexically; the JVM resolves the symlink first.
     // For work/x/link/.. that is two different app directories — one store each.

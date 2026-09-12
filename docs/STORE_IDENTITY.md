@@ -51,9 +51,14 @@ none derives the path itself.
    own store next time. It does still **claim** the store — the `owner` marker
    is written and is permanent — because that is what stops two apps sharing one
    explicit store (U17), and it is why a `PORTAL_STORE` directory should be a
-   throwaway one. A consequence worth knowing: after such a run the store is
-   owned by an app that no longer resolves to it, and `keliver-store-recover.sh`
-   will refuse to hand it to anything else while that app still exists.
+   throwaway one. A consequence worth knowing, and an easy one to get wrong:
+   after such a run the store is owned by an app that no longer resolves to it.
+   The relay will refuse to serve it to any other app. But
+   `keliver-store-recover.sh` will **not** refuse to rebind it — its guard is
+   "the recorded owner still exists AND still resolves to this store", and after
+   a `PORTAL_STORE` run the owner resolves to its own default store instead. So
+   a claimed throwaway store is protected from being *served* to another app,
+   not from being *reassigned* to one. Measured, not assumed.
 2. `store` in `<app>/keliver.portal.json` — explicit, committed.
 3. `<app>/.gradle/keliver-store-path` — the binding pointer.
 4. `~/.keliver-portal/apps/<slug>-<hash>` — the first-boot default.

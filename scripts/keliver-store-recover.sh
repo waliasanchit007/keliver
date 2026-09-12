@@ -184,14 +184,18 @@ APP_LOCK="$GRADLE_DIR/keliver-store.lock"
 # the lock stolen; and it fails with EPERM for a LIVE process owned by another
 # user, which would steal a running relay's lock. Both mean wait.
 lock_holder_gone() { # pid -> 0 only when the process definitely does not exist
-  local pid="$1" err
+  local pid="$1"
   case "$pid" in ''|*[!0-9]*) return 1 ;; esac      # unreadable -> wait
-  kill -0 "$pid" 2>/dev/null && return 1            # alive -> wait
-  err="$(kill -0 "$pid" 2>&1)"
-  case "$err" in
-    *"o such process"*) return 0 ;;                 # ESRCH: definitely gone
-    *) return 1 ;;                                  # EPERM or anything else: wait
-  esac
+  kill -0 "$pid" 2>/dev/null && return 1            # alive, and ours -> wait
+  # `kill -0` also fails with EPERM for a LIVE process owned by another user,
+  # so its failure alone does not mean death. Ask `ps` instead of parsing the
+  # error text: bash's kill prints strerror(errno), and glibc TRANSLATES that
+  # through the libc catalog, so an "o such process" match silently stops
+  # working under LANG=de_DE and the lock is never reclaimed. `ps -p` is POSIX
+  # and lists processes regardless of owner.
+  command -v ps >/dev/null 2>&1 || return 1         # cannot tell -> wait
+  ps -p "$pid" >/dev/null 2>&1 && return 1          # alive, someone else's -> wait
+  return 0
 }
 
 lock_take_over() { # lock-dir -> 0 when the directory was cleared for a retry
