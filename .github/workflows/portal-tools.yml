@@ -208,60 +208,17 @@ jobs:
           profile: pixel_5
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           disable-animations: true
+          # This action runs `script:` under /usr/bin/sh, which is dash on
+          # Ubuntu and rejects `set -o pipefail`. Keep this a single bash call
+          # and put the actual checks in a reviewable script that a local run
+          # against an attached device can use unchanged.
           script: |
-            set -euo pipefail
-            SERIAL="$(adb devices | awk '/device$/{print $1; exit}')"
-            echo "serial: $SERIAL"
-
-            # 1. The documented development route, end to end, from the package.
-            #    This installs the host and drives the guide's device steps.
-            scripts/keliver-adopter-acceptance.sh "$RUNNER_TEMP/acceptance" \
-              "${{ steps.apk.outputs.zip }}" --serial "$SERIAL"
-
-            # 2. Production mode must be REFUSED, and nothing may be fetched.
-            adb -s "$SERIAL" logcat -c
-            adb -s "$SERIAL" shell am force-stop dev.keliver.portaldevice
-            adb -s "$SERIAL" shell am start -n \
-              dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity \
-              --es mode prod
-            sleep 12
-            adb -s "$SERIAL" logcat -d > prod-attempt.log
-            adb -s "$SERIAL" exec-out screencap -p > prod-refused.png
-            adb -s "$SERIAL" shell uiautomator dump /sdcard/prod.xml >/dev/null
-            adb -s "$SERIAL" shell cat /sdcard/prod.xml > prod-ui.xml
-
-            grep -q "refusing production mode" prod-attempt.log \
-              || { echo "::error::no refusal logged"; exit 1; }
-            grep -qi "Production mode refused" prod-ui.xml \
-              || { echo "::error::the refusal is not on screen"; exit 1; }
-            # Nothing may have been fetched for a refused session.
-            if grep -qE "prod mode: loading|manifest.zipline.json" prod-attempt.log; then
-              echo "::error::a manifest or bundle was requested for a refused session"; exit 1
-            fi
-
-            # 3. The development route still works after the refusal.
-            adb -s "$SERIAL" logcat -c
-            adb -s "$SERIAL" shell am force-stop dev.keliver.portaldevice
-            adb -s "$SERIAL" shell am start -n \
-              dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
-            sleep 10
-            adb -s "$SERIAL" logcat -d > dev-after.log
-            grep -q "mode=dev" dev-after.log \
-              || { echo "::error::the development route did not start"; exit 1; }
-            grep -q "refusing production mode" dev-after.log \
-              && { echo "::error::the development route was refused"; exit 1; }
-            adb -s "$SERIAL" exec-out screencap -p > dev-after.png
-            echo "device checks passed"
+            bash scripts/keliver-device-verify.sh "${{ steps.apk.outputs.zip }}" "$RUNNER_TEMP/devverify" "$GITHUB_WORKSPACE/device-evidence"
 
       - name: Keep the device evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: device-evidence-${{ github.event.inputs.device_run_id }}
-          path: |
-            prod-attempt.log
-            prod-refused.png
-            prod-ui.xml
-            dev-after.log
-            dev-after.png
+          path: device-evidence/
           if-no-files-found: warn
