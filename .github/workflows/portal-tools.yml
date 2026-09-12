@@ -24,6 +24,14 @@ on:
       ref:
         description: "Tag or commit to build (use a portal-tools-v* tag for releases)"
         required: true
+      device_run_id:
+        description: "Set to a run id holding a retained candidate artifact to run DEVICE verification instead of a build"
+        required: false
+        default: ""
+      device_apk_sha256:
+        description: "sha256 the APK inside that artifact must have"
+        required: false
+        default: ""
 # Least privilege, split by job. The BUILD job is read-only, so a branch build
 # or a manual dispatch physically cannot create a release, attach an asset,
 # publish a package or move a tag. Only the RELEASE job can write, and it runs
@@ -31,7 +39,12 @@ on:
 permissions:
   contents: read
 jobs:
+  # A dispatch either BUILDS a candidate or VERIFIES one on a device, never both.
+  # (The device job lives here rather than in its own file because GitHub will
+  # only dispatch a workflow whose filename already exists on the default
+  # branch, and main is not being pushed.)
   bundle:
+    if: github.event_name == 'push' || github.event.inputs.device_run_id == ''
     permissions:
       contents: read
     # Prerequisites this job actually needs: JDK 17, the Android SDK (the bundle
@@ -135,3 +148,120 @@ jobs:
           # Its OWN release. Existing v* releases and their assets are untouched.
           tag_name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
+
+  device:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.device_run_id != ''
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Fetch the RETAINED candidate artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.inputs.device_run_id }}
+          github-token: ${{ github.token }}
+          pattern: keliver-portal-tools-*
+          merge-multiple: true
+          path: candidate
+
+      - name: Identify the APK under test
+        id: apk
+        run: |
+          set -euo pipefail
+          zip="$(ls candidate/keliver-portal-tools-*.zip)"
+          echo "zip: $zip"; sha256sum "$zip"
+          entry="$(unzip -Z1 "$zip" | grep -E 'host/.*\.apk$')"
+          unzip -p "$zip" "$entry" > host.apk
+          got="$(sha256sum host.apk | cut -d' ' -f1)"
+          echo "apk sha256: $got"
+          test "$got" = "${{ github.event.inputs.device_apk_sha256 }}"
+          # The bundled host must still be key-free at the point of install.
+          if unzip -l host.apk | grep -q 'assets/portal_ed25519.pub'; then
+            echo "::error::the APK under test embeds a portal key"; exit 1
+          fi
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          df -h / /mnt || true
+
+      - name: Boot an emulator and run the device checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          # aosp_atd is the smallest x86_64 image and is built for CI. API 33
+          # has no "default" (AOSP) x86_64 image, so that would not resolve.
+          target: aosp_atd
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            SERIAL="$(adb devices | awk '/device$/{print $1; exit}')"
+            echo "serial: $SERIAL"
+
+            # 1. The documented development route, end to end, from the package.
+            #    This installs the host and drives the guide's device steps.
+            scripts/keliver-adopter-acceptance.sh "$RUNNER_TEMP/acceptance" \
+              "${{ steps.apk.outputs.zip }}" --serial "$SERIAL"
+
+            # 2. Production mode must be REFUSED, and nothing may be fetched.
+            adb -s "$SERIAL" logcat -c
+            adb -s "$SERIAL" shell am force-stop dev.keliver.portaldevice
+            adb -s "$SERIAL" shell am start -n \
+              dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity \
+              --es mode prod
+            sleep 12
+            adb -s "$SERIAL" logcat -d > prod-attempt.log
+            adb -s "$SERIAL" exec-out screencap -p > prod-refused.png
+            adb -s "$SERIAL" shell uiautomator dump /sdcard/prod.xml >/dev/null
+            adb -s "$SERIAL" shell cat /sdcard/prod.xml > prod-ui.xml
+
+            grep -q "refusing production mode" prod-attempt.log \
+              || { echo "::error::no refusal logged"; exit 1; }
+            grep -qi "Production mode refused" prod-ui.xml \
+              || { echo "::error::the refusal is not on screen"; exit 1; }
+            # Nothing may have been fetched for a refused session.
+            if grep -qE "prod mode: loading|manifest.zipline.json" prod-attempt.log; then
+              echo "::error::a manifest or bundle was requested for a refused session"; exit 1
+            fi
+
+            # 3. The development route still works after the refusal.
+            adb -s "$SERIAL" logcat -c
+            adb -s "$SERIAL" shell am force-stop dev.keliver.portaldevice
+            adb -s "$SERIAL" shell am start -n \
+              dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
+            sleep 10
+            adb -s "$SERIAL" logcat -d > dev-after.log
+            grep -q "mode=dev" dev-after.log \
+              || { echo "::error::the development route did not start"; exit 1; }
+            grep -q "refusing production mode" dev-after.log \
+              && { echo "::error::the development route was refused"; exit 1; }
+            adb -s "$SERIAL" exec-out screencap -p > dev-after.png
+            echo "device checks passed"
+
+      - name: Keep the device evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-evidence-${{ github.event.inputs.device_run_id }}
+          path: |
+            prod-attempt.log
+            prod-refused.png
+            prod-ui.xml
+            dev-after.log
+            dev-after.png
+          if-no-files-found: warn
