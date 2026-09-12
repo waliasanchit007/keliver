@@ -50,8 +50,8 @@ jobs:
     # Prerequisites this job actually needs: JDK 17, the Android SDK (the bundle
     # ships a device-host APK built by :portal-device-android:assembleDebug),
     # Node/Yarn for the Kotlin/Wasm editor build, python3 and zip.
-    # ubuntu-latest carries all of them. NOTE: as of the 0.3.4 candidate this
-    # job has NOT been executed on Linux — see docs/RELEASE_REVIEW.md.
+    # ubuntu-latest carries all of them — verified by run 34587245714, which
+    # built the 0.3.4 candidate here and passed the portable checks.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

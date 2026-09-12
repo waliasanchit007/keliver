@@ -1342,7 +1342,24 @@ source, no store document) and is now 19/0.
 `5ca96302df46fc4815a76d4487b0913ba5d160589f3f166f4defbb656b2c5a44`, tools 0.3.4,
 Maven dependency version 0.3.3 unchanged.
 
-**Still blocked**: device verification. No AVD, system image, `sdkmanager` or
-device here, so the APK has never been installed or launched — APK inspection
-and unit tests do not substitute. The Linux CI path for `portal-tools.yml`
-remains unexecuted.
+**Device verification: DONE, on CI.** Local emulator work was abandoned — this
+machine's single APFS container was full — so the route is a hosted runner.
+`.github/workflows/portal-tools.yml` gained a `device` job (`contents: read` +
+`actions: read`, dispatch-only) that downloads the **retained** candidate
+artifact, checks its APK sha256, and runs `scripts/keliver-device-verify.sh` on
+an `aosp_atd` x86_64 API 33 emulator.
+
+Run [`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791):
+**19 device checks, 0 failed**, with the packaged acceptance inside it at
+**23 passed, 0 failed**. Production mode is refused on screen on a cold host and
+again on a warm one, requesting no manifest or bundle and loading no guest code;
+the development route renders the guest screen and still does after a refusal.
+
+The Linux CI path is also no longer unexecuted: run `34587245714` built the
+bundle on `ubuntu-24.04` and passed the portable checks, producing the artifact
+the device run used (zip `2b6536a0…`, APK `d4fb1605…`).
+
+**Remaining before release**: only the decision of which artifact to publish —
+the retained CI bytes that were actually verified, or a fresh tag build. See
+`docs/RELEASE_REVIEW.md`. Not covered by any of this: physical devices, other
+API levels, and arm64.

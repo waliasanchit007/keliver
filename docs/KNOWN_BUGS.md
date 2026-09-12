@@ -1256,10 +1256,26 @@ packaging across a warm build directory — key A, then dev-only, then key B,
 then no key — and against the previous wiring fails with *"THE DEVELOPMENT HOST
 CARRIES A KEY: 'aaaaaaaa'"* and a later build still carrying key B.
 
-**Not verified on a device.** The refusal path and the development route have
-unit coverage and the APK has been inspected, but nothing has been installed or
-launched — there is no emulator or device available here. See
-`docs/RELEASE_REVIEW.md`.
+**Verified on a device.** CI run
+[`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791)
+installs the *retained CI candidate APK* (`d4fb1605…`) on an `aosp_atd` x86_64
+API 33 emulator with the bundle's own installer, and passes **19 device checks,
+0 failed**, with the packaged acceptance inside it at **23 passed, 0 failed**.
+Established on the device, not inferred:
+
+* `--es mode prod` is refused on a **cold** host and again on a **warm** one —
+  after a successful development session has populated the dev Zipline cache;
+* the refusal renders: `text="Production mode refused"` plus the full
+  actionable message, in the `dev.keliver.portaldevice` view hierarchy;
+* for each refused session, **no manifest or bundle was requested** and **no
+  guest code was loaded**;
+* the documented development route renders the guest screen, and still does
+  after a refusal (`codeLoadSuccess modules=40`).
+
+Evidence and limits:
+`docs/superpowers/evidence/tools-0.3.4/device-verification-ci.md`. Not covered:
+any physical device, any other API level, and arm64 — the APK ships
+`lib/arm64-v8a` and `lib/armeabi-v7a`, neither of which was executed.
 
 ### U18. `get_guide` returned "guide not found" for every adopter — FIXED
 

@@ -1,8 +1,17 @@
 # Release review — keliver-portal-tools 0.3.4 candidate
 
-Prepared 2026-09-11. **Nothing has been pushed, tagged, uploaded or dispatched,
-and no published bytes have been replaced.** This is a candidate built locally
-from a clean tree, for a release decision.
+Prepared 2026-09-11, device verification completed 2026-09-12. **Nothing has
+been tagged, released, uploaded to a release, or published to Maven, and no
+published bytes have been replaced.** Commits went to the review branch
+`review/portal-tools-0.3.4` only; `main` was not pushed. This is a candidate for
+a release decision.
+
+**The device blocker is cleared.** The CI-built candidate APK has been installed
+and driven on an emulator — CI run
+[`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791),
+19 device checks and 23 acceptance checks, 0 failures. See *Device verification*
+below. The decision is now purely which artifact to publish and whether to
+accept the stated limits.
 
 ## Candidate
 
@@ -82,8 +91,9 @@ the check that actually covers it.
   package one that does, and a production request is refused on screen before
   anything is fetched. An adopter's own production host is unchanged: its key is
   embedded and verification stays on. *Covered by:* `HostTrustPolicyTest` (6),
-  `keliver-device-host-hygiene-check.sh` (5), and APK inspection — **not** by
-  any on-device run.
+  `keliver-device-host-hygiene-check.sh` (5), APK inspection, **and an on-device
+  run** — CI run `34670604791` shows the refusal on screen, cold and warm, with
+  no manifest or bundle requested and no guest code loaded.
 - **Scaffolder fixes:** `keliver-init` writes a `.gitignore`; a documented route
   exists for adopting a pre-existing store. *Covered by:* the acceptance's
   scaffold and ownership steps.
@@ -151,7 +161,7 @@ or launches the APK; `:portal-editor:wasmJsTest` was not part of it either.
 | `:portal-device-android:testDebugUnitTest` (`HostTrustPolicyTest`) | **6 tests, 0 failures** |
 | unknown-screen `/doc` | now **automated inside the acceptance**: 404, no source created, no store document created |
 | packaged APK contents | no `assets/portal_ed25519.pub` |
-| device / emulator route | **NOT RUN — verification incomplete, see Blockers** |
+| device / emulator route | **PASSED** — CI run `34670604791`, 19 device checks + 23 acceptance checks, 0 failed |
 
 The acceptance gate itself was repaired first (U21). It used to launch
 `keliver-portal` in the background, ignore its result, and accept any server
@@ -177,60 +187,73 @@ ships a device-host APK built by `:portal-device-android:assembleDebug`;
 Node/Yarn for the Kotlin/Wasm editor distribution; `python3` and `zip`. Nothing
 in the bundle requires macOS — no iOS or native target is built.
 
-**This candidate was built on macOS 15 (Darwin 25.5.0) with JDK 17. The workflow
-has not been executed on Linux, in this block or any previous one.** The
-workflow file has been corrected for the new tag convention, but a corrected
-YAML is not evidence that it runs.
+The candidate was also built on macOS 15 (Darwin 25.5.0) with JDK 17, which is
+where the local artifact in the table above came from.
 
-Supported path, by the evidence available: **build locally on macOS** as this
-candidate was, and treat the Linux workflow as unverified.
+**The Linux workflow is no longer unverified.** Run `34587245714` executed it
+end to end on `ubuntu-24.04`: it built the zip, printed a `VERSION.json` whose
+`sourceCommit` matches the dispatched ref, produced an APK, and passed the
+portable checks. The Android SDK — the prerequisite most likely to be missing —
+was present. The device job then ran the resulting APK on an emulator.
 
-**Required CI gate before trusting the workflow** (not authorized here, no
-remote execution in this block): dispatch `portal-tools.yml` on a branch, and
-require that it (a) builds the zip, (b) prints a `VERSION.json` whose
-`sourceCommit` matches the dispatched ref, and (c) produces an APK — the Android
-SDK on the runner is the piece most likely to be missing. Then re-run the two
-acceptance scripts against the Linux-built zip on a machine that can run them.
-Until that has passed, releases should be cut from the macOS build.
+Supported path: **the CI build is the one to publish.** It is reproducible from
+a tag by anyone, its artifact is retained, and it is the artifact the device
+verification actually ran against.
+
+## Device verification
+
+CI run
+[`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791),
+`workflow_dispatch` on `review/portal-tools-0.3.4`, running
+`scripts/keliver-device-verify.sh` as committed at `dca19196d`. It downloads the
+**retained** artifact from run `34587245714`, checks the APK's sha256 against
+`d4fb1605…`, refuses an APK carrying a portal key, and installs it with the
+bundle's own installer — nothing is rebuilt.
+
+| what | result |
+|---|---|
+| emulator | `aosp_atd` x86_64, API 33, `pixel_5`, headless, swiftshader, KVM on |
+| install | `installed dev.keliver.portaldevice (versionName 1.0)`, sidecar checksum matched |
+| device checks | **19 passed, 0 failed** |
+| packaged acceptance with `--serial` | **23 passed, 0 failed** (19 portable + 4 device) |
+| `--es mode prod`, cold host | refused, on screen, no manifest/bundle requested, no guest code loaded |
+| `--es mode prod`, warm host (after a dev session) | refused identically |
+| development route | guest screen rendered: `My Inbox`, `First item`, `Second item`, `Refresh` |
+| development route after a refusal | `mode=dev`, `codeLoadSuccess modules=40`, guest screen in the dump |
+
+The on-screen evidence is the uiautomator view hierarchy, not a screenshot:
+`adb exec-out screencap` on a `-no-window` emulator returns an all-black frame,
+which an earlier run (`34669956183`) proved by producing three byte-identical
+blank PNGs. Details, including two assertions that were tightened after that
+discovery, are in
+`docs/superpowers/evidence/tools-0.3.4/device-verification-ci.md`; the evidence
+files are in `docs/superpowers/evidence/tools-0.3.4/device-run-34670604791/`.
 
 ## Blockers and limitations
 
-**Two findings that need a decision before publishing:**
+**Both earlier findings are now closed.**
 
-1. **The device route is still unverified, and remains the one blocker.** The
-   APK has never been installed or launched. An isolated SDK, an `aosp_atd`
-   arm64 system image and an AVD were installed and configured here — see
-   `docs/superpowers/evidence/tools-0.3.4/emulator-attempt.md` — but the boot
-   was stopped rather than run: the machine's single APFS container was at 100%
-   with ~3.3 GB free, the emulator wants ~7.4 GB at the default partition size
-   (~3 GB at `disk.dataPartition.size = 800M`), and the `--serial` acceptance
-   additionally runs Gradle inside a scaffolded app. The isolated SDK was then
-   removed rather than left holding 5.5 GB of a full disk (free space went
-   7.6 GB → 13 GB); nothing outside that isolated tree was touched.
-
-   **A CI route is prepared and NOT dispatched**:
-   `.github/workflows/portal-tools-device.yml`, `workflow_dispatch` only,
-   `contents: read` + `actions: read`, no release step. It downloads the
-   *retained* artifact from a nominated run, checks the APK's sha256 against an
-   expected value, refuses an APK carrying a portal key, boots an x86_64
-   emulator (the APK ships `lib/x86_64`, so this is possible), runs the packaged
-   acceptance with `--serial`, then asserts that `--es mode prod` is refused on
-   screen with no manifest or bundle request, and that the development route
-   still starts afterwards. Screenshots and logcat are uploaded as evidence.
-
-   That workflow has **never been run**: KVM availability and emulator disk
-   headroom on a hosted runner are expectations, not measurements. Its first run
-   is the experiment, and it needs your authorization.
+1. ~~The device route is unverified.~~ **Done** — see *Device verification*
+   below. The local attempt was abandoned for disk (this machine's single APFS
+   container was at 100%; `docs/superpowers/evidence/tools-0.3.4/emulator-attempt.md`),
+   and the isolated SDK was removed. The hosted-runner route replaced it and
+   works: 80 GB free, KVM available, boot to `sys.boot_completed=1` in 36-38 s.
 2. ~~A locally built bundle can embed the builder's portal public key.~~
    **Fixed** (U22, `8751ad333`) — see the release note above. The property is
    now enforced by the build (`-Pkeliver.devOnlyHost=true`, plus a packaging
    refusal if the asset is present) rather than by remembering to set
-   `PORTAL_STORE`, and `keliver-device-host-hygiene-check.sh` holds it across a
-   warm build directory.
+   `PORTAL_STORE`, `keliver-device-host-hygiene-check.sh` holds it across a warm
+   build directory, and the refusal is now observed on a device.
 
 **Other limitations:**
 
-- macOS only; Linux inferred from the script, not executed.
+- The device route was exercised on **one** emulator only: `aosp_atd` x86_64,
+  API 33. No physical device, no other API level, and **no arm64 runtime** — the
+  APK ships `lib/arm64-v8a` and `lib/armeabi-v7a`, neither of which was
+  executed.
+- The production *load* path remains unexercised end to end. The bundled host
+  refuses production by design, so nothing here verifies a signed bundle
+  actually loading in an adopter's own production host.
 - The acceptance runs a single app: it says nothing about concurrent store
   isolation, which rests on the unit tests named above.
 - U20 remains open and unassessed: the editor asks the browser for a frame every
@@ -243,17 +266,56 @@ Until that has passed, releases should be cut from the macOS build.
 
 ## Exact release actions, awaiting authorization
 
-None of these has been performed.
+None of these has been performed. **No tag exists, no release exists, nothing
+has been uploaded, and no Maven coordinate has moved.**
 
-1. Decide the remaining blocker: run the device route, or accept shipping an
-   APK nobody has launched.
-2. `git tag portal-tools-v0.3.4 ec10e191a` — the tag must name the commit the
-   package was built from.
-3. `git push origin portal-tools-v0.3.4` — this fires `portal-tools.yml` only.
-   It will *rebuild* the zip on `ubuntu-latest`, which is the unverified path;
-   if that is not wanted yet, create the GitHub release manually and upload the
-   locally built zip instead, leaving the tag push for when the CI gate passes.
-4. Verify the published asset's sha256 against the candidate above if the local
-   zip is uploaded; expect a *different* hash if CI rebuilds it, and re-run the
-   acceptance against whatever is actually published.
-5. Leave `v0.3.3` and its asset alone. No Maven action of any kind.
+There is one open decision and then four mechanical steps.
+
+### The decision
+
+`portal-tools-v0.3.4` fires `portal-tools.yml`, whose `release` job attaches
+**the zip that tag build produces** — a *fourth* build of `ec10e191a`, not the
+artifact the device verification ran against. Two ways to close that gap:
+
+- **(a) Tag and let CI build the asset.** Simplest, and the path is now
+  verified: the same workflow already built, checked and produced a working APK
+  on Linux twice. The published zip's sha256 will **not** equal
+  `2b6536a0…` — a rebuild is not byte-reproducible here, and the two builds
+  already recorded above differ. Accept that, then re-run
+  `keliver-device-verify.sh` against the published asset to make the
+  verification apply to the bytes adopters download.
+- **(b) Publish the exact verified bytes.** Create the release manually and
+  upload the retained artifact from run `34587245714` (zip `2b6536a0…`, APK
+  `d4fb1605…`) — the bytes run `34670604791` actually installed and drove. The
+  tag then names the commit but not the build.
+
+**(b) is what the evidence supports**; (a) is defensible and cheaper, but ships
+bytes nobody has run.
+
+### Then
+
+1. `git tag portal-tools-v0.3.4 ec10e191a` — the tag must name the commit the
+   package was built from. Note `ec10e191a` is an ancestor of the review branch;
+   the later commits are the device job, the verification script and these docs,
+   none of which is in the bundle.
+2. Under (a): `git push origin portal-tools-v0.3.4`. Under (b): push the tag and
+   upload the retained zip to the release yourself, and be aware the tag push
+   will still trigger a CI build whose `release` job would attach its own zip —
+   so under (b) create the release from the retained artifact **first**, or hold
+   the tag push.
+3. Verify the published asset's sha256 and re-run
+   `scripts/keliver-adopter-acceptance.sh`, `keliver-acceptance-identity-check.sh`
+   and a device dispatch against **whatever is actually published**.
+4. Leave `v0.3.3` and its asset alone. No Maven action of any kind — the library
+   line does not move, and `portal-tools-v*` does not match the `v*` pattern
+   `publish.yml` listens on.
+
+### What this block changed
+
+Commits on `review/portal-tools-0.3.4` only (`d6b7bb432` → `dca19196d`, plus
+this doc): the device job in `.github/workflows/portal-tools.yml`,
+`scripts/keliver-device-verify.sh`, the evidence, and these docs. **No
+production source changed** — `portal-device-android`, `portal-relay`,
+`portal-mcp`, `portal-editor` and every published module are untouched, so the
+candidate commit `ec10e191a` and both candidate artifacts remain exactly what
+they were.
