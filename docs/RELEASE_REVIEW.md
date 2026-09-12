@@ -1,17 +1,47 @@
-# Release review — keliver-portal-tools 0.3.4 candidate
+# Release review — keliver-portal-tools 0.3.4
 
-Prepared 2026-09-11, device verification completed 2026-09-12. **Nothing has
-been tagged, released, uploaded to a release, or published to Maven, and no
-published bytes have been replaced.** Commits went to the review branch
-`review/portal-tools-0.3.4` only; `main` was not pushed. This is a candidate for
-a release decision.
+> **STATUS: RELEASED, 2026-09-12.**
+> <https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.4>
+>
+> This document was written as a *candidate review* and is kept as the record of
+> how the release was decided. Sections below that describe pending decisions or
+> open blockers were true when written and are now **superseded** — each is
+> marked. Nothing has been deleted.
 
-**The device blocker is cleared.** The CI-built candidate APK has been installed
-and driven on an emulator — CI run
+## Released
+
+| | |
+|---|---|
+| release | <https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.4> |
+| tag | `portal-tools-v0.3.4` (annotated `306ffc7fa1ecc77af96a04541e5fed4dfc306016`) |
+| tag target | **`ec10e191aa0fc04ce6663342b23b2ccf2ce76891`** |
+| asset | `keliver-portal-tools-0.3.4.zip`, 90,315,306 bytes, plus `.sha256` |
+| zip sha256 | `2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98` |
+| APK sha256 | `d4fb1605137342f6744628f1129ddaee746cb9c8a3288639f70bf7669ac76ebf` |
+| build run | [`34587245714`](https://github.com/waliasanchit007/keliver/actions/runs/34587245714) — produced artifact `10194397219` |
+| device run | [`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791) — 19 device + 23 acceptance checks, 0 failed |
+| Maven | **unchanged at 0.3.3.** No library published, no coordinate moved |
+| GitHub "Latest" | left on `v0.3.3` — this is a tools-only release |
+
+**The published bytes are the verified bytes, not a rebuild.** The asset is
+artifact `10194397219` from run `34587245714` uploaded byte-for-byte — the same
+artifact ID that device run `34670604791` downloaded and installed. The hash was
+confirmed at four points: the retained artifact, the upload, a re-download of
+the draft asset, and the public download URL after publishing. The published
+`.sha256` file validates the published zip.
+
+Publication used **option (b)** from *Exact release actions* below. Because a
+tag push runs the workflow **as defined at the tagged commit**, and
+`portal-tools.yml` at `ec10e191a` is the pre-least-privilege version
+(workflow-level `contents: write`, upload gated only on
+`if: github.event_name == 'push'`), that older uploader would have replaced the
+asset with its own rebuild. The procedure that prevented it is recorded in
+[`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md).
+
+**The device blocker was cleared** before release — CI run
 [`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791),
 19 device checks and 23 acceptance checks, 0 failures. See *Device verification*
-below. The decision is now purely which artifact to publish and whether to
-accept the stated limits.
+below.
 
 ## Candidate
 
@@ -162,6 +192,7 @@ or launches the APK; `:portal-editor:wasmJsTest` was not part of it either.
 | unknown-screen `/doc` | now **automated inside the acceptance**: 404, no source created, no store document created |
 | packaged APK contents | no `assets/portal_ed25519.pub` |
 | device / emulator route | **PASSED** — CI run `34670604791`, 19 device checks + 23 acceptance checks, 0 failed |
+| published asset, public URL | **`2b6536a0…` — matches the verified artifact** |
 
 The acceptance gate itself was repaired first (U21). It used to launch
 `keliver-portal` in the background, ignore its result, and accept any server
@@ -231,6 +262,9 @@ files are in `docs/superpowers/evidence/tools-0.3.4/device-run-34670604791/`.
 
 ## Blockers and limitations
 
+> **Superseded in part:** both blockers below are closed and the release has
+> shipped. The *Other limitations* remain accurate and still apply to 0.3.4.
+
 **Both earlier findings are now closed.**
 
 1. ~~The device route is unverified.~~ **Done** — see *Device verification*
@@ -264,12 +298,18 @@ files are in `docs/superpowers/evidence/tools-0.3.4/device-run-34670604791/`.
   isolating `user.home` without keeping `GRADLE_USER_HOME` on the real one loses
   that truststore and every download fails PKIX.
 
-## Exact release actions, awaiting authorization
+## Exact release actions — DONE
 
-None of these has been performed. **No tag exists, no release exists, nothing
-has been uploaded, and no Maven coordinate has moved.**
+> **Superseded:** this section was the pre-release plan. It was executed on
+> 2026-09-12 via **option (b)**, and the authorization it was awaiting was
+> given. The live procedure is [`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md);
+> the text below is kept as the record of the choice that was made.
 
-There is one open decision and then four mechanical steps.
+~~None of these has been performed. No tag exists, no release exists, nothing
+has been uploaded, and no Maven coordinate has moved.~~ All of it has now been
+performed, as recorded in *Released* at the top.
+
+There was one open decision and then four mechanical steps.
 
 ### The decision
 
@@ -290,7 +330,7 @@ artifact the device verification ran against. Two ways to close that gap:
   tag then names the commit but not the build.
 
 **(b) is what the evidence supports**; (a) is defensible and cheaper, but ships
-bytes nobody has run.
+bytes nobody has run. **(b) was chosen and executed.**
 
 ### Then
 

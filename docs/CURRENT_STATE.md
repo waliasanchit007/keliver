@@ -1359,7 +1359,30 @@ The Linux CI path is also no longer unexecuted: run `34587245714` built the
 bundle on `ubuntu-24.04` and passed the portable checks, producing the artifact
 the device run used (zip `2b6536a0…`, APK `d4fb1605…`).
 
-**Remaining before release**: only the decision of which artifact to publish —
-the retained CI bytes that were actually verified, or a fresh tag build. See
-`docs/RELEASE_REVIEW.md`. Not covered by any of this: physical devices, other
-API levels, and arm64.
+**RELEASED 2026-09-12**:
+<https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.4>
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.4` → **`ec10e191aa0fc04ce6663342b23b2ccf2ce76891`** |
+| asset | `keliver-portal-tools-0.3.4.zip`, 90,315,306 bytes, plus `.sha256` |
+| zip sha256 | `2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98` |
+| APK sha256 | `d4fb1605137342f6744628f1129ddaee746cb9c8a3288639f70bf7669ac76ebf` |
+| build run | [`34587245714`](https://github.com/waliasanchit007/keliver/actions/runs/34587245714) (artifact `10194397219`) |
+| device run | [`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791) |
+| Maven | **unchanged at 0.3.3** — no library published, no coordinate moved |
+| GitHub "Latest" | left on `v0.3.3`; this is a tools-only release |
+
+The published asset is the **verified artifact uploaded byte-for-byte**, not a
+rebuild: the same artifact ID the device run installed. Its hash was confirmed
+at the retained artifact, at upload, on a re-download of the draft, and on the
+public URL after publishing.
+
+Because a tag push runs workflows **as defined at the tagged commit**, and
+`portal-tools.yml` at `ec10e191a` still carried the auto-uploading `release`
+job, that job was prevented from replacing the asset. `portal-tools.yml` has
+since had automatic publication removed entirely — every job is read-only, and
+the asset is attached by hand from a named retained artifact. Procedure:
+`docs/PORTAL_TOOLS_RELEASE.md`.
+
+Not covered by any of this: physical devices, other API levels, and arm64.

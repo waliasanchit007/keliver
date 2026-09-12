@@ -13,13 +13,23 @@ command here comes from that package or from your app's Gradle wrapper.
 * **JDK 17 or later.** Verified on 17 and 21. If your default `java` is older,
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
-* The unpacked **`keliver-portal-tools`** package. Everything below writes
-  `$KP` for its `bin/` directory:
+* The unpacked **`keliver-portal-tools`** package. The current release is
+  **[tools 0.3.4](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.4)**:
 
+  ```bash
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.4/keliver-portal-tools-0.3.4.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.4/keliver-portal-tools-0.3.4.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.4.zip.sha256   # sha256sum -c on Linux
+
+  unzip keliver-portal-tools-0.3.4.zip
+  export KP="$PWD/keliver-portal-tools-0.3.4/bin"
   ```
-  unzip keliver-portal-tools-<version>.zip
-  export KP="$PWD/keliver-portal-tools-<version>/bin"
-  ```
+
+  Expected: `2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98`.
+
+  The tools version and the library version are **separate lines**: tools 0.3.4
+  scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
+  bundle records both in its `VERSION.json`.
 
 * For the device route only: the **Android SDK platform-tools** (`adb`) and a
   running emulator or a connected device.

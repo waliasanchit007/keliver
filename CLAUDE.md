@@ -75,7 +75,19 @@ fires portal-tools.yml only — it does not match the `v*` pattern publish.yml
 listens on, so a tools release cannot publish a library. The workflow guards
 tag==file and builds the exact tagged commit; the zip carries `VERSION.json`
 with the tools version, source commit and the Maven dependency version its
-scaffolders wire in. Pre-gate locally: `scripts/build-portal-tools.sh`, then
+scaffolders wire in.
+
+**portal-tools.yml does NOT publish** — every job is read-only, so no run of it
+can create a release or attach an asset. The build is not byte-reproducible, so
+the asset is attached **by hand from the named retained artifact that was
+verified**, never from a rebuild at the tag. Full procedure, including checking
+what an older tagged commit's workflow would do:
+[`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current release:
+tools **0.3.4** (Maven dependency **0.3.3**).
+
+Pre-gate locally: `scripts/build-portal-tools.sh`, then
 `scripts/keliver-adopter-acceptance.sh <parent> <zip>` **and**
 `scripts/keliver-acceptance-identity-check.sh <parent> <zip>` (U21: the
-acceptance must refuse a portal it did not start).
+acceptance must refuse a portal it did not start). With a device or emulator,
+`scripts/keliver-device-verify.sh <zip> <work> <evidence>` (U22: the bundled
+host must refuse production mode).
