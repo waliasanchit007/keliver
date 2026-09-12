@@ -39,7 +39,7 @@ does) against apps outside the repository. The same script, both sides:
 | --- | --- | --- |
 | [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command | **29 passed / 18 failed** |
 | [`lifecycle-before.log`](lifecycle-before.log) | `43148d63e` — after that round, before the transaction-lifecycle round | **62 passed / 14 failed** |
-| [`recovery-check.log`](recovery-check.log) | this branch | **75 passed / 0 failed** |
+| [`recovery-check.log`](recovery-check.log) | this branch | **77 passed / 0 failed** |
 
 * **C1** a real Zipline manifest signed with the store's key before a move
   verifies, with Zipline's own `ManifestVerifier`, against the public key the
@@ -105,8 +105,27 @@ The pre-fix recovery script has no pause hook, so it was instrumented with
 [`lifecycle-before-instrumentation.diff`](lifecycle-before-instrumentation.diff)
 is the complete change. Nothing else about the pre-fix script was touched.
 
+### The unlocked path, before it was removed
+
+[`lock-before.log`](lock-before.log) — executed at `4b5c7a0ad` with the
+throwaway test kept beside it
+([`lock-before-UnlockedPathTest.kt.txt`](lock-before-UnlockedPathTest.kt.txt)).
+All three of its assertions PASSED there, which is the defect rather than a
+success:
+
+```
+BEFORE: parent-unavailable          -> block ran unlocked
+BEFORE: mkdir-failed-and-absent     -> block ran unlocked
+BEFORE: after cleanup, later holder's lock exists = false
+```
+
+The two unlocked returns were `PortalConfig.kt:352` and `:360` at that commit.
+They are gone; a vanished lock is retried, a lock that cannot be created
+refuses, an unwritable holder marker is a failed acquisition, and cleanup
+removes the lock only while its marker still names this process.
+
 The relay-side lock protocol is additionally covered by `StoreLockTest`
-(10 tests), which drives the interleaving between the liveness check and the
+(14 tests), which drives the interleaving between the liveness check and the
 claim through a seam in `claimStaleLock` rather than hoping to hit it by timing.
 
 What the before-run shows, in its own words:

@@ -36,18 +36,35 @@ class StoreLockTest {
     return lock
   }
 
-  /** Run withStoreLock with a short wait; returns null when it reported busy. */
-  private fun <T> attempt(app: File, waitMillis: Long = 400, block: () -> T): T? {
-    var busy = false
-    val out = try {
-      withStoreLock(app, waitMillis = waitMillis, onBusy = { busy = true; throw Busy() }) { block() }
-    } catch (_: Busy) {
+  /**
+   * Run withStoreLock with a short wait. Returns null when it refused, and
+   * records WHY in [refusal] — "busy" or "unavailable: <reason>". Both are
+   * Nothing-returning in production (the relay exits), so the test turns them
+   * into an exception.
+   */
+  private var refusal: String? = null
+
+  private fun <T> attempt(
+    app: File,
+    waitMillis: Long = 400,
+    afterFailedCreate: () -> Unit = {},
+    block: () -> T,
+  ): T? {
+    refusal = null
+    return try {
+      withStoreLock(
+        app,
+        waitMillis = waitMillis,
+        onBusy = { refusal = "busy"; throw Refused() },
+        onUnavailable = { _, why -> refusal = "unavailable: $why"; throw Refused() },
+        afterFailedCreate = afterFailedCreate,
+      ) { block() }
+    } catch (_: Refused) {
       null
     }
-    return if (busy) null else out
   }
 
-  private class Busy : RuntimeException()
+  private class Refused : RuntimeException()
 
   @Test
   fun theLockIsExclusiveWhileItIsHeld() {
@@ -56,7 +73,7 @@ class StoreLockTest {
     val release = CountDownLatch(1)
     val second = AtomicBoolean(false)
     val holder = Thread {
-      withStoreLock(a, onBusy = { error("holder should not be busy") }) {
+      withStoreLock(a, onBusy = { error("holder should not be busy") }, onUnavailable = { _, w -> error(w) }) {
         inside.countDown()
         release.await(10, TimeUnit.SECONDS)
       }
@@ -163,21 +180,100 @@ class StoreLockTest {
   fun theHolderRecordsItsOwnPid() {
     val a = app()
     var recorded: String? = null
-    withStoreLock(a, onBusy = { error("not busy") }) {
+    withStoreLock(a, onBusy = { error("not busy") }, onUnavailable = { _, w -> error(w) }) {
       recorded = File(lockOf(a), "pid").readText().trim()
     }
     assertEquals("${ProcessHandle.current().pid()}", recorded)
   }
 
   @Test
-  fun anUnwritableAppTreeRunsUnlockedRatherThanRefusingToStart() {
-    // .gradle cannot be created because it is a regular file. Refusing to start
-    // there would be worse than an unsynchronised startup nothing contends for.
+  fun anAppTreeWhereTheLockCannotBeCreatedRefusesRatherThanRunningUnlocked() {
+    // .gradle is a regular file, so the lock directory cannot exist. This used
+    // to run the block anyway and announce it — the single-writer guarantee
+    // waived at exactly the moment the filesystem was behaving unusually.
     val a = app()
     File(a, ".gradle").writeText("not a directory\n")
-    val notices = mutableListOf<String>()
-    val ran = withStoreLock(a, onUnlocked = notices::add, onBusy = { error("not busy") }) { "ok" }
-    assertEquals("ok", ran)
-    assertTrue(notices.any { "without the store lock" in it }, "the unlocked start must be announced: $notices")
+    var ran = false
+    assertEquals(null, attempt(a) { ran = true }, "it must refuse, not run unlocked")
+    assertFalse(ran, "the block must not have executed")
+    assertTrue(refusal!!.startsWith("unavailable"), "wrong refusal: $refusal")
+  }
+
+  @Test
+  fun aLockDirectoryThatCannotBeCreatedAtAllRefuses() {
+    // .gradle exists and is a directory, but is not writable, so `mkdir` of the
+    // lock fails AND the lock is absent — the shape that used to be read as
+    // "cannot create it, so proceed unlocked".
+    val a = app()
+    val gradle = File(a, ".gradle")
+    gradle.mkdirs()
+    assertTrue(gradle.setWritable(false, false), "could not make the directory read-only")
+    try {
+      var ran = false
+      assertEquals(null, attempt(a, waitMillis = 200) { ran = true }, "it must refuse, not run unlocked")
+      assertFalse(ran, "the block must not have executed")
+      assertTrue(refusal!!.startsWith("unavailable"), "wrong refusal: $refusal")
+      assertFalse(lockOf(a).exists())
+    } finally {
+      gradle.setWritable(true, true)
+    }
+  }
+
+  @Test
+  fun aLockThatVanishesBetweenTheFailedCreateAndTheExistsCheckIsRetried() {
+    // The reported interleaving: `mkdir` fails because the holder still has the
+    // lock, and the holder releases it before the exists() check. A missing
+    // directory there is a reason to try again, not permission to proceed
+    // unlocked. Driven through a seam so it is exact, not raced.
+    val a = app()
+    val lock = seedLock(a, mapOf("pid" to "${ProcessHandle.current().pid()}\n"))
+    var released = false
+    var ran = false
+    val out = attempt(
+      a,
+      waitMillis = 5_000,
+      afterFailedCreate = {
+        if (!released) {
+          released = true
+          File(lock, "pid").delete()
+          lock.delete()
+        }
+      },
+    ) { ran = true; "ok" }
+    assertTrue(released, "the seam must have fired — otherwise this proves nothing")
+    assertEquals("ok", out, "it must acquire on the retry, refusal was: $refusal")
+    assertTrue(ran)
+    assertFalse(lock.exists(), "and release it again")
+  }
+
+  @Test
+  fun cleanupDoesNotRemoveALaterHoldersLock() {
+    // A hard kill leaves the marker behind; a later holder takes the lock over.
+    // This process's own finally/shutdown-hook cleanup must not then delete it.
+    val a = app()
+    var observed: String? = null
+    withStoreLock(a, onBusy = { error("not busy") }, onUnavailable = { _, w -> error(w) }) {
+      // Somebody else's takeover completes while this block is running.
+      File(lockOf(a), "pid").writeText("999999\n")
+      observed = File(lockOf(a), "pid").readText().trim()
+    }
+    assertEquals("999999", observed)
+    assertTrue(lockOf(a).exists(), "the later holder's lock must survive this process's cleanup")
+    assertEquals("999999", File(lockOf(a), "pid").readText().trim(), "and keep its marker")
+  }
+
+  @Test
+  fun anUnwritableMarkerIsTreatedAsAFailedAcquisition() {
+    // Holding a lock nobody can identify is worse than not holding one: no
+    // contender can take it over and this process cannot safely release it.
+    val a = app()
+    val lock = lockOf(a)
+    lock.mkdirs()
+    // A directory where the `pid` file has to go: the write cannot succeed.
+    File(lock, "pid").mkdirs()
+    var ran = false
+    assertEquals(null, attempt(a, waitMillis = 200) { ran = true })
+    assertFalse(ran, "the block must not run without an identifiable holder")
+    assertTrue(refusal != null, "it must have refused")
   }
 }

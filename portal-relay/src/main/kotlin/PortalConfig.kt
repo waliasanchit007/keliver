@@ -333,41 +333,84 @@ internal fun storeLockDir(repoDir: File): File = File(File(repoDir, ".gradle"), 
  *
  * Waits [waitMillis] for a recovery in flight, then gives up rather than
  * proceeding — a bounded wait is the point; two writers is the failure.
- * If the lock directory cannot be created at all (a read-only app tree), the
- * block runs unlocked and [onUnlocked] is told: refusing to start an app whose
- * tree is read-only would be a worse outcome than an unsynchronised startup
- * that nothing else is contending for.
+ *
+ * THERE IS NO UNLOCKED PATH. [block] runs only while this process holds the
+ * lock and has recorded its own pid in it. Every other outcome calls
+ * [onUnavailable] or [onBusy], both of which return [Nothing]. An earlier
+ * version ran the block anyway when the lock could not be created — which is
+ * the single-writer guarantee being announced and then waived, and it waived it
+ * exactly when the filesystem was behaving unusually. A missing lock directory
+ * after a failed `mkdir` is a reason to TRY AGAIN (the holder released it
+ * between the two syscalls), never permission to proceed.
+ *
+ * A read-only app tree therefore refuses to start rather than starting
+ * unsynchronised. If a genuinely read-only startup is ever wanted it has to be
+ * its own path that cannot claim a store or write a pointer; an unrestricted
+ * fallback is not that.
  */
 internal fun <T> withStoreLock(
   repoDir: File,
   waitMillis: Long = 20_000,
-  onUnlocked: (String) -> Unit = {},
+  onTakeover: (String) -> Unit = {},
+  onUnavailable: (File, String) -> Nothing,
   onBusy: (File) -> Nothing,
+  afterFailedCreate: () -> Unit = {},
   block: () -> T,
 ): T {
   val lock = storeLockDir(repoDir)
-  val parentReady = runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)
-  if (!parentReady) {
-    onUnlocked("portal-server: could not create ${lock.parentFile}; starting without the store lock")
-    return block()
+  if (!runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)) {
+    onUnavailable(lock, "${lock.parentFile} could not be created, so the store lock cannot be taken")
   }
   val deadline = System.currentTimeMillis() + waitMillis
+  // `mkdir` failed and the directory is not there: either the holder released
+  // it in the microseconds between those two syscalls, or it cannot be created
+  // at all. The first resolves on the next attempt; the second does not, so a
+  // run of them is what tells the two apart.
+  var vanished = 0
   while (true) {
     if (runCatching { lock.mkdir() }.getOrDefault(false)) break
+    // Seam, no-op in production: StoreLockTest uses it to release the lock
+    // between the failed mkdir and the exists() check below, which is the
+    // interleaving that used to be read as "cannot create it".
+    afterFailedCreate()
     if (!lock.exists()) {
-      // Cannot create it and it is not there: not a contention problem.
-      onUnlocked("portal-server: could not take $lock; starting without the store lock")
-      return block()
+      if (++vanished > 20) {
+        onUnavailable(lock, "$lock cannot be created (it keeps disappearing rather than being held)")
+      }
+      Thread.sleep(50)
+      continue
     }
+    vanished = 0
     if (claimStaleLock(lock)) {
-      onUnlocked("portal-server: taking over $lock — the process that held it is gone")
+      onTakeover("portal-server: taking over $lock — the process that held it is gone")
       continue
     }
     if (System.currentTimeMillis() >= deadline) onBusy(lock)
     Thread.sleep(200)
   }
-  runCatching { File(lock, "pid").writeText(ProcessHandle.current().pid().toString() + "\n") }
-  fun release() = runCatching { File(lock, "pid").delete(); lock.delete() }
+
+  // The marker identifies the holder. Without it nobody — including this
+  // process's own cleanup — can tell whose lock this is, so a failure to write
+  // it is a failure to acquire.
+  val me = ProcessHandle.current().pid().toString()
+  val pidFile = File(lock, "pid")
+  val marked = runCatching { pidFile.writeText(me + "\n"); pidFile.readText().trim() == me }.getOrDefault(false)
+  if (!marked) {
+    runCatching { pidFile.delete(); lock.delete() }
+    onUnavailable(lock, "the holder marker in $lock could not be written")
+  }
+
+  // Release ONLY while the marker still says this process. A lock taken over
+  // after a hard kill belongs to its new holder; deleting it here would be the
+  // two-writers failure the lock exists to prevent.
+  fun release() {
+    runCatching {
+      if (pidFile.readText().trim() == me) {
+        pidFile.delete()
+        lock.delete()
+      }
+    }
+  }
   // Best effort for a hard kill; the ordinary path releases in the finally.
   val hook = Thread { release() }
   Runtime.getRuntime().addShutdownHook(hook)

@@ -197,7 +197,14 @@ if ! mkdir "$APP_LOCK" 2>/dev/null; then
   (lock: $APP_LOCK). Nothing was changed. If nothing is running, remove it."
   fi
 fi
-printf '%s\n' "$$" > "$APP_LOCK/pid" 2>/dev/null
+# The marker identifies the holder. Without it nobody — including this script's
+# own cleanup, which releases only what the marker says is ours — can tell whose
+# lock this is, so failing to write it is failing to acquire.
+if ! printf '%s\n' "$$" > "$APP_LOCK/pid" 2>/dev/null \
+   || [ "$(cat "$APP_LOCK/pid" 2>/dev/null)" != "$$" ]; then
+  rm -f "$APP_LOCK/pid" 2>/dev/null; rmdir "$APP_LOCK" 2>/dev/null
+  die "could not record this process as the holder of $APP_LOCK. Nothing was changed."
+fi
 APP_LOCK_HELD=1
 STORE_LOCK=""
 
@@ -385,7 +392,11 @@ if ! mkdir "$STORE_LOCK" 2>/dev/null; then
     die "another recovery is in progress on $STORE. Nothing was changed."
   fi
 fi
-printf '%s\n' "$$" > "$STORE_LOCK/pid" 2>/dev/null
+if ! printf '%s\n' "$$" > "$STORE_LOCK/pid" 2>/dev/null \
+   || [ "$(cat "$STORE_LOCK/pid" 2>/dev/null)" != "$$" ]; then
+  rmdir "$STORE_LOCK" 2>/dev/null; STORE_LOCK=""
+  die "could not record this process as the holder of the store lock. Nothing was changed."
+fi
 
 # Re-read under the lock: the marker may have changed since it was inspected.
 NOW="$(tr -d '\n' < "$OWNER_FILE")"

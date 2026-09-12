@@ -532,6 +532,9 @@ note "stores whose owner now names this app:${CLAIMED:- none}"
   && ok "C9 at most one owner marker names this app" \
   || bad "C9 both stores claim this app"
 P9="$(tr -d '\n' < "$A9/.gradle/keliver-store-path" 2>/dev/null)"
+# Either outcome is correct — the loser can be refused by the LOCK, or, if it
+# won the lock, by PRECEDENCE (the pointer already names the other store, which
+# holds an identity). Both branches assert, so neither can pass by default.
 if [ "$W9" = 1 ]; then
   OWNED="$S9A"; [ "$CLAIMED" = " B" ] && OWNED="$S9B"
   [ "$P9" = "$OWNED" ] && ok "C9 the pointer agrees with the owner marker" \
@@ -539,6 +542,16 @@ if [ "$W9" = 1 ]; then
   [ "$(effective "$A9" 2>/dev/null)" = "$OWNED" ] \
     && ok "C9 the resolver selects the store that was actually claimed" \
     || bad "C9 the resolver selects something else"
+else
+  note "both were refused; reasons:"
+  grep -h '^✗' "$DISP/c9-a.log" "$DISP/c9-b.log" 2>/dev/null | sed 's/^/          /'
+  [ -z "$CLAIMED" ] && ok "C9 with no winner, no store claims this app" \
+                    || bad "C9 nobody succeeded but$CLAIMED claims this app"
+  [ "$P9" = "$S9A" ] && ok "C9 with no winner, the pointer is exactly as it was" \
+                     || bad "C9 the pointer moved to $P9 without a successful recovery"
+  [ "$(effective "$A9" 2>/dev/null)" = "$S9A" ] \
+    && ok "C9 and ordinary resolution is unchanged" \
+    || bad "C9 ordinary resolution changed without a successful recovery"
 fi
 
 # --- C10: recovery versus relay startup --------------------------------------
@@ -808,6 +821,11 @@ fi
 [ -f "$L14/pid" ] && [ "$(tr -d '\n' < "$L14/pid")" = "$$" ] \
   && ok "C14 the live holder's marker is untouched" || bad "C14 the live holder's marker changed"
 rm -f "$L14/pid"; rmdir "$L14"
+# NOTE the shell's holder-marker check (a failed marker write is a failed
+# acquisition) is defensive and is NOT exercised here: by the time it runs, the
+# probe write into .gradle has already succeeded, so no external setup makes it
+# fail without an injector. The equivalent JVM check IS exercised, in
+# StoreLockTest.anUnwritableMarkerIsTreatedAsAFailedAcquisition.
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

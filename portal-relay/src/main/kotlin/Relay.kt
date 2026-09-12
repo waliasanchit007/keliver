@@ -82,12 +82,25 @@ private fun resolveStore(): File {
   var resolved: File? = null
   val failure: String? = withStoreLock(
     repoDir,
-    onUnlocked = ::println,
+    onTakeover = ::println,
     onBusy = { lock ->
       System.err.println(
         "portal-server: a store recovery is in progress for this app (lock: $lock).\n" +
           "  Wait for keliver-store-recover.sh to finish and start again. If nothing is\n" +
           "  running, remove that directory.",
+      )
+      kotlin.system.exitProcess(70)
+    },
+    // No unlocked fallback. Claiming a store and writing the pointer are the
+    // two writes the lock exists to serialize, so a lock that cannot be taken
+    // means this process does not do them.
+    onUnavailable = { lock, why ->
+      System.err.println(
+        "portal-server: the store lock is unavailable, so the portal will not start.\n" +
+          "  $why\n" +
+          "  lock: $lock\n" +
+          "  Starting without it would let a store recovery and this startup write the\n" +
+          "  binding at the same time. Make the app directory writable and try again.",
       )
       kotlin.system.exitProcess(70)
     },

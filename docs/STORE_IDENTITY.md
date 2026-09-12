@@ -263,11 +263,30 @@ lock only recovery commands took would not serialize the writer most likely to
 be running.
 
 The relay waits up to 20 seconds for a recovery in flight and then refuses to
-start, naming the lock. If the lock directory cannot be created at all (a
-read-only app tree) the relay says so and starts unlocked, because refusing to
-start there would be the worse outcome. A store lock (`<store>/owner.lock`) is
-still taken inside the app lock, so two apps recovering the same store also
-serialize.
+start, naming the lock. A store lock (`<store>/owner.lock`) is still taken
+inside the app lock, so two apps recovering the same store also serialize.
+
+**There is no unlocked path.** The work runs only while the process holds the
+lock *and* has recorded its own pid in it; every other outcome refuses. An
+earlier version ran the block anyway when the lock could not be created — the
+single-writer guarantee announced and then waived, and waived exactly when the
+filesystem was behaving unusually. A lock directory that is missing after a
+failed `mkdir` is a reason to **try again** (the holder released it between the
+two syscalls), never permission to proceed; a run of such attempts is what
+distinguishes that from a directory that cannot be created at all.
+
+So an app tree where `<app>/.gradle` cannot be written **refuses to start**
+rather than starting unsynchronised. That is a deliberate behaviour change. If
+a genuinely read-only startup is ever wanted it has to be its own path that
+cannot claim a store or write a pointer; an unrestricted fallback is not that.
+
+Failing to write the holder marker is failing to acquire. A lock nobody can
+identify is worse than no lock: no contender can take it over, and the holder
+cannot safely release it.
+
+Cleanup — the `finally`, the shutdown hook, and the shell's EXIT and signal
+traps — removes the lock **only while the marker still names this process**. A
+lock taken over after a hard kill belongs to its new holder.
 
 **A lock must not outlive its holder.** Introducing a lock that blocks startup
 introduces a way to wedge the portal, so the holder records its pid inside the

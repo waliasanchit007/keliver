@@ -1313,6 +1313,20 @@ exactly one contender can — and the claim is content-checked before the
 directory is cleared. `StoreLockTest` drives that interleaving through a seam
 rather than hoping to hit it by timing.
 
+**A third round removed the hole in the lock itself.** `withStoreLock` ran the
+block anyway when it could not create the lock — the single-writer guarantee
+announced and then waived, and waived exactly when the filesystem was behaving
+unusually. Worse, a `mkdir` that failed because the lock existed followed by an
+`exists()` that found it gone — the holder releasing in between — took that
+same path. There is now **no unlocked path**: a vanished lock is retried, a
+lock that genuinely cannot be created refuses, and a holder marker that cannot
+be written is a failed acquisition rather than a lock nobody can identify. An
+app tree where `<app>/.gradle` is unwritable therefore refuses to start; that
+is a deliberate behaviour change, recorded in
+[`STORE_IDENTITY.md`](STORE_IDENTITY.md). The JVM's release path also matched
+the shell's and now removes the lock only while its marker still names this
+process, on both the `finally` and shutdown-hook routes.
+
 ### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;

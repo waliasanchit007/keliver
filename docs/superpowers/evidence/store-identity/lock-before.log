@@ -1,0 +1,27 @@
+# withStoreLock before the locking correction (commit 4b5c7a0ad)
+
+Executed with the throwaway test below, added to a worktree at 4b5c7a0ad.
+All three assertions PASSED there — that is the defect, not a success.
+
+BEFORE: parent-unavailable -> block ran unlocked; notices=[portal-server: could not create /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/unlocked14041826361811223341/.gradle; starting without the store lock]
+BEFORE: mkdir-failed-and-absent -> block ran unlocked; notices=[portal-server: could not take /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/unlocked2280101759137755560/.gradle/keliver-store.lock; starting without the store lock]
+BEFORE: after cleanup, later holder's lock exists = false
+
+tests="3" skipped="0" failures="0" errors="0"
+
+The two unlocked paths were PortalConfig.kt:352 and :360 at that commit:
+  val lock = storeLockDir(repoDir)
+  val parentReady = runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)
+  if (!parentReady) {
+    onUnlocked("portal-server: could not create ${lock.parentFile}; starting without the store lock")
+    return block()
+  }
+  val deadline = System.currentTimeMillis() + waitMillis
+  while (true) {
+    if (runCatching { lock.mkdir() }.getOrDefault(false)) break
+    if (!lock.exists()) {
+      // Cannot create it and it is not there: not a contention problem.
+      onUnlocked("portal-server: could not take $lock; starting without the store lock")
+      return block()
+    }
+    if (claimStaleLock(lock)) {
