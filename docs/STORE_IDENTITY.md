@@ -1,0 +1,199 @@
+# The store ownership contract
+
+Status: implementation note for the U23 / U24 / U25.1 correction. Written
+before the fix, from the reproductions in
+`scripts/keliver-store-identity-repro.sh`.
+
+An app's **store** holds its signing identity (`keys/ed25519.{priv,pub}`), its
+screen documents, and its published bundles. Everything downstream — a bundle
+that verifies on a device, a production host that embeds the right public key —
+depends on one question having one stable answer: *which store is this app's?*
+
+Today that answer is a pure function of the app's path. Paths move, so the
+identity moves with them, silently. This note fixes the answer.
+
+## 1. What identity is, and is not
+
+**An app's identity is the store it is bound to.** Not its directory name, not
+its Git remote, not its path.
+
+Two derivations are deliberately rejected:
+
+* **Directory name.** `~/work/app` and `~/archive/app` are different apps that
+  would collide.
+* **Git remote.** Two clones of one repository are two independent working
+  copies on one machine, and a fork or a rename changes the remote without
+  changing the app. A remote is also attacker-supplied text in a repo you were
+  handed.
+
+A store is therefore bound to an app by a **mutual, two-sided marker**:
+
+| side | file | committed? | written by |
+| --- | --- | --- | --- |
+| store → app | `<store>/owner` — the app's canonical path at claim time | n/a | `claimStoreFor`, atomically, once |
+| app → store | `<app>/.gradle/keliver-store-path` — the store's absolute path | no, `.gradle` is gitignored | the relay, after a successful claim |
+
+Neither side alone is proof. The pointer is machine-local and uncommitted, so a
+`git clone` does not carry it — but `cp -a` does. The owner marker names a path,
+and paths move. The contract below is what the two of them mean *together*.
+
+## 2. Resolution order
+
+Every consumer resolves in exactly this order. There is one authoritative
+implementation, `PortalConfig.storeDir()`; `scripts/keliver-store-path.sh` is
+its mirror, asserted equal by `StoreContractTest`; every other consumer calls
+one of those two and none derives the path itself.
+
+1. `PORTAL_STORE` — explicit, one run.
+2. `store` in `<app>/keliver.portal.json` — explicit, committed.
+3. `<app>/.gradle/keliver-store-path` — the binding pointer.
+4. `~/.keliver-portal/apps/<slug>-<hash>` — the first-boot default.
+
+**Step 4 in full.** `<hash>` is the first 8 hex digits of SHA-256 over the
+*canonical* (symlink-resolved) absolute path. `<slug>` is the canonical
+basename, lowercased, with every character outside `[a-z0-9._-]` replaced by
+`-`, runs of `-` collapsed, and leading/trailing `-` trimmed.
+
+Both halves derive from the **canonical** path. Before this change the hash did
+and the slug did not, which is U25.1: `~/work/current -> ~/work/app-v2` resolved
+`apps/current-<h>` or `apps/app-v2-<h>` depending on which path you typed — one
+app, two stores, two signing identities, no warning. Collapsing `-` runs also
+removes a Kotlin/Python divergence: Kotlin's regex maps each UTF-16 code *unit*
+and Python maps each code *point*, so a name containing an astral character
+produced `--` in one and `-` in the other.
+
+**Step 4, compatibility scan.** The hash was already canonical, so an app's
+existing 0.3.4 store directory differs from the new name only in the slug. If
+`apps/<slug>-<hash>` does not exist, the resolver looks for existing
+`apps/*-<hash>` directories:
+
+* none — use `apps/<slug>-<hash>`; this is a first boot and a new identity;
+* exactly one — use it, and say so. The identity, documents and bundles an
+  existing app already has are what matter, not the spelling of the directory;
+* more than one — **refuse**. That is a split identity (U25.1 already happened
+  here), and choosing one silently is the failure being fixed. The message lists
+  the candidates with their public-key fingerprints and points at recovery.
+
+## 3. The five questions
+
+### The same app, through its real path or through a symlink
+
+One store. Steps 3 and 4 both go through the symlink to the same answer: the
+pointer file is the same file either way, and the default canonicalises both
+halves of the name.
+
+### The app directory is renamed or moved
+
+The pointer moves with the tree, so step 3 still resolves the original store —
+its identity, documents and bundles. But `<store>/owner` records the *old* path,
+and this app's canonical path is now the new one, so the claim mismatches.
+
+**The relay refuses to start**, naming the store, both paths, and the recovery
+command. It does not mint a new identity, and it does not rewrite the marker on
+its own.
+
+It refuses rather than adopting because the pointer cannot distinguish a move
+from a copy: `cp -a` duplicates it. A rename is thus loud and one command away,
+instead of silent and unrecoverable-looking. This is the U23 fix.
+
+### The app is copied, or independently cloned
+
+* **Copied** (`cp -a`) — the copy carries the pointer, so it resolves the
+  original's store, mismatches the owner, and is refused. The instruction for
+  the copy is *delete the pointer*, after which it takes a store of its own at
+  step 4 (its canonical path differs, so the hash does). The original is
+  untouched.
+* **Cloned from Git** — `.gradle` is not committed, so there is no pointer. The
+  clone takes a fresh store at step 4 and a fresh identity. Two clones on one
+  machine are two apps.
+
+An explicit committed `"store"` (step 2) is the one way a copy can reach the
+original's store, and it is still refused by the owner marker. Copying
+configuration must never confer ownership.
+
+### The old owner path is unavailable
+
+Nothing changes. The store stays owned by the path recorded in its marker, and
+nothing is reclaimed automatically.
+
+The bug register's suggested fix — treat a claim as reclaimable when the
+recorded owner path no longer exists — is **not implemented**. Absence is not
+proof of ownership: an unmounted volume, a deleted-and-recreated directory, or
+any app that happens to sit at an unused path would all pass it, and the prize
+is a private signing key.
+
+What authorizes recovery is an operator running the recovery command and naming
+both sides. The validations in it exist to catch mistakes, not to establish
+ownership.
+
+### Two apps attempt to use one store concurrently
+
+Unchanged and already correct: `claimStoreFor` creates `owner` with
+`CREATE_NEW`, so exactly one first claimant wins and every other is refused
+without altering anything (`StoreClaimRaceTest`). Recovery takes the same kind
+of exclusive lock (`<store>/owner.lock`, `CREATE_NEW`), so two concurrent
+recoveries have one winner and the loser leaves both stores exactly as it found
+them.
+
+## 4. Recovery
+
+`keliver-store-recover.sh <app-dir> [--store DIR]` is the supported operation.
+It rebinds an existing store to an app **without touching keys, documents or
+bundles** — no hand-editing of `owner`, which is what U24 forced.
+
+It refuses, changing nothing, when:
+
+* the store has no `owner` marker — there is nothing to recover; just start;
+* the recorded owner path still exists **and** still resolves to this same
+  store — that is two live apps, not a relocation;
+* the app already resolves to a *different* store that holds its own signing
+  identity or documents — adopting would abandon or merge an identity, and this
+  never merges two stores;
+* another recovery holds the lock.
+
+On success it prints the store's public-key fingerprint before and after
+(identical, by construction — nothing under `keys/` is read, written or moved),
+rewrites `owner` atomically, and rewrites the app's pointer.
+
+## 5. Existing 0.3.4 stores
+
+* **An app that has booted at least once and has not moved.** Nothing changes:
+  its pointer resolves the same store and the owner still matches.
+* **An app with no pointer** (never booted, or `.gradle` removed) at an
+  unchanged path. The hash is identical, so the compatibility scan adopts the
+  existing directory even where the new slug rule spells the name differently.
+* **An app that was already split across a symlink and a real path.** Two
+  stores end in the same hash, so the resolver refuses and names both with
+  their fingerprints. This is the one case where an app that used to start now
+  does not — deliberately: it had two identities and picking one silently is the
+  defect.
+* **An app that was renamed under 0.3.4 and has already minted a second
+  identity.** It starts normally: its pointer names the *new* store and that
+  store's owner is the new path. To go back to the original identity, move the
+  new store aside and then name the old one:
+
+  ```bash
+  mv ~/.keliver-portal/apps/<new>-<hash> ~/.keliver-portal/apps/<new>-<hash>.abandoned
+  keliver-store-recover.sh /abs/path/to/app --store ~/.keliver-portal/apps/<old>-<oldhash>
+  ```
+
+  Recovery refuses while the new store still holds an identity, because
+  adopting over it would abandon a signing key without saying so.
+* **A pointer naming a directory that no longer exists.** It is created and
+  claimed as a first boot. There is nothing left to preserve, and the
+  alternative — refusing — would strand an app whose store was deliberately
+  deleted.
+
+No migration step is required, and nothing rewrites an existing store.
+
+## 6. What this does not change
+
+* Cross-app isolation. An unrelated app still cannot claim a foreign store; the
+  only new path to a store is the explicit recovery command, which refuses while
+  the old owner is live.
+* Existing signing identities. No key is generated, rotated, read or moved by
+  any part of this change.
+* The `"store"` escape hatch, `PORTAL_STORE`, or the legacy-store adoption
+  route (`keliver-adopt-legacy-store.sh`), which copies and is unrelated.
+* U25.2 (`HostTrustPolicy.HEX` length), U25.3 (`devOnlyHost` parsing) and U25.4
+  (`keliverStoreDir` warn-and-fall-back) stay open. They are not store identity.
