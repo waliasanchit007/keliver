@@ -1129,6 +1129,11 @@ Regression: two-app script (2 failures before, 9 passes after) plus
 
 ### U23. Renaming or moving an app directory silently rotates its signing identity — OPEN
 
+**Symptoms:** your documents look empty, or a device rejects a bundle you just
+published, after the app directory was renamed or moved — or after you launched
+it through a symlink (see U25.1, which reaches this outcome with no rename).
+Nothing has been destroyed; see *Recovery* in [U24].
+
 Found by independent review of PR #74, in code that **shipped in tools 0.3.4**.
 Not introduced by that PR and not fixed in it: the fix is a behaviour change in
 store resolution and needs its own verification and release.
@@ -1195,16 +1200,35 @@ treat the claim as reclaimable with a printed notice rather than fatally.
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
 
-1. **The Kotlin and shell store resolvers disagree on a symlinked final path
-   component.** `PortalConfig` canonicalises the path for the *hash* but not for
-   the *slug*; `keliver-store-path.sh` canonicalises both. With
-   `current -> real-app-v2`, the relay resolves `apps/current-<h>` while the
-   script says `apps/real-app-v2-<h>`. Before the relay has ever booted there
-   (so `.gradle/keliver-store-path` does not exist yet) the guest build finds no
-   key and emits an **unsigned** bundle. Fails safe and self-heals once the
-   pointer is written. `StoreContractTest` uses only temp paths so cannot catch
-   it. Related: the Python slug uses Unicode-aware `isalnum()`, the Kotlin regex
-   is ASCII `[^a-z0-9._-]`, so `café` slugs differently in each.
+1. **A symlinked final path component splits one app across two stores.**
+   `PortalConfig.appStoreName` canonicalises the path for the *hash* but not for
+   the *slug*:
+
+   ```kotlin
+   val abs  = repoDir.absoluteFile.canonicalFile.path   // hash: canonical
+   val slug = repoDir.absoluteFile.name.lowercase()...  // slug: NOT canonical
+   ```
+
+   This bites twice.
+
+   *Kotlin vs Kotlin — and this reaches [U23]'s outcome with no rename at all.*
+   With `~/work/current -> ~/work/app-v2`, launching `PORTAL_REPO=~/work/current`
+   resolves `apps/current-<h>` and launching `PORTAL_REPO=~/work/app-v2`
+   resolves `apps/app-v2-<h>`: **the same app, two stores, two signing
+   identities, chosen by which path you happened to type.** Nothing warns,
+   because `claimStoreFor` writes the *canonical* path as the owner, so both
+   markers agree and neither conflicts.
+
+   *Kotlin vs shell.* `keliver-store-path.sh` canonicalises both, so the relay
+   resolves `apps/current-<h>` while the script reports `apps/app-v2-<h>`.
+   Before the relay has ever booted there (so `.gradle/keliver-store-path` does
+   not exist yet) the guest build finds no key and emits an **unsigned** bundle.
+   Fails safe, and self-heals once the pointer is written.
+
+   `StoreContractTest` uses only `Files.createTempDirectory` paths, so it
+   structurally cannot catch either. Related: the Python slug uses
+   Unicode-aware `isalnum()`, the Kotlin regex is ASCII `[^a-z0-9._-]`, so
+   `café` slugs differently in each.
 2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
    exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then

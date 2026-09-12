@@ -100,7 +100,11 @@ if [ -n "$BLIND" ]; then
   bad "these scripts kill whatever holds a port:"
   printf '%s\n' "$BLIND" | sed "s|$ROOT/|        |"
 else
-  ok "no script kills a process it did not start"
+  # Say what was actually established. A grep cannot prove a behaviour; it can
+  # only prove no script matches the known spelling. Forms that still evade it:
+  # `kill $(lsof …)`, a pipe through another command, an `xargs -I{}`, and a
+  # line continuation between the lookup and the kill.
+  ok "no script matches the known blind-port-kill spelling"
 fi
 
 echo
