@@ -1,0 +1,19 @@
+first mark : setup/start 2026-09-06T03:55:16Z
+last mark  : device/rendered 2026-09-06T04:14:44Z
+TOTAL SPAN : 0:19:28
+
+interval between consecutive marks:
+     0:00:00  setup/start -> setup/scaffolded
+     0:03:54  setup/scaffolded -> implement/start
+     0:00:34  implement/start -> implement/friction-serialization
+     0:00:31  implement/friction-serialization -> build/cold-start
+     0:00:00  build/cold-start -> build/cold-done
+     0:00:30  build/cold-done -> build/retry-after-plugin-version
+     0:00:15  build/retry-after-plugin-version -> build/cold-done
+     0:00:53  build/cold-done -> debug/yarn-tls-trap
+     0:00:09  debug/yarn-tls-trap -> verify/tests-done
+     0:00:33  verify/tests-done -> verify/browser-start
+     0:01:40  verify/browser-start -> verify/browser-states-done
+     0:01:43  verify/browser-states-done -> device/build-start
+     0:06:04  device/build-start -> device/installed
+     0:02:42  device/installed -> device/rendered

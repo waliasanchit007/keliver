@@ -152,3 +152,60 @@ class PortalConfigTest {
     }
   }
 }
+
+/**
+ * Regression: the document store used to default to the machine-global
+ * `~/.keliver-portal`, shared by every app. Two apps then collided — the boot
+ * scan retired the other app's mirrors, and opening a foreign screen wrote its
+ * `.kt` into this app's source tree.
+ */
+class PortalStoreOwnershipTest {
+  private fun tmp(name: String): java.io.File =
+    java.nio.file.Files.createTempDirectory(name).toFile().also { it.deleteOnExit() }
+
+  @kotlin.test.Test
+  fun twoAppsGetDifferentDefaultStores() {
+    val a = tmp("appx")
+    val b = tmp("appy")
+    val cfg = PortalConfig()
+    kotlin.test.assertNotEquals(cfg.storeDir(a).path, cfg.storeDir(b).path)
+  }
+
+  @kotlin.test.Test
+  fun theDefaultStoreIsStableForOneApp() {
+    val a = tmp("appx")
+    val cfg = PortalConfig()
+    kotlin.test.assertEquals(cfg.storeDir(a).path, cfg.storeDir(a).path)
+  }
+
+  @kotlin.test.Test
+  fun theDefaultStoreIsNeverInsideTheApp() {
+    val a = tmp("appx")
+    val store = PortalConfig().storeDir(a)
+    kotlin.test.assertFalse(
+      store.canonicalPath.startsWith(a.canonicalPath),
+      "the store must not live in the adopter's source tree: $store",
+    )
+  }
+
+  @kotlin.test.Test
+  fun anExplicitStoreIsHonoured() {
+    val a = tmp("appx")
+    val explicit = tmp("explicit")
+    kotlin.test.assertEquals(
+      explicit.canonicalPath,
+      PortalConfig(store = explicit.path).storeDir(a).canonicalPath,
+    )
+  }
+
+  @kotlin.test.Test
+  fun aStoreRefusesASecondOwner() {
+    val store = tmp("store")
+    val a = tmp("appx")
+    val b = tmp("appy")
+    claimStoreFor(store, a)
+    claimStoreFor(store, a) // idempotent for its owner
+    val e = kotlin.test.assertFailsWith<IllegalStateException> { claimStoreFor(store, b) }
+    kotlin.test.assertTrue("store conflict" in (e.message ?: ""), e.message ?: "")
+  }
+}

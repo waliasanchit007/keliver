@@ -1,0 +1,13 @@
+diff --git a/src/jsMain/kotlin/screens/home.kt b/src/jsMain/kotlin/screens/home.kt
+index 3848980..c8c16a6 100644
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@ import dev.keliver.ui.Dp
+ fun HomeScreen(b: HomeScreenBindings) {
+   Column {
+     StyledText(
+-      text = "MyApp",
++      text = "My Inbox",
+       fontSize = 28,
+       bold = true,
+     )

@@ -1,0 +1,4 @@
+  PASS  suite rejects the original destructive preflight
+
+meta passed: 1   failed: 0
+artifacts: /private/var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/preflight-meta-HWdASL

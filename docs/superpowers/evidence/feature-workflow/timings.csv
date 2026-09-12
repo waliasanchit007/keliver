@@ -1,0 +1,16 @@
+phase,event,utc
+setup,start,2026-09-06T03:55:16Z
+setup,scaffolded,2026-09-06T03:55:16Z
+implement,start,2026-09-06T03:59:10Z
+implement,friction-serialization,2026-09-06T03:59:44Z
+build,cold-start,2026-09-06T04:00:15Z
+build,cold-done,2026-09-06T04:00:15Z
+build,retry-after-plugin-version,2026-09-06T04:00:45Z
+build,cold-done,2026-09-06T04:01:00Z
+debug,yarn-tls-trap,2026-09-06T04:01:53Z
+verify,tests-done,2026-09-06T04:02:02Z
+verify,browser-start,2026-09-06T04:02:35Z
+verify,browser-states-done,2026-09-06T04:04:15Z
+device,build-start,2026-09-06T04:05:58Z
+device,installed,2026-09-06T04:12:02Z
+device,rendered,2026-09-06T04:14:44Z

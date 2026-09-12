@@ -1,0 +1,45 @@
+  PASS  the packaged APK carries no embedded portal key
+  PASS  the bundle's own installer installed the packaged APK
+  PASS  [cold] the host logged a production refusal
+  PASS  [cold] the foreground window belongs to the host
+  PASS  [cold] the refusal heading is on screen
+  PASS  [cold] the actionable reason is on screen, not just the heading
+  PASS  [cold] no manifest or bundle was requested
+  PASS  [cold] no guest code was loaded
+  PASS  the packaged adopter acceptance passed with --serial
+          PASS  keliver-init scaffolded the app
+          PASS  keliver-portal started and answers: the portal this run started owns :8077 (pid 3129)
+          PASS  get_guide returns the adopter guide (14185 bytes)
+          PASS  the guide names no Keliver-repo-only commands
+          PASS  get_document returned the screen (version 1, title 'MyApp')
+          PASS  an unknown screen is 404: {"error":"no screen 'definitely-not-a-screen' in project 'default'; known screens: home"}
+          PASS  the unknown screen created no source
+          PASS  the unknown screen created no store document
+          PASS  apply_ops dry run validated: {"ok":true,"version":1}
+          PASS  apply_ops committed: {"ok":true,"version":2}
+          PASS  the screen source now reads the edited title
+          PASS  exactly one tracked file changed: src/jsMain/kotlin/screens/home.kt
+          PASS  hand-owned logic is byte-identical
+          PASS  the generated version stamp appeared, as the guide says
+          PASS  ./gradlew compileKotlinJs succeeds
+          PASS  keliver-new-device-target.sh added the device target
+          PASS  keliver-install-device-host.sh installed the host
+          PASS  serveDevelopmentZipline is serving the bundle
+          PASS  the edited title is on the device: text="My Inbox" text="Edit screens/home.kt — or run keliver-portal for the visual editor." text="First item" text="Second item" text="Refresh" 
+          PASS  stop then start works: the portal this run started owns :8077 (pid 4052)
+          PASS  the edit persists in the document after restart
+          PASS  the edit persists in the source after restart
+          PASS  the store is outside the app: myapp-0b2a3743
+        passed: 23   failed: 0
+          PASS  the edited title is on the device: text="My Inbox" text="Edit screens/home.kt — or run keliver-portal for the visual editor." text="First item" text="Second item" text="Refresh" 
+  PASS  [warm] the host logged a production refusal
+  PASS  [warm] the foreground window belongs to the host
+  PASS  [warm] the refusal heading is on screen
+  PASS  [warm] the actionable reason is on screen, not just the heading
+  PASS  [warm] no manifest or bundle was requested
+  PASS  [warm] no guest code was loaded
+  PASS  the development route still enters the development path after a refusal
+  PASS  the development route was not refused
+  PASS  the development route's foreground window belongs to the host
+  PASS  the refusal screen is gone on the development route
+passed: 19   failed: 0

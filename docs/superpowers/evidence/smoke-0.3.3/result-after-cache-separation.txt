@@ -1,0 +1,7 @@
+version:   0.3.3
+started:   2026-09-06T06:40:09Z
+finished:  2026-09-06T06:40:39Z
+scaffolder:/Users/sanchit.walia/NonWork/Keliver/scripts/keliver-init
+workdir:   /tmp/smoke-final
+result:    PASS: 0.3.3 resolves from Central and compiles (30 modules cached, 9 IR files)
+exit:      0

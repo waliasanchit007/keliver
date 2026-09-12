@@ -1,0 +1,17 @@
+SCORE all-nine-runs (byte-identical): PASS — Total line reads subtotal + shipping after tapping Add item
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-uShA4p/gradle.log
+   exit=0
+SCORE control-defective:   FAIL — AssertionError: REQUIREMENT: after adding a $12.00 item the Total line must read $17.00 (subtotal + $5.00 shipping). Expected <[Cart, Subtotal, $12.00, Total, $17.00]>, actual <[Cart, Subtotal, $12.00
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-Leoyhd/gradle.log
+   exit=1
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/a-r1-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/a-r2-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/a-r3-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/b-r1-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/b-r2-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/b-r3-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/c-r1-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/c-r2-final.kt
+7e297d99c73b95b2c36dba6a0bedbfcf91315f3d  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/scoring/c-r3-final.kt

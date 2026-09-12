@@ -44,6 +44,7 @@ pluginManagement {
     id 'org.jetbrains.kotlin.multiplatform' version '2.2.0'
     id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0'
     id 'org.jetbrains.compose' version '1.8.2'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.0'
   }
 }
 dependencyResolutionManagement {
@@ -65,6 +66,11 @@ plugins {
   id 'org.jetbrains.kotlin.multiplatform'
   id 'org.jetbrains.kotlin.plugin.compose'
   id 'org.jetbrains.compose'
+  // @Serializable API types need this at RUNTIME on Kotlin/JS. Without it the
+  // code still COMPILES and then fails in the browser with
+  //   SerializationException: Serializer for class 'X' is not found
+  // which is why it ships enabled rather than as a commented hint.
+  id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 kotlin {
@@ -77,6 +83,7 @@ kotlin {
         api 'dev.keliver:portal-sql:${KELIVER_VERSION}'                 // HostSqlDriver data layer
         implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
         implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
       }
     }
   }
@@ -92,6 +99,29 @@ cat > "$DIR/keliver.portal.json" <<EOF
     "widgetVersion": 1
   }
 }
+EOF
+
+# A scaffolded app is usually committed straight away, so ship the ignore file
+# with it. Without one the first portal run and the first build leave `.gradle/`
+# and `build/` as untracked noise in the adopter's very first `git status` —
+# and `.gradle/` now also holds keliver-store-path, the pointer the relay writes
+# to tell the publisher and the device hosts where this app's document store is.
+# That pointer is build state, not source: it is machine-specific and must not
+# be committed.
+cat > "$DIR/.gitignore" <<'EOF'
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Keliver: the relay records this app's resolved document store here. Machine
+# specific — do not commit.
+.gradle/keliver-store-path
+
+# Editors / OS
+.DS_Store
+*.iml
+.idea/
 EOF
 
 cat > "$DIR/src/jsMain/kotlin/screens/home.kt" <<EOF
@@ -190,7 +220,7 @@ if [ -n "$WRAPPER" ]; then
 fi
 
 echo "==> created $DIR/"
-echo "    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver $KELIVER_VERSION) · keliver.portal.json"
+echo "    screens/home.kt · logic/HomePresenter.kt · build.gradle (keliver $KELIVER_VERSION) · keliver.portal.json · .gitignore"
 echo ""
 echo "next:"
 echo "  cd $DIR && ./gradlew compileKotlinJs     # type-check your screens"

@@ -1,0 +1,12 @@
+(version 1)
+(allow default)
+(deny file-read* file-write*
+  (subpath "/Users/sanchit.walia/NonWork/Keliver")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/tasks")
+  (subpath "/Users/sanchit.walia/.claude/projects"))
+(allow file-read-metadata (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad") (subpath "/Users/sanchit.walia/NonWork/Keliver"))
+(allow file-read* file-write*
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/ws-a")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/ws-a-store")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/discovery/runtime"))

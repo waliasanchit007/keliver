@@ -1,0 +1,9 @@
+SCORE control-defective:   FAIL — AssertionError: REQUIREMENT: the summary label must reflect state after addItem(). Expected <[Basket, 1 items]>, actual <[Basket, 0 items]>.
+  test: dev.keliver.portal.render.M4LabelUpdateCheck.summaryLabelReflectsStateAfterTransition
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-Wh1sYm/gradle.log
+SCORE baseline-final:      PASS — summary label reflects state after addItem()
+  test: dev.keliver.portal.render.M4LabelUpdateCheck.summaryLabelReflectsStateAfterTransition
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-6ohEsr/gradle.log
+SCORE semantic-final:      PASS — summary label reflects state after addItem()
+  test: dev.keliver.portal.render.M4LabelUpdateCheck.summaryLabelReflectsStateAfterTransition
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-ZxYfN4/gradle.log

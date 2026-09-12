@@ -1,0 +1,5 @@
+text="Edit screens/home.kt — or run keliver-portal for the visual editor."
+text="First item"
+text="Kiosk"
+text="Refresh"
+text="Second item"

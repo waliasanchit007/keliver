@@ -1,0 +1,30 @@
+condition:      semantic
+total calls:    19
+unparsed lines: 0
+
+    16  Bash
+     2  Read
+     1  Edit
+
+portal MCP calls: NONE
+
+Call order:
+    1. Bash
+    2. Read
+    3. Read
+    4. Bash
+    5. Edit
+    6. Bash
+    7. Bash
+    8. Bash
+    9. Bash
+   10. Bash
+   11. Bash
+   12. Bash
+   13. Bash
+   14. Bash
+   15. Bash
+   16. Bash
+   17. Bash
+   18. Bash
+   19. Bash

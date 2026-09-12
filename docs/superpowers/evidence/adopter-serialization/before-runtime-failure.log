@@ -1,0 +1,85 @@
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/Users/sanchit.walia/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :generateResourceAccessorsForCommonMain SKIPPED
+> Task :convertXmlValueResourcesForJsMain NO-SOURCE
+> Task :copyNonXmlValueResourcesForJsMain NO-SOURCE
+> Task :prepareComposeResourcesTaskForJsMain NO-SOURCE
+> Task :generateResourceAccessorsForJsMain SKIPPED
+> Task :generateActualResourceCollectorsForJsMain SKIPPED
+> Task :generateComposeResClass SKIPPED
+> Task :generateExpectResourceCollectorsForCommonMain SKIPPED
+> Task :convertXmlValueResourcesForCommonTest NO-SOURCE
+> Task :copyNonXmlValueResourcesForCommonTest NO-SOURCE
+> Task :prepareComposeResourcesTaskForCommonTest NO-SOURCE
+> Task :generateResourceAccessorsForCommonTest SKIPPED
+> Task :convertXmlValueResourcesForJsTest NO-SOURCE
+> Task :copyNonXmlValueResourcesForJsTest NO-SOURCE
+> Task :prepareComposeResourcesTaskForJsTest NO-SOURCE
+> Task :generateResourceAccessorsForJsTest SKIPPED
+> Task :jsResolveResourcesFromDependencies
+> Task :assembleJsMainResources
+> Task :jsResolveSelfResourcesCopyHierarchicalMultiplatformResources
+> Task :jsAggregateResources
+> Task :unpackSkikoWasmRuntime SKIPPED
+> Task :jsProcessResources
+> Task :assembleJsTestResources
+> Task :jsTestProcessResources
+> Task :compileKotlinJs
+> Task :kotlinNodeJsSetup
+> Task :jsMainClasses
+> Task :kotlinKotlinNpmCachesSetup
+> Task :kotlinRestoreYarnLock SKIPPED
+> Task :kotlinYarnSetup
+> Task :jsPackageJson
+> Task :jsTestPackageJson
+> Task :jsPublicPackageJson
+> Task :jsTestPublicPackageJson
+> Task :kotlinPackageJsonUmbrella
+> Task :rootPackageJson
+> Task :compileTestKotlinJs
+
+> Task :kotlinNpmInstall
+(node:86317) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > karma > glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > mocha > glob@8.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > karma-webpack > glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > karma > rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > karma > rimraf > glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > karma > glob > inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+warning workspace-aggregator-12e98863-f028-472d-8c98-3ac22212779e > repro-test > mocha > glob > inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+warning Ignored scripts due to flag.
+
+> Task :jsTestClasses
+> Task :kotlinStoreYarnLock
+> Task :compileTestDevelopmentExecutableKotlinJs
+> Task :jsTestTestDevelopmentExecutableCompileSync
+
+
+repro.logic.ApiTest.roundTrips[js, browser, ChromeHeadless152.0.0.0, MacOS10.15.7] FAILED
+    SerializationException at /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/_karma_webpack_943754/commons.js:34727
+
+> Task :jsBrowserTest
+
+1 test completed, 1 failed
+There were failing tests. See the report at: file:///private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/repro/repro/build/reports/tests/jsBrowserTest/index.html
+
+> Task :jsTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':jsTest'.
+> There were failing tests. See the report at: file:///private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/repro/repro/build/reports/tests/jsTest/index.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to generate a Build Scan (Powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 14s
+23 actionable tasks: 23 executed

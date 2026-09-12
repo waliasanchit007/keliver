@@ -1,0 +1,9 @@
+feed.logic.FeedRepositoryTest: tests=4 failures=0 skipped=0
+   populated ok
+   empty ok
+   errorStatusRaises ok
+   retryAfterFailureSucceeds ok
+feed.logic.FeedScreenBehaviourTest: tests=3 failures=0 skipped=0
+   loadingThenPopulated ok
+   loadingThenEmpty ok
+   errorThenRetryButtonRecoversThroughTheUi ok

@@ -1,0 +1,3 @@
+SCORE c5-dead-button:      FAIL — AssertionError: REQUIREMENT: after adding a $12.00 item the Total line must read $17.00 (subtotal + $5.00 shipping). Expected <[Cart, Subtotal, $12.00, Total, $17.00]>, actual <[Cart, Subtotal, $0.00,
+  test: dev.keliver.portal.render.M4CartTotalCheck.totalIncludesShippingAfterAdd
+  log:  /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//m4-score-aRhURK/gradle.log

@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-09-06T00:00:00Z",
+  "expiresAt": "2027-09-06T00:00:00Z",
+  "matchHeaders": [],
+  "entries": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/articles",
+        "query": {},
+        "headers": {},
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": "[{\"id\":\"a1\",\"title\":\"Fixture: Tide tables\"},{\"id\":\"a2\",\"title\":\"Fixture: Kelp survey\"}]",
+        "headers": {
+          "content-type": "application/json"
+        }
+      }
+    }
+  ]
+}

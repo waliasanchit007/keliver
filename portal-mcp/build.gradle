@@ -12,4 +12,26 @@ dependencies {
   implementation projects.portalCore      // generated catalog for get_catalog
   implementation projects.portalDocument  // op/document types
   implementation libs.kotlinx.serialization.json
+
+  testImplementation libs.kotlin.test
+  testImplementation libs.kotlin.test.junit
+  testImplementation libs.junit
 }
+
+tasks.named('test') { useJUnit() }
+
+// Ship the ADOPTER guide INSIDE the package.
+//
+// get_guide first read <PORTAL_REPO>/docs/PORTAL_USAGE.md — a path only this
+// repository has — so it worked for us and said "guide not found" for every
+// adopter. Bundling fixed availability but shipped the CONTRIBUTOR guide,
+// which tells an adopter to run scripts/keliver-dev.sh and edit
+// portal-app-lib/, neither of which exists in their app. The bundled document
+// is now docs/PORTAL_ADOPTER_GUIDE.md, written against the packaged commands.
+// Copied at build time so it cannot drift from the file in this repo.
+def bundleGuide = tasks.register('bundlePortalGuide', Copy) {
+  from(rootProject.file('docs/PORTAL_ADOPTER_GUIDE.md')) { rename { 'PORTAL_USAGE.md' } }
+  into(layout.buildDirectory.dir('generated/guide/dev/keliver/portal/mcp'))
+}
+sourceSets.main.resources.srcDir(bundleGuide.map { it.destinationDir.parentFile.parentFile.parentFile.parentFile })
+tasks.named('processResources') { dependsOn(bundleGuide) }

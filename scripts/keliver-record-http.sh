@@ -8,13 +8,31 @@
 #   keliver-record-http.sh close <session-id>
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The APP is the working directory, not the script's parent. Shipped in a
+# bundle, "the script's parent" is the bundle root, and this looked for the
+# app's keliver.portal.json inside keliver-portal-tools.
+ROOT="${KELIVER_APP_DIR:-$PWD}"
+# The resolver sits next to this script in a bundle (bin/) and one level up in
+# the repository (scripts/). Find it either way.
+keliver_store_path_script() {
+  local here; here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+  if [ -x "$here/keliver-store-path.sh" ]; then echo "$here/keliver-store-path.sh"
+  elif [ -x "$here/../scripts/keliver-store-path.sh" ]; then echo "$here/../scripts/keliver-store-path.sh"
+  else echo "keliver-store-path.sh not found next to $here" >&2; return 1; fi
+}
+
 CONFIG="$ROOT/keliver.portal.json"
+[ -r "$CONFIG" ] || {
+  echo "no keliver.portal.json in $ROOT — run this from the app directory, or set KELIVER_APP_DIR" >&2
+  exit 66
+}
 PORTAL_URL="${PORTAL_URL:-http://127.0.0.1:$(python3 -c \
   "import json; print(json.load(open('$CONFIG')).get('port', 8077))")}"
-STORE="$(python3 -c \
-  "import json; print(json.load(open('$CONFIG')).get('store', '~/.keliver-portal'))")"
-STORE="${STORE/#\~/$HOME}"
+# One store contract: ask the resolver, never re-derive it here. This used to
+# default to ~/.keliver-portal, which stopped being the store once the relay
+# moved to a per-app directory — the token was then looked for in the wrong
+# place and recording appeared to be off.
+STORE="$("$(keliver_store_path_script)" "$ROOT")"
 TOKEN_FILE="${PORTAL_HTTP_RECORD_TOKEN_FILE:-$STORE/http-record.token}"
 
 usage() {

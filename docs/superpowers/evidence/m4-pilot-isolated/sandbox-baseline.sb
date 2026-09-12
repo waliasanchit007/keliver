@@ -1,0 +1,17 @@
+(version 1)
+(allow default)
+;; Enforced isolation for the baseline participant.
+(deny file-read* file-write*
+  ;; the controller's repository (evaluator check, reference fix, reports, git history)
+  (subpath "/Users/sanchit.walia/NonWork/Keliver")
+  ;; evaluator-side material and sentinel
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/pilot/evaluator")
+  ;; prior participant transcripts and controller task output
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/tasks")
+  ;; earlier experiment runs
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/m4run")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/m4run2")
+  ;; this conversation's own project history
+  (subpath "/Users/sanchit.walia/.claude/projects")
+  ;; the OTHER participant's workspace
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/pilot/semantic"))

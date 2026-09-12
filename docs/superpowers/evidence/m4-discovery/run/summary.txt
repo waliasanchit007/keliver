@@ -1,0 +1,30 @@
+arm  rep listing   model              disc mcp  pre-edit calls sec 
+a    1   deferred  claude-sonnet-5    0    0    False    12    88
+a    2   deferred  claude-sonnet-5    0    0    False    19    149
+a    3   deferred  claude-sonnet-5    0    0    False    14    97
+b    1   deferred  claude-sonnet-5    0    0    False    14    98
+b    2   deferred  claude-sonnet-5    0    0    False    14    98
+b    3   deferred  claude-sonnet-5    0    0    False    12    90
+c    1   listed    claude-sonnet-5    0    0    False    11    89
+c    2   listed    claude-sonnet-5    0    0    False    12    92
+c    3   listed    claude-sonnet-5    0    0    False    14    98
+
+A  deferred + how-to-discover
+    invoked portal tools: 0/3    issued a discovery call: 0/3
+
+B  deferred, availability only
+    invoked portal tools: 0/3    issued a discovery call: 0/3
+
+C  listed, availability only
+    invoked portal tools: 0/3    issued a discovery call: 0/3
+
+Call orders:
+  a-r1: Bash Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash
+  a-r2: Bash Bash Read Read Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash Bash Bash Bash Read
+  a-r3: Bash Read Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash Bash
+  b-r1: Bash Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash Bash Bash
+  b-r2: Bash Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash Bash Bash
+  b-r3: Bash Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash
+  c-r1: Bash Read Read Edit Bash Bash Bash Bash Bash Bash Bash
+  c-r2: Bash Read Read Read Edit Bash Bash Bash Bash Bash Bash Bash
+  c-r3: Bash Bash Read Read Read Bash Edit Bash Bash Bash Bash Bash Bash Bash

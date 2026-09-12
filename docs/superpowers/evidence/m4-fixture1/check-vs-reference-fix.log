@@ -1,0 +1,439 @@
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/Users/sanchit.walia/.android-certs/jssecacerts -Djavax.net.ssl.trustStorePassword=changeit
+> Task :keliver-settings:compileJava UP-TO-DATE
+> Task :keliver-settings:pluginDescriptors UP-TO-DATE
+> Task :keliver-settings:processResources UP-TO-DATE
+> Task :keliver-settings:classes UP-TO-DATE
+> Task :keliver-settings:jar UP-TO-DATE
+Type-safe project accessors is an incubating feature.
+> Task :build-support:keliver-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-support:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-support:keliver-gradle-plugin:generateBuildConfig UP-TO-DATE
+> Task :build-support:keliver-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :build-support:compileKotlin UP-TO-DATE
+> Task :build-support:compileJava NO-SOURCE
+> Task :build-support:keliver-gradle-plugin:compileJava NO-SOURCE
+> Task :build-support:pluginDescriptors UP-TO-DATE
+> Task :build-support:keliver-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :build-support:processResources UP-TO-DATE
+> Task :build-support:classes UP-TO-DATE
+> Task :build-support:keliver-gradle-plugin:processResources UP-TO-DATE
+> Task :build-support:keliver-gradle-plugin:classes UP-TO-DATE
+> Task :build-support:keliver-gradle-plugin:jar UP-TO-DATE
+> Task :build-support:jar UP-TO-DATE
+
+> Configure project :
+warning: Dokka Gradle plugin V1 is deprecated
+    
+    Dokka Gradle plugin V1 is deprecated, and will be removed in Dokka version 2.1.0
+    Please migrate to Dokka Gradle plugin V2. This will require updating your project.
+    To learn about migrating read the migration guide https://kotl.in/dokka-gradle-migration
+    
+    To start migrating to Dokka Gradle plugin V2 add
+        org.jetbrains.dokka.experimental.gradle.pluginMode=V2EnabledWithHelpers
+    into your project's `gradle.properties` file.
+    
+    We would appreciate your feedback!
+     - Please report any feedback or problems https://kotl.in/dokka-issues
+     - Chat with the community visit #dokka in https://kotlinlang.slack.com/ (To sign up visit https://kotl.in/slack)
+    
+
+> Configure project :build-support-ksp-processor
+w: ⚠️ Deprecated Gradle Property 'kotlin.native.ignoreIncorrectDependencies' Used
+The `kotlin.native.ignoreIncorrectDependencies` deprecated property is used in your build.
+Solution: It is unsupported, please stop using it.
+
+w: ⚠️ Deprecated Gradle Property 'kotlin.mpp.androidGradlePluginCompatibility.nowarn' Used
+The `kotlin.mpp.androidGradlePluginCompatibility.nowarn` deprecated property is used in your build.
+Solution: It is unsupported, please stop using it.
+
+
+> Task :keliver-tooling-codegen:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-widget:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-compose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-schema:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-runtime:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-schema:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-compose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :kotlinWasmKotlinNpmCachesSetup
+> Task :keliver-layout-widget:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-modifiers:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-tooling-schema:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-capabilities:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-api:jvmProcessResources NO-SOURCE
+> Task :keliver-protocol:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-widget:composeHelpers UP-TO-DATE
+> Task :keliver-layout-testing:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-protocol-guest:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-testing:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-protocol-guest:composeHelpers UP-TO-DATE
+> Task :keliver-capabilities:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-protocol:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-runtime:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-ui-basic-api:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-protocol:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-runtime:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-api:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-capabilities:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-api:wasmJsPackageJson UP-TO-DATE
+> Task :portal-core:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-leak-detector:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-protocol:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-flow:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-yoga:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-api:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-widget:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-api:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-capabilities:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-schema:compileKotlin UP-TO-DATE
+> Task :keliver-ui-basic-modifiers:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-api:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-runtime:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-api:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-leak-detector:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-modifiers:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-modifiers:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-api:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-modifiers:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-compose:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-yoga:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-snapshot-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-protocol-host:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-modifiers:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-core:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-protocol-guest:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-widget-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-protocol-host:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :portal-flow:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-widget:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-widget:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-modifiers:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-snapshot-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-compose:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-widget:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-shared-test:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-compose:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-widget:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-widget:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-widget:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-shared-test:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-shared-test:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-widget:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-protocol-guest:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget-shared-test:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-layout-compose:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-compose:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-shared-test:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-compose:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-guest-web:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-host-web:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-composeui:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-compose:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-widget:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-guest-web:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-document:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-compose:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-widget-shared-test:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-testing:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-testing:wasmJsPackageJson UP-TO-DATE
+> Task :portal-app-lib:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-material-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-render:wasmJsPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-composeui:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-presenter-spike:wasmJsPackageJson UP-TO-DATE
+> Task :portal-document:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-host-web:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-app-lib:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-compose:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-material-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-testing:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-capabilities:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-compose:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-editor:wasmJsPackageJson UP-TO-DATE
+> Task :portal-presenter-spike:wasmJsTestPackageJson UP-TO-DATE
+> Task :portal-render:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-api:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-compose:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-compose:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-modifiers:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-compose:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :web-spike:wasmJsPackageJson UP-TO-DATE
+> Task :portal-editor:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-widget:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-modifiers:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :web-spike:wasmJsTestPackageJson UP-TO-DATE
+> Task :keliver-layout-api:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-api:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-compose:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-shared-test:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-widget:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-compose:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-shared-test:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-compose:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-capabilities:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-api:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-shared-test:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-widget:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-leak-detector:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-shared-test:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-api:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-compose:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-modifiers:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-layout-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-leak-detector:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-guest-web:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-widget:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-host-web:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-api:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-compose:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-widget:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-modifiers:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-guest-web:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-protocol-host-web:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol-host:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-runtime:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol-guest:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-snapshot-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-material-widget:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-api:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-compose:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-runtime:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol-guest:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol-host:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-modifiers:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-api:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-compose:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-widget:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-widget:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-snapshot-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-modifiers:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-composeui:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-shared-test:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-testing:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-yoga:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-app-lib:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-core:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-ui-basic-widget:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-yoga:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :portal-flow:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-core:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-shared-test:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :portal-render:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-flow:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-testing:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-widget:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :portal-app-lib:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-compose:composeHelpers UP-TO-DATE
+> Task :keliver-tooling-schema:processResources NO-SOURCE
+> Task :portal-document:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-document:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-schema:compileJava NO-SOURCE
+> Task :keliver-tooling-codegen:processResources NO-SOURCE
+> Task :portal-render:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :portal-presenter-spike:wasmJsPublicPackageJson UP-TO-DATE
+> Task :keliver-protocol-guest:generateBuildConfig UP-TO-DATE
+> Task :keliver-lazylayout-compose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-schema:processResources NO-SOURCE
+> Task :keliver-schema:classes UP-TO-DATE
+> Task :keliver-ui-basic-composeui:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-lazylayout-widget:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-protocol-guest:generateWasmJsMainBuildConfig SKIPPED
+> Task :keliver-lazylayout-testing:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-material-api:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-api:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-lazylayout-schema:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-layout-api:processJvmMainResources SKIPPED
+> Task :portal-presenter-spike:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-material-modifiers:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-material-compose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-widget:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-widget:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-lazylayout-widget:composeHelpers UP-TO-DATE
+> Task :portal-editor:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-material-schema:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-schema:jar UP-TO-DATE
+> Task :keliver-material-testing:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :keliver-material-api:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-lazylayout-api:compileKotlinWasmJs UP-TO-DATE
+> Task :web-spike:wasmJsPublicPackageJson UP-TO-DATE
+> Task :portal-render:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :portal-render:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :keliver-compose:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-runtime:compileKotlinJvm UP-TO-DATE
+> Task :portal-render:copyNonXmlValueResourcesForCommonMain NO-SOURCE
+> Task :keliver-runtime:compileJvmMainJava NO-SOURCE
+> Task :portal-render:prepareComposeResourcesTaskForCommonMain NO-SOURCE
+> Task :keliver-runtime:jvmProcessResources NO-SOURCE
+> Task :portal-core:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-runtime:processJvmMainResources SKIPPED
+> Task :portal-editor:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :keliver-runtime:jvmMainClasses UP-TO-DATE
+> Task :web-spike:wasmJsTestPublicPackageJson UP-TO-DATE
+> Task :portal-render:generateResourceAccessorsForCommonMain SKIPPED
+> Task :keliver-protocol-guest:compileKotlinWasmJs UP-TO-DATE
+> Task :portal-render:convertXmlValueResourcesForWasmJsMain NO-SOURCE
+> Task :keliver-runtime:jvmJar UP-TO-DATE
+> Task :portal-render:copyNonXmlValueResourcesForWasmJsMain NO-SOURCE
+> Task :portal-render:prepareComposeResourcesTaskForWasmJsMain NO-SOURCE
+> Task :keliver-lazylayout-api:compileKotlinJvm UP-TO-DATE
+> Task :keliver-lazylayout-api:compileJvmMainJava NO-SOURCE
+> Task :keliver-lazylayout-api:jvmProcessResources NO-SOURCE
+> Task :keliver-lazylayout-api:processJvmMainResources SKIPPED
+> Task :keliver-testing:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-lazylayout-api:jvmMainClasses UP-TO-DATE
+> Task :keliver-material-api:compileKotlinJvm UP-TO-DATE
+> Task :keliver-material-api:compileJvmMainJava NO-SOURCE
+> Task :keliver-material-api:jvmProcessResources NO-SOURCE
+> Task :keliver-material-api:processJvmMainResources SKIPPED
+> Task :keliver-material-api:jvmMainClasses UP-TO-DATE
+> Task :portal-render:generateResourceAccessorsForWasmJsMain SKIPPED
+> Task :portal-render:generateActualResourceCollectorsForWasmJsMain SKIPPED
+> Task :portal-render:generateComposeResClass SKIPPED
+> Task :portal-render:generateExpectResourceCollectorsForCommonMain SKIPPED
+> Task :keliver-layout-api:compileKotlinJvm UP-TO-DATE
+> Task :keliver-lazylayout-api:jvmJar UP-TO-DATE
+> Task :portal-render:generateParityFixtureSources UP-TO-DATE
+> Task :keliver-tooling-schema:compileKotlin UP-TO-DATE
+> Task :keliver-material-api:jvmJar UP-TO-DATE
+> Task :keliver-layout-api:compileJvmMainJava NO-SOURCE
+> Task :keliver-layout-api:jvmMainClasses UP-TO-DATE
+> Task :keliver-tooling-schema:compileJava NO-SOURCE
+> Task :portal-render:convertXmlValueResourcesForCommonTest NO-SOURCE
+> Task :portal-render:copyNonXmlValueResourcesForCommonTest NO-SOURCE
+> Task :keliver-tooling-schema:classes UP-TO-DATE
+> Task :portal-render:prepareComposeResourcesTaskForCommonTest NO-SOURCE
+> Task :portal-render:generateResourceAccessorsForCommonTest SKIPPED
+> Task :keliver-layout-api:jvmJar UP-TO-DATE
+> Task :portal-render:convertXmlValueResourcesForWasmJsTest NO-SOURCE
+> Task :portal-render:copyNonXmlValueResourcesForWasmJsTest NO-SOURCE
+> Task :portal-render:prepareComposeResourcesTaskForWasmJsTest NO-SOURCE
+> Task :portal-render:generateResourceAccessorsForWasmJsTest SKIPPED
+> Task :keliver-tooling-schema:jar UP-TO-DATE
+> Task :portal-render:wasmJsResolveResourcesFromDependencies UP-TO-DATE
+> Task :portal-render:assembleWasmJsMainResources UP-TO-DATE
+> Task :portal-render:wasmJsResolveSelfResourcesCopyHierarchicalMultiplatformResources UP-TO-DATE
+> Task :portal-render:wasmJsAggregateResources UP-TO-DATE
+> Task :portal-render:wasmJsProcessResources UP-TO-DATE
+> Task :keliver-layout-schema:compileKotlin UP-TO-DATE
+> Task :portal-render:assembleWasmJsTestResources UP-TO-DATE
+> Task :keliver-lazylayout-schema:compileKotlin UP-TO-DATE
+> Task :keliver-layout-schema:compileJava NO-SOURCE
+> Task :keliver-tooling-codegen:compileKotlin UP-TO-DATE
+> Task :keliver-lazylayout-schema:compileJava NO-SOURCE
+> Task :keliver-tooling-codegen:compileJava NO-SOURCE
+> Task :keliver-tooling-codegen:classes UP-TO-DATE
+> Task :portal-render:wasmJsTestProcessResources UP-TO-DATE
+> Task :keliver-tooling-codegen:jar UP-TO-DATE
+> Task :keliver-layout-schema:redwoodJsonGenerate UP-TO-DATE
+> Task :keliver-lazylayout-schema:redwoodJsonGenerate UP-TO-DATE
+> Task :keliver-layout-schema:processResources UP-TO-DATE
+> Task :keliver-layout-schema:classes UP-TO-DATE
+> Task :keliver-lazylayout-schema:processResources UP-TO-DATE
+> Task :keliver-lazylayout-schema:classes UP-TO-DATE
+> Task :keliver-layout-schema:jar UP-TO-DATE
+> Task :keliver-lazylayout-schema:jar UP-TO-DATE
+> Task :keliver-layout-modifiers:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-lazylayout-widget:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-layout-widget:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-layout-compose:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-lazylayout-compose:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-lazylayout-testing:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-layout-testing:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-layout-modifiers:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-layout-widget:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-lazylayout-widget:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-schema:compileKotlin UP-TO-DATE
+> Task :keliver-material-schema:compileJava NO-SOURCE
+> Task :keliver-layout-compose:compileKotlinWasmJs UP-TO-DATE
+> Task :portal-render:unpackSkikoWasmRuntime SKIPPED
+> Task :keliver-material-schema:redwoodJsonGenerate UP-TO-DATE
+> Task :portal-render:processSkikoRuntimeForKWasm NO-SOURCE
+> Task :keliver-layout-testing:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-lazylayout-compose:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-schema:processResources UP-TO-DATE
+> Task :keliver-material-schema:classes UP-TO-DATE
+> Task :keliver-material-schema:jar UP-TO-DATE
+> Task :keliver-lazylayout-testing:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-testing:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-material-widget:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-material-compose:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-material-modifiers:redwoodKotlinGenerate UP-TO-DATE
+> Task :keliver-material-modifiers:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-widget:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-compose:compileKotlinWasmJs UP-TO-DATE
+> Task :keliver-material-testing:compileKotlinWasmJs UP-TO-DATE
+> Task :portal-render:compileKotlinWasmJs UP-TO-DATE
+> Task :portal-render:wasmJsMainClasses UP-TO-DATE
+> Task :kotlinWasmNodeJsSetup UP-TO-DATE
+> Task :kotlinWasmRestoreYarnLock UP-TO-DATE
+> Task :portal-render:kotlinWasmNodeJsSetup UP-TO-DATE
+> Task :kotlinWasmYarnSetup UP-TO-DATE
+> Task :kotlinWasmPackageJsonUmbrella UP-TO-DATE
+> Task :wasmRootPackageJson UP-TO-DATE
+> Task :kotlinWasmNpmInstall UP-TO-DATE
+> Task :kotlinWasmStoreYarnLock UP-TO-DATE
+
+> Task :portal-render:compileTestKotlinWasmJs
+w: Opt-in requirement marker dev.keliver.leaks.RedwoodLeakApi is unresolved. Please make sure it's present in the module dependencies
+w: Opt-in requirement marker dev.keliver.yoga.RedwoodYogaApi is unresolved. Please make sure it's present in the module dependencies
+w: Opt-in requirement marker kotlinx.cinterop.BetaInteropApi is unresolved. Please make sure it's present in the module dependencies
+w: Opt-in requirement marker kotlinx.cinterop.ExperimentalForeignApi is unresolved. Please make sure it's present in the module dependencies
+
+> Task :portal-render:wasmJsTestClasses
+> Task :portal-render:compileTestDevelopmentExecutableKotlinWasmJs
+> Task :portal-render:wasmJsTestTestDevelopmentExecutableCompileSync
+
+> Task :portal-render:wasmJsBrowserTest
+> Task :portal-render:wasmJsTest
+
+[Incubating] Problems report is available at: file:///Users/sanchit.walia/NonWork/Keliver/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.0.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 10s
+299 actionable tasks: 6 executed, 293 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.0.0/userguide/configuration_cache_enabling.html

@@ -1,0 +1,37 @@
+// Feed — keliver server-driven-UI screens (the guest). Author screens in
+// src/jsMain/kotlin/screens/ (visually via keliver-portal, or here in your IDE
+// with native Compose completion). Compiles to JS; ships OTA as a signed bundle.
+plugins {
+  id 'org.jetbrains.kotlin.multiplatform'
+  id 'org.jetbrains.kotlin.plugin.compose'
+  id 'org.jetbrains.compose'
+  // Required for @Serializable API types on Kotlin/JS. Not scaffolded by
+  // keliver-init; without it you get a RUNTIME 'Serializer for class X not
+  // found', not a compile error.
+  id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+kotlin {
+  js { browser() }
+  sourceSets {
+    jsTest {
+      dependencies {
+        implementation 'org.jetbrains.kotlin:kotlin-test'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+        implementation 'dev.keliver:keliver-material-testing:0.3.3'
+        implementation 'dev.keliver:keliver-testing:0.3.3'
+      }
+    }
+    jsMain {
+      dependencies {
+        api 'dev.keliver:keliver-material-compose:0.3.3'   // StyledText/Button/Icon/ListItem/…
+        api 'dev.keliver:keliver-layout-compose:0.3.3'     // Column/Row/Spacer
+        api 'dev.keliver:keliver-http:0.3.3'                // KeliverHttp / HostHttpProvider
+        api 'dev.keliver:portal-sql:0.3.3'                 // HostSqlDriver data layer
+        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+      }
+    }
+  }
+}

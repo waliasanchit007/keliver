@@ -1,0 +1,22 @@
+(version 1)
+(allow default)
+
+;; 1. DENY the whole controller/evaluator surface — not a list of answer files.
+;;    The scratchpad root covers the evaluator area, participant reports, every
+;;    prior experiment, and the other participant's workspace AND outputs.
+(deny file-read* file-write*
+  (subpath "/Users/sanchit.walia/NonWork/Keliver")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/tasks")
+  (subpath "/Users/sanchit.walia/.claude/projects"))
+
+;; 2. Metadata-only on the ancestors, so paths beneath them can be RESOLVED.
+;;    stat is permitted; reading contents and listing directories are not.
+(allow file-read-metadata
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad")
+  (subpath "/Users/sanchit.walia/NonWork/Keliver"))
+
+;; 3. ALLOW back exactly what this participant needs. Last match wins.
+(allow file-read* file-write*
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/ws-semantic")
+  (subpath "/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial/runtime"))

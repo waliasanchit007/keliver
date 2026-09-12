@@ -1,0 +1,7 @@
+version:   0.3.3
+started:   2026-09-06T05:31:46Z
+finished:  2026-09-06T05:32:28Z
+scaffolder:/Users/sanchit.walia/NonWork/Keliver/scripts/keliver-init
+workdir:   /tmp/smoke-cachetest
+result:    PASS: 0.3.3 resolves from Central and compiles (30 modules cached, 9 IR files)
+exit:      0

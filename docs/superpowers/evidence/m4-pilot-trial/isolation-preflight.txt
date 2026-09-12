@@ -1,0 +1,34 @@
+M4 isolation preflight
+trial:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/trial
+run id: 62361-1788700405
+--- baseline
+  PASS  baseline: evaluator area — denied
+  PASS  baseline: controller repository — denied
+  PASS  baseline: other participant workspace — denied
+  PASS  baseline: other participant's report — denied
+  PASS  baseline: own report location — denied
+  PASS  baseline: prior experiment output — denied
+  PASS  baseline: real baseline report on disk — denied
+  PASS  baseline: real semantic report on disk — denied
+  PASS  baseline: controller git history denied
+  PASS  baseline: own workspace readable
+--- semantic
+  PASS  semantic: evaluator area — denied
+  PASS  semantic: controller repository — denied
+  PASS  semantic: other participant workspace — denied
+  PASS  semantic: other participant's report — denied
+  PASS  semantic: own report location — denied
+  PASS  semantic: prior experiment output — denied
+  PASS  semantic: real semantic report on disk — denied
+  PASS  semantic: real baseline report on disk — denied
+  PASS  semantic: controller git history denied
+  PASS  semantic: own workspace readable
+--- runtime
+  PASS  baseline can build its own fixture inside the sandbox
+  PASS  semantic can run the staged MCP server (get_document offered)
+--- non-destructiveness
+  PASS  reports/ unchanged by this preflight
+  PASS  evaluator/ unchanged by this preflight
+  PASS  sentinels removed
+
+passed: 25   failed: 0

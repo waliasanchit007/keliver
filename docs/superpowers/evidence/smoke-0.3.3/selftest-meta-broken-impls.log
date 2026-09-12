@@ -1,0 +1,9 @@
+meta: validating the suite against broken smoke implementations
+  PASS  suite rejects broken impl: always-pass              
+  PASS  suite rejects broken impl: eats-cache               
+  PASS  suite rejects broken impl: leaks-mavenlocal         
+  PASS  suite rejects broken impl: never-fails              
+  PASS  suite accepts the real smoke script                 
+
+meta passed: 5   failed: 0
+artifacts: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//smoke-meta-SgLkpZ

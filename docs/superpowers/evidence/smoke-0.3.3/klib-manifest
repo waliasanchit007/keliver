@@ -1,0 +1,12 @@
+abi_version=2.2.0
+builtins_platform=JS
+compiler_version=2.2.0
+depends=dev.keliver\:keliver-material-compose dev.keliver\:keliver-layout-compose dev.keliver\:portal-sql dev.keliver\:keliver-lazylayout-compose dev.keliver\:keliver-compose org.jetbrains.compose.runtime\:runtime-saveable dev.keliver\:keliver-material-widget dev.keliver\:keliver-layout-widget dev.keliver\:keliver-lazylayout-widget dev.keliver\:keliver-layout-modifiers dev.keliver\:keliver-layout-api dev.keliver\:keliver-lazylayout-api org.jetbrains.compose.runtime\:runtime app.cash.zipline\:zipline dev.keliver\:keliver-widget org.jetbrains.kotlinx\:kotlinx-coroutines-core dev.keliver\:keliver-material-modifiers dev.keliver\:keliver-runtime dev.keliver\:keliver-material-api org.jetbrains.kotlinx\:kotlinx-serialization-core org.jetbrains.kotlin\:kotlin-dom-api-compat kotlin org.jetbrains.kotlinx\:atomicfu
+ir_signature_versions=1,2
+jsOutputName=smoke
+language_features=+JsAllowValueClassesInExternals +MultiPlatformProjects
+metadata_version=1.4.1
+serializedIrFileFingerprints=3gber6huf8yw9.1ttl6wpo5gyws o7izb4x7b01b.rni423xaj157
+serializedKlibFingerprint=1khnplzn5nwsu.ls5rljhv6eo3
+unique_name=smoke
+wasm_targets=wasm-js

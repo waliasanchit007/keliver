@@ -1,0 +1,21 @@
+{
+  "condition": "a",
+  "listing": "deferred",
+  "model_requested": "sonnet",
+  "model_resolved": "claude-sonnet-5",
+  "exit_code": 143,
+  "elapsed_seconds": 35,
+  "discovery_calls": 0,
+  "first_mcp_call_index": null,
+  "first_edit_index": null,
+  "mcp_preceded_edit": false,
+  "tool_calls_total": 6,
+  "tool_calls_by_name": {
+    "Bash": 1,
+    "Read": 5
+  },
+  "portal_mcp_calls": {},
+  "usage": {},
+  "stream_events": 30,
+  "unparsed_lines": 0
+}

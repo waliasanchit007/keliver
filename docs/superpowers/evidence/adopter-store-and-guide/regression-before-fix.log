@@ -1,0 +1,19 @@
+contamination regression   HOME=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/home
+store on disk before: 
+  appx sees: ["orders"]
+  PASS  appx sees only its own screen
+  appy sees screens: ["profile"]   projects: ["default"]
+  PASS  appy sees only its own screen
+  PASS  appy source tree unchanged
+  PASS  appx source tree unchanged
+  PASS  after restart appy still sees its own screen and only that
+  concurrent — appy: ["orders"]   appx: ["orders"]
+  FAIL  CONCURRENT: appy's screen list shows appx's screen (["orders"])
+  PASS  concurrent: appx still lists only its own screen
+  FAIL  appy source tree gained foreign files:
+        1a2,3
+        > src/jsMain/kotlin/screens/Compiled_orders.kt
+        > src/jsMain/kotlin/screens/orders.kt
+  PASS  appx's own screen survived the other app's lifecycle
+
+passed: 7   failed: 2

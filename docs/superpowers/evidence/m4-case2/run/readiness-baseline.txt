@@ -1,0 +1,4 @@
+condition: baseline
+manifest_sha: 99065e139a9dfab840dba59083f6524c17cbcbc9
+initial: text="Cart" text="Subtotal" text="$0.00" text="Total" text="$0.00" text="Add item"
+after_tap: text="Cart" text="Subtotal" text="$12.00" text="Total" text="$12.00" text="Add item"

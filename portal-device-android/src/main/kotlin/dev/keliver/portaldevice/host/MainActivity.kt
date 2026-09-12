@@ -13,10 +13,13 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
@@ -67,14 +70,23 @@ class MainActivity : ComponentActivity() {
     val publicKeyHex = runCatching {
       assets.open("portal_ed25519.pub").bufferedReader().use { it.readText().trim() }
     }.getOrNull()
-    val verifier = if (prodMode && publicKeyHex != null) {
-      Log.d(TAG, "prod mode: verifying manifests with portal-ed25519 ${publicKeyHex.take(8)}…")
-      ManifestVerifier.Builder().addEd25519("portal-ed25519", publicKeyHex.decodeHex()).build()
-    } else {
-      if (prodMode) Log.w(TAG, "prod mode WITHOUT embedded public key — falling back to NO_SIGNATURE_CHECKS")
-      ManifestVerifier.NO_SIGNATURE_CHECKS
+
+    // U22: decided BEFORE any factory, any fetch, any bundle load. A request for
+    // production is either honoured with signature verification or refused with
+    // a message saying what to do — never quietly downgraded.
+    val verifier = when (val trust = decideHostTrust(prodMode, BuildConfig.DEV_ONLY, publicKeyHex)) {
+      is HostTrust.Refused -> {
+        Log.e(TAG, "refusing production mode: ${trust.message}")
+        setContent { RefusedScreen(trust.message) }
+        return
+      }
+      is HostTrust.ProductionVerified -> {
+        Log.d(TAG, "prod mode: verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…")
+        ManifestVerifier.Builder().addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex()).build()
+      }
+      HostTrust.DevelopmentUnsigned -> ManifestVerifier.NO_SIGNATURE_CHECKS
     }
-    Log.d(TAG, "onCreate — mode=${if (prodMode) "prod" else "dev"}")
+    Log.d(TAG, "onCreate — mode=${if (prodMode) "prod" else "dev"}, devOnlyHost=${BuildConfig.DEV_ONLY}")
 
     val ziplineHttpClient = OkHttpClient().asZiplineHttpClient()
     val okhttp = OkHttpClient()
@@ -205,5 +217,27 @@ private object LoggingEventListener : EventListener() {
   }
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)
+  }
+}
+
+/** What a refused production request looks like on the device: the reason, on screen. */
+@androidx.compose.runtime.Composable
+private fun RefusedScreen(message: String) {
+  MaterialTheme {
+    Surface(modifier = Modifier.fillMaxSize()) {
+      androidx.compose.foundation.layout.Column(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(24.dp),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+      ) {
+        androidx.compose.material.Text(
+          text = "Production mode refused",
+          style = MaterialTheme.typography.h6,
+        )
+        androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+        androidx.compose.material.Text(text = message)
+      }
+    }
   }
 }

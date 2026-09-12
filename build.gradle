@@ -1,3 +1,28 @@
+// ---------------------------------------------------------------------------
+// The one store contract. The relay generates the portal's Ed25519 keys under
+// the repo's resolved document store; the publisher signs with the private key
+// and the device hosts embed the public one. They used to hardcode
+// ~/.keliver-portal, which broke the moment the relay moved to a per-app store:
+// a bundle signed by one identity, verified against another. Everything now
+// asks scripts/keliver-store-path.sh, and StoreContractTest asserts that script
+// agrees with PortalConfig.storeDir().
+// ---------------------------------------------------------------------------
+ext.keliverStoreDir = { java.io.File repoDir ->
+  def script = new java.io.File(rootProject.projectDir, 'scripts/keliver-store-path.sh')
+  if (!script.exists()) return new java.io.File(System.getProperty('user.home'), '.keliver-portal')
+  def out = new StringBuilder(), err = new StringBuilder()
+  def proc = [script.absolutePath, repoDir.absolutePath].execute()
+  proc.consumeProcessOutput(out, err)
+  proc.waitForOrKill(30_000)
+  def path = out.toString().trim()
+  if (proc.exitValue() != 0 || path.isEmpty()) {
+    logger.warn("keliver: could not resolve the portal store (${err.toString().trim()}); " +
+      'falling back to ~/.keliver-portal')
+    return new java.io.File(System.getProperty('user.home'), '.keliver-portal')
+  }
+  return new java.io.File(path)
+}
+
 buildscript {
   dependencies {
     classpath libs.kotlin.composePlugin

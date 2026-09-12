@@ -1,0 +1,12 @@
+m4-isolation-preflight self-test
+workdir: /private/var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/preflight-selftest-ilowDJ
+  PASS  first preflight passes
+  PASS  repeated preflight passes
+  PASS  reports/ and evaluator/ byte-identical after two preflights
+  PASS  both participant reports still hold their original content
+  PASS  no sentinel files left behind
+  PASS  permissive profile is rejected (8 leak(s) reported)
+  PASS  a report modified during the run is detected and fails the preflight
+
+passed: 7   failed: 0
+artifacts: /private/var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/preflight-selftest-ilowDJ

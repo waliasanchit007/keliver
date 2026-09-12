@@ -1,0 +1,55 @@
+All three states verified on the emulator. Report below.
+
+---
+
+## VERDICT: no (before fix); now yes
+
+## DIAGNOSIS
+`src/jsMain/kotlin/screens/cart.kt:29` — the `StyledText` under the "Total" label was bound to `b.subtotal` instead of `b.total`. The `CartScreenBindings.total` property was never read anywhere in the project (portal `find_usages("total")` → *no usages*; `find_usages("subtotal")` → **two** bindings, `StyledText#4` and `StyledText#6`). The Total line therefore mirrored the Subtotal line.
+
+The presenter `src/jsMain/kotlin/logic/CartPresenter.kt:20-23` was already correct: `totalCents = if (items == 0) 0 else subtotalCents + SHIPPING_CENTS`, and `money()` formats correctly. Empty cart happened to look right ("$0.00" == "$0.00"); the bug only showed once shipping applied.
+
+## FIX
+```diff
+--- a/src/jsMain/kotlin/screens/cart.kt
++++ b/src/jsMain/kotlin/screens/cart.kt
+@@ -26,7 +26,7 @@ fun CartScreen(b: CartScreenBindings) {
+     StyledText(
+       text = "Total",
+       fontSize = 12,
+     )
+     StyledText(
+-      text = b.subtotal,
++      text = b.total,
+       fontSize = 14,
+     )
+```
+One line. The device entrypoint (`device/Main.kt:29`) renders `CartScreen` directly, so this is the only change needed for the running app. (The portal semantic document still mirrors the old binding on `StyledText#6`; it's a derived view and does not drive the Zipline build, so I left it untouched to keep the fix minimal.)
+
+## VERIFICATION
+**OBSERVED RUNNING** (emulator-5554, after `compileKotlinJs` → `serveDevelopmentZipline` (manifest 200) → host force-stop/restart):
+- Empty cart: Subtotal `$0.00`, Total `$0.00`
+- After 1 tap: Subtotal `$12.00`, Total `$17.00`
+- After 2 taps: Subtotal `$24.00`, Total `$29.00`
+
+All three match the requirement exactly. `compileKotlinJs` build succeeded.
+
+**INFERRED FROM READING CODE:** that the presenter math was correct and the defect was purely the screen's field binding — confirmed by the portal document (`StyledText#6.text` = `Bind(subtotal)`) and `find_usages` before I was permitted to open `cart.kt`. Reading `cart.kt` afterward confirmed line 29 verbatim.
+
+## CONFIDENCE: high
+The wrong binding was identified independently via portal tools before opening the screen file, the reading of `cart.kt` confirmed it, and all three required on-device states were observed correct after the fix.
+
+## TOOL FINDINGS
+- **`mcp__keliver-portal__get_guide`** — returned "guide not found" (no `docs/PORTAL_USAGE.md`). No help.
+- **`mcp__keliver-portal__list_projects`** — `["default"]`. Minor orientation only.
+- **`mcp__keliver-portal__list_screens`** — `["cart"]`. Confirmed the single screen to inspect. Mild help.
+- **`mcp__keliver-portal__get_catalog`** — widget/prop/op schema. Context for reading the document (told me `StyledText.text` is a `Text`-kind prop that can be `Lit` or `Bind`). Indirect help.
+- **`mcp__keliver-portal__get_document(cart)`** — **decisive.** Showed handle #6 (the Total value `StyledText`) bound to `field: "subtotal"` while handle #4 bound the same, and the contract exposed a separate `total: String`. This located the bug without opening `screens/`.
+- **`mcp__keliver-portal__find_usages("total")`** — "no usages" — **decisive corroboration**: the computed `total` field was dead, so the Total line had to be pointing elsewhere.
+- **`mcp__keliver-portal__find_usages("subtotal")`** — showed `StyledText#4` and `StyledText#6` both bind `subtotal`, pinpointing the duplicated binding. **Decisive.**
+
+## TOOLS
+- Portal MCP tools (above) — used for diagnosis; `get_document` + both `find_usages` calls were the ones that mattered.
+- `Read` on `logic/CartPresenter.kt` and `device/Main.kt` (allowed) — confirmed presenter correctness and that `CartScreen` is the live renderer.
+- `Bash` (gradle `compileKotlinJs`, `serveDevelopmentZipline`, `curl`, `adb` uiautomator/input/screencap) — build and on-emulator verification.
+- `Edit` — applied the one-line fix.

@@ -1,0 +1,7 @@
+text="Articles Feed"
+text="Retry"
+text="Title 1"
+text="Title 2"
+text="Title 3"
+text="{statusLine}"
+text="⚡ live overlay — doc v2 (compiled v1, catching up…)"

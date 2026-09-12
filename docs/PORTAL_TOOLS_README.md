@@ -2,7 +2,9 @@
 
 The keliver visual portal — server, editor, MCP agent surface, and scaffolder —
 runnable against your own app repo without cloning keliver. Requires **Java 17+**
-and **python3**.
+and **python3**. `VERSION.json` records this bundle's tools version, the source
+commit it was built from, and the Maven dependency version its scaffolders wire
+into new projects — those are two independent version lines.
 
 ```
 bin/keliver-init <AppName> [dir]   # scaffold a new keliver SDUI project
@@ -47,6 +49,21 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Doesn't (yet):** compile/sign the production bundle or drive on-device
   preview — those run in your app's own Gradle. See the keliver repo's
   `docs/PORTAL_USAGE.md` and `docs/SCREEN_ARCHITECTURE.md` for the host wiring.
+
+### `host/` — the device host is DEVELOPMENT-ONLY
+
+`host/keliver-device-host-<version>.apk` lets you see your screens on an
+emulator without writing any Android code. It carries **no portal public key**,
+loads only the unsigned bundle your own `serveDevelopmentZipline` is serving,
+and **refuses production mode** (`--es mode prod`) with an on-device message
+rather than loading a production bundle unverified.
+
+Shipping to real users needs **your own production host**: copy
+`sample/host-android` from the keliver repository and build it on a machine
+whose portal store holds `keys/ed25519.pub`, so your portal's identity is
+embedded and signature verification stays on. `host/README.md` has the table of
+what each mode does. This separation is deliberate — a generic binary that
+belongs to nobody has nothing to verify your bundles against.
 
 ### bin/keliver-new-component.sh
 

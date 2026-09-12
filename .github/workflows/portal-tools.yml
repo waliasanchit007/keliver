@@ -1,37 +1,226 @@
-# Builds keliver-portal-tools (server + editor + mcp + keliver-init/keliver-portal
-# launchers) and attaches the zip to the GitHub Release for the tag. No signing
-# secrets needed — free on ubuntu-latest for a public repo.
+# Builds and VERIFIES keliver-portal-tools candidates (relay + editor + mcp +
+# device host APK + keliver-init/keliver-portal launchers). No signing secrets
+# needed.
+#
+# THIS WORKFLOW DOES NOT PUBLISH. It has no job with `contents: write`, so no
+# run of it — tag, branch or dispatch — can create a release, attach an asset,
+# move a tag or replace published bytes.
+#
+# That is deliberate. The build is NOT byte-reproducible: the same commit built
+# on macOS and on Linux produced two different zips. Verification — the adopter
+# acceptance, the foreign-relay identity regression, the packaging hygiene
+# check, and the on-device run — establishes ONE set of bytes. A job that
+# rebuilt at the tag and attached its own output would publish bytes nobody had
+# tested, under release notes citing runs that never saw them.
+#
+# So a tools tag builds and verifies a candidate, and the asset is attached by
+# hand from a named retained artifact. The procedure, including how to stop an
+# older workflow at an older tagged commit from doing it automatically, is
+# docs/PORTAL_TOOLS_RELEASE.md.
+#
+# TOOLS TAGS ARE SEPARATE FROM LIBRARY TAGS.
+#
+#   library:  v0.3.3               -> publish.yml (GitHub Packages) and, manually,
+#                                     publish-maven-central.yml
+#   tools:    portal-tools-v0.3.4  -> this workflow, and ONLY this workflow
+#
+# `portal-tools-v*` does not match the `v*` pattern publish.yml listens on, so a
+# tools release cannot publish libraries. That is the point of the convention:
+# naming a ZIP must never move a published Maven coordinate.
+#
+# The version comes from build-support/portal-tools.version and the tag must
+# agree with it, the same guard publish-maven-central.yml uses for the library
+# version. The checkout is the exact commit the tag points at.
 name: portal-tools
 on:
   push:
-    tags: ["v*"]
+    tags: ["portal-tools-v*"]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version label for the bundle (e.g. 0.3.0)"
+      ref:
+        description: "Commit to BUILD. Ignored by device verification, which tests the artifact named by device_run_id and runs the verifier from the dispatch branch."
         required: true
+      device_run_id:
+        description: "Set to a run id holding a retained candidate artifact to run DEVICE verification instead of a build"
+        required: false
+        default: ""
+      device_apk_sha256:
+        description: "sha256 the APK inside that artifact must have"
+        required: false
+        default: ""
+# Least privilege, and no exceptions: EVERY job here is read-only. Nothing in
+# this workflow can create a release, attach an asset, publish a package or move
+# a tag, on any trigger.
 permissions:
-  contents: write
+  contents: read
 jobs:
+  # A dispatch either BUILDS a candidate or VERIFIES one on a device, never both.
+  # A tools tag push reaches THIS job only: it builds the tagged commit and runs
+  # the portable Linux checks, and publishes nothing. Device verification is a
+  # separate dispatch against the retained artifact (see
+  # docs/PORTAL_TOOLS_RELEASE.md) — a tag push does not perform it.
+  # (The device job lives here rather than in its own file because GitHub will
+  # only dispatch a workflow whose filename already exists on the default
+  # branch.)
   bundle:
+    if: github.event_name == 'push' || github.event.inputs.device_run_id == ''
+    permissions:
+      contents: read
+    # Prerequisites this job actually needs: JDK 17, the Android SDK (the bundle
+    # ships a device-host APK built by :portal-device-android:assembleDebug),
+    # Node/Yarn for the Kotlin/Wasm editor build, python3 and zip.
+    # ubuntu-latest carries all of them — verified by run 34587245714, which
+    # built the 0.3.4 candidate here and passed the portable checks.
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          # The tag names the commit; build that commit and nothing else.
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Resolve and verify the tools version
+        id: v
+        run: |
+          set -euo pipefail
+          file="$(tr -d ' \n' < build-support/portal-tools.version)"
+          echo "recorded tools version: $file"
+          echo "building commit: $(git rev-parse HEAD)"
+          case "${GITHUB_REF_TYPE:-}" in
+            tag)
+              tag="${GITHUB_REF_NAME#portal-tools-v}"
+              if [ "$tag" != "$file" ]; then
+                echo "::error::tag portal-tools-v$tag does not match build-support/portal-tools.version ($file)"
+                exit 1
+              fi
+              ;;
+            *) echo "not a tag build; using the recorded version" ;;
+          esac
+          echo "version=$file" >> "$GITHUB_OUTPUT"
+      - name: Build the tools bundle
+        run: scripts/build-portal-tools.sh "${{ steps.v.outputs.version }}"
+      - name: Identify what was packaged
+        run: |
+          set -euo pipefail
+          zip="build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip"
+          echo "--- VERSION.json"
+          unzip -p "$zip" '*/VERSION.json' | tee version.json
+          get() { python3 -c "import json,sys;print(json.load(open('version.json'))[sys.argv[1]])" "$1"; }
+          tv="$(get toolsVersion)"; mv="$(get mavenDependencyVersion)"; sc="$(get sourceCommit)"
+          echo "tools=$tv  maven=$mv  sourceCommit=$sc  checkout=$(git rev-parse HEAD)"
+          test "$tv" = "0.3.4"                 # the tools line
+          test "$mv" = "0.3.3"                 # the Maven line must NOT move
+          test "$sc" = "$(git rev-parse HEAD)" # the package names the commit actually built
+          echo "--- hashes"
+          sha256sum "$zip"
+          unzip -p "$zip" '*/host/*.apk' > host.apk
+          sha256sum host.apk
+          echo "--- the bundled host must be development-only and key-free (U22)"
+          if unzip -l host.apk | grep -q 'assets/portal_ed25519.pub'; then
+            echo "::error::the packaged APK embeds a portal key"; exit 1
+          fi
+          echo "no assets/portal_ed25519.pub - ok"
+      - name: Portable checks on Linux
+        run: |
+          set -euo pipefail
+          zip="$PWD/build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip"
+          echo "::group::unit tests"
+          ./gradlew --console=plain :portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest
+          echo "::endgroup::"
+          echo "::group::device-host packaging hygiene (U22)"
+          scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
+          echo "::endgroup::"
+          echo "::group::packaged adopter acceptance (includes the U21 identity gate)"
+          scripts/keliver-adopter-acceptance.sh "$RUNNER_TEMP/acceptance" "$zip"
+          echo "::endgroup::"
+          echo "::group::foreign-relay refusal regression"
+          scripts/keliver-acceptance-identity-check.sh "$RUNNER_TEMP/identity" "$zip"
+          echo "::endgroup::"
+      - name: Keep the artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keliver-portal-tools-${{ steps.v.outputs.version }}-${{ github.sha }}
+          path: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  device:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.device_run_id != ''
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      # Deliberately the DISPATCH branch, not `inputs.ref`: the verifier must be
+      # able to test a candidate whose commit predates it (ec10e191a has no
+      # keliver-device-verify.sh). What is pinned is the ARTIFACT, by
+      # device_run_id + device_apk_sha256 below.
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Resolve version
-        id: v
-        run: |
-          v="${{ github.event.inputs.version }}"
-          [ -z "$v" ] && v="${GITHUB_REF_NAME#v}"
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-      - name: Build the tools bundle
-        run: scripts/build-portal-tools.sh "${{ steps.v.outputs.version }}"
-      - name: Attach to the release
-        uses: softprops/action-gh-release@v2
+
+      - name: Fetch the RETAINED candidate artifact
+        uses: actions/download-artifact@v4
         with:
-          files: build/portal-tools/keliver-portal-tools-${{ steps.v.outputs.version }}.zip
-          tag_name: v${{ steps.v.outputs.version }}
-          fail_on_unmatched_files: true
+          run-id: ${{ github.event.inputs.device_run_id }}
+          github-token: ${{ github.token }}
+          pattern: keliver-portal-tools-*
+          merge-multiple: true
+          path: candidate
+
+      - name: Identify the APK under test
+        id: apk
+        run: |
+          set -euo pipefail
+          zip="$(ls candidate/keliver-portal-tools-*.zip)"
+          echo "zip: $zip"; sha256sum "$zip"
+          entry="$(unzip -Z1 "$zip" | grep -E 'host/.*\.apk$')"
+          unzip -p "$zip" "$entry" > host.apk
+          got="$(sha256sum host.apk | cut -d' ' -f1)"
+          echo "apk sha256: $got"
+          test "$got" = "${{ github.event.inputs.device_apk_sha256 }}"
+          # The bundled host must still be key-free at the point of install.
+          if unzip -l host.apk | grep -q 'assets/portal_ed25519.pub'; then
+            echo "::error::the APK under test embeds a portal key"; exit 1
+          fi
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          df -h / /mnt || true
+
+      - name: Boot an emulator and run the device checks
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          # aosp_atd is the smallest x86_64 image and is built for CI. API 33
+          # has no "default" (AOSP) x86_64 image, so that would not resolve.
+          target: aosp_atd
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          # This action runs `script:` under /usr/bin/sh, which is dash on
+          # Ubuntu and rejects `set -o pipefail`. Keep this a single bash call
+          # and put the actual checks in a reviewable script that a local run
+          # against an attached device can use unchanged.
+          script: |
+            bash scripts/keliver-device-verify.sh "${{ steps.apk.outputs.zip }}" "$RUNNER_TEMP/devverify" "$GITHUB_WORKSPACE/device-evidence"
+
+      - name: Keep the device evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-evidence-${{ github.event.inputs.device_run_id }}
+          path: device-evidence/
+          if-no-files-found: warn

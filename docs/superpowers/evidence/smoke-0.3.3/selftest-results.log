@@ -1,0 +1,18 @@
+keliver-consumer-smoke self-test   version=0.3.3
+smoke:   /Users/sanchit.walia/NonWork/Keliver/scripts/keliver-consumer-smoke.sh
+workdir: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//smoke-selftest-nlLJPs
+  PASS  missing --out value exits, does not hang (exit 2)
+  PASS  missing --scaffolder value exits, does not hang (exit 2)
+./scripts/keliver-consumer-smoke-selftest.sh: line 122:  6865 Terminated: 15          ( sleep "$secs"; kill -9 $p 2> /dev/null )
+  PASS  failed scaffolding step fails (exit 1)
+  PASS  failed compilation step fails (distinct from scaffolding) (exit 1)
+  PASS  version absent from Central fails (exit 1)
+  PASS  snapshot version refused (exit 2)
+  PASS  hostile env + pre-existing dir still passes (exit 0)
+  PASS  seeded cache neither reused nor altered
+  PASS  hostile env stripped: no mavenLocal in the generated project
+  PASS  result.txt records a PASS
+  PASS  smoke.log shows the dependency cache started empty
+
+passed: 11   failed: 0
+artifacts: /var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T//smoke-selftest-nlLJPs

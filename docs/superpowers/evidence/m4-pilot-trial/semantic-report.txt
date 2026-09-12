@@ -1,0 +1,53 @@
+Screenshot confirms "4 items". The fix is verified end-to-end on the device.
+
+---
+
+**VERDICT: no** (before my fix — the app did not meet the requirement; it does now)
+
+**DIAGNOSIS**
+
+`src/jsMain/kotlin/screens/home.kt:17` — the summary label's text was the hardcoded string literal `"0 items"`. The screen never read `b.summary`, so the binding the presenter exposes was dead code and the label could never change. `HomeScreenBindings.summary` (declared at `home.kt:28`, implemented at `logic/HomePresenter.kt:14`) had no consumer anywhere in the app.
+
+The counter state itself was fine: `addItem()` correctly incremented `count`, and the tap was reaching the presenter — the value simply had no path to the screen.
+
+**FIX**
+
+```diff
+--- a/src/jsMain/kotlin/screens/home.kt
++++ b/src/jsMain/kotlin/screens/home.kt
+@@ -14,7 +14,7 @@
+       bold = true,
+     )
+     StyledText(
+-      text = "0 items",
++      text = b.summary,
+       fontSize = 14,
+     )
+     Button(
+```
+
+One line, in the screen only. No change to the presenter — see the caveat below.
+
+**VERIFICATION**
+
+*Observed running (emulator-5554, real taps on the real host app):*
+- Baseline, before any edit: restarted the host, `uiautomator` dump showed `Basket` / `0 items` / `Add item`. Tapped "Add item" at (136,231) → label still read `0 items`. **Bug reproduced on device, not just suspected from code.**
+- Confirmed the bundle server was live: a pre-existing Gradle daemon already held port 8080 (my own `serveDevelopmentZipline` failed to bind and exited). I checked its cwd via `lsof` — it was this project — and recorded the served `./basket.js` hash (`07d94027…`). After rebuilding, the served hash changed to `b3916eec…`, proving the device was fetching my new build and not a stale bundle. This mattered: without it, a passing test could have been meaningless.
+- After the fix: cold start showed `0 items`; one tap → `1 items`; further taps → `2 items`, `3 items`, `4 items`. Screenshot confirms `4 items` rendered.
+- `./gradlew compileKotlinJs` — BUILD SUCCESSFUL.
+
+*Inferred from reading code (not separately proven):*
+- The reason `HomePresenter.kt:14` still works despite `override val summary: String = "$count items"` being a `val` with an initializer (evaluated once per object construction, not a computed property): `HomePresenter` returns a non-`Unit` value, so Compose cannot make it a restartable scope. The `count` read therefore invalidates the enclosing scope, `AppUi.Show()`, which re-runs `HomePresenter()` and builds a fresh bindings object each recomposition. The observed increments are consistent with this, but I did not instrument recomposition to prove the mechanism.
+
+**Caveat I deliberately did not "fix":** that `val` is a latent hazard — it reads correct only because of the non-restartable-scope detail above. `override val summary: String get() = "$count items"` would be more robustly idiomatic. I left it alone because the brief asked for a *minimal* fix and the line is empirically correct; changing working code on a theory would have been scope creep. Flagging it as a judgment call that's yours to make.
+
+**CONFIDENCE: high.** The defect was a hardcoded literal — unambiguous — and I reproduced the failure and the fix on the actual emulator rather than reasoning from source alone, with the bundle hash confirming the device ran my build. Residual uncertainty is confined to the *explanation* of why the presenter's `val` is safe, which doesn't affect the verdict or the fix.
+
+**TOOLS**
+- `Bash` (gradle, adb, curl, lsof, python3) — the workhorse; did everything.
+- `uiautomator dump` + grep — helped most; gave exact label text, which is what the requirement is stated in.
+- `lsof` / manifest hash comparison — helped decisively; caught that a foreign server owned 8080 and let me prove bundle freshness.
+- Background `Bash` for `serveDevelopmentZipline` — did *not* help; it failed on port bind. The pre-existing daemon served fine, so no restart was needed.
+- `Read` on the screenshot — useful final confirmation, though the XML dump was the more precise signal.
+
+Housekeeping: the pre-existing serve daemon on port 8080 is still running (it was not mine to kill); nothing I started is left running.

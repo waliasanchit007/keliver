@@ -878,6 +878,537 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U19. Live preview appeared not to re-render after a presenter action — CAUSE UNRESOLVED
+
+> **Read this first (2026-09-11).** Two causal explanations have now been
+> written here and both are withdrawn. The second one — "an idle host schedules
+> no frames" — was measured and is **false**: the editor's host delivers 60
+> frames per second continuously, driven by the editor's own frame pump, in
+> every state including before Live is pressed. Published `portal-editor:0.3.3`
+> handles both synchronous actions and asynchronous presenter completions
+> correctly. The original `0 → 1 → 1 → 1` observation has not reproduced under
+> any condition tried and its **cause is unknown**.
+>
+> The two `HostWakeSignal` changes below were unproven and have been
+> **removed** (`b4102945f`); `portal-editor`'s wasmJsMain sources and klib dump
+> are identical to `v0.3.3` again. Full trace and per-arm measurements:
+> `docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`.
+>
+> Status is **previously observed, currently unreproduced, cause unresolved** —
+> not "fixed", and not "never happened". The observation was recorded faithfully
+> and has not been explained.
+>
+> Everything below is preserved as the record of what was observed and claimed,
+> in order, including the parts now known to be wrong.
+
+**The earlier causal wording here was wrong and is withdrawn.** It said state
+was "discarded between dispatches". State was never discarded.
+
+**What was believed to have happened — also withdrawn, see the note above.**
+The editor runs the live-preview guest composition
+on its own `BroadcastFrameClock` and ticks it from the HOST's frames
+(`EditorShell.kt`, the `while (true) { withFrameNanos { guestClock.sendFrame } }`
+loop). That is one-directional. A preview action wrote presenter state, which
+invalidated the **guest** composition — and the guest then waited for a frame
+that never came, because an idle host schedules no frames and nothing told it
+otherwise. The presenter's own state advanced correctly the whole time; the
+canvas kept showing the first frame until some unrelated event (a document
+edit, a tree reload) happened to re-render the host.
+
+**Evidence that separated the explanations.** A temporary instrumented preview
+logged presenter identity, state before/after each action, and each frame:
+
+```
+compose: presenter#1 count=0        <- exactly ONE composition, ever
+frame#1 tally=0 tallied
+route: frame#1 action=add           <- canvas tap
+dispatch: presenter#1 count 0 -> 1  <- state DID advance
+route: frame#1 action=add           <- State Inspector, SAME frame + presenter
+dispatch: presenter#1 count 1 -> 2  <- and advanced again
+```
+
+State inspector still read `0 tallied` throughout. Both dispatch routes reached
+the same live presenter. So: not a presenter reset, not a stale callback, not a
+registration mistake — a stale **display**. Applying an unrelated document edit
+then made the canvas jump straight to `2 tallied`, confirming the value was
+there all along.
+
+The earlier `0 → 1 → 1 → 1` reading is explained too: the first tap also
+changed the selection, which re-rendered the host and produced the one frame
+that showed `1`.
+
+**Fix** (`portal-editor`): `HostWakeSignal` — a state the host composition
+reads, bumped by `LiveEngine.dispatch`. A live dispatch now invalidates the
+host, the host schedules a frame, the loop ticks the guest clock, and the
+presenter's new frame is composed. Two lines of behaviour, in the module that
+owns the coupling. Both dispatch routes go through `LiveEngine.dispatch`, so
+canvas taps and the State Inspector's ⚡ buttons are both covered.
+
+**Intended resets are preserved**: `LivePresenterHost` still keys the presenter
+on `"screen:persona"`, so changing screen or persona starts fresh, and
+`LiveEngine.stop()` still ends the session and clears live values.
+
+**Regression**: `portal-editor/src/wasmJsTest/.../LivePreviewDispatchTest.kt`,
+2 tests. `threeActionsAdvanceThePreviewedValue` drives the real
+`LivePresenterHost` + `LiveEngine.dispatch` + `PreviewBindings` path under the
+editor's actual two-clock arrangement, with a host that only produces frames
+when woken, and requires `0 → 1 → 2 → 3`. **Failing before the fix** with
+`actual <[0 tallied, 0 tallied, 0 tallied, 0 tallied]>`.
+`intendedResetBoundariesStillReset` covers screen change, session stop, and
+restart.
+
+**Verified from a fresh external app** built against a local candidate
+`portal-editor`: browser preview `0 → 1 → 2 → 3`, and the same unchanged
+presenter on the device `0 → 1 → 2 → 3`.
+
+**Part 2 — asynchronous presenter state (2026-09-11).** `HostWakeSignal` was
+bumped by `LiveEngine.dispatch`, which covers only state written *inside* an
+action. A presenter also writes state from a coroutine: a `LaunchedEffect`
+completes and there is no dispatch to wake anything. Under a host that only
+frames when invalidated, that update asked for **no frame at all**.
+
+Fixed by moving the wake to the guest clock itself:
+`newGuestFrameClock()` = `BroadcastFrameClock { HostWakeSignal.wake() }`
+(`portal-editor/src/wasmJsMain/kotlin/HostWakeSignal.kt`). A
+`BroadcastFrameClock` reports the moment it gains its first awaiter, which is
+exactly the moment the guest has work it cannot do without a frame — an action,
+a coroutine, or a guest animation alike. It is edge-triggered, so an idle
+editor stays idle: no polling, no unconditional animation loop.
+
+**Regression**: `LivePreviewAsyncTest.kt`, 3 tests, driving the host as well as
+the guest — a host recomposer, the editor's frame pump, and a driver that
+produces a frame only while the host has pending work. Failing before the
+change:
+
+```
+anAsyncCompletionReachesThePreviewWithNoInteraction
+    the completion must ask the host for a frame; it asked for none
+workStartedByAnActionLandsAfterTheDispatchRenderSettles
+    the action's own rendering. Expected <loading>, actual <idle>
+pendingWorkFromAnEndedSessionIsNeverDelivered
+    the presenter's own async start reached the preview. Expected <loading>, actual <idle>
+```
+
+**A correction to the paragraph above.** "Still true in published 0.3.3" is not
+supported by what a browser actually does, and is withdrawn as stated. Running
+the whole route again from a fresh external app (`ledger`) against **published**
+`dev.keliver:portal-editor:0.3.3` from Central, in Chrome 152 both headless and
+headed, every case passed: three canvas taps gave `0 → 1 → 2 → 3`, and an async
+completion reached the canvas and the State Inspector with no interaction — the
+last measured after six seconds of complete quiet, with no polling of the page
+at all. The published editor did **not** reproduce U19 in that app.
+
+So the mechanism is real (the harness above shows the guest asking for zero
+frames), but the browser condition it depends on — a host composition that goes
+idle while the guest has work — was not reproduced here, and the earlier
+`0 → 1 → 1 → 1` browser reading remains unexplained. What the fix guarantees is
+that a guest invalidation asks for a frame **regardless of the host's scheduling
+policy**; what it does not establish is how often a browser leaves the host
+idle. See `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md`.
+
+**Release scope.** Both parts are in `portal-editor`, a **Maven** artifact; the
+tools bundle does not carry them. Neither is released.
+
+---
+
+**Part 3 — the reconciliation (2026-09-11).** The harness that produced both
+"failing before" results was traced against Compose 1.8.2's actual sources and
+found to withhold frames production delivers: its pump awaited the parent clock
+directly, so the pump's awaiter never counted toward
+`Recomposer.hasBroadcastFrameClockAwaiters`, and the driver refused to send
+frames. Production's pump is a `LaunchedEffect` inside the host composition, so
+its awaiter makes the recomposer request a browser frame every frame, forever.
+
+Measured with identical instrumentation across three published variants
+(`v0.3.3` with no wake, part 1, part 2), same app and browser, separate origins,
+fresh profiles, no service workers, empty cache storage:
+
+| | before Live | Live idle | after Stop | async completion | tap |
+|---|---|---|---|---|---|
+| v0.3.3, no wake | 60.2 frames/s | 59.9/s | 59.9/s | 154 ms, +0 host recompositions | +0 |
+| part 1 | 60.0/s | 59.9/s | 59.9/s | 155 ms, +0 | +1 each |
+| part 2 | 59.9/s | 59.9/s | 60.3/s | 155 ms, +2 | +1 to +2 |
+
+Both patches are behaviourally indistinguishable from doing nothing, and add
+recomposition. The corrected harness (`PreviewTestEditor.kt`) passes all five
+live-preview tests with **both** wake mechanisms removed.
+
+**Status: previously observed, currently unreproduced, cause unresolved.** No
+production defect was reproduced; the wake changes were removed in `b4102945f`.
+No hypothesis for the original observation has supporting evidence, so none is
+recorded here as more or less likely than another.
+
+Evidence: `docs/superpowers/evidence/adopter-preview-route/`.
+
+### U16. `get_document` silently returned an empty document for a qualified screen id — FIXED (both halves)
+
+**What.** `list_screens` returns bare names (`["home"]`), and `get_document`
+expected that bare form. Passing the qualified form the relay's own log prints
+(`default/home`) returned a *different*, empty document under the
+double-prefixed name `default/default_home`, with no error.
+
+**Fixed at the MCP layer** in `portal-mcp` `Tools.normalizeScreen` +
+`rejectUnknownScreen`: a leading `<project>/` matching the resolved project is
+stripped, and an unknown screen returns `isError` naming the valid ids.
+Applied to `get_document`, `apply_ops`, `undo` and `redo`.
+Regression: `ScreenIdTest`, 7 cases.
+
+**Fixed at the relay layer** in `a3b9651ad`: `GET /doc` for a screen the app
+does not have is now **404** naming the known screens. It used to mint the
+document — and because the engine materialises a document's backing file, that
+"read" created `<screen>.kt` and `Compiled_<screen>.kt` inside the app's source
+tree. Verified through the packaged relay from a fresh scaffold:
+`HTTP 404 {"error":"no screen 'invoice' in project 'default'; known screens: home"}`
+with the source tree unchanged. See
+`docs/superpowers/evidence/adopter-store-and-guide/`.
+
+### U17. One document store was shared by every app on the machine — FIXED
+
+**What.** `storeDir()` defaulted to `~/.keliver-portal`, a machine-global
+directory. Nothing tied a store to a repo, so with two scaffolded apps running:
+
+* app B's `/screens` listed app A's screens, and opening one wrote
+  `<screen>.kt` + `Compiled_<screen>.kt` into **app B's** source tree;
+* starting app B **deleted** app A's documents, because `bootScan` retires
+  store mirrors whose `.kt` is missing from the app it is serving.
+
+This is what put `feed.kt` into a freshly scaffolded cart app during the M4
+case-2 setup.
+
+**Fixed** in `a3b9651ad`. Ownership rules: a store belongs to exactly one repo;
+the default is `~/.keliver-portal/apps/<slug>-<hash of the repo path>`; never
+inside the app's source tree; persists across restarts; an explicit store (or
+`PORTAL_STORE`, which used to be **silently ignored**) is honoured but records
+its owner and refuses a second repo with an actionable error.
+
+Regression: two-app script (2 failures before, 9 passes after) plus
+`PortalStoreOwnershipTest` (5 cases).
+
+**Follow-ups completed in `546164fc2`:**
+
+* **Consumers unified.** Relocating the store left four behind:
+  `portal-published-guest` signed with `~/.keliver-portal/keys`, both device
+  hosts embedded the public key from there, and `keliver-record-http.sh`
+  resolved the old default. Reproduced with disposable state — the relay minted
+  an identity in the per-app store and the publisher produced an **unsigned
+  bundle**. All four now use `scripts/keliver-store-path.sh`;
+  `StoreContractTest` asserts that script agrees with `PortalConfig.storeDir()`.
+  Verified by publishing a bundle signed `portal-ed25519` and checking it with
+  Zipline's own `ManifestVerifier` against the store's public key, checks ON,
+  plus a tamper case that must fail.
+* **Ownership acquisition made atomic.** `claimStoreFor` was `exists()` then
+  `writeText()`; a 16-thread test showed **16 of 16** simultaneous claimants
+  winning an unowned store. Now `CREATE_NEW`. `StoreClaimRaceTest` (3 cases)
+  and a process-level check: exactly one relay survives, the loser alters
+  neither marker nor sources, and the owner still restarts.
+* **Upgrade path.** The relay reports what a legacy `~/.keliver-portal` still
+  holds and points at `scripts/keliver-adopt-legacy-store.sh`, which copies per
+  file into one **named** app — never moving, deleting, overwriting without
+  `--force`, or guessing which repo owns an ambiguous global store.
+  `keliver-legacy-compat-check.sh`, 14 cases on disposable fixtures.
+* **Test isolation enforced.** `scripts/keliver-test-isolation-guard.sh`
+  refuses to start a test relay unless the JVM's effective `user.home` and the
+  resolved store are both inside the disposable root. Setting `HOME` is not
+  enough — that is how the real store was written to.
+
+**Remaining limitations.**
+
+* Pre-relocation content in a developer's `~/.keliver-portal` top level is left
+  where it is and is no longer read. Nothing is deleted; the adopt route or an
+  explicit `store` brings it back for the one app that owns it.
+* The `.gradle/keliver-store-path` pointer lives in the app's `.gradle`
+  directory. **Resolved in `b890abca0`**: `keliver-init` now scaffolds a
+  `.gitignore`, and `scripts/keliver-adopter-tree-check.sh` asserts a
+  scaffolded app's `git status` stays empty across an ordinary portal run and a
+  build (before: 5 failures; after: 8/0, and 8/0 from the bundle). An app
+  scaffolded by an OLDER keliver-init still has no `.gitignore` and will show
+  `.gradle/` as untracked.
+* Verified on macOS only. The `user.home`-versus-`HOME` divergence that caused
+  the incident is macOS-specific in its details; Linux and CI behaviour is
+  **inferred from the code**, not executed.
+
+### U23. Renaming or moving an app directory silently rotates its signing identity — OPEN
+
+**Symptoms:** your documents look empty, or a device rejects a bundle you just
+published, after the app directory was renamed or moved — or after you launched
+it through a symlink (see U25.1, which reaches this outcome with no rename).
+Nothing has been destroyed; see *Recovery* in [U24].
+
+Found by independent review of PR #74, in code that **shipped in tools 0.3.4**.
+Not introduced by that PR and not fixed in it: the fix is a behaviour change in
+store resolution and needs its own verification and release.
+
+`PortalConfig.appStoreName` derives the default store from the app's canonical
+absolute path:
+
+```kotlin
+val abs = repoDir.absoluteFile.canonicalFile.path
+val digest = java.security.MessageDigest.getInstance("SHA-256").digest(abs.toByteArray())
+```
+
+Rename `~/work/myapp` to `~/work/checkout`, or move it to another disk, and the
+relay resolves a *different* store, finds no keys, and `ensureKeys()` mints a
+**fresh Ed25519 keypair**. Consequences:
+
+* bundles published before the move no longer verify against the new identity;
+* a production host built earlier embeds the old public key and will reject
+  newly signed manifests;
+* documents and drafts under the old store are orphaned.
+
+It is silent — `legacyStoreOrNull` deliberately excludes `apps`, so a sibling
+per-app store is never reported. Before 0.3.4 (one global store) a rename could
+not rotate the identity.
+
+**Nothing is deleted.** The old store, keypair included, is intact at
+`~/.keliver-portal/apps/<old-slug>-<oldhash>/`. Screen documents are derived
+state — the boot scan re-ingests them from the `.kt` files in git — so only
+unsaved drafts are genuinely at risk. Blast radius today is one machine: there
+is no external adopter and no deployed production bundle.
+
+**Recovery, and the trap in it — see U24.**
+
+### U24. `claimStoreFor` refuses the recovery its own error message recommends — OPEN
+
+Found by the same review; also shipped in 0.3.4, also unfixed here.
+
+The store-conflict error tells the user:
+
+> Fix: remove "store" from this app's keliver.portal.json to get its own
+> store, or point it at a directory this app alone uses.
+
+But the `owner` marker records the canonical repo path at claim time:
+
+```kotlin
+val me = repoDir.absoluteFile.canonicalFile.path
+```
+
+So after a rename (U23), pointing `"store"` back at the old directory to recover
+the identity and documents makes `me` the *new* path and `theirs` the *old*
+one. They differ, `claimStoreFor` throws, and the relay **refuses to boot**,
+reporting that the store "already belongs to another app" — which is the same
+app. The only way out is hand-editing the `owner` file, which nothing documents.
+
+This is what makes U23 feel like corruption when it is not. **Manual recovery:**
+edit `<store>/owner` to the app's current canonical path (`cd <app> && pwd -P`),
+or copy `keys/` out of the old store into the new one.
+
+Suggested fix for both: when the recorded owner path no longer exists on disk,
+treat the claim as reclaimable with a printed notice rather than fatally.
+
+### U25. Four smaller store/host issues found by the PR #74 review — OPEN
+
+All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
+none is a security hole.
+
+1. **A symlinked final path component splits one app across two stores.**
+   `PortalConfig.appStoreName` canonicalises the path for the *hash* but not for
+   the *slug*:
+
+   ```kotlin
+   val abs  = repoDir.absoluteFile.canonicalFile.path   // hash: canonical
+   val slug = repoDir.absoluteFile.name.lowercase()...  // slug: NOT canonical
+   ```
+
+   This bites twice.
+
+   *Kotlin vs Kotlin — and this reaches [U23]'s outcome with no rename at all.*
+   With `~/work/current -> ~/work/app-v2`, launching `PORTAL_REPO=~/work/current`
+   resolves `apps/current-<h>` and launching `PORTAL_REPO=~/work/app-v2`
+   resolves `apps/app-v2-<h>`: **the same app, two stores, two signing
+   identities, chosen by which path you happened to type.** Nothing warns,
+   because `claimStoreFor` writes the *canonical* path as the owner, so both
+   markers agree and neither conflicts.
+
+   *Kotlin vs shell.* `keliver-store-path.sh` canonicalises both, so the relay
+   resolves `apps/current-<h>` while the script reports `apps/app-v2-<h>`.
+   Before the relay has ever booted there (so `.gradle/keliver-store-path` does
+   not exist yet) the guest build finds no key and emits an **unsigned** bundle.
+   Fails safe, and self-heals once the pointer is written.
+
+   `StoreContractTest` uses only `Files.createTempDirectory` paths, so it
+   structurally cannot catch either. Related: the Python slug uses
+   Unicode-aware `isalnum()`, the Kotlin regex is ASCII `[^a-z0-9._-]`, so
+   `café` slugs differently in each.
+2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
+   exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
+   truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
+   throws in `onCreate` — a crash instead of the refusal screen. **Fail-closed**:
+   nothing is fetched and verification is never skipped, so the U22 claim holds.
+   Should be `^[0-9a-fA-F]{64}$`.
+3. **`-Pkeliver.devOnlyHost` accepts only the exact string `true`.** Groovy's
+   `String.toBoolean()` means a bare `-Pkeliver.devOnlyHost`, `=1` or `=yes`
+   silently yields `false` and a production-shaped host. Backstopped by
+   `build-portal-tools.sh`, which refuses to package an APK containing
+   `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+4. **`keliverStoreDir` warns and falls back to `~/.keliver-portal`** when
+   `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
+   then sign with one identity while the relay uses another — the mismatch the
+   helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
+   builds. Failing the build would be safer.
+
+### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
+
+`scripts/keliver-adopter-acceptance.sh` starts `keliver-portal` and then health-
+waits with `curl -sf http://localhost:$PORT/screens`. It treats any answer as
+proof that its own portal started.
+
+Observed 2026-09-11 during the tools-bundle release review. A relay left running
+from an earlier step held `:8077`. `keliver-portal` behaved correctly and
+refused:
+
+```
+✗ a portal server is already answering on :8077 — 'keliver-portal stop' first,
+  or use a different port in keliver.portal.json
+```
+
+The acceptance recorded `PASS  keliver-portal started and answers` anyway and
+drove every subsequent MCP call against the other app — `get_document` returned
+`title 'Ledger'` in a run that had scaffolded `MyApp`, and `apply_ops` edited
+that other app's source file. It finished 12 passed / 3 failed, and the three
+failures pointed at the scaffolded app rather than at the real cause.
+
+With the port free the same package scores 16/0, so this is purely a harness
+defect — but it is the harness the release evidence rests on, and it fails
+towards a **false pass**.
+
+**Fixed** (`5457bd42d`). Before any document request, and again after the
+restart, the acceptance requires both:
+
+1. `keliver-portal` itself started — its own exit is the authority, and it
+   already refuses an occupied port;
+2. the process listening on the port is a **descendant of a pid this run
+   recorded** in that app's `keliver-portal` run directory.
+
+A matching screen title is deliberately not accepted as identity: both apps
+scaffold the same tree, so the title matched in the incident above. Ancestry is
+walked because keliver-portal records the launcher it forked and the relay JVM
+is that launcher's child.
+
+**Regression**: `scripts/keliver-acceptance-identity-check.sh` stands a foreign
+relay on the expected port with its own disposable app and requires the
+acceptance to exit nonzero at the startup/identity gate, issue no mutation,
+leave the foreign app's source and store byte-identical, and leave the foreign
+relay running. 6/6; the normal run is unaffected at 16/0.
+
+### U20. The editor asks the browser for a frame every ~16 ms, for the page's whole life — MEASURED, NOT ASSESSED
+
+**Not a defect report.** A measurement recorded here so it is not lost, and so
+that any future work on it starts from data rather than from the assumption that
+the editor idles.
+
+`EditorShell` parks a coroutine in `withFrameNanos` inside the host composition.
+Per Compose 1.8.2, that awaiter keeps `Recomposer.hasBroadcastFrameClockAwaiters`
+true, so the recomposer requests a frame from its parent clock every frame, and
+on web that parent schedules a `requestAnimationFrame`. The loop is
+self-sustaining and has no off state.
+
+Measured in a scaffolded app, published `portal-editor:0.3.3`, headless Chrome
+152, with a counter on the pump itself:
+
+| state | host frames |
+|---|---|
+| editor loaded, **before ▶ Live** | 60.2 / s |
+| Live running, presenter idle | 59.9 / s |
+| **after ■ Stop** | 59.9 / s |
+
+with zero recompositions of the host content throughout. Same figures on the two
+reverted variants, so this is not something recent work introduced — it is how
+the editor has always run.
+
+**What is not known:** what this costs an adopter in practice (battery, CPU on a
+laptop with the editor open in a background tab, interaction with the browser's
+own rAF throttling), and whether the pump could be made demand-driven without
+reintroducing the coupling problems that
+`docs/superpowers/evidence/adopter-preview-route/U19-RECONCILIATION.md`
+describes. Deliberately not acted on: the editor works, and changing frame
+scheduling on the strength of one idle-state measurement is how U19's two
+withdrawn "fixes" happened.
+
+### U22. A locally built tools bundle embedded the builder's portal public key — FIXED
+
+`:portal-device-android:assembleDebug` copies `<store>/keys/ed25519.pub` into
+the device host's `assets/portal_ed25519.pub` whenever the build machine has a
+portal store with keys (`copyPortalKey`, `onlyIf { portalPubKey.exists() }`).
+The intent is local dev: the host verifies signed manifests against the portal
+that signed them.
+
+On a release build that is wrong. The first `keliver-portal-tools-0.3.4` build
+on this machine embedded **this developer's** portal public key, 64 bytes at
+`assets/portal_ed25519.pub`. Shipped publicly that would:
+
+* put one machine's portal identity inside a public artifact, and
+* make prod-mode verification **fail** for every adopter whose bundles are
+  signed by their own portal.
+
+A clean CI machine has no store, so `onlyIf` is false and the APK ships without
+a key — meaning the artifact's contents depend on who built it, which is also
+how this went unnoticed.
+
+A second defect sat behind it: asked for prod mode with no key, `MainActivity`
+logged `prod mode WITHOUT embedded public key — falling back to
+NO_SIGNATURE_CHECKS` and **loaded the production bundle anyway**. A request to
+verify became a request to load anything.
+
+**Fixed** (`8751ad333`), as an explicit build input rather than a property of
+the build machine:
+
+* `-Pkeliver.devOnlyHost=true` builds the **generic development host**: no key
+  embedded, `BuildConfig.DEV_ONLY=true`. `build-portal-tools.sh` passes it and
+  **refuses to package** an APK containing `assets/portal_ed25519.pub`.
+* `decideHostTrust` (`HostTrustPolicy.kt`) decides before any factory, fetch or
+  bundle load. A dev-only host refuses prod mode and says what to build
+  instead; any host asked for prod without a usable key refuses instead of
+  downgrading. The refusal renders on the device, it is not just logged.
+* an adopter's **production host is unchanged**: its key is embedded and
+  signature verification stays on.
+* `copyPortalKey` was a `Copy` with `onlyIf`, so a key copied by an earlier
+  build survived in the output directory once its input disappeared — a warm
+  build directory could smuggle it into a later APK. It is a `Sync` now, so the
+  directory matches the inputs exactly.
+* `zip` updates an archive in place, so the release zip is deleted before it is
+  rebuilt and cannot retain obsolete entries.
+
+**Regressions.** `HostTrustPolicyTest` (6 tests) covers the behaviour; against
+the previous logic five fail, including *"missing key must refuse, got
+DevelopmentUnsigned"*. `scripts/keliver-device-host-hygiene-check.sh` covers
+packaging across a warm build directory — key A, then dev-only, then key B,
+then no key — and against the previous wiring fails with *"THE DEVELOPMENT HOST
+CARRIES A KEY: 'aaaaaaaa'"* and a later build still carrying key B.
+
+**Verified on a device.** CI run
+[`34670604791`](https://github.com/waliasanchit007/keliver/actions/runs/34670604791)
+installs the *retained CI candidate APK* (`d4fb1605…`) on an `aosp_atd` x86_64
+API 33 emulator with the bundle's own installer, and passes **19 device checks,
+0 failed**, with the packaged acceptance inside it at **23 passed, 0 failed**.
+Established on the device, not inferred:
+
+* `--es mode prod` is refused on a **cold** host and again on a **warm** one —
+  after a successful development session has populated the dev Zipline cache;
+* the refusal renders: `text="Production mode refused"` plus the full
+  actionable message, in the `dev.keliver.portaldevice` view hierarchy;
+* for each refused session, **no manifest or bundle was requested** and **no
+  guest code was loaded**;
+* the documented development route renders the guest screen, and still does
+  after a refusal (`codeLoadSuccess modules=40`).
+
+Evidence and limits:
+`docs/superpowers/evidence/tools-0.3.4/device-verification-ci.md`. Not covered:
+any physical device, any other API level, and arm64 — the APK ships
+`lib/arm64-v8a` and `lib/armeabi-v7a`, neither of which was executed.
+
+### U18. `get_guide` returned "guide not found" for every adopter — FIXED
+
+**What.** The tool read `<PORTAL_REPO>/docs/PORTAL_USAGE.md`. That path exists
+in this repository and in no app scaffolded by `keliver-init`, and the MCP
+package shipped no markdown, so the tool worked from this checkout and failed
+everywhere else. Reported as unhelpful by an M4 participant.
+
+**Fixed** in `a3b9651ad`: the guide is copied into the package at build time
+from `docs/PORTAL_USAGE.md`, so it cannot drift. An app's own
+`docs/PORTAL_USAGE.md` still wins. Verified through the packaged server from a
+fresh scaffold and from a directory with no app at all. Regression: `GuideTest`,
+5 cases.
+
 ### U13. Inherited Redwood tests are quarantined — the shared `test-app` fixture was stripped
 
 **What.** A May-2026 test-completeness audit found that `./gradlew

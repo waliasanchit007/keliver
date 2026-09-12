@@ -1,0 +1,4 @@
+17c31d9d17250a71b88eacca58d068380d983a4b  src/jsMain/kotlin/device/Main.kt
+356f4ad5dad14cbed2b5b1f0c8ceb36303359704  src/jsMain/kotlin/logic/HomePresenter.kt
+e4309817538f102b9b6f40a9536da14308211f92  src/jsMain/kotlin/screens/Compiled_home.kt
+0f4a9f6aa255cccb303c2f764bcc0b3e8c9b6975  src/jsMain/kotlin/screens/home.kt

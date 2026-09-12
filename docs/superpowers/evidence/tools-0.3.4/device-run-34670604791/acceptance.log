@@ -1,0 +1,37 @@
+run dir: /home/runner/work/_temp/devverify/acceptance/keliver-acceptance-SwHXfN
+package: 2b6536a0252c33c7bfd59add41b346bb6805af8198d6642346b08e0310d6dd98
+  PASS  keliver-init scaffolded the app
+  guard ok: user.home=/home/runner/work/_temp/devverify/acceptance/keliver-acceptance-SwHXfN/home
+  guard ok: store=/home/runner/work/_temp/devverify/acceptance/keliver-acceptance-SwHXfN/home/.keliver-portal/apps/myapp-0b2a3743
+  PASS  keliver-portal started and answers: the portal this run started owns :8077 (pid 3129)
+  PASS  get_guide returns the adopter guide (14185 bytes)
+  PASS  the guide names no Keliver-repo-only commands
+  PASS  get_document returned the screen (version 1, title 'MyApp')
+  PASS  an unknown screen is 404: {"error":"no screen 'definitely-not-a-screen' in project 'default'; known screens: home"}
+  PASS  the unknown screen created no source
+  PASS  the unknown screen created no store document
+  PASS  apply_ops dry run validated: {"ok":true,"version":1}
+  PASS  apply_ops committed: {"ok":true,"version":2}
+  PASS  the screen source now reads the edited title
+  PASS  exactly one tracked file changed: src/jsMain/kotlin/screens/home.kt
+  PASS  hand-owned logic is byte-identical
+  PASS  the generated version stamp appeared, as the guide says
+  PASS  ./gradlew compileKotlinJs succeeds
+  PASS  keliver-new-device-target.sh added the device target
+  PASS  keliver-install-device-host.sh installed the host
+  PASS  serveDevelopmentZipline is serving the bundle
+  PASS  the edited title is on the device: text="My Inbox" text="Edit screens/home.kt — or run keliver-portal for the visual editor." text="First item" text="Second item" text="Refresh" 
+  PASS  stop then start works: the portal this run started owns :8077 (pid 4052)
+  PASS  the edit persists in the document after restart
+  PASS  the edit persists in the source after restart
+  ---- source fingerprint delta ----
+        0a1
+        > 17c31d9d17250a71b88eacca58d068380d983a4b  src/jsMain/kotlin/device/Main.kt
+        2c3,4
+        < 91b8dea9a4fa80ba42b07b269d1efe0f17b73e6f  src/jsMain/kotlin/screens/home.kt
+        ---
+        > e4309817538f102b9b6f40a9536da14308211f92  src/jsMain/kotlin/screens/Compiled_home.kt
+        > 0f4a9f6aa255cccb303c2f764bcc0b3e8c9b6975  src/jsMain/kotlin/screens/home.kt
+  PASS  the store is outside the app: myapp-0b2a3743
+
+passed: 23   failed: 0

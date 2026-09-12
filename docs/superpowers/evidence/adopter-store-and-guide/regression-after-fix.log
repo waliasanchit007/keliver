@@ -1,0 +1,16 @@
+contamination regression   HOME=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/adopter-defects/home
+store on disk before: 
+  appx sees: ["orders"]
+  PASS  appx sees only its own screen
+  appy sees screens: ["profile"]   projects: ["default"]
+  PASS  appy sees only its own screen
+  PASS  appy source tree unchanged
+  PASS  appx source tree unchanged
+  PASS  after restart appy still sees its own screen and only that
+  concurrent — appy: ["profile"]   appx: ["orders"]
+  PASS  concurrent: appy still lists only its own screen
+  PASS  concurrent: appx still lists only its own screen
+  PASS  appy source tree still unchanged after requesting a foreign screen
+  PASS  appx's own screen survived the other app's lifecycle
+
+passed: 9   failed: 0

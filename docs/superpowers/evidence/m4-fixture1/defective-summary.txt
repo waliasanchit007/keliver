@@ -1,0 +1,4 @@
+    AssertionError: REQUIREMENT: the summary label must reflect state after addItem(). Expected <[Basket, 1 items]>, actual <[Basket, 0 items]>.
+        at <dev.keliver:portal-render_test>.kotlin.AssertionError.<init>(/var/folders/f8/td36d85928g5dwbnpcl_sqlm0000gq/T/_karma_webpack_54225/332d689878850e2cad9c.wasm)
+9 tests completed, 1 failed
+BUILD FAILED in 10s

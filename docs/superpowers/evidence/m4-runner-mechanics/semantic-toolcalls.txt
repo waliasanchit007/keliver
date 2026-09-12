@@ -1,0 +1,15 @@
+condition:      semantic
+total calls:    3
+unparsed lines: 0
+
+     1  Bash
+     1  ToolSearch
+     1  mcp__keliver-portal__get_document
+
+portal MCP calls: 
+     1  mcp__keliver-portal__get_document
+
+Call order:
+    1. Bash
+    2. ToolSearch
+    3. mcp__keliver-portal__get_document
