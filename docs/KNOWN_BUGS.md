@@ -1127,7 +1127,7 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
-### U23. Renaming or moving an app directory silently rotates its signing identity — OPEN
+### U23. Renaming or moving an app directory silently rotates its signing identity — FIXED, UNRELEASED
 
 **Symptoms:** your documents look empty, or a device rejects a bundle you just
 published, after the app directory was renamed or moved — or after you launched
@@ -1167,7 +1167,34 @@ is no external adopter and no deployed production bundle.
 
 **Recovery, and the trap in it — see U24.**
 
-### U24. `claimStoreFor` refuses the recovery its own error message recommends — OPEN
+**Fixed on `fix/store-identity-u23-u25`; not in any released bundle.** Two
+changes, both in the contract now written down in
+[`STORE_IDENTITY.md`](STORE_IDENTITY.md):
+
+1. `PortalConfig.storeDir()` now reads `<app>/.gradle/keliver-store-path`, the
+   pointer the relay writes after a successful claim. The shell mirror has
+   always documented and implemented that step; the function it calls
+   authoritative did not. The pointer travels with a renamed directory, so a
+   moved app now *finds* its own store instead of deriving a new name.
+2. Whether it may USE it is `claimStoreFor`'s decision, and a path mismatch is
+   still refused — the pointer cannot tell a move from a `cp -a`. What changed
+   is that the refusal is a clean message naming `keliver-store-recover.sh`
+   (and, for a copy, the pointer to delete), and the relay exits 70 with it
+   rather than throwing `ExceptionInInitializerError`.
+
+So a rename is now **loud and one command away** instead of silent. No new
+keypair is minted at any point.
+
+Observed before (relay at `ec10e191a`) and after, in
+`scripts/keliver-store-identity-repro.sh`:
+
+```
+before   R1 the renamed app silently got a DIFFERENT identity (8ca57a27… -> a1c40dcb…)
+after    R1 the renamed app was refused, and told how to recover
+         R2b the signing identity survived the relocation (6df6e8d8…)
+```
+
+### U24. `claimStoreFor` refuses the recovery its own error message recommends — FIXED, UNRELEASED
 
 Found by the same review; also shipped in 0.3.4, also unfixed here.
 
@@ -1192,10 +1219,128 @@ This is what makes U23 feel like corruption when it is not. **Manual recovery:**
 edit `<store>/owner` to the app's current canonical path (`cd <app> && pwd -P`),
 or copy `keys/` out of the old store into the new one.
 
-Suggested fix for both: when the recorded owner path no longer exists on disk,
-treat the claim as reclaimable with a printed notice rather than fatally.
+**Fixed on `fix/store-identity-u23-u25`; not in any released bundle.**
 
-### U25. Four smaller store/host issues found by the PR #74 review — OPEN
+The suggested fix above — reclaim when the recorded owner path no longer exists
+— was **deliberately not implemented**. Absence is not proof of ownership: an
+unmounted volume, a deleted-and-recreated directory, or any app that happens to
+sit at an unused path would all pass it, and the prize is a private signing key.
+`claimStoreFor` now says exactly that when the owner path is missing, and still
+refuses.
+
+What replaced it is an explicit operation, `scripts/keliver-store-recover.sh`,
+which every refusal now names. It rewrites `<store>/owner` and the app's pointer
+and does nothing else: no key is read, written, copied or generated (the
+public-key fingerprint is printed before and after), no documents or bundles are
+touched, and two stores are never merged. It refuses, changing nothing, when the
+recorded owner is still live on that store, when the app already has a store of
+its own holding an identity or documents, or when another recovery holds the
+`owner.lock`. The old advice — "point `store` at a directory this app alone
+uses" — is gone from the conflict message, because following it was the trap.
+
+Verified end to end through the packaged command in
+`scripts/keliver-store-recovery-check.sh`: a Zipline manifest signed before the
+move verifies against the public key the app resolves after it, the app
+restarts normally, an unrelated app is unaffected and still refused, and two
+plausible claimants racing to recover one store produce exactly one winner with
+nothing but the owner marker changed.
+
+**The first version of this command did not hold up, and the review that caught
+it is worth recording.** `keliver-store-recover.sh` as first written reported
+success in three situations where the binding did not exist:
+
+1. **`owner` and the pointer are two writes.** With `.gradle` a regular file —
+   or any other unusable pointer destination — `owner` was rewritten, the
+   pointer write failed, and the command exited 0. The store was then owned by
+   an app that did not resolve to it: U23's shape, reached through the tool
+   meant to fix it. The destination is now probe-written before anything is
+   mutated, both writes are rolled back if either fails, and success is
+   **defined by re-running the resolver**, not by exit status.
+2. **It checked the DEFAULT store, not the effective one.** An app pinned by
+   `"store"` in `keliver.portal.json`, or bound by a pointer, to store B could
+   "recover" store A and go on resolving B. Validation now asks the resolver
+   what the app selects *and by which rule* (`keliver-store-path.sh --explain`),
+   refuses when a committed setting outranks the command, and no longer reads a
+   resolver refusal as "this app has no store". `PORTAL_STORE` is ignored,
+   loudly, for the same reason: a one-run override must not decide a permanent
+   binding.
+3. **An `owner` already naming this app was treated as "nothing to do".**
+   `claimStoreFor` records the CANONICAL path, so after a symlink split BOTH
+   stores name the same app — see U25.1. The command exited 0, the pointer was
+   never written, and the relay went on refusing the split. The documented way
+   out of a split now works: the pointer is established and verified, and the
+   unselected store is untouched.
+
+A fourth item came out of the same review: a per-store lock does not serialize
+two recoveries aiming at *different* stores for one app, and does not serialize
+the relay, which performs the same two-sided update at startup. The lock is now
+the APP's (`<app>/.gradle/keliver-store.lock`, `mkdir`-created so the shell and
+the JVM share it) and the relay takes it too, waiting up to 20s and then
+refusing to start rather than interleaving. A relay that is ALREADY running
+still does not hold it — stop the portal before recovering. That limitation is
+documented in [`STORE_IDENTITY.md`](STORE_IDENTITY.md).
+
+**A second review round found the transaction lifecycle wrong as well.** Three
+more, all reproduced:
+
+5. **The signal trap made things worse, not better.** It released both locks
+   and returned — and bash RESUMES at the interrupted statement once a handler
+   returns, so a `TERM` between the owner write and the pointer write dropped
+   the locks and then went on to finish the update and report success. `INT`
+   and `TERM` are now handled explicitly: before the transaction commits they
+   restore both sides **while still holding the locks**, verify the
+   restoration, and exit non-zero; after it commits they leave it alone. The
+   handler exits rather than returning, further signals are ignored while
+   unwinding, and every mutation re-checks an aborting flag. `SIGKILL` is
+   stated as unrecoverable rather than papered over.
+6. **Restoration was neither exact nor verified.** The previous owner was held
+   in a shell variable via `$(...)`, which strips trailing newlines, and
+   whether the pointer existed was a boolean beside its text. Both sides are
+   now copied as FILES into a per-run backup directory under `<app>/.gradle`,
+   every copy and every restore is `cmp`-verified, and a restoration that fails
+   keeps the backup and reports the real partial state with the commands to fix
+   it by hand — instead of deleting the backup and printing "unchanged".
+7. **The relay resolved the store BEFORE taking the lock.** A start that waited
+   on a recovery in flight then claimed the store it had selected before that
+   recovery ran, and wrote that stale answer back into the pointer — undoing
+   the rebinding it had just waited for. Resolution, claim and pointer write
+   are now one transaction inside the lock.
+
+Also from that round: the stale-lock takeover added in item 4 could delete a
+lock a different contender had acquired between the liveness check and the
+deletion. The takeover is now *claimed* by renaming the `pid` marker aside —
+exactly one contender can — and the claim is content-checked before the
+directory is cleared. `StoreLockTest` drives that interleaving through a seam
+rather than hoping to hit it by timing.
+
+**A fourth round made the liveness test three-valued.** The takeover asked a
+yes/no question — "is the holder gone?" — and answered it with the failure of
+`kill -0` and then of `ps -p`. Three shapes reached "gone" that were nothing of
+the kind: a marker wider than the arithmetic (`ps` says *process id too large*,
+which is not absence), a numeric marker above `pid_t`, and a `ps` that could
+not run at all (no `/proc`) — the last of which would steal a LIVE holder's
+lock. The verdict is now ALIVE / GONE / UNKNOWN, only GONE permits a takeover,
+and the inspector must find the asking process before it is trusted about
+another. `--holder-state <pid>` prints the verdict, and `StoreLockTest` asserts
+the shell and the JVM agree marker for marker, including under a forced-absent
+inspector. Permission-denied inspection is ALIVE: EPERM means the process
+exists.
+
+**A third round removed the hole in the lock itself.** `withStoreLock` ran the
+block anyway when it could not create the lock — the single-writer guarantee
+announced and then waived, and waived exactly when the filesystem was behaving
+unusually. Worse, a `mkdir` that failed because the lock existed followed by an
+`exists()` that found it gone — the holder releasing in between — took that
+same path. There is now **no unlocked path**: a vanished lock is retried, a
+lock that genuinely cannot be created refuses, and a holder marker that cannot
+be written is a failed acquisition rather than a lock nobody can identify. An
+app tree where `<app>/.gradle` is unwritable therefore refuses to start; that
+is a deliberate behaviour change, recorded in
+[`STORE_IDENTITY.md`](STORE_IDENTITY.md). The JVM's release path also matched
+the shell's and now removes the lock only while its marker still names this
+process, on both the `finally` and shutdown-hook routes.
+
+### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
@@ -1229,6 +1374,29 @@ none is a security hole.
    structurally cannot catch either. Related: the Python slug uses
    Unicode-aware `isalnum()`, the Kotlin regex is ASCII `[^a-z0-9._-]`, so
    `café` slugs differently in each.
+
+   **FIXED, UNRELEASED** (`fix/store-identity-u23-u25`). The slug now comes from
+   the CANONICAL basename, and is computed over its **UTF-8 bytes** with runs of
+   `-` collapsed and the ends trimmed — Kotlin mapped UTF-16 code *units* and
+   Python code *points*, so an astral character produced `--` in one and `-` in
+   the other; bytes leave nothing to disagree about. Measured before the fix:
+   `caf----5f6f6b5b` (Kotlin) versus `café---5f6f6b5b` (shell) for `café-☕`;
+   after, both `caf-9c8fe456`.
+
+   Because only the slug can differ from an existing 0.3.4 store directory (the
+   hash was always canonical), the default resolution now scans for an existing
+   `apps` entry ending in `-<hash>`: none means a first boot, exactly one is
+   adopted with a printed notice, and **more than one is refused** rather than
+   guessed between — that is the split having already happened, and it is what
+   `keliver-store-recover.sh --store` is for. `StoreContractTest` gained real
+   symlinked and Unicode directories, and `StoreIdentityTest` covers the slug
+   rule directly.
+
+   Recovering out of an existing split is covered by C8 in
+   `keliver-store-recovery-check.sh`, and it is checked by *resolving and
+   starting the relay* afterwards rather than by the command's exit status —
+   the first version of the command exited 0 there while leaving the split in
+   place (see [U24]).
 2. **`HostTrustPolicy.HEX` accepts any length.** An Ed25519 public key is
    exactly 64 hex chars, but `^[0-9a-fA-F]+$` has no length bound, so a
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
@@ -1244,7 +1412,57 @@ none is a security hole.
    `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
    then sign with one identity while the relay uses another — the mismatch the
    helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
-   builds. Failing the build would be safer.
+   builds. Failing the build would be safer. **Still open** — but the U25.1 fix
+   added one new way for the resolver to exit non-zero (exit 3, a split store),
+   so `build.gradle` now fails the build on exit 3 specifically rather than
+   falling back. Every other failure still warns and falls back, unchanged.
+
+### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
+
+Found while building the U23/U24 regressions, in tooling that shipped in
+tools 0.3.4.
+
+`scripts/keliver-verify-signed-bundle.sh` ends by running
+`SignedBundleVerificationTest` and passing the manifest and public key as
+`-Dkeliver.verify.*` on the Gradle command line. That sets them on the **Gradle
+JVM**. Gradle forks a separate JVM for tests and does not pass its own system
+properties down, and `portal-relay/build.gradle` forwarded nothing — so the test
+read `null` for both, took its "skipped (no manifest/pubkey properties)" branch,
+and returned success. The script then printed
+
+> ==> signed bundle verifies against the store's public key
+
+having verified nothing at all. Demonstrated by pointing it at paths that do not
+exist:
+
+```
+$ ./gradlew :portal-relay:test --tests '*SignedBundleVerificationTest*' --rerun-tasks \
+    -Dkeliver.verify.manifest=/nonexistent/m.json -Dkeliver.verify.pubkey=/nonexistent/k.pub
+BUILD SUCCESSFUL in 9s
+```
+
+Nothing was mis-signed — the publisher and the hosts do agree, as the U26-free
+parts of that script establish — but the final gate was decorative.
+
+**Fixed** by forwarding exactly those properties to the test JVM in
+`portal-relay/build.gradle`. The same command now fails with
+`AssertionError: no manifest at /nonexistent/m.json`. Both tests also fail
+rather than skip when a driver supplies *some* of their properties, since
+partial configuration is a broken driver and not a reason to pass. Both drivers
+— `keliver-verify-signed-bundle.sh` and `keliver-store-recovery-check.sh` —
+assert against the result XML that the tests ran, did not skip, and that BOTH
+the genuine verification and the tamper rejection executed.
+
+**Which earlier claims this invalidates.** Anything that cited
+`keliver-verify-signed-bundle.sh` as evidence that a signed bundle verifies was
+reporting a test that did not run. The specific statement is in
+`docs/CURRENT_STATE.md` ("Signing is verified, not asserted… a tampered
+manifest is rejected, so the check is not vacuous"), now struck through in
+place with a superseding note. What that script *did* establish independently
+of the skipped test — that the relay, the publisher and the device hosts
+resolve the same store, and that an unsigned bundle was produced when they did
+not — is unaffected. A genuine verification exists now: see C1 in
+[`evidence/store-identity/recovery-check.log`](superpowers/evidence/store-identity/recovery-check.log).
 
 ### U21. The packaged adopter acceptance passed when a FOREIGN portal answered the port — FIXED
 

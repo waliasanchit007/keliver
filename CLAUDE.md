@@ -91,3 +91,14 @@ Pre-gate locally: `scripts/build-portal-tools.sh`, then
 acceptance must refuse a portal it did not start). With a device or emulator,
 `scripts/keliver-device-verify.sh <zip> <work> <evidence>` (U22: the bundled
 host must refuse production mode).
+
+**Store identity** is a contract with one authority (`PortalConfig.storeDir()`)
+and one shell mirror (`scripts/keliver-store-path.sh`), written down in
+[`docs/STORE_IDENTITY.md`](docs/STORE_IDENTITY.md). An app is bound to its store
+by a pointer in `<app>/.gradle/keliver-store-path` and an `owner` marker in the
+store; a path mismatch is REFUSED and `scripts/keliver-store-recover.sh` is the
+only supported rebinding. Never derive a store path anywhere else — the third
+copy of the rules had already drifted. Checks:
+`scripts/keliver-store-identity-repro.sh <parent>` (U23/U24/U25.1) and
+`scripts/keliver-store-recovery-check.sh <parent>` (relocation outcomes, through
+the packaged commands).

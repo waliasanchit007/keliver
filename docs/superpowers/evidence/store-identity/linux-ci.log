@@ -1,0 +1,23 @@
+# Linux CI — build-only tools workflow
+
+run 34741427256 · workflow_dispatch · ubuntu-latest · conclusion SUCCESS
+dispatched with -f ref=b26a42f4697e148297356202ec6ec2ed948bf1a1
+
+## the checkout is the commit that was asked for
+bundle	Resolve and verify the tools version	2026-09-13T05:54:05.0682028Z ^[[36;1mecho "recorded tools version: $file"^[[0m
+bundle	Resolve and verify the tools version	2026-09-13T05:54:05.0682591Z ^[[36;1mecho "building commit: $(git rev-parse HEAD)"^[[0m
+bundle	Resolve and verify the tools version	2026-09-13T05:54:05.0879963Z recorded tools version: 0.3.4
+bundle	Resolve and verify the tools version	2026-09-13T05:54:05.0903992Z building commit: b26a42f4697e148297356202ec6ec2ed948bf1a1
+
+## candidate identity (UNRELEASED development candidate)
+bundle	Identify what was packaged	2026-09-13T06:01:57.8915248Z ^[[36;1mecho "no assets/portal_ed25519.pub - ok"^[[0m
+bundle	Identify what was packaged	2026-09-13T06:01:57.9024632Z   "toolsVersion": "0.3.4",
+bundle	Identify what was packaged	2026-09-13T06:01:57.9025102Z   "sourceCommit": "b26a42f4697e148297356202ec6ec2ed948bf1a1",
+bundle	Identify what was packaged	2026-09-13T06:01:57.9026034Z   "mavenDependencyVersion": "0.3.3",
+bundle	Identify what was packaged	2026-09-13T06:01:58.0543341Z c34c11e698c38b527a6ce67e364e33430c7d8dba29c1c0c75a73fd7d63513c87  build/portal-tools/keliver-portal-tools-0.3.4.zip
+bundle	Identify what was packaged	2026-09-13T06:01:58.2113019Z 99a4a26b4b878eab0ca136894d60a221e208d7631ef41cd099f9d062b0b0020a  host.apk
+bundle	Identify what was packaged	2026-09-13T06:01:58.2142874Z no assets/portal_ed25519.pub - ok
+
+## portable checks
+bundle	Portable checks on Linux	2026-09-13T06:04:58.3802619Z         tests="1" skipped="0" failures="0" errors="0"
+bundle	Portable checks on Linux	2026-09-13T06:05:18.1360506Z         tests="2" skipped="0" failures="0" errors="0"

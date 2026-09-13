@@ -904,10 +904,35 @@ the root build for all three Gradle modules and by the recording client.
 `StoreContractTest` asserts the shell mirror agrees with
 `PortalConfig.storeDir()`.
 
-**Signing is verified, not asserted.** The same scenario now produces a bundle
-signed `portal-ed25519` that verifies against the store's public key through
-Zipline's own `ManifestVerifier` with signature checks on; a tampered manifest
-is rejected, so the check is not vacuous. An unsigned bundle fails the test.
+~~**Signing is verified, not asserted.** The same scenario now produces a
+bundle signed `portal-ed25519` that verifies against the store's public key
+through Zipline's own `ManifestVerifier` with signature checks on; a tampered
+manifest is rejected, so the check is not vacuous. An unsigned bundle fails the
+test.~~
+
+> **SUPERSEDED — this claim rested on a test that skipped.** `-Dkeliver.verify.*`
+> reaches the Gradle JVM, and Gradle forks a separate JVM for tests without
+> passing its own system properties down. `portal-relay/build.gradle` forwarded
+> none, so `SignedBundleVerificationTest` read `null` for both paths, took its
+> "skipped" branch, and `keliver-verify-signed-bundle.sh` printed its success
+> line regardless. Every earlier statement in this document, in
+> `docs/RELEASE_REVIEW.md`, or in a commit message that cited that script as
+> evidence of signature verification — including the sentence struck through
+> above and "a tampered manifest is rejected, so the check is not vacuous" —
+> was reporting a test that did not run. Recorded as U26 in
+> [`KNOWN_BUGS.md`](KNOWN_BUGS.md).
+>
+> **What is established now.** The properties are forwarded; the tests fail
+> rather than skip when a driver sets some of them; both drivers assert against
+> the result XML that the tests ran, did not skip, and that BOTH the genuine
+> verification and the tamper rejection executed. Under those conditions a real
+> Zipline manifest signed with a disposable store's key verifies through
+> `ManifestVerifier` with signature checks on, and a tampered copy does not —
+> measured in
+> [`evidence/store-identity/recovery-check.log`](superpowers/evidence/store-identity/recovery-check.log)
+> (`tests="2" skipped="0" failures="0" errors="0"`). What was true all along is
+> that the publisher and the hosts resolve the same store; that part never
+> depended on the skipped test.
 
 ### Startup is safe under a race
 

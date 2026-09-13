@@ -1,0 +1,37 @@
+# C13, boundary-tied, against the pre-fix relay (43148d63e)
+
+The same controlled interleaving, now synchronised on THIS relay's own
+lock-wait announcement instead of a machine-global `pgrep -f RelayKt`.
+The boundary IS reached (first two lines) and the stale resolution is still
+detected — so the tightening did not turn the case into a no-op.
+
+--- C13  a startup that waits re-resolves; it does not use a stale answer
+  PASS  C13 the relay reached the lock wait (its own log says so)
+  PASS  C13 the relay started after waiting for the lock
+  FAIL  C13 startup wrote back its stale answer (pointer is now /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/home/.keliver-portal/apps/c13a-store-aaaaaac6)
+  FAIL  C13 the relay is serving something other than /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/home/.keliver-portal/apps/c13b-store-aaaaaac7
+  FAIL  C13 the abandoned store was modified
+  FAIL  C13 ordinary resolution disagrees
+  FAIL  C13 the restart did not land on /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/home/.keliver-portal/apps/c13b-store-aaaaaac7
+        SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+        SLF4J: Defaulting to no-operation (NOP) logger implementation
+        SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+        portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/home/.keliver-portal/apps/c13a-store-aaaaaac6/kotlin (edits in ANY editor go live)
+        portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/apps/c13-app/src/jsMain/kotlin/screens (edits in ANY editor go live)
+        portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/apps/c13-app/src/jsMain/kotlin/components (edits in ANY editor go live)
+        portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/apps/c13-app/src/jsMain/kotlin/flows (edits in ANY editor go live)
+        portal-server: watching /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/apps/c13-app/src/jsMain/kotlin/logic (edits in ANY editor go live)
+        portal-server: :8167 — store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/home/.keliver-portal/apps/c13a-store-aaaaaac6 repo=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13b/keliver-store-recovery-a7mioj/apps/c13-app  active=(default, Home)
+        portal-server: endpoints /projects /screens /draft /active /tree /publickey /publish /bundles
+
+--- C14  stale-lock takeover cannot clobber another contender
+
+Whole-run tally at that commit: passed: 61   failed: 26
+
+NOTE the C11 failures in that run are expected and unrelated: this worktree
+carries the 43148d63e recovery script, which has no pause hook, so no signal
+can be delivered at a boundary — and B1's guard reports that as a FAILURE
+instead of passing vacuously, which is the point of B1's fix.
+
+The only change made to the pre-fix tree is the lock-wait announcement:
+see c13-before-instrumentation.diff.

@@ -9,6 +9,21 @@ application {
   mainClass = 'RelayKt'
 }
 
+// Driven checks (keliver-verify-signed-bundle.sh, keliver-store-recovery-check.sh)
+// pass their inputs as -D on the Gradle command line. That reaches the GRADLE
+// JVM, not the forked test JVM, so the tests saw null, took their "skipped"
+// branch and the build went green — a verification that never verified
+// anything. Forward the ones those checks use, explicitly.
+tasks.withType(Test).configureEach {
+  [
+    'keliver.verify.manifest', 'keliver.verify.pubkey',
+    'keliver.sign.privkey', 'keliver.sign.manifest', 'keliver.sign.out',
+  ].each { key ->
+    def value = System.getProperty(key)
+    if (value != null) systemProperty(key, value)
+  }
+}
+
 dependencies {
   implementation projects.keliverCapabilities // #16 H1: pure HostHttp replay envelope
   implementation projects.portalCore

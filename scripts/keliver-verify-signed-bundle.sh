@@ -84,7 +84,17 @@ echo "==> verifying with Zipline's ManifestVerifier (checks ON)"
     -Dkeliver.verify.manifest="$MANIFEST" -Dkeliver.verify.pubkey="$PUB" \
     --rerun-tasks --console=plain > "$DISP/verify.log" 2>&1 )
 vrc=$?
-grep -oE 'tests="[0-9]+" skipped="[0-9]+" failures="[0-9]+" errors="[0-9]+"' \
-  "$ROOT/portal-relay/build/test-results/test/TEST-SignedBundleVerificationTest.xml" 2>/dev/null
+XML="$ROOT/portal-relay/build/test-results/test/TEST-SignedBundleVerificationTest.xml"
+grep -oE 'tests="[0-9]+" skipped="[0-9]+" failures="[0-9]+" errors="[0-9]+"' "$XML" 2>/dev/null
 [ $vrc -eq 0 ] || { echo "VERIFICATION FAILED (see $DISP/verify.log)" >&2; exit 1; }
-echo "==> signed bundle verifies against the store's public key"
+# A green build is not the claim. -D reaches the GRADLE JVM, not the forked
+# test JVM, and until portal-relay/build.gradle forwarded these properties the
+# test read null, took its skip branch, and this line printed anyway (U26).
+[ -f "$XML" ] || { echo "no test result XML — the verification did not run" >&2; exit 1; }
+if grep -q "skipped (no manifest/pubkey properties)" "$XML"; then
+  echo "VERIFICATION SKIPPED — it proved nothing. Check that the build forwards" >&2
+  echo "  -Dkeliver.verify.* to the test JVM." >&2
+  exit 1
+fi
+grep -q 'tests="2"' "$XML" || { echo "expected 2 tests (verification and tamper rejection)" >&2; exit 1; }
+echo "==> signed bundle verifies against the store's public key, and a tampered one does not"

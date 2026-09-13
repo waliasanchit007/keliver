@@ -15,6 +15,13 @@ ext.keliverStoreDir = { java.io.File repoDir ->
   proc.consumeProcessOutput(out, err)
   proc.waitForOrKill(30_000)
   def path = out.toString().trim()
+  // Exit 3 is "this app has more than one store and I will not guess" (U25.1).
+  // Falling back to ~/.keliver-portal there would sign the guest bundle with
+  // whatever identity the legacy global store happens to hold — the exact
+  // mismatch this resolver exists to prevent. Refuse instead.
+  if (proc.exitValue() == 3) {
+    throw new GradleException('keliver: ' + err.toString().trim())
+  }
   if (proc.exitValue() != 0 || path.isEmpty()) {
     logger.warn("keliver: could not resolve the portal store (${err.toString().trim()}); " +
       'falling back to ~/.keliver-portal')

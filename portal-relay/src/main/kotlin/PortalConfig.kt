@@ -260,30 +260,382 @@ fun loadPortalConfig(repoDir: File): PortalConfig {
 /** The global root that per-app stores live under. */
 private fun portalHome(): File = File(System.getProperty("user.home"), ".keliver-portal")
 
-/** Stable, readable per-repo directory name: <dir-name>-<8 hex of the abs path>. */
-internal fun appStoreName(repoDir: File): String {
-  val abs = repoDir.absoluteFile.canonicalFile.path
-  val digest = java.security.MessageDigest.getInstance("SHA-256").digest(abs.toByteArray())
-  val hash = digest.take(4).joinToString("") { "%02x".format(it) }
-  val slug = repoDir.absoluteFile.name.lowercase().replace(Regex("[^a-z0-9._-]"), "-").ifEmpty { "app" }
-  return "$slug-$hash"
+/**
+ * Refusals that mean "I will not guess which store is yours".
+ *
+ * [IllegalStateException] so that callers written against the original
+ * `claimStoreFor` contract keep working; the relay catches this one to print
+ * the message instead of a stack trace.
+ */
+class StoreOwnershipException(message: String) : IllegalStateException(message)
+
+/**
+ * The readable half of a default store directory name.
+ *
+ * Defined over the basename's **UTF-8 bytes**, not its characters, because
+ * three languages have to produce the same answer. Kotlin's old regex mapped
+ * each UTF-16 code *unit*, Python's `isalnum()` is Unicode-aware and maps each
+ * code *point*, so `café-☕` slugged as `caf----` in Kotlin and `café---` in
+ * the shell mirror — the same app, two store directories. Bytes, ASCII
+ * lowercasing, and collapsed runs leave nothing for them to disagree about.
+ */
+internal fun storeSlug(name: String): String {
+  val sb = StringBuilder()
+  for (byte in name.toByteArray(Charsets.UTF_8)) {
+    val c = (byte.toInt() and 0xff).toChar()
+    val lower = if (c in 'A'..'Z') (c.code + 32).toChar() else c
+    sb.append(
+      if (lower in 'a'..'z' || lower in '0'..'9' || lower == '.' || lower == '_' || lower == '-') lower else '-',
+    )
+  }
+  val slug = sb.toString().replace(Regex("-+"), "-").trim('-')
+  // "." and ".." are directory names the store root must never be given.
+  return if (slug.isEmpty() || slug == "." || slug == "..") "app" else slug
 }
 
 /**
- * Where this repo's documents live.
- *
- * Default: `~/.keliver-portal/apps/<slug>-<hash>` — inside the familiar global
- * root, but owned by exactly one repo. Never inside the app's source tree.
- * An explicit [store] is honoured verbatim (`~/` expanded, relative paths
- * resolved against the repo).
+ * The hash half: 8 hex digits of SHA-256 over the app's CANONICAL path, so a
+ * symlink and the real path hash identically. This half was already canonical
+ * before the U25.1 fix; the slug was not.
  */
-fun PortalConfig.storeDir(repoDir: File): File {
-  val s = store ?: return File(File(portalHome(), "apps"), appStoreName(repoDir))
-  return when {
-    s.startsWith("~/") -> File(System.getProperty("user.home"), s.removePrefix("~/"))
-    File(s).isAbsolute -> File(s)
-    else -> File(repoDir, s)
+internal fun appStoreHash(repoDir: File): String {
+  val abs = repoDir.absoluteFile.canonicalFile.path
+  val digest = java.security.MessageDigest.getInstance("SHA-256").digest(abs.toByteArray())
+  return digest.take(4).joinToString("") { "%02x".format(it) }
+}
+
+/** Stable, readable per-repo directory name: `<slug>-<8 hex of the canonical path>`. */
+internal fun appStoreName(repoDir: File): String =
+  "${storeSlug(repoDir.absoluteFile.canonicalFile.name)}-${appStoreHash(repoDir)}"
+
+/** The app-side half of the binding: machine-local, uncommitted, `.gradle` is gitignored. */
+internal fun storePointerFile(repoDir: File): File = File(File(repoDir, ".gradle"), "keliver-store-path")
+
+/**
+ * The app-side lock, shared with `keliver-store-recover.sh`.
+ *
+ * Claiming a store and writing the pointer are two writes, and the relay is not
+ * the only writer: the recovery command performs the same two-sided update. A
+ * lock held only by recovery commands would not serialize against a relay
+ * starting at that moment, which is how a store can end up owned by an app
+ * whose pointer names a different one. `mkdir` is the atomic create, so the
+ * shell and the JVM can hold the same lock.
+ */
+internal fun storeLockDir(repoDir: File): File = File(File(repoDir, ".gradle"), "keliver-store.lock")
+
+/**
+ * Run [block] holding the app lock.
+ *
+ * EVERYTHING that decides or records the binding belongs inside [block] —
+ * resolution included. Resolving first and locking afterwards means the store
+ * this process claims can be the one a recovery replaced while it waited, and
+ * it then writes that stale answer back into the pointer, undoing the recovery.
+ *
+ * Waits [waitMillis] for a recovery in flight, then gives up rather than
+ * proceeding — a bounded wait is the point; two writers is the failure.
+ *
+ * THERE IS NO UNLOCKED PATH. [block] runs only while this process holds the
+ * lock and has recorded its own pid in it. Every other outcome calls
+ * [onUnavailable] or [onBusy], both of which return [Nothing]. An earlier
+ * version ran the block anyway when the lock could not be created — which is
+ * the single-writer guarantee being announced and then waived, and it waived it
+ * exactly when the filesystem was behaving unusually. A missing lock directory
+ * after a failed `mkdir` is a reason to TRY AGAIN (the holder released it
+ * between the two syscalls), never permission to proceed.
+ *
+ * A read-only app tree therefore refuses to start rather than starting
+ * unsynchronised. If a genuinely read-only startup is ever wanted it has to be
+ * its own path that cannot claim a store or write a pointer; an unrestricted
+ * fallback is not that.
+ */
+internal fun <T> withStoreLock(
+  repoDir: File,
+  waitMillis: Long = 20_000,
+  onTakeover: (String) -> Unit = {},
+  onWaiting: (File) -> Unit = {},
+  onUnavailable: (File, String) -> Nothing,
+  onBusy: (File) -> Nothing,
+  afterFailedCreate: () -> Unit = {},
+  afterAcquire: () -> Unit = {},
+  block: () -> T,
+): T {
+  val lock = storeLockDir(repoDir)
+  if (!runCatching { lock.parentFile.mkdirs(); lock.parentFile.isDirectory }.getOrDefault(false)) {
+    onUnavailable(lock, "${lock.parentFile} could not be created, so the store lock cannot be taken")
   }
+  val deadline = System.currentTimeMillis() + waitMillis
+  // `mkdir` failed and the directory is not there: either the holder released
+  // it in the microseconds between those two syscalls, or it cannot be created
+  // at all. The first resolves on the next attempt; the second does not, so a
+  // run of them is what tells the two apart.
+  var vanished = 0
+  var announcedWait = false
+  while (true) {
+    if (runCatching { lock.mkdir() }.getOrDefault(false)) break
+    // Seam, no-op in production: StoreLockTest uses it to release the lock
+    // between the failed mkdir and the exists() check below, which is the
+    // interleaving that used to be read as "cannot create it".
+    afterFailedCreate()
+    if (!lock.exists()) {
+      if (++vanished > 20) {
+        onUnavailable(lock, "$lock cannot be created (it keeps disappearing rather than being held)")
+      }
+      Thread.sleep(50)
+      continue
+    }
+    vanished = 0
+    if (claimStaleLock(lock)) {
+      onTakeover("portal-server: taking over $lock — the process that held it is gone")
+      continue
+    }
+    // Say it once, the first time this start actually blocks. A process that
+    // may sit here for twenty seconds should not do it silently, and it gives
+    // anything driving this an observable boundary that belongs to THIS
+    // process rather than to whatever JVMs happen to be on the machine.
+    if (!announcedWait) {
+      announcedWait = true
+      onWaiting(lock)
+    }
+    if (System.currentTimeMillis() >= deadline) onBusy(lock)
+    Thread.sleep(200)
+  }
+
+  // The marker identifies the holder. Without it nobody — including this
+  // process's own cleanup — can tell whose lock this is, so a failure to write
+  // it is a failure to acquire.
+  // Seam, no-op in production: the marker write can only fail once the
+  // directory is ours, which nothing outside the process can arrange.
+  afterAcquire()
+
+  val me = ProcessHandle.current().pid().toString()
+  val pidFile = File(lock, "pid")
+  val marked = runCatching { pidFile.writeText(me + "\n"); pidFile.readText().trim() == me }.getOrDefault(false)
+  if (!marked) {
+    runCatching { pidFile.delete(); lock.delete() }
+    onUnavailable(lock, "the holder marker in $lock could not be written")
+  }
+
+  // Release ONLY while the marker still says this process. A lock taken over
+  // after a hard kill belongs to its new holder; deleting it here would be the
+  // two-writers failure the lock exists to prevent.
+  fun release() {
+    runCatching {
+      if (pidFile.readText().trim() == me) {
+        pidFile.delete()
+        lock.delete()
+      }
+    }
+  }
+  // Best effort for a hard kill; the ordinary path releases in the finally.
+  val hook = Thread { release() }
+  Runtime.getRuntime().addShutdownHook(hook)
+  try {
+    return block()
+  } finally {
+    release()
+    runCatching { Runtime.getRuntime().removeShutdownHook(hook) }
+  }
+}
+
+/**
+ * Clear a lock whose holder is gone, so that the caller can retry `mkdir`.
+ *
+ * The naive form — read the pid, see it is dead, delete the directory — can
+ * delete a lock a DIFFERENT contender acquired between those two steps, and
+ * then there are two writers. So the takeover is CLAIMED: the `pid` file is
+ * renamed aside, which exactly one contender can do, and the claim is checked
+ * to still hold the dead pid that was inspected. A live holder always writes
+ * its `pid` before doing anything, and a new holder can only exist after this
+ * same rename removed the old marker — so a successful, content-checked claim
+ * proves this is not somebody else's live lock.
+ *
+ * The liveness question itself is [lockHolderState]: only a positively
+ * established absence returns true here. The cost of waiting is a message, the
+ * cost of stealing is two writers.
+ *
+ * `keliver-store-recover.sh` implements the same protocol, so the shell and
+ * the JVM contend correctly with each other.
+ */
+/**
+ * What the holder marker says about its process, in three values.
+ *
+ * Only [HolderState.GONE] permits a takeover. An unreadable marker, a pid
+ * outside the range a pid can occupy, an inspector that cannot answer, or a
+ * process this one is not permitted to signal are all uncertainty — and
+ * uncertainty leaves the lock alone. `keliver-store-recover.sh`'s
+ * `lock_holder_state` implements the same three values on the same inputs, and
+ * `StoreLockTest.theShellAndTheJvmAgreeOnEveryMarkerShape` asserts they agree.
+ */
+internal enum class HolderState { ALIVE, GONE, UNKNOWN }
+
+/**
+ * [selfVisible] is the inspector's own sanity probe: one that cannot find THIS
+ * process cannot say anything about another, and reading its failure as "no
+ * such process" is how a live holder's lock gets stolen. Injectable so the
+ * "inspector cannot answer" branch is reachable on a machine where it can.
+ */
+internal fun lockHolderState(
+  recorded: String?,
+  // The probe is pid 1 AND this process. A JVM can always see its own process,
+  // so probing only with it would certify an inspector that cannot see anyone
+  // else's — and then read their absence as death. Under hidepid=1 that is
+  // exactly what happens: /proc/<other> exists but its contents are not
+  // readable, so ProcessHandle.of returns empty for a LIVE holder.
+  selfVisible: Boolean = runCatching {
+    ProcessHandle.of(ProcessHandle.current().pid()).isPresent && ProcessHandle.of(1L).isPresent
+  }.getOrDefault(false),
+): HolderState {
+  // NOT trimmed. The shell reads the marker with `$(cat …)`, which strips only
+  // trailing newlines, and rejects anything else non-numeric — so trimming here
+  // laundered " 7 " into a pid the shell calls UNKNOWN, and if that pid were
+  // absent the JVM would have taken the lock over while the shell left it
+  // alone. Both sides now accept exactly [1-9][0-9]{0,9}.
+  val text = recorded.orEmpty()
+  if (text.isEmpty() || !text.all { it in '0'..'9' }) return HolderState.UNKNOWN
+  if (text[0] == '0') return HolderState.UNKNOWN     // our writer never emits one
+  if (text.length > 10) return HolderState.UNKNOWN
+  val pid = text.toLongOrNull() ?: return HolderState.UNKNOWN
+  // A pid cannot exceed the platform's pid_t. Above that there is no process to
+  // find and no way to tell "absent" from "unaskable", so it is neither.
+  if (pid < 1L || pid > Int.MAX_VALUE.toLong()) return HolderState.UNKNOWN
+  if (!selfVisible) return HolderState.UNKNOWN
+  val handle = runCatching { ProcessHandle.of(pid) }.getOrNull() ?: return HolderState.UNKNOWN
+  return if (handle.isPresent) HolderState.ALIVE else HolderState.GONE
+}
+
+internal fun claimStaleLock(lock: File, betweenCheckAndClaim: () -> Unit = {}): Boolean {
+  val pidFile = File(lock, "pid")
+  // trimEnd('\n') is exactly what `$(cat …)` does in the shell; anything more
+  // would accept markers the shell rejects.
+  val recorded = runCatching { pidFile.readText().trimEnd('\n') }.getOrNull()
+    ?.takeIf { it.isNotEmpty() } ?: return false
+  if (lockHolderState(recorded) != HolderState.GONE) return false
+
+  // A seam, no-op in production: the window between deciding the holder is
+  // dead and claiming the marker is exactly where a racing contender can slip
+  // in, and StoreLockTest drives that interleaving through here rather than
+  // hoping to hit it by timing.
+  betweenCheckAndClaim()
+
+  val claim = File(lock, "pid.stale.${ProcessHandle.current().pid()}")
+  if (!runCatching { pidFile.renameTo(claim) }.getOrDefault(false)) return false
+  // trimEnd('\n'), the same reader as above: two different trims of one marker
+  // is the shape that produced the padded-marker divergence.
+  if (runCatching { claim.readText().trimEnd('\n') }.getOrNull() != recorded) {
+    // Not the marker that was inspected: put it back and wait rather than delete.
+    runCatching { claim.renameTo(pidFile) }
+    return false
+  }
+  runCatching { lock.listFiles()?.forEach { it.delete() } }
+  return runCatching { lock.delete() }.getOrDefault(false)
+}
+
+/**
+ * Step 4 of the contract: the first-boot default, plus the compatibility scan
+ * that keeps an app that already has a store from being handed a new one.
+ *
+ * The hash was canonical before this change and still is, so an existing store
+ * directory can differ from the name computed today only in its SLUG — an
+ * app-v2/current symlink split (U25.1), or the older Kotlin/Python slug rules.
+ * Rather than mint a second identity, look for any `apps` entry whose name
+ * ends in `-<hash>`:
+ *
+ *   * none — this really is a first boot;
+ *   * one  — that is this app's store whatever it is called; use it and say so;
+ *   * more — the split already happened. Picking one silently is the bug being
+ *     fixed, so refuse and name them.
+ */
+internal fun defaultStoreDir(repoDir: File, notify: (String) -> Unit = {}): File {
+  val apps = File(portalHome(), "apps")
+  val hash = appStoreHash(repoDir)
+  val preferred = File(apps, "${storeSlug(repoDir.absoluteFile.canonicalFile.name)}-$hash")
+
+  // The scan runs even when `preferred` exists. Returning it on sight would
+  // hide exactly the case this is for: after a symlink split BOTH names exist,
+  // and one of them is the canonical one — so a short-circuit would silently
+  // pick it and leave the other identity, which published bundles may verify
+  // against, unmentioned.
+  val existing = (apps.listFiles() ?: emptyArray())
+    .filter { it.isDirectory && it.name.endsWith("-$hash") }
+    .sortedBy { it.name }
+  return when {
+    existing.isEmpty() -> preferred
+    existing.size == 1 && existing.single().name == preferred.name -> preferred
+    existing.size == 1 -> existing.single().also {
+      notify("portal-server: using this app's existing store $it (recorded under an older name; the default is now ${preferred.name})")
+    }
+    else -> throw StoreOwnershipException(
+      buildString {
+        appendLine("portal store split: ${existing.size} stores exist for this app.")
+        // FULL paths, not basenames: this message names a command whose
+        // --store argument is a directory, and an operator who copies a
+        // basename out of it gets "no store at one-13aa30ce". The shell
+        // resolver prints realpaths for the same reason.
+        existing.forEach {
+          // absolutePath, not canonicalPath: the latter throws on a symlink
+          // loop, and throwing from inside the constructor of the refusal would
+          // replace the actionable message with a stack trace. These live
+          // directly under apps/, so the two agree.
+          appendLine("  - ${it.absolutePath}   identity ${publicKeyFingerprint(it)}")
+        }
+        appendLine("  app: ${repoDir.absoluteFile.canonicalFile.path}")
+        appendLine("  the name a first boot would choose today is ${preferred.name}")
+        appendLine("This happens when one app was launched through more than one path — a")
+        appendLine("symlink and the real directory resolved different store names before the")
+        appendLine("slug was canonicalised. Nothing has been deleted.")
+        appendLine("Fix: choose the store to keep (its identity is the one your published")
+        appendLine("bundles verify against) and bind this app to it:")
+        appendLine("  keliver-store-recover.sh ${repoDir.absoluteFile.canonicalFile.path} --store <one of the above>")
+      },
+    )
+  }
+}
+
+/**
+ * A store's identity, safe to print: SHA-256 of the PUBLIC key, first 16 hex.
+ * `keys/ed25519.priv` is never read here or anywhere that reports a conflict.
+ */
+internal fun publicKeyFingerprint(storeDir: File): String {
+  val pub = File(storeDir, "keys/ed25519.pub")
+  if (!pub.isFile) return "none yet"
+  val bytes = runCatching { pub.readBytes() }.getOrElse { return "unreadable" }
+  val digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+  return digest.take(8).joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * Where this repo's documents live. The contract is docs/STORE_IDENTITY.md:
+ *
+ *   1. PORTAL_STORE                        (the relay handles this one)
+ *   2. "store" in keliver.portal.json
+ *   3. <app>/.gradle/keliver-store-path    (the binding pointer)
+ *   4. ~/.keliver-portal/apps/<slug>-<hash>
+ *
+ * Step 3 is new here. `scripts/keliver-store-path.sh` has always documented and
+ * implemented it — this function, the authority it claims to mirror, did not —
+ * and that gap is U23: the pointer moves with a renamed directory, so reading
+ * it is what lets a moved app still find its own identity instead of minting a
+ * fresh one. Whether it may then USE it is [claimStoreFor]'s decision.
+ */
+fun PortalConfig.storeDir(repoDir: File, notify: (String) -> Unit = {}): File {
+  // A BLANK value means "not set", exactly as `if store:` does in the mirror.
+  // Without this, `{"store": ""}` took the relative-path branch and resolved to
+  // `File(repoDir, "")` — the app's own source tree — while every Gradle
+  // consumer went on reading ~/.keliver-portal/apps/…: one identity signing and
+  // another verifying, which is the failure this contract exists to prevent.
+  store?.takeIf { it.isNotBlank() }?.let { s ->
+    return when {
+      s.startsWith("~/") -> File(System.getProperty("user.home"), s.removePrefix("~/"))
+      File(s).isAbsolute -> File(s)
+      else -> File(repoDir, s)
+    }
+  }
+  val pointer = storePointerFile(repoDir)
+  if (pointer.isFile) {
+    val pointed = runCatching { pointer.readText().trim() }.getOrDefault("")
+    if (pointed.isNotEmpty()) return File(pointed)
+  }
+  return defaultStoreDir(repoDir, notify)
 }
 
 /**
@@ -325,17 +677,56 @@ fun claimStoreFor(storeDir: File, repoDir: File) {
   }
 
   if (theirs == me) return
-  throw IllegalStateException(
+
+  // Which refusal this is depends on how we got here. If this app's own
+  // pointer names this store, the app moved (or was copied); if not, two
+  // different apps are aiming at one store. Both refuse — the pointer cannot
+  // tell a move from a `cp -a`, so adopting on sight would hand a copy someone
+  // else's signing key — but the instruction differs, and the old one sent
+  // people into U24: it told them to point "store" at the directory holding
+  // their identity, which is exactly the claim being refused here.
+  val pointed = runCatching {
+    val f = storePointerFile(repoDir)
+    f.isFile && File(f.readText().trim()).absoluteFile.canonicalFile == storeDir.absoluteFile.canonicalFile
+  }.getOrDefault(false)
+  val ownerExists = theirs.isNotEmpty() && File(theirs).isDirectory
+
+  throw StoreOwnershipException(
     buildString {
-      appendLine("portal store conflict: $storeDir already belongs to another app.")
-      appendLine("  owner: ${theirs.ifEmpty { "(unknown — the marker exists but is empty)" }}")
-      appendLine("  this:  $me")
-      appendLine("Two apps must not share one document store — the boot scan retires")
-      appendLine("mirrors that do not match the app it is serving, which would delete the")
-      appendLine("other app's documents, and opening a foreign screen writes its .kt into")
-      appendLine("this app's source tree.")
-      appendLine("Fix: remove \"store\" from this app's keliver.portal.json to get its own")
-      appendLine("store, or point it at a directory this app alone uses.")
+      if (pointed) {
+        appendLine("portal store: this app has moved.")
+        appendLine("  store: $storeDir")
+        appendLine("  identity: ${publicKeyFingerprint(storeDir)}")
+        appendLine("  it is recorded as belonging to: ${theirs.ifEmpty { "(unknown — the marker is empty)" }}")
+        appendLine("  this app is now at:             $me")
+        appendLine("Nothing has been deleted, and no new signing identity has been created.")
+        appendLine("The store above still holds this app's keys, documents and bundles.")
+        appendLine("If this app was MOVED or RENAMED, rebind it — keys and documents are")
+        appendLine("preserved and nothing is copied:")
+        appendLine("  keliver-store-recover.sh $me")
+        appendLine("If this is a COPY of that app and should be independent, drop the")
+        appendLine("pointer it inherited and it will start its own store:")
+        appendLine("  rm ${storePointerFile(repoDir)}")
+      } else {
+        appendLine("portal store conflict: $storeDir already belongs to another app.")
+        appendLine("  owner: ${theirs.ifEmpty { "(unknown — the marker exists but is empty)" }}")
+        appendLine("  this:  $me")
+        appendLine("Two apps must not share one document store — the boot scan retires")
+        appendLine("mirrors that do not match the app it is serving, which would delete the")
+        appendLine("other app's documents, and opening a foreign screen writes its .kt into")
+        appendLine("this app's source tree.")
+        if (ownerExists) {
+          appendLine("The recorded owner still exists on disk, so these are two live apps.")
+          appendLine("Fix: remove \"store\" from this app's keliver.portal.json and let it take")
+          appendLine("a store of its own, or point it at a directory this app alone uses.")
+        } else {
+          appendLine("The recorded owner is not on disk — but an absent path is not proof that")
+          appendLine("this app is the one that left it, so the store is not reclaimed for you.")
+          appendLine("If this IS that app under a new path, rebind it explicitly:")
+          appendLine("  keliver-store-recover.sh $me --store $storeDir")
+          appendLine("Otherwise remove \"store\" from keliver.portal.json to get a store of its own.")
+        }
+      }
     },
   )
 }

@@ -73,10 +73,71 @@ private val root = resolveStore()
  */
 private fun resolveStore(): File {
   val env = System.getenv("PORTAL_STORE")?.takeIf { it.isNotBlank() }
-  val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir)
-  dir.mkdirs()
-  claimStoreFor(dir, repoDir)
-  writeStorePointer(repoDir, dir)
+
+  // RESOLUTION HAPPENS INSIDE THE LOCK. It used to happen before it, so a
+  // startup that waited on a recovery in flight went on to claim the store it
+  // had resolved BEFORE that recovery ran — and then wrote that stale answer
+  // back into the pointer, undoing the rebinding it had just waited for.
+  // Selecting, claiming and recording the binding are one transaction.
+  var resolved: File? = null
+  val failure: String? = withStoreLock(
+    repoDir,
+    onTakeover = ::println,
+    onWaiting = { lock ->
+      println(
+        "portal-server: waiting for a store recovery to finish before resolving the store " +
+          "(lock: $lock)",
+      )
+    },
+    onBusy = { lock ->
+      System.err.println(
+        "portal-server: a store recovery is in progress for this app (lock: $lock).\n" +
+          "  Wait for keliver-store-recover.sh to finish and start again. If nothing is\n" +
+          "  running, remove that directory.",
+      )
+      kotlin.system.exitProcess(70)
+    },
+    // No unlocked fallback. Claiming a store and writing the pointer are the
+    // two writes the lock exists to serialize, so a lock that cannot be taken
+    // means this process does not do them.
+    onUnavailable = { lock, why ->
+      System.err.println(
+        "portal-server: the store lock is unavailable, so the portal will not start.\n" +
+          "  $why\n" +
+          "  lock: $lock\n" +
+          "  Starting without it would let a store recovery and this startup write the\n" +
+          "  binding at the same time. Make the app directory writable and try again.",
+      )
+      kotlin.system.exitProcess(70)
+    },
+  ) {
+    try {
+      val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir, ::println)
+      dir.mkdirs()
+      claimStoreFor(dir, repoDir)
+      // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app.
+      // Other consumers already see it: PORTAL_STORE is step 1 of the shell
+      // resolver too, and it is an environment variable, so a build in the
+      // same environment resolves it without any pointer.
+      val pointerFailure = if (env == null) writeStorePointer(repoDir, dir) else null
+      if (pointerFailure != null) {
+        pointerFailure
+      } else {
+        resolved = dir
+        null
+      }
+    } catch (e: StoreOwnershipException) {
+      // A refusal is an answer, not a crash. This used to surface as an
+      // ExceptionInInitializerError stack trace with the actionable part
+      // buried in the middle of it. Reported AFTER the lock is released.
+      e.message ?: "portal store: refused"
+    }
+  }
+  if (failure != null) {
+    System.err.println(failure)
+    kotlin.system.exitProcess(70)
+  }
+  val dir = resolved!!
   legacyStoreOrNull(dir)?.let { println(it.describe()) }
   return dir
 }
@@ -89,14 +150,31 @@ private fun resolveStore(): File {
  * the relay. Rather than duplicating the path derivation in three build files,
  * the relay records the resolved path and they read it. `.gradle/` because it
  * is build state, is gitignored by convention, and survives `clean`.
+ *
+ * It is also the app half of the ownership binding (docs/STORE_IDENTITY.md):
+ * it travels with a renamed directory, which is how a moved app still finds
+ * its own store. NOT written for a PORTAL_STORE run — that override is for one
+ * run and must not rebind the app, and a build in the same environment reads
+ * the variable directly.
  */
-private fun writeStorePointer(repo: File, store: File) {
-  runCatching {
-    val f = File(File(repo, ".gradle"), "keliver-store-path")
+private fun writeStorePointer(repo: File, store: File): String? {
+  val f = File(File(repo, ".gradle"), "keliver-store-path")
+  val line = store.absolutePath + "\n"
+  return runCatching {
     f.parentFile.mkdirs()
-    val line = store.absolutePath + "\n"
     if (!f.exists() || f.readText() != line) f.writeText(line)
-  }.onFailure { println("portal-server: could not record the store pointer: $it") }
+    check(f.readText() == line) { "the pointer does not read back as written" }
+    null
+  }.getOrElse { e ->
+    // Not a warning. The pointer is half the binding: the publisher signs with
+    // the key in the store it names and the device hosts embed the public key
+    // from there, so a relay that serves without it hands the next build a
+    // different identity. This used to print and carry on.
+    "portal-server: the store pointer could not be written, so the portal will not start.\n" +
+      "  $f\n  $e\n" +
+      "  The store itself is unchanged and still belongs to this app. Make that path\n" +
+      "  writable (it must be a regular file, not a directory) and start again."
+  }
 }
 private val activeFile = File(root, "active")
 private val keysDir = File(root, "keys")

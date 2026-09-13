@@ -1,0 +1,121 @@
+=== store recovery outcomes
+    disposable root: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC
+    bundle:          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/bundle
+
+--- C1  a bundle signed before the move still verifies after it
+        store:    /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/checkout-b44250ca
+        identity: 7edfc11d53cf6486
+        tests="1" skipped="0" failures="0" errors="0"
+  PASS  C1 a real Zipline manifest was signed with this store's identity
+  PASS  C1 the moved app was refused before any identity was minted
+  PASS  C1 the packaged recovery command accepted the move
+        identity before: 7edfc11d53cf6486
+        identity after:  7edfc11d53cf6486
+  PASS  C1 the moved app is serving from its original store
+  PASS  C1 the public-key fingerprint is unchanged (7edfc11d53cf6486)
+        tests="2" skipped="0" failures="0" errors="0"
+  PASS  C1 the pre-move signed bundle verifies against the post-move public key
+
+--- C2  the recovered app restarts normally
+  PASS  C2 a second start after recovery is uneventful
+
+--- C3  an unrelated app is unaffected, and still refused this store
+  PASS  C3 the unrelated app took a store of its own
+  PASS  C3 it has its own signing identity
+  PASS  C3 the foreign claim was refused
+  PASS  C3 the refused claim changed nothing in the store
+  PASS  C3 recovery refused an unrelated app while the owner is live
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/other
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/checkout-b44250ca
+        identity before: 7edfc11d53cf6486
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/checkout-renamed
+        ✗ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/checkout-renamed still exists and still uses this store. That is two apps, not a relocation.
+          Nothing was changed. If that directory is a leftover copy, remove it (or its
+          .gradle/keliver-store-path) first, then re-run.
+  PASS  C3 the refused recovery changed nothing in the store
+  PASS  C3 the unrelated app's own store is untouched
+
+--- C4  two plausible claimants race to recover one store
+        race-a exit=0  race-b exit=1
+  PASS  C4 exactly one claimant won
+  PASS  C4 the marker names exactly one of the claimants
+  PASS  C4 nothing but the owner marker changed
+  PASS  C4 the identity survived the race (de96c8010bc038c2)
+  PASS  C4 the losing app is still refused
+
+--- C5  the packaged keliver-portal starts the recovered app
+          guard ok: user.home=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home
+          guard ok: store=/private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/checkout-b44250ca
+  PASS  C5 the packaged launcher started the recovered app
+  PASS  C5 the packaged launcher stopped it again
+
+--- C6  recovery reports success only when the binding actually works
+  FAIL  C6a recovery reported success with no writable pointer destination
+        app:   /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-file
+        store: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/c6-store-aaaaaaa1
+        identity before: 271a413bd339c570
+        recorded owner:  /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-gone
+        mkdir: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-file/.gradle: File exists
+        /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/bundle/bin/keliver-store-recover.sh: line 142: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-file/.gradle/keliver-store-path: Not a directory
+        identity after:  271a413bd339c570
+        ✓ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/c6-store-aaaaaaa1 is now bound to /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-file
+          keys, documents and bundles were not read, copied or moved.
+          /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-gone was not modified.
+  FAIL  C6a the owner was rewritten anyway
+  FAIL  C6b recovery reported success after the pointer write failed
+  FAIL  C6b the owner marker was left rewritten: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c6-midway
+  PASS  C6c a valid recovery succeeded
+  PASS  C6c the ordinary resolver now selects the recovered store
+
+--- C7  recovery respects configuration, the pointer, and precedence
+  FAIL  C7a recovery bound a store the app does not resolve to
+        resolver still selects: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/stores/c7-b
+  FAIL  C7a a store was modified by a refused recovery
+  FAIL  C7b recovery ignored an existing pointer to another identity
+  FAIL  C7b the target store was modified
+  FAIL  C7c a resolver refusal was swallowed and read as 'no store'
+  FAIL  C7c the reported reason is not this app's split
+  PASS  C7d PORTAL_STORE did not become the binding
+  FAIL  C7d PORTAL_STORE was neither reported nor refused
+
+--- C8  a split where BOTH markers already name this app
+  PASS  C8 the resolver refuses the split before recovery
+  PASS  C8 recovery accepted an explicitly chosen store in a same-owner split
+  FAIL  C8 resolution selects '<refused>', not /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/home/.keliver-portal/apps/current-05a3ae07
+  PASS  C8 the unselected store and its identity are untouched
+        guard refused for c8-boot:
+          portal store split: 2 stores exist for /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c8-app.
+            - c8-app-05a3ae07
+            - current-05a3ae07
+            the name a first boot would choose today is c8-app-05a3ae07
+          Choose the one to keep (its identity is the one your published bundles
+          verify against) and bind this app to it:
+            keliver-store-recover.sh /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c8-app --store <one of the above>
+          guard: the store could not be resolved for /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c8-app (see above).
+          guard: refusing to start a test relay.
+  FAIL  C8 the relay did not come up on the chosen store (got '')
+tail: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/c8-boot.log: No such file or directory
+
+--- C9  two recoveries targeting different stores for one app
+        target-A exit=0  target-B exit=0
+  FAIL  C9 both reported success on different stores
+        stores whose owner now names this app: A B
+  FAIL  C9 both stores claim this app
+
+--- C10  recovery and relay startup are serialized
+  FAIL  C10 the relay did not start, but not because of the lock
+        The store above still holds this app's keys, documents and bundles.
+        If this app was MOVED or RENAMED, rebind it — keys and documents are
+        preserved and nothing is copied:
+          keliver-store-recover.sh /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c10-app
+        If this is a COPY of that app and should be independent, drop the
+        pointer it inherited and it will start its own store:
+          rm /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC/apps/c10-app/.gradle/keliver-store-path
+        
+  FAIL  C10 a second recovery ran while the app lock was held
+  FAIL  C10 the stale lock was not reported as taken over
+  PASS  C10 recovery proceeds once the lock is free
+  PASS  C10 the relay starts normally afterwards
+
+passed: 29   failed: 18
+evidence: /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/rb/keliver-store-recovery-FDXQeC

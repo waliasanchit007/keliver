@@ -1,0 +1,62 @@
+import java.io.File
+import java.nio.file.Files
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+/**
+ * BEFORE-EVIDENCE ONLY. Written against the code at 4b5c7a0ad to show that
+ * withStoreLock executes the block with no lock held. Both cases below reach
+ * one of the two `return block()` statements at PortalConfig.kt:352 and :360.
+ */
+class UnlockedPathTest {
+  private fun app(): File = Files.createTempDirectory("unlocked").toFile().also { it.deleteOnExit() }
+
+  @Test
+  fun theBlockRunsUnlockedWhenTheLockParentCannotBeCreated() {
+    val a = app()
+    File(a, ".gradle").writeText("not a directory\n")
+    val notices = mutableListOf<String>()
+    var ran = false
+    val out = withStoreLock(a, onUnlocked = notices::add, onBusy = { error("not busy") }) { ran = true; "ok" }
+    assertEquals("ok", out)
+    assertTrue(ran, "DEFECT: the block executed with no lock held")
+    assertTrue(notices.any { "without the store lock" in it }, notices.toString())
+    assertTrue(!File(a, ".gradle/keliver-store.lock").exists(), "and no lock was ever held")
+    println("BEFORE: parent-unavailable -> block ran unlocked; notices=$notices")
+  }
+
+  @Test
+  fun theBlockRunsUnlockedWhenMkdirFailsAndTheLockIsAbsent() {
+    // The same observable condition a holder produces by releasing the lock
+    // between the failed mkdir and the exists() check: mkdir fails, the
+    // directory is not there.
+    val a = app()
+    val gradle = File(a, ".gradle")
+    gradle.mkdirs()
+    assertTrue(gradle.setWritable(false, false))
+    try {
+      val notices = mutableListOf<String>()
+      var ran = false
+      val out = withStoreLock(a, onUnlocked = notices::add, onBusy = { error("not busy") }) { ran = true; "ok" }
+      assertEquals("ok", out)
+      assertTrue(ran, "DEFECT: the block executed with no lock held")
+      println("BEFORE: mkdir-failed-and-absent -> block ran unlocked; notices=$notices")
+    } finally {
+      gradle.setWritable(true, true)
+    }
+  }
+
+  @Test
+  fun releaseDeletesALaterHoldersLock() {
+    val a = app()
+    var seen: String? = null
+    withStoreLock(a, onBusy = { error("not busy") }) {
+      File(a, ".gradle/keliver-store.lock/pid").writeText("999999\n")
+      seen = File(a, ".gradle/keliver-store.lock/pid").readText().trim()
+    }
+    assertEquals("999999", seen)
+    println("BEFORE: after cleanup, later holder's lock exists = ${File(a, ".gradle/keliver-store.lock").exists()}")
+    assertTrue(!File(a, ".gradle/keliver-store.lock").exists(), "DEFECT: cleanup removed the later holder's lock")
+  }
+}
