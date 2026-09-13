@@ -69,14 +69,13 @@ ext.keliverPortalStore = { org.gradle.api.Project p ->
     }
     answer = memo.get('store')
   }
-  if (answer instanceof Throwable) throw answer
+  // A FRESH exception per query, with the memoised one as its cause. Rethrowing
+  // the identical instance meant whichever consumer asked first owned the stack
+  // trace and Gradle's location decoration, so the guest bundle could fail with
+  // a trace rooted in the Android module — and with org.gradle.parallel=true two
+  // tasks can be rethrowing it at once.
+  if (answer instanceof Throwable) throw new GradleException(answer.message, answer)
   return answer
-}
-
-// The lazy form every consumer should use: nothing resolves until the returned
-// provider is queried, which happens when the task that needs the key is run.
-ext.keliverPortalStoreProvider = { org.gradle.api.Project p ->
-  p.providers.provider { keliverPortalStore(p) }
 }
 
 ext.keliverStoreDir = { java.io.File repoDir ->

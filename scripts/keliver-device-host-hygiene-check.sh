@@ -63,11 +63,26 @@ build() { # build <label> <store-or-empty> <devOnly true|false>
   # still lands in this log, which nothing read unless the build FAILED. Print
   # it, and assert it: this is the only scripted caller that passes the
   # override, so if the warning is not checked here it is not checked anywhere.
-  if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
-    ok "$label: the build-only store override announced itself"
-    grep -h "is in use, so this build signs" "$DISP/build-$label.log" | fold -w 100 -s | sed 's/^/        ! /'
+  #
+  # The expected answer DEPENDS ON THE MODE, and asserting it unconditionally
+  # was wrong — measured on Linux CI, which failed on exactly the two dev-only
+  # builds. The development-only host embeds no key, so it must not consult a
+  # store at all; the warning is emitted by the resolver accessor, so its
+  # ABSENCE here is the evidence that the short-circuit holds. Both directions
+  # are asserted, so neither mode can pass by accident.
+  if [ "$devonly" = true ]; then
+    if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
+      bad "$label: the development-only host consulted a store it has no use for"
+    else
+      ok "$label: the development-only host consulted no store at all"
+    fi
   else
-    bad "$label: the build-only store override was used without saying so"
+    if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
+      ok "$label: the build-only store override announced itself"
+      grep -h "is in use, so this build signs" "$DISP/build-$label.log" | fold -w 100 -s | sed 's/^/        ! /'
+    else
+      bad "$label: the build-only store override was used without saying so"
+    fi
   fi
 }
 

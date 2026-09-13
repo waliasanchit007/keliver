@@ -1461,11 +1461,28 @@ none is a security hole.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
-     `ZiplineCompileTask.signingKeys` instead, which the plugin itself populates
-     lazily. **Measured:** setting it during script evaluation was silently
-     overwritten by the plugin's own `afterEvaluate` and produced an *unsigned*
-     bundle with a key present; registering it from a later `afterEvaluate`
-     signs correctly.
+     `ZiplineCompileTask.signingKeys` instead, from `afterEvaluate`.
+
+     **Why `afterEvaluate`, precisely.** Gradle runs a task's configuration
+     actions in the order they were *added*. The zipline plugin writes
+     `signingKeys` from that task's own **registration action**, and the task is
+     registered from the Kotlin JS plugin's `afterEvaluate` — after this build
+     file has been read. A `configureEach` added at script level is therefore
+     added before the task exists, runs before the registration action, and is
+     overwritten by it. **Measured twice in this build:** script level →
+     `unsigned.signatures = {}` with a key present; identical code from
+     `afterEvaluate` → signed. An isolated reproduction of the same plugin
+     shapes reports the opposite, so this must be measured here rather than
+     modelled.
+
+     The invariant is "nothing may write `signingKeys` after us", which cannot
+     be enforced from the build file — so it is **gated** instead.
+     `scripts/keliver-guest-signing-check.sh` builds the guest bundle against a
+     disposable store with a key and asserts the manifest is signed, and against
+     one without and asserts it is not. Measured: reverting that single line to a
+     script-level `configureEach` makes the check fail — the build still
+     succeeds, which is exactly why a gate and not a comment. It runs in the
+     portable CI checks.
 
    "I could not find out whether you have a signing key" is not "you have no
    signing key": when resolution fails, the compile task fails rather than
@@ -1479,8 +1496,23 @@ none is a security hole.
    from the relay's, and nothing verifies that they agree. It bypasses the split
    refusal, and the relay does not see it. It is printed at QUIET level so `-q`
    cannot hide it, and `keliver-device-host-hygiene-check.sh` — the only scripted
-   caller that passes it — now greps the build log for that line and asserts it,
-   because surviving `-q` into a log nobody reads is not visibility.
+   caller that passes it — greps the build log for that line, because surviving
+   `-q` into a log nobody reads is not visibility.
+
+   That assertion is **mode-dependent**, and asserting it unconditionally was
+   wrong: Linux CI run 34771348310 failed on exactly the two development-only
+   builds. The dev-only host short-circuits before the resolver accessor, so it
+   emits no warning — and the *absence* is the evidence that the short-circuit
+   holds. Both directions are now asserted.
+
+   **Still open, recorded rather than fixed.** The resolver accessor reads
+   `rootProject.ext` and calls `p.logger`/`p.findProperty` from providers that
+   are queried at execution time. Under `--configuration-cache` this currently
+   works, but a cached entry would bake in the resolved store path, so a rebind
+   could be ignored until the entry is invalidated; under Project Isolation the
+   cross-project `rootProject.ext` read is a violation. Neither mode is enabled
+   here. A `ValueSource` is the correct home for the resolver subprocess and
+   would give per-build memoisation for free. Not done in this block.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

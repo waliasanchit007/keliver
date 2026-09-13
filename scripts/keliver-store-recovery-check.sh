@@ -791,7 +791,12 @@ grep -q "^✓" "$DISP/c12.log" \
 # prints "<old store> was not modified.", and matching that would have forced
 # the phrase list to be narrowed instead of the region.
 c12_after_banner() { sed -n '/COULD NOT BE RESTORED/,$p' "$DISP/c12.log"; }
-if c12_after_banner | grep -qi "unchanged\|was not modified\|nothing was changed"; then
+if [ -z "$(c12_after_banner)" ]; then
+  # No banner means no region, and "no region" would otherwise read as "made no
+  # false claim" — an assertion that passes hardest when the report has gone
+  # missing entirely.
+  bad "C12 there is no failure banner to scope the claim check to"
+elif c12_after_banner | grep -qi "unchanged\|was not modified\|nothing was changed"; then
   bad "C12 it claimed nothing changed while the state is partial"
   c12_after_banner | grep -in "unchanged\|was not modified\|nothing was changed" | sed 's/^/        /'
 else
@@ -1104,7 +1109,12 @@ unset KELIVER_RELAY_FAIL_POINTER
 # no signing identity anywhere in them. This block asserts both halves against
 # the same broken resolver, so neither can be satisfied by giving up the other.
 NOPY="$DISP/nopy"; mkdir -p "$NOPY"; printf '#!/bin/sh\nexit 127\n' > "$NOPY/python3"; chmod +x "$NOPY/python3"
-mkdir -p "$DISP/c16-store"
+# A disposable store WITH a public key, so the control below exercises the
+# embedding path rather than an empty one. The bytes only have to be
+# recognisable; nothing verifies a signature here.
+mkdir -p "$DISP/c16-store/keys"
+printf '%s' "$(printf 'ab%.0s' $(seq 1 32))" > "$DISP/c16-store/keys/ed25519.pub"
+EMBEDDED="$ROOT/portal-device-android/build/portalKeys/portal_ed25519.pub"
 
 # Half one: work that needs no identity is unaffected. No override is passed —
 # using one here would prove nothing, since it is the resolver we are breaking.
@@ -1147,6 +1157,44 @@ grep -q "is in use, so this build signs" "$DISP/c16-override.log" \
   && ok "C16d and the build-only override announces itself even under -q" \
   || { bad "C16d the build-only override was used without saying so"; \
        tail -4 "$DISP/c16-override.log" | sed 's/^/        /'; }
+# ...and it really embedded THAT store's key. Pointing the control at an empty
+# store proved only that dependency resolution unblocked: with no key the task
+# has nothing to copy, so it would have looked identical if the embedding had
+# stopped working altogether.
+if [ -f "$EMBEDDED" ] && cmp -s "$EMBEDDED" "$DISP/c16-store/keys/ed25519.pub"; then
+  ok "C16d and the key embedded is the one in the store it was given"
+else
+  bad "C16d the key embedded is not the one in the store it was given"
+  ls -A "$(dirname "$EMBEDDED")" 2>/dev/null | sed 's/^/        /'
+fi
+# U22 at the Sync level, on every platform rather than only where an Android SDK
+# exists: the SAME warm build directory, now built as the development-only host,
+# must not still hold the key it just embedded.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+    -Pkeliver.portalStore="$DISP/c16-store" -Pkeliver.devOnlyHost=true \
+    :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-warm.log" 2>&1
+if [ $? != 0 ]; then
+  bad "C16d the development-only build failed in a warm directory"
+  tail -12 "$DISP/c16-warm.log" | sed 's/^/        /'
+elif [ -e "$EMBEDDED" ]; then
+  bad "C16d a warm build directory kept the key for the development-only host"
+else
+  ok "C16d a warm build directory does not keep the key for the development-only host"
+fi
+
+# The development-only host embeds no key, so it must not consult a store at
+# all — not even to discover that the resolver is broken. Same broken PATH, no
+# override: if the short-circuit ever stops short-circuiting, this fails.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+    -Pkeliver.devOnlyHost=true :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-devonly.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d the development-only host builds without consulting a store"
+else
+  bad "C16d the development-only host asked for a store it has no use for"
+  tail -12 "$DISP/c16-devonly.log" | sed 's/^/        /'
+fi
 
 # A WORDING guard, and only that. The behavioural guarantee is the non-zero exit
 # asserted above — a fallback, by definition, lets the build succeed. This grep

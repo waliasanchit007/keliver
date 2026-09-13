@@ -153,6 +153,14 @@ jobs:
           # second Gradle daemon. Build it here so a failure is attributable.
           ./gradlew --console=plain :portal-device-guest:compileDevelopmentZipline
           echo "::endgroup::"
+          echo "::group::guest bundle signing"
+          # The guest signs from the compile task's own signingKeys property,
+          # written from afterEvaluate. Any later writer silently wins and the
+          # symptom is an UNSIGNED bundle with a key present, not an error.
+          # Measured: reverting that one line to a script-level configureEach
+          # makes this step fail and nothing else. Both directions are asserted.
+          scripts/keliver-guest-signing-check.sh "$RUNNER_TEMP/guest-signing"
+          echo "::endgroup::"
           echo "::group::store recovery outcomes, through the packaged commands"
           # Relocation end to end: a bundle signed before a move still verifies
           # after it, an unrelated app stays isolated, concurrent recoveries

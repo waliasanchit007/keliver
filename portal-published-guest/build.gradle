@@ -41,10 +41,24 @@ redwoodBuild {
 // you have a signing key" is not "you have no signing key", and silently
 // shipping an unsigned bundle to someone who signs theirs is the failure this
 // contract exists to prevent.
-// afterEvaluate, because the zipline plugin wires the extension into this same
-// ListProperty from its OWN afterEvaluate — MEASURED: setting it during script
-// evaluation was silently overwritten and the bundle came out unsigned with a
-// key present. Ours is registered after the plugin's, so it runs last.
+// afterEvaluate, and the reason is ORDERING, not ceremony. Gradle runs a task's
+// configuration actions in the order they were ADDED. The zipline plugin writes
+// signingKeys from the task's own REGISTRATION action, and that task is
+// registered from the Kotlin JS plugin's afterEvaluate — i.e. after this file
+// has finished being read. A `configureEach` added at script level is therefore
+// added BEFORE the task exists, runs BEFORE the registration action, and is
+// overwritten by it.
+//
+// MEASURED, twice, in this build: script level -> unsigned.signatures = {} with
+// a key present; the identical code from afterEvaluate -> signed. An isolated
+// reproduction of the same plugin shapes says script level wins, so do not
+// trust a model of this; it is the Kotlin plugin's late registration that
+// decides it.
+//
+// The invariant to preserve is simply: NOTHING MAY WRITE signingKeys AFTER US.
+// It is not enforceable from here, so it is gated instead —
+// scripts/keliver-verify-signed-bundle.sh runs in the portable CI checks and
+// fails if a bundle built with a key present comes out unsigned.
 afterEvaluate {
   tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
     signingKeys.set(providers.provider {
