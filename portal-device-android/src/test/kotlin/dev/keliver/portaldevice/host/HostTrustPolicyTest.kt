@@ -1,6 +1,7 @@
 package dev.keliver.portaldevice.host
 
 import kotlin.test.Test
+import okio.ByteString.Companion.decodeHex
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -113,6 +114,10 @@ class HostTrustPolicyTest {
     val trust = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = "ab".repeat(32))
     val hex = (trust as HostTrust.ProductionVerified).publicKeyHex
     assertEquals(64, hex.length)
-    assertEquals(32, hex.chunked(2).size)
+    // Actually decode it. `hex.chunked(2).size` is arithmetically implied by the
+    // length above, so it asserted nothing; the invariant is that what this
+    // policy blesses is something decodeHex accepts, which is what used to
+    // throw in onCreate.
+    assertEquals(32, hex.decodeHex().size)
   }
 }

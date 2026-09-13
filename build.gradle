@@ -11,11 +11,22 @@
 // one. Resolution now FAILS rather than falling back, and it happens at
 // configuration time, so a machine without python3 could otherwise not run any
 // Gradle task at all — including ones that need no signing identity. This gives
-// a way to proceed on purpose; it does not weaken anything, because naming a
-// store explicitly is exactly what the resolver's step 1 and 2 already honour.
+// a way to proceed on purpose. It is NOT equivalent to the resolver's steps 1
+// and 2: PORTAL_STORE and "store" are honoured by the relay as well, whereas
+// this is a GRADLE property only the build sees. Sign with it and the publisher
+// uses one identity while the relay serves whatever the resolver selects —
+// which is the mismatch the contract exists to prevent — unless PORTAL_STORE or
+// "store" is set to agree. It also returns before keliverStoreDir, so it
+// bypasses the split refusal (exit 3). Strictly better than the silent
+// ~/.keliver-portal fallback it replaced, but it is an override, so it says so.
 ext.keliverPortalStore = { org.gradle.api.Project p ->
   def override = p.findProperty('keliver.portalStore')
-  override ? new java.io.File(override.toString()) : keliverStoreDir(p.rootProject.projectDir)
+  if (!override) return keliverStoreDir(p.rootProject.projectDir)
+  p.logger.lifecycle("keliver: -Pkeliver.portalStore=${override} is in use, so this build signs " +
+    'and embeds from that store. The RELAY will not use it unless PORTAL_STORE or "store" in ' +
+    'keliver.portal.json names it too — otherwise the bundle is signed by one identity and ' +
+    'verified against another.')
+  new java.io.File(override.toString())
 }
 
 ext.keliverStoreDir = { java.io.File repoDir ->

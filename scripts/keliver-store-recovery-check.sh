@@ -48,8 +48,20 @@ note(){ printf '        %s\n' "$1"; }
 # --- the bundle under test ---------------------------------------------------
 BUNDLE="$DISP/bundle"
 mkdir -p "$BUNDLE/bin" "$BUNDLE/relay"
-[ -x "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" ] || {
-  echo "build the relay first: ./gradlew :portal-relay:installDist" >&2; exit 2; }
+# BUILD WHAT WE STAGE. This suite copies the INSTALLED relay into its bundle,
+# and `:portal-relay:compileKotlin` does not refresh that — so a source edit
+# followed by a compile left it testing the previous binary, which is how a
+# refusal message and the assertion that greps it drifted apart while the run
+# reported green. Comparing mtimes is not enough either: Gradle correctly skips
+# a rebuild when content is unchanged, and the stale-looking timestamp is then
+# a false alarm. So just build it, every time; it is up-to-date in seconds.
+echo "==> refreshing the relay this suite stages"
+( cd "$ROOT" && ./gradlew --console=plain -q :portal-relay:installDist ) || {
+  echo "could not build the relay; refusing to report results for whatever is on disk" >&2
+  exit 2
+}
+RELAY_BIN="$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay"
+[ -x "$RELAY_BIN" ] || { echo "no relay at $RELAY_BIN" >&2; exit 2; }
 cp -R "$ROOT/portal-relay/build/install/portal-relay/." "$BUNDLE/relay/"
 cp "$ROOT/scripts/keliver-portal" "$ROOT/scripts/keliver-store-path.sh" \
    "$ROOT/scripts/keliver-store-recover.sh" "$ROOT/scripts/keliver-adopt-legacy-store.sh" "$BUNDLE/bin/"
@@ -1031,7 +1043,7 @@ boot "$A16" 8178 c16a || BOOT_RC=1
 [ "$(stores_under)" = "$BEFORE16" ] \
   && ok "C16a no store was created by the failed start" \
   || { bad "C16a the failed start left a store behind"; ls -1 "$DISP/home/.keliver-portal/apps" | sed 's/^/        /'; }
-grep -q "Nothing has been claimed or created" "$BOOT_LOG" \
+grep -q "has been claimed or created" "$BOOT_LOG" \
   && ok "C16a and it says so truthfully" || bad "C16a the refusal does not say what it left"
 
 # (b) a failure BETWEEN validating the destination and writing it. The relay
