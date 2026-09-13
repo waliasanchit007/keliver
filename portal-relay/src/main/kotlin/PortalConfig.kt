@@ -519,7 +519,9 @@ internal fun claimStaleLock(lock: File, betweenCheckAndClaim: () -> Unit = {}): 
 
   val claim = File(lock, "pid.stale.${ProcessHandle.current().pid()}")
   if (!runCatching { pidFile.renameTo(claim) }.getOrDefault(false)) return false
-  if (runCatching { claim.readText().trim() }.getOrNull() != recorded) {
+  // trimEnd('\n'), the same reader as above: two different trims of one marker
+  // is the shape that produced the padded-marker divergence.
+  if (runCatching { claim.readText().trimEnd('\n') }.getOrNull() != recorded) {
     // Not the marker that was inspected: put it back and wait rather than delete.
     runCatching { claim.renameTo(pidFile) }
     return false

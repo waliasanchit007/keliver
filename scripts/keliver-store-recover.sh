@@ -77,7 +77,10 @@ if   [ -x "$HERE/keliver-store-path.sh" ];            then RESOLVE="$HERE/kelive
 elif [ -x "$HERE/../scripts/keliver-store-path.sh" ]; then RESOLVE="$HERE/../scripts/keliver-store-path.sh"
 else echo "keliver-store-path.sh not found next to $HERE" >&2; exit 2; fi
 
-APP="${1:?usage: $0 <app-dir> [--store DIR] [--home DIR] [--dry-run]}"; shift
+USAGE="usage: $0 <app-dir> [--store DIR] [--home DIR] [--dry-run]
+   or: $0 --holder-state <pid>        (diagnostic: why is a lock not reclaimed?)"
+# The diagnostic does not read an app dir, so it must not demand one.
+if [ "${1:-}" = "--holder-state" ]; then APP="."; else APP="${1:?$USAGE}"; shift; fi
 STORE=""; HOME_DIR=""; DRY=0; HOLDER_STATE_QUERY=""; HOLDER_STATE_ASKED=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -90,13 +93,21 @@ while [ $# -gt 0 ]; do
     --holder-state)
       [ $# -ge 2 ] || { echo "--holder-state needs a value (use '' for an empty marker)" >&2; exit 2; }
       HOLDER_STATE_QUERY="$2"; HOLDER_STATE_ASKED=1; shift 2 ;;
-    -h|--help) sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) printf '%s\n' "$USAGE"; sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
 keliver_lock_inspector() {
+  # A forced value chooses WHICH inspector, never whether it has to prove
+  # itself. Returning it unprobed meant `proc` forced on a machine with no
+  # /proc answered GONE for a live process — the wrong-GONE class this whole
+  # contract exists to close, reachable through a variable that ships in the
+  # bundle.
   case "${KELIVER_LOCK_INSPECTOR:-auto}" in
-    proc|ps|none) printf '%s' "$KELIVER_LOCK_INSPECTOR"; return ;;
+    none) printf 'none'; return ;;
+    proc) { [ -d "/proc/$$" ] && [ -e /proc/1 ]; } && printf 'proc' || printf 'none'; return ;;
+    ps)   { command -v ps >/dev/null 2>&1 && ps -p "$$" >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; } \
+            && printf 'ps' || printf 'none'; return ;;
   esac
   # /proc is authoritative where it exists, needs no external command, and has
   # no locale surface. It also sees OTHER USERS' processes, which is what makes

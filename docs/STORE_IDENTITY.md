@@ -343,8 +343,12 @@ The inspector's probe is **pid 1 as well as this process**. Probing only with
 this process certifies an inspector that can see its owner's processes and
 nobody else's — which is what `hidepid` produces — and it would then read
 another user's live process as death. pid 1 always exists and is never ours, so
-an inspector that cannot see it declines to answer, and every verdict under
-`hidepid` becomes UNKNOWN on both sides rather than a wrong GONE on one.
+an inspector that cannot see it declines to answer. Under `hidepid=2` pid 1 is
+hidden from both, so every verdict becomes UNKNOWN on both sides rather than a
+wrong GONE on one. Under `hidepid=1` the `/proc/<pid>` entry is still
+stat-able while its contents are not, so the shell answers correctly and the
+JVM — which opens `/proc/<pid>/stat` — declines; they disagree, but in the safe
+direction, which is the reverse of what this probe replaced.
 
 Residual, shared by both sides and not closed: pid reuse, and a foreign PID
 namespace, where a marker written inside a container and read outside means a

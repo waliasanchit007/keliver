@@ -930,6 +930,18 @@ for insp in "" proc ps; do
   expect_state ""          UNKNOWN "[$tag] an empty marker" "$insp"
   expect_state " 7 "       UNKNOWN "[$tag] a padded marker" "$insp"
 done
+# A FORCED inspector still has to prove itself. Forcing the one this machine
+# does not have must yield UNKNOWN, never a verdict — returning a forced value
+# unprobed made `proc` on a machine with no /proc answer GONE for a LIVE
+# process, which is the wrong-GONE class this section exists to close.
+if [ -d "/proc/$$" ]; then MISSING_INSPECTOR=ps; else MISSING_INSPECTOR=proc; fi
+if [ "$MISSING_INSPECTOR" = ps ] && command -v ps >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; then
+  note "both inspectors work here; the unprobed-forced-value case cannot be built"
+else
+  expect_state 1 UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] pid 1" "$MISSING_INSPECTOR"
+  expect_state "$C15_DEAD" UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] a reaped child" "$MISSING_INSPECTOR"
+fi
+
 # A missing VALUE is a usage error, not an empty marker — and must not hang.
 ( "$RECOVER" "$A15" --holder-state ) > "$DISP/c15-arity.log" 2>&1 & ap=$!
 ( sleep 10; kill -9 "$ap" 2>/dev/null ) & wp=$!
