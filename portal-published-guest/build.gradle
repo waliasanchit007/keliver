@@ -22,7 +22,7 @@ redwoodBuild {
 // a per-app store, this module kept signing with the OLD global key while the
 // hosts embedded whichever public key they found — a bundle signed by one
 // identity and verified against another. All of them now ask the same resolver.
-def portalKey = new File(keliverStoreDir(rootProject.projectDir), 'keys/ed25519.priv')
+def portalKey = new File(keliverPortalStore(project), 'keys/ed25519.priv')
 if (portalKey.exists()) {
   zipline {
     signingKeys {

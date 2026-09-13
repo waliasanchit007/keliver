@@ -10,7 +10,7 @@ apply plugin: 'app.cash.zipline' // IR plugin: rewrites the host's zipline.take/
 
 // P4/P5: embed the portal's Ed25519 PUBLIC key as a generated Kotlin const so
 // prod mode can verify signed manifests (parity with the Android host's asset).
-def portalPubKey = new File(keliverStoreDir(rootProject.projectDir), 'keys/ed25519.pub')
+def portalPubKey = new File(keliverPortalStore(project), 'keys/ed25519.pub')
 def portalKeyDir = file("$buildDir/generated/portalKeys/kotlin")
 def generatePortalKey = tasks.register('generatePortalKey') {
   inputs.property('exists', portalPubKey.exists())

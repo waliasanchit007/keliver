@@ -7,6 +7,17 @@
 // asks scripts/keliver-store-path.sh, and StoreContractTest asserts that script
 // agrees with PortalConfig.storeDir().
 // ---------------------------------------------------------------------------
+// The deliberate escape, for all three consumers rather than only the Android
+// one. Resolution now FAILS rather than falling back, and it happens at
+// configuration time, so a machine without python3 could otherwise not run any
+// Gradle task at all — including ones that need no signing identity. This gives
+// a way to proceed on purpose; it does not weaken anything, because naming a
+// store explicitly is exactly what the resolver's step 1 and 2 already honour.
+ext.keliverPortalStore = { org.gradle.api.Project p ->
+  def override = p.findProperty('keliver.portalStore')
+  override ? new java.io.File(override.toString()) : keliverStoreDir(p.rootProject.projectDir)
+}
+
 ext.keliverStoreDir = { java.io.File repoDir ->
   def script = new java.io.File(rootProject.projectDir, 'scripts/keliver-store-path.sh')
   if (!script.exists()) {
@@ -77,4 +88,3 @@ afterEvaluate {
     }
   }
 }
-

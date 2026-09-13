@@ -57,8 +57,12 @@ class HostTrustPolicyTest {
 
   @Test
   fun aProductionHostWithItsKeyVerifies() {
-    val t = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " ABCDEF0123 ")
-    assertEquals(HostTrust.ProductionVerified("ABCDEF0123"), t, "the trimmed key must be used")
+    // 64 hex characters: an Ed25519 public key is 32 bytes, and the policy now
+    // bounds the length. This case is about TRIMMING and case tolerance, so the
+    // key itself just has to be a valid one.
+    val key = "ABCDEF0123".repeat(6) + "ABCD"
+    val t = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " $key ")
+    assertEquals(HostTrust.ProductionVerified(key), t, "the trimmed key must be used")
   }
 
   /** The route adopters actually use must stay open in both binaries. */
@@ -88,21 +92,25 @@ class HostTrustPolicyTest {
       valid.dropLast(1) to "63 chars, odd length — the decodeHex crash",
       valid + "ab" to "66 chars, one byte long",
       valid.dropLast(1) + "z" to "64 chars but not hex",
-      " $valid" to "leading space",
     )
     for ((key, why) in bad) {
-      val trust = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = key)
+      val trust = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = key)
       assertTrue(trust is HostTrust.Refused, "must refuse ($why), got $trust")
     }
-    val ok = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = valid)
+    val ok = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = valid)
     assertTrue(ok is HostTrust.ProductionVerified, "a 64-char hex key must still verify, got $ok")
+    // Surrounding whitespace is TRIMMED on purpose — an asset read keeps the
+    // trailing newline — so a padded valid key still verifies. The length bound
+    // applies to what is left after trimming, not to the raw string.
+    val padded = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " $valid\n")
+    assertTrue(padded is HostTrust.ProductionVerified, "a padded 64-char key must verify, got $padded")
   }
 
   @Test
   fun aRefusedKeyNeverReachesDecodeHex() {
     // The crash was decodeHex() on what this policy had already blessed, so the
     // invariant is: anything ProductionVerified decodes to exactly 32 bytes.
-    val trust = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = "ab".repeat(32))
+    val trust = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = "ab".repeat(32))
     val hex = (trust as HostTrust.ProductionVerified).publicKeyHex
     assertEquals(64, hex.length)
     assertEquals(32, hex.chunked(2).size)

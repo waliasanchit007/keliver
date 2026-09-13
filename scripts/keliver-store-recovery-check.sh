@@ -124,7 +124,7 @@ boot() {
     lsof -nP -iTCP:"$port" -sTCP:LISTEN -t >/dev/null 2>&1 || break
     sleep 1
   done
-  BOOT_STORE="$(tr -d '\n' < "$app/.gradle/keliver-store-path" 2>/dev/null)"
+  BOOT_STORE="$(cat "$app/.gradle/keliver-store-path" 2>/dev/null | tr -d '\n')"
   return 0
 }
 
@@ -954,10 +954,16 @@ stub_state() { PATH="$STUB:$PATH" KELIVER_LOCK_INSPECTOR=ps "$RECOVER" "$A15" --
   && ok "C15 a forced inspector that cannot answer -> UNKNOWN for a dead pid" \
   || bad "C15 a forced-but-broken inspector reported $(stub_state "$C15_DEAD") for a reaped child"
 # And an unrecognised value is refused outright rather than meaning "auto".
-PATH="$STUB:$PATH" KELIVER_LOCK_INSPECTOR=bogus "$RECOVER" "$A15" --holder-state 1 > "$DISP/c15-bogus.log" 2>&1
-[ $? = 2 ] && [ ! -s "$DISP/c15-bogus.log.stdout" ] \
-  && ok "C15 an unrecognised inspector is refused, not silently auto" \
-  || bad "C15 an unrecognised inspector was accepted"
+# stdout and stderr kept APART: the point is that no verdict is printed, and
+# folding them together made the "no stdout" half test a file that is never
+# written — permanently true, and therefore no test at all.
+KELIVER_LOCK_INSPECTOR=bogus "$RECOVER" "$A15" --holder-state 1 \
+  > "$DISP/c15-bogus.out" 2> "$DISP/c15-bogus.err"
+C15_BOGUS_RC=$?
+[ "$C15_BOGUS_RC" = 2 ] && [ ! -s "$DISP/c15-bogus.out" ] \
+  && grep -q "is not one of auto, proc, ps, none" "$DISP/c15-bogus.err" \
+  && ok "C15 an unrecognised inspector is refused with no verdict printed" \
+  || { bad "C15 an unrecognised inspector was accepted (rc=$C15_BOGUS_RC, stdout='$(cat "$DISP/c15-bogus.out")')"; }
 
 # A missing VALUE is a usage error, not an empty marker — and must not hang.
 ( "$RECOVER" "$A15" --holder-state ) > "$DISP/c15-arity.log" 2>&1 & ap=$!
@@ -1070,15 +1076,24 @@ grep -qi "falling back" "$DISP/c16-gradle.log" \
 
 # (d) the recovery CLI, without touching the filesystem.
 CLI_PROBE="$DISP/apps/c16-cli"; mkdir -p "$CLI_PROBE"
-"$RECOVER" --help > "$DISP/c16-help.log" 2>&1
+# Run it FROM the probe directory: asking whether --help touched a directory it
+# was never pointed at could only ever answer "no".
+( cd "$CLI_PROBE" && "$RECOVER" --help ) > "$DISP/c16-help.log" 2>&1
 [ $? = 0 ] && grep -q "^usage:" "$DISP/c16-help.log" \
   && ok "C16e --help works as the first argument" || bad "C16e --help as the first argument failed"
-[ -e "$CLI_PROBE/.gradle" ] && bad "C16e --help touched the filesystem" \
-                           || ok "C16e --help touched nothing"
+[ -z "$(ls -A "$CLI_PROBE" 2>/dev/null)" ] \
+  && ok "C16e --help left its working directory empty" \
+  || { bad "C16e --help touched the filesystem"; ls -A "$CLI_PROBE" | sed 's/^/        /'; }
 ( cd "$CLI_PROBE" && "$RECOVER" . --home "$DISP/home" > "$DISP/c16-dot.log" 2>&1 )
-grep -q "no store at\|has no owner marker\|no such app dir" "$DISP/c16-dot.log" \
-  && ok "C16e '.' is treated as an ordinary app directory" \
-  || { bad "C16e '.' was not treated as an app directory"; head -2 "$DISP/c16-dot.log" | sed 's/^/        /'; }
+# "no such app dir" would mean '.' was NOT accepted, so it cannot be one of the
+# outcomes that counts as success.
+if grep -q "no such app dir" "$DISP/c16-dot.log"; then
+  bad "C16e '.' was rejected as an app directory"
+elif grep -q "no store at\|has no owner marker\|app:   " "$DISP/c16-dot.log"; then
+  ok "C16e '.' is treated as an ordinary app directory"
+else
+  bad "C16e '.' produced an unexpected outcome"; head -2 "$DISP/c16-dot.log" | sed 's/^/        /'
+fi
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

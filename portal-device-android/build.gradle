@@ -39,9 +39,7 @@ def devOnlyHost = keliverBooleanProperty('keliver.devOnlyHost')
 // not the invoking shell's, so an env var cannot be relied on to reach this
 // code. The hygiene check needs a deterministic input; production resolution is
 // unchanged when the property is absent.
-def portalStoreOverride = project.findProperty('keliver.portalStore')
-def portalStoreDir = portalStoreOverride ? new File(portalStoreOverride.toString())
-                                         : keliverStoreDir(rootProject.projectDir)
+def portalStoreDir = keliverPortalStore(project)
 def portalPubKey = new File(portalStoreDir, 'keys/ed25519.pub')
 def embedPortalKey = !devOnlyHost && portalPubKey.exists()
 

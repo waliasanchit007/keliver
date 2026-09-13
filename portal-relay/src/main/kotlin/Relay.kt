@@ -201,9 +201,9 @@ private fun storePointerObstacle(repo: File): String? {
   return why?.let {
     "portal-server: the store pointer cannot be written, so the portal will not start.\n" +
       "  $it\n" +
-      "  Nothing has been claimed or created: this is checked before the store is\n" +
-      "  touched. Make that path writable (the pointer must be a regular file) and\n" +
-      "  start again."
+      "  No store has been claimed or created: this is checked before the store is\n" +
+      "  touched. (The app's .gradle directory may have been created to test it.)\n" +
+      "  Make that path writable — the pointer must be a regular file — and start again."
   }
 }
 
