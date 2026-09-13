@@ -449,18 +449,54 @@ internal fun <T> withStoreLock(
  * same rename removed the old marker — so a successful, content-checked claim
  * proves this is not somebody else's live lock.
  *
- * An UNREADABLE or MISSING pid returns false: the cost of waiting is a
- * message, the cost of stealing is two writers.
+ * The liveness question itself is [lockHolderState]: only a positively
+ * established absence returns true here. The cost of waiting is a message, the
+ * cost of stealing is two writers.
  *
  * `keliver-store-recover.sh` implements the same protocol, so the shell and
  * the JVM contend correctly with each other.
  */
+/**
+ * What the holder marker says about its process, in three values.
+ *
+ * Only [HolderState.GONE] permits a takeover. An unreadable marker, a pid
+ * outside the range a pid can occupy, an inspector that cannot answer, or a
+ * process this one is not permitted to signal are all uncertainty — and
+ * uncertainty leaves the lock alone. `keliver-store-recover.sh`'s
+ * `lock_holder_state` implements the same three values on the same inputs, and
+ * `StoreLockTest.theShellAndTheJvmAgreeOnEveryMarkerShape` asserts they agree.
+ */
+internal enum class HolderState { ALIVE, GONE, UNKNOWN }
+
+/**
+ * [selfVisible] is the inspector's own sanity probe: one that cannot find THIS
+ * process cannot say anything about another, and reading its failure as "no
+ * such process" is how a live holder's lock gets stolen. Injectable so the
+ * "inspector cannot answer" branch is reachable on a machine where it can.
+ */
+internal fun lockHolderState(
+  recorded: String?,
+  selfVisible: Boolean = runCatching {
+    ProcessHandle.of(ProcessHandle.current().pid()).isPresent
+  }.getOrDefault(false),
+): HolderState {
+  val text = recorded?.trim().orEmpty()
+  if (text.isEmpty() || !text.all { it in '0'..'9' }) return HolderState.UNKNOWN
+  if (text.length > 1 && text[0] == '0') return HolderState.UNKNOWN  // our writer never emits one
+  if (text.length > 10) return HolderState.UNKNOWN
+  val pid = text.toLongOrNull() ?: return HolderState.UNKNOWN
+  // A pid cannot exceed the platform's pid_t. Above that there is no process to
+  // find and no way to tell "absent" from "unaskable", so it is neither.
+  if (pid < 1L || pid > Int.MAX_VALUE.toLong()) return HolderState.UNKNOWN
+  if (!selfVisible) return HolderState.UNKNOWN
+  val handle = runCatching { ProcessHandle.of(pid) }.getOrNull() ?: return HolderState.UNKNOWN
+  return if (handle.isPresent) HolderState.ALIVE else HolderState.GONE
+}
+
 internal fun claimStaleLock(lock: File, betweenCheckAndClaim: () -> Unit = {}): Boolean {
   val pidFile = File(lock, "pid")
   val recorded = runCatching { pidFile.readText().trim() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return false
-  val pid = recorded.toLongOrNull() ?: return false
-  val alive = runCatching { ProcessHandle.of(pid).map { it.isAlive }.orElse(false) }.getOrDefault(true)
-  if (alive) return false
+  if (lockHolderState(recorded) != HolderState.GONE) return false
 
   // A seam, no-op in production: the window between deciding the holder is
   // dead and claiming the marker is exactly where a racing contender can slip

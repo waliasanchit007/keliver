@@ -899,6 +899,63 @@ rm -f "$L14/pid"; rmdir "$L14"
 # fail without an injector. The JVM equivalent IS exercised, through a seam, in
 # StoreLockTest.anUnwritableMarkerIsTreatedAsAFailedAcquisition — which until
 # this round reached onBusy instead and passed on the wrong branch.
+
+# --- C15: only a positively absent holder permits a takeover -----------------
+echo
+echo "--- C15  the holder-state contract, end to end"
+A15="$DISP/apps/c15-app"; S15="$DISP/home/.keliver-portal/apps/c15-store-aaaaaad1"
+mkstore "$S15" "$DISP/apps/c15-gone" "$(printf 'd6%.0s' $(seq 1 32))"
+c11_app "$A15" "$S15"
+L15="$A15/.gradle/keliver-store.lock"
+( : ) & C15_DEAD=$!; wait "$C15_DEAD" 2>/dev/null   # a pid that certainly does not exist
+
+state() { "$RECOVER" "$A15" --holder-state "$1" 2>/dev/null; }
+expect_state() { # marker, expected, label
+  local got; got="$(state "$1")"
+  [ "$got" = "$2" ] && ok "C15 $3 -> $2" || bad "C15 $3 -> $got (expected $2)"
+}
+expect_state "$C15_DEAD" GONE    "a reaped child"
+expect_state "$$"        ALIVE   "this very process"
+expect_state 1           ALIVE   "pid 1, live and not ours to signal"
+expect_state 99999999999999999999 UNKNOWN "a 20-digit marker"
+expect_state 4294967296  UNKNOWN "a marker above pid_t"
+expect_state xx          UNKNOWN "a non-numeric marker"
+expect_state ""          UNKNOWN "an empty marker"
+if [ "$(KELIVER_LOCK_INSPECTOR=none "$RECOVER" "$A15" --holder-state "$C15_DEAD" 2>/dev/null)" = UNKNOWN ]; then
+  ok "C15 an inspector that cannot answer -> UNKNOWN, even for a dead pid"
+else
+  bad "C15 a broken inspector was read as absence"
+fi
+# Locale cannot change any of it — nothing parses an error message.
+[ "$(LC_ALL=de_DE.UTF-8 "$RECOVER" "$A15" --holder-state "$C15_DEAD" 2>/dev/null)" = GONE ] \
+  && ok "C15 the verdict is locale-independent" || bad "C15 the verdict changed under another locale"
+
+# And the verdicts are what the LOCK actually does. Uncertainty must leave it
+# exactly as it was; only GONE may be taken over.
+for spec in "99999999999999999999:a 20-digit marker" "4294967296:a marker above pid_t" \
+            "xx:a non-numeric marker" "1:a live holder we cannot signal"; do
+  m="${spec%%:*}"; lbl="${spec#*:}"
+  mkdir -p "$L15"; printf '%s\n' "$m" > "$L15/pid"
+  BEFORE="$(snapshot "$L15")"
+  if "$RECOVER" "$A15" --store "$S15" --home "$DISP/home" --dry-run > "$DISP/c15.log" 2>&1; then
+    bad "C15 $lbl was taken over"
+  else
+    ok "C15 $lbl is refused, not taken over"
+  fi
+  [ "$(snapshot "$L15")" = "$BEFORE" ] && ok "C15 $lbl left the lock unchanged" \
+                                       || bad "C15 $lbl disturbed the lock"
+  rm -f "$L15/pid"; rmdir "$L15"
+done
+# The one case that MAY proceed.
+mkdir -p "$L15"; printf '%s\n' "$C15_DEAD" > "$L15/pid"
+if "$RECOVER" "$A15" --store "$S15" --home "$DISP/home" --dry-run > "$DISP/c15-dead.log" 2>&1; then
+  ok "C15 a positively absent holder is taken over"
+  grep -q "taking over" "$DISP/c15-dead.log" && ok "C15 and it says so" || bad "C15 the takeover was silent"
+else
+  bad "C15 a dead holder's lock was not reclaimable"
+  sed 's/^/        /' "$DISP/c15-dead.log"
+fi
+rm -f "$L15/pid" 2>/dev/null; rmdir "$L15" 2>/dev/null
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

@@ -317,9 +317,32 @@ always writes its `pid` before doing anything, and a new holder can only exist
 after this same rename removed the old marker, so a successful content-checked
 claim proves this is not somebody else's live lock. `keliver-store-recover.sh`
 and `PortalConfig.withStoreLock` implement the same protocol, so the shell and
-the JVM contend correctly with each other. Pid reuse can still defeat the
-liveness test; the bounded wait and a refusal naming the directory are the
-backstop.
+the JVM contend correctly with each other.
+
+**Only a positively established absence permits a takeover.** The holder's
+state is three-valued — ALIVE, GONE, UNKNOWN — and only GONE is enough:
+
+| the marker | verdict |
+| --- | --- |
+| a process we may signal | ALIVE |
+| a live process we may **not** signal (permission denied) | ALIVE — permission denied means it exists |
+| not a number, empty, `0`, or written with a leading zero | UNKNOWN |
+| a number outside the range a pid can occupy (above `pid_t`, or wider than the arithmetic) | UNKNOWN |
+| the process inspector cannot answer — absent, or unable to see even this process | UNKNOWN |
+| an inspector that can see this process, and does not see that one | GONE |
+
+Nothing parses an error message. bash's `kill` prints `strerror(errno)`, which
+glibc translates, so a text match silently stops working under another locale.
+The inspector is `/proc` where it exists and `ps` otherwise, and it must find
+**this** process before it is trusted about another: one that cannot is
+reporting its own failure, not the holder's absence. `--holder-state <pid>` on
+`keliver-store-recover.sh` prints the verdict, which is also how
+`StoreLockTest` asserts the shell and the JVM agree marker for marker.
+
+Residual, shared by both sides and not closed: pid reuse, and a `/proc` mounted
+with `hidepid` or in a foreign PID namespace, where another user's live process
+is invisible to both `ProcessHandle` and the shell. They still agree; the
+bounded wait and a refusal naming the directory are the backstop.
 
 Startup resolves the store **inside** the lock. It used to resolve first and
 lock afterwards, so a start that waited on a recovery in flight went on to

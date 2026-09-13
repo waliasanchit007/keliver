@@ -1313,6 +1313,19 @@ exactly one contender can — and the claim is content-checked before the
 directory is cleared. `StoreLockTest` drives that interleaving through a seam
 rather than hoping to hit it by timing.
 
+**A fourth round made the liveness test three-valued.** The takeover asked a
+yes/no question — "is the holder gone?" — and answered it with the failure of
+`kill -0` and then of `ps -p`. Three shapes reached "gone" that were nothing of
+the kind: a marker wider than the arithmetic (`ps` says *process id too large*,
+which is not absence), a numeric marker above `pid_t`, and a `ps` that could
+not run at all (no `/proc`) — the last of which would steal a LIVE holder's
+lock. The verdict is now ALIVE / GONE / UNKNOWN, only GONE permits a takeover,
+and the inspector must find the asking process before it is trusted about
+another. `--holder-state <pid>` prints the verdict, and `StoreLockTest` asserts
+the shell and the JVM agree marker for marker, including under a forced-absent
+inspector. Permission-denied inspection is ALIVE: EPERM means the process
+exists.
+
 **A third round removed the hole in the lock itself.** `withStoreLock` ran the
 block anyway when it could not create the lock — the single-writer guarantee
 announced and then waived, and waived exactly when the filesystem was behaving

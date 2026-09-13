@@ -117,6 +117,108 @@ class StoreLockTest {
     assertFalse(lockOf(a).exists(), "the reclaimed lock must be released again")
   }
 
+  // --- the holder-state contract ------------------------------------------
+  //
+  // Only a positively established absence permits a takeover. Everything else
+  // is uncertainty and must leave the lock alone.
+
+  /** The pid of a process that certainly exists but this one may not signal. */
+  private fun otherUsersLivePid(): String = "1"   // init/launchd, root-owned
+
+  @Test
+  fun onlyAPositivelyAbsentProcessIsGone() {
+    val dead = deadPid().toString()
+    assertEquals(HolderState.GONE, lockHolderState(dead))
+    assertEquals(HolderState.ALIVE, lockHolderState(ProcessHandle.current().pid().toString()))
+    // Permission-denied inspection is a LIVE holder, not an absent one.
+    assertEquals(HolderState.ALIVE, lockHolderState(otherUsersLivePid()))
+  }
+
+  @Test
+  fun aMarkerThatIsNotAPidIsUnknownNotGone() {
+    for (bad in listOf("", "   ", "xx", "12x", "-1", "0", "007", "1 2")) {
+      assertEquals(HolderState.UNKNOWN, lockHolderState(bad), "for marker '$bad'")
+    }
+    assertEquals(HolderState.UNKNOWN, lockHolderState(null))
+  }
+
+  @Test
+  fun aPidOutsideTheRangeAPidCanOccupyIsUnknownNotGone() {
+    // 20 digits overflows Long; 4294967296 does not, but is above pid_t. Both
+    // used to answer GONE on one side or the other, which is a takeover.
+    assertEquals(HolderState.UNKNOWN, lockHolderState("99999999999999999999"))
+    assertEquals(HolderState.UNKNOWN, lockHolderState("4294967296"))
+    assertEquals(HolderState.UNKNOWN, lockHolderState("2147483648"))
+    // and the boundary is inclusive on the legal side
+    assertEquals(HolderState.GONE, lockHolderState("2147483647"))
+  }
+
+  @Test
+  fun anInspectorThatCannotAnswerIsUnknownNotGone() {
+    // A process inspector that cannot find THIS process cannot say anything
+    // about another. Reading that failure as "no such process" is how a live
+    // holder's lock gets stolen.
+    assertEquals(HolderState.UNKNOWN, lockHolderState(deadPid().toString(), selfVisible = false))
+    assertEquals(
+      HolderState.UNKNOWN,
+      lockHolderState(ProcessHandle.current().pid().toString(), selfVisible = false),
+    )
+  }
+
+  @Test
+  fun uncertaintyLeavesTheLockExactlyAsItWas() {
+    for (marker in listOf("xx", "99999999999999999999", "4294967296", "0", otherUsersLivePid())) {
+      val a = app()
+      val lock = seedLock(a, mapOf("pid" to "$marker\n"))
+      val before = lock.listFiles()!!.associate { it.name to it.readText() }
+      assertFalse(claimStaleLock(lock), "marker '$marker' must not be claimable")
+      assertEquals(null, attempt(a, waitMillis = 200) { "ran" }, "marker '$marker' must not be acquirable")
+      assertTrue(lock.exists(), "marker '$marker': the lock must still be there")
+      assertEquals(before, lock.listFiles()!!.associate { it.name to it.readText() },
+        "marker '$marker': the lock's contents must be untouched")
+    }
+  }
+
+  @Test
+  fun theShellAndTheJvmAgreeOnEveryMarkerShape() {
+    // The two implementations contend for the same lock, so a disagreement is
+    // a takeover one of them would perform and the other would refuse.
+    val script = generateSequence(File(".").absoluteFile) { it.parentFile }
+      .first { File(it, "scripts/keliver-store-recover.sh").exists() }
+      .let { File(it, "scripts/keliver-store-recover.sh") }
+    val appDir = app()
+
+    fun viaShell(marker: String, inspector: String?): String {
+      val pb = ProcessBuilder(
+        "bash", script.absolutePath, appDir.absolutePath, "--holder-state", marker,
+      )
+      inspector?.let { pb.environment()["KELIVER_LOCK_INSPECTOR"] = it }
+      pb.redirectErrorStream(true)
+      val p = pb.start()
+      val out = p.inputStream.bufferedReader().readText().trim()
+      p.waitFor()
+      assertEquals(0, p.exitValue(), out)
+      return out
+    }
+
+    val markers = listOf(
+      deadPid().toString(), ProcessHandle.current().pid().toString(), otherUsersLivePid(),
+      "", "xx", "0", "007", "-1", "2147483647", "2147483648", "4294967296",
+      "99999999999999999999",
+    )
+    for (m in markers) {
+      assertEquals(lockHolderState(m).name, viaShell(m, null), "shell and JVM disagree on '$m'")
+    }
+    // and when the inspector cannot answer, both say UNKNOWN
+    for (m in listOf(deadPid().toString(), otherUsersLivePid())) {
+      assertEquals("UNKNOWN", viaShell(m, "none"), "shell with no inspector, marker '$m'")
+      assertEquals(
+        HolderState.UNKNOWN, lockHolderState(m, selfVisible = false),
+        "JVM with no inspector, marker '$m'",
+      )
+    }
+  }
+
   @Test
   fun aLockWhoseHolderIsAliveIsNotTakenOver() {
     val a = app()
