@@ -1447,6 +1447,17 @@ none is a security hole.
    path, the exit code, its stderr and what to install. Exit 3 (a split store)
    already failed and still does.
 
+   **The cost, stated plainly.** The three consumers resolve the store at
+   CONFIGURATION time, and Gradle configures every project, so a resolver that
+   cannot run now fails *any* task — including `:portal-relay:test` and
+   `apiCheck`, which need no signing identity at all.
+   `-Pkeliver.portalStore=<dir>` is the deliberate way through, and it now works
+   for all three consumers rather than only the Android one. **Narrowing the
+   refusal to the tasks that actually consume an identity is NOT done**: it
+   means deferring configuration-time signing setup in `portal-published-guest`,
+   `portal-device-ios` and `portal-device-android`, which is larger than this
+   block. A remaining limitation, not a closed one.
+
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 
 Found while building the U23/U24 regressions, in tooling that shipped in
