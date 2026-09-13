@@ -1588,19 +1588,36 @@ independent review, each time by comparing strings:
    run directory created *inside* the store.
 
 It now compares **device+inode** for every existing ancestor; refuses `..`
-outright; refuses a dangling symlink; and re-runs the whole check on the
-canonical path *after* `mkdir -p` and `cd`, which is the only placement that
-cannot be out-spelled. The `stat` flavour is probed rather than assumed — the
+outright, and `/`, and a dangling symlink; and re-runs the whole check on the
+canonical path *after* `mkdir -p` and `cd`, which is the only placement a
+spelling cannot hide from. The `stat` flavour is probed rather than assumed — the
 BSD-first order would have made the identity comparison **inert on Linux**, where
 `-f` means `--file-system` — and a `stat` that cannot report device+inode makes
-the guard refuse rather than silently fall back to matching names.
+the guard refuse rather than silently fall back to matching names. "Could not
+tell" is a distinct answer from "different", and both refuse.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 25 assertions over
-the spellings, the environment shapes, the legitimate parents that must still
-work, and the end state after `keliver_make_run_dir`. Run against the previous
-commit it reports 5 failures, including the run directory inside the store. It
-runs in the portable CI checks, which is also where the GNU-`stat` path is
-exercised — macOS cannot.
+A fourth fail-open followed the first three, and it was the guard writing rather
+than allowing: `mkdir -p` necessarily runs *between* the two checks, so a
+case-variant parent under a store that did not exist yet passed the first check
+and was **created** — four directories, the store among them — before the second
+refused it. `keliver_make_run_dir` now records what did not exist beforehand and
+`rmdir`s exactly what it made, innermost first; `rmdir` and never `rm -rf`, so it
+stops at anything that was already there.
+
+`scripts/keliver-refusal-check.sh` is the regression suite: 33 assertions over
+the spellings, the environment shapes, the legitimate parents that must keep
+working, and — for the cases that matter — the **end state** of the filesystem
+rather than only an exit code. An earlier version counted around the refusal
+function, which contains no `mkdir`: measured, that assertion passed against a
+guard stubbed to `return 0`. Run against the previous commit the suite reports
+the leak above.
+
+**Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
+so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The
+case-**insensitive** branch — the one the whole identity comparison exists for —
+is only ever exercised by hand on a developer's Mac. The suite detects which
+filesystem it is on and asserts the correct answer for that one; neither branch
+is skipped, but only one of them runs in CI.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

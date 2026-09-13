@@ -113,16 +113,6 @@ keliver_require_isolated_store() {
 # non-existent ancestor, on a case-variant path, and on a .. segment — and every
 # one of those was reachable by a ten-line harness that had not been written.
 #
-# BY IDENTITY, NOT BY NAME. The first version of this compared resolved path
-# strings. On macOS the default filesystem is case-INSENSITIVE, so
-# ~/.KELIVER-PORTAL is the very same directory as ~/.keliver-portal — same
-# device, same inode — and every case-sensitive pattern missed it: MEASURED, a
-# disposable ed25519.priv was written inside .keliver-portal through a
-# case-variant path. So each existing ancestor of the parent is compared to each
-# protected root by device+inode, which is immune to case, to symlinks and to
-# any other spelling of the same directory. The name patterns remain only as a
-# fallback for a path whose components do not exist yet, where there is no inode
-# to compare.
 # Same DIRECTORY, by device+inode. Comparing resolved path strings was wrong
 # twice: on macOS the default filesystem is case-INSENSITIVE, so
 # ~/.KELIVER-PORTAL is the very same directory as ~/.keliver-portal — same
@@ -158,13 +148,19 @@ keliver_stat_id() {
   return 1
 }
 
-keliver_stat_usable() { KELIVER_STAT_FMT=""; keliver_stat_id / >/dev/null; }
+# Does NOT reset the memo — an earlier version did, so the flavour was re-probed
+# on every refusal while a comment claimed it was cached.
+keliver_stat_usable() { keliver_stat_id / >/dev/null; }
 
+# 0 = the same directory, 1 = provably different, 2 = COULD NOT TELL.
+# Collapsing the third into the second is how a guard silently degrades to
+# matching names: both directories exist, stat fails for one of them, and
+# "different" is the answer the caller acts on.
 keliver_same_dir() {
   [ -d "$1" ] && [ -d "$2" ] || return 1
   local a b
-  a="$(keliver_stat_id "$1")" || return 1
-  b="$(keliver_stat_id "$2")" || return 1
+  a="$(keliver_stat_id "$1")" || return 2
+  b="$(keliver_stat_id "$2")" || return 2
   [ "$a" = "$b" ]
 }
 
@@ -260,6 +256,13 @@ keliver_refuse_protected_parent() {
     echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
     return 2;;
   esac
+  # The filesystem root is not a disposable parent. It is in no protected set,
+  # so without this it was simply allowed, and mktemp -d would scatter run
+  # directories at / — EPERM under SIP, but fine as root in a container.
+  if [ "$abs" = "/" ]; then
+    echo "keliver: refusing / as a disposable run parent" >&2
+    return 2
+  fi
   # A dangling symlink passes every check below and then fails in mkdir with a
   # diagnostic about the wrong thing.
   if [ -L "$given" ] && [ ! -e "$given" ]; then
@@ -272,7 +275,10 @@ keliver_refuse_protected_parent() {
   while : ; do
     while IFS= read -r root; do
       [ -n "$root" ] || continue
-      if keliver_same_dir "$cur" "$root"; then matched="$root"; break; fi
+      keliver_same_dir "$cur" "$root"; case $? in
+        0) matched="$root"; break;;
+        2) matched="$root (identity could not be established)"; break;;
+      esac
     done <<EOF
 $roots
 EOF
@@ -300,9 +306,12 @@ EOF
 $roots
 EOF
   # The home directory itself is not a disposable parent.
-  if [ -n "${HOME:-}" ] && keliver_same_dir "$abs" "$HOME"; then
-    echo "keliver: refusing to use your home directory as a disposable run parent" >&2
-    return 2
+  if [ -n "${HOME:-}" ]; then
+    keliver_same_dir "$abs" "$HOME"
+    case $? in 0|2)
+      echo "keliver: refusing to use your home directory as a disposable run parent" >&2
+      return 2;;
+    esac
   fi
   return 0
 }
@@ -316,14 +325,37 @@ keliver_make_run_dir() {
     echo "keliver_make_run_dir: $parent exists and is not a directory" >&2; return 2
   fi
   keliver_refuse_protected_parent "$parent" || return 2
+  # The first refusal reasons about a path that may not exist yet, so it reasons
+  # about SPELLINGS. The second runs on the real directory, after mkdir -p and
+  # after cd has resolved every symlink and .. — the only place a spelling
+  # cannot hide. But mkdir -p has to happen in between, and MEASURED, it did:
+  # a parent spelled $HOME/.KELIVER-PORTAL/apps/live/x on a case-insensitive
+  # filesystem passed the first check, mkdir -p created four directories INSIDE
+  # the real store, and only then was it refused — leaving them behind. A guard
+  # whose contract is "never write into the real store" had created it.
+  #
+  # So remember what existed first, and on refusal remove exactly what this call
+  # created, innermost first. rmdir, never rm -rf: it removes only empty
+  # directories, so it stops at anything that was already there or that anyone
+  # else put there in the meantime.
+  local existed="$parent" created_from=""
+  while [ ! -d "$existed" ] && [ "$existed" != "/" ] && [ -n "$existed" ]; do
+    created_from="$existed"
+    existed="$(dirname "$existed")"
+  done
   mkdir -p "$parent" || return 1
-  parent="$(cd "$parent" && pwd -P)" || return 1
-  # AGAIN, on the path the kernel actually resolved. The first call runs on a
-  # path that may not exist yet, so it reasons about spellings; this one runs on
-  # the real directory, after mkdir -p and after every symlink and .. has been
-  # resolved by cd. It is the only placement that cannot be out-spelled, and it
-  # is cheap — the stat flavour and the JVM home are both already memoised.
-  keliver_refuse_protected_parent "$parent" || return 2
+  local resolved
+  resolved="$(cd "$parent" && pwd -P)" || return 1
+  if ! keliver_refuse_protected_parent "$resolved"; then
+    local undo="$parent"
+    while [ -n "$created_from" ] && [ -n "$undo" ] && [ "$undo" != "/" ]; do
+      rmdir "$undo" 2>/dev/null || break
+      [ "$undo" = "$created_from" ] && break
+      undo="$(dirname "$undo")"
+    done
+    return 2
+  fi
+  parent="$resolved"
   local dir
   dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")" || return 1
   printf '%s' "$dir"

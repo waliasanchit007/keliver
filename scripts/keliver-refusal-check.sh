@@ -93,6 +93,7 @@ must_refuse ".. past a MISSING component"      "$FH" "$FH/nope/../.keliver-porta
 must_refuse "a trailing slash"                 "$FH" "$FH/.keliver-portal/"
 must_refuse "the gradle home"                  "$FH" "$FH/.gradle/caches/x"
 must_refuse "the home directory itself"        "$FH" "$FH"
+must_refuse "the filesystem root"              "$FH" "/"
 must_refuse "a dangling symlink"               "$FH" "$DISP/dangling"
 
 echo "--- environment shapes"
@@ -107,31 +108,86 @@ rc=$( ( unset HOME; unset PORTAL_STORE; KELIVER_STAT_FMT=""; KELIVER_JVM_HOME_ME
 echo "--- legitimate parents must still work"
 must_allow "an ordinary disposable directory"  "$FH" "$DISP/legit"
 must_allow "one that does not exist yet"       "$FH" "$DISP/legit/not-yet/deeper"
-must_allow "a relative PORTAL_STORE elsewhere" "$FH" "$DISP/legit" "PORTAL_STORE=."
+# A relative PORTAL_STORE resolves against the CALLER's cwd, so this case has to
+# control it: run from $DISP/other, where "." is not an ancestor of $DISP/legit.
+# Measured: invoked from a directory that IS an ancestor, the guard refuses —
+# correctly, and the assertion would have failed for the right reason in the
+# wrong test.
+printf '  ....  relative PORTAL_STORE, from a controlled directory\n'
+rc=$( ( cd "$DISP/other" && export HOME="$FH" PORTAL_STORE="."
+        KELIVER_JVM_HOME_MEMO=""
+        keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
+[ "$rc" = 0 ] && ok "allowed: a relative PORTAL_STORE that is not an ancestor" \
+              || bad "refused (rc=$rc) a legitimate parent under a relative PORTAL_STORE"
 must_allow "a sibling of the store"            "$FH" "$FH/scratch"
 
-echo "--- the refusal must create nothing"
-BEFORE="$(find "$FH" | wc -l | tr -d ' ')"
-refuse_rc "$FH" "$FH/.keliver-portal/apps/nope/deeper" >/dev/null
-refuse_rc "$FH" "$FH/nope2/../.keliver-portal" >/dev/null
-AFTER="$(find "$FH" | wc -l | tr -d ' ')"
-[ "$BEFORE" = "$AFTER" ] \
-  && ok "nothing was created by a refused call ($BEFORE entries before and after)" \
-  || { bad "a refused call created something ($BEFORE -> $AFTER)"; find "$FH" | sed 's/^/        /'; }
+echo "--- the whole path, through keliver_make_run_dir, asserting the END STATE"
+# keliver_refuse_protected_parent contains no mkdir and no mktemp, so counting
+# around IT could never fail however broken the guard was — measured, that
+# assertion passed against a guard stubbed to `return 0`. The creation happens
+# in keliver_make_run_dir, so the count has to be around that.
+make_run_dir_rc() { # <home> <parent>
+  ( export HOME="$1"; unset PORTAL_STORE
+    KELIVER_JVM_HOME_MEMO=""
+    keliver_make_run_dir "$2" probe >/dev/null 2>&1 )
+  echo $?
+}
+state_of() { find "$FH" | LC_ALL=C sort; }
 
-echo "--- and the whole path, through keliver_make_run_dir"
-# The .. case is the one that got past the refusal and was then resolved into
-# the store by mkdir -p, so assert on the END STATE, not only on the exit code.
-rc=$( ( export HOME="$FH"; unset PORTAL_STORE
-        KELIVER_STAT_FMT=""; KELIVER_JVM_HOME_MEMO=""
-        keliver_make_run_dir "$FH/nope3/../.keliver-portal" probe >/dev/null 2>&1 ); echo $? )
-[ "$rc" = 2 ] && ok "make_run_dir refuses the .. spelling" \
-               || bad "make_run_dir ALLOWED the .. spelling (rc=$rc)"
-if find "$FH/.keliver-portal" -maxdepth 1 -name 'keliver-probe-*' | grep -q .; then
+for spelling in \
+  "$FH/.keliver-portal/apps/nope/deeper" \
+  "$FH/nope3/../.keliver-portal" \
+  "$FH/.KELIVER-PORTAL/apps/live/x" ; do
+  BEFORE="$(state_of)"
+  rc="$(make_run_dir_rc "$FH" "$spelling")"
+  AFTER="$(state_of)"
+  label="${spelling#$FH/}"
+  [ "$rc" = 2 ] && ok "make_run_dir refuses: $label" \
+                 || bad "make_run_dir ALLOWED (rc=$rc): $label"
+  if [ "$BEFORE" = "$AFTER" ]; then
+    ok "and left the filesystem exactly as it was: $label"
+  else
+    bad "it created something before refusing: $label"
+    diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'
+  fi
+done
+# The one that matters most, stated separately: no run directory anywhere in the
+# store, whatever spelling was used to reach it.
+if find "$FH/.keliver-portal" -name 'keliver-probe-*' 2>/dev/null | grep -q .; then
   bad "a run directory was created INSIDE the protected store"
-  find "$FH/.keliver-portal" -maxdepth 1 -name 'keliver-probe-*' | sed 's/^/        /'
+  find "$FH/.keliver-portal" -name 'keliver-probe-*' | sed 's/^/        /'
 else
   ok "no run directory was created inside the protected store"
+fi
+
+# THE CASE THAT ACTUALLY LEAKED, and it needs a home where the store does NOT
+# exist yet. With the store present, a case-variant spelling resolves to it and
+# the FIRST refusal catches it before mkdir — which is why an earlier version of
+# this block, run against the leaking guard, passed. With the store absent there
+# is no inode to compare, the name fallback is case-sensitive and misses, and
+# mkdir -p then CREATES the store four levels deep before the second refusal
+# fires. A bare ~/.keliver-portal materialising where none existed is exactly
+# the state the store-identity contract reasons about.
+FH2="$DISP/home-empty"
+mkdir -p "$FH2"
+BEFORE="$(find "$FH2" | LC_ALL=C sort)"
+rc="$(make_run_dir_rc "$FH2" "$FH2/.KELIVER-PORTAL/apps/live/x")"
+AFTER="$(find "$FH2" | LC_ALL=C sort)"
+[ "$rc" = 2 ] && ok "make_run_dir refuses a case variant of a store that does not exist yet" \
+               || bad "make_run_dir ALLOWED (rc=$rc) a case variant of an absent store"
+if [ "$BEFORE" = "$AFTER" ]; then
+  ok "and did not bring the store into existence on the way"
+else
+  bad "it created the store while refusing to use it"
+  diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'
+fi
+
+echo "--- and a legitimate parent still gets a run directory"
+LEGIT_RUN="$( export HOME="$FH"; unset PORTAL_STORE; keliver_make_run_dir "$DISP/legit" probe )"
+if [ -n "$LEGIT_RUN" ] && [ -d "$LEGIT_RUN" ]; then
+  ok "make_run_dir still creates one for a legitimate parent"
+else
+  bad "make_run_dir created nothing for a legitimate parent"
 fi
 
 echo "--- stat must be able to prove identity, or the guard must refuse"
@@ -145,4 +201,10 @@ rc=$( ( export HOME="$FH"; unset PORTAL_STORE
 
 echo
 echo "passed: $PASS   failed: $FAIL"
+# Clean up on success; keep the tree on failure, where it is evidence.
+if [ "$FAIL" = 0 ]; then
+  rm -rf "$DISP"
+else
+  echo "evidence: $DISP"
+fi
 [ "$FAIL" = 0 ]
