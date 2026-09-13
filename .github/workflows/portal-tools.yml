@@ -155,10 +155,13 @@ jobs:
           echo "::endgroup::"
           echo "::group::guest bundle signing"
           # The guest signs from the compile task's own signingKeys property,
-          # written from afterEvaluate. Any later writer silently wins and the
-          # symptom is an UNSIGNED bundle with a key present, not an error.
-          # Measured: reverting that one line to a script-level configureEach
-          # makes this step fail and nothing else. Both directions are asserted.
+          # written by a configureEach placed BELOW the kotlin {} block. Gradle
+          # splices a registration action in at the position register() was
+          # called, so the same statement moved above that block is added
+          # earlier, loses to the plugin's own write, and the symptom is an
+          # UNSIGNED bundle with a key present rather than an error. Measured:
+          # that move makes this step fail and nothing else. Both directions are
+          # asserted.
           scripts/keliver-guest-signing-check.sh "$RUNNER_TEMP/guest-signing"
           echo "::endgroup::"
           echo "::group::store recovery outcomes, through the packaged commands"

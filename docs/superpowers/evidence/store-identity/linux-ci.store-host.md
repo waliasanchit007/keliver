@@ -4,7 +4,7 @@ Four identities, recorded separately, because a GitHub run's `headSha` is the
 SHA of the **workflow definition**, not of what an input-driven checkout built.
 Conflating them is how a run gets credited to the wrong commit.
 
-## Run 34775999489 — the candidate
+## Run 34775999489 — `975b3e2c8`
 
 | what | value |
 |---|---|
@@ -17,6 +17,10 @@ Conflating them is how a run gets credited to the wrong commit.
 Per-check on Linux: hygiene **10 / 0**, adopter acceptance **19 / 0**,
 foreign-relay refusal **6 / 0**, identity contract **11 / 0**, guest bundle
 signing **4 / 0**, store recovery **145 / 0**.
+
+Evidence for `975b3e2c8` and nothing later: the signing wiring and the
+disposable-parent refusal both changed after it. The row for each run below says
+what that run does and does not cover, and this one gets the same treatment.
 
 `tools=0.3.4 maven=0.3.3` — the 0.3.5 bump is parked on
 `release/portal-tools-0.3.5`. This is a development candidate, not a release,

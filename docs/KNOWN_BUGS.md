@@ -1508,8 +1508,12 @@ none is a security hole.
      the collection — measured, four Kotlin/JS + Zipline tasks realized during
      configuration of *every* build, including `:portal-relay:test`, `apiCheck`
      and IDE sync, which is the shape of cost this whole change exists to
-     remove — and it bought almost nothing, since no compile task means no
-     bundle and therefore nothing to ship unsigned. It also silently invalidated
+     remove. What it bought is narrow rather than nothing: a renamed class stops
+     the build file compiling, and no compile task at all means no bundle to
+     ship unsigned. The one case it did cover — the class still exists but a
+     future plugin registers none of that type while something else produces the
+     bundle — is now caught only by the gate, at release time. Narrow, and
+     stated rather than claimed away. It also silently invalidated
      the measurement below: with the guard present, moving the statement above
      `kotlin {}` made configuration *abort*, so the "build still succeeds while
      the gate fails" transcript could not have been produced by that code.
@@ -1518,10 +1522,11 @@ none is a security hole.
      **gated** rather than trusted. `scripts/keliver-guest-signing-check.sh`
      builds the guest bundle against a disposable store with a key and asserts
      the manifest is signed, and against one without and asserts it is not.
-     Measured against the code as it now stands — `passed: 3 failed: 1`, the
-     build itself succeeding — moving the statement back **above** the
-     `kotlin {}` block makes the check fail silently, which is exactly why this
-     needs a gate and not a comment. The gate builds the Development variant and
+     Measured against the code as it now stands: moving the statement back
+     **above** the `kotlin {}` block makes the gate fail loudly —
+     `passed: 3 failed: 1` — while the BUILD still succeeds. It is the WIRING
+     that fails silently, which is exactly why this needs a gate and not a
+     comment. The gate builds the Development variant and
      runs in `portal-tools.yml`, which fires on `portal-tools-v*` tags and on
      `workflow_dispatch`: a release-time and on-demand gate, not a per-commit
      one.

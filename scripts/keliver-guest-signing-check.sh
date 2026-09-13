@@ -39,64 +39,15 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 export JAVA_HOME
 
-# keliver_make_run_dir gives this script a fresh mktemp -d under the parent, so
-# it never writes into a directory it did not create. It does NOT check where
-# that parent is — an earlier version of this comment claimed it did — so the
-# refusal below is explicit: this script writes a disposable PRIVATE KEY, and
-# `keliver-guest-signing-check.sh ~/.keliver-portal` must not plant one inside a
-# real store.
+# keliver_make_run_dir gives this script a fresh mktemp -d under the parent, and
+# refuses outright when that parent lies inside the real portal store, the
+# Gradle home or $PORTAL_STORE — by device+inode, so a case-variant or
+# symlinked spelling of the same directory is refused too. That check lives in
+# the guard rather than here because six checks mint throwaway identities under
+# a caller-supplied parent and they should not each carry their own copy of the
+# rule; two earlier copies of it, local to this script, both failed open.
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-
-# Canonicalise WITHOUT failing open. The first version of this did
-# `cd "$(dirname "$1")" && pwd -P` — which, when the parent's parent did not
-# exist, produced an empty string, matched nothing, and let the run proceed.
-# MEASURED: that wrote a disposable ed25519.priv inside a .keliver-portal tree,
-# the one outcome the refusal exists to prevent. It also never canonicalised the
-# FINAL component, so a symlink named like a scratch directory but pointing at a
-# store was allowed.
-#
-# Walk down to the deepest ancestor that exists, resolve THAT, and re-append the
-# rest. When the whole path exists this resolves every component, symlinked
-# final component included.
-keliver_abs_of() {
-  local p rest cur
-  case "$1" in /*) p="$1";; *) p="$PWD/$1";; esac
-  rest=""; cur="$p"
-  while [ ! -d "$cur" ] && [ "$cur" != "/" ] && [ "$cur" != "." ] && [ -n "$cur" ]; do
-    rest="/$(basename "$cur")$rest"
-    cur="$(dirname "$cur")"
-  done
-  if [ -d "$cur" ]; then printf '%s%s\n' "$(cd "$cur" && pwd -P)" "$rest"
-  else printf '%s\n' "$p"; fi
-}
-
-# No HOME means the two paths that must be protected cannot be named, so there
-# is no safe answer. Refuse rather than guess.
-[ -n "${HOME:-}" ] || {
-  echo "HOME is not set, so this script cannot tell whether it was pointed at the real" >&2
-  echo "portal store. It generates a signing key; refusing." >&2
-  exit 2
-}
-HOME_REAL="$(cd "$HOME" 2>/dev/null && pwd -P)" || HOME_REAL="$HOME"
-
-# A literal, unexpanded ~ is a quoting mistake, and acting on it would create a
-# directory called "~" in the caller's cwd.
-case "$DISP_PARENT" in
-  '~'|'~'/*) echo "refusing '$DISP_PARENT': ~ was not expanded (single quotes?)" >&2; exit 2;;
-esac
-# Both the LEXICAL path and the resolved one: either reaching a protected tree
-# is a refusal.
-for keliver_cand in "$(keliver_abs_of "$DISP_PARENT")" "$DISP_PARENT"; do
-  case "$keliver_cand" in
-    "$HOME_REAL"/.keliver-portal|"$HOME_REAL"/.keliver-portal/*|\
-    "$HOME_REAL"/.gradle|"$HOME_REAL"/.gradle/*|\
-    "$HOME"/.keliver-portal|"$HOME"/.keliver-portal/*|\
-    "$HOME"/.gradle|"$HOME"/.gradle/*)
-      echo "refusing to run under $keliver_cand: this script generates a signing key" >&2
-      exit 2;;
-  esac
-done
 DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit $?
 
 # Keep Gradle's project cache — task history, file hashes — inside the

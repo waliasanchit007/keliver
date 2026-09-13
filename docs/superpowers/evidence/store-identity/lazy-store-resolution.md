@@ -95,7 +95,7 @@ into a split state without creating a second store under the real
 
 Row 6 failed the first time: setting `ZiplineCompileTask.signingKeys` at script
 level produced an **unsigned bundle with a key present** —
-`unsigned.signatures = {}`. From `afterEvaluate`, it signs.
+`unsigned.signatures = {}`. From inside `afterEvaluate` it signed — which sent the first three explanations chasing `afterEvaluate` itself, and none of them was the reason.
 
 **Three explanations for that were written down before the right one** — "the
 plugin's own `afterEvaluate`", "the task does not exist yet", "the registration
@@ -191,7 +191,7 @@ count; quoting the total as a fixed figure would be wrong.
 
 ## Suites
 
-* `keliver-store-recovery-check.sh` — **133 passed, 0 failed** (`recovery-check.log`)
+* `keliver-store-recovery-check.sh` — **136 passed, 0 failed** on macOS (`recovery-check.log`); see the section above for why Linux reports 144/145
 * `keliver-store-identity-repro.sh` — **11 passed, 0 failed** (`identity-repro.log`)
 * `:portal-relay:test` — EXIT=0
 
