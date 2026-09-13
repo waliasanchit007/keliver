@@ -39,13 +39,15 @@ ext.keliverPortalStore = { org.gradle.api.Project p ->
   def memo = rootProject.ext.keliverStoreMemo
   def override = p.findProperty('keliver.portalStore')
   if (override) {
-    // quiet(), not lifecycle(): -q hides lifecycle, and -q is how
-    // keliver-device-host-hygiene-check.sh — the ONLY scripted caller that
-    // passes this property; build-portal-tools.sh passes devOnlyHost only —
-    // invokes Gradle, so the warning was never shown there. Surviving -q is
-    // not the same as being read: that script redirected the build log and
-    // only looked at it on failure, so it now greps for this line and asserts
-    // it. Printed once per build, not once per lazy query.
+    // quiet(), not lifecycle(): -q hides lifecycle, and -q is how the scripted
+    // callers invoke Gradle — keliver-device-host-hygiene-check.sh,
+    // keliver-guest-signing-check.sh, and C16d inside
+    // keliver-store-recovery-check.sh — so the warning was never shown to any
+    // of them. (build-portal-tools.sh passes devOnlyHost only, not this.)
+    // Surviving -q is not the same as being read: the hygiene check redirected
+    // the build log and only looked at it on failure, so it greps for this line
+    // and asserts it, in both directions. Printed once per build, not once per
+    // lazy query.
     synchronized (memo) {
       if (!memo.containsKey('warned')) {
         memo.put('warned', true)

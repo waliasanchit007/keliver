@@ -41,27 +41,32 @@ redwoodBuild {
 // you have a signing key" is not "you have no signing key", and silently
 // shipping an unsigned bundle to someone who signs theirs is the failure this
 // contract exists to prevent.
-// afterEvaluate, and the reason is ORDERING, not ceremony. Gradle runs a task's
-// configuration actions in the order they were ADDED. The zipline plugin writes
-// signingKeys from the task's own REGISTRATION action, and that task is
-// registered from the Kotlin JS plugin's afterEvaluate — i.e. after this file
-// has finished being read. A `configureEach` added at script level is therefore
-// added BEFORE the task exists, runs BEFORE the registration action, and is
-// overwritten by it.
+// The ordering here is load-bearing, and it took three attempts to describe
+// correctly, so: the zipline plugin writes signingKeys from the compile task's
+// own REGISTRATION action, and Gradle runs that action LAST — after every
+// `configureEach`/`all` action added before the task is realized, whenever those
+// were added. A lazy `configureEach` therefore always loses, whether it was
+// added before or after the task existed. MEASURED in this build: script level
+// -> unsigned.signatures = {} with a key present.
 //
-// MEASURED, twice, in this build: script level -> unsigned.signatures = {} with
-// a key present; the identical code from afterEvaluate -> signed. An isolated
-// reproduction of the same plugin shapes says script level wins, so do not
-// trust a model of this; it is the Kotlin plugin's late registration that
-// decides it.
+// `configureEach` on an ALREADY-REALIZED task runs immediately instead, i.e.
+// after the registration action, which is the only reason an afterEvaluate
+// block worked: the zipline plugin's own afterEvaluate — registered at `apply
+// plugin` above, so ahead of this file's — has already realized the task.
 //
-// The invariant to preserve is simply: NOTHING MAY WRITE signingKeys AFTER US.
-// It is not enforceable from here, so it is gated instead —
-// scripts/keliver-verify-signed-bundle.sh runs in the portable CI checks and
-// fails if a bundle built with a key present comes out unsigned.
+// Depending on that is depending on someone else realizing it for us: a plugin
+// upgrade that stops doing so would drop signing silently, with NOBODY writing
+// signingKeys. So the realization is not left to chance — `.toList()` forces it
+// here, and the write provably follows it.
+//
+// It is still a fragile shape, so it is GATED rather than trusted:
+// scripts/keliver-guest-signing-check.sh builds against a disposable store with
+// a key and asserts the manifest is signed, and against one without and asserts
+// it is not. It runs in the portable CI checks. Measured: reverting this to a
+// lazy configureEach makes that check fail while the build still succeeds.
 afterEvaluate {
-  tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
-    signingKeys.set(providers.provider {
+  tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).toList().each { t ->
+    t.signingKeys.set(providers.provider {
       def portalKey = new File(keliverPortalStore(project), 'keys/ed25519.priv')
       if (!portalKey.exists()) return []
       [new app.cash.zipline.gradle.ZiplineCompileTask.ManifestSigningKey(

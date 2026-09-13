@@ -41,25 +41,39 @@ A task with no signing identity in it, stopped by the identity resolver, during
 
 Row 10 is U22 without an APK, because this machine has no Android SDK wired up.
 
-**The first version of row 10 passed for the wrong reason, and the claim under
-it was wrong.** `syncPortalKey` was a `Sync`; with no source file a `Copy`/`Sync`
-task is `NO-SOURCE`, which *skips the task entirely* — its actions never run, and
-the directory is emptied by Gradle's stale-output cleanup rather than by anything
-this build states. The cleanup does happen here (measured on macOS, and the U22
-hygiene case passes on Linux CI), but an emptied directory *is* the whole U22
-property, and it should not rest on a behaviour of the skip path — an independent
-reproduction of the same task shape on Gradle 9.0.0 reports the key surviving.
-It also made two of the three log branches unreachable: a skipped task prints
-nothing.
+**What was written under row 10 the first two times was wrong, in opposite
+directions.** The accurate account, measured on this repo's Gradle 9.0.0 with an
+identically shaped `Sync`: the run where the source *disappears* is **not**
+`NO-SOURCE`. It executes, and it removes the stale key deterministically. Only
+the run *after* that is `NO-SOURCE`. So `Sync` was not silently relying on
+stale-output cleanup for the U22 transition, and the claim that it was is
+withdrawn.
 
-`syncPortalKey` is no longer a `Sync`. It declares its inputs and output and
-empties the directory in its own action, which always runs. Row 10 was re-run
-against that, with the same result, and both previously unreachable branches now
-print:
+What `Sync` really did not do is run its **own actions** on that transition —
+measured, `doFirst` does not fire — which left two of the three messages below
+permanently unprintable, and it left the emptying to `Copy` semantics rather
+than to anything this build states.
+
+`syncPortalKey` is no longer a `Sync`. It empties the directory in its own
+action and runs every time, because output-directory *contents* are not part of
+Gradle's up-to-date check: measured, a foreign file planted in
+`build/portalKeys` survives an UP-TO-DATE run of **either** shape, and that
+directory is an `assets.srcDirs` entry, so anything left in it ships. Running
+unconditionally closes that and costs a delete plus at most one small copy.
+
+Row 10 was re-run against the new shape with the same result, and both
+previously unreachable branches now print. The second of them also had to be
+**reworded**: it said "DEVELOPMENT-ONLY host" for a build with
+`keliver.devOnlyHost` absent — a production-shaped host with `DEV_ONLY=false` —
+which names the wrong one of the two binaries this module produces. Unreachable
+text is unreviewed text.
 
 ```
-portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded (keliver.devOnlyHost=true)
-portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded (no key at …/dstore-empty/keys/ed25519.pub)
+portal-device-android: no portal key embedded — this is the DEVELOPMENT-ONLY host
+  (keliver.devOnlyHost=true), which refuses production mode
+portal-device-android: no portal key embedded — no key at …/keys/ed25519.pub.
+  This host is NOT marked development-only, so production mode will have no
+  identity to verify against.
 ```
 
 The same property is now asserted in C16d on every platform, against a store that
@@ -80,25 +94,33 @@ Row 6 failed the first time: setting `ZiplineCompileTask.signingKeys` at script
 level produced an **unsigned bundle with a key present** —
 `unsigned.signatures = {}`. From `afterEvaluate`, it signs.
 
-The first explanation written down for that was wrong. The zipline plugin does
-not write `signingKeys` from its own `afterEvaluate`; it writes from the task's
-**registration action**, and the task is registered from the Kotlin JS plugin's
-`afterEvaluate`, i.e. after this build file has been read. Gradle runs a task's
-configuration actions in the order they were added, so a script-level
-`configureEach` is added before the task exists and is overwritten by the
-registration action. Re-measured after the correction, in the real build:
+**Two explanations for that were written down before the right one.** The
+first blamed the plugin's own `afterEvaluate`; the second blamed the task not
+existing yet. Neither is the mechanism, and both survived until an independent
+review measured the ordering instead of reading it.
+
+What actually happens: the zipline plugin writes `signingKeys` from the compile
+task's **registration action**, and Gradle runs that action **last** — after
+every `configureEach`/`all` action added before the task is realized, whenever
+those were added. A lazy `configureEach` therefore loses either way. A
+`configureEach` on an **already-realized** task runs immediately instead, after
+the registration action — and that is the only reason the `afterEvaluate` block
+worked, because the zipline plugin's own `afterEvaluate` had already realized
+the task.
+
+Re-measured in the real build:
 
 ```
 script-level configureEach -> signatures: {}
 afterEvaluate              -> signatures: {"portal-ed25519": "975490ce…"}
 ```
 
-An isolated reproduction of the same plugin shapes reports script level winning,
-so this is a property of *this* build's plugin ordering and must be measured
-here rather than modelled.
+Relying on someone else to realize the task is the actual fragility: a plugin
+upgrade that stopped doing so would drop signing with *nobody* writing
+`signingKeys`. `.toList()` now forces the realization, so the write provably
+follows the registration action.
 
-The invariant — nothing may write `signingKeys` after us — is not enforceable
-from the build file, so it is gated:
+The shape is still fragile, so it is gated:
 `scripts/keliver-guest-signing-check.sh` asserts both directions, and reverting
 that one line makes it fail while the build still succeeds:
 

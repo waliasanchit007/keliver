@@ -94,26 +94,31 @@ android {
 // NOT a Copy, and no longer a Sync. Copy with onlyIf left a previously copied
 // key sitting in the output directory when the input later disappeared, so a
 // warm build directory could smuggle an earlier build's key into a later APK
-// (U22). Sync fixed that, but only by accident of a Gradle behaviour this build
-// never states: with no source file a Copy/Sync task is NO-SOURCE, which skips
-// the task entirely — its actions never run — and the directory is emptied by
-// Gradle's stale-output cleanup rather than by anything here. That cleanup does
-// happen (measured on macOS, and the U22 hygiene case passes on Linux CI), but
-// an emptied directory is the whole U22 property, and it should not rest on a
-// behaviour of the skip path. It also made two of the three log branches below
-// unreachable, because a skipped task prints nothing.
+// (U22). Sync did fix that: MEASURED, the run where the source disappears is
+// NOT the NO-SOURCE run — it executes and removes the stale key — and only the
+// run after it is NO-SOURCE. What Sync did not do is run its own ACTIONS on
+// that transition, which left two of the three messages below permanently
+// unprintable, and it left the emptying to Copy semantics rather than to
+// anything this build states.
 //
-// So the directory is now emptied by this task, in its own action, always.
+// Both are stated here now: the directory is emptied by this task, in its own
+// action. upToDateWhen{false} because that action is a delete and at most one
+// small copy, and because output-directory contents are NOT part of Gradle's
+// up-to-date check — measured: a foreign file planted in build/portalKeys
+// survives an UP-TO-DATE run of either shape, and this directory is an
+// assets.srcDirs entry, so anything left in it ships. Running every time closes
+// that and costs nothing.
 def portalKeyDir = layout.buildDirectory.dir('portalKeys')
 tasks.register('syncPortalKey') {
   // Providers: the store is resolved when this task RUNS, so an unanswerable
   // resolver fails the one task that embeds an identity and not the rest of the
   // build. inputs.files has no @SkipWhenEmpty, so an empty list leaves the task
-  // out-of-date rather than NO-SOURCE, and the action below always runs.
+  // out-of-date rather than NO-SOURCE.
   inputs.property('devOnlyHost', devOnlyHost)
   inputs.files(providers.provider { embedPortalKey.get() ? [portalPubKey.get()] : [] })
     .withPropertyName('portalPublicKey')
   outputs.dir(portalKeyDir)
+  outputs.upToDateWhen { false }
   doLast {
     def dir = portalKeyDir.get().asFile
     dir.deleteDir()
@@ -123,11 +128,16 @@ tasks.register('syncPortalKey') {
       new File(dir, 'portal_ed25519.pub').bytes = src.bytes
       logger.lifecycle("portal-device-android: embedding portal key from ${src}")
     } else if (devOnlyHost) {
-      logger.lifecycle('portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded ' +
-        '(keliver.devOnlyHost=true)')
+      logger.lifecycle('portal-device-android: no portal key embedded — this is the ' +
+        'DEVELOPMENT-ONLY host (keliver.devOnlyHost=true), which refuses production mode')
     } else {
-      logger.lifecycle("portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded " +
-        "(no key at ${portalPubKey.get()})")
+      // NOT the development-only host: DEV_ONLY is false, so this binary will
+      // run in production mode with nothing to verify a bundle against. Saying
+      // "DEVELOPMENT-ONLY" here — which is what it used to say, unreachably —
+      // names the wrong one of the two shapes this module builds.
+      logger.lifecycle("portal-device-android: no portal key embedded — no key at " +
+        "${portalPubKey.get()}. This host is NOT marked development-only, so production " +
+        "mode will have no identity to verify against.")
     }
   }
 }

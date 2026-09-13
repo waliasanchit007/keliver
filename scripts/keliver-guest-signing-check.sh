@@ -23,9 +23,28 @@
 # and is never printed.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-DISP="${1:?usage: $0 <disposable-root>}"
-mkdir -p "$DISP"; DISP="$(cd "$DISP" && pwd -P)"
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null || echo "$JAVA_HOME")}"
+DISP_PARENT="${1:?usage: $0 <disposable-root>}"
+# /usr/libexec/java_home is macOS-only; on Linux (CI) JAVA_HOME is already set
+# by setup-java. Falling through with an empty value would be worse than saying
+# so — gradlew would silently pick whatever java is on PATH.
+if [ -z "${JAVA_HOME:-}" ]; then
+  if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 2; }
+fi
+export JAVA_HOME
+
+# The same guard every sibling check uses. Without it this script would
+# mkdir -p whatever it was handed and write a disposable PRIVATE KEY inside it:
+# `keliver-guest-signing-check.sh ~/.keliver-portal` would plant one in the real
+# store.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit 1
+
+# signingKeys is an @Input, so the disposable private key would otherwise be
+# serialised into Gradle's execution history under the repo. Keep the project
+# cache — and therefore that history — inside the disposable root.
+GRADLE_FLAGS="--console=plain -q --project-cache-dir $DISP/project-cache"
 
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
@@ -56,7 +75,7 @@ PY
 
 echo "--- a store WITH a signing key"
 rm -f "$MANIFEST"
-if ( cd "$ROOT" && ./gradlew --console=plain -q -Pkeliver.portalStore="$DISP/store" "$TASK" ) \
+if ( cd "$ROOT" && ./gradlew $GRADLE_FLAGS -Pkeliver.portalStore="$DISP/store" "$TASK" ) \
      > "$DISP/signed.log" 2>&1; then
   ok "the guest bundle builds against a store that holds a key"
 else
@@ -72,7 +91,7 @@ fi
 
 echo "--- a store with NO signing key"
 rm -f "$MANIFEST"
-if ( cd "$ROOT" && ./gradlew --console=plain -q -Pkeliver.portalStore="$DISP/nostore" "$TASK" ) \
+if ( cd "$ROOT" && ./gradlew $GRADLE_FLAGS -Pkeliver.portalStore="$DISP/nostore" "$TASK" ) \
      > "$DISP/unsigned.log" 2>&1; then
   ok "the guest bundle still builds when the store holds no key"
 else
@@ -85,6 +104,12 @@ if [ "$SIGS" = "(none)" ]; then
 else
   bad "an unsigned build produced signatures: $SIGS"
 fi
+
+# The manifest under portal-published-guest/build is left UNSIGNED by the second
+# case. Nothing packages or verifies that path today, but leaving an unsigned
+# manifest lying in the repo is the sort of thing a later check trips over, so
+# remove it rather than explain it later.
+rm -f "$MANIFEST"
 
 echo
 echo "passed: $PASS   failed: $FAIL"

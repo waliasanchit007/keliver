@@ -1059,6 +1059,14 @@ fi
 rm -f "$L15/pid" 2>/dev/null; rmdir "$L15" 2>/dev/null
 
 # --- C16: a failed startup leaves nothing, and a broken resolver fails closed --
+#
+# NOT hermetic, unlike the rest of this suite. C16d runs Gradle in $ROOT, so its
+# key-embedding assertions read and write the REAL repo build directory
+# ($ROOT/portal-device-android/build/portalKeys) — there is no per-run build
+# directory to point them at. A concurrent :portal-device-android build (an IDE,
+# another script) can therefore make them non-deterministic, and they briefly
+# leave a throwaway store's PUBLIC key in that directory. Fine in sequential CI;
+# worth knowing before running this next to a build you care about.
 echo
 echo "--- C16  failure is non-destructive, and never falls back to another identity"
 stores_under() { ls -1 "$DISP/home/.keliver-portal/apps" 2>/dev/null | wc -l | tr -d ' '; }
@@ -1186,7 +1194,12 @@ fi
 # The development-only host embeds no key, so it must not consult a store at
 # all — not even to discover that the resolver is broken. Same broken PATH, no
 # override: if the short-circuit ever stops short-circuiting, this fails.
-( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+#
+# NOT -q, and the task is asserted to have RUN. An earlier version of this
+# assertion was satisfied by an UP-TO-DATE no-op left behind by the run above,
+# which is not evidence that anything short-circuited; -q would also have hidden
+# the lifecycle line that proves which branch executed.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain \
     -Pkeliver.devOnlyHost=true :portal-device-android:syncPortalKey ) \
   > "$DISP/c16-devonly.log" 2>&1
 if [ $? = 0 ]; then
@@ -1194,6 +1207,12 @@ if [ $? = 0 ]; then
 else
   bad "C16d the development-only host asked for a store it has no use for"
   tail -12 "$DISP/c16-devonly.log" | sed 's/^/        /'
+fi
+if grep -q "keliver.devOnlyHost=true" "$DISP/c16-devonly.log"; then
+  ok "C16d and it really ran, taking the development-only branch"
+else
+  bad "C16d nothing proves the development-only branch executed"
+  grep -n "syncPortalKey" "$DISP/c16-devonly.log" | sed 's/^/        /'
 fi
 
 # A WORDING guard, and only that. The behavioural guarantee is the non-zero exit

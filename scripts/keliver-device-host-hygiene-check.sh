@@ -61,8 +61,9 @@ build() { # build <label> <store-or-empty> <devOnly true|false>
   # -Pkeliver.portalStore warns that the build's identity may differ from the
   # relay's. It is printed at QUIET level so -q cannot hide it, but -q output
   # still lands in this log, which nothing read unless the build FAILED. Print
-  # it, and assert it: this is the only scripted caller that passes the
-  # override, so if the warning is not checked here it is not checked anywhere.
+  # it, and assert it. (C16d in keliver-store-recovery-check.sh asserts the same
+  # warning; this is the only caller that asserts it while ASSEMBLING AN APK,
+  # which is the case U22 is about.)
   #
   # The expected answer DEPENDS ON THE MODE, and asserting it unconditionally
   # was wrong — measured on Linux CI, which failed on exactly the two dev-only

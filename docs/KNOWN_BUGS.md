@@ -1456,32 +1456,53 @@ none is a security hole.
 
    * `portal-device-android` — `syncPortalKey`'s source is a provider;
      `-Pkeliver.devOnlyHost=true` short-circuits before it, so the
-     development-only host never consults a store at all.
+     development-only host never consults a store at all. It is no longer a
+     `Sync`: it empties its output directory in its own action and runs every
+     time, because output-directory *contents* are not part of Gradle's
+     up-to-date check and that directory is an `assets.srcDirs` entry — measured,
+     a foreign file planted there survives an UP-TO-DATE run of either shape.
    * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
+
+     **Asymmetry, recorded not fixed:** the iOS host has neither half of the
+     Android hardening. There is no `devOnlyHost` short-circuit, so every
+     `compileKotlinIos*` consults the store, and it writes an empty-string
+     constant rather than emptying an output directory. No `U22`-shaped leak
+     follows from the second (the generated file is overwritten, not
+     accumulated), but the first means iOS compiles need an identity they may
+     not use. Out of scope for this block.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
      `ZiplineCompileTask.signingKeys` instead, from `afterEvaluate`.
 
-     **Why `afterEvaluate`, precisely.** Gradle runs a task's configuration
-     actions in the order they were *added*. The zipline plugin writes
-     `signingKeys` from that task's own **registration action**, and the task is
-     registered from the Kotlin JS plugin's `afterEvaluate` — after this build
-     file has been read. A `configureEach` added at script level is therefore
-     added before the task exists, runs before the registration action, and is
-     overwritten by it. **Measured twice in this build:** script level →
-     `unsigned.signatures = {}` with a key present; identical code from
-     `afterEvaluate` → signed. An isolated reproduction of the same plugin
-     shapes reports the opposite, so this must be measured here rather than
-     modelled.
+     **The ordering, described correctly at the third attempt.** The zipline
+     plugin writes `signingKeys` from the compile task's own **registration
+     action**, and Gradle runs that action **last** — after every
+     `configureEach`/`all` action added before the task is realized, whenever
+     those were added. So a lazy `configureEach` always loses, whether it was
+     added before or after the task existed. Measured: script level →
+     `unsigned.signatures = {}` with a key present.
 
-     The invariant is "nothing may write `signingKeys` after us", which cannot
-     be enforced from the build file — so it is **gated** instead.
+     `configureEach` on an **already-realized** task runs immediately instead,
+     i.e. after the registration action — and that, not "afterEvaluate", is why
+     the `afterEvaluate` block worked: the zipline plugin's own `afterEvaluate`,
+     registered at `apply plugin`, has already realized the task by then. Two
+     earlier write-ups of this were wrong in different ways; both were corrected
+     only because an independent review measured the ordering rather than
+     reading it.
+
+     Depending on someone else realizing the task is depending on a plugin
+     upgrade not changing — and if it did, signing would drop with *nobody*
+     writing `signingKeys`, so an invariant phrased as "nothing writes after us"
+     would still hold while the bundle shipped unsigned. `.toList()` forces the
+     realization here, so the write provably follows the registration action.
+
+     It is still a fragile shape, so it is **gated** rather than trusted.
      `scripts/keliver-guest-signing-check.sh` builds the guest bundle against a
      disposable store with a key and asserts the manifest is signed, and against
-     one without and asserts it is not. Measured: reverting that single line to a
-     script-level `configureEach` makes the check fail — the build still
-     succeeds, which is exactly why a gate and not a comment. It runs in the
+     one without and asserts it is not. Measured: reverting it to a lazy
+     `configureEach` makes the check fail — while the build still succeeds,
+     which is exactly why this needs a gate and not a comment. It runs in the
      portable CI checks.
 
    "I could not find out whether you have a signing key" is not "you have no
