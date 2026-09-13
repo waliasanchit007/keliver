@@ -208,7 +208,8 @@ could remove a lock a *later* process had already taken over — the same
 two-writers failure the lock exists to prevent.
 
 **`SIGKILL` and power loss cannot be rolled back, and nothing here claims
-otherwise.** There is no handler for them, so the store can be left owned by
+otherwise — there is no handler, and none is possible.** What follows is what
+actually survives, not a recovery guarantee. There is no handler for them, so the store can be left owned by
 the app with the pointer not yet written, or the reverse. What survives is the
 backup directory, which is deleted only once the transaction is verified: a
 later run reports any it finds and never overwrites one, and the lock's pid
@@ -354,6 +355,17 @@ Residual, shared by both sides and not closed: pid reuse, and a foreign PID
 namespace, where a marker written inside a container and read outside means a
 different process. The bounded wait and a refusal naming the directory are the
 backstop.
+
+**A startup that cannot finish leaves nothing behind.** The pointer's
+destination is validated — with a probe write, not a permission bit — *before*
+the store is claimed, so a refusal creates no `apps/<slug>-<hash>`. Claiming
+first and discovering the pointer unwritable afterwards used to leave an empty,
+owner-marked store that held no identity and, because the hash is the app's,
+read as a second candidate the next time the app was launched through a
+symlink. The window between validating and writing is real, so a failure there
+undoes exactly what that startup created — an owner marker it wrote, and the
+directory only if it created it and it is still empty. A store that was already
+there is never touched.
 
 Startup resolves the store **inside** the lock. It used to resolve first and
 lock afterwards, so a start that waited on a recovery in flight went on to

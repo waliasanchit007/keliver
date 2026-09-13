@@ -9,7 +9,11 @@
 // ---------------------------------------------------------------------------
 ext.keliverStoreDir = { java.io.File repoDir ->
   def script = new java.io.File(rootProject.projectDir, 'scripts/keliver-store-path.sh')
-  if (!script.exists()) return new java.io.File(System.getProperty('user.home'), '.keliver-portal')
+  if (!script.exists()) {
+    throw new GradleException("keliver: ${script} is missing, so this app's store cannot be " +
+      'resolved. The publisher signs with the key in that store and the device hosts embed ' +
+      'its public key; guessing would sign with one identity and verify against another.')
+  }
   def out = new StringBuilder(), err = new StringBuilder()
   def proc = [script.absolutePath, repoDir.absolutePath].execute()
   proc.consumeProcessOutput(out, err)
@@ -22,10 +26,20 @@ ext.keliverStoreDir = { java.io.File repoDir ->
   if (proc.exitValue() == 3) {
     throw new GradleException('keliver: ' + err.toString().trim())
   }
+  // NO FALLBACK. This used to warn and return ~/.keliver-portal — the legacy
+  // GLOBAL store, which on a developer's machine usually holds a real signing
+  // identity. Measured: with python3 off the PATH, a per-app store of
+  // apps/probeapp-bce953ee silently became ~/.keliver-portal, so the guest
+  // bundle would be signed by one identity while the relay served another.
+  // A warning in a -q build is not a defence. Fail, and say what to do.
   if (proc.exitValue() != 0 || path.isEmpty()) {
-    logger.warn("keliver: could not resolve the portal store (${err.toString().trim()}); " +
-      'falling back to ~/.keliver-portal')
-    return new java.io.File(System.getProperty('user.home'), '.keliver-portal')
+    throw new GradleException("keliver: could not resolve this app's portal store.\n" +
+      "  resolver: ${script}\n" +
+      "  exit:     ${proc.exitValue()}\n" +
+      "  stderr:   ${err.toString().trim() ?: '(none)'}\n" +
+      '  The resolver needs java and python3 on PATH. Refusing to fall back to\n' +
+      '  ~/.keliver-portal: signing with whatever identity the legacy global store\n' +
+      '  happens to hold is the mismatch this resolver exists to prevent.')
   }
   return new java.io.File(path)
 }
@@ -63,3 +77,4 @@ afterEvaluate {
     }
   }
 }
+

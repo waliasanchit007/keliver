@@ -113,6 +113,20 @@ private fun resolveStore(): File {
   ) {
     try {
       val dir = if (env != null) File(env).absoluteFile else config.storeDir(repoDir, ::println)
+
+      // VALIDATE THE POINTER DESTINATION BEFORE CLAIMING ANYTHING. Claiming
+      // first and discovering the pointer is unwritable afterwards left an
+      // empty, owner-marked apps/<slug>-<hash> behind — a store nobody can use
+      // and, because the hash is the app's, a permanent second candidate that
+      // makes a later symlink launch refuse as a split. Measured: a failed
+      // start created apps/app-470fafae with owner set and no keys.
+      if (env == null) {
+        storePointerObstacle(repoDir)?.let { return@withStoreLock it }
+      }
+
+      // Whether THIS startup created them decides what it may undo below.
+      val storeExisted = dir.isDirectory
+      val ownerExisted = File(dir, "owner").isFile
       dir.mkdirs()
       claimStoreFor(dir, repoDir)
       // PORTAL_STORE is a ONE-RUN override, so it must not rebind the app.
@@ -121,6 +135,10 @@ private fun resolveStore(): File {
       // same environment resolves it without any pointer.
       val pointerFailure = if (env == null) writeStorePointer(repoDir, dir) else null
       if (pointerFailure != null) {
+        // The window between validating and writing is real — a directory can
+        // be replaced in it — so undo exactly what this startup created and
+        // nothing else. An identity that was already here is never touched.
+        undoStartupClaim(dir, repoDir, storeExisted, ownerExisted)?.let(::println)
         pointerFailure
       } else {
         resolved = dir
@@ -157,9 +175,72 @@ private fun resolveStore(): File {
  * run and must not rebind the app, and a build in the same environment reads
  * the variable directly.
  */
+/**
+ * Is there anything about the pointer's destination that will stop it being
+ * written? Returns the refusal, or null when it looks writable. Checked BEFORE
+ * the store is claimed, so a start that cannot finish leaves nothing behind.
+ */
+private fun storePointerObstacle(repo: File): String? {
+  val gradleDir = File(repo, ".gradle")
+  val pointer = File(gradleDir, "keliver-store-path")
+  val why = when {
+    gradleDir.exists() && !gradleDir.isDirectory -> "$gradleDir exists and is not a directory"
+    !gradleDir.isDirectory && !runCatching { gradleDir.mkdirs() }.getOrDefault(false) ->
+      "$gradleDir could not be created"
+    pointer.exists() && pointer.isDirectory -> "$pointer is a directory, not a file"
+    pointer.exists() && !pointer.canWrite() -> "$pointer is not writable"
+    else -> {
+      // A probe, not a permission bit: the failure modes that matter here are
+      // the ones `canWrite` does not model.
+      val probe = File(gradleDir, ".keliver-pointer-probe.${ProcessHandle.current().pid()}")
+      val ok = runCatching { probe.writeText("probe\n"); probe.delete(); true }.getOrDefault(false)
+      runCatching { probe.delete() }
+      if (ok) null else "$gradleDir is not writable"
+    }
+  }
+  return why?.let {
+    "portal-server: the store pointer cannot be written, so the portal will not start.\n" +
+      "  $it\n" +
+      "  Nothing has been claimed or created: this is checked before the store is\n" +
+      "  touched. Make that path writable (the pointer must be a regular file) and\n" +
+      "  start again."
+  }
+}
+
+/**
+ * Undo what this startup created, and only that. Returns a note to print, or
+ * null when there was nothing of ours to remove.
+ */
+private fun undoStartupClaim(dir: File, repo: File, storeExisted: Boolean, ownerExisted: Boolean): String? {
+  if (ownerExisted || storeExisted) return null
+  val owner = File(dir, "owner")
+  // Only if it still names us — someone else may have taken it in the interim.
+  val mine = runCatching { owner.readText().trim() == repo.absoluteFile.canonicalFile.path }
+    .getOrDefault(false)
+  if (!mine) return null
+  runCatching { owner.delete() }
+  // Only an EMPTY directory: never delete a store that has acquired contents.
+  val removed = runCatching { (dir.listFiles()?.isEmpty() ?: false) && dir.delete() }.getOrDefault(false)
+  return if (removed) {
+    "portal-server: removed the store $dir that this failed start had just created " +
+      "(it held no identity and would otherwise have read as a second store for this app)"
+  } else {
+    "portal-server: note — $dir was created by this failed start and could not be removed; " +
+      "it holds no identity, and it can be deleted safely"
+  }
+}
+
 private fun writeStorePointer(repo: File, store: File): String? {
   val f = File(File(repo, ".gradle"), "keliver-store-path")
   val line = store.absolutePath + "\n"
+  // TEST-ONLY, inert unless set to 1: the window between validating the
+  // destination and writing it is real (a directory can be replaced in it) but
+  // cannot be hit from outside, and an untested rollback is not a rollback.
+  if (System.getenv("KELIVER_RELAY_FAIL_POINTER") == "1") {
+    return "portal-server: the store pointer could not be written (fault injection).\n" +
+      "  $f\n" +
+      "  Anything this start had just created has been removed."
+  }
   return runCatching {
     f.parentFile.mkdirs()
     if (!f.exists() || f.readText() != line) f.writeText(line)

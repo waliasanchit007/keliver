@@ -78,9 +78,20 @@ elif [ -x "$HERE/../scripts/keliver-store-path.sh" ]; then RESOLVE="$HERE/../scr
 else echo "keliver-store-path.sh not found next to $HERE" >&2; exit 2; fi
 
 USAGE="usage: $0 <app-dir> [--store DIR] [--home DIR] [--dry-run]
-   or: $0 --holder-state <pid>        (diagnostic: why is a lock not reclaimed?)"
-# The diagnostic does not read an app dir, so it must not demand one.
-if [ "${1:-}" = "--holder-state" ]; then APP="."; else APP="${1:?$USAGE}"; shift; fi
+   or: $0 --holder-state <pid>        (diagnostic: why is a lock not reclaimed?)
+   or: $0 --help"
+# Modes that take no app directory are recognised HERE, before anything reads
+# the filesystem, and they set an explicit flag. `APP="."` used to stand in for
+# "diagnostic mode", which made the sentinel indistinguishable from the very
+# ordinary `keliver-store-recover.sh .` — and --help was not recognised at all,
+# so it became the app-dir positional and produced "no such app dir: --help".
+APP=""
+DIAGNOSTIC_MODE=0
+case "${1:-}" in
+  -h|--help) printf '%s\n' "$USAGE"; sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
+  --holder-state) DIAGNOSTIC_MODE=1 ;;
+  *) APP="${1:?$USAGE}"; shift ;;
+esac
 STORE=""; HOME_DIR=""; DRY=0; HOLDER_STATE_QUERY=""; HOLDER_STATE_ASKED=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -93,10 +104,22 @@ while [ $# -gt 0 ]; do
     --holder-state)
       [ $# -ge 2 ] || { echo "--holder-state needs a value (use '' for an empty marker)" >&2; exit 2; }
       HOLDER_STATE_QUERY="$2"; HOLDER_STATE_ASKED=1; shift 2 ;;
-    -h|--help) printf '%s\n' "$USAGE"; sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) printf '%s\n' "$USAGE"; sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;   # after an app dir
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
+
+# Validated at top level and before any consumer, because keliver_lock_inspector
+# always runs inside $( ) — an `exit` in there kills only the substitution and
+# the caller carries on with an empty answer. This variable decides how a lock's
+# holder is judged alive or gone, so a typo must stop the run, not silently mean
+# something else.
+case "${KELIVER_LOCK_INSPECTOR:-auto}" in
+  auto|proc|ps|none) ;;
+  *) echo "KELIVER_LOCK_INSPECTOR=${KELIVER_LOCK_INSPECTOR} is not one of auto, proc, ps, none." >&2
+     exit 2 ;;
+esac
+
 keliver_lock_inspector() {
   # A forced value chooses WHICH inspector, never whether it has to prove
   # itself. Returning it unprobed meant `proc` forced on a machine with no
@@ -104,10 +127,16 @@ keliver_lock_inspector() {
   # contract exists to close, reachable through a variable that ships in the
   # bundle.
   case "${KELIVER_LOCK_INSPECTOR:-auto}" in
+    auto) ;;                       # the ordinary path, probed below
     none) printf 'none'; return ;;
     proc) { [ -d "/proc/$$" ] && [ -e /proc/1 ]; } && printf 'proc' || printf 'none'; return ;;
     ps)   { command -v ps >/dev/null 2>&1 && ps -p "$$" >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; } \
             && printf 'ps' || printf 'none'; return ;;
+    # An unrecognised value cannot be rejected from here: this function always
+    # runs inside $( ), so `exit` would kill only the substitution and the
+    # caller would carry on with an empty answer. It is validated once, at top
+    # level, right after the options are parsed.
+    *) printf 'none' ;;
   esac
   # /proc is authoritative where it exists, needs no external command, and has
   # no locale surface. It also sees OTHER USERS' processes, which is what makes
@@ -167,10 +196,13 @@ lock_holder_gone() { # pid -> 0 ONLY on positively established absence
 # The diagnostic answers BEFORE anything is validated, created or locked: it
 # exists for the operator whose lock is stuck, which is exactly when the app
 # tree may be read-only or oddly shaped.
-if [ "$HOLDER_STATE_ASKED" = 1 ]; then
+if [ "$HOLDER_STATE_ASKED" = 1 ] || [ "$DIAGNOSTIC_MODE" = 1 ]; then
+  [ "$HOLDER_STATE_ASKED" = 1 ] || { echo "--holder-state needs a value" >&2; exit 2; }
   printf '%s\n' "$(lock_holder_state "$HOLDER_STATE_QUERY")"
   exit 0
 fi
+# Past here an app directory is required, and "." is an ordinary one.
+[ -n "$APP" ] || { printf '%s\n' "$USAGE" >&2; exit 2; }
 
 [ -d "$APP" ] || { echo "no such app dir: $APP" >&2; exit 2; }
 APP="$(cd "$APP" && pwd -P)"

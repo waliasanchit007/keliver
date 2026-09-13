@@ -8,7 +8,32 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 apply plugin: 'app.cash.zipline' // IR plugin for zipline.take/bind
 
-def devOnlyHost = (project.findProperty('keliver.devOnlyHost') ?: 'false').toString().toBoolean()
+// ACCEPTED FORMS, and nothing else. Groovy's String.toBoolean() looks
+// permissive and is not: MEASURED, '1' and 'y' are true while 'yes' and 'on'
+// are FALSE, and a bare -Pkeliver.devOnlyHost (no '=') is the empty string,
+// also false. So -Pkeliver.devOnlyHost=yes silently built a PRODUCTION-shaped
+// host for someone who asked for the development-only one. Unsupported values
+// are now rejected rather than quietly meaning the other mode.
+//
+//   true:  true 1 yes on      false: false 0 no off      (case-insensitive)
+//
+// A bare flag is rejected too: it plainly intends `true`, and guessing that is
+// how this class of bug starts.
+ext.keliverBooleanProperty = { String name ->
+  def raw = project.findProperty(name)
+  if (raw == null) return false
+  def v = raw.toString().trim().toLowerCase()
+  if (v in ['true', '1', 'yes', 'on']) return true
+  if (v in ['false', '0', 'no', 'off']) return false
+  throw new GradleException(
+    "keliver: -P${name}=${raw} is not a value this build understands.\n" +
+      '  true:  true 1 yes on\n' +
+      '  false: false 0 no off\n' +
+      (v.isEmpty()
+        ? '  A bare -P' + name + ' has no value; write -P' + name + '=true.'
+        : '  Refusing to guess: the wrong guess builds the other kind of host.'))
+}
+def devOnlyHost = keliverBooleanProperty('keliver.devOnlyHost')
 // -Pkeliver.portalStore=<dir> overrides the resolved store. PORTAL_STORE is an
 // ENV var and Groovy's List.execute() inherits the Gradle DAEMON's environment,
 // not the invoking shell's, so an env var cannot be relied on to reach this

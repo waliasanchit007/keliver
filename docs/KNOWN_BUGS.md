@@ -1340,7 +1340,7 @@ is a deliberate behaviour change, recorded in
 the shell's and now removes the lock only while its marker still names this
 process, on both the `finally` and shutdown-hook routes.
 
-### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
+### U25. Four smaller store/host issues found by the PR #74 review — ALL FOUR FIXED, UNRELEASED
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
@@ -1402,20 +1402,50 @@ none is a security hole.
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
    throws in `onCreate` — a crash instead of the refusal screen. **Fail-closed**:
    nothing is fetched and verification is never skipped, so the U22 claim holds.
-   Should be `^[0-9a-fA-F]{64}$`.
-3. **`-Pkeliver.devOnlyHost` accepts only the exact string `true`.** Groovy's
-   `String.toBoolean()` means a bare `-Pkeliver.devOnlyHost`, `=1` or `=yes`
-   silently yields `false` and a production-shaped host. Backstopped by
-   `build-portal-tools.sh`, which refuses to package an APK containing
-   `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+
+   **FIXED, UNRELEASED.** The bound is `^[0-9a-fA-F]{64}$`, the refusal names
+   the length it got, and `HostTrustPolicyTest` covers empty, 62, 63 (the odd
+   length that threw), 66, 64-but-not-hex and a leading space — plus the
+   invariant that anything `ProductionVerified` decodes to exactly 32 bytes, so
+   the policy can no longer bless something `decodeHex` will reject.
+3. **`-Pkeliver.devOnlyHost` silently means the other mode for some values.**
+
+   > **This entry was WRONG and is corrected here.** It claimed only the exact
+   > string `true` is accepted and that `=1` and `=yes` both yield `false`.
+   > Measured against Groovy's `String.toBoolean()` before changing anything:
+   >
+   > ```
+   > 'true' 'TRUE' 'True' 'tRuE' -> true      '1' -> true      'y'  -> true
+   > 'false' '0' 'no' 'on' ''    -> false     'yes' -> false
+   > ```
+   >
+   > So it is case-insensitive, `1` and `y` DO work, and the real hazard is the
+   > opposite of what was recorded: `-Pkeliver.devOnlyHost=yes` and `=on`
+   > silently yield **false**, building a production-shaped host for someone who
+   > asked for the development-only one. A bare `-Pkeliver.devOnlyHost` (no
+   > `=`) is the empty string, also false — that part was right.
+
+   Backstopped by `build-portal-tools.sh`, which refuses to package an APK
+   containing `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+
+   **FIXED, UNRELEASED.** The accepted forms are documented and everything else
+   is refused: `true 1 yes on` and `false 0 no off`, case-insensitive and
+   trimmed. A bare flag is rejected with the fix in the message rather than
+   guessed, because guessing is how this class of bug starts.
 4. **`keliverStoreDir` warns and falls back to `~/.keliver-portal`** when
    `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
    then sign with one identity while the relay uses another — the mismatch the
    helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
-   builds. Failing the build would be safer. **Still open** — but the U25.1 fix
-   added one new way for the resolver to exit non-zero (exit 3, a split store),
-   so `build.gradle` now fails the build on exit 3 specifically rather than
-   falling back. Every other failure still warns and falls back, unchanged.
+   builds.
+
+   **FIXED, UNRELEASED.** Reproduced first, with `python3` replaced by a stub
+   that exits 127: a disposable app resolved `apps/probeapp-bce953ee` with a
+   healthy resolver and **`~/.keliver-portal`** — the legacy global store, which
+   on a developer's machine usually holds a real signing identity — with a
+   broken one. There is no fallback now. A resolver that is missing, or that
+   exits non-zero, or that prints nothing, fails the build with the resolver
+   path, the exit code, its stderr and what to install. Exit 3 (a split store)
+   already failed and still does.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

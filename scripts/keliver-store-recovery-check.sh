@@ -934,13 +934,30 @@ done
 # does not have must yield UNKNOWN, never a verdict — returning a forced value
 # unprobed made `proc` on a machine with no /proc answer GONE for a LIVE
 # process, which is the wrong-GONE class this section exists to close.
-if [ -d "/proc/$$" ]; then MISSING_INSPECTOR=ps; else MISSING_INSPECTOR=proc; fi
-if [ "$MISSING_INSPECTOR" = ps ] && command -v ps >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; then
-  note "both inspectors work here; the unprobed-forced-value case cannot be built"
-else
-  expect_state 1 UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] pid 1" "$MISSING_INSPECTOR"
-  expect_state "$C15_DEAD" UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] a reaped child" "$MISSING_INSPECTOR"
-fi
+# A forced inspector must still prove itself. This used to be built from
+# whichever inspector the machine LACKED — which meant it ran on macOS and
+# self-skipped on Linux, where both work, so the platform that matters had no
+# coverage at all. A skipped setup is not coverage. Instead the failure is
+# MANUFACTURED, identically on both: a stub `ps` that exits non-zero, ahead of
+# the real one on PATH, with the inspector forced to `ps`. The probe then fails
+# wherever this runs.
+STUB="$DISP/stub-bin"; mkdir -p "$STUB"
+printf '#!/bin/sh\nexit 1\n' > "$STUB/ps"; chmod +x "$STUB/ps"
+stub_state() { PATH="$STUB:$PATH" KELIVER_LOCK_INSPECTOR=ps "$RECOVER" "$A15" --holder-state "$1" 2>/dev/null; }
+[ "$(PATH="$STUB:$PATH" "$STUB/ps" -p 1 >/dev/null 2>&1; echo $?)" = 1 ] \
+  && ok "C15 the stub inspector really does fail (the setup is not a no-op)" \
+  || bad "C15 the stub inspector did not fail; the case below proves nothing"
+[ "$(stub_state 1)" = UNKNOWN ] \
+  && ok "C15 a forced inspector that cannot answer -> UNKNOWN for a LIVE pid" \
+  || bad "C15 a forced-but-broken inspector reported $(stub_state 1) for pid 1"
+[ "$(stub_state "$C15_DEAD")" = UNKNOWN ] \
+  && ok "C15 a forced inspector that cannot answer -> UNKNOWN for a dead pid" \
+  || bad "C15 a forced-but-broken inspector reported $(stub_state "$C15_DEAD") for a reaped child"
+# And an unrecognised value is refused outright rather than meaning "auto".
+PATH="$STUB:$PATH" KELIVER_LOCK_INSPECTOR=bogus "$RECOVER" "$A15" --holder-state 1 > "$DISP/c15-bogus.log" 2>&1
+[ $? = 2 ] && [ ! -s "$DISP/c15-bogus.log.stdout" ] \
+  && ok "C15 an unrecognised inspector is refused, not silently auto" \
+  || bad "C15 an unrecognised inspector was accepted"
 
 # A missing VALUE is a usage error, not an empty marker — and must not hang.
 ( "$RECOVER" "$A15" --holder-state ) > "$DISP/c15-arity.log" 2>&1 & ap=$!
@@ -992,6 +1009,76 @@ else
   sed 's/^/        /' "$DISP/c15-dead.log"
 fi
 rm -f "$L15/pid" 2>/dev/null; rmdir "$L15" 2>/dev/null
+
+# --- C16: a failed startup leaves nothing, and a broken resolver fails closed --
+echo
+echo "--- C16  failure is non-destructive, and never falls back to another identity"
+stores_under() { ls -1 "$DISP/home/.keliver-portal/apps" 2>/dev/null | wc -l | tr -d ' '; }
+
+# (a) the pointer destination is unusable: refuse BEFORE claiming anything.
+A16="$DISP/apps/c16-badpointer"; mkapp "$A16" 8178
+mkdir -p "$A16/.gradle/keliver-store-path"          # the pointer path is a directory
+BEFORE16="$(stores_under)"
+boot "$A16" 8178 c16a || BOOT_RC=1
+[ "$BOOT_RC" != 0 ] && ok "C16a the relay refused to start" \
+                    || bad "C16a the relay started with an unwritable pointer"
+[ "$(stores_under)" = "$BEFORE16" ] \
+  && ok "C16a no store was created by the failed start" \
+  || { bad "C16a the failed start left a store behind"; ls -1 "$DISP/home/.keliver-portal/apps" | sed 's/^/        /'; }
+grep -q "Nothing has been claimed or created" "$BOOT_LOG" \
+  && ok "C16a and it says so truthfully" || bad "C16a the refusal does not say what it left"
+
+# (b) a failure BETWEEN validating the destination and writing it. The relay
+# has already claimed the store by then, so the rollback is what is under test.
+A16B="$DISP/apps/c16-midway"; mkapp "$A16B" 8178
+BEFORE16B="$(stores_under)"
+export KELIVER_RELAY_FAIL_POINTER=1
+boot "$A16B" 8178 c16b || BOOT_RC=1
+unset KELIVER_RELAY_FAIL_POINTER
+[ "$BOOT_RC" != 0 ] && ok "C16b the relay refused when the pointer write failed" \
+                    || bad "C16b the relay started anyway"
+[ "$(stores_under)" = "$BEFORE16B" ] \
+  && ok "C16b the store this start had just claimed was removed" \
+  || { bad "C16b a claimed store was left behind"; ls -1 "$DISP/home/.keliver-portal/apps" | sed 's/^/        /'; }
+# and a PRE-EXISTING store must never be removed by the same path.
+A16C="$DISP/apps/c16-existing"; mkapp "$A16C" 8178
+boot "$A16C" 8178 c16c-first || BOOT_RC=1
+S16C="$BOOT_STORE"
+[ -n "$S16C" ] && [ -f "$S16C/keys/ed25519.pub" ] \
+  && ok "C16c a first start created a real identity" || bad "C16c no identity to protect"
+FP16="$(fingerprint "$S16C")"
+export KELIVER_RELAY_FAIL_POINTER=1
+boot "$A16C" 8178 c16c-second || BOOT_RC=1
+unset KELIVER_RELAY_FAIL_POINTER
+[ -d "$S16C" ] && [ "$(fingerprint "$S16C")" = "$FP16" ] \
+  && ok "C16c a later failed start left the existing identity alone" \
+  || bad "C16c the rollback removed a store it did not create"
+
+# (c) the resolver failing must fail the BUILD, not pick the global store.
+NOPY="$DISP/nopy"; mkdir -p "$NOPY"; printf '#!/bin/sh\nexit 127\n' > "$NOPY/python3"; chmod +x "$NOPY/python3"
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q :portal-relay:compileKotlin ) \
+  > "$DISP/c16-gradle.log" 2>&1
+if [ $? = 0 ]; then
+  bad "C16d a build with a broken store resolver succeeded"
+else
+  ok "C16d a build with a broken store resolver fails"
+fi
+grep -q "could not resolve this app's portal store" "$DISP/c16-gradle.log" \
+  && ok "C16d and says which resolver and why" || bad "C16d the failure is not the store resolver's"
+grep -qi "falling back" "$DISP/c16-gradle.log" \
+  && bad "C16d it still mentions falling back" || ok "C16d no fallback identity is offered"
+
+# (d) the recovery CLI, without touching the filesystem.
+CLI_PROBE="$DISP/apps/c16-cli"; mkdir -p "$CLI_PROBE"
+"$RECOVER" --help > "$DISP/c16-help.log" 2>&1
+[ $? = 0 ] && grep -q "^usage:" "$DISP/c16-help.log" \
+  && ok "C16e --help works as the first argument" || bad "C16e --help as the first argument failed"
+[ -e "$CLI_PROBE/.gradle" ] && bad "C16e --help touched the filesystem" \
+                           || ok "C16e --help touched nothing"
+( cd "$CLI_PROBE" && "$RECOVER" . --home "$DISP/home" > "$DISP/c16-dot.log" 2>&1 )
+grep -q "no store at\|has no owner marker\|no such app dir" "$DISP/c16-dot.log" \
+  && ok "C16e '.' is treated as an ordinary app directory" \
+  || { bad "C16e '.' was not treated as an app directory"; head -2 "$DISP/c16-dot.log" | sed 's/^/        /'; }
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

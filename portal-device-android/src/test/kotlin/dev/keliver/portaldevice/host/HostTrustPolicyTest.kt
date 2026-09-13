@@ -75,4 +75,36 @@ class HostTrustPolicyTest {
       "an app host can still be used for development",
     )
   }
+
+  // U25.2: the length bound. Without it a truncated key returned
+  // ProductionVerified and then threw inside decodeHex() in onCreate — a crash
+  // instead of the refusal screen. These must all take the normal refusal path.
+  @Test
+  fun aMalformedPublicKeyIsRefusedBeforeAnythingIsLoaded() {
+    val valid = "ab".repeat(32)
+    val bad = listOf(
+      "" to "empty",
+      "ab".repeat(31) to "62 chars, one byte short",
+      valid.dropLast(1) to "63 chars, odd length — the decodeHex crash",
+      valid + "ab" to "66 chars, one byte long",
+      valid.dropLast(1) + "z" to "64 chars but not hex",
+      " $valid" to "leading space",
+    )
+    for ((key, why) in bad) {
+      val trust = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = key)
+      assertTrue(trust is HostTrust.Refused, "must refuse ($why), got $trust")
+    }
+    val ok = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = valid)
+    assertTrue(ok is HostTrust.ProductionVerified, "a 64-char hex key must still verify, got $ok")
+  }
+
+  @Test
+  fun aRefusedKeyNeverReachesDecodeHex() {
+    // The crash was decodeHex() on what this policy had already blessed, so the
+    // invariant is: anything ProductionVerified decodes to exactly 32 bytes.
+    val trust = hostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = "ab".repeat(32))
+    val hex = (trust as HostTrust.ProductionVerified).publicKeyHex
+    assertEquals(64, hex.length)
+    assertEquals(32, hex.chunked(2).size)
+  }
 }
