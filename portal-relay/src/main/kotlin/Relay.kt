@@ -83,6 +83,12 @@ private fun resolveStore(): File {
   val failure: String? = withStoreLock(
     repoDir,
     onTakeover = ::println,
+    onWaiting = { lock ->
+      println(
+        "portal-server: waiting for a store recovery to finish before resolving the store " +
+          "(lock: $lock)",
+      )
+    },
     onBusy = { lock ->
       System.err.println(
         "portal-server: a store recovery is in progress for this app (lock: $lock).\n" +

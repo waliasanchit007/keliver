@@ -39,7 +39,7 @@ does) against apps outside the repository. The same script, both sides:
 | --- | --- | --- |
 | [`recovery-before.log`](recovery-before.log) | `eb17ab897` — the first version of the recovery command | **29 passed / 18 failed** |
 | [`lifecycle-before.log`](lifecycle-before.log) | `43148d63e` — after that round, before the transaction-lifecycle round | **62 passed / 14 failed** |
-| [`recovery-check.log`](recovery-check.log) | this branch | **80 passed / 0 failed** |
+| [`recovery-check.log`](recovery-check.log) | this branch | **82 passed / 0 failed** |
 
 * **C1** a real Zipline manifest signed with the store's key before a move
   verifies, with Zipline's own `ManifestVerifier`, against the public key the
@@ -80,6 +80,14 @@ does) against apps outside the repository. The same script, both sides:
 * **C13** a startup that waits for the lock re-resolves under it. Before the fix
   it claimed the store it had selected *before* the recovery ran and wrote that
   stale answer back into the pointer, undoing the rebinding it had waited for.
+  The interleaving is synchronised on **this relay's own lock-wait
+  announcement**, read from the log file this case launched it with — not on
+  `pgrep -f RelayKt`, which matched any relay on the machine and could be
+  satisfied by a process the case never started. If that line does not appear
+  the case FAILS; it is never counted as passing unexercised.
+  [`c13-before.log`](c13-before.log) is the same boundary-tied case run against
+  the pre-fix relay: the boundary is reached and the stale resolution is still
+  detected, so the tightening did not turn it into a no-op.
 * **C14** a stale-lock takeover already claimed by another contender is left
   alone, and a live holder's lock is never taken over.
 

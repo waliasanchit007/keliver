@@ -336,7 +336,7 @@ if keliver_port_free_or_die 8161 && keliver_port_free_or_die 8096; then
     ok "C5 the packaged launcher stopped it again"
   fi
 else
-  note "8161 or 8096 is in use by something this run does not own; C5 skipped"
+  bad "C5 could not run — 8161 or 8096 is in use by something this run does not own"
 fi
 
 
@@ -794,17 +794,30 @@ if keliver_port_free_or_die 8167; then
   mkdir -p "$A13/.gradle/keliver-store.lock"
   printf '%s\n' "$$" > "$A13/.gradle/keliver-store.lock/pid"   # a LIVE holder, so it is not taken over
   ( cd "$A13" && PORTAL_REPO="$A13" "$RELAY" > "$DISP/c13.log" 2>&1 ) & C13_PID=$!
-  # Wait for the JVM to exist before assuming it has resolved and is waiting on
-  # the lock. A fixed sleep that is too short on a loaded runner makes every
-  # assertion below pass without the stale-answer path being taken at all.
-  C13_JVM=0
-  for _ in $(seq 1 60); do
-    pgrep -f "RelayKt" >/dev/null 2>&1 && { C13_JVM=1; break; }
+  # The boundary has to belong to THIS relay. `pgrep -f RelayKt` matched any
+  # relay on the machine — the developer's own portal, or another job on a
+  # self-hosted runner — so it could be satisfied instantly by a process this
+  # test never launched, and a fixed sleep afterwards could expire before the
+  # real one had blocked. Then the pointer was swapped while the relay was not
+  # yet waiting, and every assertion below passed without the interleaving
+  # having happened.
+  #
+  # The relay now announces the wait on ITS OWN stdout, which is this file.
+  # Seeing that line proves this process reached the lock wait.
+  C13_WAITING=0
+  for _ in $(seq 1 90); do
+    grep -q "waiting for a store recovery to finish" "$DISP/c13.log" 2>/dev/null \
+      && { C13_WAITING=1; break; }
     kill -0 "$C13_PID" 2>/dev/null || break
     sleep 1
   done
-  [ "$C13_JVM" = 1 ] || bad "C13 the relay JVM never started; the interleaving below proves nothing"
-  sleep 5                                    # past resolution, into the lock wait
+  if [ "$C13_WAITING" = 1 ]; then
+    ok "C13 the relay reached the lock wait (its own log says so)"
+  else
+    bad "C13 the relay never reached the lock wait; the interleaving did not happen"
+    tail -12 "$DISP/c13.log" | sed 's/^/        /'
+  fi
+  # Only now is it safe to change the binding underneath it and let it proceed.
   printf '%s\n' "$S13B" > "$A13/.gradle/keliver-store-path"
   rm -f "$A13/.gradle/keliver-store.lock/pid"; rmdir "$A13/.gradle/keliver-store.lock"
   C13_UP=0
@@ -834,7 +847,8 @@ if keliver_port_free_or_die 8167; then
     && ok "C13 and it restarts on the same store" \
     || { bad "C13 the restart did not land on $S13B"; tail -10 "$BOOT_LOG" | sed 's/^/        /'; }
 else
-  note "8167 is in use by something this run does not own; C13 skipped"
+  # Not a note: an unexercised C13 is not a passing C13.
+  bad "C13 could not run — 8167 is in use by something this run does not own"
 fi
 
 # --- C14: a claimed takeover is not completed by someone else ----------------

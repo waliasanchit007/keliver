@@ -352,6 +352,7 @@ internal fun <T> withStoreLock(
   repoDir: File,
   waitMillis: Long = 20_000,
   onTakeover: (String) -> Unit = {},
+  onWaiting: (File) -> Unit = {},
   onUnavailable: (File, String) -> Nothing,
   onBusy: (File) -> Nothing,
   afterFailedCreate: () -> Unit = {},
@@ -368,6 +369,7 @@ internal fun <T> withStoreLock(
   // at all. The first resolves on the next attempt; the second does not, so a
   // run of them is what tells the two apart.
   var vanished = 0
+  var announcedWait = false
   while (true) {
     if (runCatching { lock.mkdir() }.getOrDefault(false)) break
     // Seam, no-op in production: StoreLockTest uses it to release the lock
@@ -385,6 +387,14 @@ internal fun <T> withStoreLock(
     if (claimStaleLock(lock)) {
       onTakeover("portal-server: taking over $lock — the process that held it is gone")
       continue
+    }
+    // Say it once, the first time this start actually blocks. A process that
+    // may sit here for twenty seconds should not do it silently, and it gives
+    // anything driving this an observable boundary that belongs to THIS
+    // process rather than to whatever JVMs happen to be on the machine.
+    if (!announcedWait) {
+      announcedWait = true
+      onWaiting(lock)
     }
     if (System.currentTimeMillis() >= deadline) onBusy(lock)
     Thread.sleep(200)

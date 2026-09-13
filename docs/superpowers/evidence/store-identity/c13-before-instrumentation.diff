@@ -1,0 +1,23 @@
+--- /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13-orig-PortalConfig.kt	2026-09-13 11:09:01
++++ /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/c13-before/portal-relay/src/main/kotlin/PortalConfig.kt	2026-09-13 11:09:01
+@@ -348,6 +348,7 @@
+   }
+   val deadline = System.currentTimeMillis() + waitMillis
+   var stolen = false
++  var announcedWait = false   // TEST INSTRUMENTATION ONLY
+   while (true) {
+     if (runCatching { lock.mkdir() }.getOrDefault(false)) break
+     if (!lock.exists()) {
+@@ -364,6 +365,12 @@
+       runCatching { File(lock, "pid").delete(); lock.delete() }
+       continue
+     }
++    // TEST INSTRUMENTATION ONLY: the same lock-wait announcement the fixed
++    // relay makes, so the check can synchronise on THIS process's boundary.
++    if (!announcedWait) {
++      announcedWait = true
++      onUnlocked("portal-server: waiting for a store recovery to finish before resolving the store (lock: $lock)")
++    }
+     if (System.currentTimeMillis() >= deadline) onBusy(lock)
+     Thread.sleep(200)
+   }
