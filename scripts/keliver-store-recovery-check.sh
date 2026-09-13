@@ -909,18 +909,39 @@ c11_app "$A15" "$S15"
 L15="$A15/.gradle/keliver-store.lock"
 ( : ) & C15_DEAD=$!; wait "$C15_DEAD" 2>/dev/null   # a pid that certainly does not exist
 
-state() { "$RECOVER" "$A15" --holder-state "$1" 2>/dev/null; }
-expect_state() { # marker, expected, label
-  local got; got="$(state "$1")"
+expect_state() { # marker, expected, label, [inspector]
+  local got
+  if [ -n "${4:-}" ]; then got="$(KELIVER_LOCK_INSPECTOR="$4" "$RECOVER" "$A15" --holder-state "$1" 2>/dev/null)"
+  else got="$("$RECOVER" "$A15" --holder-state "$1" 2>/dev/null)"; fi
   [ "$got" = "$2" ] && ok "C15 $3 -> $2" || bad "C15 $3 -> $got (expected $2)"
 }
-expect_state "$C15_DEAD" GONE    "a reaped child"
-expect_state "$$"        ALIVE   "this very process"
-expect_state 1           ALIVE   "pid 1, live and not ours to signal"
-expect_state 99999999999999999999 UNKNOWN "a 20-digit marker"
-expect_state 4294967296  UNKNOWN "a marker above pid_t"
-expect_state xx          UNKNOWN "a non-numeric marker"
-expect_state ""          UNKNOWN "an empty marker"
+# Both inspectors, on every platform. Linux takes the /proc branch and macOS
+# takes ps, so without forcing each one the branch that is not native to the
+# machine ships never having run.
+for insp in "" proc ps; do
+  [ "$insp" = proc ] && [ ! -d /proc/$$ ] && continue      # no /proc here
+  tag="${insp:-auto}"
+  expect_state "$C15_DEAD" GONE    "[$tag] a reaped child" "$insp"
+  expect_state "$$"        ALIVE   "[$tag] this very process" "$insp"
+  expect_state 1           ALIVE   "[$tag] pid 1, live and not ours to signal" "$insp"
+  expect_state 99999999999999999999 UNKNOWN "[$tag] a 20-digit marker" "$insp"
+  expect_state 4294967296  UNKNOWN "[$tag] a marker above pid_t" "$insp"
+  expect_state xx          UNKNOWN "[$tag] a non-numeric marker" "$insp"
+  expect_state ""          UNKNOWN "[$tag] an empty marker" "$insp"
+  expect_state " 7 "       UNKNOWN "[$tag] a padded marker" "$insp"
+done
+# A missing VALUE is a usage error, not an empty marker — and must not hang.
+( "$RECOVER" "$A15" --holder-state ) > "$DISP/c15-arity.log" 2>&1 & ap=$!
+( sleep 10; kill -9 "$ap" 2>/dev/null ) & wp=$!
+wait "$ap" 2>/dev/null; arc=$?
+kill "$wp" 2>/dev/null
+[ "$arc" = 2 ] && ok "C15 --holder-state with no value is a usage error, not a hang" \
+               || bad "C15 --holder-state with no value exited $arc"
+# The diagnostic must answer without creating anything in the app tree.
+A15B="$DISP/apps/c15-untouched"; mkdir -p "$A15B"
+"$RECOVER" "$A15B" --holder-state 1 > /dev/null 2>&1
+[ -e "$A15B/.gradle" ] && bad "C15 the diagnostic created .gradle in the app tree" \
+                       || ok "C15 the diagnostic answers without touching the app tree"
 if [ "$(KELIVER_LOCK_INSPECTOR=none "$RECOVER" "$A15" --holder-state "$C15_DEAD" 2>/dev/null)" = UNKNOWN ]; then
   ok "C15 an inspector that cannot answer -> UNKNOWN, even for a dead pid"
 else
@@ -939,8 +960,11 @@ for spec in "99999999999999999999:a 20-digit marker" "4294967296:a marker above 
   BEFORE="$(snapshot "$L15")"
   if "$RECOVER" "$A15" --store "$S15" --home "$DISP/home" --dry-run > "$DISP/c15.log" 2>&1; then
     bad "C15 $lbl was taken over"
-  else
+  elif grep -q "locked by another store recovery or a starting portal" "$DISP/c15.log"; then
     ok "C15 $lbl is refused, not taken over"
+  else
+    bad "C15 $lbl was refused, but for an unrelated reason"
+    head -3 "$DISP/c15.log" | sed 's/^/        /'
   fi
   [ "$(snapshot "$L15")" = "$BEFORE" ] && ok "C15 $lbl left the lock unchanged" \
                                        || bad "C15 $lbl disturbed the lock"

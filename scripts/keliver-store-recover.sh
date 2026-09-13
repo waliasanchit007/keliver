@@ -84,12 +84,83 @@ while [ $# -gt 0 ]; do
     --store)   STORE="${2:?--store needs a value}"; shift 2 ;;
     --home)    HOME_DIR="${2:?--home needs a value}"; shift 2 ;;
     --dry-run) DRY=1; shift ;;
-    # The empty marker is a real case, so this accepts an empty value.
-    --holder-state) HOLDER_STATE_QUERY="${2-}"; HOLDER_STATE_ASKED=1; shift 2 ;;
+    # The empty marker is a real case, so this accepts an empty VALUE — but not
+    # a missing one: dropping the `${2:?}` also dropped the arity check, and
+    # `shift 2` with one argument left shifts nothing, so the loop never ended.
+    --holder-state)
+      [ $# -ge 2 ] || { echo "--holder-state needs a value (use '' for an empty marker)" >&2; exit 2; }
+      HOLDER_STATE_QUERY="$2"; HOLDER_STATE_ASKED=1; shift 2 ;;
     -h|--help) sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
+keliver_lock_inspector() {
+  case "${KELIVER_LOCK_INSPECTOR:-auto}" in
+    proc|ps|none) printf '%s' "$KELIVER_LOCK_INSPECTOR"; return ;;
+  esac
+  # /proc is authoritative where it exists, needs no external command, and has
+  # no locale surface. It also sees OTHER USERS' processes, which is what makes
+  # a permission-denied `kill -0` distinguishable from a dead process.
+  # The probe is pid 1 AND this process. /proc/$$ is visible to its owner under
+  # every hidepid setting, so probing only with it would certify an inspector
+  # that cannot see anyone else's processes — and then read their absence as
+  # death. pid 1 always exists and is never ours, so an inspector that cannot
+  # see it cannot answer for a holder either.
+  [ -d "/proc/$$" ] && [ -e "/proc/1" ] && { printf 'proc'; return; }
+  if command -v ps >/dev/null 2>&1 && ps -p "$$" >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; then
+    printf 'ps'; return
+  fi
+  printf 'none'
+}
+
+# THE HOLDER'S STATE, in three values: ALIVE, GONE, UNKNOWN.
+#
+# Only GONE permits a takeover. Everything else — an unreadable marker, a pid
+# outside the range a pid can occupy, an inspector that cannot answer, a
+# process we are not permitted to signal — is uncertainty, and uncertainty
+# leaves the lock alone. Nothing here parses an error message: bash's `kill`
+# prints strerror(errno), which glibc translates.
+#
+# PortalConfig.lockHolderState implements the same three values on the same
+# inputs; StoreLockTest asserts the two agree.
+lock_holder_state() {
+  local pid="$1" n
+
+  # 1. the marker has to be a pid at all.
+  case "$pid" in
+    ''|*[!0-9]*) printf 'UNKNOWN'; return ;;
+    0*) printf 'UNKNOWN'; return ;;   # our writer never emits a leading zero
+  esac
+  n="$pid"
+  # Range-check as a STRING first: a 20-digit value overflows shell arithmetic,
+  # and `ps -p` rejects it with "process id too large" — which is not absence.
+  if [ "${#n}" -gt 10 ]; then printf 'UNKNOWN'; return; fi
+  if [ "$n" -lt 1 ] || [ "$n" -gt 2147483647 ]; then printf 'UNKNOWN'; return; fi
+
+  # 2. a signal we are permitted to send proves life outright.
+  kill -0 "$n" 2>/dev/null && { printf 'ALIVE'; return; }
+
+  # 3. otherwise an inspector decides — if one can.
+  case "$(keliver_lock_inspector)" in
+    proc) [ -e "/proc/$n" ] && printf 'ALIVE' || printf 'GONE' ;;
+    ps)   ps -p "$n" >/dev/null 2>&1 && printf 'ALIVE' || printf 'GONE' ;;
+    *)    printf 'UNKNOWN' ;;
+  esac
+}
+
+lock_holder_gone() { # pid -> 0 ONLY on positively established absence
+  [ "$(lock_holder_state "$1")" = GONE ]
+}
+
+
+# The diagnostic answers BEFORE anything is validated, created or locked: it
+# exists for the operator whose lock is stuck, which is exactly when the app
+# tree may be read-only or oddly shaped.
+if [ "$HOLDER_STATE_ASKED" = 1 ]; then
+  printf '%s\n' "$(lock_holder_state "$HOLDER_STATE_QUERY")"
+  exit 0
+fi
+
 [ -d "$APP" ] || { echo "no such app dir: $APP" >&2; exit 2; }
 APP="$(cd "$APP" && pwd -P)"
 
@@ -196,67 +267,6 @@ APP_LOCK="$GRADLE_DIR/keliver-store.lock"
 # stolen. Prints proc, ps, or none.
 #
 # KELIVER_LOCK_INSPECTOR forces one of those; test-only, see the header.
-keliver_lock_inspector() {
-  case "${KELIVER_LOCK_INSPECTOR:-auto}" in
-    proc|ps|none) printf '%s' "$KELIVER_LOCK_INSPECTOR"; return ;;
-  esac
-  # /proc is authoritative where it exists, needs no external command, and has
-  # no locale surface. It also sees OTHER USERS' processes, which is what makes
-  # a permission-denied `kill -0` distinguishable from a dead process.
-  [ -d "/proc/$$" ] && { printf 'proc'; return; }
-  if command -v ps >/dev/null 2>&1 && ps -p "$$" >/dev/null 2>&1; then
-    printf 'ps'; return
-  fi
-  printf 'none'
-}
-
-# THE HOLDER'S STATE, in three values: ALIVE, GONE, UNKNOWN.
-#
-# Only GONE permits a takeover. Everything else — an unreadable marker, a pid
-# outside the range a pid can occupy, an inspector that cannot answer, a
-# process we are not permitted to signal — is uncertainty, and uncertainty
-# leaves the lock alone. Nothing here parses an error message: bash's `kill`
-# prints strerror(errno), which glibc translates.
-#
-# PortalConfig.lockHolderState implements the same three values on the same
-# inputs; StoreLockTest asserts the two agree.
-lock_holder_state() {
-  local pid="$1" n
-
-  # 1. the marker has to be a pid at all.
-  case "$pid" in
-    ''|*[!0-9]*) printf 'UNKNOWN'; return ;;
-    0*) printf 'UNKNOWN'; return ;;   # our writer never emits a leading zero
-  esac
-  n="$pid"
-  # Range-check as a STRING first: a 20-digit value overflows shell arithmetic,
-  # and `ps -p` rejects it with "process id too large" — which is not absence.
-  if [ "${#n}" -gt 10 ]; then printf 'UNKNOWN'; return; fi
-  if [ "$n" -lt 1 ] || [ "$n" -gt 2147483647 ]; then printf 'UNKNOWN'; return; fi
-
-  # 2. a signal we are permitted to send proves life outright.
-  kill -0 "$n" 2>/dev/null && { printf 'ALIVE'; return; }
-
-  # 3. otherwise an inspector decides — if one can.
-  case "$(keliver_lock_inspector)" in
-    proc) [ -e "/proc/$n" ] && printf 'ALIVE' || printf 'GONE' ;;
-    ps)   ps -p "$n" >/dev/null 2>&1 && printf 'ALIVE' || printf 'GONE' ;;
-    *)    printf 'UNKNOWN' ;;
-  esac
-}
-
-lock_holder_gone() { # pid -> 0 ONLY on positively established absence
-  [ "$(lock_holder_state "$1")" = GONE ]
-}
-
-# A diagnostic: why is this lock not being reclaimed? Prints the verdict for a
-# pid and exits, before any validation or locking. Also what StoreLockTest calls
-# to assert the shell and the JVM agree.
-if [ "$HOLDER_STATE_ASKED" = 1 ]; then
-  printf '%s\n' "$(lock_holder_state "$HOLDER_STATE_QUERY")"
-  exit 0
-fi
-
 lock_take_over() { # lock-dir -> 0 when the directory was cleared for a retry
   local lock="$1" pid claim
   pid="$(cat "$lock/pid" 2>/dev/null)" || return 1   # unknown -> wait

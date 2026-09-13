@@ -339,10 +339,17 @@ reporting its own failure, not the holder's absence. `--holder-state <pid>` on
 `keliver-store-recover.sh` prints the verdict, which is also how
 `StoreLockTest` asserts the shell and the JVM agree marker for marker.
 
-Residual, shared by both sides and not closed: pid reuse, and a `/proc` mounted
-with `hidepid` or in a foreign PID namespace, where another user's live process
-is invisible to both `ProcessHandle` and the shell. They still agree; the
-bounded wait and a refusal naming the directory are the backstop.
+The inspector's probe is **pid 1 as well as this process**. Probing only with
+this process certifies an inspector that can see its owner's processes and
+nobody else's — which is what `hidepid` produces — and it would then read
+another user's live process as death. pid 1 always exists and is never ours, so
+an inspector that cannot see it declines to answer, and every verdict under
+`hidepid` becomes UNKNOWN on both sides rather than a wrong GONE on one.
+
+Residual, shared by both sides and not closed: pid reuse, and a foreign PID
+namespace, where a marker written inside a container and read outside means a
+different process. The bounded wait and a refusal naming the directory are the
+backstop.
 
 Startup resolves the store **inside** the lock. It used to resolve first and
 lock afterwards, so a start that waited on a recovery in flight went on to

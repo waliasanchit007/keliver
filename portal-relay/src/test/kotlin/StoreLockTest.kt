@@ -136,7 +136,10 @@ class StoreLockTest {
 
   @Test
   fun aMarkerThatIsNotAPidIsUnknownNotGone() {
-    for (bad in listOf("", "   ", "xx", "12x", "-1", "0", "007", "1 2")) {
+    // Padding is not laundered away: " 7 " is not the pid 7, it is a marker
+    // this implementation does not recognise — which is what the shell says.
+    for (bad in listOf("", "   ", "xx", "12x", "-1", "0", "007", "1 2",
+                       " 1", "1 ", "\t1", "1\r", "  7  ", "+7")) {
       assertEquals(HolderState.UNKNOWN, lockHolderState(bad), "for marker '$bad'")
     }
     assertEquals(HolderState.UNKNOWN, lockHolderState(null))
@@ -193,11 +196,14 @@ class StoreLockTest {
         "bash", script.absolutePath, appDir.absolutePath, "--holder-state", marker,
       )
       inspector?.let { pb.environment()["KELIVER_LOCK_INSPECTOR"] = it }
-      pb.redirectErrorStream(true)
+      // stdout ONLY. The script warns on stderr when PORTAL_STORE is set — a
+      // supported override — and folding that in made this test report a
+      // protocol disagreement that did not exist.
       val p = pb.start()
       val out = p.inputStream.bufferedReader().readText().trim()
+      val err = p.errorStream.bufferedReader().readText()
       p.waitFor()
-      assertEquals(0, p.exitValue(), out)
+      assertEquals(0, p.exitValue(), "stdout=$out stderr=$err")
       return out
     }
 
@@ -205,11 +211,15 @@ class StoreLockTest {
       deadPid().toString(), ProcessHandle.current().pid().toString(), otherUsersLivePid(),
       "", "xx", "0", "007", "-1", "2147483647", "2147483648", "4294967296",
       "99999999999999999999",
+      // Padded markers: the JVM used to trim these into a pid the shell calls
+      // UNKNOWN. "  7  " was the dangerous one — the JVM answered GONE.
+      " 1", "1 ", "\t1", "1\r", "  7  ", " ", "+7", "00000000000000000000",
     )
     for (m in markers) {
       assertEquals(lockHolderState(m).name, viaShell(m, null), "shell and JVM disagree on '$m'")
     }
-    // and when the inspector cannot answer, both say UNKNOWN
+    // and when the inspector cannot answer, both say UNKNOWN — for any marker
+    // neither side can prove alive by other means.
     for (m in listOf(deadPid().toString(), otherUsersLivePid())) {
       assertEquals("UNKNOWN", viaShell(m, "none"), "shell with no inspector, marker '$m'")
       assertEquals(
@@ -217,6 +227,18 @@ class StoreLockTest {
         "JVM with no inspector, marker '$m'",
       )
     }
+    // The one DELIBERATE asymmetry: the shell has a second proof of life the
+    // JVM has no equivalent for — a signal it is permitted to send — so for a
+    // signalable pid it answers ALIVE even with the inspector forced off, while
+    // the JVM has only the inspector and must answer UNKNOWN. Both are "do not
+    // take the lock", and neither seam exists in production.
+    val self = ProcessHandle.current().pid().toString()
+    assertEquals("ALIVE", viaShell(self, "none"), "the shell can still signal itself")
+    assertEquals(HolderState.UNKNOWN, lockHolderState(self, selfVisible = false))
+    assertTrue(
+      viaShell(self, "none") != "GONE" && lockHolderState(self, selfVisible = false) != HolderState.GONE,
+      "neither may call a signalable process GONE",
+    )
   }
 
   @Test

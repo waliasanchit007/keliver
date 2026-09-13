@@ -476,13 +476,23 @@ internal enum class HolderState { ALIVE, GONE, UNKNOWN }
  */
 internal fun lockHolderState(
   recorded: String?,
+  // The probe is pid 1 AND this process. A JVM can always see its own process,
+  // so probing only with it would certify an inspector that cannot see anyone
+  // else's — and then read their absence as death. Under hidepid=1 that is
+  // exactly what happens: /proc/<other> exists but its contents are not
+  // readable, so ProcessHandle.of returns empty for a LIVE holder.
   selfVisible: Boolean = runCatching {
-    ProcessHandle.of(ProcessHandle.current().pid()).isPresent
+    ProcessHandle.of(ProcessHandle.current().pid()).isPresent && ProcessHandle.of(1L).isPresent
   }.getOrDefault(false),
 ): HolderState {
-  val text = recorded?.trim().orEmpty()
+  // NOT trimmed. The shell reads the marker with `$(cat …)`, which strips only
+  // trailing newlines, and rejects anything else non-numeric — so trimming here
+  // laundered " 7 " into a pid the shell calls UNKNOWN, and if that pid were
+  // absent the JVM would have taken the lock over while the shell left it
+  // alone. Both sides now accept exactly [1-9][0-9]{0,9}.
+  val text = recorded.orEmpty()
   if (text.isEmpty() || !text.all { it in '0'..'9' }) return HolderState.UNKNOWN
-  if (text.length > 1 && text[0] == '0') return HolderState.UNKNOWN  // our writer never emits one
+  if (text[0] == '0') return HolderState.UNKNOWN     // our writer never emits one
   if (text.length > 10) return HolderState.UNKNOWN
   val pid = text.toLongOrNull() ?: return HolderState.UNKNOWN
   // A pid cannot exceed the platform's pid_t. Above that there is no process to
@@ -495,7 +505,10 @@ internal fun lockHolderState(
 
 internal fun claimStaleLock(lock: File, betweenCheckAndClaim: () -> Unit = {}): Boolean {
   val pidFile = File(lock, "pid")
-  val recorded = runCatching { pidFile.readText().trim() }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return false
+  // trimEnd('\n') is exactly what `$(cat …)` does in the shell; anything more
+  // would accept markers the shell rejects.
+  val recorded = runCatching { pidFile.readText().trimEnd('\n') }.getOrNull()
+    ?.takeIf { it.isNotEmpty() } ?: return false
   if (lockHolderState(recorded) != HolderState.GONE) return false
 
   // A seam, no-op in production: the window between deciding the holder is
