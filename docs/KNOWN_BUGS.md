@@ -1447,16 +1447,40 @@ none is a security hole.
    path, the exit code, its stderr and what to install. Exit 3 (a split store)
    already failed and still does.
 
-   **The cost, stated plainly.** The three consumers resolve the store at
-   CONFIGURATION time, and Gradle configures every project, so a resolver that
-   cannot run now fails *any* task — including `:portal-relay:test` and
-   `apiCheck`, which need no signing identity at all.
-   `-Pkeliver.portalStore=<dir>` is the deliberate way through, and it now works
-   for all three consumers rather than only the Android one. **Narrowing the
-   refusal to the tasks that actually consume an identity is NOT done**: it
-   means deferring configuration-time signing setup in `portal-published-guest`,
-   `portal-device-ios` and `portal-device-android`, which is larger than this
-   block. A remaining limitation, not a closed one.
+   **The cost it first had, and no longer has.** The three consumers resolved
+   the store at CONFIGURATION time, and Gradle configures every project, so a
+   resolver that could not run failed *any* task — including `:portal-relay:test`
+   and `apiCheck`, which need no signing identity at all. That was recorded here
+   as an open limitation. It is now closed: each consumer wires the resolver into
+   a `Provider` that only the task consuming an identity queries.
+
+   * `portal-device-android` — `syncPortalKey`'s source is a provider;
+     `-Pkeliver.devOnlyHost=true` short-circuits before it, so the
+     development-only host never consults a store at all.
+   * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
+   * `portal-published-guest` — the one that could not be expressed through the
+     `zipline { signingKeys { … } }` extension, because membership of that
+     container is fixed while the build file is read. The provider goes onto
+     `ZiplineCompileTask.signingKeys` instead, which the plugin itself populates
+     lazily. **Measured:** setting it during script evaluation was silently
+     overwritten by the plugin's own `afterEvaluate` and produced an *unsigned*
+     bundle with a key present; registering it from a later `afterEvaluate`
+     signs correctly.
+
+   "I could not find out whether you have a signing key" is not "you have no
+   signing key": when resolution fails, the compile task fails rather than
+   quietly shipping an unsigned bundle.
+
+   Resolution is memoised per build — including the failure, which is rethrown —
+   so lazy querying does not re-run the resolver subprocess per consumer.
+
+   `-Pkeliver.portalStore=<dir>` remains the deliberate build-only escape. It is
+   a **warning, not a check**: it reports that the build's identity may differ
+   from the relay's, and nothing verifies that they agree. It bypasses the split
+   refusal, and the relay does not see it. It is printed at QUIET level so `-q`
+   cannot hide it, and `keliver-device-host-hygiene-check.sh` — the only scripted
+   caller that passes it — now greps the build log for that line and asserts it,
+   because surviving `-q` into a log nobody reads is not visibility.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

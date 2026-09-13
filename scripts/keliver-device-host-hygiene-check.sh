@@ -58,6 +58,17 @@ build() { # build <label> <store-or-empty> <devOnly true|false>
       :portal-device-android:assembleDebug ) \
     >"$DISP/build-$label.log" 2>&1 \
     || { bad "$label: gradle failed"; tail -5 "$DISP/build-$label.log"; return 1; }
+  # -Pkeliver.portalStore warns that the build's identity may differ from the
+  # relay's. It is printed at QUIET level so -q cannot hide it, but -q output
+  # still lands in this log, which nothing read unless the build FAILED. Print
+  # it, and assert it: this is the only scripted caller that passes the
+  # override, so if the warning is not checked here it is not checked anywhere.
+  if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
+    ok "$label: the build-only store override announced itself"
+    grep -h "is in use, so this build signs" "$DISP/build-$label.log" | fold -w 100 -s | sed 's/^/        ! /'
+  else
+    bad "$label: the build-only store override was used without saying so"
+  fi
 }
 
 # 1. a normal app-specific production host, key A

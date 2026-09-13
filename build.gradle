@@ -7,30 +7,76 @@
 // asks scripts/keliver-store-path.sh, and StoreContractTest asserts that script
 // agrees with PortalConfig.storeDir().
 // ---------------------------------------------------------------------------
+// WHEN this runs matters as much as what it answers. Resolution used to happen
+// while each consumer's build file was being EVALUATED, and Gradle evaluates
+// every project for any task, so a resolver that could not answer failed the
+// WHOLE build — :portal-relay:test, apiCheck, tasks with no signing identity
+// anywhere in them. Failing closed is right; failing unrelated work is not.
+// Each consumer now wires this into a Provider queried by the one task that
+// needs the key, so the resolver runs, and can refuse, only when the selected
+// operation actually depends on this app's identity.
+//
+// Memoised for the build: three consumers querying lazily would otherwise spawn
+// the resolver subprocess once per query rather than once per build. A FAILURE
+// is memoised too and rethrown, so the diagnostic is identical wherever it
+// surfaces and a broken resolver is not re-run dozens of times.
+ext.keliverStoreMemo = [:]
+
 // The deliberate escape, for all three consumers rather than only the Android
-// one. Resolution now FAILS rather than falling back, and it happens at
-// configuration time, so a machine without python3 could otherwise not run any
-// Gradle task at all — including ones that need no signing identity. This gives
-// a way to proceed on purpose. It is NOT equivalent to the resolver's steps 1
-// and 2: PORTAL_STORE and "store" are honoured by the relay as well, whereas
-// this is a GRADLE property only the build sees. Sign with it and the publisher
-// uses one identity while the relay serves whatever the resolver selects —
-// which is the mismatch the contract exists to prevent — unless PORTAL_STORE or
-// "store" is set to agree. It also returns before keliverStoreDir, so it
-// bypasses the split refusal (exit 3). Strictly better than the silent
-// ~/.keliver-portal fallback it replaced, but it is an override, so it says so.
+// one. Resolution FAILS rather than falling back, so this gives a way to
+// proceed on purpose. It is NOT equivalent to the resolver's steps 1 and 2:
+// PORTAL_STORE and "store" are honoured by the relay as well, whereas this is a
+// GRADLE property only the build sees. Sign with it and the publisher uses one
+// identity while the relay serves whatever the resolver selects — which is the
+// mismatch the contract exists to prevent — unless PORTAL_STORE or "store" is
+// set to agree. It also returns before keliverStoreDir, so it bypasses the
+// split refusal (exit 3). Strictly better than the silent ~/.keliver-portal
+// fallback it replaced, but it is an override, so it says so. The warning is a
+// WARNING: it reports that the build's identity may differ from the relay's, it
+// does not check that they agree, and nothing here can make it proof that they
+// do.
 ext.keliverPortalStore = { org.gradle.api.Project p ->
+  def memo = rootProject.ext.keliverStoreMemo
   def override = p.findProperty('keliver.portalStore')
-  if (!override) return keliverStoreDir(p.rootProject.projectDir)
-  // quiet(), not lifecycle(): -q hides lifecycle, and -q is exactly how
-  // keliver-device-host-hygiene-check.sh and build-portal-tools.sh invoke
-  // Gradle — so the one scripted path that uses this override would never have
-  // shown the warning.
-  p.logger.quiet("keliver: -Pkeliver.portalStore=${override} is in use, so this build signs " +
-    'and embeds from that store. The RELAY will not use it unless PORTAL_STORE or "store" in ' +
-    'keliver.portal.json names it too — otherwise the bundle is signed by one identity and ' +
-    'verified against another.')
-  new java.io.File(override.toString())
+  if (override) {
+    // quiet(), not lifecycle(): -q hides lifecycle, and -q is how
+    // keliver-device-host-hygiene-check.sh — the ONLY scripted caller that
+    // passes this property; build-portal-tools.sh passes devOnlyHost only —
+    // invokes Gradle, so the warning was never shown there. Surviving -q is
+    // not the same as being read: that script redirected the build log and
+    // only looked at it on failure, so it now greps for this line and asserts
+    // it. Printed once per build, not once per lazy query.
+    synchronized (memo) {
+      if (!memo.containsKey('warned')) {
+        memo.put('warned', true)
+        p.logger.quiet("keliver: -Pkeliver.portalStore=${override} is in use, so this build signs " +
+          'and embeds from that store. The RELAY will not use it unless PORTAL_STORE or "store" in ' +
+          'keliver.portal.json names it too — otherwise the bundle is signed by one identity and ' +
+          'verified against another. This is a warning, not a check: nothing here verifies that ' +
+          'the relay agrees.')
+      }
+    }
+    return new java.io.File(override.toString())
+  }
+  def answer
+  synchronized (memo) {
+    if (!memo.containsKey('store')) {
+      try {
+        memo.put('store', keliverStoreDir(p.rootProject.projectDir))
+      } catch (Throwable t) {
+        memo.put('store', t)
+      }
+    }
+    answer = memo.get('store')
+  }
+  if (answer instanceof Throwable) throw answer
+  return answer
+}
+
+// The lazy form every consumer should use: nothing resolves until the returned
+// provider is queried, which happens when the task that needs the key is run.
+ext.keliverPortalStoreProvider = { org.gradle.api.Project p ->
+  p.providers.provider { keliverPortalStore(p) }
 }
 
 ext.keliverStoreDir = { java.io.File repoDir ->

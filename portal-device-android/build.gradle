@@ -39,9 +39,15 @@ def devOnlyHost = keliverBooleanProperty('keliver.devOnlyHost')
 // not the invoking shell's, so an env var cannot be relied on to reach this
 // code. The hygiene check needs a deterministic input; production resolution is
 // unchanged when the property is absent.
-def portalStoreDir = keliverPortalStore(project)
-def portalPubKey = new File(portalStoreDir, 'keys/ed25519.pub')
-def embedPortalKey = !devOnlyHost && portalPubKey.exists()
+//
+// PROVIDERS, not values: resolving here evaluated the store while this file was
+// being read, which made every task in the build — including :portal-relay:test
+// — depend on an identity they never use. Nothing below queries these until
+// syncPortalKey runs.
+def portalPubKey = providers.provider { new File(keliverPortalStore(project), 'keys/ed25519.pub') }
+// && short-circuits, so the DEVELOPMENT-ONLY host never asks for a store at
+// all: it embeds no key, so there is no identity for it to consult.
+def embedPortalKey = providers.provider { !devOnlyHost && portalPubKey.get().exists() }
 
 android {
   namespace 'dev.keliver.portaldevice.host'
@@ -91,14 +97,22 @@ android {
 // directory match the inputs exactly, which for the dev-only host means empty.
 tasks.register('syncPortalKey', Sync) {
   into "$buildDir/portalKeys"
-  if (embedPortalKey) {
-    from(portalPubKey) { rename { 'portal_ed25519.pub' } }
+  // from(Provider): the source is resolved when this task runs, so an
+  // unanswerable resolver fails THIS task — the one that embeds an identity —
+  // and not the rest of the build.
+  from(providers.provider { embedPortalKey.get() ? [portalPubKey.get()] : [] }) {
+    rename { 'portal_ed25519.pub' }
   }
   doFirst {
-    logger.lifecycle(embedPortalKey
-      ? "portal-device-android: embedding portal key from ${portalPubKey}"
-      : "portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded" +
-        (devOnlyHost ? " (keliver.devOnlyHost=true)" : " (no key at ${portalPubKey})"))
+    if (embedPortalKey.get()) {
+      logger.lifecycle("portal-device-android: embedding portal key from ${portalPubKey.get()}")
+    } else if (devOnlyHost) {
+      logger.lifecycle('portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded ' +
+        '(keliver.devOnlyHost=true)')
+    } else {
+      logger.lifecycle("portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded " +
+        "(no key at ${portalPubKey.get()})")
+    }
   }
 }
 preBuild.dependsOn syncPortalKey

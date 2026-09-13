@@ -773,12 +773,30 @@ else
 fi
 grep -q "COULD NOT BE RESTORED" "$DISP/c12.log" && ok "C12 the partial state is reported as partial" \
                                                 || bad "C12 the failure was not reported as a partial state"
-# Anchored on the script's OWN success marker rather than on a list of phrases
-# it might use to claim success. The list had already been widened twice; the
-# shape was the problem, not the words.
+# TWO different untruths are possible here, and one assertion cannot catch both.
+# The first is reporting SUCCESS. The second is admitting failure and STILL
+# telling the operator the store was left alone — which is the case this block
+# exists for, and which anchoring on the success marker alone does not detect:
+# MEASURED against a stub that exits non-zero, prints the partial banner, and
+# then prints "the store was left unchanged", the marker check passed it.
+#
+# The success-marker check is also nearly redundant with the exit status above
+# it (the only non-dry-run ✓ is the line immediately before `exit 0`), so it is
+# kept as a cheap second guard and NOT as the coverage for this property.
 grep -q "^✓" "$DISP/c12.log" \
-  && { bad "C12 it claimed nothing changed while the state is partial"; grep -in "unchanged\|was not modified" "$DISP/c12.log" | sed 's/^/        /'; } \
-  || ok "C12 it does not claim the store is unchanged"
+  && { bad "C12 it printed a success marker for a failed restoration"; \
+       grep -n "^✓" "$DISP/c12.log" | sed 's/^/        /'; } \
+  || ok "C12 no success marker for a failed restoration"
+# Scoped to the text AFTER the failure banner: the SUCCESS path legitimately
+# prints "<old store> was not modified.", and matching that would have forced
+# the phrase list to be narrowed instead of the region.
+c12_after_banner() { sed -n '/COULD NOT BE RESTORED/,$p' "$DISP/c12.log"; }
+if c12_after_banner | grep -qi "unchanged\|was not modified\|nothing was changed"; then
+  bad "C12 it claimed nothing changed while the state is partial"
+  c12_after_banner | grep -in "unchanged\|was not modified\|nothing was changed" | sed 's/^/        /'
+else
+  ok "C12 it does not claim the store is unchanged"
+fi
 BK="$(ls -d "$A12/.gradle"/keliver-store-recover.backup.* 2>/dev/null | head -1)"
 if [ -n "$BK" ] && [ -f "$BK/owner" ] && [ -f "$BK/pointer.existed" ]; then
   ok "C12 the material needed to restore by hand was kept"
@@ -1079,26 +1097,65 @@ unset KELIVER_RELAY_FAIL_POINTER
   && ok "C16c a later failed start left the existing identity alone" \
   || bad "C16c the rollback removed a store it did not create"
 
-# (c) the resolver failing must fail the BUILD, not pick the global store.
+# (c) a resolver that cannot answer must stop the work that NEEDS an identity,
+# and must stop nothing else. Both halves matter: failing closed was right, but
+# resolution used to happen while every project was being evaluated, so an
+# unanswerable resolver failed :portal-relay:test and apiCheck too — tasks with
+# no signing identity anywhere in them. This block asserts both halves against
+# the same broken resolver, so neither can be satisfied by giving up the other.
 NOPY="$DISP/nopy"; mkdir -p "$NOPY"; printf '#!/bin/sh\nexit 127\n' > "$NOPY/python3"; chmod +x "$NOPY/python3"
+mkdir -p "$DISP/c16-store"
+
+# Half one: work that needs no identity is unaffected. No override is passed —
+# using one here would prove nothing, since it is the resolver we are breaking.
 ( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q :portal-relay:compileKotlin ) \
+  > "$DISP/c16-unrelated.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d a task that needs no identity still builds with a broken resolver"
+else
+  bad "C16d a broken resolver still fails a task that needs no identity"
+  tail -12 "$DISP/c16-unrelated.log" | sed 's/^/        /'
+fi
+
+# Half two: the task that embeds this app's identity refuses. syncPortalKey is
+# the Android host's key-embedding step; it is the narrowest task in the build
+# whose output IS an identity.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q :portal-device-android:syncPortalKey ) \
   > "$DISP/c16-gradle.log" 2>&1
 if [ $? = 0 ]; then
-  bad "C16d a build with a broken store resolver succeeded"
+  bad "C16d the key-embedding task succeeded with a broken store resolver"
 else
-  ok "C16d a build with a broken store resolver fails"
+  ok "C16d the key-embedding task refuses when the store cannot be resolved"
 fi
 grep -q "could not resolve this app's portal store" "$DISP/c16-gradle.log" \
   && ok "C16d and says which resolver and why" || bad "C16d the failure is not the store resolver's"
-# The real guarantee here is the NON-ZERO EXIT asserted just above: a fallback,
-# by definition, lets configuration succeed. Two earlier shapes of this
-# assertion were unsound — `grep "falling back"` matched a phrase the build no
-# longer emits, so it could only ever pass; and grepping for the legacy path
-# flagged the REFUSAL, which names ~/.keliver-portal precisely to say it will
-# not use it. What is left is a live string whose disappearance would mean the
-# refusal had stopped being explicit.
+
+# Half two, control: the SAME task under the SAME broken PATH succeeds once it
+# is told which store to use. Without this, the refusal above is equally
+# consistent with a task that simply always fails, and the suite could not tell
+# the difference.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+    -Pkeliver.portalStore="$DISP/c16-store" :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-override.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d the same task succeeds when given a store, so the refusal is the resolver's"
+else
+  bad "C16d the key-embedding task fails even when given a store"
+  tail -12 "$DISP/c16-override.log" | sed 's/^/        /'
+fi
+grep -q "is in use, so this build signs" "$DISP/c16-override.log" \
+  && ok "C16d and the build-only override announces itself even under -q" \
+  || { bad "C16d the build-only override was used without saying so"; \
+       tail -4 "$DISP/c16-override.log" | sed 's/^/        /'; }
+
+# A WORDING guard, and only that. The behavioural guarantee is the non-zero exit
+# asserted above — a fallback, by definition, lets the build succeed. This grep
+# and the one two assertions up both read the same GradleException literal, so
+# they pass and fail together; it is here to notice if the refusal ever stops
+# saying out loud that it will not borrow another identity, not as independent
+# evidence that it does not.
 grep -q "Refusing to fall back to" "$DISP/c16-gradle.log" \
-  && ok "C16d the refusal is explicit that no fallback identity is used" \
+  && ok "C16d the refusal still says in words that no fallback identity is used" \
   || { bad "C16d the refusal no longer rules out a fallback identity"; \
        tail -4 "$DISP/c16-gradle.log" | sed 's/^/        /'; }
 

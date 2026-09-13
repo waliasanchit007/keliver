@@ -411,14 +411,21 @@ an active relay.
 
 No migration step is required, and nothing rewrites an existing store.
 
-**A split blocks Gradle too, not only the relay.** `build.gradle`'s
-`keliverStoreDir` is called during configuration by `portal-published-guest`,
-`portal-device-android` and `portal-device-ios`, and it fails the build on the
-resolver's exit 3. So an app in the split state cannot run *any* Gradle task
-until `keliver-store-recover.sh --store` has chosen a store. That is deliberate
-— the alternative is signing a guest bundle with whatever identity the legacy
-global store happens to hold — but it is broader than "the portal will not
-start".
+**A split blocks the Gradle work that needs an identity.** `build.gradle`'s
+`keliverStoreDir` is reached from `portal-published-guest`,
+`portal-device-android` and `portal-device-ios`, and it fails on the resolver's
+exit 3 — so an app in the split state cannot compile a signed guest bundle or
+embed a host key until `keliver-store-recover.sh --store` has chosen a store.
+That is deliberate: the alternative is signing a guest bundle with whatever
+identity the legacy global store happens to hold.
+
+It stops there. Each consumer queries the resolver through a `Provider` owned by
+the task that consumes the identity, so a split — or a resolver that cannot run
+at all — does not fail `:portal-relay:test`, `apiCheck`, or anything else with
+no identity in it. The development-only Android host short-circuits before the
+provider is queried, so it never consults a store. This was not always true: the
+three consumers resolved during project evaluation, which failed every task in
+the build, and that is recorded in `KNOWN_BUGS.md` under U25.4.
 
 ## 6. What this does not change
 
@@ -430,4 +437,5 @@ start".
 * The `"store"` escape hatch, `PORTAL_STORE`, or the legacy-store adoption
   route (`keliver-adopt-legacy-store.sh`), which copies and is unrelated.
 * U25.2 (`HostTrustPolicy.HEX` length), U25.3 (`devOnlyHost` parsing) and U25.4
-  (`keliverStoreDir` warn-and-fall-back) stay open. They are not store identity.
+  (`keliverStoreDir` warn-and-fall-back) were open when this contract was first
+  written and are now fixed; see `KNOWN_BUGS.md`.
