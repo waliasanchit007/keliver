@@ -30,7 +30,7 @@ ZIP="$(cd "$(dirname "$ZIP")" && pwd -P)/$(basename "$ZIP")"   # the script cd's
 
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$PARENT" acceptance)" || exit 1
+DISP="$(keliver_make_run_dir "$PARENT" acceptance)" || exit $?
 mkdir -p "$DISP/home" "$DISP/pkg" "$DISP/work"
 echo "run dir: $DISP"
 

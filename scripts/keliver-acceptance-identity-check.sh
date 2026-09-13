@@ -26,7 +26,7 @@ ZIP="$(cd "$(dirname "$ZIP")" && pwd -P)/$(basename "$ZIP")"
 
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$PARENT" identity)" || exit 1
+DISP="$(keliver_make_run_dir "$PARENT" identity)" || exit $?
 echo "run dir: $DISP"
 
 pass=0; fail=0

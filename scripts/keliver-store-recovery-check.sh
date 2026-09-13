@@ -39,7 +39,7 @@ fi
 export JAVA_HOME
 
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$DISP_PARENT" store-recovery)" || exit 1
+DISP="$(keliver_make_run_dir "$DISP_PARENT" store-recovery)" || exit $?
 mkdir -p "$DISP/home"
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"

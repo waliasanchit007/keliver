@@ -1563,6 +1563,45 @@ none is a security hole.
    here. A `ValueSource` is the correct home for the resolver subprocess and
    would give per-build memoisation for free. Not done in this block.
 
+### The disposable-parent refusal — FIXED, UNRELEASED
+
+Nine checks (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
+`keliver-guest-signing-check.sh` and six more) mint throwaway stores, public keys
+and signing keys beneath a parent directory the caller names. A mistyped argument
+is a key written into the developer's real store.
+
+`keliver_make_run_dir` now refuses a parent inside the real portal store — under
+the shell's `HOME` *and* the JVM's `user.home`, which differ on macOS — the
+Gradle home, `$PORTAL_STORE`, or the home directory itself.
+
+**It failed open three times before it worked**, each time found by an
+independent review, each time by comparing strings:
+
+1. `cd "$(dirname "$1")" && pwd -P` produced an empty string when the parent's
+   parent did not exist, matched nothing, and let the run proceed. Measured: an
+   `ed25519.priv` written inside a `.keliver-portal` tree.
+2. macOS filesystems are case-insensitive by default, so `~/.KELIVER-PORTAL` is
+   the same device and inode as `~/.keliver-portal` while every case-sensitive
+   pattern missed it. Measured: the same outcome again.
+3. A `..` segment past a component that did not exist yet survived into the path
+   `mkdir -p` later created, and the kernel resolved it elsewhere. Measured: a
+   run directory created *inside* the store.
+
+It now compares **device+inode** for every existing ancestor; refuses `..`
+outright; refuses a dangling symlink; and re-runs the whole check on the
+canonical path *after* `mkdir -p` and `cd`, which is the only placement that
+cannot be out-spelled. The `stat` flavour is probed rather than assumed — the
+BSD-first order would have made the identity comparison **inert on Linux**, where
+`-f` means `--file-system` — and a `stat` that cannot report device+inode makes
+the guard refuse rather than silently fall back to matching names.
+
+`scripts/keliver-refusal-check.sh` is the regression suite: 25 assertions over
+the spellings, the environment shapes, the legitimate parents that must still
+work, and the end state after `keliver_make_run_dir`. Run against the previous
+commit it reports 5 failures, including the run directory inside the store. It
+runs in the portable CI checks, which is also where the GNU-`stat` path is
+exercised — macOS cannot.
+
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 
 Found while building the U23/U24 regressions, in tooling that shipped in

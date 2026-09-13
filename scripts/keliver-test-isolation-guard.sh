@@ -105,8 +105,13 @@ keliver_require_isolated_store() {
 # into. Every one of them mints throwaway identities — stores, public keys,
 # signing keys — beneath the parent it is handed, so a mistyped argument is a
 # key written into the developer's real store. This lives here rather than in
-# any one script because there are six callers, and the last time a rule like
-# this had one copy per caller the copies drifted.
+# any one script because there are NINE callers (six of which CI runs), and the
+# last time a rule like this had one copy per caller the copies drifted.
+#
+# scripts/keliver-refusal-check.sh is its regression suite. It exists because
+# this refusal failed open in three consecutive reviewed commits — on a
+# non-existent ancestor, on a case-variant path, and on a .. segment — and every
+# one of those was reachable by a ten-line harness that had not been written.
 #
 # BY IDENTITY, NOT BY NAME. The first version of this compared resolved path
 # strings. On macOS the default filesystem is case-INSENSITIVE, so
@@ -118,12 +123,49 @@ keliver_require_isolated_store() {
 # any other spelling of the same directory. The name patterns remain only as a
 # fallback for a path whose components do not exist yet, where there is no inode
 # to compare.
+# Same DIRECTORY, by device+inode. Comparing resolved path strings was wrong
+# twice: on macOS the default filesystem is case-INSENSITIVE, so
+# ~/.KELIVER-PORTAL is the very same directory as ~/.keliver-portal — same
+# device, same inode — and every case-sensitive pattern missed it.
+#
+# The stat flavour is PROBED, not assumed. `stat -f FMT` is the BSD/macOS
+# spelling; on GNU coreutils -f is --file-system and takes no operand, so the
+# BSD-first order silently produced garbage that never compared equal — the
+# identity check would have been inert on the Linux runner, which is where CI
+# runs. BSD stat rejects -c outright, so probing GNU first disambiguates. A stat
+# that answers neither way makes this function REFUSE to guess; see
+# keliver_refuse_protected_parent, which then refuses to run at all rather than
+# degrade to name matching.
+KELIVER_STAT_FMT=""
+keliver_stat_id() {
+  local id fmt
+  if [ -z "$KELIVER_STAT_FMT" ]; then
+    for fmt in -c -f; do
+      id="$(stat "$fmt" '%d:%i' / 2>/dev/null)"
+      case "$id" in
+        *[!0-9:]*|'') ;;
+        *:*) KELIVER_STAT_FMT="$fmt"; break;;
+      esac
+    done
+    [ -n "$KELIVER_STAT_FMT" ] || KELIVER_STAT_FMT="none"
+  fi
+  [ "$KELIVER_STAT_FMT" = "none" ] && return 1
+  id="$(stat "$KELIVER_STAT_FMT" '%d:%i' "$1" 2>/dev/null)" || return 1
+  case "$id" in
+    *[!0-9:]*|'') return 1;;
+    *:*) printf '%s' "$id"; return 0;;
+  esac
+  return 1
+}
+
+keliver_stat_usable() { KELIVER_STAT_FMT=""; keliver_stat_id / >/dev/null; }
+
 keliver_same_dir() {
   [ -d "$1" ] && [ -d "$2" ] || return 1
   local a b
-  a="$(stat -f '%d:%i' "$1" 2>/dev/null || stat -c '%d:%i' "$1" 2>/dev/null)" || return 1
-  b="$(stat -f '%d:%i' "$2" 2>/dev/null || stat -c '%d:%i' "$2" 2>/dev/null)" || return 1
-  [ -n "$a" ] && [ "$a" = "$b" ]
+  a="$(keliver_stat_id "$1")" || return 1
+  b="$(keliver_stat_id "$2")" || return 1
+  [ "$a" = "$b" ]
 }
 
 # The absolute path, with the deepest EXISTING ancestor resolved and the
@@ -133,16 +175,18 @@ keliver_abs_of() {
   local p rest cur resolved
   case "$1" in /*) p="$1";; *) p="$PWD/$1";; esac
   rest=""; cur="$p"
-  while [ ! -d "$cur" ] && [ "$cur" != "/" ] && [ "$cur" != "." ] && [ -n "$cur" ]; do
+  while [ ! -d "$cur" ] && [ "$cur" != "/" ] && [ -n "$cur" ]; do
     rest="/$(basename "$cur")$rest"
     cur="$(dirname "$cur")"
+    case "$cur" in /*) ;; *) return 1;; esac
   done
-  if [ -d "$cur" ]; then
-    resolved="$(cd "$cur" 2>/dev/null && pwd -P)" || return 1
-    [ -n "$resolved" ] || return 1
-    printf '%s%s\n' "${resolved%/}" "$rest"
+  [ -d "$cur" ] || { printf '%s\n' "$p"; return 0; }
+  resolved="$(cd "$cur" 2>/dev/null && pwd -P)" || return 1
+  [ -n "$resolved" ] || return 1
+  if [ "$resolved" = "/" ]; then
+    printf '%s\n' "${rest:-/}"
   else
-    printf '%s\n' "$p"
+    printf '%s%s\n' "$resolved" "$rest"
   fi
 }
 
@@ -150,19 +194,46 @@ keliver_abs_of() {
 # shell's HOME or the JVM's user.home — which differ on macOS, where user.home
 # comes from the passwd entry and ignores HOME — an explicit PORTAL_STORE, and
 # the Gradle home.
+#
+# keliver_effective_jvm_home SPAWNS A JVM, and this is consulted once per
+# ancestor level, so it is resolved once per shell. If java cannot be run the
+# JVM-home roots are simply not added; the $HOME ones still are, and those are
+# the same path except where user.home and HOME disagree. Stated because a
+# silently smaller protected set should not be a surprise.
+KELIVER_JVM_HOME_MEMO=""
 keliver_protected_roots() {
-  local h jh
-  for h in "${HOME:-}" "$(keliver_effective_jvm_home 2>/dev/null)"; do
-    h="${h%/}"
-    [ -n "$h" ] || continue
+  local h abs
+  if [ -z "$KELIVER_JVM_HOME_MEMO" ]; then
+    KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
+    [ -n "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="-"
+  fi
+  for h in "${HOME:-}" "$KELIVER_JVM_HOME_MEMO"; do
+    [ -n "$h" ] && [ "$h" != "-" ] || continue
+    # HOME=/ must still protect /.keliver-portal: stripping the slash left an
+    # empty prefix, which was then skipped entirely.
+    [ "$h" = "/" ] || h="${h%/}"
+    [ "$h" = "/" ] && h=""
     printf '%s\n%s\n' "$h/.keliver-portal" "$h/.gradle"
   done
-  [ -n "${PORTAL_STORE:-}" ] && printf '%s\n' "${PORTAL_STORE%/}"
+  # PORTAL_STORE is a caller's environment, so it may be relative — and a
+  # relative one used verbatim made the CURRENT DIRECTORY a protected root,
+  # refusing legitimate parents.
+  if [ -n "${PORTAL_STORE:-}" ]; then
+    abs="$(keliver_abs_of "$PORTAL_STORE" 2>/dev/null)" || abs=""
+    [ -n "$abs" ] && [ "$abs" != "/" ] && printf '%s\n' "${abs%/}"
+  fi
   return 0
 }
 
 keliver_refuse_protected_parent() {
-  local given="$1" abs cur root matched=""
+  local given="$1" abs cur root matched="" roots
+  # A guard that cannot establish identity must not quietly fall back to
+  # matching names.
+  keliver_stat_usable || {
+    echo "keliver: stat cannot report device+inode here, so this check cannot prove its" >&2
+    echo "  run directory is outside the real portal store. Refusing." >&2
+    return 2
+  }
   # No HOME means the paths that must be protected cannot even be named.
   [ -n "${HOME:-}" ] || {
     echo "keliver: HOME is not set, so this check cannot tell whether it was pointed at" >&2
@@ -172,13 +243,30 @@ keliver_refuse_protected_parent() {
   # An unexpanded literal ~ is a quoting mistake; acting on it creates a
   # directory called "~" in the caller's cwd.
   case "$given" in '~'|'~'/*)
-    echo "keliver: refusing '$given' — ~ was not expanded (single quotes?)" >&2; return 2;;
+    echo "keliver: refusing '''$given''' — ~ was not expanded (single quotes?)" >&2; return 2;;
   esac
   abs="$(keliver_abs_of "$given")" || {
-    echo "keliver: refusing '$given' — its path could not be resolved, so it cannot be" >&2
+    echo "keliver: refusing '''$given''' — its path could not be resolved, so it cannot be" >&2
     echo "  shown to be outside the real store." >&2
     return 2
   }
+  # A .. segment past a component that does not exist yet survives into the
+  # path mkdir -p later creates, and the kernel resolves it somewhere else
+  # entirely: MEASURED, <home>/nope/../.keliver-portal was allowed here and then
+  # created a run directory INSIDE the store. Nothing legitimate needs .., so it
+  # is refused rather than normalised.
+  case "/$abs/" in *"/../"*)
+    echo "keliver: refusing '''$given''' — it contains a .. segment that cannot be resolved" >&2
+    echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
+    return 2;;
+  esac
+  # A dangling symlink passes every check below and then fails in mkdir with a
+  # diagnostic about the wrong thing.
+  if [ -L "$given" ] && [ ! -e "$given" ]; then
+    echo "keliver: refusing '''$given''' — it is a symlink pointing at nothing." >&2
+    return 2
+  fi
+  roots="$(keliver_protected_roots)"
   # By identity: every existing ancestor, against every protected root.
   cur="$abs"
   while : ; do
@@ -186,11 +274,12 @@ keliver_refuse_protected_parent() {
       [ -n "$root" ] || continue
       if keliver_same_dir "$cur" "$root"; then matched="$root"; break; fi
     done <<EOF
-$(keliver_protected_roots)
+$roots
 EOF
     [ -n "$matched" ] && break
     [ "$cur" = "/" ] && break
     cur="$(dirname "$cur")"
+    case "$cur" in /*) ;; *) break;; esac
   done
   if [ -n "$matched" ]; then
     echo "keliver: refusing to run under $matched — these checks mint throwaway keys" >&2
@@ -208,15 +297,16 @@ EOF
       return 2;;
     esac
   done <<EOF
-$(keliver_protected_roots)
+$roots
 EOF
   # The home directory itself is not a disposable parent.
-  if keliver_same_dir "$abs" "${HOME%/}"; then
+  if [ -n "${HOME:-}" ] && keliver_same_dir "$abs" "$HOME"; then
     echo "keliver: refusing to use your home directory as a disposable run parent" >&2
     return 2
   fi
   return 0
 }
+
 
 # Usage:  RUN="$(keliver_make_run_dir "$PARENT" acceptance)"
 keliver_make_run_dir() {
@@ -228,6 +318,12 @@ keliver_make_run_dir() {
   keliver_refuse_protected_parent "$parent" || return 2
   mkdir -p "$parent" || return 1
   parent="$(cd "$parent" && pwd -P)" || return 1
+  # AGAIN, on the path the kernel actually resolved. The first call runs on a
+  # path that may not exist yet, so it reasons about spellings; this one runs on
+  # the real directory, after mkdir -p and after every symlink and .. has been
+  # resolved by cd. It is the only placement that cannot be out-spelled, and it
+  # is cheap — the stat flavour and the JVM home are both already memoised.
+  keliver_refuse_protected_parent "$parent" || return 2
   local dir
   dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")" || return 1
   printf '%s' "$dir"

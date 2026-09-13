@@ -31,7 +31,7 @@ done
 [ -x "$RELAY" ] || { echo "no relay at $RELAY (./gradlew :portal-relay:installDist)" >&2; exit 2; }
 
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$DISP_PARENT" store-identity)" || exit 1
+DISP="$(keliver_make_run_dir "$DISP_PARENT" store-identity)" || exit $?
 mkdir -p "$DISP/home"
 # Deliberately NOT `export HOME`. The store expands "~/" through the JVM's
 # user.home, which macOS takes from the passwd entry and not from $HOME, so

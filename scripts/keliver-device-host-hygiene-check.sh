@@ -26,7 +26,7 @@ PARENT="${1:?usage: $0 <parent-dir>}"
 
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$PARENT" devhost)" || exit 1
+DISP="$(keliver_make_run_dir "$PARENT" devhost)" || exit $?
 echo "run dir: $DISP"
 
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null || true)}"
