@@ -22,7 +22,11 @@
 ext.keliverPortalStore = { org.gradle.api.Project p ->
   def override = p.findProperty('keliver.portalStore')
   if (!override) return keliverStoreDir(p.rootProject.projectDir)
-  p.logger.lifecycle("keliver: -Pkeliver.portalStore=${override} is in use, so this build signs " +
+  // quiet(), not lifecycle(): -q hides lifecycle, and -q is exactly how
+  // keliver-device-host-hygiene-check.sh and build-portal-tools.sh invoke
+  // Gradle — so the one scripted path that uses this override would never have
+  // shown the warning.
+  p.logger.quiet("keliver: -Pkeliver.portalStore=${override} is in use, so this build signs " +
     'and embeds from that store. The RELAY will not use it unless PORTAL_STORE or "store" in ' +
     'keliver.portal.json names it too — otherwise the bundle is signed by one identity and ' +
     'verified against another.')

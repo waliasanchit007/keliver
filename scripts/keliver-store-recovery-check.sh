@@ -13,6 +13,10 @@
 #       nothing — not the store, not its own
 #   C5  the packaged keliver-portal launcher starts the recovered app
 #
+# The suite BUILDS the relay it stages (:portal-relay:installDist) before each
+# run, so it can never report results for a binary that is not the source under
+# test. A relay left in build/install by hand is overwritten.
+#
 # The commands under test run from a bundle-shaped staging directory
 # (bin/ + relay/, assembled exactly as scripts/build-portal-tools.sh does) so
 # that the paths inside them are the bundle's, not the repository's.
@@ -488,7 +492,7 @@ if PORTAL_STORE="$S7G" "$RECOVER" "$A7D" --home "$DISP/home" > "$DISP/c7d.log" 2
 else
   ok "C7d recovery refused rather than let PORTAL_STORE decide"
 fi
-grep -qi "PORTAL_STORE" "$DISP/c7d.log" && ok "C7d the override was reported, not silently applied" \
+grep -q "PORTAL_STORE is set" "$DISP/c7d.log" && ok "C7d the override was reported, not silently applied" \
                                         || bad "C7d PORTAL_STORE was neither reported nor refused"
 
 # --- C8: the same-owner split ------------------------------------------------
@@ -769,13 +773,16 @@ else
 fi
 grep -q "COULD NOT BE RESTORED" "$DISP/c12.log" && ok "C12 the partial state is reported as partial" \
                                                 || bad "C12 the failure was not reported as a partial state"
-grep -qi "unchanged\|was not modified\|Nothing was changed" "$DISP/c12.log" \
+# Anchored on the script's OWN success marker rather than on a list of phrases
+# it might use to claim success. The list had already been widened twice; the
+# shape was the problem, not the words.
+grep -q "^✓" "$DISP/c12.log" \
   && { bad "C12 it claimed nothing changed while the state is partial"; grep -in "unchanged\|was not modified" "$DISP/c12.log" | sed 's/^/        /'; } \
   || ok "C12 it does not claim the store is unchanged"
 BK="$(ls -d "$A12/.gradle"/keliver-store-recover.backup.* 2>/dev/null | head -1)"
 if [ -n "$BK" ] && [ -f "$BK/owner" ] && [ -f "$BK/pointer.existed" ]; then
   ok "C12 the material needed to restore by hand was kept"
-  grep -q "$BK" "$DISP/c12.log" && ok "C12 and the report names it" || bad "C12 the report does not name the backup"
+  grep -qF "$BK" "$DISP/c12.log" && ok "C12 and the report names it" || bad "C12 the report does not name the backup"
 else
   bad "C12 the backup was deleted after a failed restoration"
 fi
@@ -1083,8 +1090,17 @@ else
 fi
 grep -q "could not resolve this app's portal store" "$DISP/c16-gradle.log" \
   && ok "C16d and says which resolver and why" || bad "C16d the failure is not the store resolver's"
-grep -qi "falling back" "$DISP/c16-gradle.log" \
-  && bad "C16d it still mentions falling back" || ok "C16d no fallback identity is offered"
+# The real guarantee here is the NON-ZERO EXIT asserted just above: a fallback,
+# by definition, lets configuration succeed. Two earlier shapes of this
+# assertion were unsound — `grep "falling back"` matched a phrase the build no
+# longer emits, so it could only ever pass; and grepping for the legacy path
+# flagged the REFUSAL, which names ~/.keliver-portal precisely to say it will
+# not use it. What is left is a live string whose disappearance would mean the
+# refusal had stopped being explicit.
+grep -q "Refusing to fall back to" "$DISP/c16-gradle.log" \
+  && ok "C16d the refusal is explicit that no fallback identity is used" \
+  || { bad "C16d the refusal no longer rules out a fallback identity"; \
+       tail -4 "$DISP/c16-gradle.log" | sed 's/^/        /'; }
 
 # (d) the recovery CLI, without touching the filesystem.
 CLI_PROBE="$DISP/apps/c16-cli"; mkdir -p "$CLI_PROBE"
