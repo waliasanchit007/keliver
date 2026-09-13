@@ -185,6 +185,27 @@ takes a directory; the adopter guide said you could re-run recovery naming the
 other store, which the code refuses; and `{"store": ""}` resolved to the app's
 own source tree in Kotlin while the shell mirror fell through to the default.
 
+## Linux CI
+
+[`linux-ci.log`](linux-ci.log) — run
+[34741427256](https://github.com/waliasanchit007/keliver/actions/runs/34741427256),
+`workflow_dispatch` on `b26a42f4697e148297356202ec6ec2ed948bf1a1`,
+ubuntu-latest, **SUCCESS**. The `device` job is skipped; this is the build-only
+path. The workflow prints its own checkout — `building commit:
+b26a42f469…` — and `VERSION.json` records the same commit, so the bytes are
+attributable to the commit that was dispatched.
+
+The interruption cases are the ones that had never run on Linux, and they did:
+`SIGINT` under `set -m` is delivered there (C11c), each boundary is twenty
+seconds apart in the timestamps, and C13's boundary assertion — the relay's own
+lock-wait announcement — passes. A signal that was never delivered would have
+failed the case rather than passing it vacuously.
+
+**The recovery check's total is 81 or 82 depending on which branch of the C9
+race wins**, and both are correct: the loser can be refused by the LOCK or, if
+it won the lock, by PRECEDENCE, and each branch asserts its own invariant. Do
+not treat either number as a tripwire.
+
 ## What was not touched
 
 Every run has its own `user.home`, its own stores and its own throwaway signing
