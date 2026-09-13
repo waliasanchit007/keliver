@@ -7,12 +7,13 @@
 #
 # WHY THIS EXISTS. portal-published-guest does not configure signing through the
 # `zipline { signingKeys { ... } }` extension; it writes the compile task's own
-# signingKeys ListProperty from afterEvaluate, because the store must not be
-# resolved while the build file is being read. Gradle runs a task's
-# configuration actions in the order they were added, so ANY later writer to
-# that property silently wins — and the symptom is not an error. It is a bundle
-# that ships UNSIGNED with a signing key sitting in the store. That happened
-# once during development and was caught by hand.
+# signingKeys ListProperty from a `configureEach` placed BELOW the `kotlin {}`
+# block, because the store must not be resolved while the build file is being
+# read. Gradle splices a task's registration action into the container's action
+# chain at the position register() was called, so the same statement moved above
+# that block is added earlier, loses to the plugin's own write, and the symptom
+# is not an error. It is a bundle that ships UNSIGNED with a signing key sitting
+# in the store. That happened once during development and was caught by hand.
 #
 # This turns "signed" into a gate. Both directions are asserted, so the check
 # cannot pass by never signing anything.
@@ -46,12 +47,56 @@ export JAVA_HOME
 # real store.
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-PARENT_REAL="$(cd "$(dirname "$DISP_PARENT")" 2>/dev/null && pwd -P)/$(basename "$DISP_PARENT")"
-case "$PARENT_REAL" in
-  "$HOME/.keliver-portal"|"$HOME/.keliver-portal"/*|"$HOME/.gradle"|"$HOME/.gradle"/*)
-    echo "refusing to run inside $PARENT_REAL: this script generates a signing key" >&2
-    exit 2;;
+
+# Canonicalise WITHOUT failing open. The first version of this did
+# `cd "$(dirname "$1")" && pwd -P` — which, when the parent's parent did not
+# exist, produced an empty string, matched nothing, and let the run proceed.
+# MEASURED: that wrote a disposable ed25519.priv inside a .keliver-portal tree,
+# the one outcome the refusal exists to prevent. It also never canonicalised the
+# FINAL component, so a symlink named like a scratch directory but pointing at a
+# store was allowed.
+#
+# Walk down to the deepest ancestor that exists, resolve THAT, and re-append the
+# rest. When the whole path exists this resolves every component, symlinked
+# final component included.
+keliver_abs_of() {
+  local p rest cur
+  case "$1" in /*) p="$1";; *) p="$PWD/$1";; esac
+  rest=""; cur="$p"
+  while [ ! -d "$cur" ] && [ "$cur" != "/" ] && [ "$cur" != "." ] && [ -n "$cur" ]; do
+    rest="/$(basename "$cur")$rest"
+    cur="$(dirname "$cur")"
+  done
+  if [ -d "$cur" ]; then printf '%s%s\n' "$(cd "$cur" && pwd -P)" "$rest"
+  else printf '%s\n' "$p"; fi
+}
+
+# No HOME means the two paths that must be protected cannot be named, so there
+# is no safe answer. Refuse rather than guess.
+[ -n "${HOME:-}" ] || {
+  echo "HOME is not set, so this script cannot tell whether it was pointed at the real" >&2
+  echo "portal store. It generates a signing key; refusing." >&2
+  exit 2
+}
+HOME_REAL="$(cd "$HOME" 2>/dev/null && pwd -P)" || HOME_REAL="$HOME"
+
+# A literal, unexpanded ~ is a quoting mistake, and acting on it would create a
+# directory called "~" in the caller's cwd.
+case "$DISP_PARENT" in
+  '~'|'~'/*) echo "refusing '$DISP_PARENT': ~ was not expanded (single quotes?)" >&2; exit 2;;
 esac
+# Both the LEXICAL path and the resolved one: either reaching a protected tree
+# is a refusal.
+for keliver_cand in "$(keliver_abs_of "$DISP_PARENT")" "$DISP_PARENT"; do
+  case "$keliver_cand" in
+    "$HOME_REAL"/.keliver-portal|"$HOME_REAL"/.keliver-portal/*|\
+    "$HOME_REAL"/.gradle|"$HOME_REAL"/.gradle/*|\
+    "$HOME"/.keliver-portal|"$HOME"/.keliver-portal/*|\
+    "$HOME"/.gradle|"$HOME"/.gradle/*)
+      echo "refusing to run under $keliver_cand: this script generates a signing key" >&2
+      exit 2;;
+  esac
+done
 DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit $?
 
 # Keep Gradle's project cache — task history, file hashes — inside the

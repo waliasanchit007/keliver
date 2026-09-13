@@ -1476,7 +1476,8 @@ none is a security hole.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
-     `ZiplineCompileTask.signingKeys` instead, from `afterEvaluate`.
+     `ZiplineCompileTask.signingKeys` instead, from a `configureEach` placed
+     below the `kotlin {}` block.
 
      **The ordering rule, at the fourth attempt.** The zipline plugin writes
      `signingKeys` from the compile task's **registration action**, and those
@@ -1498,18 +1499,28 @@ none is a security hole.
      wrapper is gone. Each was corrected only because an independent review
      measured the ordering instead of reading it.
 
-     `isEmpty()` realizes the collection first, so "the plugin registered no
-     compile task" fails the build rather than producing an unsigned bundle.
-     Still not covered: a `ZiplineCompileTask` registered *after* this statement
-     would keep the plugin's value, because ours would again be the earlier
-     action. Nothing registers one later today.
+     Not covered: a `ZiplineCompileTask` registered *after* this statement would
+     keep the plugin's value, because ours would again be the earlier action.
+     Nothing registers one later today.
+
+     A fifth attempt briefly added an `isEmpty()` guard, to fail closed if the
+     plugin ever registered no compile task. It is gone. `isEmpty()` **realizes**
+     the collection — measured, four Kotlin/JS + Zipline tasks realized during
+     configuration of *every* build, including `:portal-relay:test`, `apiCheck`
+     and IDE sync, which is the shape of cost this whole change exists to
+     remove — and it bought almost nothing, since no compile task means no
+     bundle and therefore nothing to ship unsigned. It also silently invalidated
+     the measurement below: with the guard present, moving the statement above
+     `kotlin {}` made configuration *abort*, so the "build still succeeds while
+     the gate fails" transcript could not have been produced by that code.
 
      It is still a shape that depends on where a statement sits, so it is
      **gated** rather than trusted. `scripts/keliver-guest-signing-check.sh`
      builds the guest bundle against a disposable store with a key and asserts
      the manifest is signed, and against one without and asserts it is not.
-     Measured: moving the statement back **above** the `kotlin {}` block makes
-     the check fail while the build still succeeds — which is exactly why this
+     Measured against the code as it now stands — `passed: 3 failed: 1`, the
+     build itself succeeding — moving the statement back **above** the
+     `kotlin {}` block makes the check fail silently, which is exactly why this
      needs a gate and not a comment. The gate builds the Development variant and
      runs in `portal-tools.yml`, which fires on `portal-tools-v*` tags and on
      `workflow_dispatch`: a release-time and on-demand gate, not a per-commit

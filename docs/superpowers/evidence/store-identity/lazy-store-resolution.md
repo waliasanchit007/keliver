@@ -118,16 +118,26 @@ same statement ABOVE kotlin {}  -> signatures: {}
 same statement BELOW kotlin {}  -> signatures: {"portal-ed25519": "…"}
 ```
 
-It now sits below, as a plain `configureEach`, with no `afterEvaluate` and no
-snapshot. `isEmpty()` realizes the collection first so that "the plugin
-registered no compile task" fails the build instead of producing an unsigned
-bundle. A task registered *after* that statement would still keep the plugin's
-value; nothing registers one later today.
+It now sits below, as a plain `configureEach`, with no `afterEvaluate`, no
+snapshot and no eager realization. A task registered *after* that statement
+would still keep the plugin's value; nothing registers one later today.
+
+**One more correction, because it invalidated the transcript below.** At
+`975b3e2c8` this statement was preceded by an `isEmpty()` guard that failed
+closed if the plugin registered no compile task. `isEmpty()` realizes the
+collection — measured, four Kotlin/JS + Zipline tasks realized during
+configuration of every build, `:portal-relay:test` and IDE sync included, which
+is the cost this change exists to remove. Worse, with that guard in place,
+moving the statement above `kotlin {}` made configuration *abort*, so the
+"build succeeds, gate fails" transcript below was **not** producible by the code
+it was committed beside: it was the earlier, pre-guard experiment carried
+forward. The guard is removed and the transcript re-measured against the code as
+it now stands.
 
 The shape depends on where a statement sits, so it is gated:
-`scripts/keliver-guest-signing-check.sh` asserts both directions, and moving the
-statement back above the `kotlin {}` block makes it fail while the build still
-succeeds:
+`scripts/keliver-guest-signing-check.sh` asserts both directions. Re-measured
+against the committed code, moving the statement back above the `kotlin {}`
+block makes the gate fail while the build itself still succeeds:
 
 ```
 --- a store WITH a signing key
@@ -164,6 +174,20 @@ old assertion: ok (regression MISSED)
 ```
 
 and against the real partial report it stays `ok`, so it is not a false positive.
+
+## Why the recovery suite's total differs by platform
+
+Three numbers appear for one suite and they are not in conflict:
+
+* **136** on macOS
+* **144 / 145** on Linux CI
+
+C15 sweeps the lock inspector over `auto`, `proc` and `ps`, 8 assertions each.
+macOS has no `/proc`, so the `proc` sweep is skipped there — exactly 8 fewer.
+The remaining ±1 is C9's deliberate two-branch race: whichever contender wins
+asserts a different thing, so the total legitimately varies by one between runs
+on the same platform. The suite's pass/fail result is the assertion, never the
+count; quoting the total as a fixed figure would be wrong.
 
 ## Suites
 

@@ -15,7 +15,6 @@ redwoodBuild {
   ziplineApplication('portal-published')
 }
 
-
 kotlin {
   js {
     outputModuleName = 'portal-published-guest'
@@ -43,7 +42,6 @@ kotlin {
     }
   }
 }
-
 
 // SIGNING IS WIRED BELOW `kotlin {}`, AND THE POSITION IS THE WHOLE POINT.
 //
@@ -84,21 +82,19 @@ kotlin {
 // move this statement, re-run scripts/keliver-guest-signing-check.sh before
 // believing it still works.
 //
-// FAIL CLOSED on there being nothing to wire: isEmpty() realizes the
-// collection, so "the plugin registered no compile task" becomes a build
-// failure rather than an unsigned bundle.
-//
 // NOT covered: a ZiplineCompileTask registered AFTER this statement would keep
 // the plugin's value, because ours would again be the earlier action. Nothing
-// registers one later today, and the check below is the backstop — though it
-// builds the Development variant only.
-def ziplineCompileTasks = tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask)
-if (ziplineCompileTasks.isEmpty()) {
-  throw new GradleException('keliver: the zipline plugin registered no compile task for ' +
-    'portal-published-guest, so there is nothing to attach this app\'s signing identity ' +
-    'to. Refusing to build a bundle that would silently ship unsigned.')
-}
-ziplineCompileTasks.configureEach {
+// registers one later today, and scripts/keliver-guest-signing-check.sh is the
+// backstop — though it builds the Development variant only.
+//
+// There was briefly an isEmpty() guard here, to fail closed if the plugin ever
+// registered no compile task at all. It is gone: isEmpty() REALIZES the
+// collection, which measurably realized four Kotlin/JS + Zipline tasks during
+// configuration of EVERY build — :portal-relay:test, apiCheck, IDE sync — which
+// is the shape of cost this whole change exists to remove. It also bought very
+// little: no compile task means no bundle, so there is nothing to ship
+// unsigned. configureEach is lazy and realizes nothing.
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
   signingKeys.set(providers.provider {
     def portalKey = new File(keliverPortalStore(project), 'keys/ed25519.priv')
     if (!portalKey.exists()) return []
