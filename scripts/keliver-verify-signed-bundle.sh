@@ -16,6 +16,14 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DISP="${1:?usage: $0 <disposable-root>}"
+# The TENTH script that mints a signing identity under a caller-supplied parent,
+# and the one that did not go through keliver_make_run_dir's refusal — it
+# mkdir -p's whatever it is handed. It still does not use a per-run directory
+# (its layout is fixed and its isolation guard checks the resolved store), but
+# the protected-tree refusal is not optional for something that generates a key.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+keliver_refuse_protected_parent "$DISP" || exit $?
 mkdir -p "$DISP"; DISP="$(cd "$DISP" && pwd -P)"
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 

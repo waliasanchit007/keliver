@@ -28,6 +28,13 @@ DISP_PARENT="${1:?usage: $0 <disposable-root>}"
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
 DISP="$(keliver_make_run_dir "$DISP_PARENT" refusal)" || exit $?
 
+# keliver_protected_roots spawns a JVM to read user.home. Resolving it once and
+# exporting it keeps every subshell below from doing so: measured, resetting the
+# memo per case cost 9 seconds in a suite that is otherwise pure filesystem work.
+KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
+[ -n "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="-"
+export KELIVER_JVM_HOME_MEMO
+
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 bad() { FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; }
@@ -46,7 +53,7 @@ refuse_rc() { # refuse_rc <home> <parent> [extra-env...]
   local home="$1" parent="$2"; shift 2
   ( export HOME="$home"; unset PORTAL_STORE
     for kv in "$@"; do export "${kv?}"; done
-    KELIVER_STAT_FMT=""; KELIVER_JVM_HOME_MEMO=""
+    KELIVER_STAT_FMT=""
     keliver_refuse_protected_parent "$parent" >/dev/null 2>&1 )
   echo $?
 }
@@ -115,8 +122,7 @@ must_allow "one that does not exist yet"       "$FH" "$DISP/legit/not-yet/deeper
 # wrong test.
 printf '  ....  relative PORTAL_STORE, from a controlled directory\n'
 rc=$( ( cd "$DISP/other" && export HOME="$FH" PORTAL_STORE="."
-        KELIVER_JVM_HOME_MEMO=""
-        keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
+            keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
 [ "$rc" = 0 ] && ok "allowed: a relative PORTAL_STORE that is not an ancestor" \
               || bad "refused (rc=$rc) a legitimate parent under a relative PORTAL_STORE"
 must_allow "a sibling of the store"            "$FH" "$FH/scratch"
@@ -128,7 +134,6 @@ echo "--- the whole path, through keliver_make_run_dir, asserting the END STATE"
 # in keliver_make_run_dir, so the count has to be around that.
 make_run_dir_rc() { # <home> <parent>
   ( export HOME="$1"; unset PORTAL_STORE
-    KELIVER_JVM_HOME_MEMO=""
     keliver_make_run_dir "$2" probe >/dev/null 2>&1 )
   echo $?
 }
@@ -136,12 +141,11 @@ state_of() { find "$FH" | LC_ALL=C sort; }
 
 for spelling in \
   "$FH/.keliver-portal/apps/nope/deeper" \
-  "$FH/nope3/../.keliver-portal" \
-  "$FH/.KELIVER-PORTAL/apps/live/x" ; do
+  "$FH/nope3/../.keliver-portal" ; do
   BEFORE="$(state_of)"
   rc="$(make_run_dir_rc "$FH" "$spelling")"
   AFTER="$(state_of)"
-  label="${spelling#$FH/}"
+  label="${spelling#"$FH"/}"
   [ "$rc" = 2 ] && ok "make_run_dir refuses: $label" \
                  || bad "make_run_dir ALLOWED (rc=$rc): $label"
   if [ "$BEFORE" = "$AFTER" ]; then
@@ -160,27 +164,89 @@ else
   ok "no run directory was created inside the protected store"
 fi
 
-# THE CASE THAT ACTUALLY LEAKED, and it needs a home where the store does NOT
-# exist yet. With the store present, a case-variant spelling resolves to it and
-# the FIRST refusal catches it before mkdir — which is why an earlier version of
-# this block, run against the leaking guard, passed. With the store absent there
-# is no inode to compare, the name fallback is case-sensitive and misses, and
-# mkdir -p then CREATES the store four levels deep before the second refusal
-# fires. A bare ~/.keliver-portal materialising where none existed is exactly
-# the state the store-identity contract reasons about.
+# THE CASE THAT ACTUALLY LEAKED. It needs BOTH a case-insensitive filesystem and
+# a home where the store does not exist yet:
+#
+#   * with the store present, a case-variant spelling resolves to it and the
+#     FIRST refusal catches it before mkdir — which is why an earlier version of
+#     this block, run against the leaking guard, passed and proved nothing;
+#   * with the store absent there is no inode to compare, the name fallback is
+#     case-sensitive and misses, and mkdir -p CREATES the store four levels deep
+#     before the second refusal fires;
+#   * on a case-SENSITIVE filesystem .KELIVER-PORTAL is simply a different
+#     directory, so it is an ordinary parent and creating it is correct.
+#
+# Asserting the first answer on both is the mistake this suite already made once
+# with the plain case-variant assertion, and Linux CI caught it. So: assert the
+# real property for the filesystem in hand, and say which one ran.
 FH2="$DISP/home-empty"
 mkdir -p "$FH2"
 BEFORE="$(find "$FH2" | LC_ALL=C sort)"
 rc="$(make_run_dir_rc "$FH2" "$FH2/.KELIVER-PORTAL/apps/live/x")"
 AFTER="$(find "$FH2" | LC_ALL=C sort)"
-[ "$rc" = 2 ] && ok "make_run_dir refuses a case variant of a store that does not exist yet" \
-               || bad "make_run_dir ALLOWED (rc=$rc) a case variant of an absent store"
-if [ "$BEFORE" = "$AFTER" ]; then
-  ok "and did not bring the store into existence on the way"
+if [ "$CASE_FOLDING" = "insensitive" ]; then
+  [ "$rc" = 2 ] && ok "make_run_dir refuses a case variant of a store that does not exist yet" \
+                 || bad "make_run_dir ALLOWED (rc=$rc) a case variant of an absent store"
+  if [ "$BEFORE" = "$AFTER" ]; then
+    ok "and did not bring the store into existence on the way"
+  else
+    bad "it created the store while refusing to use it"
+    diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'
+  fi
 else
-  bad "it created the store while refusing to use it"
+  [ "$rc" = 0 ] && ok "a case variant is an ordinary parent on a case-sensitive filesystem" \
+                 || bad "refused (rc=$rc) an ordinary parent that merely resembles the store"
+  if [ -d "$FH2/.keliver-portal" ]; then
+    bad "using .KELIVER-PORTAL brought the real .keliver-portal into existence"
+  else
+    ok "and the real store was not created by using a similar-looking name"
+  fi
+fi
+printf '        (the mkdir-then-refuse undo path is reachable only where the filesystem\n'
+printf '         folds case; on this run the filesystem is case-%s)\n' "$CASE_FOLDING"
+
+echo "--- a failed mkdir must undo too, not only a refusal"
+# mkdir -p can fail partway: an over-long component, ENOSPC, a read-only volume.
+# MEASURED, the undo ran only on the refusal path, so a partial mkdir left
+# .KELIVER-PORTAL and .KELIVER-PORTAL/apps behind — which on a case-folding
+# filesystem IS the store. Same leak, different return.
+FH3="$DISP/home-mkdirfail"
+mkdir -p "$FH3"
+LONG="$(printf 'z%.0s' $(seq 1 300))"
+BEFORE="$(find "$FH3" | LC_ALL=C sort)"
+rc="$(make_run_dir_rc "$FH3" "$FH3/.keliver-portal-probe/apps/$LONG")"
+AFTER="$(find "$FH3" | LC_ALL=C sort)"
+[ "$rc" != 0 ] && ok "a parent mkdir cannot create is not accepted (rc=$rc)" \
+                || bad "a parent mkdir cannot create was accepted"
+if [ "$BEFORE" = "$AFTER" ]; then
+  ok "and a partial mkdir left nothing behind"
+else
+  bad "a partial mkdir left directories behind"
   diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'
 fi
+
+echo "--- and pre-existing content is never removed by the undo"
+mkdir -p "$FH/keep/inner"; : > "$FH/keep/inner/file"
+( export HOME="$FH"; unset PORTAL_STORE; keliver_make_run_dir "$FH/keep/inner/new" probe >/dev/null 2>&1 )
+if [ -f "$FH/keep/inner/file" ] && [ -d "$FH/keep/inner" ]; then
+  ok "a pre-existing directory and its contents survive"
+else
+  bad "the undo removed something it did not create"
+fi
+
+echo "--- 'could not tell' is not 'different'"
+# stat that answers for / but not for the candidate: keliver_same_dir must
+# report unknown, and the caller must refuse rather than treat it as a mismatch.
+rc=$( ( export HOME="$FH"; unset PORTAL_STORE
+        KELIVER_STAT_FMT=""
+        stat() {
+          # `case` patterns inside $( ( ... ) ) confuse bash's parser here, so
+          # this is an if.
+          if [ "${3:-}" = "/" ]; then command stat "$@"; else return 1; fi
+        }
+        keliver_refuse_protected_parent "$FH/.keliver-portal" >/dev/null 2>&1 ); echo $? )
+[ "$rc" = 2 ] && ok "a per-path stat failure refuses instead of reading as 'different'" \
+               || bad "a per-path stat failure was read as 'different' (rc=$rc)"
 
 echo "--- and a legitimate parent still gets a run directory"
 LEGIT_RUN="$( export HOME="$FH"; unset PORTAL_STORE; keliver_make_run_dir "$DISP/legit" probe )"

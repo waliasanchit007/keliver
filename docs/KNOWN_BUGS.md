@@ -1596,15 +1596,24 @@ BSD-first order would have made the identity comparison **inert on Linux**, wher
 the guard refuse rather than silently fall back to matching names. "Could not
 tell" is a distinct answer from "different", and both refuse.
 
-A fourth fail-open followed the first three, and it was the guard writing rather
-than allowing: `mkdir -p` necessarily runs *between* the two checks, so a
-case-variant parent under a store that did not exist yet passed the first check
-and was **created** — four directories, the store among them — before the second
-refused it. `keliver_make_run_dir` now records what did not exist beforehand and
-`rmdir`s exactly what it made, innermost first; `rmdir` and never `rm -rf`, so it
-stops at anything that was already there.
+A fourth and fifth failure followed the first three, and both were the guard
+**writing** rather than allowing. `mkdir -p` necessarily runs *between* the two
+checks, so a case-variant parent under a store that did not exist yet passed the
+first check and was created — four directories, the store among them — before
+the second refused it. Then the undo turned out to run only on the refusal path:
+a `mkdir -p` that fails partway (an over-long component, ENOSPC, a read-only
+volume) left what it had already made, which is the same store by a different
+return. And the undo itself stopped at the first level `mkdir` had never
+reached, so it removed nothing at all in that case.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 33 assertions over
+`keliver_make_run_dir` now records what did not exist beforehand and undoes on
+**every** exit — refusal, failed `mkdir`, failed `cd` — stepping over levels that
+were never created and removing the rest innermost first. `rmdir` and never
+`rm -rf`, so it stops at anything that was already there or that anyone else put
+there meanwhile, and when it stops it says so rather than reporting a clean
+refusal over a store still on disk.
+
+`scripts/keliver-refusal-check.sh` is the regression suite: 35 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1614,10 +1623,13 @@ the leak above.
 
 **Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
 so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The
-case-**insensitive** branch — the one the whole identity comparison exists for —
-is only ever exercised by hand on a developer's Mac. The suite detects which
+case-**insensitive** branch — the one the whole identity comparison exists for,
+and the only filesystem on which the mkdir-then-refuse undo is even reachable —
+is exercised only by hand on a developer's Mac. The suite detects which
 filesystem it is on and asserts the correct answer for that one; neither branch
-is skipped, but only one of them runs in CI.
+is skipped, but only one of them runs in CI. Asserting the macOS answer
+unconditionally is a mistake this suite made twice, and Linux CI caught it both
+times.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

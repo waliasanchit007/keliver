@@ -105,7 +105,9 @@ keliver_require_isolated_store() {
 # into. Every one of them mints throwaway identities — stores, public keys,
 # signing keys — beneath the parent it is handed, so a mistyped argument is a
 # key written into the developer's real store. This lives here rather than in
-# any one script because there are NINE callers (six of which CI runs), and the
+# any one script because TEN scripts mint identities this way (six of which CI
+# runs; keliver-verify-signed-bundle.sh calls the refusal directly rather than
+# through keliver_make_run_dir, because its layout is fixed), and the
 # last time a rule like this had one copy per caller the copies drifted.
 #
 # scripts/keliver-refusal-check.sh is its regression suite. It exists because
@@ -317,6 +319,27 @@ EOF
 }
 
 
+# Remove exactly the directories this call created, innermost first, stopping at
+# the deepest one that already existed. rmdir and never rm -rf: it removes only
+# EMPTY directories, so it stops at anything that was already there or that
+# anyone else put there meanwhile — and when it stops it SAYS so, because
+# "refused" while the store sits on disk is the wrong story to tell.
+keliver_undo_created() {
+  local undo="$1" created_from="$2"
+  [ -n "$created_from" ] || return 0
+  while [ -n "$undo" ] && [ "$undo" != "/" ]; do
+    # A level that does not exist is one mkdir -p never reached: step over it
+    # rather than stopping. MEASURED — stopping there left the two directories
+    # mkdir HAD created, which was the whole bug.
+    if [ -d "$undo" ] && ! rmdir "$undo" 2>/dev/null; then
+      echo "keliver: could not remove $undo, which this call created" >&2
+      return 0
+    fi
+    [ "$undo" = "$created_from" ] && return 0
+    undo="$(dirname "$undo")"
+  done
+}
+
 # Usage:  RUN="$(keliver_make_run_dir "$PARENT" acceptance)"
 keliver_make_run_dir() {
   local parent="$1" name="${2:-run}"
@@ -343,16 +366,22 @@ keliver_make_run_dir() {
     created_from="$existed"
     existed="$(dirname "$existed")"
   done
-  mkdir -p "$parent" || return 1
+  # EVERY exit after this point undoes, not only the refusal. mkdir -p can fail
+  # partway — an over-long component, ENOSPC, a read-only volume — and MEASURED,
+  # it then left .KELIVER-PORTAL and .KELIVER-PORTAL/apps behind, which on a
+  # case-folding filesystem IS the store. The same outcome as the refusal leak,
+  # through a different return.
+  if ! mkdir -p "$parent"; then
+    keliver_undo_created "$parent" "$created_from"
+    return 1
+  fi
   local resolved
-  resolved="$(cd "$parent" && pwd -P)" || return 1
+  if ! resolved="$(cd "$parent" && pwd -P)"; then
+    keliver_undo_created "$parent" "$created_from"
+    return 1
+  fi
   if ! keliver_refuse_protected_parent "$resolved"; then
-    local undo="$parent"
-    while [ -n "$created_from" ] && [ -n "$undo" ] && [ "$undo" != "/" ]; do
-      rmdir "$undo" 2>/dev/null || break
-      [ "$undo" = "$created_from" ] && break
-      undo="$(dirname "$undo")"
-    done
+    keliver_undo_created "$parent" "$created_from"
     return 2
   fi
   parent="$resolved"
