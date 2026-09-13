@@ -17,6 +17,11 @@
 # This turns "signed" into a gate. Both directions are asserted, so the check
 # cannot pass by never signing anything.
 #
+# WHAT IT DOES AND DOES NOT COVER. It builds the DEVELOPMENT variant only, and
+# it runs in portal-tools.yml, which fires on `portal-tools-v*` tags and on
+# workflow_dispatch — not on pull requests and not on pushes to main. So it is a
+# release-time and on-demand gate, not a per-commit one.
+#
 # It never reads the developer's real store: -Pkeliver.portalStore names a
 # disposable one, which is resolved before the resolver is consulted, so no real
 # key is read and none is written. The private key it generates is disposable
@@ -33,18 +38,28 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 export JAVA_HOME
 
-# The same guard every sibling check uses. Without it this script would
-# mkdir -p whatever it was handed and write a disposable PRIVATE KEY inside it:
-# `keliver-guest-signing-check.sh ~/.keliver-portal` would plant one in the real
-# store.
+# keliver_make_run_dir gives this script a fresh mktemp -d under the parent, so
+# it never writes into a directory it did not create. It does NOT check where
+# that parent is — an earlier version of this comment claimed it did — so the
+# refusal below is explicit: this script writes a disposable PRIVATE KEY, and
+# `keliver-guest-signing-check.sh ~/.keliver-portal` must not plant one inside a
+# real store.
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit 1
+PARENT_REAL="$(cd "$(dirname "$DISP_PARENT")" 2>/dev/null && pwd -P)/$(basename "$DISP_PARENT")"
+case "$PARENT_REAL" in
+  "$HOME/.keliver-portal"|"$HOME/.keliver-portal"/*|"$HOME/.gradle"|"$HOME/.gradle"/*)
+    echo "refusing to run inside $PARENT_REAL: this script generates a signing key" >&2
+    exit 2;;
+esac
+DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit $?
 
-# signingKeys is an @Input, so the disposable private key would otherwise be
-# serialised into Gradle's execution history under the repo. Keep the project
-# cache — and therefore that history — inside the disposable root.
-GRADLE_FLAGS="--console=plain -q --project-cache-dir $DISP/project-cache"
+# Keep Gradle's project cache — task history, file hashes — inside the
+# disposable root, so the run leaves no .gradle state in the repo. NOT because
+# the private key would otherwise be stored there: measured, Gradle records a
+# hash of the @Input, and the key bytes appear in no cache file. The cost is a
+# cold project cache, so the Kotlin/JS + Zipline chain re-executes every run.
+GRADLE_FLAGS=(--console=plain -q --project-cache-dir "$DISP/project-cache")
 
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
@@ -75,7 +90,7 @@ PY
 
 echo "--- a store WITH a signing key"
 rm -f "$MANIFEST"
-if ( cd "$ROOT" && ./gradlew $GRADLE_FLAGS -Pkeliver.portalStore="$DISP/store" "$TASK" ) \
+if ( cd "$ROOT" && ./gradlew "${GRADLE_FLAGS[@]}" -Pkeliver.portalStore="$DISP/store" "$TASK" ) \
      > "$DISP/signed.log" 2>&1; then
   ok "the guest bundle builds against a store that holds a key"
 else
@@ -91,7 +106,7 @@ fi
 
 echo "--- a store with NO signing key"
 rm -f "$MANIFEST"
-if ( cd "$ROOT" && ./gradlew $GRADLE_FLAGS -Pkeliver.portalStore="$DISP/nostore" "$TASK" ) \
+if ( cd "$ROOT" && ./gradlew "${GRADLE_FLAGS[@]}" -Pkeliver.portalStore="$DISP/nostore" "$TASK" ) \
      > "$DISP/unsigned.log" 2>&1; then
   ok "the guest bundle still builds when the store holds no key"
 else
@@ -106,9 +121,10 @@ else
 fi
 
 # The manifest under portal-published-guest/build is left UNSIGNED by the second
-# case. Nothing packages or verifies that path today, but leaving an unsigned
-# manifest lying in the repo is the sort of thing a later check trips over, so
-# remove it rather than explain it later.
+# case, and that path is not unused: keliver-verify-signed-bundle.sh globs for
+# it. That script rebuilds first, so an unsigned leftover would not mislead it
+# today — but leaving one in the repo is the sort of thing a later check trips
+# over, so remove it rather than explain it later.
 rm -f "$MANIFEST"
 
 echo

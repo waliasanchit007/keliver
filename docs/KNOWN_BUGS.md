@@ -1463,47 +1463,57 @@ none is a security hole.
      a foreign file planted there survives an UP-TO-DATE run of either shape.
    * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
 
-     **Asymmetry, recorded not fixed:** the iOS host has neither half of the
-     Android hardening. There is no `devOnlyHost` short-circuit, so every
-     `compileKotlinIos*` consults the store, and it writes an empty-string
-     constant rather than emptying an output directory. No `U22`-shaped leak
-     follows from the second (the generated file is overwritten, not
-     accumulated), but the first means iOS compiles need an identity they may
-     not use. Out of scope for this block.
+     **Asymmetry, recorded not fixed — and worse than first written.** The iOS
+     host has neither half of the Android hardening. There is no `devOnlyHost`
+     short-circuit, so every `compileKotlinIos*` consults the store. And
+     `generatePortalKey` has the same foreign-file hole that was just closed on
+     Android: `outputs.dir` with no `upToDateWhen { false }`, so a file planted
+     in its output directory survives an UP-TO-DATE run. That directory is a
+     `kotlin.srcDir`, which makes a planted file **Kotlin source compiled into
+     the framework** — worse than a stale asset. Not fixed here because neither
+     this machine nor Linux CI can build or verify the iOS target, and shipping
+     an unverifiable change to a signing path is how this class of bug started.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
      `ZiplineCompileTask.signingKeys` instead, from `afterEvaluate`.
 
-     **The ordering, described correctly at the third attempt.** The zipline
-     plugin writes `signingKeys` from the compile task's own **registration
-     action**, and Gradle runs that action **last** — after every
-     `configureEach`/`all` action added before the task is realized, whenever
-     those were added. So a lazy `configureEach` always loses, whether it was
-     added before or after the task existed. Measured: script level →
-     `unsigned.signatures = {}` with a key present.
+     **The ordering rule, at the fourth attempt.** The zipline plugin writes
+     `signingKeys` from the compile task's **registration action**, and those
+     tasks are registered when the JS binaries are created — by
+     `binaries.executable()` inside `kotlin { js { … } }`. Gradle splices a
+     registration action into the container's action chain **at the position
+     `register()` was called**: actions added before it run before it, actions
+     added after it run after it and win.
 
-     `configureEach` on an **already-realized** task runs immediately instead,
-     i.e. after the registration action — and that, not "afterEvaluate", is why
-     the `afterEvaluate` block worked: the zipline plugin's own `afterEvaluate`,
-     registered at `apply plugin`, has already realized the task by then. Two
-     earlier write-ups of this were wrong in different ways; both were corrected
-     only because an independent review measured the ordering rather than
-     reading it.
+     So the only thing that matters is where the statement sits. It now sits
+     **below** the `kotlin {}` block. Measured: the identical statement above
+     the block → `unsigned.signatures = {}` with a key present; below it →
+     signed.
 
-     Depending on someone else realizing the task is depending on a plugin
-     upgrade not changing — and if it did, signing would drop with *nobody*
-     writing `signingKeys`, so an invariant phrased as "nothing writes after us"
-     would still hold while the bundle shipped unsigned. `.toList()` forces the
-     realization here, so the write provably follows the registration action.
+     Three earlier write-ups of this were wrong, in three different ways — "the
+     plugin's own afterEvaluate", "the task does not exist yet", "the
+     registration action runs last". Two of them wrapped the wiring in
+     `afterEvaluate`, which was never needed and hid the actual rule; that
+     wrapper is gone. Each was corrected only because an independent review
+     measured the ordering instead of reading it.
 
-     It is still a fragile shape, so it is **gated** rather than trusted.
-     `scripts/keliver-guest-signing-check.sh` builds the guest bundle against a
-     disposable store with a key and asserts the manifest is signed, and against
-     one without and asserts it is not. Measured: reverting it to a lazy
-     `configureEach` makes the check fail — while the build still succeeds,
-     which is exactly why this needs a gate and not a comment. It runs in the
-     portable CI checks.
+     `isEmpty()` realizes the collection first, so "the plugin registered no
+     compile task" fails the build rather than producing an unsigned bundle.
+     Still not covered: a `ZiplineCompileTask` registered *after* this statement
+     would keep the plugin's value, because ours would again be the earlier
+     action. Nothing registers one later today.
+
+     It is still a shape that depends on where a statement sits, so it is
+     **gated** rather than trusted. `scripts/keliver-guest-signing-check.sh`
+     builds the guest bundle against a disposable store with a key and asserts
+     the manifest is signed, and against one without and asserts it is not.
+     Measured: moving the statement back **above** the `kotlin {}` block makes
+     the check fail while the build still succeeds — which is exactly why this
+     needs a gate and not a comment. The gate builds the Development variant and
+     runs in `portal-tools.yml`, which fires on `portal-tools-v*` tags and on
+     `workflow_dispatch`: a release-time and on-demand gate, not a per-commit
+     one.
 
    "I could not find out whether you have a signing key" is not "you have no
    signing key": when resolution fails, the compile task fails rather than
@@ -1516,9 +1526,11 @@ none is a security hole.
    a **warning, not a check**: it reports that the build's identity may differ
    from the relay's, and nothing verifies that they agree. It bypasses the split
    refusal, and the relay does not see it. It is printed at QUIET level so `-q`
-   cannot hide it, and `keliver-device-host-hygiene-check.sh` — the only scripted
-   caller that passes it — greps the build log for that line, because surviving
-   `-q` into a log nobody reads is not visibility.
+   cannot hide it, and `keliver-device-host-hygiene-check.sh` greps the build log
+   for that line, because surviving `-q` into a log nobody reads is not
+   visibility. (It is not the only scripted caller any more —
+   `keliver-guest-signing-check.sh` and C16d pass it too — but it is the only one
+   that asserts the warning while *assembling an APK*.)
 
    That assertion is **mode-dependent**, and asserting it unconditionally was
    wrong: Linux CI run 34771348310 failed on exactly the two development-only

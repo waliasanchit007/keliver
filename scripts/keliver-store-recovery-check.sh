@@ -1208,7 +1208,9 @@ else
   bad "C16d the development-only host asked for a store it has no use for"
   tail -12 "$DISP/c16-devonly.log" | sed 's/^/        /'
 fi
-if grep -q "keliver.devOnlyHost=true" "$DISP/c16-devonly.log"; then
+# The distinctive phrase from the branch itself. Grepping for the PROPERTY name
+# would also match it quoted in a Gradle stack trace or in the build file.
+if grep -q "this is the DEVELOPMENT-ONLY host" "$DISP/c16-devonly.log"; then
   ok "C16d and it really ran, taking the development-only branch"
 else
   bad "C16d nothing proves the development-only branch executed"

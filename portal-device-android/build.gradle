@@ -128,8 +128,10 @@ tasks.register('syncPortalKey') {
       new File(dir, 'portal_ed25519.pub').bytes = src.bytes
       logger.lifecycle("portal-device-android: embedding portal key from ${src}")
     } else if (devOnlyHost) {
+      // Not "=true": true 1 yes on are all accepted, and echoing a value the
+      // caller did not type is how a reader starts doubting the message.
       logger.lifecycle('portal-device-android: no portal key embedded — this is the ' +
-        'DEVELOPMENT-ONLY host (keliver.devOnlyHost=true), which refuses production mode')
+        'DEVELOPMENT-ONLY host (keliver.devOnlyHost is set), which refuses production mode')
     } else {
       // NOT the development-only host: DEV_ONLY is false, so this binary will
       // run in production mode with nothing to verify a bundle against. Saying

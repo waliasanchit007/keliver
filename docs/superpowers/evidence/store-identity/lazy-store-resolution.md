@@ -1,6 +1,9 @@
 # Resolving the store when a task needs it — what was executed
 
-Commit under test: `eeab72ebd` (branch `fix/store-host-correctness`).
+Commit the matrix was first run against: `eeab72ebd`. Re-run and corrected
+through `8a702b230`, `bcff322eb`, `9a7f681ed` and the head this document is
+committed at — four independent reviews, each of which found something the run
+before it had recorded wrongly.
 Pre-fix commit used for before/after: `72ba9fc1e`.
 Platform: macOS (darwin 25.5.0), JDK 17, Gradle 9.0.0.
 
@@ -30,7 +33,7 @@ A task with no signing identity in it, stopped by the identity resolver, during
 | 1 | `:portal-relay:compileKotlin`, broken resolver, no override | succeeds | **EXIT=0** |
 | 2 | `:portal-relay:test`, broken resolver, no override | succeeds | **EXIT=0** |
 | 3 | `:portal-device-android:syncPortalKey`, broken resolver | refuses, names the resolver | **EXIT=1**, `Could not determine the dependencies of task ':portal-device-android:syncPortalKey' > keliver: could not resolve this app's portal store. resolver: … exit: 127 … Refusing to fall back to ~/.keliver-portal` |
-| 4 | `:portal-device-android:syncPortalKey -Pkeliver.devOnlyHost=true`, broken resolver | succeeds without consulting a store | **EXIT=0** (`syncPortalKey NO-SOURCE`) |
+| 4 | `:portal-device-android:syncPortalKey -Pkeliver.devOnlyHost=true`, broken resolver | succeeds without consulting a store | **EXIT=0**, task executes and takes the dev-only branch (it was `NO-SOURCE` when this row was first recorded; with `upToDateWhen { false }` and no `@SkipWhenEmpty` it can never be `NO-SOURCE` again) |
 | 5 | `:portal-published-guest:compileProductionExecutableKotlinJsZipline`, broken resolver | refuses | **EXIT=1**, same diagnostic |
 | 6 | same task, `-Pkeliver.portalStore=<disposable store WITH a key>` | signed | `unsigned.signatures = {"portal-ed25519": "975490ce…ed03"}` |
 | 7 | same task, `-Pkeliver.portalStore=<disposable store with NO key>` | unsigned, not a failure | `unsigned.signatures = {}` |
@@ -94,35 +97,37 @@ Row 6 failed the first time: setting `ZiplineCompileTask.signingKeys` at script
 level produced an **unsigned bundle with a key present** —
 `unsigned.signatures = {}`. From `afterEvaluate`, it signs.
 
-**Two explanations for that were written down before the right one.** The
-first blamed the plugin's own `afterEvaluate`; the second blamed the task not
-existing yet. Neither is the mechanism, and both survived until an independent
-review measured the ordering instead of reading it.
+**Three explanations for that were written down before the right one** — "the
+plugin's own `afterEvaluate`", "the task does not exist yet", "the registration
+action runs last". Each survived until an independent review measured the
+ordering instead of reading it. Two of them wrapped the wiring in
+`afterEvaluate`, which was never needed and hid the actual rule.
 
-What actually happens: the zipline plugin writes `signingKeys` from the compile
-task's **registration action**, and Gradle runs that action **last** — after
-every `configureEach`/`all` action added before the task is realized, whenever
-those were added. A lazy `configureEach` therefore loses either way. A
-`configureEach` on an **already-realized** task runs immediately instead, after
-the registration action — and that is the only reason the `afterEvaluate` block
-worked, because the zipline plugin's own `afterEvaluate` had already realized
-the task.
+The rule: the zipline plugin writes `signingKeys` from the compile task's
+**registration action**, and those tasks are registered when the JS binaries are
+created — by `binaries.executable()` inside `kotlin { js { … } }`. Gradle splices
+a registration action into the container's action chain **at the position
+`register()` was called**. Actions added before it run before it; actions added
+after it run after it and win.
 
-Re-measured in the real build:
+So the only thing that mattered was that the statement sat *above* the
+`kotlin {}` block. Measured in the real build, with nothing else changed:
 
 ```
-script-level configureEach -> signatures: {}
-afterEvaluate              -> signatures: {"portal-ed25519": "975490ce…"}
+same statement ABOVE kotlin {}  -> signatures: {}
+same statement BELOW kotlin {}  -> signatures: {"portal-ed25519": "…"}
 ```
 
-Relying on someone else to realize the task is the actual fragility: a plugin
-upgrade that stopped doing so would drop signing with *nobody* writing
-`signingKeys`. `.toList()` now forces the realization, so the write provably
-follows the registration action.
+It now sits below, as a plain `configureEach`, with no `afterEvaluate` and no
+snapshot. `isEmpty()` realizes the collection first so that "the plugin
+registered no compile task" fails the build instead of producing an unsigned
+bundle. A task registered *after* that statement would still keep the plugin's
+value; nothing registers one later today.
 
-The shape is still fragile, so it is gated:
-`scripts/keliver-guest-signing-check.sh` asserts both directions, and reverting
-that one line makes it fail while the build still succeeds:
+The shape depends on where a statement sits, so it is gated:
+`scripts/keliver-guest-signing-check.sh` asserts both directions, and moving the
+statement back above the `kotlin {}` block makes it fail while the build still
+succeeds:
 
 ```
 --- a store WITH a signing key
@@ -131,7 +136,10 @@ that one line makes it fail while the build still succeeds:
 passed: 3   failed: 1
 ```
 
-It runs in the portable CI checks.
+It runs in `portal-tools.yml`'s portable checks — which fire on
+`portal-tools-v*` tags and on `workflow_dispatch`, not on pull requests or
+pushes to main. A release-time and on-demand gate, not a per-commit one, and it
+builds the Development variant only.
 
 ## The C16d assertion can fail
 
