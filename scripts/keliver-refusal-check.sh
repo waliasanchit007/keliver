@@ -66,8 +66,26 @@ echo "--- spellings of the same protected directory"
 must_refuse "the store itself"                 "$FH" "$FH/.keliver-portal"
 must_refuse "a subdirectory of the store"      "$FH" "$FH/.keliver-portal/apps"
 must_refuse "a path whose ancestor is missing" "$FH" "$FH/.keliver-portal/apps/nope/deeper"
-must_refuse "a case variant (macOS)"           "$FH" "$FH/.KELIVER-PORTAL"
-must_refuse "a mixed-case variant + subdir"    "$FH" "$FH/.Keliver-Portal/apps"
+# Case variants are a property of the FILESYSTEM, not of the guard, and the two
+# platforms genuinely differ: on a case-insensitive filesystem (macOS default)
+# .KELIVER-PORTAL IS the store — same device, same inode — and must be refused;
+# on a case-sensitive one (Linux CI) it is a different directory that happens to
+# look similar, and refusing it would be wrong. Asserting the macOS answer
+# everywhere failed on Linux, correctly. So detect, then assert the real
+# property in BOTH directions rather than skipping one of them.
+touch "$FH/.keliver-CaseProbe"
+if [ -e "$FH/.keliver-caseprobe" ]; then
+  CASE_FOLDING="insensitive"
+  must_refuse "a case variant, on a case-insensitive filesystem"   "$FH" "$FH/.KELIVER-PORTAL"
+  must_refuse "a mixed-case variant + subdir, likewise"            "$FH" "$FH/.Keliver-Portal/apps"
+else
+  CASE_FOLDING="sensitive"
+  must_allow  "a case variant, on a case-SENSITIVE filesystem"     "$FH" "$FH/.KELIVER-PORTAL"
+  must_allow  "a mixed-case variant + subdir, likewise"            "$FH" "$FH/.Keliver-Portal/apps"
+fi
+rm -f "$FH/.keliver-CaseProbe"
+printf '        (filesystem is case-%s; both directions are asserted, neither skipped)\n' \
+  "$CASE_FOLDING"
 must_refuse "a symlink pointing at the store"  "$FH" "$DISP/symlink-to-store"
 must_refuse "through a symlink to the store"   "$FH" "$DISP/symlink-to-store/apps"
 must_refuse ".. past an existing component"    "$FH" "$FH/.gradle/../.keliver-portal"
