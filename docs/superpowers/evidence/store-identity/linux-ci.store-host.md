@@ -4,7 +4,25 @@ Four identities, recorded separately, because a GitHub run's `headSha` is the
 SHA of the **workflow definition**, not of what an input-driven checkout built.
 Conflating them is how a run gets credited to the wrong commit.
 
-## Run 34774476035 — the candidate
+## Run 34775999489 — the candidate
+
+| what | value |
+|---|---|
+| workflow-definition SHA (`run.headSha`) | `975b3e2c8bbdfaf95b7920f600f3a9fa0ada6361` (branch `fix/store-host-correctness`) |
+| actual checkout SHA (`git rev-parse HEAD` in the job) | `975b3e2c8bbdfaf95b7920f600f3a9fa0ada6361` |
+| `VERSION.json.sourceCommit` | `975b3e2c8bbdfaf95b7920f600f3a9fa0ada6361` |
+| ZIP sha256 | `86623b924b6f05c356b220dd5e2a71aa49776438b1dedc343497ca1854445e9f` |
+| conclusion | **success** |
+
+Per-check on Linux: hygiene **10 / 0**, adopter acceptance **19 / 0**,
+foreign-relay refusal **6 / 0**, identity contract **11 / 0**, guest bundle
+signing **4 / 0**, store recovery **145 / 0**.
+
+`tools=0.3.4 maven=0.3.3` — the 0.3.5 bump is parked on
+`release/portal-tools-0.3.5`. This is a development candidate, not a release,
+and it does not replace the published 0.3.4 asset.
+
+## Run 34774476035 — the previous head (`9a7f681ed`)
 
 | what | value |
 |---|---|
@@ -15,12 +33,7 @@ Conflating them is how a run gets credited to the wrong commit.
 | artifact | `keliver-portal-tools-0.3.4-9a7f681ed…`, 90,354,570 bytes |
 | conclusion | **success** |
 
-`tools=0.3.4 maven=0.3.3` — the 0.3.5 version bump is parked on
-`release/portal-tools-0.3.5` and is deliberately not on this branch. This is a
-development candidate, not a release, and it does not replace the published
-0.3.4 asset.
-
-### Per-check tallies on Linux
+### Per-check tallies on Linux at `9a7f681ed`
 
 | check | result |
 |---|---|
@@ -40,6 +53,7 @@ development candidate, not a release, and it does not replace the published
 | 34771348310 | `4e4c46e72` (main) | `8a702b230` | **failure** | evidence for `8a702b230` only — and the only executed proof that the hygiene override assertion can fail. Retained deliberately. |
 | 34772824205 | `4e4c46e72` (main) | `bcff322eb` | success | **does not cover the signing gate.** Dispatched with `--ref main`, so the workflow *definition* came from main, which has no `guest bundle signing` step. The checkout was `bcff322eb`, so the scripts were the branch's — but the step list was not. |
 | 34773606065 | `bcff322eb` (branch) | `bcff322eb` | success | first run that actually executed the signing gate (4 / 0) |
+| 34774476035 | `9a7f681ed` (branch) | `9a7f681ed` | success | evidence for `9a7f681ed` only; the signing wiring changed again after it |
 
 That fourth row is the reason these four identities are recorded separately. A
 run can check out exactly the commit you asked for and still execute a different
