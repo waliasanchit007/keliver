@@ -1565,9 +1565,11 @@ none is a security hole.
 
 ### The disposable-parent refusal — FIXED, UNRELEASED
 
-Nine checks (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
-`keliver-guest-signing-check.sh` and six more) mint throwaway stores, public keys
-and signing keys beneath a parent directory the caller names. A mistyped argument
+Ten scripts (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
+`keliver-guest-signing-check.sh` and seven more) mint throwaway stores, public
+keys and signing keys beneath a parent directory the caller names. Six of them
+run in CI; `keliver-verify-signed-bundle.sh` calls the refusal directly rather
+than through `keliver_make_run_dir`, because its layout is fixed. A mistyped argument
 is a key written into the developer's real store.
 
 `keliver_make_run_dir` now refuses a parent inside the real portal store — under
@@ -1606,14 +1608,26 @@ volume) left what it had already made, which is the same store by a different
 return. And the undo itself stopped at the first level `mkdir` had never
 reached, so it removed nothing at all in that case.
 
-`keliver_make_run_dir` now records what did not exist beforehand and undoes on
-**every** exit — refusal, failed `mkdir`, failed `cd` — stepping over levels that
-were never created and removing the rest innermost first. `rmdir` and never
-`rm -rf`, so it stops at anything that was already there or that anyone else put
-there meanwhile, and when it stops it says so rather than reporting a clean
+A sixth and seventh followed those. `mktemp -d` was a fourth exit with no undo
+while three separate comments claimed every exit was covered. And a `.` path
+component defeated the undo entirely: `rmdir` fails with EINVAL on a basename of
+`.`, for a reason that has nothing to do with the directory being occupied, so
+the walk aborted at the first level and left the whole tree — store included —
+while the call reported a clean refusal.
+
+`keliver_make_run_dir` now normalises `.` segments and doubled slashes away (`..`
+is refused instead, since it cannot be resolved against a directory that does not
+exist yet, and `./scratch` is an ordinary thing for a caller to pass), **records**
+the levels that did not exist rather than re-deriving them afterwards, and undoes
+on every exit: refusal, failed `mkdir`, failed `cd`, failed `mktemp`. Recording
+matters beyond tidiness — the old walk's only stop condition was string equality
+with the deepest pre-existing level, and demonstrated in isolation, a chain it
+could not match sent it climbing past that level toward `/`. A recorded list
+cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
+empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 35 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 49 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal

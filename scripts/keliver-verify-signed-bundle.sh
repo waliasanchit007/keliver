@@ -37,8 +37,6 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
 mkdir -p "$DISP/home" "$STORE"
 
-# shellcheck source=/dev/null
-. "$ROOT/scripts/keliver-test-isolation-guard.sh"
 keliver_require_isolated_store "$DISP" "$ROOT" || exit 1
 
 echo "==> generating a disposable signing identity via the relay"

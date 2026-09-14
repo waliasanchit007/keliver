@@ -4,7 +4,7 @@
 #
 #   scripts/keliver-refusal-check.sh <disposable-root>
 #
-# WHY THIS EXISTS. Nine checks mint throwaway stores, public keys and signing
+# WHY THIS EXISTS. Ten scripts mint throwaway stores, public keys and signing
 # keys beneath a parent directory the caller names. keliver_make_run_dir refuses
 # a parent that lies inside the real portal store, the Gradle home or
 # $PORTAL_STORE. That refusal FAILED OPEN in three consecutive reviewed commits:
@@ -205,33 +205,87 @@ fi
 printf '        (the mkdir-then-refuse undo path is reachable only where the filesystem\n'
 printf '         folds case; on this run the filesystem is case-%s)\n' "$CASE_FOLDING"
 
-echo "--- a failed mkdir must undo too, not only a refusal"
-# mkdir -p can fail partway: an over-long component, ENOSPC, a read-only volume.
-# MEASURED, the undo ran only on the refusal path, so a partial mkdir left
-# .KELIVER-PORTAL and .KELIVER-PORTAL/apps behind — which on a case-folding
-# filesystem IS the store. Same leak, different return.
-FH3="$DISP/home-mkdirfail"
-mkdir -p "$FH3"
-LONG="$(printf 'z%.0s' $(seq 1 300))"
-BEFORE="$(find "$FH3" | LC_ALL=C sort)"
-rc="$(make_run_dir_rc "$FH3" "$FH3/.keliver-portal-probe/apps/$LONG")"
-AFTER="$(find "$FH3" | LC_ALL=C sort)"
-[ "$rc" != 0 ] && ok "a parent mkdir cannot create is not accepted (rc=$rc)" \
-                || bad "a parent mkdir cannot create was accepted"
-if [ "$BEFORE" = "$AFTER" ]; then
-  ok "and a partial mkdir left nothing behind"
-else
-  bad "a partial mkdir left directories behind"
-  diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'
-fi
+echo "--- EVERY exit undoes, not only the refusal"
+# The undo used to run on the refusal path alone, so a mkdir that failed partway
+# left what it had made — on a case-folding filesystem, the store. Three
+# comments then claimed "every exit" while mktemp was still uncovered. Each exit
+# gets its own case, and each is provoked by a different mechanism rather than
+# by one trick that happens to hit them all.
+undo_case() { # undo_case <label> <base> <parent> <setup-cmd...>
+  local label="$1" base="$2" parent="$3"; shift 3
+  local before after rc
+  before="$(find "$base" 2>/dev/null | LC_ALL=C sort)"
+  rc=$( ( export HOME="$FH3"; unset PORTAL_STORE; "$@"
+          keliver_make_run_dir "$parent" probe >/dev/null 2>&1 ); echo $? )
+  after="$(find "$base" 2>/dev/null | LC_ALL=C sort)"
+  [ "$rc" != 0 ] && ok "$label: not accepted (rc=$rc)" \
+                  || bad "$label: accepted when it should not have been"
+  if [ "$before" = "$after" ]; then
+    ok "$label: and nothing was left behind"
+  else
+    bad "$label: directories were left behind"
+    diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | sed 's/^/        /'
+  fi
+}
+FH3="$DISP/home-exits"
+mkdir -p "$FH3/ro"
+chmod a-w "$FH3/ro"
+undo_case "mkdir cannot create it" "$FH3/ro" "$FH3/ro/a/b/c" true
+chmod u+w "$FH3/ro"
+mkdir -p "$FH3/mk"
+undo_case "mktemp cannot create in it" "$FH3/mk" "$FH3/mk/a/b/c" umask 0222
+mkdir -p "$FH3/cd"
+undo_case "cd cannot enter it" "$FH3/cd" "$FH3/cd/a/b/c" umask 0777
+# The same exits, reached through a spelling containing a `.` component. rmdir
+# fails with EINVAL on a basename of `.`, which used to abort the undo at the
+# first level — so the dot has to be exercised on a path that actually REACHES
+# the undo, not on one the first refusal catches by name.
+mkdir -p "$FH3/dot"
+undo_case "mktemp cannot create in it, via a . component" \
+  "$FH3/dot" "$FH3/dot/a/./b/c" umask 0222
+mkdir -p "$FH3/dot2"
+undo_case "cd cannot enter it, via a trailing ." \
+  "$FH3/dot2" "$FH3/dot2/a/b/c/." umask 0777
 
-echo "--- and pre-existing content is never removed by the undo"
-mkdir -p "$FH/keep/inner"; : > "$FH/keep/inner/file"
-( export HOME="$FH"; unset PORTAL_STORE; keliver_make_run_dir "$FH/keep/inner/new" probe >/dev/null 2>&1 )
-if [ -f "$FH/keep/inner/file" ] && [ -d "$FH/keep/inner" ]; then
-  ok "a pre-existing directory and its contents survive"
+# The umask 0777 cases leave directories this suite cannot later remove, which
+# turns a failure into an unremovable evidence tree. Put the permissions back.
+chmod -R u+rwx "$FH3" 2>/dev/null || true
+
+echo "--- a . component must not defeat the REFUSAL either"
+# These two are caught by the FIRST refusal (the store exists here, so the name
+# fallback matches), which is why they are stated as a refusal property. The
+# undo's own dot handling is covered by the two undo_case rows above, which
+# reach it. `./scratch` is an ordinary thing to pass, so refusing `.` outright
+# would be wrong; it is normalised away instead.
+for spelling in \
+  "$FH/.keliver-portal/apps/live/x/." \
+  "$FH/.keliver-portal/apps/./live/x" ; do
+  BEFORE="$(find "$FH" | LC_ALL=C sort)"
+  rc="$(make_run_dir_rc "$FH" "$spelling")"
+  AFTER="$(find "$FH" | LC_ALL=C sort)"
+  label="${spelling#"$FH"/}"
+  [ "$rc" = 2 ] && ok "refused, with a . component: $label" \
+                 || bad "ALLOWED (rc=$rc) with a . component: $label"
+  [ "$BEFORE" = "$AFTER" ] && ok "and left nothing behind: $label" \
+                           || { bad "left something behind: $label"
+                                diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'; }
+done
+
+echo "--- and pre-existing content on the undo chain is never removed"
+# The earlier version of this used a LEGITIMATE parent, so the undo was never
+# invoked at all — instrumented, it ran twice in the whole suite and not once
+# here. The parent has to be one that gets refused, with something already on
+# the chain the undo walks.
+FH4="$DISP/home-keep"
+mkdir -p "$FH4/.keliver-portal/apps/occupied"
+: > "$FH4/.keliver-portal/apps/occupied/file"
+rc="$(make_run_dir_rc "$FH4" "$FH4/.keliver-portal/apps/occupied/new/deeper")"
+[ "$rc" = 2 ] && ok "refused a parent under an occupied directory" \
+               || bad "ALLOWED (rc=$rc) a parent under the store"
+if [ -f "$FH4/.keliver-portal/apps/occupied/file" ]; then
+  ok "and the pre-existing file and its directory survived the undo"
 else
-  bad "the undo removed something it did not create"
+  bad "the undo removed content it did not create"
 fi
 
 echo "--- 'could not tell' is not 'different'"
@@ -247,6 +301,20 @@ rc=$( ( export HOME="$FH"; unset PORTAL_STORE
         keliver_refuse_protected_parent "$FH/.keliver-portal" >/dev/null 2>&1 ); echo $? )
 [ "$rc" = 2 ] && ok "a per-path stat failure refuses instead of reading as 'different'" \
                || bad "a per-path stat failure was read as 'different' (rc=$rc)"
+
+echo "--- 'could not tell' at the HOME comparison too"
+# The case above returns from the protected-roots loop. This one targets the
+# home-directory arm, which had no coverage for its unknown branch: instrumented,
+# it only ever logged 0 or 1 across the whole suite.
+rc=$( ( export HOME="$DISP/home-plain"; unset PORTAL_STORE
+        mkdir -p "$HOME"
+        KELIVER_STAT_FMT=""
+        stat() {
+          if [ "${3:-}" = "/" ]; then command stat "$@"; else return 1; fi
+        }
+        keliver_refuse_protected_parent "$HOME" >/dev/null 2>&1 ); echo $? )
+[ "$rc" = 2 ] && ok "an unprovable home-directory comparison refuses" \
+               || bad "an unprovable home-directory comparison did not refuse (rc=$rc)"
 
 echo "--- and a legitimate parent still gets a run directory"
 LEGIT_RUN="$( export HOME="$FH"; unset PORTAL_STORE; keliver_make_run_dir "$DISP/legit" probe )"

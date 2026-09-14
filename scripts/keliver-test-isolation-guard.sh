@@ -172,6 +172,23 @@ keliver_same_dir() {
 keliver_abs_of() {
   local p rest cur resolved
   case "$1" in /*) p="$1";; *) p="$PWD/$1";; esac
+  # Collapse `//` and drop `.` segments. Dropping `.` is always safe — unlike
+  # `..`, which is refused rather than normalised because it can only be
+  # resolved against a directory that may not exist yet. It is also NECESSARY:
+  # rmdir fails with EINVAL when the basename is `.`, for reasons that have
+  # nothing to do with the directory being occupied, and MEASURED, that aborted
+  # the undo at the first level and left the whole tree — the store included —
+  # on disk while the call reported a clean refusal. `./scratch` is an ordinary
+  # thing for a caller to pass, so refusing `.` outright would be wrong.
+  while :; do
+    case "$p" in
+      *//*)  p="${p%%//*}/${p#*//}";;
+      */./*) p="${p%%/./*}/${p#*/./}";;
+      *) break;;
+    esac
+  done
+  case "$p" in */.) p="${p%/.}";; esac
+  [ -n "$p" ] || p="/"
   rest=""; cur="$p"
   while [ ! -d "$cur" ] && [ "$cur" != "/" ] && [ -n "$cur" ]; do
     rest="/$(basename "$cur")$rest"
@@ -319,24 +336,25 @@ EOF
 }
 
 
-# Remove exactly the directories this call created, innermost first, stopping at
-# the deepest one that already existed. rmdir and never rm -rf: it removes only
-# EMPTY directories, so it stops at anything that was already there or that
-# anyone else put there meanwhile — and when it stops it SAYS so, because
-# "refused" while the store sits on disk is the wrong story to tell.
+# Remove exactly the directories this call created, innermost first. The list is
+# RECORDED during the pre-mkdir scan and passed in, rather than re-derived by
+# walking `dirname` from the parent afterwards: the walk's only stop condition
+# was string equality with the deepest pre-existing level, so any spelling that
+# broke the chain either left the tree behind or — demonstrated in isolation —
+# kept climbing past it. A list cannot climb past anything.
+#
+# rmdir and never rm -rf: it removes only EMPTY directories, so anything with
+# contents stops it, and it says so — "refused" while the store sits on disk is
+# the wrong story to tell. An empty directory someone else created in the
+# meantime WOULD be removed; rmdir cannot distinguish it.
 keliver_undo_created() {
-  local undo="$1" created_from="$2"
-  [ -n "$created_from" ] || return 0
-  while [ -n "$undo" ] && [ "$undo" != "/" ]; do
-    # A level that does not exist is one mkdir -p never reached: step over it
-    # rather than stopping. MEASURED — stopping there left the two directories
-    # mkdir HAD created, which was the whole bug.
-    if [ -d "$undo" ] && ! rmdir "$undo" 2>/dev/null; then
-      echo "keliver: could not remove $undo, which this call created" >&2
+  local d
+  for d in "$@"; do
+    [ -n "$d" ] && [ -d "$d" ] || continue
+    if ! rmdir "$d" 2>/dev/null; then
+      echo "keliver: could not remove $d, which this call created — it is not empty" >&2
       return 0
     fi
-    [ "$undo" = "$created_from" ] && return 0
-    undo="$(dirname "$undo")"
   done
 }
 
@@ -361,32 +379,44 @@ keliver_make_run_dir() {
   # created, innermost first. rmdir, never rm -rf: it removes only empty
   # directories, so it stops at anything that was already there or that anyone
   # else put there in the meantime.
-  local existed="$parent" created_from=""
-  while [ ! -d "$existed" ] && [ "$existed" != "/" ] && [ -n "$existed" ]; do
-    created_from="$existed"
-    existed="$(dirname "$existed")"
+  # Work from the NORMALISED path from here on: `.` segments and doubled slashes
+  # are gone, so what mkdir creates and what the undo removes are the same
+  # strings.
+  parent="$(keliver_abs_of "$parent")" || return 2
+  # Record what does not exist YET, deepest first. This list is the only thing
+  # the undo is allowed to remove.
+  local -a keliver_created=()
+  local probe="$parent"
+  while [ ! -d "$probe" ] && [ "$probe" != "/" ] && [ -n "$probe" ]; do
+    keliver_created+=("$probe")
+    probe="$(dirname "$probe")"
   done
-  # EVERY exit after this point undoes, not only the refusal. mkdir -p can fail
-  # partway — an over-long component, ENOSPC, a read-only volume — and MEASURED,
-  # it then left .KELIVER-PORTAL and .KELIVER-PORTAL/apps behind, which on a
-  # case-folding filesystem IS the store. The same outcome as the refusal leak,
-  # through a different return.
+  # EVERY exit from here undoes, and that enumeration is the claim: refusal,
+  # failed mkdir, failed cd, failed mktemp. mkdir -p can fail partway — an
+  # over-long component, ENOSPC, a read-only volume — and MEASURED, it then left
+  # .KELIVER-PORTAL and .KELIVER-PORTAL/apps behind, which on a case-folding
+  # filesystem IS the store: the same leak as the refusal path, through a
+  # different return. mktemp was a fourth such exit, found by the tenth review
+  # while three comments claimed every exit was covered.
   if ! mkdir -p "$parent"; then
-    keliver_undo_created "$parent" "$created_from"
+    keliver_undo_created "${keliver_created[@]}"
     return 1
   fi
   local resolved
   if ! resolved="$(cd "$parent" && pwd -P)"; then
-    keliver_undo_created "$parent" "$created_from"
+    keliver_undo_created "${keliver_created[@]}"
     return 1
   fi
   if ! keliver_refuse_protected_parent "$resolved"; then
-    keliver_undo_created "$parent" "$created_from"
+    keliver_undo_created "${keliver_created[@]}"
     return 2
   fi
   parent="$resolved"
   local dir
-  dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")" || return 1
+  if ! dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")"; then
+    keliver_undo_created "${keliver_created[@]}"
+    return 1
+  fi
   printf '%s' "$dir"
 }
 
