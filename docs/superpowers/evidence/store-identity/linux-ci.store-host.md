@@ -4,6 +4,57 @@ Four identities, recorded separately, because a GitHub run's `headSha` is the
 SHA of the **workflow definition**, not of what an input-driven checkout built.
 Conflating them is how a run gets credited to the wrong commit.
 
+## Run 34824531657 — `bc2a32550`, the candidate
+
+| what | value |
+|---|---|
+| workflow-definition SHA (`run.headSha`) | `bc2a325503a2daff38251030a0d46378429ad6ff` (branch `fix/store-host-correctness`) |
+| actual checkout SHA (`git rev-parse HEAD` in the job) | `bc2a325503a2daff38251030a0d46378429ad6ff` |
+| `VERSION.json.sourceCommit` | `bc2a325503a2daff38251030a0d46378429ad6ff` |
+| ZIP sha256 | `76ee7eeb155f20e41a9f6629c1d8f84b46b68c11d85dcc6885a6c596588bf959` |
+| conclusion | **success** |
+
+Per-check on Linux: disposable-parent refusal **87 / 0**, hygiene **10 / 0**,
+adopter acceptance **19 / 0**, foreign-relay refusal **6 / 0**, identity contract
+**11 / 0**, guest bundle signing **4 / 0**, store recovery **144 / 0**.
+
+## How many rounds this took, and why it is written down
+
+Fifteen independent reviews, fifteen rejections. The store/host work the block
+asked for — failing closed on store resolution, non-destructive startup, host
+input validation, the recovery CLI, a portable NEW-1 — was settled at
+`c201521a3`. Everything after it is **one file**,
+`scripts/keliver-test-isolation-guard.sh`: a check that refuses to let a test
+script's disposable-parent argument point at the real portal store. It is not on
+any product path.
+
+That check failed open, or wrote where it was refusing to, in eight consecutive
+reviewed commits:
+
+| # | how it got through |
+|---|---|
+| 1 | a parent whose own parent did not exist — empty canonicalisation matched nothing |
+| 2 | a case-variant path on a case-insensitive filesystem |
+| 3 | a `..` segment past a component that did not exist yet |
+| 4 | `mkdir -p` created the store *between* the two refusals |
+| 5 | a partial `mkdir` failure skipped the undo entirely |
+| 6 | a `.` component made `rmdir` fail EINVAL and abort the undo |
+| 7 | `pwd -P`'s doubled leading slash through a symlink to `/` |
+| 8 | the protected ROOTS were compared raw while the candidate was resolved |
+| 9 | `~user/store` — the tilde check, one character along |
+
+The recurring error is the same one each time: fixing the operand the review
+pointed at and not its symmetric partner — candidate but not root, resolved but
+not raw, `OSError` but not every exception, `~/` but not `~user`.
+
+What made it converge was `keliver-refusal-check.sh`, and the discipline of
+running each round's new assertions against the **previous** commit. Three of
+this round's fail there. Two rounds were caught by Linux CI asserting a macOS
+answer. The lint had to be rewritten four times and moved into its own file
+before it could be tested at all — as a heredoc it could only scan the live
+tree, where the case its logic exists for does not occur, so every mutation of
+that logic passed.
+
 ## Run 34791145004 — `c201521a3`
 
 | what | value |
