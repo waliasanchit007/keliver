@@ -336,6 +336,42 @@ WANT="$(python3 -c "import os,sys;print(os.path.realpath(sys.argv[1]))" "$SYMH/s
 [ "$GOT" = "$WANT" ] && ok "and the guard's resolution agrees with the kernel's" \
                      || bad "guard said $GOT, kernel said $WANT"
 
+# A .. traversing a symlink into a HARMLESS tree. Only the given-spelling check
+# can refuse this one: the resolved path lands nowhere protected, so the
+# protected-root match cannot fire. Mutation-tested — deleting that check left
+# the whole suite passing, which made it unfalsifiable and the next refactor's
+# free deletion.
+mkdir -p "$SYMH/elsewhere"
+ln -s "$SYMH/elsewhere" "$SYMH/safe/harmless"
+rc="$(refuse_rc "$SYMH" "$SYMH/safe/harmless/../keys")"
+[ "$rc" = 2 ] && ok "refused: .. traversing a symlink, even somewhere harmless" \
+               || bad "ALLOWED (rc=$rc): .. traversing a symlink somewhere harmless"
+
+# A symlink to / puts a DOUBLED leading slash in pwd -P's answer, and every
+# name-prefix comparison downstream then fails to match. MEASURED, that let a
+# parent inside the Gradle home through, and the one caller with no second
+# refusal created its store there.
+mkdir -p "$SYMH/root"
+ln -s / "$SYMH/root/R"
+# The protected subpath must NOT exist, or the identity walk catches it before
+# the name comparison and the assertion proves nothing — measured, that is why
+# an earlier version of this case passed against the guard it was written for.
+ROOTSPELL="$SYMH/root/R$SYMH/.keliver-portal/apps/evil"
+rc="$(refuse_rc "$SYMH" "$ROOTSPELL")"
+[ "$rc" = 2 ] && ok "refused: a protected tree reached through a symlink to /" \
+               || bad "ALLOWED (rc=$rc): a protected tree reached through a symlink to /"
+GOT="$( ( keliver_abs_of "$ROOTSPELL" ) )"
+WANT="$(python3 -c "import os,sys;print(os.path.realpath(sys.argv[1]))" "$ROOTSPELL")"
+[ "$GOT" = "$WANT" ] && ok "and no doubled leading slash survives into the answer" \
+                     || bad "guard said $GOT, kernel said $WANT"
+
+echo "--- .. is refused outright, which is a policy and not an accident"
+# Every .. spelling is refused, including one that reaches nowhere near a
+# protected tree. That is deliberate — .. cannot be resolved against a directory
+# that does not exist yet — but it is a tightening, so it is pinned rather than
+# left to be rediscovered as a bug.
+must_refuse "an ordinary relative parent containing .." "$FH" "$DISP/legit/../legit2"
+
 echo "--- 'could not tell' is not 'different'"
 # stat that answers for / but not for the candidate: keliver_same_dir must
 # report unknown, and the caller must refuse rather than treat it as a mismatch.
@@ -380,6 +416,79 @@ rc=$( ( export HOME="$FH"; unset PORTAL_STORE
         keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
 [ "$rc" = 2 ] && ok "a stat that cannot answer refuses rather than matching names" \
                || bad "a broken stat degraded the guard to name matching (rc=$rc)"
+
+echo "--- nothing in scripts/ can die on bash 3.2"
+# Expanding an EMPTY array under `set -u` is fatal on bash 3.2, which is
+# /bin/bash on macOS. CI runs ubuntu with bash 5 and structurally cannot catch a
+# new one, so this is a lint rather than a behaviour test: it is the only thing
+# standing between a fifth "${arr[@]}" and a guard that kills the caller's shell
+# instead of returning.
+# Only an array that CAN be empty matters: expanding a non-empty one is fine on
+# 3.2, and ${#arr[@]} is fine either way. So the lint flags an expansion whose
+# array is initialised empty somewhere in the same file — which is exactly the
+# shape that bit us: an array declared empty, then expanded plainly.
+# Scoped to keliver-*.sh: those are the scripts that source this guard and that
+# this work owns. Anything found elsewhere is reported but does not fail the
+# suite — widening the gate to unrelated scripts is not this block's call.
+UNGUARDED="$(
+  for f in "$ROOT"/scripts/keliver-*.sh; do
+    python3 - "$f" <<'PY'
+import re, sys
+path = sys.argv[1]
+src = open(path, encoding="utf-8", errors="replace").read().split("\n")
+emptyable = set(re.findall(r'(?:local\s+-a\s+|declare\s+-a\s+|^\s*)([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)',
+                           "\n".join(src), re.M))
+for i, line in enumerate(src, 1):
+    for m in re.finditer(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}', line):
+        name = m.group(1)
+        if name not in emptyable:
+            continue
+        if "[@]+" in line:
+            continue
+        print("%s:%d:%s" % (path, i, line.strip()))
+PY
+  done
+)"
+if [ -z "$UNGUARDED" ]; then
+  ok "every array that can be empty is expanded safely for bash 3.2"
+else
+  bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
+  printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
+fi
+ELSEWHERE="$(
+  for f in "$ROOT"/scripts/*.sh; do
+    b="$(basename "$f")"
+    # A case pattern here would trip the parser inside a substitution.
+    if [ "${b#keliver-}" != "$b" ]; then continue; fi
+    python3 - "$f" <<'PY'
+import re, sys
+path = sys.argv[1]
+src = open(path, encoding="utf-8", errors="replace").read().split("\n")
+emptyable = set(re.findall(r'(?:local\s+-a\s+|declare\s+-a\s+|^\s*)([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)',
+                           "\n".join(src), re.M))
+for i, line in enumerate(src, 1):
+    for m in re.finditer(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}', line):
+        if m.group(1) in emptyable and "[@]+" not in line:
+            print("%s:%d" % (path, i))
+PY
+  done
+)"
+[ -n "$ELSEWHERE" ] && {
+  printf '        note: the same hazard exists outside keliver-*.sh, not gated here:\n'
+  printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
+}
+
+# And the syntax itself, under the old parser.
+if [ -x /bin/bash ]; then
+  BADPARSE=""
+  for f in "$ROOT"/scripts/*.sh; do
+    /bin/bash -n "$f" 2>/dev/null || BADPARSE="$BADPARSE $f"
+  done
+  [ -z "$BADPARSE" ] && ok "and every script still parses under /bin/bash" \
+                     || bad "these do not parse under /bin/bash:$BADPARSE"
+else
+  bad "no /bin/bash here, so the old-parser check did not run"
+fi
 
 echo
 echo "passed: $PASS   failed: $FAIL"

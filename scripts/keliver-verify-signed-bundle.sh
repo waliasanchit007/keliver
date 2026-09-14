@@ -16,8 +16,8 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DISP="${1:?usage: $0 <disposable-root>}"
-# The TENTH script that mints a signing identity under a caller-supplied parent,
-# and the one that did not go through keliver_make_run_dir's refusal — it
+# The ELEVENTH script that mints a signing identity under a caller-supplied
+# parent, and the one that did not go through keliver_make_run_dir's refusal — it
 # mkdir -p's whatever it is handed. It still does not use a per-run directory
 # (its layout is fixed and its isolation guard checks the resolved store), but
 # the protected-tree refusal is not optional for something that generates a key.
@@ -29,8 +29,17 @@ keliver_refuse_protected_parent "$DISP" || exit $?
 # a raw argument of <safe>/link/../evil created directories under the Gradle home
 # the refusal had just cleared, because mkdir -p resolves .. against the kernel's
 # view rather than the shell's.
-DISP="$(keliver_abs_of "$DISP")" || exit 2
-mkdir -p "$DISP"; DISP="$(cd -P "$DISP" && pwd -P)"
+DISP="$(keliver_abs_of "$DISP")" || {
+  echo "keliver: could not resolve '$1' to a path this check can vouch for." >&2
+  exit 2
+}
+# Checked, both of them. This script runs `set -uo pipefail` without -e, so an
+# unchecked failure here left DISP empty and the next lines targeted /home and
+# /store at the filesystem root — outside everything the refusal just vouched
+# for.
+mkdir -p "$DISP" || { echo "keliver: could not create $DISP" >&2; exit 1; }
+DISP="$(cd -P "$DISP" && pwd -P)" || { echo "keliver: could not enter $DISP" >&2; exit 1; }
+[ -n "$DISP" ] || { echo "keliver: the disposable root resolved to nothing" >&2; exit 1; }
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 
 STORE="$DISP/store"

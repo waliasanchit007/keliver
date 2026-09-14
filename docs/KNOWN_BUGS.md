@@ -1627,7 +1627,7 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 55 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 61 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1646,8 +1646,24 @@ measured, that let a signing key be minted under the Gradle home through
 `keliver-verify-signed-bundle.sh`, which was `mkdir`-ing its raw argument rather
 than the path the refusal had vouched for. The guard resolves with `cd -P`,
 checks `..` against the given spelling as well as the resolved one, and that
-script now creates the vouched-for path. The suite runs under `/bin/bash` as well
-as under `bash`.
+script now creates the vouched-for path.
+
+An eighth followed: bash's `pwd -P` returns a **doubled leading slash** for a
+path reached through a symlink to `/` — `//private/tmp/…` where `getcwd()`,
+`/bin/pwd -P` and `realpath` all say `/private/tmp/…`. Every name-prefix
+comparison downstream then failed to match, and measured, the same
+`keliver-verify-signed-bundle.sh` created its store inside the Gradle home
+again, by a different spelling. The leading slash is collapsed now.
+
+`..` is refused **outright**, including spellings that reach nowhere protected —
+`../scratch` is rejected. That is deliberate (a `..` cannot be resolved against a
+directory that does not exist yet) rather than incidental, and it is pinned by an
+assertion so it cannot be quietly relaxed or quietly widened.
+
+The suite runs under `/bin/bash` as well as under `bash`, and carries a lint:
+an array declared empty and then expanded plainly is fatal on 3.2, so it fails
+the suite for `keliver-*.sh` and is reported for anything else. CI runs bash 5
+and cannot catch that class at all.
 
 **Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
 so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The

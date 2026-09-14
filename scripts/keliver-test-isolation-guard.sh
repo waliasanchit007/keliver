@@ -199,6 +199,14 @@ keliver_abs_of() {
   [ -d "$cur" ] || { printf '%s\n' "$p"; return 0; }
   resolved="$(cd -P "$cur" 2>/dev/null && pwd -P)" || return 1
   [ -n "$resolved" ] || return 1
+  # A DOUBLED LEADING SLASH. POSIX leaves a leading `//` implementation-defined
+  # and bash's pwd -P preserves it, so a path reached through a symlink to `/`
+  # comes back as //private/tmp/... where getcwd(), /bin/pwd -P and realpath all
+  # say /private/tmp/... . Everything downstream then compares strings against a
+  # prefix that cannot match: MEASURED, a parent spelled through such a symlink
+  # was ALLOWED, and keliver-verify-signed-bundle.sh — the one caller with no
+  # second refusal — created its store inside the Gradle home.
+  while :; do case "$resolved" in //*) resolved="${resolved#/}";; *) break;; esac; done
   if [ "$resolved" = "/" ]; then
     printf '%s\n' "${rest:-/}"
   else
@@ -279,7 +287,13 @@ keliver_refuse_protected_parent() {
   # while realpath said <store>/keys. keliver_abs_of uses `cd -P` now, but the
   # given spelling is checked first regardless: it is the thing the caller
   # actually asked for.
-  case "/$1/" in *"/../"*)
+  #
+  # The agreement with the kernel is bounded: a symlink to a FILE, or a dangling
+  # one, as a MID-path component still resolves differently here than realpath
+  # would. Neither is exploitable — mkdir -p fails ENOTDIR or ENOENT on both, and
+  # a dangling symlink as the whole argument is refused below — but the claim is
+  # "agrees for directories", not "agrees always".
+  case "/$given/" in *"/../"*)
     echo "keliver: refusing '$given' — it contains a .. segment that cannot be resolved" >&2
     echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
     return 2;;
