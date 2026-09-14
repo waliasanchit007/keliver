@@ -4,7 +4,21 @@ Four identities, recorded separately, because a GitHub run's `headSha` is the
 SHA of the **workflow definition**, not of what an input-driven checkout built.
 Conflating them is how a run gets credited to the wrong commit.
 
-## Run 34824531657 — `bc2a32550`, the candidate
+## Run 34828230695 — `c11e81643`, the candidate
+
+| what | value |
+|---|---|
+| workflow-definition SHA (`run.headSha`) | `c11e8164306e8d224233be3568e62d3967ed7ca2` (branch `fix/store-host-correctness`) |
+| actual checkout SHA (`git rev-parse HEAD` in the job) | `c11e8164306e8d224233be3568e62d3967ed7ca2` |
+| `VERSION.json.sourceCommit` | `c11e8164306e8d224233be3568e62d3967ed7ca2` |
+| ZIP sha256 | `5ac85c1d97f3d4290f2be2a18431ff602c50f455bce2a240e84c5bdce6e6fc8f` |
+| conclusion | **success** |
+
+Per-check on Linux: disposable-parent refusal **93 / 0**, hygiene **10 / 0**,
+adopter acceptance **19 / 0**, foreign-relay refusal **6 / 0**, identity contract
+**11 / 0**, guest bundle signing **4 / 0**, store recovery **144 / 0**.
+
+## Run 34824531657 — `bc2a32550`
 
 | what | value |
 |---|---|
@@ -14,9 +28,9 @@ Conflating them is how a run gets credited to the wrong commit.
 | ZIP sha256 | `76ee7eeb155f20e41a9f6629c1d8f84b46b68c11d85dcc6885a6c596588bf959` |
 | conclusion | **success** |
 
-Per-check on Linux: disposable-parent refusal **87 / 0**, hygiene **10 / 0**,
-adopter acceptance **19 / 0**, foreign-relay refusal **6 / 0**, identity contract
-**11 / 0**, guest bundle signing **4 / 0**, store recovery **144 / 0**.
+Per-check on Linux: refusal **87 / 0**, recovery **144 / 0**. Evidence for
+`bc2a32550` only — the sixteenth review then found the `KELIVER_JVM_HOME_MEMO`
+bypass, which this run could not have caught because nothing asserted it.
 
 ## How many rounds this took, and why it is written down
 
@@ -48,6 +62,11 @@ spelling at all:
 The recurring error is the same one each time: fixing the operand the review
 pointed at and not its symmetric partner — candidate but not root, resolved but
 not raw, `OSError` but not every exception, `~/` but not `~user`.
+
+The tenth is different in kind and worth reading twice: an **environment
+variable** switched off the protected root that exists *because* `$HOME` is not
+trusted. No path spelling was involved, and the refusal suite itself exports that
+variable.
 
 What made it converge was `keliver-refusal-check.sh`, and the discipline of
 running each round's new assertions against the **previous** commit. Three of
