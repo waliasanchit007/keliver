@@ -121,7 +121,9 @@ for a in "${COORDS[@]}"; do
   [ "$code" = "200" ] || missing+=("$a")
 done
 if [ ${#missing[@]} -gt 0 ]; then
-  finish 1 "FAIL: not on Central: ${missing[*]}"
+  # ${missing[*]+...}: safe even if the count test above ever stops dominating
+  # this line. Expanding an empty array under `set -u` is fatal on bash 3.2.
+  finish 1 "FAIL: not on Central: ${missing[*]+${missing[*]}}"
 fi
 
 # ------------------------------------------------------------- scaffolding --

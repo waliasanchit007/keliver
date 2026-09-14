@@ -437,6 +437,31 @@ must_refuse "a ~/.keliver-portal that is a symlink"   "$PS/home3"    "$PS/elsewh
 must_refuse "the home directory itself, via a symlink" "$PS/linkhome" "$PS/realhome"
 must_allow  "an ordinary parent beside a symlinked home" "$PS/linkhome" "$PS/scratch"
 
+must_refuse "PORTAL_STORE with an unexpanded ~"      "$PS/realhome" "$PS/scratch2" "PORTAL_STORE=~/store"
+# HOME naming a directory that does not exist yet: keliver_same_dir's [ -d ]
+# returns 1 there, so the string comparison is the only thing that refuses.
+# Mutation-tested — without it, and without resolving $HOME first, this is the
+# case that gets through while the symlinked-home row still passes on stat -L.
+must_refuse "the home directory itself, not yet created" "$PS/nohome" "$PS/nohome"
+
+echo "--- a protected root that resolves to / has no useful answer"
+# Protect it and every directory is inside it; skip it and the one tree that
+# must be protected is not. It must say which, and refuse.
+ROOTSLASH="$DISP/home-rootslash"
+mkdir -p "$ROOTSLASH"
+ln -s / "$ROOTSLASH/.gradle"
+rc="$(refuse_rc "$ROOTSLASH" "$DISP/legit")"
+[ "$rc" = 2 ] && ok "refused, rather than denying everything in silence" \
+               || bad "a root resolving to / gave rc=$rc"
+( export HOME="$ROOTSLASH"; unset PORTAL_STORE; KELIVER_STAT_FMT=""
+  keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>"$DISP/rootslash.err" )
+if grep -q "resolves to the filesystem root" "$DISP/rootslash.err"; then
+  ok "and said which root it was"
+else
+  bad "it refused without saying why"
+  head -3 "$DISP/rootslash.err" | sed 's/^/        /'
+fi
+
 echo "--- a symlink to a directory is the same directory"
 # stat follows no symlinks without -L while [ -d ] does, so keliver_same_dir
 # compared the LINK's inode and answered "provably different" about one and the
@@ -492,68 +517,86 @@ echo "--- nothing in scripts/ can die on bash 3.2"
 # A scanner that cannot run must FAIL: measured, the earlier version reported
 # PASS when python3 raised on an unreadable file, which is the one outcome a
 # lint that CI cannot replace must never produce.
-command -v python3 >/dev/null 2>&1 || bad "no python3, so the bash 3.2 lint did not run"
-LINT_OUT="$(python3 - "$ROOT" <<'PY' 2>&1
+if ! command -v python3 >/dev/null 2>&1; then
+  bad "no python3, so the bash 3.2 lint did not run"
+  LINT_OUT=""; LINT_RC=1
+else
+  LINT_OUT="$(python3 - "$ROOT" <<'PY' 2>&1
 import os, re, sys
 root = os.path.join(sys.argv[1], "scripts")
 # An array is "emptyable" if it is ever declared without a non-empty
-# initialiser. That covers `x=()`, `local x=()`, `declare -a x`, `local -a x`,
-# and a declaration anywhere a command may start — not only at line start.
-# ANY `name=()`, wherever it appears. An anchored version missed `local -a x=()
-# y=()` (only the first name) and, without re.M, every declaration after the
-# first line. Over-matching only widens the set of arrays considered emptyable,
-# which the `safe` set and the per-match guard check then narrow again.
+# initialiser. ANY `name=()` wherever it appears, plus a declared-but-unassigned
+# array, plus anything unset. Over-matching only widens the set; the per-match
+# guard check narrows it again.
 DECL = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)')
-BARE = re.compile(r'\b(?:local|declare|typeset)\s+-\w*a\w*\s+([A-Za-z_][A-Za-z0-9_]*)(?![=\w])')
+BARE = re.compile(r'\b(?:local|declare|typeset)\s+-\w*a\w*\s+([A-Za-z_][A-Za-z0-9_]*)(?![=\w])', re.M)
 UNSET = re.compile(r'\bunset\s+([A-Za-z_][A-Za-z0-9_]*)')
 USE = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\}')
-GUARD = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\+')
-APPEND = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*)\+=\(')
-COUNT = re.compile(r'\$\{#([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\}')
-bad = []
+bad_rows = []
+scanned = 0
 try:
     files = sorted(f for f in os.listdir(root) if f.endswith(".sh"))
-except OSError as e:
+except Exception as e:
     print("SCANNER-FAILED %s" % e); raise SystemExit(0)
 for name in files:
     path = os.path.join(root, name)
     try:
         text = open(path, encoding="utf-8", errors="replace").read()
-    except OSError as e:
+    except Exception as e:
         print("SCANNER-FAILED cannot read %s: %s" % (path, e)); continue
+    scanned += 1
     lines = text.split("\n")
     emptyable = set(DECL.findall(text)) | set(BARE.findall(text)) | set(UNSET.findall(text))
-    # An array appended to unconditionally, or tested non-empty, is safe.
-    safe = set(APPEND.findall(text)) | set(COUNT.findall(text))
+    # NO name-global whitelist. An earlier version marked an array safe for the
+    # whole file if it was appended to once, or counted once, anywhere — which
+    # hid an append inside an `if` and a count test that does not dominate the
+    # expansion. Both are fatal on 3.2 and both were caught by the version
+    # before that one. Dominance is not something a regex can decide, so this
+    # errs toward false positives and the flagged code gets made
+    # unconditionally safe instead of whitelisted.
     for i, line in enumerate(lines, 1):
-        guarded = set(GUARD.findall(line))
         for m in USE.finditer(line):
             n = m.group(1)
-            if n not in emptyable or n in safe or n in guarded:
+            if n not in emptyable:
                 continue
-            # per-MATCH, not per-line: one guarded expansion used to whitelist
-            # every other expansion sharing its line.
-            if line[max(0, m.start() - 2):m.start() + len(m.group(0)) + 2].find("[@]+") >= 0:
+            # Per MATCH: is THIS expansion the body of a ${name[@]+...} guard?
+            # Scanning leftward for the enclosing `${name[@]+` is what makes a
+            # guarded and an unguarded expansion on one line distinguishable.
+            head = line[:m.start()]
+            if re.search(r'\$\{' + re.escape(n) + r'\[[@*]\]\+[^}]*$', head):
                 continue
-            print("%s:%d:%s|%s" % (path, i, n, line.strip()[:100]))
+            kind = "KELIVER" if os.path.basename(path).startswith("keliver-") else "OTHER"
+            print("%s|%s:%d:%s|%s" % (kind, path, i, n, line.strip()[:100]))
+print("SCANNER-OK %d" % scanned)
 PY
 )"
-LINT_FAILED="$(printf '%s\n' "$LINT_OUT" | grep "SCANNER-FAILED" || true)"
-[ -n "$LINT_FAILED" ] && { bad "the bash 3.2 lint could not scan"; printf '%s\n' "$LINT_FAILED" | sed 's/^/        /'; }
-UNGUARDED="$(printf '%s\n' "$LINT_OUT" | grep "/scripts/keliver-" || true)"
-ELSEWHERE="$(printf '%s\n' "$LINT_OUT" | grep "/scripts/" | grep -v "/scripts/keliver-" || true)"
-if [ -z "$UNGUARDED" ]; then
-  ok "every array that can be empty is expanded safely for bash 3.2"
-else
-  bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
-  printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
+  LINT_RC=$?
 fi
-[ -n "$ELSEWHERE" ] && {
-  printf '        note: the same shape outside keliver-*.sh, not gated here:\n'
-  printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
-}
+# A POSITIVE sentinel, and the exit status. Absence of a failure marker is not
+# evidence the scan happened: measured, a plain `raise ValueError` inside the
+# scanner produced a traceback with no marker, $( ) discarded the status, and
+# the lint reported PASS — the one outcome it exists to prevent.
+if [ "$LINT_RC" -ne 0 ] || ! printf '%s\n' "$LINT_OUT" | grep -q '^SCANNER-OK'; then
+  bad "the bash 3.2 lint did not complete, so it proves nothing"
+  printf '%s\n' "$LINT_OUT" | head -5 | sed 's/^/        /'
+else
+  UNGUARDED="$(printf '%s\n' "$LINT_OUT" | grep '^KELIVER|' || true)"
+  ELSEWHERE="$(printf '%s\n' "$LINT_OUT" | grep '^OTHER|' || true)"
+  if [ -z "$UNGUARDED" ]; then
+    ok "every array that can be empty is expanded safely for bash 3.2"
+  else
+    bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
+    printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
+  fi
+  printf '%s\n' "$LINT_OUT" | grep -q '^SCANNER-OK' \
+    && ok "and the lint reported completing, rather than merely not complaining" \
+    || bad "the lint produced no completion sentinel"
+  [ -n "$ELSEWHERE" ] && {
+    printf '        note: the same shape outside keliver-*.sh, not gated here:\n'
+    printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
+  }
+fi
 
-# And the syntax itself, under the old parser.
 # /bin/bash is bash 3.2 on macOS and bash 5 on the Linux runner, so this is a
 # real second parser only on macOS. Say which one ran rather than implying two.
 if [ -x /bin/bash ]; then

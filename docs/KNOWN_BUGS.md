@@ -1627,7 +1627,7 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 76 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 81 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1673,17 +1673,34 @@ than the unknown case, because the caller acts on it. `-L` on both flavours.
 
 The suite carries a lint — an array declared empty and then expanded plainly is
 fatal on 3.2, failing the suite for `keliver-*.sh` and reported for anything
-else — and it had to be rewritten once: measured against ten genuinely fatal
-shapes it caught two, missed `local x=()`, a declaration not at line start, a
-declared-but-unassigned array, the `[*]` form, a second name on one declaration,
-`unset`, and a guarded expansion whitelisting an unguarded one on the same line;
-and it reported PASS when its own scanner could not read a file. It now catches
-all ten, refuses the two safe idioms it used to flag (`x+=(…)` and an explicit
-`${#x[@]}` test), and fails loudly when it cannot scan.
+else — and it took three attempts. The first caught two of ten fatal shapes. The
+second caught all ten but introduced a name-global whitelist: an array appended
+to *once*, or counted *once*, anywhere in the file was treated as safe
+everywhere, which hid an append inside an `if` and a `${#x[@]}` test that does
+not dominate the expansion — both fatal, and both caught by the version before
+it. Dominance is not something a regex decides, so there is no whitelist now:
+the lint errs toward false positives, and the one line it flagged in-tree was
+made unconditionally safe rather than excused.
+
+It also reported PASS whenever its scanner failed in any way other than an
+`OSError` — measured, a plain `raise` inside it produced a traceback with no
+failure marker, `$( )` discarded the exit status, and the lint said everything
+was fine. It now requires a positive completion sentinel and the scanner's exit
+status, and the suite asserts that sentinel.
 
 `/bin/bash` is bash 3.2 on macOS and bash 5 on the Linux runner, so it is a
 second parser only on macOS; the suite says which one it got rather than
-implying two. And `keliver-verify-signed-bundle.sh` — the one caller with no
+implying two.
+
+`PORTAL_STORE` was the last root resolved one-sidedly, and an unexpanded `~` —
+single quotes in a Makefile, a CI yaml, an `.envrc` — made it name a literal
+`~` directory under `$PWD`, leaving the real store protected by nothing.
+Measured: a run directory created inside it. Both spellings are emitted now, and
+an unexpanded `~` there refuses the whole run rather than silently protecting
+the wrong path. A protected root that resolves to `/` gets the same treatment
+for the opposite reason: protecting it would mean refusing every directory on
+the machine, skipping it would leave the one tree that matters unprotected, so
+it names the root and refuses. And `keliver-verify-signed-bundle.sh` — the one caller with no
 second refusal, where every one of these leaks landed first — appeared in no
 workflow and no check. It is asserted now.
 

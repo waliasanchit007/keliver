@@ -42,7 +42,9 @@ DISP="$(cd -P "$DISP" && pwd -P)" || { echo "keliver: could not enter $DISP" >&2
 [ -n "$DISP" ] || { echo "keliver: the disposable root resolved to nothing" >&2; exit 1; }
 if [ -z "${JAVA_HOME:-}" ]; then
   if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
-  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 2; }
+  # exit 3, not 2: 2 is the refusal's code, and a caller that cannot tell a
+  # refusal from a missing toolchain will read one as the other.
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 3; }
 fi
 export JAVA_HOME
 
@@ -60,7 +62,14 @@ mkdir -p "$DISP/home" "$STORE" || {
 keliver_require_isolated_store "$DISP" "$ROOT" || exit 1
 
 echo "==> generating a disposable signing identity via the relay"
-PORT="$(python3 -c "import json;print(json.load(open('$ROOT/keliver.portal.json')).get('port',8077))")"
+PORT="$(ROOT="$ROOT" python3 -c "import json,os;print(json.load(open(os.environ['ROOT']+'/keliver.portal.json')).get('port',8077))" 2>/dev/null)"
+# Unchecked, an unreadable or malformed config gave PORT="", and the script then
+# spent two minutes polling http://localhost:/screens before failing about
+# something else. $ROOT goes through the environment rather than into the Python
+# source, so a quote in the repo path cannot break it either.
+case "$PORT" in
+  ''|*[!0-9]*) echo "keliver: could not read a port from $ROOT/keliver.portal.json" >&2; exit 3;;
+esac
 
 # A relay already on this port is NOT ours to talk to or to kill. The default
 # is 8077, the documented dev-loop port, so the likely occupant is the

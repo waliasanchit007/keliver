@@ -252,6 +252,18 @@ keliver_protected_roots() {
     for leaf in "$h/.keliver-portal" "$h/.gradle"; do
       printf '%s\n' "$leaf"
       resolved_leaf="$(keliver_abs_of "$leaf" 2>/dev/null)" || resolved_leaf=""
+      # A protected root that resolves to "/" has no useful answer: protect it
+      # and every directory on the machine is inside it, so nothing can run;
+      # skip it and the one tree that must be protected is not. Say which it is
+      # and refuse, rather than denying everything with no explanation or
+      # protecting nothing in silence. Roots were raw strings before they were
+      # resolved here, so this only became reachable with that fix.
+      if [ "$resolved_leaf" = "/" ]; then
+        echo "keliver: $leaf resolves to the filesystem root, so 'inside the protected" >&2
+        echo "  tree' would mean everywhere. Refusing rather than guessing." >&2
+        printf '%s\n' "KELIVER_PROTECTED_ROOTS_UNUSABLE"
+        return 0
+      fi
       [ -n "$resolved_leaf" ] && [ "$resolved_leaf" != "$leaf" ] \
         && printf '%s\n' "$resolved_leaf"
     done
@@ -260,8 +272,23 @@ keliver_protected_roots() {
   # relative one used verbatim made the CURRENT DIRECTORY a protected root,
   # refusing legitimate parents.
   if [ -n "${PORTAL_STORE:-}" ]; then
+    # An unexpanded ~ — single quotes in a Makefile, a CI yaml, an .envrc —
+    # resolves to a literal "~" directory under $PWD, so the REAL store ends up
+    # protected by nothing at all. The given argument is already refused for
+    # this; the root was not, and MEASURED, PORTAL_STORE='~/store' let a run
+    # directory be created inside the real store. Say so rather than silently
+    # protecting the wrong path.
+    case "$PORTAL_STORE" in '~'|'~'/*)
+      echo "keliver: PORTAL_STORE is '$PORTAL_STORE' — the ~ was never expanded, so it names" >&2
+      echo "  a literal '~' directory and protects nothing. Refusing." >&2
+      printf '%s\n' "KELIVER_PROTECTED_ROOTS_UNUSABLE"
+      return 0;;
+    esac
+    # Both spellings, like the $HOME leaves above.
+    printf '%s\n' "${PORTAL_STORE%/}"
     abs="$(keliver_abs_of "$PORTAL_STORE" 2>/dev/null)" || abs=""
-    [ -n "$abs" ] && [ "$abs" != "/" ] && printf '%s\n' "${abs%/}"
+    [ -n "$abs" ] && [ "$abs" != "/" ] && [ "${abs%/}" != "${PORTAL_STORE%/}" ] \
+      && printf '%s\n' "${abs%/}"
   fi
   return 0
 }
@@ -340,6 +367,10 @@ keliver_refuse_protected_parent() {
     return 2
   fi
   roots="$(keliver_protected_roots)"
+  case "$roots" in *KELIVER_PROTECTED_ROOTS_UNUSABLE*)
+    echo "keliver: refusing to run — the protected set could not be established." >&2
+    return 2;;
+  esac
   # By identity: every existing ancestor, against every protected root.
   cur="$abs"
   while : ; do
