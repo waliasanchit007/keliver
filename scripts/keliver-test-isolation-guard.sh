@@ -133,7 +133,7 @@ keliver_stat_id() {
   local id fmt
   if [ -z "$KELIVER_STAT_FMT" ]; then
     for fmt in -c -f; do
-      id="$(stat "$fmt" '%d:%i' / 2>/dev/null)"
+      id="$(stat -L "$fmt" '%d:%i' / 2>/dev/null)"
       case "$id" in
         *[!0-9:]*|'') ;;
         *:*) KELIVER_STAT_FMT="$fmt"; break;;
@@ -142,7 +142,12 @@ keliver_stat_id() {
     [ -n "$KELIVER_STAT_FMT" ] || KELIVER_STAT_FMT="none"
   fi
   [ "$KELIVER_STAT_FMT" = "none" ] && return 1
-  id="$(stat "$KELIVER_STAT_FMT" '%d:%i' "$1" 2>/dev/null)" || return 1
+  # -L, because neither flavour follows symlinks without it while [ -d ] does.
+  # MEASURED: without it, a directory and a symlink to that same directory came
+  # back with different inodes, so keliver_same_dir answered "provably
+  # DIFFERENT" about one and the same directory — worse than the unknown case
+  # the three-valued result exists to handle, because the caller acts on it.
+  id="$(stat -L "$KELIVER_STAT_FMT" '%d:%i' "$1" 2>/dev/null)" || return 1
   case "$id" in
     *[!0-9:]*|'') return 1;;
     *:*) printf '%s' "$id"; return 0;;
@@ -226,18 +231,30 @@ keliver_abs_of() {
 # silently smaller protected set should not be a surprise.
 KELIVER_JVM_HOME_MEMO=""
 keliver_protected_roots() {
-  local h abs
+  local h abs leaf resolved_leaf
   if [ -z "$KELIVER_JVM_HOME_MEMO" ]; then
     KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
     [ -n "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="-"
   fi
+  # BOTH SPELLINGS OF EVERY ROOT. The candidate is normalised and
+  # symlink-resolved before it is compared; the roots were not, so the name
+  # comparison had one resolved operand and one raw one. MEASURED, that let
+  # through: HOME spelled with a doubled slash, HOME reached through a symlink,
+  # and a ~/.gradle or ~/.keliver-portal that is itself a symlink onto another
+  # volume — an ordinary developer setup. The raw spelling is kept as well,
+  # because the comparison against the GIVEN path needs it.
   for h in "${HOME:-}" "$KELIVER_JVM_HOME_MEMO"; do
     [ -n "$h" ] && [ "$h" != "-" ] || continue
     # HOME=/ must still protect /.keliver-portal: stripping the slash left an
     # empty prefix, which was then skipped entirely.
     [ "$h" = "/" ] || h="${h%/}"
     [ "$h" = "/" ] && h=""
-    printf '%s\n%s\n' "$h/.keliver-portal" "$h/.gradle"
+    for leaf in "$h/.keliver-portal" "$h/.gradle"; do
+      printf '%s\n' "$leaf"
+      resolved_leaf="$(keliver_abs_of "$leaf" 2>/dev/null)" || resolved_leaf=""
+      [ -n "$resolved_leaf" ] && [ "$resolved_leaf" != "$leaf" ] \
+        && printf '%s\n' "$resolved_leaf"
+    done
   done
   # PORTAL_STORE is a caller's environment, so it may be relative — and a
   # relative one used verbatim made the CURRENT DIRECTORY a protected root,
@@ -250,7 +267,7 @@ keliver_protected_roots() {
 }
 
 keliver_refuse_protected_parent() {
-  local given="$1" abs cur root matched="" roots
+  local given="$1" abs cur root matched="" roots home_abs
   # A guard that cannot establish identity must not quietly fall back to
   # matching names.
   keliver_stat_usable || {
@@ -298,6 +315,12 @@ keliver_refuse_protected_parent() {
     echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
     return 2;;
   esac
+  # DEFENCE IN DEPTH, and deliberately not independently reachable: every ..
+  # in the given spelling is caught above, and pwd -P never emits one, so no
+  # input reaches here with a .. that the previous check missed. Mutation
+  # testing confirms deleting it changes no assertion. It is kept as a guard
+  # against a future keliver_abs_of that introduces one, and it is labelled
+  # rather than left looking like coverage it does not have.
   case "/$abs/" in *"/../"*)
     echo "keliver: refusing '$given' — it contains a .. segment that cannot be resolved" >&2
     echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
@@ -354,7 +377,12 @@ $roots
 EOF
   # The home directory itself is not a disposable parent.
   if [ -n "${HOME:-}" ]; then
-    keliver_same_dir "$abs" "$HOME"
+    home_abs="$(keliver_abs_of "$HOME" 2>/dev/null)" || home_abs="$HOME"
+    [ "$abs" = "$home_abs" ] && {
+      echo "keliver: refusing to use your home directory as a disposable run parent" >&2
+      return 2
+    }
+    keliver_same_dir "$abs" "$home_abs"
     case $? in 0|2)
       echo "keliver: refusing to use your home directory as a disposable run parent" >&2
       return 2;;

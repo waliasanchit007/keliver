@@ -371,6 +371,7 @@ echo "--- .. is refused outright, which is a policy and not an accident"
 # that does not exist yet — but it is a tightening, so it is pinned rather than
 # left to be rediscovered as a bug.
 must_refuse "an ordinary relative parent containing .." "$FH" "$DISP/legit/../legit2"
+must_refuse "the ../scratch spelling the docs quote"  "$FH" "$DISP/legit/../scratch"
 
 echo "--- 'could not tell' is not 'different'"
 # stat that answers for / but not for the candidate: keliver_same_dir must
@@ -417,6 +418,63 @@ rc=$( ( export HOME="$FH"; unset PORTAL_STORE
 [ "$rc" = 2 ] && ok "a stat that cannot answer refuses rather than matching names" \
                || bad "a broken stat degraded the guard to name matching (rc=$rc)"
 
+echo "--- the PROTECTED side must be resolved too, not just the candidate"
+# The candidate path is normalised and symlink-resolved; the roots were not, so
+# the name comparison had one resolved operand and one raw one. Every row here
+# was measured ALLOWED before that was fixed, and each needs the protected
+# subtree to be ABSENT (with it present the identity walk catches it and the
+# assertion proves nothing) or the root itself to be a symlink.
+PS="$DISP/protected-side"
+mkdir -p "$PS/realhome" "$PS/realgradle" "$PS/elsewherestore" "$PS/dslash/h"
+ln -s "$PS/realhome" "$PS/linkhome"
+mkdir -p "$PS/home2"; ln -s "$PS/realgradle" "$PS/home2/.gradle"
+mkdir -p "$PS/home3"; ln -s "$PS/elsewherestore" "$PS/home3/.keliver-portal"
+must_refuse "HOME spelled with a doubled slash"      "/$PS/dslash/h" "$PS/dslash/h/.gradle/caches/evil"
+must_refuse "HOME reached through a symlink (gradle)" "$PS/linkhome" "$PS/realhome/.gradle/caches/evil"
+must_refuse "HOME reached through a symlink (store)"  "$PS/linkhome" "$PS/realhome/.keliver-portal/apps/evil"
+must_refuse "a ~/.gradle that is itself a symlink"    "$PS/home2"    "$PS/realgradle/caches/evil"
+must_refuse "a ~/.keliver-portal that is a symlink"   "$PS/home3"    "$PS/elsewherestore/apps"
+must_refuse "the home directory itself, via a symlink" "$PS/linkhome" "$PS/realhome"
+must_allow  "an ordinary parent beside a symlinked home" "$PS/linkhome" "$PS/scratch"
+
+echo "--- a symlink to a directory is the same directory"
+# stat follows no symlinks without -L while [ -d ] does, so keliver_same_dir
+# compared the LINK's inode and answered "provably different" about one and the
+# same directory — worse than the unknown case, because the caller acts on it.
+mkdir -p "$DISP/samedir/real"
+ln -s "$DISP/samedir/real" "$DISP/samedir/link"
+( KELIVER_STAT_FMT=""; keliver_same_dir "$DISP/samedir/real" "$DISP/samedir/link" )
+case $? in
+  0) ok "a directory and a symlink to it compare as the same directory";;
+  1) bad "a directory and a symlink to it compared as provably DIFFERENT";;
+  *) bad "the comparison could not tell, where it should have been certain";;
+esac
+
+echo "--- the one script with no second refusal is pinned too"
+# keliver-verify-signed-bundle.sh calls the refusal directly and has no
+# keliver_make_run_dir behind it, so every leak found in this guard has landed
+# there first. Nothing tested it: grepped, it appears in no workflow and in no
+# check. It exits before any Gradle work, so asserting on it is cheap.
+VSB="$ROOT/scripts/keliver-verify-signed-bundle.sh"
+VSBH="$DISP/home-vsb"
+mkdir -p "$VSBH/.gradle/caches" "$VSBH/root"
+ln -s / "$VSBH/root/R"
+for spelling in \
+  "$VSBH/.keliver-portal" \
+  "$VSBH/.gradle/caches/x" \
+  "$VSBH/root/R$VSBH/.keliver-portal/apps/evil" ; do
+  before="$(find "$VSBH" | LC_ALL=C sort)"
+  ( export HOME="$VSBH"; unset PORTAL_STORE; "$VSB" "$spelling" ) >/dev/null 2>&1
+  rc=$?
+  after="$(find "$VSBH" | LC_ALL=C sort)"
+  label="${spelling#"$VSBH"/}"
+  [ "$rc" = 2 ] && ok "verify-signed-bundle refuses: $label" \
+                 || bad "verify-signed-bundle ALLOWED (rc=$rc): $label"
+  [ "$before" = "$after" ] && ok "and created nothing: $label" \
+                           || { bad "it created something: $label"
+                                diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | sed 's/^/        /'; }
+done
+
 echo "--- nothing in scripts/ can die on bash 3.2"
 # Expanding an EMPTY array under `set -u` is fatal on bash 3.2, which is
 # /bin/bash on macOS. CI runs ubuntu with bash 5 and structurally cannot catch a
@@ -430,62 +488,87 @@ echo "--- nothing in scripts/ can die on bash 3.2"
 # Scoped to keliver-*.sh: those are the scripts that source this guard and that
 # this work owns. Anything found elsewhere is reported but does not fail the
 # suite — widening the gate to unrelated scripts is not this block's call.
-UNGUARDED="$(
-  for f in "$ROOT"/scripts/keliver-*.sh; do
-    python3 - "$f" <<'PY'
-import re, sys
-path = sys.argv[1]
-src = open(path, encoding="utf-8", errors="replace").read().split("\n")
-emptyable = set(re.findall(r'(?:local\s+-a\s+|declare\s+-a\s+|^\s*)([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)',
-                           "\n".join(src), re.M))
-for i, line in enumerate(src, 1):
-    for m in re.finditer(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}', line):
-        name = m.group(1)
-        if name not in emptyable:
-            continue
-        if "[@]+" in line:
-            continue
-        print("%s:%d:%s" % (path, i, line.strip()))
+# One scan over every script, classifying each file rather than two near-copies.
+# A scanner that cannot run must FAIL: measured, the earlier version reported
+# PASS when python3 raised on an unreadable file, which is the one outcome a
+# lint that CI cannot replace must never produce.
+command -v python3 >/dev/null 2>&1 || bad "no python3, so the bash 3.2 lint did not run"
+LINT_OUT="$(python3 - "$ROOT" <<'PY' 2>&1
+import os, re, sys
+root = os.path.join(sys.argv[1], "scripts")
+# An array is "emptyable" if it is ever declared without a non-empty
+# initialiser. That covers `x=()`, `local x=()`, `declare -a x`, `local -a x`,
+# and a declaration anywhere a command may start — not only at line start.
+# ANY `name=()`, wherever it appears. An anchored version missed `local -a x=()
+# y=()` (only the first name) and, without re.M, every declaration after the
+# first line. Over-matching only widens the set of arrays considered emptyable,
+# which the `safe` set and the per-match guard check then narrow again.
+DECL = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)')
+BARE = re.compile(r'\b(?:local|declare|typeset)\s+-\w*a\w*\s+([A-Za-z_][A-Za-z0-9_]*)(?![=\w])')
+UNSET = re.compile(r'\bunset\s+([A-Za-z_][A-Za-z0-9_]*)')
+USE = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\}')
+GUARD = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\+')
+APPEND = re.compile(r'\b([A-Za-z_][A-Za-z0-9_]*)\+=\(')
+COUNT = re.compile(r'\$\{#([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\}')
+bad = []
+try:
+    files = sorted(f for f in os.listdir(root) if f.endswith(".sh"))
+except OSError as e:
+    print("SCANNER-FAILED %s" % e); raise SystemExit(0)
+for name in files:
+    path = os.path.join(root, name)
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError as e:
+        print("SCANNER-FAILED cannot read %s: %s" % (path, e)); continue
+    lines = text.split("\n")
+    emptyable = set(DECL.findall(text)) | set(BARE.findall(text)) | set(UNSET.findall(text))
+    # An array appended to unconditionally, or tested non-empty, is safe.
+    safe = set(APPEND.findall(text)) | set(COUNT.findall(text))
+    for i, line in enumerate(lines, 1):
+        guarded = set(GUARD.findall(line))
+        for m in USE.finditer(line):
+            n = m.group(1)
+            if n not in emptyable or n in safe or n in guarded:
+                continue
+            # per-MATCH, not per-line: one guarded expansion used to whitelist
+            # every other expansion sharing its line.
+            if line[max(0, m.start() - 2):m.start() + len(m.group(0)) + 2].find("[@]+") >= 0:
+                continue
+            print("%s:%d:%s|%s" % (path, i, n, line.strip()[:100]))
 PY
-  done
 )"
+LINT_FAILED="$(printf '%s\n' "$LINT_OUT" | grep "SCANNER-FAILED" || true)"
+[ -n "$LINT_FAILED" ] && { bad "the bash 3.2 lint could not scan"; printf '%s\n' "$LINT_FAILED" | sed 's/^/        /'; }
+UNGUARDED="$(printf '%s\n' "$LINT_OUT" | grep "/scripts/keliver-" || true)"
+ELSEWHERE="$(printf '%s\n' "$LINT_OUT" | grep "/scripts/" | grep -v "/scripts/keliver-" || true)"
 if [ -z "$UNGUARDED" ]; then
   ok "every array that can be empty is expanded safely for bash 3.2"
 else
   bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
   printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
 fi
-ELSEWHERE="$(
-  for f in "$ROOT"/scripts/*.sh; do
-    b="$(basename "$f")"
-    # A case pattern here would trip the parser inside a substitution.
-    if [ "${b#keliver-}" != "$b" ]; then continue; fi
-    python3 - "$f" <<'PY'
-import re, sys
-path = sys.argv[1]
-src = open(path, encoding="utf-8", errors="replace").read().split("\n")
-emptyable = set(re.findall(r'(?:local\s+-a\s+|declare\s+-a\s+|^\s*)([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)',
-                           "\n".join(src), re.M))
-for i, line in enumerate(src, 1):
-    for m in re.finditer(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[@\]\}', line):
-        if m.group(1) in emptyable and "[@]+" not in line:
-            print("%s:%d" % (path, i))
-PY
-  done
-)"
 [ -n "$ELSEWHERE" ] && {
-  printf '        note: the same hazard exists outside keliver-*.sh, not gated here:\n'
+  printf '        note: the same shape outside keliver-*.sh, not gated here:\n'
   printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
 }
 
 # And the syntax itself, under the old parser.
+# /bin/bash is bash 3.2 on macOS and bash 5 on the Linux runner, so this is a
+# real second parser only on macOS. Say which one ran rather than implying two.
 if [ -x /bin/bash ]; then
+  OLDBASH_V="$(/bin/bash --version 2>/dev/null | head -1 | sed 's/.*version \([0-9]*\).*/\1/')"
   BADPARSE=""
   for f in "$ROOT"/scripts/*.sh; do
     /bin/bash -n "$f" 2>/dev/null || BADPARSE="$BADPARSE $f"
   done
-  [ -z "$BADPARSE" ] && ok "and every script still parses under /bin/bash" \
-                     || bad "these do not parse under /bin/bash:$BADPARSE"
+  if [ -n "$BADPARSE" ]; then
+    bad "these do not parse under /bin/bash:$BADPARSE"
+  elif [ "${OLDBASH_V:-0}" -lt 4 ] 2>/dev/null; then
+    ok "and every script parses under /bin/bash, which here is bash ${OLDBASH_V}.x"
+  else
+    ok "every script parses under /bin/bash (bash ${OLDBASH_V:-?}.x — same parser as the shebang, so this is not a second opinion)"
+  fi
 else
   bad "no /bin/bash here, so the old-parser check did not run"
 fi

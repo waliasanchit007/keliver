@@ -1627,7 +1627,7 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 61 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 76 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1660,10 +1660,32 @@ again, by a different spelling. The leading slash is collapsed now.
 directory that does not exist yet) rather than incidental, and it is pinned by an
 assertion so it cannot be quietly relaxed or quietly widened.
 
-The suite runs under `/bin/bash` as well as under `bash`, and carries a lint:
-an array declared empty and then expanded plainly is fatal on 3.2, so it fails
-the suite for `keliver-*.sh` and is reported for anything else. CI runs bash 5
-and cannot catch that class at all.
+A ninth and tenth were both one-sided fixes. The `//` collapse and the symlink
+resolution were applied to the **candidate** path only; the protected roots were
+compared as raw `$HOME/...` strings. Measured, that let through a `HOME` spelled
+with a doubled slash, a `HOME` reached through a symlink, and a `~/.gradle` or
+`~/.keliver-portal` that is itself a symlink onto another volume — an ordinary
+developer setup — in every case where the protected subtree did not exist yet.
+Both spellings of every root are emitted now. And `stat` follows no symlinks
+without `-L` while `[ -d ]` does, so `keliver_same_dir` compared the *link's*
+inode and answered "provably different" about one and the same directory: worse
+than the unknown case, because the caller acts on it. `-L` on both flavours.
+
+The suite carries a lint — an array declared empty and then expanded plainly is
+fatal on 3.2, failing the suite for `keliver-*.sh` and reported for anything
+else — and it had to be rewritten once: measured against ten genuinely fatal
+shapes it caught two, missed `local x=()`, a declaration not at line start, a
+declared-but-unassigned array, the `[*]` form, a second name on one declaration,
+`unset`, and a guarded expansion whitelisting an unguarded one on the same line;
+and it reported PASS when its own scanner could not read a file. It now catches
+all ten, refuses the two safe idioms it used to flag (`x+=(…)` and an explicit
+`${#x[@]}` test), and fails loudly when it cannot scan.
+
+`/bin/bash` is bash 3.2 on macOS and bash 5 on the Linux runner, so it is a
+second parser only on macOS; the suite says which one it got rather than
+implying two. And `keliver-verify-signed-bundle.sh` — the one caller with no
+second refusal, where every one of these leaks landed first — appeared in no
+workflow and no check. It is asserted now.
 
 **Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
 so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The

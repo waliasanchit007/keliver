@@ -40,7 +40,11 @@ DISP="$(keliver_abs_of "$DISP")" || {
 mkdir -p "$DISP" || { echo "keliver: could not create $DISP" >&2; exit 1; }
 DISP="$(cd -P "$DISP" && pwd -P)" || { echo "keliver: could not enter $DISP" >&2; exit 1; }
 [ -n "$DISP" ] || { echo "keliver: the disposable root resolved to nothing" >&2; exit 1; }
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+if [ -z "${JAVA_HOME:-}" ]; then
+  if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 2; }
+fi
+export JAVA_HOME
 
 STORE="$DISP/store"
 export PORTAL_STORE="$STORE"
@@ -50,7 +54,8 @@ export PORTAL_STORE="$STORE"
 # re-downloading them through a TLS-inspecting proxy is how this first failed.
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
-mkdir -p "$DISP/home" "$STORE"
+mkdir -p "$DISP/home" "$STORE" || {
+  echo "keliver: could not create the disposable store under $DISP" >&2; exit 1; }
 
 keliver_require_isolated_store "$DISP" "$ROOT" || exit 1
 
