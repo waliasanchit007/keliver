@@ -105,9 +105,9 @@ keliver_require_isolated_store() {
 # into. Every one of them mints throwaway identities — stores, public keys,
 # signing keys — beneath the parent it is handed, so a mistyped argument is a
 # key written into the developer's real store. This lives here rather than in
-# any one script because TEN scripts mint identities this way (six of which CI
-# runs; keliver-verify-signed-bundle.sh calls the refusal directly rather than
-# through keliver_make_run_dir, because its layout is fixed), and the
+# any one script because ELEVEN scripts mint identities this way — ten through
+# keliver_make_run_dir and keliver-verify-signed-bundle.sh calling the refusal
+# directly, its layout being fixed — of which SEVEN run in CI, and the
 # last time a rule like this had one copy per caller the copies drifted.
 #
 # scripts/keliver-refusal-check.sh is its regression suite. It exists because
@@ -171,7 +171,8 @@ keliver_same_dir() {
 # unreadable ancestor used to truncate the answer and let the check pass.
 keliver_abs_of() {
   local p rest cur resolved
-  case "$1" in /*) p="$1";; *) p="$PWD/$1";; esac
+  [ -n "${1:-}" ] || return 1
+  case "$1" in /*) p="$1";; *) p="${PWD:-$(pwd)}/$1";; esac
   # Collapse `//` and drop `.` segments. Dropping `.` is always safe — unlike
   # `..`, which is refused rather than normalised because it can only be
   # resolved against a directory that may not exist yet. It is also NECESSARY:
@@ -196,7 +197,7 @@ keliver_abs_of() {
     case "$cur" in /*) ;; *) return 1;; esac
   done
   [ -d "$cur" ] || { printf '%s\n' "$p"; return 0; }
-  resolved="$(cd "$cur" 2>/dev/null && pwd -P)" || return 1
+  resolved="$(cd -P "$cur" 2>/dev/null && pwd -P)" || return 1
   [ -n "$resolved" ] || return 1
   if [ "$resolved" = "/" ]; then
     printf '%s\n' "${rest:-/}"
@@ -258,10 +259,10 @@ keliver_refuse_protected_parent() {
   # An unexpanded literal ~ is a quoting mistake; acting on it creates a
   # directory called "~" in the caller's cwd.
   case "$given" in '~'|'~'/*)
-    echo "keliver: refusing '''$given''' — ~ was not expanded (single quotes?)" >&2; return 2;;
+    echo "keliver: refusing '$given' — ~ was not expanded (single quotes?)" >&2; return 2;;
   esac
   abs="$(keliver_abs_of "$given")" || {
-    echo "keliver: refusing '''$given''' — its path could not be resolved, so it cannot be" >&2
+    echo "keliver: refusing '$given' — its path could not be resolved, so it cannot be" >&2
     echo "  shown to be outside the real store." >&2
     return 2
   }
@@ -270,8 +271,21 @@ keliver_refuse_protected_parent() {
   # entirely: MEASURED, <home>/nope/../.keliver-portal was allowed here and then
   # created a run directory INSIDE the store. Nothing legitimate needs .., so it
   # is refused rather than normalised.
+  #
+  # Checked against BOTH the given spelling and the resolved one. Bash's `cd` is
+  # LOGICAL by default: it cancels `link/..` textually, so a .. that traverses a
+  # symlink was already gone by the time this looked, and the answer disagreed
+  # with the kernel's — MEASURED, safe/link/../keys resolved here to safe/keys
+  # while realpath said <store>/keys. keliver_abs_of uses `cd -P` now, but the
+  # given spelling is checked first regardless: it is the thing the caller
+  # actually asked for.
+  case "/$1/" in *"/../"*)
+    echo "keliver: refusing '$given' — it contains a .. segment that cannot be resolved" >&2
+    echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
+    return 2;;
+  esac
   case "/$abs/" in *"/../"*)
-    echo "keliver: refusing '''$given''' — it contains a .. segment that cannot be resolved" >&2
+    echo "keliver: refusing '$given' — it contains a .. segment that cannot be resolved" >&2
     echo "  before the directory exists, and mkdir would resolve it elsewhere." >&2
     return 2;;
   esac
@@ -285,7 +299,7 @@ keliver_refuse_protected_parent() {
   # A dangling symlink passes every check below and then fails in mkdir with a
   # diagnostic about the wrong thing.
   if [ -L "$given" ] && [ ! -e "$given" ]; then
-    echo "keliver: refusing '''$given''' — it is a symlink pointing at nothing." >&2
+    echo "keliver: refusing '$given' — it is a symlink pointing at nothing." >&2
     return 2
   fi
   roots="$(keliver_protected_roots)"
@@ -399,22 +413,22 @@ keliver_make_run_dir() {
   # different return. mktemp was a fourth such exit, found by the tenth review
   # while three comments claimed every exit was covered.
   if ! mkdir -p "$parent"; then
-    keliver_undo_created "${keliver_created[@]}"
+    keliver_undo_created ${keliver_created[@]+"${keliver_created[@]}"}
     return 1
   fi
   local resolved
-  if ! resolved="$(cd "$parent" && pwd -P)"; then
-    keliver_undo_created "${keliver_created[@]}"
+  if ! resolved="$(cd -P "$parent" && pwd -P)"; then
+    keliver_undo_created ${keliver_created[@]+"${keliver_created[@]}"}
     return 1
   fi
   if ! keliver_refuse_protected_parent "$resolved"; then
-    keliver_undo_created "${keliver_created[@]}"
+    keliver_undo_created ${keliver_created[@]+"${keliver_created[@]}"}
     return 2
   fi
   parent="$resolved"
   local dir
   if ! dir="$(mktemp -d "$parent/keliver-$name-XXXXXX")"; then
-    keliver_undo_created "${keliver_created[@]}"
+    keliver_undo_created ${keliver_created[@]+"${keliver_created[@]}"}
     return 1
   fi
   printf '%s' "$dir"

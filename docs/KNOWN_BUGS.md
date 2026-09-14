@@ -1565,11 +1565,11 @@ none is a security hole.
 
 ### The disposable-parent refusal — FIXED, UNRELEASED
 
-Ten scripts (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
-`keliver-guest-signing-check.sh` and seven more) mint throwaway stores, public
-keys and signing keys beneath a parent directory the caller names. Six of them
-run in CI; `keliver-verify-signed-bundle.sh` calls the refusal directly rather
-than through `keliver_make_run_dir`, because its layout is fixed. A mistyped argument
+Eleven scripts (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
+`keliver-guest-signing-check.sh` and eight more) mint throwaway stores, public
+keys and signing keys beneath a parent directory the caller names. Seven run in
+CI. Ten go through `keliver_make_run_dir`; `keliver-verify-signed-bundle.sh`
+calls the refusal directly, because its layout is fixed. A mistyped argument
 is a key written into the developer's real store.
 
 `keliver_make_run_dir` now refuses a parent inside the real portal store — under
@@ -1627,13 +1627,27 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 49 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 55 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
 function, which contains no `mkdir`: measured, that assertion passed against a
 guard stubbed to `return 0`. Run against the previous commit the suite reports
 the leak above.
+
+Two more followed, and both were platform-shaped. Expanding an empty array under
+`set -u` is **fatal on bash 3.2**, which is `/bin/bash` on macOS — and the
+recorded list is empty whenever the parent already exists, so an existing parent
+that `mktemp` could not use killed the shell instead of returning. CI runs bash 5
+and could never have caught it. And bash's `cd` is *logical* by default: it
+cancels `link/..` textually, so a `..` traversing a symlink was gone before the
+`..` refusal looked, and the guard's answer disagreed with the kernel's —
+measured, that let a signing key be minted under the Gradle home through
+`keliver-verify-signed-bundle.sh`, which was `mkdir`-ing its raw argument rather
+than the path the refusal had vouched for. The guard resolves with `cd -P`,
+checks `..` against the given spelling as well as the resolved one, and that
+script now creates the vouched-for path. The suite runs under `/bin/bash` as well
+as under `bash`.
 
 **Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
 so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The

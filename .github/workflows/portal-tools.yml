@@ -131,11 +131,12 @@ jobs:
           ./gradlew --console=plain :portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest
           echo "::endgroup::"
           echo "::group::disposable-parent refusal"
-          # Nine checks mint throwaway stores and signing keys under a parent the
-          # caller names; keliver_make_run_dir refuses a parent inside the real
-          # store, the Gradle home or $PORTAL_STORE. That refusal failed open in
-          # three consecutive reviewed commits, so it has a suite. It also runs
-          # the identity comparison on GNU stat, which macOS cannot exercise.
+          # Eleven scripts mint throwaway stores and signing keys under a parent
+          # the caller names, seven of them here; keliver_make_run_dir refuses a
+          # parent inside the real store, the Gradle home or $PORTAL_STORE. That
+          # refusal failed open, or wrote where it was refusing to, in five
+          # consecutive reviewed commits — so it has a suite. This is also the
+          # only place the identity comparison runs on GNU stat.
           scripts/keliver-refusal-check.sh "$RUNNER_TEMP/refusal"
           echo "::endgroup::"
           echo "::group::device-host packaging hygiene (U22)"

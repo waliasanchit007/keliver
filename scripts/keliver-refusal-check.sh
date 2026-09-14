@@ -4,7 +4,7 @@
 #
 #   scripts/keliver-refusal-check.sh <disposable-root>
 #
-# WHY THIS EXISTS. Ten scripts mint throwaway stores, public keys and signing
+# WHY THIS EXISTS. Eleven scripts mint throwaway stores, public keys and signing
 # keys beneath a parent directory the caller names. keliver_make_run_dir refuses
 # a parent that lies inside the real portal store, the Gradle home or
 # $PORTAL_STORE. That refusal FAILED OPEN in three consecutive reviewed commits:
@@ -230,8 +230,16 @@ undo_case() { # undo_case <label> <base> <parent> <setup-cmd...>
 FH3="$DISP/home-exits"
 mkdir -p "$FH3/ro"
 chmod a-w "$FH3/ro"
-undo_case "mkdir cannot create it" "$FH3/ro" "$FH3/ro/a/b/c" true
+undo_case "mkdir cannot create it at all" "$FH3/ro" "$FH3/ro/a/b/c" true
 chmod u+w "$FH3/ro"
+# A read-only parent makes mkdir fail at the FIRST level, so it creates nothing
+# and the end-state assertion cannot fail. The leak this exit is about is a
+# mkdir that fails PARTWAY, which needs a component the filesystem will not
+# accept. Both cases, because replacing one with the other left the partial
+# case uncovered.
+mkdir -p "$FH3/partial"
+undo_case "mkdir fails partway through" "$FH3/partial" \
+  "$FH3/partial/a/$(printf 'x%.0s' $(seq 1 300))/c" true
 mkdir -p "$FH3/mk"
 undo_case "mktemp cannot create in it" "$FH3/mk" "$FH3/mk/a/b/c" umask 0222
 mkdir -p "$FH3/cd"
@@ -271,22 +279,62 @@ for spelling in \
                                 diff <(printf '%s\n' "$BEFORE") <(printf '%s\n' "$AFTER") | sed 's/^/        /'; }
 done
 
-echo "--- and pre-existing content on the undo chain is never removed"
-# The earlier version of this used a LEGITIMATE parent, so the undo was never
-# invoked at all — instrumented, it ran twice in the whole suite and not once
-# here. The parent has to be one that gets refused, with something already on
-# the chain the undo walks.
-FH4="$DISP/home-keep"
-mkdir -p "$FH4/.keliver-portal/apps/occupied"
-: > "$FH4/.keliver-portal/apps/occupied/file"
-rc="$(make_run_dir_rc "$FH4" "$FH4/.keliver-portal/apps/occupied/new/deeper")"
-[ "$rc" = 2 ] && ok "refused a parent under an occupied directory" \
-               || bad "ALLOWED (rc=$rc) a parent under the store"
-if [ -f "$FH4/.keliver-portal/apps/occupied/file" ]; then
-  ok "and the pre-existing file and its directory survived the undo"
+echo "--- the undo removes only empty directories, and says when it cannot"
+# Tested by calling keliver_undo_created DIRECTLY. Two earlier attempts at this
+# went through keliver_make_run_dir and never reached the undo at all — the
+# first used a legitimate parent, the second one the FIRST refusal catches
+# before any recording happens. Instrumented, the undo ran six times in the
+# whole suite and not once in either block. And by construction the recorded
+# list holds only levels that did not exist, so "pre-existing content on the
+# chain" cannot be produced through make_run_dir; the contract worth asserting
+# is rmdir-not-rm-rf, which is a property of the helper.
+U="$DISP/undo-unit"
+mkdir -p "$U/a/b/c"
+: > "$U/a/b/keepme"
+( keliver_undo_created "$U/a/b/c" "$U/a/b" "$U/a" ) > "$DISP/undo.log" 2>&1
+if [ -f "$U/a/b/keepme" ] && [ -d "$U/a/b" ]; then
+  ok "it stopped at a directory that was not empty"
 else
-  bad "the undo removed content it did not create"
+  bad "it removed a directory that had contents"
 fi
+[ -d "$U/a/b/c" ] && bad "it did not remove the empty directory it was given" \
+                  || ok "and it did remove the empty one below it"
+grep -q "could not remove" "$DISP/undo.log" \
+  && ok "and it said so rather than reporting a clean removal" \
+  || { bad "it stopped silently"; cat "$DISP/undo.log" | sed 's/^/        /'; }
+
+echo "--- an already-existing parent records nothing, and that must not be fatal"
+# keliver_created is empty whenever the parent already exists. Expanding an
+# empty array under `set -u` is FATAL on bash 3.2, which is /bin/bash on macOS —
+# the platform the local pre-gate and the device checks run on. It kills the
+# shell rather than returning, so the caller never sees a status.
+FH5="$DISP/home-exists"
+mkdir -p "$FH5/ro"
+chmod a-w "$FH5/ro"
+out="$( ( export HOME="$FH5"; unset PORTAL_STORE
+          keliver_make_run_dir "$FH5/ro" probe 2>&1 >/dev/null ); echo "rc=$?" )"
+chmod u+w "$FH5/ro"
+case "$out" in
+  *"unbound variable"*) bad "an empty record killed the shell: $out";;
+  *rc=0*) bad "mktemp succeeded in a read-only directory, so this proves nothing";;
+  *) ok "an already-existing parent that mktemp cannot use returns, not crashes";;
+esac
+
+echo "--- .. through a symlink is refused, and agrees with the kernel"
+# Bash's cd is LOGICAL by default: it cancels link/.. textually, so a .. that
+# traverses a symlink was gone before the .. check looked, and the guard's
+# answer disagreed with realpath's. MEASURED, that let a signing key be minted
+# under the Gradle home.
+SYMH="$DISP/home-symlink"
+mkdir -p "$SYMH/.gradle/caches" "$SYMH/safe"
+ln -s "$SYMH/.gradle/caches" "$SYMH/safe/link"
+rc="$(refuse_rc "$SYMH" "$SYMH/safe/link/../keys")"
+[ "$rc" = 2 ] && ok "refused: .. traversing a symlink into a protected tree" \
+               || bad "ALLOWED (rc=$rc): .. traversing a symlink into a protected tree"
+GOT="$( ( keliver_abs_of "$SYMH/safe/link/../keys" ) )"
+WANT="$(python3 -c "import os,sys;print(os.path.realpath(sys.argv[1]))" "$SYMH/safe/link/../keys")"
+[ "$GOT" = "$WANT" ] && ok "and the guard's resolution agrees with the kernel's" \
+                     || bad "guard said $GOT, kernel said $WANT"
 
 echo "--- 'could not tell' is not 'different'"
 # stat that answers for / but not for the candidate: keliver_same_dir must

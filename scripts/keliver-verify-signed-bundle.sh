@@ -24,7 +24,13 @@ DISP="${1:?usage: $0 <disposable-root>}"
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
 keliver_refuse_protected_parent "$DISP" || exit $?
-mkdir -p "$DISP"; DISP="$(cd "$DISP" && pwd -P)"
+# mkdir the path the refusal VOUCHED FOR, not the raw argument. They can differ:
+# the refusal reasons about the normalised, symlink-resolved path, and MEASURED,
+# a raw argument of <safe>/link/../evil created directories under the Gradle home
+# the refusal had just cleared, because mkdir -p resolves .. against the kernel's
+# view rather than the shell's.
+DISP="$(keliver_abs_of "$DISP")" || exit 2
+mkdir -p "$DISP"; DISP="$(cd -P "$DISP" && pwd -P)"
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 
 STORE="$DISP/store"
