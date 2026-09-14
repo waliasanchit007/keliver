@@ -261,8 +261,7 @@ keliver_protected_roots() {
       if [ "$resolved_leaf" = "/" ]; then
         echo "keliver: $leaf resolves to the filesystem root, so 'inside the protected" >&2
         echo "  tree' would mean everywhere. Refusing rather than guessing." >&2
-        printf '%s\n' "KELIVER_PROTECTED_ROOTS_UNUSABLE"
-        return 0
+        return 3
       fi
       [ -n "$resolved_leaf" ] && [ "$resolved_leaf" != "$leaf" ] \
         && printf '%s\n' "$resolved_leaf"
@@ -278,17 +277,31 @@ keliver_protected_roots() {
     # this; the root was not, and MEASURED, PORTAL_STORE='~/store' let a run
     # directory be created inside the real store. Say so rather than silently
     # protecting the wrong path.
-    case "$PORTAL_STORE" in '~'|'~'/*)
+    # ~user/... too: it is the same unexpanded tilde one character along, and
+            # MEASURED, PORTAL_STORE='~someuser/store' walked straight through the
+            # check that had just been added for '~/store'.
+    case "$PORTAL_STORE" in '~'|'~'/*|'~'[!/]*)
       echo "keliver: PORTAL_STORE is '$PORTAL_STORE' — the ~ was never expanded, so it names" >&2
       echo "  a literal '~' directory and protects nothing. Refusing." >&2
-      printf '%s\n' "KELIVER_PROTECTED_ROOTS_UNUSABLE"
-      return 0;;
+      return 3;;
     esac
-    # Both spellings, like the $HOME leaves above.
-    printf '%s\n' "${PORTAL_STORE%/}"
+    # Both spellings, like the $HOME leaves above — and the same answer for a
+    # PORTAL_STORE that resolves to "/", which used to be a silent skip while
+    # the documentation said otherwise.
     abs="$(keliver_abs_of "$PORTAL_STORE" 2>/dev/null)" || abs=""
-    [ -n "$abs" ] && [ "$abs" != "/" ] && [ "${abs%/}" != "${PORTAL_STORE%/}" ] \
-      && printf '%s\n' "${abs%/}"
+    if [ "${PORTAL_STORE%/}" = "" ] || [ "$abs" = "/" ]; then
+      echo "keliver: PORTAL_STORE is '$PORTAL_STORE', which resolves to the filesystem" >&2
+      echo "  root, so 'inside the store' would mean everywhere. Refusing." >&2
+      return 3
+    fi
+    # The raw spelling is DEFENCE IN DEPTH and deliberately not independently
+    # reachable: the candidate is compared in both its given and its resolved
+    # form, so the resolved root already matches everything the raw one would.
+    # It is here for a future keliver_abs_of that cannot resolve a root, where
+    # the raw spelling is all there is. Labelled rather than left looking like
+    # coverage it does not have.
+    printf '%s\n' "${PORTAL_STORE%/}"
+    [ -n "$abs" ] && [ "${abs%/}" != "${PORTAL_STORE%/}" ] && printf '%s\n' "${abs%/}"
   fi
   return 0
 }
@@ -310,7 +323,7 @@ keliver_refuse_protected_parent() {
   }
   # An unexpanded literal ~ is a quoting mistake; acting on it creates a
   # directory called "~" in the caller's cwd.
-  case "$given" in '~'|'~'/*)
+  case "$given" in '~'|'~'/*|'~'[!/]*)
     echo "keliver: refusing '$given' — ~ was not expanded (single quotes?)" >&2; return 2;;
   esac
   abs="$(keliver_abs_of "$given")" || {
@@ -366,11 +379,15 @@ keliver_refuse_protected_parent() {
     echo "keliver: refusing '$given' — it is a symlink pointing at nothing." >&2
     return 2
   fi
-  roots="$(keliver_protected_roots)"
-  case "$roots" in *KELIVER_PROTECTED_ROOTS_UNUSABLE*)
+  # By STATUS, not by a marker in the data. The marker was an unanchored
+  # substring match over user-controlled paths, so a directory that happened to
+  # be named after it produced a refusal with a false explanation — and
+  # returning 0 after emitting it meant the function reported success while
+  # handing back a truncated list.
+  if ! roots="$(keliver_protected_roots)"; then
     echo "keliver: refusing to run — the protected set could not be established." >&2
-    return 2;;
-  esac
+    return 2
+  fi
   # By identity: every existing ancestor, against every protected root.
   cur="$abs"
   while : ; do

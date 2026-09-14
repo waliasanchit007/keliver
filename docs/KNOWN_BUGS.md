@@ -1627,7 +1627,7 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 81 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 87 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1685,12 +1685,35 @@ made unconditionally safe rather than excused.
 It also reported PASS whenever its scanner failed in any way other than an
 `OSError` — measured, a plain `raise` inside it produced a traceback with no
 failure marker, `$( )` discarded the exit status, and the lint said everything
-was fine. It now requires a positive completion sentinel and the scanner's exit
-status, and the suite asserts that sentinel.
+was fine. It requires a positive completion sentinel and the scanner's exit
+status now.
+
+The fourth attempt moved it out of the suite into
+`scripts/keliver-bash32-lint.py`, because as a heredoc it could only ever scan
+the **live tree** — which holds one guarded expansion and no line carrying both
+a guarded and an unguarded one, the single case its guard logic exists for.
+Measured: replacing that logic with the crude per-line skip it had replaced, or
+with a name-blind one, left the suite green. The suite now runs it against
+thirteen fixtures that are fatal on 3.2 and five that are safe, and asserts the
+exact finding set; both mutants fail that. The guard scan is brace-depth aware,
+so a `}` from a nested `${#x[@]}` no longer ends a guard early (false positive)
+and an escaped or quoted `${x[@]+` in a string no longer opens one that was
+never there (false negative). A real false positive can be silenced with a
+trailing `# lint: bash32-ok`.
 
 `/bin/bash` is bash 3.2 on macOS and bash 5 on the Linux runner, so it is a
 second parser only on macOS; the suite says which one it got rather than
 implying two.
+
+`~user/store` is the same unexpanded tilde one character along, and it walked
+straight through the check added for `~/store` — measured, a run directory
+created inside the named store. Both forms are refused now, for the given
+argument as well as for `PORTAL_STORE`. A `PORTAL_STORE` of `/` was a silent
+skip while the paragraph below claimed it got the same treatment as a `$HOME`
+leaf; it does now. And the "protected set is unusable" signal was an unanchored
+substring match over user-controlled paths, so a directory named after the
+marker produced a refusal with a false explanation, while the function returned
+success and a truncated list. It is a return status.
 
 `PORTAL_STORE` was the last root resolved one-sidedly, and an unexpanded `~` —
 single quotes in a Makefile, a CI yaml, an `.envrc` — made it name a literal

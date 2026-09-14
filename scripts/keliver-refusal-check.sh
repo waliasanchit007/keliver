@@ -438,6 +438,13 @@ must_refuse "the home directory itself, via a symlink" "$PS/linkhome" "$PS/realh
 must_allow  "an ordinary parent beside a symlinked home" "$PS/linkhome" "$PS/scratch"
 
 must_refuse "PORTAL_STORE with an unexpanded ~"      "$PS/realhome" "$PS/scratch2" "PORTAL_STORE=~/store"
+# ~user/... is the same unexpanded tilde one character along, and it walked
+# straight through the check added for ~/store.
+must_refuse "PORTAL_STORE with an unexpanded ~user" "$PS/realhome" "$PS/scratch2" "PORTAL_STORE=~someuser/store"
+must_refuse "a parent argument spelled ~user"       "$PS/realhome" "~someuser/store"
+# A PORTAL_STORE of / has no useful answer either: protect it and nothing can
+# run, skip it and the named store is unprotected. It was a silent skip.
+must_refuse "PORTAL_STORE that is the filesystem root" "$PS/realhome" "$PS/scratch2" "PORTAL_STORE=/"
 # HOME naming a directory that does not exist yet: keliver_same_dir's [ -d ]
 # returns 1 there, so the string comparison is the only thing that refuses.
 # Mutation-tested — without it, and without resolving $HOME first, this is the
@@ -500,6 +507,24 @@ for spelling in \
                                 diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") | sed 's/^/        /'; }
 done
 
+# ...and the prologue PAST the refusal, which the rows above never reach: they
+# all exit at rc=2 long before the port and JAVA_HOME checks. Running it from a
+# copied "repo" with no keliver.portal.json exercises the port branch, and
+# distinguishes its exit code from the refusal's — they were both 2, so a caller
+# could not tell a refused parent from a missing toolchain.
+FAKE="$DISP/fakerepo"
+mkdir -p "$FAKE/scripts" "$DISP/vsb-ok"
+cp "$VSB" "$ROOT/scripts/keliver-test-isolation-guard.sh" "$FAKE/scripts/"
+( export HOME="$VSBH"; unset PORTAL_STORE
+  "$FAKE/scripts/keliver-verify-signed-bundle.sh" "$DISP/vsb-ok" ) \
+  >/dev/null 2>"$DISP/vsb-port.err"
+rc=$?
+[ "$rc" = 3 ] && ok "verify-signed-bundle exits 3, not the refusal's 2, on a bad config" \
+               || bad "an unreadable config gave rc=$rc, indistinguishable from a refusal"
+grep -q "could not read a port" "$DISP/vsb-port.err" \
+  && ok "and names the config rather than blaming something else" \
+  || { bad "it did not say the port could not be read"; head -2 "$DISP/vsb-port.err" | sed 's/^/        /'; }
+
 echo "--- nothing in scripts/ can die on bash 3.2"
 # Expanding an EMPTY array under `set -u` is fatal on bash 3.2, which is
 # /bin/bash on macOS. CI runs ubuntu with bash 5 and structurally cannot catch a
@@ -517,84 +542,110 @@ echo "--- nothing in scripts/ can die on bash 3.2"
 # A scanner that cannot run must FAIL: measured, the earlier version reported
 # PASS when python3 raised on an unreadable file, which is the one outcome a
 # lint that CI cannot replace must never produce.
+LINT="$ROOT/scripts/keliver-bash32-lint.py"
 if ! command -v python3 >/dev/null 2>&1; then
   bad "no python3, so the bash 3.2 lint did not run"
-  LINT_OUT=""; LINT_RC=1
+elif [ ! -f "$LINT" ]; then
+  bad "the bash 3.2 lint is missing: $LINT"
 else
-  LINT_OUT="$(python3 - "$ROOT" <<'PY' 2>&1
-import os, re, sys
-root = os.path.join(sys.argv[1], "scripts")
-# An array is "emptyable" if it is ever declared without a non-empty
-# initialiser. ANY `name=()` wherever it appears, plus a declared-but-unassigned
-# array, plus anything unset. Over-matching only widens the set; the per-match
-# guard check narrows it again.
-DECL = re.compile(r'([A-Za-z_][A-Za-z0-9_]*)=\(\s*\)')
-BARE = re.compile(r'\b(?:local|declare|typeset)\s+-\w*a\w*\s+([A-Za-z_][A-Za-z0-9_]*)(?![=\w])', re.M)
-UNSET = re.compile(r'\bunset\s+([A-Za-z_][A-Za-z0-9_]*)')
-USE = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\[[@*]\]\}')
-bad_rows = []
-scanned = 0
-try:
-    files = sorted(f for f in os.listdir(root) if f.endswith(".sh"))
-except Exception as e:
-    print("SCANNER-FAILED %s" % e); raise SystemExit(0)
-for name in files:
-    path = os.path.join(root, name)
-    try:
-        text = open(path, encoding="utf-8", errors="replace").read()
-    except Exception as e:
-        print("SCANNER-FAILED cannot read %s: %s" % (path, e)); continue
-    scanned += 1
-    lines = text.split("\n")
-    emptyable = set(DECL.findall(text)) | set(BARE.findall(text)) | set(UNSET.findall(text))
-    # NO name-global whitelist. An earlier version marked an array safe for the
-    # whole file if it was appended to once, or counted once, anywhere — which
-    # hid an append inside an `if` and a count test that does not dominate the
-    # expansion. Both are fatal on 3.2 and both were caught by the version
-    # before that one. Dominance is not something a regex can decide, so this
-    # errs toward false positives and the flagged code gets made
-    # unconditionally safe instead of whitelisted.
-    for i, line in enumerate(lines, 1):
-        for m in USE.finditer(line):
-            n = m.group(1)
-            if n not in emptyable:
-                continue
-            # Per MATCH: is THIS expansion the body of a ${name[@]+...} guard?
-            # Scanning leftward for the enclosing `${name[@]+` is what makes a
-            # guarded and an unguarded expansion on one line distinguishable.
-            head = line[:m.start()]
-            if re.search(r'\$\{' + re.escape(n) + r'\[[@*]\]\+[^}]*$', head):
-                continue
-            kind = "KELIVER" if os.path.basename(path).startswith("keliver-") else "OTHER"
-            print("%s|%s:%d:%s|%s" % (kind, path, i, n, line.strip()[:100]))
-print("SCANNER-OK %d" % scanned)
-PY
-)"
-  LINT_RC=$?
-fi
-# A POSITIVE sentinel, and the exit status. Absence of a failure marker is not
-# evidence the scan happened: measured, a plain `raise ValueError` inside the
-# scanner produced a traceback with no marker, $( ) discarded the status, and
-# the lint reported PASS — the one outcome it exists to prevent.
-if [ "$LINT_RC" -ne 0 ] || ! printf '%s\n' "$LINT_OUT" | grep -q '^SCANNER-OK'; then
-  bad "the bash 3.2 lint did not complete, so it proves nothing"
-  printf '%s\n' "$LINT_OUT" | head -5 | sed 's/^/        /'
-else
-  UNGUARDED="$(printf '%s\n' "$LINT_OUT" | grep '^KELIVER|' || true)"
-  ELSEWHERE="$(printf '%s\n' "$LINT_OUT" | grep '^OTHER|' || true)"
-  if [ -z "$UNGUARDED" ]; then
-    ok "every array that can be empty is expanded safely for bash 3.2"
+  # FIXTURES FIRST. The lint used to be a heredoc that only ever scanned the
+  # live tree — which holds one guarded expansion and no line carrying a
+  # guarded and an unguarded one, the single case its guard logic exists for.
+  # Measured: replacing that logic with the crude per-line skip it had replaced,
+  # or with a name-blind one, left the suite green. So the lint is now its own
+  # file and it is run against shapes chosen to exercise it.
+  FIX="$DISP/lint-fixtures"
+  mkdir -p "$FIX"
+  fixture() { printf '%s\n' "$2" > "$FIX/$1"; }
+  # lint: bash32-fixtures-begin
+  # Fatal on bash 3.2 — every one of these aborts the shell under set -u.
+  fixture keliver-f01.sh 'x=()
+f "${x[@]}"'
+  fixture keliver-f02.sh 'g(){ local x=(); f "${x[@]}"; }'
+  fixture keliver-f03.sh 'g(){ x=(); f "${x[@]}"; }'
+  fixture keliver-f04.sh 'a=1
+declare -a x
+f "${x[@]}"'
+  fixture keliver-f05.sh 'g(){ local -a x; f "${x[@]}"; }'
+  fixture keliver-f06.sh 'x=()
+f "${x[*]}"'
+  fixture keliver-f07.sh 'g(){ local -a p=() q=(); f "${q[@]}"; }'
+  fixture keliver-f08.sh 'x=(a)
+unset x
+f "${x[@]}"'
+  fixture keliver-f09.sh 'a=()
+if true; then a+=(z); fi
+f "${a[@]}"'
+  fixture keliver-f10.sh 'b=()
+[ ${#b[@]} -gt 0 ]
+f "${b[@]}"'
+  fixture keliver-f11.sh 'c=()
+f "${c[@]+"${c[@]}"}" "${c[@]}"'
+  fixture keliver-f12.sh 'a=()
+echo "a literal \${a[@]+ inside a string"
+f "${a[@]}"'
+  # Another array's guard must not cover this one. Verified fatal on bash 3.2:
+  # with d non-empty the guard body IS expanded, and e is empty.
+  fixture keliver-f13.sh 'd=(x)
+e=()
+f "${d[@]+${d[@]} ${e[@]}}"'
+  # Safe — none of these may be reported.
+  fixture keliver-s01.sh 'x=()
+f ${x[@]+"${x[@]}"}'
+  fixture keliver-s02.sh 'm=()
+f "${m[@]+${#m[@]} ${m[@]}}"'
+  fixture keliver-s03.sh 'p=()
+f "${p[@]:-}"'
+  fixture keliver-s04.sh 'n=()
+f "${n[@]}"  # lint: bash32-ok'
+  fixture keliver-s05.sh 'echo "no arrays here at all"'
+  fixture other-o01.sh 'z=()
+f "${z[@]}"'
+
+  # lint: bash32-fixtures-end
+  FIXOUT="$(python3 "$LINT" "$FIX" 2>&1)"; FIXRC=$?
+  MISSED=""; SPURIOUS=""
+  for n in 01 02 03 04 05 06 07 08 09 10 11 12 13; do
+    printf '%s\n' "$FIXOUT" | grep -q "^KELIVER|.*keliver-f$n\.sh:" || MISSED="$MISSED f$n"
+  done
+  for n in 01 02 03 04 05; do
+    printf '%s\n' "$FIXOUT" | grep -q "keliver-s$n\.sh:" && SPURIOUS="$SPURIOUS s$n"
+  done
+  printf '%s\n' "$FIXOUT" | grep -q "^OTHER|.*other-o01\.sh:" || MISSED="$MISSED routing"
+  if [ "$FIXRC" = 0 ] && [ -z "$MISSED" ]; then
+    ok "the lint flags every shape that is fatal on bash 3.2"
   else
-    bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
-    printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
+    bad "the lint missed a fatal shape:$MISSED (rc=$FIXRC)"
   fi
-  printf '%s\n' "$LINT_OUT" | grep -q '^SCANNER-OK' \
-    && ok "and the lint reported completing, rather than merely not complaining" \
-    || bad "the lint produced no completion sentinel"
-  [ -n "$ELSEWHERE" ] && {
-    printf '        note: the same shape outside keliver-*.sh, not gated here:\n'
-    printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
-  }
+  if [ -z "$SPURIOUS" ]; then
+    ok "and reports none of the safe ones"
+  else
+    bad "the lint flagged a safe shape:$SPURIOUS"
+  fi
+
+  # Then the live tree.
+  LINT_OUT="$(python3 "$LINT" "$ROOT/scripts" 2>&1)"; LINT_RC=$?
+  # A POSITIVE sentinel and the exit status. Absence of a failure marker is not
+  # evidence the scan happened: measured, a plain raise inside the scanner
+  # produced a traceback with no marker, $( ) discarded the status, and the
+  # lint reported PASS.
+  if [ "$LINT_RC" -ne 0 ] || ! printf '%s\n' "$LINT_OUT" | grep -q '^SCANNER-OK'; then
+    bad "the bash 3.2 lint did not complete, so it proves nothing"
+    printf '%s\n' "$LINT_OUT" | head -5 | sed 's/^/        /'
+  else
+    UNGUARDED="$(printf '%s\n' "$LINT_OUT" | grep '^KELIVER|' || true)"
+    ELSEWHERE="$(printf '%s\n' "$LINT_OUT" | grep '^OTHER|' || true)"
+    if [ -z "$UNGUARDED" ]; then
+      ok "every array that can be empty is expanded safely for bash 3.2"
+    else
+      bad "an array that can be empty is expanded unguarded — fatal on bash 3.2"
+      printf '%s\n' "$UNGUARDED" | sed 's/^/        /'
+    fi
+    [ -n "$ELSEWHERE" ] && {
+      printf '        note: the same shape outside keliver-*.sh, not gated here:\n'
+      printf '%s\n' "$ELSEWHERE" | sed 's/^/          /'
+    }
+  fi
 fi
 
 # /bin/bash is bash 3.2 on macOS and bash 5 on the Linux runner, so this is a
