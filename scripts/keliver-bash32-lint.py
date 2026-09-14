@@ -68,18 +68,34 @@ def guarded_spans(line, name):
     return spans
 
 
+def _is_comment_marker(line, m):
+    """True when the marker's `#` is real shell comment syntax, not text.
+
+    A marker inside a string used to disarm scanning: a line merely MENTIONING
+    the begin marker silenced the rest of the file, and a hint string containing
+    the pragma silenced its own line.
+    """
+    head = line[:m.start()]
+    return head.count("'") % 2 == 0 and head.count('"') % 2 == 0
+
+
 def scan(path, text, out):
     emptyable = set(DECL.findall(text)) | set(BARE.findall(text)) | set(UNSET.findall(text))
     kind = "KELIVER" if os.path.basename(path).startswith("keliver-") else "OTHER"
     in_fixtures = False
     for i, line in enumerate(text.split("\n"), 1):
-        if FIX_BEGIN.search(line):
+        mb = FIX_BEGIN.search(line)
+        if mb and _is_comment_marker(line, mb):
             in_fixtures = True
             continue
-        if FIX_END.search(line):
+        me = FIX_END.search(line)
+        if me and _is_comment_marker(line, me):
             in_fixtures = False
             continue
-        if in_fixtures or PRAGMA.search(line):
+        if in_fixtures:
+            continue
+        mp = PRAGMA.search(line)
+        if mp and _is_comment_marker(line, mp):
             continue
         for m in USE.finditer(line):
             name = m.group(1)
@@ -88,6 +104,7 @@ def scan(path, text, out):
             if any(a <= m.start() < b for a, b in guarded_spans(line, name)):
                 continue
             out.append("%s|%s:%d:%s|%s" % (kind, path, i, name, line.strip()[:100]))
+    return 1 if in_fixtures else 0
 
 
 def main(argv):
@@ -106,7 +123,11 @@ def main(argv):
                 print("SCANNER-FAILED cannot read %s: %s" % (path, e))
                 continue
             scanned += 1
-            scan(path, text, out)
+            # An unclosed region reached EOF silently and left the rest of the
+            # file unscanned — a scan that did not happen, reported as success.
+            if scan(path, text, out):
+                print("SCANNER-FAILED unclosed fixtures region in %s" % path)
+                return 1
     for row in out:
         print(row)
     print("SCANNER-OK %d" % scanned)

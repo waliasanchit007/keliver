@@ -230,11 +230,28 @@ keliver_abs_of() {
 # the same path except where user.home and HOME disagree. Stated because a
 # silently smaller protected set should not be a surprise.
 KELIVER_JVM_HOME_MEMO=""
+KELIVER_JVM_HOME_TRIED=""
 keliver_protected_roots() {
   local h abs leaf resolved_leaf
-  if [ -z "$KELIVER_JVM_HOME_MEMO" ]; then
+  # The memo is a CACHE, and it used to be trusted straight from the
+  # environment. "-" was its own "java could not be run" marker, so ANY
+  # inherited value — "-", or a path that does not exist — dropped the JVM-home
+  # leaves entirely. MEASURED: with HOME pointed at a disposable directory and
+  # KELIVER_JVM_HOME_MEMO=- inherited, a parent inside the REAL store was
+  # ALLOWED. The JVM root exists precisely BECAUSE HOME is not trusted, so an
+  # env var that switches it off hands the protected set back to HOME. An
+  # inherited value is honoured only if it names a directory that exists, and
+  # "java is absent" now lives in a separate flag a caller cannot spell.
+  # ${...:-} throughout: an UNSET memo under `set -u` aborted the function, and
+  # an aborted refusal reads to the caller exactly like an allowed one.
+  case "${KELIVER_JVM_HOME_MEMO:-}" in
+    /*) [ -d "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="";;
+    *)  KELIVER_JVM_HOME_MEMO="";;
+  esac
+  if [ -z "${KELIVER_JVM_HOME_MEMO:-}" ] && [ -z "${KELIVER_JVM_HOME_TRIED:-}" ]; then
+    KELIVER_JVM_HOME_TRIED=1
     KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
-    [ -n "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="-"
+    case "${KELIVER_JVM_HOME_MEMO:-}" in /*) ;; *) KELIVER_JVM_HOME_MEMO="";; esac
   fi
   # BOTH SPELLINGS OF EVERY ROOT. The candidate is normalised and
   # symlink-resolved before it is compared; the roots were not, so the name
@@ -243,8 +260,8 @@ keliver_protected_roots() {
   # and a ~/.gradle or ~/.keliver-portal that is itself a symlink onto another
   # volume — an ordinary developer setup. The raw spelling is kept as well,
   # because the comparison against the GIVEN path needs it.
-  for h in "${HOME:-}" "$KELIVER_JVM_HOME_MEMO"; do
-    [ -n "$h" ] && [ "$h" != "-" ] || continue
+  for h in "${HOME:-}" "${KELIVER_JVM_HOME_MEMO:-}"; do
+    [ -n "$h" ] || continue
     # HOME=/ must still protect /.keliver-portal: stripping the slash left an
     # empty prefix, which was then skipped entirely.
     [ "$h" = "/" ] || h="${h%/}"
@@ -278,8 +295,8 @@ keliver_protected_roots() {
     # directory be created inside the real store. Say so rather than silently
     # protecting the wrong path.
     # ~user/... too: it is the same unexpanded tilde one character along, and
-            # MEASURED, PORTAL_STORE='~someuser/store' walked straight through the
-            # check that had just been added for '~/store'.
+    # MEASURED, PORTAL_STORE='~someuser/store' walked straight through the
+    # check that had just been added for '~/store'.
     case "$PORTAL_STORE" in '~'|'~'/*|'~'[!/]*)
       echo "keliver: PORTAL_STORE is '$PORTAL_STORE' — the ~ was never expanded, so it names" >&2
       echo "  a literal '~' directory and protects nothing. Refusing." >&2

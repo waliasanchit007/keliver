@@ -1627,7 +1627,7 @@ cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
 empty stops it, and when it stops it says so rather than reporting a clean
 refusal over a store still on disk.
 
-`scripts/keliver-refusal-check.sh` is the regression suite: 87 assertions over
+`scripts/keliver-refusal-check.sh` is the regression suite: 93 assertions over
 the spellings, the environment shapes, the legitimate parents that must keep
 working, and — for the cases that matter — the **end state** of the filesystem
 rather than only an exit code. An earlier version counted around the refusal
@@ -1704,6 +1704,18 @@ trailing `# lint: bash32-ok`.
 `/bin/bash` is bash 3.2 on macOS and bash 5 on the Linux runner, so it is a
 second parser only on macOS; the suite says which one it got rather than
 implying two.
+
+**The tenth failure was not a path spelling at all.** `KELIVER_JVM_HOME_MEMO`
+caches the JVM's `user.home`, which is a protected root *because* `$HOME` is not
+trusted — on macOS they differ. It was read straight from the environment, and
+`-` was its own "java could not be run" marker, so any inherited value dropped
+that root: measured, with `$HOME` pointed at a disposable directory, a parent
+inside the **real** store was allowed. The refusal suite exports the memo for
+speed, which is exactly how such a value arrives in practice. An inherited value
+is honoured now only if it names a directory that exists, "java is absent" lives
+in a separate non-exported flag, and every expansion is `${…:-}` — an *unset*
+memo under `set -u` aborted the function, and an aborted refusal reads to the
+caller exactly like an allowed one.
 
 `~user/store` is the same unexpanded tilde one character along, and it walked
 straight through the check added for `~/store` — measured, a run directory

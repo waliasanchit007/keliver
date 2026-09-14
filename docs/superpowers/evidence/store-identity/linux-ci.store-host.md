@@ -28,8 +28,9 @@ input validation, the recovery CLI, a portable NEW-1 — was settled at
 script's disposable-parent argument point at the real portal store. It is not on
 any product path.
 
-That check failed open, or wrote where it was refusing to, in eight consecutive
-reviewed commits:
+That check failed open, or wrote where it was refusing to, in nine consecutive
+reviewed commits — ten counting the tenth row below, which is not a path
+spelling at all:
 
 | # | how it got through |
 |---|---|
@@ -42,6 +43,7 @@ reviewed commits:
 | 7 | `pwd -P`'s doubled leading slash through a symlink to `/` |
 | 8 | the protected ROOTS were compared raw while the candidate was resolved |
 | 9 | `~user/store` — the tilde check, one character along |
+| 10 | an inherited `KELIVER_JVM_HOME_MEMO` switching off the root that exists *because* `$HOME` is untrusted |
 
 The recurring error is the same one each time: fixing the operand the review
 pointed at and not its symmetric partner — candidate but not root, resolved but

@@ -469,6 +469,45 @@ else
   head -3 "$DISP/rootslash.err" | sed 's/^/        /'
 fi
 
+echo "--- an inherited cache must not switch a protected root off"
+# KELIVER_JVM_HOME_MEMO caches the JVM's user.home, which is a protected root
+# BECAUSE $HOME is not trusted — on macOS they differ. It was read straight from
+# the environment, and "-" was its own "java could not be run" marker, so any
+# inherited value dropped that root: MEASURED, with HOME pointed at a disposable
+# directory, a parent inside the REAL store was allowed. This suite exports the
+# memo for speed, which is exactly how such a value arrives in practice.
+REALHOME="$(cd "$HOME" && pwd -P)"
+memo_case() { # memo_case <label> <memo-or-empty-for-unset> <parent> <want-rc>
+  local label="$1" memo="$2" parent="$3" want="$4" rc
+  rc=$( ( export HOME="$PS/realhome"; unset PORTAL_STORE; KELIVER_STAT_FMT=""
+          if [ -n "$memo" ]; then export KELIVER_JVM_HOME_MEMO="$memo"
+          else unset KELIVER_JVM_HOME_MEMO; fi
+          unset KELIVER_JVM_HOME_TRIED
+          keliver_refuse_protected_parent "$parent" >/dev/null 2>&1 ); echo $? )
+  [ "$rc" = "$want" ] && ok "$label" || bad "$label (rc=$rc, wanted $want)"
+}
+memo_case "an inherited memo of '-' does not unprotect the real store" \
+  "-" "$REALHOME/.keliver-portal/apps/evil" 2
+memo_case "nor one naming a directory that does not exist" \
+  "/nonexistent-keliver-probe" "$REALHOME/.keliver-portal/apps/evil" 2
+memo_case "nor a relative one" \
+  "relative/path" "$REALHOME/.keliver-portal/apps/evil" 2
+memo_case "and an UNSET memo does not abort the refusal under set -u" \
+  "" "$REALHOME/.keliver-portal/apps/evil" 2
+memo_case "while a legitimate parent is still allowed" \
+  "-" "$DISP/legit" 0
+
+echo "--- a path named after the old in-band marker is not a diagnosis"
+# The "protected set is unusable" signal used to be a string in the data, so a
+# directory named after it produced a refusal with a false explanation while the
+# function reported success and a truncated list. It is a return status now.
+MARKDIR="$DISP/KELIVER_PROTECTED_ROOTS_UNUSABLE/store"
+mkdir -p "$MARKDIR"
+rc=$( ( export HOME="$PS/realhome" PORTAL_STORE="$MARKDIR"; KELIVER_STAT_FMT=""
+        keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
+[ "$rc" = 0 ] && ok "a path containing the old marker text is just a path" \
+              || bad "a path named after the marker was read as a failure (rc=$rc)"
+
 echo "--- a symlink to a directory is the same directory"
 # stat follows no symlinks without -L while [ -d ] does, so keliver_same_dir
 # compared the LINK's inode and answered "provably different" about one and the
@@ -574,7 +613,7 @@ f "${x[*]}"'
 unset x
 f "${x[@]}"'
   fixture keliver-f09.sh 'a=()
-if true; then a+=(z); fi
+if [ -n "${OPT:-}" ]; then a+=(z); fi
 f "${a[@]}"'
   fixture keliver-f10.sh 'b=()
 [ ${#b[@]} -gt 0 ]
@@ -589,6 +628,13 @@ f "${a[@]}"'
   fixture keliver-f13.sh 'd=(x)
 e=()
 f "${d[@]+${d[@]} ${e[@]}}"'
+  # The escape and quote decoys must be on the SAME LINE as the expansion:
+  # guarded_spans matches per line, so a decoy on its own line never reaches the
+  # scan and the two branches it is meant to exercise stay unfalsifiable.
+  fixture keliver-f14.sh 'a=()
+echo "a literal \${a[@]+ x" ; f "${a[@]}"'
+  fixture keliver-f15.sh 'b=()
+echo '"'"'${b[@]+ x'"'"' ; f "${b[@]}"'
   # Safe — none of these may be reported.
   fixture keliver-s01.sh 'x=()
 f ${x[@]+"${x[@]}"}'
@@ -596,16 +642,18 @@ f ${x[@]+"${x[@]}"}'
 f "${m[@]+${#m[@]} ${m[@]}}"'
   fixture keliver-s03.sh 'p=()
 f "${p[@]:-}"'
+  fixture keliver-s05.sh 'echo "no arrays here at all"'
+  # NOT a safe shape — it is fatal, and it is here to prove the pragma silences
+  # a report. Listing it under "safe" said the opposite of what it tests.
   fixture keliver-s04.sh 'n=()
 f "${n[@]}"  # lint: bash32-ok'
-  fixture keliver-s05.sh 'echo "no arrays here at all"'
   fixture other-o01.sh 'z=()
 f "${z[@]}"'
 
   # lint: bash32-fixtures-end
   FIXOUT="$(python3 "$LINT" "$FIX" 2>&1)"; FIXRC=$?
   MISSED=""; SPURIOUS=""
-  for n in 01 02 03 04 05 06 07 08 09 10 11 12 13; do
+  for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
     printf '%s\n' "$FIXOUT" | grep -q "^KELIVER|.*keliver-f$n\.sh:" || MISSED="$MISSED f$n"
   done
   for n in 01 02 03 04 05; do
