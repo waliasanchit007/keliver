@@ -569,6 +569,100 @@ case "$JH" in
   *) ok "the fake user.home is outside the fake HOME, so these cases need the JVM root";;
 esac
 
+echo "--- discovery of the JVM user.home must SUCCEED, or the guard must refuse"
+# THE EIGHTEENTH REVIEW'S FINDING, and the first that is not about a variable or
+# a path spelling: it is about a LOST EXIT STATUS.
+#
+# keliver_effective_jvm_home was one pipeline, `java ... | awk ...`, so the
+# command substitution carried AWK's status — and awk succeeds when it matches
+# nothing. "java is not installed", "java crashed", "java printed no user.home"
+# and a real answer were therefore indistinguishable to every caller: rc=0 and an
+# empty string. keliver_protected_roots read the empty string as "there is no JVM
+# root" and continued with the $HOME roots alone, which is the fallback the JVM
+# root exists to avoid.
+#
+# MEASURED against 53ed0637d, with HOME on a disposable directory and the store
+# under a DIFFERENT user.home — the macOS geometry, and the only geometry where
+# this root matters — every one of these returned 0 AND created directories
+# inside the protected store.
+#
+# Fixtures are a stub `java` on a controlled PATH, and for the absence case a
+# PATH holding symlinks to the tools the guard needs and no java at all. Nothing
+# real is consulted: $HOME here is a disposable directory too.
+JB="$DISP/javabin"; mkdir -p "$JB"
+JPURE="$DISP/purebin"; mkdir -p "$JPURE"
+for t in awk basename dirname find head id mkdir mktemp rmdir sed stat; do
+  src="$(command -v "$t" 2>/dev/null)" && ln -sf "$src" "$JPURE/$t"
+done
+# If that PATH cannot run the guard at all, the absence case would "refuse" for
+# a reason that has nothing to do with java, and would prove nothing.
+if ( export PATH="$JPURE"; command -v stat >/dev/null 2>&1 && command -v mktemp >/dev/null 2>&1 ) \
+   && ! ( export PATH="$JPURE"; command -v java >/dev/null 2>&1 ); then
+  ok "the java-free fixture PATH has the guard's tools and no java"
+else
+  bad "the java-free fixture PATH is wrong, so the absence case proves nothing"
+fi
+
+# java_case <label> <stub-body | ABSENT> <target> <want-rc>
+# Asserts BOTH halves, like cache_case: the status, and that the protected tree
+# is byte-identical afterwards.
+java_case() {
+  local label="$1" body="$2" target="$3" want="$4" pathspec before after rc1 rc2
+  if [ "$body" = "ABSENT" ]; then
+    pathspec="$JPURE"
+  else
+    printf '#!/bin/sh\n%s\n' "$body" > "$JB/java"; chmod +x "$JB/java"
+    pathspec="$JB:$JPURE"
+  fi
+  before="$(find "$JH" | sort)"
+  echo died > "$DISP/jc.rc1"; echo died > "$DISP/jc.rc2"
+  ( export PATH="$pathspec" HOME="$DISP/jvmhome-home"; unset PORTAL_STORE
+    keliver_refuse_protected_parent "$target" >/dev/null 2>&1; echo $? > "$DISP/jc.rc1"
+    keliver_make_run_dir "$target" probe >/dev/null 2>&1; echo $? > "$DISP/jc.rc2" )
+  rc1="$(cat "$DISP/jc.rc1")"; rc2="$(cat "$DISP/jc.rc2")"
+  after="$(find "$JH" | sort)"
+  if [ "$rc1" = "$want" ] && [ "$rc2" = "$want" ]; then
+    ok "$label"
+  else
+    bad "$label (refuse rc=$rc1, make_run_dir rc=$rc2, wanted $want)"
+  fi
+  if [ "$before" = "$after" ]; then
+    ok "$label: and the protected tree is byte-identical"
+  else
+    bad "$label: it WROTE inside the protected root"
+    diff <(echo "$before") <(echo "$after") | sed 's/^/        /'
+  fi
+  rm -rf "$JH/.keliver-portal/apps/evil"
+}
+
+VICTIM="$JH/.keliver-portal/apps/evil"
+java_case "java exits 127"                       'exit 127'                                "$VICTIM" 2
+java_case "java exits 1 with an error message"   'echo "could not find libjvm" >&2; exit 1' "$VICTIM" 2
+java_case "java prints no user.home line"        'echo "        java.version = 17"'         "$VICTIM" 2
+java_case "java prints an EMPTY user.home"       'echo "        user.home = "'              "$VICTIM" 2
+java_case "java prints a RELATIVE user.home"     'echo "        user.home = relative/nope"' "$VICTIM" 2
+java_case "java prints TWO different user.homes" \
+  'echo "        user.home = /one"; echo "        user.home = /two"'                        "$VICTIM" 2
+java_case "java is absent from PATH entirely"    'ABSENT'                                   "$VICTIM" 2
+
+# VALID discovery, in the geometry that matters: HOME and user.home differ, and
+# the store lives under user.home. The root has to come from java or not at all.
+java_case "valid discovery protects a store under user.home" \
+  "echo \"        user.home = $JH\"" "$VICTIM" 2
+# ...and the control that makes every row above mean something. Without it, a
+# guard that refused unconditionally would pass the whole block. MEASURED: it
+# did — naming a local variable `status`, which is a read-only alias for $? in
+# zsh, aborted the function, every caller read that as "discovery failed", and
+# the first run of these assertions was green for exactly that reason. This row
+# was the only one that caught it.
+java_case "and a legitimate parent is still ALLOWED" \
+  "echo \"        user.home = $JH\"" "$DISP/legit" 0
+# The other direction of the same control: with discovery working, the $HOME
+# roots must still bite, so a pass here is not "java answered, therefore allow".
+java_case "while a store under HOME is still refused" \
+  "echo \"        user.home = $JH\"" "$DISP/jvmhome-home/.keliver-portal/x" 2
+rm -f "$JB/java"
+
 echo "--- a path named after the old in-band marker is not a diagnosis"
 # The "protected set is unusable" signal used to be a string in the data, so a
 # directory named after it produced a refusal with a false explanation while the

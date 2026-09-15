@@ -1747,6 +1747,39 @@ asserts the whole property — refuses, **and** leaves the protected tree
 byte-identical — against a disposable fake `user.home` produced by a stub `java`,
 rather than against `$HOME` as it used to.
 
+**The thirteenth failure is not a variable or a path spelling — it is a lost
+exit status.** `keliver_effective_jvm_home` was a single pipeline,
+`java … | awk …`, so the command substitution carried **awk's** status, and awk
+succeeds when it matches nothing. "java is not installed", "java crashed", "java
+printed no `user.home`" and a real answer were therefore the same answer to every
+caller: `rc=0` and an empty string. `keliver_protected_roots` read that empty
+string as "there is no JVM root" and continued with the `$HOME` roots alone —
+which is precisely the fallback the JVM root exists to prevent.
+
+Measured against `53ed0637d`, with `$HOME` on a disposable directory and the
+store under a *different* `user.home` (the macOS geometry, and the only one where
+this root matters), all of these returned `0` from the refusal **and then created
+directories inside the protected store**: java exiting 127, java exiting 1 with a
+message, java printing a relative `user.home`, java printing an empty one, java
+printing no `user.home` line, java printing two different ones, and java absent
+from `PATH` entirely.
+
+The invocation is unpiped now and its status is kept and checked; the answer must
+be exactly one non-empty absolute path; and discovery failure returns 3 from
+`keliver_protected_roots`, which every caller already treats as a refusal — before
+any `mkdir`. There is no fallback to `$HOME`. **Consequence, stated because it is
+a real cost:** a machine with no working java cannot run these checks at all.
+That is deliberate — refusing to run is recoverable, writing into the real store
+is not. `keliver_require_isolated_store` had the same hole, passing an empty home
+to the store resolver, and refuses now too.
+
+The local was briefly named `status`, which is a **read-only alias for `$?` in
+zsh**. Sourced from a zsh prompt the assignment aborted the function, which
+returned non-zero, which every caller reads as "discovery failed" — so the first
+run of the new assertions refused *everything*, including legitimate parents, and
+looked like a pass. The legitimate-parent control was the only assertion that
+caught it, and it is why that control is now mandatory in each of these blocks.
+
 `KELIVER_STAT_FMT` was the same shape one function along: the one cache
 expansion still unguarded, where an `unset` under `set -u` killed the subshell
 of a command substitution — which reads to the caller as an empty answer, not a

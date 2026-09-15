@@ -71,7 +71,7 @@ have caught them, because nothing asserted them.
 
 ## How many rounds this took, and why it is written down
 
-Seventeen independent reviews, seventeen rejections. The store/host work the block
+Eighteen independent reviews, eighteen rejections. The store/host work the block
 asked for — failing closed on store resolution, non-destructive startup, host
 input validation, the recovery CLI, a portable NEW-1 — was settled at
 `c201521a3`. Everything after it is **one file**,
@@ -80,7 +80,7 @@ script's disposable-parent argument point at the real portal store. It is not on
 any product path.
 
 That check failed open, or wrote where it was refusing to, in nine consecutive
-reviewed commits — twelve counting the last three rows below, none of which is a
+reviewed commits — thirteen counting the last four rows below, none of which is a
 path spelling at all:
 
 | # | how it got through |
@@ -97,6 +97,7 @@ path spelling at all:
 | 10 | an inherited `KELIVER_JVM_HOME_MEMO` switching off the root that exists *because* `$HOME` is untrusted |
 | 11 | `KELIVER_JVM_HOME_TRIED` — round 10 validated the memo and left the flag that decides whether the memo is *filled* |
 | 12 | a memo validated for **shape** (absolute, exists) rather than provenance: any real directory is honoured, and an honoured memo *replaces* the JVM root |
+| 13 | `java … \| awk …` — the substitution carried **awk's** status, so "java is absent/crashed/said nothing" and a real answer were indistinguishable, and the JVM root was silently dropped |
 
 The recurring error is the same one each time: fixing the operand the review
 pointed at and not its symmetric partner — candidate but not root, resolved but

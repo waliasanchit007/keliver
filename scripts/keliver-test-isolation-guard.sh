@@ -18,11 +18,65 @@
 #
 set -uo pipefail
 
-# Print the JVM's effective user.home under the current environment.
+# Print the JVM's effective user.home under the current environment, or FAIL.
+#
+# THE STATUS IS THE POINT. This used to be one pipeline —
+#
+#   out="$(java -XshowSettings:properties -version 2>&1 | awk ...)"
+#
+# — so the substitution carried AWK's status, and awk succeeds when it matches
+# nothing. "java is not installed", "java crashed", "java printed no user.home"
+# and "java said /Users/me" were therefore the SAME answer to every caller: rc=0
+# and an empty string. keliver_protected_roots read that empty string as "there
+# is no JVM root" and carried on with the $HOME ones alone.
+#
+# MEASURED at 53ed0637d, with HOME on a disposable directory and the store under
+# a DIFFERENT user.home — the macOS geometry this root exists for — all five of
+# these returned 0 from the refusal and then created directories inside the
+# protected store: java exiting 127, java exiting 1 with a message, java printing
+# a relative user.home, java printing no user.home line, and java absent from
+# PATH entirely.
+#
+# So: no pipe around the invocation, the exit status is kept and checked, and the
+# answer must be exactly one non-empty absolute path. Anything else is a failure
+# the caller must refuse on — never an empty string it can mistake for "no root".
 keliver_effective_jvm_home() {
-  local out
-  out="$(java -XshowSettings:properties -version 2>&1 | awk -F'= ' '/^ *user\.home/ {print $2; exit}')"
-  printf '%s' "${out%$'\r'}"
+  # NOT named `status`: that is a read-only alias for $? in zsh, and this file is
+  # sourced by name from whatever shell a developer happens to be in. MEASURED:
+  # under zsh the assignment aborted the function, which returned non-zero, which
+  # every caller reads as "discovery failed" — so the first run of the new
+  # assertions refused EVERYTHING, including legitimate parents, and looked like
+  # a pass. The legitimate-parent case is the only assertion that caught it.
+  local raw jstatus out
+  # Unpiped, so $? is java's own. A missing binary is 127 here; it was 0 before.
+  raw="$(java -XshowSettings:properties -version 2>&1)"; jstatus=$?
+  if [ "$jstatus" -ne 0 ]; then
+    echo "keliver: java exited $jstatus when asked for user.home." >&2
+    printf '%s\n' "$raw" | head -5 | sed 's/^/  java: /' >&2
+    return 1
+  fi
+  # UNAMBIGUOUS, not just present: collect every user.home line, and answer only
+  # if they agree on one non-empty value. Two different answers is not something
+  # to pick a winner from. awk's own exit 1 reaches this substitution because
+  # there is no command after it in the pipeline to mask it.
+  out="$(printf '%s\n' "$raw" | awk '
+    /^[ \t]*user\.home[ \t]*=/ {
+      v = substr($0, index($0, "=") + 1)
+      gsub(/^[ \t]+/, "", v); gsub(/[ \t\r]+$/, "", v)
+      if (v != "") seen[v] = 1
+    }
+    END { n = 0; for (k in seen) { n++; last = k }
+          if (n == 1) print last; else exit 1 }
+  ')" || {
+    echo "keliver: java ran, but did not report exactly one user.home." >&2
+    return 1
+  }
+  case "$out" in
+    /*) ;;
+    *)  echo "keliver: java reported user.home='$out', which is not an absolute path." >&2
+        return 1;;
+  esac
+  printf '%s' "$out"
 }
 
 # Print the store the relay would resolve for <app-dir>, without starting it.
@@ -51,7 +105,14 @@ keliver_require_isolated_store() {
   root="$(cd "$root" 2>/dev/null && pwd -P)" || { echo "guard: disposable root does not exist: $1" >&2; return 1; }
 
   local jvm_home store
-  jvm_home="$(keliver_effective_jvm_home)"
+  # Same requirement as keliver_protected_roots: an unknown user.home used to
+  # arrive here as an empty string and be passed to the store resolver as the
+  # home to resolve against, which is a different store from the real one.
+  if ! jvm_home="$(keliver_effective_jvm_home)"; then
+    echo "guard: the JVM's user.home could not be established (see above), so the store" >&2
+    echo "guard: this app resolves cannot be named. Refusing to start a test relay." >&2
+    return 1
+  fi
   if ! store="$(keliver_effective_store "$app" "$jvm_home")"; then
     echo "guard: the store could not be resolved for $app (see above)." >&2
     echo "guard: refusing to start a test relay." >&2
@@ -267,8 +328,31 @@ keliver_protected_roots() {
   # ${...:-} on every expansion: an UNSET variable under `set -u` aborts the
   # function, and an aborted refusal reads to the caller exactly like an allowed
   # one. jvm_home is assigned before it is read, so it cannot be unset here.
-  jvm_home="$(keliver_effective_jvm_home 2>/dev/null)"
-  case "$jvm_home" in /*) ;; *) jvm_home="";; esac
+  # REQUIRED, not best-effort. The JVM user.home is a protected root in its own
+  # right — on macOS it comes from the passwd entry and ignores $HOME, which is
+  # the entire reason it is consulted — so "I could not find out where it is" is
+  # not "there is nothing there to protect". Falling back to the $HOME roots
+  # alone hands the protected set back to the variable this root exists because
+  # it does not trust.
+  #
+  # The stderr is NOT swallowed here any more: it used to be `2>/dev/null`, so
+  # the one explanation of why the protected set was short never reached anyone.
+  #
+  # CONSEQUENCE, stated because it is a real cost: a machine with no working
+  # java cannot run these checks at all. That is deliberate. Every caller mints
+  # throwaway stores and signing keys next to a real one, and refusing to run is
+  # recoverable while writing into the real store is not.
+  if ! jvm_home="$(keliver_effective_jvm_home)"; then
+    echo "keliver: the JVM's user.home could not be established (see above), and it is" >&2
+    echo "  a protected root in its own right — on macOS it differs from \$HOME. Refusing" >&2
+    echo "  rather than protecting only \$HOME." >&2
+    return 3
+  fi
+  case "$jvm_home" in
+    /*) ;;
+    *)  echo "keliver: java reported a user.home that is not an absolute path. Refusing." >&2
+        return 3;;
+  esac
   # BOTH SPELLINGS OF EVERY ROOT. The candidate is normalised and
   # symlink-resolved before it is compared; the roots were not, so the name
   # comparison had one resolved operand and one raw one. MEASURED, that let
