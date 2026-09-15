@@ -131,7 +131,7 @@ keliver_require_isolated_store() {
 KELIVER_STAT_FMT=""
 keliver_stat_id() {
   local id fmt
-  if [ -z "$KELIVER_STAT_FMT" ]; then
+  if [ -z "${KELIVER_STAT_FMT:-}" ]; then
     for fmt in -c -f; do
       id="$(stat -L "$fmt" '%d:%i' / 2>/dev/null)"
       case "$id" in
@@ -224,35 +224,51 @@ keliver_abs_of() {
 # comes from the passwd entry and ignores HOME — an explicit PORTAL_STORE, and
 # the Gradle home.
 #
-# keliver_effective_jvm_home SPAWNS A JVM, and this is consulted once per
-# ancestor level, so it is resolved once per shell. If java cannot be run the
-# JVM-home roots are simply not added; the $HOME ones still are, and those are
-# the same path except where user.home and HOME disagree. Stated because a
-# silently smaller protected set should not be a surprise.
-KELIVER_JVM_HOME_MEMO=""
-KELIVER_JVM_HOME_TRIED=""
+# keliver_effective_jvm_home SPAWNS A JVM, and this function asks it once per
+# call. If java cannot be run the JVM-home roots are simply not added; the $HOME
+# ones still are, and those are the same path except where user.home and HOME
+# disagree. Stated because a silently smaller protected set should not be a
+# surprise.
+#
+# THERE IS NO CACHE HERE ANY MORE, AND THAT IS THE FIX. Eleven rounds of this
+# guard failing open produced ten path spellings and then one variable; the
+# eleventh and twelfth were two more spellings of that same variable, and the
+# shape they all share is "something a caller can set decides whether a
+# protected root exists". Deleting the shape ends the series; guarding the next
+# spelling of it does not.
+#
+# What was here: KELIVER_JVM_HOME_MEMO cached the answer and KELIVER_JVM_HOME_TRIED
+# recorded that java had been asked. Both were ordinary globals, wiped at source
+# time — so an EXPORTED value could not reach them — but assignable by any caller
+# after sourcing, which is exactly what scripts/keliver-refusal-check.sh did for
+# speed. MEASURED at c11e81643, with HOME on a disposable directory and a fake
+# user.home holding the store:
+#
+#   KELIVER_JVM_HOME_TRIED=1  (memo unset)  -> java never asked, JVM root absent,
+#                                              refuse rc=0, make_run_dir rc=0 and
+#                                              TWO directories created inside it
+#   KELIVER_JVM_HOME_MEMO=<any existing dir> -> honoured, and an honoured memo
+#                                              REPLACES the JVM root rather than
+#                                              adding to it: same rc=0, same writes
+#
+# The round that introduced the validation checked the memo for SHAPE — absolute,
+# and a directory that exists — which rejects the three shapes that are invalid
+# as paths and accepts the one that is a valid path and still a lie. Provenance,
+# not shape, was the property, and a shell global cannot carry provenance.
+#
+# The cache also never cached. keliver_protected_roots is only ever called as
+# `roots="$(keliver_protected_roots)"` — a command substitution — so both globals
+# were subshell-local and never reached the caller. MEASURED: two consecutive
+# keliver_refuse_protected_parent calls spawned java TWICE and left both globals
+# empty in the parent shell. The only thing the memo ever sped up was the one
+# caller that set it by hand, and that caller was the hole.
 keliver_protected_roots() {
-  local h abs leaf resolved_leaf
-  # The memo is a CACHE, and it used to be trusted straight from the
-  # environment. "-" was its own "java could not be run" marker, so ANY
-  # inherited value — "-", or a path that does not exist — dropped the JVM-home
-  # leaves entirely. MEASURED: with HOME pointed at a disposable directory and
-  # KELIVER_JVM_HOME_MEMO=- inherited, a parent inside the REAL store was
-  # ALLOWED. The JVM root exists precisely BECAUSE HOME is not trusted, so an
-  # env var that switches it off hands the protected set back to HOME. An
-  # inherited value is honoured only if it names a directory that exists, and
-  # "java is absent" now lives in a separate flag a caller cannot spell.
-  # ${...:-} throughout: an UNSET memo under `set -u` aborted the function, and
-  # an aborted refusal reads to the caller exactly like an allowed one.
-  case "${KELIVER_JVM_HOME_MEMO:-}" in
-    /*) [ -d "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="";;
-    *)  KELIVER_JVM_HOME_MEMO="";;
-  esac
-  if [ -z "${KELIVER_JVM_HOME_MEMO:-}" ] && [ -z "${KELIVER_JVM_HOME_TRIED:-}" ]; then
-    KELIVER_JVM_HOME_TRIED=1
-    KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
-    case "${KELIVER_JVM_HOME_MEMO:-}" in /*) ;; *) KELIVER_JVM_HOME_MEMO="";; esac
-  fi
+  local h abs leaf resolved_leaf jvm_home
+  # ${...:-} on every expansion: an UNSET variable under `set -u` aborts the
+  # function, and an aborted refusal reads to the caller exactly like an allowed
+  # one. jvm_home is assigned before it is read, so it cannot be unset here.
+  jvm_home="$(keliver_effective_jvm_home 2>/dev/null)"
+  case "$jvm_home" in /*) ;; *) jvm_home="";; esac
   # BOTH SPELLINGS OF EVERY ROOT. The candidate is normalised and
   # symlink-resolved before it is compared; the roots were not, so the name
   # comparison had one resolved operand and one raw one. MEASURED, that let
@@ -260,7 +276,7 @@ keliver_protected_roots() {
   # and a ~/.gradle or ~/.keliver-portal that is itself a symlink onto another
   # volume — an ordinary developer setup. The raw spelling is kept as well,
   # because the comparison against the GIVEN path needs it.
-  for h in "${HOME:-}" "${KELIVER_JVM_HOME_MEMO:-}"; do
+  for h in "${HOME:-}" "$jvm_home"; do
     [ -n "$h" ] || continue
     # HOME=/ must still protect /.keliver-portal: stripping the slash left an
     # empty prefix, which was then skipped entirely.

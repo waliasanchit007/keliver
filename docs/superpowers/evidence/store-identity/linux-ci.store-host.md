@@ -30,11 +30,12 @@ adopter acceptance **19 / 0**, foreign-relay refusal **6 / 0**, identity contrac
 
 Per-check on Linux: refusal **87 / 0**, recovery **144 / 0**. Evidence for
 `bc2a32550` only — the sixteenth review then found the `KELIVER_JVM_HOME_MEMO`
-bypass, which this run could not have caught because nothing asserted it.
+bypass, and the seventeenth found its two symmetric partners. Neither run could
+have caught them, because nothing asserted them.
 
 ## How many rounds this took, and why it is written down
 
-Fifteen independent reviews, fifteen rejections. The store/host work the block
+Seventeen independent reviews, seventeen rejections. The store/host work the block
 asked for — failing closed on store resolution, non-destructive startup, host
 input validation, the recovery CLI, a portable NEW-1 — was settled at
 `c201521a3`. Everything after it is **one file**,
@@ -43,8 +44,8 @@ script's disposable-parent argument point at the real portal store. It is not on
 any product path.
 
 That check failed open, or wrote where it was refusing to, in nine consecutive
-reviewed commits — ten counting the tenth row below, which is not a path
-spelling at all:
+reviewed commits — twelve counting the last three rows below, none of which is a
+path spelling at all:
 
 | # | how it got through |
 |---|---|
@@ -58,15 +59,25 @@ spelling at all:
 | 8 | the protected ROOTS were compared raw while the candidate was resolved |
 | 9 | `~user/store` — the tilde check, one character along |
 | 10 | an inherited `KELIVER_JVM_HOME_MEMO` switching off the root that exists *because* `$HOME` is untrusted |
+| 11 | `KELIVER_JVM_HOME_TRIED` — round 10 validated the memo and left the flag that decides whether the memo is *filled* |
+| 12 | a memo validated for **shape** (absolute, exists) rather than provenance: any real directory is honoured, and an honoured memo *replaces* the JVM root |
 
 The recurring error is the same one each time: fixing the operand the review
 pointed at and not its symmetric partner — candidate but not root, resolved but
 not raw, `OSError` but not every exception, `~/` but not `~user`.
 
-The tenth is different in kind and worth reading twice: an **environment
+The tenth is different in kind and worth reading twice: a **caller-settable
 variable** switched off the protected root that exists *because* `$HOME` is not
-trusted. No path spelling was involved, and the refusal suite itself exports that
+trusted. No path spelling was involved, and the refusal suite itself set that
 variable.
+
+Rounds 11 and 12 are that same error applied to round 10's own fix — the flag
+next to the memo, and a memo validated for shape rather than provenance. The
+mechanism is deleted now rather than guarded a third time: `java` is asked once
+per call into a `local`, and nothing a caller can assign decides whether a
+protected root exists. It cost the suite about 25 seconds and removed the shape.
+Measured against `1c19804e6`, **nine** of the new assertions fail there, four of
+them reporting that the guard *wrote inside the protected root*.
 
 What made it converge was `keliver-refusal-check.sh`, and the discipline of
 running each round's new assertions against the **previous** commit. Three of

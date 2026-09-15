@@ -28,13 +28,12 @@ DISP_PARENT="${1:?usage: $0 <disposable-root>}"
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
 DISP="$(keliver_make_run_dir "$DISP_PARENT" refusal)" || exit $?
 
-# keliver_protected_roots spawns a JVM to read user.home. Resolving it once and
-# exporting it keeps every subshell below from doing so: measured, resetting the
-# memo per case cost 9 seconds in a suite that is otherwise pure filesystem work.
-KELIVER_JVM_HOME_MEMO="$(keliver_effective_jvm_home 2>/dev/null)"
-[ -n "$KELIVER_JVM_HOME_MEMO" ] || KELIVER_JVM_HOME_MEMO="-"
-export KELIVER_JVM_HOME_MEMO
-
+# This suite used to resolve the JVM user.home once and hand it to every subshell
+# through KELIVER_JVM_HOME_MEMO, to avoid ~90 JVM starts. That variable is gone:
+# it was the hole. A caller-settable global decided whether a protected root
+# existed, and the suite was the caller — so the very assertions below ran with
+# the root they were testing switched off. The guard now asks java per call and
+# the suite pays the seconds.
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 bad() { FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; }
@@ -108,7 +107,7 @@ must_refuse "an unexpanded literal ~"          "$FH" '~/.keliver-portal'
 must_refuse "PORTAL_STORE naming the parent"   "$FH" "$DISP/other" "PORTAL_STORE=$DISP/other"
 must_refuse "PORTAL_STORE above the parent"    "$FH" "$DISP/other/x" "PORTAL_STORE=$DISP/other"
 printf '  ....  HOME unset\n'
-rc=$( ( unset HOME; unset PORTAL_STORE; KELIVER_STAT_FMT=""; KELIVER_JVM_HOME_MEMO=""
+rc=$( ( unset HOME; unset PORTAL_STORE; KELIVER_STAT_FMT=""
         keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
 [ "$rc" = 2 ] && ok "refused: HOME unset" || bad "ALLOWED (rc=$rc): HOME unset"
 
@@ -411,7 +410,7 @@ fi
 
 echo "--- stat must be able to prove identity, or the guard must refuse"
 rc=$( ( export HOME="$FH"; unset PORTAL_STORE
-        KELIVER_STAT_FMT="none"; KELIVER_JVM_HOME_MEMO="-"
+        KELIVER_STAT_FMT="none"
         # keliver_stat_usable re-probes, so shadow stat itself.
         stat() { return 1; }
         keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
@@ -469,33 +468,106 @@ else
   head -3 "$DISP/rootslash.err" | sed 's/^/        /'
 fi
 
-echo "--- an inherited cache must not switch a protected root off"
-# KELIVER_JVM_HOME_MEMO caches the JVM's user.home, which is a protected root
-# BECAUSE $HOME is not trusted — on macOS they differ. It was read straight from
-# the environment, and "-" was its own "java could not be run" marker, so any
-# inherited value dropped that root: MEASURED, with HOME pointed at a disposable
-# directory, a parent inside the REAL store was allowed. This suite exports the
-# memo for speed, which is exactly how such a value arrives in practice.
-REALHOME="$(cd "$HOME" && pwd -P)"
-memo_case() { # memo_case <label> <memo-or-empty-for-unset> <parent> <want-rc>
-  local label="$1" memo="$2" parent="$3" want="$4" rc
-  rc=$( ( export HOME="$PS/realhome"; unset PORTAL_STORE; KELIVER_STAT_FMT=""
-          if [ -n "$memo" ]; then export KELIVER_JVM_HOME_MEMO="$memo"
-          else unset KELIVER_JVM_HOME_MEMO; fi
-          unset KELIVER_JVM_HOME_TRIED
-          keliver_refuse_protected_parent "$parent" >/dev/null 2>&1 ); echo $? )
-  [ "$rc" = "$want" ] && ok "$label" || bad "$label (rc=$rc, wanted $want)"
+echo "--- no caller-settable variable may switch a protected root off"
+# THE ELEVENTH AND TWELFTH WAYS IN, and the reason the mechanism is gone rather
+# than guarded. The JVM's user.home is a protected root BECAUSE $HOME is not
+# trusted — on macOS they differ. It used to be cached in KELIVER_JVM_HOME_MEMO,
+# with KELIVER_JVM_HOME_TRIED recording that java had been asked. Both were
+# wiped at source time, so an exported value could not reach them, but either
+# could be assigned after sourcing — which is what this suite did for speed.
+#
+# The round before this one validated the MEMO and left the FLAG alone, and
+# validated it for shape (absolute, and a directory that exists) rather than for
+# provenance. Two shapes survived, each measured against that commit, each
+# returning 0 on a parent inside the protected root AND creating two directories
+# there:
+#
+#   KELIVER_JVM_HOME_TRIED=1            java is never asked, the root is absent
+#   KELIVER_JVM_HOME_MEMO=<existing dir> honoured — and an honoured memo REPLACES
+#                                        the JVM root rather than adding to it
+#
+# The previous version of this block asserted rc only, against $HOME/.keliver-portal
+# — the developer's REAL store — and began each case with `unset
+# KELIVER_JVM_HOME_TRIED`, which is precisely what kept it from seeing the flag.
+# It is a DISPOSABLE fake user.home now, produced by a stub `java` on PATH, which
+# is what makes it safe to drive keliver_make_run_dir here and assert the whole
+# property: refuses, AND leaves the tree byte-identical.
+JH="$DISP/jvmhome"
+mkdir -p "$JH/.keliver-portal/apps" "$JH/.gradle" "$DISP/stubbin" "$DISP/jvmhome-home"
+cat > "$DISP/stubbin/java" <<STUB
+#!/bin/sh
+echo "        user.home = $JH"
+STUB
+chmod +x "$DISP/stubbin/java"
+
+# cache_case <label> <post-source-assignments> <want-rc>
+# The assignments run AFTER the guard is sourced — the only vector that ever
+# reached these variables — and nothing is unset on the way in.
+cache_case() {
+  local label="$1" assign="$2" want="$3" before after rc1 rc2
+  local victim="$JH/.keliver-portal/apps/evil"
+  before="$(find "$JH" | sort)"
+  # SENTINEL FIRST. An assignment like `unset KELIVER_STAT_FMT` can make the
+  # subshell die on an unbound expansion under set -u, and a dead subshell never
+  # reaches its `echo $?` — so these files would still hold the PREVIOUS case's
+  # status and the assertion would quietly grade the wrong run. Caught by this
+  # suite reporting rc=0/0 for a case whose subshell had in fact been killed.
+  # "died" is not 2, so a death still fails the assertion, which is correct: a
+  # refusal that aborts reads to the caller exactly like an allowed one.
+  echo died > "$DISP/cc.rc1"; echo died > "$DISP/cc.rc2"
+  ( export PATH="$DISP/stubbin:$PATH" HOME="$DISP/jvmhome-home"; unset PORTAL_STORE
+    eval "$assign"
+    keliver_refuse_protected_parent "$victim" >/dev/null 2>&1; echo $? > "$DISP/cc.rc1"
+    keliver_make_run_dir "$victim" probe >/dev/null 2>&1; echo $? > "$DISP/cc.rc2" )
+  rc1="$(cat "$DISP/cc.rc1")"; rc2="$(cat "$DISP/cc.rc2")"
+  after="$(find "$JH" | sort)"
+  if [ "$rc1" = "$want" ] && [ "$rc2" = "$want" ]; then
+    ok "$label"
+  else
+    bad "$label (refuse rc=$rc1, make_run_dir rc=$rc2, wanted $want)"
+  fi
+  # The property is BOTH halves: it must refuse, and the refusal must not write.
+  if [ "$before" = "$after" ]; then
+    ok "$label: and the protected tree is byte-identical"
+  else
+    bad "$label: it WROTE inside the protected root"
+    diff <(echo "$before") <(echo "$after") | sed 's/^/        /'
+  fi
+  rm -rf "$victim"
 }
-memo_case "an inherited memo of '-' does not unprotect the real store" \
-  "-" "$REALHOME/.keliver-portal/apps/evil" 2
-memo_case "nor one naming a directory that does not exist" \
-  "/nonexistent-keliver-probe" "$REALHOME/.keliver-portal/apps/evil" 2
-memo_case "nor a relative one" \
-  "relative/path" "$REALHOME/.keliver-portal/apps/evil" 2
-memo_case "and an UNSET memo does not abort the refusal under set -u" \
-  "" "$REALHOME/.keliver-portal/apps/evil" 2
-memo_case "while a legitimate parent is still allowed" \
-  "-" "$DISP/legit" 0
+
+cache_case "an inherited TRIED flag does not unprotect the JVM home" \
+  "KELIVER_JVM_HOME_TRIED=1" 2
+cache_case "nor a memo naming a directory that really exists" \
+  "KELIVER_JVM_HOME_MEMO=\"$DISP/legit\"" 2
+cache_case "nor both of them together" \
+  "KELIVER_JVM_HOME_TRIED=1; KELIVER_JVM_HOME_MEMO=\"$DISP/legit\"" 2
+cache_case "nor the '-' marker the tenth round was about" \
+  "KELIVER_JVM_HOME_MEMO=-" 2
+cache_case "nor one naming a directory that does not exist" \
+  "KELIVER_JVM_HOME_MEMO=/nonexistent-keliver-probe" 2
+cache_case "nor a relative one" \
+  "KELIVER_JVM_HOME_MEMO=relative/path" 2
+cache_case "nor either of them exported into the environment" \
+  "export KELIVER_JVM_HOME_TRIED=1 KELIVER_JVM_HOME_MEMO=\"$DISP/legit\"" 2
+# Not a path variable, but the same shape: a cache an unset can turn into a fatal
+# expansion under set -u, which kills the subshell of a command substitution and
+# reads to the caller as an empty answer rather than a refusal.
+cache_case "nor unsetting the stat-format cache under set -u" \
+  "unset KELIVER_STAT_FMT" 2
+# ...and none of that may cost the legitimate case its rc=0.
+rc=$( ( export PATH="$DISP/stubbin:$PATH" HOME="$DISP/jvmhome-home"; unset PORTAL_STORE
+        KELIVER_JVM_HOME_TRIED=1
+        keliver_refuse_protected_parent "$DISP/legit" >/dev/null 2>&1 ); echo $? )
+[ "$rc" = 0 ] && ok "while a legitimate parent is still allowed" \
+              || bad "a legitimate parent was refused (rc=$rc)"
+# The JVM root is only worth protecting if it is genuinely SEPARATE from $HOME.
+# If the stub were ignored this whole block would be asserting nothing, so prove
+# the geometry it depends on: the victim is outside HOME, and still refused.
+case "$JH" in
+  "$DISP/jvmhome-home"/*) bad "the fake user.home is inside the fake HOME — these cases prove nothing";;
+  *) ok "the fake user.home is outside the fake HOME, so these cases need the JVM root";;
+esac
 
 echo "--- a path named after the old in-band marker is not a diagnosis"
 # The "protected set is unusable" signal used to be a string in the data, so a

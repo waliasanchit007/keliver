@@ -1717,6 +1717,41 @@ in a separate non-exported flag, and every expansion is `${…:-}` — an *unset
 memo under `set -u` aborted the function, and an aborted refusal reads to the
 caller exactly like an allowed one.
 
+**That fix was not enough, and the eleventh and twelfth failures are its two
+symmetric partners.** The seventeenth review measured both against `1c19804e6`,
+each returning `0` on a parent inside the protected root and then creating two
+directories there:
+
+* `KELIVER_JVM_HOME_TRIED=1` — the memo was validated; the flag deciding whether
+  the memo is ever *filled* was not. Any non-empty value means `java` is never
+  asked and the JVM-home roots simply do not exist. The commit that introduced it
+  described it as "a separate flag a caller cannot spell"; it is an ordinary
+  global with a documented name, and the suite's own `memo_case` began by
+  `unset`ting it, which is exactly what kept the new assertions from seeing it.
+* `KELIVER_JVM_HOME_MEMO=<any directory that exists>` — the validation checked
+  the memo for **shape** (absolute, and a directory), which rejects the three
+  spellings that are invalid *as paths* and accepts the one that is a valid path
+  and still a lie. And an honoured memo **replaces** the JVM root rather than
+  adding to it, so a valid-looking value switches the real one off just as `-`
+  did. Provenance was the property, and a shell global cannot carry provenance.
+
+Both are gone rather than guarded. `keliver_protected_roots` asks `java` once per
+call into a `local`, and there is no caller-settable variable in the path at all.
+The cache was never a cache: `keliver_protected_roots` is only ever invoked as
+`roots="$(keliver_protected_roots)"`, a command substitution, so both globals were
+subshell-local and never reached the caller — measured, two consecutive refusals
+spawned `java` twice and left both globals empty in the parent shell. The only
+thing the memo ever sped up was the one caller that set it by hand, and that
+caller was the hole. The suite pays ~90 JVM starts (about 25s in total) and
+asserts the whole property — refuses, **and** leaves the protected tree
+byte-identical — against a disposable fake `user.home` produced by a stub `java`,
+rather than against `$HOME` as it used to.
+
+`KELIVER_STAT_FMT` was the same shape one function along: the one cache
+expansion still unguarded, where an `unset` under `set -u` killed the subshell
+of a command substitution — which reads to the caller as an empty answer, not a
+refusal. It is `${…:-}` now and asserted.
+
 `~user/store` is the same unexpanded tilde one character along, and it walked
 straight through the check added for `~/store` — measured, a run directory
 created inside the named store. Both forms are refused now, for the given
