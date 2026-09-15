@@ -39,6 +39,55 @@ and paths move. The contract below is what the two of them mean *together*.
 
 ## 2. Resolution order
 
+### The home it all resolves against
+
+Steps 2–4 below are relative to a **home**, and that home is part of the
+identity: it selects the default store and expands a `~/...` in
+`keliver.portal.json`. The store holds the Ed25519 signing key and the public
+key device hosts embed, so the wrong home signs with one identity and verifies
+against another.
+
+The authority is the JVM's `System.getProperty("user.home")`.
+**`$HOME` is not a substitute**: on macOS `user.home` comes from the passwd
+entry and ignores `$HOME`, so the two are routinely different directories.
+
+`scripts/keliver-store-path.sh` establishes it in this order:
+
+1. `--home <absolute dir>` — the caller's answer. A *relative* `--home` is a
+   usage error (exit 2), not a store relative to the caller's cwd.
+2. The JVM's `user.home`, from `java -XshowSettings:properties`. The invocation's
+   exit status is checked, and the output must contain exactly one non-empty
+   absolute `user.home`.
+3. There is no step 3. **Exit 4**, naming the problem.
+
+`$HOME` used to be step 3, silently, and the discovery above it was a pipeline
+whose status came from `awk` — which succeeds when it matches nothing. So "java
+is absent", "java crashed" and "java printed no `user.home`" were
+indistinguishable from an answer, and all of them fell through to `$HOME` (#78).
+
+The home is only established **when it is needed**: `PORTAL_STORE` is step 1 of
+the resolution order below and is answered before any home is read, so an
+explicit store still works on a machine with no java. `--default` *is* the
+home-derived step and refuses without one.
+
+**Consequence for adopters.** `keliver-store-path.sh` ships in the tools bundle,
+and the callers there — `keliver-record-http.sh`, `keliver-store-recover.sh`, the
+acceptance checks — do not pass `--home`. On a machine with no working `java`
+those now **fail with exit 4 instead of quietly answering against `$HOME`**. On
+Linux, where `$HOME` and `user.home` usually agree, that old answer was usually
+right; the refusal is the price of not being silently wrong on macOS, where they
+do not agree. The diagnostic names both remedies: put a working `java` on `PATH`,
+or pass `--home`.
+
+The Gradle build does not go through discovery at all — it passes
+`--home System.getProperty('user.home')` from the JVM already running Gradle,
+which *is* the authority. `.execute()` inherits the Gradle **daemon's**
+environment rather than the invoking shell's, so neither the daemon's `$HOME`
+nor its `PATH` is necessarily what the developer sees; that is precisely the
+environment the old fallback chain was reading.
+
+### The four steps
+
 Every consumer resolves in exactly this order. `PortalConfig.storeDir()` is the
 authoritative implementation of steps 2–4 (step 1 is applied by the relay, in
 `resolveStore`, since it is an environment variable rather than a property of
