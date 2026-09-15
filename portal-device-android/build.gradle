@@ -8,17 +8,46 @@ apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 apply plugin: 'org.jetbrains.compose'
 apply plugin: 'app.cash.zipline' // IR plugin for zipline.take/bind
 
-def devOnlyHost = (project.findProperty('keliver.devOnlyHost') ?: 'false').toString().toBoolean()
+// ACCEPTED FORMS, and nothing else. Groovy's String.toBoolean() looks
+// permissive and is not: MEASURED, '1' and 'y' are true while 'yes' and 'on'
+// are FALSE, and a bare -Pkeliver.devOnlyHost (no '=') is the empty string,
+// also false. So -Pkeliver.devOnlyHost=yes silently built a PRODUCTION-shaped
+// host for someone who asked for the development-only one. Unsupported values
+// are now rejected rather than quietly meaning the other mode.
+//
+//   true:  true 1 yes on      false: false 0 no off      (case-insensitive)
+//
+// A bare flag is rejected too: it plainly intends `true`, and guessing that is
+// how this class of bug starts.
+ext.keliverBooleanProperty = { String name ->
+  def raw = project.findProperty(name)
+  if (raw == null) return false
+  def v = raw.toString().trim().toLowerCase()
+  if (v in ['true', '1', 'yes', 'on']) return true
+  if (v in ['false', '0', 'no', 'off']) return false
+  throw new GradleException(
+    "keliver: -P${name}=${raw} is not a value this build understands.\n" +
+      '  true:  true 1 yes on\n' +
+      '  false: false 0 no off\n' +
+      (v.isEmpty()
+        ? '  A bare -P' + name + ' has no value; write -P' + name + '=true.'
+        : '  Refusing to guess: the wrong guess builds the other kind of host.'))
+}
+def devOnlyHost = keliverBooleanProperty('keliver.devOnlyHost')
 // -Pkeliver.portalStore=<dir> overrides the resolved store. PORTAL_STORE is an
 // ENV var and Groovy's List.execute() inherits the Gradle DAEMON's environment,
 // not the invoking shell's, so an env var cannot be relied on to reach this
 // code. The hygiene check needs a deterministic input; production resolution is
 // unchanged when the property is absent.
-def portalStoreOverride = project.findProperty('keliver.portalStore')
-def portalStoreDir = portalStoreOverride ? new File(portalStoreOverride.toString())
-                                         : keliverStoreDir(rootProject.projectDir)
-def portalPubKey = new File(portalStoreDir, 'keys/ed25519.pub')
-def embedPortalKey = !devOnlyHost && portalPubKey.exists()
+//
+// PROVIDERS, not values: resolving here evaluated the store while this file was
+// being read, which made every task in the build — including :portal-relay:test
+// — depend on an identity they never use. Nothing below queries these until
+// syncPortalKey runs.
+def portalPubKey = providers.provider { new File(keliverPortalStore(project), 'keys/ed25519.pub') }
+// && short-circuits, so the DEVELOPMENT-ONLY host never asks for a store at
+// all: it embeds no key, so there is no identity for it to consult.
+def embedPortalKey = providers.provider { !devOnlyHost && portalPubKey.get().exists() }
 
 android {
   namespace 'dev.keliver.portaldevice.host'
@@ -62,20 +91,56 @@ android {
 // fail for every adopter signing with their own. It is now an explicit build
 // input, not an accident of the filesystem.
 
-// Sync, not Copy: Copy with onlyIf left a previously copied key sitting in the
-// output directory when the input later disappeared, so a warm build directory
-// could smuggle an earlier build's key into a later APK. Sync makes the
-// directory match the inputs exactly, which for the dev-only host means empty.
-tasks.register('syncPortalKey', Sync) {
-  into "$buildDir/portalKeys"
-  if (embedPortalKey) {
-    from(portalPubKey) { rename { 'portal_ed25519.pub' } }
-  }
-  doFirst {
-    logger.lifecycle(embedPortalKey
-      ? "portal-device-android: embedding portal key from ${portalPubKey}"
-      : "portal-device-android: DEVELOPMENT-ONLY host — no portal key embedded" +
-        (devOnlyHost ? " (keliver.devOnlyHost=true)" : " (no key at ${portalPubKey})"))
+// NOT a Copy, and no longer a Sync. Copy with onlyIf left a previously copied
+// key sitting in the output directory when the input later disappeared, so a
+// warm build directory could smuggle an earlier build's key into a later APK
+// (U22). Sync did fix that: MEASURED, the run where the source disappears is
+// NOT the NO-SOURCE run — it executes and removes the stale key — and only the
+// run after it is NO-SOURCE. What Sync did not do is run its own ACTIONS on
+// that transition, which left two of the three messages below permanently
+// unprintable, and it left the emptying to Copy semantics rather than to
+// anything this build states.
+//
+// Both are stated here now: the directory is emptied by this task, in its own
+// action. upToDateWhen{false} because that action is a delete and at most one
+// small copy, and because output-directory contents are NOT part of Gradle's
+// up-to-date check — measured: a foreign file planted in build/portalKeys
+// survives an UP-TO-DATE run of either shape, and this directory is an
+// assets.srcDirs entry, so anything left in it ships. Running every time closes
+// that and costs nothing.
+def portalKeyDir = layout.buildDirectory.dir('portalKeys')
+tasks.register('syncPortalKey') {
+  // Providers: the store is resolved when this task RUNS, so an unanswerable
+  // resolver fails the one task that embeds an identity and not the rest of the
+  // build. inputs.files has no @SkipWhenEmpty, so an empty list leaves the task
+  // out-of-date rather than NO-SOURCE.
+  inputs.property('devOnlyHost', devOnlyHost)
+  inputs.files(providers.provider { embedPortalKey.get() ? [portalPubKey.get()] : [] })
+    .withPropertyName('portalPublicKey')
+  outputs.dir(portalKeyDir)
+  outputs.upToDateWhen { false }
+  doLast {
+    def dir = portalKeyDir.get().asFile
+    dir.deleteDir()
+    dir.mkdirs()
+    if (embedPortalKey.get()) {
+      def src = portalPubKey.get()
+      new File(dir, 'portal_ed25519.pub').bytes = src.bytes
+      logger.lifecycle("portal-device-android: embedding portal key from ${src}")
+    } else if (devOnlyHost) {
+      // Not "=true": true 1 yes on are all accepted, and echoing a value the
+      // caller did not type is how a reader starts doubting the message.
+      logger.lifecycle('portal-device-android: no portal key embedded — this is the ' +
+        'DEVELOPMENT-ONLY host (keliver.devOnlyHost is set), which refuses production mode')
+    } else {
+      // NOT the development-only host: DEV_ONLY is false, so this binary will
+      // run in production mode with nothing to verify a bundle against. Saying
+      // "DEVELOPMENT-ONLY" here — which is what it used to say, unreachably —
+      // names the wrong one of the two shapes this module builds.
+      logger.lifecycle("portal-device-android: no portal key embedded — no key at " +
+        "${portalPubKey.get()}. This host is NOT marked development-only, so production " +
+        "mode will have no identity to verify against.")
+    }
   }
 }
 preBuild.dependsOn syncPortalKey

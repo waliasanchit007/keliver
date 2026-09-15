@@ -26,7 +26,7 @@ PARENT="${1:?usage: $0 <parent-dir>}"
 
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$PARENT" devhost)" || exit 1
+DISP="$(keliver_make_run_dir "$PARENT" devhost)" || exit $?
 echo "run dir: $DISP"
 
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null || true)}"
@@ -58,6 +58,33 @@ build() { # build <label> <store-or-empty> <devOnly true|false>
       :portal-device-android:assembleDebug ) \
     >"$DISP/build-$label.log" 2>&1 \
     || { bad "$label: gradle failed"; tail -5 "$DISP/build-$label.log"; return 1; }
+  # -Pkeliver.portalStore warns that the build's identity may differ from the
+  # relay's. It is printed at QUIET level so -q cannot hide it, but -q output
+  # still lands in this log, which nothing read unless the build FAILED. Print
+  # it, and assert it. (C16d in keliver-store-recovery-check.sh asserts the same
+  # warning; this is the only caller that asserts it while ASSEMBLING AN APK,
+  # which is the case U22 is about.)
+  #
+  # The expected answer DEPENDS ON THE MODE, and asserting it unconditionally
+  # was wrong — measured on Linux CI, which failed on exactly the two dev-only
+  # builds. The development-only host embeds no key, so it must not consult a
+  # store at all; the warning is emitted by the resolver accessor, so its
+  # ABSENCE here is the evidence that the short-circuit holds. Both directions
+  # are asserted, so neither mode can pass by accident.
+  if [ "$devonly" = true ]; then
+    if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
+      bad "$label: the development-only host consulted a store it has no use for"
+    else
+      ok "$label: the development-only host consulted no store at all"
+    fi
+  else
+    if grep -q "is in use, so this build signs" "$DISP/build-$label.log"; then
+      ok "$label: the build-only store override announced itself"
+      grep -h "is in use, so this build signs" "$DISP/build-$label.log" | fold -w 100 -s | sed 's/^/        ! /'
+    else
+      bad "$label: the build-only store override was used without saying so"
+    fi
+  fi
 }
 
 # 1. a normal app-specific production host, key A

@@ -16,7 +16,7 @@ DISP="${1:?usage: $0 <disposable-root>}"
 # A unique run dir beneath the caller's parent; never erase what the caller
 # supplied. See keliver_make_run_dir.
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$DISP" store-integration)" || exit 1
+DISP="$(keliver_make_run_dir "$DISP" store-integration)" || exit $?
 mkdir -p "$DISP/home"
 export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"

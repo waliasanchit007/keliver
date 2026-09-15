@@ -10,14 +10,19 @@ apply plugin: 'app.cash.zipline' // IR plugin: rewrites the host's zipline.take/
 
 // P4/P5: embed the portal's Ed25519 PUBLIC key as a generated Kotlin const so
 // prod mode can verify signed manifests (parity with the Android host's asset).
-def portalPubKey = new File(keliverStoreDir(rootProject.projectDir), 'keys/ed25519.pub')
+//
+// A PROVIDER, not a value: resolving while this file is read made every task in
+// the build depend on an identity most of them never use. Queried only when
+// generatePortalKey is in the graph, i.e. when an iOS framework is compiled.
+def portalPubKey = providers.provider { new File(keliverPortalStore(project), 'keys/ed25519.pub') }
 def portalKeyDir = file("$buildDir/generated/portalKeys/kotlin")
 def generatePortalKey = tasks.register('generatePortalKey') {
-  inputs.property('exists', portalPubKey.exists())
-  if (portalPubKey.exists()) inputs.file(portalPubKey)
+  inputs.property('exists', providers.provider { portalPubKey.get().exists() })
+  inputs.files(providers.provider { portalPubKey.get().exists() ? [portalPubKey.get()] : [] })
   outputs.dir(portalKeyDir)
   doLast {
-    def hex = portalPubKey.exists() ? portalPubKey.text.trim() : ''
+    def keyFile = portalPubKey.get()
+    def hex = keyFile.exists() ? keyFile.text.trim() : ''
     def f = new File(portalKeyDir, 'PortalPublicKey.kt')
     f.parentFile.mkdirs()
     f.text = "package dev.keliver.portaldevice.ios\n\n// GENERATED from the portal store's ed25519.pub — do not edit.\ninternal const val PORTAL_PUBLIC_KEY_HEX: String = \"$hex\"\n"

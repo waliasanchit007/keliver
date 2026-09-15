@@ -1,6 +1,7 @@
 package dev.keliver.portaldevice.host
 
 import kotlin.test.Test
+import okio.ByteString.Companion.decodeHex
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -57,8 +58,12 @@ class HostTrustPolicyTest {
 
   @Test
   fun aProductionHostWithItsKeyVerifies() {
-    val t = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " ABCDEF0123 ")
-    assertEquals(HostTrust.ProductionVerified("ABCDEF0123"), t, "the trimmed key must be used")
+    // 64 hex characters: an Ed25519 public key is 32 bytes, and the policy now
+    // bounds the length. This case is about TRIMMING and case tolerance, so the
+    // key itself just has to be a valid one.
+    val key = "ABCDEF0123".repeat(6) + "ABCD"
+    val t = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " $key ")
+    assertEquals(HostTrust.ProductionVerified(key), t, "the trimmed key must be used")
   }
 
   /** The route adopters actually use must stay open in both binaries. */
@@ -74,5 +79,45 @@ class HostTrustPolicyTest {
       decideHostTrust(prodMode = false, devOnlyHost = false, publicKeyHex = "abcdef01"),
       "an app host can still be used for development",
     )
+  }
+
+  // U25.2: the length bound. Without it a truncated key returned
+  // ProductionVerified and then threw inside decodeHex() in onCreate — a crash
+  // instead of the refusal screen. These must all take the normal refusal path.
+  @Test
+  fun aMalformedPublicKeyIsRefusedBeforeAnythingIsLoaded() {
+    val valid = "ab".repeat(32)
+    val bad = listOf(
+      "" to "empty",
+      "ab".repeat(31) to "62 chars, one byte short",
+      valid.dropLast(1) to "63 chars, odd length — the decodeHex crash",
+      valid + "ab" to "66 chars, one byte long",
+      valid.dropLast(1) + "z" to "64 chars but not hex",
+    )
+    for ((key, why) in bad) {
+      val trust = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = key)
+      assertTrue(trust is HostTrust.Refused, "must refuse ($why), got $trust")
+    }
+    val ok = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = valid)
+    assertTrue(ok is HostTrust.ProductionVerified, "a 64-char hex key must still verify, got $ok")
+    // Surrounding whitespace is TRIMMED on purpose — an asset read keeps the
+    // trailing newline — so a padded valid key still verifies. The length bound
+    // applies to what is left after trimming, not to the raw string.
+    val padded = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = " $valid\n")
+    assertTrue(padded is HostTrust.ProductionVerified, "a padded 64-char key must verify, got $padded")
+  }
+
+  @Test
+  fun aRefusedKeyNeverReachesDecodeHex() {
+    // The crash was decodeHex() on what this policy had already blessed, so the
+    // invariant is: anything ProductionVerified decodes to exactly 32 bytes.
+    val trust = decideHostTrust(prodMode = true, devOnlyHost = false, publicKeyHex = "ab".repeat(32))
+    val hex = (trust as HostTrust.ProductionVerified).publicKeyHex
+    assertEquals(64, hex.length)
+    // Actually decode it. `hex.chunked(2).size` is arithmetically implied by the
+    // length above, so it asserted nothing; the invariant is that what this
+    // policy blesses is something decodeHex accepts, which is what used to
+    // throw in onCreate.
+    assertEquals(32, hex.decodeHex().size)
   }
 }

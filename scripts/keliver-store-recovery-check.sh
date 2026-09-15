@@ -13,6 +13,10 @@
 #       nothing — not the store, not its own
 #   C5  the packaged keliver-portal launcher starts the recovered app
 #
+# The suite BUILDS the relay it stages (:portal-relay:installDist) before each
+# run, so it can never report results for a binary that is not the source under
+# test. A relay left in build/install by hand is overwritten.
+#
 # The commands under test run from a bundle-shaped staging directory
 # (bin/ + relay/, assembled exactly as scripts/build-portal-tools.sh does) so
 # that the paths inside them are the bundle's, not the repository's.
@@ -35,7 +39,7 @@ fi
 export JAVA_HOME
 
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
-DISP="$(keliver_make_run_dir "$DISP_PARENT" store-recovery)" || exit 1
+DISP="$(keliver_make_run_dir "$DISP_PARENT" store-recovery)" || exit $?
 mkdir -p "$DISP/home"
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
@@ -48,8 +52,20 @@ note(){ printf '        %s\n' "$1"; }
 # --- the bundle under test ---------------------------------------------------
 BUNDLE="$DISP/bundle"
 mkdir -p "$BUNDLE/bin" "$BUNDLE/relay"
-[ -x "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" ] || {
-  echo "build the relay first: ./gradlew :portal-relay:installDist" >&2; exit 2; }
+# BUILD WHAT WE STAGE. This suite copies the INSTALLED relay into its bundle,
+# and `:portal-relay:compileKotlin` does not refresh that — so a source edit
+# followed by a compile left it testing the previous binary, which is how a
+# refusal message and the assertion that greps it drifted apart while the run
+# reported green. Comparing mtimes is not enough either: Gradle correctly skips
+# a rebuild when content is unchanged, and the stale-looking timestamp is then
+# a false alarm. So just build it, every time; it is up-to-date in seconds.
+echo "==> refreshing the relay this suite stages"
+( cd "$ROOT" && ./gradlew --console=plain -q :portal-relay:installDist ) || {
+  echo "could not build the relay; refusing to report results for whatever is on disk" >&2
+  exit 2
+}
+RELAY_BIN="$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay"
+[ -x "$RELAY_BIN" ] || { echo "no relay at $RELAY_BIN" >&2; exit 2; }
 cp -R "$ROOT/portal-relay/build/install/portal-relay/." "$BUNDLE/relay/"
 cp "$ROOT/scripts/keliver-portal" "$ROOT/scripts/keliver-store-path.sh" \
    "$ROOT/scripts/keliver-store-recover.sh" "$ROOT/scripts/keliver-adopt-legacy-store.sh" "$BUNDLE/bin/"
@@ -124,7 +140,7 @@ boot() {
     lsof -nP -iTCP:"$port" -sTCP:LISTEN -t >/dev/null 2>&1 || break
     sleep 1
   done
-  BOOT_STORE="$(tr -d '\n' < "$app/.gradle/keliver-store-path" 2>/dev/null)"
+  BOOT_STORE="$(cat "$app/.gradle/keliver-store-path" 2>/dev/null | tr -d '\n')"
   return 0
 }
 
@@ -476,7 +492,7 @@ if PORTAL_STORE="$S7G" "$RECOVER" "$A7D" --home "$DISP/home" > "$DISP/c7d.log" 2
 else
   ok "C7d recovery refused rather than let PORTAL_STORE decide"
 fi
-grep -qi "PORTAL_STORE" "$DISP/c7d.log" && ok "C7d the override was reported, not silently applied" \
+grep -q "PORTAL_STORE is set" "$DISP/c7d.log" && ok "C7d the override was reported, not silently applied" \
                                         || bad "C7d PORTAL_STORE was neither reported nor refused"
 
 # --- C8: the same-owner split ------------------------------------------------
@@ -757,13 +773,39 @@ else
 fi
 grep -q "COULD NOT BE RESTORED" "$DISP/c12.log" && ok "C12 the partial state is reported as partial" \
                                                 || bad "C12 the failure was not reported as a partial state"
-grep -qi "unchanged\|was not modified\|Nothing was changed" "$DISP/c12.log" \
-  && { bad "C12 it claimed nothing changed while the state is partial"; grep -in "unchanged\|was not modified" "$DISP/c12.log" | sed 's/^/        /'; } \
-  || ok "C12 it does not claim the store is unchanged"
+# TWO different untruths are possible here, and one assertion cannot catch both.
+# The first is reporting SUCCESS. The second is admitting failure and STILL
+# telling the operator the store was left alone — which is the case this block
+# exists for, and which anchoring on the success marker alone does not detect:
+# MEASURED against a stub that exits non-zero, prints the partial banner, and
+# then prints "the store was left unchanged", the marker check passed it.
+#
+# The success-marker check is also nearly redundant with the exit status above
+# it (the only non-dry-run ✓ is the line immediately before `exit 0`), so it is
+# kept as a cheap second guard and NOT as the coverage for this property.
+grep -q "^✓" "$DISP/c12.log" \
+  && { bad "C12 it printed a success marker for a failed restoration"; \
+       grep -n "^✓" "$DISP/c12.log" | sed 's/^/        /'; } \
+  || ok "C12 no success marker for a failed restoration"
+# Scoped to the text AFTER the failure banner: the SUCCESS path legitimately
+# prints "<old store> was not modified.", and matching that would have forced
+# the phrase list to be narrowed instead of the region.
+c12_after_banner() { sed -n '/COULD NOT BE RESTORED/,$p' "$DISP/c12.log"; }
+if [ -z "$(c12_after_banner)" ]; then
+  # No banner means no region, and "no region" would otherwise read as "made no
+  # false claim" — an assertion that passes hardest when the report has gone
+  # missing entirely.
+  bad "C12 there is no failure banner to scope the claim check to"
+elif c12_after_banner | grep -qi "unchanged\|was not modified\|nothing was changed"; then
+  bad "C12 it claimed nothing changed while the state is partial"
+  c12_after_banner | grep -in "unchanged\|was not modified\|nothing was changed" | sed 's/^/        /'
+else
+  ok "C12 it does not claim the store is unchanged"
+fi
 BK="$(ls -d "$A12/.gradle"/keliver-store-recover.backup.* 2>/dev/null | head -1)"
 if [ -n "$BK" ] && [ -f "$BK/owner" ] && [ -f "$BK/pointer.existed" ]; then
   ok "C12 the material needed to restore by hand was kept"
-  grep -q "$BK" "$DISP/c12.log" && ok "C12 and the report names it" || bad "C12 the report does not name the backup"
+  grep -qF "$BK" "$DISP/c12.log" && ok "C12 and the report names it" || bad "C12 the report does not name the backup"
 else
   bad "C12 the backup was deleted after a failed restoration"
 fi
@@ -934,13 +976,36 @@ done
 # does not have must yield UNKNOWN, never a verdict — returning a forced value
 # unprobed made `proc` on a machine with no /proc answer GONE for a LIVE
 # process, which is the wrong-GONE class this section exists to close.
-if [ -d "/proc/$$" ]; then MISSING_INSPECTOR=ps; else MISSING_INSPECTOR=proc; fi
-if [ "$MISSING_INSPECTOR" = ps ] && command -v ps >/dev/null 2>&1 && ps -p 1 >/dev/null 2>&1; then
-  note "both inspectors work here; the unprobed-forced-value case cannot be built"
-else
-  expect_state 1 UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] pid 1" "$MISSING_INSPECTOR"
-  expect_state "$C15_DEAD" UNKNOWN "[forced $MISSING_INSPECTOR, unavailable here] a reaped child" "$MISSING_INSPECTOR"
-fi
+# A forced inspector must still prove itself. This used to be built from
+# whichever inspector the machine LACKED — which meant it ran on macOS and
+# self-skipped on Linux, where both work, so the platform that matters had no
+# coverage at all. A skipped setup is not coverage. Instead the failure is
+# MANUFACTURED, identically on both: a stub `ps` that exits non-zero, ahead of
+# the real one on PATH, with the inspector forced to `ps`. The probe then fails
+# wherever this runs.
+STUB="$DISP/stub-bin"; mkdir -p "$STUB"
+printf '#!/bin/sh\nexit 1\n' > "$STUB/ps"; chmod +x "$STUB/ps"
+stub_state() { PATH="$STUB:$PATH" KELIVER_LOCK_INSPECTOR=ps "$RECOVER" "$A15" --holder-state "$1" 2>/dev/null; }
+[ "$(PATH="$STUB:$PATH" "$STUB/ps" -p 1 >/dev/null 2>&1; echo $?)" = 1 ] \
+  && ok "C15 the stub inspector really does fail (the setup is not a no-op)" \
+  || bad "C15 the stub inspector did not fail; the case below proves nothing"
+[ "$(stub_state 1)" = UNKNOWN ] \
+  && ok "C15 a forced inspector that cannot answer -> UNKNOWN for a LIVE pid" \
+  || bad "C15 a forced-but-broken inspector reported $(stub_state 1) for pid 1"
+[ "$(stub_state "$C15_DEAD")" = UNKNOWN ] \
+  && ok "C15 a forced inspector that cannot answer -> UNKNOWN for a dead pid" \
+  || bad "C15 a forced-but-broken inspector reported $(stub_state "$C15_DEAD") for a reaped child"
+# And an unrecognised value is refused outright rather than meaning "auto".
+# stdout and stderr kept APART: the point is that no verdict is printed, and
+# folding them together made the "no stdout" half test a file that is never
+# written — permanently true, and therefore no test at all.
+KELIVER_LOCK_INSPECTOR=bogus "$RECOVER" "$A15" --holder-state 1 \
+  > "$DISP/c15-bogus.out" 2> "$DISP/c15-bogus.err"
+C15_BOGUS_RC=$?
+[ "$C15_BOGUS_RC" = 2 ] && [ ! -s "$DISP/c15-bogus.out" ] \
+  && grep -q "is not one of auto, proc, ps, none" "$DISP/c15-bogus.err" \
+  && ok "C15 an unrecognised inspector is refused with no verdict printed" \
+  || { bad "C15 an unrecognised inspector was accepted (rc=$C15_BOGUS_RC, stdout='$(cat "$DISP/c15-bogus.out")')"; }
 
 # A missing VALUE is a usage error, not an empty marker — and must not hang.
 ( "$RECOVER" "$A15" --holder-state ) > "$DISP/c15-arity.log" 2>&1 & ap=$!
@@ -992,6 +1057,197 @@ else
   sed 's/^/        /' "$DISP/c15-dead.log"
 fi
 rm -f "$L15/pid" 2>/dev/null; rmdir "$L15" 2>/dev/null
+
+# --- C16: a failed startup leaves nothing, and a broken resolver fails closed --
+#
+# NOT hermetic, unlike the rest of this suite. C16d runs Gradle in $ROOT, so its
+# key-embedding assertions read and write the REAL repo build directory
+# ($ROOT/portal-device-android/build/portalKeys) — there is no per-run build
+# directory to point them at. A concurrent :portal-device-android build (an IDE,
+# another script) can therefore make them non-deterministic, and they briefly
+# leave a throwaway store's PUBLIC key in that directory. Fine in sequential CI;
+# worth knowing before running this next to a build you care about.
+echo
+echo "--- C16  failure is non-destructive, and never falls back to another identity"
+stores_under() { ls -1 "$DISP/home/.keliver-portal/apps" 2>/dev/null | wc -l | tr -d ' '; }
+
+# (a) the pointer destination is unusable: refuse BEFORE claiming anything.
+A16="$DISP/apps/c16-badpointer"; mkapp "$A16" 8178
+mkdir -p "$A16/.gradle/keliver-store-path"          # the pointer path is a directory
+BEFORE16="$(stores_under)"
+boot "$A16" 8178 c16a || BOOT_RC=1
+[ "$BOOT_RC" != 0 ] && ok "C16a the relay refused to start" \
+                    || bad "C16a the relay started with an unwritable pointer"
+[ "$(stores_under)" = "$BEFORE16" ] \
+  && ok "C16a no store was created by the failed start" \
+  || { bad "C16a the failed start left a store behind"; ls -1 "$DISP/home/.keliver-portal/apps" | sed 's/^/        /'; }
+grep -q "has been claimed or created" "$BOOT_LOG" \
+  && ok "C16a and it says so truthfully" || bad "C16a the refusal does not say what it left"
+
+# (b) a failure BETWEEN validating the destination and writing it. The relay
+# has already claimed the store by then, so the rollback is what is under test.
+A16B="$DISP/apps/c16-midway"; mkapp "$A16B" 8178
+BEFORE16B="$(stores_under)"
+export KELIVER_RELAY_FAIL_POINTER=1
+boot "$A16B" 8178 c16b || BOOT_RC=1
+unset KELIVER_RELAY_FAIL_POINTER
+[ "$BOOT_RC" != 0 ] && ok "C16b the relay refused when the pointer write failed" \
+                    || bad "C16b the relay started anyway"
+[ "$(stores_under)" = "$BEFORE16B" ] \
+  && ok "C16b the store this start had just claimed was removed" \
+  || { bad "C16b a claimed store was left behind"; ls -1 "$DISP/home/.keliver-portal/apps" | sed 's/^/        /'; }
+# and a PRE-EXISTING store must never be removed by the same path.
+A16C="$DISP/apps/c16-existing"; mkapp "$A16C" 8178
+boot "$A16C" 8178 c16c-first || BOOT_RC=1
+S16C="$BOOT_STORE"
+[ -n "$S16C" ] && [ -f "$S16C/keys/ed25519.pub" ] \
+  && ok "C16c a first start created a real identity" || bad "C16c no identity to protect"
+FP16="$(fingerprint "$S16C")"
+export KELIVER_RELAY_FAIL_POINTER=1
+boot "$A16C" 8178 c16c-second || BOOT_RC=1
+unset KELIVER_RELAY_FAIL_POINTER
+[ -d "$S16C" ] && [ "$(fingerprint "$S16C")" = "$FP16" ] \
+  && ok "C16c a later failed start left the existing identity alone" \
+  || bad "C16c the rollback removed a store it did not create"
+
+# (c) a resolver that cannot answer must stop the work that NEEDS an identity,
+# and must stop nothing else. Both halves matter: failing closed was right, but
+# resolution used to happen while every project was being evaluated, so an
+# unanswerable resolver failed :portal-relay:test and apiCheck too — tasks with
+# no signing identity anywhere in them. This block asserts both halves against
+# the same broken resolver, so neither can be satisfied by giving up the other.
+NOPY="$DISP/nopy"; mkdir -p "$NOPY"; printf '#!/bin/sh\nexit 127\n' > "$NOPY/python3"; chmod +x "$NOPY/python3"
+# A disposable store WITH a public key, so the control below exercises the
+# embedding path rather than an empty one. The bytes only have to be
+# recognisable; nothing verifies a signature here.
+mkdir -p "$DISP/c16-store/keys"
+printf '%s' "$(printf 'ab%.0s' $(seq 1 32))" > "$DISP/c16-store/keys/ed25519.pub"
+EMBEDDED="$ROOT/portal-device-android/build/portalKeys/portal_ed25519.pub"
+
+# Half one: work that needs no identity is unaffected. No override is passed —
+# using one here would prove nothing, since it is the resolver we are breaking.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q :portal-relay:compileKotlin ) \
+  > "$DISP/c16-unrelated.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d a task that needs no identity still builds with a broken resolver"
+else
+  bad "C16d a broken resolver still fails a task that needs no identity"
+  tail -12 "$DISP/c16-unrelated.log" | sed 's/^/        /'
+fi
+
+# Half two: the task that embeds this app's identity refuses. syncPortalKey is
+# the Android host's key-embedding step; it is the narrowest task in the build
+# whose output IS an identity.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-gradle.log" 2>&1
+if [ $? = 0 ]; then
+  bad "C16d the key-embedding task succeeded with a broken store resolver"
+else
+  ok "C16d the key-embedding task refuses when the store cannot be resolved"
+fi
+grep -q "could not resolve this app's portal store" "$DISP/c16-gradle.log" \
+  && ok "C16d and says which resolver and why" || bad "C16d the failure is not the store resolver's"
+
+# Half two, control: the SAME task under the SAME broken PATH succeeds once it
+# is told which store to use. Without this, the refusal above is equally
+# consistent with a task that simply always fails, and the suite could not tell
+# the difference.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+    -Pkeliver.portalStore="$DISP/c16-store" :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-override.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d the same task succeeds when given a store, so the refusal is the resolver's"
+else
+  bad "C16d the key-embedding task fails even when given a store"
+  tail -12 "$DISP/c16-override.log" | sed 's/^/        /'
+fi
+grep -q "is in use, so this build signs" "$DISP/c16-override.log" \
+  && ok "C16d and the build-only override announces itself even under -q" \
+  || { bad "C16d the build-only override was used without saying so"; \
+       tail -4 "$DISP/c16-override.log" | sed 's/^/        /'; }
+# ...and it really embedded THAT store's key. Pointing the control at an empty
+# store proved only that dependency resolution unblocked: with no key the task
+# has nothing to copy, so it would have looked identical if the embedding had
+# stopped working altogether.
+if [ -f "$EMBEDDED" ] && cmp -s "$EMBEDDED" "$DISP/c16-store/keys/ed25519.pub"; then
+  ok "C16d and the key embedded is the one in the store it was given"
+else
+  bad "C16d the key embedded is not the one in the store it was given"
+  ls -A "$(dirname "$EMBEDDED")" 2>/dev/null | sed 's/^/        /'
+fi
+# U22 at the Sync level, on every platform rather than only where an Android SDK
+# exists: the SAME warm build directory, now built as the development-only host,
+# must not still hold the key it just embedded.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain -q \
+    -Pkeliver.portalStore="$DISP/c16-store" -Pkeliver.devOnlyHost=true \
+    :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-warm.log" 2>&1
+if [ $? != 0 ]; then
+  bad "C16d the development-only build failed in a warm directory"
+  tail -12 "$DISP/c16-warm.log" | sed 's/^/        /'
+elif [ -e "$EMBEDDED" ]; then
+  bad "C16d a warm build directory kept the key for the development-only host"
+else
+  ok "C16d a warm build directory does not keep the key for the development-only host"
+fi
+
+# The development-only host embeds no key, so it must not consult a store at
+# all — not even to discover that the resolver is broken. Same broken PATH, no
+# override: if the short-circuit ever stops short-circuiting, this fails.
+#
+# NOT -q, and the task is asserted to have RUN. An earlier version of this
+# assertion was satisfied by an UP-TO-DATE no-op left behind by the run above,
+# which is not evidence that anything short-circuited; -q would also have hidden
+# the lifecycle line that proves which branch executed.
+( cd "$ROOT" && PATH="$NOPY:$PATH" ./gradlew --console=plain \
+    -Pkeliver.devOnlyHost=true :portal-device-android:syncPortalKey ) \
+  > "$DISP/c16-devonly.log" 2>&1
+if [ $? = 0 ]; then
+  ok "C16d the development-only host builds without consulting a store"
+else
+  bad "C16d the development-only host asked for a store it has no use for"
+  tail -12 "$DISP/c16-devonly.log" | sed 's/^/        /'
+fi
+# The distinctive phrase from the branch itself. Grepping for the PROPERTY name
+# would also match it quoted in a Gradle stack trace or in the build file.
+if grep -q "this is the DEVELOPMENT-ONLY host" "$DISP/c16-devonly.log"; then
+  ok "C16d and it really ran, taking the development-only branch"
+else
+  bad "C16d nothing proves the development-only branch executed"
+  grep -n "syncPortalKey" "$DISP/c16-devonly.log" | sed 's/^/        /'
+fi
+
+# A WORDING guard, and only that. The behavioural guarantee is the non-zero exit
+# asserted above — a fallback, by definition, lets the build succeed. This grep
+# and the one two assertions up both read the same GradleException literal, so
+# they pass and fail together; it is here to notice if the refusal ever stops
+# saying out loud that it will not borrow another identity, not as independent
+# evidence that it does not.
+grep -q "Refusing to fall back to" "$DISP/c16-gradle.log" \
+  && ok "C16d the refusal still says in words that no fallback identity is used" \
+  || { bad "C16d the refusal no longer rules out a fallback identity"; \
+       tail -4 "$DISP/c16-gradle.log" | sed 's/^/        /'; }
+
+# (d) the recovery CLI, without touching the filesystem.
+CLI_PROBE="$DISP/apps/c16-cli"; mkdir -p "$CLI_PROBE"
+# Run it FROM the probe directory: asking whether --help touched a directory it
+# was never pointed at could only ever answer "no".
+( cd "$CLI_PROBE" && "$RECOVER" --help ) > "$DISP/c16-help.log" 2>&1
+[ $? = 0 ] && grep -q "^usage:" "$DISP/c16-help.log" \
+  && ok "C16e --help works as the first argument" || bad "C16e --help as the first argument failed"
+[ -z "$(ls -A "$CLI_PROBE" 2>/dev/null)" ] \
+  && ok "C16e --help left its working directory empty" \
+  || { bad "C16e --help touched the filesystem"; ls -A "$CLI_PROBE" | sed 's/^/        /'; }
+( cd "$CLI_PROBE" && "$RECOVER" . --home "$DISP/home" > "$DISP/c16-dot.log" 2>&1 )
+# "no such app dir" would mean '.' was NOT accepted, so it cannot be one of the
+# outcomes that counts as success.
+if grep -q "no such app dir" "$DISP/c16-dot.log"; then
+  bad "C16e '.' was rejected as an app directory"
+elif grep -q "no store at\|has no owner marker\|app:   " "$DISP/c16-dot.log"; then
+  ok "C16e '.' is treated as an ordinary app directory"
+else
+  bad "C16e '.' produced an unexpected outcome"; head -2 "$DISP/c16-dot.log" | sed 's/^/        /'
+fi
 echo
 echo "passed: $pass   failed: $fail"
 echo "evidence: $DISP"

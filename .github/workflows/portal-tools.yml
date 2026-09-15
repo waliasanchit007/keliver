@@ -130,6 +130,15 @@ jobs:
           echo "::group::unit tests"
           ./gradlew --console=plain :portal-relay:test :portal-mcp:test :portal-device-android:testDebugUnitTest
           echo "::endgroup::"
+          echo "::group::disposable-parent refusal"
+          # Eleven scripts mint throwaway stores and signing keys under a parent
+          # the caller names, seven of them here; keliver_make_run_dir refuses a
+          # parent inside the real store, the Gradle home or $PORTAL_STORE. That
+          # refusal failed open, or wrote where it was refusing to, in five
+          # consecutive reviewed commits — so it has a suite. This is also the
+          # only place the identity comparison runs on GNU stat.
+          scripts/keliver-refusal-check.sh "$RUNNER_TEMP/refusal"
+          echo "::endgroup::"
           echo "::group::device-host packaging hygiene (U22)"
           scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
           echo "::endgroup::"
@@ -152,6 +161,17 @@ jobs:
           # inside itself, under a different JAVA_TOOL_OPTIONS and therefore a
           # second Gradle daemon. Build it here so a failure is attributable.
           ./gradlew --console=plain :portal-device-guest:compileDevelopmentZipline
+          echo "::endgroup::"
+          echo "::group::guest bundle signing"
+          # The guest signs from the compile task's own signingKeys property,
+          # written by a configureEach placed BELOW the kotlin {} block. Gradle
+          # splices a registration action in at the position register() was
+          # called, so the same statement moved above that block is added
+          # earlier, loses to the plugin's own write, and the symptom is an
+          # UNSIGNED bundle with a key present rather than an error. Measured:
+          # that move makes this step fail and nothing else. Both directions are
+          # asserted.
+          scripts/keliver-guest-signing-check.sh "$RUNNER_TEMP/guest-signing"
           echo "::endgroup::"
           echo "::group::store recovery outcomes, through the packaged commands"
           # Relocation end to end: a bundle signed before a move still verifies

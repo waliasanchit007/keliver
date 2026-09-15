@@ -16,8 +16,37 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DISP="${1:?usage: $0 <disposable-root>}"
-mkdir -p "$DISP"; DISP="$(cd "$DISP" && pwd -P)"
-export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+# The ELEVENTH script that mints a signing identity under a caller-supplied
+# parent, and the one that did not go through keliver_make_run_dir's refusal — it
+# mkdir -p's whatever it is handed. It still does not use a per-run directory
+# (its layout is fixed and its isolation guard checks the resolved store), but
+# the protected-tree refusal is not optional for something that generates a key.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-test-isolation-guard.sh"
+keliver_refuse_protected_parent "$DISP" || exit $?
+# mkdir the path the refusal VOUCHED FOR, not the raw argument. They can differ:
+# the refusal reasons about the normalised, symlink-resolved path, and MEASURED,
+# a raw argument of <safe>/link/../evil created directories under the Gradle home
+# the refusal had just cleared, because mkdir -p resolves .. against the kernel's
+# view rather than the shell's.
+DISP="$(keliver_abs_of "$DISP")" || {
+  echo "keliver: could not resolve '$1' to a path this check can vouch for." >&2
+  exit 2
+}
+# Checked, both of them. This script runs `set -uo pipefail` without -e, so an
+# unchecked failure here left DISP empty and the next lines targeted /home and
+# /store at the filesystem root — outside everything the refusal just vouched
+# for.
+mkdir -p "$DISP" || { echo "keliver: could not create $DISP" >&2; exit 1; }
+DISP="$(cd -P "$DISP" && pwd -P)" || { echo "keliver: could not enter $DISP" >&2; exit 1; }
+[ -n "$DISP" ] || { echo "keliver: the disposable root resolved to nothing" >&2; exit 1; }
+if [ -z "${JAVA_HOME:-}" ]; then
+  if [ -x /usr/libexec/java_home ]; then JAVA_HOME="$(/usr/libexec/java_home -v 17)"; fi
+  # exit 3, not 2: 2 is the refusal's code, and a caller that cannot tell a
+  # refusal from a missing toolchain will read one as the other.
+  [ -n "${JAVA_HOME:-}" ] || { echo "JAVA_HOME is not set and cannot be discovered" >&2; exit 3; }
+fi
+export JAVA_HOME
 
 STORE="$DISP/store"
 export PORTAL_STORE="$STORE"
@@ -27,14 +56,20 @@ export PORTAL_STORE="$STORE"
 # re-downloading them through a TLS-inspecting proxy is how this first failed.
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$DISP/home"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
-mkdir -p "$DISP/home" "$STORE"
+mkdir -p "$DISP/home" "$STORE" || {
+  echo "keliver: could not create the disposable store under $DISP" >&2; exit 1; }
 
-# shellcheck source=/dev/null
-. "$ROOT/scripts/keliver-test-isolation-guard.sh"
 keliver_require_isolated_store "$DISP" "$ROOT" || exit 1
 
 echo "==> generating a disposable signing identity via the relay"
-PORT="$(python3 -c "import json;print(json.load(open('$ROOT/keliver.portal.json')).get('port',8077))")"
+PORT="$(ROOT="$ROOT" python3 -c "import json,os;print(json.load(open(os.environ['ROOT']+'/keliver.portal.json')).get('port',8077))" 2>/dev/null)"
+# Unchecked, an unreadable or malformed config gave PORT="", and the script then
+# spent two minutes polling http://localhost:/screens before failing about
+# something else. $ROOT goes through the environment rather than into the Python
+# source, so a quote in the repo path cannot break it either.
+case "$PORT" in
+  ''|*[!0-9]*) echo "keliver: could not read a port from $ROOT/keliver.portal.json" >&2; exit 3;;
+esac
 
 # A relay already on this port is NOT ours to talk to or to kill. The default
 # is 8077, the documented dev-loop port, so the likely occupant is the

@@ -64,13 +64,20 @@ public fun decideHostTrust(
   }
   if (!key.matches(HEX)) {
     return HostTrust.Refused(
-      "The embedded portal public key is not valid hex, so no manifest can be " +
-        "verified against it. Rebuild the host from a portal store with a valid " +
-        "keys/ed25519.pub. Refusing to load a production bundle without " +
-        "signature verification.",
+      "The embedded portal public key is not a 64-character hex Ed25519 key " +
+        "(got ${key.length} character(s)), so no manifest can be verified against " +
+        "it. Rebuild the host from a portal store with a valid keys/ed25519.pub. " +
+        "Refusing to load a production bundle without signature verification.",
     )
   }
   return HostTrust.ProductionVerified(key)
 }
 
-private val HEX = Regex("^[0-9a-fA-F]+$")
+/**
+ * An Ed25519 public key is exactly 32 bytes — 64 hex characters. The bound
+ * matters: without it a truncated `ed25519.pub` returned ProductionVerified
+ * here and then threw inside `decodeHex()` in `onCreate`, so a malformed key
+ * crashed the host instead of reaching the refusal screen. Rejecting it here
+ * means the normal refusal path runs, before anything is fetched or loaded.
+ */
+private val HEX = Regex("^[0-9a-fA-F]{64}$")

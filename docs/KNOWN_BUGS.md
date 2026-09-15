@@ -1340,7 +1340,7 @@ is a deliberate behaviour change, recorded in
 the shell's and now removes the lock only while its marker still names this
 process, on both the `finally` and shutdown-hook routes.
 
-### U25. Four smaller store/host issues found by the PR #74 review — 1 FIXED (UNRELEASED), 3 OPEN
+### U25. Four smaller store/host issues found by the PR #74 review — ALL FOUR FIXED, UNRELEASED
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
@@ -1402,20 +1402,448 @@ none is a security hole.
    truncated `ed25519.pub` returns `ProductionVerified` and `decodeHex()` then
    throws in `onCreate` — a crash instead of the refusal screen. **Fail-closed**:
    nothing is fetched and verification is never skipped, so the U22 claim holds.
-   Should be `^[0-9a-fA-F]{64}$`.
-3. **`-Pkeliver.devOnlyHost` accepts only the exact string `true`.** Groovy's
-   `String.toBoolean()` means a bare `-Pkeliver.devOnlyHost`, `=1` or `=yes`
-   silently yields `false` and a production-shaped host. Backstopped by
-   `build-portal-tools.sh`, which refuses to package an APK containing
-   `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+
+   **FIXED, UNRELEASED.** The bound is `^[0-9a-fA-F]{64}$`, the refusal names
+   the length it got, and `HostTrustPolicyTest` covers empty, 62, 63 (the odd
+   length that threw), 66, 64-but-not-hex and a leading space — plus the
+   invariant that anything `ProductionVerified` decodes to exactly 32 bytes, so
+   the policy can no longer bless something `decodeHex` will reject.
+3. **`-Pkeliver.devOnlyHost` silently means the other mode for some values.**
+
+   > **This entry was WRONG and is corrected here.** It claimed only the exact
+   > string `true` is accepted and that `=1` and `=yes` both yield `false`.
+   > Measured against Groovy's `String.toBoolean()` before changing anything:
+   >
+   > ```
+   > 'true' 'TRUE' 'True' 'tRuE' -> true      '1' -> true      'y'  -> true
+   > 'false' '0' 'no' 'on' ''    -> false     'yes' -> false
+   > ```
+   >
+   > So it is case-insensitive, `1` and `y` DO work, and the real hazard is the
+   > opposite of what was recorded: `-Pkeliver.devOnlyHost=yes` and `=on`
+   > silently yield **false**, building a production-shaped host for someone who
+   > asked for the development-only one. A bare `-Pkeliver.devOnlyHost` (no
+   > `=`) is the empty string, also false — that part was right.
+
+   Backstopped by `build-portal-tools.sh`, which refuses to package an APK
+   containing `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
+
+   **FIXED, UNRELEASED.** The accepted forms are documented and everything else
+   is refused: `true 1 yes on` and `false 0 no off`, case-insensitive and
+   trimmed. A bare flag is rejected with the fix in the message rather than
+   guessed, because guessing is how this class of bug starts.
 4. **`keliverStoreDir` warns and falls back to `~/.keliver-portal`** when
    `keliver-store-path.sh` cannot run (no `java` or `python3`). The guest would
    then sign with one identity while the relay uses another — the mismatch the
    helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
-   builds. Failing the build would be safer. **Still open** — but the U25.1 fix
-   added one new way for the resolver to exit non-zero (exit 3, a split store),
-   so `build.gradle` now fails the build on exit 3 specifically rather than
-   falling back. Every other failure still warns and falls back, unchanged.
+   builds.
+
+   **FIXED, UNRELEASED.** Reproduced first, with `python3` replaced by a stub
+   that exits 127: a disposable app resolved `apps/probeapp-bce953ee` with a
+   healthy resolver and **`~/.keliver-portal`** — the legacy global store, which
+   on a developer's machine usually holds a real signing identity — with a
+   broken one. There is no fallback now. A resolver that is missing, or that
+   exits non-zero, or that prints nothing, fails the build with the resolver
+   path, the exit code, its stderr and what to install. Exit 3 (a split store)
+   already failed and still does.
+
+   **The cost it first had, and no longer has.** The three consumers resolved
+   the store at CONFIGURATION time, and Gradle configures every project, so a
+   resolver that could not run failed *any* task — including `:portal-relay:test`
+   and `apiCheck`, which need no signing identity at all. That was recorded here
+   as an open limitation. It is now closed: each consumer wires the resolver into
+   a `Provider` that only the task consuming an identity queries.
+
+   * `portal-device-android` — `syncPortalKey`'s source is a provider;
+     `-Pkeliver.devOnlyHost=true` short-circuits before it, so the
+     development-only host never consults a store at all. It is no longer a
+     `Sync`: it empties its output directory in its own action and runs every
+     time, because output-directory *contents* are not part of Gradle's
+     up-to-date check and that directory is an `assets.srcDirs` entry — measured,
+     a foreign file planted there survives an UP-TO-DATE run of either shape.
+   * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
+
+     **Asymmetry, recorded not fixed — and worse than first written.** The iOS
+     host has neither half of the Android hardening. There is no `devOnlyHost`
+     short-circuit, so every `compileKotlinIos*` consults the store. And
+     `generatePortalKey` has the same foreign-file hole that was just closed on
+     Android: `outputs.dir` with no `upToDateWhen { false }`, so a file planted
+     in its output directory survives an UP-TO-DATE run. That directory is a
+     `kotlin.srcDir`, which makes a planted file **Kotlin source compiled into
+     the framework** — worse than a stale asset. Not fixed here because neither
+     this machine nor Linux CI can build or verify the iOS target, and shipping
+     an unverifiable change to a signing path is how this class of bug started.
+   * `portal-published-guest` — the one that could not be expressed through the
+     `zipline { signingKeys { … } }` extension, because membership of that
+     container is fixed while the build file is read. The provider goes onto
+     `ZiplineCompileTask.signingKeys` instead, from a `configureEach` placed
+     below the `kotlin {}` block.
+
+     **The ordering rule, at the fourth attempt.** The zipline plugin writes
+     `signingKeys` from the compile task's **registration action**, and those
+     tasks are registered when the JS binaries are created — by
+     `binaries.executable()` inside `kotlin { js { … } }`. Gradle splices a
+     registration action into the container's action chain **at the position
+     `register()` was called**: actions added before it run before it, actions
+     added after it run after it and win.
+
+     So the only thing that matters is where the statement sits. It now sits
+     **below** the `kotlin {}` block. Measured: the identical statement above
+     the block → `unsigned.signatures = {}` with a key present; below it →
+     signed.
+
+     Three earlier write-ups of this were wrong, in three different ways — "the
+     plugin's own afterEvaluate", "the task does not exist yet", "the
+     registration action runs last". Two of them wrapped the wiring in
+     `afterEvaluate`, which was never needed and hid the actual rule; that
+     wrapper is gone. Each was corrected only because an independent review
+     measured the ordering instead of reading it.
+
+     Not covered: a `ZiplineCompileTask` registered *after* this statement would
+     keep the plugin's value, because ours would again be the earlier action.
+     Nothing registers one later today.
+
+     A fifth attempt briefly added an `isEmpty()` guard, to fail closed if the
+     plugin ever registered no compile task. It is gone. `isEmpty()` **realizes**
+     the collection — measured, four Kotlin/JS + Zipline tasks realized during
+     configuration of *every* build, including `:portal-relay:test`, `apiCheck`
+     and IDE sync, which is the shape of cost this whole change exists to
+     remove. What it bought is narrow rather than nothing: a renamed class stops
+     the build file compiling, and no compile task at all means no bundle to
+     ship unsigned. The one case it did cover — the class still exists but a
+     future plugin registers none of that type while something else produces the
+     bundle — is now caught only by the gate, at release time. Narrow, and
+     stated rather than claimed away. It also silently invalidated
+     the measurement below: with the guard present, moving the statement above
+     `kotlin {}` made configuration *abort*, so the "build still succeeds while
+     the gate fails" transcript could not have been produced by that code.
+
+     It is still a shape that depends on where a statement sits, so it is
+     **gated** rather than trusted. `scripts/keliver-guest-signing-check.sh`
+     builds the guest bundle against a disposable store with a key and asserts
+     the manifest is signed, and against one without and asserts it is not.
+     Measured against the code as it now stands: moving the statement back
+     **above** the `kotlin {}` block makes the gate fail loudly —
+     `passed: 3 failed: 1` — while the BUILD still succeeds. It is the WIRING
+     that fails silently, which is exactly why this needs a gate and not a
+     comment. The gate builds the Development variant and
+     runs in `portal-tools.yml`, which fires on `portal-tools-v*` tags and on
+     `workflow_dispatch`: a release-time and on-demand gate, not a per-commit
+     one.
+
+   "I could not find out whether you have a signing key" is not "you have no
+   signing key": when resolution fails, the compile task fails rather than
+   quietly shipping an unsigned bundle.
+
+   Resolution is memoised per build — including the failure, which is rethrown —
+   so lazy querying does not re-run the resolver subprocess per consumer.
+
+   `-Pkeliver.portalStore=<dir>` remains the deliberate build-only escape. It is
+   a **warning, not a check**: it reports that the build's identity may differ
+   from the relay's, and nothing verifies that they agree. It bypasses the split
+   refusal, and the relay does not see it. It is printed at QUIET level so `-q`
+   cannot hide it, and `keliver-device-host-hygiene-check.sh` greps the build log
+   for that line, because surviving `-q` into a log nobody reads is not
+   visibility. (It is not the only scripted caller any more —
+   `keliver-guest-signing-check.sh` and C16d pass it too — but it is the only one
+   that asserts the warning while *assembling an APK*.)
+
+   That assertion is **mode-dependent**, and asserting it unconditionally was
+   wrong: Linux CI run 34771348310 failed on exactly the two development-only
+   builds. The dev-only host short-circuits before the resolver accessor, so it
+   emits no warning — and the *absence* is the evidence that the short-circuit
+   holds. Both directions are now asserted.
+
+   **Still open, recorded rather than fixed.** The resolver accessor reads
+   `rootProject.ext` and calls `p.logger`/`p.findProperty` from providers that
+   are queried at execution time. Under `--configuration-cache` this currently
+   works, but a cached entry would bake in the resolved store path, so a rebind
+   could be ignored until the entry is invalidated; under Project Isolation the
+   cross-project `rootProject.ext` read is a violation. Neither mode is enabled
+   here. A `ValueSource` is the correct home for the resolver subprocess and
+   would give per-build memoisation for free. Not done in this block.
+
+### The disposable-parent refusal — FIXED, UNRELEASED
+
+Eleven scripts (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
+`keliver-guest-signing-check.sh` and eight more) mint throwaway stores, public
+keys and signing keys beneath a parent directory the caller names. Seven run in
+CI. Ten go through `keliver_make_run_dir`; `keliver-verify-signed-bundle.sh`
+calls the refusal directly, because its layout is fixed. A mistyped argument
+is a key written into the developer's real store.
+
+`keliver_make_run_dir` now refuses a parent inside the real portal store — under
+the shell's `HOME` *and* the JVM's `user.home`, which differ on macOS — the
+Gradle home, `$PORTAL_STORE`, or the home directory itself.
+
+**It failed open three times before it worked**, each time found by an
+independent review, each time by comparing strings:
+
+1. `cd "$(dirname "$1")" && pwd -P` produced an empty string when the parent's
+   parent did not exist, matched nothing, and let the run proceed. Measured: an
+   `ed25519.priv` written inside a `.keliver-portal` tree.
+2. macOS filesystems are case-insensitive by default, so `~/.KELIVER-PORTAL` is
+   the same device and inode as `~/.keliver-portal` while every case-sensitive
+   pattern missed it. Measured: the same outcome again.
+3. A `..` segment past a component that did not exist yet survived into the path
+   `mkdir -p` later created, and the kernel resolved it elsewhere. Measured: a
+   run directory created *inside* the store.
+
+It now compares **device+inode** for every existing ancestor; refuses `..`
+outright, and `/`, and a dangling symlink; and re-runs the whole check on the
+canonical path *after* `mkdir -p` and `cd`, which is the only placement a
+spelling cannot hide from. The `stat` flavour is probed rather than assumed — the
+BSD-first order would have made the identity comparison **inert on Linux**, where
+`-f` means `--file-system` — and a `stat` that cannot report device+inode makes
+the guard refuse rather than silently fall back to matching names. "Could not
+tell" is a distinct answer from "different", and both refuse.
+
+A fourth and fifth failure followed the first three, and both were the guard
+**writing** rather than allowing. `mkdir -p` necessarily runs *between* the two
+checks, so a case-variant parent under a store that did not exist yet passed the
+first check and was created — four directories, the store among them — before
+the second refused it. Then the undo turned out to run only on the refusal path:
+a `mkdir -p` that fails partway (an over-long component, ENOSPC, a read-only
+volume) left what it had already made, which is the same store by a different
+return. And the undo itself stopped at the first level `mkdir` had never
+reached, so it removed nothing at all in that case.
+
+A sixth and seventh followed those. `mktemp -d` was a fourth exit with no undo
+while three separate comments claimed every exit was covered. And a `.` path
+component defeated the undo entirely: `rmdir` fails with EINVAL on a basename of
+`.`, for a reason that has nothing to do with the directory being occupied, so
+the walk aborted at the first level and left the whole tree — store included —
+while the call reported a clean refusal.
+
+`keliver_make_run_dir` now normalises `.` segments and doubled slashes away (`..`
+is refused instead, since it cannot be resolved against a directory that does not
+exist yet, and `./scratch` is an ordinary thing for a caller to pass), **records**
+the levels that did not exist rather than re-deriving them afterwards, and undoes
+on every exit: refusal, failed `mkdir`, failed `cd`, failed `mktemp`. Recording
+matters beyond tidiness — the old walk's only stop condition was string equality
+with the deepest pre-existing level, and demonstrated in isolation, a chain it
+could not match sent it climbing past that level toward `/`. A recorded list
+cannot climb past anything. `rmdir` and never `rm -rf`, so anything that is not
+empty stops it, and when it stops it says so rather than reporting a clean
+refusal over a store still on disk.
+
+`scripts/keliver-refusal-check.sh` is the regression suite: 93 assertions over
+the spellings, the environment shapes, the legitimate parents that must keep
+working, and — for the cases that matter — the **end state** of the filesystem
+rather than only an exit code. An earlier version counted around the refusal
+function, which contains no `mkdir`: measured, that assertion passed against a
+guard stubbed to `return 0`. Run against the previous commit the suite reports
+the leak above.
+
+Two more followed, and both were platform-shaped. Expanding an empty array under
+`set -u` is **fatal on bash 3.2**, which is `/bin/bash` on macOS — and the
+recorded list is empty whenever the parent already exists, so an existing parent
+that `mktemp` could not use killed the shell instead of returning. CI runs bash 5
+and could never have caught it. And bash's `cd` is *logical* by default: it
+cancels `link/..` textually, so a `..` traversing a symlink was gone before the
+`..` refusal looked, and the guard's answer disagreed with the kernel's —
+measured, that let a signing key be minted under the Gradle home through
+`keliver-verify-signed-bundle.sh`, which was `mkdir`-ing its raw argument rather
+than the path the refusal had vouched for. The guard resolves with `cd -P`,
+checks `..` against the given spelling as well as the resolved one, and that
+script now creates the vouched-for path.
+
+An eighth followed: bash's `pwd -P` returns a **doubled leading slash** for a
+path reached through a symlink to `/` — `//private/tmp/…` where `getcwd()`,
+`/bin/pwd -P` and `realpath` all say `/private/tmp/…`. Every name-prefix
+comparison downstream then failed to match, and measured, the same
+`keliver-verify-signed-bundle.sh` created its store inside the Gradle home
+again, by a different spelling. The leading slash is collapsed now.
+
+`..` is refused **outright**, including spellings that reach nowhere protected —
+`../scratch` is rejected. That is deliberate (a `..` cannot be resolved against a
+directory that does not exist yet) rather than incidental, and it is pinned by an
+assertion so it cannot be quietly relaxed or quietly widened.
+
+A ninth and tenth were both one-sided fixes. The `//` collapse and the symlink
+resolution were applied to the **candidate** path only; the protected roots were
+compared as raw `$HOME/...` strings. Measured, that let through a `HOME` spelled
+with a doubled slash, a `HOME` reached through a symlink, and a `~/.gradle` or
+`~/.keliver-portal` that is itself a symlink onto another volume — an ordinary
+developer setup — in every case where the protected subtree did not exist yet.
+Both spellings of every root are emitted now. And `stat` follows no symlinks
+without `-L` while `[ -d ]` does, so `keliver_same_dir` compared the *link's*
+inode and answered "provably different" about one and the same directory: worse
+than the unknown case, because the caller acts on it. `-L` on both flavours.
+
+The suite carries a lint — an array declared empty and then expanded plainly is
+fatal on 3.2, failing the suite for `keliver-*.sh` and reported for anything
+else — and it took three attempts. The first caught two of ten fatal shapes. The
+second caught all ten but introduced a name-global whitelist: an array appended
+to *once*, or counted *once*, anywhere in the file was treated as safe
+everywhere, which hid an append inside an `if` and a `${#x[@]}` test that does
+not dominate the expansion — both fatal, and both caught by the version before
+it. Dominance is not something a regex decides, so there is no whitelist now:
+the lint errs toward false positives, and the one line it flagged in-tree was
+made unconditionally safe rather than excused.
+
+It also reported PASS whenever its scanner failed in any way other than an
+`OSError` — measured, a plain `raise` inside it produced a traceback with no
+failure marker, `$( )` discarded the exit status, and the lint said everything
+was fine. It requires a positive completion sentinel and the scanner's exit
+status now.
+
+The fourth attempt moved it out of the suite into
+`scripts/keliver-bash32-lint.py`, because as a heredoc it could only ever scan
+the **live tree** — which holds one guarded expansion and no line carrying both
+a guarded and an unguarded one, the single case its guard logic exists for.
+Measured: replacing that logic with the crude per-line skip it had replaced, or
+with a name-blind one, left the suite green. The suite now runs it against
+thirteen fixtures that are fatal on 3.2 and five that are safe, and asserts the
+exact finding set; both mutants fail that. The guard scan is brace-depth aware,
+so a `}` from a nested `${#x[@]}` no longer ends a guard early (false positive)
+and an escaped or quoted `${x[@]+` in a string no longer opens one that was
+never there (false negative). A real false positive can be silenced with a
+trailing `# lint: bash32-ok`.
+
+`/bin/bash` is bash 3.2 on macOS and bash 5 on the Linux runner, so it is a
+second parser only on macOS; the suite says which one it got rather than
+implying two.
+
+**The tenth failure was not a path spelling at all.** `KELIVER_JVM_HOME_MEMO`
+caches the JVM's `user.home`, which is a protected root *because* `$HOME` is not
+trusted — on macOS they differ. It was read straight from the environment, and
+`-` was its own "java could not be run" marker, so any inherited value dropped
+that root: measured, with `$HOME` pointed at a disposable directory, a parent
+inside the **real** store was allowed. The refusal suite exports the memo for
+speed, which is exactly how such a value arrives in practice. An inherited value
+is honoured now only if it names a directory that exists, "java is absent" lives
+in a separate non-exported flag, and every expansion is `${…:-}` — an *unset*
+memo under `set -u` aborted the function, and an aborted refusal reads to the
+caller exactly like an allowed one.
+
+**That fix was not enough, and the eleventh and twelfth failures are its two
+symmetric partners.** The seventeenth review measured both against `1c19804e6`,
+each returning `0` on a parent inside the protected root and then creating two
+directories there:
+
+* `KELIVER_JVM_HOME_TRIED=1` — the memo was validated; the flag deciding whether
+  the memo is ever *filled* was not. Any non-empty value means `java` is never
+  asked and the JVM-home roots simply do not exist. The commit that introduced it
+  described it as "a separate flag a caller cannot spell"; it is an ordinary
+  global with a documented name, and the suite's own `memo_case` began by
+  `unset`ting it, which is exactly what kept the new assertions from seeing it.
+* `KELIVER_JVM_HOME_MEMO=<any directory that exists>` — the validation checked
+  the memo for **shape** (absolute, and a directory), which rejects the three
+  spellings that are invalid *as paths* and accepts the one that is a valid path
+  and still a lie. And an honoured memo **replaces** the JVM root rather than
+  adding to it, so a valid-looking value switches the real one off just as `-`
+  did. Provenance was the property, and a shell global cannot carry provenance.
+
+Both are gone rather than guarded. `keliver_protected_roots` asks `java` once per
+call into a `local`, and there is no caller-settable variable in the path at all.
+The cache was never a cache: `keliver_protected_roots` is only ever invoked as
+`roots="$(keliver_protected_roots)"`, a command substitution, so both globals were
+subshell-local and never reached the caller — measured, two consecutive refusals
+spawned `java` twice and left both globals empty in the parent shell. The only
+thing the memo ever sped up was the one caller that set it by hand, and that
+caller was the hole. The suite pays ~90 JVM starts (about 25s in total) and
+asserts the whole property — refuses, **and** leaves the protected tree
+byte-identical — against a disposable fake `user.home` produced by a stub `java`,
+rather than against `$HOME` as it used to.
+
+**The thirteenth failure is not a variable or a path spelling — it is a lost
+exit status.** `keliver_effective_jvm_home` was a single pipeline,
+`java … | awk …`, so the command substitution carried **awk's** status, and awk
+succeeds when it matches nothing. "java is not installed", "java crashed", "java
+printed no `user.home`" and a real answer were therefore the same answer to every
+caller: `rc=0` and an empty string. `keliver_protected_roots` read that empty
+string as "there is no JVM root" and continued with the `$HOME` roots alone —
+which is precisely the fallback the JVM root exists to prevent.
+
+Measured against `53ed0637d`, with `$HOME` on a disposable directory and the
+store under a *different* `user.home` (the macOS geometry, and the only one where
+this root matters), all of these returned `0` from the refusal **and then created
+directories inside the protected store**: java exiting 127, java exiting 1 with a
+message, java printing a relative `user.home`, java printing an empty one, java
+printing no `user.home` line, java printing two different ones, and java absent
+from `PATH` entirely.
+
+The invocation is unpiped now and its status is kept and checked; the answer must
+be exactly one non-empty absolute path; and discovery failure returns 3 from
+`keliver_protected_roots`, which every caller already treats as a refusal — before
+any `mkdir`. There is no fallback to `$HOME` **in the guard**.
+
+*Scoped deliberately, because the first draft of this paragraph overclaimed.*
+Two scripts outside the guard still carry the identical pipeline, and one carries
+the explicit fallback too — `scripts/keliver-store-path.sh:51-53`
+(`[ -n "$HOME_DIR" ] || HOME_DIR="$HOME"`) and
+`scripts/keliver-adopt-legacy-store.sh:40`. Neither is reachable from the fixed
+path: `keliver_effective_store` always passes `--home "$jvm_home"`, which is now
+validated non-empty and absolute, so the fallback is dead for every guard caller,
+and `keliver-adopt-legacy-store.sh` fails closed (it ends up with
+`/.keliver-portal` and exits 1). Neither writes anything. But a human running
+`keliver-store-path.sh <app>` directly on a box with broken java is still told a
+different store's name, in the script CLAUDE.md designates as the shell mirror of
+the store-identity authority. **Recorded, not fixed here**: it is a product path,
+changing it would make store resolution refuse where it currently answers, and
+nothing in this block's verification covers that. It wants its own change.
+
+**Consequence, stated because it is a real cost:** a machine with no working java cannot run these checks at all.
+That is deliberate — refusing to run is recoverable, writing into the real store
+is not. `keliver_require_isolated_store` had the same hole, passing an empty home
+to the store resolver, and refuses now too.
+
+Two of the new assertions were **structurally vacuous when first written**, found
+by the targeted review of this very commit. `java_case` snapshotted only the fake
+`user.home` tree, while two of its rows point elsewhere — one at the `$HOME` tree,
+one at a legitimate parent — so for those rows the "byte-identical" PASS asserted
+nothing. That is the same fix-one-operand-not-its-partner error this list exists
+to record, committed inside the assertions written to catch it. Both protected
+trees are watched now, cleanup is derived from the target rather than hardcoded,
+and the discovery rows additionally assert **why** they refused — a refusal is
+cheap to get by accident, and a fixture `PATH` missing one unrelated tool
+produces `rc=2` too. Demonstrated against a mutant that drops the `$HOME` roots:
+the HOME row now fails on both halves, where the old helper passed the tree half.
+
+The local was briefly named `status`, which is a **read-only alias for `$?` in
+zsh**. Sourced from a zsh prompt the assignment aborted the function, which
+returned non-zero, which every caller reads as "discovery failed" — so the first
+run of the new assertions refused *everything*, including legitimate parents, and
+looked like a pass. The legitimate-parent control was the only assertion that
+caught it, and it is why that control is now mandatory in each of these blocks.
+
+`KELIVER_STAT_FMT` was the same shape one function along: the one cache
+expansion still unguarded, where an `unset` under `set -u` killed the subshell
+of a command substitution — which reads to the caller as an empty answer, not a
+refusal. It is `${…:-}` now and asserted.
+
+`~user/store` is the same unexpanded tilde one character along, and it walked
+straight through the check added for `~/store` — measured, a run directory
+created inside the named store. Both forms are refused now, for the given
+argument as well as for `PORTAL_STORE`. A `PORTAL_STORE` of `/` was a silent
+skip while the paragraph below claimed it got the same treatment as a `$HOME`
+leaf; it does now. And the "protected set is unusable" signal was an unanchored
+substring match over user-controlled paths, so a directory named after the
+marker produced a refusal with a false explanation, while the function returned
+success and a truncated list. It is a return status.
+
+`PORTAL_STORE` was the last root resolved one-sidedly, and an unexpanded `~` —
+single quotes in a Makefile, a CI yaml, an `.envrc` — made it name a literal
+`~` directory under `$PWD`, leaving the real store protected by nothing.
+Measured: a run directory created inside it. Both spellings are emitted now, and
+an unexpanded `~` there refuses the whole run rather than silently protecting
+the wrong path. A protected root that resolves to `/` gets the same treatment
+for the opposite reason: protecting it would mean refusing every directory on
+the machine, skipping it would leave the one tree that matters unprotected, so
+it names the root and refuses. And `keliver-verify-signed-bundle.sh` — the one caller with no
+second refusal, where every one of these leaks landed first — appeared in no
+workflow and no check. It is asserted now.
+
+**Coverage, stated exactly.** Both `portal-tools.yml` jobs are `ubuntu-latest`,
+so CI exercises the GNU-`stat` path and the case-**sensitive** branch. The
+case-**insensitive** branch — the one the whole identity comparison exists for,
+and the only filesystem on which the mkdir-then-refuse undo is even reachable —
+is exercised only by hand on a developer's Mac. The suite detects which
+filesystem it is on and asserts the correct answer for that one; neither branch
+is skipped, but only one of them runs in CI. Asserting the macOS answer
+unconditionally is a mistake this suite made twice, and Linux CI caught it both
+times.
 
 ### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
 

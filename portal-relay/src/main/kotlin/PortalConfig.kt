@@ -409,7 +409,14 @@ internal fun <T> withStoreLock(
 
   val me = ProcessHandle.current().pid().toString()
   val pidFile = File(lock, "pid")
-  val marked = runCatching { pidFile.writeText(me + "\n"); pidFile.readText().trim() == me }.getOrDefault(false)
+  // trimEnd('\n'), matching the shell's `$(cat …)`. This is an IDENTITY
+  // comparison — "is this marker mine?" — not a liveness verdict, but it must
+  // still agree with the shell about what the file says, or the two disagree
+  // about who holds the lock. `.trim()` here would have called a
+  // whitespace-padded marker ours when `lock_is_ours` would not.
+  val marked = runCatching {
+    pidFile.writeText(me + "\n"); pidFile.readText().trimEnd('\n') == me
+  }.getOrDefault(false)
   if (!marked) {
     runCatching { pidFile.delete(); lock.delete() }
     onUnavailable(lock, "the holder marker in $lock could not be written")
@@ -420,7 +427,8 @@ internal fun <T> withStoreLock(
   // two-writers failure the lock exists to prevent.
   fun release() {
     runCatching {
-      if (pidFile.readText().trim() == me) {
+      // Identity again, not liveness: release only what this process marked.
+      if (pidFile.readText().trimEnd('\n') == me) {
         pidFile.delete()
         lock.delete()
       }
