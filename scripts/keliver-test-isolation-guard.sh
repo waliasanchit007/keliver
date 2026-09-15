@@ -348,6 +348,12 @@ keliver_protected_roots() {
     echo "  rather than protecting only \$HOME." >&2
     return 3
   fi
+  # DEFENCE IN DEPTH, deliberately not independently reachable — labelled, like
+  # the raw PORTAL_STORE spelling below, rather than left looking like coverage
+  # it no longer has. keliver_effective_jvm_home already guarantees either one
+  # absolute path or a non-zero status, so nothing can arrive here that this
+  # rejects. It stays for a future edit to that function that relaxes the
+  # guarantee without noticing this caller depends on it.
   case "$jvm_home" in
     /*) ;;
     *)  echo "keliver: java reported a user.home that is not an absolute path. Refusing." >&2

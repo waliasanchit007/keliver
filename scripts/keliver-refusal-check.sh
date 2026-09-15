@@ -596,54 +596,90 @@ for t in awk basename dirname find head id mkdir mktemp rmdir sed stat; do
 done
 # If that PATH cannot run the guard at all, the absence case would "refuse" for
 # a reason that has nothing to do with java, and would prove nothing.
-if ( export PATH="$JPURE"; command -v stat >/dev/null 2>&1 && command -v mktemp >/dev/null 2>&1 ) \
-   && ! ( export PATH="$JPURE"; command -v java >/dev/null 2>&1 ); then
-  ok "the java-free fixture PATH has the guard's tools and no java"
-else
-  bad "the java-free fixture PATH is wrong, so the absence case proves nothing"
-fi
+# EVERY tool, not two of them. Asserting only stat+mktemp was the same
+# fix-one-operand error this file keeps recording: demonstrated, a PATH missing
+# only `basename` still makes the guard return 2, for a reason that has nothing
+# to do with java — so the absence row would have passed for the wrong reason if
+# one ln -sf had quietly failed. The rows themselves also assert WHY they
+# refused, below, which is the real backstop.
+JPURE_OK=1
+for t in awk basename dirname head mkdir mktemp rmdir sed stat; do
+  ( export PATH="$JPURE"; command -v "$t" >/dev/null 2>&1 ) || { JPURE_OK=0; echo "        missing: $t"; }
+done
+( export PATH="$JPURE"; command -v java >/dev/null 2>&1 ) && JPURE_OK=0
+[ "$JPURE_OK" = 1 ] && ok "the java-free fixture PATH has every tool the guard needs, and no java" \
+                    || bad "the java-free fixture PATH is wrong, so the absence case proves nothing"
 
-# java_case <label> <stub-body | ABSENT> <target> <want-rc>
-# Asserts BOTH halves, like cache_case: the status, and that the protected tree
-# is byte-identical afterwards.
+# java_case <label> <stub-body | ABSENT> <target> <want-rc> [reason-grep]
+# Asserts BOTH halves, like cache_case: the status, and that the protected trees
+# are byte-identical afterwards — plus, where a reason is given, that it refused
+# for the reason under test rather than some unrelated one.
+#
+# BOTH protected trees. This watched only $JH, while two rows in the block point
+# elsewhere — one at the $HOME tree, one at a legitimate parent — so for those
+# two the "byte-identical" PASS asserted nothing at all. That is the same
+# fix-one-operand-not-its-partner error this file exists to record, committed in
+# the very assertions written to catch it. $DISP/legit is deliberately NOT
+# watched: the allowed row is supposed to create a run directory there.
 java_case() {
-  local label="$1" body="$2" target="$3" want="$4" pathspec before after rc1 rc2
+  local label="$1" body="$2" target="$3" want="$4" reason="${5:-}"
+  local pathspec before after rc1 rc2
   if [ "$body" = "ABSENT" ]; then
     pathspec="$JPURE"
   else
     printf '#!/bin/sh\n%s\n' "$body" > "$JB/java"; chmod +x "$JB/java"
     pathspec="$JB:$JPURE"
   fi
-  before="$(find "$JH" | sort)"
-  echo died > "$DISP/jc.rc1"; echo died > "$DISP/jc.rc2"
+  before="$(find "$JH" "$DISP/jvmhome-home" | sort)"
+  echo died > "$DISP/jc.rc1"; echo died > "$DISP/jc.rc2"; : > "$DISP/jc.err"
   ( export PATH="$pathspec" HOME="$DISP/jvmhome-home"; unset PORTAL_STORE
-    keliver_refuse_protected_parent "$target" >/dev/null 2>&1; echo $? > "$DISP/jc.rc1"
+    keliver_refuse_protected_parent "$target" >/dev/null 2>"$DISP/jc.err"; echo $? > "$DISP/jc.rc1"
     keliver_make_run_dir "$target" probe >/dev/null 2>&1; echo $? > "$DISP/jc.rc2" )
   rc1="$(cat "$DISP/jc.rc1")"; rc2="$(cat "$DISP/jc.rc2")"
-  after="$(find "$JH" | sort)"
+  after="$(find "$JH" "$DISP/jvmhome-home" | sort)"
   if [ "$rc1" = "$want" ] && [ "$rc2" = "$want" ]; then
     ok "$label"
   else
     bad "$label (refuse rc=$rc1, make_run_dir rc=$rc2, wanted $want)"
   fi
   if [ "$before" = "$after" ]; then
-    ok "$label: and the protected tree is byte-identical"
+    ok "$label: and both protected trees are byte-identical"
   else
-    bad "$label: it WROTE inside the protected root"
+    bad "$label: it WROTE inside a protected root"
     diff <(echo "$before") <(echo "$after") | sed 's/^/        /'
   fi
-  rm -rf "$JH/.keliver-portal/apps/evil"
+  # THE REASON, not just the status. A refusal is cheap to get by accident — a
+  # fixture PATH missing one unrelated tool produces rc=2 too — so the rows that
+  # are about discovery assert that discovery is what was named.
+  if [ -n "$reason" ]; then
+    if grep -q "$reason" "$DISP/jc.err"; then
+      ok "$label: and named discovery as the reason"
+    else
+      bad "$label: refused, but not for the reason under test"
+      head -3 "$DISP/jc.err" | sed 's/^/        /'
+    fi
+  fi
+  # Derived from $target, not hardcoded: the hardcoded form left the $HOME-tree
+  # row's directory behind for the next row's snapshot to trip over.
+  rm -rf "$target"/keliver-probe-* 2>/dev/null
+  case "$target" in
+    "$JH"/*|"$DISP/jvmhome-home"/*) rm -rf "$target";;
+  esac
 }
 
 VICTIM="$JH/.keliver-portal/apps/evil"
-java_case "java exits 127"                       'exit 127'                                "$VICTIM" 2
-java_case "java exits 1 with an error message"   'echo "could not find libjvm" >&2; exit 1' "$VICTIM" 2
-java_case "java prints no user.home line"        'echo "        java.version = 17"'         "$VICTIM" 2
-java_case "java prints an EMPTY user.home"       'echo "        user.home = "'              "$VICTIM" 2
-java_case "java prints a RELATIVE user.home"     'echo "        user.home = relative/nope"' "$VICTIM" 2
+# The message every discovery failure must carry. The stub that exits 1 prints
+# "no libjvm here", deliberately NOT containing this text, so the assertion
+# cannot be satisfied by the stub's own output being echoed back.
+WHY="could not be established"
+java_case "java exits 127"                       'exit 127'                                "$VICTIM" 2 "$WHY"
+java_case "java exits 1 with an error message"   'echo "no libjvm here" >&2; exit 1'        "$VICTIM" 2 "$WHY"
+java_case "java prints no user.home line"        'echo "        java.version = 17"'         "$VICTIM" 2 "$WHY"
+java_case "java prints an EMPTY user.home"       'echo "        user.home = "'              "$VICTIM" 2 "$WHY"
+java_case "java prints a RELATIVE user.home"     'echo "        user.home = relative/nope"' "$VICTIM" 2 "$WHY"
 java_case "java prints TWO different user.homes" \
-  'echo "        user.home = /one"; echo "        user.home = /two"'                        "$VICTIM" 2
-java_case "java is absent from PATH entirely"    'ABSENT'                                   "$VICTIM" 2
+  'echo "        user.home = /one"; echo "        user.home = /two"'                        "$VICTIM" 2 "$WHY"
+java_case "java is absent from PATH entirely"    'ABSENT'                                   "$VICTIM" 2 "$WHY"
 
 # VALID discovery, in the geometry that matters: HOME and user.home differ, and
 # the store lives under user.home. The root has to come from java or not at all.

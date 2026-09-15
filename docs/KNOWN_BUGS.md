@@ -1767,11 +1767,39 @@ from `PATH` entirely.
 The invocation is unpiped now and its status is kept and checked; the answer must
 be exactly one non-empty absolute path; and discovery failure returns 3 from
 `keliver_protected_roots`, which every caller already treats as a refusal — before
-any `mkdir`. There is no fallback to `$HOME`. **Consequence, stated because it is
-a real cost:** a machine with no working java cannot run these checks at all.
+any `mkdir`. There is no fallback to `$HOME` **in the guard**.
+
+*Scoped deliberately, because the first draft of this paragraph overclaimed.*
+Two scripts outside the guard still carry the identical pipeline, and one carries
+the explicit fallback too — `scripts/keliver-store-path.sh:51-53`
+(`[ -n "$HOME_DIR" ] || HOME_DIR="$HOME"`) and
+`scripts/keliver-adopt-legacy-store.sh:40`. Neither is reachable from the fixed
+path: `keliver_effective_store` always passes `--home "$jvm_home"`, which is now
+validated non-empty and absolute, so the fallback is dead for every guard caller,
+and `keliver-adopt-legacy-store.sh` fails closed (it ends up with
+`/.keliver-portal` and exits 1). Neither writes anything. But a human running
+`keliver-store-path.sh <app>` directly on a box with broken java is still told a
+different store's name, in the script CLAUDE.md designates as the shell mirror of
+the store-identity authority. **Recorded, not fixed here**: it is a product path,
+changing it would make store resolution refuse where it currently answers, and
+nothing in this block's verification covers that. It wants its own change.
+
+**Consequence, stated because it is a real cost:** a machine with no working java cannot run these checks at all.
 That is deliberate — refusing to run is recoverable, writing into the real store
 is not. `keliver_require_isolated_store` had the same hole, passing an empty home
 to the store resolver, and refuses now too.
+
+Two of the new assertions were **structurally vacuous when first written**, found
+by the targeted review of this very commit. `java_case` snapshotted only the fake
+`user.home` tree, while two of its rows point elsewhere — one at the `$HOME` tree,
+one at a legitimate parent — so for those rows the "byte-identical" PASS asserted
+nothing. That is the same fix-one-operand-not-its-partner error this list exists
+to record, committed inside the assertions written to catch it. Both protected
+trees are watched now, cleanup is derived from the target rather than hardcoded,
+and the discovery rows additionally assert **why** they refused — a refusal is
+cheap to get by accident, and a fixture `PATH` missing one unrelated tool
+produces `rc=2` too. Demonstrated against a mutant that drops the `$HOME` roots:
+the HOME row now fails on both halves, where the old helper passed the tree half.
 
 The local was briefly named `status`, which is a **read-only alias for `$?` in
 zsh**. Sourced from a zsh prompt the assignment aborted the function, which
