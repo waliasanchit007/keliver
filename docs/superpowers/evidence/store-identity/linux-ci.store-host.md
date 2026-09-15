@@ -4,6 +4,42 @@ Four identities, recorded separately, because a GitHub run's `headSha` is the
 SHA of the **workflow definition**, not of what an input-driven checkout built.
 Conflating them is how a run gets credited to the wrong commit.
 
+## Run 34914450783 — `7184cf467`, the candidate
+
+| what | value |
+|---|---|
+| workflow-definition SHA (`run.headSha`) | `7184cf467d4a6f938c8ccf1d3dd18ecfe83fd5f5` (branch `fix/store-host-correctness`) |
+| actual checkout SHA (`git rev-parse HEAD` in the job) | `7184cf467d4a6f938c8ccf1d3dd18ecfe83fd5f5` |
+| `VERSION.json.sourceCommit` | `7184cf467d4a6f938c8ccf1d3dd18ecfe83fd5f5` |
+| ZIP sha256 | `717dadb3c3cd5c10fde90a1f9d65401ec65b0b5935ea670ff5770394ff0cc851` |
+| conclusion | **success** (`bundle`; `device` skipped, no device input) |
+
+Per-check on Linux: disposable-parent refusal **106 / 0**, hygiene **10 / 0**,
+adopter acceptance **19 / 0**, foreign-relay refusal **6 / 0**, identity contract
+**11 / 0**, guest bundle signing **4 / 0**, store recovery **144 / 0**.
+
+The refusal suite went 93 → 106: the thirteen assertions added for rounds 11 and
+12. They pass here as well as on macOS, and this run is the one that exercises
+them on the case-**sensitive** branch —
+
+```
+PASS  allowed: a case variant, on a case-SENSITIVE filesystem
+      (filesystem is case-sensitive; both directions are asserted, neither skipped)
+PASS  an inherited TRIED flag does not unprotect the JVM home
+PASS  an inherited TRIED flag does not unprotect the JVM home: and the protected tree is byte-identical
+```
+
+`/bin/bash` is bash 5 here, so the lint's parse pass is not a second opinion on
+this runner; the bash 3.2 parse is macOS-only. The case-INSENSITIVE direction of
+the two case assertions, and the `mkdir`-then-refuse undo path that only exists
+where the filesystem folds case, are covered by
+[`macos-refusal.md`](macos-refusal.md) and by nothing here.
+
+The ZIP hash differs from every earlier run and that is expected: the build is
+not byte-reproducible, which is why `docs/PORTAL_TOOLS_RELEASE.md` attaches a
+release asset from the verified retained artifact rather than from a rebuild.
+Nothing was published by this run — every job in `portal-tools.yml` is read-only.
+
 ## Run 34828230695 — `c11e81643`, the candidate
 
 | what | value |
