@@ -131,5 +131,8 @@ if grep -q "skipped (no manifest/pubkey properties)" "$XML"; then
   echo "  -Dkeliver.verify.* to the test JVM." >&2
   exit 1
 fi
-grep -q 'tests="2"' "$XML" || { echo "expected 2 tests (verification and tamper rejection)" >&2; exit 1; }
-echo "==> signed bundle verifies against the store's public key, and a tampered one does not"
+grep -q 'tests="3"' "$XML" || {
+  echo "expected 3 tests (verification, tamper rejection, foreign-key rejection)" >&2; exit 1; }
+echo "==> signed bundle verifies against the store's public key; a tampered one does not,"
+echo "    and neither does a DIFFERENT key — which is the identity-binding this contract"
+echo "    exists for (#78): tampering alone would pass a verifier that ignored the key."

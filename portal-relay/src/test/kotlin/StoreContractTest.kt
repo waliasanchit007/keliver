@@ -262,6 +262,145 @@ class StoreContractTest {
     assertTrue(!File(viaScript(app, home)).canonicalPath.startsWith(app.canonicalPath))
   }
 
+  // ---------------------------------------------------------------------------
+  // WITHOUT --home. Every case above passes --home explicitly, which means the
+  // branch the Gradle build and the shell tools actually used — discover the
+  // JVM user.home, and (until #78) silently fall back to $HOME — was never
+  // exercised by the one test whose job is to keep the two implementations in
+  // agreement. These drive it.
+  //
+  // A stub `java` on PATH stands in for discovery so the answer is controllable;
+  // $HOME is deliberately pointed somewhere ELSE, because on macOS user.home
+  // comes from the passwd entry and ignores $HOME, and picking $HOME selects a
+  // different store — which is where the signing key and the host's
+  // verification key live.
+  // ---------------------------------------------------------------------------
+
+  private class Run(val exit: Int, val out: String, val err: String)
+
+  /** Runs the resolver with NO --home, with [javaBody] as the `java` on PATH. */
+  private fun viaScriptDiscovering(
+    app: File,
+    shellHome: File,
+    javaBody: String?,
+    env: Map<String, String> = emptyMap(),
+    args: List<String> = emptyList(),
+  ): Run {
+    val bin = tmp("bin")
+    // A PATH holding only what the resolver needs. Prepending to the real PATH
+    // would let a deleted stub fall through to the machine's REAL java, which
+    // answers with the developer's real user.home — a false pass, and a read
+    // this test has no business making.
+    for (tool in listOf("bash", "python3", "awk", "head", "sed", "cat", "ls")) {
+      val src = listOf("/bin", "/usr/bin", "/usr/local/bin")
+        .map { File(it, tool) }.firstOrNull { it.canExecute() } ?: continue
+      java.nio.file.Files.createSymbolicLink(File(bin, tool).toPath(), src.toPath())
+    }
+    if (javaBody != null) {
+      File(bin, "java").apply {
+        writeText("#!/bin/sh\n$javaBody\n")
+        setExecutable(true)
+      }
+    }
+    val pb = ProcessBuilder(listOf(script.absolutePath, app.absolutePath) + args)
+    pb.environment()["PATH"] = bin.absolutePath
+    pb.environment()["HOME"] = shellHome.absolutePath
+    pb.environment().remove("PORTAL_STORE")
+    pb.environment().putAll(env)
+    val p = pb.start()
+    val out = p.inputStream.bufferedReader().readText().trim()
+    val err = p.errorStream.bufferedReader().readText().trim()
+    p.waitFor()
+    return Run(p.exitValue(), out, err)
+  }
+
+  @Test
+  fun discoveredHomeAgreesWithTheAuthority() {
+    val jvmHome = tmp("jvmhome")
+    val shellHome = tmp("shellhome")
+    val app = tmp("app")
+    val r = viaScriptDiscovering(app, shellHome, "echo \"        user.home = ${jvmHome.absolutePath}\"")
+    assertEquals(0, r.exit, "resolver failed: ${r.out} ${r.err}")
+    // The authority, asked with the SAME user.home the stub reported.
+    val kotlin = withUserHome(jvmHome) { PortalConfig().storeDir(app) }
+    assertEquals(kotlin.canonicalPath, File(r.out).canonicalPath)
+    // And it is emphatically not the $HOME answer.
+    val viaShellHome = withUserHome(shellHome) { PortalConfig().storeDir(app) }
+    assertTrue(
+      File(r.out).canonicalPath != viaShellHome.canonicalPath,
+      "resolver used \$HOME instead of the JVM user.home",
+    )
+  }
+
+  @Test
+  fun failedDiscoveryRefusesRatherThanUsingShellHome() {
+    val shellHome = tmp("shellhome")
+    val app = tmp("app")
+    // Every shape of "discovery did not produce one usable absolute path".
+    val broken = mapOf(
+      "exit 127" to "exit 127",
+      "error exit" to "echo 'no libjvm here' >&2; exit 1",
+      "no user.home line" to "echo '        java.version = 17'",
+      "empty user.home" to "echo '        user.home = '",
+      "relative user.home" to "echo '        user.home = relative/nope'",
+      "two user.homes" to "echo '        user.home = /one'; echo '        user.home = /two'",
+    )
+    val shellAnswer = withUserHome(shellHome) { PortalConfig().storeDir(app) }.canonicalPath
+    for ((name, body) in broken) {
+      val r = viaScriptDiscovering(app, shellHome, body)
+      assertEquals(4, r.exit, "$name: expected refusal, got ${r.exit} / ${r.out}")
+      // A caller writing STORE="$(resolver ...)" without checking $? must not
+      // get a usable-looking path out of a refusal.
+      assertEquals("", r.out, "$name: refused but still printed a path")
+      assertTrue(
+        !r.out.contains(shellAnswer),
+        "$name: refusal leaked the \$HOME store",
+      )
+    }
+    // java absent from PATH entirely is the same requirement.
+    val absent = viaScriptDiscovering(app, shellHome, javaBody = null)
+    assertEquals(4, absent.exit, "java absent: expected refusal, got ${absent.exit} / ${absent.out}")
+    assertEquals("", absent.out)
+  }
+
+  @Test
+  fun anExplicitStoreNeedsNoDiscovery() {
+    val shellHome = tmp("shellhome")
+    val app = tmp("app")
+    val explicit = tmp("explicit")
+    // PORTAL_STORE is step 1 and is answered before any home is read, so it must
+    // survive a box with no working java. Requiring the home here would refuse a
+    // caller who has already said exactly which store to use.
+    val r = viaScriptDiscovering(
+      app, shellHome, "exit 127", env = mapOf("PORTAL_STORE" to explicit.absolutePath),
+    )
+    assertEquals(0, r.exit, "explicit store refused: ${r.err}")
+    assertEquals(explicit.canonicalPath, File(r.out).canonicalPath)
+    val kotlin = withUserHome(shellHome) {
+      PortalConfig(store = explicit.absolutePath).storeDir(app)
+    }
+    assertEquals(kotlin.canonicalPath, File(r.out).canonicalPath)
+    // --default IS the home-derived step, so there it must still refuse.
+    val dflt = viaScriptDiscovering(
+      app, shellHome, "exit 127",
+      env = mapOf("PORTAL_STORE" to explicit.absolutePath), args = listOf("--default"),
+    )
+    assertEquals(4, dflt.exit, "--default answered without a home: ${dflt.out}")
+  }
+
+  @Test
+  fun aRelativeHomeIsRejected() {
+    val shellHome = tmp("shellhome")
+    val app = tmp("app")
+    // A relative --home resolves against the CALLER's cwd inside python, which
+    // is a different store per caller.
+    val r = viaScriptDiscovering(
+      app, shellHome, "exit 127", args = listOf("--home", "relative/home"),
+    )
+    assertEquals(2, r.exit, "a relative --home was accepted: ${r.out}")
+    assertEquals("", r.out)
+  }
+
   private fun <T> withUserHome(home: File, block: () -> T): T {
     val previous = System.getProperty("user.home")
     System.setProperty("user.home", home.absolutePath)

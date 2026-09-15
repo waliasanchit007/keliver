@@ -87,8 +87,21 @@ ext.keliverStoreDir = { java.io.File repoDir ->
       'resolved. The publisher signs with the key in that store and the device hosts embed ' +
       'its public key; guessing would sign with one identity and verify against another.')
   }
+  // --home FROM THIS JVM, not from another one. The resolver's own fallback used
+  // to be `java -XshowSettings:properties` and then, if that produced nothing,
+  // $HOME — and on macOS user.home comes from the passwd entry and ignores
+  // $HOME, so the two differ routinely. This build is already running inside a
+  // JVM whose user.home IS the authority PortalConfig.storeDir() reads, so ask
+  // it directly: it cannot fail, it cannot disagree with the relay, and it does
+  // not depend on a `java` being on the daemon's PATH at all.
+  //
+  // .execute() inherits the GRADLE DAEMON's environment, not the invoking
+  // shell's — the same caveat this file records for PORTAL_STORE — so neither
+  // the daemon's $HOME nor its PATH is necessarily what the developer sees.
+  // That is exactly the environment the old fallback chain was reading.
   def out = new StringBuilder(), err = new StringBuilder()
-  def proc = [script.absolutePath, repoDir.absolutePath].execute()
+  def proc = [script.absolutePath, repoDir.absolutePath,
+              '--home', System.getProperty('user.home')].execute()
   proc.consumeProcessOutput(out, err)
   proc.waitForOrKill(30_000)
   def path = out.toString().trim()
