@@ -110,8 +110,15 @@ REC_PID=$!
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null http://localhost:8143/screens && break; sleep 2; done
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-resolve-store.sh"
+# The relay on 8143 is already running by this point, and this script has no EXIT
+# trap, so a bare `exit` here would leave a stray JVM holding the port and the
+# NEXT run would die in keliver_port_free_or_die. Kill what we started first.
 REC_STORE="$(keliver_require_store "the recording client's store, before the token check" \
-  "$ROOT/scripts/keliver-store-path.sh" "$REC")" || exit $?
+  "$ROOT/scripts/keliver-store-path.sh" "$REC")" || {
+  rc=$?
+  keliver_kill_own 8143 "${REC_PID:-}"
+  exit "$rc"
+}
 if [ -r "$REC_STORE/http-record.token" ]; then
   ok "the token is in the resolved store (contents not shown)"
 else

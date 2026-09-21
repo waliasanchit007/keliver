@@ -98,7 +98,15 @@ esac
 
 echo "adopting into: $TARGET"
 echo "          from: $LEGACY  (read-only)"
-mkdir -p "$TARGET"
+# CHECKED. Unchecked, a target that cannot be created still reached the copy
+# loop — and if the legacy store happened to hold none of the copied names, every
+# copy_one returned early on [ -e "$src" ], `failed` stayed 0, and this printed
+# "copied 0 item(s) ... unchanged" and exited 0. A success claim with no
+# destination: the same family as the bug this script was fixed for.
+mkdir -p "$TARGET" || {
+  echo "keliver-adopt-legacy-store: could not create $TARGET — nothing was adopted." >&2
+  exit 1
+}
 
 copied=0; skipped=0; failed=0
 copy_one() { # relative path

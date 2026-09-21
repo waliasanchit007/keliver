@@ -173,10 +173,16 @@ class SignedBundleVerificationTest {
     val error = outcome.exceptionOrNull()!!
     // The predicate must be able to say NO, or asserting it proves nothing. An
     // unrelated failure is checked against the same function, in the same run.
+    // The negative control MENTIONS the manifest on purpose. An IOException about
+    // a disk misses every alternative trivially and only proves the predicate is
+    // not constant-true; a missing manifest file is the realistic unrelated
+    // failure, and it is exactly what a looser predicate would have accepted.
     assertTrue(
-      !looksLikeSignatureRejection(java.io.IOException("the disk went away")),
-      "the signature-rejection predicate accepts unrelated failures, so asserting it is " +
-        "worth nothing",
+      !looksLikeSignatureRejection(
+        java.io.FileNotFoundException("/tmp/nope/manifest.zipline.json (No such file)"),
+      ),
+      "the signature-rejection predicate accepts an unrelated failure that merely mentions " +
+        "the manifest, so asserting it is worth nothing",
     )
     assertTrue(
       looksLikeSignatureRejection(error),
@@ -188,10 +194,12 @@ class SignedBundleVerificationTest {
 
   /** Does this throwable read as the signature check refusing, rather than an accident? */
   private fun looksLikeSignatureRejection(t: Throwable): Boolean {
+    // "manifest" is NOT in this list: FileNotFoundException on
+    // manifest.zipline.json, and every ZiplineManifest* class name, would satisfy
+    // it — which is an unrelated failure being read as proof of key binding.
     val text = "${t::class.qualifiedName}: ${t.message}"
     return text.contains("signature", ignoreCase = true) ||
-      text.contains("verif", ignoreCase = true) ||
-      text.contains("manifest", ignoreCase = true)
+      text.contains("verif", ignoreCase = true)
   }
 
   /** RFC 8032 raw encoding: little-endian y, high bit of the last byte = x parity. */

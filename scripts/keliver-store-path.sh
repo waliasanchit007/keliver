@@ -108,6 +108,20 @@ keliver_discover_jvm_home() {
   printf '%s' "$out"
 }
 
+# BLANK IS NOT SET, because that is what the authority does:
+# Relay.kt resolves PORTAL_STORE with `?.takeIf { it.isNotBlank() }`, so a
+# whitespace-only value there means "fall through to the default store". The
+# mirror took it literally and answered "<cwd>/   " with rc 0 — a different store
+# from the one the relay would open, which is the whole class of bug this file
+# exists to prevent. The `"store"` key in keliver.portal.json already had this
+# fix three lines into the python below, and its comment even says "the same
+# failure as \"\", with the two sides swapped"; the env twin was the side left
+# swapped.
+case "${PORTAL_STORE:-}" in
+  *[![:space:]]*) ;;      # has at least one non-space character: a real value
+  *) PORTAL_STORE="" ;;   # unset, empty, or all whitespace: not a value
+esac
+
 # ONLY WHEN IT IS ACTUALLY NEEDED. $PORTAL_STORE is step 1 and is answered
 # before any home is consulted, so demanding a working java there would refuse a
 # caller who has already said exactly which store to use — strictness that buys
@@ -156,7 +170,10 @@ def expand(s):
     return s if os.path.isabs(s) else os.path.join(app, s)
 
 if not only_default:
-    if env:
+    # .strip(): the shell above already blanks a whitespace-only PORTAL_STORE,
+    # and this is the second side of the same test for anyone calling the python
+    # directly. Blank means "not set", matching Relay.kt's isNotBlank().
+    if env.strip():
         answer("env", os.path.abspath(env))
 
     cfg = os.path.join(app, "keliver.portal.json")

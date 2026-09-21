@@ -84,8 +84,20 @@ took the resolver's stdout and ignored its exit code, so the refusal arrived as 
 empty string — and `cd ""` succeeds in bash, which defeated its "already uses the
 legacy store" guard as well. It then targeted `/<rel>`, tried to copy a legacy
 private signing key to `/keys/ed25519.priv`, and exited 0 reporting success. Any
-caller of this script must check the status and require a non-empty absolute path;
-`scripts/keliver-store-home-check.sh` asserts that for the bundled ones.
+caller of this script must check the status and require a non-empty absolute path.
+
+Two suites hold that line, and it is worth knowing which covers what:
+`scripts/keliver-resolver-failure-check.sh` injects three failure shapes (exit 4
+with empty output, non-zero with *misleading* output, and exit 0 with nothing)
+and asserts, per caller, a non-zero exit, no downstream write or request, and no
+success claim — it drives `keliver-record-http.sh` and
+`keliver-adopt-legacy-store.sh` end to end, and gates every other caller in
+`scripts/*.sh` with a static check that no invocation takes the resolver's stdout
+without checking its status. `scripts/keliver-store-home-check.sh` covers which
+home is chosen, and drives `keliver-adopt-legacy-store.sh`.
+**`keliver-store-recover.sh` is driven by neither** — it was already fail-closed
+before #78 (it keeps the resolver's status and message and branches on them), so
+it was not changed, and it has no failure-injection coverage.
 
 The Gradle build does not go through discovery at all — it passes
 `--home System.getProperty('user.home')` from the JVM already running Gradle,

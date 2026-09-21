@@ -19,8 +19,11 @@
 #     "the store is unchanged" passed having observed nothing
 #   * `case "" in "$APP"/*)` does not match, so "the store is outside the app"
 #     passed for an app whose store was never found
-#   * keliver-record-http.sh built "/http-record.token", sent an unauthenticated
-#     request, and reported the relay's rejection — a different problem entirely
+#   * keliver-record-http.sh built "/http-record.token" and then MISDIAGNOSED:
+#     its token guard stopped it before sending anything (so no unauthenticated
+#     request — an earlier version of this comment claimed one, wrongly), but it
+#     said "recording token not found; start the relay with PORTAL_HTTP_RECORD=1"
+#     and sent the operator to restart a healthy relay
 #
 # THREE INJECTED SHAPES, because they fail differently:
 #   1. exit 4, empty stdout          — the real refusal
@@ -90,7 +93,12 @@ echo "--- no caller may take the resolver's stdout without checking its status"
 # call site is `STORE="$(...)"`, with a quote between the `=` and the `$(`, so it
 # matched nothing and the gate passed by finding no violations anywhere. A gate
 # that cannot see its own subject is worse than no gate.
-GATE_RE='=[^=]*\$\((.*keliver-store-path\.sh|"\$\(keliver_store_path_script\)")'
+# Literal spellings AND the variable ones. The first version matched only call
+# sites that name the script path, which misses `"$RESOLVE"`, `$RESOLVE` and
+# `"$STORE_PATH_SH"` — the spellings four scripts actually use. Each of those was
+# checked by hand and none is vulnerable (they all pass --home and compare the
+# result as a string), but a gate that cannot see a spelling cannot police it.
+GATE_RE='=[^=]*\$\((.*keliver-store-path\.sh|"?\$\{?(RESOLVE|STORE_PATH_SH)\}?"?[ )]|"\$\(keliver_store_path_script\)")'
 UNCHECKED=0
 while IFS= read -r hit; do
   # An assignment from the resolver with no `||` on the same line and no
@@ -105,19 +113,27 @@ done < <(grep -rnE "$GATE_RE" --include='*.sh' "$ROOT/scripts" 2>/dev/null \
          | grep -v 'keliver-resolver-failure-check.sh' \
          | grep -v 'keliver-store-home-check.sh' \
          | grep -v 'keliver-resolve-store.sh')
+# The claim is scoped to what the scan covers: *.sh under scripts/. build.gradle,
+# the workflows and the frozen evidence copy under docs/ are outside it and were
+# audited by hand.
 [ "$UNCHECKED" -eq 0 ] \
-  && ok "every resolver invocation in scripts/ checks its status" \
+  && ok "every resolver invocation in scripts/*.sh checks its status" \
   || bad "$UNCHECKED resolver invocation(s) take stdout without checking the status"
 # THE GATE MUST SEE A VIOLATION, and must not flag a compliant line. Both
 # directions: a pattern that matches nothing passes silently, and one that
 # matches everything makes the gate unusable.
 VIOLATION='STORE="$("$ROOT/scripts/keliver-store-path.sh" "$APP")"'
+VIOLATION_VAR='STORE="$("$RESOLVE" "$APP")"'
 COMPLIANT='STORE="$(keliver_require_store "x" "$ROOT/scripts/keliver-store-path.sh" "$APP")" || exit $?'
 v_hits="$(printf '%s\n' "$VIOLATION"  | grep -cE "$GATE_RE")"
 c_hits="$(printf '%s\n' "$COMPLIANT" | grep -cE "$GATE_RE")"
+vv_hits="$(printf '%s\n' "$VIOLATION_VAR" | grep -cE "$GATE_RE")"
 [ "$v_hits" = 1 ] \
   && ok "and the gate's pattern does match the unchecked shape" \
   || bad "the gate's pattern does not match an unchecked call, so it proves nothing"
+[ "$vv_hits" = 1 ] \
+  && ok "and the variable spelling too, which the first version of it missed" \
+  || bad "the gate cannot see \"\$RESOLVE\"-style call sites"
 # The compliant line still matches the pattern; it is the `||` / wrapper filter
 # in the loop above that clears it. Assert that filter, not just the regex.
 if [ "$c_hits" = 1 ]; then
@@ -151,10 +167,21 @@ rec_case() { # rec_case <shape> <want-nonzero>
                   || bad "record-http/$shape: exited 0 with no resolvable store"
   [ ! -s "$DISP/curl.calls" ] && ok "record-http/$shape: and made no request" \
                               || bad "record-http/$shape: sent a request anyway: $(head -1 "$DISP/curl.calls")"
-  if grep -qiE 'unauthor|forbidden|401|403|relay (said|rejected)' "$DISP/rec.log"; then
-    bad "record-http/$shape: blamed authentication for a resolver failure"
+  # THE ROW THAT DISCRIMINATES. Exiting non-zero and sending nothing were ALREADY
+  # true before #78 — the token guard did that — so those two rows pass against
+  # the old script and prove only that nothing regressed. What was wrong was the
+  # message, and that is what this asserts: it must name the store/resolver, and
+  # must NOT repeat the old advice to go restart a relay that is fine.
+  if grep -q 'start the relay with PORTAL_HTTP_RECORD=1' "$DISP/rec.log"; then
+    bad "record-http/$shape: sent the operator to restart the relay for a resolver failure"
   else
-    ok "record-http/$shape: and did not blame authentication"
+    ok "record-http/$shape: and did not misdirect them at the relay"
+  fi
+  if grep -qiE 'store could not be resolved|named no store|non-absolute store' "$DISP/rec.log"; then
+    ok "record-http/$shape: and named the store resolution as the problem"
+  else
+    bad "record-http/$shape: refused without saying the store could not be resolved"
+    head -3 "$DISP/rec.log" | sed 's/^/        /'
   fi
 }
 for shape in refuse misleading emptyok; do stub_resolver "$shape"; rec_case "$shape"; done

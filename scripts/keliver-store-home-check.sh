@@ -24,9 +24,15 @@
 # <slug>-<hash> directory and differ only in their prefix; the assertion reads
 # the key material inside the resolved store and checks WHICH key it got.
 #
-# Nothing real is touched: both homes, both stores and both keys are minted
-# under <disposable-root>, and the key material is a fixed marker string, not a
-# real key.
+# Nothing real is touched — and that is ASSERTED rather than asserted-in-prose.
+# Both homes, both stores and both keys are minted under <disposable-root>, and
+# the key material is a fixed marker string, not a real key. This header used to
+# make that claim while the suite could break it: $PORTAL_STORE is step 1 of the
+# resolution order, so an inherited one steered seed_store's write, and MEASURED,
+# a store holding REAL-PUBLIC-KEY-DO-NOT-CLOBBER came back holding a fixture
+# marker. The environment is cleared below AND seed_store refuses to write
+# outside <disposable-root>, so the claim now has two mechanisms behind it and a
+# row that exercises the second.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 DISP_PARENT="${1:?usage: $0 <disposable-root>}"
@@ -35,6 +41,22 @@ RESOLVE="$ROOT/scripts/keliver-store-path.sh"
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
 DISP="$(keliver_make_run_dir "$DISP_PARENT" storehome)" || exit $?
+
+# THE SUITE CONTROLS $PORTAL_STORE; IT MUST NOT INHERIT ONE.
+#
+# PORTAL_STORE is step 1 of the resolution order, so an inherited one makes the
+# resolver answer with it for EVERY call here — including seed_store, which then
+# does `printf ... > "$path/keys/ed25519.pub"`. MEASURED: with PORTAL_STORE
+# pointing at a store holding REAL-PUBLIC-KEY-DO-NOT-CLOBBER, that file afterwards
+# contained KEY-FROM-JVM-HOME. The public key a device host embeds, overwritten,
+# outside the disposable root, by a script wired into CI — in a file whose header
+# claims nothing real is touched.
+#
+# The same file already got this right in the adopt rows, which `unset
+# PORTAL_STORE` inside their subshells. Only the two call sites that WRITE KEY
+# MATERIAL were missed. The rows that need PORTAL_STORE set it explicitly, so
+# clearing it here costs nothing.
+unset PORTAL_STORE
 
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
@@ -58,7 +80,10 @@ PURE_OK=1
 # Everything the resolver AND the bundled callers below need. A missing tool
 # makes a case "refuse" for a reason that has nothing to do with java — measured,
 # omitting `cp` failed the adopt-legacy positive row for exactly that reason.
-for t in bash python3 awk head sed cat basename dirname mkdir ls cp rm find date chmod stat; do
+# `env` is in here because the resolver calls below run through `env -u
+# PORTAL_STORE`; without it the java-free case failed with 127 (env not found)
+# instead of 4, i.e. refused for a reason with nothing to do with java.
+for t in bash env python3 awk head sed cat basename dirname mkdir ls cp rm find date chmod stat; do
   src="$(command -v "$t" 2>/dev/null)" && ln -sf "$src" "$PURE/$t" || PURE_OK=0
 done
 java_says() { printf '#!/bin/sh\n%s\n' "$1" > "$BIN/java"; chmod +x "$BIN/java"; }
@@ -71,9 +96,19 @@ GOOD_JAVA="echo \"        user.home = $HOME_B\""
 java_says "$GOOD_JAVA"
 seed_store() { # seed_store <home> <marker>
   local home="$1" marker="$2" path
-  path="$( PATH="$BIN:$PATH" HOME="$home" "$RESOLVE" "$APP" --home "$home" )" || return 1
-  mkdir -p "$path/keys"
-  printf '%s' "$marker" > "$path/keys/ed25519.pub"
+  path="$( PATH="$BIN:$PATH" HOME="$home" env -u PORTAL_STORE "$RESOLVE" "$APP" --home "$home" )" || return 1
+  [ -n "$path" ] || { echo "seed_store: the resolver named no store" >&2; return 1; }
+  # DEFENCE AT THE WRITE, not only at the input. Clearing PORTAL_STORE above
+  # fixes the way this went wrong; this is the invariant it was violating, and it
+  # holds whatever a future edit does to the inputs: this suite mints key material
+  # and must never do so outside the disposable root it was given.
+  case "$path" in
+    "$DISP"/*) ;;
+    *) echo "seed_store: REFUSING to write a key at '$path' — outside $DISP." >&2
+       return 1;;
+  esac
+  mkdir -p "$path/keys" || return 1
+  printf '%s' "$marker" > "$path/keys/ed25519.pub" || return 1
   printf '%s' "$path"
 }
 STORE_A="$(seed_store "$HOME_A" "KEY-FROM-SHELL-HOME")" || { echo "setup failed (A)"; exit 1; }
@@ -119,7 +154,7 @@ route() {
   else
     java_says "$jbody"
   fi
-  outp="$( PATH="$usepath" HOME="$HOME_A" "$RESOLVE" "$APP" "$@" 2>"$DISP/err" )"; rc=$?
+  outp="$( PATH="$usepath" HOME="$HOME_A" env -u PORTAL_STORE "$RESOLVE" "$APP" "$@" 2>"$DISP/err" )"; rc=$?
   if [ "$want_id" = "REFUSED" ]; then
     id="REFUSED"
     # A refusal must also print NOTHING on stdout: a caller doing
@@ -218,15 +253,25 @@ SPLIT_APP="$DISP/splitapp"; mkdir -p "$SPLIT_APP"
 # -<hash>, differing only in slug. A "-legacy" SUFFIX does not end in the hash
 # and is not a split at all — the first version of this fixture built one of
 # those and scored a failure against a refusal that was working correctly.
-p1="$( PATH="$BIN:$PATH" HOME="$HOME_B" "$RESOLVE" "$SPLIT_APP" --home "$HOME_B" )"
+# CHECKED: an unchecked "" here made line 223 run `mkdir -p "" "./legacyname-"`,
+# which creates a stray directory in the CALLER's cwd — the exact shape this
+# suite exists to police, inside the suite.
+p1="$( PATH="$BIN:$PATH" HOME="$HOME_B" env -u PORTAL_STORE "$RESOLVE" "$SPLIT_APP" --home "$HOME_B" )" \
+  || { bad "could not resolve the split fixture's store; the split rows prove nothing"; p1=""; }
+case "$p1" in
+  "$DISP"/*) ;;
+  *) bad "the split fixture resolved outside $DISP ('$p1'); refusing to build it"; p1="";;
+esac
 SPLIT_HASH="${p1##*-}"
-mkdir -p "$p1" "$(dirname "$p1")/legacyname-$SPLIT_HASH"
+if [ -n "$p1" ]; then
+  mkdir -p "$p1" "$(dirname "$p1")/legacyname-$SPLIT_HASH"
+fi
 # Prove the fixture really is split before asserting anything about it.
 SPLIT_N="$(ls -1d "$(dirname "$p1")"/*-"$SPLIT_HASH" 2>/dev/null | wc -l | tr -d ' ')"
 [ "$SPLIT_N" = 2 ] && ok "the split fixture really has two stores for one app" \
                    || bad "the split fixture has $SPLIT_N store(s), so the next row proves nothing"
 rc=0
-outp="$( PATH="$BIN:$PATH" HOME="$HOME_A" "$RESOLVE" "$SPLIT_APP" 2>"$DISP/split.err" )" || rc=$?
+outp="$( PATH="$BIN:$PATH" HOME="$HOME_A" env -u PORTAL_STORE "$RESOLVE" "$SPLIT_APP" 2>"$DISP/split.err" )" || rc=$?
 case "$rc" in
   3) ok "a split store still exits 3, not 4" ;;
   0) bad "a split store resolved silently (rc=0) — the refusal is gone" ;;
@@ -234,6 +279,52 @@ case "$rc" in
      # scoring a pass for an unrelated refusal.
      bad "a split store exited $rc, not 3 — $(head -1 "$DISP/split.err")" ;;
 esac
+
+# BLANK IS NOT SET, matching Relay.kt's `takeIf { it.isNotBlank() }`. A
+# whitespace-only PORTAL_STORE used to make the mirror answer "<cwd>/   " with
+# rc 0 and no java at all — a different store from the one the relay would open.
+rc=0
+outp="$( PATH="$BIN:$PATH" HOME="$HOME_A" PORTAL_STORE="   " "$RESOLVE" "$APP" 2>/dev/null )" || rc=$?
+[ "$rc" = 0 ] && [ "$(identity_of "$outp")" = "KEY-FROM-JVM-HOME" ] \
+  && ok "a whitespace-only PORTAL_STORE is ignored, as the authority ignores it" \
+  || bad "a blank PORTAL_STORE was taken literally (rc=$rc, identity=$(identity_of "$outp"))"
+# ...and being blank must not exempt it from needing a home either.
+rc=0
+java_says 'exit 127'
+outp="$( PATH="$BIN:$PATH" HOME="$HOME_A" PORTAL_STORE="   " "$RESOLVE" "$APP" 2>/dev/null )" || rc=$?
+[ "$rc" = 4 ] && [ -z "$outp" ] \
+  && ok "and a blank one still requires a home, unlike a real one" \
+  || bad "a blank PORTAL_STORE skipped the home requirement (rc=$rc, out=$outp)"
+java_says "$GOOD_JAVA"
+
+echo "--- this suite may not mint key material outside the disposable root"
+# The guard inside seed_store, exercised. Without a row, "it refuses" is a claim
+# about code nobody runs — and the reason this section exists is that the header
+# above made exactly that kind of claim while the suite was violating it.
+OUTSIDE="$DISP_PARENT/outside-the-run-dir"
+mkdir -p "$OUTSIDE"
+if seed_store "$OUTSIDE" "SHOULD-NEVER-BE-WRITTEN" >/dev/null 2>"$DISP/seed.err"; then
+  bad "seed_store wrote a key outside $DISP"
+else
+  ok "seed_store refuses to write a key outside the disposable root"
+fi
+if [ -e "$OUTSIDE/.keliver-portal" ]; then
+  bad "and it created a store there anyway"
+else
+  ok "and created nothing there"
+fi
+# The control: inside the root it must still work, or the row above passes just
+# by refusing everything.
+if seed_store "$HOME_B" "KEY-FROM-JVM-HOME" >/dev/null 2>&1; then
+  ok "while a home inside the disposable root still seeds normally"
+else
+  bad "seed_store now refuses a legitimate home, so the refusal row proves nothing"
+fi
+# And the inherited-PORTAL_STORE vector specifically: the script clears it, so by
+# the time any resolver call runs there is none to steer the answer.
+[ -z "${PORTAL_STORE:-}" ] \
+  && ok "no inherited PORTAL_STORE can steer this suite's writes" \
+  || bad "PORTAL_STORE is still set ('$PORTAL_STORE') — seed_store's target is not ours"
 
 echo "--- a bundled caller must not PROCEED on a refusal"
 # THE ONE THE REFUSAL CREATED. keliver-adopt-legacy-store.sh took the resolver's
@@ -280,7 +371,7 @@ if [ -x "$ADOPT" ]; then
   rc=0
   ( export PATH="$BIN:$PURE" HOME="$HOME_A"; unset PORTAL_STORE
     "$ADOPT" "$ADOPT_APP" --legacy "$LEG" ) > "$DISP/adopt-pos.log" 2>&1 || rc=$?
-  ADOPT_DEST="$( PATH="$BIN:$PATH" HOME="$HOME_A" "$RESOLVE" "$ADOPT_APP" )"
+  ADOPT_DEST="$( PATH="$BIN:$PATH" HOME="$HOME_A" env -u PORTAL_STORE "$RESOLVE" "$ADOPT_APP" )"
   if [ "$rc" = 0 ] && [ -f "$ADOPT_DEST/keys/ed25519.priv" ]; then
     ok "and with discovery working it adopts into the JVM home's store"
   else

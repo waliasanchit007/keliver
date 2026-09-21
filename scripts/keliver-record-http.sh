@@ -36,11 +36,16 @@ PORTAL_URL="${PORTAL_URL:-http://127.0.0.1:$(python3 -c \
 # this script SHIPS IN THE TOOLS BUNDLE and must stay self-contained.
 #
 # Unchecked, a resolver refusal (#78) arrived as STORE="" and TOKEN_FILE became
-# "/http-record.token" — which does not exist, so every request went out
-# unauthenticated and the failure surfaced as an HTTP error from the relay. "I
-# could not work out where your token lives" and "the relay rejected you" are
-# different problems with different fixes, and the second is the wrong thing to
-# tell someone.
+# "/http-record.token". What happened next was NOT an unauthenticated request —
+# an earlier draft of this comment claimed that, and it was wrong: the
+# `[[ -r "$TOKEN_FILE" ]]` guard below already stopped before sending. The defect
+# is the DIAGNOSIS. It said
+#
+#   recording token not found; start the relay with PORTAL_HTTP_RECORD=1
+#
+# which sends the operator to restart a relay that is running fine, when the
+# actual problem is that this app's store could not be named. Misdirection is
+# cheaper than a bad request and still costs an afternoon.
 #
 # Skipped entirely when PORTAL_HTTP_RECORD_TOKEN_FILE names the token directly:
 # the store is then not consulted, so demanding it would refuse a caller who has
