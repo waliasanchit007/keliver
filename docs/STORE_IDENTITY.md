@@ -71,13 +71,21 @@ explicit store still works on a machine with no java. `--default` *is* the
 home-derived step and refuses without one.
 
 **Consequence for adopters.** `keliver-store-path.sh` ships in the tools bundle,
-and the callers there — `keliver-record-http.sh`, `keliver-store-recover.sh`, the
-acceptance checks — do not pass `--home`. On a machine with no working `java`
+and the callers there — `keliver-record-http.sh`, `keliver-store-recover.sh`,
+`keliver-adopt-legacy-store.sh`, the acceptance checks — do not pass `--home`. On a machine with no working `java`
 those now **fail with exit 4 instead of quietly answering against `$HOME`**. On
 Linux, where `$HOME` and `user.home` usually agree, that old answer was usually
 right; the refusal is the price of not being silently wrong on macOS, where they
 do not agree. The diagnostic names both remedies: put a working `java` on `PATH`,
 or pass `--home`.
+
+**A refusal is only safe if the caller checks it.** `keliver-adopt-legacy-store.sh`
+took the resolver's stdout and ignored its exit code, so the refusal arrived as an
+empty string — and `cd ""` succeeds in bash, which defeated its "already uses the
+legacy store" guard as well. It then targeted `/<rel>`, tried to copy a legacy
+private signing key to `/keys/ed25519.priv`, and exited 0 reporting success. Any
+caller of this script must check the status and require a non-empty absolute path;
+`scripts/keliver-store-home-check.sh` asserts that for the bundled ones.
 
 The Gradle build does not go through discovery at all — it passes
 `--home System.getProperty('user.home')` from the JVM already running Gradle,

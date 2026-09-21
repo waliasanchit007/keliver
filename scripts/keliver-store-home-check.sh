@@ -55,7 +55,10 @@ BIN="$DISP/bin"; mkdir -p "$BIN"
 # has no business making.
 PURE="$DISP/purebin"; mkdir -p "$PURE"
 PURE_OK=1
-for t in bash python3 awk head sed cat basename dirname mkdir ls; do
+# Everything the resolver AND the bundled callers below need. A missing tool
+# makes a case "refuse" for a reason that has nothing to do with java — measured,
+# omitting `cp` failed the adopt-legacy positive row for exactly that reason.
+for t in bash python3 awk head sed cat basename dirname mkdir ls cp rm find date chmod stat; do
   src="$(command -v "$t" 2>/dev/null)" && ln -sf "$src" "$PURE/$t" || PURE_OK=0
 done
 java_says() { printf '#!/bin/sh\n%s\n' "$1" > "$BIN/java"; chmod +x "$BIN/java"; }
@@ -231,6 +234,68 @@ case "$rc" in
      # scoring a pass for an unrelated refusal.
      bad "a split store exited $rc, not 3 — $(head -1 "$DISP/split.err")" ;;
 esac
+
+echo "--- a bundled caller must not PROCEED on a refusal"
+# THE ONE THE REFUSAL CREATED. keliver-adopt-legacy-store.sh took the resolver's
+# stdout without checking its status. Once the resolver started refusing instead
+# of falling back to $HOME, a refusal arrived as TARGET="" — and `cd ""` SUCCEEDS
+# in bash, returning the cwd, so the "already uses the legacy store" guard could
+# not fire either. Every destination became "/<rel>": MEASURED, it tried to copy
+# the legacy PRIVATE SIGNING KEY to /keys/ed25519.priv, printed "copied", and
+# exited 0. macOS only escaped because / is read-only under SIP.
+#
+# This script is shipped to adopters in the tools bundle, and it is the caller
+# that copies key material, so it gets its own row rather than being covered by
+# "the resolver refuses".
+ADOPT="$ROOT/scripts/keliver-adopt-legacy-store.sh"
+LEG="$DISP/legacy"; mkdir -p "$LEG/keys" "$LEG/default"
+printf 'MARKER-NOT-A-REAL-PRIVATE-KEY\n' > "$LEG/keys/ed25519.priv"
+printf 'MARKER-PUB\n'                    > "$LEG/keys/ed25519.pub"
+printf '{}\n'                            > "$LEG/default/x.json"
+ADOPT_APP="$DISP/adoptapp"; mkdir -p "$ADOPT_APP"
+
+if [ -x "$ADOPT" ]; then
+  # NEGATIVE: no java at all. Must refuse, and must not claim to have copied.
+  rc=0
+  ( export PATH="$PURE" HOME="$HOME_A"; unset PORTAL_STORE
+    "$ADOPT" "$ADOPT_APP" --legacy "$LEG" ) > "$DISP/adopt-neg.log" 2>&1 || rc=$?
+  [ "$rc" != 0 ] && ok "adopt-legacy refuses when the store cannot be resolved (rc=$rc)" \
+                 || bad "adopt-legacy proceeded with an unresolvable store (rc=0)"
+  if grep -q 'copied:' "$DISP/adopt-neg.log"; then
+    bad "adopt-legacy reported copying something while refusing"
+    grep -m3 'copied:' "$DISP/adopt-neg.log" | sed 's/^/        /'
+  else
+    ok "and it did not report copying anything"
+  fi
+  # The tell for the original bug: it announced an EMPTY destination and carried on.
+  if grep -qE '^adopting into: *$' "$DISP/adopt-neg.log"; then
+    bad "adopt-legacy announced an empty destination and continued"
+  else
+    ok "and it never announced an empty destination"
+  fi
+
+  # POSITIVE: with discovery working, it must still adopt — into the JVM home's
+  # store, which the stub controls, so nothing real is ever the destination.
+  java_says "$GOOD_JAVA"
+  rc=0
+  ( export PATH="$BIN:$PURE" HOME="$HOME_A"; unset PORTAL_STORE
+    "$ADOPT" "$ADOPT_APP" --legacy "$LEG" ) > "$DISP/adopt-pos.log" 2>&1 || rc=$?
+  ADOPT_DEST="$( PATH="$BIN:$PATH" HOME="$HOME_A" "$RESOLVE" "$ADOPT_APP" )"
+  if [ "$rc" = 0 ] && [ -f "$ADOPT_DEST/keys/ed25519.priv" ]; then
+    ok "and with discovery working it adopts into the JVM home's store"
+  else
+    bad "adopt-legacy failed with a working resolver (rc=$rc, dest=$ADOPT_DEST)"
+    tail -4 "$DISP/adopt-pos.log" | sed 's/^/        /'
+  fi
+  # The destination must be under the fixture, never anywhere else. This is the
+  # assertion the original bug would have tripped on Linux.
+  case "$ADOPT_DEST" in
+    "$HOME_B"/*) ok "and that destination is inside the fake JVM home, not elsewhere";;
+    *)           bad "adopt-legacy resolved outside the fixture: $ADOPT_DEST";;
+  esac
+else
+  bad "keliver-adopt-legacy-store.sh is missing, so the bundled-caller rows prove nothing"
+fi
 
 echo
 printf 'passed: %d   failed: %d\n' "$PASS" "$FAIL"

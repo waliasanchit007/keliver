@@ -1770,19 +1770,46 @@ be exactly one non-empty absolute path; and discovery failure returns 3 from
 any `mkdir`. There is no fallback to `$HOME` **in the guard**.
 
 *Scoped deliberately, because the first draft of this paragraph overclaimed.*
-Two scripts outside the guard still carry the identical pipeline, and one carries
-the explicit fallback too — `scripts/keliver-store-path.sh:51-53`
-(`[ -n "$HOME_DIR" ] || HOME_DIR="$HOME"`) and
-`scripts/keliver-adopt-legacy-store.sh:40`. Neither is reachable from the fixed
-path: `keliver_effective_store` always passes `--home "$jvm_home"`, which is now
-validated non-empty and absolute, so the fallback is dead for every guard caller,
-and `keliver-adopt-legacy-store.sh` fails closed (it ends up with
-`/.keliver-portal` and exits 1). Neither writes anything. But a human running
-`keliver-store-path.sh <app>` directly on a box with broken java is still told a
-different store's name, in the script CLAUDE.md designates as the shell mirror of
-the store-identity authority. **Recorded, not fixed here**: it is a product path,
-changing it would make store resolution refuse where it currently answers, and
-nothing in this block's verification covers that. It wants its own change.
+Two scripts outside the guard carried the identical pipeline, and one carried the
+explicit fallback too — `scripts/keliver-store-path.sh` and
+`scripts/keliver-adopt-legacy-store.sh`. That paragraph recorded them as "not
+fixed here … it wants its own change", and **#78 was that change.** Both are
+fixed now; what follows is what it took, because the fix created a defect of its
+own.
+
+`keliver-store-path.sh` establishes its home or exits **4** — unpiped `java` with
+its status checked, exactly one non-empty absolute `user.home`, and no `$HOME`
+fallback. A relative `--home` is a usage error (2) rather than a per-caller
+store. The home is only established **when it is needed**, so `PORTAL_STORE`
+(step 1, answered before any home is read) still works on a machine with no java,
+while `--default` refuses. The Gradle build does not discover at all: it passes
+`--home System.getProperty('user.home')` from the JVM already running Gradle,
+which *is* the authority.
+
+**Removing the fallback broke a caller that was never checking the status.**
+`keliver-adopt-legacy-store.sh` did `TARGET="$(resolver "$APP")"` with no `||`
+and no `-n` test. A refusal arrived as `TARGET=""` — and `cd ""` **succeeds** in
+bash, returning the cwd, so the "this app already uses the legacy store" guard
+could not fire either. Every destination became `/<rel>`. Measured, with no java
+on `PATH` and `--legacy` given: it attempted to copy the legacy **private signing
+key** to `/keys/ed25519.priv`, printed `copied: keys/ed25519.priv`, and **exited
+0**. macOS escaped it only because `/` is read-only under SIP; as root on Linux
+it would have landed, outside any store, reported as success.
+
+Three things were wrong there and all three are fixed: the unchecked status, the
+unchecked `mkdir`/`cp` inside `copy_one` (which printed "copied" and incremented
+the counter on failure), and the exit code, which is now non-zero when any copy
+fails. Its own `java … | awk …` pipeline — the same lost status — is repaired
+too. `scripts/keliver-store-home-check.sh` gates all of it and is wired into
+`portal-tools.yml`; the bundled-caller rows fail against the pre-fix script with
+exactly the tell above.
+
+**The cost, stated:** `keliver-store-path.sh` ships in the tools bundle and its
+callers there do not pass `--home`, so on a machine with no working `java` they
+now fail with exit 4 instead of quietly answering against `$HOME`. On Linux,
+where `$HOME` and `user.home` usually agree, that old answer was usually right.
+The refusal is the price of not being silently wrong on macOS, where they do not.
+See [`STORE_IDENTITY.md`](STORE_IDENTITY.md) §2.
 
 **Consequence, stated because it is a real cost:** a machine with no working java cannot run these checks at all.
 That is deliberate — refusing to run is recoverable, writing into the real store
