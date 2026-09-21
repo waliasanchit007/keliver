@@ -108,7 +108,10 @@ keliver_port_free_or_die 8143 || exit 2
 ( cd "$REC" && PORTAL_REPO="$REC" PORTAL_HTTP_RECORD=1 "$RELAY" > "$DISP/rec-relay.log" 2>&1 ) &
 REC_PID=$!
 for _ in $(seq 1 40); do curl -sf -m 2 -o /dev/null http://localhost:8143/screens && break; sleep 2; done
-REC_STORE="$("$ROOT/scripts/keliver-store-path.sh" "$REC")"
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+REC_STORE="$(keliver_require_store "the recording client's store, before the token check" \
+  "$ROOT/scripts/keliver-store-path.sh" "$REC")" || exit $?
 if [ -r "$REC_STORE/http-record.token" ]; then
   ok "the token is in the resolved store (contents not shown)"
 else

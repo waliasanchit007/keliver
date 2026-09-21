@@ -73,7 +73,16 @@ echo "  ....  foreign relay answering :$PORT (launcher $FOREIGN_PID, listener $F
 
 fingerprint(){ find "$1" -type f 2>/dev/null | sort | xargs shasum 2>/dev/null; }
 FOREIGN_SRC_BEFORE="$(fingerprint "$FOREIGN/src")"
-FOREIGN_STORE="$("$KP/keliver-store-path.sh" "$FOREIGN" 2>/dev/null)"
+# CHECKED, and the 2>/dev/null is GONE. This is the foreign relay's store and the
+# fingerprint below is the evidence that the acceptance did not touch it. If the
+# path could not be acquired the fingerprint was empty, the after-comparison
+# compared empty to empty, and "the foreign store is unchanged" passed having
+# observed nothing. Hiding the resolver's stderr also removed the one message
+# that says how to fix it.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+FOREIGN_STORE="$(keliver_require_store "the foreign relay's store, for the untouched-fingerprint evidence" \
+  "$KP/keliver-store-path.sh" "$FOREIGN")" || exit $?
 FOREIGN_STORE_BEFORE="$(fingerprint "$FOREIGN_STORE")"
 
 # --- the acceptance must refuse ----------------------------------------------

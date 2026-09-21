@@ -182,7 +182,13 @@ TITLE="$(printf '%s' "$D" | python3 -c 'import sys,json;print(json.load(sys.stdi
 # Compiled_<screen>.kt in the adopter's source tree, in a package that was not
 # theirs, so a typo or a stale link left junk in their working tree.
 SRC_BEFORE_404="$( cd "$APP" && find src -type f | sort | xargs shasum )"
-STORE_DIR="$("$KP/keliver-store-path.sh" "$APP")"
+# CHECKED: this fingerprint is EVIDENCE. With STORE_DIR="" the find failed, the
+# fingerprint was empty, and the later "the store is unchanged" comparison
+# compared empty to empty and passed — a pass with no evidence behind it.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+STORE_DIR="$(keliver_require_store "the adopter app's store, for the 404 fingerprint" \
+  "$KP/keliver-store-path.sh" "$APP")" || exit $?
 STORE_BEFORE_404="$(find "$STORE_DIR" -type f 2>/dev/null | sort | xargs shasum 2>/dev/null)"
 CODE_404="$(curl -s -o "$DISP/unknown-screen.json" -w '%{http_code}' "http://localhost:$PORT/doc?screen=definitely-not-a-screen")"
 [ "$CODE_404" = "404" ] \
@@ -269,7 +275,11 @@ grep -q 'text = "My Inbox"' "$APP/src/jsMain/kotlin/screens/home.kt" \
 ( cd "$APP" && find src -type f | sort | xargs shasum ) > "$DISP/fingerprint-after.txt"
 echo "  ---- source fingerprint delta ----"
 diff "$DISP/fingerprint-before.txt" "$DISP/fingerprint-after.txt" | sed 's/^/        /' || true
-STORE="$("$KP/keliver-store-path.sh" "$APP")"
+# CHECKED: `case "" in "$APP"/*)` does not match, so an unresolvable store used
+# to satisfy "the store is outside the app" — the assertion passing precisely
+# because it had no path to judge.
+STORE="$(keliver_require_store "the adopter app's store, for the containment check" \
+  "$KP/keliver-store-path.sh" "$APP")" || exit $?
 case "$STORE" in "$APP"/*) bad "the store is inside the app" ;; *) ok "the store is outside the app: ${STORE##*/}" ;; esac
 
 echo

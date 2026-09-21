@@ -32,8 +32,39 @@ PORTAL_URL="${PORTAL_URL:-http://127.0.0.1:$(python3 -c \
 # default to ~/.keliver-portal, which stopped being the store once the relay
 # moved to a per-app directory — the token was then looked for in the wrong
 # place and recording appeared to be off.
-STORE="$("$(keliver_store_path_script)" "$ROOT")"
-TOKEN_FILE="${PORTAL_HTTP_RECORD_TOKEN_FILE:-$STORE/http-record.token}"
+# CHECKED, and inline rather than through scripts/keliver-resolve-store.sh:
+# this script SHIPS IN THE TOOLS BUNDLE and must stay self-contained.
+#
+# Unchecked, a resolver refusal (#78) arrived as STORE="" and TOKEN_FILE became
+# "/http-record.token" — which does not exist, so every request went out
+# unauthenticated and the failure surfaced as an HTTP error from the relay. "I
+# could not work out where your token lives" and "the relay rejected you" are
+# different problems with different fixes, and the second is the wrong thing to
+# tell someone.
+#
+# Skipped entirely when PORTAL_HTTP_RECORD_TOKEN_FILE names the token directly:
+# the store is then not consulted, so demanding it would refuse a caller who has
+# already said where the token is.
+if [ -n "${PORTAL_HTTP_RECORD_TOKEN_FILE:-}" ]; then
+  TOKEN_FILE="$PORTAL_HTTP_RECORD_TOKEN_FILE"
+else
+  STORE="$("$(keliver_store_path_script)" "$ROOT")" || {
+    echo "keliver-record-http: this app's store could not be resolved (see above), so the" >&2
+    echo "  recording token cannot be located. This is NOT an authentication failure and" >&2
+    echo "  not a response from the relay — nothing was sent." >&2
+    echo "  Fix the resolver, or set PORTAL_HTTP_RECORD_TOKEN_FILE to the token's path." >&2
+    exit 4
+  }
+  case "$STORE" in
+    /*) ;;
+    '') echo "keliver-record-http: the resolver exited 0 but named no store; nothing sent." >&2
+        exit 4;;
+    *)  echo "keliver-record-http: the resolver named a non-absolute store ('$STORE');" >&2
+        echo "  nothing sent." >&2
+        exit 4;;
+  esac
+  TOKEN_FILE="$STORE/http-record.token"
+fi
 
 usage() {
   echo "usage:" >&2

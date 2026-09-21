@@ -140,16 +140,58 @@ class SignedBundleVerificationTest {
       "the foreign key equals the store's key",
     )
 
+    // CONTROL, inside this test rather than relying on another one: the REAL key
+    // must verify these exact bytes here. That is what makes the foreign-key
+    // failure below attributable to the KEY. Without it, anything that broke
+    // verification generally — a malformed manifest, a decode error, a missing
+    // class — would satisfy "it did not verify" and the test would pass for a
+    // reason that has nothing to do with identity binding.
+    val realVerifier = ManifestVerifier.Builder()
+      .addEd25519("portal-ed25519", realRaw.decodeHex())
+      .build()
+    assertEquals(
+      "portal-ed25519",
+      realVerifier.verify(bytes.toByteString(), manifest),
+      "the store's own key does not verify this manifest, so nothing below is attributable",
+    )
+
     val verifier = ManifestVerifier.Builder()
       .addEd25519("portal-ed25519", foreignRaw.toByteString())
       .build()
-    val failed = runCatching { verifier.verify(bytes.toByteString(), manifest) }.isFailure
+    val outcome = runCatching { verifier.verify(bytes.toByteString(), manifest) }
     assertTrue(
-      failed,
+      outcome.isFailure,
       "a manifest signed by the store's key verified against a DIFFERENT key — signature " +
         "checking is not bound to the identity, which is the mismatch this contract exists " +
         "to prevent",
     )
+    // AND IT MUST FAIL FOR THE RIGHT REASON. `isFailure` alone accepts any
+    // throwable, so an unrelated runtime error would have passed as a rejection.
+    // The control above proves the manifest and the verifier work; what remains
+    // is that this particular failure is the signature check refusing, not an
+    // IO/decode/linkage accident.
+    val error = outcome.exceptionOrNull()!!
+    // The predicate must be able to say NO, or asserting it proves nothing. An
+    // unrelated failure is checked against the same function, in the same run.
+    assertTrue(
+      !looksLikeSignatureRejection(java.io.IOException("the disk went away")),
+      "the signature-rejection predicate accepts unrelated failures, so asserting it is " +
+        "worth nothing",
+    )
+    assertTrue(
+      looksLikeSignatureRejection(error),
+      "verification with a different key failed, but not as a signature rejection — got " +
+        "${error::class.qualifiedName}: ${error.message}. An unrelated runtime failure must " +
+        "not be read as proof of key binding.",
+    )
+  }
+
+  /** Does this throwable read as the signature check refusing, rather than an accident? */
+  private fun looksLikeSignatureRejection(t: Throwable): Boolean {
+    val text = "${t::class.qualifiedName}: ${t.message}"
+    return text.contains("signature", ignoreCase = true) ||
+      text.contains("verif", ignoreCase = true) ||
+      text.contains("manifest", ignoreCase = true)
   }
 
   /** RFC 8032 raw encoding: little-endian y, high bit of the last byte = x parity. */

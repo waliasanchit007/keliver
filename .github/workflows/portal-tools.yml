@@ -148,6 +148,15 @@ jobs:
           # IDENTITY, by reading the key inside the resolved store, not the path.
           scripts/keliver-store-home-check.sh "$RUNNER_TEMP/storehome"
           echo "::endgroup::"
+          echo "::group::what every caller does when the resolver refuses (#78)"
+          # The resolver now refuses instead of falling back to $HOME, and most
+          # callers were written against the old always-answers behaviour: they
+          # took its stdout and never looked at the status. That turns MISSING
+          # EVIDENCE into a PASS — and in one case targeted /keys/ed25519.priv.
+          # Three injected shapes: refusal, non-zero with misleading stdout, and
+          # exit 0 with nothing.
+          scripts/keliver-resolver-failure-check.sh "$RUNNER_TEMP/resolverfail"
+          echo "::endgroup::"
           echo "::group::device-host packaging hygiene (U22)"
           scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
           echo "::endgroup::"

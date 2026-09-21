@@ -122,7 +122,10 @@ fi
   && ok "the store pointer is ignored by git" || bad "the store pointer is NOT ignored"
 
 # and the store itself is still outside the app
-STORE="$("$ROOT/scripts/keliver-store-path.sh" "$APP")"
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+STORE="$(keliver_require_store "the app's store, for the tree assertions" \
+  "$ROOT/scripts/keliver-store-path.sh" "$APP")" || exit $?
 case "$STORE" in "$APP"/*) bad "the store is inside the app: $STORE" ;; *) ok "the store is outside the app" ;; esac
 
 echo

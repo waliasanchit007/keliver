@@ -72,7 +72,14 @@ grep -q "documents for project" "$DISP/relay.log" && ok "it names the documents"
 grep -q "keliver-adopt-legacy-store" "$DISP/relay.log" && ok "it points at the adopt route" || bad "no route offered"
 
 # --- 2. nothing was adopted automatically ------------------------------------
-NEW_STORE="$("$ROOT/scripts/keliver-store-path.sh" "$APP")"
+# CHECKED BEFORE ANY WRITE. This fed a -e test and, further down, the LOCAL-EDIT
+# write. With an unresolvable store it used to be "", so `[ -e "/keys/ed25519.priv" ]`
+# was false and "nothing was adopted automatically" PASSED for an app whose store
+# was never found — a pass built on missing evidence.
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+NEW_STORE="$(keliver_require_store "the app's store, before the local-edit write" \
+  "$ROOT/scripts/keliver-store-path.sh" "$APP")" || exit $?
 [ -e "$NEW_STORE/keys/ed25519.priv" ] && grep -q DISPOSABLE-FIXTURE "$NEW_STORE/keys/ed25519.priv" 2>/dev/null \
   && bad "the legacy identity was adopted automatically" \
   || ok "nothing was adopted automatically"
