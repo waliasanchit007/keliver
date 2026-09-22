@@ -3,7 +3,14 @@
 # keliver-resolver-failure-check — what every caller does when the store
 # resolver REFUSES.
 #
-#   scripts/keliver-resolver-failure-check.sh <disposable-root>
+#   scripts/keliver-resolver-failure-check.sh <disposable-root> [candidate.zip]
+#
+# With a ZIP, the bundled callers are exercised FROM THE PACKAGE as well as from
+# the repository. Those are not the same artefact: the package is what an adopter
+# runs, and a staging list that forgets a file, or ships a stale copy, is exactly
+# the kind of gap that only shows up in someone else's hands. A caller missing
+# from the package is a FAILURE here — never a reason to fall back to the repo
+# copy, which would report a pass for a file the adopter does not have.
 #
 # WHY (#78). keliver-store-path.sh used to answer whatever happened — when JVM
 # discovery failed it fell back to $HOME. Callers were written against that, so
@@ -36,7 +43,8 @@
 # write to /keys or any real store — the assertions are that execution STOPS.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
-DISP_PARENT="${1:?usage: $0 <disposable-root>}"
+DISP_PARENT="${1:?usage: $0 <disposable-root> [candidate.zip]}"
+CANDIDATE_ZIP="${2:-}"
 
 # shellcheck source=/dev/null
 . "$ROOT/scripts/keliver-test-isolation-guard.sh"
@@ -152,11 +160,15 @@ echo "--- keliver-record-http.sh: resolver failure is not an auth failure"
 APPDIR="$DISP/recapp"; mkdir -p "$APPDIR"
 printf '{"port": 8131}\n' > "$APPDIR/keliver.portal.json"
 BIN="$DISP/recbin"; mkdir -p "$BIN"
-cp "$ROOT/scripts/keliver-record-http.sh" "$BIN/"
 printf '#!/bin/sh\necho "REQUEST-MADE $*" >> "%s"\nexit 0\n' "$DISP/curl.calls" > "$BIN/curl"
-chmod +x "$BIN/curl" "$BIN/keliver-record-http.sh"
-rec_case() { # rec_case <shape> <want-nonzero>
-  local shape="$1"
+chmod +x "$BIN/curl"
+# ORIGIN is repo or package; it is printed in every label so a failure names which
+# artefact was wrong.
+ORIGIN="repo"
+use_record_http() { cp "$1" "$BIN/keliver-record-http.sh"; chmod +x "$BIN/keliver-record-http.sh"; }
+use_record_http "$ROOT/scripts/keliver-record-http.sh"
+rec_case() { # rec_case <shape>
+  local shape="$ORIGIN/$1"
   : > "$DISP/curl.calls"
   cp "$STUBDIR/keliver-store-path.sh" "$BIN/keliver-store-path.sh"
   local rc=0
@@ -184,51 +196,59 @@ rec_case() { # rec_case <shape> <want-nonzero>
     head -3 "$DISP/rec.log" | sed 's/^/        /'
   fi
 }
-for shape in refuse misleading emptyok; do stub_resolver "$shape"; rec_case "$shape"; done
-# CONTROL: with a resolvable store it must get past the resolver and actually try.
-stub_resolver valid
-printf 'tok\n' > "$GOOD_STORE/http-record.token"
-: > "$DISP/curl.calls"
-cp "$STUBDIR/keliver-store-path.sh" "$BIN/keliver-store-path.sh"
-( export PATH="$BIN:$PATH" KELIVER_APP_DIR="$APPDIR"
-  unset PORTAL_HTTP_RECORD_TOKEN_FILE
-  "$BIN/keliver-record-http.sh" close session-x ) > "$DISP/rec-ok.log" 2>&1
-[ -s "$DISP/curl.calls" ] \
-  && ok "record-http/valid: with a resolvable store it does make the request" \
-  || { bad "record-http/valid: made no request even with a good store — the rows above prove nothing"
-       tail -3 "$DISP/rec-ok.log" | sed 's/^/        /'; }
-
+run_record_http_rows() {
+  local shape
+  for shape in refuse misleading emptyok; do stub_resolver "$shape"; rec_case "$shape"; done
+  # CONTROL: with a resolvable store it must get past the resolver and actually try.
+  stub_resolver valid
+  printf 'tok\n' > "$GOOD_STORE/http-record.token"
+  : > "$DISP/curl.calls"
+  cp "$STUBDIR/keliver-store-path.sh" "$BIN/keliver-store-path.sh"
+  ( export PATH="$BIN:$PATH" KELIVER_APP_DIR="$APPDIR"
+    unset PORTAL_HTTP_RECORD_TOKEN_FILE
+    "$BIN/keliver-record-http.sh" close session-x ) > "$DISP/rec-ok.log" 2>&1
+  [ -s "$DISP/curl.calls" ] \
+    && ok "record-http/$ORIGIN/valid: with a resolvable store it does make the request" \
+    || { bad "record-http/$ORIGIN/valid: made no request even with a good store — the rows above prove nothing"
+         tail -3 "$DISP/rec-ok.log" | sed 's/^/        /'; }
+}
+run_record_http_rows
 echo "--- keliver-adopt-legacy-store.sh: all three shapes, no copy, no claim"
 LEG="$DISP/legacy"; mkdir -p "$LEG/keys"
 printf 'MARKER-NOT-A-REAL-PRIVATE-KEY\n' > "$LEG/keys/ed25519.priv"
 ADOPTBIN="$DISP/adoptbin"; mkdir -p "$ADOPTBIN"
-cp "$ROOT/scripts/keliver-adopt-legacy-store.sh" "$ADOPTBIN/"
-chmod +x "$ADOPTBIN/keliver-adopt-legacy-store.sh"
+use_adopt() { cp "$1" "$ADOPTBIN/keliver-adopt-legacy-store.sh"; chmod +x "$ADOPTBIN/keliver-adopt-legacy-store.sh"; }
+use_adopt "$ROOT/scripts/keliver-adopt-legacy-store.sh"
 ADOPT_APP="$DISP/adoptapp"; mkdir -p "$ADOPT_APP"
-for shape in refuse misleading emptyok; do
-  stub_resolver "$shape"
+run_adopt_rows() {
+  local shape rc
+  for shape in refuse misleading emptyok; do
+    stub_resolver "$shape"
+    cp "$STUBDIR/keliver-store-path.sh" "$ADOPTBIN/keliver-store-path.sh"
+    rc=0
+    "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad.log" 2>&1 || rc=$?
+    [ "$rc" -ne 0 ] && ok "adopt/$ORIGIN/$shape: exits non-zero (rc=$rc)" \
+                    || bad "adopt/$ORIGIN/$shape: exited 0 — this is the shape that targeted /keys"
+    grep -q 'copied:' "$DISP/ad.log" \
+      && bad "adopt/$ORIGIN/$shape: claimed to copy something" \
+      || ok "adopt/$ORIGIN/$shape: and claimed no copy"
+  done
+  # The misleading shape deserves its own check: the path it prints EXISTS nowhere,
+  # so a caller that ignored the status would have created it.
+  [ ! -e "$DISP/MISLEADING-PATH" ] \
+    && ok "adopt/$ORIGIN: the misleading path the stub printed was never created" \
+    || bad "adopt/$ORIGIN: something acted on the misleading stdout"
+  # CONTROL, again: a good resolver must still adopt.
+  rm -rf "$GOOD_STORE/keys"
+  stub_resolver valid
   cp "$STUBDIR/keliver-store-path.sh" "$ADOPTBIN/keliver-store-path.sh"
   rc=0
-  "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad.log" 2>&1 || rc=$?
-  [ "$rc" -ne 0 ] && ok "adopt/$shape: exits non-zero (rc=$rc)" \
-                  || bad "adopt/$shape: exited 0 — this is the shape that targeted /keys"
-  grep -q 'copied:' "$DISP/ad.log" \
-    && bad "adopt/$shape: claimed to copy something" \
-    || ok "adopt/$shape: and claimed no copy"
-done
-# The misleading shape deserves its own check: the path it prints EXISTS nowhere,
-# so a caller that ignored the status would have created it.
-[ ! -e "$DISP/MISLEADING-PATH" ] \
-  && ok "adopt: the misleading path the stub printed was never created" \
-  || bad "adopt: something acted on the misleading stdout"
-# CONTROL, again: a good resolver must still adopt.
-stub_resolver valid
-cp "$STUBDIR/keliver-store-path.sh" "$ADOPTBIN/keliver-store-path.sh"
-rc=0
-"$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad-ok.log" 2>&1 || rc=$?
-[ "$rc" = 0 ] && [ -f "$GOOD_STORE/keys/ed25519.priv" ] \
-  && ok "adopt/valid: a resolvable store still adopts" \
-  || { bad "adopt/valid: refused a good resolution (rc=$rc)"; tail -3 "$DISP/ad-ok.log" | sed 's/^/        /'; }
+  "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad-ok.log" 2>&1 || rc=$?
+  [ "$rc" = 0 ] && [ -f "$GOOD_STORE/keys/ed25519.priv" ] \
+    && ok "adopt/$ORIGIN/valid: a resolvable store still adopts" \
+    || { bad "adopt/$ORIGIN/valid: refused a good resolution (rc=$rc)"; tail -3 "$DISP/ad-ok.log" | sed 's/^/        /'; }
+}
+run_adopt_rows
 
 echo "--- the hazardous write comes AFTER the check that guards it"
 # keliver-legacy-compat-check.sh boots a relay, so it is not driven here. What IS
@@ -241,6 +261,64 @@ if [ -n "$chk_line" ] && [ -n "$wr_line" ] && [ "$chk_line" -lt "$wr_line" ]; th
   ok "legacy-compat: the store is required (line $chk_line) before the write (line $wr_line)"
 else
   bad "legacy-compat: check=$chk_line write=$wr_line — the write is not guarded"
+fi
+
+# --- the same callers, FROM THE CANDIDATE PACKAGE -----------------------------
+# An adopter runs bin/ out of the ZIP, not scripts/ out of the repo. They are
+# built from the same sources today, but the staging list in
+# scripts/build-portal-tools.sh is a separate thing that can forget a file or
+# ship a stale one, and that gap only shows up in someone else's hands.
+if [ -n "$CANDIDATE_ZIP" ]; then
+  echo "--- the bundled callers, out of the candidate ZIP"
+  if [ ! -f "$CANDIDATE_ZIP" ]; then
+    bad "no ZIP at $CANDIDATE_ZIP"
+  else
+    PKG="$DISP/pkg"; mkdir -p "$PKG"
+    if unzip -q "$CANDIDATE_ZIP" -d "$PKG" 2>"$DISP/unzip.err"; then
+      PKGBIN="$(dirname "$(find "$PKG" -type f -name 'keliver-store-path.sh' | head -1)")"
+      if [ -z "$PKGBIN" ] || [ ! -d "$PKGBIN" ]; then
+        bad "the package contains no keliver-store-path.sh"
+      else
+        ok "the package ships the resolver: ${PKGBIN#$PKG/}"
+        # MISSING IS A FAILURE, NOT A FALLBACK. Substituting the repo copy here
+        # would report a pass for a file the adopter does not have.
+        for want in keliver-record-http.sh keliver-adopt-legacy-store.sh; do
+          if [ -f "$PKGBIN/$want" ]; then
+            ok "the package ships $want"
+          else
+            bad "the package does NOT ship $want — not substituting the repo copy"
+          fi
+        done
+        # A stale packaged copy is the other half: assert the fix is actually in
+        # the shipped bytes, not just in the repo.
+        if [ -f "$PKGBIN/keliver-adopt-legacy-store.sh" ]; then
+          grep -q 'could not be resolved' "$PKGBIN/keliver-adopt-legacy-store.sh" \
+            && ok "and the packaged adopt-legacy carries the resolver check" \
+            || bad "the packaged adopt-legacy is STALE — it has no resolver check"
+        fi
+        if [ -f "$PKGBIN/keliver-record-http.sh" ]; then
+          grep -q 'could not be resolved' "$PKGBIN/keliver-record-http.sh" \
+            && ok "and the packaged record-http carries the resolver check" \
+            || bad "the packaged record-http is STALE — it has no resolver check"
+        fi
+        ORIGIN="package"
+        if [ -f "$PKGBIN/keliver-record-http.sh" ]; then
+          use_record_http "$PKGBIN/keliver-record-http.sh"
+          run_record_http_rows
+        fi
+        if [ -f "$PKGBIN/keliver-adopt-legacy-store.sh" ]; then
+          use_adopt "$PKGBIN/keliver-adopt-legacy-store.sh"
+          run_adopt_rows
+        fi
+        ORIGIN="repo"
+      fi
+    else
+      bad "could not unpack $CANDIDATE_ZIP"
+      head -3 "$DISP/unzip.err" | sed 's/^/        /'
+    fi
+  fi
+else
+  echo "    (no ZIP given, so the packaged callers were NOT exercised)"
 fi
 
 echo

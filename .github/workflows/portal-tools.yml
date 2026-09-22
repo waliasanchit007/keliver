@@ -155,7 +155,11 @@ jobs:
           # EVIDENCE into a PASS — and in one case targeted /keys/ed25519.priv.
           # Three injected shapes: refusal, non-zero with misleading stdout, and
           # exit 0 with nothing.
-          scripts/keliver-resolver-failure-check.sh "$RUNNER_TEMP/resolverfail"
+          # WITH THE CANDIDATE ZIP. The bundled callers are exercised out of the
+          # package an adopter would actually unpack, not only out of scripts/.
+          # A caller missing from the package fails this check rather than
+          # falling back to the repository copy.
+          scripts/keliver-resolver-failure-check.sh "$RUNNER_TEMP/resolverfail" "$zip"
           echo "::endgroup::"
           echo "::group::device-host packaging hygiene (U22)"
           scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
