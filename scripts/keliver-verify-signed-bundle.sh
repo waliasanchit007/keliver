@@ -100,7 +100,10 @@ PRIV="$STORE/keys/ed25519.priv"; PUB="$STORE/keys/ed25519.pub"
 echo "    keypair present (contents never printed)"
 
 echo "==> the resolver and the build agree on the store"
-RESOLVED="$("$ROOT/scripts/keliver-store-path.sh" "$ROOT")"
+# shellcheck source=/dev/null
+. "$ROOT/scripts/keliver-resolve-store.sh"
+RESOLVED="$(keliver_require_store "this repo's store, which must equal the disposable one" \
+  "$ROOT/scripts/keliver-store-path.sh" "$ROOT")" || exit $?
 [ "$RESOLVED" = "$STORE" ] || { echo "resolver says $RESOLVED, expected $STORE" >&2; exit 1; }
 echo "    $RESOLVED"
 
@@ -131,5 +134,8 @@ if grep -q "skipped (no manifest/pubkey properties)" "$XML"; then
   echo "  -Dkeliver.verify.* to the test JVM." >&2
   exit 1
 fi
-grep -q 'tests="2"' "$XML" || { echo "expected 2 tests (verification and tamper rejection)" >&2; exit 1; }
-echo "==> signed bundle verifies against the store's public key, and a tampered one does not"
+grep -q 'tests="3"' "$XML" || {
+  echo "expected 3 tests (verification, tamper rejection, foreign-key rejection)" >&2; exit 1; }
+echo "==> signed bundle verifies against the store's public key; a tampered one does not,"
+echo "    and neither does a DIFFERENT key — which is the identity-binding this contract"
+echo "    exists for (#78): tampering alone would pass a verifier that ignored the key."

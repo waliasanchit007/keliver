@@ -32,7 +32,8 @@
 # docs/STORE_IDENTITY.md.
 #
 # Exit codes: 0 resolved, 2 usage, 3 the app has more than one existing store
-# (a split identity — see U25.1 and keliver-store-recover.sh).
+# (a split identity — see U25.1 and keliver-store-recover.sh), 4 the home this
+# must resolve against could not be established (no --home, and no working java).
 #
 set -uo pipefail
 APP="${1:?usage: $0 <app-dir> [--home DIR] [--default]}"
@@ -48,9 +49,107 @@ while [ $# -gt 0 ]; do
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
-[ -n "$HOME_DIR" ] || HOME_DIR="$(java -XshowSettings:properties -version 2>&1 \
-  | awk -F'= ' '/^ *user\.home/ {print $2; exit}')"
-[ -n "$HOME_DIR" ] || HOME_DIR="$HOME"
+# THE HOME THIS RESOLVES AGAINST IS PART OF THE IDENTITY, so it is established
+# or the script fails. It decides the default store, and it expands a "~/..." in
+# keliver.portal.json — so the wrong home selects a different store, and the
+# store is where the signing key and the host's verification key live.
+#
+# The authority is PortalConfig.storeDir(), which reads the JVM's
+# System.getProperty("user.home"). On macOS that comes from the passwd entry and
+# IGNORES $HOME, so $HOME is not a substitute for it: they routinely differ, and
+# that is the whole reason this is not just "$HOME".
+#
+# What was here:
+#
+#   [ -n "$HOME_DIR" ] || HOME_DIR="$(java ... 2>&1 | awk ...)"
+#   [ -n "$HOME_DIR" ] || HOME_DIR="$HOME"
+#
+# Two defects, and the second one hid the first. The pipeline gave the
+# substitution AWK's status, and awk succeeds when it matches nothing — so "java
+# is absent", "java crashed" and "java printed no user.home" all arrived as an
+# empty string, indistinguishable from a real answer. The empty string then took
+# the $HOME fallback, silently. The same lost-status bug was fixed in
+# keliver-test-isolation-guard.sh; this is the copy on the PRODUCT path, and the
+# one with an explicit fallback bolted on underneath it.
+#
+# Callers that know the answer should pass --home and skip this entirely; the
+# Gradle build does, using the user.home of the JVM already running Gradle
+# rather than starting another java to ask.
+keliver_discover_jvm_home() {
+  local raw jstatus out
+  # NOT named `status`: read-only alias for $? in zsh.
+  # Unpiped, so $? is java's own — a missing binary is 127 here, not 0.
+  raw="$(java -XshowSettings:properties -version 2>&1)"; jstatus=$?
+  if [ "$jstatus" -ne 0 ]; then
+    echo "keliver-store-path: java exited $jstatus when asked for user.home." >&2
+    printf '%s\n' "$raw" | head -5 | sed 's/^/  java: /' >&2
+    return 1
+  fi
+  # Exactly one non-empty value, or nothing. awk is last in the pipeline, so its
+  # exit 1 is the status the substitution carries.
+  out="$(printf '%s\n' "$raw" | awk '
+    /^[ \t]*user\.home[ \t]*=/ {
+      v = substr($0, index($0, "=") + 1)
+      gsub(/^[ \t]+/, "", v); gsub(/[ \t\r]+$/, "", v)
+      if (v != "") seen[v] = 1
+    }
+    END { n = 0; for (k in seen) { n++; last = k }
+          if (n == 1) print last; else exit 1 }
+  ')" || {
+    echo "keliver-store-path: java ran, but did not report exactly one user.home." >&2
+    return 1
+  }
+  case "$out" in
+    /*) ;;
+    *)  echo "keliver-store-path: java reported user.home='$out', which is not an" >&2
+        echo "  absolute path." >&2
+        return 1;;
+  esac
+  printf '%s' "$out"
+}
+
+# BLANK IS NOT SET, because that is what the authority does:
+# Relay.kt resolves PORTAL_STORE with `?.takeIf { it.isNotBlank() }`, so a
+# whitespace-only value there means "fall through to the default store". The
+# mirror took it literally and answered "<cwd>/   " with rc 0 — a different store
+# from the one the relay would open, which is the whole class of bug this file
+# exists to prevent. The `"store"` key in keliver.portal.json already had this
+# fix three lines into the python below, and its comment even says "the same
+# failure as \"\", with the two sides swapped"; the env twin was the side left
+# swapped.
+case "${PORTAL_STORE:-}" in
+  *[![:space:]]*) ;;      # has at least one non-space character: a real value
+  *) PORTAL_STORE="" ;;   # unset, empty, or all whitespace: not a value
+esac
+
+# ONLY WHEN IT IS ACTUALLY NEEDED. $PORTAL_STORE is step 1 and is answered
+# before any home is consulted, so demanding a working java there would refuse a
+# caller who has already said exactly which store to use — strictness that buys
+# nothing and breaks an explicit configuration on a box without java. Every
+# other route needs the home: --default IS the home-derived step, a "~/..." in
+# keliver.portal.json expands against it, and the default store lives under it.
+NEEDS_HOME=1
+if [ -n "${PORTAL_STORE:-}" ] && [ "$ONLY_DEFAULT" = 0 ]; then NEEDS_HOME=0; fi
+if [ -z "$HOME_DIR" ] && [ "$NEEDS_HOME" = 1 ]; then
+  HOME_DIR="$(keliver_discover_jvm_home)" || {
+    echo "keliver-store-path: the JVM's user.home could not be established, so the store" >&2
+    echo "  for '$APP' cannot be named. This path selects the signing key and the key a" >&2
+    echo "  host embeds, so answering with \$HOME instead — which differs from user.home" >&2
+    echo "  on macOS — would risk signing with one identity and verifying against" >&2
+    echo "  another. Refusing." >&2
+    echo "  Fix: put a working java on PATH, or pass --home <dir> if you know it." >&2
+    exit 4
+  }
+fi
+# An explicit --home is the caller's answer, but a RELATIVE one silently resolves
+# against the caller's cwd inside python, which is a different store per caller.
+# Empty is allowed only on the one route that never reads it.
+case "$HOME_DIR" in
+  /*) ;;
+  '') [ "$NEEDS_HOME" = 0 ] || { echo "keliver-store-path: no home established." >&2; exit 4; };;
+  *)  echo "keliver-store-path: --home must be an absolute path, got '$HOME_DIR'." >&2
+      exit 2;;
+esac
 
 python3 - "$APP" "$HOME_DIR" "${PORTAL_STORE:-}" "$ONLY_DEFAULT" "$EXPLAIN" <<'PY'
 import json, os, sys, hashlib
@@ -71,7 +170,10 @@ def expand(s):
     return s if os.path.isabs(s) else os.path.join(app, s)
 
 if not only_default:
-    if env:
+    # .strip(): the shell above already blanks a whitespace-only PORTAL_STORE,
+    # and this is the second side of the same test for anyone calling the python
+    # directly. Blank means "not set", matching Relay.kt's isNotBlank().
+    if env.strip():
         answer("env", os.path.abspath(env))
 
     cfg = os.path.join(app, "keliver.portal.json")

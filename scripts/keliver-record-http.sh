@@ -32,8 +32,44 @@ PORTAL_URL="${PORTAL_URL:-http://127.0.0.1:$(python3 -c \
 # default to ~/.keliver-portal, which stopped being the store once the relay
 # moved to a per-app directory — the token was then looked for in the wrong
 # place and recording appeared to be off.
-STORE="$("$(keliver_store_path_script)" "$ROOT")"
-TOKEN_FILE="${PORTAL_HTTP_RECORD_TOKEN_FILE:-$STORE/http-record.token}"
+# CHECKED, and inline rather than through scripts/keliver-resolve-store.sh:
+# this script SHIPS IN THE TOOLS BUNDLE and must stay self-contained.
+#
+# Unchecked, a resolver refusal (#78) arrived as STORE="" and TOKEN_FILE became
+# "/http-record.token". What happened next was NOT an unauthenticated request —
+# an earlier draft of this comment claimed that, and it was wrong: the
+# `[[ -r "$TOKEN_FILE" ]]` guard below already stopped before sending. The defect
+# is the DIAGNOSIS. It said
+#
+#   recording token not found; start the relay with PORTAL_HTTP_RECORD=1
+#
+# which sends the operator to restart a relay that is running fine, when the
+# actual problem is that this app's store could not be named. Misdirection is
+# cheaper than a bad request and still costs an afternoon.
+#
+# Skipped entirely when PORTAL_HTTP_RECORD_TOKEN_FILE names the token directly:
+# the store is then not consulted, so demanding it would refuse a caller who has
+# already said where the token is.
+if [ -n "${PORTAL_HTTP_RECORD_TOKEN_FILE:-}" ]; then
+  TOKEN_FILE="$PORTAL_HTTP_RECORD_TOKEN_FILE"
+else
+  STORE="$("$(keliver_store_path_script)" "$ROOT")" || {
+    echo "keliver-record-http: this app's store could not be resolved (see above), so the" >&2
+    echo "  recording token cannot be located. This is NOT an authentication failure and" >&2
+    echo "  not a response from the relay — nothing was sent." >&2
+    echo "  Fix the resolver, or set PORTAL_HTTP_RECORD_TOKEN_FILE to the token's path." >&2
+    exit 4
+  }
+  case "$STORE" in
+    /*) ;;
+    '') echo "keliver-record-http: the resolver exited 0 but named no store; nothing sent." >&2
+        exit 4;;
+    *)  echo "keliver-record-http: the resolver named a non-absolute store ('$STORE');" >&2
+        echo "  nothing sent." >&2
+        exit 4;;
+  esac
+  TOKEN_FILE="$STORE/http-record.token"
+fi
 
 usage() {
   echo "usage:" >&2

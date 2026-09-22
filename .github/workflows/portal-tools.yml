@@ -139,6 +139,28 @@ jobs:
           # only place the identity comparison runs on GNU stat.
           scripts/keliver-refusal-check.sh "$RUNNER_TEMP/refusal"
           echo "::endgroup::"
+          echo "::group::which home the store resolver answers against (#78)"
+          # The resolver is the shell mirror of PortalConfig.storeDir(), and the
+          # home it resolves against picks the store — which is where the signing
+          # key and the host's verification key live. It used to fall back to
+          # $HOME when JVM discovery failed, and on macOS $HOME and user.home are
+          # routinely different directories. Every case here asserts the selected
+          # IDENTITY, by reading the key inside the resolved store, not the path.
+          scripts/keliver-store-home-check.sh "$RUNNER_TEMP/storehome"
+          echo "::endgroup::"
+          echo "::group::what every caller does when the resolver refuses (#78)"
+          # The resolver now refuses instead of falling back to $HOME, and most
+          # callers were written against the old always-answers behaviour: they
+          # took its stdout and never looked at the status. That turns MISSING
+          # EVIDENCE into a PASS — and in one case targeted /keys/ed25519.priv.
+          # Three injected shapes: refusal, non-zero with misleading stdout, and
+          # exit 0 with nothing.
+          # WITH THE CANDIDATE ZIP. The bundled callers are exercised out of the
+          # package an adopter would actually unpack, not only out of scripts/.
+          # A caller missing from the package fails this check rather than
+          # falling back to the repository copy.
+          scripts/keliver-resolver-failure-check.sh "$RUNNER_TEMP/resolverfail" "$zip"
+          echo "::endgroup::"
           echo "::group::device-host packaging hygiene (U22)"
           scripts/keliver-device-host-hygiene-check.sh "$RUNNER_TEMP/hygiene"
           echo "::endgroup::"
