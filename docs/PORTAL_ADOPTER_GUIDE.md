@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.4](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.4)**:
+  **[tools 0.3.5](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.4/keliver-portal-tools-0.3.4.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.4/keliver-portal-tools-0.3.4.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.4.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5/keliver-portal-tools-0.3.5.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5/keliver-portal-tools-0.3.5.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.5.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.4.zip
-  export KP="$PWD/keliver-portal-tools-0.3.4/bin"
+  unzip keliver-portal-tools-0.3.5.zip
+  export KP="$PWD/keliver-portal-tools-0.3.5/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.4
+  The tools version and the library version are **separate lines**: tools 0.3.5
   scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
   bundle records both in its `VERSION.json`.
 

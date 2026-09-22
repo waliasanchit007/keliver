@@ -82,8 +82,13 @@ can create a release or attach an asset. The build is not byte-reproducible, so
 the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
-[`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current release:
-tools **0.3.4** (Maven dependency **0.3.3**).
+[`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
+PUBLISHED release: tools **0.3.4** (Maven dependency **0.3.3**). A **0.3.5
+candidate** is in preparation and is NOT published; its verification status is
+recorded in [`docs/RELEASE_NOTES_TOOLS_0.3.5.md`](docs/RELEASE_NOTES_TOOLS_0.3.5.md),
+not here. While it is unpublished, `build-support/portal-tools.version` says 0.3.5
+and the bundled adopter guide's download block points at 0.3.5 (the release
+procedure's step 0) — but the release page still serves 0.3.4.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then
 `scripts/keliver-adopter-acceptance.sh <parent> <zip>` **and**
