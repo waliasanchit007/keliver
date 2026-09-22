@@ -22,7 +22,7 @@
 #
 #   library:  v0.3.3               -> publish.yml (GitHub Packages) and, manually,
 #                                     publish-maven-central.yml
-#   tools:    portal-tools-v0.3.4  -> this workflow, and ONLY this workflow
+#   tools:    portal-tools-v0.3.5  -> this workflow, and ONLY this workflow
 #
 # `portal-tools-v*` does not match the `v*` pattern publish.yml listens on, so a
 # tools release cannot publish libraries. That is the point of the convention:
@@ -111,7 +111,11 @@ jobs:
           get() { python3 -c "import json,sys;print(json.load(open('version.json'))[sys.argv[1]])" "$1"; }
           tv="$(get toolsVersion)"; mv="$(get mavenDependencyVersion)"; sc="$(get sourceCommit)"
           echo "tools=$tv  maven=$mv  sourceCommit=$sc  checkout=$(git rev-parse HEAD)"
-          test "$tv" = "0.3.4"                 # the tools line
+          # The tools version is whatever build-support/portal-tools.version says,
+          # and a tag push already had to agree with it. Asserting a literal here
+          # only made this workflow reject the next candidate. The MAVEN line stays
+          # hardcoded on purpose: that is the one that must not move.
+          test "$tv" = "${{ steps.v.outputs.version }}"
           test "$mv" = "0.3.3"                 # the Maven line must NOT move
           test "$sc" = "$(git rev-parse HEAD)" # the package names the commit actually built
           echo "--- hashes"

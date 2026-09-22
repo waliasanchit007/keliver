@@ -25,6 +25,9 @@ step against a named, retained artifact.
 
 ## Procedure
 
+The notes for the next candidate live in
+[`RELEASE_NOTES_TOOLS_0.3.5.md`](RELEASE_NOTES_TOOLS_0.3.5.md).
+
 Everything below was executed for 0.3.4 on 2026-09-12 and is written from that
 run.
 
