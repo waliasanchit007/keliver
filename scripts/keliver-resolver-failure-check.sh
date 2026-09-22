@@ -217,6 +217,59 @@ echo "--- keliver-adopt-legacy-store.sh: all three shapes, no copy, no claim"
 LEG="$DISP/legacy"; mkdir -p "$LEG/keys"
 printf 'MARKER-NOT-A-REAL-PRIVATE-KEY\n' > "$LEG/keys/ed25519.priv"
 ADOPTBIN="$DISP/adoptbin"; mkdir -p "$ADOPTBIN"
+
+# THE WRITE GUARD. The header promises the empty-path expansion is never tested by
+# letting a script write to /keys, and a promise needs a mechanism. MEASURED by
+# review: running a STALE (pre-#78) packaged adopt-legacy made this suite execute
+# `mkdir /keys` and `cp <marker> /keys/ed25519.priv`. Harmless on macOS (/ is
+# read-only) and on ubuntu-latest (the runner is not root) — but as root, in a
+# container or a self-hosted box, it creates /keys/ed25519.priv: a write outside
+# the disposable root by the suite that exists to prevent exactly that.
+#
+# Skipping callers flagged STALE would not close it: the same review showed a
+# comment can fake the staleness grep, and a faked-fresh stale script would run
+# anyway. So the writes are INTERCEPTED instead. mkdir and cp are wrapped on PATH;
+# any operand outside $DISP is refused and logged, and nothing is written. A
+# correct caller never reaches either on a refusal, so the guard costs it nothing;
+# a broken one is caught in the act and the attempt becomes an assertion.
+GUARD="$DISP/writeguard"; mkdir -p "$GUARD"
+WRITE_LOG="$DISP/write-attempts.log"; : > "$WRITE_LOG"
+REAL_MKDIR="$(command -v mkdir)"; REAL_CP="$(command -v cp)"
+for tool in mkdir cp; do
+  real="$REAL_MKDIR"; [ "$tool" = cp ] && real="$REAL_CP"
+  cat > "$GUARD/$tool" <<GUARDEOF
+#!/bin/sh
+# Refuse any non-option operand outside the disposable root, INCLUDING the empty
+# string — "" is what an unchecked refusal produces, and "\$dst" built from it is
+# "/<rel>".
+for a in "\$@"; do
+  case "\$a" in
+    -*) ;;
+    "$DISP"/*) ;;
+    *) echo "WRITE-OUTSIDE-DISP $tool '\$a'" >> "$WRITE_LOG"; exit 1 ;;
+  esac
+done
+exec "$real" "\$@"
+GUARDEOF
+  chmod +x "$GUARD/$tool"
+done
+# The guard must be able to say NO and to say YES, or asserting on it is empty.
+: > "$WRITE_LOG"
+# OUTSIDE $DISP but INSIDE the disposable parent. The probe that proves the guard
+# refuses must not itself be a write to / if the guard turns out to be broken —
+# probing with /keys-something would recreate the hazard in the very row meant to
+# rule it out.
+GUARD_PROBE="$DISP_PARENT/keliver-guard-probe-outside-run"
+"$GUARD/mkdir" -p "$GUARD_PROBE" 2>/dev/null
+grep -q 'WRITE-OUTSIDE-DISP' "$WRITE_LOG" && [ ! -e "$GUARD_PROBE" ] \
+  && ok "the write guard refuses a destination outside the disposable root" \
+  || bad "the write guard let a write outside the disposable root through"
+: > "$WRITE_LOG"
+"$GUARD/mkdir" -p "$DISP/guard-probe-ok"
+[ -d "$DISP/guard-probe-ok" ] && [ ! -s "$WRITE_LOG" ] \
+  && ok "and allows one inside it" \
+  || bad "the write guard refuses legitimate writes, so the rows below prove nothing"
+: > "$WRITE_LOG"
 use_adopt() { cp "$1" "$ADOPTBIN/keliver-adopt-legacy-store.sh"; chmod +x "$ADOPTBIN/keliver-adopt-legacy-store.sh"; }
 use_adopt "$ROOT/scripts/keliver-adopt-legacy-store.sh"
 ADOPT_APP="$DISP/adoptapp"; mkdir -p "$ADOPT_APP"
@@ -226,12 +279,19 @@ run_adopt_rows() {
     stub_resolver "$shape"
     cp "$STUBDIR/keliver-store-path.sh" "$ADOPTBIN/keliver-store-path.sh"
     rc=0
-    "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad.log" 2>&1 || rc=$?
+    : > "$WRITE_LOG"
+    PATH="$GUARD:$PATH" "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad.log" 2>&1 || rc=$?
     [ "$rc" -ne 0 ] && ok "adopt/$ORIGIN/$shape: exits non-zero (rc=$rc)" \
                     || bad "adopt/$ORIGIN/$shape: exited 0 — this is the shape that targeted /keys"
     grep -q 'copied:' "$DISP/ad.log" \
       && bad "adopt/$ORIGIN/$shape: claimed to copy something" \
       || ok "adopt/$ORIGIN/$shape: and claimed no copy"
+    if [ -s "$WRITE_LOG" ]; then
+      bad "adopt/$ORIGIN/$shape: ATTEMPTED A WRITE OUTSIDE THE DISPOSABLE ROOT (intercepted)"
+      sed 's/^/        /' "$WRITE_LOG"
+    else
+      ok "adopt/$ORIGIN/$shape: and attempted no write outside the disposable root"
+    fi
   done
   # The misleading shape deserves its own check: the path it prints EXISTS nowhere,
   # so a caller that ignored the status would have created it.
@@ -243,7 +303,7 @@ run_adopt_rows() {
   stub_resolver valid
   cp "$STUBDIR/keliver-store-path.sh" "$ADOPTBIN/keliver-store-path.sh"
   rc=0
-  "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad-ok.log" 2>&1 || rc=$?
+  PATH="$GUARD:$PATH" "$ADOPTBIN/keliver-adopt-legacy-store.sh" "$ADOPT_APP" --legacy "$LEG" > "$DISP/ad-ok.log" 2>&1 || rc=$?
   [ "$rc" = 0 ] && [ -f "$GOOD_STORE/keys/ed25519.priv" ] \
     && ok "adopt/$ORIGIN/valid: a resolvable store still adopts" \
     || { bad "adopt/$ORIGIN/valid: refused a good resolution (rc=$rc)"; tail -3 "$DISP/ad-ok.log" | sed 's/^/        /'; }
@@ -275,9 +335,16 @@ if [ -n "$CANDIDATE_ZIP" ]; then
   else
     PKG="$DISP/pkg"; mkdir -p "$PKG"
     if unzip -q "$CANDIDATE_ZIP" -d "$PKG" 2>"$DISP/unzip.err"; then
-      PKGBIN="$(dirname "$(find "$PKG" -type f -name 'keliver-store-path.sh' | head -1)")"
-      if [ -z "$PKGBIN" ] || [ ! -d "$PKGBIN" ]; then
-        bad "the package contains no keliver-store-path.sh"
+      # PINNED to */bin/ and required to be UNIQUE. `find | head -1` chose by
+      # traversal order, so a package with two resolvers would test whichever
+      # came first — not necessarily the one an adopter's PATH would reach.
+      PKG_HITS="$(find "$PKG" -type f -path '*/bin/keliver-store-path.sh')"
+      PKG_N="$(printf '%s\n' "$PKG_HITS" | grep -c . )"
+      PKGBIN=""
+      [ "$PKG_N" = 1 ] && PKGBIN="$(dirname "$PKG_HITS")"
+      if [ "$PKG_N" != 1 ]; then
+        bad "the package holds $PKG_N bin/keliver-store-path.sh — expected exactly one"
+        [ -n "$PKG_HITS" ] && printf '%s\n' "$PKG_HITS" | sed 's/^/        /'
       else
         ok "the package ships the resolver: ${PKGBIN#$PKG/}"
         # MISSING IS A FAILURE, NOT A FALLBACK. Substituting the repo copy here
@@ -285,6 +352,12 @@ if [ -n "$CANDIDATE_ZIP" ]; then
         for want in keliver-record-http.sh keliver-adopt-legacy-store.sh; do
           if [ -f "$PKGBIN/$want" ]; then
             ok "the package ships $want"
+            # Checked on the shipped file: use_* chmods its own COPY, so without
+            # this a package shipping non-executable callers passed 63/0 while an
+            # adopter running bin/$want would get "permission denied".
+            [ -x "$PKGBIN/$want" ] \
+              && ok "and ships it executable" \
+              || bad "the package ships $want WITHOUT the executable bit"
           else
             bad "the package does NOT ship $want — not substituting the repo copy"
           fi
