@@ -94,8 +94,26 @@ def edit_field(root):
     return None
 
 
+PLACEHOLDER = "Search by name or SKU"
+
+
+def field_text(root):
+    """The search field's content; the placeholder is what an EMPTY field reports."""
+    field = edit_field(root)
+    if field is None:
+        return None
+    t = field.get("text", "")
+    return "" if t == PLACEHOLDER else t
+
+
 def type_query(query, tag):
-    """Replace the search field's content with query, one key at a time."""
+    """Replace the search field's content with query, and CHECK that it did.
+
+    The first run's clear sent exactly len(text) DELs after MOVE_END and one was
+    lost: "bean" became "b", and the next query was typed as "bzzz". So: delete
+    with spares (extra DELs on an empty field are no-ops), read the field back,
+    and only type once it is empty. The query is checked the same way.
+    """
     _, _, root = wait_for(tag + "-field", lambda t: True, timeout=1)
     field = edit_field(root)
     if field is None:
@@ -103,17 +121,27 @@ def type_query(query, tag):
     x, y = bounds_center(field)
     adb("shell", "input", "tap", str(x), str(y))
     time.sleep(1)
-    current = field.get("text", "")
-    # The placeholder is reported as the text of an empty field.
-    if current and current != "Search by name or SKU":
+    for attempt in range(4):
+        current = field_text(root) or ""
+        if not current:
+            break
         adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
-        for _ in range(len(current)):
+        for _ in range(len(current) + 4):
             adb("shell", "input", "keyevent", "KEYCODE_DEL")
+        time.sleep(1)
+        _, _, root = wait_for(f"{tag}-cleared-{attempt}", lambda t: True, timeout=1)
+    if field_text(root):
+        return False
     if query:
         adb("shell", "input", "text", query)
     adb("shell", "input", "keyevent", "KEYCODE_ESCAPE")  # dismiss the keyboard
     time.sleep(1)
-    return True
+    _, _, root = wait_for(f"{tag}-typed", lambda t: field_text_of(t, query), timeout=10)
+    return field_text(root) == query
+
+
+def field_text_of(t, query):
+    return query in t
 
 
 def has(t, s):
@@ -160,12 +188,12 @@ def scenario_dev():
     check("E1", f"launch: title {TITLE!r} and '8 items · 2 low on stock'", ok, t)
     check("E1b", "Espresso beans row with 'BEAN-001 · 12 on hand'", has(t, ESP) and has(t, "BEAN-001 · 12 on hand"), t)
 
-    type_query("bean", "E2")
+    check("E2.in", "the driver typed exactly 'bean' into the search field", type_query("bean", "E2"), "see E2-typed dump")
     ok, t, root = wait_for("E2", lambda t: has(t, '2 of 8 items match "bean"'))
     check("E2", "search 'bean' -> 2 of 8, both bean rows, no Oat milk",
           ok and has(t, ESP) and has(t, FLT) and not has(t, "Oat milk 1L"), t)
 
-    type_query("zzz", "E3")
+    check("E3.in", "the driver replaced the query with exactly 'zzz'", type_query("zzz", "E3"), "see E3-typed dump")
     ok, t, root = wait_for("E3", lambda t: has(t, 'No items match "zzz".'))
     rows = [x for x in (ESP, FLT, "Oat milk 1L") if has(t, x)]
     check("E3", "search 'zzz' -> empty state, Clear search, no rows",
