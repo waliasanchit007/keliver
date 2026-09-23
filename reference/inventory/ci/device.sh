@@ -80,7 +80,7 @@ grep -iE 'sha256|checksum' "$EV/install-dev-host.log" | sed 's/^/    /'
 serve_up v1 && ok "serveDevelopmentZipline is serving the app" || bad "the bundle server never answered"
 launch dev "$EV/logcat-dev-1.txt"
 grep -q "mode=dev" "$EV/logcat-dev-1.txt" && ok "the generic host entered the development path" || bad "no development path in the log"
-drive dev Inventory; fold "E1-E10 on the development route" $?
+drive dev Inventory E; fold "E1-E10 on the development route" $?
 
 # --- 2. D14: edit through the relay, rebuild, observe ------------------------
 echo "--- 2. D14 layout edit"
@@ -113,7 +113,7 @@ cmp -s "$EV/logic-before.sha256" "$EV/logic-after.sha256" \
   && ok "D2: every file under logic/ is byte-identical after the edit" || bad "D2: logic/ changed"
 serve_down; serve_up v2 && ok "rebuilt and serving the edited app" || bad "the rebuilt bundle was not served"
 launch dev "$EV/logcat-dev-2.txt"
-drive title Stockroom; fold "D3: the device shows the edited title" $?
+drive title Stockroom D3; fold "D3: the device shows the edited title" $?
 serve_down
 
 # --- 3. production on this app's own host ------------------------------------
@@ -130,15 +130,15 @@ grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
   && ok "P2: production verifies with this app's key (${PUB:0:8}…)" || bad "P2: no verification with this app's key in the log"
 grep -q "refusing production mode" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused production" || ok "P2: production was not refused"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
-drive title Inventory; fold "P2: v1 shows Inventory in production" $?
-drive prod; fold "P3: repeated actions run from the signed bundle" $?
+drive title Inventory P2; fold "P2: v1 shows Inventory in production" $?
+drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" $?
 
 curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-v2.log" 2>&1
 grep -q 'publish OK: bundle v2' "$EV/publish-v2.log" && ok "P4: $(grep 'publish OK' "$EV/publish-v2.log")" || bad "P4: publish v2 failed"
 sha256 "$STORE/bundles/v2/manifest.zipline.json" | tee "$EV/manifest-v2.sha256"
 launch prod "$EV/logcat-prod-v2.txt"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-v2.txt" && ok "P4: the signed v2 loaded" || bad "P4: v2 did not load"
-drive title Stockroom; fold "P4: the second signed version shows Stockroom" $?
+drive title Stockroom P4; fold "P4: the second signed version shows Stockroom" $?
 portal_down "$APP"
 
 # P5: another app's identity. A COPY with its inherited pointer removed — the
@@ -166,7 +166,7 @@ grep -E "codeLoadFailed" "$EV/logcat-prod-foreign.txt" | head -3 | sed 's/^/    
 grep -qE "codeLoadFailed.*(signature|verif)" "$EV/logcat-prod-foreign.txt" \
   && ok "P5: the foreign-signed bundle was rejected on its signature" || bad "P5: no signature rejection in the log"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-foreign.txt" && bad "P5: something loaded" || ok "P5: no code loaded"
-python3 "$HERE/drive.py" "$SERIAL" "$EV" title "Foreign build" > "$EV/foreign-screen.txt" 2>&1
+python3 "$HERE/drive.py" "$SERIAL" "$EV" title "Foreign build" P5 > "$EV/foreign-screen.txt" 2>&1
 grep -q "PASS  TITLE " "$EV/foreign-screen.txt" && bad "P5: Foreign build is on screen" || ok "P5: Foreign build never appeared"
 portal_down "$FAPP"
 
@@ -176,7 +176,7 @@ launch prod "$EV/logcat-prod-recover.txt"
 grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-recover.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-prod-recover.txt" \
   && ok "P6: this app's signed bundle loads again, verified" || bad "P6: no verified load after recovery"
-drive title Stockroom; fold "P6: Stockroom is back" $?
+drive title Stockroom P6; fold "P6: Stockroom is back" $?
 portal_down "$APP"
 
 echo "device: passed $pass, failed $fail"

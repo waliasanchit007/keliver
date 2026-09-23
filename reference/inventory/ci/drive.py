@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Drive the inventory reference app on a device and check EXPECTATIONS.md.
 
-  drive.py <serial> <evidence-dir> <scenario> [title]
+  drive.py <serial> <evidence-dir> <scenario> [title] [label]
 
 Scenarios:
   dev     E1-E10 on whatever host is in the foreground (the development route)
@@ -9,8 +9,10 @@ Scenarios:
   prod    P3: Add 1 three times on Espresso beans, observed after each tap
 
 Every observation is the device's own view hierarchy (uiautomator dump), saved
-as <evidence-dir>/<scenario>-NN-<tag>.xml. Results go to <scenario>.results.json
-and the exit status is the number of failed checks (capped at 100).
+as <evidence-dir>/<label>-NN-<tag>.xml. Results go to <label>.results.json and
+the exit status is the number of failed checks (capped at 100). <label>
+defaults to the scenario; give each invocation its own, or a later run of the
+same scenario overwrites the earlier one's evidence (it did, in run 35800642819).
 """
 import json
 import os
@@ -22,6 +24,7 @@ import xml.etree.ElementTree as ET
 
 SERIAL, EV, SCENARIO = sys.argv[1], sys.argv[2], sys.argv[3]
 TITLE = sys.argv[4] if len(sys.argv) > 4 else "Inventory"
+LABEL = sys.argv[5] if len(sys.argv) > 5 else SCENARIO
 os.makedirs(EV, exist_ok=True)
 
 results = []
@@ -35,13 +38,13 @@ def adb(*args, check=True):
 def dump(tag):
     """The current view hierarchy, saved as evidence. Never a stale file."""
     seq[0] += 1
-    remote = f"/sdcard/inv-{SCENARIO}-{seq[0]:02d}.xml"
+    remote = f"/sdcard/inv-{LABEL}-{seq[0]:02d}.xml"
     for _ in range(6):
         adb("shell", "rm", "-f", remote, check=False)
         subprocess.run(["adb", "-s", SERIAL, "shell", "uiautomator", "dump", remote], capture_output=True, text=True)
         out = adb("shell", "cat", remote, check=False)
         if out.lstrip().startswith("<?xml"):
-            with open(os.path.join(EV, f"{SCENARIO}-{seq[0]:02d}-{tag}.xml"), "w") as f:
+            with open(os.path.join(EV, f"{LABEL}-{seq[0]:02d}-{tag}.xml"), "w") as f:
                 f.write(out)
             return ET.fromstring(out[out.index("<?xml"):].split("?>", 1)[1])
         time.sleep(2)
@@ -249,8 +252,8 @@ def scenario_dev():
 
 {"dev": scenario_dev, "title": scenario_title, "prod": scenario_prod}[SCENARIO]()
 
-with open(os.path.join(EV, f"{SCENARIO}.results.json"), "w") as f:
+with open(os.path.join(EV, f"{LABEL}.results.json"), "w") as f:
     json.dump(results, f, indent=1, ensure_ascii=False)
 failed = sum(1 for r in results if not r["ok"])
-print(f"{SCENARIO}: passed {len(results) - failed}, failed {failed}")
+print(f"{LABEL}: passed {len(results) - failed}, failed {failed}")
 sys.exit(min(failed, 100))
