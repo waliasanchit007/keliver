@@ -1,0 +1,24 @@
+Planted.kt
+PortalPublicKey.kt
+== compileKotlinIosSimulatorArm64
+rc=0
+> Task :keliver-material-protocol-host-web:compileKotlinIosSimulatorArm64
+> Task :keliver-layout-composeui:compileKotlinIosSimulatorArm64
+> Task :keliver-treehouse-host-composeui:compileKotlinIosSimulatorArm64
+> Task :keliver-material-composeui:compileKotlinIosSimulatorArm64
+w: file://<run-dir>/wt/keliver-material-composeui/src/commonMain/kotlin/dev/keliver/material/composeui/MaterialIcons.kt:165:29 'val Icons.Filled.Article: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Article.
+w: file://<run-dir>/wt/keliver-material-composeui/src/commonMain/kotlin/dev/keliver/material/composeui/MaterialIcons.kt:179:33 'val Icons.Filled.HelpOutline: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.HelpOutline.
+> Task :portal-device-ios:compileKotlinIosSimulatorArm64
+BUILD SUCCESSFUL in 1m 44s
+== klibs produced by the module
+portal-device-ios/build/classes
+portal-device-ios/build/classes/kotlin
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib/portal-device-ios
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib/portal-device-ios/default
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib/portal-device-ios/default/ir/debugInfo.knd
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib/portal-device-ios/default/ir/strings.knt
+portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib/portal-device-ios/default/linkdata/package_dev.keliver.portaldevice.ios/0_ios.knm
+$SP/i77/run2.sh  1.87s user 0.44s system 2% cpu 1:45.72 total

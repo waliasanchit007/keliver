@@ -1,0 +1,10 @@
+Planted.kt
+PortalPublicKey.kt
+rc=0
+> Task :portal-device-ios:generatePortalKey UP-TO-DATE
+> Task :portal-device-ios:linkDebugFrameworkIosSimulatorArm64
+BUILD SUCCESSFUL in 1m 13s
+framework: portal-device-ios/build/bin/iosSimulatorArm64/debugFramework/PortalDeviceHost.framework
+portal-device-ios/build/bin/iosSimulatorArm64/debugFramework/PortalDeviceHost.framework/Headers/PortalDeviceHost.h:208:+ (NSString *)plantedMarker __attribute__((swift_name("plantedMarker()")));
+PLANTED_MARKER_77 in binary: 0
+$SP/i77/run3.sh  1.78s user 0.23s system 2% cpu 1:15.56 total

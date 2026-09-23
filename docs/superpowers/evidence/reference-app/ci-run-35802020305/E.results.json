@@ -1,0 +1,341 @@
+[
+ {
+  "id": "E1",
+  "check": "launch: title 'Inventory' and '8 items · 2 low on stock'",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "E1b",
+  "check": "Espresso beans row with 'BEAN-001 · 12 on hand'",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "E2.in",
+  "check": "the driver typed exactly 'bean' into the search field",
+  "ok": true,
+  "observed": "see E2-typed dump"
+ },
+ {
+  "id": "E2",
+  "check": "search 'bean' -> 2 of 8, both bean rows, no Oat milk",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "bean",
+   "2 of 8 items match \"bean\"",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW"
+  ]
+ },
+ {
+  "id": "E3.in",
+  "check": "the driver replaced the query with exactly 'zzz'",
+  "ok": true,
+  "observed": "see E3-typed dump"
+ },
+ {
+  "id": "E3",
+  "check": "search 'zzz' -> empty state, Clear search, no rows",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "zzz",
+   "0 of 8 items match \"zzz\"",
+   "No items match \"zzz\".",
+   "Clear search"
+  ]
+ },
+ {
+  "id": "E4",
+  "check": "Clear search -> all 8 back, empty state gone",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "E5",
+  "check": "open Espresso beans -> details, On hand: 12, no adjustments, no warning",
+  "ok": true,
+  "observed": [
+   "Back to inventory",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · Aisle 1",
+   "On hand: 12",
+   "Remove 1",
+   "Add 1",
+   "Receive 10",
+   "No adjustments yet"
+  ]
+ },
+ {
+  "id": "E6.13",
+  "check": "Add 1 -> On hand: 13",
+  "ok": true,
+  "observed": [
+   "On hand: 13"
+  ]
+ },
+ {
+  "id": "E6.14",
+  "check": "Add 1 -> On hand: 14",
+  "ok": true,
+  "observed": [
+   "On hand: 14"
+  ]
+ },
+ {
+  "id": "E6.15",
+  "check": "Add 1 -> On hand: 15",
+  "ok": true,
+  "observed": [
+   "On hand: 15"
+  ]
+ },
+ {
+  "id": "E6.h",
+  "check": "history reads 3 adjustments: +1, +1, +1 (net +3)",
+  "ok": true,
+  "observed": [
+   "3 adjustments: +1, +1, +1 (net +3)"
+  ]
+ },
+ {
+  "id": "E7.14",
+  "check": "Remove 1 -> On hand: 14, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 14"
+  ]
+ },
+ {
+  "id": "E7.13",
+  "check": "Remove 1 -> On hand: 13, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 13"
+  ]
+ },
+ {
+  "id": "E7.12",
+  "check": "Remove 1 -> On hand: 12, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 12"
+  ]
+ },
+ {
+  "id": "E7.11",
+  "check": "Remove 1 -> On hand: 11, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 11"
+  ]
+ },
+ {
+  "id": "E7.10",
+  "check": "Remove 1 -> On hand: 10, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 10"
+  ]
+ },
+ {
+  "id": "E7.9",
+  "check": "Remove 1 -> On hand: 9, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 9"
+  ]
+ },
+ {
+  "id": "E7.8",
+  "check": "Remove 1 -> On hand: 8, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 8"
+  ]
+ },
+ {
+  "id": "E7.7",
+  "check": "Remove 1 -> On hand: 7, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 7"
+  ]
+ },
+ {
+  "id": "E7.6",
+  "check": "Remove 1 -> On hand: 6, warning absent",
+  "ok": true,
+  "observed": [
+   "On hand: 6"
+  ]
+ },
+ {
+  "id": "E7.5",
+  "check": "Remove 1 -> On hand: 5, warning shown",
+  "ok": true,
+  "observed": [
+   "On hand: 5",
+   "Low stock — reorder at 5"
+  ]
+ },
+ {
+  "id": "E8",
+  "check": "Receive 10 -> On hand: 15, warning gone",
+  "ok": true,
+  "observed": [
+   "On hand: 15"
+  ]
+ },
+ {
+  "id": "E9",
+  "check": "Back -> the row reads BEAN-001 · 15 on hand; still 8 items · 2 low",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 15 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "E10.4",
+  "check": "open Filter beans -> On hand: 4 with the warning",
+  "ok": true,
+  "observed": [
+   "Back to inventory",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · Aisle 1",
+   "On hand: 4",
+   "Low stock — reorder at 5",
+   "Remove 1",
+   "Add 1",
+   "Receive 10",
+   "No adjustments yet"
+  ]
+ },
+ {
+  "id": "E10.3",
+  "check": "Remove 1 -> On hand: 3, warning shown",
+  "ok": true,
+  "observed": [
+   "On hand: 3",
+   "Low stock — reorder at 5"
+  ]
+ },
+ {
+  "id": "E10.2",
+  "check": "Remove 1 -> On hand: 2, warning shown",
+  "ok": true,
+  "observed": [
+   "On hand: 2",
+   "Low stock — reorder at 5"
+  ]
+ },
+ {
+  "id": "E10.1",
+  "check": "Remove 1 -> On hand: 1, warning shown",
+  "ok": true,
+  "observed": [
+   "On hand: 1",
+   "Low stock — reorder at 5"
+  ]
+ },
+ {
+  "id": "E10.0",
+  "check": "Remove 1 -> On hand: 0, warning shown",
+  "ok": true,
+  "observed": [
+   "On hand: 0",
+   "Low stock — reorder at 5"
+  ]
+ },
+ {
+  "id": "E10.floor",
+  "check": "a fifth Remove 1 leaves On hand: 0 and records nothing",
+  "ok": true,
+  "observed": [
+   "On hand: 0",
+   "4 adjustments: -1, -1, -1, -1 (net -4)"
+  ]
+ }
+]

@@ -1,15 +1,33 @@
 # keliver-portal-tools 0.3.5 — release notes
 
-**Status: candidate, not published.** Publishing is a separate authorization.
-The published tools 0.3.4 asset and the Maven 0.3.3 libraries are untouched.
+**Status: RELEASED 2026-09-22** —
+<https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5>.
+Tools 0.3.4 and the Maven 0.3.3 libraries are unchanged; GitHub's "Latest"
+badge stays on the library release `v0.3.3`.
 
-This file deliberately does **not** record the candidate's ZIP hash, APK hash or
-CI runs. It is committed *in* the candidate, so it can't describe verification
-of itself without moving the commit it describes. Those values go into the
-release page notes at publication time, taken from the retained artifact that was
-verified. The procedure is [`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md):
-the asset is attached by hand from that artifact, never from a rebuild at the
-tag.
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.5` → **`b5615637531127c1d408fe0f7d652cac044d2930`** (the `sourceCommit` in `VERSION.json`; not the merge commit) |
+| merged | PR #80, merge commit `b96a9e2eb`, head matched server-side |
+| asset | `keliver-portal-tools-0.3.5.zip`, 90,351,569 bytes, plus `.sha256` |
+| zip sha256 | `4e1c3040c2e069ab2a503f4b45a7740a28ac243edfb233cdffc7bcb7e7eeb439` |
+| APK sha256 | `475276a4c51c90698871acd0f405a73678c4b96b8cff37b773fe508e5faff04e` (no embedded portal key) |
+| build run | [`35788740086`](https://github.com/waliasanchit007/keliver/actions/runs/35788740086), retained artifact `10721358747` |
+| device run | [`35790340108`](https://github.com/waliasanchit007/keliver/actions/runs/35790340108) — 19/0 device checks, 23/0 packaged acceptance, API 33 x86_64 emulator |
+| tag-push run | [`35796515942`](https://github.com/waliasanchit007/keliver/actions/runs/35796515942) — the read-only rebuild the tag fires; its artifact was **not** attached |
+
+**How the stored asset was checked.** The published asset is the retained
+artifact uploaded byte-for-byte. Its hash was confirmed at the retained artifact,
+at upload, and by GitHub's server-side `digest` of the stored draft asset. A
+download-back of the draft could **not** be run: the releasing machine's network
+blocks `release-assets.githubusercontent.com` (see `PORTAL_TOOLS_RELEASE.md`
+step 4). The **public** download was then checked from a GitHub-hosted runner,
+against the release's own `.sha256` and the pinned hash, by the first step of
+`reference-app.yml` (runs `35800642819` and `35802020305`: `keliver-portal-tools-0.3.5.zip: OK`,
+`4e1c3040…`).
+
+The candidate text below is unchanged from the tagged commit, where it was
+written before these values existed.
 
 ---
 
@@ -231,6 +249,9 @@ There's no migration step, and nothing rewrites an existing store.
   fixed in 0.3.5**.
 * Device verification for this candidate covers **Android API 33, x86_64, on an
   emulator**. No physical device and no iOS target has been verified.
-* U19 (the live-preview re-render; cause unresolved), U20 (editor frame rate;
-  measured but not assessed) and U25.2–.4 are **unchanged and still open**.
-  Nothing in 0.3.5 fixes them.
+* U19 (the live-preview re-render; cause unresolved) and U20 (editor frame
+  rate; measured but not assessed) are **unchanged and still open**. Nothing in
+  0.3.5 fixes them. (Corrected after publication: this line first also listed
+  U25.2–.4 as open. Those three — the key-length bound, `devOnlyHost` parsing
+  and the store-resolver fallback — **are** fixed in 0.3.5, as the sections
+  above describe.)

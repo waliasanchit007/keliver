@@ -97,5 +97,6 @@ Each of these was hit building this app; see
 * **The device scaffolder wires one screen.** With two screens it asks for
   `--screen`/`--presenter`, and a presenter that takes arguments means
   hand-editing `device/Main.kt`.
-* **`keliver-portal` rebuilds `editor/` on every start** — about five minutes
-  here. CI passes `--no-editor-build`.
+* **`keliver-portal` runs `editor/`'s Gradle build on every start.** The first
+  build took 5 minutes here on a fresh Gradle home; later starts are an
+  up-to-date check. CI never uses the editor, so it passes `--no-editor-build`.

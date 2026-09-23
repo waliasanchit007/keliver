@@ -13,8 +13,13 @@ them visually in a web portal that round-trips to the .kt files in git.
 - Reference adoption: **there is currently no external adopter.** `stashfin-sdui`
   (the app every historical "Stashfin" gate below was recorded against) was lost
   with the previous machine and was never pushed. Treat those gates as evidence
-  that the path worked, not as something you can re-run. The in-repo
-  [`sample/`](sample) is the only runnable reference today.
+  that the path worked, not as something you can re-run. Two runnable references
+  exist today, and **both are dogfooding, not adoption**: the in-repo
+  [`sample/`](sample) (Keliver's own widget schema, built from this checkout),
+  and [`reference/inventory`](reference/inventory) — an app built only from the
+  PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
+  checked end to end by `.github/workflows/reference-app.yml`. What it proved and
+  what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
 command. `gh` resolves to upstream cashapp/redwood — use
@@ -83,12 +88,11 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.4** (Maven dependency **0.3.3**). A **0.3.5
-candidate** is in preparation and is NOT published; its verification status is
-recorded in [`docs/RELEASE_NOTES_TOOLS_0.3.5.md`](docs/RELEASE_NOTES_TOOLS_0.3.5.md),
-not here. While it is unpublished, `build-support/portal-tools.version` says 0.3.5
-and the bundled adopter guide's download block points at 0.3.5 (the release
-procedure's step 0) — but the release page still serves 0.3.4.
+PUBLISHED release: tools **0.3.5** (Maven dependency **0.3.3**), released
+2026-09-22 from `b5615637`; its identities and how the stored asset was checked
+are in [`docs/RELEASE_NOTES_TOOLS_0.3.5.md`](docs/RELEASE_NOTES_TOOLS_0.3.5.md).
+0.3.4 stays published and unchanged. A tools tag push DOES run portal-tools.yml's
+read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then
 `scripts/keliver-adopter-acceptance.sh <parent> <zip>` **and**

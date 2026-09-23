@@ -878,6 +878,42 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U27. The relay writes the private signing key world-readable — OPEN
+
+Found building the reference app (`docs/REFERENCE_APP.md`), 2026-09-22.
+`Relay.kt#ensureKeys()` creates `<store>/keys/ed25519.priv` with
+`File.writeText`, so its mode is whatever the umask gives. Measured on macOS with
+the default umask, in a disposable store:
+
+```
+-rw-r--r--  ed25519.priv
+-rw-r--r--  ed25519.pub
+```
+
+Any local user can read the key that signs this app's production bundles. The
+same held on the Linux CI runner (`prepare.sh` prints the modes). A fix is to
+create the key `0600` (and `keys/` `0700`) atomically, and to refuse — or at
+least warn — on an existing key that is group- or world-readable. Not fixed:
+the store contract (`STORE_IDENTITY.md`) says nothing about modes, and a change
+here touches every existing store, so it wants its own review.
+
+### U28. The production host logs a false `codeLoadFailed` on every start — OPEN
+
+Found in the reference app's production run, 2026-09-22. In production mode
+`portal-device-android`'s `MainActivity.kt:112` starts the manifest flow at `""`
+and sets the real URL only when `/bundles/latest` answers. Treehouse tries the
+empty one first, so every production launch logs
+
+```
+E PortalDevice: codeLoadFailed: Expected URL scheme 'http' or 'https' but no scheme was found for
+```
+
+before the real load succeeds (or is rightly refused). Nothing wrong loads, but
+anything that reports `codeLoadFailed` — an adopter's crash reporting, or a
+check that greps for it — sees a failure on every start. The reference app's
+`ci/device.sh` asserts the *signature* failure specifically for that reason. A
+fix is to not emit until the lookup has a URL.
+
 ### U19. Live preview appeared not to re-render after a presenter action — CAUSE UNRESOLVED
 
 > **Read this first (2026-09-11).** Two causal explanations have now been
@@ -1127,7 +1163,7 @@ Regression: two-app script (2 failures before, 9 passes after) plus
   the incident is macOS-specific in its details; Linux and CI behaviour is
   **inferred from the code**, not executed.
 
-### U23. Renaming or moving an app directory silently rotates its signing identity — FIXED, UNRELEASED
+### U23. Renaming or moving an app directory silently rotates its signing identity — FIXED, released in tools 0.3.5
 
 **Symptoms:** your documents look empty, or a device rejects a bundle you just
 published, after the app directory was renamed or moved — or after you launched
@@ -1194,7 +1230,7 @@ after    R1 the renamed app was refused, and told how to recover
          R2b the signing identity survived the relocation (6df6e8d8…)
 ```
 
-### U24. `claimStoreFor` refuses the recovery its own error message recommends — FIXED, UNRELEASED
+### U24. `claimStoreFor` refuses the recovery its own error message recommends — FIXED, released in tools 0.3.5
 
 Found by the same review; also shipped in 0.3.4, also unfixed here.
 
@@ -1340,7 +1376,7 @@ is a deliberate behaviour change, recorded in
 the shell's and now removes the lock only while its marker still names this
 process, on both the `finally` and shutdown-hook routes.
 
-### U25. Four smaller store/host issues found by the PR #74 review — ALL FOUR FIXED, UNRELEASED
+### U25. Four smaller store/host issues found by the PR #74 review — ALL FOUR FIXED, released in tools 0.3.5
 
 All shipped in 0.3.4, all deferred for the same reason. Each is fail-safe today;
 none is a security hole.
@@ -1375,7 +1411,7 @@ none is a security hole.
    Unicode-aware `isalnum()`, the Kotlin regex is ASCII `[^a-z0-9._-]`, so
    `café` slugs differently in each.
 
-   **FIXED, UNRELEASED** (`fix/store-identity-u23-u25`). The slug now comes from
+   **FIXED, released in tools 0.3.5** (`fix/store-identity-u23-u25`). The slug now comes from
    the CANONICAL basename, and is computed over its **UTF-8 bytes** with runs of
    `-` collapsed and the ends trimmed — Kotlin mapped UTF-16 code *units* and
    Python code *points*, so an astral character produced `--` in one and `-` in
@@ -1403,7 +1439,7 @@ none is a security hole.
    throws in `onCreate` — a crash instead of the refusal screen. **Fail-closed**:
    nothing is fetched and verification is never skipped, so the U22 claim holds.
 
-   **FIXED, UNRELEASED.** The bound is `^[0-9a-fA-F]{64}$`, the refusal names
+   **FIXED, released in tools 0.3.5.** The bound is `^[0-9a-fA-F]{64}$`, the refusal names
    the length it got, and `HostTrustPolicyTest` covers empty, 62, 63 (the odd
    length that threw), 66, 64-but-not-hex and a leading space — plus the
    invariant that anything `ProductionVerified` decodes to exactly 32 bytes, so
@@ -1428,7 +1464,7 @@ none is a security hole.
    Backstopped by `build-portal-tools.sh`, which refuses to package an APK
    containing `assets/portal_ed25519.pub`, so a typo cannot ship a builder's key.
 
-   **FIXED, UNRELEASED.** The accepted forms are documented and everything else
+   **FIXED, released in tools 0.3.5.** The accepted forms are documented and everything else
    is refused: `true 1 yes on` and `false 0 no off`, case-insensitive and
    trimmed. A bare flag is rejected with the fix in the message rather than
    guessed, because guessing is how this class of bug starts.
@@ -1438,7 +1474,7 @@ none is a security hole.
    helper exists to prevent — behind a `logger.warn` that is invisible in `-q`
    builds.
 
-   **FIXED, UNRELEASED.** Reproduced first, with `python3` replaced by a stub
+   **FIXED, released in tools 0.3.5.** Reproduced first, with `python3` replaced by a stub
    that exits 127: a disposable app resolved `apps/probeapp-bce953ee` with a
    healthy resolver and **`~/.keliver-portal`** — the legacy global store, which
    on a developer's machine usually holds a real signing identity — with a
@@ -1473,6 +1509,16 @@ none is a security hole.
      the framework** — worse than a stale asset. Not fixed here because neither
      this machine nor Linux CI can build or verify the iOS target, and shipping
      an unverifiable change to a signing path is how this class of bug started.
+
+     **Measured 2026-09-22 (#77), on a later machine that can build iOS**, in an
+     isolated worktree of `main` with a disposable store holding a dummy key:
+     a planted `Planted.kt` survives an UP-TO-DATE `generatePortalKey`
+     (boundary 1); `compileKotlinIosSimulatorArm64` compiles it — `PLANTED` is in
+     the module klib's link data beside `PORTAL_PUBLIC_KEY_HEX`; and with a
+     public planted function, `linkDebugFrameworkIosSimulatorArm64` exports it
+     in `PortalDeviceHost.h` and carries its compiled symbol in the binary
+     (boundary 2, debug simulator framework). Release and `iosArm64` not
+     measured. Still not fixed.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
@@ -1563,7 +1609,7 @@ none is a security hole.
    here. A `ValueSource` is the correct home for the resolver subprocess and
    would give per-build memoisation for free. Not done in this block.
 
-### The disposable-parent refusal — FIXED, UNRELEASED
+### The disposable-parent refusal — FIXED (a repository check; not part of the tools bundle)
 
 Eleven scripts (`keliver-store-recovery-check.sh`, `keliver-adopter-acceptance.sh`,
 `keliver-guest-signing-check.sh` and eight more) mint throwaway stores, public
@@ -1872,7 +1918,7 @@ is skipped, but only one of them runs in CI. Asserting the macOS answer
 unconditionally is a mistake this suite made twice, and Linux CI caught it both
 times.
 
-### U26. The signed-bundle verification verified nothing — FIXED, UNRELEASED
+### U26. The signed-bundle verification verified nothing — FIXED (a repository check; not part of the tools bundle)
 
 Found while building the U23/U24 regressions, in tooling that shipped in
 tools 0.3.4.

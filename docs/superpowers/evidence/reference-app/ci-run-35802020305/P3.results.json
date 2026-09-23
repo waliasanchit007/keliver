@@ -1,0 +1,67 @@
+[
+ {
+  "id": "P3.0",
+  "check": "the list is on screen in production",
+  "ok": true,
+  "observed": [
+   "Inventory",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "P3.1",
+  "check": "Espresso beans opens with On hand: 12",
+  "ok": true,
+  "observed": [
+   "Back to inventory",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · Aisle 1",
+   "On hand: 12",
+   "Remove 1",
+   "Add 1",
+   "Receive 10",
+   "No adjustments yet"
+  ]
+ },
+ {
+  "id": "P3.13",
+  "check": "Add 1 -> On hand: 13",
+  "ok": true,
+  "observed": [
+   "On hand: 13"
+  ]
+ },
+ {
+  "id": "P3.14",
+  "check": "Add 1 -> On hand: 14",
+  "ok": true,
+  "observed": [
+   "On hand: 14"
+  ]
+ },
+ {
+  "id": "P3.15",
+  "check": "Add 1 -> On hand: 15",
+  "ok": true,
+  "observed": [
+   "On hand: 15"
+  ]
+ }
+]

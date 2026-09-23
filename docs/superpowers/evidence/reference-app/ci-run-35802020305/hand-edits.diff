@@ -1,0 +1,167 @@
+diff --git a/build.gradle b/build.gradle
+index 444c6fc..cdaf777 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -37,3 +37,41 @@ kotlin {
+     }
+   }
+ }
++
++// ---------------------------------------------------------------------------
++// PRODUCTION SIGNING — hand-added. Neither keliver-init nor
++// keliver-new-device-target.sh writes this, and the adopter guide does not
++// describe it; it is modelled on Keliver's own portal-published-guest.
++//
++// The relay's POST /publish runs `publishTask` (keliver.portal.json) and stores
++// its output as a versioned bundle. It does not sign: the Zipline compile task
++// does, with the private key of THIS app's store. The store is asked of the
++// tools bundle's resolver, never derived here, and a resolver that cannot
++// answer fails the compile rather than producing an unsigned bundle.
++//
++// Needs KP (the keliver-portal-tools bin directory, as the adopter guide
++// exports it) or -Pkeliver.toolsBin=<dir>. Must stay AFTER the kotlin {} block:
++// the zipline plugin sets signingKeys when binaries.executable() registers the
++// compile task, and the later configuration action wins.
++def keliverStoreDir = providers.provider {
++  def bin = providers.gradleProperty('keliver.toolsBin').orElse(providers.environmentVariable('KP')).getOrNull()
++  if (!bin) throw new GradleException('keliver: set KP (or -Pkeliver.toolsBin) to the keliver-portal-tools bin directory, so the store can be resolved for signing')
++  def proc = [new File(bin, 'keliver-store-path.sh').absolutePath, rootDir.absolutePath,
++              '--home', System.getProperty('user.home')].execute()
++  def out = new StringBuilder(), err = new StringBuilder()
++  proc.waitForProcessOutput(out, err)
++  if (proc.exitValue() != 0) throw new GradleException("keliver: keliver-store-path.sh exited ${proc.exitValue()}: ${err.toString().trim()}")
++  def path = out.toString().trim()
++  if (!path.startsWith('/')) throw new GradleException("keliver: keliver-store-path.sh returned a non-absolute path: '${path}'")
++  new File(path)
++}
++tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
++  signingKeys.set(providers.provider {
++    def key = new File(keliverStoreDir.get(), 'keys/ed25519.priv')
++    if (!key.exists()) return []
++    [new app.cash.zipline.gradle.ZiplineCompileTask.ManifestSigningKey(
++      'portal-ed25519',
++      app.cash.zipline.loader.SignatureAlgorithmId.Ed25519,
++      okio.ByteString.decodeHex(key.text.trim()))]
++  })
++}
+diff --git a/editor/src/wasmJsMain/kotlin/InventoryPreview.kt b/editor/src/wasmJsMain/kotlin/InventoryPreview.kt
+index fa4e443..5346830 100644
+--- a/editor/src/wasmJsMain/kotlin/InventoryPreview.kt
++++ b/editor/src/wasmJsMain/kotlin/InventoryPreview.kt
+@@ -1,22 +1,67 @@
+ /*
+- * Inventory's per-app preview entry: map each portal screen name (the .kt basename
+- * the relay ingests) to a ScreenPreview running the REAL presenter. See
+- * keliver docs/ROADMAP.md item ② + docs/SCREEN_ARCHITECTURE.md §8.
++ * Inventory's per-app preview entry: each portal screen name (the .kt basename
++ * the relay ingests) runs the REAL hand-owned presenter over the same
++ * deterministic InventoryState the device uses. Values are strings, as the
++ * preview transport requires; the list goes through putRows.
+  */
++import androidx.compose.runtime.remember
+ import dev.keliver.portal.render.AppPreviewEntry
+ import dev.keliver.portal.render.PreviewFrame
+ import dev.keliver.portal.render.ScreenPreview
++import dev.keliver.portal.render.putRows
++import inventory.logic.InventoryPresenter
++import inventory.logic.InventoryState
++import inventory.logic.ItemPresenter
++import inventory.logic.SeedInventory
+ 
+ object InventoryPreview : AppPreviewEntry {
+-  override val label = "inventory"
++  override val label = "inventory (real presenters)"
+ 
+   override val screens: Map<String, ScreenPreview> = mapOf(
+-    // "MyScreen" to ScreenPreview { env ->
+-    //   val b = MyPresenter(onAction = { env.log("→ $it") })
+-    //   PreviewFrame(
+-    //     values = mapOf("field" to b.field),           // + putRows(...) for lists
+-    //     dispatch = { action, arg -> /* route to b.* */ },
+-    //   )
+-    // },
++    "inventory" to ScreenPreview { env ->
++      val state = remember { InventoryState() }
++      val b = InventoryPresenter(state)
++      PreviewFrame(
++        values = buildMap {
++          put("query", b.query)
++          put("summary", b.summary)
++          put("isEmpty", b.isEmpty.toString())
++          put("emptyMessage", b.emptyMessage)
++          putRows("items", "item", b.items.map { mapOf("id" to it.id, "name" to it.name, "stockLine" to it.stockLine) })
++        },
++        dispatch = { action, arg ->
++          when (action) {
++            "search" -> b.search(arg.orEmpty())
++            "clearSearch" -> b.clearSearch()
++            // Navigation is the app root's job (logic/InventoryApp.kt); here it is logged.
++            "open" -> env.log("→ open ${arg ?: "(no row id delivered)"}")
++            else -> env.log("unhandled action: $action")
++          }
++        },
++      )
++    },
++    "item" to ScreenPreview { env ->
++      val state = remember { InventoryState().apply { open(SeedInventory.items.first().id) } }
++      val b = ItemPresenter(state)
++      PreviewFrame(
++        values = mapOf(
++          "name" to b.name,
++          "details" to b.details,
++          "quantityLabel" to b.quantityLabel,
++          "isLowStock" to b.isLowStock.toString(),
++          "lowStockWarning" to b.lowStockWarning,
++          "historyLabel" to b.historyLabel,
++        ),
++        dispatch = { action, arg ->
++          when (action) {
++            "increment" -> b.increment()
++            "decrement" -> b.decrement()
++            "receive" -> b.receive(arg?.toIntOrNull() ?: 10)
++            "back" -> env.log("→ back")
++            else -> env.log("unhandled action: $action")
++          }
++        },
++      )
++    },
+   )
+ }
+diff --git a/keliver.portal.json b/keliver.portal.json
+index 4de1a33..bf7ecff 100644
+--- a/keliver.portal.json
++++ b/keliver.portal.json
+@@ -4,5 +4,7 @@
+   "appRuntime": {
+     "keliverVersion": "0.3.3",
+     "widgetVersion": 1
+-  }
++  },
++  "publishTask": ":compileDevelopmentExecutableKotlinJsZipline",
++  "publishOutput": "build/zipline/Development"
+ }
+diff --git a/src/jsMain/kotlin/device/Main.kt b/src/jsMain/kotlin/device/Main.kt
+index 491443f..e94a724 100644
+--- a/src/jsMain/kotlin/device/Main.kt
++++ b/src/jsMain/kotlin/device/Main.kt
+@@ -9,8 +9,7 @@ import dev.keliver.treehouse.StandardAppLifecycle
+ import dev.keliver.treehouse.TreehouseUi
+ import dev.keliver.treehouse.ZiplineTreehouseUi
+ import dev.keliver.treehouse.asZiplineTreehouseUi
+-import inventory.logic.InventoryPresenter
+-import inventory.screens.InventoryScreen
++import inventory.logic.InventoryApp
+ 
+ /**
+  * The service the generic keliver device host take()s.
+@@ -26,7 +25,9 @@ interface PortalPresenter : AppService, ZiplineService {
+ private class AppUi : TreehouseUi {
+   @Composable
+   override fun Show() {
+-    InventoryScreen(InventoryPresenter())
++    // Hand-edited: the scaffolder wires one screen + one presenter; this app
++    // navigates between two, so it mounts its own root (logic/InventoryApp.kt).
++    InventoryApp()
+   }
+ }
+ 
