@@ -1,0 +1,91 @@
+# The inventory reference app (reference/inventory), built the way an adopter
+# would build it: from the PUBLISHED tools release and Maven Central, never from
+# this checkout's build. Then checked on an emulator: the development route,
+# a D14 layout edit, and production OTA with app-owned disposable keys.
+#
+# This is dogfooding, not adoption: the app is ours.
+#
+# Read-only. Nothing here can create a release, attach an asset, publish a
+# package or move a tag. The production host is built from the tools release's
+# own source commit (the portal-tools-v0.3.5 tag), because no production host
+# that renders keliver-material is published — see reference/inventory/README.md.
+name: reference-app
+on:
+  push:
+    branches: ["followup/0.3.5-record-and-reference-app"]
+    paths: ["reference/**", ".github/workflows/reference-app.yml"]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  reference-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the tools release's source commit (for the production host)
+        uses: actions/checkout@v4
+        with:
+          ref: portal-tools-v0.3.5
+          path: release-src
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Download the PUBLIC tools 0.3.5 release, as the adopter guide does
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/evidence"
+          cd "$RUNNER_TEMP/dl"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5
+          curl -fsSLO "$base/keliver-portal-tools-0.3.5.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.5.zip.sha256"
+          {
+            echo "downloaded: $base/keliver-portal-tools-0.3.5.zip"
+            sha256sum -c keliver-portal-tools-0.3.5.zip.sha256
+            sha256sum keliver-portal-tools-0.3.5.zip
+            unzip -p keliver-portal-tools-0.3.5.zip 'keliver-portal-tools-0.3.5/VERSION.json'
+            echo "release source commit: $(git -C "$GITHUB_WORKSPACE/release-src" rev-parse HEAD)"
+          } | tee "$GITHUB_WORKSPACE/evidence/public-download.txt"
+          test "$(sha256sum keliver-portal-tools-0.3.5.zip | cut -d' ' -f1)" = \
+            4e1c3040c2e069ab2a503f4b45a7740a28ac243edfb233cdffc7bcb7e7eeb439
+          test "$(git -C "$GITHUB_WORKSPACE/release-src" rev-parse HEAD)" = \
+            b5615637531127c1d408fe0f7d652cac044d2930
+
+      - name: Prepare — bootstrap, ingest, signed v1, production host
+        run: |
+          bash reference/inventory/ci/prepare.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence" \
+            "$GITHUB_WORKSPACE/release-src" "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.5.zip"
+          # Free the Keliver build's daemon before the emulator starts.
+          (cd "$GITHUB_WORKSPACE/release-src" && ./gradlew --stop) || true
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: Emulator — development route, D14 edit, production OTA
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: aosp_atd
+          arch: x86_64
+          profile: pixel_5
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          disable-animations: true
+          script: bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-app-evidence-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30

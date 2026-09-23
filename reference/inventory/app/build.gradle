@@ -1,0 +1,77 @@
+// Inventory — keliver server-driven-UI screens (the guest). Author screens in
+// src/jsMain/kotlin/screens/ (visually via keliver-portal, or here in your IDE
+// with native Compose completion). Compiles to JS; ships OTA as a signed bundle.
+plugins {
+  id 'org.jetbrains.kotlin.multiplatform'
+  id 'org.jetbrains.kotlin.plugin.compose'
+  id 'org.jetbrains.compose'
+  // @Serializable API types need this at RUNTIME on Kotlin/JS. Without it the
+  // code still COMPILES and then fails in the browser with
+  //   SerializationException: Serializer for class 'X' is not found
+  // which is why it ships enabled rather than as a commented hint.
+  id 'org.jetbrains.kotlin.plugin.serialization'
+  id 'app.cash.zipline'
+}
+
+kotlin {
+  js {
+    browser()
+    // required for the Zipline bundle + serveDevelopmentZipline
+    binaries.executable()
+  }
+  sourceSets {
+    jsMain {
+      dependencies {
+        api 'dev.keliver:keliver-material-compose:0.3.3'   // StyledText/Button/Icon/ListItem/…
+        api 'dev.keliver:keliver-layout-compose:0.3.3'     // Column/Row/Spacer
+        api 'dev.keliver:portal-sql:0.3.3'                 // HostSqlDriver data layer
+        implementation 'org.jetbrains.compose.runtime:runtime:1.8.2'
+        // device path: render this app's screens on the generic keliver host
+        api 'dev.keliver:keliver-treehouse-guest:0.3.3'
+        api 'dev.keliver:keliver-treehouse-guest-compose:0.3.3'
+        implementation 'dev.keliver:keliver-material-protocol-guest-web:0.3.3'
+        implementation 'app.cash.zipline:zipline:1.22.0'
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PRODUCTION SIGNING — hand-added. Neither keliver-init nor
+// keliver-new-device-target.sh writes this, and the adopter guide does not
+// describe it; it is modelled on Keliver's own portal-published-guest.
+//
+// The relay's POST /publish runs `publishTask` (keliver.portal.json) and stores
+// its output as a versioned bundle. It does not sign: the Zipline compile task
+// does, with the private key of THIS app's store. The store is asked of the
+// tools bundle's resolver, never derived here, and a resolver that cannot
+// answer fails the compile rather than producing an unsigned bundle.
+//
+// Needs KP (the keliver-portal-tools bin directory, as the adopter guide
+// exports it) or -Pkeliver.toolsBin=<dir>. Must stay AFTER the kotlin {} block:
+// the zipline plugin sets signingKeys when binaries.executable() registers the
+// compile task, and the later configuration action wins.
+def keliverStoreDir = providers.provider {
+  def bin = providers.gradleProperty('keliver.toolsBin').orElse(providers.environmentVariable('KP')).getOrNull()
+  if (!bin) throw new GradleException('keliver: set KP (or -Pkeliver.toolsBin) to the keliver-portal-tools bin directory, so the store can be resolved for signing')
+  def proc = [new File(bin, 'keliver-store-path.sh').absolutePath, rootDir.absolutePath,
+              '--home', System.getProperty('user.home')].execute()
+  def out = new StringBuilder(), err = new StringBuilder()
+  proc.waitForProcessOutput(out, err)
+  if (proc.exitValue() != 0) throw new GradleException("keliver: keliver-store-path.sh exited ${proc.exitValue()}: ${err.toString().trim()}")
+  def path = out.toString().trim()
+  if (!path.startsWith('/')) throw new GradleException("keliver: keliver-store-path.sh returned a non-absolute path: '${path}'")
+  new File(path)
+}
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
+  signingKeys.set(providers.provider {
+    def key = new File(keliverStoreDir.get(), 'keys/ed25519.priv')
+    if (!key.exists()) return []
+    [new app.cash.zipline.gradle.ZiplineCompileTask.ManifestSigningKey(
+      'portal-ed25519',
+      app.cash.zipline.loader.SignatureAlgorithmId.Ed25519,
+      okio.ByteString.decodeHex(key.text.trim()))]
+  })
+}
