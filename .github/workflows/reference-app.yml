@@ -10,9 +10,11 @@
 # own source commit (the portal-tools-v0.3.5 tag), because no production host
 # that renders keliver-material is published — see reference/inventory/README.md.
 name: reference-app
+# Runs on a pull request that touches the reference app or this workflow, and on
+# demand. Not on push: it downloads a published release and boots an emulator,
+# which is a check of the adopter route, not of every commit.
 on:
-  push:
-    branches: ["followup/0.3.5-record-and-reference-app"]
+  pull_request:
     paths: ["reference/**", ".github/workflows/reference-app.yml"]
   workflow_dispatch: {}
 permissions:
