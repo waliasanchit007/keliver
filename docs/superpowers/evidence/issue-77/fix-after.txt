@@ -1,0 +1,45 @@
+== tree: b96a9e2eb 1 modified build file(s)
+ portal-device-ios/build.gradle | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
+== 0. first run of generatePortalKey
+rc=0  :portal-device-ios:generatePortalKey
+PortalPublicKey.kt
+== 1. plant Planted.kt, run generatePortalKey again (warm)
+rc=0  :portal-device-ios:generatePortalKey
+PortalPublicKey.kt
+RESULT 1: Planted.kt ABSENT
+== generated constant
+RESULT const: PortalPublicKey.kt is exactly the expected source, key 5ca1ab1e5ca1ab1e5ca1ab1e5ca1ab1e5ca1ab1e5ca1ab1e5ca1ab1e5ca1ab1e
+== 2. plant again (if gone), then link the debug iosSimulatorArm64 framework (warm)
+Planted.kt
+PortalPublicKey.kt
+rc=0
+  :portal-device-ios:generatePortalKey
+  :portal-device-ios:compileKotlinIosSimulatorArm64
+  :portal-device-ios:linkDebugFrameworkIosSimulatorArm64
+BUILD SUCCESSFUL in 49s
+PortalPublicKey.kt
+== 2a. klib
+klib: portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib
+RESULT 2a: files in the klib mentioning PLANTED/plantedMarker: 0
+== 2b. framework
+framework: portal-device-ios/build/bin/iosSimulatorArm64/debugFramework/PortalDeviceHost.framework
+  built: Sep 24 12:09:20 2026
+RESULT 2b header: plantedMarker lines in Headers = 0
+RESULT 2b symbol: nm lines for plantedMarker = 0
+RESULT 2b literal: UTF-16LE "PLANTED_MARKER_77" occurrences = 0
+RESULT const binary: UTF-16LE key hex occurrences = 1
+== 3. nothing planted: link again (does rewriting the key file dirty the compile?)
+rc=0
+  :portal-device-ios:generatePortalKey
+  :portal-device-ios:compileKotlinIosSimulatorArm64 UP-TO-DATE
+  :portal-device-ios:linkDebugFrameworkIosSimulatorArm64 UP-TO-DATE
+PortalPublicKey.kt
+== isolation
+  KONAN_DATA_DIR=<run>/konan (2 entries)
+  entries under the real ~/.konan changed during this run: 0
+  daemons: 1 in <run>/gradle-home
+real 62.60
+user 3.70
+sys 2.15
+exit=0

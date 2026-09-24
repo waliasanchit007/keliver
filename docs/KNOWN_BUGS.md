@@ -1518,7 +1518,18 @@ none is a security hole.
      public planted function, `linkDebugFrameworkIosSimulatorArm64` exports it
      in `PortalDeviceHost.h` and carries its compiled symbol in the binary
      (boundary 2, debug simulator framework). Release and `iosArm64` not
-     measured. Still not fixed.
+     measured.
+
+     **Fixed 2026-09-24 — the foreign-file hole only.** `generatePortalKey` now
+     empties its directory in its own action and runs every time, like
+     `syncPortalKey`. Measured with `evidence/issue-77/fix-repro.sh`, warm, on
+     the debug simulator framework: the planted file is gone after the task, the
+     klib holds nothing of it, and the framework exports and contains nothing of
+     it; `PortalPublicKey.kt` is exactly the expected source and the key literal
+     is still in the binary; with nothing planted, compile and link stay
+     UP-TO-DATE. Release and `iosArm64` still not measured. The other half of the
+     asymmetry — no `devOnlyHost` short-circuit, so every `compileKotlinIos*`
+     consults the store — is unchanged.
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
