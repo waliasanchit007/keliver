@@ -261,12 +261,14 @@ and kept under "Completed priorities" below.
    Alongside it, U28: the production host logs a false `codeLoadFailed` on every
    start.
 4. **#77 — the iOS host's key generation is not hardened like Android's.**
-   Reproduced, then **fixed on a branch** (not merged): `generatePortalKey`
-   empties its directory and runs every time, like Android's `syncPortalKey`.
-   Measured on a warm debug simulator framework: the planted source no longer
-   reaches the klib or the framework, and the key constant is unchanged
+   Reproduced, then **fixed** (unreleased): `generatePortalKey` empties its
+   directory without following links, fails loudly on anything it cannot
+   delete, checks the result and runs every time. Measured on a warm debug
+   simulator framework: the planted source no longer reaches the klib or the
+   framework, and the key constant is unchanged
    (`superpowers/evidence/issue-77/`). Release and `iosArm64` not measured; the
-   missing `devOnlyHost` short-circuit on iOS is unchanged.
+   missing `devOnlyHost` short-circuit on iOS is unchanged. The review found the
+   same deletion flaw in Android's `syncPortalKey` (U30, open).
 5. **U19 (live-preview re-render; cause unresolved) and U20 (editor frame rate;
    measured, not assessed)** — open. The reference app's Live preview behaved
    correctly for 21 checked interactions (`docs/REFERENCE_APP.md`), which is

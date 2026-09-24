@@ -1,6 +1,6 @@
-== tree: b96a9e2eb 1 modified build file(s)
- portal-device-ios/build.gradle | 18 +++++++++++++++---
- 1 file changed, 15 insertions(+), 3 deletions(-)
+== tree: 13d676f4f 1 modified build file(s)
+ portal-device-ios/build.gradle | 25 +++++++++++++++++++++++--
+ 1 file changed, 23 insertions(+), 2 deletions(-)
 == 0. first run of generatePortalKey
 rc=0  :portal-device-ios:generatePortalKey
 PortalPublicKey.kt
@@ -15,9 +15,9 @@ Planted.kt
 PortalPublicKey.kt
 rc=0
   :portal-device-ios:generatePortalKey
-  :portal-device-ios:compileKotlinIosSimulatorArm64
-  :portal-device-ios:linkDebugFrameworkIosSimulatorArm64
-BUILD SUCCESSFUL in 49s
+  :portal-device-ios:compileKotlinIosSimulatorArm64 UP-TO-DATE
+  :portal-device-ios:linkDebugFrameworkIosSimulatorArm64 UP-TO-DATE
+BUILD SUCCESSFUL in 2s
 PortalPublicKey.kt
 == 2a. klib
 klib: portal-device-ios/build/classes/kotlin/iosSimulatorArm64/main/klib
@@ -39,7 +39,4 @@ PortalPublicKey.kt
   KONAN_DATA_DIR=<run>/konan (2 entries)
   entries under the real ~/.konan changed during this run: 0
   daemons: 1 in <scratch>/gh77
-real 62.60
-user 3.70
-sys 2.15
 exit=0

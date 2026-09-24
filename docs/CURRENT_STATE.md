@@ -47,13 +47,16 @@ Not demonstrated for any current artifact: a physical Android device, arm64
 execution, and iOS for the reference app.
 
 **Unresolved defects:** U19 (live-preview re-render, cause unresolved); U20
-(editor frame rate, measured not assessed); #77 (iOS `generatePortalKey`
-foreign-file hole — reproduced through to a linked debug framework; fixed on a
-branch, not merged, measured on that debug simulator framework only);
+(editor frame rate, measured not assessed); U30 (Android `syncPortalKey`
+empties its directory through symlinks — found reviewing #77);
 U27 (the relay writes `keys/ed25519.priv` world-readable); U28 (the production
 host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
 `REFERENCE_APP.md` — no published production host, publish not scaffolded.
 Priorities: `ROADMAP.md` "Current priorities".
+
+**Fixed since tools 0.3.5, unreleased:** #77 — iOS `generatePortalKey` owns its
+directory, on warm builds too (measured on a debug simulator framework only;
+release and `iosArm64` not measured).
 
 **Historical evidence whose app is gone:** every "Stashfin" gate below — the
 Android/iOS/web loop from one guest source, Profile's 0 RawCode port, the

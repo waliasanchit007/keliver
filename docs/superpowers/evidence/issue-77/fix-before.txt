@@ -32,7 +32,7 @@ RESULT const binary: UTF-16LE key hex occurrences = 1
 == isolation
   KONAN_DATA_DIR=<run>/konan (2 entries)
   entries under the real ~/.konan changed during this run: 0
-  daemons: 1 in <run>/gradle-home
+  daemons: 1 in <scratch>/gh77
 real 345.92
 user 10.07
 sys 3.97

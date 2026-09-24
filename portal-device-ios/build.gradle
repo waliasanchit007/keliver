@@ -25,6 +25,14 @@ apply plugin: 'app.cash.zipline' // IR plugin: rewrites the host's zipline.take/
 // the same shape and is fixed the same way: the task empties the directory in
 // its own action and runs every time, which costs one small write. Rewriting
 // identical bytes does not dirty the compile, whose inputs are content hashes.
+//
+// The emptying never follows a link and never fails quietly. Groovy's
+// deleteDir() does both: it recurses through a symlink into its target, and it
+// returns false instead of throwing, so an undeletable plant would survive a
+// green build. Files.walk does not follow links (a link is deleted, not what it
+// points at), Files.delete throws, and the result is checked — exactly one file.
+// The key is checked too: it is spliced into Kotlin source, so anything but 64
+// hex digits would be source as well.
 def portalPubKey = providers.provider { new File(keliverPortalStore(project), 'keys/ed25519.pub') }
 def portalKeyDir = file("$buildDir/generated/portalKeys/kotlin")
 def generatePortalKey = tasks.register('generatePortalKey') {
@@ -35,9 +43,22 @@ def generatePortalKey = tasks.register('generatePortalKey') {
   doLast {
     def keyFile = portalPubKey.get()
     def hex = keyFile.exists() ? keyFile.text.trim() : ''
-    portalKeyDir.deleteDir()
-    portalKeyDir.mkdirs()
+    if (hex && !(hex ==~ /[0-9a-fA-F]{64}/)) {
+      throw new GradleException("generatePortalKey: $keyFile is not 64 hex digits, so it is not an " +
+        "Ed25519 public key, and it would be spliced into Kotlin source. Nothing was generated.")
+    }
+    def dir = portalKeyDir.toPath()
+    if (java.nio.file.Files.exists(dir, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+      def doomed = java.nio.file.Files.walk(dir).withCloseable { it.sorted(Comparator.reverseOrder()).toList() }
+      doomed.each { java.nio.file.Files.delete(it) }
+    }
+    java.nio.file.Files.createDirectories(dir)
     new File(portalKeyDir, 'PortalPublicKey.kt').text = "package dev.keliver.portaldevice.ios\n\n// GENERATED from the portal store's ed25519.pub — do not edit.\ninternal const val PORTAL_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+    def held = (portalKeyDir.list() ?: new String[0]) as List
+    if (held != ['PortalPublicKey.kt']) {
+      throw new GradleException("generatePortalKey: $portalKeyDir holds $held after regeneration, not " +
+        "exactly PortalPublicKey.kt. It is an iOS source directory; refusing to compile from it.")
+    }
   }
 }
 tasks.configureEach { t ->

@@ -2,7 +2,12 @@
 # #77 — does generatePortalKey's directory hold ONLY its intended output, and
 # does a foreign source planted there reach the iOS build?
 #
-#   repro.sh <label>      (run once on the unfixed tree, once on the fixed one)
+#   fix-repro.sh <label>
+#
+# Layout it expects beside itself: wt/ (a worktree of this repository at the
+# tree to measure), store/keys/ed25519.pub (any 64 hex digits), and a
+# disposable GRADLE_USER_HOME in the environment. Step 3 was added after the
+# unfixed run was taken, so fix-before.txt has no step 3.
 #
 # Isolated: GRADLE_USER_HOME and the JVM's user.home are disposable, and the
 # store passed as -Pkeliver.portalStore holds only a dummy PUBLIC key
