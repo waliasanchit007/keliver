@@ -1,0 +1,11 @@
+downloaded: https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5/keliver-portal-tools-0.3.5.zip
+keliver-portal-tools-0.3.5.zip: OK
+4e1c3040c2e069ab2a503f4b45a7740a28ac243edfb233cdffc7bcb7e7eeb439  keliver-portal-tools-0.3.5.zip
+{
+  "toolsVersion": "0.3.5",
+  "sourceCommit": "b5615637531127c1d408fe0f7d652cac044d2930",
+  "sourceDirtyFiles": 0,
+  "mavenDependencyVersion": "0.3.3",
+  "builtBy": "scripts/build-portal-tools.sh"
+}
+release source commit: b5615637531127c1d408fe0f7d652cac044d2930

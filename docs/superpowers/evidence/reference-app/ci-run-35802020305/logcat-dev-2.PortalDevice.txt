@@ -1,0 +1,2 @@
+09-23 00:37:07.217  2610  2610 D PortalDevice: onCreate — mode=dev, devOnlyHost=true
+09-23 00:37:08.524  2610  2628 D PortalDevice: codeLoadSuccess modules=40

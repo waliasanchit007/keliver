@@ -1,0 +1,32 @@
+PASS the bundle's installer installed the generic development host
+PASS serveDevelopmentZipline is serving the app
+PASS the generic host entered the development path
+PASS E1-E10 on the development route
+PASS the relay for this app is up
+PASS D2: the relay applied the title edit: {"ok":true,"version":2}
+PASS D2: the source change is 2 lines in screens/inventory.kt and nothing else tracked
+PASS D2: the diff is exactly the title text and size
+PASS D2: the Compiled_inventory.kt stamp appeared
+PASS D2: every file under logic/ is byte-identical after the edit
+PASS rebuilt and serving the edited app
+PASS D3: the device shows the edited title
+PASS D3: E1-E10 unchanged after the edit
+PASS installed the production host 887774e95068aa869a1854de2e3c83e2337a70cc1e08a8d17da0879632237d32
+PASS P1: the installed host is not the development-only build (devOnlyHost=false)
+PASS P2: production verifies with this app's key (df8437e6…)
+PASS P2: production was not refused
+PASS P2: the signed v1 loaded (codeLoadSuccess)
+PASS P2: v1 shows Inventory in production
+PASS P3: repeated actions run from the signed bundle
+PASS P4: publish OK: bundle v2 (widgetVersion=1, srcHash=dacb9d455d8e7001) -> <work>/home/.keliver-portal/apps/inventory-2c1fa026/bundles/v2
+PASS P4: the signed v2 loaded
+PASS P4: the second signed version shows Stockroom
+PASS P5: a relay for the copy is up
+PASS P5: the copy has its own store and a different key (249349a9… vs df8437e6…)
+PASS P5: the copy published a bundle signed with ITS key
+PASS P5: verification still uses this app's key
+PASS P5: the foreign-signed bundle was rejected on its signature
+PASS P5: no code loaded
+PASS P5: Foreign build never appeared
+PASS P6: this app's signed bundle loads again, verified
+PASS P6: Stockroom is back

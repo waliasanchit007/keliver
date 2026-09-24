@@ -1,0 +1,15 @@
+diff --git a/src/jsMain/kotlin/screens/inventory.kt b/src/jsMain/kotlin/screens/inventory.kt
+index 04db2b3..01322fc 100644
+--- a/src/jsMain/kotlin/screens/inventory.kt
++++ b/src/jsMain/kotlin/screens/inventory.kt
+@@ -14,8 +14,8 @@ import dev.keliver.ui.Dp
+ fun InventoryScreen(b: InventoryScreenBindings) {
+   Column {
+     StyledText(
+-      text = "Inventory",
+-      fontSize = 28,
++      text = "Stockroom",
++      fontSize = 30,
+       bold = true,
+     )
+     TextField(

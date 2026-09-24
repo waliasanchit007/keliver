@@ -1,0 +1,5 @@
+  FAIL  TITLE  the list screen shows the title 'Foreign build'
+        observed: []
+  FAIL  TITLE-ONLY  no other known title is shown (Inventory, Stockroom)
+        observed: []
+P5: passed 0, failed 2

@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-09-05 (see the `Post-snapshot:` sections)
+**Last updated:** 2026-09-23 (status at a glance below; details in the `Post-snapshot:` sections)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -17,6 +17,49 @@ forward-looking roadmaps.
 > the six product gaps below are already resolved. Where that happens
 > the base section now carries a status banner; trust the banner and the dated
 > section it points to.
+
+## Status at a glance — 2026-09-23
+
+Four different kinds of claim, kept apart. **There is no external adopter**; a
+reference app we wrote ourselves is dogfooding, not adoption.
+
+**Shipped** — published artifacts anyone can fetch today:
+
+| what | version | where |
+|---|---|---|
+| libraries `dev.keliver:*` | **0.3.3** | Maven Central (unchanged since 2026-09-05) |
+| `keliver-portal-tools` | **0.3.5** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5), 2026-09-22, tag → `b5615637`; zip `4e1c3040…` |
+| `keliver-portal-tools` | 0.3.4 | still published, unchanged |
+| a production host for keliver-material screens | — | **not shipped.** The bundled host is development-only by design. |
+
+**Demonstrated, and on what** — runs we did, on apps we wrote:
+
+| capability | app | platform | when |
+|---|---|---|---|
+| scaffold → compile → 0 RawCode ingest → surgical edit, from **published artifacts only** | `reference/inventory` | macOS (local, not committed) 2026-09-22; Linux CI | 2026-09-23 |
+| Live preview with the app's real presenters, repeated actions | `reference/inventory` | macOS, headless Chrome | 2026-09-22 |
+| development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, runs `35802020305`, `35803336957` |
+| production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23, runs `35800642819`, `35802020305`, `35803336957` |
+| bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
+| store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
+
+Not demonstrated for any current artifact: a physical Android device, arm64
+execution, and iOS for the reference app.
+
+**Unresolved defects:** U19 (live-preview re-render, cause unresolved); U20
+(editor frame rate, measured not assessed); #77 (iOS `generatePortalKey`
+foreign-file hole — reproduced through to a linked debug framework, not fixed);
+U27 (the relay writes `keys/ed25519.priv` world-readable); U28 (the production
+host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
+`REFERENCE_APP.md` — no published production host, publish not scaffolded.
+Priorities: `ROADMAP.md` "Current priorities".
+
+**Historical evidence whose app is gone:** every "Stashfin" gate below — the
+Android/iOS/web loop from one guest source, Profile's 0 RawCode port, the
+hot-reload timings, the editor-distribution proof — was recorded against
+`stashfin-sdui`, lost on 2026-09-05. It shows the path worked then; it cannot be
+re-run. (K3's tri-platform captures used an in-repo tree and are not in this
+category.)
 
 ## Product state
 
@@ -1411,3 +1454,59 @@ the asset is attached by hand from a named retained artifact. Procedure:
 `docs/PORTAL_TOOLS_RELEASE.md`.
 
 Not covered by any of this: physical devices, other API levels, and arm64.
+
+## Post-snapshot: tools 0.3.5 released, and a reference app from published artifacts — 2026-09-22/23
+
+**Tools 0.3.5 is published.** PR #80 merged (`b96a9e2eb`, head matched
+server-side); tag `portal-tools-v0.3.5` on the source commit `b5615637`, not
+the merge; the asset is retained artifact `10721358747`, uploaded byte-for-byte
+(zip `4e1c3040…`, APK `475276a4…`). The tag push ran `portal-tools.yml`'s
+read-only rebuild (`35796515942`), as it always will; its artifact was not
+attached. Post-merge CI `35796446241` and pages `35796446216` passed. Tools 0.3.4
+and Maven 0.3.3 are unchanged; "Latest" stays on `v0.3.3`. Full record,
+including how the stored asset was checked when this machine's network blocked
+the download host: `RELEASE_NOTES_TOOLS_0.3.5.md`. One correction was made to
+the published notes after publication: a limitations line wrongly listed
+U25.2–.4 as open.
+
+**A reference app, from what an adopter gets — for development.** `reference/inventory`
+— search, an empty state, item detail, quantity adjustments — scaffolded with the
+published tools and compiled against Maven Central 0.3.3, outside this checkout.
+Its production route is not published-only: the production host is compiled from
+Keliver source at `b5615637`, and the CI harness is this repository's.
+`bootstrap.sh` recreates it; `.github/workflows/reference-app.yml` runs it end to
+end on a hosted runner and an API 33 x86_64 emulator. **Dogfooding, not
+adoption.** Results and every piece of friction: `REFERENCE_APP.md`. In short:
+
+- 0 RawCode on both screens; D14's write-back leg — an edit through `/ops` —
+  changed exactly two lines and left `logic/` byte-identical; Live preview ran
+  the real presenters (21/0; its Bindings panel lagged one update in every
+  capture). **D14's device-screenshot leg is not met:** runs 1–4 took no
+  screenshot, and run 5's six captures (screencap and the emulator's own) are
+  all black — visual verification of the device render is incomplete
+  (`REFERENCE_APP.md` "Device screenshots").
+- On the emulator: development route 30/0 (run `35802020305`; run `35800642819` failed one check on its own input driver, since fixed); production OTA with app-owned
+  disposable keys — signed v1 loads, repeated actions work, signed v2 changes
+  the title, a bundle signed by another app's key is refused
+  (`manifest signature for key portal-ed25519 did not verify!`), and the good
+  bundle loads again (both runs).
+- **Production needed this repository**: no published host renders
+  keliver-material screens, and the bundle's `host/README.md` points at
+  `sample/host-android`, which uses the sample's schema. Publishing is not
+  scaffolded (the default `publishTask` is Keliver's own module). The relay
+  writes the private key `0644`. These are now the top of ROADMAP's priorities.
+
+**#77, boundary 1 reproduced; boundary 2 at the klib level.** In an isolated
+worktree of `main` with a disposable store: a file planted in
+`portal-device-ios/build/generated/portalKeys/kotlin` survives an UP-TO-DATE
+`generatePortalKey`, and `compileKotlinIosSimulatorArm64` then compiles it —
+`PLANTED` is in the module's klib link data beside `PORTAL_PUBLIC_KEY_HEX`.
+Then, with a *public* planted function (so link-time dead-code elimination could
+not hide it) and `generatePortalKey` again UP-TO-DATE,
+`linkDebugFrameworkIosSimulatorArm64` produced a `PortalDeviceHost.framework`
+whose header exports `plantedMarker` and whose binary holds its compiled symbol
+(`_kfun:dev.keliver.portaldevice.ios#plantedMarker()`, per `nm`) and string
+literal. So foreign source planted in that directory **does** reach the linked
+framework — for a debug, simulator-arm64 build on this Mac. Not measured: a
+release framework, `iosArm64`, an app that embeds the framework. The issue's own
+`internal const` plant was shown at the klib level only. Not fixed.

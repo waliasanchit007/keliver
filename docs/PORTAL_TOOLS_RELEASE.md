@@ -25,11 +25,12 @@ step against a named, retained artifact.
 
 ## Procedure
 
-The notes for the next candidate live in
+The notes for the current release are
 [`RELEASE_NOTES_TOOLS_0.3.5.md`](RELEASE_NOTES_TOOLS_0.3.5.md).
 
-Everything below was executed for 0.3.4 on 2026-09-12 and is written from that
-run.
+Everything below was executed for 0.3.4 on 2026-09-12 and again for 0.3.5 on
+2026-09-22; where 0.3.5 found the written procedure wrong, the text below is
+corrected and says so.
 
 ### 0. Update the bundled guide's download block
 
@@ -128,14 +129,24 @@ and `publish-maven-central.yml` is `workflow_dispatch` only.
 
 ```bash
 git tag -a portal-tools-vX.Y.Z <sourceCommit> -m "..."
-git push origin portal-tools-vX.Y.Z          # must trigger nothing
-gh run list --limit 3                        # confirm it triggered nothing
+git push origin portal-tools-vX.Y.Z
+gh run list --limit 3                        # see what it DID trigger
 
 shasum -a 256 <zip> | sed 's|  .*/|  |' > <zip>.sha256
 gh release create portal-tools-vX.Y.Z --draft --verify-tag \
   --title "keliver-portal-tools X.Y.Z" --notes-file NOTES.md \
   <zip> <zip>.sha256
 ```
+
+**A tools tag push is not silent, and does not need to be.** This used to say
+the push "must trigger nothing". It never could: `portal-tools.yml` listens on
+`portal-tools-v*`, so the push runs its `bundle` job, which rebuilds the tagged
+commit and runs the portable checks (0.3.5: run `35796515942`). That is fine.
+The requirement is narrower and is what step 3 checks: **no workflow at the
+tagged commit can create a release, attach an asset or replace one.** A
+read-only rebuild produces an Actions artifact nobody attaches; the release
+asset stays the retained artifact that was verified. Check the run list for
+anything *other* than that one read-only run.
 
 **Download the draft asset back and hash it before publishing** — this is the
 step that proves what is actually stored, not what was sent:
@@ -145,6 +156,33 @@ gh api -H "Accept: application/octet-stream" \
   repos/<owner>/<repo>/releases/assets/<asset id> > check.zip
 shasum -a 256 check.zip
 ```
+
+GitHub also records a server-side `digest` for every stored asset, computed from
+the bytes it holds:
+
+```bash
+gh api repos/<owner>/<repo>/releases --jq \
+  '.[] | select(.tag_name=="portal-tools-vX.Y.Z") | .assets[] | {name, size, digest}'
+```
+
+**When the download host is unreachable.** Asset downloads, draft or public,
+redirect to `release-assets.githubusercontent.com`. For 0.3.5 the releasing
+machine's network blocked that host by name: the same IPs answered under other
+GitHub hostnames, a 97-byte `.sha256` came through once, and the 90 MB zip
+stalled at 0 bytes every time. Do not route around a network policy. What was
+done instead, and is acceptable only together:
+
+1. before publishing, both stored assets' server `digest` and `size` were
+   compared with the retained files (zip `4e1c3040…`, 90,351,569 bytes;
+   `.sha256` file `a07afb07…`, 97 bytes), with the tag re-checked at
+   `b5615637`;
+2. after publishing, the **public** download was checked from a GitHub-hosted
+   runner (`reference-app.yml`'s first step: `sha256sum -c` against the
+   release's own `.sha256`, then against the pinned hash — runs `35800642819`
+   and `35802020305`).
+
+The first is GitHub's own record of the stored bytes, not a download. Write it
+down that way in the release record.
 
 Then publish, and verify the *public* URL:
 

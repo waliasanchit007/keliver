@@ -1,0 +1,13 @@
+PASS bootstrap: the app was scaffolded from the published tools 0.3.5 zip
+PASS compile: ./gradlew compileKotlinJs against Maven Central 0.3.3
+PASS isolation guard: user.home and the resolved store are inside the work dir
+PASS the relay for this app answered on :8077
+PASS the relay's store is inside the work dir: <work>/home/.keliver-portal/apps/inventory-2c1fa026
+PASS the relay generated this app's disposable signing identity
+PASS D1 inventory: 10 widget nodes, 0 RawCode
+PASS D1 item: 13 widget nodes, 0 RawCode
+PASS publish v1: publish OK: bundle v1 (widgetVersion=1, srcHash=479c5ca1e7c5a951) -> <work>/home/.keliver-portal/apps/inventory-2c1fa026/bundles/v1
+PASS v1's manifest carries a portal-ed25519 signature
+PASS the production host built from b5615637531127c1d408fe0f7d652cac044d2930
+PASS P1: the host embeds assets/portal_ed25519.pub, equal to this app's public key
+PASS the development bundle builds
