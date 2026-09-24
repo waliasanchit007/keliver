@@ -1,0 +1,2 @@
+    key file mode: -rw-r--r--  ed25519.priv
+    key file mode: -rw-r--r--  ed25519.pub

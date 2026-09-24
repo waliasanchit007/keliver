@@ -14,6 +14,14 @@ expire after 30 days.
   the Zipline compile task's signing block (`app/build.gradle`), on each publish.
   The keys were generated inside the run directory and discarded with the runner,
   and every 64-hex-digit string here is a SHA-256 or a public key.
+* `ci-run-35967437120/` — from run
+  [`35967437120`](https://github.com/waliasanchit007/keliver/actions/runs/35967437120),
+  after the review's corrections: the results files (device 32/0), the published
+  manifests themselves (public: module hashes and signatures), `key-modes.txt` —
+  the store's key modes on the Linux runner, `-rw-r--r--`, the U27 measurement
+  from the published 0.3.5 relay — and `shots.results`, the verdict on each
+  device screenshot: all six BLANK. The black PNGs themselves are in the run's
+  artifact only.
 * `live-preview/` — the macOS Live-preview run: the CDP scenario
   (`live-scenario.mjs`, `cdp.mjs`), its log and results (21/0), the script's
   four captures with ▶ Live on (`L-*.png`), and one mock-mode capture taken by
