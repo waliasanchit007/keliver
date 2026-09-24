@@ -86,7 +86,8 @@ What it asserts is in `EXPECTATIONS.md` (D1 and P1's key comparison in
 logcat, diffs, the installed APK and — from run 5 on — the published manifests
 and device screenshots as an artifact. Screenshots are checked by `ci/shot.py`
 and reported in `shots.results`; a blank one is recorded as BLANK and never
-counted as a render.
+counted as a render. On this emulator every capture so far is BLANK (run
+35967437120), so the device render has not been visually verified.
 
 ## Where the route is rough
 

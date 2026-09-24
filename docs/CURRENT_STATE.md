@@ -1481,8 +1481,10 @@ adoption.** Results and every piece of friction: `REFERENCE_APP.md`. In short:
 - 0 RawCode on both screens; D14's write-back leg — an edit through `/ops` —
   changed exactly two lines and left `logic/` byte-identical; Live preview ran
   the real presenters (21/0; its Bindings panel lagged one update in every
-  capture). D14's device-screenshot leg: none was taken in these runs — see
-  `REFERENCE_APP.md`.
+  capture). **D14's device-screenshot leg is not met:** runs 1–4 took no
+  screenshot, and run 5's six captures (screencap and the emulator's own) are
+  all black — visual verification of the device render is incomplete
+  (`REFERENCE_APP.md` "Device screenshots").
 - On the emulator: development route 30/0 (run `35802020305`; run `35800642819` failed one check on its own input driver, since fixed); production OTA with app-owned
   disposable keys — signed v1 loads, repeated actions work, signed v2 changes
   the title, a bundle signed by another app's key is refused

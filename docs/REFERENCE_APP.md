@@ -43,7 +43,7 @@ Source and reproduction: [`reference/inventory/`](../reference/inventory) —
 | **Live preview with the real presenters**: 21 checks, real mouse events on the canvas | macOS, headless Chrome 153 | 21/0 |
 | development route on the bundle's generic host: E1–E10 | CI emulator, API 33 x86_64 | **30/0** (run 3) |
 | D3: the edited title on the device after a rebuild (view hierarchy) | CI emulator | pass |
-| **D14's device-render-screenshot leg** | CI emulator | **see "Device screenshots" below** — runs 1–4 took none |
+| **D14's device-render-screenshot leg** | CI emulator | **not met**: runs 1–4 took none; run 5 took six, all blank (see "Device screenshots") |
 | production OTA: P1–P6 | CI emulator, production host built from `b5615637` | **all pass** (runs 1 and 3) |
 | physical Android device | — | **not run** (none attached) |
 | arm64 Android | — | **not run** |
@@ -57,6 +57,7 @@ Source and reproduction: [`reference/inventory/`](../reference/inventory) —
 | [`35801890406`](https://github.com/waliasanchit007/keliver/actions/runs/35801890406) | `6fe677f03` | cancelled by me, to add per-invocation evidence labels before it finished |
 | [`35802020305`](https://github.com/waliasanchit007/keliver/actions/runs/35802020305) | `ac7de5f75` | **pass**: prepare 13/0, device 30/0; E1–E10 30/0 including the input checks E2.in/E3.in; P1–P6 all pass |
 | [`35803336957`](https://github.com/waliasanchit007/keliver/actions/runs/35803336957) | `5fadabaa3` | **pass** (the pull-request run at #81's first reviewed head; only the workflow trigger and README text differ from run 3): prepare 13/0, device 30/0, E 30/0 |
+| [`35967437120`](https://github.com/waliasanchit007/keliver/actions/runs/35967437120) | `25249e8ff` | **pass** after the review's corrections: prepare 13/0, device 32/0 — adding P1's `devOnlyHost=false` and D3's E1–E10 re-run after the edit (30/0); E 30/0. Device screenshots: 6 of 6 **BLANK**, outside the count (below). Manifests and key modes kept. |
 
 E3's assertion did not change between runs 1 and 3; the driver now clears with
 spare DELs, reads the field back, and asserts what it typed as its own check.
@@ -211,13 +212,13 @@ each run's evidence artifact; for runs 1–4 only the manifests' sha256 (and v1'
 signer and module count) were kept, and from run 5 on the manifests themselves
 (`manifest-v1/-v2/-foreign.zipline.json`).
 
-| | run 3 (`35802020305`) | run 1 (`35800642819`) | run 4 (`35803336957`) |
-|---|---|---|---|
-| production host APK sha256 | `92af8ceebfec4cc8e47928ed20ff90b89dc50437bc1e5f23979b05c92ce1f2bf` | `58b7b5a640d0644b008f05b5ce1e8424606f13b6dba524b18fd9da8db1924f80` | `ccc7d915aa710aed7e42cf6473e8be8265e26f1fa4beb31fa92d6ca60f93d7f9` |
-| app key (store `keys/ed25519.pub`) | `4ebb499a…` | `e91529de…` | `e3f98d90…` |
-| foreign copy's key | `970839c6…` | `6a825f3b…` | `81734293…` |
-| v1 manifest sha256 (title Inventory) | `c4e6cd91…` | `243a7d74…` | `99a92715…` |
-| v2 manifest sha256 (title Stockroom) | `4a8f6202…` | `883fd1cd…` | `cc6c4dd3…` |
+| | run 3 (`35802020305`) | run 1 (`35800642819`) | run 4 (`35803336957`) | run 5 (`35967437120`) |
+|---|---|---|---|---|
+| production host APK sha256 | `92af8ceebfec4cc8e47928ed20ff90b89dc50437bc1e5f23979b05c92ce1f2bf` | `58b7b5a640d0644b008f05b5ce1e8424606f13b6dba524b18fd9da8db1924f80` | `ccc7d915aa710aed7e42cf6473e8be8265e26f1fa4beb31fa92d6ca60f93d7f9` | `887774e95068aa869a1854de2e3c83e2337a70cc1e08a8d17da0879632237d32` |
+| app key (store `keys/ed25519.pub`) | `4ebb499a…` | `e91529de…` | `e3f98d90…` | `df8437e6…` |
+| foreign copy's key | `970839c6…` | `6a825f3b…` | `81734293…` | `249349a9…` |
+| v1 manifest sha256 (title Inventory) | `c4e6cd91…` | `243a7d74…` | `99a92715…` | `2e6464af…` |
+| v2 manifest sha256 (title Stockroom) | `4a8f6202…` | `883fd1cd…` | `cc6c4dd3…` | `4f4eb2ea…` |
 
 The table below quotes run 3. Evidence names ending `.PortalDevice.txt` are
 committed (`superpowers/evidence/reference-app/ci-run-35802020305/`, the
@@ -269,7 +270,21 @@ BLANK in `shots.results`. VALID says a frame was drawn, not that it is right;
 what it shows is for a person to look at. A BLANK capture is kept and reported
 and never counts toward D14.
 
-**Run 5:** pending.
+**Run 5 ([`35967437120`](https://github.com/waliasanchit007/keliver/actions/runs/35967437120), head `25249e8ff`): all six captures BLANK.**
+
+| point | `screencap` | emulator `screenrecord screenshot` |
+|---|---|---|
+| after E1–E10 | 1080×2340, 1 colour, 0.0% non-black — BLANK | same — BLANK |
+| after D3 (`Stockroom`, development host) | BLANK | BLANK |
+| after P4 (`Stockroom`, production host) | BLANK | BLANK |
+
+Both methods return an all-black frame on this emulator (`aosp_atd` API 33
+x86_64, `-no-window -gpu swiftshader_indirect`), while the view hierarchy at the
+same moments shows the expected screen — so this is the capture, not the app.
+**Visual verification of the device render is therefore incomplete, and D14's
+screenshot leg is not met for this app.** The behavioural evidence is unaffected.
+Not tried: another system image (`google_apis`), other `-gpu` modes, a physical
+device. The PNGs are in the run's artifact (`shot-*.png`, `shots.results`).
 
 ## Reproducing
 
