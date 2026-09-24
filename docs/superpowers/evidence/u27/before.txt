@@ -1,0 +1,67 @@
+relay:  <tools-0.3.5>/relay/bin/portal-relay
+adopt:  <tools-0.3.5>/bin/keliver-adopt-legacy-store.sh
+run:    <run>
+umask:  0022
+=== A. a fresh store under umask 022
+  PASS  A: the relay started
+    modes: run=755 a=755 home=755 .keliver-portal=755 apps=755 app-40501b68=755 keys=755 ed25519.priv=644 
+  FAIL  A: ed25519.priv is 644
+  FAIL  A: keys/ is 755
+  PASS  A: ed25519.pub exists (644)
+  PASS  A: nothing else in keys/
+  FAIL  A: no read-back report (portal-server: generated Ed25519 signing keypair in <run>/a/home/.keliver-portal/apps/app-40501b68/keys)
+  SKIP  A: cross-user read (set KELIVER_PROBE_USER)
+    public key fingerprint: 04d869bb501a4bd2
+=== B. restart
+  PASS  B: same private key after restart
+  PASS  B: same public key after restart
+  PASS  B: nothing generated on restart
+  PASS  A/B: the private key appears in no log
+=== C. a fresh store under umask 000
+    modes: run=755 c=755 home=755 .keliver-portal=777 apps=777 app-6a9007d9=777 keys=777 ed25519.priv=666 
+  FAIL  C: ed25519.priv is 666 under umask 000
+  FAIL  C: keys/ is 777 under umask 000
+  SKIP  C: cross-user read (set KELIVER_PROBE_USER)
+=== D. an existing key with the pre-U27 modes (0644 in 0755)
+  PASS  D: the relay still starts (editing does not use the key)
+  FAIL  D: no warning at start
+  FAIL  D: the commands are not in the warning
+  FAIL  D: publish was not refused: {"error":"Cannot run program '<scratch>/u27runs/before/kelive
+  PASS  D: the modes were not changed
+  PASS  D: the identity was not rotated
+  FAIL  D: no runnable command was printed
+  PASS  D: no warning after tightening
+  PASS  D: publish passes the key gate after tightening (it then fails for want of a build: )
+  PASS  D: same identity after tightening
+  PASS  D: the private key appears in no log
+=== E. half an identity
+  FAIL  E(ed25519.pub): the relay started
+  FAIL  E(ed25519.pub): no explanation
+  FAIL  E(ed25519.pub): ed25519.priv was REPLACED (identity rotated)
+  FAIL  E(ed25519.pub): a new ed25519.pub was created
+  FAIL  E(ed25519.priv): the relay started
+  FAIL  E(ed25519.priv): no explanation
+  FAIL  E(ed25519.priv): ed25519.pub was REPLACED (identity rotated)
+  FAIL  E(ed25519.priv): a new ed25519.priv was created
+=== F. a filesystem that does not enforce permissions (FAT)
+    what the filesystem reports for keys/: 700
+  FAIL  F: the relay started with a key it cannot protect
+  FAIL  F: a private key was left on the filesystem
+  FAIL  F: keys/ holds ._ed25519.priv ._ed25519.pub ed25519.priv ed25519.pub 
+  FAIL  F: it claimed to have generated a key
+  FAIL  F: adopt onto it exited 0
+  FAIL  F: adopt's report: adopting into: <run>/fat/store2
+  FAIL  F: adopt left a private key there
+  PASS  F: the private key appears in no log
+=== G. keliver-adopt-legacy-store.sh
+  PASS  G: adopt exited 0
+  FAIL  G: the adopted private key is 644
+  FAIL  G: the adopted keys/ is 755
+  PASS  G: the adopted key is the legacy identity
+  PASS  G: the legacy copy was not changed (still 644)
+  FAIL  G: adopt does not mention the legacy copy's exposure
+  PASS  G: no temporary file left in keys/
+  FAIL  G: --force over a 644 key leaves 644
+  PASS  G: the private key appears in no log
+
+key-permissions: 20 passed, 29 failed, 2 skipped   (<run>)

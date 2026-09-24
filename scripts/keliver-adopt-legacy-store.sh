@@ -127,7 +127,87 @@ copy_one() { # relative path
   echo "  copied: $rel"; copied=$((copied+1))
 }
 
-copy_one "keys/ed25519.priv"
+# THE PRIVATE KEY IS COPIED OWNER-ONLY FROM THE MOMENT IT EXISTS (U27). It went
+# through copy_one's `cp -R`, which gives a new file the SOURCE's mode minus the
+# umask — so a legacy key made before U27 (0644) arrived 0644, readable by every
+# local user — and a chmod afterwards would leave a window in which it is
+# readable. mktemp creates its file 0600 in the destination directory; that mode
+# is read back BEFORE any key byte is written, the key is written into that
+# file, and only then is it put in place: `ln`, which never replaces a name,
+# or with --force `mv -f`, which replaces it atomically. A filesystem that does
+# not enforce the mode fails the copy rather than receiving the key.
+file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1" 2>/dev/null; }
+# macOS mounts external and disk-image volumes `noowners`: every local user then
+# counts as the owner of every file, so no mode protects anything. Prints the
+# mount point when the one holding <dir> is such a volume (portal-relay's
+# SigningKeys.kt makes the same check).
+noowners_mount() { # <dir>
+  [ "$(uname)" = Darwin ] || return 1
+  local real; real="$(cd "$1" 2>/dev/null && pwd -P)" || return 1
+  mount | awk -v p="$real" '
+    { i = index($0, " on "); if (!i) next
+      rest = substr($0, i + 4)
+      if (!match(rest, / \([^()]*\)$/)) next
+      point = substr(rest, 1, RSTART - 1); flags = substr(rest, RSTART + 2, RLENGTH - 3)
+      pre = (point == "/") ? "/" : point "/"
+      if ((p == point || index(p, pre) == 1) && length(point) > best) { best = length(point); bp = point; bf = flags } }
+    END { if (best && bf ~ /(^|, )noowners(,|$)/) { print bp; exit 0 }; exit 1 }'
+}
+copy_private_key() {
+  local rel="keys/ed25519.priv" src="$LEGACY/keys/ed25519.priv" dst="$TARGET/keys/ed25519.priv" tmp m
+  [ -e "$src" ] || return 0
+  if [ -e "$dst" ] && [ "$FORCE" != 1 ]; then
+    echo "  skip (exists): $rel"; skipped=$((skipped+1)); return 0
+  fi
+  # keys/ is made 0700 when this creates it; an existing one is not changed.
+  if [ ! -d "$TARGET/keys" ]; then
+    ( umask 077 && mkdir -p "$TARGET/keys" ) || {
+      echo "  FAILED (mkdir): $rel" >&2; failed=$((failed+1)); return 1; }
+  fi
+  tmp="$(mktemp "$TARGET/keys/.adopt.XXXXXX")" || {
+    echo "  FAILED (temporary file): $rel" >&2; failed=$((failed+1)); return 1; }
+  # mktemp creates 0600. Anything else read back — an execute bit included — is
+  # a filesystem not applying the mode it was given (macOS FAT reads back 700).
+  m="$(file_mode "$tmp")"
+  case "$m" in
+    600|400) ;;
+    *) rm -f "$tmp"
+       echo "  FAILED (not owner-only): $rel — a new file in $TARGET/keys was created 600 and reads" >&2
+       echo "    back as ${m:-unknown}, so that filesystem does not enforce permissions. The key was NOT copied." >&2
+       failed=$((failed+1)); return 1 ;;
+  esac
+  if m="$(noowners_mount "$TARGET/keys")"; then
+    rm -f "$tmp"
+    echo "  FAILED (ownership ignored): $rel — the volume at $m is mounted noowners, so every local" >&2
+    echo "    user counts as the owner of every file, and this filesystem does not enforce permissions." >&2
+    echo "    The key was NOT copied." >&2
+    failed=$((failed+1)); return 1
+  fi
+  if ! cat "$src" > "$tmp"; then
+    rm -f "$tmp"; echo "  FAILED (copy): $rel" >&2; failed=$((failed+1)); return 1
+  fi
+  if [ "$FORCE" = 1 ]; then
+    mv -f "$tmp" "$dst" || { rm -f "$tmp"; echo "  FAILED (rename): $rel" >&2; failed=$((failed+1)); return 1; }
+  elif ! ln "$tmp" "$dst" 2>/dev/null; then
+    rm -f "$tmp"
+    # A key that appeared since the check above is kept, not replaced.
+    if [ -e "$dst" ]; then echo "  skip (exists): $rel"; skipped=$((skipped+1)); return 0; fi
+    echo "  FAILED (link): $rel" >&2; failed=$((failed+1)); return 1
+  else
+    rm -f "$tmp"
+  fi
+  echo "  copied: $rel (mode $(file_mode "$dst"))"; copied=$((copied+1))
+  # The legacy store is only READ, so its copy keeps whatever mode it has. Say
+  # so when that mode lets other users read it; do not change it.
+  m="$(file_mode "$src")"
+  case "$m" in
+    *[4567]?|*[4567]) echo "  note: the LEGACY copy $src is mode $m: readable by other users of this machine." >&2
+             echo "    This script does not change the legacy store. To make that copy owner-only:" >&2
+             echo "      chmod 600 '$src'" >&2 ;;
+  esac
+}
+
+copy_private_key
 copy_one "keys/ed25519.pub"
 for d in "$LEGACY"/*/; do
   [ -d "$d" ] || continue

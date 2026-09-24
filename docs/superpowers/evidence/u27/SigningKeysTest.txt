@@ -1,0 +1,12 @@
+SigningKeysTest (macOS, JDK 17): 10 tests, 0 failures, 0 errors
+   ok aNoownersVolumeIsFoundByTheLongestMountPoint
+   ok aFreshKeyIsNotPutWhereOthersCouldReplaceIt
+   ok halfAnIdentityIsRefusedAndLeftAsItWas
+   ok anExposedExistingKeyIsReportedAndNeverChanged
+   ok aTightenedKeyIsOwnerOnlyAgainWithTheSameIdentity
+   ok aRestartKeepsTheIdentity
+   ok anInterruptedGenerationsStagingIsRemoved
+   ok theFormatIsUnchangedAndTheHalvesAreOnePair
+   ok aKeysDirectoryOthersCanWriteIsExposedEvenWithAnOwnerOnlyKey
+   ok aFreshKeyIsOwnerOnlyAndNothingIsLeftBehind
+portal-relay:test (whole module, same run): 103 tests, 0 failures, 0 errors

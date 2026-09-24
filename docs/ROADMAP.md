@@ -257,9 +257,11 @@ and kept under "Completed priorities" below.
    and it unblocks item 1's "does it work" question for every adopter.
 3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:
    `0644` under a default umask, measured on macOS and Linux; `ensureKeys()`
-   uses `File.writeText`). Security; small, but it touches every existing store.
-   Alongside it, U28: the production host logs a false `codeLoadFailed` on every
-   start.
+   uses `File.writeText`). **Fixed on a branch, not released** (with U29, half a
+   key pair silently regenerated): new keys are owner-only from creation, and an
+   existing exposed key is reported and refused for publishing but never changed.
+   What remains is a tools release. Alongside it, U28: the production host logs a
+   false `codeLoadFailed` on every start.
 4. **#77 — the iOS host's key generation is not hardened like Android's.**
    Now reproduced, not fixed: a file planted in `generatePortalKey`'s output
    survives an UP-TO-DATE run, is compiled into the module, and reaches a linked

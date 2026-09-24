@@ -181,6 +181,21 @@ jobs:
           # resolver and its shell mirror agree.
           scripts/keliver-store-identity-repro.sh "$RUNNER_TEMP/store-identity"
           echo "::endgroup::"
+          echo "::group::private signing key permissions (U27)"
+          # The relay used to create keys/ed25519.priv 0644 under 0755
+          # directories: readable by every local user. This asserts a fresh key
+          # is owner-only under umask 022 and 000, a restart keeps the identity,
+          # an exposed existing key is reported and refused for publishing but
+          # never changed, half an identity is refused, a FAT loop mount is
+          # refused, and adoption copies owner-only. Here, and only here, an
+          # UNRELATED local user then tries to read the key: this runner has
+          # passwordless sudo. Under /tmp, which that user can traverse, so the
+          # check's canary precondition can hold; a denial is then the key's own
+          # permissions, not the path's.
+          ./gradlew --console=plain :portal-relay:installDist
+          sudo useradd --no-create-home --shell /usr/sbin/nologin keliverprobe
+          KELIVER_PROBE_USER=keliverprobe scripts/keliver-key-permissions-check.sh /tmp/keliver-key-perms
+          echo "::endgroup::"
           echo "::group::the guest bundle the recovery check signs"
           # build-portal-tools.sh does not build this target, so on a fresh
           # runner the check would trigger a Kotlin/JS + Zipline compile from

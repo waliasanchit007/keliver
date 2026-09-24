@@ -1,0 +1,15 @@
+  guard ok: user.home=<run>/home
+  guard ok: store=<run>/store
+==> generating a disposable signing identity via the relay
+scripts/keliver-verify-signed-bundle.sh: line 96:  1722 Terminated: 15          ( cd "$ROOT" && PORTAL_REPO="$ROOT" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" > "$DISP/relay.log" 2>&1 )
+    keypair present (contents never printed)
+==> the resolver and the build agree on the store
+    <run>/store
+==> publishing a bundle signed with that identity
+    <checkout>/portal-published-guest/build/zipline/Development/manifest.zipline.json
+==> verifying with Zipline's ManifestVerifier (checks ON)
+tests="3" skipped="0" failures="0" errors="0"
+==> signed bundle verifies against the store's public key; a tampered one does not,
+    and neither does a DIFFERENT key — which is the identity-binding this contract
+    exists for (#78): tampering alone would pass a verifier that ignored the key.
+rc=0

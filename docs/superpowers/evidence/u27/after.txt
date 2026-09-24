@@ -1,0 +1,68 @@
+relay:  <checkout>/portal-relay/build/install/portal-relay/bin/portal-relay
+adopt:  <checkout>/scripts/keliver-adopt-legacy-store.sh
+run:    <run>
+umask:  0022
+=== A. a fresh store under umask 022
+  PASS  A: the relay started
+    modes: run=755 a=755 home=755 .keliver-portal=755 apps=755 app-24e42483=755 keys=700 ed25519.priv=600 
+  PASS  A: ed25519.priv is 600
+  PASS  A: keys/ is 700
+  PASS  A: ed25519.pub exists (644)
+  PASS  A: nothing else in keys/
+  PASS  A: the relay reports the modes it read back
+  SKIP  A: cross-user read (set KELIVER_PROBE_USER)
+    public key fingerprint: b5a22e993ce80772
+=== B. restart
+  PASS  B: same private key after restart
+  PASS  B: same public key after restart
+  PASS  B: nothing generated on restart
+  PASS  A/B: the private key appears in no log
+=== C. a fresh store under umask 000
+    modes: run=755 c=755 home=755 .keliver-portal=777 apps=777 app-56214c8e=777 keys=700 ed25519.priv=600 
+  PASS  C: ed25519.priv is 600 under umask 000
+  PASS  C: keys/ is 700 under umask 000
+  SKIP  C: cross-user read (set KELIVER_PROBE_USER)
+=== D. an existing key with the pre-U27 modes (0644 in 0755)
+  PASS  D: the relay still starts (editing does not use the key)
+  PASS  D: the start warns that the key is not owner-only
+  PASS  D: the warning names the exact commands
+  PASS  D: publish is refused
+  PASS  D: the modes were not changed
+  PASS  D: the identity was not rotated
+  PASS  D: the printed commands ran
+  PASS  D: no warning after tightening
+  PASS  D: publish passes the key gate after tightening (it then fails for want of a build: )
+  PASS  D: same identity after tightening
+  PASS  D: the private key appears in no log
+=== E. half an identity
+  PASS  E(ed25519.pub): the relay refused to start (exit 78)
+  PASS  E(ed25519.pub): it says why
+  PASS  E(ed25519.pub): ed25519.priv was not replaced
+  PASS  E(ed25519.pub): no new ed25519.pub was created
+  PASS  E(ed25519.priv): the relay refused to start (exit 78)
+  PASS  E(ed25519.priv): it says why
+  PASS  E(ed25519.priv): ed25519.pub was not replaced
+  PASS  E(ed25519.priv): no new ed25519.priv was created
+=== F. a filesystem that does not enforce permissions (FAT)
+    what the filesystem reports for keys/: 700
+  PASS  F: the relay refused to start (exit 78)
+  PASS  F: it says the filesystem does not enforce permissions
+  PASS  F: no private key was created
+  PASS  F: nothing staged was left behind
+  PASS  F: no generation claimed
+  PASS  F: adopt onto it exits 1
+  PASS  F: adopt says the key was not copied, and why
+  PASS  F: adopt left no private key there
+  PASS  F: the private key appears in no log
+=== G. keliver-adopt-legacy-store.sh
+  PASS  G: adopt exited 0
+  PASS  G: the adopted private key is 600
+  PASS  G: the adopted keys/ is 700
+  PASS  G: the adopted key is the legacy identity
+  PASS  G: the legacy copy was not changed (still 644)
+  PASS  G: adopt says the legacy copy is readable by others
+  PASS  G: no temporary file left in keys/
+  PASS  G: --force over a 644 key leaves 600
+  PASS  G: the private key appears in no log
+
+key-permissions: 49 passed, 0 failed, 2 skipped   (<run>)
