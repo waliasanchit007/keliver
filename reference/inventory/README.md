@@ -1,13 +1,17 @@
 # Inventory — the reference app
 
-A small stock-keeping app built **only** from what an adopter gets: the published
+A small stock-keeping app built from what an adopter gets: the published
 [`keliver-portal-tools` 0.3.5](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5)
-release and the `dev.keliver:*:0.3.3` libraries on Maven Central. Nothing here
-is compiled against this checkout.
+release and the `dev.keliver:*:0.3.3` libraries on Maven Central. The app itself
+is never compiled against this checkout, and its **development route** uses
+nothing else. Its **production route** does: the production host is
+`portal-device-android` compiled from Keliver source at the release's commit
+(no such host is published), and the CI harness — `ci/`, and the isolation guard
+it sources — is this repository's.
 
-**This is dogfooding, not adoption.** We wrote the app, so it can show that the
-adopter route works end to end and where it is rough. It cannot show that anyone
-outside the project has adopted Keliver: nobody has.
+**This is dogfooding, not adoption.** We wrote the app, so it can show where the
+adopter route works and where it is rough. It cannot show that anyone outside
+the project has adopted Keliver: nobody has.
 
 ## What it does
 
@@ -23,8 +27,10 @@ Two portal-owned screens, one hand-owned presenter layer, deterministic data:
 | `device/Main.kt` | you | scaffolded by `keliver-new-device-target.sh`, then edited to mount `InventoryApp` |
 | `editor/.../InventoryPreview.kt` | you | the per-app Live preview entry (both screens, real presenters) |
 
-The behaviour it is checked against is written down, before any run, in
-[`EXPECTATIONS.md`](EXPECTATIONS.md).
+The behaviour it is checked against is in [`EXPECTATIONS.md`](EXPECTATIONS.md),
+committed with the harness in `1ea4356d9` — the head of the first device run —
+and unchanged since. (The macOS compile, ingest, edit and Live-preview runs came
+before that commit.)
 
 ## Recreate it
 
@@ -75,8 +81,12 @@ runs the whole route on a GitHub-hosted runner and an API 33 x86_64 emulator:
    v1, repeated actions, signed v2, a bundle signed by another app's key
    rejected, and recovery (P2–P6).
 
-Everything it asserts is in `EXPECTATIONS.md`; the run keeps the view dumps,
-logcat, diffs, the installed APK and the published manifests as an artifact.
+What it asserts is in `EXPECTATIONS.md` (D1 and P1's key comparison in
+`prepare.sh`, the rest in `device.sh`/`drive.py`). The run keeps the view dumps,
+logcat, diffs, the installed APK and — from run 5 on — the published manifests
+and device screenshots as an artifact. Screenshots are checked by `ci/shot.py`
+and reported in `shots.results`; a blank one is recorded as BLANK and never
+counted as a render.
 
 ## Where the route is rough
 

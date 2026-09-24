@@ -61,8 +61,12 @@ KP="$PARENT/tools/keliver-portal-tools-$TOOLS_VERSION/bin"
 unzip -p "$ZIP" "keliver-portal-tools-$TOOLS_VERSION/VERSION.json"
 
 # --- the adopter route --------------------------------------------------------
+# For EVERY scaffolder, not only keliver-init: keliver-new-editor.sh also writes
+# mavenLocal() first into the editor's settings when this is 1, which would
+# resolve dev.keliver:* from this machine's ~/.m2 instead of Maven Central.
+unset KELIVER_USE_MAVEN_LOCAL
 cd "$PARENT"
-env -u KELIVER_USE_MAVEN_LOCAL "$KP/keliver-init" Inventory
+"$KP/keliver-init" Inventory
 APP="$PARENT/inventory"
 cd "$APP"
 

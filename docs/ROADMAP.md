@@ -2,8 +2,9 @@
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
 its evidence — nothing here is speculative. **Status: 2026-09-23**, after tools
-0.3.5 and the first reference app built only from published artifacts
-(`reference/inventory`, `docs/REFERENCE_APP.md`). The P0–P3 sections below are
+0.3.5 and the first reference app whose development route uses only published
+artifacts (`reference/inventory`, `docs/REFERENCE_APP.md`; its production host
+still comes from Keliver source). The P0–P3 sections below are
 the 2026-07-27 backlog and its history; **"Current priorities" is the part to
 pick work from.** `CURRENT_STATE.md` opens with a status-at-a-glance that
 separates what is shipped, what was demonstrated and on what, what is broken,
@@ -59,6 +60,10 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    fillMaxWidth() — M3 ListItem wraps content under loose constraints, which the
    editor canvas exposes; devices were unaffected (parents imposed width) and
    remain so. Editor dist rebuilt; refresh :8096 to confirm.
+   **2026-09-23:** the canvas check was never recorded, and the published 0.3.3
+   editor still draws content-width rows (`REFERENCE_APP.md` finding 7). The
+   "devices were unaffected" half has no device screenshot behind it for the
+   reference app either.
 
 ## P2 — Relay/tooling ergonomics (each cost real session time)
 
@@ -240,9 +245,9 @@ Components v2, editor distribution, K1–K4, personas, replay #16) is **complete
 and kept under "Completed priorities" below.
 
 1. **An adopter cannot ship to production without a Keliver checkout.** The
-   first reference app built only from the published tools and Maven Central
-   reached production OTA only by building `portal-device-android` from the
-   release's source commit. The bundle's `host/README.md` sends adopters to
+   first reference app, developed only from the published tools and Maven
+   Central, reached production OTA only by building `portal-device-android` from
+   the release's source commit. The bundle's `host/README.md` sends adopters to
    `sample/host-android`, which renders the *sample's* widget schema, not
    keliver-material. No host that renders an adopter's screens with signature
    verification is published. **Decide what the adopter's production host is**
@@ -266,9 +271,11 @@ and kept under "Completed priorities" below.
    debug simulator framework (`superpowers/evidence/issue-77/`). This machine
    can build iOS, so the fix can land with both boundaries verified. Bounded.
 5. **U19 (live-preview re-render; cause unresolved) and U20 (editor frame rate;
-   measured, not assessed)** — open. The reference app's Live preview behaved
-   correctly for 21 checked interactions (`docs/REFERENCE_APP.md`), which is
-   evidence about this app, not a resolution of U19.
+   measured, not assessed)** — open. The reference app's Live preview passed its
+   21 checks (14 of them canvas taps), which read the canvas and the State
+   Inspector; its Bindings panel lagged one update in every capture
+   (`docs/REFERENCE_APP.md` finding 9). Evidence about this app, not a
+   resolution of U19.
 6. **Device coverage is one emulator.** Every device result for 0.3.5 and the
    reference app is Android API 33 x86_64 on CI. No physical Android device, no
    arm64 execution, and no iOS run of the reference app.

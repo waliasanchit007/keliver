@@ -15,8 +15,9 @@
 # Isolation: every JVM here runs with user.home = <work-dir>/home, so the store,
 # its keys and the relay's state are all inside <work-dir>. The repository's own
 # isolation guard checks the EFFECTIVE user.home and store before each relay
-# start and refuses otherwise. The keys are disposable and app-owned; nothing
-# reads, prints or copies a private key.
+# start and refuses otherwise. The keys are disposable and app-owned; nothing in
+# this harness reads, prints or copies a private key — the Zipline compile task's
+# signing block in the app's build.gradle is the only reader, on each publish.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -81,7 +82,7 @@ case "$STORE" in "$WORK"/*) ok "the relay's store is inside the work dir: $STORE
 PUB="$(tr -d ' \n' < "$STORE/keys/ed25519.pub")"
 echo "$PUB" > "$EV/app-public-key.hex"
 echo "    app public key: ${PUB:0:16}…"
-ls -l "$STORE/keys" | awk 'NR>1 {print "    key file mode: " $1 "  " $NF}'
+ls -l "$STORE/keys" | awk 'NR>1 {print "    key file mode: " $1 "  " $NF}' | tee "$EV/key-modes.txt"
 
 # --- 3. D1: ingest with zero RawCode -----------------------------------------
 for s in inventory item; do
@@ -97,6 +98,7 @@ curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-v1.log" 2>&1
 grep -q 'publish OK: bundle v1' "$EV/publish-v1.log" && ok "publish v1: $(grep 'publish OK' "$EV/publish-v1.log")" \
   || { bad "publish v1 failed"; tail -20 "$EV/publish-v1.log"; }
 M1="$STORE/bundles/v1/manifest.zipline.json"
+cp "$M1" "$EV/manifest-v1.zipline.json"
 python3 - "$M1" > "$EV/manifest-v1.summary" <<'PY'
 import json, sys, hashlib
 p = sys.argv[1]; raw = open(p, 'rb').read(); m = json.loads(raw)

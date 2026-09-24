@@ -9,8 +9,13 @@
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
-# Checks, not a demo: every row of EXPECTATIONS.md is asserted on the device's
-# own view hierarchy or log, and the exit status is non-zero if any fails.
+# Checks, not a demo: the E, D2-D3 and P2-P6 rows of EXPECTATIONS.md are asserted
+# here on the device's own view hierarchy or log (D1 and P1's key comparison are
+# in prepare.sh), and the exit status is non-zero if any fails.
+#
+# DEVICE SCREENSHOTS are taken too (shot, below) and checked for being a picture
+# at all, but they are VISUAL evidence and outside the pass/fail count: a blank
+# frame is recorded as BLANK in shots.results, never counted as a render.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -34,6 +39,24 @@ sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 drive(){ python3 "$HERE/drive.py" "$SERIAL" "$EV" "$@"; }
 # drive.py's exit status is its failure count; fold its checks into ours.
 fold(){ local label="$1" rc="$2"; [ "$rc" -eq 0 ] && ok "$label" || bad "$label ($rc failed checks)"; }
+# D14's "device render screenshot", two ways: the device's own screencap, and
+# the emulator's host-side capture (on a headless emulator screencap has returned
+# black frames before, run 34669956183). Each is checked by shot.py.
+shot(){  # $1 = label
+  local f="$EV/shot-$1-screencap.png" d="$EV/shot-$1-emulator.d" g
+  adb -s "$SERIAL" exec-out screencap -p > "$f" 2>/dev/null
+  printf '%s screencap %s\n' "$1" "$(python3 "$HERE/shot.py" "$f")" | tee -a "$EV/shots.results"
+  mkdir -p "$d"
+  adb -s "$SERIAL" emu screenrecord screenshot "$d" > "$d.log" 2>&1
+  g="$(ls "$d"/*.png 2>/dev/null | head -1)"
+  if [ -n "$g" ]; then
+    mv "$g" "$EV/shot-$1-emulator.png"
+    printf '%s emulator %s\n' "$1" "$(python3 "$HERE/shot.py" "$EV/shot-$1-emulator.png")" | tee -a "$EV/shots.results"
+  else
+    printf '%s emulator NONE: %s\n' "$1" "$(tr '\n' ' ' < "$d.log")" | tee -a "$EV/shots.results"
+  fi
+  rm -rf "$d"
+}
 
 . "$REPO/scripts/keliver-test-isolation-guard.sh"
 SERVE_PID=""
@@ -81,6 +104,7 @@ serve_up v1 && ok "serveDevelopmentZipline is serving the app" || bad "the bundl
 launch dev "$EV/logcat-dev-1.txt"
 grep -q "mode=dev" "$EV/logcat-dev-1.txt" && ok "the generic host entered the development path" || bad "no development path in the log"
 drive dev Inventory E; fold "E1-E10 on the development route" $?
+shot E-end
 
 # --- 2. D14: edit through the relay, rebuild, observe ------------------------
 echo "--- 2. D14 layout edit"
@@ -114,6 +138,10 @@ cmp -s "$EV/logic-before.sha256" "$EV/logic-after.sha256" \
 serve_down; serve_up v2 && ok "rebuilt and serving the edited app" || bad "the rebuilt bundle was not served"
 launch dev "$EV/logcat-dev-2.txt"
 drive title Stockroom D3; fold "D3: the device shows the edited title" $?
+shot D3-stockroom
+# D3's other half: the behaviour is unchanged after the edit — E1-E10 again,
+# on the rebuilt bundle, with the new title.
+drive dev Stockroom D3E; fold "D3: E1-E10 unchanged after the edit" $?
 serve_down
 
 # --- 3. production on this app's own host ------------------------------------
@@ -126,6 +154,8 @@ PUB="$(cat "$EV/app-public-key.hex")"
 # Stockroom, so a screen reading Inventory is the signed bundle, not the source.
 curl -sf "http://localhost:8077/bundles/latest?widgetVersion=1&caps=" > "$EV/latest-p2.json"; cat "$EV/latest-p2.json"; echo
 launch prod "$EV/logcat-prod-v1.txt"
+grep -q "mode=prod, devOnlyHost=false" "$EV/logcat-prod-v1.txt" \
+  && ok "P1: the installed host is not the development-only build (devOnlyHost=false)" || bad "P1: devOnlyHost=false not reported"
 grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \
   && ok "P2: production verifies with this app's key (${PUB:0:8}…)" || bad "P2: no verification with this app's key in the log"
 grep -q "refusing production mode" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused production" || ok "P2: production was not refused"
@@ -136,9 +166,11 @@ drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" 
 curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-v2.log" 2>&1
 grep -q 'publish OK: bundle v2' "$EV/publish-v2.log" && ok "P4: $(grep 'publish OK' "$EV/publish-v2.log")" || bad "P4: publish v2 failed"
 sha256 "$STORE/bundles/v2/manifest.zipline.json" | tee "$EV/manifest-v2.sha256"
+cp "$STORE/bundles/v2/manifest.zipline.json" "$EV/manifest-v2.zipline.json"
 launch prod "$EV/logcat-prod-v2.txt"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-v2.txt" && ok "P4: the signed v2 loaded" || bad "P4: v2 did not load"
 drive title Stockroom P4; fold "P4: the second signed version shows Stockroom" $?
+shot P4-stockroom-production
 portal_down "$APP"
 
 # P5: another app's identity. A COPY with its inherited pointer removed — the
@@ -158,6 +190,8 @@ sed -e "s/\"baseVersion\": [0-9]*/\"baseVersion\": $FV/" -e 's/"Stockroom"/"Fore
 curl -s -X POST --data-binary @"$WORK/op-foreign.json" "http://localhost:8077/ops?project=default&screen=inventory" > "$EV/ops-foreign.json"
 curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-foreign.log" 2>&1
 grep -q 'publish OK' "$EV/publish-foreign.log" && ok "P5: the copy published a bundle signed with ITS key" || bad "P5: the copy did not publish"
+FM="$(ls -d "$FSTORE"/bundles/v*/ 2>/dev/null | sort -V | tail -1)manifest.zipline.json"
+[ -f "$FM" ] && cp "$FM" "$EV/manifest-foreign.zipline.json"
 adb -s "$SERIAL" shell pm clear "$PKGID" > /dev/null
 launch prod "$EV/logcat-prod-foreign.txt"
 grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-foreign.txt" \

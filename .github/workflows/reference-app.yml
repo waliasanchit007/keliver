@@ -1,7 +1,9 @@
 # The inventory reference app (reference/inventory), built the way an adopter
 # would build it: from the PUBLISHED tools release and Maven Central, never from
 # this checkout's build. Then checked on an emulator: the development route,
-# a D14 layout edit, and production OTA with app-owned disposable keys.
+# a D14 layout edit, and production OTA with app-owned disposable keys. The
+# production host is the exception: it is compiled from Keliver source at the
+# release's tag (below), and ci/ plus the isolation guard come from this checkout.
 #
 # This is dogfooding, not adoption: the app is ours.
 #

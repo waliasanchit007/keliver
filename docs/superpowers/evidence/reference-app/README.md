@@ -9,12 +9,16 @@ expire after 30 days.
   `logic/` hashes, the published manifests' hashes, the production host's APK
   hash and source commit, this run's disposable **public** key, and the
   `PortalDevice` lines of each logcat. Not copied: the APK itself, full logcats
-  and view dumps — they are in the run's artifact while it lasts. No private key
-  was ever read, printed or copied; the keys were generated inside the run
-  directory and discarded with the runner.
+  and view dumps — they are in the run's artifact while it lasts. No harness
+  script reads, prints or copies a private key; the only thing that reads one is
+  the Zipline compile task's signing block (`app/build.gradle`), on each publish.
+  The keys were generated inside the run directory and discarded with the runner,
+  and every 64-hex-digit string here is a SHA-256 or a public key.
 * `live-preview/` — the macOS Live-preview run: the CDP scenario
-  (`live-scenario.mjs`, `cdp.mjs`), its log and results (21/0), and five
-  captures of the editor with ▶ Live on.
+  (`live-scenario.mjs`, `cdp.mjs`), its log and results (21/0), the script's
+  four captures with ▶ Live on (`L-*.png`), and one mock-mode capture taken by
+  hand (`item-mock.png`). All five are browser captures of the editor canvas, not
+  device renders.
 
 `P5.results.json` reports two failed checks by design: they probe whether the
 foreign-signed bundle's title reached the screen, and it must not have.

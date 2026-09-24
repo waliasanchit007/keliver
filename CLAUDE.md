@@ -16,9 +16,11 @@ them visually in a web portal that round-trips to the .kt files in git.
   that the path worked, not as something you can re-run. Two runnable references
   exist today, and **both are dogfooding, not adoption**: the in-repo
   [`sample/`](sample) (Keliver's own widget schema, built from this checkout),
-  and [`reference/inventory`](reference/inventory) — an app built only from the
-  PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
-  checked end to end by `.github/workflows/reference-app.yml`. What it proved and
+  and [`reference/inventory`](reference/inventory) — an app developed only from
+  the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
+  checked on an emulator by `.github/workflows/reference-app.yml`. Its
+  production route is NOT published-only: that host is compiled from Keliver
+  source at the tools release's commit, and the CI harness is this repo's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle

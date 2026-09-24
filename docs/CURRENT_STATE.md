@@ -36,10 +36,10 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | capability | app | platform | when |
 |---|---|---|---|
-| scaffold → compile → 0 RawCode ingest → surgical edit, from **published artifacts only** | `reference/inventory` | macOS + Linux CI | 2026-09-22 |
+| scaffold → compile → 0 RawCode ingest → surgical edit, from **published artifacts only** | `reference/inventory` | macOS (local, not committed) 2026-09-22; Linux CI | 2026-09-23 |
 | Live preview with the app's real presenters, repeated actions | `reference/inventory` | macOS, headless Chrome | 2026-09-22 |
-| development route on the bundled generic host, E1–E10 | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, run `35802020305` |
-| production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; host built from the checkout | 2026-09-23, runs `35800642819`, `35802020305` |
+| development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, runs `35802020305`, `35803336957` |
+| production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23, runs `35800642819`, `35802020305`, `35803336957` |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
 
@@ -1469,15 +1469,20 @@ the download host: `RELEASE_NOTES_TOOLS_0.3.5.md`. One correction was made to
 the published notes after publication: a limitations line wrongly listed
 U25.2–.4 as open.
 
-**A reference app, built only from what an adopter gets.** `reference/inventory`
+**A reference app, from what an adopter gets — for development.** `reference/inventory`
 — search, an empty state, item detail, quantity adjustments — scaffolded with the
 published tools and compiled against Maven Central 0.3.3, outside this checkout.
+Its production route is not published-only: the production host is compiled from
+Keliver source at `b5615637`, and the CI harness is this repository's.
 `bootstrap.sh` recreates it; `.github/workflows/reference-app.yml` runs it end to
 end on a hosted runner and an API 33 x86_64 emulator. **Dogfooding, not
 adoption.** Results and every piece of friction: `REFERENCE_APP.md`. In short:
 
-- 0 RawCode on both screens; a D14 edit through `/ops` changed exactly two lines
-  and left `logic/` byte-identical; Live preview ran the real presenters (21/0).
+- 0 RawCode on both screens; D14's write-back leg — an edit through `/ops` —
+  changed exactly two lines and left `logic/` byte-identical; Live preview ran
+  the real presenters (21/0; its Bindings panel lagged one update in every
+  capture). D14's device-screenshot leg: none was taken in these runs — see
+  `REFERENCE_APP.md`.
 - On the emulator: development route 30/0 (run `35802020305`; run `35800642819` failed one check on its own input driver, since fixed); production OTA with app-owned
   disposable keys — signed v1 loads, repeated actions work, signed v2 changes
   the title, a bundle signed by another app's key is refused
