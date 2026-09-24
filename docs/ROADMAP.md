@@ -253,7 +253,9 @@ and kept under "Completed priorities" below.
    verification is published. **Decide what the adopter's production host is**
    (a published host library, a scaffolded template, or a documented copy of
    `portal-device-android`) before building more authoring depth. Evidence:
-   `docs/REFERENCE_APP.md` §Production.
+   `docs/REFERENCE_APP.md` §Production. Decision input — coordinates, what is
+   not published, the smallest publish/signing setup, and the one measurement to
+   make first: `docs/PRODUCTION_HOST_FEASIBILITY.md`.
 2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has
    no `publishTask`/`publishOutput` and no signing block, so publish fails, and
