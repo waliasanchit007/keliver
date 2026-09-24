@@ -216,6 +216,8 @@ run_record_http_rows
 echo "--- keliver-adopt-legacy-store.sh: all three shapes, no copy, no claim"
 LEG="$DISP/legacy"; mkdir -p "$LEG/keys"
 printf 'MARKER-NOT-A-REAL-PRIVATE-KEY\n' > "$LEG/keys/ed25519.priv"
+# Both halves: adopt copies an identity as a pair or not at all (U29).
+printf 'MARKER-NOT-A-REAL-PUBLIC-KEY\n'  > "$LEG/keys/ed25519.pub"
 ADOPTBIN="$DISP/adoptbin"; mkdir -p "$ADOPTBIN"
 
 # THE WRITE GUARD. The header promises the empty-path expansion is never tested by
@@ -228,15 +230,15 @@ ADOPTBIN="$DISP/adoptbin"; mkdir -p "$ADOPTBIN"
 #
 # Skipping callers flagged STALE would not close it: the same review showed a
 # comment can fake the staleness grep, and a faked-fresh stale script would run
-# anyway. So the writes are INTERCEPTED instead. mkdir and cp are wrapped on PATH;
+# anyway. So the writes are INTERCEPTED instead. mkdir and cp — and mktemp, ln
+# and mv, which the owner-only key copy (U27) writes with — are wrapped on PATH;
 # any operand outside $DISP is refused and logged, and nothing is written. A
 # correct caller never reaches either on a refusal, so the guard costs it nothing;
 # a broken one is caught in the act and the attempt becomes an assertion.
 GUARD="$DISP/writeguard"; mkdir -p "$GUARD"
 WRITE_LOG="$DISP/write-attempts.log"; : > "$WRITE_LOG"
-REAL_MKDIR="$(command -v mkdir)"; REAL_CP="$(command -v cp)"
-for tool in mkdir cp; do
-  real="$REAL_MKDIR"; [ "$tool" = cp ] && real="$REAL_CP"
+for tool in mkdir cp mktemp ln mv; do
+  real="$(command -v "$tool")"
   cat > "$GUARD/$tool" <<GUARDEOF
 #!/bin/sh
 # Refuse any non-option operand outside the disposable root, INCLUDING the empty

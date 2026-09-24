@@ -1,7 +1,7 @@
   guard ok: user.home=<run>/home
   guard ok: store=<run>/store
 ==> generating a disposable signing identity via the relay
-scripts/keliver-verify-signed-bundle.sh: line 96:  1722 Terminated: 15          ( cd "$ROOT" && PORTAL_REPO="$ROOT" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" > "$DISP/relay.log" 2>&1 )
+scripts/keliver-verify-signed-bundle.sh: line 96: 32477 Terminated: 15          ( cd "$ROOT" && PORTAL_REPO="$ROOT" "$ROOT/portal-relay/build/install/portal-relay/bin/portal-relay" > "$DISP/relay.log" 2>&1 )
     keypair present (contents never printed)
 ==> the resolver and the build agree on the store
     <run>/store
@@ -12,4 +12,8 @@ tests="3" skipped="0" failures="0" errors="0"
 ==> signed bundle verifies against the store's public key; a tampered one does not,
     and neither does a DIFFERENT key — which is the identity-binding this contract
     exists for (#78): tampering alone would pass a verifier that ignored the key.
-rc=0
+signed rc=0
+
+modes of the key the relay created in <run>/store/keys (ls -l, run separately after the check):
+-rw-------@ ed25519.priv
+-rw-r--r--@ ed25519.pub

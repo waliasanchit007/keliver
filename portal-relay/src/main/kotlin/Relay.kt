@@ -338,8 +338,9 @@ private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
 
 /**
  * P4: the project signing keypair. Created, and its protection checked, by
- * SigningKeys.kt (U27). A key that is not owner-only is reported here on every
- * start and refused by [publish]; it is never changed here.
+ * SigningKeys.kt (U27). A key that is not owner-only, or half a key pair (U29),
+ * is reported here on every start and refused by [publish]; neither is ever
+ * changed here.
  */
 private fun ensureKeys() {
   val generated = try {
@@ -351,45 +352,47 @@ private fun ensureKeys() {
     System.err.println("portal-server: could not create this app's signing key in $keysDir: $e. Nothing was replaced.")
     kotlin.system.exitProcess(78)
   }
-  val protection = keyProtection(keysDir)
-  if (generated && protection == KeyProtection.OwnerOnly) {
+  if (generated) {
     println(
       "portal-server: generated this app's Ed25519 signing key in $keysDir " +
         "($PRIVATE_KEY_FILE ${modeString(File(keysDir, PRIVATE_KEY_FILE))}, keys/ ${modeString(keysDir)}, as read back)",
     )
   }
-  keyProblem(protection)?.let { System.err.println("portal-server: WARNING — $it") }
+  keyProblem()?.let { System.err.println("portal-server: WARNING — $it") }
 }
 
 /**
- * Why this app's private key must not be signed with, or null when it may. A
- * store with no private key at all is not this check's business: that publish
- * was, and still is, an unsigned bundle.
+ * Why the relay must not publish with this app's identity, or null when it may.
+ * A store with neither key file is not this check's business: that publish was,
+ * and still is, an unsigned bundle. This gates the relay's `/publish` only; a
+ * Gradle build run directly signs with whatever key is in the store.
  */
-private fun keyProblem(protection: KeyProtection? = currentKeyProtection()): String? = when (protection) {
+private fun keyProblem(protection: KeyProtection? = keyProtection(keysDir)): String? = when (protection) {
   null, KeyProtection.OwnerOnly -> null
   is KeyProtection.Exposed -> buildString {
-    appendLine("this app's private signing key is not owner-only: ${protection.detail}.")
-    appendLine("  It signs every bundle this app's production hosts accept, so publishing is refused until it is.")
+    appendLine("this app's signing identity is not owner-only: ${protection.detail}.")
+    appendLine("  The private key signs every bundle this app's production hosts accept, so the relay will not")
+    appendLine("  publish until it is.")
     if (protection.chmodFixes) {
-      appendLine("  To keep this identity and make it owner-only (nothing is rotated):")
+      appendLine("  To keep this identity and make it owner-only (modes only; nothing is rotated):")
       appendLine("    ${tightenCommands(keysDir)}")
     } else {
-      appendLine("  No chmod can fix this: the filesystem itself does not protect the key. This app's store")
-      appendLine("  has to live on a filesystem that does (docs/STORE_IDENTITY.md §2: how a store is located).")
+      appendLine("  No chmod can fix this. The store has to live where only you own and can write it, on a")
+      appendLine("  filesystem that enforces permissions (docs/STORE_IDENTITY.md §2: how a store is located).")
     }
     append("  That does not undo earlier exposure. If other users of this machine are not trusted, whether to ")
     append("rotate the key is your decision; Keliver never rotates it (docs/KNOWN_BUGS.md U27).")
   }
   is KeyProtection.Unverified -> buildString {
-    appendLine("this app's private signing key cannot be checked: ${protection.detail}.")
-    append("  Publishing is refused: Keliver signs only with a key it has measured as owner-only. ")
+    appendLine("this app's signing identity cannot be checked: ${protection.detail}.")
+    append("  The relay publishes only with a key it has measured as owner-only, so it will not publish. ")
     append("Move this app's store to a filesystem with POSIX permissions (PORTAL_STORE, or \"store\" in keliver.portal.json).")
   }
+  is KeyProtection.Incomplete -> buildString {
+    appendLine(protection.detail)
+    append("  The relay will not publish with half an identity. Editing is unaffected.")
+  }
 }
-
-private fun currentKeyProtection(): KeyProtection? =
-  if (File(keysDir, PRIVATE_KEY_FILE).exists()) keyProtection(keysDir) else null
 
 // ---------------------------------------------------------------------------
 // P4 publish pipeline

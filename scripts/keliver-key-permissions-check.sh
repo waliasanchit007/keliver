@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# keliver-key-permissions-check — U27: this app's private signing key is
+# keliver-key-permissions-check — U27/U29: this app's private signing key is
 # owner-only when the relay creates it, stays the same identity across
-# restarts, is never silently re-permissioned or rotated, and is refused for
-# signing while it is not owner-only.
+# restarts, is never silently re-permissioned or rotated, half a key pair is
+# never completed by generating, and the relay will not publish with either.
 #
 #   scripts/keliver-key-permissions-check.sh <disposable-parent> [relay-bin] [adopt-script]
 #
@@ -12,11 +12,12 @@
 # to measure that release instead (the before-the-fix reproduction does).
 #
 # Optional, and reported as SKIP when absent:
-#   KELIVER_PROBE_USER  an existing unrelated local account, readable through
+#   KELIVER_PROBE_USER  an existing unrelated local account, usable through
 #                       `sudo -n -u`. The check then tries to READ the key as
 #                       that user. It first proves the user can reach a
-#                       world-readable canary beside the store, so a denial is
-#                       the key's own permissions and not the harness's.
+#                       world-readable canary in the store directory, so a
+#                       denial comes from keys/ or the key, not from the path
+#                       leading to the store.
 #   a filesystem that ignores modes — FAT, via hdiutil on macOS or a loop mount
 #                       with passwordless sudo on Linux.
 #
@@ -90,8 +91,16 @@ start_relay() { # <umask> <log> [env...]
     sleep 1
   done
   echo "relay neither answered nor exited in 60s ($log)" >&2
+  RELAY_RC=hang; keliver_kill_own "$PORT" "$RELAY_PID"; wait "$RELAY_PID" 2>/dev/null
 }
 stop_relay() { [ -z "$RELAY_RC" ] && { keliver_kill_own "$PORT" "$RELAY_PID"; wait "$RELAY_PID" 2>/dev/null; }; sleep 1; }
+# adopt resolves the store through the JVM's user.home, so it gets the same guard.
+adopt() { # <log> [args...]
+  local log="$1"; shift
+  JAVA_TOOL_OPTIONS="-Duser.home=$H" keliver_require_isolated_store "$DISP" "$APP" > /dev/null \
+    || { echo "guard refused for $APP" >&2; exit 2; }
+  ( JAVA_TOOL_OPTIONS="-Duser.home=$H" "$ADOPT" "$APP" "$@" ) > "$log" 2>&1
+}
 
 no_key_in() { # <label> <private key file> <log>...
   local label="$1" key="$2"; shift 2
@@ -159,6 +168,17 @@ stop_relay
 traversal "$STORE"
 m="$(mode_of "$STORE/keys/ed25519.priv")"; owner_only "$m" && ok "C: ed25519.priv is $m under umask 000" || bad "C: ed25519.priv is $m under umask 000"
 m="$(mode_of "$STORE/keys")"; owner_only "$m" && ok "C: keys/ is $m under umask 000" || bad "C: keys/ is $m under umask 000"
+m="$(mode_of "$STORE/keys/ed25519.pub")"; case "$m" in *[2367]?|*[2367]) bad "C: ed25519.pub is $m, writable by others";; *) ok "C: ed25519.pub is $m, not writable by others";; esac
+# The store directory itself was created by the relay's store claim under this
+# umask, so it is world-writable: another user could move keys/ aside. That is
+# not a key the relay created, and it is reported, not changed.
+m="$(mode_of "$STORE")"
+if [ "$m" = 777 ]; then
+  grep -q "store directory" "$DISP/c/relay.log" && ok "C: the world-writable store directory ($m) is reported at start" \
+    || bad "C: the store directory is $m and the start said nothing"
+else
+  ok "C: the store directory is $m"
+fi
 probe_read C "$STORE" "$STORE/keys/ed25519.priv"
 
 # --- D. an existing exposed key: reported, never changed, not signed with -------
@@ -174,7 +194,7 @@ if [ -z "$RELAY_RC" ]; then
   curl -s -m 30 -X POST "http://localhost:$PORT/publish" > "$DISP/d/publish1.txt" 2>&1
 fi
 stop_relay
-grep -q "not owner-only" "$DISP/d/relay1.log" && ok "D: the start warns that the key is not owner-only" || bad "D: no warning at start"
+grep -q "not owner-only" "$DISP/d/relay1.log" && ok "D: the start warns that the identity is not owner-only" || bad "D: no warning at start"
 grep -q "chmod 700 '$K' && chmod 600 '$K/ed25519.priv'" "$DISP/d/relay1.log" && ok "D: the warning names the exact commands" || bad "D: the commands are not in the warning"
 grep -q "publish REFUSED" "$DISP/d/publish1.txt" 2>/dev/null && ok "D: publish is refused" \
   || bad "D: publish was not refused: $(head -c 160 "$DISP/d/publish1.txt" 2>/dev/null | tr '\n' ' ')"
@@ -182,15 +202,23 @@ grep -q "publish REFUSED" "$DISP/d/publish1.txt" 2>/dev/null && ok "D: publish i
   || bad "D: the relay changed the modes to $(mode_of "$K")/$(mode_of "$K/ed25519.priv")"
 [ "$(hash_of "$K/ed25519.priv")" = "$D_PRIV" ] && ok "D: the identity was not rotated" || bad "D: the private key CHANGED"
 # The printed commands, run as printed. They name only paths in this run.
-CMD="$(grep -m1 "^    chmod 700 '" "$DISP/d/relay1.log" | sed 's/^    //')"
+CMD="$(grep -m1 "^    chmod o-w '" "$DISP/d/relay1.log" | sed 's/^    //')"
 case "$CMD" in *"$DISP"*) bash -c "$CMD" && ok "D: the printed commands ran" || bad "D: the printed commands failed";;
   *) bad "D: no runnable command was printed";; esac
 start_relay 022 "$DISP/d/relay2.log"
-[ -z "$RELAY_RC" ] && curl -s -m 30 -X POST "http://localhost:$PORT/publish" > "$DISP/d/publish2.txt" 2>&1
+if [ -z "$RELAY_RC" ]; then
+  ok "D: the relay starts after tightening"
+  curl -s -m 30 -X POST "http://localhost:$PORT/publish" > "$DISP/d/publish2.txt" 2>&1
+else
+  bad "D: the relay did not start after tightening ($RELAY_RC)"
+fi
 stop_relay
 grep -q "not owner-only" "$DISP/d/relay2.log" && bad "D: still warned after tightening" || ok "D: no warning after tightening"
-grep -q "publish REFUSED" "$DISP/d/publish2.txt" 2>/dev/null && bad "D: publish still refused after tightening" \
-  || ok "D: publish passes the key gate after tightening (it then fails for want of a build: $(grep -o 'publish FAILED[^\n]*' "$DISP/d/publish2.txt" 2>/dev/null | head -c 60))"
+# Past the gate means it went on to run the app's Gradle build — which this
+# fixture app does not have, so that is the failure it must reach.
+if grep -q "publish REFUSED" "$DISP/d/publish2.txt" 2>/dev/null; then bad "D: publish still refused after tightening"
+elif grep -q "gradlew" "$DISP/d/publish2.txt" 2>/dev/null; then ok "D: publish passes the key gate after tightening, and reaches the build (no gradlew in this fixture)"
+else bad "D: publish after tightening did not reach the build: $(head -c 160 "$DISP/d/publish2.txt" 2>/dev/null | tr '\n' ' ')"; fi
 [ "$(hash_of "$K/ed25519.priv")" = "$D_PRIV" ] && ok "D: same identity after tightening" || bad "D: the private key CHANGED"
 no_key_in D "$K/ed25519.priv" "$DISP"/d/relay*.log "$DISP"/d/publish*.txt
 
@@ -203,9 +231,17 @@ for missing in ed25519.pub ed25519.priv; do
   kept=ed25519.priv; [ "$missing" = ed25519.priv ] && kept=ed25519.pub
   before="$(hash_of "$K/$kept")"
   mv "$K/$missing" "$DISP/e-$missing/set-aside"
-  start_relay 022 "$DISP/e-$missing/relay1.log"; stop_relay
-  [ -n "$RELAY_RC" ] && [ "$RELAY_RC" != 0 ] && ok "E($missing): the relay refused to start (exit $RELAY_RC)" || bad "E($missing): the relay started"
-  grep -q "half of this app's signing identity" "$DISP/e-$missing/relay1.log" && ok "E($missing): it says why" || bad "E($missing): no explanation"
+  start_relay 022 "$DISP/e-$missing/relay1.log"
+  if [ -z "$RELAY_RC" ]; then
+    ok "E($missing): the relay still starts (editing does not use the key)"
+    curl -s -m 30 -X POST "http://localhost:$PORT/publish" > "$DISP/e-$missing/publish.txt" 2>&1
+  else
+    bad "E($missing): the relay did not start ($RELAY_RC)"
+  fi
+  stop_relay
+  grep -q "half of this app's signing identity" "$DISP/e-$missing/relay1.log" && ok "E($missing): the start says why" || bad "E($missing): no explanation at start"
+  grep -q "publish REFUSED" "$DISP/e-$missing/publish.txt" 2>/dev/null && ok "E($missing): publish is refused" \
+    || bad "E($missing): publish was not refused: $(head -c 120 "$DISP/e-$missing/publish.txt" 2>/dev/null | tr '\n' ' ')"
   [ "$(hash_of "$K/$kept")" = "$before" ] && ok "E($missing): $kept was not replaced" || bad "E($missing): $kept was REPLACED (identity rotated)"
   [ -e "$K/$missing" ] && bad "E($missing): a new $missing was created" || ok "E($missing): no new $missing was created"
   rm -f "$DISP/e-$missing/set-aside"
@@ -227,7 +263,8 @@ if [ -n "$FAT_UNMOUNT" ]; then
   start_relay 022 "$DISP/f/relay.log" PORTAL_STORE="$STORE"; stop_relay
   echo "    what the filesystem reports for keys/: $(mode_of "$STORE/keys" || echo none)"
   [ -n "$RELAY_RC" ] && [ "$RELAY_RC" != 0 ] && ok "F: the relay refused to start (exit $RELAY_RC)" || bad "F: the relay started with a key it cannot protect"
-  grep -q "does not enforce permissions" "$DISP/f/relay.log" && ok "F: it says the filesystem does not enforce permissions" \
+  grep -q "does not enforce permissions" "$DISP/f/relay.log" && grep -q "No key was created" "$DISP/f/relay.log" \
+    && ok "F: it says the filesystem does not enforce permissions, and that no key was created" \
     || bad "F: no accurate reason: $(grep -m1 -i 'key' "$DISP/f/relay.log")"
   [ -e "$STORE/keys/ed25519.priv" ] && bad "F: a private key was left on the filesystem" || ok "F: no private key was created"
   left="$(ls -A "$STORE/keys" 2>/dev/null | tr '\n' ' ')"
@@ -238,7 +275,7 @@ if [ -n "$FAT_UNMOUNT" ]; then
   LEG="$DISP/f2/legacy"; mkdir -p "$LEG/keys"
   ( umask 077; python3 -c "import os,sys; open(sys.argv[1],'w').write(os.urandom(32).hex())" "$LEG/keys/ed25519.priv" )
   printf '%s' "$(printf 'cd%.0s' $(seq 1 32))" > "$LEG/keys/ed25519.pub"
-  ( JAVA_TOOL_OPTIONS="-Duser.home=$H" PORTAL_STORE="$FAT/store2" "$ADOPT" "$APP" --legacy "$LEG" ) > "$DISP/f2/adopt.log" 2>&1; rc=$?
+  PORTAL_STORE="$FAT/store2" adopt "$DISP/f2/adopt.log" --legacy "$LEG"; rc=$?
   [ "$rc" != 0 ] && ok "F: adopt onto it exits $rc" || bad "F: adopt onto it exited 0"
   grep -q "does not enforce permissions" "$DISP/f2/adopt.log" && grep -q "was NOT copied" "$DISP/f2/adopt.log" \
     && ok "F: adopt says the key was not copied, and why" || bad "F: adopt's report: $(grep -m1 'priv' "$DISP/f2/adopt.log")"
@@ -257,19 +294,55 @@ LEG="$H/.keliver-portal"; mkdir -p "$LEG/keys"
 printf '%s' "$(printf 'ab%.0s' $(seq 1 32))" > "$LEG/keys/ed25519.pub"
 chmod 644 "$LEG/keys/ed25519.priv"
 L_PRIV="$(hash_of "$LEG/keys/ed25519.priv")"
-( JAVA_TOOL_OPTIONS="-Duser.home=$H" "$ADOPT" "$APP" --legacy "$LEG" ) > "$DISP/g/adopt.log" 2>&1; rc=$?
+adopt "$DISP/g/adopt.log" --legacy "$LEG"; rc=$?
 [ "$rc" = 0 ] && ok "G: adopt exited 0" || { bad "G: adopt exited $rc"; sed 's/^/    /' "$DISP/g/adopt.log"; }
 m="$(mode_of "$STORE/keys/ed25519.priv")"; owner_only "$m" && ok "G: the adopted private key is $m" || bad "G: the adopted private key is $m"
 m="$(mode_of "$STORE/keys")"; owner_only "$m" && ok "G: the adopted keys/ is $m" || bad "G: the adopted keys/ is $m"
 [ "$(hash_of "$STORE/keys/ed25519.priv")" = "$L_PRIV" ] && ok "G: the adopted key is the legacy identity" || bad "G: the adopted key differs"
+cmp -s "$STORE/keys/ed25519.pub" "$LEG/keys/ed25519.pub" && ok "G: the public key came with it (a pair)" || bad "G: the adopted public key is not the legacy one"
 [ "$(mode_of "$LEG/keys/ed25519.priv")" = 644 ] && ok "G: the legacy copy was not changed (still 644)" || bad "G: the legacy copy's mode changed"
 grep -q "readable by other users" "$DISP/g/adopt.log" && ok "G: adopt says the legacy copy is readable by others" || bad "G: adopt does not mention the legacy copy's exposure"
 [ -z "$(ls -A "$STORE/keys" | grep -v -e '^ed25519.priv$' -e '^ed25519.pub$')" ] && ok "G: no temporary file left in keys/" || bad "G: keys/ holds $(ls -A "$STORE/keys" | tr '\n' ' ')"
 # --force over an existing target key with the pre-U27 mode.
 chmod 644 "$STORE/keys/ed25519.priv"
-( JAVA_TOOL_OPTIONS="-Duser.home=$H" "$ADOPT" "$APP" --legacy "$LEG" --force ) > "$DISP/g/adopt-force.log" 2>&1; rc=$?
+printf '%s' "$(printf 'ef%.0s' $(seq 1 32))" > "$STORE/keys/ed25519.pub"
+adopt "$DISP/g/adopt-force.log" --legacy "$LEG" --force; rc=$?
 m="$(mode_of "$STORE/keys/ed25519.priv")"; owner_only "$m" && ok "G: --force over a 644 key leaves $m" || bad "G: --force over a 644 key leaves $m"
-no_key_in G "$LEG/keys/ed25519.priv" "$DISP/g/adopt.log" "$DISP/g/adopt-force.log"
+cmp -s "$STORE/keys/ed25519.pub" "$LEG/keys/ed25519.pub" && ok "G: --force replaced BOTH halves" || bad "G: --force left a mismatched pair"
+# Half a legacy identity is not adopted.
+new_app g2 || exit 1
+LEG="$H/.keliver-portal"; mkdir -p "$LEG/keys"
+( umask 077; python3 -c "import os,sys; open(sys.argv[1],'w').write(os.urandom(32).hex())" "$LEG/keys/ed25519.priv" )
+adopt "$DISP/g2/adopt.log" --legacy "$LEG"; rc=$?
+[ "$rc" != 0 ] && grep -q "half an identity" "$DISP/g2/adopt.log" && ok "G: half a legacy identity is refused (exit $rc)" \
+  || bad "G: half a legacy identity: rc=$rc, $(grep -m1 'keys' "$DISP/g2/adopt.log")"
+[ -e "$STORE/keys/ed25519.priv" ] && bad "G: half a legacy identity was copied" || ok "G: nothing of it was copied"
+# An existing keys/ that other users can write is not written into.
+new_app g3 || exit 1
+LEG="$H/.keliver-portal"; mkdir -p "$LEG/keys" "$STORE/keys"
+( umask 077; python3 -c "import os,sys; open(sys.argv[1],'w').write(os.urandom(32).hex())" "$LEG/keys/ed25519.priv" )
+printf '%s' "$(printf '12%.0s' $(seq 1 32))" > "$LEG/keys/ed25519.pub"
+chmod 777 "$STORE/keys"
+adopt "$DISP/g3/adopt.log" --legacy "$LEG"; rc=$?
+[ "$rc" != 0 ] && grep -q "others can write keys/" "$DISP/g3/adopt.log" && ok "G: a keys/ others can write is refused (exit $rc)" \
+  || bad "G: a 777 keys/: rc=$rc, $(grep -m1 'keys' "$DISP/g3/adopt.log")"
+[ -e "$STORE/keys/ed25519.priv" ] && bad "G: the key was written into a 777 keys/" || ok "G: nothing was written there"
+[ -z "$(ls -A "$STORE/keys")" ] && ok "G: no staging left behind" || bad "G: keys/ holds $(ls -A "$STORE/keys" | tr '\n' ' ')"
+
+# --- every private key this run made, against every log and response it wrote --
+echo "=== no key material in any log"
+leaks=0; keys_seen=0
+while IFS= read -r k; do
+  [ -s "$k" ] || continue
+  keys_seen=$((keys_seen+1))
+  if find "$DISP" -type f \( -name '*.log' -o -name '*.txt' \) -print0 | xargs -0 grep -lF -f "$k" 2>/dev/null | grep -q .; then
+    leaks=$((leaks+1))
+  fi
+done <<KEYS
+$(find "$DISP" -name ed25519.priv -type f 2>/dev/null)
+KEYS
+[ "$keys_seen" -gt 0 ] && [ "$leaks" -eq 0 ] && ok "no log or response holds any of the $keys_seen private keys this run made" \
+  || bad "$leaks of $keys_seen private keys appear in a log or response"
 
 echo
 echo "key-permissions: $pass passed, $fail failed, $skip skipped   ($DISP)"

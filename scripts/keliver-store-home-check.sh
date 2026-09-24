@@ -83,7 +83,9 @@ PURE_OK=1
 # `env` is in here because the resolver calls below run through `env -u
 # PORTAL_STORE`; without it the java-free case failed with 127 (env not found)
 # instead of 4, i.e. refused for a reason with nothing to do with java.
-for t in bash env python3 awk head sed cat basename dirname mkdir ls cp rm find date chmod stat; do
+# mktemp, ln, mv, uname and mount are the adopt script's owner-only key copy
+# (U27): without them the positive adopt row failed on the key for that reason.
+for t in bash env python3 awk head sed cat basename dirname mkdir ls cp rm find date chmod stat mktemp ln mv uname mount; do
   src="$(command -v "$t" 2>/dev/null)" && ln -sf "$src" "$PURE/$t" || PURE_OK=0
 done
 java_says() { printf '#!/bin/sh\n%s\n' "$1" > "$BIN/java"; chmod +x "$BIN/java"; }

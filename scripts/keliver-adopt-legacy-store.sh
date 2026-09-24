@@ -127,88 +127,118 @@ copy_one() { # relative path
   echo "  copied: $rel"; copied=$((copied+1))
 }
 
-# THE PRIVATE KEY IS COPIED OWNER-ONLY FROM THE MOMENT IT EXISTS (U27). It went
-# through copy_one's `cp -R`, which gives a new file the SOURCE's mode minus the
-# umask — so a legacy key made before U27 (0644) arrived 0644, readable by every
-# local user — and a chmod afterwards would leave a window in which it is
-# readable. mktemp creates its file 0600 in the destination directory; that mode
-# is read back BEFORE any key byte is written, the key is written into that
-# file, and only then is it put in place: `ln`, which never replaces a name,
-# or with --force `mv -f`, which replaces it atomically. A filesystem that does
-# not enforce the mode fails the copy rather than receiving the key.
+# THE IDENTITY IS COPIED AS A PAIR, AND THE PRIVATE KEY OWNER-ONLY FROM THE
+# MOMENT IT EXISTS (U27). It went through copy_one's `cp -R`, which gives a new
+# file the SOURCE's mode minus the umask — so a legacy key made before U27 (0644)
+# arrived 0644, readable by every local user — and a chmod afterwards would leave
+# a window in which it is readable.
+#
+# Now: a private staging directory (`mktemp -d`, 0700) inside keys/, so no other
+# user can reach or swap anything in it; an empty file created there under umask
+# 077 and its mode read back BEFORE any key byte is written; then the key, and
+# only then into place — `ln`, which never replaces a name, or with --force
+# `mv -f`, which replaces it atomically. A filesystem that does not apply the
+# mode, a macOS volume mounted noowners, or an existing keys/ other users can
+# write fails the copy rather than receiving the key.
+#
+# And as a PAIR (U29): both halves or neither. Half a legacy identity is not
+# adopted, and --force replaces both halves, never one.
 file_mode() { stat -c %a "$1" 2>/dev/null || stat -f %Lp "$1" 2>/dev/null; }
+shq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
 # macOS mounts external and disk-image volumes `noowners`: every local user then
-# counts as the owner of every file, so no mode protects anything. Prints the
-# mount point when the one holding <dir> is such a volume (portal-relay's
-# SigningKeys.kt makes the same check).
+# counts as the owner of every file, so no mode protects anything. Succeeds, and
+# prints why, when the volume holding <dir> is such a volume OR when that cannot
+# be determined — a mount table that cannot be read is not taken as "no"
+# (portal-relay's SigningKeys.kt makes the same check, the same way). $OSTYPE is
+# bash's own, so a missing `uname` cannot make this fail open.
 noowners_mount() { # <dir>
-  [ "$(uname)" = Darwin ] || return 1
-  local real; real="$(cd "$1" 2>/dev/null && pwd -P)" || return 1
-  mount | awk -v p="$real" '
+  case "${OSTYPE:-}" in darwin*) ;; *) return 1 ;; esac
+  local real table
+  real="$(cd "$1" 2>/dev/null && pwd -P)" || { echo "an unreadable path ($1)"; return 0; }
+  table="$(mount 2>/dev/null)" && [ -n "$table" ] || { echo "an unknown volume (the mount table could not be read)"; return 0; }
+  printf '%s\n' "$table" | awk -v p="$real" '
     { i = index($0, " on "); if (!i) next
       rest = substr($0, i + 4)
       if (!match(rest, / \([^()]*\)$/)) next
       point = substr(rest, 1, RSTART - 1); flags = substr(rest, RSTART + 2, RLENGTH - 3)
       pre = (point == "/") ? "/" : point "/"
       if ((p == point || index(p, pre) == 1) && length(point) > best) { best = length(point); bp = point; bf = flags } }
-    END { if (best && bf ~ /(^|, )noowners(,|$)/) { print bp; exit 0 }; exit 1 }'
+    END { if (best && bf ~ /(^|, )noowners(,|$)/) { print "the volume at " bp; exit 0 }; exit 1 }'
 }
-copy_private_key() {
-  local rel="keys/ed25519.priv" src="$LEGACY/keys/ed25519.priv" dst="$TARGET/keys/ed25519.priv" tmp m
-  [ -e "$src" ] || return 0
-  if [ -e "$dst" ] && [ "$FORCE" != 1 ]; then
-    echo "  skip (exists): $rel"; skipped=$((skipped+1)); return 0
+ADOPT_STAGE=""
+trap '[ -n "$ADOPT_STAGE" ] && rm -rf "$ADOPT_STAGE"' EXIT
+key_fail() { # <reason> <explanation...>
+  local why="$1"; shift
+  echo "  FAILED ($why): keys/ — $*" >&2
+  echo "    The signing identity was NOT copied." >&2
+  failed=$((failed+1))
+  [ -n "$ADOPT_STAGE" ] && rm -rf "$ADOPT_STAGE"; ADOPT_STAGE=""
+  return 1
+}
+copy_identity() {
+  local sp="$LEGACY/keys/ed25519.priv" su="$LEGACY/keys/ed25519.pub"
+  local dp="$TARGET/keys/ed25519.priv" du="$TARGET/keys/ed25519.pub" m
+  [ -e "$sp" ] || [ -e "$su" ] || return 0
+  if [ ! -e "$sp" ] || [ ! -e "$su" ]; then
+    key_fail "half an identity" "the legacy store holds only $( [ -e "$sp" ] && echo ed25519.priv || echo ed25519.pub )." \
+      "Adopting half would leave this app with half a signing identity."
+    return 1
   fi
-  # keys/ is made 0700 when this creates it; an existing one is not changed.
+  if { [ -e "$dp" ] || [ -e "$du" ]; } && [ "$FORCE" != 1 ]; then
+    echo "  skip (exists): keys/ (this app already has a signing identity)"; skipped=$((skipped+1)); return 0
+  fi
+  # keys/ is made 0700 when this creates it; an existing one is not changed —
+  # but it is not written into if other users can write it.
   if [ ! -d "$TARGET/keys" ]; then
-    ( umask 077 && mkdir -p "$TARGET/keys" ) || {
-      echo "  FAILED (mkdir): $rel" >&2; failed=$((failed+1)); return 1; }
+    ( umask 077 && mkdir -p "$TARGET/keys" ) || { key_fail mkdir "could not create $TARGET/keys."; return 1; }
   fi
-  tmp="$(mktemp "$TARGET/keys/.adopt.XXXXXX")" || {
-    echo "  FAILED (temporary file): $rel" >&2; failed=$((failed+1)); return 1; }
-  # mktemp creates 0600. Anything else read back — an execute bit included — is
-  # a filesystem not applying the mode it was given (macOS FAT reads back 700).
-  m="$(file_mode "$tmp")"
+  case "$(file_mode "$TARGET/keys")" in
+    *[2367]?|*[2367]) key_fail "others can write keys/" "$TARGET/keys is mode $(file_mode "$TARGET/keys"), so other" \
+      "users could replace the key. Make it owner-only (chmod 700 $(shq "$TARGET/keys")) and run this again."; return 1 ;;
+  esac
+  ADOPT_STAGE="$(mktemp -d "$TARGET/keys/.adopt.XXXXXX")" || { key_fail "temporary directory" "mktemp -d failed in $TARGET/keys."; return 1; }
+  ( umask 077 && : > "$ADOPT_STAGE/ed25519.priv" ) || { key_fail "temporary file" "could not create a file in $ADOPT_STAGE."; return 1; }
+  # Created 600. Anything else read back — an execute bit included — is a
+  # filesystem not applying the mode it was given (macOS FAT reads back 700).
+  m="$(file_mode "$ADOPT_STAGE/ed25519.priv")"
   case "$m" in
     600|400) ;;
-    *) rm -f "$tmp"
-       echo "  FAILED (not owner-only): $rel — a new file in $TARGET/keys was created 600 and reads" >&2
-       echo "    back as ${m:-unknown}, so that filesystem does not enforce permissions. The key was NOT copied." >&2
-       failed=$((failed+1)); return 1 ;;
+    *) key_fail "not owner-only" "a new file in $TARGET/keys was created 600 and reads back as ${m:-unknown}," \
+         "so that filesystem does not enforce permissions."; return 1 ;;
   esac
   if m="$(noowners_mount "$TARGET/keys")"; then
-    rm -f "$tmp"
-    echo "  FAILED (ownership ignored): $rel — the volume at $m is mounted noowners, so every local" >&2
-    echo "    user counts as the owner of every file, and this filesystem does not enforce permissions." >&2
-    echo "    The key was NOT copied." >&2
-    failed=$((failed+1)); return 1
+    key_fail "ownership ignored" "$m is, or may be, mounted noowners: every local user would count as the" \
+      "owner of every file, so this filesystem does not enforce permissions."; return 1
   fi
-  if ! cat "$src" > "$tmp"; then
-    rm -f "$tmp"; echo "  FAILED (copy): $rel" >&2; failed=$((failed+1)); return 1
-  fi
+  cat "$sp" > "$ADOPT_STAGE/ed25519.priv" || { key_fail copy "could not copy the private key."; return 1; }
+  cp "$su" "$ADOPT_STAGE/ed25519.pub" || { key_fail copy "could not copy the public key."; return 1; }
   if [ "$FORCE" = 1 ]; then
-    mv -f "$tmp" "$dst" || { rm -f "$tmp"; echo "  FAILED (rename): $rel" >&2; failed=$((failed+1)); return 1; }
-  elif ! ln "$tmp" "$dst" 2>/dev/null; then
-    rm -f "$tmp"
-    # A key that appeared since the check above is kept, not replaced.
-    if [ -e "$dst" ]; then echo "  skip (exists): $rel"; skipped=$((skipped+1)); return 0; fi
-    echo "  FAILED (link): $rel" >&2; failed=$((failed+1)); return 1
+    mv -f "$ADOPT_STAGE/ed25519.priv" "$dp" && mv -f "$ADOPT_STAGE/ed25519.pub" "$du" \
+      || { key_fail rename "could not move the pair into place; check $TARGET/keys before starting the relay."; return 1; }
   else
-    rm -f "$tmp"
+    # ln refuses an existing name, so a key that appeared since the check above is kept.
+    if ! ln "$ADOPT_STAGE/ed25519.priv" "$dp" 2>/dev/null; then
+      key_fail link "$dp could not be created (it may have appeared since the check). Nothing was replaced."; return 1
+    fi
+    if ! ln "$ADOPT_STAGE/ed25519.pub" "$du" 2>/dev/null; then
+      rm -f "$dp"; key_fail link "$du could not be created; the private key placed a moment ago was withdrawn."; return 1
+    fi
   fi
-  echo "  copied: $rel (mode $(file_mode "$dst"))"; copied=$((copied+1))
+  rm -rf "$ADOPT_STAGE"; ADOPT_STAGE=""
+  echo "  copied: keys/ed25519.priv (mode $(file_mode "$dp"))"
+  echo "  copied: keys/ed25519.pub"
+  copied=$((copied+2))
   # The legacy store is only READ, so its copy keeps whatever mode it has. Say
   # so when that mode lets other users read it; do not change it.
-  m="$(file_mode "$src")"
+  m="$(file_mode "$sp")"
   case "$m" in
-    *[4567]?|*[4567]) echo "  note: the LEGACY copy $src is mode $m: readable by other users of this machine." >&2
+    *[4567]?|*[4567]) echo "  note: the LEGACY copy $sp is mode $m: readable by other users of this machine." >&2
              echo "    This script does not change the legacy store. To make that copy owner-only:" >&2
-             echo "      chmod 600 '$src'" >&2 ;;
+             echo "      chmod 600 $(shq "$sp")" >&2 ;;
   esac
 }
 
-copy_private_key
-copy_one "keys/ed25519.pub"
+copy_identity
 for d in "$LEGACY"/*/; do
   [ -d "$d" ] || continue
   name="$(basename "$d")"

@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /**
  * U27: the signing key is created owner-only, an existing one is never changed,
- * and half an identity is refused rather than regenerated.
+ * and half an identity is reported, never completed by generating (U29).
  *
  * Everything here is in a fresh temporary directory; no store is resolved and no
  * key material is printed — assertions compare bytes in memory.
@@ -38,6 +38,7 @@ class SigningKeysTest {
     assertTrue(ensureSigningKeys(keys))
     assertEquals("rw-------", mode(File(keys, PRIVATE_KEY_FILE)))
     assertEquals("rwx------", mode(keys))
+    assertTrue(mode(File(keys, PUBLIC_KEY_FILE)).let { it[4] != 'w' && it[7] != 'w' }, "public key not writable by others")
     assertEquals(KeyProtection.OwnerOnly, keyProtection(keys))
     assertEquals(setOf(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE), keys.list()!!.toSet(), "no staging directory left")
   }
@@ -127,15 +128,63 @@ class SigningKeysTest {
   }
 
   @Test
-  fun halfAnIdentityIsRefusedAndLeftAsItWas() {
+  fun halfAnIdentityIsReportedAndLeftAsItWas() {
     for (present in listOf(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE)) {
       val keys = File(store(), "keys").apply { mkdirs() }
       File(keys, present).writeText("55".repeat(32))
-      val e = assertFailsWith<SigningKeyException> { ensureSigningKeys(keys) }
-      assertTrue("Nothing was changed" in e.message!!, e.message)
+      assertFalse(ensureSigningKeys(keys), "nothing generated beside $present")
       assertEquals(listOf(present), keys.list()!!.toList(), "nothing was generated beside $present")
       assertEquals("55".repeat(32), File(keys, present).readText(), "$present was not replaced")
+      val p = keyProtection(keys)
+      assertIs<KeyProtection.Incomplete>(p)
+      assertTrue("Nothing was generated" in p.detail, p.detail)
     }
+  }
+
+  @Test
+  fun noIdentityAtAllIsNotThisChecksBusiness() {
+    val keys = File(store(), "keys").apply { mkdirs() }
+    assertEquals(null, keyProtection(keys))
+  }
+
+  @Test
+  fun aWorldWritableStoreDirectoryIsExposedButAGroupWritableOneIsNot() {
+    val root = store()
+    val keys = File(root, "keys")
+    ensureSigningKeys(keys)
+    chmod(root, "rwxrwxr-x") // a user-private-group umask (002)
+    assertEquals(KeyProtection.OwnerOnly, keyProtection(keys))
+    chmod(root, "rwxrwxrwx")
+    val p = keyProtection(keys)
+    assertIs<KeyProtection.Exposed>(p)
+    assertTrue("store directory" in p.detail && p.chmodFixes, p.detail)
+    chmod(root, "rwx------")
+  }
+
+  @Test
+  fun aPublicKeyOthersCanWriteIsExposed() {
+    val keys = File(store(), "keys")
+    ensureSigningKeys(keys)
+    chmod(File(keys, PUBLIC_KEY_FILE), "rw-rw-rw-")
+    val p = keyProtection(keys)
+    assertIs<KeyProtection.Exposed>(p)
+    assertTrue(PUBLIC_KEY_FILE in p.detail, p.detail)
+  }
+
+  @Test
+  fun thePrintedCommandsRunAsPrintedOnAPathWithAQuote() {
+    val root = File(store(), "o'neil's store")
+    val keys = File(root, "keys").apply { mkdirs() }
+    File(keys, PRIVATE_KEY_FILE).writeText("77".repeat(32))
+    File(keys, PUBLIC_KEY_FILE).writeText("88".repeat(32))
+    chmod(File(keys, PRIVATE_KEY_FILE), "rw-r--r--")
+    chmod(keys, "rwxr-xr-x")
+    assertIs<KeyProtection.Exposed>(keyProtection(keys))
+    val p = ProcessBuilder("/bin/sh", "-c", tightenCommands(keys)).redirectErrorStream(true).start()
+    val out = p.inputStream.bufferedReader().readText()
+    assertEquals(0, p.waitFor(), out)
+    assertEquals(KeyProtection.OwnerOnly, keyProtection(keys))
+    assertEquals("77".repeat(32), File(keys, PRIVATE_KEY_FILE).readText(), "modes only; the key is the same")
   }
 
   @Test
@@ -153,11 +202,11 @@ class SigningKeysTest {
     chmod(keys, "rwxrwxrwx")
     val e = assertFailsWith<SigningKeyException> { ensureSigningKeys(keys) }
     assertTrue("rwxrwxrwx" in e.message!!, e.message)
-    assertEquals(emptyList(), keys.list()!!.toList(), "nothing was created")
+    assertEquals(emptyList(), keys.list()!!.toList(), "no key was created")
   }
 
   @Test
-  fun aNoownersVolumeIsFoundByTheLongestMountPoint() {
+  fun aNoownersVolumeIsFoundByDeviceThenByTheLongestMountPoint() {
     // The shape of macOS `mount` output, including the line MEASURED for a FAT
     // image attached with hdiutil.
     val listing = """
@@ -166,12 +215,17 @@ class SigningKeysTest {
       /dev/disk6s1 on /private/tmp/run/fat (msdos, local, nodev, nosuid, noowners, noatime, nobrowse, fskit, mounted by someone)
       /dev/disk7s1 on /Volumes/My Drive (apfs, local, nodev, nosuid, journaled, noowners)
     """.trimIndent()
-    assertEquals("/private/tmp/run/fat", noownersMountFor(listing, "/private/tmp/run/fat/store/keys"))
-    assertEquals("/private/tmp/run/fat", noownersMountFor(listing, "/private/tmp/run/fat"))
-    assertEquals("/Volumes/My Drive", noownersMountFor(listing, "/Volumes/My Drive/app/keys"))
-    assertEquals(null, noownersMountFor(listing, "/private/tmp/run/fatter/keys"), "a prefix of a name is not a mount")
-    assertEquals(null, noownersMountFor(listing, "/Users/me/.keliver-portal/apps/a/keys"))
-    assertEquals(null, noownersMountFor(listing, "/System/Volumes/Data/Users/me/keys"))
+    assertEquals("/private/tmp/run/fat", noownersMountFor(listing, null, "/private/tmp/run/fat/store/keys"))
+    assertEquals("/private/tmp/run/fat", noownersMountFor(listing, null, "/private/tmp/run/fat"))
+    assertEquals("/Volumes/My Drive", noownersMountFor(listing, null, "/Volumes/My Drive/app/keys"))
+    assertEquals(null, noownersMountFor(listing, null, "/private/tmp/run/fatter/keys"), "a prefix of a name is not a mount")
+    assertEquals(null, noownersMountFor(listing, null, "/Users/me/.keliver-portal/apps/a/keys"))
+    assertEquals(null, noownersMountFor(listing, null, "/System/Volumes/Data/Users/me/keys"))
+    // By device: a firmlinked /Users path is on the Data volume, whatever its prefix says.
+    val dataNoowners = listing.replace("journaled, nobrowse, protect", "journaled, nobrowse, noowners")
+    assertEquals("/System/Volumes/Data", noownersMountFor(dataNoowners, "/dev/disk3s5", "/Users/me/.keliver-portal/apps/a/keys/ed25519.priv"))
+    assertEquals(null, noownersMountFor(listing, "/dev/disk3s5", "/Users/me/.keliver-portal/apps/a/keys/ed25519.priv"))
+    assertEquals("/private/tmp/run/fat", noownersMountFor(listing, "/dev/disk6s1", "/private/tmp/run/fat/k"))
   }
 
   private fun unhex(s: String): ByteArray = ByteArray(s.length / 2) { s.substring(2 * it, 2 * it + 2).toInt(16).toByte() }

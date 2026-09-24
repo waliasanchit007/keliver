@@ -515,18 +515,24 @@ The store's private key is the one secret in it, so its modes are part of the
 contract. `portal-relay/src/main/kotlin/SigningKeys.kt` is the implementation;
 `scripts/keliver-key-permissions-check.sh` asserts it.
 
-* **Created owner-only.** `keys/` is created 0700 and `keys/ed25519.priv` 0600,
-  each with that mode at creation — never written and then chmodded. The mode is
-  read back before the key is placed, and a key is not created where the read-back
-  does not show owner-only (a filesystem that does not apply modes, or a macOS
-  volume mounted `noowners`). `ed25519.pub` is public and keeps the umask's mode.
-* **Never changed afterwards.** Nothing in Keliver chmods, rewrites or rotates an
-  existing key. A key that is not owner-only is reported at every relay start with
-  the commands that keep the identity, and the relay's `/publish` refuses to sign
-  with it (see `KNOWN_BUGS.md` U27 for why that, and not an automatic chmod).
+* **Created owner-only.** `keys/` is created 0700, `keys/ed25519.priv` 0600 and
+  `ed25519.pub` 0644, each with that mode at creation — never written and then
+  chmodded. The private key's mode is read back before any key byte is written,
+  and a key is not created where the read-back does not show owner-only (a
+  filesystem that does not apply modes, or a macOS volume mounted `noowners`).
+* **Never changed on its own afterwards.** Nothing in Keliver chmods, rewrites or
+  rotates an existing key by itself; `keliver-adopt-legacy-store.sh --force`
+  replaces one because it was asked to. An identity that is not owner-only is
+  reported at every relay start with the commands that keep it, and the relay's
+  `/publish` refuses to sign with it (see `KNOWN_BUGS.md` U27 for why that, and
+  not an automatic chmod). A Gradle build run directly is not gated.
+* **What owner-only means.** Also: `keys/` and `ed25519.pub` not writable by
+  group or other, the key and `keys/` owned by the relay's user, and the store
+  directory not world-writable. Directories above the store are not checked.
 * **Copies are owner-only too.** Anything that copies the private key creates the
   copy owner-only before writing into it; `keliver-adopt-legacy-store.sh` does. A
   plain `cp` of a 0600 key stays 0600 (a new file gets the source's mode minus the
   umask); `cp` of a 0644 key does not.
-* **An identity is both files.** One without the other is refused at start, never
-  completed by generating the missing half (U29).
+* **An identity is both files.** One without the other is never completed by
+  generating the missing half (U29): the relay starts, reports it, and will not
+  publish. Adoption copies both or neither.

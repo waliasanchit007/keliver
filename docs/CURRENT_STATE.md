@@ -50,7 +50,7 @@ execution, and iOS for the reference app.
 (editor frame rate, measured not assessed); #77 (iOS `generatePortalKey`
 foreign-file hole — reproduced through to a linked debug framework, not fixed);
 U27 (the relay writes `keys/ed25519.priv` world-readable) and U29 (half a key
-pair is silently regenerated) — both fixed on a branch, **not released**; U28 (the production
+pair is silently regenerated) — both fixed, **not released**; U28 (the production
 host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
 `REFERENCE_APP.md` — no published production host, publish not scaffolded.
 Priorities: `ROADMAP.md` "Current priorities".

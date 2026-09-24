@@ -190,8 +190,9 @@ jobs:
           # refused, and adoption copies owner-only. Here, and only here, an
           # UNRELATED local user then tries to read the key: this runner has
           # passwordless sudo. Under /tmp, which that user can traverse, so the
-          # check's canary precondition can hold; a denial is then the key's own
-          # permissions, not the path's.
+          # check's canary precondition — a world-readable file in the store
+          # directory — can hold; a denial is then keys/ or the key, not the path
+          # leading to the store.
           ./gradlew --console=plain :portal-relay:installDist
           sudo useradd --no-create-home --shell /usr/sbin/nologin keliverprobe
           KELIVER_PROBE_USER=keliverprobe scripts/keliver-key-permissions-check.sh /tmp/keliver-key-perms

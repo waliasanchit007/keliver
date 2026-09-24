@@ -885,14 +885,15 @@ Found building the reference app (`docs/REFERENCE_APP.md`), 2026-09-22.
 `File.writeText`, so its mode was whatever the umask gave. Reproduced
 2026-09-24 against the **released tools 0.3.5 bundle** — its own relay and
 adopt script, driven by `scripts/keliver-key-permissions-check.sh` in disposable
-stores (`docs/superpowers/evidence/u27/before.txt`):
+stores (`docs/superpowers/evidence/u27/before.txt`); the Linux runner measured
+the same 0644 (`superpowers/evidence/reference-app/ci-run-35967437120/key-modes.txt`):
 
 | case | released 0.3.5 | after this fix |
 |---|---|---|
 | fresh store, umask 022 | `ed25519.priv` **644**, `keys/` 755 | 600, 700 |
-| fresh store, umask 000 | **666**, 777 | 600, 700 |
-| adopting a legacy 644 key (`keliver-adopt-legacy-store.sh`) | copied **644**, `--force` too | 600; the legacy copy is left alone and named as readable |
-| store on a macOS FAT image (mounted `noowners`) | key created, "generated" | start refused (exit 78), nothing created |
+| fresh store, umask 000 | **666**, 777 | 600, 700 — and the store directory, which the relay's store claim creates **777** under this umask, is reported and publishing refused until `chmod o-w` |
+| adopting a legacy 644 key (`keliver-adopt-legacy-store.sh`) | copied **644**, `--force` too | 600, as a pair; the legacy copy left alone and named as readable |
+| store on a macOS FAT image (mounted `noowners`) | key created, "generated" | start refused (exit 78), no key created |
 | an existing 644 key | used silently | reported every start; `/publish` refused; **mode not changed** |
 
 Traversal is why the 644 mattered: every directory from the home to the key was
@@ -903,25 +904,38 @@ another local user.
 **The fix** (`portal-relay/src/main/kotlin/SigningKeys.kt`):
 
 * A new private key is owner-only from the moment the file exists: created
-  `O_EXCL` with mode 0600 in a 0700 staging directory under `keys/`, written,
-  synced, its mode READ BACK, and only then hard-linked into place (a link never
-  replaces an existing name). Not write-then-chmod. A umask can only remove
-  bits, so no umask widens it; umask 000 is in the check.
+  `O_EXCL` with mode 0600, **empty**, in a 0700 staging directory under `keys/`;
+  its mode read back; only then the key bytes written and synced, and the file
+  hard-linked into place (a link never replaces a name; there is no fallback —
+  a move would be a check followed by a replacing rename). Not write-then-chmod.
+  A umask can only remove bits; umask 000 is in the check.
 * It is created only when the read-back shows protection holds. A mode that
   reads back with a bit that was never requested (macOS FAT: `rw-------` reads
   back `rwx------`) means the filesystem does not apply modes, and a macOS
-  volume mounted `noowners` makes every local user the owner of every file —
-  the JVM cannot see mount flags, so the relay asks `/sbin/mount`, and a table
-  it cannot read is "unverified", not "fine". Either way the staged key is
-  discarded before anything could sign with it and the start fails saying so.
-* `keys/` is created 0700. A fresh key is not put into an existing `keys/` that
-  other users can write.
-* `keliver-adopt-legacy-store.sh` copies the key into a `mktemp` file (0600),
-  checks that mode reads back before writing a byte into it, then `ln`s it into
-  place (`mv -f` with `--force`). Same `noowners` check.
-* No key material is printed: messages carry paths and modes only. The check
-  greps every relay and adopt log for the private key (pattern read from the
-  file) and finds none.
+  volume mounted `noowners` makes every local user the owner of every file — the
+  JVM cannot see mount flags, so the relay asks `/sbin/mount` for the volume
+  holding the key (by device), and a table it cannot read is "unverified", not
+  "fine". Either way the empty staged file is discarded, no key bytes are
+  written, and the start fails saying so.
+* `keys/` is created 0700; the public key 0644 (minus the umask). A fresh key
+  is not put into an existing `keys/` that other users can write.
+* `keliver-adopt-legacy-store.sh` copies the identity **as a pair** (both
+  halves or neither; `--force` replaces both) through a `mktemp -d` staging
+  directory inside `keys/`: an empty file created under umask 077, its mode read
+  back before a byte is written, then `ln` into place (`mv -f` with `--force`).
+  It refuses a `keys/` others can write, a filesystem that does not apply the
+  mode, and a `noowners` volume, and cleans up its staging on exit.
+* No key material is printed: messages carry paths, modes and owners only. The
+  check searches every log and publish response it produced for every private
+  key it made (pattern read from the file) and finds none.
+
+**What "owner-only" is checked as.** Both files present; `ed25519.priv` has no
+group or other bits; `keys/` and `ed25519.pub` are not writable by group or
+other; `ed25519.priv` and `keys/` are owned by the user running the relay; the
+store directory is not world-writable (group-write is not flagged: under a
+user-private-group umask, 002 on Debian and Ubuntu, every directory is
+group-writable by a group of one); and, for a new key, the mode read back is
+the one requested and the volume does not ignore ownership.
 
 **Existing stores — the compatibility policy.** Every store created before this
 has a 0644 key, including any real one. The relay never changes an existing key
@@ -929,37 +943,47 @@ or its mode and never rotates it: tightening cannot undo an exposure that has
 already happened, so whether that identity is still trusted is the owner's
 decision, not the relay's. Instead:
 
-* every start prints a warning naming the bits and the exact commands that keep
-  the identity and make it owner-only —
-  `chmod 700 '<store>/keys' && chmod 600 '<store>/keys/ed25519.priv'` — and says
-  that doing so does not undo earlier exposure;
-* `POST /publish`, the relay's signing path, is **refused** while the key is not
-  owner-only (or cannot be checked), before anything is compiled. Editing is
-  unaffected: it never uses the key;
-* where the filesystem itself is the problem (`noowners`, modes not applied), it
-  says no chmod can help and that the store has to move.
+* every start prints a warning naming what is wrong and the exact commands that
+  keep the identity and fix the modes —
+  `chmod o-w '<store>' && chmod 700 '<store>/keys' && chmod 600 '<store>/keys/ed25519.priv' && chmod go-w '<store>/keys/ed25519.pub'`
+  (paths shell-quoted, a `'` in them escaped) — and says that doing so does not
+  undo earlier exposure;
+* `POST /publish`, the relay's signing path, is **refused** while the identity is
+  not owner-only, cannot be checked, or is half a pair (U29), before anything is
+  compiled. Editing is unaffected: it never uses the key;
+* where no chmod can help — the filesystem does not apply modes or ignores
+  ownership, or another user owns the files — it says so instead.
 
 Measured in the check (section D): the warning and the refusal appear, the modes
 and the key are unchanged, the printed commands run as printed, and afterwards
-the warning is gone and publish passes the gate with the same identity.
+the warning is gone and publish passes the gate, reaching the build, with the
+same identity.
 
-**Verified** (`docs/superpowers/evidence/u27/`): `SigningKeysTest` 10/0; the
-check 49 passed / 0 failed on macOS (2 skipped: the cross-user read);
-`keliver-verify-signed-bundle.sh` with a relay-created 0600 key — a bundle signed
-with it verifies with Zipline's `ManifestVerifier`, a tampered one and a foreign
-key do not (3/0). **Cross-user read:** not available on this Mac (no second
-account reachable without a password); the check runs it on the Linux runner in
-`portal-tools.yml` as a real second account, after proving that account can
-read a world-readable file beside the store.
+**Verified** (`docs/superpowers/evidence/u27/`): `SigningKeysTest` 14/0 (one
+runs the printed commands through `/bin/sh` on a path containing `'`); the
+check **61 passed / 0 failed** on macOS (2 skipped: the cross-user read); the
+released 0.3.5 bundle fails 36 of the same 63 (25 pass, 2 skipped); `keliver-verify-signed-bundle.sh`
+with a relay-created 0600 key — a bundle signed with it verifies with Zipline's
+`ManifestVerifier`, a tampered one and a foreign key do not (3/0); the store
+checks that exercise the relay and adoption still pass (store-home, resolver
+failure, legacy compat, store identity, store recovery). **Cross-user read:**
+not available on this Mac (no second account reachable without a password).
+`portal-tools.yml` is wired to run the check on the Linux runner with a real
+second account, after proving that account can read a world-readable file in
+the store directory; see the PR for whether that run has a result.
 
-**Not covered.** POSIX mode bits only: ACLs are not examined, nor who owns the
-file. Linux ownership-remapping mounts (idmapped, `all_squash`) and network
-filesystems' server-side checks are taken at their reported modes. The gate is
-the relay's `/publish`: `portal-published-guest` and an adopter's own signing
-block in `build.gradle` sign with whatever key is there. The store's other files
-keep umask modes. **Not released:** the published tools 0.3.5 relay still
-creates 0644 keys, and the reference app's CI, which uses that bundle, still
-measures it.
+**Not covered.** POSIX modes and owners: ACLs are not examined. Directories
+above the store (`apps/`, `.keliver-portal`, the home) are not checked — under
+umask 000 the relay's store claim creates them 777, and only the store directory
+itself is reported. Linux ownership-remapping mounts (idmapped, `all_squash`)
+and network filesystems' server-side checks are taken at their reported modes,
+and for an EXISTING key on a filesystem that ignores modes (Linux vfat) the
+chmod advice is printed although it cannot help. The gate is the relay's
+`/publish`: a Gradle build run directly — `portal-published-guest` or an
+adopter's own signing block in `build.gradle` — signs with whatever key is in
+the store. The store's other files keep umask modes. **Not released:** the
+published tools 0.3.5 relay still creates 0644 keys, and the reference app's
+CI, which uses that bundle, still measures it.
 
 ### U29. Half a signing identity was silently regenerated — FIXED, UNRELEASED
 
@@ -969,14 +993,20 @@ Measured against the released tools 0.3.5 relay (`evidence/u27/before.txt`,
 section E): with `ed25519.pub` moved aside, the next start **replaced the private
 key**; with `ed25519.priv` moved aside, it **replaced the public key** that hosts
 embed. No message either way — a rotation, the failure U23 was about, through a
-different door.
+different door. (It also hid inside `keliver-store-recovery-check.sh`, whose
+fixture stores hold only a public key: every relay booted on one replaced it.)
 
-Now: one file without the other refuses the start (exit 78), changes nothing, and
-says how to restore the missing half or deliberately begin a new identity. A
-generation that fails after placing the private key withdraws it (only if it is
-still byte-for-byte the one it placed), so the relay does not create this state
-itself. `SigningKeysTest.halfAnIdentityIsRefusedAndLeftAsItWas`, and the check's
-section E, both directions.
+Now: one file without the other is never completed by generating. The relay
+still starts — editing does not use the key, and a store holding only the public
+key is a legitimate verify-only setup — warns at every start, and refuses
+`/publish`, saying which half is missing and what recovers it: a missing public
+key is determined by the private one (restore it from a backup; Keliver does not
+derive it), a missing private key cannot be recovered (restore it, or begin a
+new identity on purpose). A generation that fails after placing the private key
+withdraws it (only if it is still byte-for-byte the one it placed); only a crash
+in the instant between the two links can leave half a pair, and the next start
+reports it rather than repairing it. `SigningKeysTest.halfAnIdentityIsReportedAndLeftAsItWas`,
+and the check's section E, both directions.
 
 ### U28. The production host logs a false `codeLoadFailed` on every start — OPEN
 
