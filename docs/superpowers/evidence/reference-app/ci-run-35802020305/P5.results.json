@@ -1,0 +1,14 @@
+[
+ {
+  "id": "TITLE",
+  "check": "the list screen shows the title 'Foreign build'",
+  "ok": false,
+  "observed": []
+ },
+ {
+  "id": "TITLE-ONLY",
+  "check": "no other known title is shown (Inventory, Stockroom)",
+  "ok": false,
+  "observed": []
+ }
+]

@@ -1,0 +1,22 @@
+  PASS  L0  mock mode before Live
+  PASS  L1  Live runs the real presenter (fidelity panel)
+  PASS  L2  real seed value: quantityLabel = On hand: 12
+  PASS  L3.13  canvas tap Add 1 -> On hand: 13
+  PASS  L3.14  canvas tap Add 1 -> On hand: 14
+  PASS  L3.15  canvas tap Add 1 -> On hand: 15
+  PASS  L3.h  history accumulates: 3 adjustments: +1, +1, +1 (net +3)
+  PASS  L4.14  canvas tap Remove 1 -> On hand: 14, isLowStock false
+  PASS  L4.13  canvas tap Remove 1 -> On hand: 13, isLowStock false
+  PASS  L4.12  canvas tap Remove 1 -> On hand: 12, isLowStock false
+  PASS  L4.11  canvas tap Remove 1 -> On hand: 11, isLowStock false
+  PASS  L4.10  canvas tap Remove 1 -> On hand: 10, isLowStock false
+  PASS  L4.9  canvas tap Remove 1 -> On hand: 9, isLowStock false
+  PASS  L4.8  canvas tap Remove 1 -> On hand: 8, isLowStock false
+  PASS  L4.7  canvas tap Remove 1 -> On hand: 7, isLowStock false
+  PASS  L4.6  canvas tap Remove 1 -> On hand: 6, isLowStock false
+  PASS  L4.5  canvas tap Remove 1 -> On hand: 5, isLowStock true
+  PASS  L5  canvas tap Receive 10 -> On hand: 15
+  action console: ⚡ receive(10) → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ decrement → real presenter | ⚡ increment → real presenter | ⚡ increment → real present
+  PASS  L6  Stop clears the live values
+  PASS  L7  a restarted Live session starts from the seed again (On hand: 12)
+  PASS  L8  list screen live: summary = 8 items · 2 low on stock

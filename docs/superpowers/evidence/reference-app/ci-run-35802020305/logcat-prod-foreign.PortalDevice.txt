@@ -1,0 +1,35 @@
+09-23 00:38:50.246  2957  2957 D PortalDevice: prod mode: verifying manifests with portal-ed25519 4ebb499a…
+09-23 00:38:50.249  2957  2957 D PortalDevice: onCreate — mode=prod, devOnlyHost=false
+09-23 00:38:50.508  2957  2981 E PortalDevice: codeLoadFailed: Expected URL scheme 'http' or 'https' but no scheme was found for 
+09-23 00:38:50.508  2957  2981 E PortalDevice: java.lang.IllegalArgumentException: Expected URL scheme 'http' or 'https' but no scheme was found for 
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at okhttp3.HttpUrl$Builder.parse$okhttp(HttpUrl.kt:1360)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at okhttp3.HttpUrl$Companion.get(HttpUrl.kt:1734)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at okhttp3.Request$Builder.url(Request.kt:233)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.OkHttpZiplineHttpClient.download(OkHttpZiplineHttpClient.kt:45)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.internal.fetcher.HttpFetcher.fetchByteString(HttpFetcher.kt:130)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.internal.fetcher.HttpFetcher.fetchManifest(HttpFetcher.kt:62)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader.fetchManifestFromNetwork(ZiplineLoader.kt:686)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader.loadFromNetwork(ZiplineLoader.kt:347)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader.access$loadFromNetwork(ZiplineLoader.kt:71)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader$load$2$1.emit(ZiplineLoader.kt:261)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader$load$2$1.emit(ZiplineLoader.kt:260)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at kotlinx.coroutines.flow.StateFlowImpl.collect(StateFlow.kt:401)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at kotlinx.coroutines.flow.ReadonlyStateFlow.collect(Unknown Source:2)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader$load$2.invokeSuspend(ZiplineLoader.kt:260)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+09-23 00:38:50.508  2957  2981 E PortalDevice: 	at java.lang.Thread.run(Thread.java:1012)
+09-23 00:38:50.910  2957  2975 D PortalDevice: prod mode: loading http://10.0.2.2:8077/bundles/v1/manifest.zipline.json
+09-23 00:38:51.952  2957  2981 E PortalDevice: codeLoadFailed: manifest signature for key portal-ed25519 did not verify!
+09-23 00:38:51.952  2957  2981 E PortalDevice: java.lang.IllegalStateException: manifest signature for key portal-ed25519 did not verify!
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ManifestVerifier.verify(ManifestVerifier.kt:57)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader.fetchManifestFromNetwork(ZiplineLoader.kt:695)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader.access$fetchManifestFromNetwork(ZiplineLoader.kt:71)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at app.cash.zipline.loader.ZiplineLoader$fetchManifestFromNetwork$1.invokeSuspend(Unknown Source:15)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+09-23 00:38:51.952  2957  2981 E PortalDevice: 	at java.lang.Thread.run(Thread.java:1012)

@@ -1,0 +1,20 @@
+== run 1
+rc=0
+> Task :portal-device-ios:generatePortalKey
+BUILD SUCCESSFUL in 1m 38s
+total 8
+drwxr-xr-x@ 3 sanchit.walia  wheel   96 23 Sep 05:52 .
+drwxr-xr-x@ 3 sanchit.walia  wheel   96 23 Sep 05:52 ..
+-rw-r--r--@ 1 sanchit.walia  wheel  222 23 Sep 05:52 PortalPublicKey.kt
+== run 2 (after planting)
+rc=0
+> Task :portal-device-ios:generatePortalKey UP-TO-DATE
+BUILD SUCCESSFUL in 2s
+total 16
+drwxr-xr-x@ 4 sanchit.walia  wheel  128 23 Sep 05:52 .
+drwxr-xr-x@ 3 sanchit.walia  wheel   96 23 Sep 05:52 ..
+-rw-r--r--@ 1 sanchit.walia  wheel   71 23 Sep 05:52 Planted.kt
+-rw-r--r--@ 1 sanchit.walia  wheel  222 23 Sep 05:52 PortalPublicKey.kt
+== the iOS source set includes that directory:
+48:      kotlin.srcDir(portalKeyDir)
+$SP/i77/run.sh  6.31s user 1.17s system 7% cpu 1:43.12 total

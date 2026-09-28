@@ -1,10 +1,17 @@
 # Keliver — Roadmap & improvement backlog
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
-its evidence — nothing here is speculative. Status: 2026-07-27, after the
-Stashfin tri-platform loop, Project Components C1-C4, real-presenter and persona
-preview, and the complete flow-authoring/preview loop. See `CURRENT_STATE.md`
-for the dated baseline and post-snapshot delivery ledger.
+its evidence — nothing here is speculative. **Status: 2026-09-23**, after tools
+0.3.5 and the first reference app whose development route uses only published
+artifacts (`reference/inventory`, `docs/REFERENCE_APP.md`; its production host
+still comes from Keliver source). The P0–P3 sections below are
+the 2026-07-27 backlog and its history; **"Current priorities" is the part to
+pick work from.** `CURRENT_STATE.md` opens with a status-at-a-glance that
+separates what is shipped, what was demonstrated and on what, what is broken,
+and which evidence can no longer be re-run.
+
+**There is no external adopter.** Everything below that says "verified" was
+verified by us, on apps we wrote.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
@@ -53,6 +60,10 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    fillMaxWidth() — M3 ListItem wraps content under loose constraints, which the
    editor canvas exposes; devices were unaffected (parents imposed width) and
    remain so. Editor dist rebuilt; refresh :8096 to confirm.
+   **2026-09-23:** the canvas check was never recorded, and the published 0.3.3
+   editor still draws content-width rows (`REFERENCE_APP.md` finding 7). The
+   "devices were unaffected" half has no device screenshot behind it for the
+   reference app either.
 
 ## P2 — Relay/tooling ergonomics (each cost real session time)
 
@@ -228,6 +239,60 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
 
 ## Current priorities
 
+Refreshed 2026-09-23 from the reference-app run (`docs/REFERENCE_APP.md`), the
+0.3.5 release, and the open defects. The July list (preview hardening, Project
+Components v2, editor distribution, K1–K4, personas, replay #16) is **complete**
+and kept under "Completed priorities" below.
+
+1. **An adopter cannot ship to production without a Keliver checkout.** The
+   first reference app, developed only from the published tools and Maven
+   Central, reached production OTA only by building `portal-device-android` from
+   the release's source commit. The bundle's `host/README.md` sends adopters to
+   `sample/host-android`, which renders the *sample's* widget schema, not
+   keliver-material. No host that renders an adopter's screens with signature
+   verification is published. **Decide what the adopter's production host is**
+   (a published host library, a scaffolded template, or a documented copy of
+   `portal-device-android`) before building more authoring depth. Evidence:
+   `docs/REFERENCE_APP.md` §Production.
+2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
+   defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has
+   no `publishTask`/`publishOutput` and no signing block, so publish fails, and
+   the adopter guide does not mention either. The reference app shows the
+   minimum that works (`reference/inventory/app/build.gradle`, bottom). Small,
+   and it unblocks item 1's "does it work" question for every adopter.
+3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:
+   `0644` under a default umask, measured on macOS and Linux; `ensureKeys()`
+   uses `File.writeText`). Security; small, but it touches every existing store.
+   Alongside it, U28: the production host logs a false `codeLoadFailed` on every
+   start.
+4. **#77 — the iOS host's key generation is not hardened like Android's.**
+   Now reproduced, not fixed: a file planted in `generatePortalKey`'s output
+   survives an UP-TO-DATE run, is compiled into the module, and reaches a linked
+   debug simulator framework (`superpowers/evidence/issue-77/`). This machine
+   can build iOS, so the fix can land with both boundaries verified. Bounded.
+5. **U19 (live-preview re-render; cause unresolved) and U20 (editor frame rate;
+   measured, not assessed)** — open. The reference app's Live preview passed its
+   21 checks (14 of them canvas taps), which read the canvas and the State
+   Inspector; its Bindings panel lagged one update in every capture
+   (`docs/REFERENCE_APP.md` finding 9). Evidence about this app, not a
+   resolution of U19.
+6. **Device coverage is one emulator.** Every device result for 0.3.5 and the
+   reference app is Android API 33 x86_64 on CI. No physical Android device, no
+   arm64 execution, and no iOS run of the reference app.
+7. **Adopter ergonomics found by the reference app** — each small, each real:
+   the device scaffolder wires exactly one screen and presenter (a navigating
+   app hand-edits `device/Main.kt`); the first `editor/` build that
+   `keliver-portal` triggers took 5 minutes on a fresh Gradle home, with no
+   progress shown; editor-canvas ListItems render at content width.
+8. **An external adopter.** Not an engineering task and not something to do
+   from here, but it is the thesis. Items 1–2 are what a first adopter would
+   hit first.
+9. Depth candidates, **after** 1–3: presenter/FlowScope linting, transparent
+   local composables, component metadata/thumbnails. K2b API convergence remains
+   a separately versioned decision.
+
+### Completed priorities (2026-07)
+
 1. ✅ **Bounded preview hardening and tri-platform verification** — complete
    2026-07-23; evidence and the pre-change baseline are in `CURRENT_STATE.md`.
 2. ✅ **Project Components v2 — one required content slot** — complete and tri-platform
@@ -276,9 +341,6 @@ reject them, the portal becomes designer-only, and the two-way thesis dies socia
    builds, services, device state, guest-load/error checks, screenshot/content
    validation, and relay-state restoration. Delivery fixed iOS safe-area
    handling and hardened Wasm/headless evidence capture.
-10. Presenter/FlowScope linting, transparent local composables, and component
-    metadata/thumbnails are now the leading depth candidates. K2b API
-    convergence remains a separately versioned decision, not a prerequisite.
 
 ## P4 — Platform debt (tracked, not urgent)
 
