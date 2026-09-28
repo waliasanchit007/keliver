@@ -15,32 +15,54 @@ refusal is not in question under any option below.
 
 ## What the host is made of
 
-The production host is three files, about 380 lines
-(`portal-device-android/src/main/kotlin/dev/keliver/portaldevice/host/`), on top
-of libraries:
+The production host is three Kotlin files, 382 lines
+(`portal-device-android/src/main/kotlin/dev/keliver/portaldevice/host/`), plus an
+`AndroidManifest.xml` (INTERNET, cleartext traffic, the launcher activity) and a
+`build.gradle` that supplies `BuildConfig.DEV_ONLY` and embeds the key
+(`syncPortalKey`), on top of libraries. It applies `com.android.application`,
+`org.jetbrains.kotlin.android`, `org.jetbrains.kotlin.plugin.compose`,
+`org.jetbrains.compose` 1.8.2 and `app.cash.zipline`.
 
 | role | coordinate (as used at `b5615637`) | published? | Android variant |
 |---|---|---|---|
 | Treehouse host runtime | `dev.keliver:keliver-treehouse-host:0.3.3` | yes | `androidJvm` |
 | Compose UI host | `dev.keliver:keliver-treehouse-host-composeui:0.3.3` | yes | `androidJvm` |
 | keliver-material widgets | `dev.keliver:keliver-material-composeui:0.3.3` | yes | `androidJvm` |
-| keliver-material host protocol | `dev.keliver:keliver-material-protocol-host-web:0.3.3` | yes | **`jvm` only** |
-| SQL host wire (`AndroidSqlHost`) | `dev.keliver:portal-sql:0.3.3` | yes | **`jvm` only** |
-| HTTP host (`HostHttp`) | `dev.keliver:keliver-http:0.3.3` | yes | **`jvm` only** |
+| keliver-material host protocol | `dev.keliver:keliver-material-protocol-host-web:0.3.3` | yes | no `androidJvm`; `jvm` |
+| SQL host wire (`AndroidSqlHost`) | `dev.keliver:portal-sql:0.3.3` | yes | no `androidJvm`; `jvm` |
+| HTTP host (`HostHttp`) | `dev.keliver:keliver-http:0.3.3` | yes | no `androidJvm`; `jvm` |
 | guest contract (`PortalPresenter`, `HostApi`) | `portal-device-guest` | **no** | — |
 | Zipline runtime; `ManifestVerifier` | `app.cash.zipline:zipline:1.22.0`, `app.cash.zipline:zipline-loader:1.22.0`, and the `app.cash.zipline` Gradle plugin (IR rewrite of `take`/`bind`) | yes | — |
 | the rest | `com.squareup.okhttp3:okhttp:5.1.0`; `androidx.activity:activity-compose:1.10.1`; `androidx.core:core-ktx:1.16.0`; `io.coil-kt.coil3:coil-compose-core:3.3.0`, `coil-network-okhttp:3.3.0`; `org.jetbrains.compose.{runtime,foundation,material,ui}` 1.8.2; `kotlinx-coroutines-core:1.10.2`; Kotlin 2.2.0, AGP 8.12.0 | yes | — |
 
 The variants come from each coordinate's published Gradle module metadata on
-Maven Central, read 2026-09-24.
+Maven Central, read 2026-09-24. Imported directly by the host files but arriving
+transitively, so they resolve without being listed: `keliver-leak-detector`
+(via `keliver-protocol-host`), `keliver-capabilities` (via `keliver-http`),
+`kotlinx-serialization-json` 1.9.0 and okio 3.16.0 (via `keliver-treehouse-host`),
+and androidx.lifecycle (via activity).
 
 ## What is missing from what is published
 
-1. **The host itself.** `MainActivity.kt` handles development versus production
-   mode, the `/bundles/latest` lookup, and Zipline loading with
-   `ManifestVerifier`. `HostTrustPolicy.kt` refuses production without a valid
-   embedded key. `AndroidSqlHost.kt` is the SQL host. These live in an
-   application module, and no library on Maven Central provides them.
+1. **The host itself — and as it stands it is not a production host.** No
+   library on Maven Central provides `MainActivity.kt` (development versus
+   production mode, the `/bundles/latest` lookup, Zipline loading with
+   `ManifestVerifier`), `HostTrustPolicy.kt` (refuses production without a valid
+   embedded key) or `AndroidSqlHost.kt`. And at `b5615637` those files are a
+   test host with a production *mode*, not a production app:
+   * production is opt-in **per launch** (`intent.getStringExtra("mode") ==
+     "prod"`); a plain launcher start takes the development path, with
+     `ManifestVerifier.NO_SIGNATURE_CHECKS` and a cleartext manifest URL;
+   * the endpoints are emulator addresses (`http://10.0.2.2:8077`, `:8080`), and
+     the manifest allows cleartext traffic;
+   * `HostHttp` is bound to `AndroidReplayHttpHost`, which posts to the relay's
+     `/http-replay` with a test fixture set;
+   * the `applicationId` is the generic host's, and it logs a false
+     `codeLoadFailed` on every start (U28).
+   Any option has to make production the default (or only) mode, the endpoints
+   configurable, and `HostHttp` the adopter's own. The reference app's
+   production runs lived with all of this because the emulator reached the relay
+   at `10.0.2.2`.
 2. **The key-embedding build step.** `syncPortalKey` copies
    `<store>/keys/ed25519.pub` into the APK's assets, and `-Pkeliver.devOnlyHost`
    selects the build shape. The store lookup (`keliverPortalStore`) is in the
@@ -53,27 +75,36 @@ Maven Central, read 2026-09-24.
    `PortalPresenter` itself (`keliver-new-device-target.sh`), and the generic
    host binds it: the reference app's E1–E10 ran that way. A standalone host can
    declare its side of the contract the same way.
-4. **Unverified: three `jvm`-only libraries in an Android app.** Android builds
-   normally accept a Kotlin Multiplatform `jvm` variant. However, no Android
-   build has consumed these three from Maven Central: `portal-device-android`
-   uses project dependencies. This is the first thing any option has to
-   measure.
+4. **Unverified: resolving the published metadata in an Android build.** More
+   than the three above have no `androidJvm` variant — `keliver-protocol`,
+   `keliver-protocol-host`, `keliver-leak-detector`, `keliver-material-widget`,
+   `keliver-material-modifiers` and `keliver-capabilities` too — and the
+   `androidJvm` artifacts depend on them, so the `jvm` variants are already how
+   Android consumes them: `portal-device-android` does exactly that through
+   project dependencies (`portal-sql/build.gradle`: "android host consumes via
+   jvm artifact"). What is unmeasured is whether an AGP 8.12 build resolves the
+   same graph from Maven Central's module metadata.
 
 ## The smallest supported publish/signing setup
 
-This is measured in the reference app (`reference/inventory/app`), and nothing
-in it comes from a checkout:
+This is measured in the reference app (`reference/inventory/app`). The setup
+itself comes from no checkout; the host that verified the result (step 3) was
+built by the checkout route (option C below).
 
 1. `keliver.portal.json`:
    `"publishTask": ":compileDevelopmentExecutableKotlinJsZipline", "publishOutput": "build/zipline/Development"`.
    The default is Keliver's own `:portal-published-guest:…`, which fails on a
    scaffolded app.
 2. `build.gradle`, **after** the `kotlin {}` block: set `ZiplineCompileTask.signingKeys`
-   from `<store>/keys/ed25519.priv`, using the bundle's `keliver-store-path.sh`
-   to find the store. Placed before that block, the bundle compiles **unsigned
-   without an error**. That rule is recorded only in
-   `portal-published-guest/build.gradle`.
-3. The relay's `POST /publish` then compiles and signs. Measured result:
+   from `<store>/keys/ed25519.priv`, using the tools bundle's
+   `keliver-store-path.sh` to find the store (so the build needs `KP` or
+   `-Pkeliver.toolsBin`). Placed before that block — or with no key in the
+   store, by design — the bundle compiles **unsigned without an error**. The
+   ordering rule is in Keliver's own build files and checks
+   (`portal-published-guest/build.gradle`, `keliver-guest-signing-check.sh`) and
+   the reference app's, but in no scaffold and no adopter-facing doc.
+3. The relay's `POST /publish` then runs `publishTask`, and the Zipline compile
+   task signs. Measured result:
    - the manifest carries a `portal-ed25519` signature;
    - a production host with the matching key loads v1, then v2;
    - a bundle signed with another app's key is refused on its signature.
@@ -90,14 +121,15 @@ Known limits of this setup:
 * **A. Publish a host library.** For example, an Android library that contains
   `MainActivity`'s loading logic as an embeddable Activity or composable, plus
   `HostTrustPolicy`, and a Gradle task (or plugin) that embeds the store's
-  public key.
+  public key. `devOnlyHost` must stay a compile-time input of the tools APK —
+  never a runtime or intent parameter a library caller could flip.
   - The adopter's app depends on it and supplies the key.
   - It goes on the library line (Maven Central, `apiCheck`, versioning), so
     this is a new public API.
 * **B. Scaffold a host app.** A tools-bundle command writes an Android module
-  into the adopter's repository: the three host files, a `build.gradle` on the
-  published coordinates above, and a key-embedding task that calls
-  `keliver-store-path.sh`.
+  into the adopter's repository: the host files — reworked per item 1 — a
+  manifest, a `build.gradle` on the published coordinates above, and a
+  key-embedding task that calls `keliver-store-path.sh`.
   - The adopter owns the generated code, and updates come by re-scaffolding.
   - It goes on the tools line only, so no library release is needed.
 * **C. Document the checkout route.** This is what the reference app does:
@@ -114,5 +146,6 @@ Known limits of this setup:
 **The measurement that should come before choosing.** Build a throwaway
 Android app that resolves the coordinates above from Maven Central and compiles
 the three host files against them, with no host code changed. This settles
-item 4 for every option, and it tells A and B apart on cost. It reads no store
+item 4 — compilation and resolution only; item 1's production defaults are
+design work either way — and it tells A and B apart on cost. It reads no store
 and signs nothing.
