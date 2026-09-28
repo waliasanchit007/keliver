@@ -38,8 +38,8 @@ reference app we wrote ourselves is dogfooding, not adoption.
 |---|---|---|---|
 | scaffold → compile → 0 RawCode ingest → surgical edit, from **published artifacts only** | `reference/inventory` | macOS (local, not committed) 2026-09-22; Linux CI | 2026-09-23 |
 | Live preview with the app's real presenters, repeated actions | `reference/inventory` | macOS, headless Chrome | 2026-09-22 |
-| development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, runs `35802020305`, `35803336957` |
-| production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23, runs `35800642819`, `35802020305`, `35803336957` |
+| development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23/24, runs `35802020305`, `35803336957`, `35967437120`, `35969509784`, `35969576311` |
+| production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23/24, runs `35800642819`, `35802020305`, `35803336957`, `35967437120`, `35969509784`, `35969576311` |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
 
@@ -1482,7 +1482,7 @@ adoption.** Results and every piece of friction: `REFERENCE_APP.md`. In short:
   changed exactly two lines and left `logic/` byte-identical; Live preview ran
   the real presenters (21/0; its Bindings panel lagged one update in every
   capture). **D14's device-screenshot leg is not met:** runs 1–4 took no
-  screenshot, and run 5's six captures (screencap and the emulator's own) are
+  screenshot, and runs 5–7's 18 captures (screencap and the emulator's own) are
   all black — visual verification of the device render is incomplete
   (`REFERENCE_APP.md` "Device screenshots").
 - On the emulator: development route 30/0 (run `35802020305`; run `35800642819` failed one check on its own input driver, since fixed); production OTA with app-owned
