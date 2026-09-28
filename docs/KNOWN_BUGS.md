@@ -1032,6 +1032,22 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
+### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — OPEN
+
+Found by the independent review of the #77 fix, 2026-09-24.
+`portal-device-android/build.gradle`'s `syncPortalKey` empties
+`build/portalKeys` with Groovy's `deleteDir()`, which recurses through a symlink
+into its target and returns `false` instead of throwing. MEASURED on the iOS
+task's identical first-fix code (`superpowers/evidence/issue-77/fix-hardening-committed.txt`):
+a symlink planted in the directory got **its target emptied**, and a plant that
+could not be deleted **survived a green build**. On Android the directory is an
+`assets.srcDirs` entry, so a surviving plant ships as an asset, and a link to a
+real directory — a store, say — would have that directory's contents deleted by
+the next build. Not measured on Android itself; the code is the same call.
+The fix is the one `generatePortalKey` now has (`Files.walk` + `Files.delete`,
+then check the directory holds exactly the expected file). Not fixed here: #77
+was scoped to the iOS generated-source hole.
+
 ### U19. Live preview appeared not to re-render after a presenter action — CAUSE UNRESOLVED
 
 > **Read this first (2026-09-11).** Two causal explanations have now been
@@ -1617,8 +1633,9 @@ none is a security hole.
      a foreign file planted there survives an UP-TO-DATE run of either shape.
    * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
 
-     **Asymmetry, recorded not fixed — and worse than first written.** The iOS
-     host has neither half of the Android hardening. There is no `devOnlyHost`
+     **Asymmetry, recorded not fixed — and worse than first written.** (As it
+     stood before the 2026-09-24 fix below; the foreign-file half is now fixed.)
+     The iOS host had neither half of the Android hardening. There is no `devOnlyHost`
      short-circuit, so every `compileKotlinIos*` consults the store. And
      `generatePortalKey` has the same foreign-file hole that was just closed on
      Android: `outputs.dir` with no `upToDateWhen { false }`, so a file planted
@@ -1636,7 +1653,28 @@ none is a security hole.
      public planted function, `linkDebugFrameworkIosSimulatorArm64` exports it
      in `PortalDeviceHost.h` and carries its compiled symbol in the binary
      (boundary 2, debug simulator framework). Release and `iosArm64` not
-     measured. Still not fixed.
+     measured.
+
+     **Fixed 2026-09-24 — the foreign-file hole only.** `generatePortalKey` now
+     empties its directory in its own action — without following symlinks,
+     refusing when a directory between the build directory and it is a link,
+     and failing rather than continuing when something cannot be deleted — writes
+     the key file `CREATE_NEW`, checks
+     that exactly `PortalPublicKey.kt` remains, refuses a store key that is not
+     64 hex digits (it is spliced into source), and runs every time. Measured
+     with `superpowers/evidence/issue-77/fix-repro.sh` and `fix-hardening.sh`,
+     warm, on the debug simulator framework: the planted file is gone after the
+     task, the klib holds nothing of it, and the framework exports and contains
+     nothing of it; `PortalPublicKey.kt` is exactly the expected source and the
+     key literal is still in the binary; with nothing planted, compile and link
+     stay UP-TO-DATE; a planted symlink's target is left alone, an undeletable
+     plant fails the build, and a non-hex key fails it. Release and `iosArm64`
+     not measured. Not covered: `compileIosMainKotlinMetadata`, which compiles
+     the same directory without the task (the linked framework does not use its
+     output). The other half of the asymmetry — no `devOnlyHost` short-circuit,
+     so every `compileKotlinIos*` consults the store — is unchanged.
+
+     **The Android sibling still has the deletion flaw: U30.**
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto
