@@ -9,7 +9,7 @@ store or key was read, listed or changed. Paths are shortened to `<run>`,
 | file | what |
 |---|---|
 | `before.txt` | `scripts/keliver-key-permissions-check.sh` against the **released tools 0.3.5 bundle** — its `relay/bin/portal-relay` and `bin/keliver-adopt-legacy-store.sh`, from the zip whose sha256 is `4e1c3040…` (the published asset). 25 passed, **36 failed**, 2 skipped. |
-| `after.txt` | the same check against this branch's relay and adopt script: **61 passed, 0 failed**, 2 skipped. |
+| `after.txt` | the same check against this branch's relay and adopt script, at the final code (after the second review): **61 passed, 0 failed**, 2 skipped. |
 | `signed.txt` | `scripts/keliver-verify-signed-bundle.sh` on this branch: a key created by the new code signs a bundle that Zipline's `ManifestVerifier` accepts; a tampered bundle and a different key are rejected (3/0). The key's modes (`-rw-------`) were listed after the check and appended. |
 | `SigningKeysTest.txt` | the unit tests (14/0) and the whole `portal-relay` module (107/0). |
 | `store-checks.txt` | the store checks that start the relay or run adoption, on this branch: store-home 32/0, resolver-failure 42/0, legacy-compat 14/0, store-identity 11/0, store-recovery 136/0. |

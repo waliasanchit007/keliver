@@ -148,8 +148,9 @@ shq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
 # macOS mounts external and disk-image volumes `noowners`: every local user then
 # counts as the owner of every file, so no mode protects anything. Succeeds, and
 # prints why, when the volume holding <dir> is such a volume OR when that cannot
-# be determined — a mount table that cannot be read is not taken as "no"
-# (portal-relay's SigningKeys.kt makes the same check, the same way). $OSTYPE is
+# be determined — a mount table that cannot be read is not taken as "no".
+# This matches the mount by path prefix; portal-relay's SigningKeys.kt makes the
+# same check but by device, which also sees through macOS firmlinks. $OSTYPE is
 # bash's own, so a missing `uname` cannot make this fail open.
 noowners_mount() { # <dir>
   case "${OSTYPE:-}" in darwin*) ;; *) return 1 ;; esac
