@@ -125,8 +125,11 @@ for us.
    The fix is two keys (`publishTask`, `publishOutput`) **and** a signing block
    in `build.gradle` — the relay does not sign; the Zipline compile task does,
    with the store's private key. The block has to come **after** the `kotlin {}`
-   block or the bundle compiles unsigned without an error; that rule is written
-   down only in `portal-published-guest/build.gradle`'s comments.
+   block or the bundle compiles unsigned without an error (as it also does,
+   by design, when the store has no key). That rule is in Keliver's own build
+   files and checks (`portal-published-guest/build.gradle`,
+   `keliver-guest-signing-check.sh`) and in this app's block, but in no scaffold
+   and no adopter-facing doc.
    The reference app's version: `reference/inventory/app/build.gradle` (bottom).
    The adopter guide mentions published bundles and the publisher but does not
    describe how to publish — no `/publish`, no `publishTask`.
