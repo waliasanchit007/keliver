@@ -31,7 +31,6 @@ import kotlinx.serialization.encodeToString
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.URLDecoder
-import java.security.KeyPairGenerator
 import java.security.MessageDigest
 
 /**
@@ -338,19 +337,61 @@ private fun ensureDefaults() {
 private fun hex(b: ByteArray): String = b.joinToString("") { "%02x".format(it) }
 
 /**
- * P4: the project signing keypair. Zipline wants raw 32-byte Ed25519 keys as
- * hex; the JDK wraps them in PKCS#8/X.509 — the raw key is the last 32 bytes.
+ * P4: the project signing keypair. Created, and its protection checked, by
+ * SigningKeys.kt (U27). A key that is not owner-only, or half a key pair (U29),
+ * is reported here on every start and refused by [publish]; neither is ever
+ * changed here.
  */
 private fun ensureKeys() {
-  keysDir.mkdirs()
-  val priv = File(keysDir, "ed25519.priv")
-  val pub = File(keysDir, "ed25519.pub")
-  if (priv.exists() && pub.exists()) return
-  val kp = KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
-  fun raw32(encoded: ByteArray) = encoded.copyOfRange(encoded.size - 32, encoded.size)
-  priv.writeText(hex(raw32(kp.private.encoded)))
-  pub.writeText(hex(raw32(kp.public.encoded)))
-  println("portal-server: generated Ed25519 signing keypair in $keysDir")
+  val generated = try {
+    ensureSigningKeys(keysDir)
+  } catch (e: SigningKeyException) {
+    System.err.println("portal-server: ${e.message}")
+    kotlin.system.exitProcess(78)
+  } catch (e: java.io.IOException) {
+    System.err.println("portal-server: could not create this app's signing key in $keysDir: $e. Nothing was replaced.")
+    kotlin.system.exitProcess(78)
+  }
+  if (generated) {
+    println(
+      "portal-server: generated this app's Ed25519 signing key in $keysDir " +
+        "($PRIVATE_KEY_FILE ${modeString(File(keysDir, PRIVATE_KEY_FILE))}, keys/ ${modeString(keysDir)}, as read back)",
+    )
+  }
+  keyProblem()?.let { System.err.println("portal-server: WARNING — $it") }
+}
+
+/**
+ * Why the relay must not publish with this app's identity, or null when it may.
+ * A store with neither key file is not this check's business: that publish was,
+ * and still is, an unsigned bundle. This gates the relay's `/publish` only; a
+ * Gradle build run directly signs with whatever key is in the store.
+ */
+private fun keyProblem(protection: KeyProtection? = keyProtection(keysDir)): String? = when (protection) {
+  null, KeyProtection.OwnerOnly -> null
+  is KeyProtection.Exposed -> buildString {
+    appendLine("this app's signing identity is not owner-only: ${protection.detail}.")
+    appendLine("  The private key signs every bundle this app's production hosts accept, so the relay will not")
+    appendLine("  publish until it is.")
+    if (protection.chmodFixes) {
+      appendLine("  To keep this identity and make it owner-only (modes only; nothing is rotated):")
+      appendLine("    ${tightenCommands(keysDir)}")
+    } else {
+      appendLine("  No chmod can fix this. The store has to live where only you own and can write it, on a")
+      appendLine("  filesystem that enforces permissions (docs/STORE_IDENTITY.md §2: how a store is located).")
+    }
+    append("  That does not undo earlier exposure. If other users of this machine are not trusted, whether to ")
+    append("rotate the key is your decision; Keliver never rotates it (docs/KNOWN_BUGS.md U27).")
+  }
+  is KeyProtection.Unverified -> buildString {
+    appendLine("this app's signing identity cannot be checked: ${protection.detail}.")
+    append("  The relay publishes only with a key it has measured as owner-only, so it will not publish. ")
+    append("Move this app's store to a filesystem with POSIX permissions (PORTAL_STORE, or \"store\" in keliver.portal.json).")
+  }
+  is KeyProtection.Incomplete -> buildString {
+    appendLine(protection.detail)
+    append("  The relay will not publish with half an identity. Editing is unaffected.")
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +420,8 @@ private fun publish(): Pair<Boolean, String> {
       unimpl.forEach { appendLine("  • $it") }
     }
   }
+  // U27: measured now, not at startup — the mode can change while the relay runs.
+  keyProblem()?.let { return false to "publish REFUSED: $it\nNothing was compiled or signed." }
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
   val gradlew = File(repoDir, "gradlew").absolutePath
