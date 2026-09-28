@@ -1653,8 +1653,10 @@ none is a security hole.
      measured.
 
      **Fixed 2026-09-24 — the foreign-file hole only.** `generatePortalKey` now
-     empties its directory in its own action — without following symlinks, and
-     failing rather than continuing when something cannot be deleted — checks
+     empties its directory in its own action — without following symlinks,
+     refusing when a directory between the build directory and it is a link,
+     and failing rather than continuing when something cannot be deleted — writes
+     the key file `CREATE_NEW`, checks
      that exactly `PortalPublicKey.kt` remains, refuses a store key that is not
      64 hex digits (it is spliced into source), and runs every time. Measured
      with `superpowers/evidence/issue-77/fix-repro.sh` and `fix-hardening.sh`,

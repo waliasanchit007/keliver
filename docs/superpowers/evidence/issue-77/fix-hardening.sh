@@ -37,19 +37,36 @@ printf 'package dev.keliver.portaldevice.ios\npublic fun plantedMarker(): String
 chflags uchg "$OUT/Planted.kt"
 G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store" > "$L/run5.log" 2>&1; rc=$?
 echo "rc=$rc  $(grep -E 'BUILD (SUCCESSFUL|FAILED)' "$L/run5.log")"
-grep -m1 -E 'AccessDenied|Operation not permitted|holds|generatePortalKey:' "$L/run5.log" | cut -c1-200 | sed 's/^/  /'
+grep -m1 -E 'AccessDenied|Operation not permitted|holds|generatePortalKey:' "$L/run5.log" | sed -e "s#$PWD/##" -e 's/^/  /'
 if [ -e "$OUT/Planted.kt" ] && [ "$rc" = 0 ]; then echo "RESULT 5: the plant SURVIVED a GREEN build"
 elif [ -e "$OUT/Planted.kt" ]; then echo "RESULT 5: the plant survived, and the build FAILED (not silently)"
 else echo "RESULT 5: the plant is gone"; fi
 chflags nouchg "$OUT/Planted.kt" 2>/dev/null; rm -f "$OUT/Planted.kt"
 
 echo "== 6. a store whose ed25519.pub is not 64 hex digits"
+G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store" > "$L/run6pre.log" 2>&1
+BEFORE6="$(shasum -a 256 "$OUT/PortalPublicKey.kt" 2>/dev/null | cut -c1-64)"
+echo "  PortalPublicKey.kt before: ${BEFORE6:-ABSENT}"
 mkdir -p "$I/store-bad/keys"
 printf '00"\npublic fun injected(): Int = 1\nprivate const val Z = "' > "$I/store-bad/keys/ed25519.pub"
 G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store-bad" > "$L/run6.log" 2>&1; rc=$?
 echo "rc=$rc  $(grep -E 'BUILD (SUCCESSFUL|FAILED)' "$L/run6.log")"
+grep -m1 'not 64 hex digits' "$L/run6.log" | sed -e "s#$I#<run>#g" -e 's/^/  /'
+AFTER6="$(shasum -a 256 "$OUT/PortalPublicKey.kt" 2>/dev/null | cut -c1-64)"
 if grep -q 'injected' "$OUT/PortalPublicKey.kt" 2>/dev/null; then echo "RESULT 6: the key's text became SOURCE (PortalPublicKey.kt declares injected())"
-else echo "RESULT 6: no injected source in PortalPublicKey.kt"; fi
+elif grep -q 'not 64 hex digits' "$L/run6.log" && [ -n "$BEFORE6" ] && [ "$AFTER6" = "$BEFORE6" ]; then
+  echo "RESULT 6: refused by the hex check; PortalPublicKey.kt present before and unchanged after"
+else echo "RESULT 6: INCONCLUSIVE (rc=$rc, hex message $(grep -c 'not 64 hex digits' "$L/run6.log"), before ${BEFORE6:-ABSENT}, after ${AFTER6:-ABSENT})"; fi
+
+echo "== 7. a symlink ABOVE the directory: build/generated/portalKeys -> a directory holding kotlin/canary.txt"
+rm -rf "$I/uptarget"; mkdir -p "$I/uptarget/kotlin"; echo canary > "$I/uptarget/kotlin/canary.txt"
+rm -rf portal-device-ios/build/generated/portalKeys; ln -s "$I/uptarget" portal-device-ios/build/generated/portalKeys
+G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store" > "$L/run7link.log" 2>&1; rc=$?
+echo "rc=$rc  $(grep -E 'BUILD (SUCCESSFUL|FAILED)' "$L/run7link.log")"
+grep -m1 'is a symbolic link' "$L/run7link.log" | sed -e "s#$PWD/##" -e 's/^/  /'
+[ -f "$I/uptarget/kotlin/canary.txt" ] && echo "RESULT 7: the link's target was left alone (canary.txt present)" \
+  || echo "RESULT 7: the link's TARGET WAS EMPTIED (canary.txt gone)"
+rm -f portal-device-ios/build/generated/portalKeys
 
 echo "== restore: a normal run"
-G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store" > "$L/run7.log" 2>&1; echo "rc=$?  directory: $(ls -A "$OUT" | tr '\n' ' ')"
+G :portal-device-ios:generatePortalKey -Pkeliver.portalStore="$I/store" > "$L/run8.log" 2>&1; echo "rc=$?  directory: $(ls -A "$OUT" | tr '\n' ' ')"

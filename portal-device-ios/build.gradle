@@ -48,12 +48,27 @@ def generatePortalKey = tasks.register('generatePortalKey') {
         "Ed25519 public key, and it would be spliced into Kotlin source. Nothing was generated.")
     }
     def dir = portalKeyDir.toPath()
+    // NOFOLLOW_LINKS covers only the last component, so the directories between
+    // the build directory and this one must not be links either: a link there
+    // would point the emptying below at somewhere else entirely.
+    def between = buildDir.toPath()
+    for (seg in ['generated', 'portalKeys', 'kotlin']) {
+      between = between.resolve(seg)
+      if (java.nio.file.Files.isSymbolicLink(between)) {
+        throw new GradleException("generatePortalKey: $between is a symbolic link. Refusing to empty or " +
+          "write through it; remove it (it is under the build directory) and build again.")
+      }
+    }
     if (java.nio.file.Files.exists(dir, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
       def doomed = java.nio.file.Files.walk(dir).withCloseable { it.sorted(Comparator.reverseOrder()).toList() }
       doomed.each { java.nio.file.Files.delete(it) }
     }
     java.nio.file.Files.createDirectories(dir)
-    new File(portalKeyDir, 'PortalPublicKey.kt').text = "package dev.keliver.portaldevice.ios\n\n// GENERATED from the portal store's ed25519.pub — do not edit.\ninternal const val PORTAL_PUBLIC_KEY_HEX: String = \"$hex\"\n"
+    // CREATE_NEW: fails if anything — a link included — appeared at that name
+    // since the directory was emptied, rather than writing through it.
+    java.nio.file.Files.write(dir.resolve('PortalPublicKey.kt'),
+      "package dev.keliver.portaldevice.ios\n\n// GENERATED from the portal store's ed25519.pub — do not edit.\ninternal const val PORTAL_PUBLIC_KEY_HEX: String = \"$hex\"\n".getBytes('UTF-8'),
+      java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE)
     def held = (portalKeyDir.list() ?: new String[0]) as List
     if (held != ['PortalPublicKey.kt']) {
       throw new GradleException("generatePortalKey: $portalKeyDir holds $held after regeneration, not " +

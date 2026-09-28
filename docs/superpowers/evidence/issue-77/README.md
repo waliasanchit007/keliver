@@ -26,17 +26,23 @@ for the same measured reason (output-directory contents are not part of Gradle's
 up-to-date check). After the independent review it also:
 
 * empties the directory with `Files.walk` + `Files.delete`, which never follows a
-  symlink and throws on failure. The first version used Groovy's `deleteDir()`,
-  which does both wrong (rows 4–5 below);
+  symlink inside it and throws on failure, and refuses to run when any directory
+  between the build directory and it (`generated/`, `portalKeys/`, `kotlin/`) is
+  a link. The first version used Groovy's `deleteDir()`, which does both wrong
+  (rows 4–5, 7 below);
 * refuses a store key that is not 64 hex digits, because the key is spliced into
-  Kotlin source (row 6).
+  Kotlin source (row 6);
+* writes `PortalPublicKey.kt` with `CREATE_NEW`, so it never writes through
+  something that appeared at that name.
 
 `fix-repro.sh` measures the three boundaries on a **warm** build and prints the
 generated constant; `fix-hardening.sh` measures the review's three cases, at task
-level. Everything at `b96a9e2eb` — the build file is identical on this branch —
-on macOS with Xcode:
+level. The unfixed and first-fix runs were taken on a worktree at `b96a9e2eb`,
+the later ones at `13d676f4f` and `a1245992b` — all with the same code outside
+`portal-device-ios/build.gradle`, whose version each output names — on macOS
+with Xcode:
 
-| | unfixed | first fix (`deleteDir`) | hardened (this commit) |
+| | unfixed | first fix (`deleteDir`) | hardened (final) |
 |---|---|---|---|
 | 1 — planted file after a warm `generatePortalKey` | task `UP-TO-DATE`, **survived** | task ran, absent | task ran, absent |
 | 2a — files in the module klib mentioning the plant | **3** | 0 | 0 |
@@ -45,11 +51,17 @@ on macOS with Xcode:
 | the key's UTF-16 literal in the linked binary | 1 | 1 | 1 |
 | 3 — nothing planted, link again | (step added later) | compile and link `UP-TO-DATE` | compile and link `UP-TO-DATE` |
 | 4 — a symlink in the directory, to a directory holding a canary | (not run) | **the link's target was emptied** | target left alone; link removed |
-| 5 — a plant that cannot be deleted (`chflags uchg`) | (not run) | **survived a green build** | build **fails**, naming the file |
-| 6 — a store key that is Kotlin, not hex | (not run) | **became source** (`injected()` in `PortalPublicKey.kt`) | build fails; nothing generated |
+| 5 — a plant that cannot be deleted (`chflags uchg`) | (not run) | **survived a green build** | build **fails**: `Planted.kt: Operation not permitted` |
+| 6 — a store key that is Kotlin, not hex | (not run) | **became source** (`injected()` in `PortalPublicKey.kt`) | refused by the hex check (its message in the log); `PortalPublicKey.kt` present before and unchanged after |
+| 7 — `build/generated/portalKeys` itself a link to a directory holding `kotlin/canary.txt` | (not run) | (not run) | build fails naming the link; target untouched |
 
-Files: `fix-before.txt`, `fix-after.txt` (first fix), `fix-after-hardened.txt`,
-`fix-hardening-committed.txt` (first fix), `fix-hardening-hardened.txt`. The
+Files: `fix-before.txt`, `fix-after.txt` (first fix), `fix-after-hardened.txt`
+and `fix-hardening-hardened.txt` (the first hardening), `fix-hardening-committed.txt`
+(first fix), and `fix-after-final.txt` / `fix-hardening-final.txt` — the final
+code, from a fresh build directory, so the step-2 compile and link really ran.
+The hardened column is the final run; its rows 1–5 match the first hardening,
+whose row-6 check was vacuous (the key file was already gone, and the log was
+not searched) — the second review's finding, fixed in the script. The
 `real`/`user`/`sys`/`exit=` lines come from the wrapper that ran the scripts
 (`/usr/bin/time`), not from the scripts. In `fix-after-hardened.txt` the compile
 is `UP-TO-DATE` in step 2: the task had already removed the plant, so the
