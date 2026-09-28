@@ -31,7 +31,9 @@ GitHub-hosted Linux runner (`portal-tools.yml` run 35969910149, head
 `b162fb83e`), with a second account created for the run as `KELIVER_PROBE_USER`:
 **63 passed, 0 failed, 0 skipped**. That account read a world-readable canary in
 the store directory, and could not read the private key (sections A and C); the
-FAT case there is a vfat loop mount (section F).
+FAT case there is a vfat loop mount (section F). Run 36468669380 repeated it on
+the final code (`f6aa5e61d`, after the second review): 63/0/0 again, every other
+portable check green.
 
 No key material is in these files. Keys are compared by hash inside the check.
 Its last row searches every log and publish response it wrote for every private

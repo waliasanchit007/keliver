@@ -968,7 +968,8 @@ with a relay-created 0600 key — a bundle signed with it verifies with Zipline'
 `ManifestVerifier`, a tampered one and a foreign key do not (3/0); the store
 checks that exercise the relay and adoption still pass (store-home, resolver
 failure, legacy compat, store identity, store recovery). **Cross-user read, on
-Linux:** `portal-tools.yml` run 35969910149 (head `b162fb83e`) ran the check on
+Linux:** `portal-tools.yml` run 35969910149 (head `b162fb83e`), and again run
+36468669380 on the final code (`f6aa5e61d`, same result), ran the check on
 the GitHub-hosted runner with a second account created for the run — **63
 passed, 0 failed, 0 skipped**: that account could read a world-readable file in
 the store directory but not the private key, under umask 022 and 000, and a vfat
