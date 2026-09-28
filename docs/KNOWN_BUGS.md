@@ -966,11 +966,15 @@ released 0.3.5 bundle fails 36 of the same 63 (25 pass, 2 skipped); `keliver-ver
 with a relay-created 0600 key — a bundle signed with it verifies with Zipline's
 `ManifestVerifier`, a tampered one and a foreign key do not (3/0); the store
 checks that exercise the relay and adoption still pass (store-home, resolver
-failure, legacy compat, store identity, store recovery). **Cross-user read:**
-not available on this Mac (no second account reachable without a password).
-`portal-tools.yml` is wired to run the check on the Linux runner with a real
-second account, after proving that account can read a world-readable file in
-the store directory; see the PR for whether that run has a result.
+failure, legacy compat, store identity, store recovery). **Cross-user read, on
+Linux:** `portal-tools.yml` run 35969910149 (head `b162fb83e`) ran the check on
+the GitHub-hosted runner with a second account created for the run — **63
+passed, 0 failed, 0 skipped**: that account could read a world-readable file in
+the store directory but not the private key, under umask 022 and 000, and a vfat
+loop mount was refused for both the relay and adoption
+(`evidence/u27/linux-ci-35969910149.txt`). Every other portable check in that
+run passed. Not available on this Mac (no second account reachable without a
+password).
 
 **Not covered.** POSIX modes and owners: ACLs are not examined. Directories
 above the store (`apps/`, `.keliver-portal`, the home) are not checked — under

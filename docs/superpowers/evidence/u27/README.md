@@ -25,11 +25,13 @@ disk image attached with `hdiutil` (macOS mounts it `noowners`), for the relay
 and for adoption; **G** adoption: a pair, owner-only; `--force` replaces both
 halves; half a legacy identity refused; a `keys/` others can write refused.
 
-The two SKIPs are the cross-user read: this Mac has no second account reachable
-without a password. `portal-tools.yml` is wired to run the same check on the
-Linux runner with a real second account (`KELIVER_PROBE_USER`), after proving
-that account can read a world-readable canary in the store directory. Whether
-that run has a result is in the PR, not here.
+The two SKIPs on macOS are the cross-user read: this Mac has no second account
+reachable without a password. `linux-ci-35969910149.txt` is the same check on the
+GitHub-hosted Linux runner (`portal-tools.yml` run 35969910149, head
+`b162fb83e`), with a second account created for the run as `KELIVER_PROBE_USER`:
+**63 passed, 0 failed, 0 skipped**. That account read a world-readable canary in
+the store directory, and could not read the private key (sections A and C); the
+FAT case there is a vfat loop mount (section F).
 
 No key material is in these files. Keys are compared by hash inside the check.
 Its last row searches every log and publish response it wrote for every private
