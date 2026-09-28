@@ -1,0 +1,6 @@
+key-permissions against the released 0.3.5 bundle: rc=1 (see before.txt)
+store-home-check rc=0 passed: 32   failed: 0
+resolver-failure-check rc=0 passed: 42   failed: 0
+legacy-compat-check rc=0 passed: 14   failed: 0
+store-identity-repro rc=0 passed: 11   failed: 0
+store-recovery-check rc=0 passed: 136   failed: 0
