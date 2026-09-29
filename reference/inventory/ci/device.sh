@@ -79,7 +79,15 @@ launch(){  # $1 = dev|prod ; $2 = logcat file
   adb -s "$SERIAL" shell am force-stop "$PKGID"
   adb -s "$SERIAL" shell am force-stop "$PROD_ID"
   # The production host is production-only: a plain launcher start.
-  if [ "$1" = prod ]; then adb -s "$SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$PROD_ID" >/dev/null
+  if [ "$1" = prod ]; then
+    # Its launcher activity, as the device resolves it — not a guess that the
+    # application id equals the Kotlin package. (`am start -p <pkg>` with only
+    # MAIN/LAUNCHER was accepted and started nothing: run 36621274110.)
+    local cmp
+    cmp="$(adb -s "$SERIAL" shell cmd package resolve-activity --brief -a android.intent.action.MAIN \
+      -c android.intent.category.LAUNCHER "$PROD_ID" | tr -d '\r' | tail -1)"
+    echo "    launching $cmp"
+    adb -s "$SERIAL" shell am start -n "$cmp" >/dev/null
   else adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null; fi
   sleep 15
   adb -s "$SERIAL" logcat -d > "$2"
