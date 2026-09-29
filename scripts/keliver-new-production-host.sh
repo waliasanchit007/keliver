@@ -66,7 +66,7 @@ while [ $# -gt 0 ]; do
     --api-base-url)    need "$1" $#; API_BASE_URL="$2"; shift 2 ;;
     --application-id)  need "$1" $#; APPLICATION_ID="$2"; shift 2 ;;
     --public-key-file) need "$1" $#; KEY_FILE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,33p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)         sed -n '2,44p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -87,8 +87,8 @@ done
 
 # ASCII URL characters only (gradle.properties is ISO-8859-1 with escapes); the
 # bundle server takes no query or fragment, since the host appends a path.
-SERVER_RE='^https?://[A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
-API_RE='^https?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
+SERVER_RE='^https?://[][A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
+API_RE='^https?://[][A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
 [ -n "$BUNDLE_SERVER" ] || fail "--bundle-server is required (e.g. http://10.0.2.2:8077 for an emulator reaching this machine's relay)."
 [[ "$BUNDLE_SERVER" =~ $SERVER_RE ]] || fail "--bundle-server must be an http:// or https:// URL of plain ASCII, without a query (got '$BUNDLE_SERVER')."
 [ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $API_RE ]] || fail "--api-base-url must be an http:// or https:// URL of plain ASCII (got '$API_BASE_URL')."
@@ -115,24 +115,39 @@ PY
 PACKAGE="$ROOT_PKG.host"
 # The Keliver version the GUEST uses, so host and guest do not drift apart.
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
-try: print(json.load(open(sys.argv[1]))['appRuntime']['keliverVersion'])
+try:
+    v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
+    print(v if isinstance(v, str) and v.strip() else '0.3.3')
 except Exception: print('0.3.3')" "$APP/keliver.portal.json")}"
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$'
 [[ "$APPLICATION_ID" =~ $ID_RE ]] || fail "--application-id must look like com.example.app (got '$APPLICATION_ID')."
-NAME="$(sed -n "s/^[[:space:]]*rootProject\.name[[:space:]]*=[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" "$APP/settings.gradle" 2>/dev/null | head -1)"
+NAME=""
+for f in "$APP/settings.gradle" "$APP/settings.gradle.kts"; do
+  [ -f "$f" ] || continue
+  NAME="$( { sed -n "s/^[[:space:]]*rootProject\.name[[:space:]]*=[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" "$f" || true; } | head -1)"
+  [ -n "$NAME" ] && break
+done
 [ -n "$NAME" ] || NAME="$(basename "$APP")"
 [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || NAME="app"
 
 # The public key: an explicit file, or this app's store's ed25519.pub.
-STORE_PUB=""
+STORE_PUB=""; RESOLVE_WHY=""; RESOLVE_ERR="$(mktemp "${TMPDIR:-/tmp}/keliver-resolve.XXXXXX")"
 RESOLVE="$HERE/keliver-store-path.sh"
-if [ -x "$RESOLVE" ] && STORE="$("$RESOLVE" "$APP" 2>/dev/null)"; then
-  case "$STORE" in /*) [ -f "$STORE/keys/ed25519.pub" ] && STORE_PUB="$STORE/keys/ed25519.pub" ;; esac
+STORE=""
+if [ -x "$RESOLVE" ]; then
+  # Status checked: a refusal or an error leaves STORE empty, never a guess.
+  STORE="$("$RESOLVE" "$APP" 2>"$RESOLVE_ERR")" || STORE=""
 fi
+case "$STORE" in
+  /*) [ -f "$STORE/keys/ed25519.pub" ] && STORE_PUB="$STORE/keys/ed25519.pub"
+      [ -n "$STORE_PUB" ] || RESOLVE_WHY="the store ($STORE) has no keys/ed25519.pub yet" ;;
+  *)  RESOLVE_WHY="the store did not resolve: $(tr '\n' ' ' < "$RESOLVE_ERR" 2>/dev/null | cut -c1-300)" ;;
+esac
+rm -f "$RESOLVE_ERR"
 if [ -z "$KEY_FILE" ]; then
-  [ -n "$STORE_PUB" ] || fail "no public key found in this app's portal store. Start this app's portal once (keliver-portal) so it creates its signing identity, or pass --public-key-file."
+  [ -n "$STORE_PUB" ] || fail "no public key from this app's portal store ($RESOLVE_WHY). Start this app's portal once (keliver-portal) so it creates its signing identity, or pass --public-key-file."
   KEY_FILE="$STORE_PUB"
 fi
 [ -f "$KEY_FILE" ] || fail "no such file: $KEY_FILE"
@@ -149,7 +164,7 @@ if [ -n "$STORE_PUB" ]; then
   fi
   KEY_ORIGIN="$KEY_FILE (matches this app's store)"
 else
-  echo "note: this app's portal store did not resolve, so $KEY_FILE could not be checked against it." >&2
+  echo "note: $KEY_FILE could not be checked against this app's portal store ($RESOLVE_WHY)." >&2
   echo "      A private key looks exactly like a public one; make sure this is ed25519.pub." >&2
   KEY_ORIGIN="$KEY_FILE (NOT checked against a store)"
 fi

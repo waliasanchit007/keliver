@@ -118,8 +118,8 @@ At runtime:
 | missing or unusable | **refused** with a message; nothing is fetched (and the build would already have failed) |
 
 A production session is never downgraded to "load it anyway". The host starts
-from the last bundle that loaded — verified again from Zipline's cache, so it
-works offline — and moves to the newest when the lookup answers; it follows a
+from the last bundle that loaded — verified again from Zipline's cache, so after
+one successful load it works offline — and moves to the newest when the lookup answers; it follows a
 manifest URL only on the bundle server's own origin.
 
 **Not protected: rollback.** Any bundle signed with your key is accepted,

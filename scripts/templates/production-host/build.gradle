@@ -41,6 +41,8 @@ android {
     targetSdk 35
     versionCode 1
     versionName '1.0'
+    // Off for every build type unless one turns it on (only debug does).
+    manifestPlaceholders = [usesCleartextTraffic: 'false']
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
   }
@@ -49,7 +51,6 @@ android {
     // configured server is plain http — an emulator reaching a relay. A release
     // build with an http server is refused outright (checkReleaseUrls, below).
     debug { manifestPlaceholders = [usesCleartextTraffic: cleartext.toString()] }
-    release { manifestPlaceholders = [usesCleartextTraffic: 'false'] }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -71,7 +72,7 @@ def checkPortalKey = tasks.register('checkPortalKey') {
 }
 tasks.named('preBuild') { dependsOn checkPortalKey }
 
-// A release build talks https or not at all. It still needs YOUR signing config
+// A non-debug build talks https or not at all. It still needs YOUR signing config
 // (android { signingConfigs { ... } }) before it will install anywhere.
 def checkReleaseUrls = tasks.register('checkReleaseUrls') {
   doLast {
@@ -81,8 +82,14 @@ def checkReleaseUrls = tasks.register('checkReleaseUrls') {
     }
   }
 }
-tasks.configureEach { t ->
-  if (t.name == 'preReleaseBuild') t.dependsOn checkReleaseUrls
+// Every non-debug variant — release, custom build types, any flavor.
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    if (variant.buildType != 'debug') {
+      def pre = "pre${variant.name.capitalize()}Build"
+      tasks.configureEach { t -> if (t.name == pre) t.dependsOn checkReleaseUrls }
+    }
+  }
 }
 
 dependencies {

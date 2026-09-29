@@ -110,7 +110,9 @@ class MainActivity : ComponentActivity() {
     }
 
     val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-    val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)
+    // Only a saved URL on the CURRENT bundle server's origin; after an update
+    // that moved the server, the old one is ignored.
+    val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
     var manifestFlow: MutableStateFlow<String>? = null
     if (lastGood != null) {
       Log.d(TAG, "starting from the last bundle that loaded: $lastGood")
@@ -154,13 +156,16 @@ class MainActivity : ComponentActivity() {
         return@runCatching null
       }
       val url = server.resolve(path)
-      if (url == null || url.scheme != server.scheme || url.host != server.host || url.port != server.port) {
+      if (!sameOrigin(url, server)) {
         Log.e(TAG, "refusing a manifest URL off the bundle server's origin: $path")
         return@runCatching null
       }
       url.toString()
     }
   }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
+
+  private fun sameOrigin(url: HttpUrl?, server: HttpUrl): Boolean =
+    url != null && url.scheme == server.scheme && url.host == server.host && url.port == server.port
 
   private fun startTreehouse(
     verifier: ManifestVerifier,
@@ -198,7 +203,9 @@ class MainActivity : ComponentActivity() {
     val app = factory.create(
       appScope = lifecycleScope,
       spec = spec,
-      // Remember a manifest only once it has loaded — that is, verified.
+      // Remember a manifest URL only once code has loaded for it. What loaded is
+      // always verified; on a first load Zipline may have fallen back to its
+      // cache, so the URL itself is a hint, and is verified again when used.
       eventListenerFactory = LoggingEventListenerFactory { url ->
         prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply()
       },

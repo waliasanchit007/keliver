@@ -73,12 +73,17 @@ refuses "the private key renamed .key"     "is not this app's public key" --bund
 refuses "another app's public key"         "is not this app's public key" --bundle-server "$SERVER" --public-key-file "$OTHER"
 refuses "a bundle server with a query"     "without a query"          --bundle-server "$SERVER/?x=1" --public-key-file "$KEY"
 refuses "a non-ASCII bundle server"        "plain ASCII"              --bundle-server "http://bündel.example" --public-key-file "$KEY"
-refuses "a value holding a placeholder"    "@@"                       --bundle-server "$SERVER" --application-id "com.x@@NAME@@" --public-key-file "$KEY"
+refuses "a value holding a placeholder"    "which the templates use as placeholders" --bundle-server "http://h:8077/@@NAME@@" --public-key-file "$KEY"
 KELIVER_HOST_KOTLIN_VERSION="1'x" refuses "a hostile version override" "not a version" --bundle-server "$SERVER" --public-key-file "$KEY"
 refuses "a missing key file"               "no such file"             --bundle-server "$SERVER" --public-key-file "$DISP/nope.pub"
 # An unprefixed KOTLIN_VERSION (common on CI images) must not change the build.
 export KOTLIN_VERSION=1.9.0
 refuses "an unknown option"                "unknown option"           --bundle-server "$SERVER" --frobnicate
+mv "$APP/settings.gradle" "$APP/s.gradle"
+out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && [ -d "$APP/host-android" ] && ok "no settings.gradle: still scaffolds (named after the directory), no silent exit" \
+  || bad "no settings.gradle: rc=$rc $(printf '%s' "$out" | tail -1)"
+rm -rf "$APP/host-android"; mv "$APP/s.gradle" "$APP/settings.gradle"
 mv "$APP/keliver.portal.json" "$APP/k.json"
 refuses "outside an app root"              "no keliver.portal.json"   --bundle-server "$SERVER" --public-key-file "$KEY"
 mv "$APP/k.json" "$APP/keliver.portal.json"
@@ -89,7 +94,7 @@ rm "$APP/src/jsMain/kotlin/screens/other.kt"
 echo "=== a successful scaffold (the key from the store, by default)"
 out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --api-base-url "https://api.example.com/v1" 2>&1 )"; rc=$?
 [ "$rc" = 0 ] && ok "scaffolded (exit 0)" || { bad "scaffold failed: $out"; }
-printf '%s' "$out" | grep -q "matches this app's store\|from $KEY" && ok "it names where the key came from" || bad "no key origin in: $out"
+printf '%s' "$out" | grep -q "matches this app's store" && ok "the key was checked against this app's store" || bad "no store match in: $out"
 H="$APP/host-android"
 missing=0
 for f in settings.gradle build.gradle gradle.properties .gitignore src/main/AndroidManifest.xml \

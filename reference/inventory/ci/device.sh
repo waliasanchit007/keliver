@@ -231,7 +231,8 @@ grep -q "$HOST_TAG: starting from the last bundle that loaded" "$EV/logcat-prod-
   && ok "P7: the host started from the last bundle that loaded" || bad "P7: it did not start from the last bundle"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
-  && ok "P7: it loaded offline, still verified with this app's key" || bad "P7: no verified load offline"
+  && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \
+  || bad "P7: no load offline"
 drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 echo "device: passed $pass, failed $fail"
