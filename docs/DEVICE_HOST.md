@@ -74,25 +74,47 @@ It binds services your presenters can take by name:
 
 ## 2. Your own production host
 
-When you need your own Activity, branding, embedded bundles, signature
-verification or store distribution, copy `sample/host-android` from the Keliver
-repository. That is a complete, buildable Android application wired to a guest,
-and it is the starting point for a production host.
+Shipping to real users needs your own host: your application id, your
+portal's public key, signature verification always on. Scaffold one into your
+app from this bundle — no Keliver checkout:
 
-**A production host must carry your portal's public key, and keeps signature
-verification on.** Build it on a machine whose portal store holds
-`keys/ed25519.pub` — `bin/keliver-store-path.sh <app>` prints where that is —
-and the key is embedded as `assets/portal_ed25519.pub`. At runtime:
+```bash
+bin/keliver-new-production-host.sh --bundle-server https://bundles.example.com
+./gradlew -p host-android assembleRelease        # or assembleDebug
+```
 
-| requested mode | embedded key | what happens |
-|---|---|---|
-| development | irrelevant | unsigned dev bundle from `serveDevelopmentZipline` |
-| production | present and valid | manifests verified against that key |
-| production | missing or unusable | **refused** with a message; nothing is fetched |
+Run it from your app's root. It writes `host-android/`, a standalone Gradle
+build that resolves Keliver from Maven Central only, and that is yours to edit
+from then on:
 
-The last row is the point: a production session is never downgraded to "load it
-anyway". If your host refuses, the key is missing from the build, not from the
-bundle — rebuild it where the store lives.
+- **production only** — every bundle's manifest must verify against
+  `src/main/assets/portal_ed25519.pub`; there is no development path (that is
+  what the generic host above is for);
+- **your key, committed** — the scaffolder copies the PUBLIC key from your
+  portal store (`keys/ed25519.pub`; `bin/keliver-store-path.sh <app>` prints
+  where that is), or from `--public-key-file`. It never reads the private key.
+  A missing or malformed key fails the build;
+- **your servers** — `--bundle-server` (the relay's `/bundles` API, or anything
+  serving the same paths) and, optionally, `--api-base-url`, which gives guests
+  the `HostHttp` capability over real HTTP. Both live in
+  `host-android/gradle.properties`. Cleartext is allowed only for an `http://`
+  server — fine for an emulator reaching `http://10.0.2.2:8077`, not for users;
+- `--application-id` defaults to `<your package>.host`.
+
+At runtime:
+
+| embedded key | what happens |
+|---|---|
+| present and valid | the latest compatible bundle's manifest is verified against it; a bundle signed by any other key is refused |
+| missing or unusable | **refused** with a message; nothing is fetched (and the build would already have failed) |
+
+A production session is never downgraded to "load it anyway".
+
+**What you still set up yourself.** Publishing signed bundles is not scaffolded
+yet: `keliver.portal.json` needs a `publishTask`/`publishOutput` for your app
+and your `build.gradle` a signing block after the `kotlin {}` block
+(`docs/PRODUCTION_HOST_FEASIBILITY.md`, "The smallest supported publish/signing
+setup"). A release build needs your own signing config for the APK.
 
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.

@@ -58,12 +58,25 @@ loads only the unsigned bundle your own `serveDevelopmentZipline` is serving,
 and **refuses production mode** (`--es mode prod`) with an on-device message
 rather than loading a production bundle unverified.
 
-Shipping to real users needs **your own production host**: copy
-`sample/host-android` from the keliver repository and build it on a machine
-whose portal store holds `keys/ed25519.pub`, so your portal's identity is
-embedded and signature verification stays on. `host/README.md` has the table of
-what each mode does. This separation is deliberate — a generic binary that
-belongs to nobody has nothing to verify your bundles against.
+Shipping to real users needs **your own production host**:
+`bin/keliver-new-production-host.sh` scaffolds one into your app (below), with
+your portal's public key embedded and signature verification always on.
+`host/README.md` has what it does and what it refuses. This separation is
+deliberate — a generic binary that belongs to nobody has nothing to verify your
+bundles against.
+
+### bin/keliver-new-production-host.sh
+
+```bash
+bin/keliver-new-production-host.sh --bundle-server URL [--api-base-url URL] \
+    [--application-id ID] [--public-key-file PATH]
+./gradlew -p host-android assembleDebug
+```
+
+Writes `host-android/`: your app's production Android host, a standalone build
+on Maven Central only. Production-only, verifying every bundle against the
+public key it copies from your portal store (never the private key). Refuses
+without changing anything if an input is wrong or `host-android/` exists.
 
 ### bin/keliver-new-component.sh
 

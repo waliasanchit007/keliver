@@ -19,8 +19,9 @@ them visually in a web portal that round-trips to the .kt files in git.
   and [`reference/inventory`](reference/inventory) — an app developed only from
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
   checked on an emulator by `.github/workflows/reference-app.yml`. Its
-  production route is NOT published-only: that host is compiled from Keliver
-  source at the tools release's commit, and the CI harness is this repo's. What it proved and
+  production host is scaffolded by `scripts/keliver-new-production-host.sh`
+  and built from Maven Central (no Keliver source compiled), but that script is
+  not yet in a released tools bundle, and the CI harness is this repo's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle

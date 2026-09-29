@@ -93,12 +93,13 @@ counted as a render.
 Each of these was hit building this app; see
 [`docs/REFERENCE_APP.md`](../../docs/REFERENCE_APP.md) for the full record.
 
-* **Production needs the Keliver repository.** The bundle's `host/README.md`
-  says to copy `sample/host-android` for a production host, but that host renders
-  the sample's own widget schema, not keliver-material. The host that renders an
-  adopter's screens is `portal-device-android`, which is not published. CI builds
-  it from the release's source commit with `-Pkeliver.devOnlyHost=false
-  -Pkeliver.portalStore=<this app's store>`.
+* **Production needed the Keliver repository — now scaffolded, not yet
+  released.** The 0.3.5 bundle's `host/README.md` says to copy
+  `sample/host-android`, which renders the sample's own widget schema, not
+  keliver-material. CI now runs `scripts/keliver-new-production-host.sh` (#85)
+  in the app and builds `host-android/` from Maven Central; until a tools
+  release ships it, that script is the one piece that comes from this
+  repository.
 * **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, whose
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
   fails. This app sets `publishTask`/`publishOutput` in `keliver.portal.json`

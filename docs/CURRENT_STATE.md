@@ -51,7 +51,9 @@ execution, and iOS for the reference app.
 foreign-file hole — reproduced through to a linked debug framework, not fixed);
 U27 (the relay writes `keys/ed25519.priv` world-readable); U28 (the production
 host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
-`REFERENCE_APP.md` — no published production host, publish not scaffolded.
+`REFERENCE_APP.md` — no published production host (a scaffolder,
+`keliver-new-production-host.sh`, is built and passes the reference app's
+P1–P6 from Maven Central, but is not released), publish not scaffolded.
 Priorities: `ROADMAP.md` "Current priorities".
 
 **Historical evidence whose app is gone:** every "Stashfin" gate below — the
