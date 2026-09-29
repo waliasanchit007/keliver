@@ -4,13 +4,13 @@
 # check ingest, publish a signed v1, and build a production host that embeds
 # THIS app's public key.
 #
-#   ci/prepare.sh <work-dir> <evidence-dir> <keliver-release-checkout> [tools.zip]
+#   ci/prepare.sh <work-dir> <evidence-dir> [tools.zip]
 #
-# <keliver-release-checkout> is a checkout of the commit the tools release was
-# built from (portal-tools-v0.3.5 -> b5615637). The production host is built
-# from THAT source, because no production host that renders keliver-material
-# widgets is published: host/README.md in the bundle points at the Keliver
-# repository, and this is the step that finds out what that costs.
+# The production host is SCAFFOLDED into the app by this repository's
+# scripts/keliver-new-production-host.sh (not yet in a published tools bundle)
+# and built by the app's own Gradle from Maven Central. It used to be
+# portal-device-android compiled from Keliver's source at the release commit;
+# no Keliver source is compiled here now.
 #
 # Isolation: every JVM here runs with user.home = <work-dir>/home, so the store,
 # its keys and the relay's state are all inside <work-dir>. The repository's own
@@ -22,10 +22,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO="$(cd "$HERE/../../.." && pwd -P)"
-WORK="${1:?usage: $0 <work-dir> <evidence-dir> <keliver-release-checkout> [tools.zip]}"
+WORK="${1:?usage: $0 <work-dir> <evidence-dir> [tools.zip]}"
 EV="${2:?}"
-RELEASE_SRC="$(cd "${3:?}" && pwd -P)"
-ZIP="${4:-}"
+ZIP="${3:-}"
 mkdir -p "$WORK/home" "$EV"
 WORK="$(cd "$WORK" && pwd -P)"; EV="$(cd "$EV" && pwd -P)"
 
@@ -112,22 +111,33 @@ grep -q "signed by \['portal-ed25519'\]" "$EV/manifest-v1.summary" \
   && ok "v1's manifest carries a portal-ed25519 signature" || bad "v1's manifest is not signed"
 portal_down "$APP"
 
-# --- 5. P1: the production host, with THIS app's key -------------------------
-# The Keliver build would otherwise resolve the Keliver checkout's own store;
-# -Pkeliver.portalStore names this app's. It is a build-only override that warns.
-( cd "$RELEASE_SRC" && git rev-parse HEAD > "$EV/host-source-commit" && \
-  ./gradlew -q -Pkeliver.devOnlyHost=false -Pkeliver.portalStore="$STORE" \
-    :portal-device-android:assembleDebug --console=plain ) > "$EV/host-build.log" 2>&1 \
-  && ok "the production host built from $(cat "$EV/host-source-commit")" \
-  || { bad "the production host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
-grep -i 'keliver:' "$EV/host-build.log" | sed 's/^/    /' | head -5
-APK="$RELEASE_SRC/portal-device-android/build/outputs/apk/debug/portal-device-android-debug.apk"
+# --- 5. P1: the production host, scaffolded, with THIS app's key ------------
+# keliver-new-production-host.sh reads the PUBLIC key from this app's store
+# (resolved under this run's user.home) and writes host-android/, a standalone
+# build on Maven Central only. 10.0.2.2 is how the emulator reaches the relay.
+PROD_ID=inventory.host
+( cd "$APP" && "$REPO/scripts/keliver-new-production-host.sh" --bundle-server http://10.0.2.2:8077 \
+    --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
+  && ok "P1: keliver-new-production-host.sh scaffolded host-android/" \
+  || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
+sed 's/^/    /' "$EV/host-scaffold.log"
+printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug ) > "$EV/host-build.log" 2>&1 \
+  && ok "P1: the scaffolded host built from Maven Central" \
+  || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
+# Where every Keliver artifact in that build came from.
+( cd "$APP" && ./gradlew --console=plain -q -p host-android dependencies --configuration debugRuntimeClasspath ) \
+  > "$EV/host-dependencies.txt" 2>&1
+grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+echo "    $(wc -l < "$EV/host-keliver-artifacts.txt" | tr -d ' ') dev.keliver artifacts, all $(cut -d: -f3 "$EV/host-keliver-artifacts.txt" | sort -u | tr '\n' ' ')"
+APK="$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)"
 cp "$APK" "$EV/production-host.apk"
 sha256 "$EV/production-host.apk" | tee "$EV/production-host.apk.sha256"
 EMB="$(unzip -p "$EV/production-host.apk" assets/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
 [ -n "$EMB" ] && [ "$EMB" = "$PUB" ] \
   && ok "P1: the host embeds assets/portal_ed25519.pub, equal to this app's public key" \
   || bad "P1: the embedded key (${EMB:0:16}) is not this app's (${PUB:0:16})"
+echo "PROD_ID=$PROD_ID" >> "$WORK/env"
 echo "APK=$EV/production-host.apk" >> "$WORK/env"
 
 # Warm the development bundle so the device step does not wait on it.

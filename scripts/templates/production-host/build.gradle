@@ -1,0 +1,81 @@
+// This app's PRODUCTION Android host. Scaffolded by keliver-new-production-host.sh;
+// yours to edit from here on.
+//
+// What makes it production-only:
+// * it loads only bundles whose manifest verifies against the public key in
+//   src/main/assets/portal_ed25519.pub (checked below at build time, and again
+//   on the device before anything is fetched);
+// * it has no development path — for that, use the generic development host
+//   from the tools bundle, which refuses production.
+plugins {
+  id 'com.android.application' version '@@AGP_VERSION@@'
+  id 'org.jetbrains.kotlin.android' version '@@KOTLIN_VERSION@@'
+  id 'org.jetbrains.kotlin.plugin.compose' version '@@KOTLIN_VERSION@@'
+  id 'org.jetbrains.compose' version '@@COMPOSE_VERSION@@'
+  id 'app.cash.zipline' version '@@ZIPLINE_VERSION@@' // IR rewrite of zipline.take/bind
+}
+
+def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
+def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').trim()
+if (!(bundleServer ==~ /https?:\/\/[^\s"]+/)) {
+  throw new GradleException("keliver.bundleServer must be an http:// or https:// URL (got '$bundleServer'). " +
+    "Set it in gradle.properties or pass -Pkeliver.bundleServer=...")
+}
+if (apiBaseUrl && !(apiBaseUrl ==~ /https?:\/\/[^\s"]+/)) {
+  throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
+}
+
+android {
+  namespace '@@PACKAGE@@'
+  compileSdk 35
+  defaultConfig {
+    applicationId '@@APPLICATION_ID@@'
+    minSdk 21
+    targetSdk 35
+    versionCode 1
+    versionName '1.0'
+    buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
+    buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
+    // Cleartext only when a configured server is plain http.
+    manifestPlaceholders = [usesCleartextTraffic: (bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')).toString()]
+  }
+  buildFeatures { compose true; buildConfig true }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+kotlin { jvmToolchain(17) }
+
+// The embedded key is the whole of this host's trust: a missing or malformed
+// one fails the BUILD, not just a launch on someone's device.
+def portalKey = file('src/main/assets/portal_ed25519.pub')
+def checkPortalKey = tasks.register('checkPortalKey') {
+  inputs.file(portalKey)
+  doLast {
+    def hex = portalKey.text.trim()
+    if (!(hex ==~ /[0-9a-fA-F]{64}/)) {
+      throw new GradleException("$portalKey is not a 64-hex-digit Ed25519 public key. Re-run " +
+        "keliver-new-production-host.sh, or copy your portal store's keys/ed25519.pub there.")
+    }
+  }
+}
+tasks.named('preBuild') { dependsOn checkPortalKey }
+
+dependencies {
+  implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-material-composeui:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-material-protocol-host-web:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:portal-sql:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
+  implementation 'app.cash.zipline:zipline:@@ZIPLINE_VERSION@@'
+  implementation 'app.cash.zipline:zipline-loader:@@ZIPLINE_VERSION@@'
+  implementation 'com.squareup.okhttp3:okhttp:5.1.0'
+  implementation 'androidx.activity:activity-compose:1.10.1'
+  implementation 'androidx.core:core-ktx:1.16.0'
+  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
+  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+  implementation 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.compose.material:material:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+}
