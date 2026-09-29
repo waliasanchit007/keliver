@@ -181,6 +181,17 @@ jobs:
           # resolver and its shell mirror agree.
           scripts/keliver-store-identity-repro.sh "$RUNNER_TEMP/store-identity"
           echo "::endgroup::"
+          echo "::group::the production-host scaffolder, from scripts/ and from the package"
+          # keliver-new-production-host.sh writes an adopter's own production
+          # Android host. Its refusals must leave the app byte-identical, and the
+          # host it writes must BUILD from Maven Central (--build: assembleDebug,
+          # key embedded, a malformed key failing the build). Then the copy in
+          # the candidate zip, which must find its templates at bin/../templates.
+          scripts/keliver-new-production-host-selftest.sh "$RUNNER_TEMP/prod-host" --build
+          mkdir -p "$RUNNER_TEMP/pkg" && unzip -q -o "$zip" -d "$RUNNER_TEMP/pkg"
+          KELIVER_PRODUCTION_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-production-host.sh" \
+            scripts/keliver-new-production-host-selftest.sh "$RUNNER_TEMP/prod-host-pkg"
+          echo "::endgroup::"
           echo "::group::the guest bundle the recovery check signs"
           # build-portal-tools.sh does not build this target, so on a fresh
           # runner the check would trigger a Kotlin/JS + Zipline compile from

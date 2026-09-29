@@ -213,6 +213,25 @@ The host reaches your machine at `10.0.2.2:8080`, which is an **emulator**
 address. A physical device needs its own reachable host URL; see
 [`DEVICE_HOST.md`](DEVICE_HOST.md).
 
+## Ship to production
+
+The generic host above is development-only and refuses production. Your app's
+production host is scaffolded once, into `host-android/`. **The command ships
+in the tools release after 0.3.5** (not yet released); until then it is
+`scripts/keliver-new-production-host.sh` in the Keliver repository.
+
+```bash
+$KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an emulator reaching your relay
+./gradlew -p host-android assembleDebug
+```
+
+It embeds your portal's public key (copied from your store — commit
+`host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
+against it, and loads the latest one your relay has published. Use an
+`https://` bundle server for real users — a release build refuses `http://`;
+`DEVICE_HOST.md` §2 has the options and what the host refuses. Publishing signed bundles still needs a `publishTask`
+and a signing block of your own — not yet scaffolded.
+
 ## Preview mocks are not runtime values
 
 The editor's preview and the running app show different things, deliberately.

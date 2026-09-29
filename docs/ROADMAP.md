@@ -250,12 +250,12 @@ and kept under "Completed priorities" below.
    the release's source commit. The bundle's `host/README.md` sends adopters to
    `sample/host-android`, which renders the *sample's* widget schema, not
    keliver-material. No host that renders an adopter's screens with signature
-   verification is published. **Decide what the adopter's production host is**
-   (a published host library, a scaffolded template, or a documented copy of
-   `portal-device-android`) before building more authoring depth. Evidence:
-   `docs/REFERENCE_APP.md` §Production. Decision input — coordinates, what is
-   not published, the smallest publish/signing setup, and the one measurement to
-   make first: `docs/PRODUCTION_HOST_FEASIBILITY.md`.
+   verification is published. **Decided 2026-09-30: a scaffolded host app**
+   (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Built, unreleased:**
+   `keliver-new-production-host.sh` writes `host-android/`, production-only, on
+   Maven Central only; the reference app's P1–P6 pass on it (CI run
+   `36616829164`). What remains: a tools release to ship it, publish/signing
+   scaffolding (item 2), and a host run on a physical device over HTTPS.
 2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has
    no `publishTask`/`publishOutput` and no signing block, so publish fails, and

@@ -1,7 +1,9 @@
 # A standalone Android production host — feasibility
 
 **2026-09-24, measured 2026-09-29. Decision input for ROADMAP "Current
-priorities" item 1. Nothing here is implemented.**
+priorities" item 1.** Decided 2026-09-30: **option B, scaffold a host app** —
+implemented as `keliver-new-production-host.sh` (#85), which reworks item 1's
+gaps (production-only, configurable servers, real `HostHttp`, no U28).
 
 > **Measured (2026-09-29):** a throwaway Android app, outside the checkout,
 > with only Maven Central and Google as repositories, **resolves every

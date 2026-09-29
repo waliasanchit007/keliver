@@ -25,12 +25,15 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-. "$WORK/env"   # APP, KP, STORE, APK
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID
 export KP JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
+# Two different apps: the tools bundle's generic DEVELOPMENT host, and this
+# app's own scaffolded PRODUCTION host (host-android/, built by prepare.sh).
 PKGID=dev.keliver.portaldevice
 ACT="$PKGID/dev.keliver.portaldevice.host.MainActivity"
+HOST_TAG=KeliverHost
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/device.results"; }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/device.results"; }
@@ -74,7 +77,17 @@ portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep
 launch(){  # $1 = dev|prod ; $2 = logcat file
   adb -s "$SERIAL" logcat -c || true
   adb -s "$SERIAL" shell am force-stop "$PKGID"
-  if [ "$1" = prod ]; then adb -s "$SERIAL" shell am start -n "$ACT" --es mode prod >/dev/null
+  adb -s "$SERIAL" shell am force-stop "$PROD_ID"
+  # The production host is production-only: a plain launcher start.
+  if [ "$1" = prod ]; then
+    # Its launcher activity, as the device resolves it — not a guess that the
+    # application id equals the Kotlin package. (`am start -p <pkg>` with only
+    # MAIN/LAUNCHER was accepted and started nothing: run 36621274110.)
+    local cmp
+    cmp="$(adb -s "$SERIAL" shell cmd package resolve-activity --brief -a android.intent.action.MAIN \
+      -c android.intent.category.LAUNCHER "$PROD_ID" | tr -d '\r' | tail -1)"
+    echo "    launching $cmp"
+    adb -s "$SERIAL" shell am start -n "$cmp" >/dev/null
   else adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null; fi
   sleep 15
   adb -s "$SERIAL" logcat -d > "$2"
@@ -154,11 +167,16 @@ PUB="$(cat "$EV/app-public-key.hex")"
 # Stockroom, so a screen reading Inventory is the signed bundle, not the source.
 curl -sf "http://localhost:8077/bundles/latest?widgetVersion=1&caps=" > "$EV/latest-p2.json"; cat "$EV/latest-p2.json"; echo
 launch prod "$EV/logcat-prod-v1.txt"
-grep -q "mode=prod, devOnlyHost=false" "$EV/logcat-prod-v1.txt" \
-  && ok "P1: the installed host is not the development-only build (devOnlyHost=false)" || bad "P1: devOnlyHost=false not reported"
-grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \
+adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_ID" \
+  && ok "P1: the production host is its own app ($PROD_ID), not the generic development host" \
+  || bad "P1: $PROD_ID is not installed"
+# U28 was the generic host loading an empty manifest URL on every start; the
+# scaffolded host creates its Treehouse app only once the URL is known.
+grep -q "codeLoadFailed: Expected URL scheme" "$EV/logcat-prod-v1.txt" \
+  && bad "P2: an empty-URL load was attempted (U28)" || ok "P2: no empty-URL load attempt (U28 absent)"
+grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \
   && ok "P2: production verifies with this app's key (${PUB:0:8}…)" || bad "P2: no verification with this app's key in the log"
-grep -q "refusing production mode" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused production" || ok "P2: production was not refused"
+grep -q "$HOST_TAG: refusing to load" "$EV/logcat-prod-v1.txt" && bad "P2: the production host refused to load" || ok "P2: the production host did not refuse"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-v1.txt" && ok "P2: the signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
 drive title Inventory P2; fold "P2: v1 shows Inventory in production" $?
 drive prod Inventory P3; fold "P3: repeated actions run from the signed bundle" $?
@@ -192,9 +210,9 @@ curl -s -m 600 -X POST http://localhost:8077/publish > "$EV/publish-foreign.log"
 grep -q 'publish OK' "$EV/publish-foreign.log" && ok "P5: the copy published a bundle signed with ITS key" || bad "P5: the copy did not publish"
 FM="$(ls -d "$FSTORE"/bundles/v*/ 2>/dev/null | sort -V | tail -1)manifest.zipline.json"
 [ -f "$FM" ] && cp "$FM" "$EV/manifest-foreign.zipline.json"
-adb -s "$SERIAL" shell pm clear "$PKGID" > /dev/null
+adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 launch prod "$EV/logcat-prod-foreign.txt"
-grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-foreign.txt" \
+grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-foreign.txt" \
   && ok "P5: verification still uses this app's key" || bad "P5: verification key not seen"
 grep -E "codeLoadFailed" "$EV/logcat-prod-foreign.txt" | head -3 | sed 's/^/    /'
 grep -qE "codeLoadFailed.*(signature|verif)" "$EV/logcat-prod-foreign.txt" \
@@ -207,11 +225,23 @@ portal_down "$FAPP"
 # P6: back to this app's relay; the good bundle loads again, still verified.
 portal_up "$APP" "$EV/relay-A-2.log" || bad "P6: the relay did not come back"
 launch prod "$EV/logcat-prod-recover.txt"
-grep -q "prod mode: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-recover.txt" \
+grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-recover.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-prod-recover.txt" \
   && ok "P6: this app's signed bundle loads again, verified" || bad "P6: no verified load after recovery"
 drive title Stockroom P6; fold "P6: Stockroom is back" $?
 portal_down "$APP"
+
+# P7: offline. No relay is running now; the host starts from the last bundle
+# that loaded, which Zipline verifies again from its cache.
+curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
+launch prod "$EV/logcat-prod-offline.txt"
+grep -q "$HOST_TAG: starting from the last bundle that loaded" "$EV/logcat-prod-offline.txt" \
+  && ok "P7: the host started from the last bundle that loaded" || bad "P7: it did not start from the last bundle"
+grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
+  && grep -q "codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
+  && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \
+  || bad "P7: no load offline"
+drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 echo "device: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]
