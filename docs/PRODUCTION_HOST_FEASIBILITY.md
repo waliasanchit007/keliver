@@ -1,7 +1,14 @@
 # A standalone Android production host — feasibility
 
-**2026-09-24. Decision input for ROADMAP "Current priorities" item 1. Nothing
-here is implemented.**
+**2026-09-24, measured 2026-09-29. Decision input for ROADMAP "Current
+priorities" item 1. Nothing here is implemented.**
+
+> **Measured (2026-09-29):** a throwaway Android app, outside the checkout,
+> with only Maven Central and Google as repositories, **resolves every
+> dependency and compiles the three host files byte-for-byte unchanged — once
+> one 17-line file declares `HostApi` and `PortalPresenter` by shape.** Without
+> that file it fails, and every one of its compile errors traces to those two
+> names. See "The measurement" below.
 
 The question: can an adopter build an Android app that renders their
 keliver-material screens from **signed** bundles, verified against **their own**
@@ -70,20 +77,25 @@ and androidx.lifecycle (via activity).
    `keliver-gradle-plugin` has nothing for stores or keys. The reference app's
    signing block shows the published workaround: call the tools bundle's
    `keliver-store-path.sh`.
-3. **`portal-device-guest` is not published, and does not need to be.** Zipline
-   binds services by name and shape. The scaffolded guest already declares
-   `PortalPresenter` itself (`keliver-new-device-target.sh`), and the generic
-   host binds it: the reference app's E1–E10 ran that way. A standalone host can
-   declare its side of the contract the same way.
-4. **Unverified: resolving the published metadata in an Android build.** More
+3. **`portal-device-guest` is not published, and does not need to be — but
+   the host files import from it.** Zipline binds services by name and shape.
+   The scaffolded guest already declares `PortalPresenter` itself
+   (`keliver-new-device-target.sh`), and the generic host binds it: the
+   reference app's E1–E10 ran that way. `MainActivity.kt` imports
+   `dev.keliver.portaldevice.HostApi` and `PortalPresenter` from that module, so
+   a standalone host needs one extra file declaring both by shape (measured
+   below: that is the only thing missing for compilation).
+4. **Resolving the published metadata in an Android build — measured, it
+   works.** More
    than the three above have no `androidJvm` variant — `keliver-protocol`,
    `keliver-protocol-host`, `keliver-leak-detector`, `keliver-material-widget`,
    `keliver-material-modifiers` and `keliver-capabilities` too — and the
    `androidJvm` artifacts depend on them, so the `jvm` variants are already how
    Android consumes them: `portal-device-android` does exactly that through
    project dependencies (`portal-sql/build.gradle`: "android host consumes via
-   jvm artifact"). What is unmeasured is whether an AGP 8.12 build resolves the
-   same graph from Maven Central's module metadata.
+   jvm artifact"). An AGP 8.12 build resolves the same graph from Maven
+   Central's module metadata: it picked the `-jvm` artifacts for those modules
+   and the `-android` ones where they exist, and built an APK (below).
 
 ## The smallest supported publish/signing setup
 
@@ -143,9 +155,39 @@ Known limits of this setup:
 - A production host is a separate app, with its own key embedded at build time.
 - `build-portal-tools.sh` keeps refusing to package any APK that embeds a key.
 
-**The measurement that should come before choosing.** Build a throwaway
-Android app that resolves the coordinates above from Maven Central and compiles
-the three host files against them, with no host code changed. This settles
-item 4 — compilation and resolution only; item 1's production defaults are
-design work either way — and it tells A and B apart on cost. It reads no store
-and signs nothing.
+## The measurement
+
+`superpowers/evidence/host-feasibility/measure.sh <keliver-checkout> <work>`
+generates a throwaway Android project with:
+- AGP 8.12.0, Kotlin 2.2.0, Compose Multiplatform 1.8.2 and Zipline 1.22.0;
+- `compileSdk` 35, `minSdk` 21, and `DEV_ONLY=false`;
+- a new `applicationId`;
+- repositories limited to Maven Central, Google and the plugin portal (`FAIL_ON_PROJECT_REPOS`; no `mavenLocal`);
+- the coordinates in the table above.
+
+It copies the three host files and the manifest from `b5615637`, checks that the host files are byte-identical, and builds two variants.
+
+It is isolated:
+- the Gradle home and the JVM's `user.home` are inside the work directory;
+- the local Android SDK is only read;
+- no store is read, no key is embedded (the host reads its key from an asset at runtime), and nothing is signed.
+
+Run on macOS, 2026-09-29 (`superpowers/evidence/host-feasibility/`):
+
+| variant | dependencies | `assembleDebug` |
+|---|---|---|
+| **A** — the three files alone | all resolved from the public repositories | **fails**: 22 errors, all from the unresolved `HostApi` / `PortalPresenter` (`variant-A-errors.txt`) |
+| **B** — the same, plus `GuestContract.kt` declaring both by shape (17 lines, the signatures from `portal-device-guest` at `b5615637`) | all resolved | **succeeds**: a 20.7 MB debug APK, embedding no key |
+
+What this settles:
+- **Item 4 is settled:** the published graph resolves and compiles for Android.
+- **Item 3 is settled:** the one gap for compilation is the guest contract, and a by-shape declaration closes it.
+- **For the options:**
+  - B (scaffold a host app) needs no new published artifact to *compile*: the three files, the one contract file, a manifest and this build script.
+  - A (a host library) would carry the contract itself.
+
+What it does not settle:
+- **The APK was not run**, on any device.
+- **The production defaults (item 1) are untouched:** production is still opt-in per launch, the endpoints are emulator addresses, and `HostHttp` is still a replay fixture. That is design work under any option.
+- **The key-embedding build step (item 2) is not part of it.**
+- **Release (R8) builds were not tried.**
