@@ -75,8 +75,10 @@ bin/keliver-new-production-host.sh --bundle-server URL [--api-base-url URL] \
 
 Writes `host-android/`: your app's production Android host, a standalone build
 on Maven Central only. Production-only, verifying every bundle against the
-public key it copies from your portal store (never the private key). Refuses
-without changing anything if an input is wrong or `host-android/` exists.
+public key it copies from your portal store; it refuses a `.priv` file and, when
+your store resolves, any key that is not its `ed25519.pub`. Refuses without
+changing anything if an input is wrong or `host-android/` exists. A release
+build needs `https://` servers and your own signing config.
 
 ### bin/keliver-new-component.sh
 

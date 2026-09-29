@@ -17,27 +17,39 @@ plugins {
 
 def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
 def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').trim()
-if (!(bundleServer ==~ /https?:\/\/[^\s"]+/)) {
-  throw new GradleException("keliver.bundleServer must be an http:// or https:// URL (got '$bundleServer'). " +
-    "Set it in gradle.properties or pass -Pkeliver.bundleServer=...")
+// ASCII URL characters only; the bundle server takes no query or fragment,
+// because the host appends its own path to it.
+def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
+def apiUrl = /https?:\/\/[A-Za-z0-9._~:\/?#\[\]@!$&()*+,;=%-]+/
+if (!(bundleServer ==~ serverUrl)) {
+  throw new GradleException("keliver.bundleServer must be an http:// or https:// URL without a query " +
+    "(got '$bundleServer'). Set it in gradle.properties or pass -Pkeliver.bundleServer=...")
 }
-if (apiBaseUrl && !(apiBaseUrl ==~ /https?:\/\/[^\s"]+/)) {
+if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
   throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
 }
+def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
 
 android {
   namespace '@@PACKAGE@@'
   compileSdk 35
   defaultConfig {
     applicationId '@@APPLICATION_ID@@'
-    minSdk 21
+    // 23: below it Android ignores usesCleartextTraffic, so http would be allowed
+    // whatever the manifest says.
+    minSdk 23
     targetSdk 35
     versionCode 1
     versionName '1.0'
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
-    // Cleartext only when a configured server is plain http.
-    manifestPlaceholders = [usesCleartextTraffic: (bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')).toString()]
+  }
+  buildTypes {
+    // Cleartext (app-wide on Android) only in DEBUG builds, and only when a
+    // configured server is plain http — an emulator reaching a relay. A release
+    // build with an http server is refused outright (checkReleaseUrls, below).
+    debug { manifestPlaceholders = [usesCleartextTraffic: cleartext.toString()] }
+    release { manifestPlaceholders = [usesCleartextTraffic: 'false'] }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -58,6 +70,20 @@ def checkPortalKey = tasks.register('checkPortalKey') {
   }
 }
 tasks.named('preBuild') { dependsOn checkPortalKey }
+
+// A release build talks https or not at all. It still needs YOUR signing config
+// (android { signingConfigs { ... } }) before it will install anywhere.
+def checkReleaseUrls = tasks.register('checkReleaseUrls') {
+  doLast {
+    if (cleartext) {
+      throw new GradleException("A release build needs https:// servers; keliver.bundleServer is " +
+        "'$bundleServer' and keliver.apiBaseUrl is '$apiBaseUrl'. Use an http:// server only for debug builds.")
+    }
+  }
+}
+tasks.configureEach { t ->
+  if (t.name == 'preReleaseBuild') t.dependsOn checkReleaseUrls
+}
 
 dependencies {
   implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'

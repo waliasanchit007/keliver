@@ -33,7 +33,6 @@ unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 # app's own scaffolded PRODUCTION host (host-android/, built by prepare.sh).
 PKGID=dev.keliver.portaldevice
 ACT="$PKGID/dev.keliver.portaldevice.host.MainActivity"
-PROD_ACT="$PROD_ID/$PROD_ID.MainActivity"
 HOST_TAG=KeliverHost
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/device.results"; }
@@ -80,7 +79,7 @@ launch(){  # $1 = dev|prod ; $2 = logcat file
   adb -s "$SERIAL" shell am force-stop "$PKGID"
   adb -s "$SERIAL" shell am force-stop "$PROD_ID"
   # The production host is production-only: a plain launcher start.
-  if [ "$1" = prod ]; then adb -s "$SERIAL" shell am start -n "$PROD_ACT" >/dev/null
+  if [ "$1" = prod ]; then adb -s "$SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p "$PROD_ID" >/dev/null
   else adb -s "$SERIAL" shell am start -n "$ACT" >/dev/null; fi
   sleep 15
   adb -s "$SERIAL" logcat -d > "$2"
@@ -223,6 +222,17 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
   && ok "P6: this app's signed bundle loads again, verified" || bad "P6: no verified load after recovery"
 drive title Stockroom P6; fold "P6: Stockroom is back" $?
 portal_down "$APP"
+
+# P7: offline. No relay is running now; the host starts from the last bundle
+# that loaded, which Zipline verifies again from its cache.
+curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
+launch prod "$EV/logcat-prod-offline.txt"
+grep -q "$HOST_TAG: starting from the last bundle that loaded" "$EV/logcat-prod-offline.txt" \
+  && ok "P7: the host started from the last bundle that loaded" || bad "P7: it did not start from the last bundle"
+grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
+  && grep -q "codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
+  && ok "P7: it loaded offline, still verified with this app's key" || bad "P7: no verified load offline"
+drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 echo "device: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

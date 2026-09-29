@@ -19,25 +19,44 @@
 #                      Without it the host provides no HostHttp.
 #   --application-id   default: <your app package>.host
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
-#                      found by keliver-store-path.sh. Only the PUBLIC key is
-#                      read, ever. It is copied into the module (it is public and
-#                      belongs in git), so building the host needs no store.
+#                      found by keliver-store-path.sh. The key is copied into
+#                      the module (it is public and belongs in git), so building
+#                      the host needs no store.
+#
+#                      A private key has the same format as a public one, so a
+#                      file cannot prove which it is. This refuses a file whose
+#                      real path (links resolved) ends in .priv, and — whenever
+#                      this app's store resolves — a key that is not that
+#                      store's ed25519.pub. Without a store it cannot tell: pass
+#                      only your ed25519.pub. Nothing here opens ed25519.priv.
 #
 # The host is production-ONLY: it verifies every bundle's signature and has no
 # development path — the tools bundle's generic development host is for that,
 # and it keeps refusing production. Build with
-#   ./gradlew -p host-android assembleRelease        (or assembleDebug)
+#   ./gradlew -p host-android assembleDebug
+# assembleRelease needs https:// servers and YOUR signing config in
+# host-android/build.gradle before the APK will install.
+#
+# Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
+# app's appRuntime.keliverVersion, else 0.3.3), KELIVER_HOST_ZIPLINE_VERSION,
+# KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION, KELIVER_HOST_AGP_VERSION.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
 
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.3}"
-ZIPLINE_VERSION="${ZIPLINE_VERSION:-1.22.0}"
-KOTLIN_VERSION="${KOTLIN_VERSION:-2.2.0}"
-COMPOSE_VERSION="${COMPOSE_VERSION:-1.8.2}"
-AGP_VERSION="${AGP_VERSION:-8.12.0}"
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# Prefixed on purpose: KOTLIN_VERSION and friends are common on CI images, and
+# an unrelated one silently changed the generated build.
+ZIPLINE_VERSION="${KELIVER_HOST_ZIPLINE_VERSION:-1.22.0}"
+KOTLIN_VERSION="${KELIVER_HOST_KOTLIN_VERSION:-2.2.0}"
+COMPOSE_VERSION="${KELIVER_HOST_COMPOSE_VERSION:-1.8.2}"
+AGP_VERSION="${KELIVER_HOST_AGP_VERSION:-8.12.0}"
+# Resolve a symlinked invocation to the real script, so the templates are found.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  link="$(readlink "$SELF")"; case "$link" in /*) SELF="$link" ;; *) SELF="$(dirname "$SELF")/$link" ;; esac
+done
+HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 BUNDLE_SERVER=""; API_BASE_URL=""; APPLICATION_ID=""; KEY_FILE=""
 need() { [ "$2" -ge 2 ] || { echo "$1 needs a value" >&2; exit 2; }; }
@@ -66,10 +85,17 @@ for t in "$HERE/templates/production-host" "$HERE/../templates/production-host";
 done
 [ -n "$TEMPLATES" ] || fail "the production-host templates are missing (looked in $HERE/templates and $HERE/../templates)."
 
-URL_RE='^https?://[^[:space:]"'"'"']+$'
+# ASCII URL characters only (gradle.properties is ISO-8859-1 with escapes); the
+# bundle server takes no query or fragment, since the host appends a path.
+SERVER_RE='^https?://[A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
+API_RE='^https?://[A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
 [ -n "$BUNDLE_SERVER" ] || fail "--bundle-server is required (e.g. http://10.0.2.2:8077 for an emulator reaching this machine's relay)."
-[[ "$BUNDLE_SERVER" =~ $URL_RE ]] || fail "--bundle-server must be an http:// or https:// URL (got '$BUNDLE_SERVER')."
-[ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $URL_RE ]] || fail "--api-base-url must be an http:// or https:// URL (got '$API_BASE_URL')."
+[[ "$BUNDLE_SERVER" =~ $SERVER_RE ]] || fail "--bundle-server must be an http:// or https:// URL of plain ASCII, without a query (got '$BUNDLE_SERVER')."
+[ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $API_RE ]] || fail "--api-base-url must be an http:// or https:// URL of plain ASCII (got '$API_BASE_URL')."
+VERSION_RE='^[0-9A-Za-z.+-]+$'
+for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$AGP_VERSION"; do
+  [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
+done
 
 # The app's package: every screen declares <root>.screens (the keliver-init
 # layout, the same rule keliver-new-device-target.sh uses).
@@ -87,6 +113,11 @@ print(next(iter(pkgs))[: -len('.screens')])
 PY
 )" || fail "${ROOT_PKG#ERROR }"
 PACKAGE="$ROOT_PKG.host"
+# The Keliver version the GUEST uses, so host and guest do not drift apart.
+KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
+try: print(json.load(open(sys.argv[1]))['appRuntime']['keliverVersion'])
+except Exception: print('0.3.3')" "$APP/keliver.portal.json")}"
+[[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$'
 [[ "$APPLICATION_ID" =~ $ID_RE ]] || fail "--application-id must look like com.example.app (got '$APPLICATION_ID')."
@@ -94,22 +125,41 @@ NAME="$(sed -n "s/^[[:space:]]*rootProject\.name[[:space:]]*=[[:space:]]*['\"]\(
 [ -n "$NAME" ] || NAME="$(basename "$APP")"
 [[ "$NAME" =~ ^[A-Za-z0-9._-]+$ ]] || NAME="app"
 
-# The public key: an explicit file, or this app's store. Only ed25519.pub.
+# The public key: an explicit file, or this app's store's ed25519.pub.
+STORE_PUB=""
+RESOLVE="$HERE/keliver-store-path.sh"
+if [ -x "$RESOLVE" ] && STORE="$("$RESOLVE" "$APP" 2>/dev/null)"; then
+  case "$STORE" in /*) [ -f "$STORE/keys/ed25519.pub" ] && STORE_PUB="$STORE/keys/ed25519.pub" ;; esac
+fi
 if [ -z "$KEY_FILE" ]; then
-  RESOLVE="$HERE/keliver-store-path.sh"
-  [ -x "$RESOLVE" ] || fail "keliver-store-path.sh not found next to this script; pass --public-key-file."
-  STORE="$("$RESOLVE" "$APP")" || fail "this app's portal store could not be resolved (see above); pass --public-key-file."
-  case "$STORE" in /*) ;; *) fail "the store resolver named a non-absolute path ('$STORE')." ;; esac
-  KEY_FILE="$STORE/keys/ed25519.pub"
-  [ -f "$KEY_FILE" ] || fail "no public key at $KEY_FILE. Start this app's portal once (keliver-portal) so it creates its signing identity, or pass --public-key-file."
+  [ -n "$STORE_PUB" ] || fail "no public key found in this app's portal store. Start this app's portal once (keliver-portal) so it creates its signing identity, or pass --public-key-file."
+  KEY_FILE="$STORE_PUB"
 fi
 [ -f "$KEY_FILE" ] || fail "no such file: $KEY_FILE"
-case "$(basename "$KEY_FILE")" in *.priv) fail "refusing to read a private key ($KEY_FILE); the host needs the PUBLIC key." ;; esac
+REAL_KEY="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$KEY_FILE")"
+case "$(basename "$KEY_FILE")|$(basename "$REAL_KEY")" in
+  *.priv\|*|*\|*.priv) fail "refusing a private key ($KEY_FILE -> $REAL_KEY); the host needs the PUBLIC key." ;;
+esac
 KEY_HEX="$(tr -d '[:space:]' < "$KEY_FILE")"
 [[ "$KEY_HEX" =~ ^[0-9a-fA-F]{64}$ ]] || fail "$KEY_FILE is not a 64-hex-digit Ed25519 public key."
+KEY_ORIGIN="$KEY_FILE"
+if [ -n "$STORE_PUB" ]; then
+  if [ "$KEY_HEX" != "$(tr -d '[:space:]' < "$STORE_PUB")" ]; then
+    fail "$KEY_FILE is not this app's public key ($STORE_PUB differs). A host must trust the key this app's portal signs with — and a file that is not ed25519.pub may be a private key under another name."
+  fi
+  KEY_ORIGIN="$KEY_FILE (matches this app's store)"
+else
+  echo "note: this app's portal store did not resolve, so $KEY_FILE could not be checked against it." >&2
+  echo "      A private key looks exactly like a public one; make sure this is ed25519.pub." >&2
+  KEY_ORIGIN="$KEY_FILE (NOT checked against a store)"
+fi
 
 # --- stage everything, then move it into place in one step -----------------
+for v in "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL"; do
+  case "$v" in *@@*) fail "a value contains '@@', which the templates use as placeholders: '$v'." ;; esac
+done
 STAGE="$(mktemp -d "$APP/.host-android.XXXXXX")"
+chmod 755 "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
 PKG_PATH="${PACKAGE//.//}"
 subst() { # <src> <dst>
@@ -140,7 +190,12 @@ cat > "$STAGE/.gitignore" <<'EOF'
 /.gradle/
 /local.properties
 EOF
-mv "$STAGE" "$APP/host-android"
+# mkdir is atomic: if host-android appeared since the check above, this fails
+# instead of moving the stage INSIDE it.
+mkdir "$APP/host-android" 2>/dev/null || fail "$APP/host-android appeared while scaffolding — refusing to overwrite."
+( cd "$STAGE" && tar cf - . ) | ( cd "$APP/host-android" && tar xf - ) \
+  || { rm -rf "$APP/host-android"; fail "could not write $APP/host-android."; }
+rm -rf "$STAGE"
 trap - EXIT
 
 echo "created host-android/ — this app's production Android host"
@@ -148,7 +203,9 @@ echo "  package          $PACKAGE"
 echo "  application id   $APPLICATION_ID"
 echo "  bundle server    $BUNDLE_SERVER"
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
-echo "  trusts the key   ${KEY_HEX:0:8}… (from $KEY_FILE) — commit host-android/src/main/assets/portal_ed25519.pub"
+echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
+echo "                   commit host-android/src/main/assets/portal_ed25519.pub"
 echo "next:"
 echo "  ./gradlew -p host-android assembleDebug     (needs an Android SDK: ANDROID_HOME, or host-android/local.properties)"
+echo "  a release build needs https:// servers and your own signing config in host-android/build.gradle"
 echo "  publish a bundle (the relay's POST /publish), then install and launch the host."

@@ -1,9 +1,10 @@
-# The inventory reference app (reference/inventory). The app, its development
-# route and its PRODUCTION HOST are built from the PUBLISHED tools release and
-# Maven Central — no Keliver source is compiled. What still comes from this
-# checkout: ci/ and the isolation guard, and scripts/keliver-new-production-host.sh,
-# which scaffolds the production host and is not yet in a published tools
-# bundle. Checked on an emulator: the development route, a D14 layout edit, and
+# The inventory reference app (reference/inventory). The app and its
+# development route come from the PUBLISHED tools release and Maven Central.
+# Its production host is built against Maven Central too — no Keliver library
+# module is compiled from source — but it is scaffolded by this checkout's
+# scripts/keliver-new-production-host.sh, whose templates (the host's own
+# Kotlin) are not yet in a published tools bundle. ci/ and the isolation guard
+# are this checkout's as well. Checked on an emulator: the development route, a D14 layout edit, and
 # production OTA with app-owned disposable keys.
 #
 # This is dogfooding, not adoption: the app is ours.

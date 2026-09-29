@@ -20,7 +20,8 @@ them visually in a web portal that round-trips to the .kt files in git.
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
   checked on an emulator by `.github/workflows/reference-app.yml`. Its
   production host is scaffolded by `scripts/keliver-new-production-host.sh`
-  and built from Maven Central (no Keliver source compiled), but that script is
+  and built against Maven Central — no Keliver LIBRARY module is compiled from
+  source, but the host's own Kotlin is a template from this repo, the script is
   not yet in a released tools bundle, and the CI harness is this repo's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 

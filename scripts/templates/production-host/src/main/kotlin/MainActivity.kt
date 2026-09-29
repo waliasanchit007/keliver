@@ -9,8 +9,15 @@
  * - The bundle server and the API base are build settings (gradle.properties),
  *   not emulator addresses.
  * - HostHttp is real HTTP to YOUR API base, bound only when one is configured.
- * - The Treehouse app is created only once the bundle's manifest URL is known,
- *   so there is no load attempt on an empty URL (Keliver's U28).
+ * - The Treehouse app is created only once a manifest URL is known, so there is
+ *   no load attempt on an empty URL (Keliver's U28). It starts at once from the
+ *   last manifest that loaded — verified again from Zipline's cache, so the app
+ *   works offline — and moves to the newest one when the lookup answers.
+ * - The manifest must come from the bundle server's own origin.
+ *
+ * Not protected: rollback. Any bundle signed by this key is accepted, including
+ * an older one, so whoever controls the bundle server (or, over http, the path
+ * to it) can serve a previous signed version.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -54,12 +61,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.EmptySerializersModule
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString.Companion.decodeHex
 
 private const val TAG = "KeliverHost"
+private const val PREFS = "keliver-host"
+private const val LAST_GOOD_MANIFEST = "lastGoodManifestUrl"
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +96,12 @@ class MainActivity : ComponentActivity() {
       .build()
 
     val okhttp = OkHttpClient()
-    val apiBase = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() }
+    val server = BuildConfig.KELIVER_BUNDLE_SERVER.toHttpUrlOrNull()
+    if (server == null) {
+      setContent { MessageScreen("Refusing to load", "The bundle server '${BuildConfig.KELIVER_BUNDLE_SERVER}' is not a URL.") }
+      return
+    }
+    val apiBase = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() }?.toHttpUrlOrNull()
     // Advertise only what this host really provides: the bundle lookup uses it
     // to pick a compatible bundle.
     val capabilities = buildList {
@@ -90,29 +109,67 @@ class MainActivity : ComponentActivity() {
       if (apiBase != null) add(dev.keliver.capabilities.HOST_HTTP_CAPABILITY)
     }
 
-    setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
+    val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+    val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)
+    var manifestFlow: MutableStateFlow<String>? = null
+    if (lastGood != null) {
+      Log.d(TAG, "starting from the last bundle that loaded: $lastGood")
+      manifestFlow = startTreehouse(verifier, okhttp, apiBase, lastGood)
+    } else {
+      setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
+    }
     lifecycleScope.launch {
-      val manifestUrl = withContext(Dispatchers.IO) { latestManifestUrl(okhttp, capabilities) }
-      if (manifestUrl == null) {
-        setContent { MessageScreen("No bundle", "No compatible bundle at ${BuildConfig.KELIVER_BUNDLE_SERVER}.") }
-        return@launch
+      val latest = withContext(Dispatchers.IO) { latestManifestUrl(okhttp, server, capabilities) }
+      when {
+        latest == null && manifestFlow == null ->
+          setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
+        latest == null -> Log.d(TAG, "lookup failed; staying on the last bundle that loaded")
+        manifestFlow == null -> {
+          Log.d(TAG, "loading $latest")
+          manifestFlow = startTreehouse(verifier, okhttp, apiBase, latest)
+        }
+        manifestFlow!!.value != latest -> {
+          Log.d(TAG, "loading $latest")
+          manifestFlow!!.value = latest
+        }
       }
-      Log.d(TAG, "loading $manifestUrl")
-      startTreehouse(verifier, okhttp, apiBase, manifestUrl)
     }
   }
 
-  private fun latestManifestUrl(okhttp: OkHttpClient, capabilities: List<String>): String? = runCatching {
-    val server = BuildConfig.KELIVER_BUNDLE_SERVER
-    val caps = java.net.URLEncoder.encode(capabilities.joinToString(","), "UTF-8")
-    val body = okhttp.newCall(Request.Builder().url("$server/bundles/latest?widgetVersion=1&caps=$caps").build())
-      .execute().use { it.body?.string().orEmpty() }
-    val path = Regex("\"manifestUrl\":\"([^\"]+)\"").find(body)?.groupValues?.get(1)
-    if (path == null) Log.e(TAG, "no compatible bundle ($body)")
-    path?.let { if (it.startsWith("http")) it else "$server$it" }
+  /** The newest compatible bundle's manifest URL, on the bundle server's own origin, or null. */
+  private fun latestManifestUrl(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): String? = runCatching {
+    val lookup = server.newBuilder().addPathSegments("bundles/latest")
+      .addQueryParameter("widgetVersion", "1")
+      .addQueryParameter("caps", capabilities.joinToString(","))
+      .build()
+    okhttp.newCall(Request.Builder().url(lookup).build()).execute().use { response ->
+      val body = response.body?.string().orEmpty()
+      if (!response.isSuccessful) {
+        Log.e(TAG, "bundle lookup: HTTP ${response.code} ($body)")
+        return@runCatching null
+      }
+      val path = Json.parseToJsonElement(body).jsonObject["manifestUrl"]?.jsonPrimitive?.content
+      if (path == null) {
+        Log.e(TAG, "no compatible bundle ($body)")
+        return@runCatching null
+      }
+      val url = server.resolve(path)
+      if (url == null || url.scheme != server.scheme || url.host != server.host || url.port != server.port) {
+        Log.e(TAG, "refusing a manifest URL off the bundle server's origin: $path")
+        return@runCatching null
+      }
+      url.toString()
+    }
   }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
 
-  private fun startTreehouse(verifier: ManifestVerifier, okhttp: OkHttpClient, apiBase: String?, manifestUrl: String) {
+  private fun startTreehouse(
+    verifier: ManifestVerifier,
+    okhttp: OkHttpClient,
+    apiBase: HttpUrl?,
+    manifestUrl: String,
+  ): MutableStateFlow<String> {
+    val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+    val flow = MutableStateFlow(manifestUrl)
     val factory = TreehouseAppFactory(
       context = applicationContext,
       httpClient = okhttp.asZiplineHttpClient(),
@@ -128,7 +185,7 @@ class MainActivity : ComponentActivity() {
     )
     val spec = object : TreehouseApp.Spec<PortalPresenter>() {
       override val name = "keliver-production"
-      override val manifestUrl = MutableStateFlow(manifestUrl)
+      override val manifestUrl = flow
       override val serializersModule = EmptySerializersModule()
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
@@ -141,7 +198,10 @@ class MainActivity : ComponentActivity() {
     val app = factory.create(
       appScope = lifecycleScope,
       spec = spec,
-      eventListenerFactory = LoggingEventListenerFactory,
+      // Remember a manifest only once it has loaded — that is, verified.
+      eventListenerFactory = LoggingEventListenerFactory { url ->
+        prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply()
+      },
     )
     setContent {
       MaterialTheme {
@@ -163,17 +223,22 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+    return flow
   }
 }
 
-private object LoggingEventListenerFactory : EventListener.Factory {
-  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener
+private class LoggingEventListenerFactory(private val onLoaded: (String) -> Unit) : EventListener.Factory {
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener(manifestUrl, onLoaded)
   override fun close() {}
 }
 
-private object LoggingEventListener : EventListener() {
+private class LoggingEventListener(
+  private val manifestUrl: String?,
+  private val onLoaded: (String) -> Unit,
+) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size}")
+    manifestUrl?.let(onLoaded)
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)

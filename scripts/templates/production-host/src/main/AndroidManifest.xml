@@ -5,6 +5,7 @@
 
     <application
         android:label="@@NAME@@"
+        android:allowBackup="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
 
