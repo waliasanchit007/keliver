@@ -147,11 +147,13 @@ nothing falls back to the cache: that launch shows no bundle.
 including an older one. Whoever controls the bundle server can serve a previous
 signed version (over `http://`, so can anyone on the path).
 
-**What you still set up yourself.** Publishing signed bundles is not scaffolded
-yet: `keliver.portal.json` needs a `publishTask`/`publishOutput` for your app
-and your `build.gradle` a signing block after the `kotlin {}` block
-(`docs/PRODUCTION_HOST_FEASIBILITY.md`, "The smallest supported publish/signing
-setup"). A release build needs your own signing config for the APK.
+**Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
+after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
+`publishTask`/`publishOutput` for your app and appends the signing block to your
+`build.gradle`, below `kotlin {}`. `POST /publish` then stores a bundle only if
+its manifest verifies against your store's public key: an unsigned or
+foreign-signed bundle is refused and nothing is stored. **What you still set up
+yourself:** your own signing config for a release APK.
 
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.

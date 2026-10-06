@@ -168,7 +168,11 @@ elif $EDITOR_BUILD && [ -d "$APP_DIR/editor" ]; then
 fi
 
 say "portal-server against $APP_DIR (:$PORT)"
-( cd "$APP_DIR" && PORTAL_REPO="$APP_DIR" "$RELAY" ) >"$SERVER_LOG" 2>&1 &
+# KELIVER_TOOLS_BIN: POST /publish runs the app's build, and the signing block
+# keliver-new-publish-target.sh writes finds this app's store through
+# $KELIVER_TOOLS_BIN/keliver-store-path.sh. Without it the bundle compiles
+# unsigned, and the relay refuses to store it.
+( cd "$APP_DIR" && PORTAL_REPO="$APP_DIR" KELIVER_TOOLS_BIN="$HERE" "$RELAY" ) >"$SERVER_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
 say "editor (:$EDITOR_PORT) from $EDITOR_DIR"

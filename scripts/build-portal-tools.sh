@@ -49,12 +49,14 @@ cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
 # Scaffolders so external app repos get the same DX (C1 new-component; ② new-editor).
 cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
    scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
-   scripts/keliver-new-production-host.sh "$STAGE/bin/"
+   scripts/keliver-new-production-host.sh scripts/keliver-new-publish-target.sh "$STAGE/bin/"
 # The production-host scaffolder's templates: an Android module's SOURCE, with
 # no key in it — the key is copied from the adopter's own store when they run
 # the scaffolder. It finds them at bin/../templates.
 mkdir -p "$STAGE/templates"
 cp -R scripts/templates/production-host "$STAGE/templates/"
+# keliver-new-publish-target.sh's signing block, appended to an app's build.gradle.
+cp -R scripts/templates/publish "$STAGE/templates/"
 # The store contract has to travel with the tools. keliver-record-http.sh asks
 # keliver-store-path.sh where this app's store is; without both, an adopter's
 # recording client looks for its token in a directory that stopped being the
@@ -68,7 +70,7 @@ cp scripts/keliver-store-path.sh scripts/keliver-record-http.sh \
 chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
   "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
   "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh" \
-  "$STAGE/bin/keliver-new-production-host.sh" \
+  "$STAGE/bin/keliver-new-production-host.sh" "$STAGE/bin/keliver-new-publish-target.sh" \
   "$STAGE/bin/keliver-store-path.sh" "$STAGE/bin/keliver-record-http.sh" \
   "$STAGE/bin/keliver-adopt-legacy-store.sh" "$STAGE/bin/keliver-store-recover.sh"
 

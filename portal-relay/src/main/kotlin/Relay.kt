@@ -393,6 +393,30 @@ private fun publish(): Pair<Boolean, String> {
 
   val ziplineOut = File(repoDir, config.publishOutput)
   if (!ziplineOut.exists()) return false to log.appendLine("publish FAILED: no zipline output at $ziplineOut").toString()
+  // Never store a bundle that every production host would refuse. The relay
+  // does not sign; the compile task does, and when its signing block is
+  // missing, above `kotlin {}`, or cannot find the store, it still succeeds and
+  // writes an UNSIGNED bundle. That used to be reported as "publish OK".
+  val manifest = File(ziplineOut, "manifest.zipline.json")
+  val publicKey = File(keysDir, "ed25519.pub")
+  val unsignedWhy = when {
+    !manifest.isFile -> "no manifest.zipline.json in $ziplineOut"
+    !publicKey.isFile -> "no public key at $publicKey"
+    else -> publishedSignatureProblem(manifest.readText(), publicKey.readText())
+  }
+  if (unsignedWhy != null) {
+    return false to log.appendLine("publish REFUSED: $unsignedWhy.").appendLine(
+      """
+      |  Nothing was stored. The relay does not sign: `${config.publishTask}` must, with
+      |  ${File(keysDir, "ed25519.priv")} (never printed). In an app, run
+      |  keliver-new-publish-target.sh once: it writes publishTask, publishOutput and the
+      |  signing block. That block must stay BELOW `kotlin {}`, and the build finds the
+      |  store through the tools bundle, so start the portal with keliver-portal (or
+      |  set KELIVER_TOOLS_BIN to the bundle's bin/).
+      """.trimMargin(),
+    ).toString()
+  }
+  log.appendLine("publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key")
   val version = nextBundleVersion()
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)

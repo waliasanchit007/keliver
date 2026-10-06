@@ -1,0 +1,53 @@
+
+// ---------------------------------------------------------------------------
+// keliver: PUBLISH SIGNING — written by keliver-new-publish-target.sh.
+//
+// The relay's POST /publish runs `publishTask` (keliver.portal.json) and keeps
+// its output as a versioned bundle ONLY if the manifest is signed with this
+// app's key: production hosts refuse anything else. The relay does not sign.
+// The Zipline compile task does, below, with <store>/keys/ed25519.priv. The
+// store is asked of the tools bundle's resolver (keliver-store-path.sh), never
+// derived here.
+//
+// Where the tools are: -Pkeliver.toolsBin, else KELIVER_TOOLS_BIN (keliver-portal
+// sets it for the relay, so /publish needs nothing), else KP. With none of them,
+// or before the first portal start has created the key, the bundle compiles
+// UNSIGNED: fine for development, and /publish refuses it. A resolver that
+// answers with an error fails the build instead.
+//
+// KEEP THIS BELOW the kotlin {} block. The zipline plugin writes signingKeys
+// when binaries.executable() registers the compile task, and the later write
+// wins: above that block, the bundle compiles unsigned without an error.
+def keliverSigningKey = providers.provider {
+  def bin = providers.gradleProperty('keliver.toolsBin')
+    .orElse(providers.environmentVariable('KELIVER_TOOLS_BIN'))
+    .orElse(providers.environmentVariable('KP'))
+    .getOrNull()
+  if (!bin) {
+    logger.warn('keliver: no tools bin (-Pkeliver.toolsBin, KELIVER_TOOLS_BIN or KP), so this bundle is UNSIGNED')
+    return null
+  }
+  def proc = [new File(bin, 'keliver-store-path.sh').absolutePath, rootDir.absolutePath,
+              '--home', System.getProperty('user.home')].execute()
+  def out = new StringBuilder(), err = new StringBuilder()
+  proc.waitForProcessOutput(out, err)
+  if (proc.exitValue() != 0) throw new GradleException("keliver: keliver-store-path.sh exited ${proc.exitValue()}: ${err.toString().trim()}")
+  def path = out.toString().trim()
+  if (!path.startsWith('/')) throw new GradleException("keliver: keliver-store-path.sh returned a non-absolute path: '${path}'")
+  def key = new File(path, 'keys/ed25519.priv')
+  if (!key.isFile()) {
+    logger.warn("keliver: no signing key at ${key} yet (the first portal start creates it), so this bundle is UNSIGNED")
+    return null
+  }
+  key
+}
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach {
+  signingKeys.set(providers.provider {
+    def key = keliverSigningKey.getOrNull()
+    if (key == null) return []
+    [new app.cash.zipline.gradle.ZiplineCompileTask.ManifestSigningKey(
+      'portal-ed25519',
+      app.cash.zipline.loader.SignatureAlgorithmId.Ed25519,
+      okio.ByteString.decodeHex(key.text.trim()))]
+  })
+}

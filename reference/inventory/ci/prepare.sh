@@ -6,9 +6,10 @@
 #
 #   ci/prepare.sh <work-dir> <evidence-dir> [tools.zip]
 #
-# The production host is SCAFFOLDED into the app by this repository's
-# scripts/keliver-new-production-host.sh (not yet in a published tools bundle)
-# and built by the app's own Gradle from Maven Central. It used to be
+# Publishing is wired by this repository's scripts/keliver-new-publish-target.sh,
+# and the production host is SCAFFOLDED into the app by its
+# scripts/keliver-new-production-host.sh (neither is in a published tools bundle
+# yet) and built by the app's own Gradle from Maven Central. It used to be
 # portal-device-android compiled from Keliver's source at the release commit;
 # no Keliver source is compiled here now.
 #
@@ -53,6 +54,13 @@ echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
   && ok "compile: ./gradlew compileKotlinJs against Maven Central 0.3.3" \
   || { bad "compile failed"; tail -30 "$EV/compile.log"; exit 1; }
+
+# publishTask/publishOutput and the signing block. The bootstrap no longer
+# overlays a hand-written block; this is the scaffolder an adopter would run.
+( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
+  && ok "publishing wired by keliver-new-publish-target.sh" \
+  || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
+cp "$APP/build.gradle" "$EV/app-build.gradle"
 
 # --- 2. a relay for this app, isolated ----------------------------------------
 # shellcheck source=/dev/null

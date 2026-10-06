@@ -215,22 +215,33 @@ address. A physical device needs its own reachable host URL; see
 
 ## Ship to production
 
-The generic host above is development-only and refuses production. Your app's
-production host is scaffolded once, into `host-android/`. **The command ships
-in the tools release after 0.3.5** (not yet released); until then it is
+The generic host above is development-only and refuses production. Two
+commands, each run once, give your app signed publishing and its own production
+host. **Both ship in the tools release after 0.3.5** (not yet released); until
+then they are `scripts/keliver-new-publish-target.sh` and
 `scripts/keliver-new-production-host.sh` in the Keliver repository.
 
 ```bash
+$KP/keliver-new-device-target.sh       # if you have not already: the bundle's entry point
+$KP/keliver-new-publish-target.sh      # publishTask/publishOutput + the signing block
+$KP/keliver-portal stop . && $KP/keliver-portal   # the relay reads keliver.portal.json at start
+curl -X POST http://localhost:8077/publish        # "publish OK: bundle v1", signed with your key
+
 $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an emulator reaching your relay
 ./gradlew -p host-android assembleDebug
 ```
+
+The relay does not sign: your build does, with your store's private key, and
+`/publish` keeps a bundle only if its manifest verifies against your store's
+public key. Without the signing block — or with it moved above `kotlin {}`,
+where it silently does nothing — the build still succeeds and `/publish` says
+`publish REFUSED: the bundle is UNSIGNED` and stores nothing.
 
 It embeds your portal's public key (copied from your store — commit
 `host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
 against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
-`DEVICE_HOST.md` §2 has the options and what the host refuses. Publishing signed bundles still needs a `publishTask`
-and a signing block of your own — not yet scaffolded.
+`DEVICE_HOST.md` §2 has the options and what the host refuses.
 
 ## Preview mocks are not runtime values
 

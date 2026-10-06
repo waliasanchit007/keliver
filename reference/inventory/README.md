@@ -52,6 +52,7 @@ Then, from `/some/empty/dir/inventory`:
 ```bash
 export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.5/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
+<keliver checkout>/scripts/keliver-new-publish-target.sh   # publishing + signing (not yet in a release)
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
 ```
 
@@ -100,11 +101,12 @@ Each of these was hit building this app; see
   in the app and builds `host-android/` from Maven Central; until a tools
   release ships it, that script is the one piece that comes from this
   repository.
-* **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, whose
+* **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, whose
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
-  fails. This app sets `publishTask`/`publishOutput` in `keliver.portal.json`
-  and adds the signing block at the end of `build.gradle`; neither step is in
-  the adopter guide.
+  failed, and nothing signed. This app used to carry both settings and a
+  hand-written signing block in its overlay; CI now runs
+  `scripts/keliver-new-publish-target.sh` (#86) instead. Until a tools release
+  ships it, that script also comes from this repository.
 * **The device scaffolder wires one screen.** With two screens it asks for
   `--screen`/`--presenter`, and a presenter that takes arguments means
   hand-editing `device/Main.kt`.
