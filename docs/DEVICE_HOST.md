@@ -117,10 +117,31 @@ At runtime:
 | present and valid | the latest compatible bundle's manifest is verified against it; a bundle signed by any other key is refused |
 | missing or unusable | **refused** with a message; nothing is fetched (and the build would already have failed) |
 
-A production session is never downgraded to "load it anyway". The host starts
-from the last bundle that loaded — verified again from Zipline's cache, so after
-one successful load it works offline — and moves to the newest when the lookup answers; it follows a
-manifest URL only on the bundle server's own origin.
+A production session is never downgraded to "load it anyway". On each launch
+the host asks the bundle server for the newest compatible bundle first (5 s to
+connect, 10 s in all) and follows a manifest URL only on that server's own
+origin:
+
+| lookup | what loads |
+|---|---|
+| answers | the newest compatible bundle, from the network; once it loads, Zipline pins it in its cache |
+| fails, and a bundle loaded before | the bundle pinned in Zipline's cache — the last one that loaded from the network — with its manifest verified again against the key; it stays in use until the next launch |
+| fails, nothing loaded before | a "No bundle" screen |
+
+The cache is used only on that second row because of how Zipline 1.22 loads:
+it reads its cache *before* the network and only if the `FreshnessChecker`
+accepts the cached manifest, and it never falls back to the cache after a
+network failure. Treehouse's default checker accepts nothing, so the host passes
+one that accepts the cached bundle for that start alone. A cached manifest that
+no longer verifies is never run: Zipline re-verifies it while reading it, with
+either checker, and throws. What the app then shows is not measured. Because
+that check runs before the network, the host keeps one cache per key (named by
+the key's first 16 hex digits): after an update that changes the embedded key,
+the new key starts with an empty cache instead of one it cannot verify. That
+key-change path is reasoned from Zipline's source, not run on a device.
+
+When the lookup answers but the bundle itself then fails to download or verify,
+nothing falls back to the cache: that launch shows no bundle.
 
 **Not protected: rollback.** Any bundle signed with your key is accepted,
 including an older one. Whoever controls the bundle server can serve a previous

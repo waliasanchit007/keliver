@@ -9,10 +9,19 @@
  * - The bundle server and the API base are build settings (gradle.properties),
  *   not emulator addresses.
  * - HostHttp is real HTTP to YOUR API base, bound only when one is configured.
- * - The Treehouse app is created only once a manifest URL is known, so there is
- *   no load attempt on an empty URL (Keliver's U28). It starts at once from the
- *   last manifest that loaded — verified again from Zipline's cache, so the app
- *   works offline — and moves to the newest one when the lookup answers.
+ * - The bundle lookup runs FIRST, with a short timeout, and the Treehouse app is
+ *   created only once its answer is known, so there is no load attempt on an
+ *   empty URL (Keliver's U28):
+ *   - lookup answers: load the newest compatible bundle from the network. Once
+ *     it has loaded, Zipline pins it in its cache.
+ *   - lookup fails, and a bundle loaded before: start from Zipline's cache. In
+ *     Zipline 1.22 the cache is used ONLY before the network and only when the
+ *     FreshnessChecker accepts it; there is no fallback after a network failure.
+ *     So this start, and only this one, accepts the cached bundle as fresh. That
+ *     bundle is the last one that loaded from the network, and its manifest is
+ *     verified again against the key before it runs. It stays in use until the
+ *     next launch; the app does not move to a newer bundle while it runs.
+ *   - otherwise: a "No bundle" screen.
  * - The manifest must come from the bundle server's own origin.
  *
  * Not protected: rollback. Any bundle signed by this key is accepted, including
@@ -43,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
+import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
+import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
 import app.cash.zipline.loader.asZiplineHttpClient
 import coil3.ImageLoader
@@ -70,6 +81,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okio.ByteString.Companion.decodeHex
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "KeliverHost"
 private const val PREFS = "keliver-host"
@@ -94,6 +106,11 @@ class MainActivity : ComponentActivity() {
     val verifier = ManifestVerifier.Builder()
       .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
       .build()
+    // One Zipline cache per key. Zipline verifies its pinned manifest before it
+    // tries the network, and throws if that fails; a cache shared across a key
+    // change would hold a manifest the new key cannot verify, and no bundle
+    // would load, online or not. The old key's cache stays on disk, unused.
+    val cacheName = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 
     val okhttp = OkHttpClient()
     val server = BuildConfig.KELIVER_BUNDLE_SERVER.toHttpUrlOrNull()
@@ -110,30 +127,29 @@ class MainActivity : ComponentActivity() {
     }
 
     val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-    // Only a saved URL on the CURRENT bundle server's origin; after an update
-    // that moved the server, the old one is ignored.
+    // Set once a bundle has loaded from the network, so it says Zipline's cache
+    // holds one. Only a saved URL on the CURRENT bundle server's origin counts;
+    // after an update that moved the server, the old one is ignored.
     val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
-    var manifestFlow: MutableStateFlow<String>? = null
-    if (lastGood != null) {
-      Log.d(TAG, "starting from the last bundle that loaded: $lastGood")
-      manifestFlow = startTreehouse(verifier, okhttp, apiBase, lastGood)
-    } else {
-      setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
-    }
+    setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
     lifecycleScope.launch {
-      val latest = withContext(Dispatchers.IO) { latestManifestUrl(okhttp, server, capabilities) }
+      // Short timeouts: offline, this decides how long the app waits before it
+      // starts from the cache.
+      val lookupClient = okhttp.newBuilder()
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
+        .build()
+      val latest = withContext(Dispatchers.IO) { latestManifestUrl(lookupClient, server, capabilities) }
       when {
-        latest == null && manifestFlow == null ->
-          setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
-        latest == null -> Log.d(TAG, "lookup failed; staying on the last bundle that loaded")
-        manifestFlow == null -> {
+        latest != null -> {
           Log.d(TAG, "loading $latest")
-          manifestFlow = startTreehouse(verifier, okhttp, apiBase, latest)
+          startTreehouse(verifier, cacheName, okhttp, apiBase, latest, DefaultFreshnessCheckerNotFresh)
         }
-        manifestFlow!!.value != latest -> {
-          Log.d(TAG, "loading $latest")
-          manifestFlow!!.value = latest
+        lastGood != null -> {
+          Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood)")
+          startTreehouse(verifier, cacheName, okhttp, apiBase, lastGood, AcceptCachedBundle)
         }
+        else -> setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
       }
     }
   }
@@ -169,10 +185,12 @@ class MainActivity : ComponentActivity() {
 
   private fun startTreehouse(
     verifier: ManifestVerifier,
+    cacheName: String,
     okhttp: OkHttpClient,
     apiBase: HttpUrl?,
     manifestUrl: String,
-  ): MutableStateFlow<String> {
+    freshness: FreshnessChecker,
+  ) {
     val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
     val flow = MutableStateFlow(manifestUrl)
     val factory = TreehouseAppFactory(
@@ -181,7 +199,7 @@ class MainActivity : ComponentActivity() {
       manifestVerifier = verifier,
       embeddedFileSystem = null,
       embeddedDir = null,
-      cacheName = "keliver-production",
+      cacheName = cacheName,
       cacheMaxSizeInBytes = 50L * 1024L * 1024L,
       concurrentDownloads = 4,
       stateStore = MemoryStateStore(),
@@ -192,6 +210,7 @@ class MainActivity : ComponentActivity() {
       override val name = "keliver-production"
       override val manifestUrl = flow
       override val serializersModule = EmptySerializersModule()
+      override val freshnessChecker = freshness
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", AndroidSqlHost(applicationContext))
@@ -203,9 +222,8 @@ class MainActivity : ComponentActivity() {
     val app = factory.create(
       appScope = lifecycleScope,
       spec = spec,
-      // Remember a manifest URL only once code has loaded for it. What loaded is
-      // always verified; on a first load Zipline may have fallen back to its
-      // cache, so the URL itself is a hint, and is verified again when used.
+      // Remember a manifest URL only once code has loaded for it from the
+      // network. A load from the cache reports no URL, so it changes nothing.
       eventListenerFactory = LoggingEventListenerFactory { url ->
         prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply()
       },
@@ -230,8 +248,17 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
-    return flow
   }
+}
+
+/**
+ * Used only when the bundle lookup failed: accept the bundle Zipline pinned in
+ * its cache, whatever its age. Zipline still verifies its manifest against the
+ * key before loading it. If the cache holds nothing (cleared, or a new key's
+ * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
+ */
+private object AcceptCachedBundle : FreshnessChecker {
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long) = true
 }
 
 private class LoggingEventListenerFactory(private val onLoaded: (String) -> Unit) : EventListener.Factory {

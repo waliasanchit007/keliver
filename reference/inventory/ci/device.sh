@@ -231,12 +231,15 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
 drive title Stockroom P6; fold "P6: Stockroom is back" $?
 portal_down "$APP"
 
-# P7: offline. No relay is running now; the host starts from the last bundle
-# that loaded, which Zipline verifies again from its cache.
+# P7: offline. No relay is running now, so the lookup fails and the host starts
+# from the bundle Zipline pinned in its cache at P6, verified again with this
+# app's key. (Run 36624478213: an earlier host that loaded the saved URL with
+# Zipline's default freshness checker failed here — Zipline 1.22 uses its cache
+# only before the network, and only when the checker accepts it.)
 curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && bad "P7: a relay is still answering" || ok "P7: no bundle server is answering"
 launch prod "$EV/logcat-prod-offline.txt"
-grep -q "$HOST_TAG: starting from the last bundle that loaded" "$EV/logcat-prod-offline.txt" \
-  && ok "P7: the host started from the last bundle that loaded" || bad "P7: it did not start from the last bundle"
+grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-prod-offline.txt" \
+  && ok "P7: the lookup failed and the host started from its cache" || bad "P7: it did not start from the cache"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-offline.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-prod-offline.txt" \
   && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \

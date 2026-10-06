@@ -62,7 +62,9 @@ from Maven Central, embeds `assets/portal_ed25519.pub` equal to the store's
 host.* P2–P6 are unchanged; one check was added to P2: no empty-URL load attempt
 on launch (U28). **Added the same day: P7** — with no bundle server answering,
 the production host starts from the last bundle that loaded, verified again
-with this app's key, and shows `Stockroom`.
+with this app's key, and shows `Stockroom`. (Wording made precise 2026-10-06,
+same check: the host looks up the newest bundle first, and only when that fails
+starts from the bundle Zipline pinned in its cache.)
 
 Verification is never disabled. The generic development host from the tools
 bundle is used for the development route only; it refuses production by design
