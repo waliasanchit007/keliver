@@ -72,8 +72,23 @@ def fail(msg):
     print("ERROR " + msg); sys.exit(0)
 
 def strip_comments(src):
-    src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
-    return re.sub(r'//[^\n]*', '', src)
+    # Groovy comments out, string literals kept: a '**/*.js' or a URL in a
+    # string must not open a comment that hides real code.
+    out, i, n = [], 0, len(src)
+    while i < n:
+        if src.startswith('//', i):
+            j = src.find('\n', i); i = n if j < 0 else j
+        elif src.startswith('/*', i):
+            j = src.find('*/', i + 2); i = n if j < 0 else j + 2
+        elif src[i] in '\'"':
+            q = src[i:i + 3] if src[i:i + 3] in ("'''", '"""') else src[i]
+            j = i + len(q)
+            while j < n and not src.startswith(q, j):
+                j += 2 if src[j] == '\\' else 1
+            out.append(src[i:j + len(q)]); i = j + len(q)
+        else:
+            out.append(src[i]); i += 1
+    return ''.join(out)
 
 build = open(os.path.join(app, 'build.gradle'), encoding='utf-8').read()
 code = strip_comments(build)
@@ -122,8 +137,8 @@ for name in ('keliver.portal.json', 'build.gradle'):
     shutil.copymode(os.path.join(app, name), os.path.join(stage, name))
 print('ok ' + ' '.join(changes))
 PY
-PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT")" \
-  || fail "validation failed to run (python3 is required)."
+PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" 2>"$STAGE/plan.err")" \
+  || fail "validation failed: $(tail -1 "$STAGE/plan.err" 2>/dev/null || echo 'python3 is required')"
 case "$PLAN" in
   ok*) ;;
   ERROR*) fail "${PLAN#ERROR }" ;;
@@ -131,7 +146,9 @@ case "$PLAN" in
 esac
 
 # Write: each file is replaced by a rename from the same directory, with its
-# mode kept. Nothing above this line touched the app.
+# mode kept. Nothing above this line touched the app. The two renames are not
+# one atomic step; keliver.portal.json goes first, so if the second fails, a
+# rerun accepts the settings it finds and adds the block.
 for f in ${PLAN#ok }; do
   mv -f "$STAGE/$f" "$APP/$f"
 done

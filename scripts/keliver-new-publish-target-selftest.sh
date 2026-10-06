@@ -130,6 +130,19 @@ PY
 ( cd "$DISP/same" && "$SCAFFOLD" > /dev/null 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/same/build.gradle" \
   && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused"
 
+echo "=== comment markers inside strings are strings"
+make_app strings device
+python3 - "$DISP/strings/build.gradle" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+s = s.replace('kotlin {', "def glob = '**/*.js'\ndef site = 'https://example.com/x'\n\nkotlin {", 1)
+s += '\n/* a real comment */\n'
+open(p, 'w').write(s)
+PY
+( cd "$DISP/strings" && "$SCAFFOLD" > "$DISP/strings.log" 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/strings/build.gradle" \
+  && ok "a '**/*.js' glob and a URL in strings do not hide the kotlin {} block" \
+  || bad "strings were read as comments: $(head -1 "$DISP/strings.log")"
+
 echo "=== through a symlink, as an installed command"
 make_app linked device
 ln -s "$SCAFFOLD" "$DISP/keliver-new-publish-target"
@@ -167,10 +180,12 @@ JAVA
 
   compile() { # <log> [env assignments...]: compile the bundle; returns gradle's exit
     local log="$1"; shift
+    rm -f "$MANIFEST"   # so a stale manifest can never answer for this compile
     ( cd "$APP" && env "$@" ./gradlew --console=plain compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
   }
   # Prints "signed:<true|false>" or "unsigned", from the manifest as built.
   signature_of() {
+    [ -f "$MANIFEST" ] || { echo missing; return; }
     python3 - "$MANIFEST" "$T/payload.bin" <<'PY' | {
 import json, sys
 m = json.load(open(sys.argv[1]))

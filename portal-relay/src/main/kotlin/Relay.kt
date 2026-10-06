@@ -408,7 +408,7 @@ private fun publish(): Pair<Boolean, String> {
     return false to log.appendLine("publish REFUSED: $unsignedWhy.").appendLine(
       """
       |  Nothing was stored. The relay does not sign: `${config.publishTask}` must, with
-      |  ${File(keysDir, "ed25519.priv")} (never printed). In an app, run
+      |  ${File(keysDir, "ed25519.priv")} (never printed). In a keliver-init app, run
       |  keliver-new-publish-target.sh once: it writes publishTask, publishOutput and the
       |  signing block. That block must stay BELOW `kotlin {}`, and the build finds the
       |  store through the tools bundle, so start the portal with keliver-portal (or

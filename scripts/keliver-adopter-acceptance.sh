@@ -296,11 +296,13 @@ fi
 # above kotlin {}) still compiles, UNSIGNED. The relay must refuse it and store
 # nothing.
 cp "$DISP/build.gradle.unsigned" "$APP/build.gradle"
+BUNDLES_BEFORE="$(ls -d "$STORE_DIR"/bundles/v* 2>/dev/null | wc -l | tr -d ' ')"
 curl -s -m 900 -X POST "http://localhost:$PORT/publish" >"$DISP/publish-unsigned.log" 2>&1
 grep -q 'publish REFUSED: the bundle is UNSIGNED' "$DISP/publish-unsigned.log" \
   && ok "an unsigned bundle is refused: $(grep 'publish REFUSED' "$DISP/publish-unsigned.log")" \
   || { bad "an unsigned bundle was not refused"; tail -8 "$DISP/publish-unsigned.log" | sed 's/^/        /'; }
-[ ! -e "$STORE_DIR/bundles/v2" ] && ok "the refused bundle was not stored (no v2)" || bad "A REFUSED BUNDLE WAS STORED as v2"
+[ "$(ls -d "$STORE_DIR"/bundles/v* 2>/dev/null | wc -l | tr -d ' ')" = "$BUNDLES_BEFORE" ] \
+  && ok "the refused bundle was not stored ($BUNDLES_BEFORE bundle(s) before and after)" || bad "A REFUSED BUNDLE WAS STORED"
 ( cd "$APP" && "$KP/keliver-portal" stop . >/dev/null 2>&1 )
 
 # --- ownership, by fingerprint not just git status ---------------------------

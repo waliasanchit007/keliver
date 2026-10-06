@@ -15,6 +15,9 @@
 // UNSIGNED: fine for development, and /publish refuses it. A resolver that
 // answers with an error fails the build instead.
 //
+// Not configuration-cache compatible: the store is resolved by running a
+// process, and the key becomes a task input (keliver-init leaves the cache off).
+//
 // KEEP THIS BELOW the kotlin {} block. The zipline plugin writes signingKeys
 // when binaries.executable() registers the compile task, and the later write
 // wins: above that block, the bundle compiles unsigned without an error.

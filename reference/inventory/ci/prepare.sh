@@ -61,6 +61,11 @@ echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
   && ok "publishing wired by keliver-new-publish-target.sh" \
   || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
 cp "$APP/build.gradle" "$EV/app-build.gradle"
+# Committed, as an adopter would: D2 asserts that a layout edit changes exactly
+# one tracked file.
+( cd "$APP" && git add build.gradle keliver.portal.json \
+    && git -c user.name=prepare -c user.email=prepare@invalid commit -qm "keliver-new-publish-target.sh" ) \
+  || { bad "could not commit the publish wiring"; exit 1; }
 
 # --- 2. a relay for this app, isolated ----------------------------------------
 # shellcheck source=/dev/null
