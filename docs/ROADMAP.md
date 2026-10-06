@@ -253,8 +253,8 @@ and kept under "Completed priorities" below.
    verification is published. **Decided 2026-09-30: a scaffolded host app**
    (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Built, unreleased:**
    `keliver-new-production-host.sh` writes `host-android/`, production-only, on
-   Maven Central only; the reference app's P1–P6 pass on it (CI run
-   `36616829164`). What remains: a tools release to ship it, publish/signing
+   Maven Central only; the reference app's P1–P7 pass on it, P7 being an
+   offline start from Zipline's verified cache (CI run `37505534432`). What remains: a tools release to ship it, publish/signing
    scaffolding (item 2), and a host run on a physical device over HTTPS.
 2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has

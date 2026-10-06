@@ -48,6 +48,7 @@ Source and reproduction: [`reference/inventory/`](../reference/inventory) —
 | D3: the edited title on the device after a rebuild (view hierarchy) | CI emulator | pass |
 | **D14's device-render-screenshot leg** | CI emulator | **see "Device screenshots" below** — runs 1–4 took none |
 | production OTA: P1–P6 | CI emulator, production host built from `b5615637` | **all pass** (runs 1 and 3) |
+| production OTA on the **scaffolded** host from Maven Central: P1–P7 (P7: relay down, starts from the cache) | CI emulator | **all pass** (run 13, `37505534432`) |
 | physical Android device | — | **not run** (none attached) |
 | arm64 Android | — | **not run** |
 | iOS | — | **not run** for this app |
@@ -105,8 +106,8 @@ for us.
 
 1. **There was no published production host for keliver-material screens** —
    **addressed by `keliver-new-production-host.sh` (#85, unreleased)**, which
-   scaffolds one built from Maven Central; P1–P6 pass on it (run 8,
-   `36616829164`). What follows is what the route cost before it. The
+   scaffolds one built from Maven Central; P1–P7 pass on it (run 13,
+   `37505534432`). What follows is what the route cost before it. The
    bundle's `host/README.md` §2 says: copy `sample/host-android` from the
    Keliver repository. That host is built against the *sample's* schema
    (`SampleSchemaHostProtocol`: Box, Text, Column, …), so it cannot render a
@@ -219,6 +220,27 @@ then v2 load, the other app's bundle is refused with `codeLoadFailed: manifest
 signature for key portal-ed25519 did not verify!`, and there is no empty-URL
 load attempt (U28 absent). APK `a51367b1…`; evidence in
 `superpowers/evidence/reference-app/ci-run-36616829164/`.
+
+Runs 8–13, all on PR #85's branch:
+
+| run | head | result |
+|---|---|---|
+| 8 [`36616829164`](https://github.com/waliasanchit007/keliver/actions/runs/36616829164) | `e6629e362` | **pass**: prepare 14/0, device 33/0, P1–P6 |
+| 9 [`36619270109`](https://github.com/waliasanchit007/keliver/actions/runs/36619270109) | `6c6adb81d` | **pass** (only docs and run 8's evidence changed since run 8) |
+| 10 [`36621274110`](https://github.com/waliasanchit007/keliver/actions/runs/36621274110) | `083416ea0` | **failed, every production check**: `am start -p <pkg>` with only MAIN/LAUNCHER was accepted and started nothing, so no host ran. Fixed in the harness: `device.sh` launches the component that `cmd package resolve-activity` reports for the launcher intent. |
+| 11 [`36623080877`](https://github.com/waliasanchit007/keliver/actions/runs/36623080877) | `4132f975c` | cancelled by me (superseded by the launch fix) |
+| 12 [`36624478213`](https://github.com/waliasanchit007/keliver/actions/runs/36624478213) | `0e407a125` | **failed, P7 only** (P1–P6 pass): with the relay down, the host started from its saved manifest URL with Treehouse's default freshness checker and got `codeLoadFailed: Failed to connect`. Zipline 1.22 reads its cache only *before* the network and only when the `FreshnessChecker` accepts it; it never falls back to the cache after a network failure. The host was wrong, not the check. |
+| 13 [`37505534432`](https://github.com/waliasanchit007/keliver/actions/runs/37505534432) | `f586e41a4` | **pass**: prepare 14/0, device 37/0, P1–P7. The host now looks up the newest bundle first and, only when that fails, starts with a checker that accepts Zipline's pinned, re-verified cache. |
+
+Run 13's P7, from `ci-run-37505534432/logcat-prod-offline.KeliverHost.txt`:
+the lookup fails with `ECONNREFUSED`, then `lookup failed; starting from the
+cached bundle (last loaded from …/bundles/v2/manifest.zipline.json)` and, 0.34 s
+later, `codeLoadSuccess modules=40`; the screen shows `Stockroom`
+(`P7.results.json`). Its identities: app key `016e1a14…`, the copy's key
+`a370f897…`; manifests v1 `74255e06…`, v2 `d013fd6b…`, foreign `195be429…`
+(sha256 of the kept files); APK `24936f26…`; 54 `dev.keliver` artifacts, all
+0.3.3. Its six device screenshots are BLANK, like every run's
+(*Device screenshots*), so the screen evidence is the view hierarchy.
 
 **The production host, runs 1–7.** `portal-device-android` built from the tools
 release's source commit `b5615637` with `-Pkeliver.devOnlyHost=false

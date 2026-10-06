@@ -14,6 +14,12 @@ expire after 30 days.
   the Zipline compile task's signing block (`app/build.gradle`), on each publish.
   The keys were generated inside the run directory and discarded with the runner,
   and every 64-hex-digit string here is a SHA-256 or a public key.
+* `ci-run-36616829164/` and `ci-run-37505534432/` — runs 8 and 13, on the
+  production host scaffolded by `keliver-new-production-host.sh` and built from
+  Maven Central: results files, the host's dependency list
+  (`host-keliver-artifacts.txt`), its scaffold log and APK hash, the manifests,
+  this run's disposable **public** key, and only the `KeliverHost` lines of
+  each production logcat. Run 13 adds P7 (offline) and its logcat lines.
 * `live-preview/` — the macOS Live-preview run: the CDP scenario
   (`live-scenario.mjs`, `cdp.mjs`), its log and results (21/0), the script's
   four captures with ▶ Live on (`L-*.png`), and one mock-mode capture taken by

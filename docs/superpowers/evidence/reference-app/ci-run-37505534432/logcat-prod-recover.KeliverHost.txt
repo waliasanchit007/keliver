@@ -1,0 +1,3 @@
+10-06 17:55:31.738  4196  4196 D KeliverHost: verifying manifests with portal-ed25519 016e1a14…
+10-06 17:55:32.316  4196  4196 D KeliverHost: loading http://10.0.2.2:8077/bundles/v2/manifest.zipline.json
+10-06 17:55:33.304  4196  4225 D KeliverHost: codeLoadSuccess modules=40

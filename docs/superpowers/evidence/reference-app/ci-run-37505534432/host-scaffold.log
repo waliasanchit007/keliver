@@ -1,0 +1,11 @@
+created host-android/ — this app's production Android host
+  package          inventory.host
+  application id   inventory.host
+  bundle server    http://10.0.2.2:8077
+  HostHttp         not provided (no --api-base-url)
+  trusts the key   016e1a14… from /home/runner/work/_temp/ref/home/.keliver-portal/apps/inventory-2c1fa026/keys/ed25519.pub (matches this app's store)
+                   commit host-android/src/main/assets/portal_ed25519.pub
+next:
+  ./gradlew -p host-android assembleDebug     (needs an Android SDK: ANDROID_HOME, or host-android/local.properties)
+  a release build needs https:// servers and your own signing config in host-android/build.gradle
+  publish a bundle (the relay's POST /publish), then install and launch the host.

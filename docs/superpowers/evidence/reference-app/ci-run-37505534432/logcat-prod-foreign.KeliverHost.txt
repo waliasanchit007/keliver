@@ -1,0 +1,13 @@
+10-06 17:54:07.430  3794  3794 D KeliverHost: verifying manifests with portal-ed25519 016e1a14…
+10-06 17:54:08.005  3794  3794 D KeliverHost: loading http://10.0.2.2:8077/bundles/v1/manifest.zipline.json
+10-06 17:54:08.108  3794  3822 E KeliverHost: codeLoadFailed: manifest signature for key portal-ed25519 did not verify!
+10-06 17:54:08.108  3794  3822 E KeliverHost: java.lang.IllegalStateException: manifest signature for key portal-ed25519 did not verify!
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at app.cash.zipline.loader.ManifestVerifier.verify(ManifestVerifier.kt:57)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at app.cash.zipline.loader.ZiplineLoader.fetchManifestFromNetwork(ZiplineLoader.kt:695)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at app.cash.zipline.loader.ZiplineLoader.access$fetchManifestFromNetwork(ZiplineLoader.kt:71)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at app.cash.zipline.loader.ZiplineLoader$fetchManifestFromNetwork$1.invokeSuspend(Unknown Source:15)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+10-06 17:54:08.108  3794  3822 E KeliverHost: 	at java.lang.Thread.run(Thread.java:1012)
