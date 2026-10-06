@@ -256,10 +256,15 @@ and kept under "Completed priorities" below.
    Maven Central only; the reference app's P1–P7 pass on it, P7 being an
    offline start from Zipline's verified cache (CI run `37505534432`). What remains: a tools release to ship it, publish/signing
    scaffolding (item 2), and a host run on a physical device over HTTPS.
-2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
-   defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has
-   no `publishTask`/`publishOutput` and no signing block, so publish fails, and
-   the adopter guide does not mention either. The reference app shows the
+2. **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, which
+   defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app had
+   no `publishTask`/`publishOutput` and no signing block, so publish failed, and
+   the adopter guide did not mention either. **Built, unreleased (#86):**
+   `keliver-new-publish-target.sh` writes both settings and the signing block,
+   and the relay now refuses to store a bundle whose manifest does not verify
+   against the store's key (portal-tools `37513071473`; reference-app
+   `37513078292`, P1–P7 on scaffolded signing). Left: the production (minified)
+   bundle variant, and a release. The reference app shows the
    minimum that works (`reference/inventory/app/build.gradle`, bottom). Small,
    and it unblocks item 1's "does it work" question for every adopter.
 3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:

@@ -55,7 +55,8 @@ host logs a false `codeLoadFailed` on every start); and the adopter-route gaps i
 `REFERENCE_APP.md` — no published production host (a scaffolder,
 `keliver-new-production-host.sh`, is built and passes the reference app's
 P1–P7 from Maven Central, offline start included — run `37505534432` — but is
-not released), publish not scaffolded.
+not released); publishing is scaffolded by `keliver-new-publish-target.sh` and
+the relay refuses unsigned bundles (#86, unreleased).
 Priorities: `ROADMAP.md` "Current priorities".
 
 **Historical evidence whose app is gone:** every "Stashfin" gate below — the

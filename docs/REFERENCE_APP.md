@@ -121,7 +121,14 @@ for us.
    override that warns rather than checks. None of this is in the adopter guide.
    Its production host also keeps the generic host's `applicationId`, reaches the
    relay at `10.0.2.2:8077` (an emulator address), and is a debug build.
-2. **Publish is not scaffolded, and fails on a scaffolded app.** `POST /publish`
+2. **Publish was not scaffolded, and failed on a scaffolded app** — **addressed
+   by `keliver-new-publish-target.sh` (#86, unreleased)**. CI now runs it in the
+   app instead of overlaying a hand-written block, and P1–P7 pass on the bundles
+   it signs (run `37513078292`). This app's relay is still the published 0.3.5
+   one, which does not check signatures; #86's relay refusal of unsigned bundles
+   is exercised by the adopter acceptance (portal-tools `37513071473`), not
+   here. Here, `prepare.sh` fails an unsigned v1 and the host verifies on the
+   device. What follows is the route before it. `POST /publish`
    runs `publishTask` from `keliver.portal.json`, default
    `:portal-published-guest:compileDevelopmentZipline` — Keliver's own module.
    On a scaffolded app that is, measured:
