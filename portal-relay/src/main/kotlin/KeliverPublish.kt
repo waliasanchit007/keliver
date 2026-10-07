@@ -47,7 +47,8 @@ object KeliverPublish {
       }
     }
     val repoDir = File(app ?: ".").absoluteFile.normalize()
-    if (out == null) return usage("--out is required")
+    if (out.isNullOrBlank()) return usage("--out is required (a directory; it is never the current one by default)")
+    if (keyFile != null && keyFile.isBlank()) return usage("--public-key-file needs a file")
     if (!repoDir.isDirectory) return usage("no such app directory: $repoDir")
     val publicKeyHex = when {
       keyFile != null -> runCatching { File(keyFile).readText().trim() }.getOrElse {

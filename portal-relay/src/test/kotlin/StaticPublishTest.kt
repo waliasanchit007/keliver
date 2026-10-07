@@ -219,5 +219,7 @@ class StaticPublishTest {
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--public-key-file", keyFile.path), null) { _, _ -> 0 })
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out), null) { _, _ -> 0 })
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--bogus"), app.publicHex) { _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", "", "--skip-build"), app.publicHex) { _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", ""), null) { _, _ -> 0 })
   }
 }

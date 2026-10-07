@@ -271,6 +271,13 @@ Serve that directory from any static host or CDN (S3, GCS, GitHub Pages,
 nginx) over HTTPS. Point `--bundle-server` at it. Hosts from the current
 scaffolders read `bundles/index.json`.
 
+Caching:
+- Serve `bundles/index.json` with `Cache-Control: no-cache`, or a short
+  `max-age`: it is the only file that changes, and a CDN that keeps an old copy
+  delays every update.
+- Everything under `v<N>/` is never rewritten, so it can be cached for as long
+  as you like.
+
 **It is not in a released tools bundle yet.** Until it is, it is
 `scripts/keliver-publish` in the Keliver repository, and it needs
 `portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
