@@ -26,7 +26,8 @@ step against a named, retained artifact.
 ## Procedure
 
 The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.5.md`](RELEASE_NOTES_TOOLS_0.3.5.md).
+[`RELEASE_NOTES_TOOLS_0.3.5.md`](RELEASE_NOTES_TOOLS_0.3.5.md); the 0.3.6
+candidate's are [`RELEASE_NOTES_TOOLS_0.3.6.md`](RELEASE_NOTES_TOOLS_0.3.6.md).
 
 Everything below was executed for 0.3.4 on 2026-09-12 and again for 0.3.5 on
 2026-09-22; where 0.3.5 found the written procedure wrong, the text below is
