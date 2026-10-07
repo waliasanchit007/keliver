@@ -86,7 +86,11 @@ Parity with the Android production host, for iOS.
    - same-origin manifest URLs only;
    - `HostHttp` via `NSURLSession`, bound only when an API base is set, with
      the same path rules as `OkHttpHostHttp`;
-   - SQL via the existing `IosSqlHost`;
+   - **a real SQLite `HostSqlDriver`**. The spike's `IosSqlHost` is in memory,
+     so guest data doesn't survive a restart; the Android host uses real
+     SQLite;
+   - **network images**. The spike's coil `ImageLoader` has no network fetcher
+     on iOS;
    - all-or-nothing writes.
 
    *Done when:* a self-test (refusals byte-identical, output complete, no
@@ -209,8 +213,8 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | step | state | evidence / where |
 |---|---|---|
 | plan written | done 2026-10-07 | this file; branch `feat/ios-production-host` |
-| W1 I0 iOS feasibility from Maven Central | in progress | — |
-| W1 I1 scaffolder | not started | — |
+| W1 I0 iOS feasibility from Maven Central | **done 2026-10-07**: the production host links for the simulator; 54 `dev.keliver` artifacts, all 0.3.3 from Maven Central | `docs/superpowers/evidence/ios-host-i0/` |
+| W1 I1 scaffolder | in progress | — |
 | W1 I2 iOS CI | not started | — |
 | W1 I3 spike fallback | not started | — |
 | W1 I4 docs + 0.3.7 | not started (needs approval to release) | — |
@@ -218,11 +222,22 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 
 ## Next action
 
-W1 I0: in a disposable directory, create a KMP module that depends only on
-Maven Central 0.3.3, put a production version of the host Kotlin in it, and
-link `iosSimulatorArm64`. Use a disposable `GRADLE_USER_HOME` (copy the two
-trustStore props, never print them) and `KONAN_DATA_DIR`. Then record the
-results here.
+W1 I1:
+1. Turn `docs/superpowers/evidence/ios-host-i0/proj/src/iosMain/kotlin/` into
+   `scripts/templates/ios-host/` (with `@@PACKAGE@@`, the key and the servers
+   substituted at scaffold time).
+2. Add an Xcode app shell. Base it on `portal-device-ios-app`, but don't
+   hard-code a `DEVELOPMENT_TEAM`, and use a build phase running
+   `./gradlew -p host-ios embedAndSignAppleFrameworkForXcode`. The ATS
+   exception for `http://` should apply to Debug and localhost only.
+3. Replace `IosSqlHost` with real SQLite (`platform.sqlite3`).
+4. Add network images.
+5. Write `scripts/keliver-new-ios-host.sh` and its self-test, with a
+   `--build` mode that runs `xcodebuild -sdk iphonesimulator
+   CODE_SIGNING_ALLOWED=NO`.
+
+The Kotlin/Native toolchain downloads in about 4 minutes into a disposable
+`KONAN_DATA_DIR` (1.3 GB).
 
 ## Standing constraints (from the owner; they apply to every step)
 

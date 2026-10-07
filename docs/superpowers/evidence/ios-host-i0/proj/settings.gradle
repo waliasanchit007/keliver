@@ -1,0 +1,9 @@
+// I0: does an iOS production host compile and link from PUBLISHED artifacts only?
+pluginManagement {
+  repositories { gradlePluginPortal(); google(); mavenCentral() }
+}
+dependencyResolutionManagement {
+  repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+  repositories { google(); mavenCentral() }
+}
+rootProject.name = 'ios-host-i0'

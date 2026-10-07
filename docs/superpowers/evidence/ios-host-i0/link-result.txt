@@ -1,0 +1,2 @@
+> Task :linkDebugFrameworkIosSimulatorArm64
+BUILD SUCCESSFUL in 2m 36s
