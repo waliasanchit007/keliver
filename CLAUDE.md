@@ -6,6 +6,9 @@ compiled signed Zipline bundles, render natively on Android/iOS/web, and edit
 them visually in a web portal that round-trips to the .kt files in git.
 
 **Read before working:**
+- `docs/DELIVERY_PLAN.md` — **the plan of record for delivery work** (iOS host, publishing, distribution,
+  rollout controls). Read it first in any session touching hosts, publishing or releases; update its Status
+  table and Next action before stopping.
 - `docs/DECISIONS.md` — finalized architecture decisions (D1–D15). Don't relitigate.
 - `docs/ROADMAP.md` — prioritized backlog with evidence. Pick work from here.
 - `docs/SCREEN_ARCHITECTURE.md` — Style B (Screen/Presenter/Bindings) in detail.
