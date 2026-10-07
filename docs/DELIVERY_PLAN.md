@@ -222,22 +222,39 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 
 ## Next action
 
-W1 is done apart from the release. **Ask the owner** whether to cut tools 0.3.7
-with `keliver-new-ios-host.sh`, following `PORTAL_TOOLS_RELEASE.md`. Until then
-adopters use the script from this repository.
+**On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
+release and W3.**
 
-Then **W3**: a headless `keliver publish` CLI, plus a static signed
-`bundles/index.json` that both hosts read, so any static host or CDN works,
-with an HTTPS check in CI. Design it first:
-- the index format, with the sequence number W4 needs;
-- whether the index is signed separately or each entry carries the bundle's
-  manifest hash.
+**Track A: tools 0.3.7.** Ship `keliver-new-ios-host.sh`, following
+`docs/PORTAL_TOOLS_RELEASE.md`.
+- Branch `release/portal-tools-0.3.7` from `feat/ios-production-host` (PR #88).
+- Bump `build-support/portal-tools.version`, and the adopter guide's download
+  block (step 0).
+- In the adopter guide, `DEVICE_HOST.md` §3 and the tools README, change
+  "not yet in a released bundle" for the iOS scaffolder to "from 0.3.7".
+- `docs/RELEASE_NOTES_TOOLS_0.3.7.md`, status CANDIDATE.
+- Build: `portal-tools.yml` dispatch. Then the device run with the APK
+  sha256, local verification of the retained artifact, and the step-3 workflow
+  check at the candidate commit.
+- **Tag and publish only after the owner says so explicitly.** "Start" is
+  not approval to publish. 0.3.6's approval doesn't carry over.
+- Consider adding `ios-host.yml`'s checks to the candidate's verification:
+  run `ios.sh` against the candidate zip.
 
-iOS follow-ups, small and recorded:
-- P3 (taps) has no iOS driver;
-- the rows render content-width (REFERENCE_APP finding 7);
-- HostHttp and images aren't exercised by the inventory guest;
-- a physical iPhone, a release build and HTTPS (W7).
+**Track B: W3, headless publish and static distribution.** On a new branch
+stacked on #88:
+1. Design the static index, `bundles/index.json`:
+   - entries carry version, widgetVersion, caps, manifest URL, manifest
+     sha256, createdAt, and a monotonically increasing `sequence` (for W4);
+   - decide whether the index is signed (Ed25519, same key) or each entry is
+     bound by its manifest's own signature plus the manifest hash.
+2. A `keliver-publish` CLI (in the tools bundle). Without the relay, it
+   compiles, verifies the signature (reuse `publishedSignatureProblem`), and
+   writes `bundles/vN/…` plus the index into an output directory.
+3. Both hosts (the Android template and the iOS template) look up through
+   the index when the server has no `/bundles/latest`, or always.
+4. CI: publish with the CLI into a static server over HTTPS (a self-signed CA
+   installed in the emulator and simulator), then run P2/P4/P7 against it.
 
 ## Standing constraints (from the owner; they apply to every step)
 
