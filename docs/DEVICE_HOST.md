@@ -1,10 +1,11 @@
-# Running your screens on an Android device
+# Running your screens on a device
 
-Keliver guests are not Android application modules. To see your screens on a
-device you need a **host**: a small Android app that loads your compiled guest
-bundle over HTTP and renders it with native widgets.
+Keliver guests are not Android or iOS application modules. To see your screens
+on a device you need a **host**: a small native app that loads your compiled
+guest bundle over HTTP and renders it with native widgets.
 
-You have two options. Most adopters want the first.
+On Android you have two options; most adopters want the first while they
+develop. §3 is the iOS production host.
 
 ## 1. The generic device host (zero Android code) — **development only**
 
@@ -72,7 +73,7 @@ It binds services your presenters can take by name:
   shipping container for your app.
 - **No production mode.** See above: it refuses, by design.
 
-## 2. Your own production host
+## 2. Your own production Android host
 
 Shipping to real users needs your own host: your application id, your
 portal's public key, signature verification always on. Scaffold one into your
@@ -160,8 +161,8 @@ a new adopter can see their screens on a device without writing Android code.
 
 ## 3. Your own production iOS host
 
-`keliver-new-ios-host.sh` (run from the app root, on macOS with Xcode) writes
-`host-ios/`:
+`keliver-new-ios-host.sh` (run from the app root; scaffolding needs bash and
+python3, building needs macOS with Xcode) writes `host-ios/`:
 - **a Kotlin framework** (`KeliverHost`), a standalone Gradle build on Maven
   Central only;
 - **an Xcode app** whose build phase runs
@@ -204,8 +205,8 @@ For development, `Info.plist` gets an App Transport Security exception only
 for the `http://` hosts you scaffolded with. There is none for `https://`, and
 none in a release build.
 
-**Measured** (`docs/superpowers/evidence/ios-host-i1/`, `ios-host-i2-local/`
-and the `ios-host.yml` CI runs), on iOS simulators:
+**Measured** on iOS simulators (the evidence is in the Keliver repository,
+`docs/superpowers/evidence/ios-host-*`, and its `ios-host.yml` CI runs):
 - signed v1 loads;
 - an edit published as v2 is followed (Inventory → Stockroom);
 - a bundle signed with another app's key is refused;
@@ -217,7 +218,9 @@ and the `ios-host.yml` CI runs), on iOS simulators:
 - a physical iPhone;
 - a release or App Store build;
 - HTTPS end to end;
-- HostHttp and images in a running app.
+- taps (the CI has no iOS tap driver);
+- HostHttp, network images and guest SQL in a running app (the reference
+  guest uses none of them; the SQLite driver was tested on a macOS harness).
 
 **Not protected:** rollback. As on Android, any bundle signed by the key is
 accepted, including an older one.

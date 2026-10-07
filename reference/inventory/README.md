@@ -52,7 +52,7 @@ Then, from `/some/empty/dir/inventory`:
 ```bash
 export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.5/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
-<keliver checkout>/scripts/keliver-new-publish-target.sh   # publishing + signing (not yet in a release)
+<keliver checkout>/scripts/keliver-new-publish-target.sh   # publishing + signing (in tools from 0.3.6)
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
 ```
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# The reference app's production route on iOS: the PUBLIC tools release, a
-# signed publish, and a production host scaffolded by keliver-new-ios-host.sh,
+# The reference app's production route on iOS: a tools release (the PUBLIC
+# 0.3.6 asset by default, or a pinned release candidate), a signed publish, and a production host scaffolded by keliver-new-ios-host.sh,
 # run on an iOS simulator. The scaffolder is the zip's own bin/ copy when the
 # zip ships one (tools 0.3.7 on), else this repository's scripts/ copy.
 #
@@ -50,16 +50,18 @@ sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
-# --- 1. the app, from the public release --------------------------------------
+# --- 1. the app, from the tools zip -------------------------------------------
 got="$(sha256 "$ZIP" | cut -d' ' -f1)"
 if [ -n "${KELIVER_CANDIDATE_SHA256:-}" ]; then
   [ "$got" = "$KELIVER_CANDIDATE_SHA256" ] || { bad "the tools zip is $got, not the candidate $KELIVER_CANDIDATE_SHA256"; exit 1; }
   TOOLS_VERSION="$(unzip -p "$ZIP" '*/VERSION.json' | python3 -c 'import json,sys; print(json.load(sys.stdin)["toolsVersion"])')" \
     || { bad "the candidate zip has no readable VERSION.json"; exit 1; }
-  ok "the tools zip is the CANDIDATE $TOOLS_VERSION (${got:0:8}…), not a published release"
+  ok "the tools zip is the CANDIDATE $TOOLS_VERSION ($got), not a published release"
+  LABEL="candidate $TOOLS_VERSION"
 else
   [ "$got" = "$TOOLS_SHA256" ] || { bad "the tools zip is $got, not the published $TOOLS_SHA256"; exit 1; }
   ok "the tools zip is the published $TOOLS_VERSION asset (${TOOLS_SHA256:0:8}…)"
+  LABEL="published $TOOLS_VERSION"
 fi
 mkdir -p "$WORK/tools" && ( cd "$WORK/tools" && unzip -q "$ZIP" )
 KP="$WORK/tools/keliver-portal-tools-$TOOLS_VERSION/bin"
@@ -75,8 +77,8 @@ APP="$WORK/inventory"
   # The files the scaffolders cannot produce (bootstrap.sh's overlay).
   for f in keliver.portal.json build.gradle settings.gradle src/jsMain/kotlin/device/Main.kt; do cp "$REF/app/$f" "$f"; done
   "$KP/keliver-new-publish-target.sh"
-  git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $TOOLS_VERSION"
-) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $TOOLS_VERSION" \
+  git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
+) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
   || { bad "recreating the app failed"; tail -20 "$EV/app.log"; exit 1; }
 
 # --- 2. a relay for this app, isolated -----------------------------------------
@@ -116,7 +118,10 @@ cp "$STORE/bundles/v1/manifest.zipline.json" "$EV/manifest-v1.zipline.json" 2>/d
 
 # --- 3. P1: the iOS host, scaffolded, with THIS app's key ----------------------
 BID=inventory.ioshost
-if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $TOOLS_VERSION zip's bin/"
+# A candidate must ship the scaffolder: its own copy is what is under test, so a
+# missing or non-executable one fails here instead of falling back to scripts/.
+if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $LABEL zip's bin/"
+elif [ -n "${KELIVER_CANDIDATE_SHA256:-}" ]; then bad "P1: the candidate zip has no executable bin/keliver-new-ios-host.sh"; exit 1
 else IOS_SCAFFOLD="$REPO/scripts/keliver-new-ios-host.sh"; WHICH="this repository's scripts/"; fi
 ( cd "$APP" && "$IOS_SCAFFOLD" --bundle-server http://localhost:8077 --bundle-id "$BID" ) \
   > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh ($WHICH) scaffolded host-ios/" \

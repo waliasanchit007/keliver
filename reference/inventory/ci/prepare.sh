@@ -8,8 +8,8 @@
 #
 # Publishing is wired by this repository's scripts/keliver-new-publish-target.sh,
 # and the production host is SCAFFOLDED into the app by its
-# scripts/keliver-new-production-host.sh (neither is in a published tools bundle
-# yet) and built by the app's own Gradle from Maven Central. It used to be
+# scripts/keliver-new-production-host.sh (both ship from tools 0.3.6; the 0.3.5
+# zip used here has neither) and built by the app's own Gradle from Maven Central. It used to be
 # portal-device-android compiled from Keliver's source at the release commit;
 # no Keliver source is compiled here now.
 #

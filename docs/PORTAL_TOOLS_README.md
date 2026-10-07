@@ -46,9 +46,13 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 
 - **Does:** the web portal loop (author screens visually or in code, live
   preview, the op engine, `.kt` write-back, MCP) against any app dir.
-- **Doesn't (yet):** compile/sign the production bundle or drive on-device
-  preview — those run in your app's own Gradle. See the keliver repo's
-  `docs/PORTAL_USAGE.md` and `docs/SCREEN_ARCHITECTURE.md` for the host wiring.
+- **Also:** wire signed publishing into your app
+  (`bin/keliver-new-publish-target.sh`; the signing runs in your app's own
+  Gradle, and `POST /publish` keeps only bundles signed with your key), and
+  scaffold your own production hosts for Android
+  (`bin/keliver-new-production-host.sh`) and iOS (`bin/keliver-new-ios-host.sh`).
+- **Doesn't (yet):** publish without the local relay (no headless CLI), serve
+  bundles from a static host or CDN, or protect against rollback.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -83,7 +87,7 @@ build needs `https://` servers and your own signing config.
 ### bin/keliver-new-ios-host.sh
 
 ```bash
-keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+bin/keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
 xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```

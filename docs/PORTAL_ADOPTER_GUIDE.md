@@ -239,12 +239,12 @@ It embeds your portal's public key (copied from your store — commit
 `host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
 against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
-`DEVICE_HOST.md` §2 has the options and what the host refuses.
+`DEVICE_HOST.md` §2 (Android) has the options and what the host refuses.
 
 **iOS.** `keliver-new-ios-host.sh` writes `host-ios/`: the same production
 host, for iOS. It is a Kotlin framework built from Maven Central plus an Xcode
 app around it. It ships in the tools bundle from **0.3.7** on. Scaffolding
-and building it need macOS with Xcode.
+needs only bash and python3; building and running it need macOS with Xcode.
 
 ```bash
 $KP/keliver-new-ios-host.sh --bundle-server http://localhost:8077    # a simulator on this Mac reaching your relay

@@ -23,8 +23,9 @@ the project has adopted Keliver. Nobody has.
   no Keliver *library* module from source: the production host is scaffolded
   into the app by `keliver-new-production-host.sh` and built by the app's Gradle
   against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
-  Kotlin is that scaffolder's template, and the scaffolder is not yet in a
-  published tools bundle, so both still come from this repository. Runs 1–7
+  Kotlin is that scaffolder's template. The scaffolder ships in tools 0.3.6,
+  but the reference app is still built from the 0.3.5 zip, which lacks it, so
+  both still come from this repository. Runs 1–7
   used `portal-device-android` compiled from Keliver **source** at `b5615637`.
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
