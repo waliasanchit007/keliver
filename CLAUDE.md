@@ -21,11 +21,13 @@ them visually in a web portal that round-trips to the .kt files in git.
   [`sample/`](sample) (Keliver's own widget schema, built from this checkout),
   and [`reference/inventory`](reference/inventory) — an app developed only from
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
-  checked on an emulator by `.github/workflows/reference-app.yml`. Its
-  production host is scaffolded by `scripts/keliver-new-production-host.sh`
-  and built against Maven Central — no Keliver LIBRARY module is compiled from
-  source, but the host's own Kotlin is a template from this repo, the script
-  comes from this checkout (it ships from tools 0.3.6; the app still uses 0.3.5), and the CI harness is this repo's. What it proved and
+  checked on an emulator by `.github/workflows/reference-app.yml` and on an iOS
+  simulator by `ios-host.yml`. Since PR #92 its production route is
+  published-only too: tools **0.3.7**'s own `bin/` scaffolders write the
+  signing, the Android host and the iOS host, which build against Maven
+  Central. No Keliver source and no script from this checkout are used, except
+  the CI harness (`ci/`, the isolation guard) and the app's recorded overlay
+  files (`hand-edits.diff`). What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle

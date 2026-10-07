@@ -1,13 +1,13 @@
 # Inventory — the reference app
 
 A small stock-keeping app built from what an adopter gets: the published
-[`keliver-portal-tools` 0.3.5](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5)
+[`keliver-portal-tools` 0.3.7](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7)
 release and the `dev.keliver:*:0.3.3` libraries on Maven Central. The app itself
-is never compiled against this checkout, and its **development route** uses
-nothing else. Its **production route** does: the production host is
-`portal-device-android` compiled from Keliver source at the release's commit
-(no such host is published), and the CI harness — `ci/`, and the isolation guard
-it sources — is this repository's.
+is never compiled against this checkout. Neither of its routes uses anything
+else: development, and production. Production means signed publishing plus
+the Android and iOS production hosts, all written by the zip's own `bin/`
+scaffolders. Only the CI harness is this repository's: `ci/`, and the
+isolation guard it sources.
 
 **This is dogfooding, not adoption.** We wrote the app, so it can show where the
 adopter route works and where it is rough. It cannot show that anyone outside
@@ -40,7 +40,7 @@ Needs JDK 17+, python3, curl, git — the adopter guide's prerequisites.
 reference/inventory/bootstrap.sh /some/empty/dir
 ```
 
-That downloads the public 0.3.5 zip, checks it against the release's `.sha256`
+That downloads the public 0.3.7 zip, checks it against the release's `.sha256`
 **and** the hash pinned in the script, runs `keliver-init`, copies in `app/`'s
 screens and logic, runs `keliver-new-device-target.sh` and `keliver-new-editor.sh`,
 and then overlays the files the scaffolders cannot write. What it overlays is
@@ -50,9 +50,9 @@ skip the download; it must have the same hash.
 Then, from `/some/empty/dir/inventory`:
 
 ```bash
-export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.5/bin
+export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.7/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
-<keliver checkout>/scripts/keliver-new-publish-target.sh   # publishing + signing (in tools from 0.3.6)
+$KP/keliver-new-publish-target.sh         # publishing + signing
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
 ```
 
@@ -94,19 +94,18 @@ counted as a render.
 Each of these was hit building this app; see
 [`docs/REFERENCE_APP.md`](../../docs/REFERENCE_APP.md) for the full record.
 
-* **Production needed the Keliver repository — now scaffolded, not yet
-  released.** The 0.3.5 bundle's `host/README.md` says to copy
-  `sample/host-android`, which renders the sample's own widget schema, not
-  keliver-material. CI now runs `scripts/keliver-new-production-host.sh` (#85)
-  in the app and builds `host-android/` from Maven Central; until a tools
-  release ships it, that script is the one piece that comes from this
-  repository.
+* **Production needed the Keliver repository — fixed in tools 0.3.6/0.3.7.**
+  The 0.3.5 bundle's `host/README.md` said to copy `sample/host-android`, which
+  renders the sample's own widget schema, not keliver-material. CI now runs the
+  0.3.7 zip's `bin/keliver-new-production-host.sh` (Android) and
+  `bin/keliver-new-ios-host.sh` (iOS) in the app, and builds both hosts from
+  Maven Central.
 * **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, whose
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
   failed, and nothing signed. This app used to carry both settings and a
-  hand-written signing block in its overlay; CI now runs
-  `scripts/keliver-new-publish-target.sh` (#86) instead. Tools 0.3.6 ships it;
-  this app still bootstraps from 0.3.5, so CI takes it from this repository.
+  hand-written signing block in its overlay. CI now runs the 0.3.7 zip's
+  `bin/keliver-new-publish-target.sh` instead, whose block is the U31-fixed
+  one.
 * **The device scaffolder wires one screen.** With two screens it asks for
   `--screen`/`--presenter`, and a presenter that takes arguments means
   hand-editing `device/Main.kt`.
