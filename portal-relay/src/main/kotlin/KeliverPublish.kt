@@ -5,7 +5,12 @@ import kotlin.system.exitProcess
  * `keliver-publish`: the relay's publish without the relay, for CI and for a
  * static or CDN bundle server (W3, docs/DELIVERY_PLAN.md).
  *
- *   keliver-publish [app-dir] --out <dir> --public-key-file <file> [--channel stable] [--skip-build]
+ *   keliver-publish [app-dir] --out <dir> --public-key-file <file> [--channel stable] [--skip-build] [--init]
+ *
+ * `<dir>` must hold the LIVE `bundles/index.json` and `bundles/v<N>/` (download
+ * them from the bundle server first): the next version and sequence come from
+ * them. Without an index it refuses, unless `--init` says this is the first
+ * publish ever.
  *
  * Runs the app's `publishTask` (keliver.portal.json), refuses output that is not
  * signed with the app's key or is incomplete, and writes `<out>/bundles/v<N>/`
@@ -14,15 +19,21 @@ import kotlin.system.exitProcess
  * none is given. Only the PUBLIC key is read here. The compile task signs, with
  * the key its signing block finds (KELIVER_SIGNING_KEY_FILE in CI).
  *
- * Exit status: 0 published, 2 usage, 3 build failed, 4 refused (nothing written),
- * 5 an I/O error while writing (see its message: at worst a `v<N>/` that no
- * index entry names, which is never served as current and whose number is
- * never reused).
+ * Exit status:
+ * - 0 published;
+ * - 2 usage;
+ * - 3 the build failed (nothing published);
+ * - 4 refused: nothing written, except that losing the lock race to another
+ *   publish may have created `bundles/.publish.lock`;
+ * - 5 an I/O error while writing: the index is unchanged or complete, never
+ *   half-written, but a `v<N>/` that no entry names may be left. It is never
+ *   served as current, and its number is never reused.
+ * An unexpected error exits 1 with a stack trace.
  */
 object KeliverPublish {
   private const val USAGE =
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
-      "[--channel stable] [--skip-build]"
+      "[--channel stable] [--skip-build] [--init]"
 
   @JvmStatic
   fun main(args: Array<String>) {
@@ -35,6 +46,7 @@ object KeliverPublish {
     var keyFile: String? = null
     var channel = DEFAULT_CHANNEL
     var skipBuild = false
+    var init = false
     val it = args.iterator()
     while (it.hasNext()) {
       when (val a = it.next()) {
@@ -42,6 +54,7 @@ object KeliverPublish {
         "--public-key-file" -> keyFile = it.nextOrNull() ?: return usage("--public-key-file needs a file")
         "--channel" -> channel = it.nextOrNull() ?: return usage("--channel needs a name")
         "--skip-build" -> skipBuild = true
+        "--init" -> init = true
         "-h", "--help" -> { println(USAGE); return 0 }
         else -> if (a.startsWith("-") || app != null) return usage("unexpected argument: $a") else app = a
       }
@@ -59,6 +72,16 @@ object KeliverPublish {
     }
     val config = runCatching { loadPortalConfig(repoDir) }.getOrElse {
       return refuse("could not read ${File(repoDir, "keliver.portal.json")}: ${it.message}")
+    }
+
+    // Checked again under the lock; this only spares a build that could not be published.
+    if (!init && !File(File(out, "bundles"), INDEX_FILE).exists()) {
+      return refuse(
+        "there is no ${File(File(out, "bundles"), INDEX_FILE)}. Download the served bundles/index.json and " +
+          "every bundles/v<N>/ into $out first: the next version and sequence come from them, and publishing " +
+          "into an empty directory would start again at v1 and overwrite what hosts already load. Only for the " +
+          "very first publish, pass --init.",
+      )
     }
 
     if (skipBuild) {
@@ -79,11 +102,14 @@ object KeliverPublish {
       emptyList()
     }
     val result = try {
-      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel, caps)
+      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel, caps, init = init)
     } catch (e: PublishRefused) {
-      return refuse(e.message.orEmpty())
+      return refuse(e.message.orEmpty(), e.aboutSigning)
     } catch (e: java.io.IOException) {
-      System.err.println("keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete; never half-written.")
+      System.err.println(
+        "keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete, never half-written; " +
+          "a v<N>/ that no index entry names may be left, which is never served as current and never reused.",
+      )
       return 5
     }
     println("keliver-publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key; every module is present")
@@ -107,15 +133,17 @@ object KeliverPublish {
     return 2
   }
 
-  private fun refuse(why: String): Int {
-    System.err.println(
-      """
-      |keliver-publish REFUSED: $why
-      |  Nothing was published. Production hosts accept only bundles signed with this app's key:
-      |  the compile task signs them, through the block keliver-new-publish-target.sh writes. In CI,
-      |  point KELIVER_SIGNING_KEY_FILE at a file holding the private key (never print it).
-      """.trimMargin(),
-    )
+  private fun refuse(why: String, aboutSigning: Boolean = false): Int {
+    System.err.println("keliver-publish REFUSED: $why\n  Nothing was published.")
+    if (aboutSigning) {
+      System.err.println(
+        """
+        |  Production hosts accept only bundles signed with this app's key: the compile task signs
+        |  them, through the block keliver-new-publish-target.sh writes. In CI, point
+        |  KELIVER_SIGNING_KEY_FILE at a file holding the private key (never print it).
+        """.trimMargin(),
+      )
+    }
     return 4
   }
 

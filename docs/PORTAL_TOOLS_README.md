@@ -95,10 +95,14 @@ Central plus an Xcode app. It applies the same key checks and refusals as
 ### scripts/keliver-publish (not yet in a released bundle)
 
 ```bash
-keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build]
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build] [--init]
 ```
 
-Publishes without the relay, for CI and for static or CDN hosting:
+Publishes without the relay, for CI and for static or CDN hosting. `DIR` must
+hold the live `bundles/index.json` and `bundles/v<N>/`, downloaded from your
+bundle server: without an index it refuses, unless `--init` marks the very
+first publish. The adopter guide's "Publish from CI to a static server" has
+the upload order.
 1. It builds the app's `publishTask`.
 2. It refuses the bundle and writes nothing (exit 4) unless the manifest is
    signed with the app's key and every module is present with its signed

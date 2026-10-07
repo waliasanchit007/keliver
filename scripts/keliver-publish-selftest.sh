@@ -122,10 +122,19 @@ echo "==> keliver-publish self-test ($RELAY_HOME)"
 [ "$rc" = 2 ] && grep -q -- "--out is required" "$WORK/u.log" && ok "no --out: usage, exit 2" || bad "no --out: exit $rc"
 "$PUBLISH" "$APP" --out "$SITE" --frobnicate > "$WORK/u.log" 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "an unknown option: exit 2" || bad "an unknown option: exit $rc"
+"$PUBLISH" "$APP" "$WORK" --out "$SITE" > "$WORK/u.log" 2>&1; rc=$?
+[ "$rc" = 2 ] && grep -q "one app directory only" "$WORK/u.log" && ok "two app directories: exit 2" || bad "two app directories: exit $rc"
 [ ! -e "$SITE" ] && ok "usage errors wrote nothing" || bad "a usage error created $SITE"
 
-# 2. publish v1, through the app's build
-FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" > "$WORK/p1.log" 2>&1; rc=$?
+# 2. an empty out dir is refused without --init (a CI checkout that did not download the live
+#    index would otherwise republish v1 at sequence 1), before any build runs
+: > "$APP/gradlew.calls"
+FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" > "$WORK/p0.log" 2>&1; rc=$?
+[ "$rc" = 4 ] && grep -q -- "--init" "$WORK/p0.log" && [ ! -e "$SITE" ] && [ ! -s "$APP/gradlew.calls" ] \
+  && ok "no live index and no --init: refused (exit 4), nothing built or written" || { bad "no index: exit $rc"; cat "$WORK/p0.log"; }
+
+#    publish v1, through the app's build, as the first publish ever
+FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --init > "$WORK/p1.log" 2>&1; rc=$?
 [ "$rc" = 0 ] && ok "v1 published: $(grep 'published v' "$WORK/p1.log")" || { bad "v1: exit $rc"; cat "$WORK/p1.log"; }
 grep -qx "task=:compileDevelopmentExecutableKotlinJsZipline toolsBin=$TOOLS/bin" "$APP/gradlew.calls" \
   && ok "it ran the app's publishTask with KELIVER_TOOLS_BIN = the tools bin" || bad "build call: $(cat "$APP/gradlew.calls")"

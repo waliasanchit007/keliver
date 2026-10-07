@@ -208,7 +208,10 @@ index.**
   `capabilities`, `channel`) to the exact manifest the publisher meant:
   - the host's Zipline HTTP client checks the downloaded manifest bytes
     against it, in the same fetch Zipline loads from;
-  - a mismatch fails the load.
+  - a mismatch fails the load. Zipline has no fallback to the cache after a
+    network load fails, so the host then shows no bundle even with a cached
+    one. Publishers must upload `v<N>/` before the index and never overwrite
+    a `v<N>/`; the fallback is a W5 item.
   - This catches a CDN serving a manifest that doesn't belong to the entry
     (for example, a mixed or stale cache).
   - It is not a security boundary: the index is unsigned, so whoever can
@@ -243,7 +246,9 @@ index.**
 
 **The relay keeps `/bundles/latest`** and also serves
 `GET /bundles/index.json`, generated from its store's `v<N>/meta.json` and
-manifests.
+manifests. A `v<N>` without a readable `meta.json` holding an integer
+`widgetVersion` is left out, as `/bundles/latest` never picks one: the relay
+writes meta.json last, so such a directory is an unfinished publish.
 - A host built from the new templates fetches `index.json`.
 - Only on **HTTP 404** for it (a relay from tools 0.3.7 or earlier) does it
   fall back to `/bundles/latest`.
@@ -253,8 +258,13 @@ manifests.
 **`keliver-publish`**, in the tools bundle's `bin/`:
 
 ```
-keliver-publish [app-dir] --out <dir> [--public-key-file F] [--channel stable] [--skip-build]
+keliver-publish [app-dir] --out <dir> [--public-key-file F] [--channel stable] [--skip-build] [--init]
 ```
+
+`<dir>` must hold the **live** `bundles/index.json` and `bundles/v<N>/`: the
+next version and sequence come from them. Without an index the CLI refuses
+before building, unless `--init` marks the very first publish. CI must never
+add `--init` itself.
 
 1. It runs the app's `publishTask` from `keliver.portal.json` (as the relay
    does) with `KELIVER_TOOLS_BIN` set, so the existing signing block signs.
@@ -269,8 +279,20 @@ keliver-publish [app-dir] --out <dir> [--public-key-file F] [--channel stable] [
    `index.json` through a temp file and an atomic rename. All of this happens
    under a lock file.
 5. Anything unsigned, signed by another key, or incomplete is refused, and
-   nothing is written. A malformed existing index is refused, never
-   overwritten.
+   nothing is written. So are a malformed existing index (never overwritten;
+   duplicate sequences or versions count as malformed) and an `--out` inside
+   the compile output.
+6. Exit status:
+   - 0: published;
+   - 2: usage;
+   - 3: the build failed;
+   - 4: refused, with nothing written (losing the lock race may create
+     `bundles/.publish.lock`; that message carries no signing hint);
+   - 5: an I/O error while writing. The index is unchanged or complete, but a
+     `v<N>/` that no entry names may be left.
+7. Uploading: `v<N>/` first, then `index.json`; never delete or overwrite a
+   `v<N>/`; skip dotfiles; one publish at a time (a CI concurrency group). The
+   adopter guide's GitHub Actions recipe does this.
 
 **CI signing without a store.** The signing block gains
 `KELIVER_SIGNING_KEY_FILE` (or `-Pkeliver.signingKeyFile`), a file holding
@@ -319,6 +341,12 @@ The host exposes:
   launch or immediately);
 - events: downloaded, applied, failed, refused (with the reason).
 
+- **Fall back to the last good bundle.** When the lookup names a bundle that
+  then fails to load (a download error, a `manifestSha256` mismatch, a
+  missing `v<N>/`) and a bundle loaded before, restart from Zipline's verified
+  cache (`AcceptCachedBundle`) instead of showing nothing. Zipline 1.22 has no
+  such fallback itself. Found by W3's review, from S6.
+
 *Done when:* unit tests plus one CI scenario (an update applied on resume)
 pass.
 
@@ -365,9 +393,10 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
 | W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
 | W3 design | **done 2026-10-07**: a static `bundles/index.json` (format 1). Each entry is bound by its manifest's own signature plus `manifestSha256`; the index is unsigned. Anti-rollback is deferred to W4. | "W3 design" above |
-| W3 `keliver-publish` + index-reading hosts | **built, CI green 2026-10-07** on PR #90 (`feat/w3-static-publish`, stacked on #88). The CLI verifies the signature and every module's sha256, then writes `v<N>/` and an atomic `index.json`; it refuses and writes nothing otherwise. The relay also serves `/bundles/index.json`. Both host templates read the index, pin the manifest's sha256, and fall back to `/bundles/latest` only on a 404. `KELIVER_SIGNING_KEY_FILE` covers CI signing. Tests: `StaticPublishTest` 12, `BundleIndexTest` 7, `keliver-publish-selftest.sh` 16/0, Android and iOS host self-tests with builds 40/0 and 49/0. | PR #90 |
+| W3 `keliver-publish` + index-reading hosts | **built, CI green 2026-10-07** on PR #90 (`feat/w3-static-publish`, stacked on #88). The CLI verifies the signature and every module's sha256, then writes `v<N>/` and an atomic `index.json`. It refuses anything unsigned, foreign or incomplete and writes nothing (exit codes in the W3 design). The relay also serves `/bundles/index.json`. Both host templates read the index, pin the manifest's sha256, and fall back to `/bundles/latest` only on a 404. `KELIVER_SIGNING_KEY_FILE` covers CI signing. Tests before the review: `StaticPublishTest` 12, `BundleIndexTest` 7, `keliver-publish-selftest.sh` 16/0, the iOS host self-test with `xcodebuild` 49/0 (CI). The Android host self-test with a build, 40/0, was local and is in no CI evidence. | PR #90 |
 | W3 static HTTPS on CI | **green 2026-10-07**. No relay; a static HTTPS server is fed only by the CLI, with a throwaway CA in the emulator's system store and the simulator's keychain. S2 (v1 through the index), S4 (v2), S5 (CLI refuses a foreign key), S6 (wrong sha256, nothing loads), S7 (offline from the cache). Android `reference-app.yml` run 37629943998: prepare 18/0, device 54/0. iOS `ios-host.yml` run 37629943934: self-test 49/0, `ios.sh` 48/0. | `docs/superpowers/evidence/w3-android-ci-37629943998/`, `w3-ios-ci-37629943934/` |
-| W3 remaining | not yet in a released tools bundle (it needs a release after 0.3.7, with approval). A GitHub Actions recipe is in the adopter guide. The independent review is pending. | — |
+| W3 independent review | **done 2026-10-07; all should-fix points fixed or recorded** (PR #90). B1: the recipe republished v1 at sequence 1 from an empty checkout. Now the CLI refuses an out dir with no index unless `--init` (checked before building), and the guide's recipe downloads the live `bundles/` first, uses a concurrency group, uploads `v<N>/` before the index with no deletes, and removes `.gradle/` (U31). S1: no fallback to the cache after a failed load is documented (guide, `DEVICE_HOST`); the fallback itself is a W5 item. S2: the relay's index skips a `v<N>` without usable `meta.json`. S4: the lock refusal has its own message; exit codes are documented accurately; the production host's `gradle.properties` no longer says a static server isn't enough. Nits done: one app dir in the wrapper, `--out` inside the output refused, duplicate sequences or versions refused, S5 wording, head runs named. S3 (the key in `.gradle/`) is U31, fixed separately. Tests after the fixes: `StaticPublishTest` 16/0, `BundleIndexTest` 7/0, `PublishSignatureTest` 7/0, `keliver-publish-selftest.sh` 18/0 (local). | PR #90 |
+| W3 known, not done | Two 10 s timeouts when the index is a 404 and `/bundles/latest` is slow. iOS `timeoutInterval` is an idle timeout. No size limit on the index body. The docs' "same origin" is not a boundary, because Zipline's downloads follow redirects (integrity rests on the signatures). `pickFromIndex` accepts quoted numbers. Capability filtering is unit-tested only; the device checks publish with no capabilities. There is no device check of a new host against a new relay's `/bundles/index.json`. Not in a released tools bundle: that needs a release after 0.3.7, with approval. | — |
 | W2, W4–W8 | not started | — |
 
 ## Next action
@@ -391,8 +420,10 @@ release and W3.**
 - Consider adding `ios-host.yml`'s checks to the candidate's verification:
   run `ios.sh` against the candidate zip.
 
-**Track B: W3 — built and green on CI (PR #90, see Status).** Remaining:
-- an independent review of PR #90;
+**Track B: W3 — built, reviewed, review fixed (PR #90, see Status).**
+Remaining:
+- CI green on the post-review head;
+- U31 (fixed separately);
 - shipping it in a tools release after 0.3.7, only with the owner's approval.
 
 Then W4 (rollback protection through a signed sequence in the manifest's

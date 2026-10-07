@@ -8,7 +8,8 @@
 # https://localhost:8443; nothing else about it changes.
 #   S2  signed v1 loads through bundles/index.json over HTTPS ("Depot")
 #   S4  an edit, published as v2 by the CLI, reaches the host ("Warehouse")
-#   S5  the CLI refuses the build against another app's key; nothing changes
+#   S5  checked against another app's public key, the CLI refuses this app's
+#       already-built bundle (--skip-build); nothing changes
 #   S6  an index whose sha256 isn't the manifest's: nothing loads
 #   S7  server down: the host starts from its cached v2
 # The app's signing block here is the one tools 0.3.6 wrote, so the CLI signs
@@ -28,12 +29,13 @@ SCREEN="$APP/src/jsMain/kotlin/screens/inventory.kt"
 w3_title(){  # $1 from, $2 to: the edit a developer makes; no relay involved
   sed -i '' "s/text = \"$1\"/text = \"$2\"/" "$SCREEN" && grep -q "text = \"$2\"" "$SCREEN"
 }
-w3_publish(){  # $1 label: the CLI, run as a CI job would run it
-  ( cd "$APP" && "$PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" ) > "$EV/w3-publish-$1.log" 2>&1
+w3_publish(){  # $1 label, then extra flags: the CLI, run as a CI job would run it
+  local label="$1"; shift
+  ( cd "$APP" && "$PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" "$@" ) > "$EV/w3-publish-$label.log" 2>&1
 }
 w3_site(){ ( cd "$W3/site" && find . -type f -exec shasum -a 256 {} + | sort ); }
 
-w3_title Stockroom Depot && w3_publish v1 && grep -q "published v1 (sequence 1" "$EV/w3-publish-v1.log" \
+w3_title Stockroom Depot && w3_publish v1 --init && grep -q "published v1 (sequence 1" "$EV/w3-publish-v1.log" \
   && ok "W3: keliver-publish compiled, verified and wrote $(grep -o 'published v1 ([^)]*)' "$EV/w3-publish-v1.log")" \
   || { bad "W3: publish v1"; tail -20 "$EV/w3-publish-v1.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-v1.json" 2>/dev/null

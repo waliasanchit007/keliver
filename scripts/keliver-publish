@@ -3,12 +3,17 @@
 # no relay: for CI, and for any static server or CDN (S3, GCS, GitHub Pages,
 # nginx). Ships in keliver-portal-tools; needs Java 17+.
 #
-#   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] [--channel stable] [--skip-build]
+#   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] [--channel stable] [--skip-build] [--init]
 #
 # Writes <dir>/bundles/v<N>/ (the compile task's output, unchanged) and
 # <dir>/bundles/index.json (the next sequence). Serve <dir> as-is; production
 # hosts scaffolded by keliver-new-production-host.sh / keliver-new-ios-host.sh
 # read bundles/index.json from their bundle server.
+#
+# <dir> must hold the LIVE bundles/index.json and bundles/v<N>/: download them
+# from your bundle server first. Without an index it refuses, unless --init
+# says this is the very first publish. Upload v<N>/ before index.json, never
+# delete or overwrite a v<N>/, and skip the dotfiles (.publish.lock, leftovers).
 #
 # 1. Builds the app's publishTask (keliver.portal.json), with KELIVER_TOOLS_BIN
 #    set so the signing block keliver-new-publish-target.sh wrote can find the
@@ -21,8 +26,10 @@
 # KELIVER_PUBLIC_KEY_HEX, else this app's store (keys/ed25519.pub, located by
 # keliver-store-path.sh, the one shell mirror of the store contract).
 #
-# Exit status: 0 published, 2 usage, 3 build failed, 4 refused (nothing written),
-# 5 an I/O error while writing.
+# Exit status: 0 published; 2 usage; 3 the build failed; 4 refused, nothing
+# written (except bundles/.publish.lock when another publish held it); 5 an I/O
+# error while writing (the index is unchanged or complete, but a v<N>/ that no
+# entry names may be left).
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,20 +39,22 @@ BUNDLE="$(cd "$HERE/.." && pwd)"
 JVM="${KELIVER_RELAY_HOME:-$BUNDLE/relay}/bin/keliver-publish-jvm"
 [ -x "$JVM" ] || { echo "keliver-publish: $JVM not found (run from an unpacked keliver-portal-tools)" >&2; exit 2; }
 
-APP_ARG="."
+APP_ARG=""
 HAS_KEY=false
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,25p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,32p' "${BASH_SOURCE[0]}"; exit 0 ;;
     --public-key-file) HAS_KEY=true; ARGS+=("$1" "${2:-}"); shift ;;
     --out|--channel) ARGS+=("$1" "${2:-}"); shift ;;
-    --skip-build) ARGS+=("$1") ;;
+    --skip-build|--init) ARGS+=("$1") ;;
     -*) echo "keliver-publish: unknown option $1" >&2; exit 2 ;;
-    *) APP_ARG="$1" ;;
+    *) [ -z "$APP_ARG" ] || { echo "keliver-publish: one app directory only (got '$APP_ARG' and '$1')" >&2; exit 2; }
+       APP_ARG="$1" ;;
   esac
   shift
 done
+APP_ARG="${APP_ARG:-.}"
 APP_DIR="$(cd "$APP_ARG" 2>/dev/null && pwd)" || { echo "keliver-publish: no such directory: $APP_ARG" >&2; exit 2; }
 
 if ! $HAS_KEY && [ -z "${KELIVER_PUBLIC_KEY_HEX:-}" ]; then

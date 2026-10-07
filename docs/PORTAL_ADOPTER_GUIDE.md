@@ -271,43 +271,118 @@ Serve that directory from any static host or CDN (S3, GCS, GitHub Pages,
 nginx) over HTTPS. Point `--bundle-server` at it. Hosts from the current
 scaffolders read `bundles/index.json`.
 
+**It is not in a released tools bundle yet.** Until it is, it is
+`scripts/keliver-publish` in the Keliver repository, and it needs
+`portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
+
+**The live index is the state.** The next `v<N>` and `sequence` come from the
+`bundles/` directory you publish into. So:
+- **Download the live `bundles/` first:** `index.json` and the `v<N>/`
+  directories. Publishing into an empty directory would start again at v1, and
+  uploading the result would overwrite the v1 hosts already load. Without an
+  `index.json`, `keliver-publish` refuses.
+- **`--init` only for the very first publish, run once by hand.** Never let CI
+  add it, for instance because a download failed: that is exactly the case it
+  exists to stop.
+- **Upload `v<N>/` first, then `index.json`.** Never delete or overwrite a
+  `v<N>/`. Skip dotfiles: `.publish.lock`, and any `.staging-*` or
+  `.index.json.tmp-*` an interrupted run left.
+- **One publish at a time.** The lock in `bundles/` only covers one machine; in
+  CI use a `concurrency` group.
+
+A first publish, by hand:
+
+```bash
+$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
+Every later one, in GitHub Actions, with S3 as the example. With GCS use
+`gsutil -m rsync -r`; with any other server, copy the same files in the same
+order.
+
+```yaml
+concurrency: keliver-publish            # never two publishes at once
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ... JDK 17, cloud credentials, keliver-portal-tools as $KP
+      - name: The live bundles/, which the next version and sequence come from
+        run: |
+          mkdir -p site/bundles
+          aws s3 cp "s3://$BUCKET/bundles/index.json" site/bundles/index.json   # fails the job if it is missing
+          aws s3 sync "s3://$BUCKET/bundles" site/bundles
+      - name: Build, verify, write v<N>/ and index.json
+        run: |
+          umask 077
+          printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
+          KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
+            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+          rm -f "$RUNNER_TEMP/keliver.priv"
+        env:
+          KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}
+      - name: Upload v<N>/ first, then the index
+        run: |
+          N="$(jq -r '.entries | max_by(.sequence) | .version' site/bundles/index.json)"
+          aws s3 cp --recursive "site/bundles/v$N" "s3://$BUCKET/bundles/v$N" \
+            --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp site/bundles/index.json "s3://$BUCKET/bundles/index.json" --cache-control "no-cache"
+      - name: The signing key leaks into Gradle's project state (U31)
+        if: always()
+        run: rm -rf .gradle "$RUNNER_TEMP/keliver.priv"
+```
+
+**Keep the signing key out of logs and caches.** This applies until U31 is
+fixed (`docs/KNOWN_BUGS.md`): Zipline's compile task passes the private key to
+a child process on its command line. As a result:
+- it appears in Gradle's `--info` and `--debug` output, so don't publish with
+  those flags;
+- it is recorded in the app's `.gradle/` directory, so delete it after the job
+  (as above) and never cache it with `actions/cache`.
+
+Store the private key (the hex in your store's `keys/ed25519.priv`) as a
+secret. `KELIVER_SIGNING_KEY_FILE` is read by the signing block that
+`keliver-new-publish-target.sh` writes. If your block was written by tools
+0.3.6 or 0.3.7, the block doesn't know this variable: add the
+`keliver.signingKeyFile` lines from `templates/publish/signing.gradle`.
+
+Exit status:
+- 0: published.
+- 2: usage.
+- 3: the build failed.
+- 4: refused, with nothing written. If it lost the lock to another publish,
+  `bundles/.publish.lock` may have been created.
+- 5: an I/O error while writing. `index.json` is then unchanged or complete,
+  never half-written, but a `v<N>/` that no entry names may be left behind.
+  Hosts never load it as current, and its number is never reused.
+
 Caching:
 - Serve `bundles/index.json` with `Cache-Control: no-cache`, or a short
   `max-age`: it is the only file that changes, and a CDN that keeps an old copy
   delays every update.
 - Everything under `v<N>/` is never rewritten, so it can be cached for as long
-  as you like.
+  as you like. That is why a `v<N>/` must never be overwritten.
+- Don't let the CDN cache a 404 for long.
 
-**It is not in a released tools bundle yet.** Until it is, it is
-`scripts/keliver-publish` in the Keliver repository, and it needs
-`portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
+**When the bundle a host is told about fails to load, the host shows no
+bundle**, even though a verified cached one is on the device. This happens
+when:
+- an index entry's `manifestSha256` doesn't match the manifest served (a
+  `v<N>/` overwritten, or a stale CDN copy);
+- a `v<N>/` is missing because the index was uploaded first;
+- any download of that bundle fails.
 
-```bash
-$KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
-```
-
-In CI there is no portal store. Store the private key (the hex in your store's
-`keys/ed25519.priv`) as a secret, and write it to a file only the job can read:
-
-```yaml
-- run: |
-    umask 077
-    printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
-    KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
-      keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
-  env:
-    KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}
-```
-
-`KELIVER_SIGNING_KEY_FILE` is read by the signing block that
-`keliver-new-publish-target.sh` writes. If your block was written by tools
-0.3.6 or 0.3.7, the block doesn't know this variable: add the
-`keliver.signingKeyFile` lines from `templates/publish/signing.gradle`.
+Zipline doesn't fall back to its cache after a network load fails. The host
+starts from the cache only when the lookup itself fails. The upload rules above
+prevent the first two cases. Falling back to the last good bundle is planned
+(W5 in `docs/DELIVERY_PLAN.md`).
 
 The index is not signed. Every manifest is, and hosts verify every manifest.
 Each index entry records its manifest's sha256, and the host checks it. That
-check catches a mismatched manifest, for example a mixed CDN cache, but it
-doesn't protect against anyone who can rewrite the index.
+check catches a mismatched manifest, but it doesn't protect against anyone who
+can rewrite the index. Integrity rests on the manifest signatures, not on the
+server, its origin or its redirects.
 
 Not protected yet: rollback. Anyone who can change what your server serves can
 serve an older signed bundle (W4 in `docs/DELIVERY_PLAN.md`).

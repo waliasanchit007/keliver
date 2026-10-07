@@ -67,7 +67,7 @@ class StaticPublishTest {
   @Test
   fun publishesVersionedDirectoriesAndAnIndexAtTheNextSequence() {
     val at = Instant.parse("2026-10-07T12:00:00Z")
-    val first = publishStatic(output("one"), site, app.publicHex, capabilities = listOf("host-sql@1"), now = at)
+    val first = publishStatic(output("one"), site, app.publicHex, capabilities = listOf("host-sql@1"), now = at, init = true)
     val second = publishStatic(output("two"), site, app.publicHex)
     assertEquals(1 to 1L, first.version to first.sequence)
     assertEquals(2 to 2L, second.version to second.sequence)
@@ -89,7 +89,7 @@ class StaticPublishTest {
 
   @Test
   fun theHostsIndexReaderPicksWhatWasPublished() {
-    publishStatic(output("one"), site, app.publicHex)
+    publishStatic(output("one"), site, app.publicHex, init = true)
     publishStatic(output("two"), site, app.publicHex, capabilities = listOf("host-http@1"))
     val withHttp = pickFromIndex(File(bundles, INDEX_FILE).readText(), listOf("host-sql@1", "host-http@1")).getOrThrow()
     assertEquals(2L, withHttp.sequence)
@@ -113,7 +113,55 @@ class StaticPublishTest {
   @Test
   fun aVersionDirectoryWithoutAnEntryIsNeverReused() {
     File(bundles, "v5").mkdirs()
-    assertEquals(6, publishStatic(output("x"), site, app.publicHex).version)
+    assertEquals(6, publishStatic(output("x"), site, app.publicHex, init = true).version)
+  }
+
+  @Test
+  fun withoutTheLiveIndexItRefusesUnlessThisIsTheFirstPublish() {
+    // An empty CI checkout would otherwise write v1 at sequence 1 again and,
+    // once uploaded, replace the v1 hosts already load.
+    assertRefusedAndNothingWritten("--init") { publishStatic(output("first"), site, app.publicHex) }
+    assertFalse(site.exists())
+    File(bundles, "v3").mkdirs() // a v<N> downloaded without its index
+    assertRefusedAndNothingWritten("download the served bundles/index.json") { publishStatic(output("x"), site, app.publicHex) }
+    assertEquals(4, publishStatic(output("x"), site, app.publicHex, init = true).version)
+    // From then on the index is there and --init is not needed.
+    assertEquals(5, publishStatic(output("y"), site, app.publicHex).version)
+  }
+
+  @Test
+  fun anOutDirectoryInsideTheCompileOutputIsRefused() {
+    val out = output("o")
+    val before = out.walkTopDown().map { it.relativeTo(out).path }.toSet()
+    val e = assertFailsWith<PublishRefused> { publishStatic(out, File(out, "site"), app.publicHex, init = true) }
+    assertTrue("inside the compile output" in e.message!!, e.message)
+    assertEquals(before, out.walkTopDown().map { it.relativeTo(out).path }.toSet())
+  }
+
+  @Test
+  fun aSecondPublishHoldingTheLockIsRefusedWithoutASigningHint() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    java.nio.channels.FileChannel.open(
+      File(bundles, ".publish.lock").toPath(),
+      java.nio.file.StandardOpenOption.WRITE,
+    ).use { ch ->
+      ch.lock().use {
+        val two = output("two")
+        val before = snapshot()
+        val e = assertFailsWith<PublishRefused> { publishStatic(two, site, app.publicHex) }
+        assertTrue(".publish.lock" in e.message!!, e.message)
+        assertFalse(e.aboutSigning)
+        assertEquals(before, snapshot())
+      }
+    }
+  }
+
+  @Test
+  fun refusalsSayWhetherTheBundleItselfWasTheProblem() {
+    val unsigned = assertFailsWith<PublishRefused> { publishStatic(output("u", by = null), site, app.publicHex, init = true) }
+    assertTrue(unsigned.aboutSigning)
+    val noIndex = assertFailsWith<PublishRefused> { publishStatic(output("n"), site, app.publicHex) }
+    assertFalse(noIndex.aboutSigning)
   }
 
   private fun assertRefusedAndNothingWritten(expect: String, publish: () -> Unit) {
@@ -128,22 +176,22 @@ class StaticPublishTest {
 
   @Test
   fun anUnsignedBundleIsRefusedAndNoDirectoryIsCreated() {
-    assertRefusedAndNothingWritten("UNSIGNED") { publishStatic(output("u", by = null), site, app.publicHex) }
+    assertRefusedAndNothingWritten("UNSIGNED") { publishStatic(output("u", by = null), site, app.publicHex, init = true) }
     assertFalse(site.exists())
   }
 
   @Test
   fun aBundleSignedByAnotherKeyIsRefusedAndTheIndexIsUnchanged() {
-    publishStatic(output("one"), site, app.publicHex)
+    publishStatic(output("one"), site, app.publicHex, init = true)
     assertRefusedAndNothingWritten("does not verify") { publishStatic(output("f", by = key()), site, app.publicHex) }
   }
 
   @Test
   fun anIncompleteOrAlteredBundleIsRefused() {
     val missing = output("m").also { File(it, "lib.zipline").delete() }
-    assertRefusedAndNothingWritten("missing") { publishStatic(missing, site, app.publicHex) }
+    assertRefusedAndNothingWritten("missing") { publishStatic(missing, site, app.publicHex, init = true) }
     val altered = output("a").also { File(it, "lib.zipline").appendText("x") }
-    assertRefusedAndNothingWritten("signed manifest says") { publishStatic(altered, site, app.publicHex) }
+    assertRefusedAndNothingWritten("signed manifest says") { publishStatic(altered, site, app.publicHex, init = true) }
   }
 
   @Test
@@ -152,13 +200,16 @@ class StaticPublishTest {
     val m = File(out, "manifest.zipline.json")
     val signed = app.signer.sign(ZiplineManifest.decodeJson(m.readText().replace("\"lib.zipline\"", "\"../lib.zipline\""))).encodeJson()
     m.writeText(signed)
-    assertRefusedAndNothingWritten("outside the bundle directory") { publishStatic(out, site, app.publicHex) }
+    assertRefusedAndNothingWritten("outside the bundle directory") { publishStatic(out, site, app.publicHex, init = true) }
   }
 
   @Test
   fun anIndexThisToolCannotReadIsRefusedNotOverwritten() {
     bundles.mkdirs()
-    for (bad in listOf("not json", """{"format":2,"entries":[]}""", """{"format":1}""", """{"format":1,"entries":[{"version":1}]}""")) {
+    val twoAtSequence3 = """{"format":1,"entries":[{"sequence":3,"version":1},{"sequence":3,"version":2}]}"""
+    val twoForV1 = """{"format":1,"entries":[{"sequence":1,"version":1},{"sequence":2,"version":1}]}"""
+    val outOfRange = """{"format":1,"entries":[{"sequence":1,"version":2147483647}]}"""
+    for (bad in listOf("not json", """{"format":2,"entries":[]}""", """{"format":1}""", """{"format":1,"entries":[{"version":1}]}""", twoAtSequence3, twoForV1, outOfRange)) {
       File(bundles, INDEX_FILE).writeText(bad)
       assertRefusedAndNothingWritten("index.json") { publishStatic(output("i"), site, app.publicHex) }
     }
@@ -166,8 +217,8 @@ class StaticPublishTest {
 
   @Test
   fun aChannelNameIsChecked() {
-    assertRefusedAndNothingWritten("channel") { publishStatic(output("c"), site, app.publicHex, channel = "../beta") }
-    assertEquals("beta", publishStatic(output("b"), site, app.publicHex, channel = "beta").entry["channel"]!!.jsonPrimitive.content)
+    assertRefusedAndNothingWritten("channel") { publishStatic(output("c"), site, app.publicHex, channel = "../beta", init = true) }
+    assertEquals("beta", publishStatic(output("b"), site, app.publicHex, channel = "beta", init = true).entry["channel"]!!.jsonPrimitive.content)
   }
 
   @Test
@@ -179,6 +230,13 @@ class StaticPublishTest {
       File(dir, "meta.json").writeText("""{"version":$v,"widgetVersion":1,"capabilities":[$caps],"createdAt":1759838400000}""")
     }
     File(store, "v9-not-a-bundle").mkdirs()
+    // Publishes that did not finish (the relay writes meta.json last), and a meta.json without an
+    // integer widgetVersion: /bundles/latest never picks these, so the index must not list them.
+    output("r3").copyRecursively(File(store, "v3"))
+    output("r4").copyRecursively(File(store, "v4"))
+    File(store, "v4/meta.json").writeText("""{"version":4,"capabilities":[]}""")
+    output("r5").copyRecursively(File(store, "v5"))
+    File(store, "v5/meta.json").writeText("not json")
     val idx = Json.parseToJsonElement(relayIndexJson(store)).jsonObject
     val e = idx["entries"]!!.jsonArray.map { it.jsonObject }
     assertEquals(listOf(1L, 2L), e.map { it["sequence"]!!.jsonPrimitive.content.toLong() })
@@ -201,7 +259,10 @@ class StaticPublishTest {
     val out = File(tmp, "cli-site").path
 
     var built = emptyList<String>()
-    val ok = KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { dir, task ->
+    // Without the live index (or --init) nothing is built or published.
+    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _ -> error("built") })
+    assertFalse(File(out).exists())
+    val ok = KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path, "--init"), null) { dir, task ->
       built = listOf(dir.path, task); 0
     }
     assertEquals(0, ok)

@@ -144,7 +144,16 @@ the new key starts with an empty cache instead of one it cannot verify. That
 key-change path is reasoned from Zipline's source, not run on a device.
 
 When the lookup answers but the bundle itself then fails to download or verify,
-nothing falls back to the cache: that launch shows no bundle.
+nothing falls back to the cache: that launch shows no bundle. With a static
+server, that includes:
+- an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
+  overwritten, or a stale CDN copy);
+- a `v<N>/` that isn't there yet because the index was uploaded first.
+
+Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
+guide's "Publish from CI to a static server"). Falling back to the last good
+bundle after such a failure is planned (W5 in Keliver's
+`docs/DELIVERY_PLAN.md`).
 
 **Not protected: rollback.** Any bundle signed with your key is accepted,
 including an older one. Whoever controls the bundle server can serve a previous
@@ -180,9 +189,11 @@ It behaves like the Android host in §2:
   `HostConfig.kt`. Without a valid key the host fetches nothing and shows a
   refusal. There is no unverified fallback.
 - **Startup.** The lookup runs first (10 s), then Zipline's verified cache when
-  the lookup fails, then "No bundle". There is one Zipline cache per key, and
-  manifest URLs are followed only on the bundle server's origin. (Zipline's
-  downloads follow HTTP redirects, as on Android.)
+  the lookup fails, then "No bundle". As on Android, a bundle that the lookup
+  names but that then fails to load (a download error, or a `manifestSha256`
+  mismatch) shows "No bundle" even with a cached one; see §2. There is one
+  Zipline cache per key, and manifest URLs are followed only on the bundle
+  server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
   set. Paths can't climb out of it; a method that isn't a plain token, or a
   header holding CR or LF, is refused; hop-by-hop headers are dropped; and

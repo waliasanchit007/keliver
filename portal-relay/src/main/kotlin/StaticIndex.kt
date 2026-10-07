@@ -40,8 +40,16 @@ private val CHANNEL_RE = Regex("[a-z0-9][a-z0-9-]{0,31}")
 private val VERSION_DIR_RE = Regex("v([1-9][0-9]{0,8})")
 private val prettyJson = Json { prettyPrint = true }
 
-/** A publish that was refused before anything was written. */
-internal class PublishRefused(message: String) : Exception(message)
+/**
+ * A publish that was refused before anything was published. [aboutSigning] is
+ * true when the bundle itself was the problem (unsigned, another key,
+ * incomplete), so the CLI adds how signing works; a lock or index problem is
+ * not about signing.
+ */
+internal class PublishRefused(message: String, val aboutSigning: Boolean = false) : Exception(message)
+
+/** The highest bundle number a `v<N>` directory can carry (VERSION_DIR_RE). */
+private const val MAX_VERSION = 999_999_999
 
 internal fun sha256Hex(bytes: ByteArray): String =
   MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
@@ -87,11 +95,20 @@ internal fun readIndex(bundlesDir: File): JsonObject {
   val format = (root["format"] as? JsonPrimitive)?.intOrNull
   if (format != INDEX_FORMAT) throw PublishRefused("$f has format $format; this tool writes format $INDEX_FORMAT only")
   val entries = root["entries"] as? JsonArray ?: throw PublishRefused("$f has no entries array; it was left as it is")
+  val sequences = HashSet<Long>()
+  val versions = HashSet<Int>()
   entries.forEachIndexed { i, e ->
     val o = e as? JsonObject ?: throw PublishRefused("$f entry $i is not an object")
-    if ((o["sequence"] as? JsonPrimitive)?.longOrNull == null || (o["version"] as? JsonPrimitive)?.intOrNull == null) {
+    val sequence = (o["sequence"] as? JsonPrimitive)?.longOrNull
+    val version = (o["version"] as? JsonPrimitive)?.intOrNull
+    if (sequence == null || version == null) {
       throw PublishRefused("$f entry $i has no integer sequence and version; it was left as it is")
     }
+    if (sequence < 1 || version < 1 || version > MAX_VERSION) {
+      throw PublishRefused("$f entry $i has sequence $sequence and version $version, outside 1..$MAX_VERSION; it was left as it is")
+    }
+    if (!sequences.add(sequence)) throw PublishRefused("$f has two entries with sequence $sequence; it was left as it is")
+    if (!versions.add(version)) throw PublishRefused("$f has two entries for v$version; it was left as it is")
   }
   return root
 }
@@ -125,7 +142,15 @@ internal data class StaticPublish(val version: Int, val sequence: Long, val dir:
  *
  * Refused — with nothing written, not even the `bundles/` directory — when the
  * output is unsigned, signed by another key, or incomplete, when the existing
- * index can't be read, or when another publish holds the lock.
+ * index can't be read, when [outDir] lies inside [output], or when there is no
+ * `bundles/index.json` and [init] is false. A static site's live index is the
+ * only record of the sequence and of the `v<N>` numbers already served, so
+ * publishing into an empty directory would start again at v1 and overwrite
+ * them when uploaded: CI must download the live `bundles/` first, and only the
+ * very first publish passes `--init`.
+ *
+ * When another publish holds the lock it is refused too; only the lock file
+ * `bundles/.publish.lock` may then have been created.
  */
 internal fun publishStatic(
   output: File,
@@ -134,22 +159,43 @@ internal fun publishStatic(
   channel: String = DEFAULT_CHANNEL,
   capabilities: List<String> = emptyList(),
   now: Instant = Instant.now(),
+  init: Boolean = false,
 ): StaticPublish {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
-  staticOutputProblem(output, publicKeyHex)?.let { throw PublishRefused(it) }
+  val outputRoot = output.canonicalFile.toPath()
+  if (outDir.canonicalFile.toPath().startsWith(outputRoot)) {
+    throw PublishRefused("--out $outDir is inside the compile output $output; choose a directory outside it")
+  }
+  staticOutputProblem(output, publicKeyHex)?.let { throw PublishRefused(it, aboutSigning = true) }
   val bundlesDir = File(outDir, "bundles")
+  if (!File(bundlesDir, INDEX_FILE).exists() && !init) {
+    throw PublishRefused(
+      "there is no ${File(bundlesDir, INDEX_FILE)}. Publishing continues the LIVE index: download the " +
+        "served bundles/index.json and every bundles/v<N>/ into $outDir first, or v1 and the sequence would " +
+        "start again and overwrite what hosts already load. Only for the very first publish, pass --init.",
+    )
+  }
   // Read (and so validate) the index before creating anything.
   readIndex(bundlesDir)
 
   bundlesDir.mkdirs()
   FileChannel.open(File(bundlesDir, ".publish.lock").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
-    val lock = ch.tryLock() ?: throw PublishRefused("another keliver-publish is writing $bundlesDir")
+    // tryLock() answers null when another process holds the lock, and throws when another channel
+    // in this JVM does; both are the same refusal.
+    val lock = runCatching { ch.tryLock() }.getOrElse { e ->
+      if (e is java.nio.channels.OverlappingFileLockException) null else throw e
+    } ?: throw PublishRefused(
+      "another keliver-publish holds $bundlesDir/.publish.lock. Wait for it to finish (in CI, serialise " +
+        "publishes with a concurrency group), then publish again.",
+    )
     try {
       val index = readIndex(bundlesDir) // again, under the lock
       val entries = (index["entries"] as JsonArray).map { it as JsonObject }
       val dirVersions = bundlesDir.listFiles { f -> f.isDirectory }.orEmpty()
         .mapNotNull { VERSION_DIR_RE.matchEntire(it.name)?.groupValues?.get(1)?.toInt() }
-      val version = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull()?.plus(1) ?: 1
+      val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
+      if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
+      val version = highest + 1
       val sequence = (entries.maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! } ?: 0L) + 1
 
       val dest = File(bundlesDir, "v$version")
@@ -157,7 +203,9 @@ internal fun publishStatic(
       try {
         output.copyRecursively(staging, overwrite = false)
         // What was copied must still be what was verified.
-        staticOutputProblem(staging, publicKeyHex)?.let { throw PublishRefused("the copy in $staging failed its check: $it") }
+        staticOutputProblem(staging, publicKeyHex)?.let {
+          throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
+        }
         Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
       } finally {
         if (staging.exists()) staging.deleteRecursively()
@@ -189,6 +237,11 @@ private fun writeAtomically(target: File, text: String) {
  * store's `v<N>/meta.json` and manifests, so a host built from the current
  * templates reads one protocol from the relay and from a static server.
  * Sequence = version: the relay numbers its bundles in publish order.
+ *
+ * A `v<N>` without a manifest, or without a readable `meta.json` holding an
+ * integer `widgetVersion`, is left out, as `/bundles/latest` never picks one:
+ * the relay copies the bundle first and writes meta.json last, so such a
+ * directory is a publish that did not finish.
  */
 internal fun relayIndexJson(bundlesDir: File): String {
   val entries = bundlesDir.listFiles { f -> f.isDirectory }.orEmpty()
@@ -197,9 +250,11 @@ internal fun relayIndexJson(bundlesDir: File): String {
     .mapNotNull { (version, dir) ->
       val manifest = File(dir, "manifest.zipline.json").takeIf { it.isFile } ?: return@mapNotNull null
       val meta = runCatching { Json.parseToJsonElement(File(dir, "meta.json").readText()) as JsonObject }.getOrNull()
-      val caps = (meta?.get("capabilities") as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }.orEmpty()
-      val created = (meta?.get("createdAt") as? JsonPrimitive)?.longOrNull?.let(Instant::ofEpochMilli) ?: Instant.EPOCH
-      val widgetVersion = (meta?.get("widgetVersion") as? JsonPrimitive)?.intOrNull ?: PUBLISHED_WIDGET_VERSION
+        ?: return@mapNotNull null
+      val widgetVersion = (meta["widgetVersion"] as? JsonPrimitive)
+        ?.takeUnless { it.isString }?.intOrNull ?: return@mapNotNull null
+      val caps = (meta["capabilities"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }.orEmpty()
+      val created = (meta["createdAt"] as? JsonPrimitive)?.longOrNull?.let(Instant::ofEpochMilli) ?: Instant.EPOCH
       JsonObject(
         entryJson(version.toLong(), version, DEFAULT_CHANNEL, caps, sha256Hex(manifest.readBytes()), created) +
           ("widgetVersion" to JsonPrimitive(widgetVersion)),
