@@ -80,6 +80,18 @@ your store resolves, any key that is not its `ed25519.pub`. Refuses without
 changing anything if an input is wrong or `host-android/` exists. A release
 build needs `https://` servers and your own signing config.
 
+### scripts/keliver-new-ios-host.sh (not yet in a released bundle)
+
+```bash
+keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO build
+```
+
+Writes `host-ios/`: your app's production iOS host, a Kotlin framework on Maven
+Central plus an Xcode app. It applies the same key checks and refusals as
+`keliver-new-production-host.sh`. `host/README.md` §3 has what it does.
+
 ### bin/keliver-new-publish-target.sh
 
 ```bash

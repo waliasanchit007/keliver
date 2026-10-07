@@ -24,7 +24,10 @@ artifact, uploaded byte for byte. It was checked four ways:
 3. by a **download-back of the draft**, which the releasing machine's network
    allowed this time, unlike for 0.3.5 (90,412,020 bytes, `fac98912…`);
 4. after publishing, by the **public** URL, with `shasum -c` against the
-   release's own `.sha256`: `OK`.
+   release's own `.sha256`: `OK`. It passed from this machine, and again from
+   a GitHub-hosted runner, together with the pinned hash and the
+   `sourceCommit` (`ios-host.yml` run `37597390396`, step "Download the
+   PUBLIC tools 0.3.6 release").
 
 Before tagging, the workflow list showed an active `release.yaml`. It is
 upstream Redwood's, deleted from the tree in `85ce05714`, and absent at the

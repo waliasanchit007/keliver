@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 39199cff…
+KeliverHost: bundle lookup failed: Could not connect to the server.
+KeliverHost: lookup failed; starting from the cached bundle (last loaded from http://localhost:8077/bundles/v2/manifest.zipline.json)
+KeliverHost: codeLoadSuccess modules=40

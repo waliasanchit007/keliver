@@ -241,6 +241,24 @@ against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
 `DEVICE_HOST.md` §2 has the options and what the host refuses.
 
+**iOS.** `keliver-new-ios-host.sh` writes `host-ios/`: the same production
+host, for iOS. It is a Kotlin framework built from Maven Central plus an Xcode
+app around it. **It is not in a released tools bundle yet**; until it is, it is
+`scripts/keliver-new-ios-host.sh` in the Keliver repository. It needs macOS
+with Xcode.
+
+```bash
+$KP/keliver-new-ios-host.sh --bundle-server http://localhost:8077    # a simulator on this Mac reaching your relay
+xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO build                  # or open it in Xcode
+```
+
+Your portal's public key and the servers go into
+`host-ios/src/iosMain/kotlin/<package>/HostConfig.kt`; commit that file. A
+release build refuses `http://`. A device build needs your team and signing
+(`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
+details.
+
 ## Preview mocks are not runtime values
 
 The editor's preview and the running app show different things, deliberately.

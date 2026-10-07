@@ -41,11 +41,12 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, runs `35802020305`, `35803336957` |
 | production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23, runs `35800642819`, `35802020305`, `35803336957` |
 | production OTA on a host **scaffolded** by `keliver-new-production-host.sh` and built from Maven Central only: signed v1 → v2, foreign key rejected, offline start from the verified cache (P1–P7) | `reference/inventory` | CI emulator, API 33 x86_64; scaffolder unreleased (PR #85) | 2026-10-06, run `37505534432` |
+| production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (unreleased), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7) | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, run `37597390396` |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
 
-Not demonstrated for any current artifact: a physical Android device, arm64
-execution, and iOS for the reference app.
+Not demonstrated for any current artifact: a physical Android device or iPhone, and
+Android arm64 execution. The reference app's iOS route runs on simulators only.
 
 **Unresolved defects:** U19 (live-preview re-render, cause unresolved); U20
 (editor frame rate, measured not assessed); U30 (Android `syncPortalKey`

@@ -1,0 +1,3 @@
+KeliverHost: verifying manifests with portal-ed25519 39199cff…
+KeliverHost: loading http://localhost:8077/bundles/v2/manifest.zipline.json
+KeliverHost: codeLoadSuccess modules=40

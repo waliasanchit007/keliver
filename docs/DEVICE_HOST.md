@@ -147,7 +147,7 @@ nothing falls back to the cache: that launch shows no bundle.
 including an older one. Whoever controls the bundle server can serve a previous
 signed version (over `http://`, so can anyone on the path).
 
-**Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
+**The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
 `publishTask`/`publishOutput` for your app and appends the signing block to your
 `build.gradle`, below `kotlin {}`. `POST /publish` then stores a bundle only if
@@ -157,3 +157,57 @@ yourself:** your own signing config for a release APK.
 
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.
+
+## 3. Your own production iOS host
+
+`keliver-new-ios-host.sh` (run from the app root, on macOS with Xcode) writes
+`host-ios/`:
+- **a Kotlin framework** (`KeliverHost`), a standalone Gradle build on Maven
+  Central only;
+- **an Xcode app** whose build phase runs
+  `./gradlew -p host-ios embedAndSignAppleFrameworkForXcode`. Its
+  `PRODUCT_NAME` must differ from `KeliverHost`; the scaffolder sees to that.
+
+```bash
+keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+```
+
+It behaves like the Android host in §2:
+- **Production-only.** Every manifest must verify against the public key in
+  `HostConfig.kt`. Without a valid key the host fetches nothing and shows a
+  refusal. There is no unverified fallback.
+- **Startup.** The lookup runs first (10 s), then Zipline's verified cache when
+  the lookup fails, then "No bundle". There is one Zipline cache per key, and
+  manifest URLs are followed only on the bundle server's origin.
+- **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
+  set. Paths can't climb out of it, hop-by-hop headers are dropped, and
+  redirects aren't followed.
+- **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
+  through `src/nativeInterop/cinterop/sqlite3.def`.
+- **Images** load over the network (Coil with Ktor's Darwin engine).
+
+Build-time checks (`host-ios/build.gradle`):
+- `checkHostConfig` fails the build on a malformed key or server;
+- `checkReleaseUrls`, on every release framework link, refuses `http://`.
+
+`Info.plist` gets an App Transport Security exception only for the `http://`
+hosts you scaffolded with, and none for `https://`.
+
+**Measured** (`docs/superpowers/evidence/ios-host-i1/`, `ios-host-i2-local/`
+and the `ios-host.yml` CI runs), on iOS simulators:
+- signed v1 loads;
+- an edit published as v2 is followed (Inventory → Stockroom);
+- a bundle signed with another app's key is refused;
+- the host recovers when the right relay is back;
+- it starts offline from the cache;
+- no empty-URL load.
+
+**Not measured:**
+- a physical iPhone;
+- a release or App Store build;
+- HTTPS end to end;
+- HostHttp and images in a running app.
+
+**Not protected:** rollback. As on Android, any bundle signed by the key is
+accepted, including an older one.
+

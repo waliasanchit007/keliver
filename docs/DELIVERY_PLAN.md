@@ -215,28 +215,29 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | plan written | done 2026-10-07 | this file; branch `feat/ios-production-host` |
 | W1 I0 iOS feasibility from Maven Central | **done 2026-10-07**: the production host links for the simulator; 54 `dev.keliver` artifacts, all 0.3.3 from Maven Central | `docs/superpowers/evidence/ios-host-i0/` |
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
-| W1 I2 iOS CI | in progress | — |
-| W1 I3 spike fallback | not started | — |
-| W1 I4 docs + 0.3.7 | not started (needs approval to release) | — |
+| W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396` (macos-15, Xcode 16.4, iOS 26.2): self-test 43/0, P1/P2/P4–P7 30/0 | `docs/superpowers/evidence/ios-host-ci-37597390396/` |
+| W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
+| W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
 | W2–W8 | not started | — |
 
 ## Next action
 
-W1 I2: `.github/workflows/ios-host.yml` on a hosted `macos` runner, triggered
-on `pull_request` paths (it can't be dispatched before it is on `main`). It:
-1. runs the self-test with `--build`;
-2. recreates the inventory app from the public 0.3.6 release (zip hash
-   pinned);
-3. runs the bundle's device target and publish target, then this
-   repository's `keliver-new-ios-host.sh`;
-4. starts an isolated relay and publishes v1;
-5. builds and installs on a simulator, then runs iOS P-checks: v1 loads with
-   the title read by `reference/inventory/ci/ocr.swift`, no empty-URL load, a
-   v2 edit is followed, a copy's foreign key is refused, and the relay down
-   gives an offline start.
+W1 is done apart from the release. **Ask the owner** whether to cut tools 0.3.7
+with `keliver-new-ios-host.sh`, following `PORTAL_TOOLS_RELEASE.md`. Until then
+adopters use the script from this repository.
 
-Evidence goes to an artifact and then to `docs/superpowers/evidence/`. After
-I2: I3 (the spike's `NO_SIGNATURE_CHECKS` fallback) and I4 (docs).
+Then **W3**: a headless `keliver publish` CLI, plus a static signed
+`bundles/index.json` that both hosts read, so any static host or CDN works,
+with an HTTPS check in CI. Design it first:
+- the index format, with the sequence number W4 needs;
+- whether the index is signed separately or each entry carries the bundle's
+  manifest hash.
+
+iOS follow-ups, small and recorded:
+- P3 (taps) has no iOS driver;
+- the rows render content-width (REFERENCE_APP finding 7);
+- HostHttp and images aren't exercised by the inventory guest;
+- a physical iPhone, a release build and HTTPS (W7).
 
 ## Standing constraints (from the owner; they apply to every step)
 
