@@ -12,7 +12,10 @@
 #   S7  server down: the host starts from its cached v2
 # Signing here is the CI route: KELIVER_SIGNING_KEY_FILE names the key, and
 # KELIVER_TOOLS_BIN points at nothing, so a build that fell back to a store
-# lookup would fail instead of signing.
+# lookup would fail instead of signing. The app was wired by the published
+# 0.3.7 zip, whose signing block predates KELIVER_SIGNING_KEY_FILE; so first
+# this checkout's keliver-new-publish-target.sh upgrades it (W3's block, not in
+# a released bundle yet). That is also the 0.3.7 -> current upgrade, on CI.
 
 echo "--- 4. W3: static HTTPS, no relay"
 W3="$WORK/w3"
@@ -20,6 +23,13 @@ bash "$HERE/w3/android-ca.sh" "$SERIAL" "$W3_TLS/ca.pem" > "$EV/w3-android-ca.lo
   && ok "W3: the throwaway CA is trusted by this emulator (system store, until reboot)" \
   || { bad "W3: the CA could not be installed"; cat "$EV/w3-android-ca.log"; }
 cp "$W3_TLS/ca.pem" "$EV/w3-ca.pem"
+
+( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/w3-signing-upgrade.log" 2>&1 \
+  && grep -q '(signing-0.3.7) was replaced by the current one' "$EV/w3-signing-upgrade.log" \
+  && grep -q 'keliver.signingKeyFile' "$APP/build.gradle" \
+  && ( cd "$APP" && git add build.gradle && git -c user.name=w3 -c user.email=w3@invalid commit -qm "W3: the signing block that reads KELIVER_SIGNING_KEY_FILE" ) \
+  && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's 0.3.7 signing block" \
+  || { bad "W3: upgrading the 0.3.7 signing block"; cat "$EV/w3-signing-upgrade.log"; }
 
 SCREEN="$APP/src/jsMain/kotlin/screens/inventory.kt"
 w3_title(){  # $1 from, $2 to: the edit a developer makes; no relay involved
