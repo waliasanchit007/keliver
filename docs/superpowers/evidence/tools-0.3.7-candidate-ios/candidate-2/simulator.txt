@@ -1,0 +1,1 @@
+simulator: DC243251-B260-412A-BBB0-700D5C1B8406 (com.apple.CoreSimulator.SimRuntime.iOS-26-4 com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)

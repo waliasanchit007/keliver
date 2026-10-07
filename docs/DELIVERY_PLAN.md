@@ -217,7 +217,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
 | W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
-| W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
+| W1 I4 docs + 0.3.7 | **0.3.7 candidate 2 verified 2026-10-07; awaiting the owner's go to tag.** Source `ce9a9660`; zip `0808e144…` (90,443,206 bytes); APK `d2b5b0bf…`. Build `37632305427`; device `37635257054` (19/0, 28/0); local artifact check; tag-push workflow check; `ios.sh` against the candidate zip with its bundled scaffolder, 30/0. Candidate 1 (`2ff3b269`, zip `222ba0a1…`) is superseded, because the independent review found doc errors in the bundle: **never tag it**. | `release/portal-tools-0.3.7`, PR #89; `docs/RELEASE_NOTES_TOOLS_0.3.7.md` |
 | W2–W8 | not started | — |
 
 ## Next action
@@ -225,8 +225,19 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 **On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
 release and W3.**
 
-**Track A: tools 0.3.7.** Ship `keliver-new-ios-host.sh`, following
-`docs/PORTAL_TOOLS_RELEASE.md`.
+**Track A: tools 0.3.7.** Verified; waiting only for the owner's explicit
+go. On a go, follow `docs/PORTAL_TOOLS_RELEASE.md` steps 3–5 for **candidate 2
+only**:
+- tag `portal-tools-v0.3.7` → `ce9a966042dbcdefad7b2dc06e3200f3bf418ea9`;
+- attach the zip from build run `37632305427` (artifact `11489395242`, zip
+  sha256 `0808e144…`) plus its `.sha256`;
+- create it as a draft, check the digest, download it back, publish with
+  `--latest=false`, and check the public URL;
+- then the post-release record: CLAUDE.md, `PORTAL_TOOLS_RELEASE.md`,
+  `CURRENT_STATE.md` and `ROADMAP.md` (the iOS rows say "unreleased"), and the
+  notes' status.
+
+What was done for the candidate:
 - Branch `release/portal-tools-0.3.7` from `feat/ios-production-host` (PR #88).
 - Bump `build-support/portal-tools.version`, and the adopter guide's download
   block (step 0).
