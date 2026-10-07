@@ -269,14 +269,20 @@ and kept under "Completed priorities" below.
    and it unblocks item 1's "does it work" question for every adopter.
 3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:
    `0644` under a default umask, measured on macOS and Linux; `ensureKeys()`
-   uses `File.writeText`). Security; small, but it touches every existing store.
-   Alongside it, U28: the production host logs a false `codeLoadFailed` on every
-   start.
+   uses `File.writeText`). **Fixed, not released** (with U29, half a key pair
+   silently regenerated): new keys are owner-only from creation, and an existing
+   exposed key is reported and refused for publishing but never changed. What
+   remains is a tools release. Alongside it, U28: the production host logs a
+   false `codeLoadFailed` on every start.
 4. **#77 — the iOS host's key generation is not hardened like Android's.**
-   Now reproduced, not fixed: a file planted in `generatePortalKey`'s output
-   survives an UP-TO-DATE run, is compiled into the module, and reaches a linked
-   debug simulator framework (`superpowers/evidence/issue-77/`). This machine
-   can build iOS, so the fix can land with both boundaries verified. Bounded.
+   Reproduced, then **fixed** (unreleased): `generatePortalKey` empties its
+   directory without following links, fails loudly on anything it cannot
+   delete, checks the result and runs every time. Measured on a warm debug
+   simulator framework: the planted source no longer reaches the klib or the
+   framework, and the key constant is unchanged
+   (`superpowers/evidence/issue-77/`). Release and `iosArm64` not measured; the
+   missing `devOnlyHost` short-circuit on iOS is unchanged. The review found the
+   same deletion flaw in Android's `syncPortalKey` (U30, open).
 5. **U19 (live-preview re-render; cause unresolved) and U20 (editor frame rate;
    measured, not assessed)** — open. The reference app's Live preview passed its
    21 checks (14 of them canvas taps), which read the canvas and the State
