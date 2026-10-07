@@ -1,0 +1,7 @@
+// The production host's app identity. Set TEAM_ID (and your signing) for device builds;
+// simulator builds need none.
+TEAM_ID=
+PRODUCT_NAME=KeliverApp
+PRODUCT_BUNDLE_IDENTIFIER=dev.keliver.measure.host
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0

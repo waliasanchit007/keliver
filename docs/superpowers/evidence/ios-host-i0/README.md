@@ -22,8 +22,24 @@ scaffold:
 - `HostHttp` over `NSURLSession` with the Android path and header rules, and
   redirects refused.
 
-**Not shown here:** that it RUNS. No app was built, nothing was installed on a
-simulator, and no bundle was loaded. That is I1 and I2. The SQL host is
+**Then it ran (I1 groundwork, same day).** An Xcode shell (`app/`, adapted
+from `portal-device-ios-app`) builds the framework through
+`./gradlew embedAndSignAppleFrameworkForXcode`, with no development team
+hard-coded. `xcodebuild -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO` gave
+`BUILD SUCCEEDED` (`xcodebuild-result.txt`).
+- On a **disposable** iPhone 17 Pro simulator (iOS 26.4, created for the run
+  and deleted afterwards), the app logged `verifying manifests with
+  portal-ed25519 abababab…` and `bundle lookup failed: Could not connect to
+  the server`, and showed **"No bundle"** (`run-no-server.console.txt`,
+  `run-no-server.png`). The screenshot is a real image (189 colours), unlike
+  the Android emulator's.
+- Found on the way: an app whose `PRODUCT_NAME` equals the framework's
+  `baseName` (`KeliverHost`) makes Swift ignore `import KeliverHost`. The
+  scaffolder must keep them distinct.
+
+**Still not shown:** a signed bundle loading, a foreign key refused, an
+offline start from the cache. That needs a relay with a published bundle: the
+rest of I1, then I2 in CI. The SQL host is
 still the spike's in-memory one, and images have no network fetcher. The
 debug static framework is 339 MB.
 

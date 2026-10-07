@@ -1,0 +1,3 @@
+KeliverHost: verifying manifests with portal-ed25519 abababab…
+KeliverHost: bundle lookup failed: Could not connect to the server.
+dev.keliver.measure.host: 87536
