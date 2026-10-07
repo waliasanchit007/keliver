@@ -1137,11 +1137,18 @@ fun main(args: Array<String>) {
     }
   }
 
-  // /bundles/latest?widgetVersion=W -> newest compatible bundle; /bundles/vN/<file> -> static.
+  // /bundles/index.json -> every bundle (W3); /bundles/latest?widgetVersion=W -> newest compatible
+  // bundle (hosts from tools 0.3.7 and earlier); /bundles/vN/<file> -> static.
   server.createContext("/bundles") { ex ->
     handle(ex) {
       val path = ex.requestURI.path.removePrefix("/bundles").trimStart('/')
       when {
+        // W3: the static-layout index (StaticIndex.kt), generated from this store,
+        // so hosts built from the current templates read one protocol everywhere.
+        path == INDEX_FILE -> {
+          ex.responseHeaders.add("Cache-Control", "no-cache")
+          respond(ex, 200, relayIndexJson(bundlesDir))
+        }
         path == "latest" -> {
           val q = query(ex)
           val want = q["widgetVersion"]?.toIntOrNull() ?: Int.MAX_VALUE

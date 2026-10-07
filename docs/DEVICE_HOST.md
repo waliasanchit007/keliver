@@ -94,10 +94,13 @@ from then on:
   portal store (`keys/ed25519.pub`; `bin/keliver-store-path.sh <app>` prints
   where that is), or from `--public-key-file`. It never reads the private key.
   A missing or malformed key fails the build;
-- **your servers** — `--bundle-server` (the relay's `/bundles` API, or anything
-  implementing it: `GET /bundles/latest?widgetVersion=&caps=` answers with the
-  newest bundle compatible with those capabilities, which a static file server
-  cannot do as-is) and, optionally, `--api-base-url`, which gives guests the
+- **your servers** — `--bundle-server`: the host reads
+  `<server>/bundles/index.json` and picks the newest bundle it can run. That is
+  the file `keliver-publish` writes, so any static server or CDN works; the
+  relay serves it too. Only when the index is a 404 — a relay from tools 0.3.7
+  or earlier — does the host ask the relay's
+  `GET /bundles/latest?widgetVersion=&caps=` instead. (Hosts scaffolded before
+  this change know only `/bundles/latest`, so they need the relay.) Optionally, `--api-base-url`, which gives guests the
   `HostHttp` capability over real HTTP, confined to that base (no `..`, no
   redirects, no guest `Host` header). Both live in
   `host-android/gradle.properties`. An `http://` server turns on cleartext

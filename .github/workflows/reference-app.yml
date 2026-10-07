@@ -5,7 +5,8 @@
 # scripts/keliver-new-production-host.sh, whose templates (the host's own
 # Kotlin) are not yet in a published tools bundle. ci/ and the isolation guard
 # are this checkout's as well. Checked on an emulator: the development route, a D14 layout edit, and
-# production OTA with app-owned disposable keys.
+# production OTA with app-owned disposable keys. Then W3: keliver-publish (built
+# from this checkout) into a static HTTPS server, with no relay.
 #
 # This is dogfooding, not adoption: the app is ours.
 #
@@ -17,7 +18,20 @@ name: reference-app
 # which is a check of the adopter route, not of every commit.
 on:
   pull_request:
-    paths: ["reference/**", ".github/workflows/reference-app.yml"]
+    # The production host's templates, the publishing route and keliver-publish
+    # (W3) are what the emulator checks exercise, so changes to them run it too.
+    paths:
+      - "reference/**"
+      - ".github/workflows/reference-app.yml"
+      - "scripts/templates/production-host/**"
+      - "scripts/templates/publish/**"
+      - "scripts/keliver-new-production-host.sh"
+      - "scripts/keliver-new-publish-target.sh"
+      - "scripts/keliver-publish"
+      - "scripts/keliver-publish-selftest.sh"
+      - "portal-relay/src/main/kotlin/StaticIndex.kt"
+      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - "portal-relay/src/main/kotlin/PublishSignature.kt"
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -59,6 +73,13 @@ jobs:
             "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.5.zip"
           # Free the app's Gradle daemon before the emulator starts.
           (cd "$RUNNER_TEMP/ref/boot/inventory" && ./gradlew --stop) || true
+
+      - name: keliver-publish self-test (W3), against the relay install prepare.sh built
+        run: |
+          set -o pipefail
+          bash scripts/keliver-publish-selftest.sh "$RUNNER_TEMP/publish-selftest" \
+            --relay-home "$GITHUB_WORKSPACE/portal-relay/build/install/portal-relay" \
+            | tee "$GITHUB_WORKSPACE/evidence/keliver-publish-selftest.txt"
 
       - name: Enable KVM
         run: |

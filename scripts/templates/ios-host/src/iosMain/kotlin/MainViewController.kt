@@ -7,8 +7,12 @@
  *   key (HostConfig.kt); without a valid key nothing is fetched at all. There
  *   is no development path and no unverified fallback.
  * - The bundle lookup runs FIRST, with a short timeout, and the Treehouse app
- *   is created only once its answer is known (no empty-URL load: U28).
- *   - lookup answers: load the newest compatible bundle; Zipline pins it.
+ *   is created only once its answer is known (no empty-URL load: U28). It
+ *   reads <server>/bundles/index.json (BundleIndex.kt), which keliver-publish
+ *   writes for any static server or CDN and the relay serves; only on a 404 for
+ *   it (a relay from tools 0.3.7 or earlier) does it ask /bundles/latest.
+ *   - lookup answers: load the newest compatible bundle, its manifest held to
+ *     the sha256 the index gives; Zipline pins it.
  *   - lookup fails and a bundle loaded before: start from Zipline's cache. In
  *     Zipline 1.22 the cache is read only BEFORE the network and only when the
  *     FreshnessChecker accepts it, so this start, and only this one, accepts
@@ -130,43 +134,74 @@ private suspend fun startHost(): HostState {
   }
   // Set once a bundle has loaded from the network; only on the CURRENT server's origin.
   val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(LAST_GOOD_MANIFEST)?.takeIf { server.owns(it) }
-  val latest = latestManifestUrl(server, capabilities)
+  val latest = lookupBundle(server, capabilities)
   return when {
     latest != null -> {
-      log("loading $latest")
-      HostState.Running(createApp(trust, latest, DefaultFreshnessCheckerNotFresh, apiBase))
+      log("loading ${latest.manifestUrl} (${latest.source})")
+      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, DefaultFreshnessCheckerNotFresh, apiBase))
     }
     lastGood != null -> {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood)")
-      HostState.Running(createApp(trust, lastGood, AcceptCachedBundle, apiBase))
+      HostState.Running(createApp(trust, lastGood, null, AcceptCachedBundle, apiBase))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.")
   }
 }
 
-/** The newest compatible bundle's manifest URL, on the bundle server's own origin, or null. */
-private suspend fun latestManifestUrl(server: BundleServer, capabilities: List<String>): String? = runCatching {
-  val lookup = "${server.base}/bundles/latest?widgetVersion=1&caps=${percentEncode(capabilities.joinToString(","))}"
+/** The bundle to load: its manifest URL, the sha256 the index holds it to (null from the relay's legacy lookup), and where it came from. */
+private class Lookup(val manifestUrl: String, val manifestSha256: String?, val source: String)
+
+/**
+ * The newest compatible bundle on the bundle server, or null. Reads
+ * bundles/index.json; on a 404 for it, asks the relay's bundles/latest. Either
+ * way the manifest must be on the bundle server's own origin.
+ */
+private suspend fun lookupBundle(server: BundleServer, capabilities: List<String>): Lookup? = runCatching {
   // Short: offline, this decides how long the app waits before it starts from the cache.
+  val (status, body, _) = send(NSURLSession.sharedSession, getRequest("${server.base}/bundles/index.json", timeoutSeconds = 10.0))
+  if (status == 404) {
+    log("no bundles/index.json at ${server.base}; asking bundles/latest (a relay from tools 0.3.7 or earlier)")
+    return@runCatching legacyLatest(server, capabilities)
+  }
+  if (status !in 200 until 300) {
+    log("bundle index: HTTP $status")
+    return@runCatching null
+  }
+  val pick = pickFromIndex(body.utf8(), capabilities).getOrElse {
+    log("bundle index: ${it.message}")
+    return@runCatching null
+  }
+  val url = server.resolveSameOrigin("${server.base}/bundles/${pick.manifestPath}") ?: run {
+    log("refusing a manifest URL off the bundle server's origin: ${pick.manifestPath}")
+    return@runCatching null
+  }
+  Lookup(url, pick.manifestSha256, "index sequence ${pick.sequence}, manifest sha256 ${pick.manifestSha256.take(12)}…")
+}.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
+
+/** The relay's /bundles/latest, for relays that serve no index. */
+private suspend fun legacyLatest(server: BundleServer, capabilities: List<String>): Lookup? {
+  val lookup = "${server.base}/bundles/latest?widgetVersion=$HOST_WIDGET_VERSION&caps=${percentEncode(capabilities.joinToString(","))}"
   val (status, body, _) = send(NSURLSession.sharedSession, getRequest(lookup, timeoutSeconds = 10.0))
   if (status !in 200 until 300) {
     log("bundle lookup: HTTP $status (${body.utf8()})")
-    return@runCatching null
+    return null
   }
   val path = Json.parseToJsonElement(body.utf8()).jsonObject["manifestUrl"]?.jsonPrimitive?.content
   if (path == null) {
     log("no compatible bundle (${body.utf8()})")
-    return@runCatching null
+    return null
   }
-  server.resolveSameOrigin(path) ?: run {
+  val url = server.resolveSameOrigin(path) ?: run {
     log("refusing a manifest URL off the bundle server's origin: $path")
-    null
+    return null
   }
-}.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
+  return Lookup(url, null, "relay bundles/latest")
+}
 
 private fun createApp(
   trust: ProductionTrust.Verified,
   manifestUrl: String,
+  manifestSha256: String?,
   freshness: FreshnessChecker,
   apiBase: String?,
 ): TreehouseApp<PortalPresenter> {
@@ -174,7 +209,9 @@ private fun createApp(
     .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
     .build()
   val factory = TreehouseAppFactory(
-    httpClient = NSURLSessionZiplineHttpClient(),
+    httpClient = NSURLSessionZiplineHttpClient().let { http ->
+      if (manifestSha256 == null) http else ManifestPinningHttpClient(http, manifestUrl, manifestSha256)
+    },
     manifestVerifier = verifier,
     embeddedFileSystem = null,
     embeddedDir = null,

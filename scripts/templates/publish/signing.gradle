@@ -9,11 +9,17 @@
 // store is asked of the tools bundle's resolver (keliver-store-path.sh), never
 // derived here.
 //
-// Where the tools are: -Pkeliver.toolsBin, else KELIVER_TOOLS_BIN (keliver-portal
-// sets it for the relay, so /publish needs nothing), else KP. With none of them,
-// or before the first portal start has created the key, the bundle compiles
-// UNSIGNED: fine for development, and /publish refuses it. A resolver that
-// answers with an error fails the build instead.
+// In CI, with no store: -Pkeliver.signingKeyFile, else KELIVER_SIGNING_KEY_FILE,
+// names a file holding the private key's hex (a secret written to a 0600 file;
+// never print it). It takes precedence over the store, and a named file that is
+// missing fails the build.
+//
+// Otherwise, where the tools are: -Pkeliver.toolsBin, else KELIVER_TOOLS_BIN
+// (keliver-portal and keliver-publish set it, so neither needs anything more),
+// else KP. With none of them, or before the first portal start has created the
+// key, the bundle compiles UNSIGNED: fine for development, and both /publish
+// and keliver-publish refuse it. A resolver that answers with an error fails
+// the build instead.
 //
 // Not configuration-cache compatible: the store is resolved by running a
 // process, and the key becomes a task input (keliver-init leaves the cache off).
@@ -22,6 +28,14 @@
 // when binaries.executable() registers the compile task, and the later write
 // wins: above that block, the bundle compiles unsigned without an error.
 def keliverSigningKey = providers.provider {
+  def keyFile = providers.gradleProperty('keliver.signingKeyFile')
+    .orElse(providers.environmentVariable('KELIVER_SIGNING_KEY_FILE'))
+    .getOrNull()
+  if (keyFile) {
+    def named = new File(keyFile)
+    if (!named.isFile()) throw new GradleException("keliver: the signing key file ${named} does not exist")
+    return named
+  }
   def bin = providers.gradleProperty('keliver.toolsBin')
     .orElse(providers.environmentVariable('KELIVER_TOOLS_BIN'))
     .orElse(providers.environmentVariable('KP'))

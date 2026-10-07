@@ -5,7 +5,11 @@
 #   2. D14: a layout edit through the relay, a surgical diff, logic/ untouched,
 #      and the rebuilt screen on the device (D2, D3)
 #   3. production on the app's OWN host: signed v1, repeated actions, signed v2,
-#      a bundle signed by another key rejected, and recovery (P2-P6)
+#      a bundle signed by another key rejected, and recovery (P2-P7). The
+#      relay is the published tools release's, which serves no
+#      bundles/index.json, so the host's fallback to /bundles/latest is shown.
+#   4. W3, the static route with no relay (ci/w3/android-static.sh): S2, S4-S7
+#      against a static HTTPS server fed only by keliver-publish
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -25,7 +29,7 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK
 export KP JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
@@ -172,6 +176,9 @@ adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_I
   || bad "P1: $PROD_ID is not installed"
 # U28 was the generic host loading an empty manifest URL on every start; the
 # scaffolded host creates its Treehouse app only once the URL is known.
+grep -q "$HOST_TAG: no bundles/index.json at http://10.0.2.2:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
+  && ok "P2: the relay serves no index; the host fell back to /bundles/latest on the 404" \
+  || bad "P2: no fallback to /bundles/latest in the log"
 grep -q "codeLoadFailed: Expected URL scheme" "$EV/logcat-prod-v1.txt" \
   && bad "P2: an empty-URL load was attempted (U28)" || ok "P2: no empty-URL load attempt (U28 absent)"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \
@@ -245,6 +252,9 @@ grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/log
   && ok "P7: with the relay down, code loaded (codeLoadSuccess) in the host that verifies with this app's key" \
   || bad "P7: no load offline"
 drive title Stockroom P7; fold "P7: Stockroom offline" $?
+
+# shellcheck source=w3/android-static.sh
+. "$HERE/w3/android-static.sh"
 
 echo "device: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

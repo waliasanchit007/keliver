@@ -17,6 +17,11 @@
 #   P6  back on this app's relay, its bundle loads again
 #   P7  relay down: the host starts from its cached bundle, verified
 # P3 (repeated taps) has no iOS driver here and is not run.
+# The 0.3.6 relay serves no bundles/index.json, so these also show the host's
+# fallback to /bundles/latest on a 404.
+#
+# Then W3, the static route with no relay (ci/w3/ios-static.sh): S2, S4-S7
+# against a static HTTPS server fed only by keliver-publish.
 #
 # The simulator has no view-hierarchy dump. What a screen shows is read from
 # its screenshot by macOS Vision (ci/ocr.swift), and every screenshot is kept.
@@ -80,8 +85,9 @@ portal_up(){  # $1 = app dir, $2 = log
 }
 portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
 # Installed before anything is started, so every exit stops what this run started.
-UDID=""; FAPP=""
+UDID=""; FAPP=""; SPID=""
 cleanup(){
+  [ -n "$SPID" ] && kill "$SPID" 2>/dev/null
   if [ -n "$UDID" ]; then xcrun simctl shutdown "$UDID" >/dev/null 2>&1; xcrun simctl delete "$UDID" >/dev/null 2>&1; fi
   portal_down "$APP"; [ -n "$FAPP" ] && portal_down "$FAPP"
   return 0
@@ -163,6 +169,9 @@ C="$EV/P2-v1.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P2: the host verifies with this app's key" || bad "P2: no verification line"
 grep -q "KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json" "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "P2: signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
+grep -q "KeliverHost: no bundles/index.json at http://localhost:8077; asking bundles/latest" "$C" \
+  && ok "P2: the 0.3.6 relay serves no index; the host fell back to /bundles/latest on the 404" \
+  || bad "P2: no fallback to /bundles/latest in the console"
 grep -q "codeLoadFailed" "$C" && bad "P2: a load failed (U28 would be an empty-URL failure): $(grep codeLoadFailed "$C" | head -1)" \
   || ok "P2: no failed load, so no empty-URL attempt (U28 absent)"
 reads P2-v1 Inventory && ok "P2: the screen reads 'Inventory'" || bad "P2: 'Inventory' is not on the screen"
@@ -233,6 +242,9 @@ grep -q "lookup failed; starting from the cached bundle" "$C" && ok "P7: the loo
   || bad "P7: it did not start from the cache"
 grep -q "codeLoadSuccess" "$C" && ok "P7: code loaded offline (codeLoadSuccess), verified with this app's key" || bad "P7: no load offline"
 reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || bad "P7: 'Stockroom' is not on the screen"
+
+# shellcheck source=w3/ios-static.sh
+. "$HERE/w3/ios-static.sh"
 
 for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
 echo "ios: passed $pass, failed $fail"

@@ -92,6 +92,28 @@ Writes `host-ios/`: your app's production iOS host, a Kotlin framework on Maven
 Central plus an Xcode app. It applies the same key checks and refusals as
 `keliver-new-production-host.sh`. `host/README.md` §3 has what it does.
 
+### scripts/keliver-publish (not yet in a released bundle)
+
+```bash
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build]
+```
+
+Publishes without the relay, for CI and for static or CDN hosting:
+1. It builds the app's `publishTask`.
+2. It refuses the bundle and writes nothing (exit 4) unless the manifest is
+   signed with the app's key and every module is present with its signed
+   sha256.
+3. It writes `DIR/bundles/v<N>/` and `DIR/bundles/index.json`, with the
+   next sequence number.
+
+The public key comes from:
+- `--public-key-file`;
+- else `KELIVER_PUBLIC_KEY_HEX`;
+- else the app's store.
+
+In CI, `KELIVER_SIGNING_KEY_FILE` names a file holding the private key. The
+signing block reads it; nothing prints it.
+
 ### bin/keliver-new-publish-target.sh
 
 ```bash

@@ -103,7 +103,8 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/main/Andr
          src/main/kotlin/com/example/demo/host/ProductionTrust.kt \
          src/main/kotlin/com/example/demo/host/AndroidSqlHost.kt \
          src/main/kotlin/com/example/demo/host/OkHttpHostHttp.kt \
-         src/main/kotlin/com/example/demo/host/GuestContract.kt; do
+         src/main/kotlin/com/example/demo/host/GuestContract.kt \
+         src/main/kotlin/com/example/demo/host/BundleIndex.kt; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -123,6 +124,13 @@ grep -v '^[[:space:]]*//' "$H/settings.gradle" "$H/build.gradle" | grep -q "mave
 grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay" "$H"/src/main/kotlin/com/example/demo/host/*.kt \
   && bad "the host sources carry a development path, an emulator address or the replay fixture" \
   || ok "no development path, emulator address or replay fixture in the sources"
+# W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
+# and falls back to the relay's bundles/latest only on a 404.
+M="$H/src/main/kotlin/com/example/demo/host/MainActivity.kt"
+grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
+  && grep -q 'ManifestPinningHttpClient(zipline, latest.manifestUrl' "$M" \
+  && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
+  || bad "the host does not look up through bundles/index.json"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 

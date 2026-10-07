@@ -107,7 +107,7 @@ for f in settings.gradle build.gradle gradle.properties .gitignore src/nativeInt
          Configuration/Config.xcconfig; do
   [ -f "$H/$f" ] || { bad "missing $f"; missing=1; }
 done
-for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt; do
+for f in HostConfig.kt MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt; do
   [ -f "$K/$f" ] || { bad "missing $K/$f"; missing=1; }
 done
 [ "$missing" = 0 ] && ok "every expected file is there"
@@ -133,6 +133,12 @@ assert sorted(ats) == ['NSExceptionDomains'], ats
 assert list(ats['NSExceptionDomains']) == ['localhost'], ats
 assert ats['NSExceptionDomains']['localhost'] == {'NSExceptionAllowsInsecureHTTPLoads': True}, ats
 PY
+# W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
+# and falls back to the relay's bundles/latest only on a 404.
+grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 404' "$K/MainViewController.kt" \
+  && grep -q 'ManifestPinningHttpClient(http, manifestUrl, manifestSha256)' "$K/MainViewController.kt" \
+  && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
+  || bad "the host does not look up through bundles/index.json"
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
 grep -q 'gradlew -p host-ios --console=plain embedAndSignAppleFrameworkForXcode' "$H/iosApp.xcodeproj/project.pbxproj" \

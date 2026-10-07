@@ -153,6 +153,23 @@ EMB="$(unzip -p "$EV/production-host.apk" assets/portal_ed25519.pub 2>/dev/null 
 echo "PROD_ID=$PROD_ID" >> "$WORK/env"
 echo "APK=$EV/production-host.apk" >> "$WORK/env"
 
+# --- 6. W3 inputs: keliver-publish, a throwaway CA, the host for HTTPS -------
+# The static route (ci/w3/android-static.sh, run by device.sh) needs no relay:
+# keliver-publish from this checkout (no published tools bundle has it yet), a
+# CA and server certificate that only the emulator will trust, and the same
+# production host built for https://10.0.2.2:8443 (only the server differs).
+W3="$WORK/w3"; mkdir -p "$W3"
+W3_PUBLISH="$(bash "$HERE/w3/tools.sh" "$W3/tools" 2> "$EV/w3-tools.log" | tail -1)"
+[ -n "$W3_PUBLISH" ] && [ -x "$W3_PUBLISH" ] && ok "W3: keliver-publish built from this checkout, in the tools layout" \
+  || { bad "W3: keliver-publish was not built"; tail -20 "$EV/w3-tools.log"; }
+bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway CA and a server certificate for 10.0.2.2" \
+  || { bad "W3: no certificates"; cat "$EV/w3-tls.txt"; }
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 ) \
+  > "$EV/w3-host-build.log" 2>&1 \
+  && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
+  && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
+{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
+
 # Warm the development bundle so the device step does not wait on it.
 ( cd "$APP" && ./gradlew compileDevelopmentExecutableKotlinJsZipline --console=plain ) > "$EV/dev-bundle.log" 2>&1 \
   && ok "the development bundle builds" || bad "the development bundle did not build"

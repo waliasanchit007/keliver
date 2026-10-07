@@ -259,6 +259,52 @@ release build refuses `http://`. A device build needs your team and signing
 (`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
 details.
 
+### Publish from CI to a static server
+
+`keliver-publish` does what `POST /publish` does, without the relay:
+1. It builds your `publishTask`.
+2. It refuses a bundle that isn't signed with your key, or is missing a
+   module. In that case it writes nothing.
+3. It writes `bundles/v<N>/` plus `bundles/index.json` into a directory.
+
+Serve that directory from any static host or CDN (S3, GCS, GitHub Pages,
+nginx) over HTTPS. Point `--bundle-server` at it. Hosts from the current
+scaffolders read `bundles/index.json`.
+
+**It is not in a released tools bundle yet.** Until it is, it is
+`scripts/keliver-publish` in the Keliver repository, and it needs
+`portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
+
+```bash
+$KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
+In CI there is no portal store. Store the private key (the hex in your store's
+`keys/ed25519.priv`) as a secret, and write it to a file only the job can read:
+
+```yaml
+- run: |
+    umask 077
+    printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
+    KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
+      keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+  env:
+    KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}
+```
+
+`KELIVER_SIGNING_KEY_FILE` is read by the signing block that
+`keliver-new-publish-target.sh` writes. If your block was written by tools
+0.3.6 or 0.3.7, the block doesn't know this variable: add the
+`keliver.signingKeyFile` lines from `templates/publish/signing.gradle`.
+
+The index is not signed. Every manifest is, and hosts verify every manifest.
+Each index entry records its manifest's sha256, and the host checks it. That
+check catches a mismatched manifest, for example a mixed CDN cache, but it
+doesn't protect against anyone who can rewrite the index.
+
+Not protected yet: rollback. Anyone who can change what your server serves can
+serve an older signed bundle (W4 in `docs/DELIVERY_PLAN.md`).
+
 ## Preview mocks are not runtime values
 
 The editor's preview and the running app show different things, deliberately.

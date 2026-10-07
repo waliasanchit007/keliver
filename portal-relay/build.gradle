@@ -39,3 +39,25 @@ dependencies {
   testImplementation libs.zipline.loader
   testImplementation libs.kotlin.test.junit
 }
+
+// W3: keliver-publish, the relay's publish without the relay. Its start script
+// sits beside portal-relay's in bin/; the tools bundle's bin/keliver-publish
+// wrapper runs it.
+def keliverPublishStartScripts = tasks.register('keliverPublishStartScripts', CreateStartScripts) {
+  mainClass = 'KeliverPublish'
+  applicationName = 'keliver-publish-jvm'
+  outputDir = layout.buildDirectory.dir('keliver-publish-scripts').get().asFile
+  classpath = tasks.named('startScripts').get().classpath
+}
+distributions { main { contents { from(keliverPublishStartScripts) { into 'bin' } } } }
+
+// The production hosts' index reader (scripts/templates/*/BundleIndex.kt) is
+// template source with a @@PACKAGE@@ placeholder. Compile the Android copy into
+// the tests, so BundleIndexTest runs the code the scaffolders ship; the test
+// also holds the iOS copy byte-identical to it.
+def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
+  from(rootProject.file('scripts/templates/production-host/src/main/kotlin/BundleIndex.kt'))
+  filter { line -> line.replace('@@PACKAGE@@', 'hosttemplate') }
+  into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
+}
+sourceSets.test.kotlin.srcDir(hostTemplateTestSource)

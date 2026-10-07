@@ -11,9 +11,13 @@
  * - HostHttp is real HTTP to YOUR API base, bound only when one is configured.
  * - The bundle lookup runs FIRST, with a short timeout, and the Treehouse app is
  *   created only once its answer is known, so there is no load attempt on an
- *   empty URL (Keliver's U28):
- *   - lookup answers: load the newest compatible bundle from the network. Once
- *     it has loaded, Zipline pins it in its cache.
+ *   empty URL (Keliver's U28). The lookup reads <server>/bundles/index.json
+ *   (BundleIndex.kt), which keliver-publish writes for any static server or
+ *   CDN and the relay serves; only when that is a 404 (a relay from tools 0.3.7
+ *   or earlier) does it ask the relay's /bundles/latest instead.
+ *   - lookup answers: load the newest compatible bundle from the network, its
+ *     manifest held to the sha256 the index gives. Once it has loaded, Zipline
+ *     pins it in its cache.
  *   - lookup fails, and a bundle loaded before: start from Zipline's cache. In
  *     Zipline 1.22 the cache is used ONLY before the network and only when the
  *     FreshnessChecker accepts it; there is no fallback after a network failure.
@@ -55,6 +59,7 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
+import app.cash.zipline.loader.ZiplineHttpClient
 import app.cash.zipline.loader.asZiplineHttpClient
 import coil3.ImageLoader
 import dev.keliver.http.HostHttpProvider
@@ -139,46 +144,82 @@ class MainActivity : ComponentActivity() {
         .connectTimeout(5, TimeUnit.SECONDS)
         .callTimeout(10, TimeUnit.SECONDS)
         .build()
-      val latest = withContext(Dispatchers.IO) { latestManifestUrl(lookupClient, server, capabilities) }
+      val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities) }
       when {
         latest != null -> {
-          Log.d(TAG, "loading $latest")
-          startTreehouse(verifier, cacheName, okhttp, apiBase, latest, DefaultFreshnessCheckerNotFresh)
+          Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source})")
+          val zipline = okhttp.asZiplineHttpClient()
+          val http = latest.manifestSha256?.let { ManifestPinningHttpClient(zipline, latest.manifestUrl, it) } ?: zipline
+          startTreehouse(verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh)
         }
         lastGood != null -> {
           Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood)")
-          startTreehouse(verifier, cacheName, okhttp, apiBase, lastGood, AcceptCachedBundle)
+          startTreehouse(verifier, cacheName, okhttp, okhttp.asZiplineHttpClient(), apiBase, lastGood, AcceptCachedBundle)
         }
         else -> setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
       }
     }
   }
 
-  /** The newest compatible bundle's manifest URL, on the bundle server's own origin, or null. */
-  private fun latestManifestUrl(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): String? = runCatching {
+  /** The bundle to load: its manifest URL, the sha256 the index holds it to (null from the relay's legacy lookup), and where it came from. */
+  private class Lookup(val manifestUrl: String, val manifestSha256: String?, val source: String)
+
+  /**
+   * The newest compatible bundle on the bundle server, or null. Reads
+   * bundles/index.json; on a 404 for it, asks the relay's bundles/latest.
+   * Either way the manifest must be on the bundle server's own origin.
+   */
+  private fun lookupBundle(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): Lookup? = runCatching {
+    val indexUrl = server.newBuilder().addPathSegments("bundles/index.json").build()
+    val request = Request.Builder().url(indexUrl).header("Cache-Control", "no-cache").build()
+    okhttp.newCall(request).execute().use { response ->
+      if (response.code == 404) {
+        Log.d(TAG, "no bundles/index.json at $server; asking bundles/latest (a relay from tools 0.3.7 or earlier)")
+        return@runCatching legacyLatest(okhttp, server, capabilities)
+      }
+      val body = response.body?.string().orEmpty()
+      if (!response.isSuccessful) {
+        Log.e(TAG, "bundle index: HTTP ${response.code}")
+        return@runCatching null
+      }
+      val pick = pickFromIndex(body, capabilities).getOrElse {
+        Log.e(TAG, "bundle index: ${it.message}")
+        return@runCatching null
+      }
+      val url = server.newBuilder().addPathSegments("bundles/${pick.manifestPath}").build()
+      if (!sameOrigin(url, server)) {
+        Log.e(TAG, "refusing a manifest URL off the bundle server's origin: ${pick.manifestPath}")
+        return@runCatching null
+      }
+      Lookup(url.toString(), pick.manifestSha256, "index sequence ${pick.sequence}, manifest sha256 ${pick.manifestSha256.take(12)}…")
+    }
+  }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
+
+  /** The relay's /bundles/latest, for relays that serve no index. */
+  private fun legacyLatest(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): Lookup? {
     val lookup = server.newBuilder().addPathSegments("bundles/latest")
-      .addQueryParameter("widgetVersion", "1")
+      .addQueryParameter("widgetVersion", HOST_WIDGET_VERSION.toString())
       .addQueryParameter("caps", capabilities.joinToString(","))
       .build()
     okhttp.newCall(Request.Builder().url(lookup).build()).execute().use { response ->
       val body = response.body?.string().orEmpty()
       if (!response.isSuccessful) {
         Log.e(TAG, "bundle lookup: HTTP ${response.code} ($body)")
-        return@runCatching null
+        return null
       }
       val path = Json.parseToJsonElement(body).jsonObject["manifestUrl"]?.jsonPrimitive?.content
       if (path == null) {
         Log.e(TAG, "no compatible bundle ($body)")
-        return@runCatching null
+        return null
       }
       val url = server.resolve(path)
       if (!sameOrigin(url, server)) {
         Log.e(TAG, "refusing a manifest URL off the bundle server's origin: $path")
-        return@runCatching null
+        return null
       }
-      url.toString()
+      return Lookup(url.toString(), null, "relay bundles/latest")
     }
-  }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
+  }
 
   private fun sameOrigin(url: HttpUrl?, server: HttpUrl): Boolean =
     url != null && url.scheme == server.scheme && url.host == server.host && url.port == server.port
@@ -187,6 +228,7 @@ class MainActivity : ComponentActivity() {
     verifier: ManifestVerifier,
     cacheName: String,
     okhttp: OkHttpClient,
+    ziplineHttp: ZiplineHttpClient,
     apiBase: HttpUrl?,
     manifestUrl: String,
     freshness: FreshnessChecker,
@@ -195,7 +237,7 @@ class MainActivity : ComponentActivity() {
     val flow = MutableStateFlow(manifestUrl)
     val factory = TreehouseAppFactory(
       context = applicationContext,
-      httpClient = okhttp.asZiplineHttpClient(),
+      httpClient = ziplineHttp,
       manifestVerifier = verifier,
       embeddedFileSystem = null,
       embeddedDir = null,
