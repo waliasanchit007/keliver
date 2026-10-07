@@ -151,7 +151,9 @@ signed version (over `http://`, so can anyone on the path).
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
 `publishTask`/`publishOutput` for your app and appends the signing block to your
-`build.gradle`, below `kotlin {}`. `POST /publish` then stores a bundle only if
+`build.gradle`. The block signs the compiled manifest inside Gradle; the key is
+never on a command line, in a build log or in `.gradle/` (U31; to upgrade a
+0.3.6 block, run the command again). `POST /publish` then stores a bundle only if
 its manifest verifies against your store's public key: an unsigned or
 foreign-signed bundle is refused and nothing is stored. **What you still set up
 yourself:** your own signing config for a release APK.

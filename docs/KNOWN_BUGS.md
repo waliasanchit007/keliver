@@ -1033,6 +1033,57 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
+### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED on `fix/u31-signing-key-exposure`, not yet released
+
+Found on 2026-10-07 while acting on the independent review of W3 (PR #90). The
+review asked whether the key landed in Gradle's execution history; following
+that up showed more.
+
+**Affected:**
+- `scripts/templates/publish/signing.gradle`, as written into apps by tools
+  **0.3.6**, the published release, and by both 0.3.7 candidates;
+- this repository's `portal-published-guest/build.gradle`, which signs with
+  the owner's real store key.
+
+**What happened.** Both set the Zipline compile task's `signingKeys`.
+`ZiplineCompileTask` 1.22 (read from its bytecode) runs the compiler through
+`ExecOperations.javaexec` with an argument `--sign <algorithm>:<name>:<private
+key hex>`. And `ManifestSigningKey`, which holds the raw key, is `Serializable`
+and an `@Input`.
+
+**Measured** on this session's disposable apps (keys disposable; checks printed
+true/false only, never the key):
+- `.gradle/9.0.0/executionHistory/executionHistory.bin` held the raw 32-byte
+  key in all three apps checked. The file is **0644** under 0755 directories,
+  so other local users can read it. That undoes U27's owner-only key file.
+- One `--info` build printed the key in full in the log, on the `--sign` line.
+- Not measured, but it follows from the javaexec: the key is in the child
+  JVM's command line, visible in `ps` to local users, for as long as each
+  signed compile runs.
+
+**Fix.** The compile task no longer gets a key. A last action of the task
+(`doLast`) signs the manifest the task wrote, in the Gradle process, with
+Zipline's own `ManifestSigner`. The task's only key-related input is a SHA-256
+id of the key, so a changed key still rebuilds the bundle.
+
+**Measured** on a disposable app after the fix, with an `--info` build:
+- the manifest verifies against the store's public key;
+- no `--sign` argument in `ps` or in the log;
+- the key is in neither the log nor the new `executionHistory.bin`.
+
+The block also stops depending on its position below `kotlin {}`.
+
+**Upgrade.** `keliver-new-publish-target.sh` replaces a block that is exactly
+the 0.3.6 one in place, and refuses an edited one. The adopter guide says what
+to do next: delete `.gradle/`, and treat the key as exposed if others could
+have read it.
+
+**Not fixed here.**
+- Keys that were already exposed. There is no rotation procedure yet (W8).
+- `sample/guest` signs through `zipline { signingKeys }` with a sample key that
+  is public in its source anyway.
+- Any copy of the old block an adopter edited by hand.
+
 ### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — OPEN
 
 Found by the independent review of the #77 fix, 2026-09-24.

@@ -231,9 +231,23 @@ $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an e
 
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
-public key. Without the signing block — or with it moved above `kotlin {}`,
-where it silently does nothing — the build still succeeds and `/publish` says
-`publish REFUSED: the bundle is UNSIGNED` and stores nothing.
+public key. Without the signing block the build still succeeds and `/publish`
+says `publish REFUSED: the bundle is UNSIGNED` and stores nothing.
+
+**Upgrading from tools 0.3.6: run `keliver-new-publish-target.sh` again (U31).**
+The signing block 0.3.6 wrote gave your private key to Zipline's compile task,
+which passes it to a child JVM on its command line. While a bundle compiled,
+any local user could read the key in the process list. A `--info` or `--debug`
+build printed it, and it was stored in `.gradle/<version>/executionHistory/`,
+readable by others under the usual umask. Rerunning the command replaces
+exactly that block with one that signs inside Gradle, after the compile, and
+changes nothing else. Then:
+- delete your app's `.gradle/` directory;
+- if other users of the machine, shared CI logs or a cached `.gradle/` could
+  have exposed the key, treat it as compromised. A new key means rebuilding
+  and shipping your production hosts with its public key. Keliver has no
+  rotation procedure yet: hosts trust one key, and W8 in the delivery plan
+  covers rotation.
 
 It embeds your portal's public key (copied from your store — commit
 `host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle

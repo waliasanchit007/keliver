@@ -7,11 +7,15 @@
 #
 # --build also compiles the scaffolded app's bundle against Maven Central, in a
 # disposable Gradle home and user.home, four ways:
-#   signed        tools bin set: the manifest verifies against the store's key
+#   signed        tools bin set: the manifest verifies against the store's key,
+#                 and the private key is in no --info log, no process argument
+#                 (no Zipline `--sign`) and no .gradle/ execution history (U31)
 #   no tools bin  the bundle is UNSIGNED, with a warning (and /publish refuses it)
-#   block moved   the signing block above kotlin {}: UNSIGNED, with no error —
-#                 the ordering rule the generated comment states, measured
+#   block moved   the signing block above kotlin {}: still signed (the block no
+#                 longer depends on its position)
 #   resolver error  a resolver that exits non-zero fails the build
+# Without --build it also checks the upgrade of an app wired by tools 0.3.6:
+# exactly the old block is replaced in place; an edited one is refused.
 # The relay half (POST /publish stores the signed bundle and refuses the
 # unsigned one) is in keliver-adopter-acceptance.sh, which runs the packaged
 # portal.
@@ -109,7 +113,8 @@ python3 - "$APP/build.gradle" <<'PY' && ok "the signing block is appended once, 
 import re, sys
 s = open(sys.argv[1]).read()
 assert s.count('keliver: PUBLISH SIGNING') == 1
-assert s.count('signingKeys.set(') == 1
+assert s.count('ManifestSigner.Builder()') == 1
+assert 'signingKeys.set(' not in s, 'the key must never be a Zipline signingKeys input (U31)'
 k = re.search(r'(?m)^kotlin\s*\{', s).start()
 assert s.index('keliver: PUBLISH SIGNING') > k
 PY
@@ -129,6 +134,41 @@ open(p, 'w').write(json.dumps(c, indent=2) + '\n')
 PY
 ( cd "$DISP/same" && "$SCAFFOLD" > /dev/null 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/same/build.gradle" \
   && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused"
+
+echo "=== an app wired by tools 0.3.6 is upgraded in place (U31)"
+LEGACY="$ROOT/scripts/templates/publish/legacy/signing-0.3.6.gradle"
+make_app legacy device
+( cd "$DISP/legacy" && "$SCAFFOLD" > /dev/null 2>&1 )   # wire it, then put the 0.3.6 block back
+python3 - "$DISP/legacy/build.gradle" "$LEGACY" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy + '\n// a line the adopter added after the block\n')
+PY
+cp "$DISP/legacy/build.gradle" "$DISP/legacy.before"
+out="$( cd "$DISP/legacy" && "$SCAFFOLD" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'was replaced by the current one (U31)' \
+  && ok "the 0.3.6 signing block is recognised and replaced, with the U31 advice" \
+  || bad "upgrade: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"
+python3 - "$DISP/legacy.before" "$DISP/legacy/build.gradle" "$LEGACY" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY' \
+  && ok "the upgrade swaps exactly the old block; every other line is kept" || bad "the upgrade changed more than the block"
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert legacy not in after and after.count(new) == 1
+assert after == before.replace(legacy, new)
+PY
+refuses "a run after the upgrade" "publishing is already wired" "$DISP/legacy"
+make_app edited device
+( cd "$DISP/edited" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/edited/build.gradle" "$LEGACY" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy.replace("'portal-ed25519'", "'portal-ed25519' /* mine */"))
+PY
+refuses "an edited 0.3.6 block" "is not one this script wrote" "$DISP/edited"
 
 echo "=== comment markers inside strings are strings"
 make_app strings device
@@ -178,10 +218,20 @@ JAVA
   PUB="$(tr -d '[:space:]' < "$STORE/keys/ed25519.pub")"
   MANIFEST="$APP/build/zipline/Development/manifest.zipline.json"
 
-  compile() { # <log> [env assignments...]: compile the bundle; returns gradle's exit
+  compile() { # <log> [env assignments...]: compile the bundle at --info; returns gradle's exit
     local log="$1"; shift
     rm -f "$MANIFEST"   # so a stale manifest can never answer for this compile
-    ( cd "$APP" && env "$@" ./gradlew --console=plain compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
+    ( cd "$APP" && env "$@" ./gradlew --console=plain --info compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
+  }
+  # U31: "absent" when the private key (hex or raw) is in none of the files given.
+  key_in() {
+    python3 - "$STORE/keys/ed25519.priv" "$@" <<'PY'
+import sys
+hexk = open(sys.argv[1]).read().strip().lower()
+raw = bytes.fromhex(hexk)
+hits = [p for p in sys.argv[2:] if (lambda b: raw in b or hexk.encode() in b.lower())(open(p, 'rb').read())]
+print('absent' if not hits else 'PRESENT in ' + ' '.join(hits))
+PY
   }
   # Prints "signed:<true|false>" or "unsigned", from the manifest as built.
   signature_of() {
@@ -204,6 +254,16 @@ PY
     got="$(signature_of)"
     [ "$got" = "signed:true" ] && ok "with the tools bin: the bundle is signed and verifies against the store's public key" \
       || bad "with the tools bin: expected a verifying signature, got $got"
+    if grep -q -- '--sign' "$DISP/build-signed.log"; then bad "U31: the --info log shows a Zipline --sign argument"
+    else ok "U31: no Zipline --sign argument in the --info log (the key is on no command line)"; fi
+    HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
+    if [ -n "$HIST" ]; then
+      got="$(key_in "$DISP/build-signed.log" "$HIST")"
+      [ "$got" = absent ] && ok "U31: the private key is in neither the --info log nor .gradle/'s execution history" \
+        || bad "U31: the private key is $got"
+    else
+      bad "U31: no executionHistory.bin to check under $APP/.gradle"
+    fi
   else
     bad "the signed compile failed (rc=$rc): $(grep -E '^e: |What went wrong' -A2 "$DISP/build-signed.log" | head -4 | tr '\n' ' ')"
   fi
@@ -223,8 +283,8 @@ k = re.search(r'(?m)^kotlin\s*\{', rest).start()
 open(p, 'w').write(rest[:k] + block.lstrip('\n') + '\n' + rest[k:])
 PY
   compile "$DISP/build-moved.log" KELIVER_TOOLS_BIN="$ROOT/scripts"; rc=$?
-  [ "$rc" = 0 ] && [ "$(signature_of)" = unsigned ] \
-    && ok "the block moved above kotlin {}: the bundle compiles UNSIGNED, with no error (the ordering rule holds)" \
+  [ "$rc" = 0 ] && [ "$(signature_of)" = signed:true ] \
+    && ok "the block moved above kotlin {}: the bundle is still signed (position no longer matters)" \
     || bad "the block moved above kotlin {}: rc=$rc, signature $(signature_of)"
   cp "$DISP/build.gradle.scaffolded" "$APP/build.gradle"
 

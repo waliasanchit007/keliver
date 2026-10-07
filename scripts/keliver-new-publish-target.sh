@@ -17,10 +17,19 @@
 #
 #   1. keliver.portal.json: "publishTask": ":compileDevelopmentExecutableKotlinJsZipline"
 #                           "publishOutput": "build/zipline/Development"
-#   2. build.gradle: a signing block appended at the END, below kotlin {} —
-#      above it, the bundle compiles UNSIGNED without an error. It signs with
-#      keys/ed25519.priv of the store keliver-store-path.sh resolves for this
-#      app; the private key is read only by that compile task, never by this.
+#   2. build.gradle: a signing block appended at the END. It signs the
+#      compiled manifest with keys/ed25519.priv of the store
+#      keliver-store-path.sh resolves for this app, in the Gradle process, after
+#      the compile task (never through Zipline's signingKeys, which put the key
+#      on a command line, in --info logs and in .gradle/: U31). The private key
+#      is read only by that build step, never by this script.
+#
+# UPGRADING an app wired by tools 0.3.6 or earlier: run this again. A signing
+# block that is exactly the one 0.3.6 wrote is replaced in place by the current
+# one; nothing else changes. Anything else that configures signingKeys is
+# refused, with nothing written. Afterwards delete <app>/.gradle/ (the old
+# block left the key in its executionHistory) and treat the key as exposed if
+# other local users or CI logs could have read it.
 #
 # The development variant is what the reference app's production checks ran on;
 # the production (minified) variant has not been run on a device.
@@ -66,7 +75,7 @@ trap 'rm -rf "$STAGE"' EXIT
 # (Written to a file first: bash 3.2 misparses a heredoc inside $(...).)
 cat > "$STAGE/plan.py" <<'PY'
 import json, os, re, shutil, sys
-app, block_path, stage, task, output = sys.argv[1:6]
+app, block_path, stage, task, output, legacy_dir = sys.argv[1:7]
 
 def fail(msg):
     print("ERROR " + msg); sys.exit(0)
@@ -101,9 +110,23 @@ if not os.path.isfile(os.path.join(app, 'src/jsMain/kotlin/device/Main.kt')):
     fail("no src/jsMain/kotlin/device/Main.kt (the bundle's entry point). Run keliver-new-device-target.sh first.")
 if not re.search(r'(?m)^kotlin\s*\{', code):
     fail("build.gradle has no top-level `kotlin {` block; the signing block must follow it.")
-if 'keliver: PUBLISH SIGNING' in build:
+block = open(block_path, encoding='utf-8').read()
+upgraded = None
+if block in build:
     fail("build.gradle already has the signing block this script writes: publishing is already wired.")
-if 'signingKeys' in code:
+if 'keliver: PUBLISH SIGNING' in build:
+    # A block an earlier tools release wrote: replaced only if it is exactly that text.
+    for name in sorted(os.listdir(legacy_dir)) if os.path.isdir(legacy_dir) else []:
+        legacy = open(os.path.join(legacy_dir, name), encoding='utf-8').read()
+        if build.count(legacy) == 1:
+            upgraded = name
+            build = build.replace(legacy, block)
+            break
+    if upgraded is None:
+        fail("build.gradle has a keliver signing block that is not one this script wrote (it was edited, "
+             "or is newer than these tools). Replace it with templates/publish/signing.gradle by hand.")
+    code = strip_comments(build)
+if upgraded is None and 'signingKeys' in code:
     fail("build.gradle already configures signingKeys. Remove that block first, or keep it and add "
          "publishTask/publishOutput to keliver.portal.json yourself.")
 
@@ -128,19 +151,23 @@ if cfg.get('publishTask') != task or cfg.get('publishOutput') != output:
 with open(os.path.join(stage, 'keliver.portal.json'), 'w', encoding='utf-8') as f:
     f.write(json.dumps(cfg, indent=2, ensure_ascii=False) + '\n')
 
-block = open(block_path, encoding='utf-8').read()
 with open(os.path.join(stage, 'build.gradle'), 'w', encoding='utf-8') as f:
-    f.write(build if build.endswith('\n') else build + '\n')
-    f.write(block)
+    if upgraded:
+        f.write(build)
+    else:
+        f.write(build if build.endswith('\n') else build + '\n')
+        f.write(block)
 changes.append('build.gradle')
 for name in ('keliver.portal.json', 'build.gradle'):
     shutil.copymode(os.path.join(app, name), os.path.join(stage, name))
-print('ok ' + ' '.join(changes))
+print(('upgraded ' if upgraded else 'ok ') + ' '.join(changes))
 PY
-PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" 2>"$STAGE/plan.err")" \
+PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" "$(dirname "$BLOCK")/legacy" 2>"$STAGE/plan.err")" \
   || fail "validation failed: $(tail -1 "$STAGE/plan.err" 2>/dev/null || echo 'python3 is required')"
+UPGRADED=0
 case "$PLAN" in
   ok*) ;;
+  upgraded*) UPGRADED=1; PLAN="ok ${PLAN#upgraded }" ;;
   ERROR*) fail "${PLAN#ERROR }" ;;
   *) fail "unexpected validation output: $PLAN" ;;
 esac
@@ -153,9 +180,17 @@ for f in ${PLAN#ok }; do
   mv -f "$STAGE/$f" "$APP/$f"
 done
 
+if [ "$UPGRADED" = 1 ]; then
+  echo "==> the signing block in $APP/build.gradle was replaced by the current one (U31)"
+  echo "    The old block passed the private key to a child JVM: it was on that process's"
+  echo "    command line while it ran, in any --info/--debug build log, and it is in"
+  echo "    $APP/.gradle/<version>/executionHistory/. Delete $APP/.gradle/ now. If other local"
+  echo "    users, or CI logs, could have read any of those, treat the key as exposed."
+  exit 0
+fi
 echo "==> publishing wired for $APP"
 echo "    keliver.portal.json  publishTask $PUBLISH_TASK, publishOutput $PUBLISH_OUTPUT"
-echo "    build.gradle         signing block appended (keep it BELOW kotlin {})"
+echo "    build.gradle         signing block appended"
 echo
 echo "Next:"
 echo "  keliver-portal                     # start it once; the first start creates the app's key"
