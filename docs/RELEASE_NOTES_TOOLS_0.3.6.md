@@ -6,6 +6,20 @@ candidate's identities (zip and APK sha256, build and device runs) are recorded
 after verification, outside this commit. Tools 0.3.5 stays the published
 release until a person approves the tag and upload.
 
+## Candidate verification (recorded after the build; not in the built commit)
+
+| | |
+|---|---|
+| source commit to tag | **`e40d20ca27cc8d2a435ad223dba4920a5d843375`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`) |
+| zip | `keliver-portal-tools-0.3.6.zip`, 90,386,556-byte artifact; zip sha256 **`1d610a962373a1525d7b74c5da68fd175c94a8ece99528565a73bc69db5af8b3`** |
+| bundled dev-host APK sha256 | **`b8c2e95736be07dfbc5cab6dce27f5c029234a1b3869044bd6442857ea94b6a3`**, no `assets/portal_ed25519.pub` |
+| build run | [`37564871932`](https://github.com/waliasanchit007/keliver/actions/runs/37564871932): every portable check green, including the relay's tests, the acceptance with the publish round-trip, and both scaffolders' self-tests (39/0 and 34/0; 23/0 and 18/0). Retained artifact `11458134325` (`sha256:61bae692…`) |
+| device run | [`37566617059`](https://github.com/waliasanchit007/keliver/actions/runs/37566617059): the APK pinned by sha256; 19/0 device checks, 28/0 packaged acceptance; API 33 x86_64 emulator |
+| local check | the retained artifact was downloaded on macOS. The zip and APK hashes match both runs, `VERSION.json` is as above, and the four new files are in the bundle |
+| tag push | only `portal-tools.yml` (read-only) matches `portal-tools-v*` at that commit. `publish.yml` is `v*`, `ci.yml` ignores tags, and `pages`/`compat-matrix` don't trigger on tags |
+
+**Not done: tag, release, upload.** Those wait for approval.
+
 ---
 
 ## What this release is
