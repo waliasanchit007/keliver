@@ -203,7 +203,7 @@ PY
 . "$REPO/scripts/keliver-test-isolation-guard.sh"
 if keliver_require_isolated_store "$WORK" "$APP" > "$WORK/guard.log" 2>&1; then
   ok "isolation guard: user.home and the resolved store are inside the work dir"
-  STORE="$("$TOOLS/bin/keliver-store-path.sh" "$APP")"
+  STORE="$("$TOOLS/bin/keliver-store-path.sh" "$APP")" || { bad "the store resolver refused $APP"; STORE="$WORK/unresolved-store"; }
   "$PUBLISH" "$APP" --out "$SITE" --skip-build > "$WORK/s.log" 2>&1; rc=$?
   [ "$rc" = 2 ] && grep -q "no public key at" "$WORK/s.log" && ok "no key anywhere: exit 2, says so" || bad "no key: exit $rc"
   mkdir -p "$STORE/keys" && cp "$WORK/fx/two.pub" "$STORE/keys/ed25519.pub"
