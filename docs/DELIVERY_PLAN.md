@@ -215,7 +215,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | plan written | done 2026-10-07 | this file; branch `feat/ios-production-host` |
 | W1 I0 iOS feasibility from Maven Central | **done 2026-10-07**: the production host links for the simulator; 54 `dev.keliver` artifacts, all 0.3.3 from Maven Central | `docs/superpowers/evidence/ios-host-i0/` |
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
-| W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396` (macos-15, Xcode 16.4, iOS 26.2): self-test 43/0, P1/P2/P4–P7 30/0 | `docs/superpowers/evidence/ios-host-ci-37597390396/` |
+| W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
 | W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
 | W2–W8 | not started | — |
