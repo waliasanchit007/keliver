@@ -1,8 +1,41 @@
 # keliver-portal-tools 0.3.7 — release notes
 
-**Status: CANDIDATE.** Not tagged, not released. Tagging and publishing wait
-for the owner's explicit approval; 0.3.6's approval does not carry over.
-Tools 0.3.6 and earlier, and the Maven 0.3.3 libraries, are unchanged.
+**Status: RELEASED 2026-10-07** (18:47 UTC), candidate 4 —
+<https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7>.
+Tools 0.3.6 and earlier, and the Maven 0.3.3 libraries, are unchanged. GitHub's
+"Latest" badge stays on the library release `v0.3.3`.
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.7` (annotated, `e094f1aa`) → **`aaa034784ce6e46ee64182c173f1d564998e72c0`** (the `sourceCommit` in `VERSION.json`) |
+| asset | `keliver-portal-tools-0.3.7.zip`, 90,447,444 bytes, plus a 97-byte `.sha256` (`3ac6a9a7…`) |
+| zip sha256 | `75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb` |
+| APK sha256 | `2c89a650a71c363629b84f8340dffa26b5dd3b37df8f42c55c702141f3533fa8` (no embedded portal key) |
+| build run | [`37661109929`](https://github.com/waliasanchit007/keliver/actions/runs/37661109929), retained artifact `11501277933` |
+| device run | [`37663450946`](https://github.com/waliasanchit007/keliver/actions/runs/37663450946): 19/0, 28/0 |
+| tag-push run | [`37665259359`](https://github.com/waliasanchit007/keliver/actions/runs/37665259359): the read-only rebuild the tag fires, green; its artifact was **not** attached |
+
+**How the stored asset was checked.** The published zip is the retained
+artifact, uploaded byte for byte. It was checked four ways:
+1. at the retained artifact, downloaded on macOS: `75ce0928…`;
+2. by GitHub's server-side `digest` of the draft assets: zip `75ce0928…`,
+   90,447,444 bytes; `.sha256` `3ac6a9a7…`, 97 bytes. The tag was re-checked
+   at `aaa03478`;
+3. by a **download-back of the draft** (asset `619494300`): 90,447,444 bytes,
+   `75ce0928…`;
+4. after publishing, by the **public** URL from this machine:
+   `shasum -c` against the release's own `.sha256` gave `OK`, and
+   `VERSION.json` names `aaa03478`.
+
+Before tagging, step 3 found nothing at `aaa03478` that could publish on a
+`portal-tools-v*` tag. The workflow list still shows the stale upstream
+`release.yaml`, which is absent from the tree. No workflow was disabled.
+
+The `gh release create` client stayed alive after both uploads had finished
+and the draft was complete. It was stopped before publishing, and its being
+stopped changed nothing: `--draft` cannot publish.
+
+The candidate records below are as they were when verified.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
@@ -84,10 +117,19 @@ was built from.
 
 It adds the **iOS production host**. With 0.3.6 an adopter could ship an
 Android production host without a Keliver checkout; with 0.3.7 the same goes for
-iOS. Nothing else in the bundle changes behaviour: the relay, editor, MCP
-server, the other scaffolders and the generic Android development host are
-built from the same sources as 0.3.6. Compared entry by entry with the
-published 0.3.6 zip, candidate 1 differed only in:
+iOS. It also **fixes U31**: the publish signing block 0.3.6 wrote exposed the
+private signing key (see *Fixed: U31*).
+
+Nothing else in the bundle changes behaviour. Since 0.3.6 (`d52e2eca`), outside
+documentation the bundle's sources differ only in:
+- the iOS scaffolder and its templates;
+- the publish scaffolder and its signing template (U31), plus the kept 0.3.6
+  template it upgrades from.
+
+The relay, editor, MCP server, the Android production-host scaffolder and the
+generic Android development host are built from the same sources as 0.3.6.
+Compared entry by entry with the published 0.3.6 zip, candidate 1 (before
+U31) differed only in:
 - the new iOS scaffolder and its templates;
 - the documentation that ships in the bundle (`README.md`, `host/README.md`,
   the guide inside the MCP jar);
@@ -133,7 +175,7 @@ needs only bash and python3; building and running need macOS with Xcode.
 
 `DEVICE_HOST.md` §3 (`host/README.md` in the bundle) has the details.
 
-## Fixed (candidate 4 only): U31, the publish signing block exposed the private key
+## Fixed: U31, the publish signing block exposed the private key (candidate 4)
 
 The block that `keliver-new-publish-target.sh` writes has been the same since
 0.3.6. It set Zipline's `signingKeys`, and Zipline 1.22's compile task hands
@@ -197,8 +239,8 @@ the completeness of `host-ios/`; the `xcodebuild` half runs on macOS in
   fixed.
 - **The dev-host APK's signing certificate changes between releases.** It is
   signed with a debug key the CI runner creates for each build: 0.3.6's
-  certificate is `18:31:88:A3…`, candidate 1's `2C:C9:53:49…`, candidate 2's
-  `E9:33:CC:FD…`. `keliver-install-device-host.sh`
+  certificate is `18:31:88:A3…`, 0.3.7's (candidate 4) `A4:42:2C:B4…`;
+  the superseded candidates had others. `keliver-install-device-host.sh`
   runs `adb install -r`, which Android refuses
   (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) over an install signed with another
   key. Uninstall `dev.keliver.portaldevice` first. This follows from the

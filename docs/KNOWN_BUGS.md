@@ -1033,7 +1033,7 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
-### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED on `fix/u31-signing-key-exposure`, not yet released
+### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED in tools 0.3.7 (2026-10-07)
 
 Found on 2026-10-07 while acting on the independent review of W3 (PR #90). The
 review asked whether the key landed in Gradle's execution history; following

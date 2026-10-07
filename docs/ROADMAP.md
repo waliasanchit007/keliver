@@ -254,7 +254,7 @@ and kept under "Completed priorities" below.
    (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Shipped in tools 0.3.6:**
    `keliver-new-production-host.sh` writes `host-android/`, production-only, on
    Maven Central only; the reference app's P1–P7 pass on it, P7 being an
-   offline start from Zipline's verified cache (CI run `37505534432`). **iOS (unreleased, #88):**
+   offline start from Zipline's verified cache (CI run `37505534432`). **iOS (shipped in tools 0.3.7):**
    `keliver-new-ios-host.sh` writes `host-ios/` with the same guarantees, and iOS P1, P2 and P4–P7 pass on a
    simulator in CI (`ios-host.yml` run `37597390396`). What remains: physical devices over HTTPS, and
    release-signed builds. The plan of record is `docs/DELIVERY_PLAN.md`.

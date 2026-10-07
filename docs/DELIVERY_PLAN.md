@@ -217,7 +217,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
 | W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
-| W1 I4 docs + 0.3.7 | **Two verified candidates; awaiting the owner's choice and go.** **Candidate 4** (U31 fix included): `aaa03478`, zip `75ce0928…`, APK `2c89a650…`; build `37661109929`, device `37663450946` (19/0, 28/0); local check; `ios.sh` against the zip 30/0; independent review done. **Candidate 2** (no U31 fix; U31 listed as a known issue): `ce9a9660`, zip `0808e144…`; build `37632305427`, device `37635257054`. Candidates 1 (`2ff3b269`) and 3 (`0a547eda`) are superseded: **never tag them**. | `release/portal-tools-0.3.7` (#89), `fix/u31-signing-key-exposure` (#91); `docs/RELEASE_NOTES_TOOLS_0.3.7.md` |
+| W1 I4 docs + 0.3.7 | **RELEASED 2026-10-07: tools 0.3.7** (candidate 4, with the U31 fix). Tag `portal-tools-v0.3.7` → `aaa03478`; zip `75ce0928…`, checked at the draft digest, by download-back and at the public URL. Candidates 1–3 superseded. | `docs/RELEASE_NOTES_TOOLS_0.3.7.md`; PRs #89, #91 (not merged) |
 | W2–W8 | not started | — |
 
 ## Next action
@@ -225,22 +225,12 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 **On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
 release and W3.**
 
-**Track A: tools 0.3.7.** Verified; waiting for the owner to choose a
-candidate and say go. U31 (the signing key exposure, found after candidate 2)
-makes this a choice:
-- **Candidate 4 (recommended), with the U31 fix:** tag `portal-tools-v0.3.7`
-  → `aaa034784ce6e46ee64182c173f1d564998e72c0`, and attach the zip from build
-  `37661109929` (artifact `11501277933`, zip sha256 `75ce0928…`).
-- **Candidate 2, without the fix:** tag → `ce9a966042dbcdefad7b2dc06e3200f3bf418ea9`,
-  and attach the zip from build `37632305427` (artifact `11489395242`, zip
-  `0808e144…`).
-
-Then follow `docs/PORTAL_TOOLS_RELEASE.md` steps 3–5 for that candidate only:
-- create it as a draft, check the digest, download it back, publish with
-  `--latest=false`, and check the public URL;
-- then the post-release record: CLAUDE.md, `PORTAL_TOOLS_RELEASE.md`,
-  `CURRENT_STATE.md` and `ROADMAP.md` (the iOS rows say "unreleased"), and the
-  notes' status.
+**Track A: tools 0.3.7 — RELEASED 2026-10-07** (candidate 4, `aaa03478`, zip
+`75ce0928…`). The owner said "ok, let's go" to the recommended candidate. The
+record is in `docs/RELEASE_NOTES_TOOLS_0.3.7.md`. Follow-ups:
+- the reference app (`reference-app.yml`, `ci/ios.sh`) still builds from the
+  public 0.3.5 and 0.3.6 zips; move it to 0.3.7;
+- PRs #87, #88, #89 and #91 stay open until the owner merges.
 
 What was done for the candidate:
 - Branch `release/portal-tools-0.3.7` from `feat/ios-production-host` (PR #88).
