@@ -2,9 +2,9 @@
 #
 # Recreate the inventory reference app from the PUBLIC tools release.
 #
-#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.5.zip]
+#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.7.zip]
 #
-# With no zip, downloads the published tools 0.3.5 release and checks it against
+# With no zip, downloads the published tools 0.3.7 release and checks it against
 # the release's own .sha256 AND the hash pinned below. With a zip, checks that
 # zip against the pinned hash, so a rebuild cannot be substituted by accident.
 #
@@ -23,8 +23,8 @@
 # isolation that run needs.
 set -euo pipefail
 
-TOOLS_VERSION=0.3.5
-TOOLS_SHA256=4e1c3040c2e069ab2a503f4b45a7740a28ac243edfb233cdffc7bcb7e7eeb439
+TOOLS_VERSION=0.3.7
+TOOLS_SHA256=75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
 RELEASE=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v$TOOLS_VERSION
 ZIPNAME=keliver-portal-tools-$TOOLS_VERSION.zip
 
@@ -53,7 +53,7 @@ ZIP="$(cd "$(dirname "$ZIP")" && pwd -P)/$(basename "$ZIP")"
 got="$(sha256 "$ZIP" | cut -d' ' -f1)"
 [ "$got" = "$TOOLS_SHA256" ] || {
   echo "refusing: $ZIP has sha256 $got, not the released $TOOLS_SHA256" >&2; exit 3; }
-echo "==> tools zip sha256 $got (the published 0.3.5 asset)"
+echo "==> tools zip sha256 $got (the published $TOOLS_VERSION asset)"
 
 mkdir -p "$PARENT/tools"
 ( cd "$PARENT/tools" && unzip -q "$ZIP" )

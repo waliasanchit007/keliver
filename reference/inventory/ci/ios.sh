@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
 # The reference app's production route on iOS: a tools release (the PUBLIC
-# 0.3.6 asset by default, or a pinned release candidate), a signed publish, and a production host scaffolded by keliver-new-ios-host.sh,
-# run on an iOS simulator. The scaffolder is the zip's own bin/ copy when the
-# zip ships one (tools 0.3.7 on), else this repository's scripts/ copy.
+# 0.3.7 asset by default, or a pinned release candidate), a signed publish, and
+# a production host scaffolded by that zip's own bin/keliver-new-ios-host.sh,
+# run on an iOS simulator.
 #
 #   ci/ios.sh <work-dir> <evidence-dir> <keliver-portal-tools-X.Y.Z.zip>
 #
-# The zip must be the published 0.3.6 asset; its hash is pinned below. To check
+# The zip must be the published 0.3.7 asset; its hash is pinned below. To check
 # a release CANDIDATE instead, set KELIVER_CANDIDATE_SHA256 to the candidate
 # zip's sha256 (from its build run); the version is then read from the zip's
 # VERSION.json, and the results say "candidate", never "published".
@@ -27,13 +27,12 @@
 # Isolation: every JVM runs with user.home = <work-dir>/home, behind the
 # repository's isolation guard. The keys are disposable and app-owned. Nothing
 # here reads, prints or copies a private key; the app's signing block is the
-# only reader, on each publish. With the default published 0.3.6 zip that block
-# is the 0.3.6 one, which leaks the (disposable) key to argv, --info logs and
-# .gradle/ (U31); a candidate zip from 0.3.7 on writes the fixed block.
+# only reader, on each publish (the U31-fixed block from 0.3.7 on: the key is
+# never on a command line, in a log or in .gradle/).
 set -uo pipefail
 
-TOOLS_VERSION=0.3.6
-TOOLS_SHA256=fac9891221e95f87e6324bc9b649767fb9b17efbe3693daef089e65fcc26aca1
+TOOLS_VERSION=0.3.7
+TOOLS_SHA256=75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REF="$(cd "$HERE/.." && pwd -P)"
 REPO="$(cd "$HERE/../../.." && pwd -P)"
@@ -120,11 +119,10 @@ cp "$STORE/bundles/v1/manifest.zipline.json" "$EV/manifest-v1.zipline.json" 2>/d
 
 # --- 3. P1: the iOS host, scaffolded, with THIS app's key ----------------------
 BID=inventory.ioshost
-# A candidate must ship the scaffolder: its own copy is what is under test, so a
-# missing or non-executable one fails here instead of falling back to scripts/.
+# The zip's own copy is what is under test (published since 0.3.7), so a
+# missing or non-executable one fails here; there is no fallback to scripts/.
 if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $LABEL zip's bin/"
-elif [ -n "${KELIVER_CANDIDATE_SHA256:-}" ]; then bad "P1: the candidate zip has no executable bin/keliver-new-ios-host.sh"; exit 1
-else IOS_SCAFFOLD="$REPO/scripts/keliver-new-ios-host.sh"; WHICH="this repository's scripts/"; fi
+else bad "P1: the tools zip has no executable bin/keliver-new-ios-host.sh"; exit 1; fi
 ( cd "$APP" && "$IOS_SCAFFOLD" --bundle-server http://localhost:8077 --bundle-id "$BID" ) \
   > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh ($WHICH) scaffolded host-ios/" \
   || { bad "P1: the iOS host was not scaffolded"; cat "$EV/ios-host-scaffold.log"; exit 1; }
