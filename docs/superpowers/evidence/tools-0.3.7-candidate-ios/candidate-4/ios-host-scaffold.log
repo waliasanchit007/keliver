@@ -1,0 +1,12 @@
+created host-ios/ — this app's production iOS host
+  package          inventory.host
+  app              InventoryHost (inventory.ioshost)
+  bundle server    http://localhost:8077
+  HostHttp         not provided (no --api-base-url)
+  trusts the key   29d265cb… from /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/r37c4-ios-run/home/.keliver-portal/apps/inventory-53df19ba/keys/ed25519.pub (matches this app's store)
+                   commit host-ios/src/iosMain/kotlin/inventory/host/HostConfig.kt
+next:
+  xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
+    -configuration Debug CODE_SIGNING_ALLOWED=NO build      (or open it in Xcode)
+  a release build needs https:// servers, and a device build your team and signing
+  (host-ios/Configuration/Config.xcconfig).

@@ -6,7 +6,29 @@ Tools 0.3.6 and earlier, and the Maven 0.3.3 libraries, are unchanged.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
-### Candidate 2 — the one to tag
+### Candidate 4 — the one to tag, if 0.3.7 ships the U31 fix
+
+It is built from `fix/u31-signing-key-exposure` (PR #91), stacked on candidate 2.
+It is candidate 2 plus the U31 fix and the docs for it.
+
+| | |
+|---|---|
+| source commit to tag | **`aaa034784ce6e46ee64182c173f1d564998e72c0`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`; tools 0.3.7, Maven dependency 0.3.3) |
+| zip | `keliver-portal-tools-0.3.7.zip`, 90,447,444 bytes; zip sha256 **`75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb`** |
+| bundled dev-host APK sha256 | **`2c89a650a71c363629b84f8340dffa26b5dd3b37df8f42c55c702141f3533fa8`**, no `assets/portal_ed25519.pub` |
+| build run | [`37661109929`](https://github.com/waliasanchit007/keliver/actions/runs/37661109929): every portable check green. It includes the publish scaffolder's self-test **32/0 with `--build`**: a positive control that Zipline's command line is in the `--info` log, no `--sign` in it, the key in neither that log nor `.gradle/`'s execution history, a malformed key failing without its content, and a block above `kotlin {}` still signing. From the candidate zip it is **24/0**, with the 0.3.6 upgrade checks. Also: the guest signing check 4/4, the packaged acceptance's publish round-trip (signed v1 stored, unsigned refused), the iOS scaffolder 42/0 twice, the Android host scaffolder 39/0 and 34/0, and U27 63/0/0. Retained artifact `11501277933` (90,444,830 bytes, `sha256:81035eb4…`) |
+| device run | [`37663450946`](https://github.com/waliasanchit007/keliver/actions/runs/37663450946): the APK pinned by sha256; 19/0 device checks, 28/0 packaged acceptance; API 33 x86_64 emulator. Verifier from `fix/u31-signing-key-exposure` at `aaa03478` |
+| iOS, the candidate zip itself | `reference/inventory/ci/ios.sh` with `KELIVER_CANDIDATE_SHA256=75ce0928…`, on this Mac (Xcode 26.4.1, iOS 26.4 simulator): the app recreated from the candidate zip, so its v1, v2 and foreign bundles were all signed by the **fixed** block; the host scaffolded by the zip's own `bin/`; P1, P2, P4–P7 **30/0**. Afterwards the key was in neither app's `.gradle/` execution history. Evidence: `docs/superpowers/evidence/tools-0.3.7-candidate-ios/candidate-4/` |
+| independent review | of the fix (PR #91), by measurement. It confirmed the diagnosis with a positive control and the fix's behaviour across incremental, up-to-date, key-change and Production builds. Its findings were fixed before this build: the store-pointer advice, the upgrade's scope, a malformed key quoted by okio, stale text, and the self-test's positive control |
+| local check | The zip and APK hashes match the build run, and `VERSION.json` is as above. The bundle's `templates/publish/signing.gradle` and `legacy/signing-0.3.6.gradle` are byte-identical to the commit's. So are the guide inside the MCP jar, `host/README.md` and `README.md`. `bin/` scripts are 755. There are no `.priv`, `.pem`, `.jks` or keystore files |
+| tag push | the workflows' triggers are unchanged since candidate 2. Only `portal-tools.yml` (read-only) matches `portal-tools-v*`; the comments are updated |
+
+**Superseded: candidate 3** (`0a547eda`, build `37655814583`, zip `ffa796d5…`).
+It was the U31 fix before its independent review: device 19/0 and 28/0, iOS
+30/0. The review found that its upgrade advice ("delete `.gradle/`") would also
+delete the app's store pointer. **Never tag it.**
+
+### Candidate 2 — the one to tag if 0.3.7 ships WITHOUT the U31 fix
 
 | | |
 |---|---|
@@ -111,6 +133,31 @@ needs only bash and python3; building and running need macOS with Xcode.
 
 `DEVICE_HOST.md` §3 (`host/README.md` in the bundle) has the details.
 
+## Fixed (candidate 4 only): U31, the publish signing block exposed the private key
+
+The block that `keliver-new-publish-target.sh` writes has been the same since
+0.3.6. It set Zipline's `signingKeys`, and Zipline 1.22's compile task hands
+each key to a child JVM as `--sign <alg>:<name>:<private key hex>`, keeping the
+raw key as a task input. Measured with disposable keys, the key ended up:
+- in the process list while a bundle compiled;
+- in full in a `--info` build log;
+- in `.gradle/<version>/executionHistory/executionHistory.bin`, mode 0644
+  under the usual umask. That bypassed U27's owner-only key file.
+
+The new block leaves the compile task unsigned and signs the manifest it wrote,
+in the Gradle process, with Zipline's own `ManifestSigner`. The signed manifest
+is byte-identical to what Zipline produces itself. The key is never a task
+input, an argument or a log line. The block also works anywhere in
+`build.gradle`.
+
+**If your app was wired by 0.3.6, run `keliver-new-publish-target.sh` again.**
+It replaces exactly the old block and changes nothing else. Then:
+- delete `.gradle/*/executionHistory/`, but **keep
+  `.gradle/keliver-store-path`**, which binds the app to its store;
+- restart the portal;
+- if other users, CI logs or a cached `.gradle/` could have read the key,
+  treat it as exposed. There is no key rotation procedure yet; it is W8.
+
 ## Changed: the candidate build checks the packaged iOS scaffolder
 
 `portal-tools.yml` now runs the iOS scaffolder's self-test from `scripts/` and
@@ -140,9 +187,8 @@ the completeness of `host-ios/`; the `xcodebuild` half runs on macOS in
   - stored in `.gradle/<version>/executionHistory/executionHistory.bin`,
     mode 0644 (measured).
 
-  A fix that signs inside Gradle, after the compile, is on branch
-  `fix/u31-signing-key-exposure`, stacked on this one. **Candidate 2 does not
-  include it.**
+  **Fixed in candidate 4** (see *Fixed: U31* below). **Candidate 2 does not
+  include the fix.**
 - **Not measured on iOS:** a physical iPhone; a release or App Store build;
   HTTPS end to end; taps (P3); `HostHttp` and network images in a running app
   (the reference guest uses neither); the SQLite driver inside the iOS app.

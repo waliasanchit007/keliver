@@ -1,0 +1,1 @@
+simulator: 189F423F-B060-4FC2-9E37-BBB43D7BB08F (com.apple.CoreSimulator.SimRuntime.iOS-26-4 com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)

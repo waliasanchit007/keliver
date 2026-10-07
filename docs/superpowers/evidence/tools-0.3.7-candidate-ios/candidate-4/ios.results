@@ -1,0 +1,30 @@
+PASS the tools zip is the CANDIDATE 0.3.7 (75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb), not a published release
+PASS the app: keliver-init, device target and publish target from tools candidate 0.3.7
+PASS the relay for this app answered on :8077
+PASS the relay's store is inside the work dir
+PASS publish v1: publish OK: bundle v1 (widgetVersion=1, srcHash=479c5ca1e7c5a951) -> /private/tm
+PASS P1: keliver-new-ios-host.sh (the tools candidate 0.3.7 zip's bin/) scaffolded host-ios/
+PASS P1: HostConfig.kt embeds this app's public key (29d265cb…)
+PASS P1: xcodebuild built the host from Maven Central
+PASS P1: the host installed as its own app (inventory.ioshost)
+PASS P2: the host verifies with this app's key
+PASS P2: signed v1 loaded (codeLoadSuccess)
+PASS P2: no failed load, so no empty-URL attempt (U28 absent)
+PASS P2: the screen reads 'Inventory'
+PASS P4: the relay applied the title edit
+PASS P4: publish v2
+PASS P4: the host loaded v2
+PASS P4: the screen reads 'Stockroom'
+PASS P5: a relay for the copy is up
+PASS P5: the copy has its own store and key (791dd39b… vs 29d265cb…)
+PASS P5: the copy published a bundle signed with ITS key
+PASS P5: verification still uses this app's key
+PASS P5: the foreign-signed bundle was refused on its signature
+PASS P5: no code loaded
+PASS P5: 'Foreign build' is not on the screen (it reads 1 line(s): blank but for the status bar)
+PASS P6: this app's signed bundle loads again
+PASS P6: the screen reads 'Stockroom'
+PASS P7: no bundle server is answering
+PASS P7: the lookup failed and the host started from its cache
+PASS P7: code loaded offline (codeLoadSuccess), verified with this app's key
+PASS P7: the screen reads 'Stockroom' offline
