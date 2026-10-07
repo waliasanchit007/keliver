@@ -6,9 +6,20 @@ Tools 0.3.6 and earlier, and the Maven 0.3.3 libraries, are unchanged.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
-To be filled from the build run, the device run, the local check of the
-retained artifact, the step-3 workflow check at the source commit, and the iOS
-simulator run against the candidate zip.
+| | |
+|---|---|
+| source commit to tag | **`2ff3b269c0c503c3ff564434c9c7e538d424a3d2`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`; tools 0.3.7, Maven dependency 0.3.3) |
+| zip | `keliver-portal-tools-0.3.7.zip`, 90,443,031 bytes; zip sha256 **`222ba0a1acce40f125f30d24355431993d8595fea7c2029a808ff919d5976303`** |
+| bundled dev-host APK sha256 | **`0ccf76e8c87b841c3f2cec7426b6a522c7c1217efaff114344988ed88878220c`**, no `assets/portal_ed25519.pub` |
+| build run | [`37627385486`](https://github.com/waliasanchit007/keliver/actions/runs/37627385486): every portable check green, including the iOS scaffolder's self-test **42/0 from `scripts/` and 42/0 from the candidate zip** (new), the Android host scaffolder 39/0 and 34/0, the publish scaffolder 23/0 and 18/0, and U27 key permissions 63/0/0. Retained artifact `11485528885` (90,440,611 bytes, `sha256:b1f1e526…`) |
+| device run | [`37630451394`](https://github.com/waliasanchit007/keliver/actions/runs/37630451394): the APK pinned by sha256; 19/0 device checks, 28/0 packaged acceptance; API 33 x86_64 emulator. Verifier from `release/portal-tools-0.3.7` |
+| iOS, the candidate zip itself | `reference/inventory/ci/ios.sh` with `KELIVER_CANDIDATE_SHA256`, on this Mac (Xcode 26.4.1, iOS 26.4 simulator, iPhone 17 Pro): the app recreated from the candidate zip, the host scaffolded by the **zip's own `bin/keliver-new-ios-host.sh`**, built from Maven Central (54 `dev.keliver` artifacts, all 0.3.3); P1, P2, P4–P7 **30/0**. Evidence: `docs/superpowers/evidence/tools-0.3.7-candidate-ios/` |
+| iOS, hosted runner | `ios-host.yml` [`37627628855`](https://github.com/waliasanchit007/keliver/actions/runs/37627628855) on this PR (macos-15): self-test with `xcodebuild` 48/0; P1, P2, P4–P7 30/0, against the **public 0.3.6** zip with the repository's scaffolder at this branch (not the candidate zip: the workflow can't take one before it is on `main`) |
+| reference app (Android) | `reference-app.yml` [`37627628756`](https://github.com/waliasanchit007/keliver/actions/runs/37627628756) on this PR: green, 37/0 |
+| local check | the retained artifact downloaded on macOS. The zip and APK hashes match both runs, `VERSION.json` is as above, `bin/keliver-new-ios-host.sh` (executable) and `templates/ios-host/` (16 files) are in the bundle, and the guide inside the MCP jar is byte-identical to `docs/PORTAL_ADOPTER_GUIDE.md` at the commit, with the 0.3.7 download block |
+| tag push | at `2ff3b269`, only `portal-tools.yml` (read-only) matches `portal-tools-v*`. `publish.yml` (`packages: write`) is `v*` only; `ci.yml` ignores tags; `ios-host`, `reference-app`, `pages`, `compat-matrix` and `publish-maven-central` don't trigger on tags. No workflow at the commit can create a release or attach an asset |
+
+**Not done: tag, release, upload.** Those wait for the owner's approval.
 
 ---
 
