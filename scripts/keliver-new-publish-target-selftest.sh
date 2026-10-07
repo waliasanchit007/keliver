@@ -7,11 +7,16 @@
 #
 # --build also compiles the scaffolded app's bundle against Maven Central, in a
 # disposable Gradle home and user.home, four ways:
-#   signed        tools bin set: the manifest verifies against the store's key
+#   signed        tools bin set: the manifest verifies against the store's key,
+#                 and the private key is in no --info log, no process argument
+#                 (no Zipline `--sign`) and no .gradle/ execution history (U31)
 #   no tools bin  the bundle is UNSIGNED, with a warning (and /publish refuses it)
-#   block moved   the signing block above kotlin {}: UNSIGNED, with no error —
-#                 the ordering rule the generated comment states, measured
+#   block moved   the signing block above kotlin {}: still signed (the block no
+#                 longer depends on its position)
 #   resolver error  a resolver that exits non-zero fails the build
+# Without --build it also checks the upgrade of an app wired by tools 0.3.7
+# (a plain swap) and 0.3.6 (with the U31 advice):
+# exactly the old block is replaced in place; an edited one is refused.
 # The relay half (POST /publish stores the signed bundle and refuses the
 # unsigned one) is in keliver-adopter-acceptance.sh, which runs the packaged
 # portal.
@@ -109,7 +114,8 @@ python3 - "$APP/build.gradle" <<'PY' && ok "the signing block is appended once, 
 import re, sys
 s = open(sys.argv[1]).read()
 assert s.count('keliver: PUBLISH SIGNING') == 1
-assert s.count('signingKeys.set(') == 1
+assert s.count('ManifestSigner.Builder()') == 1
+assert 'signingKeys.set(' not in s, 'the key must never be a Zipline signingKeys input (U31)'
 k = re.search(r'(?m)^kotlin\s*\{', s).start()
 assert s.index('keliver: PUBLISH SIGNING') > k
 PY
@@ -129,6 +135,94 @@ open(p, 'w').write(json.dumps(c, indent=2) + '\n')
 PY
 ( cd "$DISP/same" && "$SCAFFOLD" > /dev/null 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/same/build.gradle" \
   && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused"
+
+echo "=== an app wired by tools 0.3.6 is upgraded in place (U31)"
+LEGACY="$ROOT/scripts/templates/publish/legacy/signing-0.3.6.gradle"
+make_app legacy device
+( cd "$DISP/legacy" && "$SCAFFOLD" > /dev/null 2>&1 )   # wire it, then put the 0.3.6 block back
+python3 - "$DISP/legacy/build.gradle" "$LEGACY" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy + '\n// a line the adopter added after the block\n')
+PY
+cp "$DISP/legacy/build.gradle" "$DISP/legacy.before"
+out="$( cd "$DISP/legacy" && "$SCAFFOLD" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'was replaced by the current one (U31)' \
+  && printf '%s' "$out" | grep -q 'keep .*keliver-store-path' \
+  && ok "the 0.3.6 signing block is recognised and replaced, with the U31 advice (keep the store pointer)" \
+  || bad "upgrade: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"
+python3 - "$DISP/legacy.before" "$DISP/legacy/build.gradle" "$LEGACY" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY' \
+  && ok "the upgrade swaps exactly the old block; every other line is kept" || bad "the upgrade changed more than the block"
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert legacy not in after and after.count(new) == 1
+assert after == before.replace(legacy, new)
+PY
+refuses "a run after the upgrade" "publishing is already wired" "$DISP/legacy"
+make_app edited device
+( cd "$DISP/edited" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/edited/build.gradle" "$LEGACY" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy.replace("'portal-ed25519'", "'portal-ed25519' /* mine */"))
+PY
+refuses "an edited 0.3.6 block" "is not one this script wrote" "$DISP/edited"
+# An app wired by tools 0.3.7: its block already signed safely, so the swap
+# carries no U31 advice.
+LEGACY37="$ROOT/scripts/templates/publish/legacy/signing-0.3.7.gradle"
+make_app wired37 device
+( cd "$DISP/wired37" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/wired37/build.gradle" "$LEGACY37" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy)
+PY
+cp "$DISP/wired37/build.gradle" "$DISP/wired37.before"
+out="$( cd "$DISP/wired37" && "$SCAFFOLD" 2>&1 )"; rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q '(signing-0.3.7) was replaced by the current one' \
+   && ! printf '%s' "$out" | grep -q 'U31' \
+   && python3 - "$DISP/wired37.before" "$DISP/wired37/build.gradle" "$LEGACY37" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY'
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert after == before.replace(legacy, new) and after.count(new) == 1
+PY
+then ok "a 0.3.7 signing block is swapped for the current one, without the U31 advice"
+else bad "upgrading a 0.3.7 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
+# The upgrade swaps the block only: an app on another publish variant keeps it.
+make_app prodvariant device
+( cd "$DISP/prodvariant" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/prodvariant" "$LEGACY" <<'PY'
+import json, sys
+app, legacy = sys.argv[1], open(sys.argv[2]).read()
+p = app + '/build.gradle'; s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy.rstrip('\n'))   # also: the file's final newline stripped
+c = json.load(open(app + '/keliver.portal.json'))
+c['publishTask'] = ':compileProductionExecutableKotlinJsZipline'; c['publishOutput'] = 'build/zipline/Production'
+open(app + '/keliver.portal.json', 'w').write(json.dumps(c, indent=2) + '\n')
+PY
+cp "$DISP/prodvariant/keliver.portal.json" "$DISP/prodvariant.json.before"
+( cd "$DISP/prodvariant" && "$SCAFFOLD" > "$DISP/prodvariant.log" 2>&1 ) \
+  && cmp -s "$DISP/prodvariant.json.before" "$DISP/prodvariant/keliver.portal.json" \
+  && grep -q 'ManifestSigner.Builder()' "$DISP/prodvariant/build.gradle" \
+  && ok "an upgrade keeps a Production publishTask untouched, and accepts a block missing its final newline" \
+  || bad "upgrade with a Production publishTask: $(head -2 "$DISP/prodvariant.log" | tr '\n' ' ')"
+make_app ownkeys device
+( cd "$DISP/ownkeys" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/ownkeys/build.gradle" "$LEGACY" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + "zipline { signingKeys { } }\n" + legacy)
+PY
+refuses "an upgrade when the app also configures signingKeys itself" "already configures signingKeys" "$DISP/ownkeys"
 
 echo "=== comment markers inside strings are strings"
 make_app strings device
@@ -178,10 +272,20 @@ JAVA
   PUB="$(tr -d '[:space:]' < "$STORE/keys/ed25519.pub")"
   MANIFEST="$APP/build/zipline/Development/manifest.zipline.json"
 
-  compile() { # <log> [env assignments...]: compile the bundle; returns gradle's exit
+  compile() { # <log> [env assignments...]: compile the bundle at --info; returns gradle's exit
     local log="$1"; shift
     rm -f "$MANIFEST"   # so a stale manifest can never answer for this compile
-    ( cd "$APP" && env "$@" ./gradlew --console=plain compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
+    ( cd "$APP" && env "$@" ./gradlew --console=plain --info compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
+  }
+  # U31: "absent" when the private key (hex or raw) is in none of the files given.
+  key_in() {
+    python3 - "$STORE/keys/ed25519.priv" "$@" <<'PY'
+import sys
+hexk = open(sys.argv[1]).read().strip().lower()
+raw = bytes.fromhex(hexk)
+hits = [p for p in sys.argv[2:] if (lambda b: raw in b or hexk.encode() in b.lower())(open(p, 'rb').read())]
+print('absent' if not hits else 'PRESENT in ' + ' '.join(hits))
+PY
   }
   # Prints "signed:<true|false>" or "unsigned", from the manifest as built.
   signature_of() {
@@ -204,9 +308,40 @@ PY
     got="$(signature_of)"
     [ "$got" = "signed:true" ] && ok "with the tools bin: the bundle is signed and verifies against the store's public key" \
       || bad "with the tools bin: expected a verifying signature, got $got"
+    # Positive control first: the --info log must show Zipline's compiler command
+    # line at all, or the absence of --sign in it would prove nothing.
+    if ! grep -q 'compile --input' "$DISP/build-signed.log"; then bad "U31: the --info log has no Zipline compile command line to check"
+    elif grep -q -- '--sign' "$DISP/build-signed.log"; then bad "U31: the --info log shows a Zipline --sign argument"
+    else ok "U31: Zipline's compile command line is in the --info log, with no --sign argument"; fi
+    HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
+    if [ -n "$HIST" ]; then
+      got="$(key_in "$DISP/build-signed.log" "$HIST")"
+      [ "$got" = absent ] && ok "U31: the private key is in neither the --info log nor .gradle/'s execution history" \
+        || bad "U31: the private key is $got"
+    else
+      bad "U31: no executionHistory.bin to check under $APP/.gradle"
+    fi
   else
     bad "the signed compile failed (rc=$rc): $(grep -E '^e: |What went wrong' -A2 "$DISP/build-signed.log" | head -4 | tr '\n' ' ')"
   fi
+
+  # CI: a named key file signs with no tools bin and no store lookup, and the key
+  # is in neither the --info log nor the execution history; a named file that is
+  # missing fails the build.
+  rm -rf "$APP"/.gradle/*/executionHistory
+  compile "$DISP/build-keyfile.log" KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv"; rc=$?
+  got="$(signature_of)"
+  HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
+  if [ "$rc" = 0 ] && [ "$got" = signed:true ] && [ -n "$HIST" ] \
+     && [ "$(key_in "$DISP/build-keyfile.log" "$HIST")" = absent ]; then
+    ok "KELIVER_SIGNING_KEY_FILE: signed and verifying, the key in neither the --info log nor the history"
+  else
+    bad "KELIVER_SIGNING_KEY_FILE: rc=$rc, signature $got, history ${HIST:-none}"
+  fi
+  compile "$DISP/build-nokeyfile.log" KELIVER_SIGNING_KEY_FILE="$DISP/no-such.priv"; rc=$?
+  [ "$rc" != 0 ] && grep -q "the signing key file $DISP/no-such.priv does not exist" "$DISP/build-nokeyfile.log" \
+    && ok "a KELIVER_SIGNING_KEY_FILE that does not exist fails the build" \
+    || bad "a missing KELIVER_SIGNING_KEY_FILE: rc=$rc"
 
   compile "$DISP/build-nobin.log"; rc=$?
   [ "$rc" = 0 ] && [ "$(signature_of)" = unsigned ] && grep -q 'so this bundle is UNSIGNED' "$DISP/build-nobin.log" \
@@ -223,10 +358,23 @@ k = re.search(r'(?m)^kotlin\s*\{', rest).start()
 open(p, 'w').write(rest[:k] + block.lstrip('\n') + '\n' + rest[k:])
 PY
   compile "$DISP/build-moved.log" KELIVER_TOOLS_BIN="$ROOT/scripts"; rc=$?
-  [ "$rc" = 0 ] && [ "$(signature_of)" = unsigned ] \
-    && ok "the block moved above kotlin {}: the bundle compiles UNSIGNED, with no error (the ordering rule holds)" \
+  [ "$rc" = 0 ] && [ "$(signature_of)" = signed:true ] \
+    && ok "the block moved above kotlin {}: the bundle is still signed (position no longer matters)" \
     || bad "the block moved above kotlin {}: rc=$rc, signature $(signature_of)"
   cp "$DISP/build.gradle.scaffolded" "$APP/build.gradle"
+
+  # A malformed key fails the build, and the failure does not quote the key file.
+  cp "$STORE/keys/ed25519.priv" "$DISP/priv.saved"
+  ( umask 077; head -c 63 "$DISP/priv.saved" > "$STORE/keys/ed25519.priv" )
+  compile "$DISP/build-badkey.log" KELIVER_TOOLS_BIN="$ROOT/scripts"; rc=$?
+  bad63="$(cat "$STORE/keys/ed25519.priv")"
+  if [ "$rc" != 0 ] && grep -q 'is not a 64-hex-digit Ed25519 private key' "$DISP/build-badkey.log" \
+     && ! grep -qF -- "$bad63" "$DISP/build-badkey.log"; then
+    ok "a malformed key fails the build without its content in the log"
+  else
+    bad "a malformed key: rc=$rc, or its content is in the log"
+  fi
+  cp "$DISP/priv.saved" "$STORE/keys/ed25519.priv"; rm -f "$DISP/priv.saved"; unset bad63
 
   mkdir -p "$DISP/brokenbin"
   printf '#!/bin/sh\necho "split identity" >&2\nexit 3\n' > "$DISP/brokenbin/keliver-store-path.sh"

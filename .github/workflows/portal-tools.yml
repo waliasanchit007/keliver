@@ -192,11 +192,23 @@ jobs:
           KELIVER_PRODUCTION_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-production-host.sh" \
             scripts/keliver-new-production-host-selftest.sh "$RUNNER_TEMP/prod-host-pkg"
           echo "::endgroup::"
+          echo "::group::the iOS host scaffolder, from scripts/ and from the package"
+          # keliver-new-ios-host.sh writes an adopter's production iOS host. Here,
+          # on Linux, only its refusals (the app byte-identical) and the
+          # completeness of host-ios/; the xcodebuild half (--build) needs macOS
+          # and runs in ios-host.yml. Then the copy in the candidate zip, which
+          # must find its templates at bin/../templates.
+          scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/ios-host"
+          KELIVER_IOS_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-ios-host.sh" \
+            scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/ios-host-pkg"
+          echo "::endgroup::"
           echo "::group::the publish scaffolder, from scripts/ and from the package"
           # keliver-new-publish-target.sh wires POST /publish and signing into an
-          # app. --build compiles the bundle four ways: signed and verifying;
-          # UNSIGNED without a tools bin; UNSIGNED with the block above kotlin {};
-          # a failing resolver failing the build. The relay's half (it stores the
+          # app. --build compiles the bundle four ways: signed and verifying, with
+          # the key in no --info log, argv or .gradle/ history (U31); UNSIGNED
+          # without a tools bin; still signed with the block above kotlin {};
+          # a failing resolver failing the build. Both runs check the upgrade
+          # of a 0.3.6 block. The relay's half (it stores the
           # signed bundle and refuses the unsigned one) is in the acceptance above.
           scripts/keliver-new-publish-target-selftest.sh "$RUNNER_TEMP/publish-target" --build
           KELIVER_PUBLISH_TARGET_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-publish-target.sh" \
@@ -226,14 +238,10 @@ jobs:
           ./gradlew --console=plain :portal-device-guest:compileDevelopmentZipline
           echo "::endgroup::"
           echo "::group::guest bundle signing"
-          # The guest signs from the compile task's own signingKeys property,
-          # written by a configureEach placed BELOW the kotlin {} block. Gradle
-          # splices a registration action in at the position register() was
-          # called, so the same statement moved above that block is added
-          # earlier, loses to the plugin's own write, and the symptom is an
-          # UNSIGNED bundle with a key present rather than an error. Measured:
-          # that move makes this step fail and nothing else. Both directions are
-          # asserted.
+          # The guest signs in a doLast of the compile task (U31: never through
+          # signingKeys, which leaked the key). The failure to catch is still an
+          # UNSIGNED bundle with a key present rather than an error. Both
+          # directions are asserted.
           scripts/keliver-guest-signing-check.sh "$RUNNER_TEMP/guest-signing"
           echo "::endgroup::"
           echo "::group::store recovery outcomes, through the packaged commands"

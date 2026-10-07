@@ -292,8 +292,8 @@ if grep -q 'publish OK: bundle v1' "$DISP/publish-1.log" \
 else
   bad "POST /publish did not store a signed v1"; tail -8 "$DISP/publish-1.log" | sed 's/^/        /'
 fi
-# The failure every adopter used to hit silently: the signing block gone (or
-# above kotlin {}) still compiles, UNSIGNED. The relay must refuse it and store
+# The failure every adopter used to hit silently: the signing block gone still
+# compiles, UNSIGNED. The relay must refuse it and store
 # nothing.
 cp "$DISP/build.gradle.unsigned" "$APP/build.gradle"
 BUNDLES_BEFORE="$(ls -d "$STORE_DIR"/bundles/v* 2>/dev/null | wc -l | tr -d ' ')"

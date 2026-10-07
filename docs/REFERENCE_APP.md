@@ -23,8 +23,9 @@ the project has adopted Keliver. Nobody has.
   no Keliver *library* module from source: the production host is scaffolded
   into the app by `keliver-new-production-host.sh` and built by the app's Gradle
   against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
-  Kotlin is that scaffolder's template, and the scaffolder is not yet in a
-  published tools bundle, so both still come from this repository. Runs 1–7
+  Kotlin is that scaffolder's template. The scaffolder ships in tools 0.3.6,
+  but the reference app is still built from the 0.3.5 zip, which lacks it, so
+  both still come from this repository. Runs 1–7
   used `portal-device-android` compiled from Keliver **source** at `b5615637`.
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
@@ -138,6 +139,9 @@ for us.
    with the store's private key. The block has to come **after** the `kotlin {}`
    block or the bundle compiles unsigned without an error; that rule is written
    down only in `portal-published-guest/build.gradle`'s comments.
+   *(Superseded, 2026-10-07, by U31 in `KNOWN_BUGS.md`. Setting `signingKeys`
+   leaks the key, so the block now signs in a `doLast`, and the ordering rule
+   no longer applies.)*
    The reference app's version: `reference/inventory/app/build.gradle` (bottom).
    The adopter guide mentions published bundles and the publisher but does not
    describe how to publish — no `/publish`, no `publishTask`.

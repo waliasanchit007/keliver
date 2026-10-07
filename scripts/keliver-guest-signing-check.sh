@@ -5,15 +5,13 @@
 #
 #   scripts/keliver-guest-signing-check.sh <disposable-root>
 #
-# WHY THIS EXISTS. portal-published-guest does not configure signing through the
-# `zipline { signingKeys { ... } }` extension; it writes the compile task's own
-# signingKeys ListProperty from a `configureEach` placed BELOW the `kotlin {}`
-# block, because the store must not be resolved while the build file is being
-# read. Gradle splices a task's registration action into the container's action
-# chain at the position register() was called, so the same statement moved above
-# that block is added earlier, loses to the plugin's own write, and the symptom
-# is not an error. It is a bundle that ships UNSIGNED with a signing key sitting
-# in the store. That happened once during development and was caught by hand.
+# WHY THIS EXISTS. portal-published-guest signs in a doLast of the compile task,
+# with Zipline's ManifestSigner, and resolves the store only when a bundle is
+# compiled. Until U31 (docs/KNOWN_BUGS.md) it set the compile task's signingKeys
+# from a configureEach that had to sit BELOW the `kotlin {}` block, or the
+# plugin's own write won and the bundle shipped UNSIGNED with a key in the store
+# (that happened once and was caught by hand). signingKeys also leaked the key,
+# so it is gone. A silent unsigned bundle is still the failure to catch.
 #
 # This turns "signed" into a gate. Both directions are asserted, so the check
 # cannot pass by never signing anything.
@@ -51,10 +49,11 @@ export JAVA_HOME
 DISP="$(keliver_make_run_dir "$DISP_PARENT" guest-signing)" || exit $?
 
 # Keep Gradle's project cache — task history, file hashes — inside the
-# disposable root, so the run leaves no .gradle state in the repo. NOT because
-# the private key would otherwise be stored there: measured, Gradle records a
-# hash of the @Input, and the key bytes appear in no cache file. The cost is a
-# cold project cache, so the Kotlin/JS + Zipline chain re-executes every run.
+# disposable root, so the run leaves no .gradle state in the repo. (An earlier
+# note here said the key bytes appear in no cache file. U31 measured the
+# opposite for signingKeys: the raw key was in executionHistory.bin. The doLast
+# signing passes no key to Gradle.) The cost is a cold project cache, so the
+# Kotlin/JS + Zipline chain re-executes every run.
 GRADLE_FLAGS=(--console=plain -q --project-cache-dir "$DISP/project-cache")
 
 PASS=0; FAIL=0

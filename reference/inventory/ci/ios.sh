@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 #
-# The reference app's production route on iOS: the PUBLIC tools release, a
-# signed publish, and a production host scaffolded by this repository's
-# scripts/keliver-new-ios-host.sh (not yet in a published tools bundle), run on
-# an iOS simulator.
+# The reference app's production route on iOS: a tools release (the PUBLIC
+# 0.3.7 asset by default, or a pinned release candidate), a signed publish, and
+# a production host scaffolded by that zip's own bin/keliver-new-ios-host.sh,
+# run on an iOS simulator.
 #
-#   ci/ios.sh <work-dir> <evidence-dir> <keliver-portal-tools-0.3.6.zip>
+#   ci/ios.sh <work-dir> <evidence-dir> <keliver-portal-tools-X.Y.Z.zip>
 #
-# The zip must be the published 0.3.6 asset; its hash is pinned below.
+# The zip must be the published 0.3.7 asset; its hash is pinned below. To check
+# a release CANDIDATE instead, set KELIVER_CANDIDATE_SHA256 to the candidate
+# zip's sha256 (from its build run); the version is then read from the zip's
+# VERSION.json, and the results say "candidate", never "published".
 #
 # iOS P-checks, the counterparts of device.sh's P1–P7:
 #   P1  the host embeds this app's public key; it builds and installs as its own app
@@ -28,12 +31,13 @@
 #
 # Isolation: every JVM runs with user.home = <work-dir>/home, behind the
 # repository's isolation guard. The keys are disposable and app-owned. Nothing
-# here reads, prints or copies a private key; the Zipline compile task's signing
-# block is the only reader, on each publish.
+# here reads, prints or copies a private key; the app's signing block is the
+# only reader, on each publish (the U31-fixed block from 0.3.7 on: the key is
+# never on a command line, in a log or in .gradle/).
 set -uo pipefail
 
-TOOLS_VERSION=0.3.6
-TOOLS_SHA256=fac9891221e95f87e6324bc9b649767fb9b17efbe3693daef089e65fcc26aca1
+TOOLS_VERSION=0.3.7
+TOOLS_SHA256=75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REF="$(cd "$HERE/.." && pwd -P)"
 REPO="$(cd "$HERE/../../.." && pwd -P)"
@@ -52,10 +56,19 @@ sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
-# --- 1. the app, from the public release --------------------------------------
+# --- 1. the app, from the tools zip -------------------------------------------
 got="$(sha256 "$ZIP" | cut -d' ' -f1)"
-[ "$got" = "$TOOLS_SHA256" ] || { bad "the tools zip is $got, not the published $TOOLS_SHA256"; exit 1; }
-ok "the tools zip is the published $TOOLS_VERSION asset (${TOOLS_SHA256:0:8}…)"
+if [ -n "${KELIVER_CANDIDATE_SHA256:-}" ]; then
+  [ "$got" = "$KELIVER_CANDIDATE_SHA256" ] || { bad "the tools zip is $got, not the candidate $KELIVER_CANDIDATE_SHA256"; exit 1; }
+  TOOLS_VERSION="$(unzip -p "$ZIP" '*/VERSION.json' | python3 -c 'import json,sys; print(json.load(sys.stdin)["toolsVersion"])')" \
+    || { bad "the candidate zip has no readable VERSION.json"; exit 1; }
+  ok "the tools zip is the CANDIDATE $TOOLS_VERSION ($got), not a published release"
+  LABEL="candidate $TOOLS_VERSION"
+else
+  [ "$got" = "$TOOLS_SHA256" ] || { bad "the tools zip is $got, not the published $TOOLS_SHA256"; exit 1; }
+  ok "the tools zip is the published $TOOLS_VERSION asset (${TOOLS_SHA256:0:8}…)"
+  LABEL="published $TOOLS_VERSION"
+fi
 mkdir -p "$WORK/tools" && ( cd "$WORK/tools" && unzip -q "$ZIP" )
 KP="$WORK/tools/keliver-portal-tools-$TOOLS_VERSION/bin"
 ( cd "$WORK" && "$KP/keliver-init" Inventory ) > "$EV/init.log" 2>&1 || { bad "keliver-init failed"; exit 1; }
@@ -70,8 +83,8 @@ APP="$WORK/inventory"
   # The files the scaffolders cannot produce (bootstrap.sh's overlay).
   for f in keliver.portal.json build.gradle settings.gradle src/jsMain/kotlin/device/Main.kt; do cp "$REF/app/$f" "$f"; done
   "$KP/keliver-new-publish-target.sh"
-  git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $TOOLS_VERSION"
-) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $TOOLS_VERSION" \
+  git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
+) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
   || { bad "recreating the app failed"; tail -20 "$EV/app.log"; exit 1; }
 
 # --- 2. a relay for this app, isolated -----------------------------------------
@@ -79,6 +92,10 @@ APP="$WORK/inventory"
 . "$REPO/scripts/keliver-test-isolation-guard.sh"
 portal_up(){  # $1 = app dir, $2 = log
   keliver_require_isolated_store "$WORK" "$1" >> "$EV/guard.log" 2>&1 || { echo "isolation guard refused $1" >&2; return 1; }
+  # A relay this run did not start would answer every check below.
+  local free=0
+  for _ in $(seq 1 10); do curl -s -m 2 -o /dev/null http://localhost:8077/devstate || { free=1; break; }; sleep 2; done
+  [ "$free" = 1 ] || { echo ":8077 already answers: a relay this run did not start" >&2; return 1; }
   ( cd "$1" && nohup "$KP/keliver-portal" --no-editor-build . > "$2" 2>&1 & )
   for _ in $(seq 1 60); do curl -sf -m 2 -o /dev/null http://localhost:8077/devstate && return 0; sleep 3; done
   return 1
@@ -108,8 +125,12 @@ cp "$STORE/bundles/v1/manifest.zipline.json" "$EV/manifest-v1.zipline.json" 2>/d
 
 # --- 3. P1: the iOS host, scaffolded, with THIS app's key ----------------------
 BID=inventory.ioshost
-( cd "$APP" && "$REPO/scripts/keliver-new-ios-host.sh" --bundle-server http://localhost:8077 --bundle-id "$BID" ) \
-  > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh scaffolded host-ios/" \
+# The zip's own copy is what is under test (published since 0.3.7), so a
+# missing or non-executable one fails here; there is no fallback to scripts/.
+if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $LABEL zip's bin/"
+else bad "P1: the tools zip has no executable bin/keliver-new-ios-host.sh"; exit 1; fi
+( cd "$APP" && "$IOS_SCAFFOLD" --bundle-server http://localhost:8077 --bundle-id "$BID" ) \
+  > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh ($WHICH) scaffolded host-ios/" \
   || { bad "P1: the iOS host was not scaffolded"; cat "$EV/ios-host-scaffold.log"; exit 1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 grep -q "PORTAL_PUBLIC_KEY_HEX: String = \"$PUB\"" "$CFG" \

@@ -1,0 +1,82 @@
+
+// ---------------------------------------------------------------------------
+// keliver: PUBLISH SIGNING (v2) — written by keliver-new-publish-target.sh.
+//
+// The relay's POST /publish runs `publishTask` (keliver.portal.json) and keeps
+// its output as a versioned bundle ONLY if the manifest is signed with this
+// app's key: production hosts refuse anything else. The relay does not sign.
+// This block does, with <store>/keys/ed25519.priv. The store is asked of the
+// tools bundle's resolver (keliver-store-path.sh), never derived here.
+//
+// Where the tools are: -Pkeliver.toolsBin, else KELIVER_TOOLS_BIN
+// (keliver-portal sets it), else KP. With none of them, or before the first
+// portal start has created the key, the bundle compiles UNSIGNED: fine for
+// development, and /publish refuses it. A resolver that answers with an error
+// fails the build instead.
+//
+// HOW IT SIGNS, AND WHY NOT WITH ZIPLINE'S signingKeys (U31). Zipline's compile
+// task passes each signing key to a child JVM as `--sign <alg>:<name>:<hex>`:
+// the private key is on a command line any local user can read while it runs,
+// in full in a `--info` or `--debug` build log, and — as the task's @Input —
+// in <app>/.gradle/<version>/executionHistory/executionHistory.bin, mode 0644.
+// So the compile task here runs UNSIGNED, and a last action of that task signs
+// the manifest it wrote, in this Gradle process, with Zipline's own
+// ManifestSigner. The key is read from its file into memory for that and never
+// becomes a task input, an argument or a log line. The task's input is a
+// one-way id of the key (a SHA-256), so a changed key rebuilds the bundle.
+//
+// Not configuration-cache compatible: the store is resolved by running a
+// process (keliver-init leaves the cache off).
+//
+// Unlike the block it replaces, this one works anywhere in build.gradle:
+// configureEach reaches compile tasks registered after it, and it never sets a
+// value the zipline plugin overwrites. The scaffolder still appends it last.
+def keliverSigningKeyFile = { ->
+  def bin = providers.gradleProperty('keliver.toolsBin')
+    .orElse(providers.environmentVariable('KELIVER_TOOLS_BIN'))
+    .orElse(providers.environmentVariable('KP'))
+    .getOrNull()
+  if (!bin) {
+    logger.warn('keliver: no tools bin (-Pkeliver.toolsBin, KELIVER_TOOLS_BIN or KP), so this bundle is UNSIGNED')
+    return null
+  }
+  def proc = [new File(bin, 'keliver-store-path.sh').absolutePath, rootDir.absolutePath,
+              '--home', System.getProperty('user.home')].execute()
+  def out = new StringBuilder(), err = new StringBuilder()
+  proc.waitForProcessOutput(out, err)
+  if (proc.exitValue() != 0) throw new GradleException("keliver: keliver-store-path.sh exited ${proc.exitValue()}: ${err.toString().trim()}")
+  def path = out.toString().trim()
+  if (!path.startsWith('/')) throw new GradleException("keliver: keliver-store-path.sh returned a non-absolute path: '${path}'")
+  def key = new File(path, 'keys/ed25519.priv')
+  if (!key.isFile()) {
+    logger.warn("keliver: no signing key at ${key} yet (the first portal start creates it), so this bundle is UNSIGNED")
+    return null
+  }
+  key
+}.memoize()
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
+  compileTask.inputs.property('keliverSigningKeyId', providers.provider {
+    def key = keliverSigningKeyFile()
+    if (key == null) return 'unsigned'
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    digest.update('keliver-signing-key-id\n'.getBytes('UTF-8'))
+    digest.update(key.text.trim().getBytes('UTF-8'))
+    digest.digest().encodeHex().toString()
+  })
+  compileTask.doLast {
+    def key = keliverSigningKeyFile()
+    if (key == null) return
+    def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
+    if (!manifestFile.isFile()) throw new GradleException("keliver: ${compileTask.path} wrote no ${manifestFile} to sign")
+    def hex = key.text.trim()
+    // Checked before decoding: okio's error for a malformed string quotes all of it.
+    if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
+    def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
+      .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
+      .build()
+    // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
+    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+    manifestFile.text = signer.sign(manifest).encodeJson()
+    logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key")
+  }
+}

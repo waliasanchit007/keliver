@@ -46,9 +46,13 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 
 - **Does:** the web portal loop (author screens visually or in code, live
   preview, the op engine, `.kt` write-back, MCP) against any app dir.
-- **Doesn't (yet):** compile/sign the production bundle or drive on-device
-  preview — those run in your app's own Gradle. See the keliver repo's
-  `docs/PORTAL_USAGE.md` and `docs/SCREEN_ARCHITECTURE.md` for the host wiring.
+- **Also:** wire signed publishing into your app
+  (`bin/keliver-new-publish-target.sh`; the signing runs in your app's own
+  Gradle, and `POST /publish` keeps only bundles signed with your key), and
+  scaffold your own production hosts for Android
+  (`bin/keliver-new-production-host.sh`) and iOS (`bin/keliver-new-ios-host.sh`).
+- **Doesn't (yet):** publish without the local relay (no headless CLI), serve
+  bundles from a static host or CDN, or protect against rollback.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -80,10 +84,10 @@ your store resolves, any key that is not its `ed25519.pub`. Refuses without
 changing anything if an input is wrong or `host-android/` exists. A release
 build needs `https://` servers and your own signing config.
 
-### scripts/keliver-new-ios-host.sh (not yet in a released bundle)
+### bin/keliver-new-ios-host.sh
 
 ```bash
-keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+bin/keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
 xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
@@ -127,11 +131,15 @@ bin/keliver-new-publish-target.sh
 
 Wires `POST /publish` for your app: `publishTask`/`publishOutput` in
 `keliver.portal.json` (the development Zipline bundle), and a signing block
-appended to `build.gradle`, below `kotlin {}`, that signs with your store's
-`keys/ed25519.priv`. The relay keeps a published bundle only if it verifies
-against your store's public key, and refuses an unsigned one. Refuses without
-changing anything if the app has no device target, already configures
-`signingKeys`, or sets a different `publishTask`. Restart the portal afterwards:
+appended to `build.gradle` that signs the compiled manifest with your store's
+`keys/ed25519.priv`, inside Gradle. The key is never passed on a command line,
+logged, or stored in `.gradle/` (U31). The relay keeps a published bundle only
+if it verifies against your store's public key, and refuses an unsigned one.
+Refuses without changing anything if the app has no device target, configures
+`signingKeys` itself, or sets a different `publishTask`. **An app wired by 0.3.6:
+run it again** (from 0.3.7 or later): it replaces exactly the old block and
+nothing else. Then delete the app's `.gradle/*/executionHistory/`, where the
+old block left the key, but keep `.gradle/keliver-store-path`. Restart the portal afterwards:
 the relay reads `keliver.portal.json` at start.
 
 ### bin/keliver-new-component.sh

@@ -6,12 +6,12 @@
 #
 #   ci/prepare.sh <work-dir> <evidence-dir> [tools.zip]
 #
-# Publishing is wired by this repository's scripts/keliver-new-publish-target.sh,
-# and the production host is SCAFFOLDED into the app by its
-# scripts/keliver-new-production-host.sh (neither is in a published tools bundle
-# yet) and built by the app's own Gradle from Maven Central. It used to be
-# portal-device-android compiled from Keliver's source at the release commit;
-# no Keliver source is compiled here now.
+# Publishing is wired, and the production host SCAFFOLDED into the app, by the
+# published tools zip's own bin/keliver-new-publish-target.sh and
+# bin/keliver-new-production-host.sh (tools 0.3.7, with the U31 signing block);
+# the host is built by the app's own Gradle from Maven Central. It used to be
+# portal-device-android compiled from Keliver's source at the release commit,
+# then this repository's scripts/ copies; neither is used now.
 #
 # Isolation: every JVM here runs with user.home = <work-dir>/home, so the store,
 # its keys and the relay's state are all inside <work-dir>. The repository's own
@@ -41,7 +41,7 @@ unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 # --- 1. the app, from the public release ------------------------------------
 echo "==> bootstrap"
 if "$HERE/../bootstrap.sh" "$WORK/boot" $ZIP > "$EV/bootstrap.log" 2>&1; then
-  ok "bootstrap: the app was scaffolded from the published tools 0.3.5 zip"
+  ok "bootstrap: the app was scaffolded from the published tools zip ($(basename "$(dirname "$(ls -d "$WORK"/boot/tools/keliver-portal-tools-*/bin)")"))"
 else
   bad "bootstrap failed"; tail -30 "$EV/bootstrap.log"; exit 1
 fi
@@ -57,8 +57,8 @@ echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
 
 # publishTask/publishOutput and the signing block. The bootstrap no longer
 # overlays a hand-written block; this is the scaffolder an adopter would run.
-( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
-  && ok "publishing wired by keliver-new-publish-target.sh" \
+( cd "$APP" && "$KP/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
+  && ok "publishing wired by the zip's bin/keliver-new-publish-target.sh" \
   || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
 cp "$APP/build.gradle" "$EV/app-build.gradle"
 # Committed, as an adopter would: D2 asserts that a layout edit changes exactly
@@ -129,9 +129,9 @@ portal_down "$APP"
 # (resolved under this run's user.home) and writes host-android/, a standalone
 # build on Maven Central only. 10.0.2.2 is how the emulator reaches the relay.
 PROD_ID=inventory.host
-( cd "$APP" && "$REPO/scripts/keliver-new-production-host.sh" --bundle-server http://10.0.2.2:8077 \
+( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server http://10.0.2.2:8077 \
     --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
-  && ok "P1: keliver-new-production-host.sh scaffolded host-android/" \
+  && ok "P1: the zip's bin/keliver-new-production-host.sh scaffolded host-android/" \
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
 sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"

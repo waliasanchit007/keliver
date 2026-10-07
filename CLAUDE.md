@@ -24,8 +24,8 @@ them visually in a web portal that round-trips to the .kt files in git.
   checked on an emulator by `.github/workflows/reference-app.yml`. Its
   production host is scaffolded by `scripts/keliver-new-production-host.sh`
   and built against Maven Central — no Keliver LIBRARY module is compiled from
-  source, but the host's own Kotlin is a template from this repo, the script is
-  not yet in a released tools bundle, and the CI harness is this repo's. What it proved and
+  source, but the host's own Kotlin is a template from this repo, the script
+  comes from this checkout (it ships from tools 0.3.6; the app still uses 0.3.5), and the CI harness is this repo's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
@@ -95,10 +95,11 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.6** (Maven dependency **0.3.3**), released
-2026-10-07 from `d52e2eca`; its identities and how the stored asset was checked
-are in [`docs/RELEASE_NOTES_TOOLS_0.3.6.md`](docs/RELEASE_NOTES_TOOLS_0.3.6.md).
-0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.7** (Maven dependency **0.3.3**), released
+2026-10-07 from `aaa03478`: the iOS production-host scaffolder and the U31
+signing fix. Its identities and how the stored asset was checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.7.md`](docs/RELEASE_NOTES_TOOLS_0.3.7.md).
+0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then

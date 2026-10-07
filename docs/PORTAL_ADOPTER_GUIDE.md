@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.6](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.6)**:
+  **[tools 0.3.7](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.6/keliver-portal-tools-0.3.6.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.6/keliver-portal-tools-0.3.6.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.6.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.7.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.6.zip
-  export KP="$PWD/keliver-portal-tools-0.3.6/bin"
+  unzip keliver-portal-tools-0.3.7.zip
+  export KP="$PWD/keliver-portal-tools-0.3.7/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.6
+  The tools version and the library version are **separate lines**: tools 0.3.7
   scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
   bundle records both in its `VERSION.json`.
 
@@ -231,21 +231,39 @@ $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an e
 
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
-public key. Without the signing block — or with it moved above `kotlin {}`,
-where it silently does nothing — the build still succeeds and `/publish` says
-`publish REFUSED: the bundle is UNSIGNED` and stores nothing.
+public key. Without the signing block the build still succeeds and `/publish`
+says `publish REFUSED: the bundle is UNSIGNED` and stores nothing.
+
+**Upgrading from tools 0.3.6: run `keliver-new-publish-target.sh` from these
+tools (0.3.7 or later) again (U31).** The 0.3.6 command can't do this; it
+answers "already wired".
+The signing block 0.3.6 wrote gave your private key to Zipline's compile task,
+which passes it to a child JVM on its command line. While a bundle compiled,
+any local user could read the key in the process list. A `--info` or `--debug`
+build printed it, and it was stored in `.gradle/<version>/executionHistory/`,
+readable by others under the usual umask. Rerunning the command replaces
+exactly that block with one that signs inside Gradle, after the compile, and
+changes nothing else, `keliver.portal.json` included. Then:
+- delete `.gradle/*/executionHistory/` in your app. **Keep
+  `.gradle/keliver-store-path`**: it binds the app to its store, and without
+  it a moved app can resolve to a new, empty store with a new key;
+- restart the portal, so `/publish` builds with the new block;
+- if other users of the machine, shared CI logs or a cached `.gradle/` could
+  have exposed the key, treat it as compromised. A new key means rebuilding
+  and shipping your production hosts with its public key. Keliver has no
+  rotation procedure yet: hosts trust one key, and W8 in the delivery plan
+  covers rotation.
 
 It embeds your portal's public key (copied from your store — commit
 `host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
 against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
-`DEVICE_HOST.md` §2 has the options and what the host refuses.
+`DEVICE_HOST.md` §2 (Android) has the options and what the host refuses.
 
 **iOS.** `keliver-new-ios-host.sh` writes `host-ios/`: the same production
 host, for iOS. It is a Kotlin framework built from Maven Central plus an Xcode
-app around it. **It is not in a released tools bundle yet**; until it is, it is
-`scripts/keliver-new-ios-host.sh` in the Keliver repository. It needs macOS
-with Xcode.
+app around it. It ships in the tools bundle from **0.3.7** on. Scaffolding
+needs only bash and python3; building and running it need macOS with Xcode.
 
 ```bash
 $KP/keliver-new-ios-host.sh --bundle-server http://localhost:8077    # a simulator on this Mac reaching your relay
@@ -328,24 +346,24 @@ jobs:
           aws s3 cp --recursive "site/bundles/v$N" "s3://$BUCKET/bundles/v$N" \
             --cache-control "public, max-age=31536000, immutable"
           aws s3 cp site/bundles/index.json "s3://$BUCKET/bundles/index.json" --cache-control "no-cache"
-      - name: The signing key leaks into Gradle's project state (U31)
+      - name: Remove the key file, and Gradle's task history with it
         if: always()
-        run: rm -rf .gradle "$RUNNER_TEMP/keliver.priv"
+        run: rm -rf .gradle/*/executionHistory "$RUNNER_TEMP/keliver.priv"
 ```
 
-**Keep the signing key out of logs and caches.** This applies until U31 is
-fixed (`docs/KNOWN_BUGS.md`): Zipline's compile task passes the private key to
-a child process on its command line. As a result:
-- it appears in Gradle's `--info` and `--debug` output, so don't publish with
-  those flags;
-- it is recorded in the app's `.gradle/` directory, so delete it after the job
-  (as above) and never cache it with `actions/cache`.
+**Keep the signing key out of logs and caches.** The signing block signs
+inside Gradle, after the compile. The key is never on a command line, in a
+`--info` or `--debug` log, or in `.gradle/` (U31, fixed in tools 0.3.7).
+Still:
+- never cache `.gradle/` with `actions/cache`;
+- delete the key file when the job ends, as above.
 
 Store the private key (the hex in your store's `keys/ed25519.priv`) as a
 secret. `KELIVER_SIGNING_KEY_FILE` is read by the signing block that
-`keliver-new-publish-target.sh` writes. If your block was written by tools
-0.3.6 or 0.3.7, the block doesn't know this variable: add the
-`keliver.signingKeyFile` lines from `templates/publish/signing.gradle`.
+`keliver-new-publish-target.sh` writes from the tools release that ships
+`keliver-publish` on. Blocks written by 0.3.6 or 0.3.7 don't know this
+variable: run `keliver-new-publish-target.sh` again. It replaces exactly
+either of those blocks and changes nothing else.
 
 Exit status:
 - 0: published.

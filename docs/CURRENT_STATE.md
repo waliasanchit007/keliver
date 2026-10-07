@@ -28,8 +28,8 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | what | version | where |
 |---|---|---|
 | libraries `dev.keliver:*` | **0.3.3** | Maven Central (unchanged since 2026-09-05) |
-| `keliver-portal-tools` | **0.3.6** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.6), 2026-10-07, tag → `d52e2eca`; zip `fac98912…` |
-| `keliver-portal-tools` | 0.3.5, 0.3.4 | still published, unchanged |
+| `keliver-portal-tools` | **0.3.7** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7), 2026-10-07, tag → `aaa03478`; zip `75ce0928…`. Adds the iOS production-host scaffolder; fixes U31 |
+| `keliver-portal-tools` | 0.3.6, 0.3.5, 0.3.4 | still published, unchanged (0.3.6's signing block has U31: upgrade) |
 | a production host for keliver-material screens | tools 0.3.6 | **scaffolded**, not shipped as a binary: `bin/keliver-new-production-host.sh` writes the app's own host. The bundled host stays development-only. |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
@@ -40,8 +40,8 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | Live preview with the app's real presenters, repeated actions | `reference/inventory` | macOS, headless Chrome | 2026-09-22 |
 | development route on the bundled generic host, E1–E10 (view hierarchy, not screenshots) | `reference/inventory` | CI emulator, API 33 x86_64 | 2026-09-23, runs `35802020305`, `35803336957` |
 | production OTA with app-owned disposable keys: signed v1 → v2, foreign key rejected | `reference/inventory` | CI emulator, API 33 x86_64; **host compiled from Keliver source** at `b5615637` | 2026-09-23, runs `35800642819`, `35802020305`, `35803336957` |
-| production OTA on a host **scaffolded** by `keliver-new-production-host.sh` and built from Maven Central only: signed v1 → v2, foreign key rejected, offline start from the verified cache (P1–P7) | `reference/inventory` | CI emulator, API 33 x86_64; scaffolder unreleased (PR #85) | 2026-10-06, run `37505534432` |
-| production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (unreleased), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7) | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, runs `37597390396`, `37602257459` |
+| production OTA on a host **scaffolded** by `keliver-new-production-host.sh` and built from Maven Central only: signed v1 → v2, foreign key rejected, offline start from the verified cache (P1–P7) | `reference/inventory` | CI emulator, API 33 x86_64; scaffolder from this repository (PR #85; released in tools 0.3.6) | 2026-10-06, run `37505534432` |
+| production OTA on an **iOS** host scaffolded by `keliver-new-ios-host.sh` (released in tools 0.3.7), from Maven Central only: signed v1 → v2, foreign key refused, recovery, offline start (iOS P1, P2, P4–P7) | `reference/inventory` | CI iOS simulator (macos-15, Xcode 16.4, iOS 26.2) and local (Xcode 26.4.1, iOS 26.4) | 2026-10-07, runs `37597390396`, `37602257459` |
 | bundled host refuses production, cold and warm | tools 0.3.5 candidate | CI emulator, API 33 x86_64 | 2026-09-22 |
 | store identity, recovery, resolver refusal (#78) | disposable fixtures | macOS + Linux CI | 2026-09-22 |
 

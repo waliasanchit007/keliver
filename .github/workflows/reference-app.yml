@@ -1,12 +1,12 @@
 # The inventory reference app (reference/inventory). The app and its
 # development route come from the PUBLISHED tools release and Maven Central.
-# Its production host is built against Maven Central too — no Keliver library
-# module is compiled from source — but it is scaffolded by this checkout's
-# scripts/keliver-new-production-host.sh, whose templates (the host's own
-# Kotlin) are not yet in a published tools bundle. ci/ and the isolation guard
-# are this checkout's as well. Checked on an emulator: the development route, a D14 layout edit, and
+# Its production host and its signed publishing are scaffolded by that release's
+# own bin/ scripts and built against Maven Central — no Keliver source is
+# compiled. What is this checkout's: ci/ and the isolation guard (the harness),
+# and the app's overlay files (bootstrap.sh's hand edits). Checked on an emulator: the development route, a D14 layout edit, and
 # production OTA with app-owned disposable keys. Then W3: keliver-publish (built
-# from this checkout) into a static HTTPS server, with no relay.
+# from this checkout; not in a released bundle yet) into a static HTTPS server,
+# with no relay.
 #
 # This is dogfooding, not adoption: the app is ours.
 #
@@ -48,29 +48,29 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Download the PUBLIC tools 0.3.5 release, as the adopter guide does
+      - name: Download the PUBLIC tools 0.3.7 release, as the adopter guide does
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/evidence"
           cd "$RUNNER_TEMP/dl"
-          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5
-          curl -fsSLO "$base/keliver-portal-tools-0.3.5.zip"
-          curl -fsSLO "$base/keliver-portal-tools-0.3.5.zip.sha256"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7
+          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip.sha256"
           {
-            echo "downloaded: $base/keliver-portal-tools-0.3.5.zip"
-            sha256sum -c keliver-portal-tools-0.3.5.zip.sha256
-            sha256sum keliver-portal-tools-0.3.5.zip
-            unzip -p keliver-portal-tools-0.3.5.zip 'keliver-portal-tools-0.3.5/VERSION.json'
+            echo "downloaded: $base/keliver-portal-tools-0.3.7.zip"
+            sha256sum -c keliver-portal-tools-0.3.7.zip.sha256
+            sha256sum keliver-portal-tools-0.3.7.zip
+            unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json'
           } | tee "$GITHUB_WORKSPACE/evidence/public-download.txt"
-          test "$(sha256sum keliver-portal-tools-0.3.5.zip | cut -d' ' -f1)" = \
-            4e1c3040c2e069ab2a503f4b45a7740a28ac243edfb233cdffc7bcb7e7eeb439
-          unzip -p keliver-portal-tools-0.3.5.zip 'keliver-portal-tools-0.3.5/VERSION.json' \
-            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'b5615637531127c1d408fe0f7d652cac044d2930'"
+          test "$(sha256sum keliver-portal-tools-0.3.7.zip | cut -d' ' -f1)" = \
+            75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
+          unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json' \
+            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'aaa034784ce6e46ee64182c173f1d564998e72c0'"
 
       - name: Prepare — bootstrap, ingest, signed v1, scaffolded production host
         run: |
           bash reference/inventory/ci/prepare.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence" \
-            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.5.zip"
+            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.7.zip"
           # Free the app's Gradle daemon before the emulator starts.
           (cd "$RUNNER_TEMP/ref/boot/inventory" && ./gradlew --stop) || true
 

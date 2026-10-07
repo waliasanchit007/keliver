@@ -391,12 +391,13 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I1 scaffolder | **built, measured locally 2026-10-07.** `keliver-new-ios-host.sh` + `templates/ios-host/`; self-test 38/0, and 43/0 with `--build` (xcodebuild). The scaffolded host loads signed v1, then v2 after an edit (Inventory → Stockroom); the real SQLite `IosSqlHost` passes 5/5. | `docs/superpowers/evidence/ios-host-i1/` |
 | W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
-| W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
+| W1 I4 docs + 0.3.7 | **RELEASED 2026-10-07: tools 0.3.7** (candidate 4, with the U31 fix). Tag `portal-tools-v0.3.7` → `aaa03478`; zip `75ce0928…`, checked at the draft digest, by download-back and at the public URL. Candidates 1–3 superseded. | `docs/RELEASE_NOTES_TOOLS_0.3.7.md`; PRs #89, #91 (not merged) |
 | W3 design | **done 2026-10-07**: a static `bundles/index.json` (format 1). Each entry is bound by its manifest's own signature plus `manifestSha256`; the index is unsigned. Anti-rollback is deferred to W4. | "W3 design" above |
 | W3 `keliver-publish` + index-reading hosts | **built, CI green 2026-10-07** on PR #90 (`feat/w3-static-publish`, stacked on #88). The CLI verifies the signature and every module's sha256, then writes `v<N>/` and an atomic `index.json`. It refuses anything unsigned, foreign or incomplete and writes nothing (exit codes in the W3 design). The relay also serves `/bundles/index.json`. Both host templates read the index, pin the manifest's sha256, and fall back to `/bundles/latest` only on a 404. `KELIVER_SIGNING_KEY_FILE` covers CI signing. Tests before the review: `StaticPublishTest` 12, `BundleIndexTest` 7, `keliver-publish-selftest.sh` 16/0, the iOS host self-test with `xcodebuild` 49/0 (CI). The Android host self-test with a build, 40/0, was local and is in no CI evidence. | PR #90 |
 | W3 static HTTPS on CI | **green 2026-10-07**. No relay; a static HTTPS server is fed only by the CLI, with a throwaway CA in the emulator's system store and the simulator's keychain. S2 (v1 through the index), S4 (v2), S5 (CLI refuses a foreign key), S6 (wrong sha256, nothing loads), S7 (offline from the cache). Android `reference-app.yml` run 37629943998: prepare 18/0, device 54/0. iOS `ios-host.yml` run 37629943934: self-test 49/0, `ios.sh` 48/0. | `docs/superpowers/evidence/w3-android-ci-37629943998/`, `w3-ios-ci-37629943934/` |
 | W3 independent review | **done 2026-10-07; all should-fix points fixed or recorded** (PR #90). B1: the recipe republished v1 at sequence 1 from an empty checkout. Now the CLI refuses an out dir with no index unless `--init` (checked before building), and the guide's recipe downloads the live `bundles/` first, uses a concurrency group, uploads `v<N>/` before the index with no deletes, and removes `.gradle/` (U31). S1: no fallback to the cache after a failed load is documented (guide, `DEVICE_HOST`); the fallback itself is a W5 item. S2: the relay's index skips a `v<N>` without usable `meta.json`. S4: the lock refusal has its own message; exit codes are documented accurately; the production host's `gradle.properties` no longer says a static server isn't enough. Nits done: one app dir in the wrapper, `--out` inside the output refused, duplicate sequences or versions refused, S5 wording, head runs named. S3 (the key in `.gradle/`) is U31, fixed separately. Tests after the fixes: `StaticPublishTest` 16/0, `BundleIndexTest` 7/0, `PublishSignatureTest` 7/0, `keliver-publish-selftest.sh` 18/0 (local). **CI on the post-review head `5f2807569`:** `reference-app.yml` 37655639736 (prepare 18/0, publish self-test 18/0, device 54/0 including S2/S4–S7) and `ios-host.yml` 37655639526 (self-test 49/0, `ios.sh` 48/0). | PR #90 |
-| W3 known, not done | Two 10 s timeouts when the index is a 404 and `/bundles/latest` is slow. iOS `timeoutInterval` is an idle timeout. No size limit on the index body. The docs' "same origin" is not a boundary, because Zipline's downloads follow redirects (integrity rests on the signatures). `pickFromIndex` accepts quoted numbers. Capability filtering is unit-tested only; the device checks publish with no capabilities. There is no device check of a new host against a new relay's `/bundles/index.json`. Not in a released tools bundle: that needs a release after 0.3.7, with approval. | — |
+| W3 known, not done | Two 10 s timeouts when the index is a 404 and `/bundles/latest` is slow. iOS `timeoutInterval` is an idle timeout. No size limit on the index body. The docs' "same origin" is not a boundary, because Zipline's downloads follow redirects (integrity rests on the signatures). `pickFromIndex` accepts quoted numbers. Capability filtering is unit-tested only; the device checks publish with no capabilities. There is no device check of a new host against a new relay's `/bundles/index.json`. Not in a released tools bundle: that needs 0.3.8, with approval. | — |
+| W3 on tools 0.3.7 | **merged onto the released 0.3.7 line 2026-10-08**, through `chore/reference-app-0.3.7` (#92: the reference app built from the published 0.3.7 zip and its own `bin/` scaffolders). The signing block keeps U31's design (signs in a `doLast`; the key is never a task input, an argument or a log line) and adds W3's CI key file (`-Pkeliver.signingKeyFile` / `KELIVER_SIGNING_KEY_FILE`). `keliver-new-publish-target.sh` upgrades a 0.3.7 block (plain swap) as well as a 0.3.6 one (U31 advice). **Ready for a 0.3.8 candidate, which ships only with the owner's approval.** | PR #90 (base #92) |
 | W2, W4–W8 | not started | — |
 
 ## Next action
@@ -404,8 +405,14 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 **On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
 release and W3.**
 
-**Track A: tools 0.3.7.** Ship `keliver-new-ios-host.sh`, following
-`docs/PORTAL_TOOLS_RELEASE.md`.
+**Track A: tools 0.3.7 — RELEASED 2026-10-07** (candidate 4, `aaa03478`, zip
+`75ce0928…`). The owner said "ok, let's go" to the recommended candidate. The
+record is in `docs/RELEASE_NOTES_TOOLS_0.3.7.md`. Follow-ups:
+- the reference app moves to the published 0.3.7 zip and its own `bin/`
+  scaffolders: PR #92;
+- PRs #87, #88, #89 and #91 stay open until the owner merges.
+
+What was done for the candidate:
 - Branch `release/portal-tools-0.3.7` from `feat/ios-production-host` (PR #88).
 - Bump `build-support/portal-tools.version`, and the adopter guide's download
   block (step 0).
@@ -420,11 +427,10 @@ release and W3.**
 - Consider adding `ios-host.yml`'s checks to the candidate's verification:
   run `ios.sh` against the candidate zip.
 
-**Track B: W3 — built, reviewed, review fixed (PR #90, see Status).**
-CI is green on the post-review head (runs 37655639736 and 37655639526).
-Remaining:
-- U31 (fixed separately);
-- shipping it in a tools release after 0.3.7, only with the owner's approval.
+**Track B: W3 — built, reviewed, review fixed, and merged onto the released
+0.3.7 line (PR #90, base #92; see Status).** Remaining:
+- shipping it in tools 0.3.8 (a candidate, then the owner's approval);
+- the "W3 known, not done" items.
 
 Then W4 (rollback protection through a signed sequence in the manifest's
 `metadata`, channels, rollout, host-version `constraints`), which builds on the
