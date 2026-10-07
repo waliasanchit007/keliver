@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 cdcdcdcd…
+KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json
+KeliverHost: codeLoadFailed: manifest signature for key portal-ed25519 did not verify!
+dev.keliver.measure.host: 90530

@@ -214,7 +214,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 |---|---|---|
 | plan written | done 2026-10-07 | this file; branch `feat/ios-production-host` |
 | W1 I0 iOS feasibility from Maven Central | **done 2026-10-07**: the production host links for the simulator; 54 `dev.keliver` artifacts, all 0.3.3 from Maven Central | `docs/superpowers/evidence/ios-host-i0/` |
-| W1 I1 scaffolder | in progress. The app shell builds with `xcodebuild` and runs on a disposable simulator: no server gives "No bundle". No signed bundle has loaded yet. | `docs/superpowers/evidence/ios-host-i0/` (app/, run-no-server.*) |
+| W1 I1 scaffolder | in progress. **The production host already runs on a simulator against a real signed bundle from the published 0.3.6 tools: v1 loads and renders, the offline start comes from the cache, and a foreign key is refused** (local). Scaffolder and templates not written yet. | `docs/superpowers/evidence/ios-host-i0/signed-run/` |
 | W1 I2 iOS CI | not started | — |
 | W1 I3 spike fallback | not started | — |
 | W1 I4 docs + 0.3.7 | not started (needs approval to release) | — |
@@ -222,34 +222,27 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 
 ## Next action
 
-W1 I1, continued:
-1. **Load a real signed bundle locally.** Unpack the published tools 0.3.6
-   zip, recreate the reference app (`reference/inventory/bootstrap.sh`
-   accepts a local zip, but pins 0.3.5's hash: pass the 0.3.5 zip, or
-   bootstrap by hand from 0.3.6), run `keliver-new-device-target.sh` and
-   `keliver-new-publish-target.sh`, start the portal with a disposable
-   `user.home`, and `POST /publish`.
-2. Put that app's `keys/ed25519.pub` into `HostConfig.kt` and run the app from
-   `docs/superpowers/evidence/ios-host-i0/app` on a disposable simulator. The
-   simulator reaches the Mac at `localhost`.
-3. Expect, in order:
-   - `codeLoadSuccess` and the screen title;
-   - then, with the relay stopped, `lookup failed; starting from the cached
-     bundle`;
-   - then, with a copy's foreign key, a signature refusal.
-4. Then turn `proj/` + `app/` into `scripts/templates/ios-host/` and
-   `scripts/keliver-new-ios-host.sh`. The app's `PRODUCT_NAME` must differ
-   from the framework's `baseName`. Then do real SQLite and network images,
-   then the self-test, then I2 (CI on a hosted macOS runner).
+W1 I1, continued. The host code and Xcode shell are proven locally
+(`docs/superpowers/evidence/ios-host-i0/`: `proj/`, `app/`, `signed-run/`).
+Now:
+1. Turn `proj/` + `app/` into `scripts/templates/ios-host/`:
+   - `@@PACKAGE@@`, the key, the bundle server and the API base are
+     substituted at scaffold time;
+   - the app's `PRODUCT_NAME` must differ from the framework's `baseName`;
+   - there is no `DEVELOPMENT_TEAM`;
+   - the ATS `http` exception applies to localhost and Debug only.
+2. Write `scripts/keliver-new-ios-host.sh`, with the same refusals as the
+   Android scaffolder (key checks, all-or-nothing writes), and its self-test
+   with `--build`.
+3. Replace the in-memory `IosSqlHost` with real SQLite (`platform.sqlite3`),
+   and add network images.
+4. I2: a CI workflow on a hosted macOS runner, triggered on `pull_request`
+   paths, running iOS P1–P7 on the reference app. That covers the cases
+   measured locally plus v1 → v2 and no empty-URL load.
 
-Tooling notes:
-- The Kotlin/Native toolchain downloads in about 4 minutes into a disposable
-  `KONAN_DATA_DIR` (1.3 GB).
-- `xcodebuild` passes the environment to the Gradle build phase, so export
-  `GRADLE_USER_HOME`, `KONAN_DATA_DIR` and `JAVA_TOOL_OPTIONS` before calling
-  it.
-- `simctl launch --console-pty` captures the `KeliverHost:` lines, but killing
-  it ends the app. Take screenshots during a plain `simctl launch`.
+To reproduce the local run, see `signed-run/README.md`. Run the isolation
+guard under **bash**, not zsh. Stop the relay with `keliver-portal stop`,
+and delete the disposable simulator.
 
 ## Standing constraints (from the owner; they apply to every step)
 
