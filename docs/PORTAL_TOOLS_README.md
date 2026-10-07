@@ -80,7 +80,7 @@ your store resolves, any key that is not its `ed25519.pub`. Refuses without
 changing anything if an input is wrong or `host-android/` exists. A release
 build needs `https://` servers and your own signing config.
 
-### scripts/keliver-new-ios-host.sh (not yet in a released bundle)
+### bin/keliver-new-ios-host.sh
 
 ```bash
 keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]

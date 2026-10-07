@@ -192,6 +192,16 @@ jobs:
           KELIVER_PRODUCTION_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-production-host.sh" \
             scripts/keliver-new-production-host-selftest.sh "$RUNNER_TEMP/prod-host-pkg"
           echo "::endgroup::"
+          echo "::group::the iOS host scaffolder, from scripts/ and from the package"
+          # keliver-new-ios-host.sh writes an adopter's production iOS host. Here,
+          # on Linux, only its refusals (the app byte-identical) and the
+          # completeness of host-ios/; the xcodebuild half (--build) needs macOS
+          # and runs in ios-host.yml. Then the copy in the candidate zip, which
+          # must find its templates at bin/../templates.
+          scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/ios-host"
+          KELIVER_IOS_HOST_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-ios-host.sh" \
+            scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/ios-host-pkg"
+          echo "::endgroup::"
           echo "::group::the publish scaffolder, from scripts/ and from the package"
           # keliver-new-publish-target.sh wires POST /publish and signing into an
           # app. --build compiles the bundle four ways: signed and verifying;

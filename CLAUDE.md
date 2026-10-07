@@ -24,8 +24,8 @@ them visually in a web portal that round-trips to the .kt files in git.
   checked on an emulator by `.github/workflows/reference-app.yml`. Its
   production host is scaffolded by `scripts/keliver-new-production-host.sh`
   and built against Maven Central — no Keliver LIBRARY module is compiled from
-  source, but the host's own Kotlin is a template from this repo, the script is
-  not yet in a released tools bundle, and the CI harness is this repo's. What it proved and
+  source, but the host's own Kotlin is a template from this repo, the script
+  ships in the tools bundle from 0.3.6, and the CI harness is this repo's. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
