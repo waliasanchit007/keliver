@@ -93,8 +93,11 @@ tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compi
     if (key == null) return
     def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
     if (!manifestFile.isFile()) throw new GradleException("keliver: ${compileTask.path} wrote no ${manifestFile} to sign")
+    def hex = key.text.trim()
+    // Checked before decoding: okio's error for a malformed string quotes all of it.
+    if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
     def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
-      .addEd25519('portal-ed25519', okio.ByteString.decodeHex(key.text.trim()))
+      .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
       .build()
     // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
     def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)

@@ -111,8 +111,9 @@ logged, or stored in `.gradle/` (U31). The relay keeps a published bundle only
 if it verifies against your store's public key, and refuses an unsigned one.
 Refuses without changing anything if the app has no device target, configures
 `signingKeys` itself, or sets a different `publishTask`. **An app wired by 0.3.6:
-run it again**: it replaces exactly the old block, then delete the app's
-`.gradle/` (the old block left the key there). Restart the portal afterwards:
+run it again** (from 0.3.7 or later): it replaces exactly the old block and
+nothing else. Then delete the app's `.gradle/*/executionHistory/`, where the
+old block left the key, but keep `.gradle/keliver-store-path`. Restart the portal afterwards:
 the relay reads `keliver.portal.json` at start.
 
 ### bin/keliver-new-component.sh

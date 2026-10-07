@@ -24,12 +24,15 @@
 #      on a command line, in --info logs and in .gradle/: U31). The private key
 #      is read only by that build step, never by this script.
 #
-# UPGRADING an app wired by tools 0.3.6 or earlier: run this again. A signing
-# block that is exactly the one 0.3.6 wrote is replaced in place by the current
-# one; nothing else changes. Anything else that configures signingKeys is
-# refused, with nothing written. Afterwards delete <app>/.gradle/ (the old
-# block left the key in its executionHistory) and treat the key as exposed if
-# other local users or CI logs could have read it.
+# UPGRADING an app wired by tools 0.3.6: run this (0.3.7 or later) again. A
+# signing block that is exactly the one 0.3.6 wrote is replaced in place by the
+# current one, and nothing else in the app is touched (keliver.portal.json
+# included). An edited block, or any other signingKeys configuration, is
+# refused with nothing written. Afterwards delete
+# <app>/.gradle/<gradle-version>/executionHistory/ (the old block left the key
+# there) but NOT <app>/.gradle/keliver-store-path, which binds the app to its
+# store; and treat the key as exposed if other local users or CI logs could have
+# read it.
 #
 # The development variant is what the reference app's production checks ran on;
 # the production (minified) variant has not been run on a device.
@@ -49,7 +52,7 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,30p' "$SELF"; exit 0 ;;
+    -h|--help) sed -n '2,40p' "$SELF"; exit 0 ;;
     *)         echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -118,17 +121,29 @@ if 'keliver: PUBLISH SIGNING' in build:
     # A block an earlier tools release wrote: replaced only if it is exactly that text.
     for name in sorted(os.listdir(legacy_dir)) if os.path.isdir(legacy_dir) else []:
         legacy = open(os.path.join(legacy_dir, name), encoding='utf-8').read()
+        # Exactly that text, once; or, at the very end, without its final newline.
         if build.count(legacy) == 1:
             upgraded = name
             build = build.replace(legacy, block)
+            break
+        if build.count(legacy.rstrip('\n')) == 1 and build.rstrip('\n').endswith(legacy.rstrip('\n')):
+            upgraded = name
+            build = build.rstrip('\n')[:-len(legacy.rstrip('\n'))] + block
             break
     if upgraded is None:
         fail("build.gradle has a keliver signing block that is not one this script wrote (it was edited, "
              "or is newer than these tools). Replace it with templates/publish/signing.gradle by hand.")
     code = strip_comments(build)
-if upgraded is None and 'signingKeys' in code:
+if 'signingKeys' in code:
     fail("build.gradle already configures signingKeys. Remove that block first, or keep it and add "
          "publishTask/publishOutput to keliver.portal.json yourself.")
+
+if upgraded:
+    # Swap the block only: the app's publish settings stay exactly as they are.
+    with open(os.path.join(stage, 'build.gradle'), 'w', encoding='utf-8') as f:
+        f.write(build)
+    shutil.copymode(os.path.join(app, 'build.gradle'), os.path.join(stage, 'build.gradle'))
+    print('upgraded build.gradle'); sys.exit(0)
 
 try:
     with open(os.path.join(app, 'keliver.portal.json'), encoding='utf-8') as f:
@@ -152,15 +167,12 @@ with open(os.path.join(stage, 'keliver.portal.json'), 'w', encoding='utf-8') as 
     f.write(json.dumps(cfg, indent=2, ensure_ascii=False) + '\n')
 
 with open(os.path.join(stage, 'build.gradle'), 'w', encoding='utf-8') as f:
-    if upgraded:
-        f.write(build)
-    else:
-        f.write(build if build.endswith('\n') else build + '\n')
-        f.write(block)
+    f.write(build if build.endswith('\n') else build + '\n')
+    f.write(block)
 changes.append('build.gradle')
 for name in ('keliver.portal.json', 'build.gradle'):
     shutil.copymode(os.path.join(app, name), os.path.join(stage, name))
-print(('upgraded ' if upgraded else 'ok ') + ' '.join(changes))
+print('ok ' + ' '.join(changes))
 PY
 PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" "$(dirname "$BLOCK")/legacy" 2>"$STAGE/plan.err")" \
   || fail "validation failed: $(tail -1 "$STAGE/plan.err" 2>/dev/null || echo 'python3 is required')"
@@ -182,10 +194,14 @@ done
 
 if [ "$UPGRADED" = 1 ]; then
   echo "==> the signing block in $APP/build.gradle was replaced by the current one (U31)"
-  echo "    The old block passed the private key to a child JVM: it was on that process's"
-  echo "    command line while it ran, in any --info/--debug build log, and it is in"
-  echo "    $APP/.gradle/<version>/executionHistory/. Delete $APP/.gradle/ now. If other local"
-  echo "    users, or CI logs, could have read any of those, treat the key as exposed."
+  echo "    Nothing else was changed. The old block passed the private key to a child JVM:"
+  echo "    it was on that process's command line while a bundle compiled, in any"
+  echo "    --info/--debug build log, and it is in .gradle/<gradle-version>/executionHistory/."
+  echo "    Now:"
+  echo "      rm -rf \"$APP\"/.gradle/*/executionHistory"
+  echo "    (keep $APP/.gradle/keliver-store-path: it binds this app to its store)."
+  echo "    If other local users, CI logs or a cached .gradle/ could have read the key,"
+  echo "    treat it as exposed. Restart the portal so /publish builds with the new block."
   exit 0
 fi
 echo "==> publishing wired for $APP"

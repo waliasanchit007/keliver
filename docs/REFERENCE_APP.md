@@ -139,6 +139,9 @@ for us.
    with the store's private key. The block has to come **after** the `kotlin {}`
    block or the bundle compiles unsigned without an error; that rule is written
    down only in `portal-published-guest/build.gradle`'s comments.
+   *(Superseded, 2026-10-07, by U31 in `KNOWN_BUGS.md`. Setting `signingKeys`
+   leaks the key, so the block now signs in a `doLast`, and the ordering rule
+   no longer applies.)*
    The reference app's version: `reference/inventory/app/build.gradle` (bottom).
    The adopter guide mentions published bundles and the publisher but does not
    describe how to publish — no `/publish`, no `publishTask`.

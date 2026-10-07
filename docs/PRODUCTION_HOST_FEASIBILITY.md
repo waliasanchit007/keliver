@@ -117,6 +117,9 @@ built by the checkout route (option C below).
    ordering rule is in Keliver's own build files and checks
    (`portal-published-guest/build.gradle`, `keliver-guest-signing-check.sh`) and
    the reference app's, but in no scaffold and no adopter-facing doc.
+   *(Superseded, 2026-10-07, by U31 in `KNOWN_BUGS.md`. `signingKeys` leaks the
+   private key into `ps`, `--info` logs and `.gradle/`. The scaffolded block now
+   signs the manifest in a `doLast`, wherever it sits.)*
 3. The relay's `POST /publish` then runs `publishTask`, and the Zipline compile
    task signs. Measured result:
    - the manifest carries a `portal-ed25519` signature;

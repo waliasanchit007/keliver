@@ -234,15 +234,20 @@ The relay does not sign: your build does, with your store's private key, and
 public key. Without the signing block the build still succeeds and `/publish`
 says `publish REFUSED: the bundle is UNSIGNED` and stores nothing.
 
-**Upgrading from tools 0.3.6: run `keliver-new-publish-target.sh` again (U31).**
+**Upgrading from tools 0.3.6: run `keliver-new-publish-target.sh` from these
+tools (0.3.7 or later) again (U31).** The 0.3.6 command can't do this; it
+answers "already wired".
 The signing block 0.3.6 wrote gave your private key to Zipline's compile task,
 which passes it to a child JVM on its command line. While a bundle compiled,
 any local user could read the key in the process list. A `--info` or `--debug`
 build printed it, and it was stored in `.gradle/<version>/executionHistory/`,
 readable by others under the usual umask. Rerunning the command replaces
 exactly that block with one that signs inside Gradle, after the compile, and
-changes nothing else. Then:
-- delete your app's `.gradle/` directory;
+changes nothing else, `keliver.portal.json` included. Then:
+- delete `.gradle/*/executionHistory/` in your app. **Keep
+  `.gradle/keliver-store-path`**: it binds the app to its store, and without
+  it a moved app can resolve to a new, empty store with a new key;
+- restart the portal, so `/publish` builds with the new block;
 - if other users of the machine, shared CI logs or a cached `.gradle/` could
   have exposed the key, treat it as compromised. A new key means rebuilding
   and shipping your production hosts with its public key. Keliver has no

@@ -1055,11 +1055,13 @@ and an `@Input`.
 true/false only, never the key):
 - `.gradle/9.0.0/executionHistory/executionHistory.bin` held the raw 32-byte
   key in all three apps checked. The file is **0644** under 0755 directories,
-  so other local users can read it. That undoes U27's owner-only key file.
+  so other local users can read it. That bypasses U27's owner-only key file.
 - One `--info` build printed the key in full in the log, on the `--sign` line.
-- Not measured, but it follows from the javaexec: the key is in the child
-  JVM's command line, visible in `ps` to local users, for as long as each
-  signed compile runs.
+  Through a Gradle daemon, `--info` also writes it to
+  `$GRADLE_USER_HOME/daemon/<version>/daemon-*.out.log` (mode 0600), as
+  measured by the review of the fix.
+- `ps`: the review sampled the Zipline child JVM 4 times with the old block,
+  without `--info`. All 4 showed `--sign` with the key in hex.
 
 **Fix.** The compile task no longer gets a key. A last action of the task
 (`doLast`) signs the manifest the task wrote, in the Gradle process, with
@@ -1075,13 +1077,38 @@ The block also stops depending on its position below `kotlin {}`.
 
 **Upgrade.** `keliver-new-publish-target.sh` replaces a block that is exactly
 the 0.3.6 one in place, and refuses an edited one. The adopter guide says what
-to do next: delete `.gradle/`, and treat the key as exposed if others could
-have read it.
+to do next:
+- delete `.gradle/*/executionHistory/`, but keep `.gradle/keliver-store-path`,
+  the store binding;
+- treat the key as exposed if others could have read it.
+
+It changes nothing else, not even `keliver.portal.json`. The upgrade also
+refuses an app that configures `signingKeys` elsewhere.
+
+**Also measured by the independent review of the fix** (#91):
+- the manifest the new block signs is byte-identical to the one Zipline signs
+  itself with the same key (Ed25519 is deterministic);
+- an incremental compile re-signs, and the result verifies;
+- an unchanged rebuild is UP-TO-DATE and stays signed;
+- a key change rebuilds, and the result verifies with the new key;
+- the Production variant signs too;
+- `ZiplineCompileTask` is not `@CacheableTask`, so there is no build-cache
+  entry to worry about.
+
+A malformed key file now fails the build without quoting the file: okio's own
+error would quote the whole string.
 
 **Not fixed here.**
 - Keys that were already exposed. There is no rotation procedure yet (W8).
 - `sample/guest` signs through `zipline { signingKeys }` with a sample key that
   is public in its source anyway.
+- `reference/inventory/ci/ios.sh` and the reference-app route still build from
+  the published 0.3.6 tools zip by default. So they write the old block, with
+  disposable keys.
+- `ManifestSigner.sign` replaces the signature map. A signature from an
+  adopter's own `zipline { signingKeys }` would be dropped, but the scaffolder
+  refuses such apps.
+- A CRLF `build.gradle` comes back with LF line endings, as with the append.
 - Any copy of the old block an adopter edited by hand.
 
 ### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — OPEN

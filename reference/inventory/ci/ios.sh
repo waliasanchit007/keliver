@@ -26,8 +26,10 @@
 #
 # Isolation: every JVM runs with user.home = <work-dir>/home, behind the
 # repository's isolation guard. The keys are disposable and app-owned. Nothing
-# here reads, prints or copies a private key; the Zipline compile task's signing
-# block is the only reader, on each publish.
+# here reads, prints or copies a private key; the app's signing block is the
+# only reader, on each publish. With the default published 0.3.6 zip that block
+# is the 0.3.6 one, which leaks the (disposable) key to argv, --info logs and
+# .gradle/ (U31); a candidate zip from 0.3.7 on writes the fixed block.
 set -uo pipefail
 
 TOOLS_VERSION=0.3.6

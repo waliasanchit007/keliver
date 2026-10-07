@@ -1,0 +1,4 @@
+U31 check after this run (booleans only; disposable keys):
+  inventory/.gradle/9.0.0/executionHistory/executionHistory.bin  key present: False
+  foreign/inventory/.gradle/9.0.0/executionHistory/executionHistory.bin  key present: False
+Both apps signed every bundle they published (v1, v2, the foreign one) with the new block.
