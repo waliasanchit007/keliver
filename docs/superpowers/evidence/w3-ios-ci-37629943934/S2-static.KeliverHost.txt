@@ -1,0 +1,3 @@
+KeliverHost: verifying manifests with portal-ed25519 d3a45845…
+KeliverHost: loading https://localhost:8443/bundles/v1/manifest.zipline.json (index sequence 1, manifest sha256 040e68c8918c…)
+KeliverHost: codeLoadSuccess modules=40

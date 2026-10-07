@@ -1,0 +1,1 @@
+simulator: 690C4A5C-6006-495A-BD2E-AC90A6A9ABB1 (com.apple.CoreSimulator.SimRuntime.iOS-26-2 com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)

@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 d3a45845…
+KeliverHost: no bundles/index.json at http://localhost:8077; asking bundles/latest (a relay from tools 0.3.7 or earlier)
+KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json (relay bundles/latest)
+KeliverHost: codeLoadSuccess modules=40

@@ -1,0 +1,4 @@
+10-07 13:49:11.112  3512  3512 D KeliverHost: verifying manifests with portal-ed25519 d6412e53…
+10-07 13:49:11.674  3512  3531 D KeliverHost: no bundles/index.json at http://10.0.2.2:8077/; asking bundles/latest (a relay from tools 0.3.7 or earlier)
+10-07 13:49:11.690  3512  3512 D KeliverHost: loading http://10.0.2.2:8077/bundles/v1/manifest.zipline.json (relay bundles/latest)
+10-07 13:49:12.802  3512  3540 D KeliverHost: codeLoadSuccess modules=40

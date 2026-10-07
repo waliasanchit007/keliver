@@ -33,7 +33,7 @@ a native Android or iOS developer gets what Shorebird gives Flutter developers:
 | Android production host | scaffolded. On a CI emulator: P1–P7 pass (signed v1 → v2, foreign key refused, no empty-URL load, offline start from the verified cache, one cache per key) |
 | iOS production host | **none for adopters.** `portal-device-ios` (+ `portal-device-ios-app`) is an in-repo dev/prod spike, built from Keliver source. Problems: <ul><li>prod without a key falls back to **`NO_SIGNATURE_CHECKS`**</li><li>hard-coded `localhost`</li><li>replay HTTP</li><li>empty-URL first load (U28)</li><li>no offline start</li><li>no cache per key</li></ul> Nothing about iOS is in the adopter guide or CI. |
 | Publishing | `POST /publish` on the **local** relay only; signed, verified before storing |
-| Distribution | bundles served by the local relay (`/bundles/latest?widgetVersion&caps`, `/bundles/vN/…`). No static/CDN layout, no HTTPS run. |
+| Distribution | bundles served by the local relay (`/bundles/latest?widgetVersion&caps`, `/bundles/vN/…`). **W3 (PR #90, unreleased):** a static `bundles/index.json` layout written by `keliver-publish`, read by both host templates, checked over HTTPS on CI. |
 | Release controls | none. No channels, no rollback, no rollback protection: any older signed bundle is accepted. |
 | Update API / visibility | host checks once at launch; no in-app API; no reporting |
 | Proof | emulator only (API 33 x86_64). No physical device, no arm64, no iOS run of current artifacts, no external adopter. |
@@ -364,7 +364,11 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W1 I2 iOS CI | **done 2026-10-07.** `ios-host.yml` run `37597390396`, then `37602257459` after the independent review's fixes (macos-15, Xcode 16.4, iOS 26.2): self-test 48/0, P1/P2/P4–P7 30/0. Review: nothing blocking, all points fixed. | `docs/superpowers/evidence/ios-host-ci-37597390396/`; run `37602257459` |
 | W1 I3 spike fallback | **deferred.** `portal-device-ios` is built only from Keliver source, and no CI job compiles it. It never reaches adopters, who get the scaffolded host. Fix it when that module is next built. | — |
 | W1 I4 docs + 0.3.7 | docs written (adopter guide "Ship to production" iOS; `DEVICE_HOST.md` §3; tools README). **0.3.7 needs the owner's approval.** | this branch |
-| W2–W8 | not started | — |
+| W3 design | **done 2026-10-07**: a static `bundles/index.json` (format 1). Each entry is bound by its manifest's own signature plus `manifestSha256`; the index is unsigned. Anti-rollback is deferred to W4. | "W3 design" above |
+| W3 `keliver-publish` + index-reading hosts | **built, CI green 2026-10-07** on PR #90 (`feat/w3-static-publish`, stacked on #88). The CLI verifies the signature and every module's sha256, then writes `v<N>/` and an atomic `index.json`; it refuses and writes nothing otherwise. The relay also serves `/bundles/index.json`. Both host templates read the index, pin the manifest's sha256, and fall back to `/bundles/latest` only on a 404. `KELIVER_SIGNING_KEY_FILE` covers CI signing. Tests: `StaticPublishTest` 12, `BundleIndexTest` 7, `keliver-publish-selftest.sh` 16/0, Android and iOS host self-tests with builds 40/0 and 49/0. | PR #90 |
+| W3 static HTTPS on CI | **green 2026-10-07**. No relay; a static HTTPS server is fed only by the CLI, with a throwaway CA in the emulator's system store and the simulator's keychain. S2 (v1 through the index), S4 (v2), S5 (CLI refuses a foreign key), S6 (wrong sha256, nothing loads), S7 (offline from the cache). Android `reference-app.yml` run 37629943998: prepare 18/0, device 54/0. iOS `ios-host.yml` run 37629943934: self-test 49/0, `ios.sh` 48/0. | `docs/superpowers/evidence/w3-android-ci-37629943998/`, `w3-ios-ci-37629943934/` |
+| W3 remaining | not yet in a released tools bundle (it needs a release after 0.3.7, with approval). A GitHub Actions recipe is in the adopter guide. The independent review is pending. | — |
+| W2, W4–W8 | not started | — |
 
 ## Next action
 
@@ -387,8 +391,13 @@ release and W3.**
 - Consider adding `ios-host.yml`'s checks to the candidate's verification:
   run `ios.sh` against the candidate zip.
 
-**Track B: W3, headless publish and static distribution.** On a new branch
-stacked on #88:
+**Track B: W3 — built and green on CI (PR #90, see Status).** Remaining:
+- an independent review of PR #90;
+- shipping it in a tools release after 0.3.7, only with the owner's approval.
+
+Then W4 (rollback protection through a signed sequence in the manifest's
+`metadata`, channels, rollout, host-version `constraints`), which builds on the
+index format. The original Track B steps were:
 1. Design the static index, `bundles/index.json`:
    - entries carry version, widgetVersion, caps, manifest URL, manifest
      sha256, createdAt, and a monotonically increasing `sequence` (for W4);

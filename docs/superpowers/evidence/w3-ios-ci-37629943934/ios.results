@@ -1,0 +1,48 @@
+PASS the tools zip is the published 0.3.6 asset (fac98912…)
+PASS the app: keliver-init, device target and publish target from tools 0.3.6
+PASS the relay for this app answered on :8077
+PASS the relay's store is inside the work dir
+PASS publish v1: publish OK: bundle v1 (widgetVersion=1, srcHash=479c5ca1e7c5a951) -> /Users/runn
+PASS P1: keliver-new-ios-host.sh scaffolded host-ios/
+PASS P1: HostConfig.kt embeds this app's public key (d3a45845…)
+PASS P1: xcodebuild built the host from Maven Central
+PASS P1: the host installed as its own app (inventory.ioshost)
+PASS P2: the host verifies with this app's key
+PASS P2: signed v1 loaded (codeLoadSuccess)
+PASS P2: the 0.3.6 relay serves no index; the host fell back to /bundles/latest on the 404
+PASS P2: no failed load, so no empty-URL attempt (U28 absent)
+PASS P2: the screen reads 'Inventory'
+PASS P4: the relay applied the title edit
+PASS P4: publish v2
+PASS P4: the host loaded v2
+PASS P4: the screen reads 'Stockroom'
+PASS P5: a relay for the copy is up
+PASS P5: the copy has its own store and key (93d75a94… vs d3a45845…)
+PASS P5: the copy published a bundle signed with ITS key
+PASS P5: verification still uses this app's key
+PASS P5: the foreign-signed bundle was refused on its signature
+PASS P5: no code loaded
+PASS P5: 'Foreign build' is not on the screen (it reads 1 line(s): blank but for the status bar)
+PASS P6: this app's signed bundle loads again
+PASS P6: the screen reads 'Stockroom'
+PASS P7: no bundle server is answering
+PASS P7: the lookup failed and the host started from its cache
+PASS P7: code loaded offline (codeLoadSuccess), verified with this app's key
+PASS P7: the screen reads 'Stockroom' offline
+PASS W3: keliver-publish from this checkout, in the tools layout
+PASS W3: a throwaway CA, trusted by this run's simulator only
+PASS W3: keliver-publish compiled, verified and wrote published v1 (sequence 1, channel stable, capabilities none)
+PASS W3: the static server answers over HTTPS, trusted through that CA
+PASS W3: the host rebuilt for https://localhost:8443
+PASS S2: signed v1 loaded through bundles/index.json over HTTPS
+PASS S2: the screen reads 'Depot'
+PASS S2: the static server served index.json and v1's manifest
+PASS S4: keliver-publish wrote v2 at sequence 2
+PASS S4: the host loaded v2
+PASS S4: the screen reads 'Warehouse'
+PASS S5: against another app's key the CLI refused (exit 4); the site is byte-identical
+PASS S6: the manifest was refused on its sha256
+PASS S6: no code loaded
+PASS S7: no bundle server is answering
+PASS S7: offline, the host started from its cached v2
+PASS S7: the screen reads 'Warehouse' offline

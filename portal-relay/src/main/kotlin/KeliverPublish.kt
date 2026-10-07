@@ -14,7 +14,10 @@ import kotlin.system.exitProcess
  * none is given. Only the PUBLIC key is read here. The compile task signs, with
  * the key its signing block finds (KELIVER_SIGNING_KEY_FILE in CI).
  *
- * Exit status: 0 published, 2 usage, 3 build failed, 4 refused (nothing written).
+ * Exit status: 0 published, 2 usage, 3 build failed, 4 refused (nothing written),
+ * 5 an I/O error while writing (see its message: at worst a `v<N>/` that no
+ * index entry names, which is never served as current and whose number is
+ * never reused).
  */
 object KeliverPublish {
   private const val USAGE =
@@ -78,6 +81,9 @@ object KeliverPublish {
       publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel, caps)
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty())
+    } catch (e: java.io.IOException) {
+      System.err.println("keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete; never half-written.")
+      return 5
     }
     println("keliver-publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key; every module is present")
     println(

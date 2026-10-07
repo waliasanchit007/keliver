@@ -1,0 +1,3 @@
+10-07 13:52:44.173  4415  4415 D KeliverHost: verifying manifests with portal-ed25519 d6412e53…
+10-07 13:52:44.771  4415  4415 D KeliverHost: loading https://10.0.2.2:8443/bundles/v1/manifest.zipline.json (index sequence 1, manifest sha256 b41a02c42df6…)
+10-07 13:52:47.024  4415  4442 D KeliverHost: codeLoadSuccess modules=40

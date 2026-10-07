@@ -1,0 +1,6 @@
+Picked up JAVA_TOOL_OPTIONS:  -Duser.home=/home/runner/work/_temp/ref/home
+keliver-publish: --skip-build: publishing the existing output of :compileDevelopmentExecutableKotlinJsZipline
+keliver-publish REFUSED: the portal-ed25519 signature does not verify against this app's public key
+  Nothing was published. Production hosts accept only bundles signed with this app's key:
+  the compile task signs them, through the block keliver-new-publish-target.sh writes. In CI,
+  point KELIVER_SIGNING_KEY_FILE at a file holding the private key (never print it).

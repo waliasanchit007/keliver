@@ -1,0 +1,25 @@
+{
+    "format": 1,
+    "entries": [
+        {
+            "sequence": 1,
+            "version": 1,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v1/manifest.zipline.json",
+            "manifestSha256": "040e68c8918c598968b29d104f03601a0f51e90cb31eeabd081a981b88bc1937",
+            "createdAt": "2026-10-07T14:11:23.430198Z"
+        },
+        {
+            "sequence": 2,
+            "version": 2,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v2/manifest.zipline.json",
+            "manifestSha256": "a77048c471225e61473a06a656d68ebf7b2573c1863bfff717d6e493568fcb34",
+            "createdAt": "2026-10-07T14:36:21.110750Z"
+        }
+    ]
+}
