@@ -105,8 +105,8 @@ Each of these was hit building this app; see
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
   failed, and nothing signed. This app used to carry both settings and a
   hand-written signing block in its overlay; CI now runs
-  `scripts/keliver-new-publish-target.sh` (#86) instead. Until a tools release
-  ships it, that script also comes from this repository.
+  `scripts/keliver-new-publish-target.sh` (#86) instead. Tools 0.3.6 ships it;
+  this app still bootstraps from 0.3.5, so CI takes it from this repository.
 * **The device scaffolder wires one screen.** With two screens it asks for
   `--screen`/`--presenter`, and a presenter that takes arguments means
   hand-editing `device/Main.kt`.

@@ -251,31 +251,31 @@ and kept under "Completed priorities" below.
    `sample/host-android`, which renders the *sample's* widget schema, not
    keliver-material. No host that renders an adopter's screens with signature
    verification is published. **Decided 2026-09-30: a scaffolded host app**
-   (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Built, unreleased:**
+   (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Shipped in tools 0.3.6:**
    `keliver-new-production-host.sh` writes `host-android/`, production-only, on
    Maven Central only; the reference app's P1–P7 pass on it, P7 being an
-   offline start from Zipline's verified cache (CI run `37505534432`). What remains: a tools release to ship it, publish/signing
-   scaffolding (item 2), and a host run on a physical device over HTTPS.
+   offline start from Zipline's verified cache (CI run `37505534432`). What remains: a host run on a physical device over
+   HTTPS, and a release-signed APK.
 2. **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, which
    defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app had
    no `publishTask`/`publishOutput` and no signing block, so publish failed, and
-   the adopter guide did not mention either. **Built, unreleased (#86):**
+   the adopter guide did not mention either. **Shipped in tools 0.3.6 (#86):**
    `keliver-new-publish-target.sh` writes both settings and the signing block,
    and the relay now refuses to store a bundle whose manifest does not verify
    against the store's key (portal-tools `37513071473`; reference-app
    `37513078292`, P1–P7 on scaffolded signing). Left: the production (minified)
-   bundle variant, and a release. The reference app shows the
+   bundle variant. The reference app shows the
    minimum that works (`reference/inventory/app/build.gradle`, bottom). Small,
    and it unblocks item 1's "does it work" question for every adopter.
 3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:
    `0644` under a default umask, measured on macOS and Linux; `ensureKeys()`
-   uses `File.writeText`). **Fixed, not released** (with U29, half a key pair
+   uses `File.writeText`). **Fixed in tools 0.3.6** (with U29, half a key pair
    silently regenerated): new keys are owner-only from creation, and an existing
-   exposed key is reported and refused for publishing but never changed. What
-   remains is a tools release. Alongside it, U28: the production host logs a
+   exposed key is reported and refused for publishing but never changed.
+   Alongside it, U28: the production host logs a
    false `codeLoadFailed` on every start.
 4. **#77 — the iOS host's key generation is not hardened like Android's.**
-   Reproduced, then **fixed** (unreleased): `generatePortalKey` empties its
+   Reproduced, then **fixed** (tools 0.3.6): `generatePortalKey` empties its
    directory without following links, fails loudly on anything it cannot
    delete, checks the result and runs every time. Measured on a warm debug
    simulator framework: the planted source no longer reaches the klib or the

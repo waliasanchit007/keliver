@@ -28,9 +28,9 @@ reference app we wrote ourselves is dogfooding, not adoption.
 | what | version | where |
 |---|---|---|
 | libraries `dev.keliver:*` | **0.3.3** | Maven Central (unchanged since 2026-09-05) |
-| `keliver-portal-tools` | **0.3.5** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5), 2026-09-22, tag → `b5615637`; zip `4e1c3040…` |
-| `keliver-portal-tools` | 0.3.4 | still published, unchanged |
-| a production host for keliver-material screens | — | **not shipped.** The bundled host is development-only by design. |
+| `keliver-portal-tools` | **0.3.6** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.6), 2026-10-07, tag → `d52e2eca`; zip `fac98912…` |
+| `keliver-portal-tools` | 0.3.5, 0.3.4 | still published, unchanged |
+| a production host for keliver-material screens | tools 0.3.6 | **scaffolded**, not shipped as a binary: `bin/keliver-new-production-host.sh` writes the app's own host. The bundled host stays development-only. |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
 
@@ -51,16 +51,15 @@ execution, and iOS for the reference app.
 (editor frame rate, measured not assessed); U30 (Android `syncPortalKey`
 empties its directory through symlinks — found reviewing #77); U28 (the production
 host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
-`REFERENCE_APP.md` — no published production host (a scaffolder,
-`keliver-new-production-host.sh`, is built and passes the reference app's
-P1–P7 from Maven Central, offline start included — run `37505534432` — but is
-not released); publishing is scaffolded by `keliver-new-publish-target.sh` and
-the relay refuses unsigned bundles (#86, unreleased).
+`REFERENCE_APP.md`. Since tools 0.3.6 the production host and signed publishing
+are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
+and the relay refuses unsigned bundles. The reference app's CI still bootstraps
+from 0.3.5, so its run of both scaffolders comes from this repository.
 Priorities: `ROADMAP.md` "Current priorities".
 
-**Fixed since tools 0.3.5, unreleased:** U27 (the relay wrote
+**Fixed in tools 0.3.6:** U27 (the relay wrote
 `keys/ed25519.priv` world-readable) and U29 (half a key pair was silently
-regenerated) — until a tools release, the published relay still does both; #77 —
+regenerated) — 0.3.5 and earlier still do both; #77 —
 iOS `generatePortalKey` owns its directory, on warm builds too (measured on a
 debug simulator framework only; release and `iosArm64` not measured).
 

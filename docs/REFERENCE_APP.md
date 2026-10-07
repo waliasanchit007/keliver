@@ -105,7 +105,7 @@ for us.
 ### Blocking production
 
 1. **There was no published production host for keliver-material screens** —
-   **addressed by `keliver-new-production-host.sh` (#85, unreleased)**, which
+   **addressed by `keliver-new-production-host.sh` (#85, in tools 0.3.6)**, which
    scaffolds one built from Maven Central; P1–P7 pass on it (run 13,
    `37505534432`). What follows is what the route cost before it. The
    bundle's `host/README.md` §2 says: copy `sample/host-android` from the
@@ -122,7 +122,7 @@ for us.
    Its production host also keeps the generic host's `applicationId`, reaches the
    relay at `10.0.2.2:8077` (an emulator address), and is a debug build.
 2. **Publish was not scaffolded, and failed on a scaffolded app** — **addressed
-   by `keliver-new-publish-target.sh` (#86, unreleased)**. CI now runs it in the
+   by `keliver-new-publish-target.sh` (#86, in tools 0.3.6)**. CI now runs it in the
    app instead of overlaying a hand-written block, and P1–P7 pass on the bundles
    it signs (run `37513078292`). This app's relay is still the published 0.3.5
    one, which does not check signatures; #86's relay refusal of unsigned bundles

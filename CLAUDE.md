@@ -92,12 +92,10 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.5** (Maven dependency **0.3.3**), released
-2026-09-22 from `b5615637`; its identities and how the stored asset was checked
-are in [`docs/RELEASE_NOTES_TOOLS_0.3.5.md`](docs/RELEASE_NOTES_TOOLS_0.3.5.md).
-0.3.4 stays published and unchanged. Tools **0.3.6** is a candidate in
-preparation, NOT published: [`docs/RELEASE_NOTES_TOOLS_0.3.6.md`](docs/RELEASE_NOTES_TOOLS_0.3.6.md)
-has its status. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.6** (Maven dependency **0.3.3**), released
+2026-10-07 from `d52e2eca`; its identities and how the stored asset was checked
+are in [`docs/RELEASE_NOTES_TOOLS_0.3.6.md`](docs/RELEASE_NOTES_TOOLS_0.3.6.md).
+0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then

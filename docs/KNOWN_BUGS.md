@@ -878,7 +878,7 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U27. The relay wrote the private signing key readable by every local user — FIXED, UNRELEASED
+### U27. The relay wrote the private signing key readable by every local user — FIXED in tools 0.3.6
 
 Found building the reference app (`docs/REFERENCE_APP.md`), 2026-09-22.
 `Relay.kt#ensureKeys()` created `<store>/keys/ed25519.priv` with
@@ -991,7 +991,7 @@ the store. The store's other files keep umask modes. **Not released:** the
 published tools 0.3.5 relay still creates 0644 keys, and the reference app's
 CI, which uses that bundle, still measures it.
 
-### U29. Half a signing identity was silently regenerated — FIXED, UNRELEASED
+### U29. Half a signing identity was silently regenerated — FIXED in tools 0.3.6
 
 Found reproducing U27, 2026-09-24. `ensureKeys()` returned only when BOTH key
 files existed; with either missing it generated a new pair and wrote both.

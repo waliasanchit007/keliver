@@ -1,10 +1,37 @@
 # keliver-portal-tools 0.3.6 — release notes
 
-**Status: CANDIDATE — not tagged, not published.** This text is written in the
-commit that gets built, so it cannot cite that build's verification. The
-candidate's identities (zip and APK sha256, build and device runs) are recorded
-after verification, outside this commit. Tools 0.3.5 stays the published
-release until a person approves the tag and upload.
+**Status: RELEASED 2026-10-07** —
+<https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.6>.
+Tools 0.3.5 and 0.3.4 and the Maven 0.3.3 libraries are unchanged. GitHub's
+"Latest" badge stays on the library release `v0.3.3`.
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.6` → **`d52e2ecab76806da181a9874855a8f147937a160`** (the `sourceCommit` in `VERSION.json`) |
+| asset | `keliver-portal-tools-0.3.6.zip`, 90,412,020 bytes, plus a 97-byte `.sha256` |
+| zip sha256 | `fac9891221e95f87e6324bc9b649767fb9b17efbe3693daef089e65fcc26aca1` |
+| APK sha256 | `c759e162b4d0781b2d5c916d653a91bb45029a94bd822c207e876632b315a3cc` (no embedded portal key) |
+| build run | [`37574414527`](https://github.com/waliasanchit007/keliver/actions/runs/37574414527), retained artifact `11463181504` |
+| device run | [`37576200137`](https://github.com/waliasanchit007/keliver/actions/runs/37576200137): 19/0 device checks, 28/0 packaged acceptance, API 33 x86_64 emulator |
+| tag-push run | [`37583770135`](https://github.com/waliasanchit007/keliver/actions/runs/37583770135): the read-only rebuild the tag fires; its artifact was **not** attached |
+
+**How the stored asset was checked.** The published zip is the retained
+artifact, uploaded byte for byte. It was checked four ways:
+1. at the retained artifact (downloaded on macOS: `fac98912…`);
+2. by GitHub's server-side `digest` of both stored draft assets (zip
+   `fac98912…`, 90,412,020 bytes; `.sha256` file `0dfd4323…`, 97 bytes), with
+   the tag re-checked at `d52e2eca`;
+3. by a **download-back of the draft**, which the releasing machine's network
+   allowed this time, unlike for 0.3.5 (90,412,020 bytes, `fac98912…`);
+4. after publishing, by the **public** URL, with `shasum -c` against the
+   release's own `.sha256`: `OK`.
+
+Before tagging, the workflow list showed an active `release.yaml`. It is
+upstream Redwood's, deleted from the tree in `85ce05714`, and absent at the
+tagged commit and on `main`, so a tag cannot run it.
+
+The candidate text below is as it was when verified. Its status lines
+described the candidate.
 
 **A first build was superseded.** It was built from `e40d20ca` without #82
 (U27) and #83 (#77): build `37564871932`, device `37566617059`, zip
