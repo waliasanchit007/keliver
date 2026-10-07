@@ -130,6 +130,19 @@ the completeness of `host-ios/`; the `xcodebuild` half runs on macOS in
 
 ## Known issues
 
+- **U31, found after candidate 2 was verified: the publish signing block
+  exposes the private signing key.** It was first shipped in 0.3.6, and this
+  bundle's `keliver-new-publish-target.sh` writes it unchanged. The block gives
+  the key to Zipline's compile task, which passes it to a child JVM as
+  `--sign …:<private key hex>`. The key is then:
+  - visible in the process list while a bundle compiles;
+  - printed in full by a `--info` build (measured);
+  - stored in `.gradle/<version>/executionHistory/executionHistory.bin`,
+    mode 0644 (measured).
+
+  A fix that signs inside Gradle, after the compile, is on branch
+  `fix/u31-signing-key-exposure`, stacked on this one. **Candidate 2 does not
+  include it.**
 - **Not measured on iOS:** a physical iPhone; a release or App Store build;
   HTTPS end to end; taps (P3); `HostHttp` and network images in a running app
   (the reference guest uses neither); the SQLite driver inside the iOS app.
