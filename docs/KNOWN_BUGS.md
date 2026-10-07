@@ -934,8 +934,9 @@ group or other bits; `keys/` and `ed25519.pub` are not writable by group or
 other; `ed25519.priv` and `keys/` are owned by the user running the relay; the
 store directory is not world-writable (group-write is not flagged: under a
 user-private-group umask, 002 on Debian and Ubuntu, every directory is
-group-writable by a group of one); and, for a new key, the mode read back is
-the one requested and the volume does not ignore ownership.
+group-writable by a group of one) and is owned by the relay's user — no key is
+generated into a store directory another user owns; and, for a new key, the
+mode read back is the one requested and the volume does not ignore ownership.
 
 **Existing stores — the compatibility policy.** Every store created before this
 has a 0644 key, including any real one. The relay never changes an existing key
@@ -967,7 +968,8 @@ with a relay-created 0600 key — a bundle signed with it verifies with Zipline'
 `ManifestVerifier`, a tampered one and a foreign key do not (3/0); the store
 checks that exercise the relay and adoption still pass (store-home, resolver
 failure, legacy compat, store identity, store recovery). **Cross-user read, on
-Linux:** `portal-tools.yml` run 35969910149 (head `b162fb83e`) ran the check on
+Linux:** `portal-tools.yml` run 35969910149 (head `b162fb83e`), and again run
+36468669380 on the final code (`f6aa5e61d`, same result), ran the check on
 the GitHub-hosted runner with a second account created for the run — **63
 passed, 0 failed, 0 skipped**: that account could read a world-readable file in
 the store directory but not the private key, under umask 022 and 000, and a vfat
@@ -1009,7 +1011,9 @@ derive it), a missing private key cannot be recovered (restore it, or begin a
 new identity on purpose). A generation that fails after placing the private key
 withdraws it (only if it is still byte-for-byte the one it placed); only a crash
 in the instant between the two links can leave half a pair, and the next start
-reports it rather than repairing it. `SigningKeysTest.halfAnIdentityIsReportedAndLeftAsItWas`,
+reports it rather than repairing it. `keliver-adopt-legacy-store.sh --force`
+replaces the pair with two renames; interrupted between them it leaves a
+mismatched pair, and says to check `keys/` when either rename fails. `SigningKeysTest.halfAnIdentityIsReportedAndLeftAsItWas`,
 and the check's section E, both directions.
 
 ### U28. The production host logs a false `codeLoadFailed` on every start — OPEN

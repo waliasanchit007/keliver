@@ -178,6 +178,7 @@ private fun protectionOf(key: Path, dir: Path, requested: Set<PosixFilePermissio
   val keyPerms = Files.getPosixFilePermissions(key)
   val dirPerms = Files.getPosixFilePermissions(dir)
   val me = currentUser()
+  val store: Path? = dir.toAbsolutePath().parent
   // What no chmod can fix: the filesystem, or who owns the files.
   val unfixable = buildList {
     if (ownership is Ownership.Ignored) add(ownership.detail)
@@ -187,9 +188,11 @@ private fun protectionOf(key: Path, dir: Path, requested: Set<PosixFilePermissio
           "${PosixFilePermissions.toString(requested)}: the filesystem does not apply the modes it is given",
       )
     }
-    for (p in listOf(key, dir)) {
+    for (p in listOfNotNull(key, dir, store)) {
       val owner = Files.getOwner(p)
-      if (owner != me) add("${p.fileName} is owned by ${owner.name}, not by ${me.name}, who runs this relay")
+      if (owner != me) {
+        add("${p.fileName} is owned by ${owner.name}, not by ${me.name}, who runs this relay (if it is yours, chown it back)")
+      }
     }
   }
   val fixable = buildList {
@@ -206,13 +209,14 @@ private fun protectionOf(key: Path, dir: Path, requested: Set<PosixFilePermissio
         add("$PUBLIC_KEY_FILE is ${PosixFilePermissions.toString(pubPerms)}: other users can replace the key hosts embed")
       }
     }
-    // The store directory: world-writable (and not sticky) means another user
-    // can move keys/ aside and put their own identity there. Group-write is not
-    // flagged, deliberately: under a user-private-group umask (002, the default
-    // on Debian and Ubuntu) every directory is group-writable by a group that is
-    // only this user.
-    val store = dir.toAbsolutePath().parent
-    if (store != null && worldWritableNotSticky(store)) {
+    // The store directory: world-writable means another user can move keys/
+    // aside and put their own identity there. No sticky-bit exemption — a
+    // sticky directory someone else planted still lets its owner do that, and
+    // the owner check above is what makes the directory this user's. Group-write
+    // is not flagged, deliberately: under a user-private-group umask (002, the
+    // default on Debian and Ubuntu) every directory is group-writable by a group
+    // that is only this user.
+    if (store != null && PosixFilePermission.OTHERS_WRITE in Files.getPosixFilePermissions(store)) {
       add("the store directory ${store.fileName}/ is writable by every user: another user can replace keys/")
     }
   }
@@ -222,12 +226,6 @@ private fun protectionOf(key: Path, dir: Path, requested: Set<PosixFilePermissio
   } else {
     KeyProtection.Exposed(problems.joinToString("; "), chmodFixes = unfixable.isEmpty())
   }
-}
-
-private fun worldWritableNotSticky(dir: Path): Boolean {
-  val mode = runCatching { Files.getAttribute(dir, "unix:mode", LinkOption.NOFOLLOW_LINKS) as Int }.getOrNull()
-  if (mode != null) return (mode and 0b010) != 0 && (mode and 0b1000000000) == 0
-  return PosixFilePermission.OTHERS_WRITE in Files.getPosixFilePermissions(dir)
 }
 
 /** The user this process runs as: the owner of a file it has just created. */
@@ -331,9 +329,11 @@ private fun createKeysDir(keys: Path): Boolean {
 }
 
 /**
- * A generation interrupted between staging and linking leaves `.keygen-*`
- * behind. Its key never reached `keys/`, so nothing can have signed with it;
- * it is removed rather than left for someone to find.
+ * A generation interrupted before linking leaves `.keygen-*` behind; its key
+ * never reached `keys/`, so nothing can have signed with it, and it is removed
+ * rather than left for someone to find. (Interrupted BETWEEN the two links, the
+ * private key did reach `keys/`; the staged public key is still removed, and the
+ * half pair is reported, not repaired — see U29.)
  */
 private fun removeInterruptedGenerations(keys: Path) {
   Files.newDirectoryStream(keys, "$STAGING_PREFIX*").use { stream ->
@@ -342,7 +342,19 @@ private fun removeInterruptedGenerations(keys: Path) {
 }
 
 private fun generate(keys: Path, createdDir: Boolean) {
-  // A fresh key is not put where other users could replace it.
+  // A fresh key is not put where other users could replace it — nor into a
+  // store directory someone else owns: generating there would be a new identity
+  // in a place another user controls, which is a rotation by another name.
+  val store = keys.toAbsolutePath().parent
+  if (store != null && supportsPosix(store)) {
+    val owner = Files.getOwner(store)
+    if (owner != currentUser()) {
+      throw SigningKeyException(
+        "will not create a signing key in $keys: the store directory is owned by ${owner.name}, not by " +
+          "${currentUser().name}, who runs this relay. No key was created.",
+      )
+    }
+  }
   if (supportsPosix(keys)) {
     val perms = Files.getPosixFilePermissions(keys)
     val dirPerms = PosixFilePermissions.toString(perms)

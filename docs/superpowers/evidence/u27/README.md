@@ -9,7 +9,7 @@ store or key was read, listed or changed. Paths are shortened to `<run>`,
 | file | what |
 |---|---|
 | `before.txt` | `scripts/keliver-key-permissions-check.sh` against the **released tools 0.3.5 bundle** — its `relay/bin/portal-relay` and `bin/keliver-adopt-legacy-store.sh`, from the zip whose sha256 is `4e1c3040…` (the published asset). 25 passed, **36 failed**, 2 skipped. |
-| `after.txt` | the same check against this branch's relay and adopt script: **61 passed, 0 failed**, 2 skipped. |
+| `after.txt` | the same check against this branch's relay and adopt script, at the final code (after the second review): **61 passed, 0 failed**, 2 skipped. |
 | `signed.txt` | `scripts/keliver-verify-signed-bundle.sh` on this branch: a key created by the new code signs a bundle that Zipline's `ManifestVerifier` accepts; a tampered bundle and a different key are rejected (3/0). The key's modes (`-rw-------`) were listed after the check and appended. |
 | `SigningKeysTest.txt` | the unit tests (14/0) and the whole `portal-relay` module (107/0). |
 | `store-checks.txt` | the store checks that start the relay or run adoption, on this branch: store-home 32/0, resolver-failure 42/0, legacy-compat 14/0, store-identity 11/0, store-recovery 136/0. |
@@ -31,7 +31,9 @@ GitHub-hosted Linux runner (`portal-tools.yml` run 35969910149, head
 `b162fb83e`), with a second account created for the run as `KELIVER_PROBE_USER`:
 **63 passed, 0 failed, 0 skipped**. That account read a world-readable canary in
 the store directory, and could not read the private key (sections A and C); the
-FAT case there is a vfat loop mount (section F).
+FAT case there is a vfat loop mount (section F). Run 36468669380 repeated it on
+the final code (`f6aa5e61d`, after the second review): 63/0/0 again, every other
+portable check green.
 
 No key material is in these files. Keys are compared by hash inside the check.
 Its last row searches every log and publish response it wrote for every private
