@@ -129,9 +129,18 @@ portal_down "$APP"
 # (resolved under this run's user.home) and writes host-android/, a standalone
 # build on Maven Central only. 10.0.2.2 is how the emulator reaches the relay.
 PROD_ID=inventory.host
-( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server http://10.0.2.2:8077 \
+# Which scaffolder writes the host. By default the published zip's own bin/
+# copy. KELIVER_SCAFFOLD_FROM=repo selects this repository's scripts/ instead:
+# the W3 workflows set it, because W3's index-reading host templates exist only
+# here until a release ships them; switch it off once one does.
+case "${KELIVER_SCAFFOLD_FROM:-zip}" in
+  zip)  PROD_SCAFFOLD="$KP/keliver-new-production-host.sh"; PROD_WHICH="the zip's bin/" ;;
+  repo) PROD_SCAFFOLD="$REPO/scripts/keliver-new-production-host.sh"; PROD_WHICH="this repository's scripts/ (W3, unreleased)" ;;
+  *)    bad "KELIVER_SCAFFOLD_FROM must be zip or repo, not ${KELIVER_SCAFFOLD_FROM}"; exit 1 ;;
+esac
+( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server http://10.0.2.2:8077 \
     --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
-  && ok "P1: the zip's bin/keliver-new-production-host.sh scaffolded host-android/" \
+  && ok "P1: keliver-new-production-host.sh ($PROD_WHICH) scaffolded host-android/" \
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
 sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"

@@ -125,10 +125,18 @@ cp "$STORE/bundles/v1/manifest.zipline.json" "$EV/manifest-v1.zipline.json" 2>/d
 
 # --- 3. P1: the iOS host, scaffolded, with THIS app's key ----------------------
 BID=inventory.ioshost
-# The zip's own copy is what is under test (published since 0.3.7), so a
-# missing or non-executable one fails here; there is no fallback to scripts/.
-if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $LABEL zip's bin/"
-else bad "P1: the tools zip has no executable bin/keliver-new-ios-host.sh"; exit 1; fi
+# By default the zip's own copy is what is under test (published since 0.3.7),
+# so a missing or non-executable one fails here; there is no silent fallback.
+# KELIVER_SCAFFOLD_FROM=repo selects this repository's scripts/ explicitly: the
+# W3 workflows set it, because W3's index-reading host template exists only here
+# until a release ships it; switch it off once one does.
+case "${KELIVER_SCAFFOLD_FROM:-zip}" in
+  zip)
+    if [ -x "$KP/keliver-new-ios-host.sh" ]; then IOS_SCAFFOLD="$KP/keliver-new-ios-host.sh"; WHICH="the tools $LABEL zip's bin/"
+    else bad "P1: the tools zip has no executable bin/keliver-new-ios-host.sh"; exit 1; fi ;;
+  repo) IOS_SCAFFOLD="$REPO/scripts/keliver-new-ios-host.sh"; WHICH="this repository's scripts/ (W3, unreleased)" ;;
+  *) bad "KELIVER_SCAFFOLD_FROM must be zip or repo, not ${KELIVER_SCAFFOLD_FROM}"; exit 1 ;;
+esac
 ( cd "$APP" && "$IOS_SCAFFOLD" --bundle-server http://localhost:8077 --bundle-id "$BID" ) \
   > "$EV/ios-host-scaffold.log" 2>&1 && ok "P1: keliver-new-ios-host.sh ($WHICH) scaffolded host-ios/" \
   || { bad "P1: the iOS host was not scaffolded"; cat "$EV/ios-host-scaffold.log"; exit 1; }

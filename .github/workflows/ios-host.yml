@@ -45,6 +45,11 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
+    env:
+      # W3: the hosts are scaffolded by this repository's scripts/, whose
+      # index-reading templates no release ships yet. Everything else comes from
+      # the published zip. Remove this once a tools release ships W3.
+      KELIVER_SCAFFOLD_FROM: repo
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
