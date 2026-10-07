@@ -11,6 +11,20 @@ release until a person approves the tag and upload.
 `1d610a96…`. It was verified and **must not be tagged**. This candidate merges
 both.
 
+## Candidate verification (recorded after the build; not in the built commit)
+
+| | |
+|---|---|
+| source commit to tag | **`d52e2ecab76806da181a9874855a8f147937a160`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`); contains #82's head `2ef70f873` and #83's head `e4e5fe5f1` |
+| zip | `keliver-portal-tools-0.3.6.zip`, 90,415,450-byte artifact; zip sha256 **`fac9891221e95f87e6324bc9b649767fb9b17efbe3693daef089e65fcc26aca1`** |
+| bundled dev-host APK sha256 | **`c759e162b4d0781b2d5c916d653a91bb45029a94bd822c207e876632b315a3cc`**, no `assets/portal_ed25519.pub` |
+| build run | [`37574414527`](https://github.com/waliasanchit007/keliver/actions/runs/37574414527): every portable check green. That includes `SigningKeysTest` 14/0 and `PublishSignatureTest` 7/0; the U27 key-permissions check **63/0/0**, with a second local account attempting the read; the acceptance with the publish round-trip; and the scaffolders' self-tests (39/0 and 34/0; 23/0 and 18/0). Retained artifact `11463181504` (`sha256:da1b825c…`) |
+| device run | [`37576200137`](https://github.com/waliasanchit007/keliver/actions/runs/37576200137): the APK pinned by sha256; 19/0 device checks, 28/0 packaged acceptance; API 33 x86_64 emulator |
+| local check | the retained artifact was downloaded on macOS. The zip and APK hashes match both runs, `VERSION.json` is as above, and the four new files are in the bundle |
+| tag push | only `portal-tools.yml` (read-only) matches `portal-tools-v*` at that commit. `publish.yml` is `v*`, `ci.yml` ignores tags, and `pages`/`compat-matrix` don't trigger on tags |
+
+**Not done: tag, release, upload.** Those wait for approval.
+
 ---
 
 ## What this release is
