@@ -147,6 +147,152 @@ signed Keliver screen next to native screens, on CI.
 *Done when:* the reference app's P1–P7 pass against a static HTTPS server fed
 only by the CLI.
 
+#### W3 design (2026-10-07, branch `feat/w3-static-publish`)
+
+**Layout.** One directory, served as-is by any static host or CDN:
+
+```
+<out>/bundles/index.json
+<out>/bundles/v1/manifest.zipline.json, *.zipline   (the compile task's output, copied unchanged)
+<out>/bundles/v2/…
+```
+
+Every `v<N>/` is immutable once written. Only `index.json` changes.
+
+**`index.json`, format 1:**
+
+```json
+{
+  "format": 1,
+  "entries": [
+    {
+      "sequence": 2,
+      "version": 2,
+      "channel": "stable",
+      "widgetVersion": 1,
+      "capabilities": ["host-sql@1"],
+      "manifest": "v2/manifest.zipline.json",
+      "manifestSha256": "<64 hex>",
+      "createdAt": "2026-10-07T12:00:00Z"
+    }
+  ]
+}
+```
+
+- `sequence` is strictly increasing across the index. It is the only order a
+  host uses. `version` names the directory. The CLI sets both to
+  `max(existing) + 1`. They are separate fields because W4's rollback and
+  channel promotion add a new sequence without new code.
+- `manifest` is a relative path under `bundles/`:
+  - no leading `/`, no scheme, no `..`;
+  - a host resolves it against `<server>/bundles/` and still checks that the
+    result is on the server's origin.
+- `channel` is optional; a missing channel means `stable`. W3 hosts take
+  `stable` entries only, so a W4 `beta` entry can be published without
+  reaching hosts built before channels existed.
+- `constraints` (an object) is reserved for W4 (`minHostVersion` and
+  `maxHostVersion`, rollout).
+  - A host skips any entry whose `constraints` holds a key it doesn't know.
+    That is fail-closed per entry, so a constraint added later can't be
+    ignored by an older host.
+  - Unknown top-level entry fields are ignored.
+- A host refuses an index whose `format` isn't 1.
+
+**Trust: per-entry binding by the manifest's own signature, not a signed
+index.**
+- What makes code run is the manifest. Zipline verifies its Ed25519
+  signature, and through it every module's sha256, against the key built
+  into the host. The host does that verification today, unchanged. A forged or
+  edited index can only point at manifests this key signed.
+- `manifestSha256` ties an entry's selection fields (`widgetVersion`,
+  `capabilities`, `channel`) to the exact manifest the publisher meant:
+  - the host's Zipline HTTP client checks the downloaded manifest bytes
+    against it, in the same fetch Zipline loads from;
+  - a mismatch fails the load.
+  - This catches a CDN serving a manifest that doesn't belong to the entry
+    (for example, a mixed or stale cache).
+  - It is not a security boundary: the index is unsigned, so whoever can
+    rewrite the index can rewrite the hash too.
+- What a signed index would add is only **freshness and anti-rollback**: a
+  server, or a path to it, replaying an older index or an older signed
+  bundle.
+  - Signing the index doesn't solve that by itself either. The host also
+    needs a floor it remembers.
+  - That is W4: the sequence goes into the **signed** manifest (Zipline's
+    manifest `metadata`), and the host refuses a sequence below the highest
+    it has run.
+  - So W3 ships an unsigned index, and the rollback gap stays documented, as
+    it is today.
+
+**Host selection.**
+- Fetch `<server>/bundles/index.json`, with a short timeout and no cache.
+- Keep the entries where:
+  - `format` is 1;
+  - `channel` is `stable`;
+  - there are no unknown `constraints`;
+  - `widgetVersion` is at most the host's own (1);
+  - every capability in `capabilities` is one the host provides;
+  - the manifest path is valid.
+- Take the highest `sequence`.
+- Load that manifest with the sha256 check.
+- Lookup-first and the offline cache start are unchanged:
+  - a failed lookup, or no usable entry with the server unreachable, starts
+    from Zipline's pinned cache as before;
+  - with the server reachable and no compatible entry, it shows "No bundle"
+    unless a bundle loaded before. The existing rule is kept.
+
+**The relay keeps `/bundles/latest`** and also serves
+`GET /bundles/index.json`, generated from its store's `v<N>/meta.json` and
+manifests.
+- A host built from the new templates fetches `index.json`.
+- Only on **HTTP 404** for it (a relay from tools 0.3.7 or earlier) does it
+  fall back to `/bundles/latest`.
+- A network failure is not a 404, so it never adds a second timeout before
+  the offline start.
+
+**`keliver-publish`**, in the tools bundle's `bin/`:
+
+```
+keliver-publish [app-dir] --out <dir> [--public-key-file F] [--channel stable] [--skip-build]
+```
+
+1. It runs the app's `publishTask` from `keliver.portal.json` (as the relay
+   does) with `KELIVER_TOOLS_BIN` set, so the existing signing block signs.
+2. It verifies the manifest with the relay's `publishedSignatureProblem`
+   against the **public** key. The key comes from:
+   - `--public-key-file`;
+   - else `KELIVER_PUBLIC_KEY_HEX`;
+   - else the app's store, through `keliver-store-path.sh`.
+3. It checks that every module named in the manifest is present with that
+   sha256.
+4. It copies to `bundles/.staging-*`, renames it to `v<N>`, then writes
+   `index.json` through a temp file and an atomic rename. All of this happens
+   under a lock file.
+5. Anything unsigned, signed by another key, or incomplete is refused, and
+   nothing is written. A malformed existing index is refused, never
+   overwritten.
+
+**CI signing without a store.** The signing block gains
+`KELIVER_SIGNING_KEY_FILE` (or `-Pkeliver.signingKeyFile`), a file holding
+the private key's hex. It takes precedence over the store; in Actions it is a
+secret written to a 0600 file. Neither the CLI nor the block prints it.
+
+**Evidence.**
+- Unit tests:
+  - the CLI staging;
+  - the relay's generated index;
+  - the host selector and the manifest-pinning client. These are compiled
+    from the template source itself, and the Android and iOS copies must be
+    byte-identical.
+- `keliver-publish-selftest.sh`.
+- The reference app on CI, after the relay P-steps:
+  - the CLI publishes into a static directory served over **HTTPS** by a
+    self-signed CA. On the emulator the CA is put in the system store by
+    root; on the simulator, with `simctl keychain add-root-cert`;
+  - S2: v1 is loaded through the index;
+  - S4: v2 after an edit;
+  - S7: server down, so the host starts from the cache.
+
 ### W4 — Release controls (G5, G6, G7)
 
 - **A monotonic sequence number** in a signed field. The host refuses any
