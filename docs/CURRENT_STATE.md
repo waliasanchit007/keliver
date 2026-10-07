@@ -54,8 +54,9 @@ empties its directory through symlinks — found reviewing #77); U28 (the produc
 host logs a false `codeLoadFailed` on every start); and the adopter-route gaps in
 `REFERENCE_APP.md`. Since tools 0.3.6 the production host and signed publishing
 are scaffolded (`keliver-new-production-host.sh`, `keliver-new-publish-target.sh`),
-and the relay refuses unsigned bundles. The reference app's CI still bootstraps
-from 0.3.5, so its run of both scaffolders comes from this repository.
+and the relay refuses unsigned bundles. Since PR #92 the reference app's CI
+builds from the published 0.3.7 zip and runs those scaffolders, and the iOS
+host's, from the zip's own `bin/`: runs `37673830830` and `37673830745`.
 Priorities: `ROADMAP.md` "Current priorities".
 
 **Fixed in tools 0.3.6:** U27 (the relay wrote

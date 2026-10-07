@@ -1,7 +1,8 @@
 # The reference app — what the published route costs an adopter
 
-**2026-09-22/24.** An inventory app built outside this checkout from the
-**published** `keliver-portal-tools` 0.3.5 release and `dev.keliver:*:0.3.3` on
+**2026-09-22/24; moved to tools 0.3.7 on 2026-10-08 (PR #92).** An inventory
+app built outside this checkout from the **published** `keliver-portal-tools`
+release (0.3.5 until PR #92, 0.3.7 since) and `dev.keliver:*:0.3.3` on
 Maven Central, following [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md),
 then checked against
 [`reference/inventory/EXPECTATIONS.md`](../reference/inventory/EXPECTATIONS.md) —
@@ -13,7 +14,8 @@ and unchanged since. The macOS compile, ingest, edit and Live-preview runs of
 **This is dogfooding.** We wrote the app. It is not evidence that anyone outside
 the project has adopted Keliver. Nobody has.
 
-**Two routes, and only one of them is published-artifacts-only.**
+**Two routes. Since PR #92 (tools 0.3.7), both are published-artifacts-only,
+apart from the CI harness.**
 
 * **The development route** uses nothing but the public tools zip and Maven
   Central: the guest app, `keliver-init` and the other scaffolders, the relay,
@@ -23,10 +25,13 @@ the project has adopted Keliver. Nobody has.
   no Keliver *library* module from source: the production host is scaffolded
   into the app by `keliver-new-production-host.sh` and built by the app's Gradle
   against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
-  Kotlin is that scaffolder's template. The scaffolder ships in tools 0.3.6,
-  but the reference app is still built from the 0.3.5 zip, which lacks it, so
-  both still come from this repository. Runs 1–7
-  used `portal-device-android` compiled from Keliver **source** at `b5615637`.
+  Kotlin is that scaffolder's template. **Since PR #92 both come from the
+  published 0.3.7 zip's `bin/` and `templates/`**: `reference-app.yml` run
+  `37673830830` (prepare 15/0, device 37/0) and the iOS host, via
+  `ios-host.yml` run `37673830745` (48/0, 30/0). Before that, runs 8 to 13 took
+  the scaffolders from this repository, because the app was built from the
+  0.3.5 zip. Runs 1–7 used `portal-device-android` compiled from Keliver
+  **source** at `b5615637`.
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
   `keliver-store-path.sh` it calls), which are not in the tools bundle.
