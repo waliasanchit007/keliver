@@ -1,0 +1,12 @@
+// A standalone Gradle build: this app's production iOS host framework. It
+// resolves Keliver ONLY from Maven Central — no Keliver checkout, no mavenLocal.
+// Scaffolded by keliver-new-ios-host.sh. The Xcode project beside it
+// (iosApp.xcodeproj) builds it through embedAndSignAppleFrameworkForXcode.
+pluginManagement {
+  repositories { gradlePluginPortal(); google(); mavenCentral() }
+}
+dependencyResolutionManagement {
+  repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+  repositories { google(); mavenCentral() }
+}
+rootProject.name = '@@NAME@@-ios-host'

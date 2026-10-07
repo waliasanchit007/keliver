@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="sqltest.IosSqlHostTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T08:45:58.773Z" hostname="STASH-LAP-0075" time="0.005">
+  <properties/>
+  <testcase name="createInsertSelect[macosArm64]" classname="sqltest.IosSqlHostTest" time="0.001"/>
+  <testcase name="updateAndDeleteReportChanges[macosArm64]" classname="sqltest.IosSqlHostTest" time="0.0"/>
+  <testcase name="aFailingBatchRollsBack[macosArm64]" classname="sqltest.IosSqlHostTest" time="0.001"/>
+  <testcase name="dataSurvivesReopening[macosArm64]" classname="sqltest.IosSqlHostTest" time="0.001"/>
+  <testcase name="badSqlIsAnErrorNotACrash[macosArm64]" classname="sqltest.IosSqlHostTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,4 @@
+# The system SQLite (libsqlite3 in the iOS SDK) for IosSqlHost. Kotlin/Native
+# ships no platform.sqlite3, so the SDK header is bound here.
+headers = sqlite3.h
+linkerOpts = -lsqlite3
