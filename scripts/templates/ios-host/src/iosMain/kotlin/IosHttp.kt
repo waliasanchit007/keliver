@@ -117,6 +117,13 @@ internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider
     require(segments.none { it == "." || it == ".." || '\\' in it }) {
       "HostHttp: '${request.path}' is not a plain relative path under the API base"
     }
+    val method = request.method.uppercase()
+    require(METHOD.matches(method)) { "HostHttp: '${request.method}' is not an HTTP method" }
+    request.headers.forEach { (k, v) ->
+      require(TOKEN.matches(k) && v.none { it == '\r' || it == '\n' || it == '\u0000' }) {
+        "HostHttp: header '$k' is not a valid header name and value"
+      }
+    }
     val query = request.query.entries.joinToString("&") { (k, v) -> "${percentEncode(k)}=${percentEncode(v)}" }
     val url = base.trimEnd('/') + segments.joinToString("") { "/" + percentEncode(it) } +
       (if (query.isEmpty()) "" else "?$query")
@@ -125,7 +132,7 @@ internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider
       cachePolicy = NSURLRequestReloadIgnoringLocalCacheData,
       timeoutInterval = 30.0,
     ).apply {
-      setHTTPMethod(request.method.uppercase())
+      setHTTPMethod(method)
       request.headers.filterKeys { it.lowercase() !in DROPPED_HEADERS }.forEach { (k, v) ->
         setValue(v, forHTTPHeaderField = k)
       }
@@ -136,6 +143,8 @@ internal class NSURLSessionHostHttp(private val base: String) : HostHttpProvider
   }
 
   private companion object {
+    val METHOD = Regex("^[A-Z]{1,16}$")
+    val TOKEN = Regex("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
     val DROPPED_HEADERS = setOf(
       "host", "connection", "content-length", "transfer-encoding", "keep-alive",
       "proxy-connection", "te", "trailer", "upgrade",

@@ -80,7 +80,8 @@ class IosSqlHost(fileName: String = "portal-app.db") : HostSqlDriver {
   private fun run(sql: String, args: List<String?>): SqlRows = memScoped {
     val out = alloc<CPointerVar<sqlite3_stmt>>()
     check(sqlite3_prepare_v2(db, sql, -1, out.ptr, null) == SQLITE_OK) { "sqlite: ${message()} in: $sql" }
-    val stmt = out.value!!
+    // Empty or comment-only SQL prepares to no statement: nothing to run.
+    val stmt = out.value ?: return@memScoped SqlRows()
     try {
       args.forEachIndexed { i, a ->
         if (a == null) sqlite3_bind_null(stmt, i + 1) else sqlite3_bind_text(stmt, i + 1, a, -1, SQLITE_TRANSIENT)

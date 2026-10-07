@@ -79,6 +79,14 @@ portal_up(){  # $1 = app dir, $2 = log
   return 1
 }
 portal_down(){ ( cd "$1" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); sleep 2; }
+# Installed before anything is started, so every exit stops what this run started.
+UDID=""; FAPP=""
+cleanup(){
+  if [ -n "$UDID" ]; then xcrun simctl shutdown "$UDID" >/dev/null 2>&1; xcrun simctl delete "$UDID" >/dev/null 2>&1; fi
+  portal_down "$APP"; [ -n "$FAPP" ] && portal_down "$FAPP"
+  return 0
+}
+trap cleanup EXIT
 portal_up "$APP" "$EV/relay-A-1.log" && ok "the relay for this app answered on :8077" \
   || { bad "the relay never answered"; tail -30 "$EV/relay-A-1.log"; exit 1; }
 STORE="$(cat "$APP/.gradle/keliver-store-path")"
@@ -127,8 +135,6 @@ PY
 )"
 UDID="$(xcrun simctl create keliver-ios-ci ${SIM#* } ${SIM% *})" || { bad "could not create a simulator ($SIM)"; exit 1; }
 echo "simulator: $UDID ($SIM)" | tee "$EV/simulator.txt"
-cleanup(){ xcrun simctl shutdown "$UDID" >/dev/null 2>&1; xcrun simctl delete "$UDID" >/dev/null 2>&1; portal_down "$APP"; [ -n "${FAPP:-}" ] && portal_down "$FAPP"; }
-trap cleanup EXIT
 xcrun simctl boot "$UDID" && xcrun simctl bootstatus "$UDID" -b > /dev/null 2>&1
 xcrun simctl install "$UDID" "$APPB" && ok "P1: the host installed as its own app ($BID)" || bad "P1: install failed"
 
@@ -142,8 +148,12 @@ launch(){
   sleep 30
   xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1
   kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
-  swift "$HERE/ocr.swift" "$EV/$label.png" > "$EV/$label.ocr.txt" 2>"$EV/$label.ocr.err"
-  printf '    %s: %s\n' "$label" "$(head -3 "$EV/$label.ocr.txt" | tr '\n' '|')"
+  # A failed reading must not let a "never appeared" check pass.
+  if swift "$HERE/ocr.swift" "$EV/$label.png" > "$EV/$label.ocr.txt" 2>"$EV/$label.ocr.err" && [ -s "$EV/$label.ocr.txt" ]; then
+    printf '    %s: %s\n' "$label" "$(head -3 "$EV/$label.ocr.txt" | tr '\n' '|')"
+  else
+    bad "$label: the screenshot could not be read ($(head -1 "$EV/$label.ocr.err"))"
+  fi
 }
 reads(){ grep -qx "$2" "$EV/$1.ocr.txt"; }   # the screen has a line exactly equal to $2
 
@@ -202,7 +212,10 @@ grep -q "verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P5: ver
 grep -qE "codeLoadFailed.*(signature|verif)" "$C" && ok "P5: the foreign-signed bundle was refused on its signature" \
   || bad "P5: no signature refusal: $(grep -E 'codeLoad' "$C" | head -2 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$C" && bad "P5: something loaded" || ok "P5: no code loaded"
-reads P5-foreign "Foreign build" && bad "P5: 'Foreign build' is on the screen" || ok "P5: 'Foreign build' never appeared"
+# On its own this is weak: a refused load leaves the screen blank. The console
+# lines above (a signature refusal, no codeLoadSuccess) are the proof.
+reads P5-foreign "Foreign build" && bad "P5: 'Foreign build' is on the screen" \
+  || ok "P5: 'Foreign build' is not on the screen (it reads $(grep -c . "$EV/P5-foreign.ocr.txt") line(s): blank but for the status bar)"
 portal_down "$FAPP"
 
 # --- P6 -------------------------------------------------------------------------

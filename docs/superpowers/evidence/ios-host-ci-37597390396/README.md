@@ -32,6 +32,17 @@ from the released 0.3.6 bundle wrote `ed25519.priv` as `-rw-------` on this
 runner too (`key-modes.txt`).
 
 Kept here: results, the key, the dependency list, the manifests, each
-launch's `KeliverHost:` console lines and OCR reading, and four screenshots.
+launch's `KeliverHost:` console lines and OCR reading, and five screenshots.
+
+**After this run,** the independent review of PR #88 found nothing blocking.
+Its points are fixed in the next commit:
+- one URL grammar (no `$`, no `user@`, no query);
+- the release build refuses ATS exceptions;
+- HostHttp checks the method and headers;
+- the cleanup trap is installed first;
+- the OCR result is checked;
+- the P5 label is honest.
+
+The later CI run records them.
 Everything else, including full logs and the xcodebuild log, is in the run's
 artifact while it lasts.

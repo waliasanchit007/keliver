@@ -22,10 +22,10 @@ def configValue = { String name ->
   def m = (hostConfig.text =~ /const val ${name}: String = "([^"]*)"/)
   m.find() ? m.group(1) : null
 }
-// ASCII URL characters only; the bundle server takes no query or fragment,
-// because the host appends its own path to it.
-def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
-def apiUrl = /https?:\/\/[A-Za-z0-9._~:\/?#\[\]@!$&()*+,;=%-]+/
+// The scaffolder's URL grammar: plain ASCII, a host name or [IPv6] (no user@),
+// an optional port and path, and no query, fragment or '$' (these are Kotlin
+// string literals, where '$' is a template).
+def url = /https?:\/\/(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)(:[0-9]{1,5})?(\/[A-Za-z0-9._~\/%-]*)?/
 
 def checkHostConfig = tasks.register('checkHostConfig') {
   inputs.file(hostConfig)
@@ -37,22 +37,30 @@ def checkHostConfig = tasks.register('checkHostConfig') {
       throw new GradleException("HostConfig.kt: PORTAL_PUBLIC_KEY_HEX is not a 64-hex-digit Ed25519 " +
         "public key, so no bundle could be verified. Copy this app's keys/ed25519.pub into it.")
     }
-    if (server == null || !(server ==~ serverUrl)) {
-      throw new GradleException("HostConfig.kt: BUNDLE_SERVER must be an http:// or https:// URL without a query (got '$server').")
+    if (server == null || !(server ==~ url)) {
+      throw new GradleException("HostConfig.kt: BUNDLE_SERVER must be an http:// or https:// URL with no user@, query, fragment or '\$' (got '$server').")
     }
-    if (api == null || (api && !(api ==~ apiUrl))) {
-      throw new GradleException("HostConfig.kt: API_BASE_URL must be empty or an http:// or https:// URL (got '$api').")
+    if (api == null || (api && !(api ==~ url))) {
+      throw new GradleException("HostConfig.kt: API_BASE_URL must be empty or an http:// or https:// URL with no user@, query, fragment or '\$' (got '$api').")
     }
   }
 }
-// A release framework refuses http:// — App Transport Security would block it
-// on a device anyway, and a release must not ship with a cleartext exception.
+// A release framework refuses http://, and refuses an Info.plist that still
+// carries a cleartext exception (the scaffolder writes one for http:// servers,
+// for development).
+def infoPlist = file('iosApp/Info.plist')
 def checkReleaseUrls = tasks.register('checkReleaseUrls') {
   inputs.file(hostConfig)
+  inputs.file(infoPlist)
   doLast {
     def plain = ['BUNDLE_SERVER', 'API_BASE_URL'].findAll { configValue(it)?.startsWith('http://') }
     if (plain) {
       throw new GradleException("A release build needs https:// servers; HostConfig.kt has http:// in ${plain.join(', ')}.")
+    }
+    def exceptions = ['NSExceptionAllowsInsecureHTTPLoads', 'NSAllowsArbitraryLoads', 'NSAllowsLocalNetworking']
+      .findAll { infoPlist.text.contains(it) }
+    if (exceptions) {
+      throw new GradleException("A release build must not ship App Transport Security exceptions; iosApp/Info.plist has ${exceptions.join(', ')}. Remove its NSAppTransportSecurity block.")
     }
   }
 }

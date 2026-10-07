@@ -16,7 +16,8 @@
  *   - otherwise: a "No bundle" screen.
  * - One Zipline cache per key, so a key change can't strand the host on a
  *   cache it can't verify.
- * - Manifests are followed only on the bundle server's own origin.
+ * - Manifest URLs are followed only on the bundle server's own origin. (Zipline's
+ *   downloads follow HTTP redirects, as on Android.)
  *
  * Not protected: rollback. Any bundle signed by this key is accepted.
  */
@@ -187,6 +188,10 @@ private fun createApp(
     leakDetector = LeakDetector.none(),
     hostProtocolFactory = KeliverMaterialHostProtocol.Factory,
   )
+  // One of each per host, bound into every code load (not one per load: each
+  // holds a connection or a session).
+  val sql = IosSqlHost()
+  val http = apiBase?.let { NSURLSessionHostHttp(it) }
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
     override val manifestUrl = MutableStateFlow(manifestUrl)
@@ -194,8 +199,8 @@ private fun createApp(
     override val freshnessChecker = freshness
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
-      zipline.bind<HostSqlDriver>("HostSqlDriver", IosSqlHost())
-      if (apiBase != null) zipline.bind<HostHttpProvider>("HostHttp", NSURLSessionHostHttp(apiBase))
+      zipline.bind<HostSqlDriver>("HostSqlDriver", sql)
+      if (http != null) zipline.bind<HostHttpProvider>("HostHttp", http)
     }
 
     override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")

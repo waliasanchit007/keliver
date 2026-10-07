@@ -178,20 +178,31 @@ It behaves like the Android host in §2:
   refusal. There is no unverified fallback.
 - **Startup.** The lookup runs first (10 s), then Zipline's verified cache when
   the lookup fails, then "No bundle". There is one Zipline cache per key, and
-  manifest URLs are followed only on the bundle server's origin.
+  manifest URLs are followed only on the bundle server's origin. (Zipline's
+  downloads follow HTTP redirects, as on Android.)
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
-  set. Paths can't climb out of it, hop-by-hop headers are dropped, and
-  redirects aren't followed.
+  set. Paths can't climb out of it; a method that isn't a plain token, or a
+  header holding CR or LF, is refused; hop-by-hop headers are dropped; and
+  redirects aren't followed. (That last one is the delegate's job. It is not
+  yet measured: no running guest has used HostHttp.)
 - **Guest SQL** (`HostSqlDriver`) is real SQLite in Application Support, bound
   through `src/nativeInterop/cinterop/sqlite3.def`.
 - **Images** load over the network (Coil with Ktor's Darwin engine).
 
 Build-time checks (`host-ios/build.gradle`):
 - `checkHostConfig` fails the build on a malformed key or server;
-- `checkReleaseUrls`, on every release framework link, refuses `http://`.
+- `checkReleaseUrls`, on every release framework link, refuses `http://`
+  servers, and refuses an `Info.plist` that still has any App Transport
+  Security exception.
 
-`Info.plist` gets an App Transport Security exception only for the `http://`
-hosts you scaffolded with, and none for `https://`.
+URLs follow one grammar in the scaffolder, the build and the host: plain
+ASCII, a host name or `[IPv6]` with no `user@`, an optional port and path,
+and no query, fragment or `$`. They become Kotlin string literals, where `$`
+would be a template.
+
+For development, `Info.plist` gets an App Transport Security exception only
+for the `http://` hosts you scaffolded with. There is none for `https://`, and
+none in a release build.
 
 **Measured** (`docs/superpowers/evidence/ios-host-i1/`, `ios-host-i2-local/`
 and the `ios-host.yml` CI runs), on iOS simulators:

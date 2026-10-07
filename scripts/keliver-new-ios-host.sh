@@ -86,14 +86,15 @@ for t in "$HERE/templates/ios-host" "$HERE/../templates/ios-host"; do
 done
 [ -n "$TEMPLATES" ] || fail "the iOS host templates are missing (looked in $HERE/templates and $HERE/../templates)."
 
-# ASCII URL characters only; the bundle server takes no query or fragment,
-# since the host appends a path.
-SERVER_RE='^https?://[][A-Za-z0-9._~:/@!$&()*+,;=%-]+$'
-API_RE='^https?://[][A-Za-z0-9._~:/?#@!$&()*+,;=%-]+$'
+# ONE URL grammar, shared with build.gradle and the host's Origins.kt: plain
+# ASCII, a host name or [IPv6] (no user@), an optional port and path, and no
+# query, fragment or '$'. The values become Kotlin string literals, where '$'
+# would be a template, and both hosts append their own paths and queries.
+URL_RE='^https?://(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)(:[0-9]{1,5})?(/[A-Za-z0-9._~/%-]*)?$'
+URL_RULE="an http:// or https:// URL: plain ASCII, a host name or [IPv6] (no user@), an optional port and path, without a query, fragment or '\$'"
 [ -n "$BUNDLE_SERVER" ] || fail "--bundle-server is required (e.g. http://localhost:8077 for a simulator reaching this Mac's relay)."
-[[ "$BUNDLE_SERVER" =~ $SERVER_RE ]] || fail "--bundle-server must be an http:// or https:// URL of plain ASCII, without a query (got '$BUNDLE_SERVER')."
-[ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $API_RE ]] || fail "--api-base-url must be an http:// or https:// URL of plain ASCII (got '$API_BASE_URL')."
-case "$BUNDLE_SERVER$API_BASE_URL" in *'"'*|*'\'*) fail "a URL may not contain a quote or a backslash." ;; esac
+[[ "$BUNDLE_SERVER" =~ $URL_RE ]] || fail "--bundle-server must be $URL_RULE (got '$BUNDLE_SERVER')."
+[ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $URL_RE ]] || fail "--api-base-url must be $URL_RULE (got '$API_BASE_URL')."
 VERSION_RE='^[0-9A-Za-z.+-]+$'
 for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
   [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
@@ -183,7 +184,8 @@ chmod 755 "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
 PKG_PATH="${PACKAGE//.//}"
 # The App Transport Security block: an exception for each http:// host given,
-# nothing for https://.
+# nothing for https://. For development only: a release build refuses any of it
+# (build.gradle: checkReleaseUrls).
 ATS_BLOCK="$(python3 - "$BUNDLE_SERVER" "$API_BASE_URL" <<'PY'
 import re, sys
 hosts = []
@@ -191,7 +193,7 @@ for url in sys.argv[1:]:
     m = re.match(r'^http://(\[[^\]]+\]|[^/:?#]+)', url)
     if m and m.group(1).lower() not in hosts: hosts.append(m.group(1).lower())
 if hosts:
-    print('\t<key>NSAppTransportSecurity</key>\n\t<dict>\n\t\t<key>NSAllowsLocalNetworking</key>\n\t\t<true/>\n\t\t<key>NSExceptionDomains</key>\n\t\t<dict>')
+    print('\t<key>NSAppTransportSecurity</key>\n\t<dict>\n\t\t<key>NSExceptionDomains</key>\n\t\t<dict>')
     for h in hosts:
         print('\t\t\t<key>%s</key>\n\t\t\t<dict>\n\t\t\t\t<key>NSExceptionAllowsInsecureHTTPLoads</key>\n\t\t\t\t<true/>\n\t\t\t</dict>' % h.strip('[]'))
     print('\t\t</dict>\n\t</dict>')

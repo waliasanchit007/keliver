@@ -76,7 +76,11 @@ refuses "the private key renamed .key"     "is not this app's public key" --bund
 refuses "another app's public key"         "is not this app's public key" --bundle-server "$SERVER" --public-key-file "$OTHER"
 refuses "a bundle server with a query"     "without a query"          --bundle-server "$SERVER/?x=1" --public-key-file "$KEY"
 refuses "a non-ASCII bundle server"        "plain ASCII"              --bundle-server "http://bündel.example" --public-key-file "$KEY"
-refuses "a value holding a placeholder"    "which the templates use as placeholders" --bundle-server "http://h:8077/@@NAME@@" --public-key-file "$KEY"
+refuses "a placeholder in a URL (the grammar refuses '@')" "must be an http" --bundle-server "http://h:8077/@@NAME@@" --public-key-file "$KEY"
+refuses "a '\$' in a URL (a Kotlin template)" "must be an http" --bundle-server "$SERVER" --api-base-url 'https://api.example.com/$v1' --public-key-file "$KEY"
+refuses "a URL with user@"                 "no user@"                 --bundle-server "http://a@localhost:8077" --public-key-file "$KEY"
+refuses "an API base with a query"         "without a query"          --bundle-server "$SERVER" --api-base-url "https://api.example.com/v1?k=1" --public-key-file "$KEY"
+refuses "a host with '&'"                  "must be an http"          --bundle-server "http://a&b:8077" --public-key-file "$KEY"
 KELIVER_HOST_KOTLIN_VERSION="1'x" refuses "a hostile version override" "not a version" --bundle-server "$SERVER" --public-key-file "$KEY"
 refuses "a missing key file"               "no such file"             --bundle-server "$SERVER" --public-key-file "$DISP/nope.pub"
 export KOTLIN_VERSION=1.9.0
@@ -121,13 +125,13 @@ grep -q '^package com.example.demo.host$' "$K/MainViewController.kt" && grep -q 
 pn="$(sed -n 's/^PRODUCT_NAME=//p' "$H/Configuration/Config.xcconfig")"
 [ -n "$pn" ] && [ "$(printf '%s' "$pn" | tr '[:upper:]' '[:lower:]')" != keliverhost ] && grep -q "baseName = 'KeliverHost'" "$H/build.gradle" \
   && ok "the app's PRODUCT_NAME ($pn) differs from the framework's module, KeliverHost" || bad "PRODUCT_NAME '$pn'"
-python3 - "$H/iosApp/Info.plist" <<'PY' && ok "Info.plist is a valid plist; ATS allows http:// to localhost only" || bad "Info.plist ATS"
+python3 - "$H/iosApp/Info.plist" <<'PY' && ok "Info.plist is a valid plist; its only ATS exception is http:// to localhost (development; a release refuses it)" || bad "Info.plist ATS"
 import plistlib, sys
 p = plistlib.load(open(sys.argv[1], 'rb'))
 ats = p['NSAppTransportSecurity']
+assert sorted(ats) == ['NSExceptionDomains'], ats
 assert list(ats['NSExceptionDomains']) == ['localhost'], ats
-assert ats['NSExceptionDomains']['localhost']['NSExceptionAllowsInsecureHTTPLoads'] is True
-assert 'NSAllowsArbitraryLoads' not in ats
+assert ats['NSExceptionDomains']['localhost'] == {'NSExceptionAllowsInsecureHTTPLoads': True}, ats
 PY
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
@@ -175,6 +179,13 @@ if [ "$BUILD" = 1 ]; then
     ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-urls.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/release-urls.log" \
       && ok "checkReleaseUrls refuses http://" || bad "checkReleaseUrls: rc=$rc"
+    # https:// servers, but an ATS exception left in Info.plist: still refused.
+    cp "$K/HostConfig.kt" "$DISP/HostConfig.kt.keep"
+    sed -i.bak -e 's#BUNDLE_SERVER: String = "http://#BUNDLE_SERVER: String = "https://#' "$K/HostConfig.kt" && rm -f "$K/HostConfig.kt.bak"
+    ( cd "$APP" && ./gradlew --console=plain -p host-ios checkReleaseUrls > "$DISP/release-ats.log" 2>&1 ); rc=$?
+    [ "$rc" != 0 ] && grep -q "must not ship App Transport Security exceptions" "$DISP/release-ats.log" \
+      && ok "checkReleaseUrls refuses an Info.plist that keeps a cleartext exception" || bad "checkReleaseUrls (ATS): rc=$rc"
+    cp "$DISP/HostConfig.kt.keep" "$K/HostConfig.kt"
     wired=0
     for link in linkReleaseFrameworkIosArm64 linkReleaseFrameworkIosSimulatorArm64; do
       ( cd "$APP" && ./gradlew --console=plain -p host-ios --dry-run "$link" > "$DISP/wiring-$link.log" 2>&1 )
