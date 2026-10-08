@@ -149,7 +149,9 @@ nothing falls back to the cache: that launch shows no bundle. With a static
 server, that includes:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
-- a `v<N>/` that isn't there yet because the index was uploaded first.
+- a `v<N>/` that isn't there yet because the index was uploaded first;
+- a newest entry whose manifest is signed for a sequence below the host's
+  rollback floor (below).
 
 Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
 guide's "Publish from CI to a static server"). Falling back to the last good
@@ -158,13 +160,33 @@ bundle after such a failure is planned (W5 in Keliver's
 
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
-The host remembers the highest sequence it has run for its key, and refuses a
-manifest below it, from the network and from the cache. It also refuses one
-with no sequence once it has run a sequenced one. So whoever controls the
-bundle server can no longer serve a previous signed version. The floor rises
-only after a bundle has loaded, so after Zipline verified its signature.
-**Not protected:** a reinstall or "clear data" resets the floor; a host that
-never ran a sequenced bundle accepts unsequenced ones.
+The host remembers the highest sequence it has run for its key: its floor.
+Below the floor, a manifest is refused:
+- on the network;
+- from the cache;
+- on the cache start's own network fallback.
+
+Once the floor is above 0, a manifest with no sequence is refused too. The
+floor rises only after a bundle has loaded, so after Zipline has verified its
+signature. Once a host has run a sequenced bundle, whoever controls the bundle
+server can't make it run an older one.
+
+**Not protected:**
+- A reinstall, or "clear data", resets the floor.
+- A host whose floor is still 0 accepts any bundle your key signed: a new
+  install, or one that has only ever run unsequenced (pre-W4) bundles. A
+  server that only ever serves old unsequenced bundles keeps it there.
+
+**One key, one sequence space.** The floor is per key, across every server and
+route the host has used. A newest entry below a host's floor shows **no
+bundle**: the same no-fallback rule as above. So never let sequences go
+backwards. Ways a publisher can do that by mistake:
+- an `--init` into an empty directory (it restarts at 1);
+- alternating relay publishing (sequence = relay version) and `keliver-publish`
+  (the index sequence) with the same key;
+- a host once pointed at a development relay that published a high sequence
+  with the production key.
+
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a

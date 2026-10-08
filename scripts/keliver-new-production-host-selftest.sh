@@ -133,9 +133,11 @@ grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code =
   || bad "the host does not look up through bundles/index.json"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load.
-grep -q 'prefs.getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor)' "$M" \
+grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor)' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)' "$M" \
+  && grep -q 'putLong(floorKey(cacheName), sequence).commit()' "$M" \
   && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
-  && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
+  && ok "W4.2: the rollback floor guards the network load, the cache start and its network fallback, and rises (committed) after a load" \
   || bad "W4.2: the rollback floor is not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"

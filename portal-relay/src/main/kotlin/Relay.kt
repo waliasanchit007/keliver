@@ -464,14 +464,14 @@ private fun publish(): Pair<Boolean, String> {
   }
   log.appendLine("publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key")
   // Once a bundle in this store carries a signed sequence, an unsequenced one is
-  // refused: hosts with rollback protection would refuse it, and stop updating.
+  // refused: hosts with rollback protection would refuse it and show no bundle.
   val storeIsSequenced = bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }.orEmpty()
     .any { dir -> File(dir, "manifest.zipline.json").takeIf { it.isFile }?.let { signedSequenceText(it.readText()) } != null }
   when (val signedSequence = signedSequenceText(manifest.readText())) {
     null -> if (storeIsSequenced) {
       return false to log.appendLine(
         "publish REFUSED: the manifest carries no signed $SEQUENCE_METADATA_KEY, but this app has published sequenced " +
-          "bundles: hosts with rollback protection would refuse it. Its signing block predates W4; run " +
+          "bundles: hosts with rollback protection would refuse it and show no bundle. Its signing block predates W4; run " +
           "keliver-new-publish-target.sh to replace it. Nothing was stored.",
       ).toString()
     } else log.appendLine(

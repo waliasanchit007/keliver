@@ -301,7 +301,8 @@ scaffolders read `bundles/index.json`.
   `index.json`, `keliver-publish` refuses.
 - **`--init` only for the very first publish, run once by hand.** Never let CI
   add it, for instance because a download failed: that is exactly the case it
-  exists to stop.
+  exists to stop. A restarted sequence would also sit below every host's
+  rollback floor, and those hosts would then show no bundle.
 - **Upload `v<N>/` first, then `index.json`.** Never delete or overwrite a
   `v<N>/`. Skip dotfiles: `.publish.lock`, and any `.staging-*` or
   `.index.json.tmp-*` an interrupted run left.
@@ -402,11 +403,13 @@ check catches a mismatched manifest, but it doesn't protect against anyone who
 can rewrite the index. Integrity rests on the manifest signatures, not on the
 server, its origin or its redirects.
 
-Rollback: each manifest carries its sequence in its signed metadata, and hosts
-refuse a sequence below the highest they have run, on the network and from
-their cache (`DEVICE_HOST.md`). So an older signed bundle served again is
-refused. To roll back on purpose, publish the older code again: it gets a new,
-higher sequence. A reinstall resets a host's floor.
+Rollback protection: each manifest carries its sequence in its signed
+metadata, and a host refuses a sequence below the highest it has run, both on
+the network and from its cache (`DEVICE_HOST.md` §2). So an older signed
+bundle served again is refused, once a host has run a sequenced one. To roll
+back on purpose, rebuild the older source and publish it: it gets a new, higher
+sequence. A `--republish` shortcut is planned (W4.3). A reinstall resets a
+host's floor. One key is one sequence space: never let sequences go backwards.
 
 ## Preview mocks are not runtime values
 

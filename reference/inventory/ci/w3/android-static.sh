@@ -12,6 +12,8 @@
 #   S7  server down: the host starts from its cached v2
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
 #   S9  (W4.2) the stored floor above the cached v2, offline: the cache is refused
+#   S9b (W4.2) the same with the server up but failing the lookup: the network
+#       fallback to the last-good manifest is refused too
 # Signing here is the CI route: KELIVER_SIGNING_KEY_FILE names the key, and
 # KELIVER_TOOLS_BIN points at nothing, so a build that fell back to a store
 # lookup would fail instead of signing. The app was wired by the published
@@ -141,4 +143,24 @@ grep -q "cached bundle refused: rollback refused: sequence 2 is below 9" "$EV/lo
   && ok "S9: offline, the cached v2 was refused below the floor" \
   || bad "S9: no cache refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-cache-floor.txt" | head -3 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$EV/logcat-static-cache-floor.txt" && bad "S9: something loaded" || ok "S9: no code loaded"
+
+# S9b (W4.2): the same, with the server UP but failing the lookup on purpose (no
+# index, no bundles/latest). The host takes the cache path; the cache is refused,
+# so Zipline fetches the last-good manifest from the network, and that fetch is
+# held to the floor too: v2 (sequence 2) is refused against 9. (Before the review
+# of W4.2 the Android cache path used an unguarded client, and this loaded v2.)
+mv "$W3/site/bundles/index.json" "$W3/index.hidden"
+python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w3-server-s9b.log" &
+SERVE_PID=$!
+for _ in $(seq 1 30); do curl -s --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v2/manifest.zipline.json && break; sleep 1; done
+launch prod "$EV/logcat-static-fallback-floor.txt"
+grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-static-fallback-floor.txt" \
+  && grep -q "rollback refused: sequence 2 is below 9" "$EV/logcat-static-fallback-floor.txt" \
+  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v2 were both held to the floor" \
+  || bad "S9b: no refusal on the network fallback: $(grep -E "$HOST_TAG" "$EV/logcat-static-fallback-floor.txt" | head -4 | tr '\n' ' ')"
+grep -q "^GET /bundles/v2/manifest.zipline.json" "$EV/w3-server-s9b.log" \
+  && ok "S9b: the host did fetch v2's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v2's manifest"
+grep -q "codeLoadSuccess" "$EV/logcat-static-fallback-floor.txt" && bad "S9b: something loaded" || ok "S9b: no code loaded"
+kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
+mv "$W3/index.hidden" "$W3/site/bundles/index.json"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"

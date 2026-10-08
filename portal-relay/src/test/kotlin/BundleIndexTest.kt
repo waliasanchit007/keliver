@@ -134,13 +134,13 @@ class BundleIndexTest {
     val v4 = """{"modules":{},"metadata":{"keliver.sequence":"4"}}""".encodeUtf8()
     val fake = Fake(mapOf(url to v4, module to "code".encodeUtf8()))
     // At or above the floor: passes, with or without an index hash (the relay's legacy lookup has none).
-    assertEquals(v4, ManifestPinningHttpClient(fake, url, null, floor = 4).download(url, emptyList()))
-    assertEquals(v4, ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = 3).download(url, emptyList()))
+    assertEquals(v4, ManifestPinningHttpClient(fake, url, null, floor = { 4 }).download(url, emptyList()))
+    assertEquals(v4, ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = { 3 }).download(url, emptyList()))
     // Below it: refused, even when the index hash matches.
-    val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = 5).download(url, emptyList()) }
+    val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = { 5 }).download(url, emptyList()) }
     assertTrue("rollback refused: sequence 4 is below 5" in e.message!!, e.message)
     // Modules are never checked against the floor.
-    assertEquals("code".encodeUtf8(), ManifestPinningHttpClient(fake, url, null, floor = 99).download(module, emptyList()))
+    assertEquals("code".encodeUtf8(), ManifestPinningHttpClient(fake, url, null, floor = { 99 }).download(module, emptyList()))
   }
 
   @Test

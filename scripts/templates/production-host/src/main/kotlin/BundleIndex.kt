@@ -121,7 +121,9 @@ internal fun manifestPathOk(path: String): Boolean =
 
 /**
  * Zipline's HTTP client, with the manifest at [manifestUrl] held to [sha256]
- * (when the index gave one) and to the rollback [floor]. Both checks run on the
+ * (when the index gave one) and to the rollback floor, read from [floor] at the
+ * moment the manifest arrives (a restart after a crash sees a floor raised since
+ * the host started). Both checks run on the
  * very bytes Zipline then verifies and loads, so there is no second fetch to
  * differ from the first. They only ever refuse: a sequence read here is not yet
  * verified, so it never raises the floor. Every other download is unchanged.
@@ -130,7 +132,7 @@ internal class ManifestPinningHttpClient(
   private val delegate: ZiplineHttpClient,
   private val manifestUrl: String,
   private val sha256: String?,
-  private val floor: Long = 0,
+  private val floor: () -> Long = { 0 },
 ) : ZiplineHttpClient() {
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {
     val body = delegate.download(url, requestHeaders)
@@ -139,7 +141,7 @@ internal class ManifestPinningHttpClient(
         val actual = body.sha256().hex()
         if (actual != sha256) throw IOException("manifest sha256 mismatch: $url is $actual, the index says $sha256")
       }
-      rollbackProblem(manifestSequence(body.utf8()), floor)?.let { throw IOException(it) }
+      rollbackProblem(manifestSequence(body.utf8()), floor())?.let { throw IOException(it) }
     }
     return body
   }

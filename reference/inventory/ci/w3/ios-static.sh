@@ -14,6 +14,8 @@
 #   S7  server down: the host starts from its cached v2
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
 #   S9  (W4.2) the stored floor above the cached v2, offline: the cache is refused
+#   S9b (W4.2) the same with the server up but failing the lookup: the network
+#       fallback to the last-good manifest is refused too
 # The app was wired by the published 0.3.7 zip, whose signing block writes no
 # publish sequence (W4). So first this checkout's keliver-new-publish-target.sh
 # upgrades it in place (the 0.3.7 -> current upgrade, on CI); the CLI then signs
@@ -143,12 +145,36 @@ reads S7-static Warehouse && ok "S7: the screen reads 'Warehouse' offline" || ba
 # offline: the cached manifest is refused and nothing runs.
 FLOOR_KEY="keliver.highestSequence-keliver-production-$(printf '%s' "$PUB" | tr 'A-F' 'a-f' | cut -c1-16)"
 xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
-xcrun simctl spawn "$UDID" defaults write "$BID" "$FLOOR_KEY" -int 9
-[ "$(xcrun simctl spawn "$UDID" defaults read "$BID" "$FLOOR_KEY" 2>/dev/null)" = 9 ] \
-  && ok "S9: the host's stored rollback floor is now 9" || bad "S9: could not set the floor ($FLOOR_KEY)"
+# The app's own domain lives in its data container: `defaults write <bundle id>`
+# from simctl spawn writes the simulator user's domain instead, which the app
+# never reads (that is how S9 first failed, in run 37742935620). Writing by path
+# through the simulator's defaults keeps cfprefsd coherent with what the app sees.
+PREFS="$(xcrun simctl get_app_container "$UDID" "$BID" data)/Library/Preferences/$BID"
+xcrun simctl spawn "$UDID" defaults write "$PREFS" "$FLOOR_KEY" -int 9
+[ "$(xcrun simctl spawn "$UDID" defaults read "$PREFS" "$FLOOR_KEY" 2>/dev/null)" = 9 ] \
+  && ok "S9: the host's stored rollback floor is now 9 (in its container's preferences)" || bad "S9: could not set the floor ($PREFS $FLOOR_KEY)"
 launch S9-cache-floor
 C="$EV/S9-cache-floor.console.txt"
 grep -q "cached bundle refused: rollback refused: sequence 2 is below 9" "$C" && ok "S9: offline, the cached v2 was refused below the floor" \
   || bad "S9: no cache refusal: $(grep -E 'codeLoad|cached|lookup' "$C" | head -3 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$C" && bad "S9: something loaded" || ok "S9: no code loaded"
+
+# S9b (W4.2): the same, with the server UP but failing the lookup on purpose (no
+# index, no bundles/latest). The host takes the cache path; the cache is refused,
+# so Zipline fetches the last-good manifest from the network, and that fetch is
+# held to the floor too: v2 (sequence 2) is refused against 9.
+mv "$W3/site/bundles/index.json" "$W3/index.hidden"
+python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w3-server-s9b.log" &
+SPID=$!
+for _ in $(seq 1 30); do curl -s --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v2/manifest.zipline.json && break; sleep 1; done
+launch S9b-fallback-floor
+C="$EV/S9b-fallback-floor.console.txt"
+grep -q "lookup failed; starting from the cached bundle" "$C" && grep -q "rollback refused: sequence 2 is below 9" "$C" \
+  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v2 were both held to the floor" \
+  || bad "S9b: no refusal on the network fallback: $(grep -E 'codeLoad|cached|lookup|refused' "$C" | head -4 | tr '\n' ' ')"
+grep -q "^GET /bundles/v2/manifest.zipline.json" "$EV/w3-server-s9b.log" \
+  && ok "S9b: the host did fetch v2's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v2's manifest"
+grep -q "codeLoadSuccess" "$C" && bad "S9b: something loaded" || ok "S9b: no code loaded"
+kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
+mv "$W3/index.hidden" "$W3/site/bundles/index.json"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"

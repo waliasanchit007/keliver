@@ -95,6 +95,9 @@ private const val PREFS = "keliver-host"
 private const val LAST_GOOD_MANIFEST = "lastGoodManifestUrl"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
 private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
+/** The stored floor; a value of the wrong type (only tampering writes one) reads as unreadable, i.e. refuse all. */
+private fun android.content.SharedPreferences.floor(cacheName: String): Long =
+  runCatching { getLong(floorKey(cacheName), 0L) }.getOrDefault(Long.MAX_VALUE)
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,7 +143,9 @@ class MainActivity : ComponentActivity() {
     // holds one. Only a saved URL on the CURRENT bundle server's origin counts;
     // after an update that moved the server, the old one is ignored.
     val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
-    val floor = prefs.getLong(floorKey(cacheName), 0L)
+    // Read when each manifest arrives, not once here: a restart after a crash
+    // must see a floor raised since this activity started.
+    val floor = { prefs.floor(cacheName) }
     setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
     lifecycleScope.launch {
       // Short timeouts: offline, this decides how long the app waits before it
@@ -152,13 +157,17 @@ class MainActivity : ComponentActivity() {
       val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities) }
       when {
         latest != null -> {
-          Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor $floor")
+          Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
           val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)
           startTreehouse(verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh)
         }
         lastGood != null -> {
-          Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood)")
-          startTreehouse(verifier, cacheName, okhttp, okhttp.asZiplineHttpClient(), apiBase, lastGood, AcceptCachedBundle(floor))
+          Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
+          // Guarded too: when the cache is refused or empty, Zipline goes on to fetch
+          // lastGood from the network, and a lookup that failed proves nothing about
+          // that server (it may have failed the lookup on purpose).
+          val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)
+          startTreehouse(verifier, cacheName, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor))
         }
         else -> setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
       }
@@ -275,9 +284,11 @@ class MainActivity : ComponentActivity() {
       eventListenerFactory = LoggingEventListenerFactory(
         onLoaded = { url -> prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply() },
         onSequence = { sequence ->
-          val floor = prefs.getLong(floorKey(cacheName), 0L)
+          val floor = prefs.floor(cacheName)
           if (sequence > floor) {
-            prefs.edit().putLong(floorKey(cacheName), sequence).apply()
+            // commit(), not apply(): Zipline has already pinned this bundle, and a
+            // floor write lost to a kill would let the previous sequence run again.
+            prefs.edit().putLong(floorKey(cacheName), sequence).commit()
             Log.d(TAG, "rollback floor raised: $floor -> $sequence")
           }
         },
@@ -312,12 +323,12 @@ class MainActivity : ComponentActivity() {
  * key before loading it. If the cache holds nothing (cleared, or a new key's
  * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
  */
-private class AcceptCachedBundle(private val floor: Long) : FreshnessChecker {
+private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessChecker {
   // The rollback floor holds here too: Zipline hands over the pinned manifest
-  // after verifying it. A refused cache is not used; Zipline then goes to the
-  // network, which is why this start was chosen, so nothing loads.
+  // after verifying it. A refused cache is not used; Zipline then fetches the
+  // manifest from the network, through the same floor guard.
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
-    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor) ?: return true
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor()) ?: return true
     Log.e(TAG, "cached bundle refused: $problem")
     return false
   }

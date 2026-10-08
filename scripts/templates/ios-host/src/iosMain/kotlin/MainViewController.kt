@@ -142,15 +142,17 @@ private suspend fun startHost(): HostState {
   }
   // Set once a bundle has loaded from the network; only on the CURRENT server's origin.
   val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(LAST_GOOD_MANIFEST)?.takeIf { server.owns(it) }
-  val floor = NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust))
+  // Read when each manifest arrives, not once here: a restart after a crash must
+  // see a floor raised since the host started.
+  val floor = { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust)) }
   val latest = lookupBundle(server, capabilities)
   return when {
     latest != null -> {
-      log("loading ${latest.manifestUrl} (${latest.source}); rollback floor $floor")
+      log("loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
       HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, floor, DefaultFreshnessCheckerNotFresh, apiBase))
     }
     lastGood != null -> {
-      log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor $floor")
+      log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
       HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.")
@@ -211,7 +213,7 @@ private fun createApp(
   trust: ProductionTrust.Verified,
   manifestUrl: String,
   manifestSha256: String?,
-  floor: Long,
+  floor: () -> Long,
   freshness: FreshnessChecker,
   apiBase: String?,
 ): TreehouseApp<PortalPresenter> {
@@ -275,12 +277,12 @@ private fun createApp(
 /**
  * Used only when the lookup failed: accept the bundle Zipline pinned, whatever
  * its age, unless it is below the rollback floor. Zipline hands it over after
- * verifying it. A refused cache is not used; Zipline then goes to the network,
- * which is why this start was chosen, so nothing loads.
+ * verifying it. A refused cache is not used; Zipline then fetches the manifest
+ * from the network, through the same floor guard (createApp wraps every client).
  */
-private class AcceptCachedBundle(private val floor: Long) : FreshnessChecker {
+private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessChecker {
   override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
-    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor) ?: return true
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor()) ?: return true
     log("cached bundle refused: $problem")
     return false
   }
