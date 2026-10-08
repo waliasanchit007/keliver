@@ -51,7 +51,8 @@ internal class PublishRefused(message: String, val aboutSigning: Boolean = false
 /**
  * W4: the manifest `metadata` key that carries the bundle's sequence. `metadata`
  * is in the signed part of a Zipline manifest, so the sequence is covered by the
- * Ed25519 signature; hosts refuse a sequence below the highest they have run.
+ * Ed25519 signature; hosts built from the W4 templates refuse a sequence below
+ * the highest they have run.
  * The signing block writes it from `-Pkeliver.sequence` before it signs.
  */
 internal const val SEQUENCE_METADATA_KEY = "keliver.sequence"
@@ -80,9 +81,24 @@ internal fun sequenceProblem(manifestJson: String, sequence: Long): String? {
   }
 }
 
-/** The sequence the next entry of [index] gets. */
-internal fun nextSequence(index: JsonObject): Long =
-  ((index["entries"] as JsonArray).maxOfOrNull { ((it as JsonObject)["sequence"] as JsonPrimitive).longOrNull!! } ?: 0L) + 1
+/**
+ * The sequence the next entry of [index] gets: past every entry, and past every
+ * signed sequence in the `v<N>/` manifests already in [bundlesDir]. A directory
+ * downloaded without its index (an `--init` over existing bundles) would
+ * otherwise restart at 1 below sequences hosts have already run.
+ */
+internal fun nextSequence(index: JsonObject, bundlesDir: File): Long {
+  val fromIndex = (index["entries"] as JsonArray).maxOfOrNull { ((it as JsonObject)["sequence"] as JsonPrimitive).longOrNull!! } ?: 0L
+  val fromManifests = bundlesDir.listFiles { f -> f.isDirectory && VERSION_DIR_RE.matches(f.name) }.orEmpty()
+    .mapNotNull { dir ->
+      File(dir, "manifest.zipline.json").takeIf { it.isFile }?.let { signedSequenceText(it.readText()) }
+        ?.takeIf { SIGNED_SEQUENCE_RE.matches(it) }?.toLong()
+    }
+    .maxOrNull() ?: 0L
+  return maxOf(fromIndex, fromManifests) + 1
+}
+
+private val SIGNED_SEQUENCE_RE = Regex("[1-9][0-9]{0,17}")
 
 /** The highest bundle number a `v<N>` directory can carry (VERSION_DIR_RE). */
 private const val MAX_VERSION = 999_999_999
@@ -196,6 +212,7 @@ internal fun publishStatic(
   capabilities: List<String> = emptyList(),
   now: Instant = Instant.now(),
   init: Boolean = false,
+  beforeLock: () -> Unit = {}, // a test hook: another publish landing between the checks and the lock
 ): StaticPublish {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
   val outputRoot = output.canonicalFile.toPath()
@@ -214,8 +231,8 @@ internal fun publishStatic(
   // Read (and so validate) the index before creating anything, and check the
   // signed sequence against it: a refusal here writes nothing.
   val manifestText = File(output, "manifest.zipline.json").readText()
-  sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir)))
-    ?.let { throw PublishRefused(it, aboutSigning = signedSequenceText(manifestText) == null) }
+  sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir), bundlesDir))?.let { throw PublishRefused(it) }
+  beforeLock()
 
   bundlesDir.mkdirs()
   FileChannel.open(File(bundlesDir, ".publish.lock").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
@@ -235,7 +252,7 @@ internal fun publishStatic(
       val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
       if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
       val version = highest + 1
-      val sequence = nextSequence(index)
+      val sequence = nextSequence(index, bundlesDir)
 
       val dest = File(bundlesDir, "v$version")
       val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")

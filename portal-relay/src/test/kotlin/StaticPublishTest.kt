@@ -266,8 +266,31 @@ class StaticPublishTest {
   fun aManifestWithoutASignedSequenceIsRefusedWithTheUpgradeHint() {
     val e = assertFailsWith<PublishRefused> { publishStatic(output("old-block", seq = null), site, app.publicHex, init = true) }
     assertTrue("no signed $SEQUENCE_METADATA_KEY" in e.message!!, e.message)
-    assertTrue(e.aboutSigning)
+    assertFalse(e.aboutSigning) // the fix is the scaffolder upgrade, not the signing key
     assertFalse(site.exists())
+  }
+
+  @Test
+  fun anInitOverExistingBundlesContinuesTheirSignedSequences() {
+    // bundles/v<N>/ downloaded without the index: their signed sequences still bind.
+    output("old", seq = 7).copyRecursively(File(bundles, "v3"))
+    assertRefusedAndNothingWritten("this publish is sequence 8") { publishStatic(output("x", seq = 1), site, app.publicHex, init = true) }
+    val p = publishStatic(output("x8", seq = 8), site, app.publicHex, init = true)
+    assertEquals(4 to 8L, p.version to p.sequence)
+  }
+
+  @Test
+  fun anotherPublishLandingBeforeTheLockIsCaughtUnderIt() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    val e = assertFailsWith<PublishRefused> {
+      publishStatic(output("late", seq = 2), site, app.publicHex, beforeLock = {
+        // Between this publish's checks and its lock, another takes sequence 2.
+        publishStatic(output("early", seq = 2), site, app.publicHex)
+      })
+    }
+    assertTrue("signed for sequence 2, but this publish is sequence 3" in e.message!!, e.message)
+    assertEquals(listOf(1L, 2L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
+    assertEquals(setOf(".publish.lock", "index.json", "v1", "v2"), bundles.list()!!.toSet()) // no staging, no v3
   }
 
   @Test
@@ -307,15 +330,22 @@ class StaticPublishTest {
     assertEquals(3, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, _ -> 1 })
     assertEquals(1, File(out, "bundles").list()!!.count { it.startsWith("v") })
     // The key from the environment, and a key that is not this app's.
-    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), key().publicHex) { _, _, _ -> error("built") })
     // --skip-build with the output still signed for sequence 1: the index is at 2 now.
     assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), app.publicHex) { _, _, _ -> error("built") })
     File(appDir, "build/zipline/Development").deleteRecursively()
     output("cli2", seq = 2).copyRecursively(File(appDir, "build/zipline/Development"))
+    // An output signed for the right sequence, checked against another app's key: only the key can refuse it.
+    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), key().publicHex) { _, _, _ -> error("built") })
+    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), app.publicHex) { _, _, _ -> error("built") })
+    // A build is asked for the next sequence, 3.
     var asked = 0L
-    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, seq -> asked = seq; 0 })
-    assertEquals(2L, asked)
-    assertEquals(2, File(out, "bundles").list()!!.count { it.startsWith("v") })
+    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, seq ->
+      asked = seq
+      File(appDir, "build/zipline/Development").deleteRecursively()
+      output("cli3", seq = seq).copyRecursively(File(appDir, "build/zipline/Development")); 0
+    })
+    assertEquals(3L, asked)
+    assertEquals(3, File(out, "bundles").list()!!.count { it.startsWith("v") })
     // Usage.
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--public-key-file", keyFile.path), null) { _, _, _ -> 0 })
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out), null) { _, _, _ -> 0 })

@@ -35,8 +35,9 @@
 // KELIVER_PUBLISH_SEQUENCE, the manifest's metadata gets "keliver.sequence": "<N>"
 // before it is signed, so the signature covers it. keliver-publish and the
 // relay's /publish pass the sequence the bundle is published at, and refuse a
-// manifest signed for another; production hosts refuse a sequence below the
-// highest they have run. N is a positive integer; anything else fails the build.
+// manifest signed for another; production hosts built from the W4 templates
+// refuse a sequence below the highest they have run. N is a positive integer;
+// anything else fails the build, signed or not.
 // Without it (a development build) the manifest carries no sequence.
 //
 // Not configuration-cache compatible: the store is resolved by running a
@@ -89,6 +90,10 @@ tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compi
     digest.digest().encodeHex().toString()
   })
   compileTask.doLast {
+    def sequence = keliverPublishSequence.getOrNull()
+    if (sequence != null && !(sequence ==~ /[1-9][0-9]{0,17}/)) {
+      throw new GradleException("keliver: keliver.sequence must be a positive integer, not '${sequence}'")
+    }
     def key = keliverSigningKeyFile()
     if (key == null) return
     def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
@@ -99,16 +104,13 @@ tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compi
     def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
       .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
       .build()
-    def text = manifestFile.text
-    def sequence = keliverPublishSequence.getOrNull()
-    if (sequence != null) {
-      if (!(sequence ==~ /[1-9][0-9]{0,17}/)) throw new GradleException("keliver: keliver.sequence must be a positive integer, not '${sequence}'")
-      def json = new groovy.json.JsonSlurper().parseText(text)
-      json.metadata = (json.metadata ?: [:]) + ['keliver.sequence': sequence]
-      text = groovy.json.JsonOutput.toJson(json)
-    }
     // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
-    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(text)
+    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+    if (sequence != null) {
+      // metadata is in the signed part of the manifest, so the signature below covers it.
+      manifest = manifest.copy(manifest.unsigned, manifest.modules, manifest.mainModuleId, manifest.mainFunction,
+        manifest.version, manifest.metadata + ['keliver.sequence': sequence])
+    }
     manifestFile.text = signer.sign(manifest).encodeJson()
     logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key" +
       (sequence != null ? ", for sequence ${sequence}" : ""))

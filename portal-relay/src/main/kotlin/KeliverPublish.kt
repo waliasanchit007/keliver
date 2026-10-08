@@ -88,7 +88,7 @@ object KeliverPublish {
     // metadata; publishStatic checks it again under the lock.
     val sequence = try {
       val bundlesDir = File(out, "bundles")
-      if (File(bundlesDir, INDEX_FILE).exists()) nextSequence(readIndex(bundlesDir)) else 1L
+      nextSequence(readIndex(bundlesDir), bundlesDir) // an absent index reads as empty
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty())
     }
