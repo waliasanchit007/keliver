@@ -23,7 +23,11 @@
  * - Manifest URLs are followed only on the bundle server's own origin. (Zipline's
  *   downloads follow HTTP redirects, as on Android.)
  *
- * Not protected: rollback. Any bundle signed by this key is accepted.
+ * Rollback protection (W4, BundleIndex.kt): the host keeps the highest signed
+ * sequence it has run for this key and refuses a manifest below it, or one
+ * without a sequence once it has run a sequenced one, from the network and from
+ * the cache. The floor rises only after a load succeeded. Not protected: a
+ * reinstall resets it.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -79,6 +83,10 @@ import platform.UIKit.UIViewController
 
 private const val TAG = "KeliverHost"
 private const val LAST_GOOD_MANIFEST = "keliver.lastGoodManifestUrl"
+/** One Zipline cache per key, and one rollback floor per key with it. */
+private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
+/** The highest signed sequence this host has run, per key (the rollback floor). */
+private fun floorKey(trust: ProductionTrust.Verified) = "keliver.highestSequence-${cacheName(trust)}"
 
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -134,15 +142,16 @@ private suspend fun startHost(): HostState {
   }
   // Set once a bundle has loaded from the network; only on the CURRENT server's origin.
   val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(LAST_GOOD_MANIFEST)?.takeIf { server.owns(it) }
+  val floor = NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust))
   val latest = lookupBundle(server, capabilities)
   return when {
     latest != null -> {
-      log("loading ${latest.manifestUrl} (${latest.source})")
-      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, DefaultFreshnessCheckerNotFresh, apiBase))
+      log("loading ${latest.manifestUrl} (${latest.source}); rollback floor $floor")
+      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, floor, DefaultFreshnessCheckerNotFresh, apiBase))
     }
     lastGood != null -> {
-      log("lookup failed; starting from the cached bundle (last loaded from $lastGood)")
-      HostState.Running(createApp(trust, lastGood, null, AcceptCachedBundle, apiBase))
+      log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor $floor")
+      HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.")
   }
@@ -202,6 +211,7 @@ private fun createApp(
   trust: ProductionTrust.Verified,
   manifestUrl: String,
   manifestSha256: String?,
+  floor: Long,
   freshness: FreshnessChecker,
   apiBase: String?,
 ): TreehouseApp<PortalPresenter> {
@@ -209,16 +219,15 @@ private fun createApp(
     .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
     .build()
   val factory = TreehouseAppFactory(
-    httpClient = NSURLSessionZiplineHttpClient().let { http ->
-      if (manifestSha256 == null) http else ManifestPinningHttpClient(http, manifestUrl, manifestSha256)
-    },
+    // The manifest held to the index's sha256 (when there is one) and to the rollback floor.
+    httpClient = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor),
     manifestVerifier = verifier,
     embeddedFileSystem = null,
     embeddedDir = null,
     // One cache per key: Zipline verifies the pinned manifest before the
     // network and throws if that fails, so a shared cache would strand a host
     // whose key changed.
-    cacheName = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}",
+    cacheName = cacheName(trust),
     cacheMaxSizeInBytes = 50L * 1024L * 1024L,
     concurrentDownloads = 4,
     stateStore = MemoryStateStore(),
@@ -247,29 +256,55 @@ private fun createApp(
     spec = spec,
     // Remember a manifest URL only once code has loaded for it from the
     // network. A load from the cache reports no URL, so it changes nothing.
-    eventListenerFactory = LoggingEventListenerFactory { url ->
-      NSUserDefaults.standardUserDefaults.setObject(url, forKey = LAST_GOOD_MANIFEST)
-    },
+    // Raise the rollback floor to the sequence that just ran: Zipline verified this
+    // manifest's signature, and so its metadata, before loading it.
+    eventListenerFactory = LoggingEventListenerFactory(
+      onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = LAST_GOOD_MANIFEST) },
+      onSequence = { sequence ->
+        val defaults = NSUserDefaults.standardUserDefaults
+        val current = defaults.integerForKey(floorKey(trust))
+        if (sequence > current) {
+          defaults.setInteger(sequence, forKey = floorKey(trust))
+          log("rollback floor raised: $current -> $sequence")
+        }
+      },
+    ),
   )
 }
 
-/** Used only when the lookup failed: accept the bundle Zipline pinned, whatever its age. */
-private object AcceptCachedBundle : FreshnessChecker {
-  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long) = true
+/**
+ * Used only when the lookup failed: accept the bundle Zipline pinned, whatever
+ * its age, unless it is below the rollback floor. Zipline hands it over after
+ * verifying it. A refused cache is not used; Zipline then goes to the network,
+ * which is why this start was chosen, so nothing loads.
+ */
+private class AcceptCachedBundle(private val floor: Long) : FreshnessChecker {
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor) ?: return true
+    log("cached bundle refused: $problem")
+    return false
+  }
 }
 
-private class LoggingEventListenerFactory(private val onLoaded: (String) -> Unit) : EventListener.Factory {
-  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener(manifestUrl, onLoaded)
+private class LoggingEventListenerFactory(
+  private val onLoaded: (String) -> Unit,
+  private val onSequence: (Long) -> Unit,
+) : EventListener.Factory {
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
+    LoggingEventListener(manifestUrl, onLoaded, onSequence)
   override fun close() {}
 }
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
   private val onLoaded: (String) -> Unit,
+  private val onSequence: (Long) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
-    log("codeLoadSuccess modules=${manifest.modules.keys.size}")
+    val sequence = manifestSequence(manifest.metadata)
+    log("codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
     manifestUrl?.let(onLoaded)
+    sequence?.let(onSequence)
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) =
     log("codeLoadFailed: ${exception.message}")

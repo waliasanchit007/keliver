@@ -402,8 +402,11 @@ check catches a mismatched manifest, but it doesn't protect against anyone who
 can rewrite the index. Integrity rests on the manifest signatures, not on the
 server, its origin or its redirects.
 
-Not protected yet: rollback. Anyone who can change what your server serves can
-serve an older signed bundle (W4 in `docs/DELIVERY_PLAN.md`).
+Rollback: each manifest carries its sequence in its signed metadata, and hosts
+refuse a sequence below the highest they have run, on the network and from
+their cache (`DEVICE_HOST.md`). So an older signed bundle served again is
+refused. To roll back on purpose, publish the older code again: it gets a new,
+higher sequence. A reinstall resets a host's floor.
 
 ## Preview mocks are not runtime values
 

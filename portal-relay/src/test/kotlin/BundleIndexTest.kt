@@ -1,6 +1,8 @@
 import app.cash.zipline.loader.ZiplineHttpClient
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.manifestPathOk
+import hosttemplate.manifestSequence
+import hosttemplate.rollbackProblem
 import hosttemplate.pickFromIndex
 import java.io.File
 import kotlin.test.Test
@@ -100,6 +102,45 @@ class BundleIndexTest {
     assertEquals("code".encodeUtf8(), ManifestPinningHttpClient(fake, url, sha).download(module, emptyList()))
     val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, url, sha).download(url, emptyList()) }
     assertTrue("manifest sha256 mismatch" in e.message!!, e.message)
+  }
+
+  @Test
+  fun theRollbackFloorRefusesOlderOrUnsequencedManifests() {
+    assertEquals(null, rollbackProblem(null, 0)) // a host that has never run a sequenced bundle
+    assertEquals(null, rollbackProblem(3, 0))
+    assertEquals(null, rollbackProblem(5, 5)) // the same bundle again (a restart, the cache)
+    assertEquals(null, rollbackProblem(6, 5))
+    assertTrue("below 5" in rollbackProblem(4, 5)!!)
+    assertTrue("no signed sequence" in rollbackProblem(null, 5)!!)
+  }
+
+  @Test
+  fun theSequenceIsReadOnlyFromWellFormedMetadata() {
+    assertEquals(7L, manifestSequence(mapOf("keliver.sequence" to "7")))
+    for (bad in listOf("", "0", "07", "-1", "7x", " 7", "99999999999999999999")) {
+      assertEquals(null, manifestSequence(mapOf("keliver.sequence" to bad)), bad)
+    }
+    assertEquals(null, manifestSequence(emptyMap()))
+    assertEquals(12L, manifestSequence("""{"modules":{},"metadata":{"keliver.sequence":"12"}}"""))
+    assertEquals(null, manifestSequence("""{"modules":{},"metadata":{"keliver.sequence":12}}""")) // a number, not the signed string
+    assertEquals(null, manifestSequence("""{"modules":{}}"""))
+    assertEquals(null, manifestSequence("not json"))
+  }
+
+  @Test
+  fun theManifestDownloadIsHeldToTheRollbackFloor() = runBlocking {
+    val url = "https://cdn.example/bundles/v4/manifest.zipline.json"
+    val module = "https://cdn.example/bundles/v4/main.zipline"
+    val v4 = """{"modules":{},"metadata":{"keliver.sequence":"4"}}""".encodeUtf8()
+    val fake = Fake(mapOf(url to v4, module to "code".encodeUtf8()))
+    // At or above the floor: passes, with or without an index hash (the relay's legacy lookup has none).
+    assertEquals(v4, ManifestPinningHttpClient(fake, url, null, floor = 4).download(url, emptyList()))
+    assertEquals(v4, ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = 3).download(url, emptyList()))
+    // Below it: refused, even when the index hash matches.
+    val e = assertFailsWith<IOException> { ManifestPinningHttpClient(fake, url, v4.sha256().hex(), floor = 5).download(url, emptyList()) }
+    assertTrue("rollback refused: sequence 4 is below 5" in e.message!!, e.message)
+    // Modules are never checked against the floor.
+    assertEquals("code".encodeUtf8(), ManifestPinningHttpClient(fake, url, null, floor = 99).download(module, emptyList()))
   }
 
   @Test

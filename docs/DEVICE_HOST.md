@@ -156,9 +156,15 @@ guide's "Publish from CI to a static server"). Falling back to the last good
 bundle after such a failure is planned (W5 in Keliver's
 `docs/DELIVERY_PLAN.md`).
 
-**Not protected: rollback.** Any bundle signed with your key is accepted,
-including an older one. Whoever controls the bundle server can serve a previous
-signed version (over `http://`, so can anyone on the path).
+**Rollback protection.** Every bundle `keliver-publish` or the relay publishes
+carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
+The host remembers the highest sequence it has run for its key, and refuses a
+manifest below it, from the network and from the cache. It also refuses one
+with no sequence once it has run a sequenced one. So whoever controls the
+bundle server can no longer serve a previous signed version. The floor rises
+only after a bundle has loaded, so after Zipline verified its signature.
+**Not protected:** a reinstall or "clear data" resets the floor; a host that
+never ran a sequenced bundle accepts unsequenced ones.
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
@@ -238,6 +244,7 @@ none in a release build.
 - HostHttp, network images and guest SQL in a running app (the reference
   guest uses none of them; the SQLite driver was tested on a macOS harness).
 
-**Not protected:** rollback. As on Android, any bundle signed by the key is
-accepted, including an older one.
+**Rollback protection** is as on Android (§2): a per-key floor in
+`NSUserDefaults`, checked on the network and on the cache start. A reinstall
+resets it.
 

@@ -51,8 +51,10 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   Gradle, and `POST /publish` keeps only bundles signed with your key), and
   scaffold your own production hosts for Android
   (`bin/keliver-new-production-host.sh`) and iOS (`bin/keliver-new-ios-host.sh`).
-- **Doesn't (yet):** publish without the local relay (no headless CLI), serve
-  bundles from a static host or CDN, or protect against rollback.
+- **Also (from the release that ships W3/W4):** publish without the relay
+  (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
+  rollback protection in the hosts it scaffolds.
+- **Doesn't (yet):** channels, staged rollouts, or an in-app update API.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

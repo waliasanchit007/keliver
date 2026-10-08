@@ -10,6 +10,8 @@
 #       already-built bundle (--skip-build); nothing changes
 #   S6  an index whose sha256 isn't the manifest's: nothing loads
 #   S7  server down: the host starts from its cached v2
+#   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
+#   S9  (W4.2) the stored floor above the cached v2, offline: the cache is refused
 # Signing here is the CI route: KELIVER_SIGNING_KEY_FILE names the key, and
 # KELIVER_TOOLS_BIN points at nothing, so a build that fell back to a store
 # lookup would fail instead of signing. The app was wired by the published
@@ -104,6 +106,20 @@ grep -q "manifest sha256 mismatch" "$EV/logcat-static-pin.txt" && ok "S6: the ma
 grep -q "codeLoadSuccess" "$EV/logcat-static-pin.txt" && bad "S6: something loaded" || ok "S6: no code loaded"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
+# S8 (W4.2): the floor rose when v2 ran; the server then offers v1 again, as the
+# newest entry (a replayed or rolled-back index). v1's manifest is validly
+# signed, but for sequence 1: the host refuses it on the network and runs nothing.
+grep -q "$HOST_TAG: rollback floor raised: 1 -> 2" "$EV/logcat-static-v2.txt" \
+  && ok "S8: running v2 raised the host's rollback floor from 1 to 2" || bad "S8: no floor raise logged at v2"
+python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); v1=[e for e in i["entries"] if e["version"]==1][0]; i["entries"].append(dict(v1, sequence=max(e["sequence"] for e in i["entries"])+1)); json.dump(i, open(p,"w"))' \
+  "$W3/site/bundles/index.json"
+launch prod "$EV/logcat-static-rollback.txt"
+grep -q "rollback refused: sequence 1 is below 2" "$EV/logcat-static-rollback.txt" \
+  && ok "S8: v1 offered again after v2: refused on its signed sequence (1 < 2)" \
+  || bad "S8: no rollback refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-rollback.txt" | head -3 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$EV/logcat-static-rollback.txt" && bad "S8: something loaded" || ok "S8: no code loaded"
+cp "$W3/index.good" "$W3/site/bundles/index.json"
+
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \
   && bad "S7: the static server is still answering" || ok "S7: no bundle server is answering"
@@ -111,4 +127,18 @@ launch prod "$EV/logcat-static-offline.txt"
 grep -q "$HOST_TAG: lookup failed; starting from the cached bundle (last loaded from https://10.0.2.2:8443/bundles/v2/" "$EV/logcat-static-offline.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-offline.txt" && ok "S7: offline, the host started from its cached v2" || bad "S7: no start from the cache"
 drive title Warehouse S7static; fold "S7: Warehouse offline" $?
+
+# S9 (W4.2): the floor holds on the cache start too. Raise the stored floor above
+# the cached v2 (as a host that had run a newer bundle would have it), then start
+# offline: the cached manifest is refused and nothing runs.
+adb -s "$SERIAL" shell am force-stop "$PROD_ID"
+adb -s "$SERIAL" shell "run-as $PROD_ID sed -i -E 's/(name=\"highestSequence-[^\"]*\" value=\")[0-9]+/\\19/' shared_prefs/keliver-host.xml"
+adb -s "$SERIAL" shell "run-as $PROD_ID cat shared_prefs/keliver-host.xml" > "$EV/w4-prefs-floor9.xml" 2>&1
+grep -q 'highestSequence-[^"]*" value="9"' "$EV/w4-prefs-floor9.xml" \
+  && ok "S9: the host's stored rollback floor is now 9" || bad "S9: could not set the floor: $(head -c 300 "$EV/w4-prefs-floor9.xml")"
+launch prod "$EV/logcat-static-cache-floor.txt"
+grep -q "cached bundle refused: rollback refused: sequence 2 is below 9" "$EV/logcat-static-cache-floor.txt" \
+  && ok "S9: offline, the cached v2 was refused below the floor" \
+  || bad "S9: no cache refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-cache-floor.txt" | head -3 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$EV/logcat-static-cache-floor.txt" && bad "S9: something loaded" || ok "S9: no code loaded"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"

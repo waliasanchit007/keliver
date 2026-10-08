@@ -12,6 +12,8 @@
 #       already-built bundle (--skip-build); nothing changes
 #   S6  an index whose sha256 isn't the manifest's: nothing loads
 #   S7  server down: the host starts from its cached v2
+#   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
+#   S9  (W4.2) the stored floor above the cached v2, offline: the cache is refused
 # The app was wired by the published 0.3.7 zip, whose signing block writes no
 # publish sequence (W4). So first this checkout's keliver-new-publish-target.sh
 # upgrades it in place (the 0.3.7 -> current upgrade, on CI); the CLI then signs
@@ -113,6 +115,20 @@ grep -q "manifest sha256 mismatch" "$C" && ok "S6: the manifest was refused on i
 grep -q "codeLoadSuccess" "$C" && bad "S6: something loaded" || ok "S6: no code loaded"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
+# S8 (W4.2): the floor rose when v2 ran; the server then offers v1 again, as the
+# newest entry (a replayed or rolled-back index). v1's manifest is validly
+# signed, but for sequence 1: the host refuses it on the network and runs nothing.
+grep -q "rollback floor raised: 1 -> 2" "$EV/S4-static.console.txt" \
+  && ok "S8: running v2 raised the host's rollback floor from 1 to 2" || bad "S8: no floor raise logged at v2"
+python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); v1=[e for e in i["entries"] if e["version"]==1][0]; i["entries"].append(dict(v1, sequence=max(e["sequence"] for e in i["entries"])+1)); json.dump(i, open(p,"w"))' \
+  "$W3/site/bundles/index.json"
+launch S8-rollback
+C="$EV/S8-rollback.console.txt"
+grep -q "rollback refused: sequence 1 is below 2" "$C" && ok "S8: v1 offered again after v2: refused on its signed sequence (1 < 2)" \
+  || bad "S8: no rollback refusal: $(grep -E 'codeLoad|loading' "$C" | head -3 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$C" && bad "S8: something loaded" || ok "S8: no code loaded"
+cp "$W3/index.good" "$W3/site/bundles/index.json"
+
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \
   && bad "S7: the static server is still answering" || ok "S7: no bundle server is answering"
@@ -121,4 +137,18 @@ C="$EV/S7-static.console.txt"
 grep -q "lookup failed; starting from the cached bundle (last loaded from https://localhost:8443/bundles/v2/" "$C" \
   && grep -q "codeLoadSuccess" "$C" && ok "S7: offline, the host started from its cached v2" || bad "S7: no start from the cache"
 reads S7-static Warehouse && ok "S7: the screen reads 'Warehouse' offline" || bad "S7: 'Warehouse' is not on the screen"
+
+# S9 (W4.2): the floor holds on the cache start too. Raise the stored floor above
+# the cached v2 (as a host that had run a newer bundle would have it), then start
+# offline: the cached manifest is refused and nothing runs.
+FLOOR_KEY="keliver.highestSequence-keliver-production-$(printf '%s' "$PUB" | tr 'A-F' 'a-f' | cut -c1-16)"
+xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
+xcrun simctl spawn "$UDID" defaults write "$BID" "$FLOOR_KEY" -int 9
+[ "$(xcrun simctl spawn "$UDID" defaults read "$BID" "$FLOOR_KEY" 2>/dev/null)" = 9 ] \
+  && ok "S9: the host's stored rollback floor is now 9" || bad "S9: could not set the floor ($FLOOR_KEY)"
+launch S9-cache-floor
+C="$EV/S9-cache-floor.console.txt"
+grep -q "cached bundle refused: rollback refused: sequence 2 is below 9" "$C" && ok "S9: offline, the cached v2 was refused below the floor" \
+  || bad "S9: no cache refusal: $(grep -E 'codeLoad|cached|lookup' "$C" | head -3 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$C" && bad "S9: something loaded" || ok "S9: no code loaded"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"

@@ -28,9 +28,11 @@
  *   - otherwise: a "No bundle" screen.
  * - The manifest must come from the bundle server's own origin.
  *
- * Not protected: rollback. Any bundle signed by this key is accepted, including
- * an older one, so whoever controls the bundle server (or, over http, the path
- * to it) can serve a previous signed version.
+ * Rollback protection (W4, BundleIndex.kt): the host keeps the highest signed
+ * sequence it has run for this key and refuses a manifest below it, or one
+ * without a sequence once it has run a sequenced one, from the network and from
+ * the cache. The floor rises only after a load succeeded. Not protected: a
+ * reinstall or "clear data" resets it.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -91,6 +93,8 @@ import java.util.concurrent.TimeUnit
 private const val TAG = "KeliverHost"
 private const val PREFS = "keliver-host"
 private const val LAST_GOOD_MANIFEST = "lastGoodManifestUrl"
+/** The highest signed sequence this host has run, per key (the rollback floor). */
+private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -136,6 +140,7 @@ class MainActivity : ComponentActivity() {
     // holds one. Only a saved URL on the CURRENT bundle server's origin counts;
     // after an update that moved the server, the old one is ignored.
     val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
+    val floor = prefs.getLong(floorKey(cacheName), 0L)
     setContent { MessageScreen("Loading", "Looking up the latest bundle…") }
     lifecycleScope.launch {
       // Short timeouts: offline, this decides how long the app waits before it
@@ -147,14 +152,13 @@ class MainActivity : ComponentActivity() {
       val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities) }
       when {
         latest != null -> {
-          Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source})")
-          val zipline = okhttp.asZiplineHttpClient()
-          val http = latest.manifestSha256?.let { ManifestPinningHttpClient(zipline, latest.manifestUrl, it) } ?: zipline
+          Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor $floor")
+          val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)
           startTreehouse(verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh)
         }
         lastGood != null -> {
           Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood)")
-          startTreehouse(verifier, cacheName, okhttp, okhttp.asZiplineHttpClient(), apiBase, lastGood, AcceptCachedBundle)
+          startTreehouse(verifier, cacheName, okhttp, okhttp.asZiplineHttpClient(), apiBase, lastGood, AcceptCachedBundle(floor))
         }
         else -> setContent { MessageScreen("No bundle", "No compatible bundle at $server, and none loaded before.") }
       }
@@ -266,9 +270,18 @@ class MainActivity : ComponentActivity() {
       spec = spec,
       // Remember a manifest URL only once code has loaded for it from the
       // network. A load from the cache reports no URL, so it changes nothing.
-      eventListenerFactory = LoggingEventListenerFactory { url ->
-        prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply()
-      },
+      // Raise the rollback floor to the sequence that just ran: Zipline verified
+      // this manifest's signature, and so its metadata, before loading it.
+      eventListenerFactory = LoggingEventListenerFactory(
+        onLoaded = { url -> prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply() },
+        onSequence = { sequence ->
+          val floor = prefs.getLong(floorKey(cacheName), 0L)
+          if (sequence > floor) {
+            prefs.edit().putLong(floorKey(cacheName), sequence).apply()
+            Log.d(TAG, "rollback floor raised: $floor -> $sequence")
+          }
+        },
+      ),
     )
     setContent {
       MaterialTheme {
@@ -299,22 +312,36 @@ class MainActivity : ComponentActivity() {
  * key before loading it. If the cache holds nothing (cleared, or a new key's
  * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
  */
-private object AcceptCachedBundle : FreshnessChecker {
-  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long) = true
+private class AcceptCachedBundle(private val floor: Long) : FreshnessChecker {
+  // The rollback floor holds here too: Zipline hands over the pinned manifest
+  // after verifying it. A refused cache is not used; Zipline then goes to the
+  // network, which is why this start was chosen, so nothing loads.
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean {
+    val problem = rollbackProblem(manifestSequence(manifest.metadata), floor) ?: return true
+    Log.e(TAG, "cached bundle refused: $problem")
+    return false
+  }
 }
 
-private class LoggingEventListenerFactory(private val onLoaded: (String) -> Unit) : EventListener.Factory {
-  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener = LoggingEventListener(manifestUrl, onLoaded)
+private class LoggingEventListenerFactory(
+  private val onLoaded: (String) -> Unit,
+  private val onSequence: (Long) -> Unit,
+) : EventListener.Factory {
+  override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
+    LoggingEventListener(manifestUrl, onLoaded, onSequence)
   override fun close() {}
 }
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
   private val onLoaded: (String) -> Unit,
+  private val onSequence: (Long) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
-    Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size}")
+    val sequence = manifestSequence(manifest.metadata)
+    Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
     manifestUrl?.let(onLoaded)
+    sequence?.let(onSequence)
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
