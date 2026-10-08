@@ -523,6 +523,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W4 design | **drafted 2026-10-08**, "W4 design" above: the signed `metadata.keliver.sequence`; a host floor, checked on the network and on the cache start; `--republish` for rollback; channels and promotion; rollout by install-id bucket; host-version gates. Zipline 1.22 confirmed: `metadata` is in the signed part, and `FreshnessChecker.isFresh` receives the verified manifest. | this file |
 | W4.1 signed sequence | **built 2026-10-08; independently reviewed, findings fixed** (PR #93, stacked on #90). The signing block writes `metadata["keliver.sequence"]` from `-Pkeliver.sequence` / `KELIVER_PUBLISH_SEQUENCE` into the manifest (Zipline's own `copy`), then signs, so the signature covers it; a malformed sequence fails the build, signed or not. `keliver-publish` passes the next sequence to the build: past every index entry AND every signed sequence already in `v<N>/` (so an `--init` over downloaded bundles can't restart at 1). It refuses a manifest signed for another sequence, or for none (the message names the scaffolder upgrade), and checks again under the lock. The relay's `/publish` passes its next version and refuses a mismatch; an unsequenced bundle is stored with a warning only while no bundle in the store is sequenced, and refused after. Tests: `StaticPublishTest` 21/0 (wrong, missing, edited sequences; `--init` over signed bundles; a race caught under the lock), `keliver-publish-selftest.sh` 20/0 (a replayed older sequence; a manifest without metadata). The device harnesses assert each published manifest's signed sequence, and S5 now requires the key refusal itself ("does not verify"). Review notes kept: the unreleased W3 block is not in `legacy/` (fine while unreleased). | PR #93 |
 | W4.2 host rollback floor | **built 2026-10-08; independently reviewed, findings fixed** (PR #93). Shared `BundleIndex.kt`: `manifestSequence`, `rollbackProblem`, and the manifest-guard client refusing a network manifest below the floor (or unsequenced once the floor is above 0), for index and relay lookups alike; the floor is read when the manifest arrives (a restart sees a raised floor). Each host keeps the floor per key (Android SharedPreferences, written with `commit()`; iOS NSUserDefaults), raises it in `codeLoadSuccess` from Zipline's verified manifest, and checks it on the cache start AND on the cache start's network fallback. **The review found that fallback unguarded on Android** (a server failing the lookup on purpose could then serve an older signed manifest); fixed, and S9b now covers it. Unit tests: `BundleIndexTest` 10/0. CI before the review fixes: Android S8/S9 passed (reference-app 37740967962, 37742935691); iOS S8 passed but **iOS S9 failed** (ios-host 37742935620): the harness wrote the floor into the simulator user's defaults, not the app container's; fixed. Device checks: S8 (v1 re-served after v2: refused), S9 (stored floor above the cached v2, offline: cache refused), S9b (same, server up but failing the lookup: the network fallback refused). Docs: `DEVICE_HOST.md` §2/§3 (what a floor of 0 does not protect; one key, one sequence space; a refused newest entry shows no bundle), guide, tools README. | PR #93 |
+| W4.1 + W4.2 CI (after both reviews) | **green 2026-10-08 at `0fae3739`.** `reference-app.yml` 37749229561: prepare 18/0, publish self-test 20/0, device 66/0, with W4.1 (v1 and v2 signed for sequences 1 and 2) and S8, S9 and S9b on Android. `ios-host.yml` 37749229400: self-test 50/0, `ios.sh` 60/0, with S8, S9 and S9b on iOS. `portal-tools.yml` 37749222637: the production-host scaffolder 41/0 (`--build`) and 36/0 (zip), the iOS host 44/0 twice, the publish target 38/0 (`--build`: the sequence signed, an edit breaking the signature, a malformed one failing) and 25/0. | PR #93 |
 | W2, W4–W8 | not started | — |
 
 ## Next action
@@ -557,21 +558,10 @@ What was done for the candidate:
 - shipping it in tools 0.3.8 (a candidate, then the owner's approval);
 - the "W3 known, not done" items.
 
-**Next: W4**, designed in "W4 design" above. It runs on a branch stacked on
-#90, step by step (W4.1 to W4.5), each with CI evidence and an independent
-review. W4.1 (the signed sequence) is first. The original Track B steps were:
-1. Design the static index, `bundles/index.json`:
-   - entries carry version, widgetVersion, caps, manifest URL, manifest
-     sha256, createdAt, and a monotonically increasing `sequence` (for W4);
-   - decide whether the index is signed (Ed25519, same key) or each entry is
-     bound by its manifest's own signature plus the manifest hash.
-2. A `keliver-publish` CLI (in the tools bundle). Without the relay, it
-   compiles, verifies the signature (reuse `publishedSignatureProblem`), and
-   writes `bundles/vN/…` plus the index into an output directory.
-3. Both hosts (the Android template and the iOS template) look up through
-   the index when the server has no `/bundles/latest`, or always.
-4. CI: publish with the CLI into a static server over HTTPS (a self-signed CA
-   installed in the emulator and simulator), then run P2/P4/P7 against it.
+**Next: W4.3** (`keliver-publish --republish <version>`: rollback as a new
+sequence). W4.1 and W4.2 are built, reviewed, fixed and green on CI (PR #93,
+stacked on #90). Then W4.4 (channels, promotion) and W4.5 (rollout,
+host-version gates), each with CI evidence and an independent review.
 
 ## Standing constraints (from the owner; they apply to every step)
 
