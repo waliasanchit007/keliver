@@ -424,8 +424,11 @@ private fun publish(): Pair<Boolean, String> {
   keyProblem()?.let { return false to "publish REFUSED: $it\nNothing was compiled or signed." }
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
+  // W4: the bundle is signed for the version it will be stored as. The relay
+  // numbers its bundles in publish order, so its sequence is the version.
+  val version = nextBundleVersion()
   val gradlew = File(repoDir, "gradlew").absolutePath
-  val proc = ProcessBuilder(gradlew, config.publishTask, "--console=plain")
+  val proc = ProcessBuilder(gradlew, config.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
     .directory(repoDir)
     .redirectErrorStream(true)
     .start()
@@ -460,7 +463,18 @@ private fun publish(): Pair<Boolean, String> {
     ).toString()
   }
   log.appendLine("publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key")
-  val version = nextBundleVersion()
+  when (val signedSequence = signedSequenceText(manifest.readText())) {
+    null -> log.appendLine(
+      "publish: WARNING the manifest carries no signed $SEQUENCE_METADATA_KEY (its signing block predates W4). " +
+        "A host with rollback protection refuses it once it has run a sequenced bundle; run " +
+        "keliver-new-publish-target.sh to replace the block.",
+    )
+    version.toString() -> log.appendLine("publish: signed for sequence $version")
+    else -> return false to log.appendLine(
+      "publish REFUSED: the manifest is signed for sequence $signedSequence, but this bundle would be v$version. " +
+        "Nothing was stored.",
+    ).toString()
+  }
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).

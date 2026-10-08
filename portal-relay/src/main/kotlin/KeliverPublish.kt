@@ -40,7 +40,7 @@ object KeliverPublish {
     exitProcess(run(args.toList(), System.getenv("KELIVER_PUBLIC_KEY_HEX")))
   }
 
-  internal fun run(args: List<String>, publicKeyHexEnv: String?, build: (File, String) -> Int = ::gradle): Int {
+  internal fun run(args: List<String>, publicKeyHexEnv: String?, build: (File, String, Long) -> Int = ::gradle): Int {
     var app: String? = null
     var out: String? = null
     var keyFile: String? = null
@@ -84,11 +84,20 @@ object KeliverPublish {
       )
     }
 
+    // W4: the build signs the sequence this publish will take into the manifest's
+    // metadata; publishStatic checks it again under the lock.
+    val sequence = try {
+      val bundlesDir = File(out, "bundles")
+      if (File(bundlesDir, INDEX_FILE).exists()) nextSequence(readIndex(bundlesDir)) else 1L
+    } catch (e: PublishRefused) {
+      return refuse(e.message.orEmpty())
+    }
+
     if (skipBuild) {
-      println("keliver-publish: --skip-build: publishing the existing output of ${config.publishTask}")
+      println("keliver-publish: --skip-build: publishing the existing output of ${config.publishTask} (it must be signed for sequence $sequence)")
     } else {
-      println("keliver-publish: building ${config.publishTask} in $repoDir")
-      val code = build(repoDir, config.publishTask)
+      println("keliver-publish: building ${config.publishTask} in $repoDir, signed for sequence $sequence")
+      val code = build(repoDir, config.publishTask, sequence)
       if (code != 0) {
         System.err.println("keliver-publish: the build failed (gradle exit $code). Nothing was published.")
         return 3
@@ -121,8 +130,8 @@ object KeliverPublish {
     return 0
   }
 
-  private fun gradle(repoDir: File, task: String): Int =
-    ProcessBuilder(File(repoDir, "gradlew").absolutePath, task, "--console=plain")
+  private fun gradle(repoDir: File, task: String, sequence: Long): Int =
+    ProcessBuilder(File(repoDir, "gradlew").absolutePath, task, "-Pkeliver.sequence=$sequence", "--console=plain")
       .directory(repoDir)
       .inheritIO()
       .start()

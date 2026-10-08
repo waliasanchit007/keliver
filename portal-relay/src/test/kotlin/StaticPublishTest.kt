@@ -43,8 +43,11 @@ class StaticPublishTest {
 
   private val app = key()
 
-  /** A compile task's output: two modules and a manifest naming them, signed by [by] (or unsigned). */
-  private fun output(name: String, title: String = name, by: Key? = app): File {
+  /**
+   * A compile task's output: two modules and a manifest naming them, signed by [by] (or unsigned),
+   * with [seq] in the signed metadata as the W4 signing block writes it (none when null).
+   */
+  private fun output(name: String, title: String = name, by: Key? = app, seq: Long? = 1): File {
     val dir = File(tmp, "out-$name").apply { mkdirs() }
     val modules = listOf("lib", "main").associateWith { m ->
       val bytes = "// $m of $title\n".encodeToByteArray()
@@ -53,7 +56,7 @@ class StaticPublishTest {
     }
     val json = """{"unsigned":{"signatures":{},"freshAtEpochMs":null,"baseUrl":null},
       |"modules":{${modules.entries.joinToString(",") { (m, sha) -> "\"./$m.js\":{\"url\":\"$m.zipline\",\"sha256\":\"$sha\",\"dependsOnIds\":[]}" }}},
-      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"}""".trimMargin().replace("\n", "")
+      |"mainModuleId":"./main.js","mainFunction":"zipline.ziplineMain"${if (seq != null) ",\"metadata\":{\"$SEQUENCE_METADATA_KEY\":\"$seq\"}" else ""}}""".trimMargin().replace("\n", "")
     val manifest = ZiplineManifest.decodeJson(json)
     File(dir, "manifest.zipline.json").writeText((by?.signer?.sign(manifest) ?: manifest).encodeJson())
     return dir
@@ -68,7 +71,7 @@ class StaticPublishTest {
   fun publishesVersionedDirectoriesAndAnIndexAtTheNextSequence() {
     val at = Instant.parse("2026-10-07T12:00:00Z")
     val first = publishStatic(output("one"), site, app.publicHex, capabilities = listOf("host-sql@1"), now = at, init = true)
-    val second = publishStatic(output("two"), site, app.publicHex)
+    val second = publishStatic(output("two", seq = 2), site, app.publicHex)
     assertEquals(1 to 1L, first.version to first.sequence)
     assertEquals(2 to 2L, second.version to second.sequence)
     assertEquals(1, index()["format"]!!.jsonPrimitive.content.toInt())
@@ -90,7 +93,7 @@ class StaticPublishTest {
   @Test
   fun theHostsIndexReaderPicksWhatWasPublished() {
     publishStatic(output("one"), site, app.publicHex, init = true)
-    publishStatic(output("two"), site, app.publicHex, capabilities = listOf("host-http@1"))
+    publishStatic(output("two", seq = 2), site, app.publicHex, capabilities = listOf("host-http@1"))
     val withHttp = pickFromIndex(File(bundles, INDEX_FILE).readText(), listOf("host-sql@1", "host-http@1")).getOrThrow()
     assertEquals(2L, withHttp.sequence)
     assertEquals(sha256Hex(File(bundles, withHttp.manifestPath).readBytes()), withHttp.manifestSha256)
@@ -104,7 +107,7 @@ class StaticPublishTest {
     File(bundles, INDEX_FILE).writeText(
       """{"format":1,"note":"kept","entries":[{"sequence":7,"version":3,"channel":"beta","constraints":{"minHostVersion":4},"manifest":"v3/manifest.zipline.json"}]}""",
     )
-    val p = publishStatic(output("next"), site, app.publicHex)
+    val p = publishStatic(output("next", seq = 8), site, app.publicHex)
     assertEquals(4 to 8L, p.version to p.sequence) // past the highest version AND the highest sequence
     assertEquals("kept", index()["note"]!!.jsonPrimitive.content)
     assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(4))), entries()[0]["constraints"])
@@ -126,7 +129,7 @@ class StaticPublishTest {
     assertRefusedAndNothingWritten("download the served bundles/index.json") { publishStatic(output("x"), site, app.publicHex) }
     assertEquals(4, publishStatic(output("x"), site, app.publicHex, init = true).version)
     // From then on the index is there and --init is not needed.
-    assertEquals(5, publishStatic(output("y"), site, app.publicHex).version)
+    assertEquals(5, publishStatic(output("y", seq = 2), site, app.publicHex).version)
   }
 
   @Test
@@ -146,7 +149,7 @@ class StaticPublishTest {
       java.nio.file.StandardOpenOption.WRITE,
     ).use { ch ->
       ch.lock().use {
-        val two = output("two")
+        val two = output("two", seq = 2)
         val before = snapshot()
         val e = assertFailsWith<PublishRefused> { publishStatic(two, site, app.publicHex) }
         assertTrue(".publish.lock" in e.message!!, e.message)
@@ -183,7 +186,7 @@ class StaticPublishTest {
   @Test
   fun aBundleSignedByAnotherKeyIsRefusedAndTheIndexIsUnchanged() {
     publishStatic(output("one"), site, app.publicHex, init = true)
-    assertRefusedAndNothingWritten("does not verify") { publishStatic(output("f", by = key()), site, app.publicHex) }
+    assertRefusedAndNothingWritten("does not verify") { publishStatic(output("f", by = key(), seq = 2), site, app.publicHex) }
   }
 
   @Test
@@ -247,6 +250,37 @@ class StaticPublishTest {
   }
 
   @Test
+  fun theSignedSequenceMustBeTheOneThisPublishTakes() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    // Signed for sequence 1 again (a replay of an old build), or for one ahead.
+    assertRefusedAndNothingWritten("signed for sequence 1, but this publish is sequence 2") {
+      publishStatic(output("stale", seq = 1), site, app.publicHex)
+    }
+    assertRefusedAndNothingWritten("signed for sequence 3, but this publish is sequence 2") {
+      publishStatic(output("ahead", seq = 3), site, app.publicHex)
+    }
+    assertEquals(2L, publishStatic(output("two", seq = 2), site, app.publicHex).sequence)
+  }
+
+  @Test
+  fun aManifestWithoutASignedSequenceIsRefusedWithTheUpgradeHint() {
+    val e = assertFailsWith<PublishRefused> { publishStatic(output("old-block", seq = null), site, app.publicHex, init = true) }
+    assertTrue("no signed $SEQUENCE_METADATA_KEY" in e.message!!, e.message)
+    assertTrue(e.aboutSigning)
+    assertFalse(site.exists())
+  }
+
+  @Test
+  fun theSequenceIsInTheSignedPartOfTheManifest() {
+    // Rewriting the sequence of a signed manifest breaks its signature: hosts can trust the number.
+    val out = output("signed", seq = 1)
+    val m = File(out, "manifest.zipline.json")
+    m.writeText(m.readText().replace("\"$SEQUENCE_METADATA_KEY\":\"1\"", "\"$SEQUENCE_METADATA_KEY\":\"9\""))
+    assertEquals("9", signedSequenceText(m.readText()))
+    assertRefusedAndNothingWritten("does not verify") { publishStatic(out, site, app.publicHex, init = true) }
+  }
+
+  @Test
   fun theCliPublishesRefusesAndReportsBuildFailures() {
     val appDir = File(tmp, "app").apply { mkdirs() }
     output("cli").copyRecursively(File(appDir, "build/zipline/Development"))
@@ -260,27 +294,33 @@ class StaticPublishTest {
 
     var built = emptyList<String>()
     // Without the live index (or --init) nothing is built or published.
-    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _ -> error("built") })
+    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, _ -> error("built") })
     assertFalse(File(out).exists())
-    val ok = KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path, "--init"), null) { dir, task ->
-      built = listOf(dir.path, task); 0
+    val ok = KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path, "--init"), null) { dir, task, seq ->
+      built = listOf(dir.path, task, seq.toString()); 0
     }
     assertEquals(0, ok)
-    assertEquals(listOf(appDir.absolutePath, ":compileDevelopmentExecutableKotlinJsZipline"), built)
+    assertEquals(listOf(appDir.absolutePath, ":compileDevelopmentExecutableKotlinJsZipline", "1"), built)
     val e = Json.parseToJsonElement(File(out, "bundles/index.json").readText()).jsonObject["entries"]!!.jsonArray
     assertEquals(listOf("host-sql@1"), e[0].jsonObject["capabilities"]!!.jsonArray.map { it.jsonPrimitive.content })
 
-    assertEquals(3, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _ -> 1 })
+    assertEquals(3, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, _ -> 1 })
     assertEquals(1, File(out, "bundles").list()!!.count { it.startsWith("v") })
     // The key from the environment, and a key that is not this app's.
-    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), key().publicHex) { _, _ -> error("built") })
-    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), app.publicHex) { _, _ -> error("built") })
+    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), key().publicHex) { _, _, _ -> error("built") })
+    // --skip-build with the output still signed for sequence 1: the index is at 2 now.
+    assertEquals(4, KeliverPublish.run(listOf(appDir.path, "--out", out, "--skip-build"), app.publicHex) { _, _, _ -> error("built") })
+    File(appDir, "build/zipline/Development").deleteRecursively()
+    output("cli2", seq = 2).copyRecursively(File(appDir, "build/zipline/Development"))
+    var asked = 0L
+    assertEquals(0, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", keyFile.path), null) { _, _, seq -> asked = seq; 0 })
+    assertEquals(2L, asked)
     assertEquals(2, File(out, "bundles").list()!!.count { it.startsWith("v") })
     // Usage.
-    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--public-key-file", keyFile.path), null) { _, _ -> 0 })
-    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out), null) { _, _ -> 0 })
-    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--bogus"), app.publicHex) { _, _ -> 0 })
-    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", "", "--skip-build"), app.publicHex) { _, _ -> 0 })
-    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", ""), null) { _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--public-key-file", keyFile.path), null) { _, _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out), null) { _, _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--bogus"), app.publicHex) { _, _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", "", "--skip-build"), app.publicHex) { _, _, _ -> 0 })
+    assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", ""), null) { _, _, _ -> 0 })
   }
 }

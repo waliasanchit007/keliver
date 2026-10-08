@@ -61,7 +61,7 @@ import java.nio.file.*;
 import java.security.*;
 import java.util.*;
 
-/** args: <out-dir> <title> <mode: signed|unsigned|foreign> <pub-out> ; one key per JVM run, private half never written. */
+/** args: <out-dir> <title> <mode: signed|unsigned|foreign> <pub-out> [sequence]; one key per JVM run, private half never written. */
 public class Fixture {
   static String hex(byte[] b) { StringBuilder s = new StringBuilder(); for (byte x : b) s.append(String.format("%02x", x)); return s.toString(); }
   public static void main(String[] a) throws Exception {
@@ -77,7 +77,9 @@ public class Fixture {
       modules.append("\"./").append(m).append(".js\":{\"url\":\"").append(m).append(".zipline\",\"sha256\":\"")
         .append(hex(MessageDigest.getInstance("SHA-256").digest(code))).append("\",\"dependsOnIds\":[]}");
     }
-    String payload = "{\"modules\":{" + modules + "},\"mainModuleId\":\"./main.js\",\"mainFunction\":\"zipline.ziplineMain\"}";
+    // W4: the sequence is in the signed metadata, as the signing block writes it.
+    String meta = a.length > 4 ? ",\"metadata\":{\"keliver.sequence\":\"" + a[4] + "\"}" : "";
+    String payload = "{\"modules\":{" + modules + "},\"mainModuleId\":\"./main.js\",\"mainFunction\":\"zipline.ziplineMain\"" + meta + "}";
     String sigs = "{}";
     if (!a[2].equals("unsigned")) {
       Signature s = Signature.getInstance("Ed25519");
@@ -92,8 +94,8 @@ public class Fixture {
 JAVA
 fixture(){ "$JAVA_HOME/bin/java" "$WORK/Fixture.java" "$@" 2>/dev/null; }
 # Each signed fixture is signed by its own run's key; that run wrote the public half to <name>.pub.
-fixture "$WORK/fx/one" One signed "$WORK/fx/one.pub"
-fixture "$WORK/fx/unsigned" Unsigned unsigned "$WORK/fx/unsigned.pub"
+fixture "$WORK/fx/one" One signed "$WORK/fx/one.pub" 1
+fixture "$WORK/fx/unsigned" Unsigned unsigned "$WORK/fx/unsigned.pub" 1
 
 # --- the app: a fake gradlew that "builds" by copying a fixture ---------------
 APP="$WORK/app"
@@ -106,7 +108,7 @@ printf '# required by every screen\nhost-sql@1\n' > "$APP/src/jsMain/kotlin/scre
 cat > "$APP/gradlew" <<'SH'
 #!/bin/bash
 # Records what it was asked and with which tools bin, then "builds" $FIXTURE.
-echo "task=$1 toolsBin=${KELIVER_TOOLS_BIN:-}" >> "$(dirname "$0")/gradlew.calls"
+echo "task=$1 $2 toolsBin=${KELIVER_TOOLS_BIN:-}" >> "$(dirname "$0")/gradlew.calls"
 [ "${FAIL_BUILD:-}" = 1 ] && exit 1
 rm -rf "$(dirname "$0")/build/zipline/Development"; mkdir -p "$(dirname "$0")/build/zipline"
 cp -R "$FIXTURE" "$(dirname "$0")/build/zipline/Development"
@@ -136,8 +138,9 @@ FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/
 #    publish v1, through the app's build, as the first publish ever
 FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --init > "$WORK/p1.log" 2>&1; rc=$?
 [ "$rc" = 0 ] && ok "v1 published: $(grep 'published v' "$WORK/p1.log")" || { bad "v1: exit $rc"; cat "$WORK/p1.log"; }
-grep -qx "task=:compileDevelopmentExecutableKotlinJsZipline toolsBin=$TOOLS/bin" "$APP/gradlew.calls" \
-  && ok "it ran the app's publishTask with KELIVER_TOOLS_BIN = the tools bin" || bad "build call: $(cat "$APP/gradlew.calls")"
+grep -qx "task=:compileDevelopmentExecutableKotlinJsZipline -Pkeliver.sequence=1 toolsBin=$TOOLS/bin" "$APP/gradlew.calls" \
+  && ok "it ran the app's publishTask for sequence 1 (-Pkeliver.sequence), with KELIVER_TOOLS_BIN = the tools bin" \
+  || bad "build call: $(cat "$APP/gradlew.calls")"
 python3 - "$SITE/bundles" > "$WORK/check1.txt" 2>&1 <<'PY'
 import hashlib, json, os, sys
 b = sys.argv[1]; idx = json.load(open(os.path.join(b, 'index.json')))
@@ -164,11 +167,17 @@ refused(){  # $1 label, $2 expected text, rest: env + command
     bad "$label: exit $rc, $(grep -m1 REFUSED "$WORK/r.log")"; tail -5 "$WORK/r.log"
   fi
 }
-fixture "$WORK/fx/foreign" Foreign signed "$WORK/fx/foreign.pub"
+fixture "$WORK/fx/foreign" Foreign signed "$WORK/fx/foreign.pub" 2
 refused "a bundle signed by another key" "does not verify" \
   FIXTURE="$WORK/fx/foreign" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
 refused "an unsigned bundle" "UNSIGNED" \
   FIXTURE="$WORK/fx/unsigned" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
+# W4: v1's own build again, now that the index is at sequence 2 (a replay of an old bundle).
+refused "a bundle signed for an older sequence" "signed for sequence 1, but this publish is sequence 2" \
+  FIXTURE="$WORK/fx/one" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
+fixture "$WORK/fx/noseq" NoSeq signed "$WORK/fx/noseq.pub"
+refused "a bundle with no signed sequence (a pre-W4 signing block)" "no signed keliver.sequence" \
+  FIXTURE="$WORK/fx/noseq" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/noseq.pub"
 cp -R "$WORK/fx/one" "$WORK/fx/tampered"; echo "x" >> "$WORK/fx/tampered/lib.zipline"
 refused "a module that differs from the signed manifest" "signed manifest says" \
   FIXTURE="$WORK/fx/tampered" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
@@ -181,7 +190,7 @@ refused "an unreadable index" "not a JSON object" \
 cp "$WORK/index.good" "$SITE/bundles/index.json"; BEFORE="$(snapshot "$SITE")"
 
 # 4. v2: the key from the environment, a channel, --skip-build
-fixture "$WORK/fx/two" Two signed "$WORK/fx/two.pub"
+fixture "$WORK/fx/two" Two signed "$WORK/fx/two.pub" 2
 rm -rf "$APP/build/zipline/Development"; cp -R "$WORK/fx/two" "$APP/build/zipline/Development"
 : > "$APP/gradlew.calls"
 KELIVER_PUBLIC_KEY_HEX="$(cat "$WORK/fx/two.pub")" "$PUBLISH" "$APP" --out "$SITE" --skip-build --channel beta > "$WORK/p2.log" 2>&1; rc=$?
@@ -206,7 +215,9 @@ if keliver_require_isolated_store "$WORK" "$APP" > "$WORK/guard.log" 2>&1; then
   STORE="$("$TOOLS/bin/keliver-store-path.sh" "$APP")" || { bad "the store resolver refused $APP"; STORE="$WORK/unresolved-store"; }
   "$PUBLISH" "$APP" --out "$SITE" --skip-build > "$WORK/s.log" 2>&1; rc=$?
   [ "$rc" = 2 ] && grep -q "no public key at" "$WORK/s.log" && ok "no key anywhere: exit 2, says so" || bad "no key: exit $rc"
-  mkdir -p "$STORE/keys" && cp "$WORK/fx/two.pub" "$STORE/keys/ed25519.pub"
+  fixture "$WORK/fx/three" Three signed "$WORK/fx/three.pub" 3
+  rm -rf "$APP/build/zipline/Development"; cp -R "$WORK/fx/three" "$APP/build/zipline/Development"
+  mkdir -p "$STORE/keys" && cp "$WORK/fx/three.pub" "$STORE/keys/ed25519.pub"
   "$PUBLISH" "$APP" --out "$SITE" --skip-build > "$WORK/s.log" 2>&1; rc=$?
   [ "$rc" = 0 ] && grep -q "published v3 (sequence 3" "$WORK/s.log" && ok "the store's public key is used when none is given" \
     || { bad "store key: exit $rc"; tail -5 "$WORK/s.log"; }

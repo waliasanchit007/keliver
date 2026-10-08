@@ -48,6 +48,42 @@ private val prettyJson = Json { prettyPrint = true }
  */
 internal class PublishRefused(message: String, val aboutSigning: Boolean = false) : Exception(message)
 
+/**
+ * W4: the manifest `metadata` key that carries the bundle's sequence. `metadata`
+ * is in the signed part of a Zipline manifest, so the sequence is covered by the
+ * Ed25519 signature; hosts refuse a sequence below the highest they have run.
+ * The signing block writes it from `-Pkeliver.sequence` before it signs.
+ */
+internal const val SEQUENCE_METADATA_KEY = "keliver.sequence"
+
+/**
+ * The sequence a manifest's signed metadata carries, exactly as written (a
+ * decimal string), or null when it carries none.
+ */
+internal fun signedSequenceText(manifestJson: String): String? {
+  val root = runCatching { Json.parseToJsonElement(manifestJson) as? JsonObject }.getOrNull() ?: return null
+  val v = (root["metadata"] as? JsonObject)?.get(SEQUENCE_METADATA_KEY) as? JsonPrimitive ?: return null
+  return if (v.isString) v.content else null
+}
+
+/** Why [manifestJson] may not be published at [sequence], or null. */
+internal fun sequenceProblem(manifestJson: String, sequence: Long): String? {
+  val signed = signedSequenceText(manifestJson)
+    ?: return "the manifest carries no signed $SEQUENCE_METADATA_KEY, so a host could not refuse an older " +
+      "bundle in its place. Its signing block predates W4: run keliver-new-publish-target.sh to replace it"
+  return if (signed == sequence.toString()) {
+    null
+  } else {
+    "the manifest is signed for sequence $signed, but this publish is sequence $sequence. keliver-publish passes " +
+      "the next sequence to the build (-Pkeliver.sequence); with --skip-build, or when another publish ran " +
+      "since this build, publish again with a build"
+  }
+}
+
+/** The sequence the next entry of [index] gets. */
+internal fun nextSequence(index: JsonObject): Long =
+  ((index["entries"] as JsonArray).maxOfOrNull { ((it as JsonObject)["sequence"] as JsonPrimitive).longOrNull!! } ?: 0L) + 1
+
 /** The highest bundle number a `v<N>` directory can carry (VERSION_DIR_RE). */
 private const val MAX_VERSION = 999_999_999
 
@@ -175,8 +211,11 @@ internal fun publishStatic(
         "start again and overwrite what hosts already load. Only for the very first publish, pass --init.",
     )
   }
-  // Read (and so validate) the index before creating anything.
-  readIndex(bundlesDir)
+  // Read (and so validate) the index before creating anything, and check the
+  // signed sequence against it: a refusal here writes nothing.
+  val manifestText = File(output, "manifest.zipline.json").readText()
+  sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir)))
+    ?.let { throw PublishRefused(it, aboutSigning = signedSequenceText(manifestText) == null) }
 
   bundlesDir.mkdirs()
   FileChannel.open(File(bundlesDir, ".publish.lock").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
@@ -196,7 +235,7 @@ internal fun publishStatic(
       val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
       if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
       val version = highest + 1
-      val sequence = (entries.maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! } ?: 0L) + 1
+      val sequence = nextSequence(index)
 
       val dest = File(bundlesDir, "v$version")
       val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
@@ -206,6 +245,8 @@ internal fun publishStatic(
         staticOutputProblem(staging, publicKeyHex)?.let {
           throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
         }
+        // Under the lock: another publish may have taken this sequence since the build.
+        sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
         Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
       } finally {
         if (staging.exists()) staging.deleteRecursively()

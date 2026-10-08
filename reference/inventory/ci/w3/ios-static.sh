@@ -12,7 +12,9 @@
 #       already-built bundle (--skip-build); nothing changes
 #   S6  an index whose sha256 isn't the manifest's: nothing loads
 #   S7  server down: the host starts from its cached v2
-# The app's signing block here is the one tools 0.3.6 wrote, so the CLI signs
+# The app was wired by the published 0.3.7 zip, whose signing block writes no
+# publish sequence (W4). So first this checkout's keliver-new-publish-target.sh
+# upgrades it in place (the 0.3.7 -> current upgrade, on CI); the CLI then signs
 # through the store (KELIVER_TOOLS_BIN). device.sh signs with
 # KELIVER_SIGNING_KEY_FILE and no store lookup instead.
 
@@ -25,6 +27,12 @@ bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && cp "$W3/tls/ca.pem" 
   && xcrun simctl keychain "$UDID" add-root-cert "$W3/tls/ca.pem" \
   && ok "W3: a throwaway CA, trusted by this run's simulator only" || bad "W3: the CA was not installed"
 
+( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/w3-signing-upgrade.log" 2>&1 \
+  && grep -q '(signing-0.3.7) was replaced by the current one' "$EV/w3-signing-upgrade.log" \
+  && ( cd "$APP" && git add build.gradle && git -c user.name=w3 -c user.email=w3@invalid commit -qm "W4: the signing block that signs a publish sequence" ) \
+  && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's 0.3.7 signing block" \
+  || { bad "W3: upgrading the 0.3.7 signing block"; cat "$EV/w3-signing-upgrade.log"; }
+
 SCREEN="$APP/src/jsMain/kotlin/screens/inventory.kt"
 w3_title(){  # $1 from, $2 to: the edit a developer makes; no relay involved
   sed -i '' "s/text = \"$1\"/text = \"$2\"/" "$SCREEN" && grep -q "text = \"$2\"" "$SCREEN"
@@ -33,12 +41,18 @@ w3_publish(){  # $1 label, then extra flags: the CLI, run as a CI job would run 
   local label="$1"; shift
   ( cd "$APP" && "$PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" "$@" ) > "$EV/w3-publish-$label.log" 2>&1
 }
+w3_signed_sequence(){  # $1 = N: v<N>'s manifest carries keliver.sequence "N" in its signed metadata (W4.1)
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); sys.exit(0 if m.get("metadata",{}).get("keliver.sequence")==sys.argv[2] else 1)' \
+    "$W3/site/bundles/v$1/manifest.zipline.json" "$1"
+}
 w3_site(){ ( cd "$W3/site" && find . -type f -exec shasum -a 256 {} + | sort ); }
 
 w3_title Stockroom Depot && w3_publish v1 --init && grep -q "published v1 (sequence 1" "$EV/w3-publish-v1.log" \
   && ok "W3: keliver-publish compiled, verified and wrote $(grep -o 'published v1 ([^)]*)' "$EV/w3-publish-v1.log")" \
   || { bad "W3: publish v1"; tail -20 "$EV/w3-publish-v1.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-v1.json" 2>/dev/null
+w3_signed_sequence 1 && ok "W4.1: v1's manifest is signed for sequence 1 (metadata keliver.sequence)" \
+  || bad "W4.1: v1's manifest does not carry signed sequence 1"
 
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w3-server.log" &
 SPID=$!
@@ -66,6 +80,8 @@ grep -q "^GET /bundles/index.json 200" "$EV/w3-server.log" && grep -q "^GET /bun
 w3_title Depot Warehouse && w3_publish v2 && grep -q "published v2 (sequence 2" "$EV/w3-publish-v2.log" \
   && ok "S4: keliver-publish wrote v2 at sequence 2" || { bad "S4: publish v2"; tail -20 "$EV/w3-publish-v2.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-v2.json" 2>/dev/null
+w3_signed_sequence 2 && ok "W4.1: v2's manifest is signed for sequence 2 (metadata keliver.sequence)" \
+  || bad "W4.1: v2's manifest does not carry signed sequence 2"
 launch S4-static
 C="$EV/S4-static.console.txt"
 grep -q "loading https://localhost:8443/bundles/v2/manifest.zipline.json (index sequence 2" "$C" && grep -q "codeLoadSuccess" "$C" \

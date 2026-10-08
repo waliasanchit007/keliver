@@ -40,12 +40,18 @@ w3_publish(){  # $1 label, then extra flags: the CLI as a CI job runs it — the
   ( cd "$APP" && KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv" KELIVER_TOOLS_BIN="$W3/no-tools-bin" \
       "$W3_PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" "$@" ) > "$EV/w3-publish-$label.log" 2>&1
 }
+w3_signed_sequence(){  # $1 = N: v<N>'s manifest carries keliver.sequence "N" in its signed metadata (W4.1)
+  python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); sys.exit(0 if m.get("metadata",{}).get("keliver.sequence")==sys.argv[2] else 1)' \
+    "$W3/site/bundles/v$1/manifest.zipline.json" "$1"
+}
 w3_site(){ ( cd "$W3/site" && find . -type f -exec sha256sum {} + | sort ); }
 
 w3_title Stockroom Depot && w3_publish v1 --init && grep -q "published v1 (sequence 1" "$EV/w3-publish-v1.log" \
   && ok "W3: keliver-publish compiled (key from KELIVER_SIGNING_KEY_FILE), verified and wrote $(grep -o 'published v1 ([^)]*)' "$EV/w3-publish-v1.log")" \
   || { bad "W3: publish v1"; tail -20 "$EV/w3-publish-v1.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-v1.json" 2>/dev/null
+w3_signed_sequence 1 && ok "W4.1: v1's manifest is signed for sequence 1 (metadata keliver.sequence)" \
+  || bad "W4.1: v1's manifest does not carry signed sequence 1"
 
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w3-server.log" &
 SERVE_PID=$!
@@ -69,6 +75,8 @@ grep -q "^GET /bundles/index.json 200" "$EV/w3-server.log" && grep -q "^GET /bun
 w3_title Depot Warehouse && w3_publish v2 && grep -q "published v2 (sequence 2" "$EV/w3-publish-v2.log" \
   && ok "S4: keliver-publish wrote v2 at sequence 2" || { bad "S4: publish v2"; tail -20 "$EV/w3-publish-v2.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-v2.json" 2>/dev/null
+w3_signed_sequence 2 && ok "W4.1: v2's manifest is signed for sequence 2 (metadata keliver.sequence)" \
+  || bad "W4.1: v2's manifest does not carry signed sequence 2"
 launch prod "$EV/logcat-static-v2.txt"
 grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v2/manifest.zipline.json (index sequence 2" "$EV/logcat-static-v2.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-v2.txt" && ok "S4: the host loaded v2" || bad "S4: v2 did not load"

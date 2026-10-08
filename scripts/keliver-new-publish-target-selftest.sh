@@ -14,6 +14,8 @@
 #   block moved   the signing block above kotlin {}: still signed (the block no
 #                 longer depends on its position)
 #   resolver error  a resolver that exits non-zero fails the build
+#   sequence      KELIVER_PUBLISH_SEQUENCE lands in the signed metadata (W4); an
+#                 edited one no longer verifies; a malformed one fails the build
 # Without --build it also checks the upgrade of an app wired by tools 0.3.7
 # (a plain swap) and 0.3.6 (with the U31 advice):
 # exactly the old block is replaced in place; an edited one is refused.
@@ -342,6 +344,27 @@ PY
   [ "$rc" != 0 ] && grep -q "the signing key file $DISP/no-such.priv does not exist" "$DISP/build-nokeyfile.log" \
     && ok "a KELIVER_SIGNING_KEY_FILE that does not exist fails the build" \
     || bad "a missing KELIVER_SIGNING_KEY_FILE: rc=$rc"
+
+  # W4: a publish sequence goes into the SIGNED metadata. signature_of verifies the
+  # payload, which includes metadata, so "signed:true" covers the number too.
+  compile "$DISP/build-seq.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=7; rc=$?
+  got="$(signature_of)"
+  seq="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("metadata",{}).get("keliver.sequence",""))' "$MANIFEST" 2>/dev/null)"
+  [ "$rc" = 0 ] && [ "$got" = signed:true ] && [ "$seq" = 7 ] \
+    && ok "KELIVER_PUBLISH_SEQUENCE=7: metadata keliver.sequence is \"7\" and the signature over it verifies" \
+    || bad "a publish sequence: rc=$rc, signature $got, sequence '$seq'"
+  python3 - "$MANIFEST" "$T/edited.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1])); m['metadata']['keliver.sequence'] = '8'
+open(sys.argv[2], 'w').write(json.dumps(m, separators=(',', ':')))
+PY
+  cp "$MANIFEST" "$T/signed.json"; cp "$T/edited.json" "$MANIFEST"
+  [ "$(signature_of)" = signed:false ] && ok "an edited sequence (7 -> 8) no longer verifies" \
+    || bad "an edited sequence still verifies: $(signature_of)"
+  cp "$T/signed.json" "$MANIFEST"
+  compile "$DISP/build-badseq.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=07x; rc=$?
+  [ "$rc" != 0 ] && grep -q "keliver.sequence must be a positive integer" "$DISP/build-badseq.log" \
+    && ok "a malformed sequence fails the build" || bad "a malformed sequence: rc=$rc"
 
   compile "$DISP/build-nobin.log"; rc=$?
   [ "$rc" = 0 ] && [ "$(signature_of)" = unsigned ] && grep -q 'so this bundle is UNSIGNED' "$DISP/build-nobin.log" \
