@@ -128,9 +128,15 @@ grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay" "$H
 # and falls back to the relay's bundles/latest only on a 404.
 M="$H/src/main/kotlin/com/example/demo/host/MainActivity.kt"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
-  && grep -q 'ManifestPinningHttpClient(zipline, latest.manifestUrl' "$M" \
+  && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)' "$M" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
+# W4.2: the rollback floor is read per key, guards the network load and the cache
+# start, and rises only from a verified successful load.
+grep -q 'prefs.getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor)' "$M" \
+  && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
+  && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
+  || bad "W4.2: the rollback floor is not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 

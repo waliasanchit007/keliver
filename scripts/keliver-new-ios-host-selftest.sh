@@ -136,9 +136,15 @@ PY
 # W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
 # and falls back to the relay's bundles/latest only on a 404.
 grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 404' "$K/MainViewController.kt" \
-  && grep -q 'ManifestPinningHttpClient(http, manifestUrl, manifestSha256)' "$K/MainViewController.kt" \
+  && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)' "$K/MainViewController.kt" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
+# W4.2: the rollback floor is read per key, guards the network load and the cache
+# start, and rises only from a verified successful load.
+grep -q 'integerForKey(floorKey(trust))' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor)' "$K/MainViewController.kt" \
+  && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
+  && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
+  || bad "W4.2: the rollback floor is not wired"
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
 grep -q 'gradlew -p host-ios --console=plain embedAndSignAppleFrameworkForXcode' "$H/iosApp.xcodeproj/project.pbxproj" \
