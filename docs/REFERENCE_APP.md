@@ -32,6 +32,9 @@ apart from the CI harness.**
   the scaffolders from this repository, because the app was built from the
   0.3.5 zip. Runs 1–7 used `portal-device-android` compiled from Keliver
   **source** at `b5615637`.
+  *On PR #90's branch (W3, not yet released), CI sets `KELIVER_SCAFFOLD_FROM=repo`,
+  so both hosts come from this repository's `scripts/` again, labelled
+  "(W3, unreleased)" in the results. A release that ships W3 removes that.*
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
   `keliver-store-path.sh` it calls), which are not in the tools bundle.

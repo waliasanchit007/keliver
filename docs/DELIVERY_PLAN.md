@@ -333,6 +333,128 @@ secret written to a 0600 file. Neither the CLI nor the block prints it.
 sequence, rollback as a new sequence, a beta-only bundle not reaching stable, a
 0% rollout not delivered, and a 100% rollout delivered.
 
+
+#### W4 design (draft 2026-10-08; builds on the W3 index, format 1)
+
+**What is signed, and what is only selection.** One field becomes signed: the
+**sequence**. It goes into Zipline's manifest `metadata` as
+`keliver.sequence`, a decimal string. `metadata` is inside the signed part of
+the manifest, so Zipline's Ed25519 check covers it.
+
+Channel, rollout and host-version constraints stay in the unsigned
+`index.json`, as selection policy (as on Shorebird's server).
+- **Why sign the sequence:** anti-rollback has to hold against whoever serves
+  the bundles, so it needs a signed number and a floor the host remembers.
+- **Why not sign the rest:** whoever controls the index can only choose among
+  bundles this key signed, and the sequence floor stops them going backwards.
+  The worst they can do is send newer, publisher-signed code to the wrong
+  channel or rollout bucket. That is recorded, not prevented.
+- **Signing the channel was considered.** It makes every promotion a re-sign
+  (the private key in CI again) and doesn't stop a replay. Deferred unless an
+  adopter needs it.
+
+**How the sequence gets signed.** U31's doLast signing step makes this cheap.
+The block reads `-Pkeliver.sequence` (else `KELIVER_PUBLISH_SEQUENCE`) and
+writes `metadata["keliver.sequence"]` into the manifest **before** it signs.
+The value is also a task input, so a new sequence re-signs.
+- `keliver-publish` passes `max(index sequences) + 1`. After the build, it
+  checks that the signed value equals the sequence it is about to write, and
+  refuses otherwise. That includes a manifest with no sequence, once the index
+  has sequenced entries.
+- The relay's `/publish` passes its next version number (relay sequence =
+  version) and checks the same way.
+- Without the property, nothing changes. A development build, or a W3-era
+  bundle, has no `keliver.sequence`.
+
+**Host: anti-rollback floor.** Per key, on each platform.
+- The host keeps `highestSequence` (SharedPreferences on Android,
+  NSUserDefaults on iOS) under the same key id the cache name uses.
+- **Network load.** The manifest-pinning HTTP client already sees the manifest
+  bytes Zipline loads. It reads `metadata.keliver.sequence` and fails the
+  download if the sequence is **below** the floor, or absent while the floor
+  is above 0. That happens before Zipline's signature check, which is fine:
+  this check only ever refuses.
+- **Raising the floor.** Only after `codeLoadSuccess`, to the sequence of the
+  bytes that load came from. Zipline has verified them by then, so an
+  attacker can't raise the floor with an unsigned high number.
+- **Cache start.** `AcceptCachedBundle` receives Zipline's verified pinned
+  manifest. It refuses one whose sequence is below the floor.
+- **Compatibility.** A host with floor 0 accepts unsequenced bundles, so an app
+  can move to W4 hosts before W4 publishing.
+- **Not covered:** a reinstall or "clear data" resets the floor.
+  Replay-protection across reinstalls needs a server; recorded as a gap.
+
+**Rollback = republish older code as a new sequence.**
+`keliver-publish --republish <version>`:
+- copies `v<version>/`'s modules into a new `v<M>/`;
+- runs the signing block's new `keliverResign` task (inputs: that directory
+  and the new sequence) to rewrite and sign the manifest. The private key
+  stays inside Gradle, as for any publish;
+- adds an entry with the new sequence.
+
+Hosts above the old sequence take it, because it is newer.
+
+**Channels.**
+- **Host side:** a host is built with one channel. The scaffolders take
+  `--channel` (default `stable`); the value goes into
+  `HostConfig`/`BuildConfig`.
+- **Publishing:** `keliver-publish --channel beta` publishes a new bundle to
+  that channel only.
+- **Promotion:** `keliver-publish --promote <sequence> --channel stable` adds a
+  second index entry for the same manifest and sequence on another channel.
+  The index's uniqueness rule becomes the pair (sequence, channel); W3
+  currently refuses duplicate sequences, and that is relaxed.
+- **The floor is per key, not per channel.** Moving a host to another channel
+  is a host rebuild. Its floor can then block a lower sequence there, which is
+  documented.
+
+**Percentage rollout.**
+- **In the index:** an entry may carry `constraints.rollout` (0–100).
+- **Install id:** the host keeps a random install id (UUID, generated once,
+  local only, never sent anywhere).
+- **Bucket:** the first 4 bytes of `sha256(installId + ":" + sequence)` as an
+  unsigned int, mod 100.
+- **Eligibility:** an entry is eligible when bucket < rollout. A host outside
+  the bucket takes the highest eligible older entry.
+- **Raising and halting:**
+  - Raising the rollout is an index edit (`keliver-publish --rollout <seq> <pct>`).
+  - Halting it (setting 0) stops new hosts. Hosts that already ran the bundle
+    keep it, because of the floor, as with Shorebird.
+
+**Host-version gates.**
+- **In the index:** `constraints.minHostVersion` and
+  `constraints.maxHostVersion` are integers.
+- **What they compare against:** the host build's own version
+  (`versionCode` on Android, `CFBundleVersion` on iOS, which must be an
+  integer). The scaffolders add `--host-version`, or read the app's version.
+- **Unknown constraints:** a W3 host already skips an entry whose constraint
+  key it doesn't know (fail-closed). So W4 entries never reach W3 hosts
+  wrongly.
+
+**Steps, each with its own evidence:**
+
+1. **W4.1** Signed sequence.
+   - Signing-block metadata.
+   - CLI and relay check that the signed sequence is the one written.
+   - Unit tests.
+   - Publish-target self-test (`--build`): the sequence is signed, and an
+     edited sequence fails verification.
+2. **W4.2** Host floor on both templates. CI:
+   - an older signed sequence is refused, over the network and from the cache;
+   - the floor is raised only after success.
+3. **W4.3** `--republish` (rollback). CI: a rollback as a new sequence reaches
+   a host that ran the newer one.
+4. **W4.4** Channels and promotion. CI:
+   - a beta-only bundle does not reach a stable host;
+   - after promotion, it does.
+5. **W4.5** Rollout and host-version gates. CI:
+   - a 0% rollout is not delivered;
+   - a 100% rollout is delivered;
+   - an entry with `minHostVersion` above the host is skipped.
+
+*Done when:* the reference app's CI shows all of the above on Android and iOS.
+That is the plan's W4 "done when", unchanged.
+
 ### W5 — Update API (G8)
 
 The host exposes:
@@ -397,7 +519,8 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W3 static HTTPS on CI | **green 2026-10-07**. No relay; a static HTTPS server is fed only by the CLI, with a throwaway CA in the emulator's system store and the simulator's keychain. S2 (v1 through the index), S4 (v2), S5 (CLI refuses a foreign key), S6 (wrong sha256, nothing loads), S7 (offline from the cache). Android `reference-app.yml` run 37629943998: prepare 18/0, device 54/0. iOS `ios-host.yml` run 37629943934: self-test 49/0, `ios.sh` 48/0. | `docs/superpowers/evidence/w3-android-ci-37629943998/`, `w3-ios-ci-37629943934/` |
 | W3 independent review | **done 2026-10-07; all should-fix points fixed or recorded** (PR #90). B1: the recipe republished v1 at sequence 1 from an empty checkout. Now the CLI refuses an out dir with no index unless `--init` (checked before building), and the guide's recipe downloads the live `bundles/` first, uses a concurrency group, uploads `v<N>/` before the index with no deletes, and removes `.gradle/` (U31). S1: no fallback to the cache after a failed load is documented (guide, `DEVICE_HOST`); the fallback itself is a W5 item. S2: the relay's index skips a `v<N>` without usable `meta.json`. S4: the lock refusal has its own message; exit codes are documented accurately; the production host's `gradle.properties` no longer says a static server isn't enough. Nits done: one app dir in the wrapper, `--out` inside the output refused, duplicate sequences or versions refused, S5 wording, head runs named. S3 (the key in `.gradle/`) is U31, fixed separately. Tests after the fixes: `StaticPublishTest` 16/0, `BundleIndexTest` 7/0, `PublishSignatureTest` 7/0, `keliver-publish-selftest.sh` 18/0 (local). **CI on the post-review head `5f2807569`:** `reference-app.yml` 37655639736 (prepare 18/0, publish self-test 18/0, device 54/0 including S2/S4–S7) and `ios-host.yml` 37655639526 (self-test 49/0, `ios.sh` 48/0). | PR #90 |
 | W3 known, not done | Two 10 s timeouts when the index is a 404 and `/bundles/latest` is slow. iOS `timeoutInterval` is an idle timeout. No size limit on the index body. The docs' "same origin" is not a boundary, because Zipline's downloads follow redirects (integrity rests on the signatures). `pickFromIndex` accepts quoted numbers. Capability filtering is unit-tested only; the device checks publish with no capabilities. There is no device check of a new host against a new relay's `/bundles/index.json`. Not in a released tools bundle: that needs 0.3.8, with approval. | — |
-| W3 on tools 0.3.7 | **merged onto the released 0.3.7 line 2026-10-08**, through `chore/reference-app-0.3.7` (#92: the reference app built from the published 0.3.7 zip and its own `bin/` scaffolders). The signing block keeps U31's design (signs in a `doLast`; the key is never a task input, an argument or a log line) and adds W3's CI key file (`-Pkeliver.signingKeyFile` / `KELIVER_SIGNING_KEY_FILE`). `keliver-new-publish-target.sh` upgrades a 0.3.7 block (plain swap) as well as a 0.3.6 one (U31 advice). **Ready for a 0.3.8 candidate, which ships only with the owner's approval.** | PR #90 (base #92) |
+| W3 on tools 0.3.7 | **merged onto the released 0.3.7 line 2026-10-08**, through `chore/reference-app-0.3.7` (#92: the reference app built from the published 0.3.7 zip and its own `bin/` scaffolders). The signing block keeps U31's design (signs in a `doLast`; the key is never a task input, an argument or a log line) and adds W3's CI key file (`-Pkeliver.signingKeyFile` / `KELIVER_SIGNING_KEY_FILE`). `keliver-new-publish-target.sh` upgrades a 0.3.7 block (plain swap) as well as a 0.3.6 one (U31 advice). **Ready for a 0.3.8 candidate, which ships only with the owner's approval.** CI after the merge, at `c777828c`: `reference-app.yml` 37697129379 (prepare 18/0, publish self-test 18/0, device 55/0, S-rows included) and `ios-host.yml` 37697129399 (`ios.sh` 48/0), with hosts from `scripts/` (`KELIVER_SCAFFOLD_FROM=repo`, labelled). `portal-tools.yml` 37675743198 at `5f3ab137` (nothing under `scripts/` or `portal-relay` changed after it): publish-target self-test 35/0 with `--build` (U31 and the CI key file) and 25/0 from the zip. **Review of the merge:** two independent review agents stalled before reporting, so the parent session reviewed it instead. That covered the signing block's U31 properties, the byte-exact legacy blocks, the upgrade loop, the scaffold-from switch and its labels, and conflict leftovers. One gap was found and fixed: the "published-only since #92" lines needed the W3 exception. | PR #90 (base #92) |
+| W4 design | **drafted 2026-10-08**, "W4 design" above: the signed `metadata.keliver.sequence`; a host floor, checked on the network and on the cache start; `--republish` for rollback; channels and promotion; rollout by install-id bucket; host-version gates. Zipline 1.22 confirmed: `metadata` is in the signed part, and `FreshnessChecker.isFresh` receives the verified manifest. | this file |
 | W2, W4–W8 | not started | — |
 
 ## Next action
@@ -432,9 +555,9 @@ What was done for the candidate:
 - shipping it in tools 0.3.8 (a candidate, then the owner's approval);
 - the "W3 known, not done" items.
 
-Then W4 (rollback protection through a signed sequence in the manifest's
-`metadata`, channels, rollout, host-version `constraints`), which builds on the
-index format. The original Track B steps were:
+**Next: W4**, designed in "W4 design" above. It runs on a branch stacked on
+#90, step by step (W4.1 to W4.5), each with CI evidence and an independent
+review. W4.1 (the signed sequence) is first. The original Track B steps were:
 1. Design the static index, `bundles/index.json`:
    - entries carry version, widgetVersion, caps, manifest URL, manifest
      sha256, createdAt, and a monotonically increasing `sequence` (for W4);

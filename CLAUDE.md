@@ -27,7 +27,10 @@ them visually in a web portal that round-trips to the .kt files in git.
   signing, the Android host and the iOS host, which build against Maven
   Central. No Keliver source and no script from this checkout are used, except
   the CI harness (`ci/`, the isolation guard) and the app's recorded overlay
-  files (`hand-edits.diff`). What it proved and
+  files (`hand-edits.diff`). Exception while W3 is unreleased: on PR #90's
+  branch, CI scaffolds both hosts from `scripts/` (`KELIVER_SCAFFOLD_FROM=repo`,
+  labelled in the results), because W3's index-reading templates exist only
+  here. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
