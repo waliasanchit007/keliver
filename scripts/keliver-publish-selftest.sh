@@ -3,11 +3,14 @@
 # Self-test for keliver-publish (the static-layout publisher, W3), through the
 # shell wrapper the tools bundle ships and the relay install's JVM entry point.
 #
-#   scripts/keliver-publish-selftest.sh <work-dir> [--relay-home DIR]
+#   scripts/keliver-publish-selftest.sh <work-dir> [--relay-home DIR | --package DIR]
 #
 # --relay-home: an existing portal-relay install (build/install/portal-relay, or
 # a tools bundle's relay/). Without it, `./gradlew :portal-relay:installDist`
 # runs in this checkout.
+# --package: an unpacked tools bundle (keliver-portal-tools-X.Y.Z/). Its own
+# bin/keliver-publish, bin/keliver-store-path.sh and relay/ are what is tested,
+# not this checkout's scripts.
 #
 # The bundles are signed here with a throwaway Ed25519 key that exists only in
 # the JVM that signs them; only its PUBLIC half is written to disk. Every store
@@ -20,9 +23,11 @@ REPO="$(cd "$HERE/.." && pwd -P)"
 WORK="${1:?usage: $0 <work-dir> [--relay-home DIR]}"
 shift
 RELAY_HOME=""
+PACKAGE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --relay-home) RELAY_HOME="${2:?}"; shift ;;
+    --package) PACKAGE="$(cd "${2:?}" && pwd -P)"; RELAY_HOME="$PACKAGE/relay"; shift ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
   shift
@@ -50,7 +55,12 @@ fi
 [ -x "$RELAY_HOME/bin/keliver-publish-jvm" ] || { echo "no keliver-publish-jvm in $RELAY_HOME/bin" >&2; exit 1; }
 TOOLS="$WORK/tools"
 rm -rf "$TOOLS"; mkdir -p "$TOOLS/bin"
-cp "$REPO/scripts/keliver-publish" "$REPO/scripts/keliver-store-path.sh" "$TOOLS/bin/"
+if [ -n "$PACKAGE" ]; then
+  [ -x "$PACKAGE/bin/keliver-publish" ] || { echo "no executable bin/keliver-publish in $PACKAGE" >&2; exit 1; }
+  cp "$PACKAGE/bin/keliver-publish" "$PACKAGE/bin/keliver-store-path.sh" "$TOOLS/bin/"
+else
+  cp "$REPO/scripts/keliver-publish" "$REPO/scripts/keliver-store-path.sh" "$TOOLS/bin/"
+fi
 ln -s "$RELAY_HOME" "$TOOLS/relay"
 PUBLISH="$TOOLS/bin/keliver-publish"
 
