@@ -386,11 +386,14 @@ for f in os.listdir(sys.argv[3]):
 print('same' if ok else 'changed')
 PY
 )"
-  HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
-  keyhits="$(key_in "$DISP/build-resign.log" ${HIST:+"$HIST"})"
+  keyhits="$(key_in "$DISP/build-resign.log")"
+  # Gradle records no history for a task without outputs, so what keeps the key out of
+  # one is that keliverResign declares no inputs at all: checked on the block itself.
+  resign_block="$(sed -n "/^tasks.register('keliverResign')/,/^}/p" "$APP/build.gradle")"
   if [ "$rc" = 0 ] && [ "$got" = signed:true ] && [ "$same" = same ] && [ "$keyhits" = absent ] \
+     && [ -n "$resign_block" ] && ! printf '%s' "$resign_block" | grep -q 'inputs\.' \
      && ! grep -q 'Task :compile' "$DISP/build-resign.log"; then
-    ok "keliverResign: the copy is signed for sequence 12 and verifies; only the sequence and signature changed; nothing compiled; the key in neither the --info log nor the history"
+    ok "keliverResign: the copy is signed for sequence 12 and verifies; only the sequence and signature changed; nothing compiled; the key is not in the --info log, and the task declares no inputs"
   else
     bad "keliverResign: rc=$rc, signature $got, $same, key $keyhits, compiled: $(grep -c 'Task :compile' "$DISP/build-resign.log")"
   fi
@@ -398,6 +401,11 @@ PY
       -Pkeliver.resignDir="$RS" -Pkeliver.sequence=13 > "$DISP/build-resign-nokey.log" 2>&1 ); rc=$?
   [ "$rc" != 0 ] && grep -q "cannot be signed again" "$DISP/build-resign-nokey.log" \
     && ok "keliverResign without a key fails (it never leaves the copy unsigned)" || bad "keliverResign without a key: rc=$rc"
+  mkdir -p "$T/site/bundles/v1" && cp -R "$RS/." "$T/site/bundles/v1/" && echo '{}' > "$T/site/bundles/index.json"
+  ( cd "$APP" && KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv" ./gradlew --console=plain keliverResign \
+      -Pkeliver.resignDir="$T/site/bundles/v1" -Pkeliver.sequence=14 > "$DISP/build-resign-live.log" 2>&1 ); rc=$?
+  [ "$rc" != 0 ] && grep -q "is a published bundle" "$DISP/build-resign-live.log" && cmp -s "$RS/manifest.zipline.json" "$T/site/bundles/v1/manifest.zipline.json" \
+    && ok "keliverResign refuses a published bundles/v<N>/ and leaves it as it is" || bad "keliverResign on a live v<N>/: rc=$rc"
   compile "$DISP/build-badseq.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=07x; rc=$?
   [ "$rc" != 0 ] && grep -q "keliver.sequence must be a positive integer" "$DISP/build-badseq.log" \
     && ok "a malformed sequence fails the build" || bad "a malformed sequence: rc=$rc"

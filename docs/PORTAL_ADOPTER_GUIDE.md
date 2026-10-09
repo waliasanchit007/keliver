@@ -320,10 +320,11 @@ KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --pu
 It copies `v3/`'s modules unchanged into the next `v<M>/` and has your app's
 `keliverResign` task (in the same signing block, with the same key) sign the
 copy for the next sequence. Nothing is compiled. The entry keeps `v3`'s
-capabilities and channel (or takes `--channel`), and records
-`"republishOf": 3`. Upload it like any other publish. It refuses a version
-the index has no entry for, a `v<N>/` that is not what the index names, and a
-bundle that does not verify against your key. A signing block from before
+capabilities, widget version and constraints, and its channel (or takes
+`--channel`), and records `"republishOf": 3`. Upload it like any other publish. It refuses a version
+the index has no entry for, an entry hosts would read differently once
+rewritten (a missing capabilities list, say), a `v<N>/` that is not what the
+index names, and a bundle that does not verify against your key. A signing block from before
 republishing has no `keliverResign`: run `keliver-new-publish-target.sh` to
 replace it.
 

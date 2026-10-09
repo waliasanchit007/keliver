@@ -297,13 +297,15 @@ internal class BuildFailed(val exitCode: Int) : Exception("the build exited $exi
  * `keliverResign` Gradle task, which holds the private key) writes the next
  * sequence into that copy's manifest and signs it again, and the copy is
  * published like any build, as a new `v<N>/` and index entry. The entry keeps
- * the original's capabilities and widget version (the code is the same), and
- * its channel unless [channel] is given, and records `republishOf`.
+ * the original's capabilities, widget version and constraints (the code is the
+ * same, and so are the hosts it may reach), and its channel unless [channel] is
+ * given, and records `republishOf`.
  *
  * Refused before [resign] runs when the index has no entry for v[version] (a
- * `v<N>/` without one is a publish that did not finish), when that directory's
- * manifest is not the one the entry names, or when the bundle is not complete
- * and signed with [publicKeyHex]. Refused after it when the re-signed manifest
+ * `v<N>/` without one is a publish that did not finish), when that entry is not
+ * shaped as hosts read it (a republish must never loosen what the original
+ * allowed), when that directory's manifest is not the one the entry names, or
+ * when the bundle is not complete and signed with [publicKeyHex]. Refused after it when the re-signed manifest
  * changed anything but its sequence and signature. The scratch copy is always
  * deleted; a refusal writes nothing.
  */
@@ -326,6 +328,8 @@ internal fun republishStatic(
       "${File(bundlesDir, INDEX_FILE)} has no entry for v$version. Only a published bundle can be republished; " +
         "a v<N>/ without an entry is a publish that did not finish.",
     )
+  if (channel != null && !CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  entryShapeProblem(original)?.let { throw PublishRefused("the index entry for v$version $it; it was left as it is") }
   val source = File(bundlesDir, "v$version")
   val sourceManifest = File(source, "manifest.zipline.json")
   val expectedSha = (original["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
@@ -334,9 +338,10 @@ internal fun republishStatic(
   }
   staticOutputProblem(source, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
   val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
-  val capabilities = (original["capabilities"] as? JsonArray)?.map { (it as JsonPrimitive).content }.orEmpty()
+  val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {
-    original["widgetVersion"]?.let { put("widgetVersion", it) }
+    put("widgetVersion", original["widgetVersion"]!!)
+    original["constraints"]?.let { put("constraints", it) }
     put("republishOf", JsonPrimitive(version))
   }
 
@@ -348,10 +353,35 @@ internal fun republishStatic(
     val code = resign(copy, sequence)
     if (code != 0) throw BuildFailed(code)
     republishProblem(sourceManifest.readText(), File(copy, "manifest.zipline.json").readText())?.let { throw PublishRefused(it) }
-    return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra)
+    try {
+      return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra)
+    } catch (e: PublishRefused) {
+      // Another publish took this sequence while the re-sign ran: the advice is not "build again".
+      val signedFor = signedSequenceText(File(copy, "manifest.zipline.json").readText())
+      if (signedFor == sequence.toString() && e.message.orEmpty().contains("but this publish is sequence")) {
+        throw PublishRefused("another publish took sequence $sequence while this republish ran; nothing was written. Run --republish $version again.")
+      }
+      throw e
+    }
   } finally {
     scratch.deleteRecursively()
   }
+}
+
+/**
+ * Why an index entry would be read differently by a host once republished, or
+ * null: hosts skip an entry whose channel is not a string, whose widget version
+ * is not an integer, or whose capabilities are not a list of strings, and a
+ * republish writes those fields explicitly.
+ */
+private fun entryShapeProblem(e: JsonObject): String? {
+  e["channel"]?.let { c -> if (!(c is JsonPrimitive && c.isString && CHANNEL_RE.matches(c.content))) return "has a malformed channel" }
+  val wv = e["widgetVersion"]
+  if (!(wv is JsonPrimitive && !wv.isString && wv.intOrNull != null)) return "has no integer widgetVersion"
+  val caps = e["capabilities"] as? JsonArray ?: return "has no capabilities list"
+  if (!caps.all { it is JsonPrimitive && it.isString }) return "has a capability that is not a string"
+  e["constraints"]?.let { if (it !is JsonObject) return "has constraints that are not an object" }
+  return null
 }
 
 /**

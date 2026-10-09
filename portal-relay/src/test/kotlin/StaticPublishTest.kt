@@ -427,8 +427,9 @@ class StaticPublishTest {
     output("leftover").copyRecursively(File(bundles, "v7")) // a publish that did not finish
     assertRefusedAndNothingWritten("no entry for v7") { republishStatic(site, 7, app.publicHex, resign = neverCalled) }
     // Checked against another app's key.
-    val foreign = assertFailsWith<PublishRefused> { republishStatic(site, 1, key().publicHex, resign = neverCalled) }
-    assertTrue("does not verify" in foreign.message!! && foreign.aboutSigning, foreign.message)
+    assertRefusedAndNothingWritten("does not verify") { republishStatic(site, 1, key().publicHex, resign = neverCalled) }
+    assertTrue(assertFailsWith<PublishRefused> { republishStatic(site, 1, key().publicHex, resign = neverCalled) }.aboutSigning)
+    assertRefusedAndNothingWritten("channel 'Beta'") { republishStatic(site, 1, app.publicHex, channel = "Beta", resign = neverCalled) }
     // A v1 directory that is not what the index names.
     val m = File(bundles, "v1/manifest.zipline.json")
     val good = m.readText()
@@ -440,9 +441,69 @@ class StaticPublishTest {
     assertRefusedAndNothingWritten("signed manifest says") { republishStatic(site, 1, app.publicHex, resign = neverCalled) }
   }
 
+  /** Rewrites v1's index entry with [change]: what a hand edit, or a later tool, may leave there. */
+  private fun editFirstEntry(change: (JsonObject) -> JsonObject) {
+    val i = index()
+    val e = i["entries"]!!.jsonArray.map { it.jsonObject }
+    File(bundles, INDEX_FILE).writeText(JsonObject(i + ("entries" to JsonArray(listOf(change(e[0])) + e.drop(1)))).toString())
+  }
+
+  @Test
+  fun aRepublishKeepsTheOriginalsConstraints() {
+    twoPublished()
+    val gate = JsonObject(mapOf("minHostVersion" to JsonPrimitive(4)))
+    editFirstEntry { JsonObject(it + ("constraints" to gate)) }
+    // Hosts that skip the original (a constraint they don't know, or one they fail) skip the republish too.
+    assertEquals(gate, republishStatic(site, 1, app.publicHex, resign = resign()).entry["constraints"])
+  }
+
+  @Test
+  fun aRepublishOfAnEntryHostsWouldReadDifferentlyIsRefused() {
+    twoPublished()
+    val neverCalled: (File, Long) -> Int = { _, _ -> error("re-signed") }
+    val good = File(bundles, INDEX_FILE).readText()
+    for ((change, why) in listOf<Pair<(JsonObject) -> JsonObject, String>>(
+      { e: JsonObject -> JsonObject(e - "capabilities") } to "has no capabilities list",
+      { e: JsonObject -> JsonObject(e + ("capabilities" to JsonArray(listOf(kotlinx.serialization.json.JsonNull)))) } to "not a string",
+      { e: JsonObject -> JsonObject(e - "widgetVersion") } to "no integer widgetVersion",
+      { e: JsonObject -> JsonObject(e + ("channel" to JsonPrimitive(3))) } to "malformed channel",
+      { e: JsonObject -> JsonObject(e + ("constraints" to JsonPrimitive("x"))) } to "constraints that are not an object",
+    )) {
+      editFirstEntry(change)
+      assertRefusedAndNothingWritten(why) { republishStatic(site, 1, app.publicHex, resign = neverCalled) }
+      File(bundles, INDEX_FILE).writeText(good)
+    }
+  }
+
+  @Test
+  fun theScratchCopyIsDeletedWhateverHappens() {
+    twoPublished()
+    var scratch: File? = null
+    assertFailsWith<BuildFailed> { republishStatic(site, 1, app.publicHex) { dir, _ -> scratch = dir; 1 } }
+    assertFalse(scratch!!.exists())
+    assertFailsWith<PublishRefused> { republishStatic(site, 1, app.publicHex) { dir, seq -> scratch = dir; resign(signFor = 1)(dir, seq) } }
+    assertFalse(scratch!!.exists())
+  }
+
+  @Test
+  fun aRepublishThatLosesTheRaceSaysToRunItAgain() {
+    twoPublished()
+    val e = assertFailsWith<PublishRefused> {
+      republishStatic(site, 1, app.publicHex) { dir, seq ->
+        publishStatic(output("early", seq = 3), site, app.publicHex) // another publish takes 3 meanwhile
+        resign()(dir, seq)
+      }
+    }
+    assertTrue("Run --republish 1 again" in e.message!!, e.message)
+    assertEquals(listOf(1L, 2L, 3L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
+  }
+
   @Test
   fun aReSignThatChangesMoreThanTheSequenceOrSignsAnotherIsRefused() {
     twoPublished()
+    assertRefusedAndNothingWritten("modules differs") {
+      republishStatic(site, 1, app.publicHex, resign = resign { JsonObject(it + ("modules" to JsonObject(it["modules"]!!.jsonObject - "./lib.js"))) })
+    }
     assertRefusedAndNothingWritten("mainFunction differs") {
       republishStatic(site, 1, app.publicHex, resign = resign { JsonObject(it + ("mainFunction" to JsonPrimitive("other.main"))) })
     }

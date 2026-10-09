@@ -184,21 +184,22 @@ object KeliverPublish {
   }
 
   private fun gradleResign(repoDir: File, dir: File, sequence: Long): Int =
-    ProcessBuilder(
-      File(repoDir, "gradlew").absolutePath, "keliverResign", "-Pkeliver.resignDir=${dir.absolutePath}",
-      "-Pkeliver.sequence=$sequence", "--console=plain",
-    )
-      .directory(repoDir)
-      .inheritIO()
-      .start()
-      .waitFor()
+    runGradlew(repoDir, "keliverResign", "-Pkeliver.resignDir=${dir.absolutePath}", "-Pkeliver.sequence=$sequence")
 
   private fun gradle(repoDir: File, task: String, sequence: Long): Int =
-    ProcessBuilder(File(repoDir, "gradlew").absolutePath, task, "-Pkeliver.sequence=$sequence", "--console=plain")
+    runGradlew(repoDir, task, "-Pkeliver.sequence=$sequence")
+
+  /** The app's ./gradlew; one that cannot start is a failed build (exit 3), not an I/O error writing the site. */
+  private fun runGradlew(repoDir: File, vararg args: String): Int = try {
+    ProcessBuilder(listOf(File(repoDir, "gradlew").absolutePath) + args + "--console=plain")
       .directory(repoDir)
       .inheritIO()
       .start()
       .waitFor()
+  } catch (e: java.io.IOException) {
+    System.err.println("keliver-publish: could not run $repoDir/gradlew: ${e.message}")
+    127
+  }
 
   private fun usage(why: String): Int {
     System.err.println("keliver-publish: $why\n$USAGE")

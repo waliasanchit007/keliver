@@ -140,6 +140,11 @@ tasks.register('keliverResign') {
     if (!dir || !new File(dir).isAbsolute()) {
       throw new GradleException('keliver: keliverResign needs -Pkeliver.resignDir=<the absolute path of a copy of the bundle to sign again>')
     }
+    // keliver-publish passes a scratch copy. A published bundles/v<N>/ (beside an
+    // index.json) is never rewritten in place: its manifestSha256 would no longer match.
+    if (new File(new File(dir).parentFile, 'index.json').exists()) {
+      throw new GradleException("keliver: ${dir} is a published bundle (its directory holds index.json); keliverResign signs only a copy (keliver-publish --republish makes one)")
+    }
     if (keliverPublishSequence.getOrNull() == null) throw new GradleException('keliver: keliverResign needs -Pkeliver.sequence=<N>')
     keliverSign(new File(dir, 'manifest.zipline.json'), true, 'there is no')
   }

@@ -258,7 +258,8 @@ for args in "--republish" "--republish x" "--republish 0" "--republish 1 --init"
     || { usage_ok=0; bad "$args: exit $rc, $(head -1 "$WORK/u.log")"; }
 done
 [ "$usage_ok" = 1 ] && [ "$(snapshot "$SITE")" = "$BEFORE" ] \
-  && ok "--republish usage errors (no number, not a number, 0, with --init, with --skip-build): exit 2, nothing written"
+  && ok "--republish usage errors (no number, not a number, 0, with --init, with --skip-build): exit 2, nothing written" \
+  || bad "--republish usage errors: a check failed above, or the site changed"
 : > "$APP/gradlew.calls"
 refused "republishing a version the index has no entry for" "no entry for v9" \
   RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 9
@@ -272,6 +273,11 @@ FAIL_BUILD=1 RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --
   && [ "$(snapshot "$SITE")" = "$BEFORE" ] && ok "a failed re-sign: exit 3, names the scaffolder upgrade, site byte-identical" \
   || { bad "a failed re-sign: exit $rc"; tail -3 "$WORK/r.log"; }
 : > "$APP/gradlew.calls"
+mv "$APP/gradlew" "$APP/gradlew.off"
+RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1 > "$WORK/r.log" 2>&1; rc=$?
+mv "$APP/gradlew.off" "$APP/gradlew"
+[ "$rc" = 3 ] && grep -q "could not run" "$WORK/r.log" && [ "$(snapshot "$SITE")" = "$BEFORE" ] \
+  && ok "no ./gradlew to run the re-sign: exit 3 (a failed build, not an I/O error), site byte-identical" || bad "no gradlew: exit $rc"
 RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1 > "$WORK/rp.log" 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -q "republished v1 as v4 (sequence 4, channel stable)" "$WORK/rp.log" \
   && ok "v1 republished: $(grep -o 'republished v1 as v4 ([^)]*)' "$WORK/rp.log")" || { bad "republish: exit $rc"; cat "$WORK/rp.log"; }
