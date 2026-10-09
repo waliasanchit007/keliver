@@ -190,6 +190,20 @@ launch(){
   else
     bad "$label: the screenshot could not be read ($(head -1 "$EV/$label.ocr.err"))"
   fi
+  # Only the status bar (one line, the clock): the first frame had not rendered
+  # yet (seen once on a cold CI simulator, after codeLoadSuccess: run
+  # 37935781374). Look once more, 15 s later (the app brought forward); a
+  # screen that stays blank still fails. Both shots are kept, and the retry is
+  # logged so a slow render stays visible.
+  if [ "$(grep -c . "$EV/$label.ocr.txt" 2>/dev/null)" -le 1 ]; then
+    echo "    $label: only the status bar on screen; looking again in 15 s" | tee -a "$EV/ios.retries"
+    xcrun simctl launch "$UDID" "$BID" >/dev/null 2>&1 || true   # forward if still running; started again if not
+    sleep 15
+    mv "$EV/$label.png" "$EV/$label.first.png"; mv "$EV/$label.ocr.txt" "$EV/$label.first.ocr.txt"
+    xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1
+    swift "$HERE/ocr.swift" "$EV/$label.png" > "$EV/$label.ocr.txt" 2>>"$EV/$label.ocr.err"
+    printf '    %s (again): %s\n' "$label" "$(head -3 "$EV/$label.ocr.txt" | tr '\n' '|')"
+  fi
 }
 reads(){ grep -qx "$2" "$EV/$1.ocr.txt"; }   # the screen has a line exactly equal to $2
 
