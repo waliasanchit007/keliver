@@ -215,10 +215,13 @@ launch prod "$EV/logcat-static-rollout-halted.txt"
 C="$EV/logcat-static-rollout-halted.txt"
 grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S14b: halted, the host that ran v5 still loads it" || bad "S14b: halted, the host that ran v5 still loads it: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+grep -q "refused" "$C" && bad "S14b: something was refused" || ok "S14b: nothing was refused"
+drive title Loft S14bstatic; fold "S14b: the screen still reads Loft" $?
 
 # S15 (W4.5): a host-version gate. v6 ("Attic") needs host version 999; this host
 # is version 1 (versionCode / CFBundleVersion), so it skips v6 and stays on v5.
 w3_title Loft Attic && w3_publish v6-gated --min-host-version 999 && grep -q "published v6 (sequence 6, channel stable" "$EV/w3-publish-v6-gated.log" \
+  && python3 -c 'import json,sys; e=json.load(open(sys.argv[1]))["entries"][-1]; sys.exit(0 if e["sequence"]==6 and e["constraints"]=={"minHostVersion":999} else 1)' "$W3/site/bundles/index.json" \
   && ok "S15: keliver-publish wrote v6 with constraints.minHostVersion 999" || { bad "S15: publish v6"; tail -20 "$EV/w3-publish-v6-gated.log"; }
 cp "$W3/site/bundles/index.json" "$EV/w3-index-w45.json" 2>/dev/null
 launch prod "$EV/logcat-static-gated.txt"

@@ -102,7 +102,9 @@ private fun android.content.SharedPreferences.floor(cacheName: String): Long =
 private const val INSTALL_ID = "installId"
 private fun android.content.SharedPreferences.installId(): String =
   runCatching { getString(INSTALL_ID, null) }.getOrNull()
-    ?: java.util.UUID.randomUUID().toString().also { edit().putString(INSTALL_ID, it).commit() }
+    // One that cannot be stored would re-roll this install's buckets every launch, and it
+    // would end up in every partial rollout: use a fixed id instead (one shared bucket).
+    ?: java.util.UUID.randomUUID().toString().let { if (edit().putString(INSTALL_ID, it).commit()) it else "unstored" }
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {

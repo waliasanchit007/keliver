@@ -215,6 +215,19 @@ internal data class Constraints(val rollout: Int? = null, val minHostVersion: Lo
       else -> null
     }
 
+  /**
+   * Why setting these over [base] (constraints copied from an entry being
+   * republished or promoted) would let a host take code the original kept from
+   * it, or null: a host-version gate may be narrowed, never widened.
+   */
+  fun loosening(base: JsonElement?): String? {
+    val b = base as? JsonObject ?: return null
+    fun copied(key: String) = (b[key] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull
+    copied("minHostVersion")?.let { if (minHostVersion != null && minHostVersion < it) return "--min-host-version $minHostVersion is below the copied minHostVersion $it: hosts older than the code needs would take it" }
+    copied("maxHostVersion")?.let { if (maxHostVersion != null && maxHostVersion > it) return "--max-host-version $maxHostVersion is above the copied maxHostVersion $it: hosts the code does not support would take it" }
+    return null
+  }
+
   /** [base] (an entry's constraints, kept) with these set on top; null when the result is empty. */
   fun over(base: JsonElement?): JsonObject? {
     val merged = (base as? JsonObject).orEmpty() + buildMap {
@@ -401,6 +414,7 @@ internal fun promoteStatic(
     val source = atSequence.firstOrNull() ?: throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
     if (atSequence.any { entryChannel(it) == channel }) throw PublishRefused("sequence $sequence is already on channel $channel")
     entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    constraints.loosening(source["constraints"])?.let { throw PublishRefused(it) }
     // Hosts on [channel] see its entries and stable's. A higher one that every host able
     // to run this bundle can also run (no constraints, nothing more required) means none
     // of them would pick this one. A higher entry that some of them skip does not.
@@ -443,7 +457,7 @@ internal fun promoteStatic(
   }
 }
 
-internal data class StaticRollout(val sequence: Long, val channel: String, val from: JsonElement?, val entry: JsonObject)
+internal data class StaticRollout(val sequence: Long, val channel: String, val from: JsonElement?, val entry: JsonObject, val note: String? = null)
 
 /**
  * W4.5: sets `constraints.rollout` on the entry at [sequence] (on [channel], which
@@ -470,6 +484,15 @@ internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channe
       else -> throw PublishRefused("sequence $sequence is on channels ${at.joinToString { entryChannel(it.value) }}: name one with --channel")
     }
     entryShapeProblem(chosen.value)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    // Hosts from before W4.5 skip any entry with constraints. Giving a live, unconstrained
+    // entry some would hide it from them (and their floor would then refuse the older one).
+    if (chosen.value["constraints"] == null) {
+      throw PublishRefused(
+        "the entry at sequence $sequence has no constraints, and hosts from before staged rollouts skip any entry " +
+          "that has some: adding a rollout now would hide a bundle they may already run. Stage a rollout when " +
+          "publishing (--rollout), or republish with --rollout.",
+      )
+    }
     return chosen.index
   }
   target(readIndex(bundlesDir)) // before the lock: a refusal writes nothing
@@ -481,7 +504,19 @@ internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channe
     val entry = JsonObject(old - "constraints" + ("constraints" to Constraints(rollout = rollout).over(old["constraints"])!!))
     entries[i] = entry
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), JsonObject(index + ("entries" to JsonArray(entries)))) + "\n")
-    StaticRollout(sequence, entryChannel(entry), (old["constraints"] as? JsonObject)?.get("rollout"), entry)
+    // Hosts on another channel also take stable's entry at this sequence (the same buckets).
+    val stableTwin = entries.firstOrNull {
+      entryChannel(entry) != DEFAULT_CHANNEL && entryChannel(it) == DEFAULT_CHANNEL &&
+        (it["sequence"] as JsonPrimitive).longOrNull == sequence
+    }
+    val stableRollout = stableTwin?.let { ((it["constraints"] as? JsonObject)?.get("rollout") as? JsonPrimitive)?.intOrNull ?: 100 }
+    val note = if (stableRollout != null && stableRollout > rollout) {
+      "sequence $sequence is also on stable at rollout $stableRollout%, which ${entryChannel(entry)} hosts take too: " +
+        "set it there as well (--channel stable) for this to take effect"
+    } else {
+      null
+    }
+    StaticRollout(sequence, entryChannel(entry), (old["constraints"] as? JsonObject)?.get("rollout"), entry, note)
   }
 }
 
@@ -544,6 +579,7 @@ internal fun republishStatic(
     )
   }
   entryShapeProblem(original)?.let { throw PublishRefused("the index entry for v$version $it; it was left as it is") }
+  constraints.loosening(original["constraints"])?.let { throw PublishRefused(it) }
   val source = File(bundlesDir, "v$version")
   val sourceManifest = File(source, "manifest.zipline.json")
   val expectedSha = (original["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
@@ -555,7 +591,10 @@ internal fun republishStatic(
   val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {
     put("widgetVersion", original["widgetVersion"]!!)
-    constraints.over(original["constraints"])?.let { put("constraints", it) }
+    // Host-version gates are about the code, so they are copied. A rollout is not: a new
+    // sequence draws new buckets, so a copied 10% would be another 10%, and a copied halt
+    // would keep the rollback from the hosts that need it. Pass --rollout to stage it.
+    constraints.over((original["constraints"] as? JsonObject)?.let { JsonObject(it - "rollout") })?.let { put("constraints", it) }
     put("republishOf", JsonPrimitive(version))
   }
 

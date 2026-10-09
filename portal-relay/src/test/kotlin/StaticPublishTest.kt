@@ -710,14 +710,43 @@ class StaticPublishTest {
     assertEquals(manifests, File(bundles, "v2").listFiles()!!.associate { it.name to sha256Hex(it.readBytes()) })
     setRolloutStatic(site, 2, 0) // halted
     assertEquals(0, entries()[1]["constraints"]!!.jsonObject["rollout"]!!.jsonPrimitive.int)
-    assertNull(setRolloutStatic(site, 1, 25).from) // an entry without constraints gets them
     assertRefusedAndNothingWritten("no entry at sequence 9") { setRolloutStatic(site, 9, 10) }
     assertRefusedAndNothingWritten("0 to 100") { setRolloutStatic(site, 2, 101) }
     assertRefusedAndNothingWritten("not on channel beta") { setRolloutStatic(site, 2, 10, channel = "beta") }
-    // On two channels, the channel must be named.
-    promoteStatic(site, 1, "beta", app.publicHex)
+    // An entry without constraints is live for hosts from before W4.5, which skip constrained ones.
+    assertRefusedAndNothingWritten("has no constraints") { setRolloutStatic(site, 1, 25) }
+  }
+
+  @Test
+  fun aRolloutOnAPromotedSequenceNamesTheChannelAndWarnsWhenStableStillAdmits() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true, constraints = Constraints(rollout = 100))
+    promoteStatic(site, 1, "stable", app.publicHex)
     assertRefusedAndNothingWritten("name one with --channel") { setRolloutStatic(site, 1, 10) }
-    assertEquals("beta", setRolloutStatic(site, 1, 10, channel = "beta").channel)
+    // Beta hosts take stable's entry too: halting beta alone changes nothing for them.
+    val halted = setRolloutStatic(site, 1, 0, channel = "beta")
+    assertTrue(halted.note!!.contains("also on stable at rollout 100%"), halted.note)
+    assertNull(setRolloutStatic(site, 1, 0, channel = "stable").note)
+    assertNull(setRolloutStatic(site, 1, 0, channel = "beta").note) // both halted now
+  }
+
+  @Test
+  fun aRepublishOrPromotionNeverWidensAHostVersionGate() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true, constraints = Constraints(minHostVersion = 50, maxHostVersion = 90))
+    for (c in listOf(Constraints(minHostVersion = 1), Constraints(maxHostVersion = 999))) {
+      assertRefusedAndNothingWritten("hosts") { promoteStatic(site, 1, "stable", app.publicHex, constraints = c) }
+      assertRefusedAndNothingWritten("hosts") { republishStatic(site, 1, app.publicHex, constraints = c) { _, _ -> error("re-signed") } }
+    }
+    // Narrowing is fine.
+    val p = promoteStatic(site, 1, "stable", app.publicHex, constraints = Constraints(minHostVersion = 60))
+    assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(60), "maxHostVersion" to JsonPrimitive(90))), p.entry["constraints"])
+  }
+
+  @Test
+  fun aRepublishDoesNotCopyTheRolloutANewSequenceDrawsNewBuckets() {
+    publishStatic(output("one"), site, app.publicHex, init = true, constraints = Constraints(rollout = 10, minHostVersion = 2))
+    publishStatic(output("two", seq = 2), site, app.publicHex)
+    assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(2))), republishStatic(site, 1, app.publicHex, resign = resign()).entry["constraints"])
+    assertEquals(5, republishStatic(site, 1, app.publicHex, constraints = Constraints(rollout = 5), resign = resign()).entry["constraints"]!!.jsonObject["rollout"]!!.jsonPrimitive.int)
   }
 
   @Test
@@ -727,12 +756,14 @@ class StaticPublishTest {
       """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
     )
     publishStatic(output("one"), site, app.publicHex, init = true)
-    publishStatic(output("two", seq = 2), site, app.publicHex)
+    publishStatic(output("two", seq = 2), site, app.publicHex, constraints = Constraints(rollout = 0))
     fun run(vararg a: String, key: String? = app.publicHex) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, key,
       { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
     for (bad in listOf(listOf("--rollout", "101"), listOf("--rollout", "x"), listOf("--min-host-version", "-1"),
       listOf("--min-host-version", "5", "--max-host-version", "4"), listOf("--set-rollout", "2"),
-      listOf("--set-rollout", "2", "--rollout", "5", "--init"), listOf("--set-rollout", "2", "--rollout", "5", "--min-host-version", "1"))) {
+      listOf("--set-rollout", "2", "--rollout", "5", "--init"), listOf("--set-rollout", "2", "--rollout", "5", "--min-host-version", "1"),
+      listOf("--set-rollout", "2", "--rollout", "5", "--skip-build"), listOf("--set-rollout", "2", "--rollout", "5", "--republish", "1"),
+      listOf("--set-rollout", "2", "--rollout", "5", "--promote", "2", "--channel", "beta"))) {
       assertEquals(2, run(*bad.toTypedArray()), bad.toString())
     }
     // --set-rollout needs no key at all.

@@ -347,6 +347,15 @@ $KP/keliver-publish . --out site --set-rollout 7 --rollout 100
 ```
 
 A halted rollout stops new installs, and hosts that already ran it keep it.
+`--set-rollout` only changes an entry that already has constraints: hosts
+scaffolded before staged rollouts skip any constrained entry, so adding one to
+a live bundle would hide it from them. Stage a rollout when you publish. On a
+promoted sequence, set the rollout on every channel it is on: beta hosts also
+take stable's entry. A `--republish` does not copy a rollout, because a new
+sequence draws new buckets; pass `--rollout` to stage it. Host-version gates
+are copied, and a republish or promotion can narrow them but never widen them.
+The install id is backed up with the app's data (Android Auto Backup, iCloud),
+so a restored install keeps its bucket.
 `--min-host-version N` / `--max-host-version N` limit an entry to host builds
 whose version (Android `versionCode`, iOS `CFBundleVersion`) is in range. Use
 them for code that needs a newer host. Hosts scaffolded before these

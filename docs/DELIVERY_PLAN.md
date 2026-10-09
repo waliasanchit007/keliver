@@ -468,7 +468,13 @@ original allowed.
   set constraints on a publish, republish or promotion. They are set on top of
   copied constraints, never dropped.
 - **Changing a rollout.** `--set-rollout <sequence> --rollout <percent>
-  [--channel]` edits the index only and needs no key.
+  [--channel]` edits the index only and needs no key. It refuses an entry
+  with no constraints, because pre-W4.5 hosts skip constrained entries. On a
+  non-stable channel, it warns when stable's entry at that sequence still
+  admits more.
+- **Republish and promotion.** Host-version gates are copied, and may be
+  narrowed but never widened (refused). A republish drops the rollout (a new
+  sequence draws new buckets) unless `--rollout` is given.
 - **Host log.** The lookup line names the host version.
 
 **Steps, each with its own evidence:**

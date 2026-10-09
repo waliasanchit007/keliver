@@ -112,10 +112,14 @@ class BundleIndexTest {
     val reached = ids.count { id -> pickFromIndex(at(30), caps, facts = HostFacts(id, 1, 4)).getOrThrow().sequence == 5L }
     assertEquals(ids.count { rolloutBucket(it, 5) < 30 }, reached)
     assertTrue(reached in 80..160, "about 30% of 400, got $reached")
-    assertEquals(rolloutBucket("install-a", 5), rolloutBucket("install-a", 5))
+    // Known answers, computed independently (python: int.from_bytes(sha256(b"install-a:5")[:4], "big") % 100):
+    // a change to the formula would silently re-bucket every install.
+    assertEquals(59, rolloutBucket("install-a", 5))
+    assertEquals(48, rolloutBucket("install-b", 7))
+    assertEquals(31, rolloutBucket("", 1))
     assertTrue(ids.all { rolloutBucket(it, 7) in 0 until 100 })
     // A malformed rollout admits nobody.
-    for (bad in listOf("101", "-1", "\"50\"", "50.5", "null")) {
+    for (bad in listOf("101", "-1", "\"50\"", "50.5", "null", "true", "99999999999999999999", "{}")) {
       val idx = index(entry(4), entry(5, extra = ""","constraints":{"rollout":$bad}"""))
       assertEquals(4L, pickFromIndex(idx, caps, facts = install).getOrThrow().sequence, bad)
     }

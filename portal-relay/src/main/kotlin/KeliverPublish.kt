@@ -261,6 +261,7 @@ object KeliverPublish {
       "keliver-publish: sequence $sequence on ${result.channel}: rollout ${result.from ?: "none"} -> $rollout%" +
         (if (rollout == 0) " (halted: hosts that have run it keep it)" else ""),
     )
+    result.note?.let { System.err.println("keliver-publish WARNING: $it") }
     println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
     return 0
   }
