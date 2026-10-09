@@ -74,6 +74,25 @@ class BundleIndexTest {
   }
 
   @Test
+  fun aHostTakesItsOwnChannelAndStableAndNoOther() {
+    val idx = index(
+      entry(3),
+      entry(4, extra = ""","channel":"stable""""),
+      entry(5, extra = ""","channel":"beta""""),
+      entry(6, extra = ""","channel":"canary""""),
+    )
+    // W4.4: a stable host never sees beta; a beta host gets beta's newest, and is never behind stable.
+    assertEquals(4L, pickFromIndex(idx, caps).getOrThrow().sequence)
+    assertEquals(5L, pickFromIndex(idx, caps, channel = "beta").getOrThrow().sequence)
+    assertEquals(6L, pickFromIndex(idx, caps, channel = "canary").getOrThrow().sequence)
+    val stableAhead = index(entry(5, extra = ""","channel":"beta""""), entry(7, extra = ""","channel":"stable""""))
+    assertEquals(7L, pickFromIndex(stableAhead, caps, channel = "beta").getOrThrow().sequence)
+    // A promotion: the same sequence and manifest on two channels.
+    val promoted = index(entry(4), entry(5, extra = ""","channel":"beta""""), entry(5, extra = ""","channel":"stable""""))
+    assertEquals(5L, pickFromIndex(promoted, caps).getOrThrow().sequence)
+  }
+
+  @Test
   fun anIndexThatIsNotFormatOneIsRefused() {
     for (bad in listOf("nope", "[]", """{"format":2,"entries":[${entry(1)}]}""", """{"entries":[${entry(1)}]}""", """{"format":1}""")) {
       assertTrue(pickFromIndex(bad, caps).isFailure, bad)

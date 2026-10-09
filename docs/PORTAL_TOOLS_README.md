@@ -54,7 +54,7 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Also (from the release that ships W3/W4):** publish without the relay
   (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
   rollback protection in the hosts it scaffolds.
-- **Doesn't (yet):** channels, staged rollouts, or an in-app update API.
+- **Doesn't (yet):** staged rollouts, or an in-app update API.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -75,7 +75,7 @@ bundles against.
 
 ```bash
 bin/keliver-new-production-host.sh --bundle-server URL [--api-base-url URL] \
-    [--application-id ID] [--public-key-file PATH]
+    [--application-id ID] [--public-key-file PATH] [--channel NAME]
 ./gradlew -p host-android assembleDebug
 ```
 
@@ -89,7 +89,7 @@ build needs `https://` servers and your own signing config.
 ### bin/keliver-new-ios-host.sh
 
 ```bash
-bin/keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+bin/keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH] [--channel NAME]
 xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
@@ -103,6 +103,7 @@ Central plus an Xcode app. It applies the same key checks and refusals as
 ```bash
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build] [--init]
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] --republish VERSION [--channel NAME]
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] --promote SEQUENCE --channel NAME
 ```
 
 Publishes without the relay, for CI and for static or CDN hosting. `DIR` must
@@ -130,6 +131,13 @@ they have run, so older code goes out again as a new sequence: `vVERSION/`'s
 modules are copied unchanged, the app's `keliverResign` task signs the copy for
 the next sequence, and it becomes the next `v<N>/` and index entry
 (`republishOf`). Nothing is compiled. Exit 3 if the re-sign fails.
+
+Channels: `--channel beta` publishes to beta only. A host takes its own
+channel (the scaffolders' `--channel`, default `stable`) and stable, so a beta
+host is never behind stable. `--promote SEQUENCE --channel stable` offers an
+already published bundle on stable too: a second index entry for the same
+`v<N>/`, with nothing built or signed. It refuses a channel that already offers
+a higher sequence.
 
 ### bin/keliver-new-publish-target.sh
 

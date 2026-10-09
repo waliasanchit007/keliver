@@ -33,8 +33,12 @@ import okio.IOException
 /** The widget protocol version this host renders. */
 internal const val HOST_WIDGET_VERSION = 1
 
-/** The only channel this host takes. An entry without a channel is on it. */
-internal const val HOST_CHANNEL = "stable"
+/**
+ * The base channel. An entry without a channel is on it, and every host takes it:
+ * a host built for another channel (HostConfig / BuildConfig, W4.4) takes that
+ * channel's entries AND stable's, so it is never behind stable.
+ */
+internal const val DEFAULT_CHANNEL = "stable"
 
 /** Constraint keys this host understands. An entry carrying any other is skipped. */
 private val KNOWN_CONSTRAINTS = emptySet<String>()
@@ -70,7 +74,7 @@ internal data class IndexPick(val sequence: Long, val manifestPath: String, val 
 /**
  * The entry this host should load from [indexJson], or a reason there is none.
  *
- * An entry is usable when its channel is [channel], it carries no constraint
+ * An entry is usable when its channel is [channel] or [DEFAULT_CHANNEL], it carries no constraint
  * this host doesn't know, its widget version is at most [widgetVersion], every
  * capability it requires is in [capabilities], and its manifest path and sha256
  * are well formed. Of those, the highest `sequence` wins.
@@ -79,7 +83,7 @@ internal fun pickFromIndex(
   indexJson: String,
   capabilities: Collection<String>,
   widgetVersion: Int = HOST_WIDGET_VERSION,
-  channel: String = HOST_CHANNEL,
+  channel: String = DEFAULT_CHANNEL,
 ): Result<IndexPick> = runCatching {
   val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: throw IOException("the index is not a JSON object")
   val format = (root["format"] as? JsonPrimitive)?.intOrNull
@@ -93,10 +97,10 @@ internal fun pickFromIndex(
 private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String): IndexPick? {
   val sequence = (e["sequence"] as? JsonPrimitive)?.longOrNull?.takeIf { it > 0 } ?: return null
   val entryChannel = when (val c = e["channel"]) {
-    null -> HOST_CHANNEL
+    null -> DEFAULT_CHANNEL
     else -> (c as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
   }
-  if (entryChannel != channel) return null
+  if (entryChannel != channel && entryChannel != DEFAULT_CHANNEL) return null
   when (val c = e["constraints"]) {
     null -> Unit
     is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys)) return null

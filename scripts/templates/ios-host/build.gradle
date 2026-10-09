@@ -33,6 +33,7 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     def key = configValue('PORTAL_PUBLIC_KEY_HEX')
     def server = configValue('BUNDLE_SERVER')
     def api = configValue('API_BASE_URL')
+    def channel = configValue('CHANNEL')
     if (key == null || !(key ==~ /[0-9a-fA-F]{64}/)) {
       throw new GradleException("HostConfig.kt: PORTAL_PUBLIC_KEY_HEX is not a 64-hex-digit Ed25519 " +
         "public key, so no bundle could be verified. Copy this app's keys/ed25519.pub into it.")
@@ -42,6 +43,9 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     }
     if (api == null || (api && !(api ==~ url))) {
       throw new GradleException("HostConfig.kt: API_BASE_URL must be empty or an http:// or https:// URL with no user@, query, fragment or '\$' (got '$api').")
+    }
+    if (channel == null || !(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
+      throw new GradleException("HostConfig.kt: CHANNEL must be lower-case letters, digits and '-', at most 32 (got '$channel').")
     }
   }
 }

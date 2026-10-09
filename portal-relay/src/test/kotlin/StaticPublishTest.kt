@@ -544,4 +544,89 @@ class StaticPublishTest {
     assertEquals(listOf(1L, 2L, 3L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
     assertEquals(1, entries().last()["republishOf"]!!.jsonPrimitive.int)
   }
+
+  // --- W4.4: channels and promotion ---------------------------------------------
+
+  @Test
+  fun aPromotionOffersTheSameBundleOnAnotherChannel() {
+    publishStatic(output("one"), site, app.publicHex, capabilities = listOf("host-sql@1"), init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex, channel = "beta", capabilities = listOf("host-sql@1"))
+    val idx = { File(bundles, INDEX_FILE).readText() }
+    assertEquals(1L, pickFromIndex(idx(), listOf("host-sql@1")).getOrThrow().sequence) // stable hosts: not yet
+    assertEquals(2L, pickFromIndex(idx(), listOf("host-sql@1"), channel = "beta").getOrThrow().sequence)
+    val before = File(bundles, "v2").walkTopDown().map { it.relativeTo(bundles).path to it.isFile }.toList()
+    val p = promoteStatic(site, 2, "stable", app.publicHex, now = Instant.parse("2026-10-09T09:00:00Z"))
+    assertEquals(Triple(2L, 2, "beta"), Triple(p.sequence, p.version, p.from))
+    val (beta, stable) = entries().filter { it["sequence"]!!.jsonPrimitive.content == "2" }
+    assertEquals("stable", stable["channel"]!!.jsonPrimitive.content)
+    assertEquals("beta", stable["promotedFrom"]!!.jsonPrimitive.content)
+    assertEquals("2026-10-09T09:00:00Z", stable["createdAt"]!!.jsonPrimitive.content)
+    for (k in listOf("version", "manifest", "manifestSha256", "capabilities", "widgetVersion")) assertEquals(beta[k], stable[k], k)
+    assertEquals(before, File(bundles, "v2").walkTopDown().map { it.relativeTo(bundles).path to it.isFile }.toList()) // no new v<N>/
+    assertEquals(setOf(".publish.lock", "index.json", "v1", "v2"), bundles.list()!!.toSet())
+    assertEquals(2L, pickFromIndex(idx(), listOf("host-sql@1")).getOrThrow().sequence) // stable hosts now take it
+    // The index stays readable, and the next publish continues after it.
+    assertEquals(3L, publishStatic(output("three", seq = 3), site, app.publicHex).sequence)
+  }
+
+  @Test
+  fun aPromotionKeepsTheConstraintsSoAGateNeverFallsAway() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true)
+    val gate = JsonObject(mapOf("minHostVersion" to JsonPrimitive(4)))
+    editFirstEntry { JsonObject(it + ("constraints" to gate)) }
+    assertEquals(gate, promoteStatic(site, 1, "stable", app.publicHex).entry["constraints"])
+  }
+
+  @Test
+  fun aPromotionIsRefusedWithNothingWritten() {
+    assertRefusedAndNothingWritten("index.json to promote in") { promoteStatic(site, 1, "stable", app.publicHex) }
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex, channel = "beta")
+    publishStatic(output("three", seq = 3), site, app.publicHex)
+    assertRefusedAndNothingWritten("no entry at sequence 9") { promoteStatic(site, 9, "stable", app.publicHex) }
+    assertRefusedAndNothingWritten("already on channel stable") { promoteStatic(site, 3, "stable", app.publicHex) }
+    assertRefusedAndNothingWritten("channel stable already offers sequence 3, above 2") { promoteStatic(site, 2, "stable", app.publicHex) }
+    assertRefusedAndNothingWritten("channel 'Stable'") { promoteStatic(site, 2, "Stable", app.publicHex) }
+    assertRefusedAndNothingWritten("does not verify") { promoteStatic(site, 1, "canary", key().publicHex) }
+    val m = File(bundles, "v1/manifest.zipline.json")
+    m.appendText("\n")
+    assertRefusedAndNothingWritten("is not the manifest the entry at sequence 1 names") { promoteStatic(site, 1, "canary", app.publicHex) }
+  }
+
+  @Test
+  fun theIndexAllowsOneSequenceOnSeveralChannelsButNothingLooser() {
+    bundles.mkdirs()
+    fun e(seq: Int, v: Int, ch: String) = """{"sequence":$seq,"version":$v,"channel":"$ch"}"""
+    File(bundles, INDEX_FILE).writeText("""{"format":1,"entries":[${e(1, 1, "beta")},${e(1, 1, "stable")}]}""")
+    assertEquals(2L, nextSequence(readIndex(bundles), bundles))
+    for ((bad, why) in listOf(
+      "${e(1, 1, "beta")},${e(1, 1, "beta")}" to "two entries with sequence 1 on channel beta",
+      "${e(1, 1, "beta")},${e(1, 2, "stable")}" to "sequence 1 for both v1 and v2",
+      "${e(1, 1, "beta")},${e(2, 1, "stable")}" to "two entries for v1, at sequences 1 and 2",
+    )) {
+      File(bundles, INDEX_FILE).writeText("""{"format":1,"entries":[$bad]}""")
+      val ex = assertFailsWith<PublishRefused> { readIndex(bundles) }
+      assertTrue(why in ex.message!!, ex.message)
+    }
+  }
+
+  @Test
+  fun theCliPromotes() {
+    val appDir = File(tmp, "papp").apply { mkdirs() }
+    File(appDir, "keliver.portal.json").writeText(
+      """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
+    )
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex, channel = "beta")
+    fun run(vararg a: String) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, app.publicHex,
+      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
+    for (bad in listOf(listOf("--promote", "2"), listOf("--promote", "x", "--channel", "stable"),
+      listOf("--promote", "2", "--channel", "stable", "--init"), listOf("--promote", "2", "--channel", "stable", "--skip-build"),
+      listOf("--promote", "2", "--channel", "stable", "--republish", "1"))) {
+      assertEquals(2, run(*bad.toTypedArray()), bad.toString())
+    }
+    assertEquals(4, run("--promote", "7", "--channel", "stable"))
+    assertEquals(0, run("--promote", "2", "--channel", "stable"))
+    assertEquals(listOf("stable", "beta", "stable"), entries().map { it["channel"]!!.jsonPrimitive.content })
+  }
 }

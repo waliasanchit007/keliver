@@ -328,6 +328,15 @@ index names, and a bundle that does not verify against your key. A signing block
 republishing has no `keliverResign`: run `keliver-new-publish-target.sh` to
 replace it.
 
+**Channels.** `--channel beta` publishes to beta only: hosts scaffolded with
+`--channel beta` take it (plus everything on stable); stable hosts don't. When
+it is ready for everyone, promote it. Nothing is built or signed, so this step
+needs no private key:
+
+```bash
+$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
 A first publish, by hand:
 
 ```bash

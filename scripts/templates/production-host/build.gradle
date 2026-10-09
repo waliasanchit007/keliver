@@ -17,6 +17,7 @@ plugins {
 
 def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
 def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').trim()
+def channel = providers.gradleProperty('keliver.channel').getOrElse('stable').trim()
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
 def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
@@ -27,6 +28,9 @@ if (!(bundleServer ==~ serverUrl)) {
 }
 if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
   throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
+}
+if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
+  throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
 }
 def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
 
@@ -45,6 +49,7 @@ android {
     manifestPlaceholders = [usesCleartextTraffic: 'false']
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
+    buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
   }
   buildTypes {
     // Cleartext (app-wide on Android) only in DEBUG builds, and only when a

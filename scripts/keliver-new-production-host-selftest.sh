@@ -65,6 +65,7 @@ refuses "without --bundle-server"          "bundle-server is required" --public-
 refuses "a non-URL bundle server"          "must be an http"          --bundle-server "10.0.2.2:8077" --public-key-file "$KEY"
 refuses "a bundle server with a quote"     "must be an http"          --bundle-server "http://x\"y" --public-key-file "$KEY"
 refuses "a non-URL API base"               "api-base-url must be"     --bundle-server "$SERVER" --api-base-url "ftp://x" --public-key-file "$KEY"
+refuses "a malformed channel (W4.4)"       "channel must be"          --bundle-server "$SERVER" --channel "Beta" --public-key-file "$KEY"
 refuses "a malformed application id"       "application-id must"      --bundle-server "$SERVER" --application-id "demo" --public-key-file "$KEY"
 refuses "a key file that is not a key"     "not a 64-hex-digit"       --bundle-server "$SERVER" --public-key-file "$BADKEY"
 refuses "a PRIVATE key file"               "refusing a private key"   --bundle-server "$SERVER" --public-key-file "$PRIV"
@@ -139,8 +140,17 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
   && ok "W4.2: the rollback floor guards the network load, the cache start and its network fallback, and rises (committed) after a load" \
   || bad "W4.2: the rollback floor is not wired"
+# W4.4: the host takes one channel besides stable, stable by default.
+grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
+  && grep -q 'pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL)' "$M" \
+  && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
+# W4.4: --channel beta, over a removed host-android (the build below then builds a beta host).
+rm -rf "$H"
+out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --api-base-url "https://api.example.com/v1" --channel beta 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && grep -q '^keliver.channel=beta$' "$H/gradle.properties" && printf '%s' "$out" | grep -q 'channel          beta (and stable)' \
+  && ok "W4.4: --channel beta is recorded in gradle.properties" || bad "W4.4: --channel beta: rc=$rc"
 
 if [ "$BUILD" = 1 ]; then
   echo "=== the scaffolded host compiles against Maven Central"

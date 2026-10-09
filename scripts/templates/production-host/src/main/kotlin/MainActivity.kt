@@ -195,7 +195,7 @@ class MainActivity : ComponentActivity() {
         Log.e(TAG, "bundle index: HTTP ${response.code}")
         return@runCatching null
       }
-      val pick = pickFromIndex(body, capabilities).getOrElse {
+      val pick = pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL).getOrElse {
         Log.e(TAG, "bundle index: ${it.message}")
         return@runCatching null
       }
@@ -204,7 +204,11 @@ class MainActivity : ComponentActivity() {
         Log.e(TAG, "refusing a manifest URL off the bundle server's origin: ${pick.manifestPath}")
         return@runCatching null
       }
-      Lookup(url.toString(), pick.manifestSha256, "index sequence ${pick.sequence}, manifest sha256 ${pick.manifestSha256.take(12)}…")
+      Lookup(
+        url.toString(),
+        pick.manifestSha256,
+        "index sequence ${pick.sequence}, channel ${BuildConfig.KELIVER_CHANNEL}, manifest sha256 ${pick.manifestSha256.take(12)}…",
+      )
     }
   }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
 

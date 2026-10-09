@@ -10,6 +10,7 @@
 #                           [--api-base-url URL]
 #                           [--bundle-id ID]
 #                           [--public-key-file PATH]
+#                           [--channel NAME]
 #
 # Run from the APP repo root (the directory holding keliver.portal.json). Needs
 # macOS with Xcode to build; scaffolding itself needs only bash and python3.
@@ -22,6 +23,9 @@
 #   --api-base-url     optional: the base URL guests' HostHttp requests go to.
 #                      Without it the host provides no HostHttp.
 #   --bundle-id        default: <your app package>.host
+#   --channel          default: stable. The release channel this host takes from
+#                      bundles/index.json besides stable (W4.4), e.g. beta for
+#                      testers: lower-case letters, digits and '-'.
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
 #                      found by keliver-store-path.sh. The key is written into
 #                      host-ios/src/iosMain/kotlin/.../HostConfig.kt (it is
@@ -58,7 +62,7 @@ while [ -L "$SELF" ]; do
 done
 HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
-BUNDLE_SERVER=""; API_BASE_URL=""; APPLICATION_ID=""; KEY_FILE=""
+BUNDLE_SERVER=""; API_BASE_URL=""; APPLICATION_ID=""; KEY_FILE=""; CHANNEL="stable"
 need() { [ "$2" -ge 2 ] || { echo "$1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -66,7 +70,8 @@ while [ $# -gt 0 ]; do
     --api-base-url)    need "$1" $#; API_BASE_URL="$2"; shift 2 ;;
     --bundle-id)       need "$1" $#; APPLICATION_ID="$2"; shift 2 ;;
     --public-key-file) need "$1" $#; KEY_FILE="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,48p' "$SELF"; exit 0 ;;
+    --channel)         need "$1" $#; CHANNEL="$2"; shift 2 ;;
+    -h|--help)         sed -n '2,52p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -95,6 +100,7 @@ URL_RULE="an http:// or https:// URL: plain ASCII, a host name or [IPv6] (no use
 [ -n "$BUNDLE_SERVER" ] || fail "--bundle-server is required (e.g. http://localhost:8077 for a simulator reaching this Mac's relay)."
 [[ "$BUNDLE_SERVER" =~ $URL_RE ]] || fail "--bundle-server must be $URL_RULE (got '$BUNDLE_SERVER')."
 [ -z "$API_BASE_URL" ] || [[ "$API_BASE_URL" =~ $URL_RE ]] || fail "--api-base-url must be $URL_RULE (got '$API_BASE_URL')."
+[[ "$CHANNEL" =~ ^[a-z0-9][a-z0-9-]{0,31}$ ]] || fail "--channel must be lower-case letters, digits and '-', at most 32 (got '$CHANNEL')."
 VERSION_RE='^[0-9A-Za-z.+-]+$'
 for v in "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION"; do
   [[ "$v" =~ $VERSION_RE ]] || fail "a KELIVER_HOST_*_VERSION override is not a version: '$v'."
@@ -203,14 +209,14 @@ subst() { # <src> <dst>
   mkdir -p "$(dirname "$2")"
   python3 - "$1" "$2" "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" \
     "$KELIVER_VERSION" "$ZIPLINE_VERSION" "$KOTLIN_VERSION" "$COMPOSE_VERSION" "$KEY_HEX" "$PRODUCT_NAME" \
-    "$PKG_PATH" "$ATS_BLOCK" <<'PY'
+    "$PKG_PATH" "$ATS_BLOCK" "$CHANNEL" <<'PY'
 import sys
-src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats = sys.argv[1:16]
+src, dst, name, pkg, bid, server, api, kv, zv, ktv, cv, key, product, pkgpath, ats, channel = sys.argv[1:17]
 s = open(src, encoding='utf-8').read()
 for k, v in {'NAME': name, 'PACKAGE': pkg, 'BUNDLE_ID': bid, 'BUNDLE_SERVER': server,
              'API_BASE_URL': api, 'KELIVER_VERSION': kv, 'ZIPLINE_VERSION': zv,
              'KOTLIN_VERSION': ktv, 'COMPOSE_VERSION': cv, 'KEY_HEX': key.lower(),
-             'PRODUCT_NAME': product, 'PKG_PATH': pkgpath,
+             'PRODUCT_NAME': product, 'PKG_PATH': pkgpath, 'CHANNEL': channel,
              'ATS_BLOCK': (ats + '\n') if ats else ''}.items():
     s = s.replace('@@' + k + '@@', v)
 assert '@@' not in s, 'unsubstituted placeholder in ' + src
@@ -244,6 +250,7 @@ echo "created host-ios/ — this app's production iOS host"
 echo "  package          $PACKAGE"
 echo "  app              $PRODUCT_NAME ($APPLICATION_ID)"
 echo "  bundle server    $BUNDLE_SERVER"
+echo "  channel          $CHANNEL (and stable)"
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
 echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
 echo "                   commit host-ios/src/iosMain/kotlin/$PKG_PATH/HostConfig.kt"

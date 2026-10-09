@@ -12,8 +12,11 @@
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
 #   S10 (W4.3) rollback done right: keliver-publish --republish 1 publishes v1's
 #       code again as v3, at sequence 3; the host (floor 2) runs it ("Depot")
-#   S7  server down: the host starts from its cached v3 (from here on, v3)
-#   S9  (W4.2) the stored floor above the cached v3, offline: the cache is refused
+#   S11 (W4.4) v4 ("Backroom"), published to beta only, does not reach this
+#       stable host: it keeps running v3
+#   S12 (W4.4) --promote 4 --channel stable: the same v4 now reaches it
+#   S7  server down: the host starts from its cached newest bundle ($LAST_V)
+#   S9  (W4.2) the stored floor above that cached bundle, offline: refused
 #   S9b (W4.2) the same with the server up but failing the lookup: the network
 #       fallback to the last-good manifest is refused too
 # Signing here is the CI route: KELIVER_SIGNING_KEY_FILE names the key, and
@@ -149,16 +152,45 @@ grep -q "$HOST_TAG: rollback floor raised: 2 -> 3" "$EV/logcat-static-republish.
   && ok "S10: running v3 raised the floor from 2 to 3" || bad "S10: no floor raise logged at v3"
 drive title Depot S10static; fold "S10: v1's code is back: the screen reads Depot" $?
 
+# S11 (W4.4): channels. An edit published to beta only ("Backroom", v4 at
+# sequence 4) does not reach this host, which was built for stable: it keeps
+# running v3.
+w3_title Warehouse Backroom && w3_publish v4-beta --channel beta && grep -q "published v4 (sequence 4, channel beta" "$EV/w3-publish-v4-beta.log" \
+  && ok "S11: keliver-publish wrote v4 at sequence 4 on channel beta" || { bad "S11: publish v4 to beta"; tail -20 "$EV/w3-publish-v4-beta.log"; }
+launch prod "$EV/logcat-static-beta.txt"
+C="$EV/logcat-static-beta.txt"
+grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v3/manifest.zipline.json (index sequence 3, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ! grep -q "bundles/v4/" "$C" && ok "S11: the stable host passed over beta's v4 and loaded v3" \
+  || bad "S11: $(grep -E 'loading|codeLoad' "$C" | head -3 | tr '\n' ' ')"
+drive title Depot S11static; fold "S11: the stable host still reads Depot" $?
+
+# S12 (W4.4): promotion. --promote 4 --channel stable adds a second index entry
+# for the same v4 (nothing built or signed, no new v<N>/); the host now loads it,
+# and its floor rises to 4.
+( cd "$APP" && "$W3_PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" --promote 4 --channel stable ) > "$EV/w3-promote-4.log" 2>&1 \
+  && grep -q "promoted sequence 4 (v4) from beta to stable" "$EV/w3-promote-4.log" && ! grep -q "Task :" "$EV/w3-promote-4.log" \
+  && ok "S12: v4 promoted from beta to stable; nothing built or signed" || { bad "S12: promote"; tail -20 "$EV/w3-promote-4.log"; }
+cp "$W3/site/bundles/index.json" "$EV/w3-index-promoted.json" 2>/dev/null
+[ "$(ls "$W3/site/bundles" | grep -c '^v')" = 4 ] && ok "S12: the promotion wrote no new v<N>/" || bad "S12: the bundle directories changed"
+launch prod "$EV/logcat-static-promoted.txt"
+C="$EV/logcat-static-promoted.txt"
+grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v4/manifest.zipline.json (index sequence 4, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S12: the stable host loaded the promoted v4" || bad "S12: v4 did not load: $(grep -E 'loading|codeLoad|refused' "$C" | head -3 | tr '\n' ' ')"
+grep -q "rollback floor raised: 3 -> 4" "$C" && ok "S12: running v4 raised the floor from 3 to 4" || bad "S12: no floor raise logged at v4"
+drive title Backroom S12static; fold "S12: after the promotion the screen reads Backroom" $?
+# The newest bundle this host has run, for S7, S9 and S9b.
+LAST_V=4; LAST_TITLE=Backroom
+
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \
   && bad "S7: the static server is still answering" || ok "S7: no bundle server is answering"
 launch prod "$EV/logcat-static-offline.txt"
-grep -q "$HOST_TAG: lookup failed; starting from the cached bundle (last loaded from https://10.0.2.2:8443/bundles/v3/" "$EV/logcat-static-offline.txt" \
-  && grep -q "codeLoadSuccess" "$EV/logcat-static-offline.txt" && ok "S7: offline, the host started from its cached v3" || bad "S7: no start from the cache"
-drive title Depot S7static; fold "S7: Depot offline" $?
+grep -q "$HOST_TAG: lookup failed; starting from the cached bundle (last loaded from https://10.0.2.2:8443/bundles/v$LAST_V/" "$EV/logcat-static-offline.txt" \
+  && grep -q "codeLoadSuccess" "$EV/logcat-static-offline.txt" && ok "S7: offline, the host started from its cached v$LAST_V" || bad "S7: no start from the cache"
+drive title "$LAST_TITLE" S7static; fold "S7: $LAST_TITLE offline" $?
 
 # S9 (W4.2): the floor holds on the cache start too. Raise the stored floor above
-# the cached v3 (as a host that had run a newer bundle would have it), then start
+# the cached newest bundle (as a host that had run a newer bundle would have it), then start
 # offline: the cached manifest is refused and nothing runs.
 adb -s "$SERIAL" shell am force-stop "$PROD_ID"
 adb -s "$SERIAL" shell "run-as $PROD_ID sed -i -E 's/(name=\"highestSequence-[^\"]*\" value=\")[0-9]+/\\19/' shared_prefs/keliver-host.xml"
@@ -166,27 +198,27 @@ adb -s "$SERIAL" shell "run-as $PROD_ID cat shared_prefs/keliver-host.xml" > "$E
 grep -q 'highestSequence-[^"]*" value="9"' "$EV/w4-prefs-floor9.xml" \
   && ok "S9: the host's stored rollback floor is now 9" || bad "S9: could not set the floor: $(head -c 300 "$EV/w4-prefs-floor9.xml")"
 launch prod "$EV/logcat-static-cache-floor.txt"
-grep -q "cached bundle refused: rollback refused: sequence 3 is below 9" "$EV/logcat-static-cache-floor.txt" \
-  && ok "S9: offline, the cached v3 was refused below the floor" \
+grep -q "cached bundle refused: rollback refused: sequence $LAST_V is below 9" "$EV/logcat-static-cache-floor.txt" \
+  && ok "S9: offline, the cached v$LAST_V was refused below the floor" \
   || bad "S9: no cache refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-cache-floor.txt" | head -3 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$EV/logcat-static-cache-floor.txt" && bad "S9: something loaded" || ok "S9: no code loaded"
 
 # S9b (W4.2): the same, with the server UP but failing the lookup on purpose (no
 # index, no bundles/latest). The host takes the cache path; the cache is refused,
 # so Zipline fetches the last-good manifest from the network, and that fetch is
-# held to the floor too: v3 (sequence 3) is refused against 9. (Before the review
+# held to the floor too: the newest (sequence $LAST_V) is refused against 9. (Before the review
 # of W4.2 the Android cache path used an unguarded client, and this loaded v2.)
 mv "$W3/site/bundles/index.json" "$W3/index.hidden"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w3-server-s9b.log" &
 SERVE_PID=$!
-for _ in $(seq 1 30); do curl -s --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v3/manifest.zipline.json && break; sleep 1; done
+for _ in $(seq 1 30); do curl -s --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v$LAST_V/manifest.zipline.json && break; sleep 1; done
 launch prod "$EV/logcat-static-fallback-floor.txt"
 grep -q "$HOST_TAG: lookup failed; starting from the cached bundle" "$EV/logcat-static-fallback-floor.txt" \
-  && grep -q "rollback refused: sequence 3 is below 9" "$EV/logcat-static-fallback-floor.txt" \
-  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v3 were both held to the floor" \
+  && grep -q "rollback refused: sequence $LAST_V is below 9" "$EV/logcat-static-fallback-floor.txt" \
+  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v$LAST_V were both held to the floor" \
   || bad "S9b: no refusal on the network fallback: $(grep -E "$HOST_TAG" "$EV/logcat-static-fallback-floor.txt" | head -4 | tr '\n' ' ')"
-grep -q "^GET /bundles/v3/manifest.zipline.json" "$EV/w3-server-s9b.log" \
-  && ok "S9b: the host did fetch v3's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v3's manifest"
+grep -q "^GET /bundles/v$LAST_V/manifest.zipline.json" "$EV/w3-server-s9b.log" \
+  && ok "S9b: the host did fetch v$LAST_V's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v$LAST_V's manifest"
 grep -q "codeLoadSuccess" "$EV/logcat-static-fallback-floor.txt" && bad "S9b: something loaded" || ok "S9b: no code loaded"
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 mv "$W3/index.hidden" "$W3/site/bundles/index.json"

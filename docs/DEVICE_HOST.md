@@ -192,6 +192,15 @@ backwards. Ways a publisher can do that by mistake:
 `v<N>/` at the next sequence, signed by the app's `keliverResign` task. Hosts
 take it because it is newer.
 
+**Channels** (both hosts). A host is built for one channel, `--channel` on
+either scaffolder (default `stable`; Android `keliver.channel` in
+`gradle.properties`, iOS `CHANNEL` in `HostConfig.kt`). It takes that channel's
+index entries and stable's, the newest sequence of them. `keliver-publish
+--channel beta` reaches only beta hosts; `--promote <sequence> --channel stable`
+then offers the same bundle to everyone. Channels are selection, in the
+unsigned index: the floor is per key, not per channel, so a host moved to
+another channel (a rebuild) keeps its floor.
+
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
@@ -217,7 +226,7 @@ python3, building needs macOS with Xcode) writes `host-ios/`:
   `PRODUCT_NAME` must differ from `KeliverHost`; the scaffolder sees to that.
 
 ```bash
-keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH]
+keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH] [--channel NAME]
 ```
 
 It behaves like the Android host in §2:

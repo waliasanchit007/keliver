@@ -304,5 +304,32 @@ PY
 [ $? = 0 ] && ok "index.json: v4 = v1's modules byte for byte, signed for sequence 4, republishOf 1, v1's capabilities and channel" \
   || { bad "index after the republish"; cat "$WORK/check6.txt"; }
 
+# 7. --promote (W4.4): v4 (stable, sequence 4) offered on beta too; no build, no new v<N>/
+cp "$SITE/bundles/index.json" "$WORK/index.before-promote"; BEFORE="$(snapshot "$SITE")"; : > "$APP/gradlew.calls"
+"$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --promote 4 > "$WORK/u.log" 2>&1; rc=$?
+[ "$rc" = 2 ] && grep -q -- "needs --channel" "$WORK/u.log" && [ "$(snapshot "$SITE")" = "$BEFORE" ] \
+  && ok "--promote without --channel: exit 2, nothing written" || bad "--promote without --channel: exit $rc"
+refused "promoting to a channel that already has it" "already on channel stable" \
+  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --promote 4 --channel stable
+refused "promoting below the channel's newest" "already offers sequence 4, above 2" \
+  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 2 --channel stable
+refused "promoting a bundle checked against another key" "does not verify" \
+  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 4 --channel beta
+"$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --promote 4 --channel beta > "$WORK/pr.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q "promoted sequence 4 (v4) from stable to beta" "$WORK/pr.log" && [ ! -s "$APP/gradlew.calls" ] \
+  && ok "v4 promoted to beta: nothing built or signed" || { bad "promote: exit $rc"; cat "$WORK/pr.log"; }
+python3 - "$SITE/bundles" "$WORK/index.before-promote" > "$WORK/check7.txt" 2>&1 <<'PY'
+import json, os, sys
+b = sys.argv[1]; idx = json.load(open(os.path.join(b, 'index.json'))); old = json.load(open(sys.argv[2]))
+assert idx['entries'][:-1] == old['entries'], 'an earlier entry changed'
+src, e = old['entries'][-1], idx['entries'][-1]
+assert (e['sequence'], e['version'], e['channel'], e['promotedFrom']) == (4, 4, 'beta', 'stable'), e
+assert all(e[k] == src[k] for k in ('manifest', 'manifestSha256', 'capabilities', 'widgetVersion')), e
+assert sorted(n for n in os.listdir(b) if not n.startswith('.')) == ['index.json', 'v1', 'v2', 'v3', 'v4'], os.listdir(b)
+print('ok')
+PY
+[ $? = 0 ] && ok "index.json: a second entry for v4 on beta, the same manifest and sha256, no new v<N>/" \
+  || { bad "index after the promotion"; cat "$WORK/check7.txt"; }
+
 echo "keliver-publish self-test: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

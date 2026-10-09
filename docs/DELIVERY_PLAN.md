@@ -394,6 +394,15 @@ The value is also a task input, so a new sequence re-signs.
 
 Hosts above the old sequence take it, because it is newer.
 
+*As built (W4.3):* the copy is made in a scratch directory outside the site,
+and `keliverResign` refuses a directory beside an `index.json`, so a published
+`v<N>/` is never rewritten. After the re-sign, anything but a changed sequence
+and signature is refused. The entry keeps the original's capabilities, widget
+version, constraints and channel (or `--channel`), plus `republishOf`. An
+original entry that hosts would read differently once its fields are written
+out explicitly is refused, because a republish must never loosen what the
+original allowed.
+
 **Channels.**
 - **Host side:** a host is built with one channel. The scaffolders take
   `--channel` (default `stable`); the value goes into
@@ -407,6 +416,18 @@ Hosts above the old sequence take it, because it is newer.
 - **The floor is per key, not per channel.** Moving a host to another channel
   is a host rebuild. Its floor can then block a lower sequence there, which is
   documented.
+
+*As built (W4.4):*
+- **A host takes its own channel and stable.** It picks the newest of both, so
+  a beta host is never behind stable. A stable host takes stable only.
+- **Index rule.** Uniqueness is (sequence, channel), and a sequence always
+  names the same `v<N>/`.
+- **Promotion** needs only the public key: nothing is built or signed. It
+  copies the entry verbatim, constraints included (a gate never falls away),
+  and adds `promotedFrom`.
+- **Refusals.** It refuses when the sequence is already on that channel, or
+  when the channel already offers a higher sequence (its hosts would never
+  pick it; use `--republish`).
 
 **Percentage rollout.**
 - **In the index:** an entry may carry `constraints.rollout` (0–100).

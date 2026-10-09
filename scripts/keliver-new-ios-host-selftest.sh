@@ -67,6 +67,7 @@ echo "=== refusals"
 refuses "without --bundle-server"          "bundle-server is required" --public-key-file "$KEY"
 refuses "a non-URL bundle server"          "must be an http"          --bundle-server "localhost:8077" --public-key-file "$KEY"
 refuses "a bundle server with a quote"     "must be an http"          --bundle-server "http://x\"y" --public-key-file "$KEY"
+refuses "a malformed channel (W4.4)"       "channel must be"          --bundle-server "$SERVER" --channel "Beta" --public-key-file "$KEY"
 refuses "a non-URL API base"               "api-base-url must be"     --bundle-server "$SERVER" --api-base-url "ftp://x" --public-key-file "$KEY"
 refuses "a malformed bundle id"            "bundle-id must"           --bundle-server "$SERVER" --bundle-id "demo" --public-key-file "$KEY"
 refuses "a key file that is not a key"     "not a 64-hex-digit"       --bundle-server "$SERVER" --public-key-file "$BADKEY"
@@ -154,8 +155,17 @@ grep -v '^[[:space:]]*//' "$H/settings.gradle" "$H/build.gradle" | grep -q "mave
 grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay\|HostApi" "$K"/*.kt \
   && bad "the host sources carry a development path, an emulator address or the replay fixture" \
   || ok "no development path, emulator address or replay fixture in the sources"
+# W4.4: the host takes one channel besides stable, stable by default.
+grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue('CHANNEL')" "$H/build.gradle" \
+  && grep -q 'pickFromIndex(body.utf8(), capabilities, channel = CHANNEL)' "$K/MainViewController.kt" \
+  && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
 refuses "a second run over an existing host-ios" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-ios\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
+# W4.4: --channel beta, over a removed host-ios (the build below then builds a beta host).
+rm -rf "$H"
+out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --api-base-url "https://api.example.com/v1" --channel beta 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && grep -q 'CHANNEL: String = "beta"' "$K/HostConfig.kt" && printf '%s' "$out" | grep -q 'channel          beta (and stable)' \
+  && ok "W4.4: --channel beta is recorded in HostConfig.kt" || bad "W4.4: --channel beta: rc=$rc"
 
 echo "=== https only: no App Transport Security exception"
 APP3="$DISP/demo3"; mkdir -p "$APP3/src/jsMain/kotlin/screens"

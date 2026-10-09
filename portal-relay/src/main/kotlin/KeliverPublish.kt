@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonPrimitive
  *
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> [--channel stable] [--skip-build] [--init]
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> --republish <version> [--channel <name>]
+ *   keliver-publish [app-dir] --out <dir> --public-key-file <file> --promote <sequence> --channel <name>
  *
  * `<dir>` must hold the LIVE `bundles/index.json` and `bundles/v<N>/` (download
  * them from the bundle server first): the next version and sequence come from
@@ -28,6 +29,10 @@ import kotlinx.serialization.json.JsonPrimitive
  * next sequence, and it is published as a new `v<N>/` with the original's
  * capabilities and channel (or `--channel`). Nothing is compiled.
  *
+ * `--promote <sequence> --channel <name>` (W4.4) offers an already published
+ * bundle on another channel: a second index entry for the same `v<N>/`. Nothing
+ * is built or signed; only the public key is needed.
+ *
  * Exit status:
  * - 0 published;
  * - 2 usage;
@@ -42,7 +47,7 @@ import kotlinx.serialization.json.JsonPrimitive
 object KeliverPublish {
   private const val USAGE =
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
-      "[--channel stable] [--skip-build] [--init] [--republish <version>]"
+      "[--channel stable] [--skip-build] [--init] [--republish <version> | --promote <sequence> --channel <name>]"
 
   @JvmStatic
   fun main(args: Array<String>) {
@@ -60,6 +65,7 @@ object KeliverPublish {
     var keyFile: String? = null
     var channel: String? = null
     var republish: Int? = null
+    var promote: Long? = null
     var skipBuild = false
     var init = false
     val it = args.iterator()
@@ -70,6 +76,8 @@ object KeliverPublish {
         "--channel" -> channel = it.nextOrNull() ?: return usage("--channel needs a name")
         "--republish" -> republish = it.nextOrNull()?.removePrefix("v")?.takeIf { v -> v.matches(Regex("[1-9][0-9]{0,8}")) }?.toInt()
           ?: return usage("--republish needs a published version number (v<N>'s N)")
+        "--promote" -> promote = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[1-9][0-9]{0,17}")) }?.toLong()
+          ?: return usage("--promote needs a published sequence number")
         "--skip-build" -> skipBuild = true
         "--init" -> init = true
         "-h", "--help" -> { println(USAGE); return 0 }
@@ -83,6 +91,9 @@ object KeliverPublish {
     if (republish != null && (init || skipBuild)) {
       return usage("--republish re-signs a bundle already in the live index: it takes neither --init nor --skip-build")
     }
+    if (promote != null && (init || skipBuild || republish != null || channel == null)) {
+      return usage("--promote <sequence> needs --channel <name>, and takes no --init, --skip-build or --republish")
+    }
     val publicKeyHex = when {
       keyFile != null -> runCatching { File(keyFile).readText().trim() }.getOrElse {
         return refuse("could not read the public key file $keyFile: ${it.message}")
@@ -94,6 +105,7 @@ object KeliverPublish {
       return refuse("could not read ${File(repoDir, "keliver.portal.json")}: ${it.message}")
     }
 
+    if (promote != null) return runPromote(File(out), promote, channel!!, publicKeyHex)
     if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, resign)
 
     // Checked again under the lock; this only spares a build that could not be published.
@@ -180,6 +192,23 @@ object KeliverPublish {
         "${(e["channel"] as JsonPrimitive).content}): the same modules, signed again for the new sequence -> ${result.dir}",
     )
     println("keliver-publish: index ${File(result.dir.parentFile, INDEX_FILE)}")
+    return 0
+  }
+
+  private fun runPromote(out: File, sequence: Long, channel: String, publicKeyHex: String): Int {
+    val result = try {
+      promoteStatic(out, sequence, channel, publicKeyHex)
+    } catch (e: PublishRefused) {
+      return refuse(e.message.orEmpty(), e.aboutSigning)
+    } catch (e: java.io.IOException) {
+      System.err.println("keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete, never half-written.")
+      return 5
+    }
+    println(
+      "keliver-publish: promoted sequence ${result.sequence} (v${result.version}) from ${result.from} to $channel: " +
+        "a second index entry for the same signed bundle; nothing was built or signed",
+    )
+    println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
     return 0
   }
 

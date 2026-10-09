@@ -148,8 +148,11 @@ internal fun readIndex(bundlesDir: File): JsonObject {
   val format = (root["format"] as? JsonPrimitive)?.intOrNull
   if (format != INDEX_FORMAT) throw PublishRefused("$f has format $format; this tool writes format $INDEX_FORMAT only")
   val entries = root["entries"] as? JsonArray ?: throw PublishRefused("$f has no entries array; it was left as it is")
-  val sequences = HashSet<Long>()
-  val versions = HashSet<Int>()
+  // W4.4: a promoted bundle has one entry per channel, so a sequence may appear
+  // more than once, but once per channel, and always for the same v<N>.
+  val onChannel = HashSet<Pair<Long, String>>()
+  val versionOf = HashMap<Long, Int>()
+  val sequenceOf = HashMap<Int, Long>()
   entries.forEachIndexed { i, e ->
     val o = e as? JsonObject ?: throw PublishRefused("$f entry $i is not an object")
     val sequence = (o["sequence"] as? JsonPrimitive)?.longOrNull
@@ -160,11 +163,23 @@ internal fun readIndex(bundlesDir: File): JsonObject {
     if (sequence < 1 || version < 1 || version > MAX_VERSION) {
       throw PublishRefused("$f entry $i has sequence $sequence and version $version, outside 1..$MAX_VERSION; it was left as it is")
     }
-    if (!sequences.add(sequence)) throw PublishRefused("$f has two entries with sequence $sequence; it was left as it is")
-    if (!versions.add(version)) throw PublishRefused("$f has two entries for v$version; it was left as it is")
+    val channel = entryChannel(o)
+    if (!onChannel.add(sequence to channel)) {
+      throw PublishRefused("$f has two entries with sequence $sequence on channel $channel; it was left as it is")
+    }
+    versionOf.put(sequence, version)?.takeIf { it != version }?.let {
+      throw PublishRefused("$f has sequence $sequence for both v$it and v$version; it was left as it is")
+    }
+    sequenceOf.put(version, sequence)?.takeIf { it != sequence }?.let {
+      throw PublishRefused("$f has two entries for v$version, at sequences $it and $sequence; it was left as it is")
+    }
   }
   return root
 }
+
+/** An entry's channel; one without a channel is on [DEFAULT_CHANNEL], as hosts read it. */
+private fun entryChannel(e: JsonObject): String =
+  (e["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
 
 internal fun entryJson(
   sequence: Long,
@@ -236,6 +251,44 @@ internal fun publishStatic(
   sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir), bundlesDir))?.let { throw PublishRefused(it) }
   beforeLock()
 
+  return withPublishLock(bundlesDir) {
+    val index = readIndex(bundlesDir) // again, under the lock
+    val entries = (index["entries"] as JsonArray).map { it as JsonObject }
+    val dirVersions = bundlesDir.listFiles { f -> f.isDirectory }.orEmpty()
+      .mapNotNull { VERSION_DIR_RE.matchEntire(it.name)?.groupValues?.get(1)?.toInt() }
+    val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
+    if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
+    val version = highest + 1
+    val sequence = nextSequence(index, bundlesDir)
+
+    val dest = File(bundlesDir, "v$version")
+    val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
+    try {
+      output.copyRecursively(staging, overwrite = false)
+      // What was copied must still be what was verified.
+      staticOutputProblem(staging, publicKeyHex)?.let {
+        throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
+      }
+      // Under the lock: another publish may have taken this sequence since the build.
+      sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
+      Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
+    } finally {
+      if (staging.exists()) staging.deleteRecursively()
+    }
+
+    val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
+    val entry = JsonObject(entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields)
+    val next = JsonObject(index + ("entries" to JsonArray(entries + entry)))
+    writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
+    StaticPublish(version, sequence, dest, entry)
+  }
+}
+
+/**
+ * Runs [block] holding `bundles/.publish.lock` (creating [bundlesDir]), or refuses
+ * when another publish holds it.
+ */
+private fun <T> withPublishLock(bundlesDir: File, block: () -> T): T {
   bundlesDir.mkdirs()
   FileChannel.open(File(bundlesDir, ".publish.lock").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
     // tryLock() answers null when another process holds the lock, and throws when another channel
@@ -247,38 +300,81 @@ internal fun publishStatic(
         "publishes with a concurrency group), then publish again.",
     )
     try {
-      val index = readIndex(bundlesDir) // again, under the lock
-      val entries = (index["entries"] as JsonArray).map { it as JsonObject }
-      val dirVersions = bundlesDir.listFiles { f -> f.isDirectory }.orEmpty()
-        .mapNotNull { VERSION_DIR_RE.matchEntire(it.name)?.groupValues?.get(1)?.toInt() }
-      val highest = (dirVersions + entries.map { (it["version"] as JsonPrimitive).intOrNull!! }).maxOrNull() ?: 0
-      if (highest >= MAX_VERSION) throw PublishRefused("$bundlesDir already holds v$highest, the highest number this layout allows")
-      val version = highest + 1
-      val sequence = nextSequence(index, bundlesDir)
-
-      val dest = File(bundlesDir, "v$version")
-      val staging = File(bundlesDir, ".staging-${UUID.randomUUID()}")
-      try {
-        output.copyRecursively(staging, overwrite = false)
-        // What was copied must still be what was verified.
-        staticOutputProblem(staging, publicKeyHex)?.let {
-          throw PublishRefused("the copy in $staging failed its check: $it", aboutSigning = true)
-        }
-        // Under the lock: another publish may have taken this sequence since the build.
-        sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
-        Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
-      } finally {
-        if (staging.exists()) staging.deleteRecursively()
-      }
-
-      val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-      val entry = JsonObject(entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields)
-      val next = JsonObject(index + ("entries" to JsonArray(entries + entry)))
-      writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
-      return StaticPublish(version, sequence, dest, entry)
+      return block()
     } finally {
       lock.release()
     }
+  }
+}
+
+internal data class StaticPromotion(val sequence: Long, val version: Int, val from: String, val entry: JsonObject)
+
+/**
+ * Promotion (W4.4, `keliver-publish --promote <sequence> --channel <name>`): the
+ * bundle already published at [sequence] is offered on [channel] too, as a
+ * second index entry for the same `v<N>/` and manifest. Nothing is built or
+ * signed, so no private key is involved: channels are selection policy in the
+ * unsigned index, and the sequence floor still bounds what any entry can do.
+ * The new entry copies the source entry verbatim (capabilities, widget version,
+ * constraints, manifest and its sha256) onto [channel], with `promotedFrom` and
+ * a new `createdAt`. Constraints are copied so that a gate never falls away on
+ * the way: hosts the source entry skips, the promoted one skips too.
+ *
+ * Refused, with nothing written: no entry at [sequence]; [sequence] is already
+ * on [channel]; [channel] already offers a higher sequence (hosts there would
+ * never pick this one; `--republish` publishes older code as a new sequence);
+ * the source entry is not shaped as hosts read it; or the bundle in `v<N>/` is
+ * not the manifest the entry names, or does not verify against [publicKeyHex].
+ */
+internal fun promoteStatic(
+  outDir: File,
+  sequence: Long,
+  channel: String,
+  publicKeyHex: String,
+  now: Instant = Instant.now(),
+): StaticPromotion {
+  if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  val bundlesDir = File(outDir, "bundles")
+  if (!File(bundlesDir, INDEX_FILE).exists()) {
+    throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to promote in: download the served bundles/ first")
+  }
+  fun check(index: JsonObject): JsonObject {
+    val entries = (index["entries"] as JsonArray).map { it as JsonObject }
+    val atSequence = entries.filter { (it["sequence"] as JsonPrimitive).longOrNull == sequence }
+    val source = atSequence.firstOrNull() ?: throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
+    if (atSequence.any { entryChannel(it) == channel }) throw PublishRefused("sequence $sequence is already on channel $channel")
+    entries.filter { entryChannel(it) == channel }.maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! }
+      ?.takeIf { it > sequence }?.let {
+        throw PublishRefused(
+          "channel $channel already offers sequence $it, above $sequence, so its hosts would never pick this one. " +
+            "To put older code back on a channel, republish it (--republish) as a new sequence.",
+        )
+      }
+    entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    val version = (source["version"] as JsonPrimitive).intOrNull!!
+    val dir = File(bundlesDir, "v$version")
+    val manifest = File(dir, "manifest.zipline.json")
+    val expected = (source["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
+    if (!manifest.isFile || sha256Hex(manifest.readBytes()) != expected) {
+      throw PublishRefused("$manifest is not the manifest the entry at sequence $sequence names (manifestSha256)")
+    }
+    staticOutputProblem(dir, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+    return source
+  }
+  check(readIndex(bundlesDir)) // before the lock: a refusal writes nothing, not even the lock file
+  return withPublishLock(bundlesDir) {
+    val index = readIndex(bundlesDir)
+    val source = check(index) // again, under the lock
+    val entry = JsonObject(
+      source + mapOf(
+        "channel" to JsonPrimitive(channel),
+        "promotedFrom" to JsonPrimitive(entryChannel(source)),
+        "createdAt" to JsonPrimitive(now.toString()),
+      ),
+    )
+    val next = JsonObject(index + ("entries" to JsonArray((index["entries"] as JsonArray) + entry)))
+    writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
+    StaticPromotion(sequence, (source["version"] as JsonPrimitive).intOrNull!!, entryChannel(source), entry)
   }
 }
 
@@ -298,7 +394,8 @@ internal class BuildFailed(val exitCode: Int) : Exception("the build exited $exi
  * sequence into that copy's manifest and signs it again, and the copy is
  * published like any build, as a new `v<N>/` and index entry. The entry keeps
  * the original's capabilities, widget version and constraints (the code is the
- * same, and so are the hosts it may reach), and its channel unless [channel] is
+ * same, and so are the hosts it may reach), and the channel it was first
+ * published on (its first entry; promotions follow it) unless [channel] is
  * given, and records `republishOf`.
  *
  * Refused before [resign] runs when the index has no entry for v[version] (a
