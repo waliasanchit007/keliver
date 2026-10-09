@@ -11,6 +11,9 @@
 #                           [--bundle-id ID]
 #                           [--public-key-file PATH]
 #                           [--channel NAME]
+#   keliver-new-ios-host.sh --embed --into DIR [--module NAME]
+#                           --bundle-server URL [--api-base-url URL]
+#                           [--public-key-file PATH] [--channel NAME]
 #
 # Run from the APP repo root (the directory holding keliver.portal.json). Needs
 # macOS with Xcode to build; scaffolding itself needs only bash and python3.
@@ -23,6 +26,12 @@
 #   --api-base-url     optional: the base URL guests' HostHttp requests go to.
 #                      Without it the host provides no HostHttp.
 #   --bundle-id        default: <your app package>.host
+#   --embed            W2: write only the host framework's Gradle build into an
+#                      EXISTING iOS app's directory, as DIR/NAME (default
+#                      keliver-host-ios): the same Kotlin as the standalone host,
+#                      a Gradle wrapper, KeliverScreen.swift and EMBED.md (the
+#                      Xcode build phase and settings to add). No Xcode project
+#                      is written or edited.
 #   --channel          default: stable. The release channel this host takes from
 #                      bundles/index.json besides stable (W4.4), e.g. beta for
 #                      testers: lower-case letters, digits and '-'.
@@ -63,6 +72,7 @@ done
 HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 BUNDLE_SERVER=""; API_BASE_URL=""; APPLICATION_ID=""; KEY_FILE=""; CHANNEL="stable"
+EMBED=false; INTO=""; MODULE="keliver-host-ios"
 need() { [ "$2" -ge 2 ] || { echo "$1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -71,7 +81,10 @@ while [ $# -gt 0 ]; do
     --bundle-id)       need "$1" $#; APPLICATION_ID="$2"; shift 2 ;;
     --public-key-file) need "$1" $#; KEY_FILE="$2"; shift 2 ;;
     --channel)         need "$1" $#; CHANNEL="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,52p' "$SELF"; exit 0 ;;
+    --embed)           EMBED=true; shift ;;
+    --into)            need "$1" $#; INTO="$2"; shift 2 ;;
+    --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
+    -h|--help)         sed -n '2,61p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -80,7 +93,23 @@ fail() { echo "keliver-new-ios-host: $*" >&2; echo "Nothing was written." >&2; e
 
 APP="$(pwd -P)"
 [ -f "$APP/keliver.portal.json" ] || fail "no keliver.portal.json here — run from the app root."
-[ -e "$APP/host-ios" ] && fail "$APP/host-ios already exists — refusing to overwrite."
+if $EMBED; then
+  [ -n "$INTO" ] || fail "--embed needs --into <the existing iOS app's directory>."
+  [ -z "$APPLICATION_ID" ] || fail "--bundle-id is for the standalone host; an embedded host is a framework in YOUR app."
+  [[ "$MODULE" =~ ^[A-Za-z][A-Za-z0-9_-]{0,63}$ ]] || fail "--module must be a plain directory name (got '$MODULE')."
+  [ -d "$INTO" ] || fail "--into $INTO is not a directory."
+  INTO="$(cd "$INTO" && pwd -P)"
+  # The framework's module is KeliverHost; an app module of that name makes Swift
+  # ignore `import KeliverHost` (measured).
+  if grep -rqsiE 'PRODUCT_(NAME|MODULE_NAME) = "?KeliverHost"?;' --include=project.pbxproj "$INTO" 2>/dev/null; then
+    fail "an Xcode project under $INTO names a product or module KeliverHost, the framework's module name; rename it first."
+  fi
+  TARGET="$INTO/$MODULE"
+else
+  [ -z "$INTO" ] || fail "--into is only for --embed."
+  TARGET="$APP/host-ios"
+fi
+[ -e "$TARGET" ] && fail "$TARGET already exists — refusing to overwrite."
 [ -x "$APP/gradlew" ] || fail "no executable ./gradlew in the app root: the Xcode build phase runs ./gradlew -p host-ios."
 
 # The templates sit beside this script in the repository (scripts/templates) and
@@ -185,7 +214,7 @@ fi
 for v in "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL" "$PRODUCT_NAME"; do
   case "$v" in *@@*) fail "a value contains '@@', which the templates use as placeholders: '$v'." ;; esac
 done
-STAGE="$(mktemp -d "$APP/.host-ios.XXXXXX")"
+STAGE="$(mktemp -d "$(dirname "$TARGET")/.$(basename "$TARGET").XXXXXX")"
 chmod 755 "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
 PKG_PATH="${PACKAGE//.//}"
@@ -223,11 +252,32 @@ assert '@@' not in s, 'unsubstituted placeholder in ' + src
 open(dst, 'w', encoding='utf-8').write(s)
 PY
 }
-for f in settings.gradle gradle.properties build.gradle iosApp/iOSApp.swift iosApp/ContentView.swift \
-         iosApp/Info.plist iosApp.xcodeproj/project.pbxproj Configuration/Config.xcconfig \
-         src/nativeInterop/cinterop/sqlite3.def; do
-  subst "$TEMPLATES/$f" "$STAGE/$f"
-done
+if $EMBED; then
+  for f in settings.gradle gradle.properties build.gradle src/nativeInterop/cinterop/sqlite3.def; do
+    subst "$TEMPLATES/$f" "$STAGE/$f"
+  done
+  EMBED_TEMPLATES="$(dirname "$TEMPLATES")/ios-host-embed"
+  [ -f "$EMBED_TEMPLATES/KeliverScreen.swift" ] || fail "the iOS embed templates are missing ($EMBED_TEMPLATES)."
+  cp "$EMBED_TEMPLATES/KeliverScreen.swift" "$STAGE/KeliverScreen.swift"
+  REL="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$TARGET" "$INTO")"
+  python3 - "$EMBED_TEMPLATES/EMBED.md" "$STAGE/EMBED.md" "$PKG_PATH" "$REL" <<'PY'
+import sys
+src, dst, pkgpath, rel = sys.argv[1:5]
+s = open(src, encoding='utf-8').read().replace('@@PKG_PATH@@', pkgpath).replace('@@REL@@', rel)
+open(dst, 'w', encoding='utf-8').write(s)
+PY
+  # Its own wrapper: an iOS app's repository has none. The guest app's (the
+  # Gradle that builds its bundles) is the one this host is known to build with.
+  cp "$APP/gradlew" "$STAGE/gradlew" && cp -R "$APP/gradle" "$STAGE/gradle" && chmod 755 "$STAGE/gradlew" \
+    || fail "could not copy this app's Gradle wrapper (gradlew, gradle/)."
+  rm -f "$STAGE/gradle/libs.versions.toml"
+else
+  for f in settings.gradle gradle.properties build.gradle iosApp/iOSApp.swift iosApp/ContentView.swift \
+           iosApp/Info.plist iosApp.xcodeproj/project.pbxproj Configuration/Config.xcconfig \
+           src/nativeInterop/cinterop/sqlite3.def; do
+    subst "$TEMPLATES/$f" "$STAGE/$f"
+  done
+fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
@@ -238,13 +288,29 @@ cat > "$STAGE/.gitignore" <<'GI'
 xcuserdata/
 /Configuration/Config.local.xcconfig
 GI
-# mkdir is atomic: if host-ios appeared since the check above, this fails
+# mkdir is atomic: if the target appeared since the check above, this fails
 # instead of moving the stage INSIDE it.
-mkdir "$APP/host-ios" 2>/dev/null || fail "$APP/host-ios appeared while scaffolding — refusing to overwrite."
-( cd "$STAGE" && tar cf - . ) | ( cd "$APP/host-ios" && tar xf - ) \
-  || { rm -rf "$APP/host-ios"; fail "could not write $APP/host-ios."; }
+mkdir "$TARGET" 2>/dev/null || fail "$TARGET appeared while scaffolding — refusing to overwrite."
+( cd "$STAGE" && tar cf - . ) | ( cd "$TARGET" && tar xf - ) \
+  || { rm -rf "$TARGET"; fail "could not write $TARGET."; }
 rm -rf "$STAGE"
 trap - EXIT
+
+if $EMBED; then
+  echo "created $MODULE/ in $INTO — this app's Keliver host framework (KeliverHost), for your Xcode app"
+  echo "  package          $PACKAGE"
+  echo "  bundle server    $BUNDLE_SERVER"
+  echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
+  echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
+  echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
+  echo "                   commit $MODULE/src/iosMain/kotlin/$PKG_PATH/HostConfig.kt"
+  echo "next, in YOUR Xcode project (nothing of it was changed): $MODULE/EMBED.md"
+  echo "  a Run Script phase before Compile Sources: cd \"\$SRCROOT/$REL\" && ./gradlew --console=plain embedAndSignAppleFrameworkForXcode"
+  echo "  ENABLE_USER_SCRIPT_SANDBOXING = NO; OTHER_LDFLAGS += -lsqlite3; Info.plist CADisableMinimumFrameDurationOnPhone = YES"
+  echo "  add $MODULE/KeliverScreen.swift to your target; then KeliverScreen() in any SwiftUI view"
+  [ -n "$ATS_BLOCK" ] && echo "  an http:// server needs an App Transport Security exception in YOUR Info.plist (development only)"
+  exit 0
+fi
 
 echo "created host-ios/ — this app's production iOS host"
 echo "  package          $PACKAGE"

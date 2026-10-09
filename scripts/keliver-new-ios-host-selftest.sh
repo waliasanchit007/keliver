@@ -184,6 +184,46 @@ keliver_require_isolated_store "$DISP" "$APP3" > /dev/null || { echo "isolation 
   && python3 -c "import plistlib,sys; p=plistlib.load(open(sys.argv[1],'rb')); assert 'NSAppTransportSecurity' not in p" "$APP3/host-ios/iosApp/Info.plist" \
   && ok "an https:// bundle server gets no ATS exception" || bad "https scaffold or its Info.plist"
 
+echo "=== --embed: the host framework for an existing iOS app (W2)"
+EX="$DISP/existing-ios"; mkdir -p "$EX/MyApp.xcodeproj"
+printf 'PRODUCT_NAME = "MyApp";\n' > "$EX/MyApp.xcodeproj/project.pbxproj"
+embed_refuses() { # <label> <expected> <args...>: refused, and neither app changed
+  local label="$1" want="$2"; shift 2
+  local b1 b2 out rc
+  b1="$(snapshot "$APP")$(snapshot "$EX")"
+  out="$( cd "$APP" && "$SCAFFOLD" "$@" 2>&1 )"; rc=$?
+  b2="$(snapshot "$APP")$(snapshot "$EX")"
+  if [ "$rc" != 0 ] && printf '%s' "$out" | grep -q -- "$want" && [ "$b1" = "$b2" ]; then
+    ok "--embed refuses $label; both apps byte-identical"
+  else
+    bad "--embed $label: rc=$rc, changed=$([ "$b1" = "$b2" ] && echo no || echo YES): $(printf '%s' "$out" | head -2 | tr '\n' ' ')"
+  fi
+}
+embed_refuses "without --into" "needs --into" --embed --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "--bundle-id" "is for the standalone host" --embed --into "$EX" --bundle-id com.x.y --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "a bad module name" "plain directory name" --embed --into "$EX" --module "../x" --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "--into without --embed" "only for --embed" --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
+mkdir -p "$DISP/clash/Clash.xcodeproj"; printf 'PRODUCT_NAME = KeliverHost;\n' > "$DISP/clash/Clash.xcodeproj/project.pbxproj"
+out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$DISP/clash" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "names a product or module KeliverHost" && [ ! -e "$DISP/clash/keliver-host-ios" ] \
+  && ok "--embed refuses a project whose product is named KeliverHost (the framework's module)" || bad "--embed KeliverHost clash: rc=$rc"
+out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$EX" --bundle-server "https://bundles.example.com" --channel beta 2>&1 )"; rc=$?
+L="$EX/keliver-host-ios"; LK="$L/src/iosMain/kotlin/com/example/demo/host"
+[ "$rc" = 0 ] && [ -d "$L" ] && ok "--embed wrote $EX/keliver-host-ios (exit 0)" || bad "--embed failed: rc=$rc $(printf '%s' "$out" | tail -3 | tr '\n' ' ')"
+[ -x "$L/gradlew" ] && [ -f "$L/gradle/wrapper/gradle-wrapper.properties" ] && [ -f "$L/settings.gradle" ] && [ -f "$L/build.gradle" ] \
+  && [ -f "$L/KeliverScreen.swift" ] && [ -f "$L/EMBED.md" ] && [ ! -e "$L/iosApp" ] && [ ! -e "$L/iosApp.xcodeproj" ] \
+  && ok "a framework build with its own wrapper, KeliverScreen.swift and EMBED.md; no Xcode app" || bad "the embedded framework's files"
+grep -q 'Keliver.shared.viewController(safeArea: safeArea)' "$L/KeliverScreen.swift" && grep -q 'cd "$SRCROOT/keliver-host-ios"' "$L/EMBED.md" \
+  && ! grep -q '@@' "$L/EMBED.md" && ok "KeliverScreen shows Keliver.shared; EMBED.md names the build phase with this layout's path" || bad "KeliverScreen.swift / EMBED.md"
+grep -q 'CHANNEL: String = "beta"' "$LK/HostConfig.kt" && grep -q 'BUNDLE_SERVER: String = "https://bundles.example.com"' "$LK/HostConfig.kt" \
+  && ok "the settings are in HostConfig.kt, as for the standalone host" || bad "HostConfig.kt"
+[ "$(cat "$EX/MyApp.xcodeproj/project.pbxproj")" = 'PRODUCT_NAME = "MyApp";' ] && ok "--embed edited no file of the existing app" || bad "--embed changed the existing project"
+same=1; for f in MainViewController.kt ProductionTrust.kt GuestContract.kt Origins.kt IosHttp.kt IosSqlHost.kt BundleIndex.kt; do
+  cmp -s "$LK/$f" "$K/$f" || { same=0; bad "$f differs between the embedded framework and the standalone host"; }
+done
+[ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the embedded framework and the standalone host"
+embed_refuses "a second run over the module" "already exists" --embed --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
+
 if [ "$BUILD" = 1 ]; then
   echo "=== the scaffolded app builds for the iOS simulator from Maven Central"
   if ! command -v xcodebuild >/dev/null 2>&1; then
