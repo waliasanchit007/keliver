@@ -205,6 +205,10 @@ grep -q "^warning:" "$EV/w2-embed-scaffold.log" && bad "W2: --embed warned about
   || { bad "W2: the existing app did not build"; grep -E '^e: |What went wrong' -A3 "$EV/w2-embed-build.log" | head -20; }
 EMB_KEY="$(unzip -p "$EV/embed-app.apk" assets/keliver/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
 [ -n "$EMB_KEY" ] && [ "$EMB_KEY" = "$PUB" ] && ok "W2: the existing app's APK trusts this app's key (assets/keliver/)" || bad "W2: the embedded key is not this app's"
+# W2.7: the same app shrunk by R8 (a release build, debug-signed for the emulator).
+( cd "$EMB_APP" && ./gradlew --console=plain assembleRelease ) > "$EV/w2-embed-release-build.log" 2>&1 \
+  && cp "$(find "$EMB_APP/app/build/outputs/apk/release" -name '*.apk' | head -1)" "$EV/embed-app-release.apk" \
+  && ok "W2.7: the existing app's minified release (R8) built" || { bad "W2.7: the release build failed"; grep -E 'Missing class|ERROR|What went wrong' -A3 "$EV/w2-embed-release-build.log" | head -20; }
 KEYF="$EMB_APP/keliver-host/src/main/assets/keliver/portal_ed25519.pub"; cp "$KEYF" "$WORK/embed-key.saved"
 printf '%s\n' "$(printf '5a%.0s' $(seq 1 32))" > "$KEYF"
 ( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-foreign-build.log" 2>&1 \
@@ -212,7 +216,7 @@ printf '%s\n' "$(printf '5a%.0s' $(seq 1 32))" > "$KEYF"
   && ok "W2: the same app, built trusting another key (for the refusal check)" || bad "W2: the foreign-key build failed"
 cp "$WORK/embed-key.saved" "$KEYF"
 ( cd "$EMB_APP" && ./gradlew --stop ) > /dev/null 2>&1 || true
-{ echo "W2_APK=$EV/embed-app.apk"; echo "W2_FOREIGN_APK=$EV/embed-app-foreign.apk"; echo "W2_ID=com.example.existing"; } >> "$WORK/env"
+{ echo "W2_APK=$EV/embed-app.apk"; echo "W2_RELEASE_APK=$EV/embed-app-release.apk"; echo "W2_FOREIGN_APK=$EV/embed-app-foreign.apk"; echo "W2_ID=com.example.existing"; } >> "$WORK/env"
 
 # Warm the development bundle so the device step does not wait on it.
 ( cd "$APP" && ./gradlew compileDevelopmentExecutableKotlinJsZipline --console=plain ) > "$EV/dev-bundle.log" 2>&1 \

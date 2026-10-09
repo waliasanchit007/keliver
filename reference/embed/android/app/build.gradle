@@ -17,6 +17,13 @@ android {
     // KELIVER EMBED (development only): the CI bundle server is https, so no
     // cleartext is needed; an http:// development server would need it here.
     debug { }
+    // W2.7: the app shrunk by R8, as a store build would be (signed with the
+    // debug key here, for the emulator only).
+    release {
+      minifyEnabled true
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+      signingConfig signingConfigs.debug
+    }
   }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }

@@ -13,6 +13,8 @@
 #   X5  the host's rollback floor is stored, in the existing app's own data
 #   X6  trusting another key: the Keliver view loads nothing, the native views
 #       stay and the process lives
+#   X7  the app shrunk by R8 (a minified release): the guest still verifies,
+#       loads and renders in the KeliverView
 echo "--- 5. W2: the host embedded in an existing app"
 W2_ID="${W2_ID:-com.example.existing}"
 w2_launch(){  # $1 = logcat file: a cold start of the existing app
@@ -121,5 +123,19 @@ grep -q "codeLoadFailed" "$EV/logcat-embed-foreign.txt" && ok "X6: the host repo
 grep -q 'text="Native header"' "$EV/w2-X6.xml" && ! grep -q 'text="Attic"' "$EV/w2-X6.xml" \
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
   && ok "X6: the native views are still shown and the app is still running" || bad "X6: the existing app did not survive the refusal"
+
+# X7: the minified release. Zipline crosses the bridge by name and reflection, so
+# R8 can break it at run time only: this is the check that the library's
+# consumer rules are enough.
+adb -s "$SERIAL" install -r "$W2_RELEASE_APK" > "$EV/install-embed-release.log" 2>&1 \
+  && ok "X7: installed the existing app's minified release" || bad "X7: the release did not install: $(tail -2 "$EV/install-embed-release.log" | tr '\n' ' ')"
+adb -s "$SERIAL" shell pm clear "$W2_ID" > /dev/null
+w2_launch "$EV/logcat-embed-release.txt"
+w2_dump X7
+grep -q "codeLoadSuccess" "$EV/logcat-embed-release.txt" && ! grep -qE "codeLoadFailed|uncaughtException|FATAL EXCEPTION" "$EV/logcat-embed-release.txt" \
+  && ok "X7: the minified app verified and loaded v7 (codeLoadSuccess, no failure)" \
+  || bad "X7: $(grep -E "$HOST_TAG|FATAL|AndroidRuntime" "$EV/logcat-embed-release.txt" | head -4 | tr '\n' ' ')"
+grep -q 'text="Attic"' "$EV/w2-X7.xml" && grep -q 'text="Native header"' "$EV/w2-X7.xml" \
+  && ok "X7: the minified app shows the native header and the guest's screen" || bad "X7: the minified app's screen is missing a part"
 
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
