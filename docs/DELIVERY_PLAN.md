@@ -682,6 +682,8 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W4.5 rollout and host-version gates | **built 2026-10-09; independently reviewed, findings fixed** (`dfd3e2a7` + `e8c26c57`). Hosts understand `rollout` (bucket = sha256("<installId>:<sequence>")[0..4] mod 100; a random install id kept on the device, never sent; known-answer vectors checked against python) and `minHostVersion`/`maxHostVersion` (Android `versionCode`, iOS `CFBundleVersion`; unknown version skips gated entries). A rollout gates only sequences above the floor, so a halt keeps hosts that ran it. Publisher: `--rollout`, `--min-host-version`, `--max-host-version` on publish, republish and promote; `--set-rollout <sequence> --rollout <percent>` edits the index only, with no key. **The review found one blocking bug**: a republish or promotion could widen a copied host-version gate; now refused. Also fixed: `--set-rollout` on an unconstrained live entry (pre-W4.5 hosts would lose it; refused), a halt on beta that stable's twin entry undoes (warned), a republish copying a rollout whose buckets no longer apply (dropped). Device S13 (0%: not delivered), S14 (100%: delivered, floor 4 -> 5), S14b (halted: the host that ran it keeps it), S15 (`minHostVersion` 999 above host version 1: skipped). | PR #93 |
 | W4.3 CI, first push | **green 2026-10-09 at `42dfbcd3`** (before the reviews' fixes). `reference-app.yml` 37894671231: publish self-test 30/0, device 73/0 with S10 on Android. `ios-host.yml` 37894671308: self-test 50/0, `ios.sh` 67/0 with S10 on iOS. `portal-tools.yml` 37894675395: publish target 40/0 (`--build`, the real `keliverResign`), hosts 41/0, 36/0, 44/0 twice. | PR #93 |
 | W4.3 to W4.5 CI (after all three reviews) | **green 2026-10-09 at `e8c26c57`.** `reference-app.yml` 37902855439: prepare 18/0, publish self-test 40/0, device 98/0, with S8 to S15 on Android. `ios-host.yml` 37902855353: self-test 54/0, `ios.sh` 92/0, with S8 to S15 on iOS. `portal-tools.yml` 37902876551: publish target 41/0 (`--build`, the real `keliverResign`) and 25/0, the production-host scaffolder 45/0 and 40/0, the iOS host 48/0 twice, key permissions 63/0. (37902859854 was a dispatch with a mistyped commit, cancelled.) | PR #93 |
+| tools 0.3.8 candidate 1 (W3 + W4) | **verified 2026-10-09; NOT tagged, awaiting the owner's approval** (PR #94, `release/portal-tools-0.3.8`).<br>• **Identities:** source `c0e71108`; zip `7ea7f11d9fdebce84861cf9224d324c15d00451ac175d84f3cd51b683c43bc14` (90,532,260 bytes); APK `afa9dadd…`.<br>• **Build** 37932744136 (artifact `11617444772`), with the packaged `keliver-publish` self-test 40/0. **Device run** 37935499926: 19/0 and 28/0.<br>• **Local check:** hashes, `VERSION.json`, no key in the APK, the templates and scripts byte-identical, the packaged self-test 40/0 again.<br>• **`ios.sh` on the candidate zip:** run 1 91/1, with the one FAIL in the harness's P2 expectation (a 0.3.8 relay serves the index), fixed in `a60624f0`; run 2 **92/0** (P1–P7, S2–S15 with the zip's own `keliver-publish`).<br>• **Step 3:** clean.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. | PR #94 |
+| W2.1–W2.7 (embed) | **built 2026-10-09; green on CI at `f7ad8415`; the independent review is not done yet** (PR #95, stacked on #94).<br>• **Android:** `KeliverHost` (one per process, owned by an `Application`), `KeliverScreen`/`KeliverView`; `--embed` writes a library module with the same Kotlin, byte-identical (self-test 58/0). The key asset moves under `assets/keliver/`.<br>• **iOS:** a `Keliver` object; `--embed` writes the framework's Gradle build, `KeliverScreen.swift` and `EMBED.md` (self-test 67/0 on CI).<br>• **Fixtures:** `reference/embed/{android,ios}`, plain apps with only the documented edits.<br>• **CI** reference-app 37936654024: device **118/0**, with R1 (a rotation: one lookup, one load) and X1–X7 (native views and the guest on one screen; a signed load; interaction; native navigation and a rotation with one load; the floor stored; another key refused while the native app survives; the R8-minified release loading). ios-host 37936654047: `ios.sh` **102/0**, with I1, I2, I4 and I5.<br>• **Not covered:** no iOS tap driver, so native navigation is checked on Android only.<br>• **Observed once:** at `077c5818` iOS P2's screenshot was blank after a verified load (a late first render); `ios.sh` now re-reads a status-bar-only screen once (`0c47eedd`). | PR #95 |
 | W2, W4–W8 | not started | — |
 
 ## Next action
@@ -716,22 +718,23 @@ What was done for the candidate:
 - shipping it in tools 0.3.8 (a candidate, then the owner's approval);
 - the "W3 known, not done" items.
 
-**W4 is built** (W4.1 to W4.5, PR #93): each step independently reviewed,
-its findings fixed, and on CI on both platforms (see Status). The plan's W4
-"done when" (all of the above in the reference app's CI on Android and iOS)
-is met at `e8c26c57`.
+**W4 is built** (W4.1 to W4.5, PR #93), reviewed and green on both platforms.
 
 **Next:**
-- **Tools 0.3.8 (W3 + W4)** is ready for a candidate: build, device run, local
-  verification of the retained artifact, `ios.sh` on the candidate zip, the
-  step-3 workflow check. **Tag and publish only after the owner approves
-  0.3.8 explicitly.**
-- **W2** (embed in an existing app), the next workstream in the order. Then
-  W5 (update API, including the fall-back-to-last-good item) and W6.
-- Known, not done in W4: a reinstall or cleared data resets the floor and the
-  install id (and backups copy both); relay `/publish` has no republish,
-  channels or rollouts (the relay is the development route); W3's own "known,
-  not done" items.
+- **Tools 0.3.8 (W3 + W4): candidate 1 is verified and waiting for the
+  owner's explicit approval.** Then tag `portal-tools-v0.3.8` on `c0e71108` and
+  attach the retained artifact `11617444772` (zip `7ea7f11d…`), following
+  `PORTAL_TOOLS_RELEASE.md` step 4. Nothing is tagged.
+- **W2 (PR #95):** W2.1–W2.7 are built and green on CI.
+  1. CI at the latest head (`0c47eedd`, with the merge of #94).
+  2. **W2.8:** the docs (an "Embed in an existing app" guide section,
+     `DEVICE_HOST.md`, the tools README).
+  3. An independent review of W2, then its fixes.
+  - Recorded follow-up, not in W2: a prebuilt, published host artifact for
+    adopters on another Kotlin version. That is a Maven publication and needs
+    the owner's approval.
+- **Then W5** (update API, including falling back to the last good bundle),
+  **then W6.**
 
 ## Standing constraints (from the owner; they apply to every step)
 
