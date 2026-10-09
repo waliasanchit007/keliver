@@ -24,6 +24,7 @@ on:
       - "reference/**"
       - ".github/workflows/reference-app.yml"
       - "scripts/templates/production-host/**"
+      - "scripts/templates/production-host-embed/**"
       - "scripts/templates/publish/**"
       - "scripts/keliver-new-production-host.sh"
       - "scripts/keliver-new-publish-target.sh"
