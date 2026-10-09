@@ -40,6 +40,17 @@
 // anything else fails the build, signed or not.
 // Without it (a development build) the manifest carries no sequence.
 //
+// REPUBLISH (W4.3, rollback). Hosts refuse a sequence below the highest they
+// have run, so older code goes out again as a new sequence:
+// `keliver-publish --republish <v>` copies published bundle v<v> to a scratch
+// directory and runs `./gradlew keliverResign -Pkeliver.resignDir=<that copy>
+// -Pkeliver.sequence=<N>`. That task writes N into the copy's manifest and signs
+// it again, with the key found exactly as for a build (so, as there, the key
+// never becomes an input, an argument or a log line). Nothing is compiled and
+// the modules are not touched: keliver-publish checks that only the sequence
+// and the signature changed. Without a key it fails rather than leave the copy
+// unsigned.
+//
 // Not configuration-cache compatible: the store is resolved by running a
 // process (keliver-init leaves the cache off).
 //
@@ -79,6 +90,35 @@ def keliverSigningKeyFile = { ->
 }.memoize()
 def keliverPublishSequence = providers.gradleProperty('keliver.sequence')
   .orElse(providers.environmentVariable('KELIVER_PUBLISH_SEQUENCE'))
+// Signs manifestFile in place, after writing the publish sequence (if any) into its metadata.
+def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
+  def sequence = keliverPublishSequence.getOrNull()
+  if (sequence != null && !(sequence ==~ /[1-9][0-9]{0,17}/)) {
+    throw new GradleException("keliver: keliver.sequence must be a positive integer, not '${sequence}'")
+  }
+  def key = keliverSigningKeyFile()
+  if (key == null) {
+    if (keyRequired) throw new GradleException("keliver: no signing key, so ${manifestFile} cannot be signed again")
+    return
+  }
+  if (!manifestFile.isFile()) throw new GradleException("keliver: ${missing} ${manifestFile} to sign")
+  def hex = key.text.trim()
+  // Checked before decoding: okio's error for a malformed string quotes all of it.
+  if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
+  def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
+    .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
+    .build()
+  // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
+  def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+  if (sequence != null) {
+    // metadata is in the signed part of the manifest, so the signature below covers it.
+    manifest = manifest.copy(manifest.unsigned, manifest.modules, manifest.mainModuleId, manifest.mainFunction,
+      manifest.version, manifest.metadata + ['keliver.sequence': sequence])
+  }
+  manifestFile.text = signer.sign(manifest).encodeJson()
+  logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key" +
+    (sequence != null ? ", for sequence ${sequence}" : ""))
+}
 tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
   compileTask.inputs.property('keliverPublishSequence', keliverPublishSequence.orElse(''))
   compileTask.inputs.property('keliverSigningKeyId', providers.provider {
@@ -90,29 +130,17 @@ tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compi
     digest.digest().encodeHex().toString()
   })
   compileTask.doLast {
-    def sequence = keliverPublishSequence.getOrNull()
-    if (sequence != null && !(sequence ==~ /[1-9][0-9]{0,17}/)) {
-      throw new GradleException("keliver: keliver.sequence must be a positive integer, not '${sequence}'")
+    keliverSign(new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json'), false, "${compileTask.path} wrote no")
+  }
+}
+tasks.register('keliverResign') {
+  description = 'Signs a copy of a published bundle again for a new keliver.sequence (keliver-publish --republish).'
+  doLast {
+    def dir = providers.gradleProperty('keliver.resignDir').getOrNull()
+    if (!dir || !new File(dir).isAbsolute()) {
+      throw new GradleException('keliver: keliverResign needs -Pkeliver.resignDir=<the absolute path of a copy of the bundle to sign again>')
     }
-    def key = keliverSigningKeyFile()
-    if (key == null) return
-    def manifestFile = new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json')
-    if (!manifestFile.isFile()) throw new GradleException("keliver: ${compileTask.path} wrote no ${manifestFile} to sign")
-    def hex = key.text.trim()
-    // Checked before decoding: okio's error for a malformed string quotes all of it.
-    if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
-    def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
-      .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
-      .build()
-    // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
-    def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
-    if (sequence != null) {
-      // metadata is in the signed part of the manifest, so the signature below covers it.
-      manifest = manifest.copy(manifest.unsigned, manifest.modules, manifest.mainModuleId, manifest.mainFunction,
-        manifest.version, manifest.metadata + ['keliver.sequence': sequence])
-    }
-    manifestFile.text = signer.sign(manifest).encodeJson()
-    logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key" +
-      (sequence != null ? ", for sequence ${sequence}" : ""))
+    if (keliverPublishSequence.getOrNull() == null) throw new GradleException('keliver: keliverResign needs -Pkeliver.sequence=<N>')
+    keliverSign(new File(dir, 'manifest.zipline.json'), true, 'there is no')
   }
 }

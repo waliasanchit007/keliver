@@ -61,7 +61,11 @@ import java.nio.file.*;
 import java.security.*;
 import java.util.*;
 
-/** args: <out-dir> <title> <mode: signed|unsigned|foreign> <pub-out> [sequence]; one key per JVM run, private half never written. */
+/**
+ * args: <out-dir> <title> <mode: signed|unsigned|foreign> <pub-out> [sequence [<dir>=<sequence>...]];
+ * one key per JVM run, private half never written. Each <dir>=<sequence> gets the same bundle's
+ * manifest signed again, by the same key, for that sequence (what keliverResign writes).
+ */
 public class Fixture {
   static String hex(byte[] b) { StringBuilder s = new StringBuilder(); for (byte x : b) s.append(String.format("%02x", x)); return s.toString(); }
   public static void main(String[] a) throws Exception {
@@ -77,24 +81,34 @@ public class Fixture {
       modules.append("\"./").append(m).append(".js\":{\"url\":\"").append(m).append(".zipline\",\"sha256\":\"")
         .append(hex(MessageDigest.getInstance("SHA-256").digest(code))).append("\",\"dependsOnIds\":[]}");
     }
+    manifest(out, modules, a.length > 4 ? a[4] : null, !a[2].equals("unsigned"), pair);
+    for (int i = 5; i < a.length; i++) {
+      String[] dirSeq = a[i].split("=", 2);
+      Path dir = Paths.get(dirSeq[0]); Files.createDirectories(dir);
+      manifest(dir, modules, dirSeq[1], true, pair);
+    }
+  }
+  static void manifest(Path dir, CharSequence modules, String sequence, boolean sign, KeyPair pair) throws Exception {
     // W4: the sequence is in the signed metadata, as the signing block writes it.
-    String meta = a.length > 4 ? ",\"metadata\":{\"keliver.sequence\":\"" + a[4] + "\"}" : "";
+    String meta = sequence != null ? ",\"metadata\":{\"keliver.sequence\":\"" + sequence + "\"}" : "";
     String payload = "{\"modules\":{" + modules + "},\"mainModuleId\":\"./main.js\",\"mainFunction\":\"zipline.ziplineMain\"" + meta + "}";
     String sigs = "{}";
-    if (!a[2].equals("unsigned")) {
+    if (sign) {
       Signature s = Signature.getInstance("Ed25519");
       s.initSign(pair.getPrivate());
       s.update(payload.getBytes(StandardCharsets.UTF_8));
       sigs = "{\"portal-ed25519\":\"" + hex(s.sign()) + "\"}";
     }
-    Files.writeString(out.resolve("manifest.zipline.json"),
+    Files.writeString(dir.resolve("manifest.zipline.json"),
       "{\"unsigned\":{\"signatures\":" + sigs + ",\"freshAtEpochMs\":null,\"baseUrl\":null}," + payload.substring(1));
   }
 }
 JAVA
 fixture(){ "$JAVA_HOME/bin/java" "$WORK/Fixture.java" "$@" 2>/dev/null; }
 # Each signed fixture is signed by its own run's key; that run wrote the public half to <name>.pub.
-fixture "$WORK/fx/one" One signed "$WORK/fx/one.pub" 1
+# one-s4 / one-s1: v1's manifest signed again by v1's key, as keliverResign would for sequence 4 (and,
+# wrongly, for 1 again).
+fixture "$WORK/fx/one" One signed "$WORK/fx/one.pub" 1 "$WORK/fx/one-s4=4" "$WORK/fx/one-s1=1"
 fixture "$WORK/fx/unsigned" Unsigned unsigned "$WORK/fx/unsigned.pub" 1
 
 # --- the app: a fake gradlew that "builds" by copying a fixture ---------------
@@ -108,6 +122,14 @@ printf '# required by every screen\nhost-sql@1\n' > "$APP/src/jsMain/kotlin/scre
 cat > "$APP/gradlew" <<'SH'
 #!/bin/bash
 # Records what it was asked and with which tools bin, then "builds" $FIXTURE.
+# keliverResign (W4.3): records the directory it was given, then "re-signs" it by
+# copying $RESIGN_FIXTURE's manifest over the copy's.
+if [ "$1" = keliverResign ]; then
+  echo "task=$1 $3 toolsBin=${KELIVER_TOOLS_BIN:-}" >> "$(dirname "$0")/gradlew.calls"
+  dir="${2#-Pkeliver.resignDir=}"; echo "$dir" > "$(dirname "$0")/resign.dir"
+  [ "${FAIL_BUILD:-}" = 1 ] && exit 1
+  cp "$RESIGN_FIXTURE/manifest.zipline.json" "$dir/manifest.zipline.json"; exit 0
+fi
 echo "task=$1 $2 toolsBin=${KELIVER_TOOLS_BIN:-}" >> "$(dirname "$0")/gradlew.calls"
 [ "${FAIL_BUILD:-}" = 1 ] && exit 1
 rm -rf "$(dirname "$0")/build/zipline/Development"; mkdir -p "$(dirname "$0")/build/zipline"
@@ -224,6 +246,57 @@ if keliver_require_isolated_store "$WORK" "$APP" > "$WORK/guard.log" 2>&1; then
 else
   bad "isolation guard refused"; cat "$WORK/guard.log"
 fi
+
+# 6. --republish (W4.3): v1's code again, as a new sequence (4), signed by keliverResign
+cp "$SITE/bundles/index.json" "$WORK/index.before-republish"; BEFORE="$(snapshot "$SITE")"
+usage_ok=1
+for args in "--republish" "--republish x" "--republish 0" "--republish 1 --init" "--republish 1 --skip-build"; do
+  # shellcheck disable=SC2086
+  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" $args > "$WORK/u.log" 2>&1; rc=$?
+  # The JVM's own usage error, not the wrapper refusing an option it does not pass on.
+  [ "$rc" = 2 ] && grep -q -- "--republish" "$WORK/u.log" && ! grep -q "unknown option" "$WORK/u.log" \
+    || { usage_ok=0; bad "$args: exit $rc, $(head -1 "$WORK/u.log")"; }
+done
+[ "$usage_ok" = 1 ] && [ "$(snapshot "$SITE")" = "$BEFORE" ] \
+  && ok "--republish usage errors (no number, not a number, 0, with --init, with --skip-build): exit 2, nothing written"
+: > "$APP/gradlew.calls"
+refused "republishing a version the index has no entry for" "no entry for v9" \
+  RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 9
+refused "republishing v1 checked against another key" "does not verify" \
+  RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --republish 1
+[ ! -s "$APP/gradlew.calls" ] && ok "neither refusal ran a re-sign" || bad "a refused republish ran: $(cat "$APP/gradlew.calls")"
+refused "a re-sign that signs the old sequence again" "signed for sequence 1, but this publish is sequence 4" \
+  RESIGN_FIXTURE="$WORK/fx/one-s1" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1
+FAIL_BUILD=1 RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1 > "$WORK/r.log" 2>&1; rc=$?
+[ "$rc" = 3 ] && grep -q "the re-sign failed" "$WORK/r.log" && grep -q "keliver-new-publish-target.sh" "$WORK/r.log" \
+  && [ "$(snapshot "$SITE")" = "$BEFORE" ] && ok "a failed re-sign: exit 3, names the scaffolder upgrade, site byte-identical" \
+  || { bad "a failed re-sign: exit $rc"; tail -3 "$WORK/r.log"; }
+: > "$APP/gradlew.calls"
+RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1 > "$WORK/rp.log" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q "republished v1 as v4 (sequence 4, channel stable)" "$WORK/rp.log" \
+  && ok "v1 republished: $(grep -o 'republished v1 as v4 ([^)]*)' "$WORK/rp.log")" || { bad "republish: exit $rc"; cat "$WORK/rp.log"; }
+grep -qx "task=keliverResign -Pkeliver.sequence=4 toolsBin=$TOOLS/bin" "$APP/gradlew.calls" \
+  && ok "it ran the app's keliverResign for sequence 4, with KELIVER_TOOLS_BIN = the tools bin (no compile)" \
+  || bad "re-sign call: $(cat "$APP/gradlew.calls")"
+RDIR="$(cat "$APP/resign.dir" 2>/dev/null)"
+case "$RDIR" in "$SITE"*|"") bad "the re-sign directory was '$RDIR' (inside the site, or none)";;
+  *) [ ! -e "$RDIR" ] && ok "the scratch copy it re-signed is outside the site and was deleted" || bad "the scratch copy $RDIR was left";; esac
+python3 - "$SITE/bundles" "$WORK/index.before-republish" > "$WORK/check6.txt" 2>&1 <<'PY'
+import hashlib, json, os, sys
+b = sys.argv[1]; idx = json.load(open(os.path.join(b, 'index.json'))); old = json.load(open(sys.argv[2]))
+assert idx['entries'][:-1] == old['entries'], 'an earlier entry changed'
+e = idx['entries'][-1]
+assert (e['sequence'], e['version'], e['channel'], e['republishOf']) == (4, 4, 'stable', 1), e
+assert e['capabilities'] == ['host-sql@1'], e
+assert e['manifestSha256'] == hashlib.sha256(open(os.path.join(b, 'v4/manifest.zipline.json'), 'rb').read()).hexdigest(), e
+for m in ('lib.zipline', 'main.zipline'):
+    assert open(os.path.join(b, 'v1', m), 'rb').read() == open(os.path.join(b, 'v4', m), 'rb').read(), m
+assert json.load(open(os.path.join(b, 'v4/manifest.zipline.json')))['metadata']['keliver.sequence'] == '4'
+assert not [n for n in os.listdir(b) if n.startswith('.staging') or '.tmp-' in n], os.listdir(b)
+print('ok')
+PY
+[ $? = 0 ] && ok "index.json: v4 = v1's modules byte for byte, signed for sequence 4, republishOf 1, v1's capabilities and channel" \
+  || { bad "index after the republish"; cat "$WORK/check6.txt"; }
 
 echo "keliver-publish self-test: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

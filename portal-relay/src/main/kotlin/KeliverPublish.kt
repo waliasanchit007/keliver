@@ -1,11 +1,13 @@
 import java.io.File
 import kotlin.system.exitProcess
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * `keliver-publish`: the relay's publish without the relay, for CI and for a
  * static or CDN bundle server (W3, docs/DELIVERY_PLAN.md).
  *
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> [--channel stable] [--skip-build] [--init]
+ *   keliver-publish [app-dir] --out <dir> --public-key-file <file> --republish <version> [--channel <name>]
  *
  * `<dir>` must hold the LIVE `bundles/index.json` and `bundles/v<N>/` (download
  * them from the bundle server first): the next version and sequence come from
@@ -19,10 +21,17 @@ import kotlin.system.exitProcess
  * none is given. Only the PUBLIC key is read here. The compile task signs, with
  * the key its signing block finds (KELIVER_SIGNING_KEY_FILE in CI).
  *
+ * `--republish <version>` is a rollback (W4.3): hosts refuse a sequence below
+ * the highest they have run, so older code goes out again as a NEW sequence.
+ * v<version>'s modules are copied unchanged, the app's `keliverResign` task
+ * (from the same signing block, holding the same key) signs the copy for the
+ * next sequence, and it is published as a new `v<N>/` with the original's
+ * capabilities and channel (or `--channel`). Nothing is compiled.
+ *
  * Exit status:
  * - 0 published;
  * - 2 usage;
- * - 3 the build failed (nothing published);
+ * - 3 the build (or, for --republish, the re-sign) failed (nothing published);
  * - 4 refused: nothing written, except that losing the lock race to another
  *   publish may have created `bundles/.publish.lock`;
  * - 5 an I/O error while writing: the index is unchanged or complete, never
@@ -33,18 +42,24 @@ import kotlin.system.exitProcess
 object KeliverPublish {
   private const val USAGE =
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
-      "[--channel stable] [--skip-build] [--init]"
+      "[--channel stable] [--skip-build] [--init] [--republish <version>]"
 
   @JvmStatic
   fun main(args: Array<String>) {
     exitProcess(run(args.toList(), System.getenv("KELIVER_PUBLIC_KEY_HEX")))
   }
 
-  internal fun run(args: List<String>, publicKeyHexEnv: String?, build: (File, String, Long) -> Int = ::gradle): Int {
+  internal fun run(
+    args: List<String>,
+    publicKeyHexEnv: String?,
+    resign: (File, File, Long) -> Int = ::gradleResign,
+    build: (File, String, Long) -> Int = ::gradle,
+  ): Int {
     var app: String? = null
     var out: String? = null
     var keyFile: String? = null
-    var channel = DEFAULT_CHANNEL
+    var channel: String? = null
+    var republish: Int? = null
     var skipBuild = false
     var init = false
     val it = args.iterator()
@@ -53,6 +68,8 @@ object KeliverPublish {
         "--out" -> out = it.nextOrNull() ?: return usage("--out needs a directory")
         "--public-key-file" -> keyFile = it.nextOrNull() ?: return usage("--public-key-file needs a file")
         "--channel" -> channel = it.nextOrNull() ?: return usage("--channel needs a name")
+        "--republish" -> republish = it.nextOrNull()?.removePrefix("v")?.takeIf { v -> v.matches(Regex("[1-9][0-9]{0,8}")) }?.toInt()
+          ?: return usage("--republish needs a published version number (v<N>'s N)")
         "--skip-build" -> skipBuild = true
         "--init" -> init = true
         "-h", "--help" -> { println(USAGE); return 0 }
@@ -63,6 +80,9 @@ object KeliverPublish {
     if (out.isNullOrBlank()) return usage("--out is required (a directory; it is never the current one by default)")
     if (keyFile != null && keyFile.isBlank()) return usage("--public-key-file needs a file")
     if (!repoDir.isDirectory) return usage("no such app directory: $repoDir")
+    if (republish != null && (init || skipBuild)) {
+      return usage("--republish re-signs a bundle already in the live index: it takes neither --init nor --skip-build")
+    }
     val publicKeyHex = when {
       keyFile != null -> runCatching { File(keyFile).readText().trim() }.getOrElse {
         return refuse("could not read the public key file $keyFile: ${it.message}")
@@ -73,6 +93,8 @@ object KeliverPublish {
     val config = runCatching { loadPortalConfig(repoDir) }.getOrElse {
       return refuse("could not read ${File(repoDir, "keliver.portal.json")}: ${it.message}")
     }
+
+    if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, resign)
 
     // Checked again under the lock; this only spares a build that could not be published.
     if (!init && !File(File(out, "bundles"), INDEX_FILE).exists()) {
@@ -111,7 +133,7 @@ object KeliverPublish {
       emptyList()
     }
     val result = try {
-      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel, caps, init = init)
+      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init)
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty(), e.aboutSigning)
     } catch (e: java.io.IOException) {
@@ -123,12 +145,53 @@ object KeliverPublish {
     }
     println("keliver-publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key; every module is present")
     println(
-      "keliver-publish: published v${result.version} (sequence ${result.sequence}, channel $channel, " +
+      "keliver-publish: published v${result.version} (sequence ${result.sequence}, channel ${channel ?: DEFAULT_CHANNEL}, " +
         "capabilities ${caps.ifEmpty { listOf("none") }.joinToString(",")}) -> ${result.dir}",
     )
     println("keliver-publish: index ${File(result.dir.parentFile, INDEX_FILE)}")
     return 0
   }
+
+  private fun runRepublish(repoDir: File, out: File, version: Int, publicKeyHex: String, channel: String?, resign: (File, File, Long) -> Int): Int {
+    val result = try {
+      republishStatic(out, version, publicKeyHex, channel) { dir, sequence ->
+        println("keliver-publish: re-signing a copy of v$version for sequence $sequence (keliverResign in $repoDir); nothing is compiled")
+        resign(repoDir, dir, sequence)
+      }
+    } catch (e: BuildFailed) {
+      System.err.println(
+        "keliver-publish: the re-sign failed (gradle exit ${e.exitCode}). Nothing was published.\n" +
+          "  If Gradle says task 'keliverResign' was not found, the app's signing block predates republishing: " +
+          "run keliver-new-publish-target.sh to replace it.",
+      )
+      return 3
+    } catch (e: PublishRefused) {
+      return refuse(e.message.orEmpty(), e.aboutSigning)
+    } catch (e: java.io.IOException) {
+      System.err.println(
+        "keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete, never half-written; " +
+          "a v<N>/ that no index entry names may be left, which is never served as current and never reused.",
+      )
+      return 5
+    }
+    val e = result.entry
+    println(
+      "keliver-publish: republished v$version as v${result.version} (sequence ${result.sequence}, channel " +
+        "${(e["channel"] as JsonPrimitive).content}): the same modules, signed again for the new sequence -> ${result.dir}",
+    )
+    println("keliver-publish: index ${File(result.dir.parentFile, INDEX_FILE)}")
+    return 0
+  }
+
+  private fun gradleResign(repoDir: File, dir: File, sequence: Long): Int =
+    ProcessBuilder(
+      File(repoDir, "gradlew").absolutePath, "keliverResign", "-Pkeliver.resignDir=${dir.absolutePath}",
+      "-Pkeliver.sequence=$sequence", "--console=plain",
+    )
+      .directory(repoDir)
+      .inheritIO()
+      .start()
+      .waitFor()
 
   private fun gradle(repoDir: File, task: String, sequence: Long): Int =
     ProcessBuilder(File(repoDir, "gradlew").absolutePath, task, "-Pkeliver.sequence=$sequence", "--console=plain")

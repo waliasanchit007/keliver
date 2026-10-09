@@ -9,6 +9,7 @@ import java.util.UUID
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -212,6 +213,7 @@ internal fun publishStatic(
   capabilities: List<String> = emptyList(),
   now: Instant = Instant.now(),
   init: Boolean = false,
+  extraFields: Map<String, JsonElement> = emptyMap(), // added to (or replacing) the new entry's fields
   beforeLock: () -> Unit = {}, // a test hook: another publish landing between the checks and the lock
 ): StaticPublish {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
@@ -270,7 +272,7 @@ internal fun publishStatic(
       }
 
       val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-      val entry = entryJson(sequence, version, channel, capabilities, manifestSha, now)
+      val entry = JsonObject(entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields)
       val next = JsonObject(index + ("entries" to JsonArray(entries + entry)))
       writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
       return StaticPublish(version, sequence, dest, entry)
@@ -278,6 +280,95 @@ internal fun publishStatic(
       lock.release()
     }
   }
+}
+
+/**
+ * W4.3: a build (here, the app's `keliverResign` task) that exited non-zero.
+ * Nothing was published.
+ */
+internal class BuildFailed(val exitCode: Int) : Exception("the build exited $exitCode")
+
+/**
+ * Rollback as a new sequence (W4.3, `keliver-publish --republish <version>`).
+ *
+ * Hosts refuse a signed sequence below the highest they have run, so going back
+ * to older code means publishing it again, ahead of everything: v[version]'s
+ * modules are copied unchanged into a scratch directory, [resign] (the app's
+ * `keliverResign` Gradle task, which holds the private key) writes the next
+ * sequence into that copy's manifest and signs it again, and the copy is
+ * published like any build, as a new `v<N>/` and index entry. The entry keeps
+ * the original's capabilities and widget version (the code is the same), and
+ * its channel unless [channel] is given, and records `republishOf`.
+ *
+ * Refused before [resign] runs when the index has no entry for v[version] (a
+ * `v<N>/` without one is a publish that did not finish), when that directory's
+ * manifest is not the one the entry names, or when the bundle is not complete
+ * and signed with [publicKeyHex]. Refused after it when the re-signed manifest
+ * changed anything but its sequence and signature. The scratch copy is always
+ * deleted; a refusal writes nothing.
+ */
+internal fun republishStatic(
+  outDir: File,
+  version: Int,
+  publicKeyHex: String,
+  channel: String? = null,
+  now: Instant = Instant.now(),
+  resign: (dir: File, sequence: Long) -> Int,
+): StaticPublish {
+  val bundlesDir = File(outDir, "bundles")
+  if (!File(bundlesDir, INDEX_FILE).exists()) {
+    throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to republish from: download the served bundles/ first")
+  }
+  val index = readIndex(bundlesDir)
+  val original = (index["entries"] as JsonArray).map { it as JsonObject }
+    .firstOrNull { (it["version"] as JsonPrimitive).intOrNull == version }
+    ?: throw PublishRefused(
+      "${File(bundlesDir, INDEX_FILE)} has no entry for v$version. Only a published bundle can be republished; " +
+        "a v<N>/ without an entry is a publish that did not finish.",
+    )
+  val source = File(bundlesDir, "v$version")
+  val sourceManifest = File(source, "manifest.zipline.json")
+  val expectedSha = (original["manifestSha256"] as? JsonPrimitive)?.content?.lowercase()
+  if (!sourceManifest.isFile || sha256Hex(sourceManifest.readBytes()) != expectedSha) {
+    throw PublishRefused("$sourceManifest is not the manifest the index entry for v$version names (manifestSha256); it was left as it is")
+  }
+  staticOutputProblem(source, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+  val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
+  val capabilities = (original["capabilities"] as? JsonArray)?.map { (it as JsonPrimitive).content }.orEmpty()
+  val extra = buildMap<String, JsonElement> {
+    original["widgetVersion"]?.let { put("widgetVersion", it) }
+    put("republishOf", JsonPrimitive(version))
+  }
+
+  val scratch = Files.createTempDirectory("keliver-republish-").toFile()
+  try {
+    val copy = File(scratch, "v$version")
+    source.copyRecursively(copy, overwrite = false)
+    val sequence = nextSequence(index, bundlesDir)
+    val code = resign(copy, sequence)
+    if (code != 0) throw BuildFailed(code)
+    republishProblem(sourceManifest.readText(), File(copy, "manifest.zipline.json").readText())?.let { throw PublishRefused(it) }
+    return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra)
+  } finally {
+    scratch.deleteRecursively()
+  }
+}
+
+/**
+ * Why [resignedJson] is not [originalJson] at a new sequence, or null: the
+ * modules (with their sha256), the main module and function, Zipline's version
+ * and every other metadata key must be unchanged.
+ */
+internal fun republishProblem(originalJson: String, resignedJson: String): String? {
+  fun parse(s: String) = runCatching { Json.parseToJsonElement(s) as? JsonObject }.getOrNull()
+  val original = parse(originalJson) ?: return "the original manifest is not a JSON object"
+  val resigned = parse(resignedJson) ?: return "the re-signed manifest is not a JSON object"
+  for (field in listOf("modules", "mainModuleId", "mainFunction", "version")) {
+    if ((original[field] ?: JsonNull) != (resigned[field] ?: JsonNull)) return "the re-signed manifest's $field differs from the original's: a republish re-signs, it never changes code"
+  }
+  fun otherMetadata(m: JsonObject) = ((m["metadata"] as? JsonObject).orEmpty()) - SEQUENCE_METADATA_KEY
+  if (otherMetadata(original) != otherMetadata(resigned)) return "the re-signed manifest's metadata differs from the original's in more than $SEQUENCE_METADATA_KEY"
+  return null
 }
 
 private fun writeAtomically(target: File, text: String) {

@@ -11,9 +11,11 @@
 #   S5  checked against another app's public key, the CLI refuses this app's
 #       already-built bundle (--skip-build); nothing changes
 #   S6  an index whose sha256 isn't the manifest's: nothing loads
-#   S7  server down: the host starts from its cached v2
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
-#   S9  (W4.2) the stored floor above the cached v2, offline: the cache is refused
+#   S10 (W4.3) rollback done right: keliver-publish --republish 1 publishes v1's
+#       code again as v3, at sequence 3; the host (floor 2) runs it ("Depot")
+#   S7  server down: the host starts from its cached v3 (from here on, v3)
+#   S9  (W4.2) the stored floor above the cached v3, offline: the cache is refused
 #   S9b (W4.2) the same with the server up but failing the lookup: the network
 #       fallback to the last-good manifest is refused too
 # The app was wired by the published 0.3.7 zip, whose signing block writes no
@@ -48,6 +50,10 @@ w3_title(){  # $1 from, $2 to: the edit a developer makes; no relay involved
 w3_publish(){  # $1 label, then extra flags: the CLI, run as a CI job would run it
   local label="$1"; shift
   ( cd "$APP" && "$PUBLISH" . --out "$W3/site" --public-key-file "$STORE/keys/ed25519.pub" "$@" ) > "$EV/w3-publish-$label.log" 2>&1
+}
+w3_same_modules(){  # $1 $2: v<$1> and v<$2> hold the same module files, byte for byte (W4.3)
+  python3 -c 'import os,sys; a,b=sys.argv[1:3]; fa=sorted(f for f in os.listdir(a) if f!="manifest.zipline.json"); fb=sorted(f for f in os.listdir(b) if f!="manifest.zipline.json"); sys.exit(0 if fa and fa==fb and all(open(os.path.join(a,f),"rb").read()==open(os.path.join(b,f),"rb").read() for f in fa) else 1)' \
+    "$W3/site/bundles/v$1" "$W3/site/bundles/v$2"
 }
 w3_signed_sequence(){  # $1 = N: v<N>'s manifest carries keliver.sequence "N" in its signed metadata (W4.1)
   python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); sys.exit(0 if m.get("metadata",{}).get("keliver.sequence")==sys.argv[2] else 1)' \
@@ -131,17 +137,37 @@ grep -q "rollback refused: sequence 1 is below 2" "$C" && ok "S8: v1 offered aga
 grep -q "codeLoadSuccess" "$C" && bad "S8: something loaded" || ok "S8: no code loaded"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
+# S10 (W4.3): rollback done right. v1's code goes out AGAIN as a new sequence:
+# keliver-publish --republish 1 copies v1's modules, the signing block's
+# keliverResign signs the copy for sequence 3 (the key found through the store,
+# as for a build; nothing compiled), and it is published as v3. The host, whose
+# floor is 2, runs it: the screen reads "Depot" again, and the floor rises to 3.
+w3_publish republish-v1 --republish 1 && grep -q "republished v1 as v3 (sequence 3" "$EV/w3-publish-republish-v1.log" \
+  && ok "S10: $(grep -o 'republished v1 as v3 ([^)]*)' "$EV/w3-publish-republish-v1.log"), by the app's keliverResign" \
+  || { bad "S10: republish v1"; tail -20 "$EV/w3-publish-republish-v1.log"; }
+grep -q "Task :compile" "$EV/w3-publish-republish-v1.log" && bad "S10: the republish compiled" || ok "S10: the republish compiled nothing"
+cp "$W3/site/bundles/index.json" "$EV/w3-index-v3.json" 2>/dev/null
+w3_signed_sequence 3 && ok "W4.3: v3's manifest is signed for sequence 3" || bad "W4.3: v3's manifest does not carry signed sequence 3"
+w3_same_modules 1 3 && ok "S10: v3's modules are v1's, byte for byte" || bad "S10: v3's modules differ from v1's"
+launch S10-republish
+C="$EV/S10-republish.console.txt"
+grep -q "loading https://localhost:8443/bundles/v3/manifest.zipline.json (index sequence 3" "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S10: the host that had run v2 (floor 2) loaded the republished v1 as v3" \
+  || bad "S10: v3 did not load: $(grep -E 'codeLoad|loading|refused' "$C" | head -3 | tr '\n' ' ')"
+grep -q "rollback floor raised: 2 -> 3" "$C" && ok "S10: running v3 raised the floor from 2 to 3" || bad "S10: no floor raise logged at v3"
+reads S10-republish Depot && ok "S10: v1's code is back: the screen reads 'Depot'" || bad "S10: 'Depot' is not on the screen"
+
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \
   && bad "S7: the static server is still answering" || ok "S7: no bundle server is answering"
 launch S7-static
 C="$EV/S7-static.console.txt"
-grep -q "lookup failed; starting from the cached bundle (last loaded from https://localhost:8443/bundles/v2/" "$C" \
-  && grep -q "codeLoadSuccess" "$C" && ok "S7: offline, the host started from its cached v2" || bad "S7: no start from the cache"
-reads S7-static Warehouse && ok "S7: the screen reads 'Warehouse' offline" || bad "S7: 'Warehouse' is not on the screen"
+grep -q "lookup failed; starting from the cached bundle (last loaded from https://localhost:8443/bundles/v3/" "$C" \
+  && grep -q "codeLoadSuccess" "$C" && ok "S7: offline, the host started from its cached v3" || bad "S7: no start from the cache"
+reads S7-static Depot && ok "S7: the screen reads 'Depot' offline" || bad "S7: 'Depot' is not on the screen"
 
 # S9 (W4.2): the floor holds on the cache start too. Raise the stored floor above
-# the cached v2 (as a host that had run a newer bundle would have it), then start
+# the cached v3 (as a host that had run a newer bundle would have it), then start
 # offline: the cached manifest is refused and nothing runs.
 FLOOR_KEY="keliver.highestSequence-keliver-production-$(printf '%s' "$PUB" | tr 'A-F' 'a-f' | cut -c1-16)"
 xcrun simctl terminate "$UDID" "$BID" >/dev/null 2>&1
@@ -155,25 +181,25 @@ xcrun simctl spawn "$UDID" defaults write "$PREFS" "$FLOOR_KEY" -int 9
   && ok "S9: the host's stored rollback floor is now 9 (in its container's preferences)" || bad "S9: could not set the floor ($PREFS $FLOOR_KEY)"
 launch S9-cache-floor
 C="$EV/S9-cache-floor.console.txt"
-grep -q "cached bundle refused: rollback refused: sequence 2 is below 9" "$C" && ok "S9: offline, the cached v2 was refused below the floor" \
+grep -q "cached bundle refused: rollback refused: sequence 3 is below 9" "$C" && ok "S9: offline, the cached v3 was refused below the floor" \
   || bad "S9: no cache refusal: $(grep -E 'codeLoad|cached|lookup' "$C" | head -3 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$C" && bad "S9: something loaded" || ok "S9: no code loaded"
 
 # S9b (W4.2): the same, with the server UP but failing the lookup on purpose (no
 # index, no bundles/latest). The host takes the cache path; the cache is refused,
 # so Zipline fetches the last-good manifest from the network, and that fetch is
-# held to the floor too: v2 (sequence 2) is refused against 9.
+# held to the floor too: v3 (sequence 3) is refused against 9.
 mv "$W3/site/bundles/index.json" "$W3/index.hidden"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w3-server-s9b.log" &
 SPID=$!
-for _ in $(seq 1 30); do curl -s --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v2/manifest.zipline.json && break; sleep 1; done
+for _ in $(seq 1 30); do curl -s --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/v3/manifest.zipline.json && break; sleep 1; done
 launch S9b-fallback-floor
 C="$EV/S9b-fallback-floor.console.txt"
-grep -q "lookup failed; starting from the cached bundle" "$C" && grep -q "rollback refused: sequence 2 is below 9" "$C" \
-  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v2 were both held to the floor" \
+grep -q "lookup failed; starting from the cached bundle" "$C" && grep -q "rollback refused: sequence 3 is below 9" "$C" \
+  && ok "S9b: lookup failed with the server up; the cache and then the network fetch of v3 were both held to the floor" \
   || bad "S9b: no refusal on the network fallback: $(grep -E 'codeLoad|cached|lookup|refused' "$C" | head -4 | tr '\n' ' ')"
-grep -q "^GET /bundles/v2/manifest.zipline.json" "$EV/w3-server-s9b.log" \
-  && ok "S9b: the host did fetch v2's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v2's manifest"
+grep -q "^GET /bundles/v3/manifest.zipline.json" "$EV/w3-server-s9b.log" \
+  && ok "S9b: the host did fetch v3's manifest from the network (the guarded path ran)" || bad "S9b: no network fetch of v3's manifest"
 grep -q "codeLoadSuccess" "$C" && bad "S9b: something loaded" || ok "S9b: no code loaded"
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 mv "$W3/index.hidden" "$W3/site/bundles/index.json"

@@ -16,6 +16,10 @@
 #   resolver error  a resolver that exits non-zero fails the build
 #   sequence      KELIVER_PUBLISH_SEQUENCE lands in the signed metadata (W4); an
 #                 edited one no longer verifies; a malformed one fails the build
+#   re-sign       keliverResign (W4.3, keliver-publish --republish) signs a copy
+#                 of the bundle again for another sequence, compiling nothing and
+#                 changing only the sequence and signature; the key is in neither
+#                 the --info log nor the history; without a key it fails
 # Without --build it also checks the upgrade of an app wired by tools 0.3.7
 # (a plain swap) and 0.3.6 (with the U31 advice):
 # exactly the old block is replaced in place; an edited one is refused.
@@ -362,6 +366,38 @@ PY
   [ "$(signature_of)" = signed:false ] && ok "an edited sequence (7 -> 8) no longer verifies" \
     || bad "an edited sequence still verifies: $(signature_of)"
   cp "$T/signed.json" "$MANIFEST"
+
+  # W4.3: keliverResign, on a copy of that bundle (signed for 7), for sequence 12.
+  RS="$T/resign"; rm -rf "$RS"; cp -R "$APP/build/zipline/Development" "$RS"
+  rm -rf "$APP"/.gradle/*/executionHistory
+  ( cd "$APP" && KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv" ./gradlew --console=plain --info keliverResign \
+      -Pkeliver.resignDir="$RS" -Pkeliver.sequence=12 > "$DISP/build-resign.log" 2>&1 ); rc=$?
+  BUILT="$MANIFEST"; MANIFEST="$RS/manifest.zipline.json"; got="$(signature_of)"; MANIFEST="$BUILT"
+  same="$(python3 - "$BUILT" "$RS/manifest.zipline.json" "$APP/build/zipline/Development" "$RS" <<'PY'
+import json, os, sys
+a, b = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+ok = all(a.get(k) == b.get(k) for k in ('modules', 'mainModuleId', 'mainFunction', 'version'))
+ok = ok and {k: v for k, v in a.get('metadata', {}).items() if k != 'keliver.sequence'} == \
+  {k: v for k, v in b.get('metadata', {}).items() if k != 'keliver.sequence'}
+ok = ok and b['metadata'].get('keliver.sequence') == '12'
+for f in os.listdir(sys.argv[3]):
+    if f != 'manifest.zipline.json':
+        ok = ok and open(os.path.join(sys.argv[3], f), 'rb').read() == open(os.path.join(sys.argv[4], f), 'rb').read()
+print('same' if ok else 'changed')
+PY
+)"
+  HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
+  keyhits="$(key_in "$DISP/build-resign.log" ${HIST:+"$HIST"})"
+  if [ "$rc" = 0 ] && [ "$got" = signed:true ] && [ "$same" = same ] && [ "$keyhits" = absent ] \
+     && ! grep -q 'Task :compile' "$DISP/build-resign.log"; then
+    ok "keliverResign: the copy is signed for sequence 12 and verifies; only the sequence and signature changed; nothing compiled; the key in neither the --info log nor the history"
+  else
+    bad "keliverResign: rc=$rc, signature $got, $same, key $keyhits, compiled: $(grep -c 'Task :compile' "$DISP/build-resign.log")"
+  fi
+  ( cd "$APP" && env -u KELIVER_SIGNING_KEY_FILE -u KELIVER_TOOLS_BIN -u KP ./gradlew --console=plain keliverResign \
+      -Pkeliver.resignDir="$RS" -Pkeliver.sequence=13 > "$DISP/build-resign-nokey.log" 2>&1 ); rc=$?
+  [ "$rc" != 0 ] && grep -q "cannot be signed again" "$DISP/build-resign-nokey.log" \
+    && ok "keliverResign without a key fails (it never leaves the copy unsigned)" || bad "keliverResign without a key: rc=$rc"
   compile "$DISP/build-badseq.log" KELIVER_TOOLS_BIN="$ROOT/scripts" KELIVER_PUBLISH_SEQUENCE=07x; rc=$?
   [ "$rc" != 0 ] && grep -q "keliver.sequence must be a positive integer" "$DISP/build-badseq.log" \
     && ok "a malformed sequence fails the build" || bad "a malformed sequence: rc=$rc"

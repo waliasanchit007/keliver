@@ -7,14 +7,17 @@ import java.security.KeyPairGenerator
 import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -352,5 +355,132 @@ class StaticPublishTest {
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--bogus"), app.publicHex) { _, _, _ -> 0 })
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", "", "--skip-build"), app.publicHex) { _, _, _ -> 0 })
     assertEquals(2, KeliverPublish.run(listOf(appDir.path, "--out", out, "--public-key-file", ""), null) { _, _, _ -> 0 })
+  }
+
+  // --- W4.3: --republish (rollback as a new sequence) --------------------------
+
+  /**
+   * What the signing block's keliverResign does: the sequence into the copy's metadata, signed
+   * again by [by]. [edit] stands for a re-sign that changes more than it may.
+   */
+  private fun resign(by: Key = app, signFor: Long? = null, edit: (JsonObject) -> JsonObject = { it }): (File, Long) -> Int =
+    { dir, seq ->
+      val f = File(dir, "manifest.zipline.json")
+      val m = Json.parseToJsonElement(f.readText()).jsonObject
+      val metadata = (m["metadata"]?.jsonObject ?: JsonObject(emptyMap())) + (SEQUENCE_METADATA_KEY to JsonPrimitive((signFor ?: seq).toString()))
+      val next = edit(JsonObject(m + ("metadata" to JsonObject(metadata))))
+      f.writeText(by.signer.sign(ZiplineManifest.decodeJson(next.toString())).encodeJson())
+      0
+    }
+
+  private fun twoPublished() {
+    publishStatic(output("one", title = "Depot"), site, app.publicHex, capabilities = listOf("host-sql@1"), init = true)
+    publishStatic(output("two", title = "Warehouse", seq = 2), site, app.publicHex, capabilities = listOf("host-sql@1", "host-http@1"))
+  }
+
+  @Test
+  fun aRepublishIsTheOlderCodeAtTheNextSequence() {
+    twoPublished()
+    var scratch: File? = null
+    val p = republishStatic(site, 1, app.publicHex, now = Instant.parse("2026-10-09T08:00:00Z")) { dir, seq ->
+      scratch = dir
+      assertEquals(3L, seq)
+      resign()(dir, seq)
+    }
+    assertEquals(3 to 3L, p.version to p.sequence)
+    for (m in listOf("lib.zipline", "main.zipline")) {
+      assertContentEquals(File(bundles, "v1/$m").readBytes(), File(bundles, "v3/$m").readBytes(), m)
+    }
+    val manifest = File(bundles, "v3/manifest.zipline.json").readText()
+    assertEquals("3", signedSequenceText(manifest))
+    assertNull(publishedSignatureProblem(manifest, app.publicHex))
+    assertNull(republishProblem(File(bundles, "v1/manifest.zipline.json").readText(), manifest))
+    val e = entries().last()
+    assertEquals(1, e["republishOf"]!!.jsonPrimitive.int)
+    assertEquals("stable", e["channel"]!!.jsonPrimitive.content)
+    assertEquals(listOf("host-sql@1"), e["capabilities"]!!.jsonArray.map { it.jsonPrimitive.content }) // v1's, not v2's
+    assertEquals(1, e["widgetVersion"]!!.jsonPrimitive.int)
+    assertEquals(sha256Hex(manifest.encodeToByteArray()), e["manifestSha256"]!!.jsonPrimitive.content)
+    assertEquals("2026-10-09T08:00:00Z", e["createdAt"]!!.jsonPrimitive.content)
+    assertFalse(scratch!!.exists(), "the scratch copy was left behind")
+    assertEquals(setOf(".publish.lock", "index.json", "v1", "v2", "v3"), bundles.list()!!.toSet())
+    // A host that has run v2 picks it: it is the newest entry, and above its floor.
+    val pick = pickFromIndex(File(bundles, INDEX_FILE).readText(), listOf("host-sql@1", "host-http@1")).getOrThrow()
+    assertEquals(3L to "v3/manifest.zipline.json", pick.sequence to pick.manifestPath)
+    assertNull(hosttemplate.rollbackProblem(hosttemplate.manifestSequence(manifest), 2))
+  }
+
+  @Test
+  fun aRepublishKeepsTheOriginalsChannelUnlessGivenOne() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true)
+    assertEquals("beta", republishStatic(site, 1, app.publicHex, resign = resign()).entry["channel"]!!.jsonPrimitive.content)
+    assertEquals("stable", republishStatic(site, 1, app.publicHex, channel = "stable", resign = resign()).entry["channel"]!!.jsonPrimitive.content)
+    assertEquals(listOf(1L, 2L, 3L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
+  }
+
+  @Test
+  fun aRepublishIsRefusedBeforeSigningWhenTheSourceIsNotAPublishedBundle() {
+    val neverCalled: (File, Long) -> Int = { _, _ -> error("re-signed") }
+    assertRefusedAndNothingWritten("index.json to republish from") { republishStatic(site, 1, app.publicHex, resign = neverCalled) }
+    twoPublished()
+    assertRefusedAndNothingWritten("no entry for v9") { republishStatic(site, 9, app.publicHex, resign = neverCalled) }
+    output("leftover").copyRecursively(File(bundles, "v7")) // a publish that did not finish
+    assertRefusedAndNothingWritten("no entry for v7") { republishStatic(site, 7, app.publicHex, resign = neverCalled) }
+    // Checked against another app's key.
+    val foreign = assertFailsWith<PublishRefused> { republishStatic(site, 1, key().publicHex, resign = neverCalled) }
+    assertTrue("does not verify" in foreign.message!! && foreign.aboutSigning, foreign.message)
+    // A v1 directory that is not what the index names.
+    val m = File(bundles, "v1/manifest.zipline.json")
+    val good = m.readText()
+    m.writeText(good + "\n")
+    assertRefusedAndNothingWritten("is not the manifest the index entry for v1 names") { republishStatic(site, 1, app.publicHex, resign = neverCalled) }
+    m.writeText(good)
+    // A module that is not the signed one.
+    File(bundles, "v1/lib.zipline").appendText("x")
+    assertRefusedAndNothingWritten("signed manifest says") { republishStatic(site, 1, app.publicHex, resign = neverCalled) }
+  }
+
+  @Test
+  fun aReSignThatChangesMoreThanTheSequenceOrSignsAnotherIsRefused() {
+    twoPublished()
+    assertRefusedAndNothingWritten("mainFunction differs") {
+      republishStatic(site, 1, app.publicHex, resign = resign { JsonObject(it + ("mainFunction" to JsonPrimitive("other.main"))) })
+    }
+    assertRefusedAndNothingWritten("metadata differs") {
+      republishStatic(site, 1, app.publicHex, resign = resign { JsonObject(it + ("metadata" to JsonObject(it["metadata"]!!.jsonObject + ("extra" to JsonPrimitive("1"))))) })
+    }
+    assertRefusedAndNothingWritten("signed for sequence 1, but this publish is sequence 3") {
+      republishStatic(site, 1, app.publicHex, resign = resign(signFor = 1))
+    }
+    assertRefusedAndNothingWritten("does not verify") { republishStatic(site, 1, app.publicHex, resign = resign(by = key())) }
+    val before = snapshot()
+    assertEquals(7, assertFailsWith<BuildFailed> { republishStatic(site, 1, app.publicHex) { _, _ -> 7 } }.exitCode)
+    assertEquals(before, snapshot())
+  }
+
+  @Test
+  fun theCliRepublishes() {
+    val appDir = File(tmp, "rapp").apply { mkdirs() }
+    File(appDir, "keliver.portal.json").writeText(
+      """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
+    )
+    twoPublished()
+    val noBuild: (File, String, Long) -> Int = { _, _, _ -> error("built") }
+    val noResign: (File, File, Long) -> Int = { _, _, _ -> error("re-signed") }
+    fun run(vararg a: String, resign: (File, File, Long) -> Int = noResign) =
+      KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, app.publicHex, resign, noBuild)
+    // Usage.
+    for (bad in listOf(listOf("--republish"), listOf("--republish", "x"), listOf("--republish", "0"),
+      listOf("--republish", "1", "--init"), listOf("--republish", "1", "--skip-build"))) {
+      assertEquals(2, run(*bad.toTypedArray()), bad.toString())
+    }
+    assertEquals(4, run("--republish", "9"))
+    assertEquals(3, run("--republish", "1") { _, _, _ -> 1 })
+    var asked: Triple<File, File, Long>? = null
+    assertEquals(0, run("--republish", "v1") { repo, dir, seq -> asked = Triple(repo, dir, seq); resign()(dir, seq) })
+    assertEquals(appDir.absoluteFile, asked!!.first)
+    assertEquals(3L, asked!!.third)
+    assertEquals(listOf(1L, 2L, 3L), entries().map { it["sequence"]!!.jsonPrimitive.content.toLong() })
+    assertEquals(1, entries().last()["republishOf"]!!.jsonPrimitive.int)
   }
 }

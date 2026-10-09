@@ -102,6 +102,7 @@ Central plus an Xcode app. It applies the same key checks and refusals as
 
 ```bash
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build] [--init]
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] --republish VERSION [--channel NAME]
 ```
 
 Publishes without the relay, for CI and for static or CDN hosting. `DIR` must
@@ -123,6 +124,12 @@ The public key comes from:
 
 In CI, `KELIVER_SIGNING_KEY_FILE` names a file holding the private key. The
 signing block reads it; nothing prints it.
+
+`--republish VERSION` is a rollback. Hosts refuse a sequence below the highest
+they have run, so older code goes out again as a new sequence: `vVERSION/`'s
+modules are copied unchanged, the app's `keliverResign` task signs the copy for
+the next sequence, and it becomes the next `v<N>/` and index entry
+(`republishOf`). Nothing is compiled. Exit 3 if the re-sign fails.
 
 ### bin/keliver-new-publish-target.sh
 

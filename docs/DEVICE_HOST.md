@@ -187,6 +187,11 @@ backwards. Ways a publisher can do that by mistake:
 - a host once pointed at a development relay that published a high sequence
   with the production key.
 
+**Rolling back** is therefore publishing again, never serving an older index:
+`keliver-publish --republish <v>` publishes v`<v>`'s unchanged modules as a new
+`v<N>/` at the next sequence, signed by the app's `keliverResign` task. Hosts
+take it because it is newer.
+
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a
