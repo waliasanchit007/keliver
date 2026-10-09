@@ -127,6 +127,113 @@ The scaffolders gain `--embed`, writing a library module instead of an app.
 *Done when:* a plain "existing" Android app and a plain SwiftUI app each show a
 signed Keliver screen next to native screens, on CI.
 
+#### W2 design (draft 2026-10-09; from a read-only survey of the templates)
+
+**One set of host sources for both modes.** Today all host logic is inside the
+app shell: Android `MainActivity.kt` (trust, lookup, floor, Zipline load,
+rendering, via `setContent` and `lifecycleScope`), and iOS
+`MainViewController.kt` (`startHost()` runs in each view controller).
+- **Android.** Split into:
+  - `KeliverHost.kt`: the host object. It owns one scope, one
+    `TreehouseAppFactory`/`TreehouseApp`, one SQL host, one HTTP host and one
+    `ImageLoader`. `start()` is idempotent; `state: StateFlow` is
+    Loading / Message / Running.
+  - `KeliverScreen.kt`: a `@Composable KeliverScreen(host, modifier)`.
+  - `KeliverView.kt`: an `AbstractComposeView`, for apps built on Views.
+
+  The scaffolded app gets a `HostApp : Application` holding the host, and a
+  ~5-line `MainActivity`. These files are byte-identical between the app and
+  `--embed`; the self-tests check that with `cmp`.
+- **iOS.** A `public object Keliver { start(); viewController() }` (not named
+  `KeliverHost`, which is the framework's module name), plus a Swift
+  `KeliverScreen: UIViewControllerRepresentable`. `MainViewController()`
+  becomes an alias.
+- **Process-wide state.** One host per process per key. A second `create()`
+  for the same cache fails loudly; it never opens a second loader on the same
+  Zipline cache. A configuration change no longer reloads anything.
+- **W4 state keeps its keys.** The floor, install id and last-good URL keep
+  their store and names in both modes (the harnesses write them directly).
+  The host version comes from `PackageManager` (`longVersionCode`), because a
+  library's `BuildConfig` has no `VERSION_CODE`.
+- **Trust root.** The key asset moves to `assets/keliver/portal_ed25519.pub`
+  in both modes. An app asset with the same name would silently override a
+  library's, and that file is the trust root.
+
+**`--embed`.**
+- **Android:** `keliver-new-production-host.sh --embed --into <existing-root>
+  [--module keliver-host]` writes a `com.android.library` module.
+  - Plugins are requested without versions, so the adopter's apply.
+  - Configuration goes in `keliver.properties` (a subproject's
+    `gradle.properties` is not read), with `-Pkeliver.*` overrides. App mode
+    uses the same file.
+  - The manifest has INTERNET only; there are consumer R8 rules.
+  - It prints the `include` / `implementation` / `Application` lines and edits
+    no adopter file.
+  - It refuses: no settings file, the module dir exists, `--application-id`.
+  - It warns: no Zipline or compose plugin, or no Kotlin 2.2.x, found in the
+    adopter's build.
+- **iOS:** `keliver-new-ios-host.sh --embed --into <dir>` writes
+  `keliver-host-ios/`: the Gradle build, `src/iosMain`, a wrapper copy,
+  `KeliverScreen.swift` and `EMBED.md`.
+  - `EMBED.md` documents the Xcode edits: the run-script phase,
+    `ENABLE_USER_SCRIPT_SANDBOXING=NO`, `-lsqlite3`, and
+    `CADisableMinimumFrameDurationOnPhone`.
+  - `checkReleaseUrls` reads the Info.plist from Xcode's environment.
+  - It refuses a project that already names a product or module KeliverHost.
+  - An XCFramework route is documented, not proven.
+
+**CI proof.**
+- **Fixtures:** `reference/embed/{android,ios}`. Each is a plain app plus an
+  `embed.diff` with exactly the documented edits, like the inventory app's
+  `hand-edits.diff`.
+- **Android** (reusing W3's static HTTPS server):
+  - X1: one UI dump has a native view and the guest screen, within the
+    `KeliverView`'s bounds;
+  - X2: a signed load;
+  - X3: interaction inside the embedded view;
+  - X4: native navigation, rotation and a second screen leave exactly one
+    lookup and one load;
+  - X5: the floor is stored;
+  - X6: with a foreign key the Keliver slot refuses, while native UI and the
+    process survive.
+- **iOS** (OCR):
+  - I1: a native `Text` and the guest screen in one screenshot;
+  - I2: a signed load;
+  - I3: a native push and pop, still one load;
+  - I4: the floor is stored;
+  - I5: with a foreign key, native UI survives.
+
+**Steps:**
+1. **W2.1** The Android refactor, with no behaviour change. The device run is
+   unchanged (S2–S15), plus a rotation row showing a single lookup.
+2. **W2.2** The iOS refactor. `ios.sh` is unchanged.
+3. **W2.3** Android `--embed`, its self-test and the fixture build.
+4. **W2.4** Android device proof X1–X6.
+5. **W2.5** iOS `--embed`, its self-test and the SwiftUI fixture build.
+6. **W2.6** iOS simulator proof I1–I5.
+7. **W2.7** R8: the fixture `assembleRelease` with minify, then X1–X2.
+8. **W2.8** Docs, an independent review, and Status. It ships in a tools
+   release only with the owner's approval.
+
+**Risks:**
+- **Biggest: the compiler plugin.** The embedded module is compiled by the
+  adopter's Kotlin, and the `app.cash.zipline` compiler plugin pins it
+  (Zipline 1.22.0 ↔ Kotlin 2.2.0). An app on another Kotlin can't embed the
+  source module. The way out is a prebuilt, published host artifact, which is
+  a Maven publication and needs the owner's approval. That is recorded as the
+  follow-up, not done in W2.
+- **Version coupling.** AGP, Compose (androidx 1.8.x) and OkHttp/Coil can be
+  coupled to or force-upgraded by the adopter's own versions. CI proves one
+  combination.
+- **The theme.** It is Material 1, so the adopter's Material 3 theme does not
+  reach Keliver screens.
+- **iOS.** An app that already embeds a Kotlin framework gets two Kotlin
+  runtimes.
+- **Unverified.** Several `TreehouseContent`s on one `TreehouseApp` (X4 tests
+  it).
+- **Backups.** The library can't force `allowBackup=false`: document
+  `dataExtractionRules`.
+
 ### W3 — Headless publishing and static distribution (G3, G4)
 
 1. **A `keliver publish` CLI** that runs without the relay: compile, verify the
