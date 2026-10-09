@@ -207,7 +207,8 @@ class MainActivity : ComponentActivity() {
       Lookup(
         url.toString(),
         pick.manifestSha256,
-        "index sequence ${pick.sequence}, channel ${BuildConfig.KELIVER_CHANNEL}, manifest sha256 ${pick.manifestSha256.take(12)}…",
+        "index sequence ${pick.sequence}, channel ${pick.channel} (host: ${BuildConfig.KELIVER_CHANNEL}), " +
+          "manifest sha256 ${pick.manifestSha256.take(12)}…",
       )
     }
   }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()

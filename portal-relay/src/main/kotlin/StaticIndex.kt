@@ -153,6 +153,7 @@ internal fun readIndex(bundlesDir: File): JsonObject {
   val onChannel = HashSet<Pair<Long, String>>()
   val versionOf = HashMap<Long, Int>()
   val sequenceOf = HashMap<Int, Long>()
+  val manifestOf = HashMap<Long, Pair<JsonElement?, JsonElement?>>()
   entries.forEachIndexed { i, e ->
     val o = e as? JsonObject ?: throw PublishRefused("$f entry $i is not an object")
     val sequence = (o["sequence"] as? JsonPrimitive)?.longOrNull
@@ -162,6 +163,11 @@ internal fun readIndex(bundlesDir: File): JsonObject {
     }
     if (sequence < 1 || version < 1 || version > MAX_VERSION) {
       throw PublishRefused("$f entry $i has sequence $sequence and version $version, outside 1..$MAX_VERSION; it was left as it is")
+    }
+    o["channel"]?.let { c ->
+      if (!(c is JsonPrimitive && c.isString && CHANNEL_RE.matches(c.content))) {
+        throw PublishRefused("$f entry $i has a malformed channel ($c), which hosts skip; it was left as it is")
+      }
     }
     val channel = entryChannel(o)
     if (!onChannel.add(sequence to channel)) {
@@ -173,8 +179,23 @@ internal fun readIndex(bundlesDir: File): JsonObject {
     sequenceOf.put(version, sequence)?.takeIf { it != sequence }?.let {
       throw PublishRefused("$f has two entries for v$version, at sequences $it and $sequence; it was left as it is")
     }
+    val manifest = o["manifest"] to o["manifestSha256"]
+    manifestOf.put(sequence, manifest)?.takeIf { it != manifest }?.let {
+      throw PublishRefused("$f has entries at sequence $sequence naming different manifests; it was left as it is")
+    }
   }
   return root
+}
+
+/**
+ * Whether every host that can run [source] can also run [other]: [other] has no
+ * constraints, requires no capability [source] doesn't, and needs no newer widget
+ * protocol. (Both entries have passed [entryShapeProblem].)
+ */
+private fun noStricterThan(other: JsonObject, source: JsonObject): Boolean {
+  fun caps(e: JsonObject) = (e["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }.toSet()
+  fun wv(e: JsonObject) = (e["widgetVersion"] as JsonPrimitive).intOrNull!!
+  return other["constraints"] == null && caps(source).containsAll(caps(other)) && wv(other) <= wv(source)
 }
 
 /** An entry's channel; one without a channel is on [DEFAULT_CHANNEL], as hosts read it. */
@@ -343,14 +364,22 @@ internal fun promoteStatic(
     val atSequence = entries.filter { (it["sequence"] as JsonPrimitive).longOrNull == sequence }
     val source = atSequence.firstOrNull() ?: throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
     if (atSequence.any { entryChannel(it) == channel }) throw PublishRefused("sequence $sequence is already on channel $channel")
-    entries.filter { entryChannel(it) == channel }.maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! }
-      ?.takeIf { it > sequence }?.let {
+    entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    // Hosts on [channel] see its entries and stable's. A higher one that every host able
+    // to run this bundle can also run (no constraints, nothing more required) means none
+    // of them would pick this one. A higher entry that some of them skip does not.
+    entries.filter { (entryChannel(it) == channel || entryChannel(it) == DEFAULT_CHANNEL) && entryShapeProblem(it) == null }
+      .filter { (it["sequence"] as JsonPrimitive).longOrNull!! > sequence && noStricterThan(it, source) }
+      .maxOfOrNull { (it["sequence"] as JsonPrimitive).longOrNull!! }
+      ?.let {
         throw PublishRefused(
-          "channel $channel already offers sequence $it, above $sequence, so its hosts would never pick this one. " +
-            "To put older code back on a channel, republish it (--republish) as a new sequence.",
+          "hosts on channel $channel already take sequence $it, above $sequence and asking no more of them, so none " +
+            "would pick this one. To put older code back, republish it (--republish) as a new sequence.",
         )
       }
-    entryShapeProblem(source)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    if ((source["manifest"] as? JsonPrimitive)?.content != "v${(source["version"] as JsonPrimitive).content}/manifest.zipline.json") {
+      throw PublishRefused("the entry at sequence $sequence names ${source["manifest"]}, not its own v<N>/manifest.zipline.json")
+    }
     val version = (source["version"] as JsonPrimitive).intOrNull!!
     val dir = File(bundlesDir, "v$version")
     val manifest = File(dir, "manifest.zipline.json")
@@ -395,8 +424,8 @@ internal class BuildFailed(val exitCode: Int) : Exception("the build exited $exi
  * published like any build, as a new `v<N>/` and index entry. The entry keeps
  * the original's capabilities, widget version and constraints (the code is the
  * same, and so are the hosts it may reach), and the channel it was first
- * published on (its first entry; promotions follow it) unless [channel] is
- * given, and records `republishOf`.
+ * published on unless [channel] is given (required when v[version] was promoted
+ * to more than one channel), and records `republishOf`.
  *
  * Refused before [resign] runs when the index has no entry for v[version] (a
  * `v<N>/` without one is a publish that did not finish), when that entry is not
@@ -426,6 +455,14 @@ internal fun republishStatic(
         "a v<N>/ without an entry is a publish that did not finish.",
     )
   if (channel != null && !CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  val onChannels = (index["entries"] as JsonArray).map { it as JsonObject }
+    .filter { (it["version"] as JsonPrimitive).intOrNull == version }.map(::entryChannel).distinct()
+  if (channel == null && onChannels.size > 1) {
+    throw PublishRefused(
+      "v$version is on channels ${onChannels.joinToString()} (it was promoted). Name the channel to roll back with " +
+        "--channel; republish once per channel if it is more than one.",
+    )
+  }
   entryShapeProblem(original)?.let { throw PublishRefused("the index entry for v$version $it; it was left as it is") }
   val source = File(bundlesDir, "v$version")
   val sourceManifest = File(source, "manifest.zipline.json")

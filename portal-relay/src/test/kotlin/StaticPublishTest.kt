@@ -585,12 +585,18 @@ class StaticPublishTest {
     publishStatic(output("three", seq = 3), site, app.publicHex)
     assertRefusedAndNothingWritten("no entry at sequence 9") { promoteStatic(site, 9, "stable", app.publicHex) }
     assertRefusedAndNothingWritten("already on channel stable") { promoteStatic(site, 3, "stable", app.publicHex) }
-    assertRefusedAndNothingWritten("channel stable already offers sequence 3, above 2") { promoteStatic(site, 2, "stable", app.publicHex) }
+    assertRefusedAndNothingWritten("hosts on channel stable already take sequence 3, above 2") { promoteStatic(site, 2, "stable", app.publicHex) }
     assertRefusedAndNothingWritten("channel 'Stable'") { promoteStatic(site, 2, "Stable", app.publicHex) }
-    assertRefusedAndNothingWritten("does not verify") { promoteStatic(site, 1, "canary", key().publicHex) }
-    val m = File(bundles, "v1/manifest.zipline.json")
+    assertRefusedAndNothingWritten("does not verify") { promoteStatic(site, 3, "canary", key().publicHex) }
+    val m = File(bundles, "v3/manifest.zipline.json")
     m.appendText("\n")
-    assertRefusedAndNothingWritten("is not the manifest the entry at sequence 1 names") { promoteStatic(site, 1, "canary", app.publicHex) }
+    assertRefusedAndNothingWritten("is not the manifest the entry at sequence 3 names") { promoteStatic(site, 3, "canary", app.publicHex) }
+    m.writeText(m.readText().trimEnd('\n'))
+    // An entry hosts would read differently (the W4.3 lesson applies to promotion too).
+    val i = index()
+    val e = i["entries"]!!.jsonArray.map { it.jsonObject }
+    File(bundles, INDEX_FILE).writeText(JsonObject(i + ("entries" to JsonArray(e.take(2) + JsonObject(e[2] - "capabilities")))).toString())
+    assertRefusedAndNothingWritten("has no capabilities list") { promoteStatic(site, 3, "canary", app.publicHex) }
   }
 
   @Test
@@ -628,5 +634,45 @@ class StaticPublishTest {
     assertEquals(4, run("--promote", "7", "--channel", "stable"))
     assertEquals(0, run("--promote", "2", "--channel", "stable"))
     assertEquals(listOf("stable", "beta", "stable"), entries().map { it["channel"]!!.jsonPrimitive.content })
+  }
+
+  @Test
+  fun aHigherEntryThatSomeHostsSkipDoesNotBlockAPromotion() {
+    publishStatic(output("one"), site, app.publicHex, capabilities = listOf("host-sql@1"), init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex, channel = "beta", capabilities = listOf("host-sql@1"))
+    // Stable's newest needs HostHttp: hosts without it are still on 1, and 2 (beta) is their fix.
+    publishStatic(output("three", seq = 3), site, app.publicHex, capabilities = listOf("host-sql@1", "host-http@1"))
+    assertEquals("stable", promoteStatic(site, 2, "stable", app.publicHex).entry["channel"]!!.jsonPrimitive.content)
+    assertEquals(2L, pickFromIndex(File(bundles, INDEX_FILE).readText(), listOf("host-sql@1")).getOrThrow().sequence)
+    assertEquals(3L, pickFromIndex(File(bundles, INDEX_FILE).readText(), listOf("host-sql@1", "host-http@1")).getOrThrow().sequence)
+    // To beta, a higher STABLE entry counts too: beta hosts take stable.
+    publishStatic(output("four", seq = 4), site, app.publicHex, capabilities = listOf("host-sql@1"))
+    publishStatic(output("five", seq = 5), site, app.publicHex, channel = "canary", capabilities = listOf("host-sql@1"))
+    assertRefusedAndNothingWritten("hosts on channel beta already take sequence 4") { promoteStatic(site, 3, "beta", app.publicHex) }
+  }
+
+  @Test
+  fun aRepublishOfAPromotedVersionNamesTheChannel() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true)
+    promoteStatic(site, 1, "stable", app.publicHex)
+    assertRefusedAndNothingWritten("is on channels beta, stable") {
+      republishStatic(site, 1, app.publicHex) { _, _ -> error("re-signed") }
+    }
+    assertEquals("stable", republishStatic(site, 1, app.publicHex, channel = "stable", resign = resign()).entry["channel"]!!.jsonPrimitive.content)
+  }
+
+  @Test
+  fun theIndexRefusesAMalformedChannelAndOneSequenceWithTwoManifests() {
+    bundles.mkdirs()
+    for ((bad, why) in listOf(
+      """{"sequence":1,"version":1,"channel":null}""" to "malformed channel",
+      """{"sequence":1,"version":1,"channel":"Beta"}""" to "malformed channel",
+      """{"sequence":1,"version":1,"channel":"beta","manifestSha256":"aa"},{"sequence":1,"version":1,"channel":"stable","manifestSha256":"bb"}""" to
+        "naming different manifests",
+    )) {
+      File(bundles, INDEX_FILE).writeText("""{"format":1,"entries":[$bad]}""")
+      val ex = assertFailsWith<PublishRefused> { readIndex(bundles) }
+      assertTrue(why in ex.message!!, ex.message)
+    }
   }
 }

@@ -136,8 +136,8 @@ Channels: `--channel beta` publishes to beta only. A host takes its own
 channel (the scaffolders' `--channel`, default `stable`) and stable, so a beta
 host is never behind stable. `--promote SEQUENCE --channel stable` offers an
 already published bundle on stable too: a second index entry for the same
-`v<N>/`, with nothing built or signed. It refuses a channel that already offers
-a higher sequence.
+`v<N>/`, with nothing built or signed and no private key. It refuses when
+that channel's hosts already take a higher sequence that asks no more of them.
 
 ### bin/keliver-new-publish-target.sh
 

@@ -8,8 +8,8 @@
 #      a bundle signed by another key rejected, and recovery (P2-P7). The
 #      relay is the published tools release's, which serves no
 #      bundles/index.json, so the host's fallback to /bundles/latest is shown.
-#   4. W3, the static route with no relay (ci/w3/android-static.sh): S2, S4-S7
-#      against a static HTTPS server fed only by keliver-publish
+#   4. W3/W4, the static route with no relay (ci/w3/android-static.sh): S2,
+#      S4-S12 against a static HTTPS server fed only by keliver-publish
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #

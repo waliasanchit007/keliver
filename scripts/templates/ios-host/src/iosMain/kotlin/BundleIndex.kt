@@ -68,8 +68,8 @@ internal fun rollbackProblem(sequence: Long?, floor: Long): String? = when {
   else -> null
 }
 
-/** The newest usable entry: its manifest path (relative to `<server>/bundles/`) and that manifest's sha256. */
-internal data class IndexPick(val sequence: Long, val manifestPath: String, val manifestSha256: String)
+/** The newest usable entry: its channel, manifest path (relative to `<server>/bundles/`) and that manifest's sha256. */
+internal data class IndexPick(val sequence: Long, val manifestPath: String, val manifestSha256: String, val channel: String = DEFAULT_CHANNEL)
 
 /**
  * The entry this host should load from [indexJson], or a reason there is none.
@@ -116,7 +116,7 @@ private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersio
   if (!manifestPathOk(manifest)) return null
   val sha = (e["manifestSha256"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.lowercase() ?: return null
   if (!SHA256.matches(sha)) return null
-  return IndexPick(sequence, manifest, sha)
+  return IndexPick(sequence, manifest, sha, entryChannel)
 }
 
 /** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */

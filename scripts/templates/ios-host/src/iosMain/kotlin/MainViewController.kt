@@ -186,7 +186,11 @@ private suspend fun lookupBundle(server: BundleServer, capabilities: List<String
     log("refusing a manifest URL off the bundle server's origin: ${pick.manifestPath}")
     return@runCatching null
   }
-  Lookup(url, pick.manifestSha256, "index sequence ${pick.sequence}, channel $CHANNEL, manifest sha256 ${pick.manifestSha256.take(12)}…")
+  Lookup(
+    url,
+    pick.manifestSha256,
+    "index sequence ${pick.sequence}, channel ${pick.channel} (host: $CHANNEL), manifest sha256 ${pick.manifestSha256.take(12)}…",
+  )
 }.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
 
 /** The relay's /bundles/latest, for relays that serve no index. */

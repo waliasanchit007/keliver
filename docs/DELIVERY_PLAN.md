@@ -426,8 +426,15 @@ original allowed.
   copies the entry verbatim, constraints included (a gate never falls away),
   and adds `promotedFrom`.
 - **Refusals.** It refuses when the sequence is already on that channel, or
-  when the channel already offers a higher sequence (its hosts would never
-  pick it; use `--republish`).
+  when that channel's hosts (its entries and stable's) already take a higher
+  sequence that asks no more of them: no constraints, no extra capability, no
+  newer widget protocol. None of them would pick the promoted one; use
+  `--republish`. A higher entry that some of them skip does not block it.
+- **Republish after promotion.** Republishing a version that is on several
+  channels needs `--channel`: rolling back only the channel it was first
+  published on would leave the others on the bad sequence.
+- **Host log.** The lookup line names the picked entry's channel and the
+  host's own.
 
 **Percentage rollout.**
 - **In the index:** an entry may carry `constraints.rollout` (0–100).

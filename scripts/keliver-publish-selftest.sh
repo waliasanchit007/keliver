@@ -311,7 +311,7 @@ cp "$SITE/bundles/index.json" "$WORK/index.before-promote"; BEFORE="$(snapshot "
   && ok "--promote without --channel: exit 2, nothing written" || bad "--promote without --channel: exit $rc"
 refused "promoting to a channel that already has it" "already on channel stable" \
   "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --promote 4 --channel stable
-refused "promoting below the channel's newest" "already offers sequence 4, above 2" \
+refused "promoting below the channel's newest" "already take sequence 4, above 2" \
   "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 2 --channel stable
 refused "promoting a bundle checked against another key" "does not verify" \
   "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 4 --channel beta

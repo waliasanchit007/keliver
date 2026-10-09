@@ -90,6 +90,11 @@ class BundleIndexTest {
     // A promotion: the same sequence and manifest on two channels.
     val promoted = index(entry(4), entry(5, extra = ""","channel":"beta""""), entry(5, extra = ""","channel":"stable""""))
     assertEquals(5L, pickFromIndex(promoted, caps).getOrThrow().sequence)
+    assertEquals("stable", pickFromIndex(promoted, caps).getOrThrow().channel)
+    // A beta host never takes canary, and takes a newest entry with no channel field (stable).
+    assertEquals(5L, pickFromIndex(index(entry(5, extra = ""","channel":"beta""""), entry(7, extra = ""","channel":"canary"""")), caps, channel = "beta").getOrThrow().sequence)
+    val pick = pickFromIndex(index(entry(5, extra = ""","channel":"beta""""), entry(8)), caps, channel = "beta").getOrThrow()
+    assertEquals(8L to "stable", pick.sequence to pick.channel)
   }
 
   @Test

@@ -331,7 +331,7 @@ replace it.
 **Channels.** `--channel beta` publishes to beta only: hosts scaffolded with
 `--channel beta` take it (plus everything on stable); stable hosts don't. When
 it is ready for everyone, promote it. Nothing is built or signed, so this step
-needs no private key:
+needs no private key (only the app's `keliver.portal.json` and the public key):
 
 ```bash
 $KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub

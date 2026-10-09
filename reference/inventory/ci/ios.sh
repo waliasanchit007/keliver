@@ -23,8 +23,8 @@
 # The 0.3.6 relay serves no bundles/index.json, so these also show the host's
 # fallback to /bundles/latest on a 404.
 #
-# Then W3, the static route with no relay (ci/w3/ios-static.sh): S2, S4-S7
-# against a static HTTPS server fed only by keliver-publish.
+# Then W3/W4, the static route with no relay (ci/w3/ios-static.sh): S2,
+# S4-S12 against a static HTTPS server fed only by keliver-publish.
 #
 # The simulator has no view-hierarchy dump. What a screen shows is read from
 # its screenshot by macOS Vision (ci/ocr.swift), and every screenshot is kept.
