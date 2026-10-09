@@ -140,6 +140,11 @@ grep -q '/bundles/index.json"' "$K/MainViewController.kt" && grep -q 'status == 
   && grep -q 'ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)' "$K/MainViewController.kt" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
   || bad "the host does not look up through bundles/index.json"
+# W2: one host per process (Keliver), started once; every view controller only observes it.
+grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (started) return' "$K/MainViewController.kt" \
+  && grep -q 'public fun MainViewController(): UIViewController = Keliver.viewController()' "$K/MainViewController.kt" \
+  && grep -q 'state.collectAsState()' "$K/MainViewController.kt" \
+  && ok "W2: Keliver is the one host (started once); MainViewController() only shows it" || bad "W2: the iOS host is not one per process"
 # W4.2: the rollback floor is read per key, guards the network load and the cache
 # start, and rises only from a verified successful load.
 grep -q 'integerForKey(floorKey(trust))' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor)' "$K/MainViewController.kt" \

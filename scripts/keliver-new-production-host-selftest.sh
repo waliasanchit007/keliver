@@ -101,6 +101,9 @@ missing=0
 for f in settings.gradle build.gradle gradle.properties .gitignore src/main/AndroidManifest.xml \
          src/main/assets/portal_ed25519.pub \
          src/main/kotlin/com/example/demo/host/MainActivity.kt \
+         src/main/kotlin/com/example/demo/host/HostApp.kt \
+         src/main/kotlin/com/example/demo/host/KeliverHost.kt \
+         src/main/kotlin/com/example/demo/host/KeliverScreen.kt \
          src/main/kotlin/com/example/demo/host/ProductionTrust.kt \
          src/main/kotlin/com/example/demo/host/AndroidSqlHost.kt \
          src/main/kotlin/com/example/demo/host/OkHttpHostHttp.kt \
@@ -127,7 +130,16 @@ grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay" "$H
   || ok "no development path, emulator address or replay fixture in the sources"
 # W3: the lookup reads bundles/index.json, holds the manifest to its sha256,
 # and falls back to the relay's bundles/latest only on a 404.
-M="$H/src/main/kotlin/com/example/demo/host/MainActivity.kt"
+M="$H/src/main/kotlin/com/example/demo/host/KeliverHost.kt"
+# W2: the host logic lives in KeliverHost, owned by the Application; the activity
+# only shows KeliverScreen, so a rotation recreates the screen, not the host.
+A="$H/src/main/kotlin/com/example/demo/host/MainActivity.kt"
+grep -q 'android:name=".HostApp"' "$H/src/main/AndroidManifest.xml" \
+  && grep -q 'KeliverHost.create(this)' "$H/src/main/kotlin/com/example/demo/host/HostApp.kt" \
+  && grep -q 'KeliverScreen((application as HostApp).keliver' "$A" && ! grep -q 'lifecycleScope\|TreehouseAppFactory\|pickFromIndex' "$A" \
+  && grep -q 'appScope = scope' "$M" && grep -q 'compareAndSet(false, true)' "$M" \
+  && ok "W2: the Application owns one KeliverHost (its own scope, started once); MainActivity only shows KeliverScreen" \
+  || bad "W2: the host is not owned by the Application"
 grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code == 404' "$M" \
   && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)' "$M" \
   && ok "the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404" \
@@ -142,10 +154,11 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   || bad "W4.2: the rollback floor is not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
-  && grep -q 'pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL' "$M" \
+  && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
-grep -q 'HostFacts(prefs.installId(), BuildConfig.VERSION_CODE.toLong(), floor())' "$M" && grep -q 'facts = facts' "$M" \
+grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
+  && grep -q 'longVersionCode' "$M" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
   && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"

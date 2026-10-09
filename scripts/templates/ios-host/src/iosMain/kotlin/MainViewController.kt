@@ -28,6 +28,11 @@
  * without a sequence once it has run a sequenced one, from the network and from
  * the cache. The floor rises only after a load succeeded. Not protected: a
  * reinstall resets it.
+ *
+ * Lifecycle (W2): `Keliver` is the host, one per process. It looks up and loads
+ * once (start() is idempotent); every view controller it makes only observes
+ * its state, so a second screen, or a screen shown again, never repeats the
+ * lookup or the load.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -42,10 +47,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
@@ -72,6 +76,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -106,32 +111,57 @@ private sealed interface HostState {
   data class Running(val app: TreehouseApp<PortalPresenter>) : HostState
 }
 
-/** The view controller your Xcode app shows (MainViewControllerKt.MainViewController()). */
-public fun MainViewController(): UIViewController = ComposeUIViewController {
-  var state by remember { mutableStateOf<HostState>(HostState.Loading) }
-  LaunchedEffect(Unit) { state = startHost() }
-  when (val s = state) {
-    HostState.Loading -> MessageScreen("Loading", "Looking up the latest bundle…")
-    is HostState.Message -> MessageScreen(s.title, s.text)
-    is HostState.Running -> {
-      val widgetSystem = remember {
-        ComposeUiKeliverMaterialWidgetSystem(
-          ImageLoader.Builder(PlatformContext.INSTANCE)
-            .components { add(KtorNetworkFetcherFactory()) } // images over the network (Ktor, Darwin engine)
-            .build(),
-        )
-      }
-      val contentSource = remember {
-        object : TreehouseContentSource<PortalPresenter> {
-          override fun get(app: PortalPresenter) = app.launch()
+/**
+ * This process's Keliver host (Swift: `Keliver.shared`). It looks up and loads
+ * the bundle once; [viewController] makes a screen that shows it.
+ */
+public object Keliver {
+  private val state = MutableStateFlow<HostState>(HostState.Loading)
+  private var started = false
+
+  /** One image loader for every screen. */
+  internal val imageLoader: ImageLoader by lazy {
+    ImageLoader.Builder(PlatformContext.INSTANCE)
+      .components { add(KtorNetworkFetcherFactory()) } // images over the network (Ktor, Darwin engine)
+      .build()
+  }
+
+  /** Looks up and loads the bundle, once per process; later calls do nothing. Call from the main thread. */
+  public fun start() {
+    if (started) return
+    started = true
+    appScope.launch { state.value = startHost() }
+  }
+
+  /**
+   * A screen showing the host: its messages while it looks up and loads, then
+   * the guest's screen. [safeArea] pads it to the safe area; turn it off when
+   * the containing layout already does.
+   */
+  public fun viewController(safeArea: Boolean = true): UIViewController = ComposeUIViewController {
+    LaunchedEffect(Unit) { start() }
+    val current by state.collectAsState()
+    val modifier = if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()
+    when (val s = current) {
+      HostState.Loading -> MessageScreen("Loading", "Looking up the latest bundle…", safeArea)
+      is HostState.Message -> MessageScreen(s.title, s.text, safeArea)
+      is HostState.Running -> {
+        val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
+        val contentSource = remember {
+          object : TreehouseContentSource<PortalPresenter> {
+            override fun get(app: PortalPresenter) = app.launch()
+          }
         }
-      }
-      Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-        TreehouseContent(treehouseApp = s.app, widgetSystem = widgetSystem, contentSource = contentSource)
+        Box(modifier) {
+          TreehouseContent(treehouseApp = s.app, widgetSystem = widgetSystem, contentSource = contentSource)
+        }
       }
     }
   }
 }
+
+/** The view controller your Xcode app shows (MainViewControllerKt.MainViewController()): Keliver's screen. */
+public fun MainViewController(): UIViewController = Keliver.viewController()
 
 private suspend fun startHost(): HostState {
   // Decided BEFORE any fetch: no valid key, no network, no bundle.
@@ -333,9 +363,9 @@ private class LoggingEventListener(
 private fun log(message: String) = println("$TAG: $message")
 
 @Composable
-private fun MessageScreen(title: String, message: String) {
+private fun MessageScreen(title: String, message: String, safeArea: Boolean = true) {
   Column(
-    modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+    modifier = (if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()).padding(24.dp),
     verticalArrangement = Arrangement.Center,
   ) {
     BasicText(title)
