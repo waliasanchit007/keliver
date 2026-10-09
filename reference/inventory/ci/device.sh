@@ -177,9 +177,19 @@ adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_I
   || bad "P1: $PROD_ID is not installed"
 # U28 was the generic host loading an empty manifest URL on every start; the
 # scaffolded host creates its Treehouse app only once the URL is known.
-grep -q "$HOST_TAG: no bundles/index.json at http://10.0.2.2:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
-  && ok "P2: the relay serves no index; the host fell back to /bundles/latest on the 404" \
-  || bad "P2: no fallback to /bundles/latest in the log"
+# Which lookup depends on the relay under test: one from tools 0.3.7 or earlier
+# serves no bundles/index.json (the host falls back to /bundles/latest on the
+# 404); from 0.3.8 it serves the index.
+if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)" = 404 ]; then
+  grep -q "$HOST_TAG: no bundles/index.json at http://10.0.2.2:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
+    && ok "P2: the relay serves no index; the host fell back to /bundles/latest on the 404" \
+    || bad "P2: no fallback to /bundles/latest in the log"
+else
+  grep -q "$HOST_TAG: loading http://10.0.2.2:8077/bundles/v1/manifest.zipline.json (index sequence 1," "$EV/logcat-prod-v1.txt" \
+    && ! grep -q "asking bundles/latest" "$EV/logcat-prod-v1.txt" \
+    && ok "P2: the relay serves bundles/index.json; the host looked v1 up through it" \
+    || bad "P2: the relay serves an index, but the host did not look up through it"
+fi
 grep -q "codeLoadFailed: Expected URL scheme" "$EV/logcat-prod-v1.txt" \
   && bad "P2: an empty-URL load was attempted (U28)" || ok "P2: no empty-URL load attempt (U28 absent)"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-prod-v1.txt" \

@@ -199,9 +199,19 @@ C="$EV/P2-v1.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P2: the host verifies with this app's key" || bad "P2: no verification line"
 grep -q "KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json" "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "P2: signed v1 loaded (codeLoadSuccess)" || bad "P2: v1 did not load"
-grep -q "KeliverHost: no bundles/index.json at http://localhost:8077; asking bundles/latest" "$C" \
-  && ok "P2: the 0.3.6 relay serves no index; the host fell back to /bundles/latest on the 404" \
-  || bad "P2: no fallback to /bundles/latest in the console"
+# Which lookup the host must have used depends on the relay under test: one from
+# tools 0.3.7 or earlier serves no bundles/index.json (the host falls back to
+# /bundles/latest on the 404); from 0.3.8 it serves the index.
+if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)" = 404 ]; then
+  grep -q "KeliverHost: no bundles/index.json at http://localhost:8077; asking bundles/latest" "$C" \
+    && ok "P2: this relay serves no index; the host fell back to /bundles/latest on the 404" \
+    || bad "P2: no fallback to /bundles/latest in the console"
+else
+  grep -q "KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json (index sequence 1," "$C" \
+    && ! grep -q "asking bundles/latest" "$C" \
+    && ok "P2: this relay serves bundles/index.json; the host looked v1 up through it" \
+    || bad "P2: the relay serves an index, but the host did not look up through it"
+fi
 grep -q "codeLoadFailed" "$C" && bad "P2: a load failed (U28 would be an empty-URL failure): $(grep codeLoadFailed "$C" | head -1)" \
   || ok "P2: no failed load, so no empty-URL attempt (U28 absent)"
 reads P2-v1 Inventory && ok "P2: the screen reads 'Inventory'" || bad "P2: 'Inventory' is not on the screen"

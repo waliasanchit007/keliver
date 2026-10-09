@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 4838a68e…
+KeliverHost: loading https://localhost:8443/bundles/v2/manifest.zipline.json (index sequence 2, channel stable (host: stable), host version 1, manifest sha256 000000000000…); rollback floor 2
+KeliverHost: codeLoadFailed: manifest sha256 mismatch: https://localhost:8443/bundles/v2/manifest.zipline.json is dd3d602a48361beb8ea48f50cf127f37679b6be6966a1a949f5e9bf8313b5788, the index says 0000000000000000000000000000000000000000000000000000000000000000
+inventory.ioshost: 94548

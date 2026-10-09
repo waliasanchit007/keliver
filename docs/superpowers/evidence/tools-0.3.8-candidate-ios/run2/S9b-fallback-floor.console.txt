@@ -1,0 +1,25 @@
+KeliverHost: verifying manifests with portal-ed25519 4838a68e…
+KeliverHost: no bundles/index.json at https://localhost:8443; asking bundles/latest (a relay from tools 0.3.7 or earlier)
+KeliverHost: bundle lookup: HTTP 404 (<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <style type="text/css">
+            :root {
+                color-scheme: light dark;
+            }
+        </style>
+        <title>Error response</title>
+    </head>
+    <body>
+        <h1>Error response</h1>
+        <p>Error code: 404</p>
+        <p>Message: File not found.</p>
+        <p>Error code explanation: 404 - Nothing matches the given URI.</p>
+    </body>
+</html>
+)
+KeliverHost: lookup failed; starting from the cached bundle (last loaded from https://localhost:8443/bundles/v5/manifest.zipline.json); rollback floor 9
+KeliverHost: cached bundle refused: rollback refused: sequence 5 is below 9, the highest this host has run
+KeliverHost: codeLoadFailed: rollback refused: sequence 5 is below 9, the highest this host has run
+inventory.ioshost: 99079
