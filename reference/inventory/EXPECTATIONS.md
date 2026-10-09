@@ -45,7 +45,7 @@ the final state.
 
 | id | action | expected |
 |---|---|---|
-| P1 | build the production host with this app's public key embedded | the APK carries `assets/portal_ed25519.pub`, equal to the store's `keys/ed25519.pub`; `BuildConfig.DEV_ONLY` is false |
+| P1 | build the production host with this app's public key embedded | the APK carries `assets/keliver/portal_ed25519.pub`, equal to the store's `keys/ed25519.pub`; `BuildConfig.DEV_ONLY` is false |
 | P2 | publish v1 (title `Inventory`), launch the host with `--es mode prod` | the host logs that it verifies manifests with `portal-ed25519`; v1 loads (`codeLoadSuccess`); `Inventory` on screen |
 | P3 | in production, tap `Add 1` three times on *Espresso beans* | `13`, `14`, `15` — the presenter runs from the signed bundle |
 | P4 | apply the D2 edit, publish v2, relaunch | `Stockroom` on screen: the second signed version changed what the user sees |
@@ -57,7 +57,7 @@ compiled from Keliver's source (`portal-device-android`, which has a
 `BuildConfig.DEV_ONLY` flag). The production host is now scaffolded by
 `keliver-new-production-host.sh` and built from Maven Central; it is
 production-only and has no such flag. P1 now reads: *the scaffolded host builds
-from Maven Central, embeds `assets/portal_ed25519.pub` equal to the store's
+from Maven Central, embeds `assets/keliver/portal_ed25519.pub` equal to the store's
 `keys/ed25519.pub`, and is installed as its own app, not the generic development
 host.* P2–P6 are unchanged; one check was added to P2: no empty-URL load attempt
 on launch (U28). **Added the same day: P7** — with no bundle server answering,

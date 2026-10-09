@@ -155,9 +155,9 @@ echo "    $(wc -l < "$EV/host-keliver-artifacts.txt" | tr -d ' ') dev.keliver ar
 APK="$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)"
 cp "$APK" "$EV/production-host.apk"
 sha256 "$EV/production-host.apk" | tee "$EV/production-host.apk.sha256"
-EMB="$(unzip -p "$EV/production-host.apk" assets/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
+EMB="$(unzip -p "$EV/production-host.apk" assets/keliver/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
 [ -n "$EMB" ] && [ "$EMB" = "$PUB" ] \
-  && ok "P1: the host embeds assets/portal_ed25519.pub, equal to this app's public key" \
+  && ok "P1: the host embeds assets/keliver/portal_ed25519.pub, equal to this app's public key" \
   || bad "P1: the embedded key (${EMB:0:16}) is not this app's (${PUB:0:16})"
 echo "PROD_ID=$PROD_ID" >> "$WORK/env"
 echo "APK=$EV/production-host.apk" >> "$WORK/env"

@@ -255,7 +255,7 @@ changes nothing else, `keliver.portal.json` included. Then:
   covers rotation.
 
 It embeds your portal's public key (copied from your store — commit
-`host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
+`host-android/src/main/assets/keliver/portal_ed25519.pub`), verifies every bundle
 against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
 `DEVICE_HOST.md` §2 (Android) has the options and what the host refuses.
@@ -313,7 +313,7 @@ they have run, so serving an older index, or an older `v<N>/` as newest, makes
 them show no bundle. To go back to v`<N>`'s code, republish it:
 
 ```bash
-KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --public-key-file host-android/src/main/assets/portal_ed25519.pub
+KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 It copies `v3/`'s modules unchanged into the next `v<M>/` and has your app's
@@ -333,7 +333,7 @@ it is ready for everyone, promote it. Nothing is built or signed, so this step
 needs no private key (only the app's `keliver.portal.json` and the public key):
 
 ```bash
-$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub
+$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 **Staged rollouts and host-version gates.** Publish with `--rollout 10` and
@@ -363,7 +363,7 @@ constraints skip any entry that has them.
 A first publish, by hand:
 
 ```bash
-$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/portal_ed25519.pub
+$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 Every later one, in GitHub Actions, with S3 as the example. With GCS use
@@ -388,7 +388,7 @@ jobs:
           umask 077
           printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
           KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
-            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
           rm -f "$RUNNER_TEMP/keliver.priv"
         env:
           KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}

@@ -60,6 +60,7 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
 # the scaffolder. It finds them at bin/../templates.
 mkdir -p "$STAGE/templates"
 cp -R scripts/templates/production-host "$STAGE/templates/"
+cp -R scripts/templates/production-host-embed "$STAGE/templates/"
 # keliver-new-publish-target.sh's signing block, appended to an app's build.gradle.
 cp -R scripts/templates/publish "$STAGE/templates/"
 # keliver-new-ios-host.sh's iOS host: a KMP framework build plus an Xcode app shell.

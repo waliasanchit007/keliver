@@ -89,7 +89,7 @@ build that resolves Keliver from Maven Central only, and that is yours to edit
 from then on:
 
 - **production only** — every bundle's manifest must verify against
-  `src/main/assets/portal_ed25519.pub`; there is no development path (that is
+  `src/main/assets/keliver/portal_ed25519.pub`; there is no development path (that is
   what the generic host above is for);
 - **your key, committed** — the scaffolder copies the PUBLIC key from your
   portal store (`keys/ed25519.pub`; `bin/keliver-store-path.sh <app>` prints

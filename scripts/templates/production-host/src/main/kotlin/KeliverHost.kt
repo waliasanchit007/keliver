@@ -5,7 +5,9 @@
  * it) and show it with KeliverScreen or KeliverView.
  *
  * - Production ONLY. Every bundle's manifest must verify against the key in
- *   assets/portal_ed25519.pub; without a valid key nothing is fetched at all.
+ *   assets/keliver/portal_ed25519.pub; without a valid key nothing is fetched at
+ *   all. (Under keliver/: an app's own asset of the same name would silently
+ *   replace a library's, and this file is the host's whole trust.)
  *   There is no development path: use the tools bundle's generic development
  *   host for that (it refuses production).
  * - The bundle server and the API base are build settings (gradle.properties),
@@ -105,7 +107,7 @@ private fun SharedPreferences.installId(): String =
 
 /**
  * What a host is built with. [fromBuild] reads this module's build settings
- * (gradle.properties via BuildConfig) and its assets/portal_ed25519.pub.
+ * (via BuildConfig) and its assets/keliver/portal_ed25519.pub.
  * [hostVersion] is what index `minHostVersion`/`maxHostVersion` gates compare
  * with: by default the app's versionCode.
  */
@@ -120,7 +122,7 @@ class KeliverConfig(
     fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
       bundleServer = BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = runCatching {
-        context.assets.open("portal_ed25519.pub").bufferedReader().use { it.readText() }
+        context.assets.open("keliver/portal_ed25519.pub").bufferedReader().use { it.readText() }
       }.getOrNull(),
       channel = BuildConfig.KELIVER_CHANNEL,
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },

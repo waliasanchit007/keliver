@@ -99,7 +99,7 @@ printf '%s' "$out" | grep -q "matches this app's store" && ok "the key was check
 H="$APP/host-android"
 missing=0
 for f in settings.gradle build.gradle gradle.properties .gitignore src/main/AndroidManifest.xml \
-         src/main/assets/portal_ed25519.pub \
+         src/main/assets/keliver/portal_ed25519.pub \
          src/main/kotlin/com/example/demo/host/MainActivity.kt \
          src/main/kotlin/com/example/demo/host/HostApp.kt \
          src/main/kotlin/com/example/demo/host/KeliverHost.kt \
@@ -117,7 +117,7 @@ grep -q "version '2.2.0'" "$H/build.gradle" && ! grep -q "1.9.0" "$H/build.gradl
   && ok "an unprefixed KOTLIN_VERSION in the environment does not change the build" || bad "KOTLIN_VERSION leaked into the build"
 unset KOTLIN_VERSION
 grep -rl '@@' "$H" >/dev/null 2>&1 && bad "an unsubstituted @@placeholder@@ remains" || ok "no placeholder left"
-cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$H/src/main/assets/portal_ed25519.pub") \
+cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$H/src/main/assets/keliver/portal_ed25519.pub") \
   && ok "the embedded key is the given public key" || bad "the embedded key differs"
 grep -q "applicationId 'com.example.demo.host'" "$H/build.gradle" && grep -q "namespace 'com.example.demo.host'" "$H/build.gradle" \
   && ok "package and application id default to <app package>.host" || bad "package/application id"
@@ -169,6 +169,52 @@ out="$( cd "$APP" && "$SCAFFOLD" --bundle-server "$SERVER" --api-base-url "https
 [ "$rc" = 0 ] && grep -q '^keliver.channel=beta$' "$H/gradle.properties" && printf '%s' "$out" | grep -q 'channel          beta (and stable)' \
   && ok "W4.4: --channel beta is recorded in gradle.properties" || bad "W4.4: --channel beta: rc=$rc"
 
+echo "=== --embed: the host as a library module in an existing app (W2)"
+EX="$DISP/existing"; mkdir -p "$EX/app"
+printf "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\nrootProject.name = 'existing'\ninclude ':app'\n" > "$EX/settings.gradle"
+printf "plugins { id 'com.android.application' version '8.12.0' apply false }\n" > "$EX/build.gradle"
+embed_refuses() { # <label> <expected> <args...>: refused, and neither app changed
+  local label="$1" want="$2"; shift 2
+  local b1 b2 out rc
+  b1="$(snapshot "$APP")$(snapshot "$EX")"
+  out="$( cd "$APP" && "$SCAFFOLD" "$@" 2>&1 )"; rc=$?
+  b2="$(snapshot "$APP")$(snapshot "$EX")"
+  if [ "$rc" != 0 ] && printf '%s' "$out" | grep -q -- "$want" && [ "$b1" = "$b2" ]; then
+    ok "--embed refuses $label; both apps byte-identical"
+  else
+    bad "--embed $label: rc=$rc, changed=$([ "$b1" = "$b2" ] && echo no || echo YES): $(printf '%s' "$out" | head -2 | tr '\n' ' ')"
+  fi
+}
+embed_refuses "without --into" "needs --into" --embed --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "an --into without settings.gradle" "no settings.gradle" --embed --into "$EX/app" --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "--application-id" "is for the standalone host" --embed --into "$EX" --application-id com.x.y --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "a bad module name" "plain module name" --embed --into "$EX" --module "../x" --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "--into without --embed" "only for --embed" --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
+embed_refuses "a malformed key" "not a 64-hex-digit" --embed --into "$EX" --bundle-server "$SERVER" --public-key-file "$BADKEY"
+out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$EX" --bundle-server "$SERVER" --channel beta 2>&1 )"; rc=$?
+L="$EX/keliver-host"; LK="$L/src/main/kotlin/com/example/demo/host"
+[ "$rc" = 0 ] && [ -d "$L" ] && ok "--embed wrote $EX/keliver-host (exit 0)" || bad "--embed failed: rc=$rc $(printf '%s' "$out" | tail -3 | tr '\n' ' ')"
+printf '%s' "$out" | grep -q "include ':keliver-host'" && printf '%s' "$out" | grep -q "implementation project(':keliver-host')" \
+  && printf '%s' "$out" | grep -q "KeliverHost.create(this)" && ok "--embed prints the include, the dependency and the Application line" || bad "--embed's next steps"
+printf '%s' "$out" | grep -q "warning: no app.cash.zipline plugin" && printf '%s' "$out" | grep -q "warning: no Kotlin 2.2.x" \
+  && ok "--embed warns that the existing build declares no Zipline plugin and no Kotlin 2.2.x" || bad "--embed did not warn about the missing plugins"
+[ "$(cat "$EX/settings.gradle")" = "$(printf "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\nrootProject.name = 'existing'\ninclude ':app'")" ] \
+  && ok "--embed edited none of the existing app's files" || bad "--embed changed the existing settings.gradle"
+grep -q "id 'com.android.library'" "$L/build.gradle" && ! grep -q "applicationId\|version '" "$L/build.gradle" \
+  && ! grep -q "<application" "$L/src/main/AndroidManifest.xml" && grep -q "android.permission.INTERNET" "$L/src/main/AndroidManifest.xml" \
+  && ok "a library: com.android.library, no application id, no plugin versions, a manifest without <application>" || bad "the embedded module is not a plain library"
+grep -q '^keliver.bundleServer=http://10.0.2.2:8077$' "$L/keliver.properties" && grep -q '^keliver.channel=beta$' "$L/keliver.properties" \
+  && ok "the settings are in keliver.properties (a subproject's gradle.properties is not read)" || bad "keliver.properties"
+cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$L/src/main/assets/keliver/portal_ed25519.pub") \
+  && ok "the key is under assets/keliver/ (an app asset cannot shadow it)" || bad "the embedded module's key"
+[ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
+same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
+  cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }
+done
+[ "$same" = 1 ] && ok "the host Kotlin is byte-identical in the library and the standalone host (one set of sources)"
+embed_refuses "a second run over the module" "already exists" --embed --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
+ls -a "$EX" | grep -q '^\.keliver-host\.' && bad "an --embed staging directory was left behind" || ok "no --embed staging directory left behind"
+
 if [ "$BUILD" = 1 ]; then
   echo "=== the scaffolded host compiles against Maven Central"
   SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -184,7 +230,7 @@ if [ "$BUILD" = 1 ]; then
     if [ "$rc" = 0 ]; then
       apk="$(find "$H/build/outputs/apk" -name '*.apk' | head -1)"
       ok "assembleDebug succeeded: $(basename "$apk"), $(wc -c < "$apk" | tr -d ' ') bytes"
-      unzip -p "$apk" assets/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
+      unzip -p "$apk" assets/keliver/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
         && ok "the APK embeds exactly the scaffolded public key" || bad "the APK's embedded key differs"
       unzip -l "$apk" | grep -q ' AndroidManifest.xml$' && ok "the APK has a manifest" || bad "the APK has no manifest"
     else
@@ -195,7 +241,7 @@ if [ "$BUILD" = 1 ]; then
     [ "$rc" != 0 ] && grep -q "A release build needs https:// servers" "$DISP/assemble-release.log" \
       && ok "a release build with an http:// server fails" || bad "release with http server: rc=$rc"
     # A key that is not a key fails the BUILD.
-    printf 'garbage\n' > "$H/src/main/assets/portal_ed25519.pub"
+    printf 'garbage\n' > "$H/src/main/assets/keliver/portal_ed25519.pub"
     ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug > "$DISP/assemble-badkey.log" 2>&1 ); rc=$?
     [ "$rc" != 0 ] && grep -q "not a 64-hex-digit Ed25519 public key" "$DISP/assemble-badkey.log" \
       && ok "a malformed embedded key fails the build" || bad "a malformed key did not fail the build (rc=$rc)"
