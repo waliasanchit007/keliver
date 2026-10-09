@@ -186,6 +186,34 @@ bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway 
   && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
 { echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
 
+# --- 7. W2: the host embedded in an "existing" app (reference/embed/android) ---
+# The same scaffolder, with --embed, writes keliver-host/ into a plain View-based
+# app whose own files carry only the documented edits (KELIVER EMBED). Built
+# for W3's static HTTPS server; and once more trusting a key that is not this
+# app's, for the refusal check.
+EMB_APP="$WORK/embed"; rm -rf "$EMB_APP"; cp -R "$REPO/reference/embed/android" "$EMB_APP"
+cp "$APP/gradlew" "$EMB_APP/" && cp -R "$APP/gradle" "$EMB_APP/"
+printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$EMB_APP/local.properties"
+( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server https://10.0.2.2:8443 ) > "$EV/w2-embed-scaffold.log" 2>&1 \
+  && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app" \
+  || { bad "W2: --embed failed"; cat "$EV/w2-embed-scaffold.log"; }
+grep -q "^warning:" "$EV/w2-embed-scaffold.log" && bad "W2: --embed warned about the existing app's build: $(grep '^warning:' "$EV/w2-embed-scaffold.log" | head -2 | tr '\n' ' ')" \
+  || ok "W2: the existing app's build declares what the library needs (no warning)"
+( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-build.log" 2>&1 \
+  && cp "$(find "$EMB_APP/app/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/embed-app.apk" \
+  && ok "W2: the existing app built with the embedded host, from Maven Central" \
+  || { bad "W2: the existing app did not build"; grep -E '^e: |What went wrong' -A3 "$EV/w2-embed-build.log" | head -20; }
+EMB_KEY="$(unzip -p "$EV/embed-app.apk" assets/keliver/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
+[ -n "$EMB_KEY" ] && [ "$EMB_KEY" = "$PUB" ] && ok "W2: the existing app's APK trusts this app's key (assets/keliver/)" || bad "W2: the embedded key is not this app's"
+KEYF="$EMB_APP/keliver-host/src/main/assets/keliver/portal_ed25519.pub"; cp "$KEYF" "$WORK/embed-key.saved"
+printf '%s\n' "$(printf '5a%.0s' $(seq 1 32))" > "$KEYF"
+( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-foreign-build.log" 2>&1 \
+  && cp "$(find "$EMB_APP/app/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/embed-app-foreign.apk" \
+  && ok "W2: the same app, built trusting another key (for the refusal check)" || bad "W2: the foreign-key build failed"
+cp "$WORK/embed-key.saved" "$KEYF"
+( cd "$EMB_APP" && ./gradlew --stop ) > /dev/null 2>&1 || true
+{ echo "W2_APK=$EV/embed-app.apk"; echo "W2_FOREIGN_APK=$EV/embed-app-foreign.apk"; echo "W2_ID=com.example.existing"; } >> "$WORK/env"
+
 # Warm the development bundle so the device step does not wait on it.
 ( cd "$APP" && ./gradlew compileDevelopmentExecutableKotlinJsZipline --console=plain ) > "$EV/dev-bundle.log" 2>&1 \
   && ok "the development bundle builds" || bad "the development bundle did not build"
