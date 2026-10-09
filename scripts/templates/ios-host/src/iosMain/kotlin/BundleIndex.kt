@@ -28,6 +28,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
 import okio.IOException
 
 /** The widget protocol version this host renders. */
@@ -40,8 +41,32 @@ internal const val HOST_WIDGET_VERSION = 1
  */
 internal const val DEFAULT_CHANNEL = "stable"
 
-/** Constraint keys this host understands. An entry carrying any other is skipped. */
-private val KNOWN_CONSTRAINTS = emptySet<String>()
+/**
+ * Constraint keys this host understands (W4.5). An entry carrying any other is
+ * skipped, so a constraint added later never reaches a host that can't honour it.
+ */
+private val KNOWN_CONSTRAINTS = setOf("rollout", "minHostVersion", "maxHostVersion")
+
+/**
+ * What an entry's constraints are checked against (W4.5): this install's random
+ * id (generated once, kept on the device, never sent anywhere), this host build's
+ * version (Android versionCode, iOS CFBundleVersion; null when it is not an
+ * integer), and the rollback floor.
+ */
+internal data class HostFacts(val installId: String, val hostVersion: Long?, val floor: Long)
+
+/**
+ * The install's bucket for a staged rollout of [sequence], 0..99: the first four
+ * bytes of sha256("<installId>:<sequence>") as an unsigned number, mod 100. An
+ * entry at rollout R reaches the installs whose bucket is below R; each sequence
+ * draws its own buckets.
+ */
+internal fun rolloutBucket(installId: String, sequence: Long): Int {
+  val h = "$installId:$sequence".encodeUtf8().sha256()
+  val first = ((h[0].toLong() and 0xff) shl 24) or ((h[1].toLong() and 0xff) shl 16) or
+    ((h[2].toLong() and 0xff) shl 8) or (h[3].toLong() and 0xff)
+  return (first % 100).toInt()
+}
 
 private val SEGMENT = Regex("[A-Za-z0-9._-]+")
 private val SHA256 = Regex("[0-9a-f]{64}")
@@ -75,26 +100,35 @@ internal data class IndexPick(val sequence: Long, val manifestPath: String, val 
  * The entry this host should load from [indexJson], or a reason there is none.
  *
  * An entry is usable when its channel is [channel] or [DEFAULT_CHANNEL], it carries no constraint
- * this host doesn't know, its widget version is at most [widgetVersion], every
- * capability it requires is in [capabilities], and its manifest path and sha256
- * are well formed. Of those, the highest `sequence` wins.
+ * this host doesn't know, its constraints admit [facts], its widget version is
+ * at most [widgetVersion], every capability it requires is in [capabilities],
+ * and its manifest path and sha256 are well formed. Of those, the highest
+ * `sequence` wins.
+ *
+ * Constraints (W4.5):
+ * - `minHostVersion` / `maxHostVersion`: this host's version must be within
+ *   them; a host whose version is unknown skips any entry that has them.
+ * - `rollout` (0..100): only installs whose [rolloutBucket] is below it. It
+ *   gates only sequences above the host's floor: a host that has already run a
+ *   sequence keeps it when its rollout is lowered or halted.
  */
 internal fun pickFromIndex(
   indexJson: String,
   capabilities: Collection<String>,
   widgetVersion: Int = HOST_WIDGET_VERSION,
   channel: String = DEFAULT_CHANNEL,
+  facts: HostFacts = HostFacts(installId = "", hostVersion = null, floor = 0),
 ): Result<IndexPick> = runCatching {
   val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: throw IOException("the index is not a JSON object")
   val format = (root["format"] as? JsonPrimitive)?.intOrNull
   if (format != 1) throw IOException("index format $format is not 1")
   val entries = root["entries"] as? JsonArray ?: throw IOException("the index has no entries")
-  entries.mapNotNull { usable(it as? JsonObject ?: return@mapNotNull null, capabilities, widgetVersion, channel) }
+  entries.mapNotNull { usable(it as? JsonObject ?: return@mapNotNull null, capabilities, widgetVersion, channel, facts) }
     .maxByOrNull { it.sequence }
     ?: throw IOException("no compatible entry among ${entries.size} (channel $channel, widget version $widgetVersion, capabilities $capabilities)")
 }
 
-private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String): IndexPick? {
+private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String, facts: HostFacts): IndexPick? {
   val sequence = (e["sequence"] as? JsonPrimitive)?.longOrNull?.takeIf { it > 0 } ?: return null
   val entryChannel = when (val c = e["channel"]) {
     null -> DEFAULT_CHANNEL
@@ -103,7 +137,7 @@ private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersio
   if (entryChannel != channel && entryChannel != DEFAULT_CHANNEL) return null
   when (val c = e["constraints"]) {
     null -> Unit
-    is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys)) return null
+    is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys) || !admits(c, sequence, facts)) return null
     else -> return null
   }
   val wv = (e["widgetVersion"] as? JsonPrimitive)?.intOrNull ?: return null
@@ -117,6 +151,24 @@ private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersio
   val sha = (e["manifestSha256"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.lowercase() ?: return null
   if (!SHA256.matches(sha)) return null
   return IndexPick(sequence, manifest, sha, entryChannel)
+}
+
+/** Whether [constraints] (only known keys) admit this host for [sequence]. A malformed value admits nobody. */
+private fun admits(constraints: JsonObject, sequence: Long, facts: HostFacts): Boolean {
+  fun number(key: String): Long? = (constraints[key] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull
+  if ("minHostVersion" in constraints) {
+    val min = number("minHostVersion") ?: return false
+    if (facts.hostVersion == null || facts.hostVersion < min) return false
+  }
+  if ("maxHostVersion" in constraints) {
+    val max = number("maxHostVersion") ?: return false
+    if (facts.hostVersion == null || facts.hostVersion > max) return false
+  }
+  if ("rollout" in constraints) {
+    val rollout = number("rollout")?.takeIf { it in 0..100 } ?: return false
+    if (sequence > facts.floor && rolloutBucket(facts.installId, sequence) >= rollout) return false
+  }
+  return true
 }
 
 /** A relative path under bundles/: no scheme, no leading '/', no '.' or '..' segment. */

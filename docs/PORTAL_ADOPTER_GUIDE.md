@@ -337,6 +337,21 @@ needs no private key (only the app's `keliver.portal.json` and the public key):
 $KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub
 ```
 
+**Staged rollouts and host-version gates.** Publish with `--rollout 10` and
+about one install in ten takes the new bundle. Each install's bucket is fixed
+for a given sequence. The rest stay on the newest bundle they may run. Raise
+the rollout, or halt it with 0, by editing the index only (no key, no build):
+
+```bash
+$KP/keliver-publish . --out site --set-rollout 7 --rollout 100
+```
+
+A halted rollout stops new installs, and hosts that already ran it keep it.
+`--min-host-version N` / `--max-host-version N` limit an entry to host builds
+whose version (Android `versionCode`, iOS `CFBundleVersion`) is in range. Use
+them for code that needs a newer host. Hosts scaffolded before these
+constraints skip any entry that has them.
+
 A first publish, by hand:
 
 ```bash

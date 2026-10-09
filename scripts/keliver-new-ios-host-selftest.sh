@@ -157,8 +157,12 @@ grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay\|Hos
   || ok "no development path, emulator address or replay fixture in the sources"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue('CHANNEL')" "$H/build.gradle" \
-  && grep -q 'pickFromIndex(body.utf8(), capabilities, channel = CHANNEL)' "$K/MainViewController.kt" \
+  && grep -q 'pickFromIndex(body.utf8(), capabilities, channel = CHANNEL' "$K/MainViewController.kt" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
+# W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
+grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \
+  && ok "W4.5: the lookup checks rollout and host-version constraints (install id, CFBundleVersion, floor)" || bad "W4.5: constraints are not wired"
 refuses "a second run over an existing host-ios" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-ios\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-ios (the build below then builds a beta host).

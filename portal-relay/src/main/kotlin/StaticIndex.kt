@@ -198,6 +198,34 @@ private fun noStricterThan(other: JsonObject, source: JsonObject): Boolean {
   return other["constraints"] == null && caps(source).containsAll(caps(other)) && wv(other) <= wv(source)
 }
 
+/**
+ * W4.5: the constraints a publish, republish or promotion sets on its entry, as
+ * the W4.5 hosts read them (BundleIndex.kt, `admits`): `rollout` 0..100,
+ * `minHostVersion` and `maxHostVersion` (the host build's integer version).
+ * Hosts from before W4.5 skip any entry with constraints.
+ */
+internal data class Constraints(val rollout: Int? = null, val minHostVersion: Long? = null, val maxHostVersion: Long? = null) {
+  val problem: String?
+    get() = when {
+      rollout != null && rollout !in 0..100 -> "a rollout is a percentage, 0 to 100 (got $rollout)"
+      minHostVersion != null && minHostVersion < 0 -> "a minimum host version is not negative (got $minHostVersion)"
+      maxHostVersion != null && maxHostVersion < 0 -> "a maximum host version is not negative (got $maxHostVersion)"
+      minHostVersion != null && maxHostVersion != null && minHostVersion > maxHostVersion ->
+        "the minimum host version $minHostVersion is above the maximum $maxHostVersion: no host could take it"
+      else -> null
+    }
+
+  /** [base] (an entry's constraints, kept) with these set on top; null when the result is empty. */
+  fun over(base: JsonElement?): JsonObject? {
+    val merged = (base as? JsonObject).orEmpty() + buildMap {
+      rollout?.let { put("rollout", JsonPrimitive(it)) }
+      minHostVersion?.let { put("minHostVersion", JsonPrimitive(it)) }
+      maxHostVersion?.let { put("maxHostVersion", JsonPrimitive(it)) }
+    }
+    return merged.takeIf { it.isNotEmpty() }?.let(::JsonObject)
+  }
+}
+
 /** An entry's channel; one without a channel is on [DEFAULT_CHANNEL], as hosts read it. */
 private fun entryChannel(e: JsonObject): String =
   (e["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
@@ -249,10 +277,12 @@ internal fun publishStatic(
   capabilities: List<String> = emptyList(),
   now: Instant = Instant.now(),
   init: Boolean = false,
+  constraints: Constraints = Constraints(),
   extraFields: Map<String, JsonElement> = emptyMap(), // added to (or replacing) the new entry's fields
   beforeLock: () -> Unit = {}, // a test hook: another publish landing between the checks and the lock
 ): StaticPublish {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  constraints.problem?.let { throw PublishRefused(it) }
   val outputRoot = output.canonicalFile.toPath()
   if (outDir.canonicalFile.toPath().startsWith(outputRoot)) {
     throw PublishRefused("--out $outDir is inside the compile output $output; choose a directory outside it")
@@ -298,7 +328,11 @@ internal fun publishStatic(
     }
 
     val manifestSha = sha256Hex(File(dest, "manifest.zipline.json").readBytes())
-    val entry = JsonObject(entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields)
+    val entryConstraints = constraints.over(extraFields["constraints"])
+    val entry = JsonObject(
+      entryJson(sequence, version, channel, capabilities, manifestSha, now) + extraFields - "constraints" +
+        listOfNotNull(entryConstraints?.let { "constraints" to it }),
+    )
     val next = JsonObject(index + ("entries" to JsonArray(entries + entry)))
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
     StaticPublish(version, sequence, dest, entry)
@@ -353,8 +387,10 @@ internal fun promoteStatic(
   channel: String,
   publicKeyHex: String,
   now: Instant = Instant.now(),
+  constraints: Constraints = Constraints(), // set on top of the copied ones (W4.5)
 ): StaticPromotion {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  constraints.problem?.let { throw PublishRefused(it) }
   val bundlesDir = File(outDir, "bundles")
   if (!File(bundlesDir, INDEX_FILE).exists()) {
     throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to promote in: download the served bundles/ first")
@@ -395,15 +431,57 @@ internal fun promoteStatic(
     val index = readIndex(bundlesDir)
     val source = check(index) // again, under the lock
     val entry = JsonObject(
-      source + mapOf(
+      source - "constraints" + mapOf(
         "channel" to JsonPrimitive(channel),
         "promotedFrom" to JsonPrimitive(entryChannel(source)),
         "createdAt" to JsonPrimitive(now.toString()),
-      ),
+      ) + listOfNotNull(constraints.over(source["constraints"])?.let { "constraints" to it }),
     )
     val next = JsonObject(index + ("entries" to JsonArray((index["entries"] as JsonArray) + entry)))
     writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), next) + "\n")
     StaticPromotion(sequence, (source["version"] as JsonPrimitive).intOrNull!!, entryChannel(source), entry)
+  }
+}
+
+internal data class StaticRollout(val sequence: Long, val channel: String, val from: JsonElement?, val entry: JsonObject)
+
+/**
+ * W4.5: sets `constraints.rollout` on the entry at [sequence] (on [channel], which
+ * may be omitted when the sequence has one entry). Raising it reaches more
+ * installs; 0 halts it for installs that have not run it, while hosts that
+ * already ran it keep it (their floor). Only the index changes, under the
+ * publish lock; nothing is built or signed, and no key is needed.
+ */
+internal fun setRolloutStatic(outDir: File, sequence: Long, rollout: Int, channel: String? = null): StaticRollout {
+  Constraints(rollout = rollout).problem?.let { throw PublishRefused(it) }
+  if (channel != null && !CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
+  val bundlesDir = File(outDir, "bundles")
+  if (!File(bundlesDir, INDEX_FILE).exists()) {
+    throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to change: download the served bundles/ first")
+  }
+  fun target(index: JsonObject): Int {
+    val entries = (index["entries"] as JsonArray).map { it as JsonObject }
+    val at = entries.withIndex().filter { (_, e) -> (e["sequence"] as JsonPrimitive).longOrNull == sequence }
+    if (at.isEmpty()) throw PublishRefused("${File(bundlesDir, INDEX_FILE)} has no entry at sequence $sequence")
+    val chosen = when {
+      channel != null -> at.singleOrNull { (_, e) -> entryChannel(e) == channel }
+        ?: throw PublishRefused("sequence $sequence is not on channel $channel")
+      at.size == 1 -> at.single()
+      else -> throw PublishRefused("sequence $sequence is on channels ${at.joinToString { entryChannel(it.value) }}: name one with --channel")
+    }
+    entryShapeProblem(chosen.value)?.let { throw PublishRefused("the index entry at sequence $sequence $it; it was left as it is") }
+    return chosen.index
+  }
+  target(readIndex(bundlesDir)) // before the lock: a refusal writes nothing
+  return withPublishLock(bundlesDir) {
+    val index = readIndex(bundlesDir)
+    val i = target(index)
+    val entries = (index["entries"] as JsonArray).map { it as JsonObject }.toMutableList()
+    val old = entries[i]
+    val entry = JsonObject(old - "constraints" + ("constraints" to Constraints(rollout = rollout).over(old["constraints"])!!))
+    entries[i] = entry
+    writeAtomically(File(bundlesDir, INDEX_FILE), prettyJson.encodeToString(JsonElement.serializer(), JsonObject(index + ("entries" to JsonArray(entries)))) + "\n")
+    StaticRollout(sequence, entryChannel(entry), (old["constraints"] as? JsonObject)?.get("rollout"), entry)
   }
 }
 
@@ -441,8 +519,10 @@ internal fun republishStatic(
   publicKeyHex: String,
   channel: String? = null,
   now: Instant = Instant.now(),
+  constraints: Constraints = Constraints(), // set on top of the original's (W4.5)
   resign: (dir: File, sequence: Long) -> Int,
 ): StaticPublish {
+  constraints.problem?.let { throw PublishRefused(it) }
   val bundlesDir = File(outDir, "bundles")
   if (!File(bundlesDir, INDEX_FILE).exists()) {
     throw PublishRefused("there is no ${File(bundlesDir, INDEX_FILE)} to republish from: download the served bundles/ first")
@@ -475,7 +555,7 @@ internal fun republishStatic(
   val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {
     put("widgetVersion", original["widgetVersion"]!!)
-    original["constraints"]?.let { put("constraints", it) }
+    constraints.over(original["constraints"])?.let { put("constraints", it) }
     put("republishOf", JsonPrimitive(version))
   }
 

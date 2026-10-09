@@ -17,6 +17,11 @@
 #   S11 (W4.4) v4 ("Backroom"), published to beta only, does not reach this
 #       stable host: it keeps running v3
 #   S12 (W4.4) --promote 4 --channel stable: the same v4 now reaches it
+#   S13 (W4.5) v5 ("Loft") at rollout 0: not delivered, the host stays on v4
+#   S14 (W4.5) --set-rollout 5 --rollout 100: delivered (floor 4 -> 5)
+#   S14b (W4.5) halted again (0): the host that ran v5 keeps it (its floor)
+#   S15 (W4.5) v6 ("Attic") with minHostVersion 999, above this host's 1:
+#       skipped, the host stays on v5
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
 #   S9b (W4.2) the same with the server up but failing the lookup: the network
@@ -186,8 +191,54 @@ grep -q "loading https://localhost:8443/bundles/v4/manifest.zipline.json (index 
   && ok "S12: the stable host loaded the promoted v4" || bad "S12: v4 did not load: $(grep -E 'loading|codeLoad|refused' "$C" | head -3 | tr '\n' ' ')"
 grep -q "rollback floor raised: 3 -> 4" "$C" && ok "S12: running v4 raised the floor from 3 to 4" || bad "S12: no floor raise logged at v4"
 reads S12-promoted Backroom && ok "S12: after the promotion the screen reads 'Backroom'" || bad "S12: 'Backroom' is not on the screen"
+# S13 (W4.5): a staged rollout at 0%. v5 ("Loft") is in the index on stable,
+# but no install's bucket is below 0, so this host stays on v4.
+w3_title Backroom Loft && w3_publish v5-rollout0 --rollout 0 && grep -q "published v5 (sequence 5, channel stable" "$EV/w3-publish-v5-rollout0.log" \
+  && python3 -c 'import json,sys; e=json.load(open(sys.argv[1]))["entries"][-1]; sys.exit(0 if e["sequence"]==5 and e["constraints"]=={"rollout":0} else 1)' "$W3/site/bundles/index.json" \
+  && ok "S13: keliver-publish wrote v5 at sequence 5 with constraints.rollout 0" || { bad "S13: publish v5 at rollout 0"; tail -20 "$EV/w3-publish-v5-rollout0.log"; }
+launch rollout0
+C="$EV/rollout0.console.txt"
+grep -q "loading https://localhost:8443/bundles/v4/manifest.zipline.json (index sequence 4," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S13: at rollout 0 the host passed over v5 and loaded v4" || bad "S13: at rollout 0 the host passed over v5 and loaded v4: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+grep -q "bundles/v5/" "$C" && bad "S13: the host asked for v5" || ok "S13: the host never asked for v5"
+reads rollout0 Backroom && ok "S13: the screen still reads Backroom" || bad "S13: the screen still reads Backroom: 'Backroom' is not on the screen"
+
+# S14 (W4.5): the rollout raised to 100% (an index edit; no key, no build): v5 reaches the host.
+( cd "$APP" && "$PUBLISH" . --out "$W3/site" --set-rollout 5 --rollout 100 ) > "$EV/w3-rollout-100.log" 2>&1 \
+  && grep -q "rollout 0 -> 100%" "$EV/w3-rollout-100.log" && ok "S14: --set-rollout 5 --rollout 100 (no key)" \
+  || { bad "S14: set the rollout"; tail -10 "$EV/w3-rollout-100.log"; }
+launch rollout100
+C="$EV/rollout100.console.txt"
+grep -q "loading https://localhost:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S14: at rollout 100 the host loaded v5" || bad "S14: at rollout 100 the host loaded v5: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+grep -q "rollback floor raised: 4 -> 5" "$C" && ok "S14: running v5 raised the floor from 4 to 5" || bad "S14: no floor raise logged at v5"
+reads rollout100 Loft && ok "S14: the screen reads Loft" || bad "S14: the screen reads Loft: 'Loft' is not on the screen"
+
+# S14b (W4.5): halting the rollout (back to 0) stops new installs, but this host
+# has run v5: its floor is 5, and a rollout gates only sequences above the floor.
+( cd "$APP" && "$PUBLISH" . --out "$W3/site" --set-rollout 5 --rollout 0 ) > "$EV/w3-rollout-halt.log" 2>&1 \
+  && grep -q "rollout 100 -> 0% (halted" "$EV/w3-rollout-halt.log" && ok "S14b: the rollout of v5 halted (0)" \
+  || { bad "S14b: halt the rollout"; tail -10 "$EV/w3-rollout-halt.log"; }
+launch rollout-halted
+C="$EV/rollout-halted.console.txt"
+grep -q "loading https://localhost:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S14b: halted, the host that ran v5 still loads it" || bad "S14b: halted, the host that ran v5 still loads it: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+
+# S15 (W4.5): a host-version gate. v6 ("Attic") needs host version 999; this host
+# is version 1 (versionCode / CFBundleVersion), so it skips v6 and stays on v5.
+w3_title Loft Attic && w3_publish v6-gated --min-host-version 999 && grep -q "published v6 (sequence 6, channel stable" "$EV/w3-publish-v6-gated.log" \
+  && ok "S15: keliver-publish wrote v6 with constraints.minHostVersion 999" || { bad "S15: publish v6"; tail -20 "$EV/w3-publish-v6-gated.log"; }
+cp "$W3/site/bundles/index.json" "$EV/w3-index-w45.json" 2>/dev/null
+launch gated
+C="$EV/gated.console.txt"
+grep -q "loading https://localhost:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S15: the host (version 1) skipped v6 and loaded v5" || bad "S15: the host (version 1) skipped v6 and loaded v5: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+grep -q "host version 1," "$C" && ok "S15: the host checked the entries against its version, 1" || bad "S15: the lookup did not name host version 1"
+grep -q "bundles/v6/" "$C" && bad "S15: the host asked for v6" || ok "S15: the host never asked for v6"
+reads gated Loft && ok "S15: the screen still reads Loft" || bad "S15: the screen still reads Loft: 'Loft' is not on the screen"
+
 # The newest bundle this host has run, for S7, S9 and S9b.
-LAST_V=4; LAST_TITLE=Backroom
+LAST_V=5; LAST_TITLE=Loft
 
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \

@@ -1,8 +1,10 @@
 import app.cash.zipline.loader.ZiplineHttpClient
+import hosttemplate.HostFacts
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.manifestPathOk
 import hosttemplate.manifestSequence
 import hosttemplate.rollbackProblem
+import hosttemplate.rolloutBucket
 import hosttemplate.pickFromIndex
 import java.io.File
 import kotlin.test.Test
@@ -95,6 +97,48 @@ class BundleIndexTest {
     assertEquals(5L, pickFromIndex(index(entry(5, extra = ""","channel":"beta""""), entry(7, extra = ""","channel":"canary"""")), caps, channel = "beta").getOrThrow().sequence)
     val pick = pickFromIndex(index(entry(5, extra = ""","channel":"beta""""), entry(8)), caps, channel = "beta").getOrThrow()
     assertEquals(8L to "stable", pick.sequence to pick.channel)
+  }
+
+  @Test
+  fun aRolloutReachesTheInstallsBelowItsPercentageAndHoldsForThoseThatRanIt() {
+    fun at(r: Int, seq: Long = 5) = index(entry(4), entry(seq, extra = ""","constraints":{"rollout":$r}"""))
+    val install = HostFacts(installId = "install-a", hostVersion = 1, floor = 4)
+    assertEquals(4L, pickFromIndex(at(0), caps, facts = install).getOrThrow().sequence) // 0%: nobody new
+    assertEquals(5L, pickFromIndex(at(100), caps, facts = install).getOrThrow().sequence) // 100%: everybody
+    // A halted (0%) rollout still reaches a host that already ran it: its floor is at that sequence.
+    assertEquals(5L, pickFromIndex(at(0), caps, facts = install.copy(floor = 5)).getOrThrow().sequence)
+    // In between: exactly the installs whose bucket is below the percentage, and the same answer every time.
+    val ids = (1..400).map { "install-$it" }
+    val reached = ids.count { id -> pickFromIndex(at(30), caps, facts = HostFacts(id, 1, 4)).getOrThrow().sequence == 5L }
+    assertEquals(ids.count { rolloutBucket(it, 5) < 30 }, reached)
+    assertTrue(reached in 80..160, "about 30% of 400, got $reached")
+    assertEquals(rolloutBucket("install-a", 5), rolloutBucket("install-a", 5))
+    assertTrue(ids.all { rolloutBucket(it, 7) in 0 until 100 })
+    // A malformed rollout admits nobody.
+    for (bad in listOf("101", "-1", "\"50\"", "50.5", "null")) {
+      val idx = index(entry(4), entry(5, extra = ""","constraints":{"rollout":$bad}"""))
+      assertEquals(4L, pickFromIndex(idx, caps, facts = install).getOrThrow().sequence, bad)
+    }
+  }
+
+  @Test
+  fun hostVersionGatesSkipHostsOutsideThem() {
+    val idx = index(
+      entry(4),
+      entry(5, extra = ""","constraints":{"minHostVersion":3}"""),
+      entry(6, extra = ""","constraints":{"maxHostVersion":1}"""),
+    )
+    fun pick(v: Long?) = pickFromIndex(idx, caps, facts = HostFacts("i", v, 0)).getOrThrow().sequence
+    assertEquals(6L, pick(1)) // 6 needs at most 1
+    assertEquals(4L, pick(2)) // neither: 5 needs 3, 6 needs at most 1
+    assertEquals(5L, pick(3))
+    assertEquals(4L, pick(null)) // an unknown host version takes no gated entry
+    // Gates hold even below the floor (unlike a rollout): they are about what the code needs.
+    val gated = index(entry(4), entry(5, extra = ""","constraints":{"minHostVersion":9}"""))
+    assertEquals(4L, pickFromIndex(gated, caps, facts = HostFacts("i", 1, 5)).getOrThrow().sequence)
+    // A constraint this host does not know still skips the entry.
+    val unknown = index(entry(4), entry(5, extra = ""","constraints":{"region":"eu"}"""))
+    assertEquals(4L, pickFromIndex(unknown, caps, facts = HostFacts("i", 1, 0)).getOrThrow().sequence)
   }
 
   @Test

@@ -201,6 +201,22 @@ then offers the same bundle to everyone. Channels are selection, in the
 unsigned index: the floor is per key, not per channel, so a host moved to
 another channel (a rebuild) keeps its floor.
 
+**Staged rollouts and host-version gates** (both hosts). An index entry may
+carry `constraints`:
+- **`rollout` (0–100):** an install takes the entry when its bucket is below
+  it. The bucket is the first four bytes of `sha256("<install id>:<sequence>")`,
+  mod 100. The install id is random, made once on the device, and never sent
+  anywhere. A rollout gates only sequences above the host's floor, so lowering
+  or halting it never takes a bundle away from a host that ran it.
+- **`minHostVersion` / `maxHostVersion`:** compared with the host build's
+  version (Android `versionCode`, iOS `CFBundleVersion`). A host whose version
+  is not an integer skips gated entries. Gates hold below the floor too, because
+  they are about what the code needs.
+
+A host skipping an entry takes the newest one it may run. An entry with a
+constraint key the host doesn't know is skipped, so hosts from before W4.5 skip
+every constrained entry.
+
 
 **The iOS twin** is §3. **Publishing the bundles it loads.** `keliver-new-publish-target.sh` (run once,
 after `keliver-new-device-target.sh`) gives `keliver.portal.json` a

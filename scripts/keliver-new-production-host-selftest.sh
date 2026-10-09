@@ -142,8 +142,12 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   || bad "W4.2: the rollback floor is not wired"
 # W4.4: the host takes one channel besides stable, stable by default.
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
-  && grep -q 'pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL)' "$M" \
+  && grep -q 'pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL' "$M" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
+# W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
+grep -q 'HostFacts(prefs.installId(), BuildConfig.VERSION_CODE.toLong(), floor())' "$M" && grep -q 'facts = facts' "$M" \
+  && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$H/src/main/kotlin/com/example/demo/host/BundleIndex.kt" \
+  && ok "W4.5: the lookup checks rollout and host-version constraints (install id, versionCode, floor)" || bad "W4.5: constraints are not wired"
 refuses "a second run over an existing host-android" "already exists" --bundle-server "$SERVER" --public-key-file "$KEY"
 ls -a "$APP" | grep -q '^\.host-android\.' && bad "a staging directory was left behind" || ok "no staging directory left behind"
 # W4.4: --channel beta, over a removed host-android (the build below then builds a beta host).

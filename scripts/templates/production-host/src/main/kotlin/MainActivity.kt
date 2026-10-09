@@ -98,6 +98,11 @@ private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
 /** The stored floor; a value of the wrong type (only tampering writes one) reads as unreadable, i.e. refuse all. */
 private fun android.content.SharedPreferences.floor(cacheName: String): Long =
   runCatching { getLong(floorKey(cacheName), 0L) }.getOrDefault(Long.MAX_VALUE)
+/** This install's random id, for staged rollouts (W4.5): made once, kept here, never sent anywhere. */
+private const val INSTALL_ID = "installId"
+private fun android.content.SharedPreferences.installId(): String =
+  runCatching { getString(INSTALL_ID, null) }.getOrNull()
+    ?: java.util.UUID.randomUUID().toString().also { edit().putString(INSTALL_ID, it).commit() }
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -154,7 +159,9 @@ class MainActivity : ComponentActivity() {
         .connectTimeout(5, TimeUnit.SECONDS)
         .callTimeout(10, TimeUnit.SECONDS)
         .build()
-      val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities) }
+      // What the index's constraints are checked against (W4.5).
+      val facts = HostFacts(prefs.installId(), BuildConfig.VERSION_CODE.toLong(), floor())
+      val latest = withContext(Dispatchers.IO) { lookupBundle(lookupClient, server, capabilities, facts) }
       when {
         latest != null -> {
           Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
@@ -182,7 +189,7 @@ class MainActivity : ComponentActivity() {
    * bundles/index.json; on a 404 for it, asks the relay's bundles/latest.
    * Either way the manifest must be on the bundle server's own origin.
    */
-  private fun lookupBundle(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): Lookup? = runCatching {
+  private fun lookupBundle(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>, facts: HostFacts): Lookup? = runCatching {
     val indexUrl = server.newBuilder().addPathSegments("bundles/index.json").build()
     val request = Request.Builder().url(indexUrl).header("Cache-Control", "no-cache").build()
     okhttp.newCall(request).execute().use { response ->
@@ -195,7 +202,7 @@ class MainActivity : ComponentActivity() {
         Log.e(TAG, "bundle index: HTTP ${response.code}")
         return@runCatching null
       }
-      val pick = pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL).getOrElse {
+      val pick = pickFromIndex(body, capabilities, channel = BuildConfig.KELIVER_CHANNEL, facts = facts).getOrElse {
         Log.e(TAG, "bundle index: ${it.message}")
         return@runCatching null
       }
@@ -207,7 +214,7 @@ class MainActivity : ComponentActivity() {
       Lookup(
         url.toString(),
         pick.manifestSha256,
-        "index sequence ${pick.sequence}, channel ${pick.channel} (host: ${BuildConfig.KELIVER_CHANNEL}), " +
+        "index sequence ${pick.sequence}, channel ${pick.channel} (host: ${BuildConfig.KELIVER_CHANNEL}), host version ${facts.hostVersion}, " +
           "manifest sha256 ${pick.manifestSha256.take(12)}…",
       )
     }

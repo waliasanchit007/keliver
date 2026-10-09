@@ -675,4 +675,71 @@ class StaticPublishTest {
       assertTrue(why in ex.message!!, ex.message)
     }
   }
+
+  // --- W4.5: rollout and host-version gates ----------------------------------
+
+  @Test
+  fun aPublishCarriesTheConstraintsItIsGiven() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    val p = publishStatic(output("two", seq = 2), site, app.publicHex, constraints = Constraints(rollout = 10, minHostVersion = 3))
+    assertEquals(JsonObject(mapOf("rollout" to JsonPrimitive(10), "minHostVersion" to JsonPrimitive(3))), p.entry["constraints"])
+    assertFalse("constraints" in entries()[0])
+    for ((c, why) in listOf(Constraints(rollout = 101) to "0 to 100", Constraints(minHostVersion = 5, maxHostVersion = 4) to "no host could take it")) {
+      assertRefusedAndNothingWritten(why) { publishStatic(output("x", seq = 3), site, app.publicHex, constraints = c) }
+    }
+  }
+
+  @Test
+  fun aRepublishOrPromotionSetsConstraintsOnTopOfTheCopiedOnes() {
+    publishStatic(output("one"), site, app.publicHex, channel = "beta", init = true, constraints = Constraints(minHostVersion = 2))
+    val r = republishStatic(site, 1, app.publicHex, constraints = Constraints(rollout = 5), resign = resign())
+    assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(2), "rollout" to JsonPrimitive(5))), r.entry["constraints"])
+    val p = promoteStatic(site, 2, "stable", app.publicHex, constraints = Constraints(rollout = 50))
+    assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(2), "rollout" to JsonPrimitive(50))), p.entry["constraints"])
+    assertEquals(5, entries()[1]["constraints"]!!.jsonObject["rollout"]!!.jsonPrimitive.int) // beta's own entry unchanged
+  }
+
+  @Test
+  fun aRolloutIsRaisedOrHaltedInTheIndexOnly() {
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex, constraints = Constraints(rollout = 0, minHostVersion = 4))
+    val manifests = File(bundles, "v2").listFiles()!!.associate { it.name to sha256Hex(it.readBytes()) }
+    val r = setRolloutStatic(site, 2, 100)
+    assertEquals(JsonPrimitive(0), r.from)
+    assertEquals(JsonObject(mapOf("rollout" to JsonPrimitive(100), "minHostVersion" to JsonPrimitive(4))), entries()[1]["constraints"])
+    assertEquals(manifests, File(bundles, "v2").listFiles()!!.associate { it.name to sha256Hex(it.readBytes()) })
+    setRolloutStatic(site, 2, 0) // halted
+    assertEquals(0, entries()[1]["constraints"]!!.jsonObject["rollout"]!!.jsonPrimitive.int)
+    assertNull(setRolloutStatic(site, 1, 25).from) // an entry without constraints gets them
+    assertRefusedAndNothingWritten("no entry at sequence 9") { setRolloutStatic(site, 9, 10) }
+    assertRefusedAndNothingWritten("0 to 100") { setRolloutStatic(site, 2, 101) }
+    assertRefusedAndNothingWritten("not on channel beta") { setRolloutStatic(site, 2, 10, channel = "beta") }
+    // On two channels, the channel must be named.
+    promoteStatic(site, 1, "beta", app.publicHex)
+    assertRefusedAndNothingWritten("name one with --channel") { setRolloutStatic(site, 1, 10) }
+    assertEquals("beta", setRolloutStatic(site, 1, 10, channel = "beta").channel)
+  }
+
+  @Test
+  fun theCliSetsConstraintsAndRollouts() {
+    val appDir = File(tmp, "capp").apply { mkdirs() }
+    File(appDir, "keliver.portal.json").writeText(
+      """{"screensDir":"src/jsMain/kotlin/screens","publishTask":":compileDevelopmentExecutableKotlinJsZipline","publishOutput":"build/zipline/Development"}""",
+    )
+    publishStatic(output("one"), site, app.publicHex, init = true)
+    publishStatic(output("two", seq = 2), site, app.publicHex)
+    fun run(vararg a: String, key: String? = app.publicHex) = KeliverPublish.run(listOf(appDir.path, "--out", site.path) + a, key,
+      { _, _, _ -> error("re-signed") }, { _, _, _ -> error("built") })
+    for (bad in listOf(listOf("--rollout", "101"), listOf("--rollout", "x"), listOf("--min-host-version", "-1"),
+      listOf("--min-host-version", "5", "--max-host-version", "4"), listOf("--set-rollout", "2"),
+      listOf("--set-rollout", "2", "--rollout", "5", "--init"), listOf("--set-rollout", "2", "--rollout", "5", "--min-host-version", "1"))) {
+      assertEquals(2, run(*bad.toTypedArray()), bad.toString())
+    }
+    // --set-rollout needs no key at all.
+    assertEquals(0, run("--set-rollout", "2", "--rollout", "20", key = null))
+    assertEquals(20, entries()[1]["constraints"]!!.jsonObject["rollout"]!!.jsonPrimitive.int)
+    assertEquals(4, run("--set-rollout", "9", "--rollout", "20", key = null))
+    assertEquals(0, run("--promote", "2", "--channel", "beta", "--rollout", "100", "--max-host-version", "7"))
+    assertEquals(JsonObject(mapOf("rollout" to JsonPrimitive(100), "maxHostVersion" to JsonPrimitive(7))), entries().last()["constraints"])
+  }
 }

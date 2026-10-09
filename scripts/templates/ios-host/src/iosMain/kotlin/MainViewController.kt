@@ -77,7 +77,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString.Companion.decodeHex
+import platform.Foundation.NSBundle
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIViewController
 
@@ -87,6 +89,14 @@ private const val LAST_GOOD_MANIFEST = "keliver.lastGoodManifestUrl"
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
 private fun floorKey(trust: ProductionTrust.Verified) = "keliver.highestSequence-${cacheName(trust)}"
+/** This install's random id, for staged rollouts (W4.5): made once, kept here, never sent anywhere. */
+private const val INSTALL_ID = "keliver.installId"
+private fun installId(): String {
+  val defaults = NSUserDefaults.standardUserDefaults
+  return defaults.stringForKey(INSTALL_ID) ?: NSUUID().UUIDString.also { defaults.setObject(it, forKey = INSTALL_ID) }
+}
+/** This build's CFBundleVersion (CURRENT_PROJECT_VERSION), for host-version gates; null unless an integer. */
+private fun hostVersion(): Long? = (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String)?.toLongOrNull()
 
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -145,7 +155,8 @@ private suspend fun startHost(): HostState {
   // Read when each manifest arrives, not once here: a restart after a crash must
   // see a floor raised since the host started.
   val floor = { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust)) }
-  val latest = lookupBundle(server, capabilities)
+  // What the index's constraints are checked against (W4.5).
+  val latest = lookupBundle(server, capabilities, HostFacts(installId(), hostVersion(), floor()))
   return when {
     latest != null -> {
       log("loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
@@ -167,7 +178,7 @@ private class Lookup(val manifestUrl: String, val manifestSha256: String?, val s
  * bundles/index.json; on a 404 for it, asks the relay's bundles/latest. Either
  * way the manifest must be on the bundle server's own origin.
  */
-private suspend fun lookupBundle(server: BundleServer, capabilities: List<String>): Lookup? = runCatching {
+private suspend fun lookupBundle(server: BundleServer, capabilities: List<String>, facts: HostFacts): Lookup? = runCatching {
   // Short: offline, this decides how long the app waits before it starts from the cache.
   val (status, body, _) = send(NSURLSession.sharedSession, getRequest("${server.base}/bundles/index.json", timeoutSeconds = 10.0))
   if (status == 404) {
@@ -178,7 +189,7 @@ private suspend fun lookupBundle(server: BundleServer, capabilities: List<String
     log("bundle index: HTTP $status")
     return@runCatching null
   }
-  val pick = pickFromIndex(body.utf8(), capabilities, channel = CHANNEL).getOrElse {
+  val pick = pickFromIndex(body.utf8(), capabilities, channel = CHANNEL, facts = facts).getOrElse {
     log("bundle index: ${it.message}")
     return@runCatching null
   }
@@ -189,7 +200,7 @@ private suspend fun lookupBundle(server: BundleServer, capabilities: List<String
   Lookup(
     url,
     pick.manifestSha256,
-    "index sequence ${pick.sequence}, channel ${pick.channel} (host: $CHANNEL), manifest sha256 ${pick.manifestSha256.take(12)}…",
+    "index sequence ${pick.sequence}, channel ${pick.channel} (host: $CHANNEL), host version ${facts.hostVersion}, manifest sha256 ${pick.manifestSha256.take(12)}…",
   )
 }.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
 

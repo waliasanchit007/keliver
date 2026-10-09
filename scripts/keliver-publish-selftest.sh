@@ -331,5 +331,27 @@ PY
 [ $? = 0 ] && ok "index.json: a second entry for v4 on beta, the same manifest and sha256, no new v<N>/" \
   || { bad "index after the promotion"; cat "$WORK/check7.txt"; }
 
+# 8. constraints (W4.5): a rollout and a host-version gate set on publish, then the rollout
+#    raised with --set-rollout, which needs no key at all (none given, none in the env)
+fixture "$WORK/fx/five" Five signed "$WORK/fx/five.pub" 5
+rm -rf "$APP/build/zipline/Development"; cp -R "$WORK/fx/five" "$APP/build/zipline/Development"
+"$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/five.pub" --skip-build --rollout 101 > "$WORK/u.log" 2>&1; rc=$?
+[ "$rc" = 2 ] && grep -q "0 to 100" "$WORK/u.log" && ok "--rollout 101: exit 2" || bad "--rollout 101: exit $rc"
+"$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/five.pub" --skip-build --rollout 0 --min-host-version 3 > "$WORK/c5.log" 2>&1; rc=$?
+python3 - "$SITE/bundles/index.json" > "$WORK/check8.txt" 2>&1 <<'PY'
+import json, sys
+e = json.load(open(sys.argv[1]))['entries'][-1]
+assert (e['sequence'], e['constraints']) == (5, {'rollout': 0, 'minHostVersion': 3}), e
+print('ok')
+PY
+py=$?
+[ "$rc" = 0 ] && [ "$py" = 0 ] && ok "v5 published at rollout 0 with minHostVersion 3 (index constraints)" || { bad "v5 with constraints: exit $rc"; cat "$WORK/check8.txt" "$WORK/c5.log"; }
+STORE_PUB_HIDDEN=""; [ -n "${STORE:-}" ] && [ -f "$STORE/keys/ed25519.pub" ] && { mv "$STORE/keys/ed25519.pub" "$WORK/store.pub.hidden"; STORE_PUB_HIDDEN=1; }
+env -u KELIVER_PUBLIC_KEY_HEX "$PUBLISH" "$APP" --out "$SITE" --set-rollout 5 --rollout 100 > "$WORK/sr.log" 2>&1; rc=$?
+[ -n "$STORE_PUB_HIDDEN" ] && mv "$WORK/store.pub.hidden" "$STORE/keys/ed25519.pub"
+python3 -c 'import json,sys; e=json.load(open(sys.argv[1]))["entries"][-1]; sys.exit(0 if e["constraints"]=={"rollout":100,"minHostVersion":3} else 1)' "$SITE/bundles/index.json"; py=$?
+[ "$rc" = 0 ] && [ "$py" = 0 ] && grep -q "rollout 0 -> 100%" "$WORK/sr.log" \
+  && ok "--set-rollout 5 --rollout 100 with no key anywhere: the rollout raised, the gate kept" || { bad "--set-rollout: exit $rc"; cat "$WORK/sr.log"; }
+
 echo "keliver-publish self-test: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

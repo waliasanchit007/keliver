@@ -54,7 +54,7 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Also (from the release that ships W3/W4):** publish without the relay
   (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
   rollback protection in the hosts it scaffolds.
-- **Doesn't (yet):** staged rollouts, or an in-app update API.
+- **Doesn't (yet):** an in-app update API.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -104,6 +104,7 @@ Central plus an Xcode app. It applies the same key checks and refusals as
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build] [--init]
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] --republish VERSION [--channel NAME]
 keliver-publish [app-dir] --out DIR [--public-key-file PATH] --promote SEQUENCE --channel NAME
+keliver-publish [app-dir] --out DIR --set-rollout SEQUENCE --rollout PERCENT [--channel NAME]
 ```
 
 Publishes without the relay, for CI and for static or CDN hosting. `DIR` must
@@ -138,6 +139,14 @@ host is never behind stable. `--promote SEQUENCE --channel stable` offers an
 already published bundle on stable too: a second index entry for the same
 `v<N>/`, with nothing built or signed and no private key. It refuses when
 that channel's hosts already take a higher sequence that asks no more of them.
+
+Constraints, on the entry a publish, `--republish` or `--promote` writes:
+`--rollout PERCENT` (a staged rollout), `--min-host-version N` and
+`--max-host-version N` (the host build's integer version: Android
+`versionCode`, iOS `CFBundleVersion`). `--set-rollout SEQUENCE --rollout
+PERCENT` changes a rollout later: raise it, or set 0 to halt it. Hosts that ran
+it keep it. It needs no key. Hosts from before these constraints skip any entry
+that has them.
 
 ### bin/keliver-new-publish-target.sh
 

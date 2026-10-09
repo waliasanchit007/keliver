@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> [--channel stable] [--skip-build] [--init]
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> --republish <version> [--channel <name>]
  *   keliver-publish [app-dir] --out <dir> --public-key-file <file> --promote <sequence> --channel <name>
+ *   keliver-publish [app-dir] --out <dir> --set-rollout <sequence> --rollout <percent> [--channel <name>]
  *
  * `<dir>` must hold the LIVE `bundles/index.json` and `bundles/v<N>/` (download
  * them from the bundle server first): the next version and sequence come from
@@ -33,6 +34,12 @@ import kotlinx.serialization.json.JsonPrimitive
  * bundle on another channel: a second index entry for the same `v<N>/`. Nothing
  * is built or signed; only the public key is needed.
  *
+ * Constraints (W4.5) on the entry a publish, republish or promotion writes:
+ * `--rollout <percent>` (a staged rollout), `--min-host-version <n>` and
+ * `--max-host-version <n>` (the host build's integer version). `--set-rollout
+ * <sequence> --rollout <percent>` changes an entry's rollout afterwards: raise
+ * it, or 0 to halt (hosts that ran it keep it). It needs no key.
+ *
  * Exit status:
  * - 0 published;
  * - 2 usage;
@@ -47,7 +54,8 @@ import kotlinx.serialization.json.JsonPrimitive
 object KeliverPublish {
   private const val USAGE =
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
-      "[--channel stable] [--skip-build] [--init] [--republish <version> | --promote <sequence> --channel <name>]"
+      "[--channel stable] [--skip-build] [--init] [--republish <version> | --promote <sequence> --channel <name>] " +
+      "[--rollout <percent>] [--min-host-version <n>] [--max-host-version <n>] | --set-rollout <sequence> --rollout <percent>"
 
   @JvmStatic
   fun main(args: Array<String>) {
@@ -66,6 +74,10 @@ object KeliverPublish {
     var channel: String? = null
     var republish: Int? = null
     var promote: Long? = null
+    var setRollout: Long? = null
+    var rollout: Int? = null
+    var minHostVersion: Long? = null
+    var maxHostVersion: Long? = null
     var skipBuild = false
     var init = false
     val it = args.iterator()
@@ -78,6 +90,14 @@ object KeliverPublish {
           ?: return usage("--republish needs a published version number (v<N>'s N)")
         "--promote" -> promote = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[1-9][0-9]{0,17}")) }?.toLong()
           ?: return usage("--promote needs a published sequence number")
+        "--set-rollout" -> setRollout = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[1-9][0-9]{0,17}")) }?.toLong()
+          ?: return usage("--set-rollout needs a published sequence number")
+        "--rollout" -> rollout = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[0-9]{1,3}")) }?.toInt()?.takeIf { v -> v in 0..100 }
+          ?: return usage("--rollout needs a percentage, 0 to 100")
+        "--min-host-version" -> minHostVersion = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[0-9]{1,15}")) }?.toLong()
+          ?: return usage("--min-host-version needs a non-negative integer (the host build's version)")
+        "--max-host-version" -> maxHostVersion = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[0-9]{1,15}")) }?.toLong()
+          ?: return usage("--max-host-version needs a non-negative integer (the host build's version)")
         "--skip-build" -> skipBuild = true
         "--init" -> init = true
         "-h", "--help" -> { println(USAGE); return 0 }
@@ -94,6 +114,14 @@ object KeliverPublish {
     if (promote != null && (init || skipBuild || republish != null || channel == null)) {
       return usage("--promote <sequence> needs --channel <name>, and takes no --init, --skip-build or --republish")
     }
+    val constraints = Constraints(rollout, minHostVersion, maxHostVersion)
+    constraints.problem?.let { return usage(it) }
+    if (setRollout != null) {
+      if (rollout == null || init || skipBuild || republish != null || promote != null || minHostVersion != null || maxHostVersion != null) {
+        return usage("--set-rollout <sequence> needs --rollout <percent> (and --channel when the sequence is on several), and nothing else")
+      }
+      return runSetRollout(File(out), setRollout, rollout, channel)
+    }
     val publicKeyHex = when {
       keyFile != null -> runCatching { File(keyFile).readText().trim() }.getOrElse {
         return refuse("could not read the public key file $keyFile: ${it.message}")
@@ -105,8 +133,8 @@ object KeliverPublish {
       return refuse("could not read ${File(repoDir, "keliver.portal.json")}: ${it.message}")
     }
 
-    if (promote != null) return runPromote(File(out), promote, channel!!, publicKeyHex)
-    if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, resign)
+    if (promote != null) return runPromote(File(out), promote, channel!!, publicKeyHex, constraints)
+    if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, constraints, resign)
 
     // Checked again under the lock; this only spares a build that could not be published.
     if (!init && !File(File(out, "bundles"), INDEX_FILE).exists()) {
@@ -145,7 +173,7 @@ object KeliverPublish {
       emptyList()
     }
     val result = try {
-      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init)
+      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init, constraints = constraints)
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty(), e.aboutSigning)
     } catch (e: java.io.IOException) {
@@ -164,9 +192,17 @@ object KeliverPublish {
     return 0
   }
 
-  private fun runRepublish(repoDir: File, out: File, version: Int, publicKeyHex: String, channel: String?, resign: (File, File, Long) -> Int): Int {
+  private fun runRepublish(
+    repoDir: File,
+    out: File,
+    version: Int,
+    publicKeyHex: String,
+    channel: String?,
+    constraints: Constraints,
+    resign: (File, File, Long) -> Int,
+  ): Int {
     val result = try {
-      republishStatic(out, version, publicKeyHex, channel) { dir, sequence ->
+      republishStatic(out, version, publicKeyHex, channel, constraints = constraints) { dir, sequence ->
         println("keliver-publish: re-signing a copy of v$version for sequence $sequence (keliverResign in $repoDir); nothing is compiled")
         resign(repoDir, dir, sequence)
       }
@@ -195,9 +231,9 @@ object KeliverPublish {
     return 0
   }
 
-  private fun runPromote(out: File, sequence: Long, channel: String, publicKeyHex: String): Int {
+  private fun runPromote(out: File, sequence: Long, channel: String, publicKeyHex: String, constraints: Constraints): Int {
     val result = try {
-      promoteStatic(out, sequence, channel, publicKeyHex)
+      promoteStatic(out, sequence, channel, publicKeyHex, constraints = constraints)
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty(), e.aboutSigning)
     } catch (e: java.io.IOException) {
@@ -207,6 +243,23 @@ object KeliverPublish {
     println(
       "keliver-publish: promoted sequence ${result.sequence} (v${result.version}) from ${result.from} to $channel: " +
         "a second index entry for the same signed bundle; nothing was built or signed",
+    )
+    println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
+    return 0
+  }
+
+  private fun runSetRollout(out: File, sequence: Long, rollout: Int, channel: String?): Int {
+    val result = try {
+      setRolloutStatic(out, sequence, rollout, channel)
+    } catch (e: PublishRefused) {
+      return refuse(e.message.orEmpty())
+    } catch (e: java.io.IOException) {
+      System.err.println("keliver-publish FAILED writing $out: $e. index.json is either unchanged or complete, never half-written.")
+      return 5
+    }
+    println(
+      "keliver-publish: sequence $sequence on ${result.channel}: rollout ${result.from ?: "none"} -> $rollout%" +
+        (if (rollout == 0) " (halted: hosts that have run it keep it)" else ""),
     )
     println("keliver-publish: index ${File(File(out, "bundles"), INDEX_FILE)}")
     return 0

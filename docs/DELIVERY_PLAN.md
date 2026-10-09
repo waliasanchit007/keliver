@@ -459,6 +459,18 @@ original allowed.
   key it doesn't know (fail-closed). So W4 entries never reach W3 hosts
   wrongly.
 
+*As built (W4.5):*
+- **Who is gated.** A rollout gates only sequences above the host's floor, so
+  lowering or halting it never takes a bundle away from a host that ran it.
+  Host-version gates hold below the floor too, because they are about what the
+  code needs. A host whose version isn't an integer skips gated entries.
+- **Publishing.** `--rollout`, `--min-host-version` and `--max-host-version`
+  set constraints on a publish, republish or promotion. They are set on top of
+  copied constraints, never dropped.
+- **Changing a rollout.** `--set-rollout <sequence> --rollout <percent>
+  [--channel]` edits the index only and needs no key.
+- **Host log.** The lookup line names the host version.
+
 **Steps, each with its own evidence:**
 
 1. **W4.1** Signed sequence.
