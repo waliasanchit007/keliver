@@ -237,7 +237,10 @@ public object Keliver {
   public suspend fun checkForUpdate(apply: Boolean = true): KeliverUpdateCheck {
     val s = session
     val running = current
-    if (s == null || running == null) return KeliverUpdateCheck("failed", -1, false, "no bundle is running yet")
+    if (s == null || running == null) {
+      log("update check: no bundle is running yet")
+      return KeliverUpdateCheck("failed", -1, false, "no bundle is running yet")
+    }
     pendingUpdate?.let { return KeliverUpdateCheck("available", it, true, "") }
     lastLookup = TimeSource.Monotonic.markNow()
     val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor()))
@@ -265,7 +268,11 @@ public object Keliver {
 
   /** With UPDATES = "on-resume": check and apply, at most every 30 s (the host observes the foreground itself). */
   private fun resumed() {
-    if (lastLookup.elapsedNow() < 30.seconds) return
+    val since = lastLookup.elapsedNow()
+    if (since < 30.seconds) {
+      log("update check skipped: the last lookup was ${since.inWholeSeconds} s ago (at most one every 30 s)")
+      return
+    }
     appScope.launch { checkForUpdate() }
   }
 
@@ -315,7 +322,7 @@ private suspend fun startHost(): HostState {
     return HostState.Message("Refusing to load", trust.message)
   }
   trust as ProductionTrust.Verified
-  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…")
+  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…; updates $UPDATES")
   val server = BundleServer.parse(BUNDLE_SERVER)
     ?: return HostState.Message("Refusing to load", "The bundle server '$BUNDLE_SERVER' is not an http(s) URL.")
   val apiBase = API_BASE_URL.takeIf { it.isNotBlank() }

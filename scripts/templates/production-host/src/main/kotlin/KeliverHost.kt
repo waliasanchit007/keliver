@@ -247,7 +247,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       return
     }
     trust as ProductionTrust.Verified
-    Log.d(TAG, "verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…")
+    Log.d(TAG, "verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…; updates ${config.updates.name.lowercase().replace('_', '-')}")
     val verifier = ManifestVerifier.Builder()
       .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
       .build()
@@ -513,7 +513,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   suspend fun checkForUpdate(apply: Boolean = true): KeliverUpdateCheck = withContext(Dispatchers.Main.immediate) {
     val s = session
     val running = mutableBundle.value
-    if (s == null || running == null) return@withContext KeliverUpdateCheck.Failed("no bundle is running yet")
+    if (s == null || running == null) {
+      Log.d(TAG, "update check: no bundle is running yet")
+      return@withContext KeliverUpdateCheck.Failed("no bundle is running yet")
+    }
     pendingUpdate?.let { return@withContext KeliverUpdateCheck.Available(it, applying = true) }
     lastLookupAt = SystemClock.elapsedRealtime()
     val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor())
@@ -548,7 +551,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    */
   fun resumed() {
     if (config.updates != KeliverUpdates.ON_RESUME) return
-    if (SystemClock.elapsedRealtime() - lastLookupAt < 30_000) return
+    val since = SystemClock.elapsedRealtime() - lastLookupAt
+    if (since < 30_000) {
+      Log.d(TAG, "update check skipped: the last lookup was ${since / 1000} s ago (at most one every 30 s)")
+      return
+    }
     scope.launch { checkForUpdate() }
   }
 

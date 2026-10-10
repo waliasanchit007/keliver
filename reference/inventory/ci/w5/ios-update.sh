@@ -24,12 +24,15 @@ w3_title Attic Garage && w3_publish v8-update && grep -q "published v8 (sequence
   && ok "U1: keliver-publish wrote v8 (\"Garage\")" || { bad "U1: publish v8"; tail -20 "$EV/w3-publish-v8-update.log"; }
 # One console for the whole scenario: the process must not change.
 xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+t0="$(date +%s)"
 xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/U1.console.txt" 2>&1 &
 CPID=$!
 sleep 30
 C="$EV/U1.console.txt"
 grep -q "loading https://localhost:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$C" && grep -q "codeLoadSuccess modules=[0-9]* sequence=8" "$C" \
   && ok "U1: the host started on v8" || bad "U1: v8 did not load: $(grep -E 'KeliverHost' "$C" | head -3 | tr '\n' ' ')"
+grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$C" \
+  && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$C")"
 xcrun simctl io "$UDID" screenshot "$EV/U1-before.png" > /dev/null 2>&1
 swift "$HERE/ocr.swift" "$EV/U1-before.png" > "$EV/U1-before.ocr.txt" 2>"$EV/U1-before.ocr.err"
 reads U1-before Garage && ok "U1: the screen reads 'Garage' (v8)" || bad "U1: 'Garage' is not on the screen: $(tr '\n' '|' < "$EV/U1-before.ocr.txt" | cut -c1-200)"
@@ -37,7 +40,9 @@ reads U1-before Garage && ok "U1: the screen reads 'Garage' (v8)" || bad "U1: 'G
 w3_title Garage Cellar && w3_publish v9-update && grep -q "published v9 (sequence 9, channel stable" "$EV/w3-publish-v9-update.log" \
   && ok "U1: keliver-publish wrote v9 (\"Cellar\") while the app ran" || { bad "U1: publish v9"; tail -20 "$EV/w3-publish-v9-update.log"; }
 
-# To the background (Settings comes forward) and back (forward, not relaunched).
+# To the background (Settings comes forward) and back (forward, not relaunched),
+# past the host's 30 s between lookups (its start was one).
+while [ $(( $(date +%s) - t0 )) -lt 40 ]; do sleep 1; done
 xcrun simctl launch "$UDID" com.apple.Preferences > /dev/null 2>&1; sleep 5
 xcrun simctl launch "$UDID" "$BID" > "$EV/U1-forward.txt" 2>&1
 sleep 25
