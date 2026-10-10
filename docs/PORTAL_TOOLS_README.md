@@ -46,9 +46,15 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 
 - **Does:** the web portal loop (author screens visually or in code, live
   preview, the op engine, `.kt` write-back, MCP) against any app dir.
-- **Doesn't (yet):** compile/sign the production bundle or drive on-device
-  preview — those run in your app's own Gradle. See the keliver repo's
-  `docs/PORTAL_USAGE.md` and `docs/SCREEN_ARCHITECTURE.md` for the host wiring.
+- **Also:** wire signed publishing into your app
+  (`bin/keliver-new-publish-target.sh`; the signing runs in your app's own
+  Gradle, and `POST /publish` keeps only bundles signed with your key), and
+  scaffold your own production hosts for Android
+  (`bin/keliver-new-production-host.sh`) and iOS (`bin/keliver-new-ios-host.sh`).
+- **Also (from the release that ships W3/W4):** publish without the relay
+  (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
+  rollback protection in the hosts it scaffolds.
+- **Doesn't (yet):** an in-app update API.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -58,12 +64,109 @@ loads only the unsigned bundle your own `serveDevelopmentZipline` is serving,
 and **refuses production mode** (`--es mode prod`) with an on-device message
 rather than loading a production bundle unverified.
 
-Shipping to real users needs **your own production host**: copy
-`sample/host-android` from the keliver repository and build it on a machine
-whose portal store holds `keys/ed25519.pub`, so your portal's identity is
-embedded and signature verification stays on. `host/README.md` has the table of
-what each mode does. This separation is deliberate — a generic binary that
-belongs to nobody has nothing to verify your bundles against.
+Shipping to real users needs **your own production host**:
+`bin/keliver-new-production-host.sh` scaffolds one into your app (below), with
+your portal's public key embedded and signature verification always on.
+`host/README.md` has what it does and what it refuses. This separation is
+deliberate — a generic binary that belongs to nobody has nothing to verify your
+bundles against.
+
+### bin/keliver-new-production-host.sh
+
+```bash
+bin/keliver-new-production-host.sh --bundle-server URL [--api-base-url URL] \
+    [--application-id ID] [--public-key-file PATH] [--channel NAME]
+./gradlew -p host-android assembleDebug
+```
+
+Writes `host-android/`: your app's production Android host, a standalone build
+on Maven Central only. Production-only, verifying every bundle against the
+public key it copies from your portal store; it refuses a `.priv` file and, when
+your store resolves, any key that is not its `ed25519.pub`. Refuses without
+changing anything if an input is wrong or `host-android/` exists. A release
+build needs `https://` servers and your own signing config.
+
+### bin/keliver-new-ios-host.sh
+
+```bash
+bin/keliver-new-ios-host.sh --bundle-server URL [--api-base-url URL] [--bundle-id ID] [--public-key-file PATH] [--channel NAME]
+xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO build
+```
+
+Writes `host-ios/`: your app's production iOS host, a Kotlin framework on Maven
+Central plus an Xcode app. It applies the same key checks and refusals as
+`keliver-new-production-host.sh`. `host/README.md` §3 has what it does.
+
+### scripts/keliver-publish (not yet in a released bundle)
+
+```bash
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] [--channel stable] [--skip-build] [--init]
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] --republish VERSION [--channel NAME]
+keliver-publish [app-dir] --out DIR [--public-key-file PATH] --promote SEQUENCE --channel NAME
+keliver-publish [app-dir] --out DIR --set-rollout SEQUENCE --rollout PERCENT [--channel NAME]
+```
+
+Publishes without the relay, for CI and for static or CDN hosting. `DIR` must
+hold the live `bundles/index.json` and `bundles/v<N>/`, downloaded from your
+bundle server: without an index it refuses, unless `--init` marks the very
+first publish. The adopter guide's "Publish from CI to a static server" has
+the upload order.
+1. It builds the app's `publishTask`.
+2. It refuses the bundle and writes nothing (exit 4) unless the manifest is
+   signed with the app's key and every module is present with its signed
+   sha256.
+3. It writes `DIR/bundles/v<N>/` and `DIR/bundles/index.json`, with the
+   next sequence number.
+
+The public key comes from:
+- `--public-key-file`;
+- else `KELIVER_PUBLIC_KEY_HEX`;
+- else the app's store.
+
+In CI, `KELIVER_SIGNING_KEY_FILE` names a file holding the private key. The
+signing block reads it; nothing prints it.
+
+`--republish VERSION` is a rollback. Hosts refuse a sequence below the highest
+they have run, so older code goes out again as a new sequence: `vVERSION/`'s
+modules are copied unchanged, the app's `keliverResign` task signs the copy for
+the next sequence, and it becomes the next `v<N>/` and index entry
+(`republishOf`). Nothing is compiled. Exit 3 if the re-sign fails.
+
+Channels: `--channel beta` publishes to beta only. A host takes its own
+channel (the scaffolders' `--channel`, default `stable`) and stable, so a beta
+host is never behind stable. `--promote SEQUENCE --channel stable` offers an
+already published bundle on stable too: a second index entry for the same
+`v<N>/`, with nothing built or signed and no private key. It refuses when
+that channel's hosts already take a higher sequence that asks no more of them.
+
+Constraints, on the entry a publish, `--republish` or `--promote` writes:
+`--rollout PERCENT` (a staged rollout), `--min-host-version N` and
+`--max-host-version N` (the host build's integer version: Android
+`versionCode`, iOS `CFBundleVersion`). `--set-rollout SEQUENCE --rollout
+PERCENT` changes a rollout later: raise it, or set 0 to halt it. Hosts that ran
+it keep it. It needs no key. Hosts from before these constraints skip any entry
+that has them.
+
+### bin/keliver-new-publish-target.sh
+
+```bash
+bin/keliver-new-device-target.sh      # first, if you have not: the bundle's entry point
+bin/keliver-new-publish-target.sh
+```
+
+Wires `POST /publish` for your app: `publishTask`/`publishOutput` in
+`keliver.portal.json` (the development Zipline bundle), and a signing block
+appended to `build.gradle` that signs the compiled manifest with your store's
+`keys/ed25519.priv`, inside Gradle. The key is never passed on a command line,
+logged, or stored in `.gradle/` (U31). The relay keeps a published bundle only
+if it verifies against your store's public key, and refuses an unsigned one.
+Refuses without changing anything if the app has no device target, configures
+`signingKeys` itself, or sets a different `publishTask`. **An app wired by 0.3.6:
+run it again** (from 0.3.7 or later): it replaces exactly the old block and
+nothing else. Then delete the app's `.gradle/*/executionHistory/`, where the
+old block left the key, but keep `.gradle/keliver-store-path`. Restart the portal afterwards:
+the relay reads `keliver.portal.json` at start.
 
 ### bin/keliver-new-component.sh
 

@@ -250,30 +250,41 @@ and kept under "Completed priorities" below.
    the release's source commit. The bundle's `host/README.md` sends adopters to
    `sample/host-android`, which renders the *sample's* widget schema, not
    keliver-material. No host that renders an adopter's screens with signature
-   verification is published. **Decide what the adopter's production host is**
-   (a published host library, a scaffolded template, or a documented copy of
-   `portal-device-android`) before building more authoring depth. Evidence:
-   `docs/REFERENCE_APP.md` §Production. Decision input — coordinates, what is
-   not published, the smallest publish/signing setup, and the one measurement to
-   make first: `docs/PRODUCTION_HOST_FEASIBILITY.md`.
-2. **Publishing is not scaffolded.** `POST /publish` runs `publishTask`, which
-   defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app has
-   no `publishTask`/`publishOutput` and no signing block, so publish fails, and
-   the adopter guide does not mention either. The reference app shows the
+   verification is published. **Decided 2026-09-30: a scaffolded host app**
+   (`docs/PRODUCTION_HOST_FEASIBILITY.md`, option B). **Shipped in tools 0.3.6:**
+   `keliver-new-production-host.sh` writes `host-android/`, production-only, on
+   Maven Central only; the reference app's P1–P7 pass on it, P7 being an
+   offline start from Zipline's verified cache (CI run `37505534432`). **iOS (shipped in tools 0.3.7):**
+   `keliver-new-ios-host.sh` writes `host-ios/` with the same guarantees, and iOS P1, P2 and P4–P7 pass on a
+   simulator in CI (`ios-host.yml` run `37597390396`). What remains: physical devices over HTTPS, and
+   release-signed builds. The plan of record is `docs/DELIVERY_PLAN.md`.
+2. **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, which
+   defaults to Keliver's own `:portal-published-guest:…`; a scaffolded app had
+   no `publishTask`/`publishOutput` and no signing block, so publish failed, and
+   the adopter guide did not mention either. **Shipped in tools 0.3.6 (#86):**
+   `keliver-new-publish-target.sh` writes both settings and the signing block,
+   and the relay now refuses to store a bundle whose manifest does not verify
+   against the store's key (portal-tools `37513071473`; reference-app
+   `37513078292`, P1–P7 on scaffolded signing). Left: the production (minified)
+   bundle variant. The reference app shows the
    minimum that works (`reference/inventory/app/build.gradle`, bottom). Small,
    and it unblocks item 1's "does it work" question for every adopter.
 3. **The relay writes the private signing key world-readable** (KNOWN_BUGS U27:
    `0644` under a default umask, measured on macOS and Linux; `ensureKeys()`
-   uses `File.writeText`). **Fixed, not released** (with U29, half a key pair
+   uses `File.writeText`). **Fixed in tools 0.3.6** (with U29, half a key pair
    silently regenerated): new keys are owner-only from creation, and an existing
-   exposed key is reported and refused for publishing but never changed. What
-   remains is a tools release. Alongside it, U28: the production host logs a
+   exposed key is reported and refused for publishing but never changed.
+   Alongside it, U28: the production host logs a
    false `codeLoadFailed` on every start.
 4. **#77 — the iOS host's key generation is not hardened like Android's.**
-   Now reproduced, not fixed: a file planted in `generatePortalKey`'s output
-   survives an UP-TO-DATE run, is compiled into the module, and reaches a linked
-   debug simulator framework (`superpowers/evidence/issue-77/`). This machine
-   can build iOS, so the fix can land with both boundaries verified. Bounded.
+   Reproduced, then **fixed** (tools 0.3.6): `generatePortalKey` empties its
+   directory without following links, fails loudly on anything it cannot
+   delete, checks the result and runs every time. Measured on a warm debug
+   simulator framework: the planted source no longer reaches the klib or the
+   framework, and the key constant is unchanged
+   (`superpowers/evidence/issue-77/`). Release and `iosArm64` not measured; the
+   missing `devOnlyHost` short-circuit on iOS is unchanged. The review found the
+   same deletion flaw in Android's `syncPortalKey` (U30, open).
 5. **U19 (live-preview re-render; cause unresolved) and U20 (editor frame rate;
    measured, not assessed)** — open. The reference app's Live preview passed its
    21 checks (14 of them canvas taps), which read the canvas and the State

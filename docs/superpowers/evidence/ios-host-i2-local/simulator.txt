@@ -1,0 +1,1 @@
+simulator: 671FACC7-F3DB-4BD9-A354-6FA4C23F0478 (com.apple.CoreSimulator.SimRuntime.iOS-26-4 com.apple.CoreSimulator.SimDeviceType.iPhone-11)

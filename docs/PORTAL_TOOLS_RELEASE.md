@@ -26,11 +26,17 @@ step against a named, retained artifact.
 ## Procedure
 
 The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.5.md`](RELEASE_NOTES_TOOLS_0.3.5.md).
+[`RELEASE_NOTES_TOOLS_0.3.7.md`](RELEASE_NOTES_TOOLS_0.3.7.md) (previous:
+[`RELEASE_NOTES_TOOLS_0.3.6.md`](RELEASE_NOTES_TOOLS_0.3.6.md)).
 
-Everything below was executed for 0.3.4 on 2026-09-12 and again for 0.3.5 on
-2026-09-22; where 0.3.5 found the written procedure wrong, the text below is
-corrected and says so.
+Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
+and for 0.3.6 and 0.3.7 on 2026-10-07. For 0.3.7, `gh release create`
+stayed alive after its uploads had finished: check the draft's assets
+(`state: uploaded`, `digest`) rather than waiting on the client. Where 0.3.5 found the written procedure wrong, the
+text below is corrected and says so. For 0.3.6 the draft download-back
+succeeded. GitHub's workflow list also showed a stale `release.yaml`, deleted
+from the tree long ago: step 3 checks the tagged commit's tree, which is what a
+tag push runs.
 
 ### 0. Update the bundled guide's download block
 

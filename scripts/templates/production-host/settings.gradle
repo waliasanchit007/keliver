@@ -1,0 +1,11 @@
+// A standalone Gradle build: this app's production Android host. It resolves
+// Keliver ONLY from Maven Central — no Keliver checkout, no mavenLocal.
+// Scaffolded by keliver-new-production-host.sh.
+pluginManagement {
+  repositories { gradlePluginPortal(); google(); mavenCentral() }
+}
+dependencyResolutionManagement {
+  repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
+  repositories { google(); mavenCentral() }
+}
+rootProject.name = '@@NAME@@-host'

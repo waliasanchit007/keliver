@@ -4,7 +4,5 @@
   "appRuntime": {
     "keliverVersion": "0.3.3",
     "widgetVersion": 1
-  },
-  "publishTask": ":compileDevelopmentExecutableKotlinJsZipline",
-  "publishOutput": "build/zipline/Development"
+  }
 }

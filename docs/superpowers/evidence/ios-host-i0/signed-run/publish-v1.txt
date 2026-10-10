@@ -1,0 +1,2 @@
+publish: the manifest is signed with this app's portal-ed25519 key
+publish OK: bundle v1 (widgetVersion=1, srcHash=479c5ca1e7c5a951) -> /private/tmp/claude-503/-Users-sanchit-walia-NonWork-Keliver/eaeda9f6-8fdf-4f50-831c-4b0e06f7931d/scratchpad/ios-i0/live/home/.keliver-portal/apps/inventory-0e1f2f89/bundles/v1

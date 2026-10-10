@@ -1,0 +1,13 @@
+== tree: 13d676f4f, build file as committed
+== 4. a symlink in the directory, pointing at a directory holding a canary
+rc=0
+RESULT 4: the link's TARGET WAS EMPTIED (canary.txt gone)
+  directory now: PortalPublicKey.kt 
+== 5. a plant that cannot be deleted (chflags uchg)
+rc=0  BUILD SUCCESSFUL in 2s
+RESULT 5: the plant SURVIVED a GREEN build
+== 6. a store whose ed25519.pub is not 64 hex digits
+rc=0  BUILD SUCCESSFUL in 2s
+RESULT 6: the key's text became SOURCE (PortalPublicKey.kt declares injected())
+== restore: a normal run
+rc=0  directory: PortalPublicKey.kt 

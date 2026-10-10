@@ -1,0 +1,11 @@
+10-07 13:53:23.969  4574  4574 D KeliverHost: verifying manifests with portal-ed25519 d6412e53…
+10-07 13:53:24.571  4574  4574 D KeliverHost: loading https://10.0.2.2:8443/bundles/v2/manifest.zipline.json (index sequence 2, manifest sha256 000000000000…)
+10-07 13:53:25.178  4574  4601 E KeliverHost: codeLoadFailed: manifest sha256 mismatch: https://10.0.2.2:8443/bundles/v2/manifest.zipline.json is 9783ad83c680a26d3cf1d7db740e5bf7d6a438fee808806ed61ea8eff6f5834c, the index says 0000000000000000000000000000000000000000000000000000000000000000
+10-07 13:53:25.178  4574  4601 E KeliverHost: java.io.IOException: manifest sha256 mismatch: https://10.0.2.2:8443/bundles/v2/manifest.zipline.json is 9783ad83c680a26d3cf1d7db740e5bf7d6a438fee808806ed61ea8eff6f5834c, the index says 0000000000000000000000000000000000000000000000000000000000000000
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at inventory.host.ManifestPinningHttpClient.download(BundleIndex.kt:108)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at inventory.host.ManifestPinningHttpClient$download$1.invokeSuspend(Unknown Source:15)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+10-07 13:53:25.178  4574  4601 E KeliverHost: 	at java.lang.Thread.run(Thread.java:1012)

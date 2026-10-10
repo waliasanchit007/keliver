@@ -1,0 +1,56 @@
+scaffolder: /Users/runner/work/keliver/keliver/scripts/keliver-new-ios-host.sh
+=== refusals
+  PASS  refuses without --bundle-server, and the app is byte-identical
+  PASS  refuses a non-URL bundle server, and the app is byte-identical
+  PASS  refuses a bundle server with a quote, and the app is byte-identical
+  PASS  refuses a non-URL API base, and the app is byte-identical
+  PASS  refuses a malformed bundle id, and the app is byte-identical
+  PASS  refuses a key file that is not a key, and the app is byte-identical
+  PASS  refuses a PRIVATE key file, and the app is byte-identical
+  PASS  refuses a .pub symlink to the private key, and the app is byte-identical
+  PASS  refuses the private key renamed .key, and the app is byte-identical
+  PASS  refuses another app's public key, and the app is byte-identical
+  PASS  refuses a bundle server with a query, and the app is byte-identical
+  PASS  refuses a non-ASCII bundle server, and the app is byte-identical
+  PASS  refuses a placeholder in a URL (the grammar refuses '@'), and the app is byte-identical
+  PASS  refuses a '$' in a URL (a Kotlin template), and the app is byte-identical
+  PASS  refuses a URL with user@, and the app is byte-identical
+  PASS  refuses an API base with a query, and the app is byte-identical
+  PASS  refuses a host with '&', and the app is byte-identical
+  PASS  refuses a hostile version override, and the app is byte-identical
+  PASS  refuses a missing key file, and the app is byte-identical
+  PASS  refuses an unknown option, and the app is byte-identical
+  PASS  refuses an app without ./gradlew, and the app is byte-identical
+  PASS  refuses outside an app root, and the app is byte-identical
+  PASS  refuses screens in two packages, and the app is byte-identical
+=== a successful scaffold (the key from the store, by default)
+  PASS  scaffolded (exit 0)
+  PASS  the key was checked against this app's store
+  PASS  every expected file is there
+  PASS  host-ios/ is 755
+  PASS  an unprefixed KOTLIN_VERSION in the environment does not change the build
+  PASS  no placeholder left
+  PASS  HostConfig.kt embeds exactly the store's public key
+  PASS  the servers are recorded in HostConfig.kt
+  PASS  package and bundle id default to <app package>.host
+  PASS  the app's PRODUCT_NAME (DemoHost) differs from the framework's module, KeliverHost
+  PASS  Info.plist is a valid plist; its only ATS exception is http:// to localhost (development; a release refuses it)
+  PASS  the lookup reads bundles/index.json, pins the manifest's sha256, and falls back only on a 404
+  PASS  the Xcode project names no development team
+  PASS  the Xcode build phase builds the framework with the app's ./gradlew -p host-ios
+  PASS  the host build uses only Maven Central, Google and the plugin portal
+  PASS  no development path, emulator address or replay fixture in the sources
+  PASS  refuses a second run over an existing host-ios, and the app is byte-identical
+  PASS  no staging directory left behind
+=== https only: no App Transport Security exception
+  PASS  an https:// bundle server gets no ATS exception
+=== the scaffolded app builds for the iOS simulator from Maven Central
+  PASS  xcodebuild built DemoHost.app for the simulator
+  PASS  the app's bundle id is com.example.demo.host
+  PASS  checkReleaseUrls refuses http://
+  PASS  checkReleaseUrls refuses an Info.plist that keeps a cleartext exception
+  PASS  both release framework links (device, simulator) depend on checkReleaseUrls
+  PASS  a malformed key in HostConfig.kt fails the build
+  PASS  the private key is in no scaffolded host
+
+ios-host scaffold: 49 passed, 0 failed   (/Users/runner/work/_temp/selftest/keliver-ios-host-WBPHJp)

@@ -1,0 +1,115 @@
+// This app's PRODUCTION iOS host framework. Scaffolded by keliver-new-ios-host.sh;
+// yours to edit from here on.
+//
+// What makes it production-only:
+// * it loads only bundles whose manifest verifies against the public key in
+//   HostConfig.kt (checked below at build time, and again on the device before
+//   anything is fetched);
+// * it has no development path and no unverified fallback.
+plugins {
+  id 'org.jetbrains.kotlin.multiplatform' version '@@KOTLIN_VERSION@@'
+  id 'org.jetbrains.kotlin.plugin.compose' version '@@KOTLIN_VERSION@@'
+  id 'org.jetbrains.compose' version '@@COMPOSE_VERSION@@'
+  id 'app.cash.zipline' version '@@ZIPLINE_VERSION@@' // IR rewrite of zipline.take/bind
+}
+
+// HostConfig.kt holds the embedded PUBLIC key and the servers. It was written
+// at scaffold time and is committed; edit it there, keeping the three
+// `const val NAME: String = "..."` lines in that form, since these checks
+// read them.
+def hostConfig = file('src/iosMain/kotlin/@@PKG_PATH@@/HostConfig.kt')
+def configValue = { String name ->
+  def m = (hostConfig.text =~ /const val ${name}: String = "([^"]*)"/)
+  m.find() ? m.group(1) : null
+}
+// The scaffolder's URL grammar: plain ASCII, a host name or [IPv6] (no user@),
+// an optional port and path, and no query, fragment or '$' (these are Kotlin
+// string literals, where '$' is a template).
+def url = /https?:\/\/(\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)(:[0-9]{1,5})?(\/[A-Za-z0-9._~\/%-]*)?/
+
+def checkHostConfig = tasks.register('checkHostConfig') {
+  inputs.file(hostConfig)
+  doLast {
+    def key = configValue('PORTAL_PUBLIC_KEY_HEX')
+    def server = configValue('BUNDLE_SERVER')
+    def api = configValue('API_BASE_URL')
+    def channel = configValue('CHANNEL')
+    if (key == null || !(key ==~ /[0-9a-fA-F]{64}/)) {
+      throw new GradleException("HostConfig.kt: PORTAL_PUBLIC_KEY_HEX is not a 64-hex-digit Ed25519 " +
+        "public key, so no bundle could be verified. Copy this app's keys/ed25519.pub into it.")
+    }
+    if (server == null || !(server ==~ url)) {
+      throw new GradleException("HostConfig.kt: BUNDLE_SERVER must be an http:// or https:// URL with no user@, query, fragment or '\$' (got '$server').")
+    }
+    if (api == null || (api && !(api ==~ url))) {
+      throw new GradleException("HostConfig.kt: API_BASE_URL must be empty or an http:// or https:// URL with no user@, query, fragment or '\$' (got '$api').")
+    }
+    if (channel == null || !(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
+      throw new GradleException("HostConfig.kt: CHANNEL must be lower-case letters, digits and '-', at most 32 (got '$channel').")
+    }
+  }
+}
+// A release framework refuses http://, and refuses an Info.plist that still
+// carries a cleartext exception (the scaffolder writes one for http:// servers,
+// for development).
+def infoPlist = file('iosApp/Info.plist')
+def checkReleaseUrls = tasks.register('checkReleaseUrls') {
+  inputs.file(hostConfig)
+  inputs.file(infoPlist)
+  doLast {
+    def plain = ['BUNDLE_SERVER', 'API_BASE_URL'].findAll { configValue(it)?.startsWith('http://') }
+    if (plain) {
+      throw new GradleException("A release build needs https:// servers; HostConfig.kt has http:// in ${plain.join(', ')}.")
+    }
+    def exceptions = ['NSExceptionAllowsInsecureHTTPLoads', 'NSAllowsArbitraryLoads', 'NSAllowsLocalNetworking']
+      .findAll { infoPlist.text.contains(it) }
+    if (exceptions) {
+      throw new GradleException("A release build must not ship App Transport Security exceptions; iosApp/Info.plist has ${exceptions.join(', ')}. Remove its NSAppTransportSecurity block.")
+    }
+  }
+}
+tasks.configureEach { t ->
+  if (t.name.startsWith('compileKotlinIos')) t.dependsOn(checkHostConfig)
+  if (t.name ==~ /linkRelease.*Ios.*/) t.dependsOn(checkReleaseUrls)
+}
+
+kotlin {
+  [iosArm64(), iosSimulatorArm64()].each { t ->
+    // The system SQLite, for IosSqlHost (src/nativeInterop/cinterop/sqlite3.def).
+    t.compilations.main.cinterops {
+      sqlite3 {
+        definitionFile = file('src/nativeInterop/cinterop/sqlite3.def')
+        packageName = 'keliver.sqlite3'
+      }
+    }
+    t.binaries.framework {
+      // The Xcode app imports this module. Its PRODUCT_NAME must differ, or
+      // Swift ignores `import KeliverHost` (measured).
+      baseName = 'KeliverHost'
+      isStatic = true
+      linkerOpts.add('-lsqlite3') // Zipline's bundle cache and IosSqlHost
+    }
+  }
+  sourceSets {
+    iosMain {
+      dependencies {
+        implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
+        implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'
+        implementation 'dev.keliver:keliver-material-composeui:@@KELIVER_VERSION@@'
+        implementation 'dev.keliver:keliver-material-protocol-host-web:@@KELIVER_VERSION@@'
+        implementation 'dev.keliver:portal-sql:@@KELIVER_VERSION@@'
+        implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
+        implementation 'app.cash.zipline:zipline:@@ZIPLINE_VERSION@@'
+        implementation 'app.cash.zipline:zipline-loader:@@ZIPLINE_VERSION@@'
+        implementation 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
+        implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
+        implementation 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
+        implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
+        implementation 'io.coil-kt.coil3:coil-network-ktor3:3.3.0' // images over the network
+        implementation 'io.ktor:ktor-client-darwin:3.1.0'           // coil's network engine on iOS
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
+      }
+    }
+  }
+}

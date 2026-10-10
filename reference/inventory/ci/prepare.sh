@@ -4,13 +4,14 @@
 # check ingest, publish a signed v1, and build a production host that embeds
 # THIS app's public key.
 #
-#   ci/prepare.sh <work-dir> <evidence-dir> <keliver-release-checkout> [tools.zip]
+#   ci/prepare.sh <work-dir> <evidence-dir> [tools.zip]
 #
-# <keliver-release-checkout> is a checkout of the commit the tools release was
-# built from (portal-tools-v0.3.5 -> b5615637). The production host is built
-# from THAT source, because no production host that renders keliver-material
-# widgets is published: host/README.md in the bundle points at the Keliver
-# repository, and this is the step that finds out what that costs.
+# Publishing is wired, and the production host SCAFFOLDED into the app, by the
+# published tools zip's own bin/keliver-new-publish-target.sh and
+# bin/keliver-new-production-host.sh (tools 0.3.7, with the U31 signing block);
+# the host is built by the app's own Gradle from Maven Central. It used to be
+# portal-device-android compiled from Keliver's source at the release commit,
+# then this repository's scripts/ copies; neither is used now.
 #
 # Isolation: every JVM here runs with user.home = <work-dir>/home, so the store,
 # its keys and the relay's state are all inside <work-dir>. The repository's own
@@ -22,10 +23,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO="$(cd "$HERE/../../.." && pwd -P)"
-WORK="${1:?usage: $0 <work-dir> <evidence-dir> <keliver-release-checkout> [tools.zip]}"
+WORK="${1:?usage: $0 <work-dir> <evidence-dir> [tools.zip]}"
 EV="${2:?}"
-RELEASE_SRC="$(cd "${3:?}" && pwd -P)"
-ZIP="${4:-}"
+ZIP="${3:-}"
 mkdir -p "$WORK/home" "$EV"
 WORK="$(cd "$WORK" && pwd -P)"; EV="$(cd "$EV" && pwd -P)"
 
@@ -41,7 +41,7 @@ unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 # --- 1. the app, from the public release ------------------------------------
 echo "==> bootstrap"
 if "$HERE/../bootstrap.sh" "$WORK/boot" $ZIP > "$EV/bootstrap.log" 2>&1; then
-  ok "bootstrap: the app was scaffolded from the published tools 0.3.5 zip"
+  ok "bootstrap: the app was scaffolded from the published tools zip ($(basename "$(dirname "$(ls -d "$WORK"/boot/tools/keliver-portal-tools-*/bin)")"))"
 else
   bad "bootstrap failed"; tail -30 "$EV/bootstrap.log"; exit 1
 fi
@@ -54,6 +54,18 @@ echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
   && ok "compile: ./gradlew compileKotlinJs against Maven Central 0.3.3" \
   || { bad "compile failed"; tail -30 "$EV/compile.log"; exit 1; }
+
+# publishTask/publishOutput and the signing block. The bootstrap no longer
+# overlays a hand-written block; this is the scaffolder an adopter would run.
+( cd "$APP" && "$KP/keliver-new-publish-target.sh" ) > "$EV/publish-target.log" 2>&1 \
+  && ok "publishing wired by the zip's bin/keliver-new-publish-target.sh" \
+  || { bad "keliver-new-publish-target.sh failed"; cat "$EV/publish-target.log"; exit 1; }
+cp "$APP/build.gradle" "$EV/app-build.gradle"
+# Committed, as an adopter would: D2 asserts that a layout edit changes exactly
+# one tracked file.
+( cd "$APP" && git add build.gradle keliver.portal.json \
+    && git -c user.name=prepare -c user.email=prepare@invalid commit -qm "keliver-new-publish-target.sh" ) \
+  || { bad "could not commit the publish wiring"; exit 1; }
 
 # --- 2. a relay for this app, isolated ----------------------------------------
 # shellcheck source=/dev/null
@@ -112,23 +124,60 @@ grep -q "signed by \['portal-ed25519'\]" "$EV/manifest-v1.summary" \
   && ok "v1's manifest carries a portal-ed25519 signature" || bad "v1's manifest is not signed"
 portal_down "$APP"
 
-# --- 5. P1: the production host, with THIS app's key -------------------------
-# The Keliver build would otherwise resolve the Keliver checkout's own store;
-# -Pkeliver.portalStore names this app's. It is a build-only override that warns.
-( cd "$RELEASE_SRC" && git rev-parse HEAD > "$EV/host-source-commit" && \
-  ./gradlew -q -Pkeliver.devOnlyHost=false -Pkeliver.portalStore="$STORE" \
-    :portal-device-android:assembleDebug --console=plain ) > "$EV/host-build.log" 2>&1 \
-  && ok "the production host built from $(cat "$EV/host-source-commit")" \
-  || { bad "the production host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
-grep -i 'keliver:' "$EV/host-build.log" | sed 's/^/    /' | head -5
-APK="$RELEASE_SRC/portal-device-android/build/outputs/apk/debug/portal-device-android-debug.apk"
+# --- 5. P1: the production host, scaffolded, with THIS app's key ------------
+# keliver-new-production-host.sh reads the PUBLIC key from this app's store
+# (resolved under this run's user.home) and writes host-android/, a standalone
+# build on Maven Central only. 10.0.2.2 is how the emulator reaches the relay.
+PROD_ID=inventory.host
+# Which scaffolder writes the host. By default the published zip's own bin/
+# copy. KELIVER_SCAFFOLD_FROM=repo selects this repository's scripts/ instead:
+# the W3 workflows set it, because W3's index-reading host templates exist only
+# here until a release ships them; switch it off once one does.
+case "${KELIVER_SCAFFOLD_FROM:-zip}" in
+  zip)  PROD_SCAFFOLD="$KP/keliver-new-production-host.sh"; PROD_WHICH="the zip's bin/" ;;
+  repo) PROD_SCAFFOLD="$REPO/scripts/keliver-new-production-host.sh"; PROD_WHICH="this repository's scripts/ (W3, unreleased)" ;;
+  *)    bad "KELIVER_SCAFFOLD_FROM must be zip or repo, not ${KELIVER_SCAFFOLD_FROM}"; exit 1 ;;
+esac
+( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server http://10.0.2.2:8077 \
+    --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
+  && ok "P1: keliver-new-production-host.sh ($PROD_WHICH) scaffolded host-android/" \
+  || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
+sed 's/^/    /' "$EV/host-scaffold.log"
+printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug ) > "$EV/host-build.log" 2>&1 \
+  && ok "P1: the scaffolded host built from Maven Central" \
+  || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
+# Where every Keliver artifact in that build came from.
+( cd "$APP" && ./gradlew --console=plain -q -p host-android dependencies --configuration debugRuntimeClasspath ) \
+  > "$EV/host-dependencies.txt" 2>&1
+grep -oE 'dev\.keliver:[a-z0-9-]+:[0-9.]+' "$EV/host-dependencies.txt" | sort -u > "$EV/host-keliver-artifacts.txt"
+echo "    $(wc -l < "$EV/host-keliver-artifacts.txt" | tr -d ' ') dev.keliver artifacts, all $(cut -d: -f3 "$EV/host-keliver-artifacts.txt" | sort -u | tr '\n' ' ')"
+APK="$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)"
 cp "$APK" "$EV/production-host.apk"
 sha256 "$EV/production-host.apk" | tee "$EV/production-host.apk.sha256"
 EMB="$(unzip -p "$EV/production-host.apk" assets/portal_ed25519.pub 2>/dev/null | tr -d ' \n')"
 [ -n "$EMB" ] && [ "$EMB" = "$PUB" ] \
   && ok "P1: the host embeds assets/portal_ed25519.pub, equal to this app's public key" \
   || bad "P1: the embedded key (${EMB:0:16}) is not this app's (${PUB:0:16})"
+echo "PROD_ID=$PROD_ID" >> "$WORK/env"
 echo "APK=$EV/production-host.apk" >> "$WORK/env"
+
+# --- 6. W3 inputs: keliver-publish, a throwaway CA, the host for HTTPS -------
+# The static route (ci/w3/android-static.sh, run by device.sh) needs no relay:
+# keliver-publish from this checkout (no published tools bundle has it yet), a
+# CA and server certificate that only the emulator will trust, and the same
+# production host built for https://10.0.2.2:8443 (only the server differs).
+W3="$WORK/w3"; mkdir -p "$W3"
+W3_PUBLISH="$(bash "$HERE/w3/tools.sh" "$W3/tools" 2> "$EV/w3-tools.log" | tail -1)"
+[ -n "$W3_PUBLISH" ] && [ -x "$W3_PUBLISH" ] && ok "W3: keliver-publish built from this checkout, in the tools layout" \
+  || { bad "W3: keliver-publish was not built"; tail -20 "$EV/w3-tools.log"; }
+bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway CA and a server certificate for 10.0.2.2" \
+  || { bad "W3: no certificates"; cat "$EV/w3-tls.txt"; }
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 ) \
+  > "$EV/w3-host-build.log" 2>&1 \
+  && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
+  && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
+{ echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
 
 # Warm the development bundle so the device step does not wait on it.
 ( cd "$APP" && ./gradlew compileDevelopmentExecutableKotlinJsZipline --console=plain ) > "$EV/dev-bundle.log" 2>&1 \

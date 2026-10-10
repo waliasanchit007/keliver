@@ -1,0 +1,91 @@
+#!/bin/bash
+# keliver-publish — publish this app's signed bundle into a STATIC layout, with
+# no relay: for CI, and for any static server or CDN (S3, GCS, GitHub Pages,
+# nginx). Ships in keliver-portal-tools; needs Java 17+.
+#
+#   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] [--channel stable] [--skip-build] [--init]
+#   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] --republish <version> [--channel <name>]
+#   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] --promote <sequence> --channel <name>
+#   keliver-publish [app-dir] --out <dir> --set-rollout <sequence> --rollout <percent> [--channel <name>]
+#
+# Writes <dir>/bundles/v<N>/ (the compile task's output, unchanged) and
+# <dir>/bundles/index.json (the next sequence). Serve <dir> as-is; production
+# hosts scaffolded by keliver-new-production-host.sh / keliver-new-ios-host.sh
+# read bundles/index.json from their bundle server.
+#
+# <dir> must hold the LIVE bundles/index.json and bundles/v<N>/: download them
+# from your bundle server first. Without an index it refuses, unless --init
+# says this is the very first publish. Upload v<N>/ before index.json, never
+# delete or overwrite a v<N>/, and skip the dotfiles (.publish.lock, leftovers).
+#
+# 1. Builds the app's publishTask (keliver.portal.json), with KELIVER_TOOLS_BIN
+#    set so the signing block keliver-new-publish-target.sh wrote can find the
+#    store. In CI, set KELIVER_SIGNING_KEY_FILE to a file holding the private
+#    key instead (never print it).
+# 2. Refuses, and writes nothing, unless the manifest is signed with this
+#    app's key and every module it names is present with that sha256.
+#
+# --republish <version> rolls back (W4.3): hosts refuse a sequence below the
+# highest they have run, so v<version>'s code is published again as a NEW
+# sequence. Its modules are copied unchanged; the app's keliverResign task (in
+# the same signing block, with the same key) signs the copy for the next
+# sequence; it becomes the next v<N>/ and index entry. Nothing is compiled.
+#
+# --promote <sequence> --channel <name> (W4.4) offers a published bundle on
+# another channel too: a second index entry for the same v<N>/. Nothing is
+# built or signed; only the public key is used.
+#
+# Constraints (W4.5), on the entry a publish, --republish or --promote writes:
+# --rollout <percent> (a staged rollout), --min-host-version / --max-host-version
+# <n> (the host build's integer version: Android versionCode, iOS
+# CFBundleVersion). --set-rollout <sequence> --rollout <percent> changes a
+# rollout afterwards (0 halts it; hosts that ran it keep it); it needs no key.
+#
+# The PUBLIC key it checks against: --public-key-file, else
+# KELIVER_PUBLIC_KEY_HEX, else this app's store (keys/ed25519.pub, located by
+# keliver-store-path.sh, the one shell mirror of the store contract).
+#
+# Exit status: 0 published; 2 usage; 3 the build (or re-sign) failed; 4 refused, nothing
+# written (except bundles/.publish.lock when another publish held it); 5 an I/O
+# error while writing (the index is unchanged or complete, but a v<N>/ that no
+# entry names may be left).
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLE="$(cd "$HERE/.." && pwd)"
+# The tools bundle's relay install holds the JVM entry point; KELIVER_RELAY_HOME
+# points at another install (portal-relay's installDist in a Keliver checkout).
+JVM="${KELIVER_RELAY_HOME:-$BUNDLE/relay}/bin/keliver-publish-jvm"
+[ -x "$JVM" ] || { echo "keliver-publish: $JVM not found (run from an unpacked keliver-portal-tools)" >&2; exit 2; }
+
+APP_ARG=""
+HAS_KEY=false
+SET_ROLLOUT=false
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) sed -n '2,51p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --public-key-file) HAS_KEY=true; ARGS+=("$1" "${2:-}"); shift ;;
+    --out|--channel|--republish|--promote|--rollout|--min-host-version|--max-host-version) ARGS+=("$1" "${2:-}"); shift ;;
+    --set-rollout) SET_ROLLOUT=true; ARGS+=("$1" "${2:-}"); shift ;;
+    --skip-build|--init) ARGS+=("$1") ;;
+    -*) echo "keliver-publish: unknown option $1" >&2; exit 2 ;;
+    *) [ -z "$APP_ARG" ] || { echo "keliver-publish: one app directory only (got '$APP_ARG' and '$1')" >&2; exit 2; }
+       APP_ARG="$1" ;;
+  esac
+  shift
+done
+APP_ARG="${APP_ARG:-.}"
+APP_DIR="$(cd "$APP_ARG" 2>/dev/null && pwd)" || { echo "keliver-publish: no such directory: $APP_ARG" >&2; exit 2; }
+
+# --set-rollout edits the index only: no key at all.
+if ! $HAS_KEY && ! $SET_ROLLOUT && [ -z "${KELIVER_PUBLIC_KEY_HEX:-}" ]; then
+  STORE="$("$HERE/keliver-store-path.sh" "$APP_DIR")" || {
+    echo "keliver-publish: could not locate this app's store; pass --public-key-file (the key your hosts embed)" >&2; exit 2; }
+  [ -f "$STORE/keys/ed25519.pub" ] || {
+    echo "keliver-publish: no public key at $STORE/keys/ed25519.pub; pass --public-key-file" >&2; exit 2; }
+  ARGS+=(--public-key-file "$STORE/keys/ed25519.pub")
+fi
+
+export KELIVER_TOOLS_BIN="${KELIVER_TOOLS_BIN:-$HERE}"
+exec "$JVM" "$APP_DIR" ${ARGS[@]+"${ARGS[@]}"}

@@ -878,7 +878,7 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U27. The relay wrote the private signing key readable by every local user — FIXED, UNRELEASED
+### U27. The relay wrote the private signing key readable by every local user — FIXED in tools 0.3.6
 
 Found building the reference app (`docs/REFERENCE_APP.md`), 2026-09-22.
 `Relay.kt#ensureKeys()` created `<store>/keys/ed25519.priv` with
@@ -991,7 +991,7 @@ the store. The store's other files keep umask modes. **Not released:** the
 published tools 0.3.5 relay still creates 0644 keys, and the reference app's
 CI, which uses that bundle, still measures it.
 
-### U29. Half a signing identity was silently regenerated — FIXED, UNRELEASED
+### U29. Half a signing identity was silently regenerated — FIXED in tools 0.3.6
 
 Found reproducing U27, 2026-09-24. `ensureKeys()` returned only when BOTH key
 files existed; with either missing it generated a new pair and wrote both.
@@ -1032,6 +1032,100 @@ anything that reports `codeLoadFailed` — an adopter's crash reporting, or a
 check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
+
+### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED in tools 0.3.7 (2026-10-07)
+
+Found on 2026-10-07 while acting on the independent review of W3 (PR #90). The
+review asked whether the key landed in Gradle's execution history; following
+that up showed more.
+
+**Affected:**
+- `scripts/templates/publish/signing.gradle`, as written into apps by tools
+  **0.3.6**, the published release, and by both 0.3.7 candidates;
+- this repository's `portal-published-guest/build.gradle`, which signs with
+  the owner's real store key.
+
+**What happened.** Both set the Zipline compile task's `signingKeys`.
+`ZiplineCompileTask` 1.22 (read from its bytecode) runs the compiler through
+`ExecOperations.javaexec` with an argument `--sign <algorithm>:<name>:<private
+key hex>`. And `ManifestSigningKey`, which holds the raw key, is `Serializable`
+and an `@Input`.
+
+**Measured** on this session's disposable apps (keys disposable; checks printed
+true/false only, never the key):
+- `.gradle/9.0.0/executionHistory/executionHistory.bin` held the raw 32-byte
+  key in all three apps checked. The file is **0644** under 0755 directories,
+  so other local users can read it. That bypasses U27's owner-only key file.
+- One `--info` build printed the key in full in the log, on the `--sign` line.
+  Through a Gradle daemon, `--info` also writes it to
+  `$GRADLE_USER_HOME/daemon/<version>/daemon-*.out.log` (mode 0600), as
+  measured by the review of the fix.
+- `ps`: the review sampled the Zipline child JVM 4 times with the old block,
+  without `--info`. All 4 showed `--sign` with the key in hex.
+
+**Fix.** The compile task no longer gets a key. A last action of the task
+(`doLast`) signs the manifest the task wrote, in the Gradle process, with
+Zipline's own `ManifestSigner`. The task's only key-related input is a SHA-256
+id of the key, so a changed key still rebuilds the bundle.
+
+**Measured** on a disposable app after the fix, with an `--info` build:
+- the manifest verifies against the store's public key;
+- no `--sign` argument in `ps` or in the log;
+- the key is in neither the log nor the new `executionHistory.bin`.
+
+The block also stops depending on its position below `kotlin {}`.
+
+**Upgrade.** `keliver-new-publish-target.sh` replaces a block that is exactly
+the 0.3.6 one in place, and refuses an edited one. The adopter guide says what
+to do next:
+- delete `.gradle/*/executionHistory/`, but keep `.gradle/keliver-store-path`,
+  the store binding;
+- treat the key as exposed if others could have read it.
+
+It changes nothing else, not even `keliver.portal.json`. The upgrade also
+refuses an app that configures `signingKeys` elsewhere.
+
+**Also measured by the independent review of the fix** (#91):
+- the manifest the new block signs is byte-identical to the one Zipline signs
+  itself with the same key (Ed25519 is deterministic);
+- an incremental compile re-signs, and the result verifies;
+- an unchanged rebuild is UP-TO-DATE and stays signed;
+- a key change rebuilds, and the result verifies with the new key;
+- the Production variant signs too;
+- `ZiplineCompileTask` is not `@CacheableTask`, so there is no build-cache
+  entry to worry about.
+
+A malformed key file now fails the build without quoting the file: okio's own
+error would quote the whole string.
+
+**Not fixed here.**
+- Keys that were already exposed. There is no rotation procedure yet (W8).
+- `sample/guest` signs through `zipline { signingKeys }` with a sample key that
+  is public in its source anyway.
+- `reference/inventory/ci/ios.sh` and the reference-app route still build from
+  the published 0.3.6 tools zip by default. So they write the old block, with
+  disposable keys.
+- `ManifestSigner.sign` replaces the signature map. A signature from an
+  adopter's own `zipline { signingKeys }` would be dropped, but the scaffolder
+  refuses such apps.
+- A CRLF `build.gradle` comes back with LF line endings, as with the append.
+- Any copy of the old block an adopter edited by hand.
+
+### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — OPEN
+
+Found by the independent review of the #77 fix, 2026-09-24.
+`portal-device-android/build.gradle`'s `syncPortalKey` empties
+`build/portalKeys` with Groovy's `deleteDir()`, which recurses through a symlink
+into its target and returns `false` instead of throwing. MEASURED on the iOS
+task's identical first-fix code (`superpowers/evidence/issue-77/fix-hardening-committed.txt`):
+a symlink planted in the directory got **its target emptied**, and a plant that
+could not be deleted **survived a green build**. On Android the directory is an
+`assets.srcDirs` entry, so a surviving plant ships as an asset, and a link to a
+real directory — a store, say — would have that directory's contents deleted by
+the next build. Not measured on Android itself; the code is the same call.
+The fix is the one `generatePortalKey` now has (`Files.walk` + `Files.delete`,
+then check the directory holds exactly the expected file). Not fixed here: #77
+was scoped to the iOS generated-source hole.
 
 ### U19. Live preview appeared not to re-render after a presenter action — CAUSE UNRESOLVED
 
@@ -1618,8 +1712,9 @@ none is a security hole.
      a foreign file planted there survives an UP-TO-DATE run of either shape.
    * `portal-device-ios` — `generatePortalKey`'s inputs are providers.
 
-     **Asymmetry, recorded not fixed — and worse than first written.** The iOS
-     host has neither half of the Android hardening. There is no `devOnlyHost`
+     **Asymmetry, recorded not fixed — and worse than first written.** (As it
+     stood before the 2026-09-24 fix below; the foreign-file half is now fixed.)
+     The iOS host had neither half of the Android hardening. There is no `devOnlyHost`
      short-circuit, so every `compileKotlinIos*` consults the store. And
      `generatePortalKey` has the same foreign-file hole that was just closed on
      Android: `outputs.dir` with no `upToDateWhen { false }`, so a file planted
@@ -1637,7 +1732,28 @@ none is a security hole.
      public planted function, `linkDebugFrameworkIosSimulatorArm64` exports it
      in `PortalDeviceHost.h` and carries its compiled symbol in the binary
      (boundary 2, debug simulator framework). Release and `iosArm64` not
-     measured. Still not fixed.
+     measured.
+
+     **Fixed 2026-09-24 — the foreign-file hole only.** `generatePortalKey` now
+     empties its directory in its own action — without following symlinks,
+     refusing when a directory between the build directory and it is a link,
+     and failing rather than continuing when something cannot be deleted — writes
+     the key file `CREATE_NEW`, checks
+     that exactly `PortalPublicKey.kt` remains, refuses a store key that is not
+     64 hex digits (it is spliced into source), and runs every time. Measured
+     with `superpowers/evidence/issue-77/fix-repro.sh` and `fix-hardening.sh`,
+     warm, on the debug simulator framework: the planted file is gone after the
+     task, the klib holds nothing of it, and the framework exports and contains
+     nothing of it; `PortalPublicKey.kt` is exactly the expected source and the
+     key literal is still in the binary; with nothing planted, compile and link
+     stay UP-TO-DATE; a planted symlink's target is left alone, an undeletable
+     plant fails the build, and a non-hex key fails it. Release and `iosArm64`
+     not measured. Not covered: `compileIosMainKotlinMetadata`, which compiles
+     the same directory without the task (the linked framework does not use its
+     output). The other half of the asymmetry — no `devOnlyHost` short-circuit,
+     so every `compileKotlinIos*` consults the store — is unchanged.
+
+     **The Android sibling still has the deletion flaw: U30.**
    * `portal-published-guest` — the one that could not be expressed through the
      `zipline { signingKeys { … } }` extension, because membership of that
      container is fixed while the build file is read. The provider goes onto

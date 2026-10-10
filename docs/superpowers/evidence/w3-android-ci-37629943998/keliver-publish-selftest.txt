@@ -1,0 +1,18 @@
+==> keliver-publish self-test (/home/runner/work/keliver/keliver/portal-relay/build/install/portal-relay)
+  PASS  no --out: usage, exit 2
+  PASS  an unknown option: exit 2
+  PASS  usage errors wrote nothing
+  PASS  v1 published: keliver-publish: published v1 (sequence 1, channel stable, capabilities host-sql@1) -> /home/runner/work/_temp/publish-selftest/site/bundles/v1
+  PASS  it ran the app's publishTask with KELIVER_TOOLS_BIN = the tools bin
+  PASS  index.json: format 1, sequence 1, capabilities from capabilities.txt, the manifest's sha256
+  PASS  a bundle signed by another key: refused (exit 4), site byte-identical
+  PASS  an unsigned bundle: refused (exit 4), site byte-identical
+  PASS  a module that differs from the signed manifest: refused (exit 4), site byte-identical
+  PASS  a failed build: exit 3, site byte-identical
+  PASS  an unreadable index: refused (exit 4), site byte-identical
+  PASS  v2 with KELIVER_PUBLIC_KEY_HEX and --skip-build (no build ran)
+  PASS  index.json: v1's entry unchanged, v2 at sequence 2 on channel beta, no staging left
+  PASS  isolation guard: user.home and the resolved store are inside the work dir
+  PASS  no key anywhere: exit 2, says so
+  PASS  the store's public key is used when none is given
+keliver-publish self-test: passed 16, failed 0

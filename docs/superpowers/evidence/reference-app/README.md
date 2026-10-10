@@ -22,6 +22,12 @@ expire after 30 days.
   from the published 0.3.5 relay — and `shots.results`, the verdict on each
   device screenshot: all six BLANK. The black PNGs themselves are in the run's
   artifact only.
+* `ci-run-36616829164/` and `ci-run-37505534432/` — runs 8 and 13, on the
+  production host scaffolded by `keliver-new-production-host.sh` and built from
+  Maven Central: results files, the host's dependency list
+  (`host-keliver-artifacts.txt`), its scaffold log and APK hash, the manifests,
+  this run's disposable **public** key, and only the `KeliverHost` lines of
+  each production logcat. Run 13 adds P7 (offline) and its logcat lines.
 * `live-preview/` — the macOS Live-preview run: the CDP scenario
   (`live-scenario.mjs`, `cdp.mjs`), its log and results (21/0), the script's
   four captures with ▶ Live on (`L-*.png`), and one mock-mode capture taken by

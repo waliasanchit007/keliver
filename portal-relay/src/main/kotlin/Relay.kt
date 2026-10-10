@@ -424,8 +424,11 @@ private fun publish(): Pair<Boolean, String> {
   keyProblem()?.let { return false to "publish REFUSED: $it\nNothing was compiled or signed." }
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
+  // W4: the bundle is signed for the version it will be stored as. The relay
+  // numbers its bundles in publish order, so its sequence is the version.
+  val version = nextBundleVersion()
   val gradlew = File(repoDir, "gradlew").absolutePath
-  val proc = ProcessBuilder(gradlew, config.publishTask, "--console=plain")
+  val proc = ProcessBuilder(gradlew, config.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
     .directory(repoDir)
     .redirectErrorStream(true)
     .start()
@@ -436,7 +439,52 @@ private fun publish(): Pair<Boolean, String> {
 
   val ziplineOut = File(repoDir, config.publishOutput)
   if (!ziplineOut.exists()) return false to log.appendLine("publish FAILED: no zipline output at $ziplineOut").toString()
-  val version = nextBundleVersion()
+  // Never store a bundle that every production host would refuse. The relay
+  // does not sign; the compile task does, and when its signing block is
+  // missing, above `kotlin {}`, or cannot find the store, it still succeeds and
+  // writes an UNSIGNED bundle. That used to be reported as "publish OK".
+  val manifest = File(ziplineOut, "manifest.zipline.json")
+  val publicKey = File(keysDir, "ed25519.pub")
+  val unsignedWhy = when {
+    !manifest.isFile -> "no manifest.zipline.json in $ziplineOut"
+    !publicKey.isFile -> "no public key at $publicKey"
+    else -> publishedSignatureProblem(manifest.readText(), publicKey.readText())
+  }
+  if (unsignedWhy != null) {
+    return false to log.appendLine("publish REFUSED: $unsignedWhy.").appendLine(
+      """
+      |  Nothing was stored. The relay does not sign: `${config.publishTask}` must, with
+      |  ${File(keysDir, "ed25519.priv")} (never printed). In a keliver-init app, run
+      |  keliver-new-publish-target.sh once: it writes publishTask, publishOutput and the
+      |  signing block. That block must stay BELOW `kotlin {}`, and the build finds the
+      |  store through the tools bundle, so start the portal with keliver-portal (or
+      |  set KELIVER_TOOLS_BIN to the bundle's bin/).
+      """.trimMargin(),
+    ).toString()
+  }
+  log.appendLine("publish: the manifest is signed with this app's $PORTAL_SIGNING_KEY_NAME key")
+  // Once a bundle in this store carries a signed sequence, an unsequenced one is
+  // refused: hosts with rollback protection would refuse it and show no bundle.
+  val storeIsSequenced = bundlesDir.listFiles { f -> f.isDirectory && f.name.startsWith("v") }.orEmpty()
+    .any { dir -> File(dir, "manifest.zipline.json").takeIf { it.isFile }?.let { signedSequenceText(it.readText()) } != null }
+  when (val signedSequence = signedSequenceText(manifest.readText())) {
+    null -> if (storeIsSequenced) {
+      return false to log.appendLine(
+        "publish REFUSED: the manifest carries no signed $SEQUENCE_METADATA_KEY, but this app has published sequenced " +
+          "bundles: hosts with rollback protection would refuse it and show no bundle. Its signing block predates W4; run " +
+          "keliver-new-publish-target.sh to replace it. Nothing was stored.",
+      ).toString()
+    } else log.appendLine(
+      "publish: WARNING the manifest carries no signed $SEQUENCE_METADATA_KEY (its signing block predates W4). " +
+        "A host with rollback protection refuses it once it has run a sequenced bundle; run " +
+        "keliver-new-publish-target.sh to replace the block.",
+    )
+    version.toString() -> log.appendLine("publish: signed for sequence $version")
+    else -> return false to log.appendLine(
+      "publish REFUSED: the manifest is signed for sequence $signedSequence, but this bundle would be v$version. " +
+        "Nothing was stored.",
+    ).toString()
+  }
   val dest = File(bundlesDir, "v$version")
   ziplineOut.copyRecursively(dest, overwrite = true)
   // M6: the audit hash is of the CANONICAL screen source (what actually compiled).
@@ -1113,11 +1161,18 @@ fun main(args: Array<String>) {
     }
   }
 
-  // /bundles/latest?widgetVersion=W -> newest compatible bundle; /bundles/vN/<file> -> static.
+  // /bundles/index.json -> every bundle (W3); /bundles/latest?widgetVersion=W -> newest compatible
+  // bundle (hosts from tools 0.3.7 and earlier); /bundles/vN/<file> -> static.
   server.createContext("/bundles") { ex ->
     handle(ex) {
       val path = ex.requestURI.path.removePrefix("/bundles").trimStart('/')
       when {
+        // W3: the static-layout index (StaticIndex.kt), generated from this store,
+        // so hosts built from the current templates read one protocol everywhere.
+        path == INDEX_FILE -> {
+          ex.responseHeaders.add("Cache-Control", "no-cache")
+          respond(ex, 200, relayIndexJson(bundlesDir))
+        }
         path == "latest" -> {
           val q = query(ex)
           val want = q["widgetVersion"]?.toIntOrNull() ?: Int.MAX_VALUE

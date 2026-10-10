@@ -1,0 +1,3 @@
+foreign-key.png: 1206x2622 colours=78 non-black=98.7% VALID
+offline.png: 1206x2622 colours=604 non-black=98.3% VALID
+v1-load.png: 1206x2622 colours=600 non-black=98.4% VALID

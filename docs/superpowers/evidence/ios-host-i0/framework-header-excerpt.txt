@@ -1,0 +1,6 @@
+
+__attribute__((objc_subclassing_restricted))
+__attribute__((swift_name("MainViewControllerKt")))
+@interface KeliverHostMainViewControllerKt : KeliverHostBase
++ (UIViewController *)MainViewController __attribute__((swift_name("MainViewController()")));
+@end

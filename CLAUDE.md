@@ -6,6 +6,9 @@ compiled signed Zipline bundles, render natively on Android/iOS/web, and edit
 them visually in a web portal that round-trips to the .kt files in git.
 
 **Read before working:**
+- `docs/DELIVERY_PLAN.md` — **the plan of record for delivery work** (iOS host, publishing, distribution,
+  rollout controls). Read it first in any session touching hosts, publishing or releases; update its Status
+  table and Next action before stopping.
 - `docs/DECISIONS.md` — finalized architecture decisions (D1–D15). Don't relitigate.
 - `docs/ROADMAP.md` — prioritized backlog with evidence. Pick work from here.
 - `docs/SCREEN_ARCHITECTURE.md` — Style B (Screen/Presenter/Bindings) in detail.
@@ -18,9 +21,16 @@ them visually in a web portal that round-trips to the .kt files in git.
   [`sample/`](sample) (Keliver's own widget schema, built from this checkout),
   and [`reference/inventory`](reference/inventory) — an app developed only from
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
-  checked on an emulator by `.github/workflows/reference-app.yml`. Its
-  production route is NOT published-only: that host is compiled from Keliver
-  source at the tools release's commit, and the CI harness is this repo's. What it proved and
+  checked on an emulator by `.github/workflows/reference-app.yml` and on an iOS
+  simulator by `ios-host.yml`. Since PR #92 its production route is
+  published-only too: tools **0.3.7**'s own `bin/` scaffolders write the
+  signing, the Android host and the iOS host, which build against Maven
+  Central. No Keliver source and no script from this checkout are used, except
+  the CI harness (`ci/`, the isolation guard) and the app's recorded overlay
+  files (`hand-edits.diff`). Exception while W3 is unreleased: on PR #90's
+  branch, CI scaffolds both hosts from `scripts/` (`KELIVER_SCAFFOLD_FROM=repo`,
+  labelled in the results), because W3's index-reading templates exist only
+  here. What it proved and
   what the route still costs an adopter: [`docs/REFERENCE_APP.md`](docs/REFERENCE_APP.md).
 
 **Environment:** `JAVA_HOME=$(/usr/libexec/java_home -v 17)` for every gradle
@@ -90,10 +100,11 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.5** (Maven dependency **0.3.3**), released
-2026-09-22 from `b5615637`; its identities and how the stored asset was checked
-are in [`docs/RELEASE_NOTES_TOOLS_0.3.5.md`](docs/RELEASE_NOTES_TOOLS_0.3.5.md).
-0.3.4 stays published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.7** (Maven dependency **0.3.3**), released
+2026-10-07 from `aaa03478`: the iOS production-host scaffolder and the U31
+signing fix. Its identities and how the stored asset was checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.7.md`](docs/RELEASE_NOTES_TOOLS_0.3.7.md).
+0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then

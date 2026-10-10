@@ -1,0 +1,103 @@
+# The production iOS host, end to end on a hosted macOS runner (W1 I2 in
+# docs/DELIVERY_PLAN.md).
+#
+# 1. keliver-new-ios-host-selftest.sh --build:
+#    - the scaffolder's refusals leave the app byte-identical;
+#    - its output is complete;
+#    - xcodebuild builds the app for the simulator from Maven Central;
+#    - a release refuses http://;
+#    - a malformed key fails the build.
+# 2. reference/inventory/ci/ios.sh:
+#    - the inventory app is recreated from the PUBLIC tools 0.3.7 release
+#      (hash pinned);
+#    - it publishes signed v1;
+#    - the host scaffolded by that zip's own bin/keliver-new-ios-host.sh runs on
+#      an iOS simulator through P1, P2 and P4–P7: signed v1, v2 after an edit, a
+#      foreign key refused, recovery, and an offline start from the cache;
+#    - then W3: keliver-publish (built from this checkout) into a static HTTPS
+#      server whose throwaway CA only this run's simulator trusts, and S2, S4-S7
+#      against it with no relay.
+#      Screens are read by macOS Vision.
+#
+# Read-only: no secrets, no publishing. The keys are disposable and generated
+# inside the run. Triggered on pull requests touching the iOS host. A workflow
+# can't be dispatched until it is on the default branch.
+name: ios-host
+on:
+  pull_request:
+    paths:
+      - "scripts/keliver-new-ios-host.sh"
+      - "scripts/keliver-new-ios-host-selftest.sh"
+      - "scripts/templates/ios-host/**"
+      - "reference/inventory/ci/ios.sh"
+      - "reference/inventory/ci/ocr.swift"
+      - "reference/inventory/ci/w3/**"
+      - "scripts/keliver-publish"
+      - "portal-relay/src/main/kotlin/StaticIndex.kt"
+      - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - ".github/workflows/ios-host.yml"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  ios-host:
+    runs-on: macos-15
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      # W3: the hosts are scaffolded by this repository's scripts/, whose
+      # index-reading templates no release ships yet. Everything else comes from
+      # the published zip. Remove this once a tools release ships W3.
+      KELIVER_SCAFFOLD_FROM: repo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: The toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios || true
+          java -version 2>&1 | head -1
+
+      - name: Download the PUBLIC tools 0.3.7 release, as the adopter guide does
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/ios-evidence"
+          cd "$RUNNER_TEMP/dl"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7
+          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip.sha256"
+          {
+            echo "downloaded: $base/keliver-portal-tools-0.3.7.zip"
+            shasum -a 256 -c keliver-portal-tools-0.3.7.zip.sha256
+            shasum -a 256 keliver-portal-tools-0.3.7.zip
+            unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json'
+          } | tee "$GITHUB_WORKSPACE/ios-evidence/public-download.txt"
+          test "$(shasum -a 256 keliver-portal-tools-0.3.7.zip | cut -d' ' -f1)" = \
+            75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
+          unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json' \
+            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'aaa034784ce6e46ee64182c173f1d564998e72c0'"
+
+      - name: The iOS host scaffolder's self-test, with xcodebuild
+        run: |
+          set -o pipefail
+          bash scripts/keliver-new-ios-host-selftest.sh "$RUNNER_TEMP/selftest" --build \
+            | tee "$GITHUB_WORKSPACE/ios-evidence/selftest.txt"
+
+      - name: iOS production OTA on the simulator — P1, P2, P4–P7
+        run: |
+          bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
+            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.7.zip"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-host-evidence-${{ github.run_id }}
+          path: ios-evidence/
+          if-no-files-found: warn
+          retention-days: 30

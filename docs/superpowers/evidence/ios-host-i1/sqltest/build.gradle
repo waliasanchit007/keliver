@@ -1,0 +1,13 @@
+// Measures the iOS host template's IosSqlHost.kt (byte-identical but for the
+// package) on Kotlin/Native macOS: same libsqlite3 and Foundation APIs, tests
+// run natively without a simulator.
+plugins { id 'org.jetbrains.kotlin.multiplatform' version '2.2.0' }
+kotlin {
+  macosArm64 {
+    compilations.main.cinterops { sqlite3 { definitionFile = file('src/nativeInterop/cinterop/sqlite3.def'); packageName = 'keliver.sqlite3' } }
+  }
+  sourceSets {
+    macosMain { dependencies { implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2' } }
+    macosTest { dependencies { implementation kotlin('test'); implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2' } }
+  }
+}

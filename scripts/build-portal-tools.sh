@@ -46,9 +46,24 @@ cp -R portal-relay/build/install/portal-relay/. "$STAGE/relay/"
 cp -R portal-mcp/build/install/portal-mcp/. "$STAGE/mcp/"
 cp -R web-spike/build/dist/wasmJs/productionExecutable/. "$STAGE/editor/"
 cp scripts/keliver-portal scripts/keliver-init "$STAGE/bin/"
+# W3: publish without the relay, into a static layout (relay/bin/keliver-publish-jvm
+# is its JVM entry point, installed with the relay above).
+cp scripts/keliver-publish "$STAGE/bin/"
+[ -x "$STAGE/relay/bin/keliver-publish-jvm" ] || { echo "relay/bin/keliver-publish-jvm is missing from the relay install" >&2; exit 1; }
 # Scaffolders so external app repos get the same DX (C1 new-component; ② new-editor).
 cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/keliver-new-editor.sh \
-   scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh "$STAGE/bin/"
+   scripts/keliver-new-device-target.sh scripts/keliver-install-device-host.sh \
+   scripts/keliver-new-production-host.sh scripts/keliver-new-publish-target.sh \
+   scripts/keliver-new-ios-host.sh "$STAGE/bin/"
+# The production-host scaffolder's templates: an Android module's SOURCE, with
+# no key in it — the key is copied from the adopter's own store when they run
+# the scaffolder. It finds them at bin/../templates.
+mkdir -p "$STAGE/templates"
+cp -R scripts/templates/production-host "$STAGE/templates/"
+# keliver-new-publish-target.sh's signing block, appended to an app's build.gradle.
+cp -R scripts/templates/publish "$STAGE/templates/"
+# keliver-new-ios-host.sh's iOS host: a KMP framework build plus an Xcode app shell.
+cp -R scripts/templates/ios-host "$STAGE/templates/"
 # The store contract has to travel with the tools. keliver-record-http.sh asks
 # keliver-store-path.sh where this app's store is; without both, an adopter's
 # recording client looks for its token in a directory that stopped being the
@@ -59,9 +74,11 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
 # refusal is printed from.
 cp scripts/keliver-store-path.sh scripts/keliver-record-http.sh \
    scripts/keliver-adopt-legacy-store.sh scripts/keliver-store-recover.sh "$STAGE/bin/"
-chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" \
+chmod +x "$STAGE/bin/keliver-portal" "$STAGE/bin/keliver-init" "$STAGE/bin/keliver-publish" \
   "$STAGE/bin/keliver-new-screen.sh" "$STAGE/bin/keliver-new-component.sh" "$STAGE/bin/keliver-new-editor.sh" \
   "$STAGE/bin/keliver-new-device-target.sh" "$STAGE/bin/keliver-install-device-host.sh" \
+  "$STAGE/bin/keliver-new-production-host.sh" "$STAGE/bin/keliver-new-publish-target.sh" \
+  "$STAGE/bin/keliver-new-ios-host.sh" \
   "$STAGE/bin/keliver-store-path.sh" "$STAGE/bin/keliver-record-http.sh" \
   "$STAGE/bin/keliver-adopt-legacy-store.sh" "$STAGE/bin/keliver-store-recover.sh"
 

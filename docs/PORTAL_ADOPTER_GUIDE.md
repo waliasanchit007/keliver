@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.5](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.5)**:
+  **[tools 0.3.7](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5/keliver-portal-tools-0.3.5.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.5/keliver-portal-tools-0.3.5.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.5.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.7.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.5.zip
-  export KP="$PWD/keliver-portal-tools-0.3.5/bin"
+  unzip keliver-portal-tools-0.3.7.zip
+  export KP="$PWD/keliver-portal-tools-0.3.7/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.5
+  The tools version and the library version are **separate lines**: tools 0.3.7
   scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
   bundle records both in its `VERSION.json`.
 
@@ -212,6 +212,256 @@ bundle at launch. Read the screen with
 The host reaches your machine at `10.0.2.2:8080`, which is an **emulator**
 address. A physical device needs its own reachable host URL; see
 [`DEVICE_HOST.md`](DEVICE_HOST.md).
+
+## Ship to production
+
+The generic host above is development-only and refuses production. Two
+commands, each run once, give your app signed publishing and its own production
+host. Both ship in the tools bundle from **0.3.6** on.
+
+```bash
+$KP/keliver-new-device-target.sh       # if you have not already: the bundle's entry point
+$KP/keliver-new-publish-target.sh      # publishTask/publishOutput + the signing block
+$KP/keliver-portal stop . && $KP/keliver-portal   # the relay reads keliver.portal.json at start
+curl -X POST http://localhost:8077/publish        # "publish OK: bundle v1", signed with your key
+
+$KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an emulator reaching your relay
+./gradlew -p host-android assembleDebug
+```
+
+The relay does not sign: your build does, with your store's private key, and
+`/publish` keeps a bundle only if its manifest verifies against your store's
+public key. Without the signing block the build still succeeds and `/publish`
+says `publish REFUSED: the bundle is UNSIGNED` and stores nothing.
+
+**Upgrading from tools 0.3.6: run `keliver-new-publish-target.sh` from these
+tools (0.3.7 or later) again (U31).** The 0.3.6 command can't do this; it
+answers "already wired".
+The signing block 0.3.6 wrote gave your private key to Zipline's compile task,
+which passes it to a child JVM on its command line. While a bundle compiled,
+any local user could read the key in the process list. A `--info` or `--debug`
+build printed it, and it was stored in `.gradle/<version>/executionHistory/`,
+readable by others under the usual umask. Rerunning the command replaces
+exactly that block with one that signs inside Gradle, after the compile, and
+changes nothing else, `keliver.portal.json` included. Then:
+- delete `.gradle/*/executionHistory/` in your app. **Keep
+  `.gradle/keliver-store-path`**: it binds the app to its store, and without
+  it a moved app can resolve to a new, empty store with a new key;
+- restart the portal, so `/publish` builds with the new block;
+- if other users of the machine, shared CI logs or a cached `.gradle/` could
+  have exposed the key, treat it as compromised. A new key means rebuilding
+  and shipping your production hosts with its public key. Keliver has no
+  rotation procedure yet: hosts trust one key, and W8 in the delivery plan
+  covers rotation.
+
+It embeds your portal's public key (copied from your store — commit
+`host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
+against it, and loads the latest one your relay has published. Use an
+`https://` bundle server for real users — a release build refuses `http://`;
+`DEVICE_HOST.md` §2 (Android) has the options and what the host refuses.
+
+**iOS.** `keliver-new-ios-host.sh` writes `host-ios/`: the same production
+host, for iOS. It is a Kotlin framework built from Maven Central plus an Xcode
+app around it. It ships in the tools bundle from **0.3.7** on. Scaffolding
+needs only bash and python3; building and running it need macOS with Xcode.
+
+```bash
+$KP/keliver-new-ios-host.sh --bundle-server http://localhost:8077    # a simulator on this Mac reaching your relay
+xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulator \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO build                  # or open it in Xcode
+```
+
+Your portal's public key and the servers go into
+`host-ios/src/iosMain/kotlin/<package>/HostConfig.kt`; commit that file. A
+release build refuses `http://`. A device build needs your team and signing
+(`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
+details.
+
+### Publish from CI to a static server
+
+`keliver-publish` does what `POST /publish` does, without the relay:
+1. It builds your `publishTask`.
+2. It refuses a bundle that isn't signed with your key, or is missing a
+   module. In that case it writes nothing.
+3. It writes `bundles/v<N>/` plus `bundles/index.json` into a directory.
+
+Serve that directory from any static host or CDN (S3, GCS, GitHub Pages,
+nginx) over HTTPS. Point `--bundle-server` at it. Hosts from the current
+scaffolders read `bundles/index.json`.
+
+**It is not in a released tools bundle yet.** Until it is, it is
+`scripts/keliver-publish` in the Keliver repository, and it needs
+`portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
+
+**The live index is the state.** The next `v<N>` and `sequence` come from the
+`bundles/` directory you publish into. So:
+- **Download the live `bundles/` first:** `index.json` and the `v<N>/`
+  directories. Publishing into an empty directory would start again at v1, and
+  uploading the result would overwrite the v1 hosts already load. Without an
+  `index.json`, `keliver-publish` refuses.
+- **`--init` only for the very first publish, run once by hand.** Never let CI
+  add it, for instance because a download failed: that is exactly the case it
+  exists to stop. A restarted sequence would also sit below every host's
+  rollback floor, and those hosts would then show no bundle.
+- **Upload `v<N>/` first, then `index.json`.** Never delete or overwrite a
+  `v<N>/`. Skip dotfiles: `.publish.lock`, and any `.staging-*` or
+  `.index.json.tmp-*` an interrupted run left.
+- **One publish at a time.** The lock in `bundles/` only covers one machine; in
+  CI use a `concurrency` group.
+
+**Rolling back is publishing again.** Hosts refuse a sequence below the highest
+they have run, so serving an older index, or an older `v<N>/` as newest, makes
+them show no bundle. To go back to v`<N>`'s code, republish it:
+
+```bash
+KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
+It copies `v3/`'s modules unchanged into the next `v<M>/` and has your app's
+`keliverResign` task (in the same signing block, with the same key) sign the
+copy for the next sequence. Nothing is compiled. The entry keeps `v3`'s
+capabilities, widget version and constraints, and its channel (or takes
+`--channel`), and records `"republishOf": 3`. Upload it like any other publish. It refuses a version
+the index has no entry for, an entry hosts would read differently once
+rewritten (a missing capabilities list, say), a `v<N>/` that is not what the
+index names, and a bundle that does not verify against your key. A signing block from before
+republishing has no `keliverResign`: run `keliver-new-publish-target.sh` to
+replace it.
+
+**Channels.** `--channel beta` publishes to beta only: hosts scaffolded with
+`--channel beta` take it (plus everything on stable); stable hosts don't. When
+it is ready for everyone, promote it. Nothing is built or signed, so this step
+needs no private key (only the app's `keliver.portal.json` and the public key):
+
+```bash
+$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
+**Staged rollouts and host-version gates.** Publish with `--rollout 10` and
+about one install in ten takes the new bundle. Each install's bucket is fixed
+for a given sequence. The rest stay on the newest bundle they may run. Raise
+the rollout, or halt it with 0, by editing the index only (no key, no build):
+
+```bash
+$KP/keliver-publish . --out site --set-rollout 7 --rollout 100
+```
+
+A halted rollout stops new installs, and hosts that already ran it keep it.
+`--set-rollout` only changes an entry that already has constraints: hosts
+scaffolded before staged rollouts skip any constrained entry, so adding one to
+a live bundle would hide it from them. Stage a rollout when you publish. On a
+promoted sequence, set the rollout on every channel it is on: beta hosts also
+take stable's entry. A `--republish` does not copy a rollout, because a new
+sequence draws new buckets; pass `--rollout` to stage it. Host-version gates
+are copied, and a republish or promotion can narrow them but never widen them.
+The install id is backed up with the app's data (Android Auto Backup, iCloud),
+so a restored install keeps its bucket.
+`--min-host-version N` / `--max-host-version N` limit an entry to host builds
+whose version (Android `versionCode`, iOS `CFBundleVersion`) is in range. Use
+them for code that needs a newer host. Hosts scaffolded before these
+constraints skip any entry that has them.
+
+A first publish, by hand:
+
+```bash
+$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/portal_ed25519.pub
+```
+
+Every later one, in GitHub Actions, with S3 as the example. With GCS use
+`gsutil -m rsync -r`; with any other server, copy the same files in the same
+order.
+
+```yaml
+concurrency: keliver-publish            # never two publishes at once
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ... JDK 17, cloud credentials, keliver-portal-tools as $KP
+      - name: The live bundles/, which the next version and sequence come from
+        run: |
+          mkdir -p site/bundles
+          aws s3 cp "s3://$BUCKET/bundles/index.json" site/bundles/index.json   # fails the job if it is missing
+          aws s3 sync "s3://$BUCKET/bundles" site/bundles
+      - name: Build, verify, write v<N>/ and index.json
+        run: |
+          umask 077
+          printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
+          KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
+            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+          rm -f "$RUNNER_TEMP/keliver.priv"
+        env:
+          KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}
+      - name: Upload v<N>/ first, then the index
+        run: |
+          N="$(jq -r '.entries | max_by(.sequence) | .version' site/bundles/index.json)"
+          aws s3 cp --recursive "site/bundles/v$N" "s3://$BUCKET/bundles/v$N" \
+            --cache-control "public, max-age=31536000, immutable"
+          aws s3 cp site/bundles/index.json "s3://$BUCKET/bundles/index.json" --cache-control "no-cache"
+      - name: Remove the key file, and Gradle's task history with it
+        if: always()
+        run: rm -rf .gradle/*/executionHistory "$RUNNER_TEMP/keliver.priv"
+```
+
+**Keep the signing key out of logs and caches.** The signing block signs
+inside Gradle, after the compile. The key is never on a command line, in a
+`--info` or `--debug` log, or in `.gradle/` (U31, fixed in tools 0.3.7).
+Still:
+- never cache `.gradle/` with `actions/cache`;
+- delete the key file when the job ends, as above.
+
+Store the private key (the hex in your store's `keys/ed25519.priv`) as a
+secret. `KELIVER_SIGNING_KEY_FILE` is read by the signing block that
+`keliver-new-publish-target.sh` writes from the tools release that ships
+`keliver-publish` on. Blocks written by 0.3.6 or 0.3.7 don't know this
+variable: run `keliver-new-publish-target.sh` again. It replaces exactly
+either of those blocks and changes nothing else.
+
+Exit status:
+- 0: published.
+- 2: usage.
+- 3: the build failed.
+- 4: refused, with nothing written. If it lost the lock to another publish,
+  `bundles/.publish.lock` may have been created.
+- 5: an I/O error while writing. `index.json` is then unchanged or complete,
+  never half-written, but a `v<N>/` that no entry names may be left behind.
+  Hosts never load it as current, and its number is never reused.
+
+Caching:
+- Serve `bundles/index.json` with `Cache-Control: no-cache`, or a short
+  `max-age`: it is the only file that changes, and a CDN that keeps an old copy
+  delays every update.
+- Everything under `v<N>/` is never rewritten, so it can be cached for as long
+  as you like. That is why a `v<N>/` must never be overwritten.
+- Don't let the CDN cache a 404 for long.
+
+**When the bundle a host is told about fails to load, the host shows no
+bundle**, even though a verified cached one is on the device. This happens
+when:
+- an index entry's `manifestSha256` doesn't match the manifest served (a
+  `v<N>/` overwritten, or a stale CDN copy);
+- a `v<N>/` is missing because the index was uploaded first;
+- any download of that bundle fails.
+
+Zipline doesn't fall back to its cache after a network load fails. The host
+starts from the cache only when the lookup itself fails. The upload rules above
+prevent the first two cases. Falling back to the last good bundle is planned
+(W5 in `docs/DELIVERY_PLAN.md`).
+
+The index is not signed. Every manifest is, and hosts verify every manifest.
+Each index entry records its manifest's sha256, and the host checks it. That
+check catches a mismatched manifest, but it doesn't protect against anyone who
+can rewrite the index. Integrity rests on the manifest signatures, not on the
+server, its origin or its redirects.
+
+Rollback protection: each manifest carries its sequence in its signed
+metadata, and a host refuses a sequence below the highest it has run, both on
+the network and from its cache (`DEVICE_HOST.md` §2). So an older signed
+bundle served again is refused, once a host has run a sequenced one. To roll
+back on purpose, rebuild the older source and publish it: it gets a new, higher
+sequence. A `--republish` shortcut is planned (W4.3). A reinstall resets a
+host's floor. One key is one sequence space: never let sequences go backwards.
 
 ## Preview mocks are not runtime values
 

@@ -1,0 +1,28 @@
+10-06 17:55:53.008  4276  4276 D KeliverHost: verifying manifests with portal-ed25519 016e1a14…
+10-06 17:55:53.063  4276  4295 E KeliverHost: bundle lookup failed
+10-06 17:55:53.063  4276  4295 E KeliverHost: java.net.ConnectException: Failed to connect to /10.0.2.2:8077
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.connection.ConnectPlan.connectSocket(ConnectPlan.kt:282)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.connection.ConnectPlan.connectTcp(ConnectPlan.kt:140)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.connection.FastFallbackExchangeFinder$launchTcpConnect$1.runOnce(FastFallbackExchangeFinder.kt:141)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.concurrent.TaskRunner$runnable$1.run(TaskRunner.kt:81)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.lang.Thread.run(Thread.java:1012)
+10-06 17:55:53.063  4276  4295 E KeliverHost: Caused by: java.net.ConnectException: failed to connect to /10.0.2.2 (port 8077) from /10.0.2.16 (port 45808) after 5000ms: isConnected failed: ECONNREFUSED (Connection refused)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at libcore.io.IoBridge.isConnected(IoBridge.java:347)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at libcore.io.IoBridge.connectErrno(IoBridge.java:237)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at libcore.io.IoBridge.connect(IoBridge.java:179)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.PlainSocketImpl.socketConnect(PlainSocketImpl.java:142)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.AbstractPlainSocketImpl.doConnect(AbstractPlainSocketImpl.java:390)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.AbstractPlainSocketImpl.connectToAddress(AbstractPlainSocketImpl.java:230)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.AbstractPlainSocketImpl.connect(AbstractPlainSocketImpl.java:212)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.SocksSocketImpl.connect(SocksSocketImpl.java:436)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at java.net.Socket.connect(Socket.java:646)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.platform.Platform.connectSocket(Platform.kt:147)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at okhttp3.internal.connection.ConnectPlan.connectSocket(ConnectPlan.kt:280)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	... 6 more
+10-06 17:55:53.063  4276  4295 E KeliverHost: Caused by: android.system.ErrnoException: isConnected failed: ECONNREFUSED (Connection refused)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	at libcore.io.IoBridge.isConnected(IoBridge.java:334)
+10-06 17:55:53.063  4276  4295 E KeliverHost: 	... 16 more
+10-06 17:55:53.264  4276  4276 D KeliverHost: lookup failed; starting from the cached bundle (last loaded from http://10.0.2.2:8077/bundles/v2/manifest.zipline.json)
+10-06 17:55:53.603  4276  4302 D KeliverHost: codeLoadSuccess modules=40

@@ -271,6 +271,40 @@ grep -q 'text = "My Inbox"' "$APP/src/jsMain/kotlin/screens/home.kt" \
   && ok "the edit persists in the source after restart" || bad "the source lost the edit"
 ( cd "$APP" && "$KP/keliver-portal" stop . >/dev/null 2>&1 )
 
+# --- guide: publish a signed bundle ------------------------------------------
+# A keliver-init app could not publish at all: publishTask defaulted to
+# Keliver's own module, and nothing signed. keliver-new-publish-target.sh wires
+# both; the relay reads keliver.portal.json at startup, so it is restarted after.
+if [ ! -f "$APP/src/jsMain/kotlin/device/Main.kt" ]; then
+  ( cd "$APP" && env -u KELIVER_USE_MAVEN_LOCAL "$KP/keliver-new-device-target.sh" >"$DISP/devtarget.log" 2>&1 ) \
+    && ok "keliver-new-device-target.sh added the bundle entry point" || bad "device target failed"
+fi
+cp "$APP/build.gradle" "$DISP/build.gradle.unsigned"
+( cd "$APP" && "$KP/keliver-new-publish-target.sh" >"$DISP/publish-target.log" 2>&1 ) \
+  && ok "keliver-new-publish-target.sh wired publishing" \
+  || { bad "keliver-new-publish-target.sh failed"; tail -3 "$DISP/publish-target.log"; }
+portal_up "$DISP/portal3.log" "the portal restarts with publishing wired" || exit 1
+curl -s -m 900 -X POST "http://localhost:$PORT/publish" >"$DISP/publish-1.log" 2>&1
+if grep -q 'publish OK: bundle v1' "$DISP/publish-1.log" \
+  && grep -q "signed with this app's portal-ed25519 key" "$DISP/publish-1.log" \
+  && [ -f "$STORE_DIR/bundles/v1/manifest.zipline.json" ]; then
+  ok "POST /publish stored v1, signed with this app's key: $(grep 'publish OK' "$DISP/publish-1.log")"
+else
+  bad "POST /publish did not store a signed v1"; tail -8 "$DISP/publish-1.log" | sed 's/^/        /'
+fi
+# The failure every adopter used to hit silently: the signing block gone still
+# compiles, UNSIGNED. The relay must refuse it and store
+# nothing.
+cp "$DISP/build.gradle.unsigned" "$APP/build.gradle"
+BUNDLES_BEFORE="$(ls -d "$STORE_DIR"/bundles/v* 2>/dev/null | wc -l | tr -d ' ')"
+curl -s -m 900 -X POST "http://localhost:$PORT/publish" >"$DISP/publish-unsigned.log" 2>&1
+grep -q 'publish REFUSED: the bundle is UNSIGNED' "$DISP/publish-unsigned.log" \
+  && ok "an unsigned bundle is refused: $(grep 'publish REFUSED' "$DISP/publish-unsigned.log")" \
+  || { bad "an unsigned bundle was not refused"; tail -8 "$DISP/publish-unsigned.log" | sed 's/^/        /'; }
+[ "$(ls -d "$STORE_DIR"/bundles/v* 2>/dev/null | wc -l | tr -d ' ')" = "$BUNDLES_BEFORE" ] \
+  && ok "the refused bundle was not stored ($BUNDLES_BEFORE bundle(s) before and after)" || bad "A REFUSED BUNDLE WAS STORED"
+( cd "$APP" && "$KP/keliver-portal" stop . >/dev/null 2>&1 )
+
 # --- ownership, by fingerprint not just git status ---------------------------
 ( cd "$APP" && find src -type f | sort | xargs shasum ) > "$DISP/fingerprint-after.txt"
 echo "  ---- source fingerprint delta ----"

@@ -1,7 +1,8 @@
 # The reference app — what the published route costs an adopter
 
-**2026-09-22/24.** An inventory app built outside this checkout from the
-**published** `keliver-portal-tools` 0.3.5 release and `dev.keliver:*:0.3.3` on
+**2026-09-22/24; moved to tools 0.3.7 on 2026-10-08 (PR #92).** An inventory
+app built outside this checkout from the **published** `keliver-portal-tools`
+release (0.3.5 until PR #92, 0.3.7 since) and `dev.keliver:*:0.3.3` on
 Maven Central, following [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md),
 then checked against
 [`reference/inventory/EXPECTATIONS.md`](../reference/inventory/EXPECTATIONS.md) —
@@ -13,16 +14,27 @@ and unchanged since. The macOS compile, ingest, edit and Live-preview runs of
 **This is dogfooding.** We wrote the app. It is not evidence that anyone outside
 the project has adopted Keliver. Nobody has.
 
-**Two routes, and only one of them is published-artifacts-only.**
+**Two routes. Since PR #92 (tools 0.3.7), both are published-artifacts-only,
+apart from the CI harness.**
 
 * **The development route** uses nothing but the public tools zip and Maven
   Central: the guest app, `keliver-init` and the other scaffolders, the relay,
   ingest, the `/ops` write-back, `/publish` and guest signing, and the bundle's
   generic development host APK. E1–E10 and D1–D3 are this route.
-* **The production route** needs a Keliver checkout: the production host is
-  `portal-device-android` compiled from Keliver **source** at the tools
-  release's commit `b5615637` — its Keliver libraries are that source, not the
-  Maven Central 0.3.3 artifacts. Every one of P1–P6 depends on that host.
+* **The production route**, from run 8 (`36616829164`, 2026-09-30) on, compiles
+  no Keliver *library* module from source: the production host is scaffolded
+  into the app by `keliver-new-production-host.sh` and built by the app's Gradle
+  against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
+  Kotlin is that scaffolder's template. **Since PR #92 both come from the
+  published 0.3.7 zip's `bin/` and `templates/`**: `reference-app.yml` run
+  `37673830830` (prepare 15/0, device 37/0) and the iOS host, via
+  `ios-host.yml` run `37673830745` (48/0, 30/0). Before that, runs 8 to 13 took
+  the scaffolders from this repository, because the app was built from the
+  0.3.5 zip. Runs 1–7 used `portal-device-android` compiled from Keliver
+  **source** at `b5615637`.
+  *On PR #90's branch (W3, not yet released), CI sets `KELIVER_SCAFFOLD_FROM=repo`,
+  so both hosts come from this repository's `scripts/` again, labelled
+  "(W3, unreleased)" in the results. A release that ships W3 removes that.*
 * **The CI harness** is this repository's: `ci/*.sh`, `ci/drive.py`, and the
   isolation guard (`scripts/keliver-test-isolation-guard.sh` and the
   `keliver-store-path.sh` it calls), which are not in the tools bundle.
@@ -45,6 +57,7 @@ Source and reproduction: [`reference/inventory/`](../reference/inventory) —
 | D3: the edited title on the device after a rebuild (view hierarchy) | CI emulator | pass |
 | **D14's device-render-screenshot leg** | CI emulator | **not met**: runs 1–4 took none; runs 5–7 took 18, all blank (see "Device screenshots") |
 | production OTA: P1–P6 | CI emulator, production host built from `b5615637` | **all pass** (runs 1, 3–7) |
+| production OTA on the **scaffolded** host from Maven Central: P1–P7 (P7: relay down, starts from the cache) | CI emulator | **all pass** (run 13, `37505534432`) |
 | physical Android device | — | **not run** (none attached) |
 | arm64 Android | — | **not run** |
 | iOS | — | **not run** for this app |
@@ -103,7 +116,10 @@ for us.
 
 ### Blocking production
 
-1. **There is no published production host for keliver-material screens.** The
+1. **There was no published production host for keliver-material screens** —
+   **addressed by `keliver-new-production-host.sh` (#85, in tools 0.3.6)**, which
+   scaffolds one built from Maven Central; P1–P7 pass on it (run 13,
+   `37505534432`). What follows is what the route cost before it. The
    bundle's `host/README.md` §2 says: copy `sample/host-android` from the
    Keliver repository. That host is built against the *sample's* schema
    (`SampleSchemaHostProtocol`: Box, Text, Column, …), so it cannot render a
@@ -117,7 +133,14 @@ for us.
    override that warns rather than checks. None of this is in the adopter guide.
    Its production host also keeps the generic host's `applicationId`, reaches the
    relay at `10.0.2.2:8077` (an emulator address), and is a debug build.
-2. **Publish is not scaffolded, and fails on a scaffolded app.** `POST /publish`
+2. **Publish was not scaffolded, and failed on a scaffolded app** — **addressed
+   by `keliver-new-publish-target.sh` (#86, in tools 0.3.6)**. CI now runs it in the
+   app instead of overlaying a hand-written block, and P1–P7 pass on the bundles
+   it signs (run `37513078292`). This app's relay is still the published 0.3.5
+   one, which does not check signatures; #86's relay refusal of unsigned bundles
+   is exercised by the adopter acceptance (portal-tools `37513071473`), not
+   here. Here, `prepare.sh` fails an unsigned v1 and the host verifies on the
+   device. What follows is the route before it. `POST /publish`
    runs `publishTask` from `keliver.portal.json`, default
    `:portal-published-guest:compileDevelopmentZipline` — Keliver's own module.
    On a scaffolded app that is, measured:
@@ -130,6 +153,9 @@ for us.
    files and checks (`portal-published-guest/build.gradle`,
    `keliver-guest-signing-check.sh`) and in this app's block, but in no scaffold
    and no adopter-facing doc.
+   *(Superseded, 2026-10-07, by U31 in `KNOWN_BUGS.md`. Setting `signingKeys`
+   leaks the key, so the block now signs in a `doLast`, and the ordering rule
+   no longer applies.)*
    The reference app's version: `reference/inventory/app/build.gradle` (bottom).
    The adopter guide mentions published bundles and the publisher but does not
    describe how to publish — no `/publish`, no `publishTask`.
@@ -209,7 +235,40 @@ with app-owned disposable keys generated by the relay inside the run directory.
 Verification was never disabled: the development host from the bundle was used
 for the development route only, and was not rebuilt, patched or reconfigured.
 
-**The production host.** `portal-device-android` built from the tools
+**The production host, from run 8 on.** Scaffolded by
+`keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077
+--application-id inventory.host` in the app, built with `./gradlew -p
+host-android assembleDebug` from Maven Central only (54 `dev.keliver` artifacts,
+all 0.3.3; `ci-run-36616829164/host-keliver-artifacts.txt`). Production-only: a
+plain launcher start, no mode switch. Run 8: prepare 14/0, device 33/0 — P1–P6
+all pass; `KeliverHost: verifying manifests with portal-ed25519 42c82747…`, v1
+then v2 load, the other app's bundle is refused with `codeLoadFailed: manifest
+signature for key portal-ed25519 did not verify!`, and there is no empty-URL
+load attempt (U28 absent). APK `a51367b1…`; evidence in
+`superpowers/evidence/reference-app/ci-run-36616829164/`.
+
+Runs 8–13, all on PR #85's branch:
+
+| run | head | result |
+|---|---|---|
+| 8 [`36616829164`](https://github.com/waliasanchit007/keliver/actions/runs/36616829164) | `e6629e362` | **pass**: prepare 14/0, device 33/0, P1–P6 |
+| 9 [`36619270109`](https://github.com/waliasanchit007/keliver/actions/runs/36619270109) | `6c6adb81d` | **pass** (only docs and run 8's evidence changed since run 8) |
+| 10 [`36621274110`](https://github.com/waliasanchit007/keliver/actions/runs/36621274110) | `083416ea0` | **failed, every production check**: `am start -p <pkg>` with only MAIN/LAUNCHER was accepted and started nothing, so no host ran. Fixed in the harness: `device.sh` launches the component that `cmd package resolve-activity` reports for the launcher intent. |
+| 11 [`36623080877`](https://github.com/waliasanchit007/keliver/actions/runs/36623080877) | `4132f975c` | cancelled by me (superseded by the launch fix) |
+| 12 [`36624478213`](https://github.com/waliasanchit007/keliver/actions/runs/36624478213) | `0e407a125` | **failed, P7 only** (P1–P6 pass): with the relay down, the host started from its saved manifest URL with Treehouse's default freshness checker and got `codeLoadFailed: Failed to connect`. Zipline 1.22 reads its cache only *before* the network and only when the `FreshnessChecker` accepts it; it never falls back to the cache after a network failure. The host was wrong, not the check. |
+| 13 [`37505534432`](https://github.com/waliasanchit007/keliver/actions/runs/37505534432) | `f586e41a4` | **pass**: prepare 14/0, device 37/0, P1–P7. The host now looks up the newest bundle first and, only when that fails, starts with a checker that accepts Zipline's pinned, re-verified cache. |
+
+Run 13's P7, from `ci-run-37505534432/logcat-prod-offline.KeliverHost.txt`:
+the lookup fails with `ECONNREFUSED`, then `lookup failed; starting from the
+cached bundle (last loaded from …/bundles/v2/manifest.zipline.json)` and, 0.34 s
+later, `codeLoadSuccess modules=40`; the screen shows `Stockroom`
+(`P7.results.json`). Its identities: app key `016e1a14…`, the copy's key
+`a370f897…`; manifests v1 `74255e06…`, v2 `d013fd6b…`, foreign `195be429…`
+(sha256 of the kept files); APK `24936f26…`; 54 `dev.keliver` artifacts, all
+0.3.3. Its six device screenshots are BLANK, like every run's
+(*Device screenshots*), so the screen evidence is the view hierarchy.
+
+**The production host, runs 1–7.** `portal-device-android` built from the tools
 release's source commit `b5615637` with `-Pkeliver.devOnlyHost=false
 -Pkeliver.portalStore=<this app's store>`. Its `assets/portal_ed25519.pub`
 equals the store's `keys/ed25519.pub` (P1). Each run builds its own host and
