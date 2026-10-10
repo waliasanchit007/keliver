@@ -1,0 +1,15 @@
+==> host APK: <work>/boot/tools/keliver-portal-tools-0.3.5/bin/../host/keliver-device-host-0.3.5.apk
+    sha256:   475276a4c51c90698871acd0f405a73678c4b96b8cff37b773fe508e5faff04e
+    device:   emulator-5554
+    checksum: matches <work>/boot/tools/keliver-portal-tools-0.3.5/bin/../host/keliver-device-host-0.3.5.apk.sha256
+Performing Streamed Install
+Success
+==> installed dev.keliver.portaldevice (versionName 1.0) on emulator-5554
+
+next, from your app directory:
+  ./gradlew serveDevelopmentZipline                      # serves your bundle on :8080
+  adb -s emulator-5554 shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity
+
+An emulator reaches your machine at 10.0.2.2, which is what the host uses.
+A physical device on your LAN cannot use this dev loop without rebuilding the
+host against your machine's address.

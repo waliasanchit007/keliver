@@ -1,0 +1,8 @@
+nm (grep plantedMarker):
+00000000015048a0 t _kfun:dev.keliver.portaldevice.ios#plantedMarker(){}kotlin.String
+000000000182ba8c t _objc2kotlin_kfun:dev.keliver.portaldevice.ios#plantedMarker(){}kotlin.String
+
+header:
+208:+ (NSString *)plantedMarker __attribute__((swift_name("plantedMarker()")));
+
+UTF-16LE "PLANTED_MARKER_77" occurrences in the binary: 1

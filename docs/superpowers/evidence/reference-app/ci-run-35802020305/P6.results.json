@@ -1,0 +1,54 @@
+[
+ {
+  "id": "TITLE",
+  "check": "the list screen shows the title 'Stockroom'",
+  "ok": true,
+  "observed": [
+   "Stockroom",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ },
+ {
+  "id": "TITLE-ONLY",
+  "check": "no other known title is shown (Inventory, Foreign build)",
+  "ok": true,
+  "observed": [
+   "Stockroom",
+   "Search by name or SKU",
+   "8 items · 2 low on stock",
+   "Espresso beans, dark roast 1kg",
+   "BEAN-001 · 12 on hand",
+   "Filter beans, light roast 1kg",
+   "BEAN-002 · 4 on hand · LOW",
+   "Oat milk 1L",
+   "MILK-010 · 24 on hand",
+   "Whole milk 2L",
+   "MILK-011 · 9 on hand · LOW",
+   "Paper cups 8oz (sleeve of 50)",
+   "CUP-008 · 30 on hand",
+   "Paper cups 12oz (sleeve of 50)",
+   "CUP-012 · 18 on hand",
+   "Lids 8oz (sleeve of 50)",
+   "LID-008 · 15 on hand",
+   "V60 paper filters (100)",
+   "FLT-060 · 6 on hand"
+  ]
+ }
+]
