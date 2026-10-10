@@ -277,6 +277,66 @@ release build refuses `http://`. A device build needs your team and signing
 (`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
 details.
 
+### Embed in an existing app
+
+The commands above write a standalone host app. To show Keliver screens inside
+an app you already have, next to its native screens, add `--embed`. It writes
+the same host as a module of your app. It edits none of your files: it prints
+the lines to add. This is not in a released tools bundle yet; it ships only
+with a later release.
+
+**Android.** Run from your Keliver app's root (the one with
+`keliver.portal.json`), pointing `--into` at your existing app's Gradle root:
+
+```bash
+$KP/keliver-new-production-host.sh --embed --into ../my-app --bundle-server https://bundles.example.com
+```
+
+It writes `../my-app/keliver-host/`, a `com.android.library` module with the
+same host Kotlin as `host-android/`. Then, in your app:
+- `settings.gradle`: `include ':keliver-host'`;
+- the root `build.gradle`: the library's plugins, `com.android.library`,
+  `org.jetbrains.kotlin.plugin.compose` and `app.cash.zipline` `1.22.0`. The
+  module requests them without versions, so your build applies them. Zipline
+  1.22.0's compiler plugin needs **Kotlin 2.2.0**, so your app must build with
+  it;
+- your app's `build.gradle`: `implementation project(':keliver-host')`;
+- your `Application`: `val keliver by lazy { KeliverHost.create(this) }`. Make
+  one host per process: a second `create()` for the same key fails;
+- a screen: `KeliverScreen(keliver, Modifier.fillMaxSize())` in Compose, or
+  `KeliverView(context).apply { host = keliver }` in a View layout.
+
+The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
+them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.
+Commit both. Your app keeps its own manifest decisions: cleartext for an
+`http://` development server, backups, the theme. A minified release keeps
+what Zipline needs through the module's consumer R8 rules.
+
+**iOS.**
+
+```bash
+$KP/keliver-new-ios-host.sh --embed --into ../MyApp --bundle-server https://bundles.example.com
+```
+
+It writes `../MyApp/keliver-host-ios/`, the `KeliverHost` framework's Gradle
+build with its own wrapper, plus `KeliverScreen.swift` and `EMBED.md`. Your
+Xcode project is not changed. `EMBED.md` lists the edits:
+- a Run Script phase before Compile Sources that builds the framework;
+- `ENABLE_USER_SCRIPT_SANDBOXING = NO` and `-lsqlite3`;
+- `CADisableMinimumFrameDurationOnPhone` in your Info.plist;
+- adding `KeliverScreen.swift` to your target.
+
+Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
+your `App`'s `init` starts the lookup early.
+
+On both platforms, every Keliver screen in the process shares one lookup and
+one load: navigating natively or rotating doesn't load again. If a bundle
+doesn't verify, no guest screen is shown and your native screens keep working.
+`DEVICE_HOST.md` §4 has the details and the limits. The main limit is on
+Android: the module compiles with your app's Kotlin, and only 2.2.0 works. On
+iOS the framework builds with its own Gradle and Kotlin, but an app that
+already embeds a Kotlin framework would carry two Kotlin runtimes.
+
 ### Publish from CI to a static server
 
 `keliver-publish` does what `POST /publish` does, without the relay:

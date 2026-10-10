@@ -300,3 +300,116 @@ none in a release build.
 `NSUserDefaults`, checked on the network and on the cache start. A reinstall
 resets it.
 
+
+## 4. Embedding the host in an existing app
+
+`--embed` on either scaffolder writes the host of §2 or §3 as a part of an app
+you already have, instead of as an app of its own. Nothing of your app is
+edited; the scaffolder prints what to add. Not in a released tools bundle yet.
+
+```bash
+keliver-new-production-host.sh --embed --into DIR [--module keliver-host] --bundle-server URL \
+    [--api-base-url URL] [--public-key-file PATH] [--channel NAME]
+keliver-new-ios-host.sh --embed --into DIR [--module keliver-host-ios] --bundle-server URL \
+    [--api-base-url URL] [--public-key-file PATH] [--channel NAME]
+```
+
+Run them from your Keliver app's root (the one with `keliver.portal.json`), as
+for §2 and §3: they read its package and its store's public key, and the iOS
+one copies its Gradle wrapper. The key checks, URL rules and refusals are the
+same, and so is the host's behaviour: production only, the lookup first, the
+verified cache, the rollback floor, channels, rollouts and host-version gates.
+
+**Android: a library module.** `DIR/keliver-host/` is a `com.android.library`
+with the same host Kotlin as `host-android/` (the self-test compares them byte
+for byte):
+- **`KeliverHost`**: the host. It owns its coroutine scope, the one Treehouse
+  app and Zipline, the SQL and HTTP hosts and the image loader, for the life
+  of the process. Create it once, in your `Application`:
+  `KeliverHost.create(this)`, from `keliver.properties` and the key asset, or
+  `KeliverHost.create(this, KeliverConfig(...))`. A second host for the same
+  key fails loudly, because two loaders must never share a Zipline cache.
+  `start()` is idempotent: the first screen calls it, or call it at launch to
+  warm up. `state` is a `StateFlow` the screens observe.
+- **`KeliverScreen(host, modifier)`**, a Composable, and **`KeliverView`**, an
+  `AbstractComposeView` for View layouts (set its `host`). They only observe
+  the host, so any number of them, recreated on every configuration change,
+  share the one lookup and the one load.
+- **Settings**: `keliver.properties` in the module (a subproject's
+  `gradle.properties` is not read), each overridable with `-Pkeliver.<name>`.
+  The host version that `minHostVersion`/`maxHostVersion` gates compare with is
+  your app's `versionCode`, from `PackageManager`.
+- **The trust root**: `src/main/assets/keliver/portal_ed25519.pub`. It sits
+  under `keliver/` in both modes, because an app asset of the same name would
+  silently replace a library's.
+- **The manifest** asks only for `INTERNET`. Everything application-level is
+  yours: cleartext for an `http://` development server (debug only; a release
+  build of the module refuses `http://`), the theme, and backups. The
+  standalone host sets `allowBackup="false"`; a library can't, so if your app
+  allows backups, exclude the host's shared preferences (`keliver-host.xml`:
+  the floor and the install id) with `dataExtractionRules` and
+  `fullBackupContent`, or a restored device starts with another device's floor
+  and rollout bucket.
+- **R8**: the module's consumer rules keep Zipline's bridged services, which
+  are called by name. A minified release of the reference app loads and
+  renders (X7 below).
+- **Your build supplies the plugins**: `com.android.library`,
+  `org.jetbrains.kotlin.plugin.compose` and `app.cash.zipline` `1.22.0`, with
+  Kotlin 2.2.0. The scaffolder warns when it can't find them.
+
+**iOS: a framework build.** `DIR/keliver-host-ios/` is the `KeliverHost`
+framework's Gradle build (the same Kotlin as `host-ios/`) with its own wrapper,
+plus `KeliverScreen.swift` and `EMBED.md`:
+- `public object Keliver { start(); viewController(safeArea:) }`, one per
+  process; `KeliverScreen` is the SwiftUI wrapper around `viewController`.
+  `MainViewController()` stays, as an alias, for the standalone app.
+- The settings and key are in `src/iosMain/kotlin/<package>/HostConfig.kt`,
+  checked by the build as in §3. `checkReleaseUrls` reads the Info.plist Xcode
+  is building (`$SRCROOT/$INFOPLIST_FILE`), so a release build refuses an
+  `http://` server or any App Transport Security exception in your app's
+  Info.plist.
+- `EMBED.md` has the Xcode edits: the Run Script phase (`embedAndSignAppleFrameworkForXcode`)
+  before Compile Sources, `ENABLE_USER_SCRIPT_SANDBOXING = NO`, `-lsqlite3`,
+  `CADisableMinimumFrameDurationOnPhone`, and adding `KeliverScreen.swift`.
+- The scaffolder refuses an Xcode project that already names a product or
+  module `KeliverHost`: Swift would then ignore `import KeliverHost`.
+
+**When a load fails**, the Keliver view shows no guest screen, and nothing
+else in your app is affected. A missing or invalid key shows the host's
+refusal message in that view, as in §2. A bundle that the lookup named but
+that then fails (another key's signature, a sha256 mismatch, a sequence below
+the floor) leaves the view blank: there is no message for it yet, and no
+fallback to the last good bundle (W5 in Keliver's `docs/DELIVERY_PLAN.md`).
+
+**Measured** in Keliver's CI, on two plain apps standing in for an existing one
+(`reference/embed/android`, a View-based app, and `reference/embed/ios`, a
+SwiftUI app), each with only the documented edits, loading from a static HTTPS
+server fed by `keliver-publish`:
+- Android emulator: the native views and the guest's screen on one screen, the
+  guest inside the `KeliverView` (X1); a signed load (X2); taps inside the
+  embedded screen (X3); native navigation and a rotation with one lookup and
+  one load (X4); the floor stored in the app's own data (X5); another key's
+  bundle refused while the native views and the process stay (X6); an
+  R8-minified release loading and rendering (X7);
+- iOS simulator: the native views and the guest's screen in one screenshot
+  (I1); a signed load (I2); the floor stored in the app's defaults (I4);
+  another key's bundle refused while the native views stay (I5).
+
+**Not measured:**
+- native navigation on iOS (no tap driver on the simulator CI);
+- an app on another Kotlin, AGP, Compose or OkHttp/Coil version than the one
+  combination CI builds;
+- an iOS app that already embeds a Kotlin framework (it would carry two Kotlin
+  runtimes; put the host sources in that framework instead);
+- an XCFramework instead of the build phase (documented in `EMBED.md`, not run);
+- physical devices.
+
+**Limits:**
+- **Kotlin, on Android.** The module is compiled by your app's Kotlin, and
+  Zipline 1.22.0's compiler plugin needs Kotlin 2.2.0. An app on another Kotlin
+  can't embed it as source. A prebuilt, published host library would remove
+  that; it isn't published.
+- **The theme** is Material 1: your Material 3 theme doesn't reach the Keliver
+  screen.
+- **Dependency versions.** Compose, OkHttp and Coil versions resolve together
+  with your app's, and a forced upgrade either way is not tested.
