@@ -721,10 +721,15 @@ What was done for the candidate:
 **W4 is built** (W4.1 to W4.5, PR #93), reviewed and green on both platforms.
 
 **Next:**
-- **Tools 0.3.8 (W3 + W4): candidate 1 is verified and waiting for the
-  owner's explicit approval.** Then tag `portal-tools-v0.3.8` on `c0e71108` and
-  attach the retained artifact `11617444772` (zip `7ea7f11d…`), following
-  `PORTAL_TOOLS_RELEASE.md` step 4. Nothing is tagged.
+- **Owner's decision, 2026-10-10: the release is deferred** until more
+  development is done; the changes will then go out together. Candidate 1
+  (`c0e71108`, zip `7ea7f11d…`) stays untagged and will be superseded. The next
+  release is a new candidate with full verification (build, device run, local
+  check, `ios.sh` on the zip, step 3), still only with the owner's explicit
+  approval. Recommended scope: W3 + W4 + W2, cut once W2 is reviewed, not
+  waiting for W5 and W6. The version 0.3.8 is still free (no tag).
+- **Owner's decision, 2026-10-10: merge the PR stack next** (#81 → #95,
+  bottom-up), before W2's remaining work.
 - **W2 (PR #95):** W2.1–W2.7 are built and green on CI.
   1. CI at the latest head (`0c47eedd`, with the merge of #94).
   2. **W2.8:** the docs (an "Embed in an existing app" guide section,
