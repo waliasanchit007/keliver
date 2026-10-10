@@ -692,6 +692,42 @@ independent review, Status.
 
 *Done when:* events arrive in CI from both platforms.
 
+#### W6 design (draft 2026-10-11)
+
+**What a host reports.** One small record per outcome, JSON:
+`{"installId", "channel", "hostVersion", "sequence", "source", "outcome", "detail", "platform"}`.
+- **Outcomes:** `loaded` (the start's bundle ran), `fell-back` (W5),
+  `update-applied`, `update-failed`, `not-loaded` ("Bundle did not load"),
+  `no-bundle`, `refused` (no valid key or server).
+- **`source`:** `network` or `cache`.
+- **`detail`:** a short reason, at most 300 characters (an exception message,
+  never a body).
+
+The install id is the random one W4.5 made for rollouts. Nothing else
+identifies a user or device.
+
+**Where it goes.** Nowhere by default.
+- **In code:** `KeliverHost.reports` (Android, a `SharedFlow`) and
+  `Keliver.onReport` (iOS) hand every record to the app, which can forward it
+  to its own analytics. That is also the place to set the crash key: the
+  sequence goes in as `keliver_sequence` (Crashlytics `setCustomKey`, Sentry
+  `setTag`), and the docs show both.
+- **The documented example**, built in and off unless set:
+  `keliver.reportUrl` (Android) or `REPORT_URL` (iOS `HostConfig.kt`). The host
+  POSTs each record there, best effort: no retries, no queue, never blocking or
+  failing a load. It follows the same URL rules and release `https://` check
+  as the bundle server.
+- **No relay endpoint in W6.** The static route has no relay, and a portal
+  view of the counts is a later, optional step.
+
+**CI proof (V1, both platforms).** The W5 build (U1) also sets the report URL
+to the static test server, whose `POST /report` writes each body to a log.
+After U1, the log holds `loaded` (sequence 8, network) and `update-applied`
+(sequence 9) from that install, with `platform` `android` or `ios`.
+
+**Steps.** W6.1 reports and the example sender on both hosts, with V1. W6.2
+docs (including the crash-key examples), an independent review, Status.
+
 ### W7 — Proof (G11)
 
 Physical Android (arm64), a physical iPhone, a release-signed APK and IPA, and
