@@ -123,6 +123,8 @@ grep -q "codeLoadFailed" "$EV/logcat-embed-foreign.txt" && ok "X6: the host repo
 grep -q 'text="Native header"' "$EV/w2-X6.xml" && ! grep -q 'text="Attic"' "$EV/w2-X6.xml" \
   && [ -n "$(adb -s "$SERIAL" shell pidof "$W2_ID" | tr -d '\r')" ] \
   && ok "X6: the native views are still shown and the app is still running" || bad "X6: the existing app did not survive the refusal"
+grep -q 'text="Bundle did not load"' "$EV/w2-X6.xml" \
+  && ok "X6: the Keliver view says the bundle did not load (not a blank view)" || bad "X6: no 'Bundle did not load' in the Keliver view"
 
 # X7: the minified release. Zipline crosses the bridge by name and reflection, so
 # R8 can break it at run time only: this is the check that the library's

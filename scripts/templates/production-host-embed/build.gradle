@@ -45,6 +45,13 @@ if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
 }
 def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
 
+// The embedded key, checked by checkPortalKey (below) and compiled into
+// BuildConfig.KELIVER_PUBLIC_KEY_HEX: the host reads it from there, never from
+// the merged assets, where an app's or another library's file of the same name
+// would win.
+def portalKey = file('src/main/assets/keliver/portal_ed25519.pub')
+def portalKeyHex = portalKey.isFile() ? portalKey.text.trim().toLowerCase() : ''
+
 android {
   namespace '@@PACKAGE@@'
   compileSdk 35
@@ -54,6 +61,7 @@ android {
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
+    buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeyHex ==~ /[0-9a-f]{64}/ ? portalKeyHex : ''}\""
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -62,7 +70,6 @@ kotlin { jvmToolchain(17) }
 
 // The embedded key is the whole of this host's trust: a missing or malformed
 // one fails the BUILD, not just a launch on someone's device.
-def portalKey = file('src/main/assets/keliver/portal_ed25519.pub')
 def checkPortalKey = tasks.register('checkPortalKey') {
   inputs.file(portalKey)
   doLast {

@@ -5,9 +5,10 @@
  * it) and show it with KeliverScreen or KeliverView.
  *
  * - Production ONLY. Every bundle's manifest must verify against the key in
- *   assets/keliver/portal_ed25519.pub; without a valid key nothing is fetched at
- *   all. (Under keliver/: an app's own asset of the same name would silently
- *   replace a library's, and this file is the host's whole trust.)
+ *   src/main/assets/keliver/portal_ed25519.pub, which the build checks and
+ *   compiles into BuildConfig.KELIVER_PUBLIC_KEY_HEX; the host reads that, never
+ *   the merged assets (an app's or another library's asset of the same name
+ *   would win the merge). Without a valid key nothing is fetched at all.
  *   There is no development path: use the tools bundle's generic development
  *   host for that (it refuses production).
  * - The bundle server and the API base are build settings (gradle.properties),
@@ -43,7 +44,11 @@
  * process. start() is idempotent: the first screen calls it, and the
  * Application may call it earlier to warm up. Screens only observe [state], so
  * a configuration change, or a second screen, never repeats the lookup or the
- * load.
+ * load. Once a bundle is loading, it is the one this process runs: a newer
+ * bundle is picked up on the next process start. A start that created nothing
+ * ("No bundle": the lookup failed and nothing was cached) is retried by the
+ * next screen to call start(). A load that fails shows "Bundle did not load"
+ * until the next process start (falling back to the last good bundle is W5).
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -91,7 +96,10 @@ import okio.ByteString.Companion.decodeHex
 
 internal const val TAG = "KeliverHost"
 private const val PREFS = "keliver-host"
-private const val LAST_GOOD_MANIFEST = "lastGoodManifestUrl"
+/** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
+private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
+/** One Zipline cache per key, and one rollback floor and last-good URL with it. */
+private fun cacheNameFor(publicKeyHex: String) = "keliver-production-${publicKeyHex.lowercase().take(16)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
 private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
 /** The stored floor; a value of the wrong type (only tampering writes one) reads as unreadable, i.e. refuse all. */
@@ -106,8 +114,10 @@ private fun SharedPreferences.installId(): String =
     ?: java.util.UUID.randomUUID().toString().let { if (edit().putString(INSTALL_ID, it).commit()) it else "unstored" }
 
 /**
- * What a host is built with. [fromBuild] reads this module's build settings
- * (via BuildConfig) and its assets/keliver/portal_ed25519.pub.
+ * What a host is built with. [fromBuild] reads this module's build settings and
+ * its checked key, both from BuildConfig: use it. A config built by hand skips
+ * the build's checks of the key and of https:// in release builds; the key is
+ * still decided before anything is fetched.
  * [hostVersion] is what index `minHostVersion`/`maxHostVersion` gates compare
  * with: by default the app's versionCode.
  */
@@ -121,9 +131,7 @@ class KeliverConfig(
   companion object {
     fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
       bundleServer = BuildConfig.KELIVER_BUNDLE_SERVER,
-      publicKeyHex = runCatching {
-        context.assets.open("keliver/portal_ed25519.pub").bufferedReader().use { it.readText() }
-      }.getOrNull(),
+      publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       channel = BuildConfig.KELIVER_CHANNEL,
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },
     )
@@ -140,6 +148,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val context = context.applicationContext
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private val started = AtomicBoolean(false)
+  private val loaded = AtomicBoolean(false)
   private val mutableState = MutableStateFlow<KeliverHostState>(KeliverHostState.Message("Loading", "Looking up the latest bundle…"))
 
   /** What screens show; they only observe it. */
@@ -172,8 +181,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // tries the network, and throws if that fails; a cache shared across a key
     // change would hold a manifest the new key cannot verify, and no bundle
     // would load, online or not. The old key's cache stays on disk, unused.
-    val cacheName = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
-    claim(cacheName)
+    // (Claimed in create(), so a second host for this key fails there.)
+    val cacheName = cacheNameFor(trust.publicKeyHex)
 
     val okhttp = OkHttpClient()
     val server = config.bundleServer.toHttpUrlOrNull()
@@ -193,7 +202,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // Set once a bundle has loaded from the network, so it says Zipline's cache
     // holds one. Only a saved URL on the CURRENT bundle server's origin counts;
     // after an update that moved the server, the old one is ignored.
-    val lastGood = prefs.getString(LAST_GOOD_MANIFEST, null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
+    val lastGood = prefs.getString(lastGoodKey(cacheName), null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
     // Read when each manifest arrives, not once here: a restart after a crash
     // must see a floor raised since this host started.
     val floor = { prefs.floor(cacheName) }
@@ -220,7 +229,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)
         startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor))
       }
-      else -> mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
+      else -> {
+        mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
+        // Nothing was created, so the next screen to start() may look again.
+        started.set(false)
+      }
     }
   }
 
@@ -343,7 +356,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // Raise the rollback floor to the sequence that just ran: Zipline verified
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
-        onLoaded = { url -> prefs.edit().putString(LAST_GOOD_MANIFEST, url).apply() },
+        onSuccess = { loaded.set(true) },
+        onLoaded = { url -> prefs.edit().putString(lastGoodKey(cacheName), url).apply() },
         onSequence = { sequence ->
           val floor = prefs.floor(cacheName)
           if (sequence > floor) {
@@ -351,6 +365,12 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             // floor write lost to a kill would let the previous sequence run again.
             prefs.edit().putLong(floorKey(cacheName), sequence).commit()
             Log.d(TAG, "rollback floor raised: $floor -> $sequence")
+          }
+        },
+        // Before any code ran, a failed load would leave the screen blank; say so instead.
+        onFailed = { reason ->
+          scope.launch {
+            if (!loaded.get()) mutableState.value = KeliverHostState.Message("Bundle did not load", reason.take(300))
           }
         },
       ),
@@ -369,9 +389,15 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       check(claimed.add(cacheName)) { "a KeliverHost for $cacheName already exists in this process: create one, in your Application" }
     }
 
-    /** Builds this process's host. Call once, from the app's Application; then [start] it, or let the first screen. */
-    fun create(context: Context, config: KeliverConfig = KeliverConfig.fromBuild(context)): KeliverHost =
-      KeliverHost(context, config)
+    /**
+     * Builds this process's host. Call once, from the app's Application; then
+     * [start] it, or let the first screen. A second host for the same key
+     * throws here.
+     */
+    fun create(context: Context, config: KeliverConfig = KeliverConfig.fromBuild(context)): KeliverHost {
+      (decideProductionTrust(config.publicKeyHex) as? ProductionTrust.Verified)?.let { claim(cacheNameFor(it.publicKeyHex)) }
+      return KeliverHost(context, config)
+    }
   }
 }
 
@@ -393,27 +419,33 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
 }
 
 private class LoggingEventListenerFactory(
+  private val onSuccess: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
+  private val onFailed: (String) -> Unit,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onLoaded, onSequence)
+    LoggingEventListener(manifestUrl, onSuccess, onLoaded, onSequence, onFailed)
   override fun close() {}
 }
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
+  private val onSuccess: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
+  private val onFailed: (String) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
     Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
+    onSuccess()
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
+    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error")
   }
   override fun uncaughtException(exception: Throwable) {
     Log.e(TAG, "uncaughtException: ${exception.message}", exception)

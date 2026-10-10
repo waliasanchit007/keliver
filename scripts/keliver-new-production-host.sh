@@ -31,7 +31,7 @@
 #                      same Kotlin as the standalone host. DIR is that app's
 #                      root (it has a settings.gradle). Nothing of the existing
 #                      app is edited: this prints the lines to add. Your app
-#                      supplies the plugins: Kotlin 2.2.x with its Compose
+#                      supplies the plugins: Kotlin 2.2.0 with its Compose
 #                      plugin and app.cash.zipline 1.22.0.
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
 #                      found by keliver-store-path.sh. The key is copied into
@@ -100,7 +100,7 @@ if $EMBED; then
   [ -z "$APPLICATION_ID" ] || fail "--application-id is for the standalone host; an embedded host is a library in YOUR app."
   [[ "$MODULE" =~ ^[A-Za-z][A-Za-z0-9_-]{0,63}$ ]] || fail "--module must be a plain module name (got '$MODULE')."
   [ -d "$INTO" ] || fail "--into $INTO is not a directory."
-  INTO="$(cd "$INTO" && pwd -P)"
+  INTO="$(CDPATH= cd -- "$INTO" && pwd -P)"
   [ -f "$INTO/settings.gradle" ] || [ -f "$INTO/settings.gradle.kts" ] \
     || fail "$INTO has no settings.gradle(.kts): --into must be the existing app's Gradle root."
   TARGET="$INTO/$MODULE"
@@ -266,7 +266,7 @@ if $EMBED; then
   found(){ grep -rqsE "$1" "$INTO"/settings.gradle* "$INTO"/build.gradle* "$INTO"/gradle/libs.versions.toml 2>/dev/null; }
   found 'app\.cash\.zipline' || echo "warning: no app.cash.zipline plugin found in $INTO's settings, build or version catalog: the library needs it (1.22.0 for Kotlin 2.2.0)." >&2
   found 'kotlin\.plugin\.compose|plugin-compose|compose-compiler' || echo "warning: no Kotlin Compose compiler plugin found in $INTO's build: the library needs org.jetbrains.kotlin.plugin.compose." >&2
-  found '2\.2\.[0-9]' || echo "warning: no Kotlin 2.2.x found in $INTO's build: Zipline 1.22.0's compiler plugin needs Kotlin 2.2.0." >&2
+  found '2\.2\.0([^0-9]|$)' || echo "warning: no Kotlin 2.2.0 found in $INTO's build: Zipline 1.22.0's compiler plugin needs Kotlin 2.2.0." >&2
   echo "created $MODULE/ in $INTO — this app's Keliver host, as a library module"
   echo "  package          $PACKAGE"
   echo "  bundle server    $BUNDLE_SERVER"

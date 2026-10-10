@@ -196,8 +196,8 @@ L="$EX/keliver-host"; LK="$L/src/main/kotlin/com/example/demo/host"
 [ "$rc" = 0 ] && [ -d "$L" ] && ok "--embed wrote $EX/keliver-host (exit 0)" || bad "--embed failed: rc=$rc $(printf '%s' "$out" | tail -3 | tr '\n' ' ')"
 printf '%s' "$out" | grep -q "include ':keliver-host'" && printf '%s' "$out" | grep -q "implementation project(':keliver-host')" \
   && printf '%s' "$out" | grep -q "KeliverHost.create(this)" && ok "--embed prints the include, the dependency and the Application line" || bad "--embed's next steps"
-printf '%s' "$out" | grep -q "warning: no app.cash.zipline plugin" && printf '%s' "$out" | grep -q "warning: no Kotlin 2.2.x" \
-  && ok "--embed warns that the existing build declares no Zipline plugin and no Kotlin 2.2.x" || bad "--embed did not warn about the missing plugins"
+printf '%s' "$out" | grep -q "warning: no app.cash.zipline plugin" && printf '%s' "$out" | grep -q "warning: no Kotlin 2.2.0" \
+  && ok "--embed warns that the existing build declares no Zipline plugin and no Kotlin 2.2.0" || bad "--embed did not warn about the missing plugins"
 [ "$(cat "$EX/settings.gradle")" = "$(printf "pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\nrootProject.name = 'existing'\ninclude ':app'")" ] \
   && ok "--embed edited none of the existing app's files" || bad "--embed changed the existing settings.gradle"
 grep -q "id 'com.android.library'" "$L/build.gradle" && ! grep -q "applicationId\|version '" "$L/build.gradle" \
@@ -206,7 +206,13 @@ grep -q "id 'com.android.library'" "$L/build.gradle" && ! grep -q "applicationId
 grep -q '^keliver.bundleServer=http://10.0.2.2:8077$' "$L/keliver.properties" && grep -q '^keliver.channel=beta$' "$L/keliver.properties" \
   && ok "the settings are in keliver.properties (a subproject's gradle.properties is not read)" || bad "keliver.properties"
 cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$L/src/main/assets/keliver/portal_ed25519.pub") \
-  && ok "the key is under assets/keliver/ (an app asset cannot shadow it)" || bad "the embedded module's key"
+  && ok "the key is the module's src/main/assets/keliver/portal_ed25519.pub" || bad "the embedded module's key"
+grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyHex" "$L/build.gradle" && grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyHex" "$H/build.gradle" \
+  && grep -q 'publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX' "$LK/KeliverHost.kt" && ! grep -q 'assets.open' "$LK/KeliverHost.kt" \
+  && ok "the host trusts the checked key compiled into BuildConfig, never the merged assets (another asset of that name cannot replace it)" \
+  || bad "the host still reads its key from the merged assets"
+grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q '^    claim(cacheName)' "$LK/KeliverHost.kt" \
+  && ok "a second host for the same key fails in create(), not later in start()" || bad "the per-key claim is not in create()"
 [ ! -e "$LK/HostApp.kt" ] && [ ! -e "$LK/MainActivity.kt" ] && ok "no app shell (HostApp, MainActivity) in the library" || bad "the library carries the app shell"
 same=1; for f in KeliverHost.kt KeliverScreen.kt BundleIndex.kt ProductionTrust.kt AndroidSqlHost.kt OkHttpHostHttp.kt GuestContract.kt; do
   cmp -s "$LK/$f" "$H/src/main/kotlin/com/example/demo/host/$f" || { same=0; bad "$f differs between the library and the standalone host"; }

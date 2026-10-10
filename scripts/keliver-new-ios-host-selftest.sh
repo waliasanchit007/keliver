@@ -205,8 +205,12 @@ embed_refuses "a bad module name" "plain directory name" --embed --into "$EX" --
 embed_refuses "--into without --embed" "only for --embed" --into "$EX" --bundle-server "$SERVER" --public-key-file "$KEY"
 mkdir -p "$DISP/clash/Clash.xcodeproj"; printf 'PRODUCT_NAME = KeliverHost;\n' > "$DISP/clash/Clash.xcodeproj/project.pbxproj"
 out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$DISP/clash" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
-[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "names a product or module KeliverHost" && [ ! -e "$DISP/clash/keliver-host-ios" ] \
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "names a product, module or target KeliverHost" && [ ! -e "$DISP/clash/keliver-host-ios" ] \
   && ok "--embed refuses a project whose product is named KeliverHost (the framework's module)" || bad "--embed KeliverHost clash: rc=$rc"
+mkdir -p "$DISP/clash2/Clash.xcodeproj"; printf '\t\t\tname = KeliverHost;\n\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";\n' > "$DISP/clash2/Clash.xcodeproj/project.pbxproj"
+out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$DISP/clash2" --bundle-server "$SERVER" --public-key-file "$KEY" 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q "target KeliverHost" && [ ! -e "$DISP/clash2/keliver-host-ios" ] \
+  && ok "--embed refuses a target named KeliverHost (PRODUCT_NAME = \$(TARGET_NAME))" || bad "--embed KeliverHost target clash: rc=$rc"
 out="$( cd "$APP" && "$SCAFFOLD" --embed --into "$EX" --bundle-server "https://bundles.example.com" --channel beta 2>&1 )"; rc=$?
 L="$EX/keliver-host-ios"; LK="$L/src/iosMain/kotlin/com/example/demo/host"
 [ "$rc" = 0 ] && [ -d "$L" ] && ok "--embed wrote $EX/keliver-host-ios (exit 0)" || bad "--embed failed: rc=$rc $(printf '%s' "$out" | tail -3 | tr '\n' ' ')"

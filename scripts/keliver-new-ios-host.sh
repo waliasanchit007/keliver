@@ -98,11 +98,13 @@ if $EMBED; then
   [ -z "$APPLICATION_ID" ] || fail "--bundle-id is for the standalone host; an embedded host is a framework in YOUR app."
   [[ "$MODULE" =~ ^[A-Za-z][A-Za-z0-9_-]{0,63}$ ]] || fail "--module must be a plain directory name (got '$MODULE')."
   [ -d "$INTO" ] || fail "--into $INTO is not a directory."
-  INTO="$(cd "$INTO" && pwd -P)"
+  INTO="$(CDPATH= cd -- "$INTO" && pwd -P)"
   # The framework's module is KeliverHost; an app module of that name makes Swift
   # ignore `import KeliverHost` (measured).
-  if grep -rqsiE 'PRODUCT_(NAME|MODULE_NAME) = "?KeliverHost"?;' --include=project.pbxproj "$INTO" 2>/dev/null; then
-    fail "an Xcode project under $INTO names a product or module KeliverHost, the framework's module name; rename it first."
+  # (A target named KeliverHost counts too: PRODUCT_NAME defaults to $(TARGET_NAME).)
+  if grep -rqsiE '(PRODUCT_(NAME|MODULE_NAME)|^[[:space:]]*name) = "?KeliverHost"?;' --include=project.pbxproj \
+       --exclude-dir=Pods --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=build "$INTO" 2>/dev/null; then
+    fail "an Xcode project under $INTO names a product, module or target KeliverHost, the framework's module name; rename it first."
   fi
   TARGET="$INTO/$MODULE"
 else

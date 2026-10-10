@@ -68,7 +68,13 @@ def checkReleaseUrls = tasks.register('checkReleaseUrls') {
       throw new GradleException("A release build needs https:// servers; HostConfig.kt has http:// in ${plain.join(', ')}.")
     }
     if (!infoPlist.isFile()) {
-      logger.warn("checkReleaseUrls: no Info.plist at ${infoPlist} to check for App Transport Security exceptions")
+      // Under Xcode (INFOPLIST_FILE set) or in the standalone host (iosApp/), the
+      // file must be there. Only an embedded framework built outside Xcode (an
+      // XCFramework) has no Info.plist of its own to check.
+      if (System.getenv('INFOPLIST_FILE') || file('iosApp').isDirectory()) {
+        throw new GradleException("checkReleaseUrls: no Info.plist at ${infoPlist}, so App Transport Security exceptions cannot be checked.")
+      }
+      logger.warn("checkReleaseUrls: no Info.plist at ${infoPlist} to check for App Transport Security exceptions (not under Xcode)")
       return
     }
     def exceptions = ['NSExceptionAllowsInsecureHTTPLoads', 'NSAllowsArbitraryLoads', 'NSAllowsLocalNetworking']

@@ -275,10 +275,12 @@ grep -q "verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P5: ver
 grep -qE "codeLoadFailed.*(signature|verif)" "$C" && ok "P5: the foreign-signed bundle was refused on its signature" \
   || bad "P5: no signature refusal: $(grep -E 'codeLoad' "$C" | head -2 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$C" && bad "P5: something loaded" || ok "P5: no code loaded"
-# On its own this is weak: a refused load leaves the screen blank. The console
-# lines above (a signature refusal, no codeLoadSuccess) are the proof.
+# The console lines above (a signature refusal, no codeLoadSuccess) are the
+# proof; the screen says the same.
 reads P5-foreign "Foreign build" && bad "P5: 'Foreign build' is on the screen" \
-  || ok "P5: 'Foreign build' is not on the screen (it reads $(grep -c . "$EV/P5-foreign.ocr.txt") line(s): blank but for the status bar)"
+  || ok "P5: 'Foreign build' is not on the screen"
+reads P5-foreign "Bundle did not load" && ok "P5: the host says the bundle did not load (not a blank screen)" \
+  || bad "P5: no 'Bundle did not load': $(tr '\n' '|' < "$EV/P5-foreign.ocr.txt" | cut -c1-200)"
 portal_down "$FAPP"
 
 # --- P6 -------------------------------------------------------------------------

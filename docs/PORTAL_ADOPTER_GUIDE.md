@@ -302,9 +302,10 @@ same host Kotlin as `host-android/`. Then, in your app:
   it;
 - your app's `build.gradle`: `implementation project(':keliver-host')`;
 - your `Application`: `val keliver by lazy { KeliverHost.create(this) }`. Make
-  one host per process: a second `create()` for the same key fails;
+  one host per process: a second `create()` for the same key throws;
 - a screen: `KeliverScreen(keliver, Modifier.fillMaxSize())` in Compose, or
-  `KeliverView(context).apply { host = keliver }` in a View layout.
+  `KeliverView(context).apply { host = keliver }` in a View layout (in a
+  `ComponentActivity` or a `Fragment`).
 
 The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
 them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.
@@ -330,8 +331,9 @@ Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
 your `App`'s `init` starts the lookup early.
 
 On both platforms, every Keliver screen in the process shares one lookup and
-one load: navigating natively or rotating doesn't load again. If a bundle
-doesn't verify, no guest screen is shown and your native screens keep working.
+one load: navigating natively or rotating doesn't load again, and a newer
+bundle is picked up on the next process start. If a bundle doesn't verify, the
+Keliver screen says "Bundle did not load" and your native screens keep working.
 `DEVICE_HOST.md` §4 has the details and the limits. The main limit is on
 Android: the module compiles with your app's Kotlin, and only 2.2.0 works. On
 iOS the framework builds with its own Gradle and Kotlin, but an app that

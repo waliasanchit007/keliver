@@ -32,7 +32,10 @@
  * Lifecycle (W2): `Keliver` is the host, one per process. It looks up and loads
  * once (start() is idempotent); every view controller it makes only observes
  * its state, so a second screen, or a screen shown again, never repeats the
- * lookup or the load.
+ * lookup or the load. Once a bundle is loading, it is the one this process
+ * runs: a newer bundle is picked up on the next process start. A start that
+ * created nothing ("No bundle") is retried by the next screen; a load that
+ * fails shows "Bundle did not load" until the next process start.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -83,15 +86,19 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString.Companion.decodeHex
 import platform.Foundation.NSBundle
+import platform.Foundation.NSThread
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIViewController
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 private const val TAG = "KeliverHost"
-private const val LAST_GOOD_MANIFEST = "keliver.lastGoodManifestUrl"
-/** One Zipline cache per key, and one rollback floor per key with it. */
+/** One Zipline cache per key, and one rollback floor and last-good URL per key with it. */
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
+/** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
+private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestUrl-${cacheName(trust)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
 private fun floorKey(trust: ProductionTrust.Verified) = "keliver.highestSequence-${cacheName(trust)}"
 /** This install's random id, for staged rollouts (W4.5): made once, kept here, never sent anywhere. */
@@ -107,7 +114,8 @@ private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 private sealed interface HostState {
   data object Loading : HostState
-  data class Message(val title: String, val text: String) : HostState
+  /** [retry]: nothing was created, so the next start() may look again. */
+  data class Message(val title: String, val text: String, val retry: Boolean = false) : HostState
   data class Running(val app: TreehouseApp<PortalPresenter>) : HostState
 }
 
@@ -117,7 +125,8 @@ private sealed interface HostState {
  */
 public object Keliver {
   private val state = MutableStateFlow<HostState>(HostState.Loading)
-  private var started = false
+  private var started = false // read and written on the main thread only
+  private var loaded = false
 
   /** One image loader for every screen. */
   internal val imageLoader: ImageLoader by lazy {
@@ -126,11 +135,27 @@ public object Keliver {
       .build()
   }
 
-  /** Looks up and loads the bundle, once per process; later calls do nothing. Call from the main thread. */
+  /** Looks up and loads the bundle, once per process; later calls do nothing. From any thread: it runs on the main one. */
   public fun start() {
+    if (!NSThread.isMainThread) {
+      dispatch_async(dispatch_get_main_queue()) { start() }
+      return
+    }
     if (started) return
     started = true
-    appScope.launch { state.value = startHost() }
+    appScope.launch {
+      val s = startHost()
+      state.value = s
+      if (s is HostState.Message && s.retry) started = false
+    }
+  }
+
+  /** Called on the main thread when a code load succeeded. */
+  internal fun codeLoaded() { loaded = true }
+
+  /** Called on the main thread when a code load failed: before any code ran, say so instead of a blank screen. */
+  internal fun codeLoadFailed(reason: String) {
+    if (!loaded) state.value = HostState.Message("Bundle did not load", reason.take(300))
   }
 
   /**
@@ -181,7 +206,7 @@ private suspend fun startHost(): HostState {
     if (apiBase != null) add(dev.keliver.capabilities.HOST_HTTP_CAPABILITY)
   }
   // Set once a bundle has loaded from the network; only on the CURRENT server's origin.
-  val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(LAST_GOOD_MANIFEST)?.takeIf { server.owns(it) }
+  val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(lastGoodKey(trust))?.takeIf { server.owns(it) }
   // Read when each manifest arrives, not once here: a restart after a crash must
   // see a floor raised since the host started.
   val floor = { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust)) }
@@ -196,7 +221,7 @@ private suspend fun startHost(): HostState {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
       HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase))
     }
-    else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.")
+    else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.", retry = true)
   }
 }
 
@@ -306,7 +331,9 @@ private fun createApp(
     // Raise the rollback floor to the sequence that just ran: Zipline verified this
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
-      onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = LAST_GOOD_MANIFEST) },
+      onSuccess = { appScope.launch { Keliver.codeLoaded() } },
+      onFailed = { reason -> appScope.launch { Keliver.codeLoadFailed(reason) } },
+      onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = lastGoodKey(trust)) },
       onSequence = { sequence ->
         val defaults = NSUserDefaults.standardUserDefaults
         val current = defaults.integerForKey(floorKey(trust))
@@ -334,27 +361,34 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
 }
 
 private class LoggingEventListenerFactory(
+  private val onSuccess: () -> Unit,
+  private val onFailed: (String) -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onLoaded, onSequence)
+    LoggingEventListener(manifestUrl, onSuccess, onFailed, onLoaded, onSequence)
   override fun close() {}
 }
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
+  private val onSuccess: () -> Unit,
+  private val onFailed: (String) -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
     log("codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
+    onSuccess()
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
   }
-  override fun codeLoadFailed(exception: Exception, startValue: Any?) =
+  override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     log("codeLoadFailed: ${exception.message}")
+    onFailed(exception.message ?: exception::class.simpleName ?: "unknown error")
+  }
   override fun uncaughtException(exception: Throwable) =
     log("uncaughtException: ${exception.message}")
 }

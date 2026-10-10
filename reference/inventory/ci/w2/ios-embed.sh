@@ -5,7 +5,8 @@
 #   I1  one screen holds the native views AND the guest's screen
 #   I2  that screen is a signed load from the static server (this app's key)
 #   I4  the host's rollback floor is stored, in the existing app's own defaults
-#   I5  trusting another app's key: nothing loads, the native views stay
+#   I5  trusting another app's key: the host looks v7 up, verifies with that
+#       key, refuses the load and says so; the native views stay
 # (There is no tap driver for the simulator here, so native navigation, I3 in
 # the plan, is not exercised on iOS; Android's X4 covers it.)
 echo "--- W2: the host framework embedded in an existing SwiftUI app"
@@ -60,8 +61,14 @@ w2_build "$EV/w2-embed-foreign-xcodebuild.log" && xcrun simctl install "$UDID" "
 launch W2-embed-foreign
 C="$EV/W2-embed-foreign.console.txt"
 grep -q "codeLoadSuccess" "$C" && bad "I5: code loaded under a key that did not sign it" || ok "I5: nothing loaded under another key"
-reads W2-embed-foreign "Native header" && ! reads W2-embed-foreign Attic \
-  && ok "I5: the native header is still shown, without the guest's screen" || bad "I5: $(tr '\n' '|' < "$EV/W2-embed-foreign.ocr.txt" | cut -c1-200)"
+# Not just "nothing loaded" (a dead server would pass that): the host trusted the
+# other key, looked v7 up, and the load failed verification.
+grep -q "KeliverHost: verifying manifests with portal-ed25519 $(printf '%s' "$FPUB" | tr 'A-F' 'a-f' | cut -c1-8)" "$C" \
+  && grep -q "loading https://localhost:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$C" && grep -q "codeLoadFailed" "$C" \
+  && ok "I5: the host trusted the other key, looked v7 up and refused it (codeLoadFailed)" \
+  || bad "I5: $(grep -E 'KeliverHost|codeLoad' "$C" | head -4 | tr '\n' ' ')"
+reads W2-embed-foreign "Native header" && ! reads W2-embed-foreign Attic && reads W2-embed-foreign "Bundle did not load" \
+  && ok "I5: the native header is still shown, and the Keliver view says the bundle did not load" || bad "I5: $(tr '\n' '|' < "$EV/W2-embed-foreign.ocr.txt" | cut -c1-200)"
 cp "$WORK/embed-hostconfig.saved" "$HC"
 xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1
 BID="$HOST_BID"

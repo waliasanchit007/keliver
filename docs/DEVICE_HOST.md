@@ -121,16 +121,16 @@ At runtime:
 | present and valid | the latest compatible bundle's manifest is verified against it; a bundle signed by any other key is refused |
 | missing or unusable | **refused** with a message; nothing is fetched (and the build would already have failed) |
 
-A production session is never downgraded to "load it anyway". On each launch
-the host asks the bundle server for the newest compatible bundle first (5 s to
+A production session is never downgraded to "load it anyway". When it starts
+(once per process; see "Lifecycle" below) the host asks the bundle server for the newest compatible bundle first (5 s to
 connect, 10 s in all) and follows a manifest URL only on that server's own
 origin:
 
 | lookup | what loads |
 |---|---|
 | answers | the newest compatible bundle, from the network; once it loads, Zipline pins it in its cache |
-| fails, and a bundle loaded before | the bundle pinned in Zipline's cache — the last one that loaded from the network — with its manifest verified again against the key; it stays in use until the next launch |
-| fails, nothing loaded before | a "No bundle" screen |
+| fails, and a bundle loaded before | the bundle pinned in Zipline's cache — the last one that loaded from the network — with its manifest verified again against the key; it stays in use until the process restarts |
+| fails, nothing loaded before | a "No bundle" screen; the next screen to open looks again |
 
 The cache is used only on that second row because of how Zipline 1.22 loads:
 it reads its cache *before* the network and only if the `FreshnessChecker`
@@ -145,7 +145,8 @@ the new key starts with an empty cache instead of one it cannot verify. That
 key-change path is reasoned from Zipline's source, not run on a device.
 
 When the lookup answers but the bundle itself then fails to download or verify,
-nothing falls back to the cache: that launch shows no bundle. With a static
+nothing falls back to the cache: the host shows "Bundle did not load" until
+the process restarts. With a static
 server, that includes:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
@@ -157,6 +158,12 @@ Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
 guide's "Publish from CI to a static server"). Falling back to the last good
 bundle after such a failure is planned (W5 in Keliver's
 `docs/DELIVERY_PLAN.md`).
+
+**Lifecycle.** The host looks up and loads once per process, and every screen
+shares that load: a rotation, a second screen or a screen opened again doesn't
+load anything. So a bundle published while the app runs is picked up on the
+next process start, not when a screen reopens. Only a start that created
+nothing (the "No bundle" row above) is retried, by the next screen that opens.
 
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
@@ -179,7 +186,7 @@ server can't make it run an older one.
 
 **One key, one sequence space.** The floor is per key, across every server and
 route the host has used. A newest entry below a host's floor shows **no
-bundle**: the same no-fallback rule as above. So never let sequences go
+bundle** ("Bundle did not load"): the same no-fallback rule as above. So never let sequences go
 backwards. Ways a publisher can do that by mistake:
 - an `--init` into an empty directory (it restarts at 1);
 - alternating relay publishing (sequence = relay version) and `keliver-publish`
@@ -252,7 +259,7 @@ It behaves like the Android host in §2:
 - **Startup.** The lookup runs first (10 s), then Zipline's verified cache when
   the lookup fails, then "No bundle". As on Android, a bundle that the lookup
   names but that then fails to load (a download error, or a `manifestSha256`
-  mismatch) shows "No bundle" even with a cached one; see §2. There is one
+  mismatch) shows "Bundle did not load" even with a cached one; see §2. There is one
   Zipline cache per key, and manifest URLs are followed only on the bundle
   server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
@@ -326,22 +333,26 @@ for byte):
 - **`KeliverHost`**: the host. It owns its coroutine scope, the one Treehouse
   app and Zipline, the SQL and HTTP hosts and the image loader, for the life
   of the process. Create it once, in your `Application`:
-  `KeliverHost.create(this)`, from `keliver.properties` and the key asset, or
-  `KeliverHost.create(this, KeliverConfig(...))`. A second host for the same
-  key fails loudly, because two loaders must never share a Zipline cache.
-  `start()` is idempotent: the first screen calls it, or call it at launch to
-  warm up. `state` is a `StateFlow` the screens observe.
+  `KeliverHost.create(this)`, from the module's build settings and checked
+  key. (`KeliverHost.create(this, KeliverConfig(...))` takes a configuration
+  built in code, which skips the build's checks of the key and of `https://`.)
+  A second `create()` for the same key throws, because two loaders must never
+  share a Zipline cache. `start()` is idempotent: the first screen calls it, or
+  call it at launch to warm up. `state` is a `StateFlow` the screens observe.
 - **`KeliverScreen(host, modifier)`**, a Composable, and **`KeliverView`**, an
   `AbstractComposeView` for View layouts (set its `host`). They only observe
   the host, so any number of them, recreated on every configuration change,
-  share the one lookup and the one load.
+  share the one lookup and the one load. `KeliverView` needs a lifecycle owner
+  in its window, like any Compose view: use it in a `ComponentActivity`
+  (`AppCompatActivity`) or a `Fragment`, not a plain `android.app.Activity`.
 - **Settings**: `keliver.properties` in the module (a subproject's
   `gradle.properties` is not read), each overridable with `-Pkeliver.<name>`.
   The host version that `minHostVersion`/`maxHostVersion` gates compare with is
   your app's `versionCode`, from `PackageManager`.
-- **The trust root**: `src/main/assets/keliver/portal_ed25519.pub`. It sits
-  under `keliver/` in both modes, because an app asset of the same name would
-  silently replace a library's.
+- **The trust root**: `src/main/assets/keliver/portal_ed25519.pub`, commit it.
+  The build checks it and compiles it into `BuildConfig`, and the host trusts
+  only that copy. It never reads the key from the APK's merged assets, where
+  your app's asset or another library's of the same name would win.
 - **The manifest** asks only for `INTERNET`. Everything application-level is
   yours: cleartext for an `http://` development server (debug only; a release
   build of the module refuses `http://`), the theme, and backups. The
@@ -374,12 +385,18 @@ plus `KeliverScreen.swift` and `EMBED.md`:
 - The scaffolder refuses an Xcode project that already names a product or
   module `KeliverHost`: Swift would then ignore `import KeliverHost`.
 
-**When a load fails**, the Keliver view shows no guest screen, and nothing
-else in your app is affected. A missing or invalid key shows the host's
-refusal message in that view, as in §2. A bundle that the lookup named but
-that then fails (another key's signature, a sha256 mismatch, a sequence below
-the floor) leaves the view blank: there is no message for it yet, and no
-fallback to the last good bundle (W5 in Keliver's `docs/DELIVERY_PLAN.md`).
+**When a load fails**, the Keliver view shows a message instead of the guest's
+screen, and nothing else in your app is affected:
+- a missing or invalid key: "Refusing to load";
+- the lookup failed and nothing is cached: "No bundle", retried by the next
+  Keliver screen that opens;
+- a bundle that the lookup named but that then fails (another key's signature,
+  a sha256 mismatch, a sequence below the floor): "Bundle did not load", until
+  the process restarts. There is no fallback to the last good bundle yet (W5
+  in Keliver's `docs/DELIVERY_PLAN.md`).
+
+A running process keeps the bundle it loaded; a newer one is picked up on the
+next process start (§2, "Lifecycle").
 
 **Measured** in Keliver's CI, on two plain apps standing in for an existing one
 (`reference/embed/android`, a View-based app, and `reference/embed/ios`, a
@@ -389,11 +406,13 @@ server fed by `keliver-publish`:
   guest inside the `KeliverView` (X1); a signed load (X2); taps inside the
   embedded screen (X3); native navigation and a rotation with one lookup and
   one load (X4); the floor stored in the app's own data (X5); another key's
-  bundle refused while the native views and the process stay (X6); an
+  bundle refused, the Keliver view saying so, while the native views and the
+  process stay (X6); an
   R8-minified release loading and rendering (X7);
 - iOS simulator: the native views and the guest's screen in one screenshot
   (I1); a signed load (I2); the floor stored in the app's defaults (I4);
-  another key's bundle refused while the native views stay (I5).
+  another key's bundle looked up, refused and reported in the Keliver view,
+  while the native views stay (I5).
 
 **Not measured:**
 - native navigation on iOS (no tap driver on the simulator CI);
