@@ -8,7 +8,8 @@
 #   S4  an edit, published as v2 by the CLI, reaches the host ("Warehouse")
 #   S5  checked against another app's public key, the CLI refuses this app's
 #       already-built bundle (--skip-build); nothing changes
-#   S6  an index whose sha256 isn't the manifest's: nothing loads
+#   S6  an index whose sha256 isn't the manifest's: that manifest is refused,
+#       and the host falls back to the cached last good bundle (W5, U2)
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
 #   S10 (W4.3) rollback done right: keliver-publish --republish 1 publishes v1's
 #       code again as v3, at sequence 3; the host (floor 2) runs it ("Depot")
@@ -22,6 +23,8 @@
 #       skipped, the host stays on v5
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
+#   S9c (W5) the lookup answers, but everything it offers is below the floor:
+#       the fall-back to the cached bundle is refused too, and the host says so
 #   S9b (W4.2) the same with the server up but failing the lookup: the network
 #       fallback to the last-good manifest is refused too
 # Signing here is the CI route: KELIVER_SIGNING_KEY_FILE names the key, and
@@ -134,12 +137,20 @@ python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); i["entries"][-
 launch prod "$EV/logcat-static-pin.txt"
 grep -q "manifest sha256 mismatch" "$EV/logcat-static-pin.txt" && ok "S6: the manifest was refused on its sha256" \
   || bad "S6: no sha256 refusal: $(grep -E 'codeLoad' "$EV/logcat-static-pin.txt" | head -2 | tr '\n' ' ')"
-grep -q "codeLoadSuccess" "$EV/logcat-static-pin.txt" && bad "S6: something loaded" || ok "S6: no code loaded"
+# W5 (U2): v2 ran before, so instead of nothing the host falls back to the
+# cached v2, verified again; nothing else loads.
+grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://10.0.2.2:8443/bundles/v2/" "$EV/logcat-static-pin.txt" \
+  && grep -q "codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$EV/logcat-static-pin.txt" \
+  && ! grep "codeLoadSuccess" "$EV/logcat-static-pin.txt" | grep -qv "sequence=2 source=cache" \
+  && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2, from the cache), and loaded nothing else" \
+  || bad "S6/U2: no fall-back: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-static-pin.txt" | tail -4 | tr '\n' ' ')"
+drive title Warehouse S6static; fold "S6/U2: the screen still shows Warehouse (v2, from the cache)" $?
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
 # S8 (W4.2): the floor rose when v2 ran; the server then offers v1 again, as the
 # newest entry (a replayed or rolled-back index). v1's manifest is validly
-# signed, but for sequence 1: the host refuses it on the network and runs nothing.
+# signed, but for sequence 1: the host refuses it on the network and does not
+# run it; it falls back to the cached v2 (W5).
 grep -q "$HOST_TAG: rollback floor raised: 1 -> 2" "$EV/logcat-static-v2.txt" \
   && ok "S8: running v2 raised the host's rollback floor from 1 to 2" || bad "S8: no floor raise logged at v2"
 python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); v1=[e for e in i["entries"] if e["version"]==1][0]; i["entries"].append(dict(v1, sequence=max(e["sequence"] for e in i["entries"])+1)); json.dump(i, open(p,"w"))' \
@@ -148,7 +159,12 @@ launch prod "$EV/logcat-static-rollback.txt"
 grep -q "rollback refused: sequence 1 is below 2" "$EV/logcat-static-rollback.txt" \
   && ok "S8: v1 offered again after v2: refused on its signed sequence (1 < 2)" \
   || bad "S8: no rollback refusal: $(grep -E "$HOST_TAG" "$EV/logcat-static-rollback.txt" | head -3 | tr '\n' ' ')"
-grep -q "codeLoadSuccess" "$EV/logcat-static-rollback.txt" && bad "S8: something loaded" || ok "S8: no code loaded"
+# W5: the refused v1 is not run; the host falls back to the cached v2.
+grep -q "falling back to the cached last good bundle" "$EV/logcat-static-rollback.txt" \
+  && ! grep "codeLoadSuccess" "$EV/logcat-static-rollback.txt" | grep -qv "sequence=2 source=cache" \
+  && grep -q "codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$EV/logcat-static-rollback.txt" \
+  && ok "S8: v1 did not run; the host fell back to the cached v2 (sequence 2, from the cache)" \
+  || bad "S8: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-static-rollback.txt" | tail -4 | tr '\n' ' ')"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
 # S10 (W4.3): rollback done right. v1's code goes out AGAIN as a new sequence:
@@ -292,3 +308,22 @@ grep -q "codeLoadSuccess" "$EV/logcat-static-fallback-floor.txt" && bad "S9b: so
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 mv "$W3/index.hidden" "$W3/site/bundles/index.json"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"
+
+# S9c (W5): the lookup answers, the floor still 9. Every listed bundle is below
+# it, so the newest is refused; the fall-back to the cached last good bundle is
+# refused on the cache and on its network fetch; the host says the bundle did
+# not load. (The fall-back never takes a bundle the floor refuses.)
+python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w3-server-s9c.log" &
+SERVE_PID=$!
+for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
+launch prod "$EV/logcat-static-fallback-refused.txt"
+F="$EV/logcat-static-fallback-refused.txt"
+grep -q "rollback refused: sequence [0-9]* is below 9" "$F" && grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle" "$F" \
+  && grep -q "cached bundle refused: rollback refused: sequence [0-9]* is below 9" "$F" \
+  && ok "S9c: the newest bundle refused below the floor, then the fall-back's cached bundle refused too" \
+  || bad "S9c: $(grep -E "$HOST_TAG|codeLoad" "$F" | tail -5 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$F" && bad "S9c: something loaded" || ok "S9c: no code loaded"
+adb -s "$SERIAL" shell rm -f /sdcard/s9c.xml; adb -s "$SERIAL" shell uiautomator dump /sdcard/s9c.xml > /dev/null 2>&1
+adb -s "$SERIAL" shell cat /sdcard/s9c.xml > "$EV/s9c.xml"
+grep -q 'text="Bundle did not load"' "$EV/s9c.xml" && ok "S9c: the screen says 'Bundle did not load'" || bad "S9c: no 'Bundle did not load' on screen"
+kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""

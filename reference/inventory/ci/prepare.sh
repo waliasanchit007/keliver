@@ -185,6 +185,13 @@ bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway 
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
   && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
 { echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
+# W5 (U1): the same host, built to check for updates when it comes back to the
+# foreground (keliver.updates=on-resume; only that build setting differs).
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 -Pkeliver.updates=on-resume ) \
+  > "$EV/w5-host-build.log" 2>&1 \
+  && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-onresume.apk" \
+  && ok "W5: the production host, built with keliver.updates=on-resume" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
+echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 
 # --- 7. W2: the host embedded in an "existing" app (reference/embed/android) ---
 # The same scaffolder, with --embed, writes keliver-host/ into a plain View-based

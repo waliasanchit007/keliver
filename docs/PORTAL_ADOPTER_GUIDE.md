@@ -333,7 +333,8 @@ your `App`'s `init` starts the lookup early.
 On both platforms, every Keliver screen in the process shares one lookup and
 one load: navigating natively or rotating doesn't load again, and a newer
 bundle is picked up on the next process start. If a bundle doesn't verify, the
-Keliver screen says "Bundle did not load" and your native screens keep working.
+host falls back to the last good one it ran; with none, the Keliver screen says
+"Bundle did not load". Your native screens keep working either way.
 `DEVICE_HOST.md` §4 has the details and the limits. The main limit is on
 Android: the module compiles with your app's Kotlin, and only 2.2.0 works. On
 iOS the framework builds with its own Gradle and Kotlin, but an app that
@@ -497,18 +498,16 @@ Caching:
   as you like. That is why a `v<N>/` must never be overwritten.
 - Don't let the CDN cache a 404 for long.
 
-**When the bundle a host is told about fails to load, the host shows no
-bundle**, even though a verified cached one is on the device. This happens
-when:
+**When the bundle a host is told about fails to load, the host falls back to
+the last good bundle**, the verified one in its cache, if one has run before.
+A new install has none and shows "Bundle did not load". This happens when:
 - an index entry's `manifestSha256` doesn't match the manifest served (a
   `v<N>/` overwritten, or a stale CDN copy);
 - a `v<N>/` is missing because the index was uploaded first;
 - any download of that bundle fails.
 
-Zipline doesn't fall back to its cache after a network load fails. The host
-starts from the cache only when the lookup itself fails. The upload rules above
-prevent the first two cases. Falling back to the last good bundle is planned
-(W5 in `docs/DELIVERY_PLAN.md`).
+The upload rules above prevent the first two cases. Hosts scaffolded before
+the fall-back (tools 0.3.7 and earlier) have none: they show no bundle instead.
 
 The index is not signed. Every manifest is, and hosts verify every manifest.
 Each index entry records its manifest's sha256, and the host checks it. That
