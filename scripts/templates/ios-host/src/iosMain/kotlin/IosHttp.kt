@@ -107,6 +107,15 @@ private class NoRedirects : NSObject(), NSURLSessionTaskDelegateProtocol {
   ) = completionHandler(null)
 }
 
+/** For host reports (W6): ephemeral, and no redirect is followed (a 3xx is the answer). */
+internal val reportSession: NSURLSession by lazy {
+  NSURLSession.sessionWithConfiguration(
+    configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration,
+    delegate = NoRedirects(),
+    delegateQueue = null,
+  )
+}
+
 /**
  * The HostHttp capability: guests send a RELATIVE request, and it goes to YOUR
  * API base over real HTTP, and nowhere else. The rules match the Android

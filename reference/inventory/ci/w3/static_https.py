@@ -25,12 +25,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         pass
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
         if self.path != "/report" or not 0 < length <= 4096:
             self.send_response(404 if self.path != "/report" else 413)
             self.end_headers()
             return
-        body = self.rfile.read(length).decode("utf-8", "replace").replace("\n", " ")
+        body = self.rfile.read(length).decode("utf-8", "replace").replace("\r", " ").replace("\n", " ")
         out.write(f"REPORT {body}\n")
         self.send_response(204)
         self.end_headers()

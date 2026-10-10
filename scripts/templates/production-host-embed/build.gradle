@@ -42,8 +42,11 @@ if (!(bundleServer ==~ serverUrl)) {
 if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
   throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
 }
-if (reportUrl && !(reportUrl ==~ apiUrl)) {
-  throw new GradleException("keliver.reportUrl must be empty or an http:// or https:// URL (got '$reportUrl').")
+// The report URL: no user@, query or fragment (a secret there would sit in the
+// APK and in every request line), as for the iOS host's REPORT_URL.
+def reportUrlPattern = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
+if (reportUrl && !(reportUrl ==~ reportUrlPattern)) {
+  throw new GradleException("keliver.reportUrl must be empty or an http:// or https:// URL with no user@, query or fragment (got '$reportUrl').")
 }
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")

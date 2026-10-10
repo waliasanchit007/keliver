@@ -126,7 +126,10 @@ private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
 /** The stored floor; a value of the wrong type (only tampering writes one) reads as unreadable, i.e. refuse all. */
 private fun SharedPreferences.floor(cacheName: String): Long =
   runCatching { getLong(floorKey(cacheName), 0L) }.getOrDefault(Long.MAX_VALUE)
-/** This install's random id, for staged rollouts (W4.5): made once, kept here, never sent anywhere. */
+/**
+ * This install's random id, for staged rollouts (W4.5): made once, kept here.
+ * It leaves the device only in reports, and only when a report URL is set (W6).
+ */
 private const val INSTALL_ID = "installId"
 private fun SharedPreferences.installId(): String =
   runCatching { getString(INSTALL_ID, null) }.getOrNull()
@@ -188,8 +191,11 @@ sealed interface KeliverUpdateCheck {
 /**
  * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
  * update-applied, update-failed, not-loaded, no-bundle or refused; [source] is
- * network or cache (or null); [detail] is a short reason. [installId] is the
- * random id made on the device for rollouts: nothing else identifies it.
+ * network or cache (or null). [reason] is a fixed category (sha256-mismatch,
+ * below-floor, signature, lookup-failed, network, config, other); [detail] is
+ * the full message, for the app only: it can hold addresses, paths or URLs, so
+ * [toJson], what a report URL receives, leaves it out. [installId] is the
+ * random id made on the device for rollouts.
  */
 data class KeliverReport(
   val installId: String,
@@ -198,6 +204,7 @@ data class KeliverReport(
   val sequence: Long?,
   val source: String?,
   val outcome: String,
+  val reason: String,
   val detail: String,
   val platform: String = "android",
 ) {
@@ -208,7 +215,7 @@ data class KeliverReport(
     put("sequence", sequence)
     put("source", source)
     put("outcome", outcome)
-    put("detail", detail)
+    put("reason", reason)
     put("platform", platform)
   }.toString()
 }
@@ -256,10 +263,15 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** Every outcome, for the app's analytics or crash keys (W6); the newest is replayed to a new collector. */
   val reports: SharedFlow<KeliverReport> = mutableReports.asSharedFlow()
 
-  /** For reports only: no timeouts that could hold anything up, nothing retried. */
+  /** For reports only: 10 s in all, nothing retried, no redirect followed. */
   private val reportClient by lazy {
-    OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false).build()
+    OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false)
+      .followRedirects(false).followSslRedirects(false).build()
   }
+  // Read once, off the per-report path.
+  private val reportInstallId by lazy { runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown") }
+  private val reportHostVersion by lazy { config.hostVersion ?: appVersionCode() }
+  private var reportedNoBundle = false
 
   /**
    * Hands [outcome] to [reports] and, with a report URL, POSTs it there. Best
@@ -267,18 +279,22 @@ class KeliverHost private constructor(context: Context, private val config: Keli
    * anything else.
    */
   private fun report(outcome: String, sequence: Long? = null, source: String? = null, detail: String = "") {
+    // A retried start reports its first "no bundle" only.
+    if (outcome == "no-bundle") { if (reportedNoBundle) return; reportedNoBundle = true }
     val r = KeliverReport(
-      installId = runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown"),
+      installId = reportInstallId,
       channel = config.channel,
-      hostVersion = config.hostVersion ?: appVersionCode(),
+      hostVersion = reportHostVersion,
       sequence = sequence,
       source = source,
       outcome = outcome,
+      reason = reportReason(outcome, detail),
       detail = detail.take(300),
     )
     mutableReports.tryEmit(r)
     val url = config.reportUrl ?: return
-    Log.d(TAG, "report: $outcome sequence=${sequence ?: "none"} to $url")
+    // Not the URL: it is the app's, and may carry what logcat should not.
+    Log.d(TAG, "report: $outcome sequence=${sequence ?: "none"} reason=${r.reason.ifEmpty { "-" }}")
     runCatching {
       val request = Request.Builder().url(url).post(r.toJson().toRequestBody("application/json".toMediaType())).build()
       reportClient.newCall(request).enqueue(object : Callback {

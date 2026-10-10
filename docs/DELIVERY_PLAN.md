@@ -695,7 +695,7 @@ independent review, Status.
 #### W6 design (draft 2026-10-11)
 
 **What a host reports.** One small record per outcome, JSON:
-`{"installId", "channel", "hostVersion", "sequence", "source", "outcome", "detail", "platform"}`.
+`{"installId", "channel", "hostVersion", "sequence", "source", "outcome", "reason", "platform"}`; `reason` is a fixed category, and the free-text `detail` stays with the app (W6 review).
 - **Outcomes:** `loaded` (the start's bundle ran), `fell-back` (W5),
   `update-applied`, `update-failed`, `not-loaded` ("Bundle did not load"),
   `no-bundle`, `refused` (no valid key or server).
