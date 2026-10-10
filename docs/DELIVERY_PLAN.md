@@ -625,6 +625,63 @@ The host exposes:
 *Done when:* unit tests plus one CI scenario (an update applied on resume)
 pass.
 
+#### W5 design (draft 2026-10-10; from Treehouse's and Zipline 1.22's source)
+
+**What the libraries allow.**
+- `TreehouseApp.restart()` builds a new `ZiplineLoader` on the SAME factory,
+  cache and HTTP client, and reads the spec's `manifestUrl` flow and
+  `freshnessChecker` again. So both an update and a fallback reuse the one app
+  and its one cache: no second loader on a cache (the W2 claim stays true).
+- `ZiplineLoader.load(flow)`: first `loadFromLocal` (the pinned cache, used
+  only if the freshness checker accepts it); if that loads, the flow ENDS and
+  later URLs are ignored. Otherwise each URL the flow emits is loaded from the
+  network: an unchanged manifest is skipped; a failure sends `Failure`, unpins
+  that manifest and leaves the running code alone; a success pins it, and
+  Treehouse swaps the code session in.
+
+**Host API (both platforms; Android `KeliverHost`, iOS `Keliver`).**
+- `currentBundle: StateFlow<KeliverBundle?>`: sequence, manifest URL, channel,
+  and whether it came from the network or the cache.
+- `checkForUpdate(): KeliverUpdateCheck`: runs the lookup now (same index,
+  channel, constraints and floor rules) and says `UpToDate`,
+  `Available(sequence)` or `Failed(reason)`. With the `IMMEDIATELY` apply mode
+  it also applies it.
+- `events: SharedFlow<KeliverUpdateEvent>`: `Downloaded`/`Applied(sequence)`,
+  `Failed(sequence, reason)`, `Refused(sequence, reason)` (the floor, a sha256
+  mismatch, a signature), `FellBack(toSequence)`.
+- `KeliverUpdatePolicy(checkOnResume, periodicMinutes, apply)`: `apply` is
+  `NEXT_LAUNCH` (the default: the next process start's lookup takes it, as
+  today) or `IMMEDIATELY`. On resume: Android `ProcessLifecycleOwner` is NOT
+  added (a new dependency); the standalone host's activity calls
+  `checkForUpdate()` in `onResume`, and an embedding app calls it where it
+  likes. iOS observes `UIApplicationWillEnterForegroundNotification`.
+
+**Applying.** The pinning HTTP client and the freshness checker become
+switchable (one object each, owned by the host). After a network start:
+point the pinning client at the new manifest and sha256, emit its URL; Zipline
+loads it while the old code runs; success swaps it in (floor raised as
+today), failure leaves the old one and emits `Failed`. After a cache start
+(the flow has ended): set the not-fresh checker, emit, `restart()`.
+
+**Fall back to the last good bundle.** When the start's network load fails
+before any code ran and a last-good URL exists for this key: switch to
+`AcceptCachedBundle` (the floor still holds), point the pinning client at the
+last-good URL with no sha256, `restart()`. Zipline verifies the cached
+manifest against the key again. Only if that also fails: "Bundle did not
+load". Open question for CI: whether Zipline's unpin of the failed manifest
+can remove files the last-good one shares (it pins per file).
+
+**CI scenarios.** U1 (both platforms): v_n running; publish v_{n+1}; the app
+goes to the background and back; the screen shows the new title with the same
+process, `Applied` logged, floor raised. U2: the lookup names a bundle whose
+`manifestSha256` is wrong (S6) after a good load: the host falls back to the
+cached last good, which renders. Unit tests: the policy and event logic, the
+switchable pinning client.
+
+**Steps.** W5.1 the switchable client and checker plus the fallback (U2);
+W5.2 `checkForUpdate`/`currentBundle`/events/policy (U1); W5.3 docs, an
+independent review, Status.
+
 ### W6 — Visibility (G9)
 
 - **A reporter interface** on the host. Events: install id, bundle sequence,
