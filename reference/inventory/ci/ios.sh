@@ -24,7 +24,8 @@
 # fallback to /bundles/latest on a 404.
 #
 # Then W3/W4, the static route with no relay (ci/w3/ios-static.sh): S2,
-# S4-S12 against a static HTTPS server fed only by keliver-publish.
+# S4-S15 against a static HTTPS server fed only by keliver-publish; and W2, the
+# host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
 #
 # The simulator has no view-hierarchy dump. What a screen shows is read from
 # its screenshot by macOS Vision (ci/ocr.swift), and every screenshot is kept.
@@ -189,6 +190,20 @@ launch(){
   else
     bad "$label: the screenshot could not be read ($(head -1 "$EV/$label.ocr.err"))"
   fi
+  # Only the status bar (one line, the clock): the first frame had not rendered
+  # yet (seen once on a cold CI simulator, after codeLoadSuccess: run
+  # 37935781374). Look once more, 15 s later (the app brought forward); a
+  # screen that stays blank still fails. Both shots are kept, and the retry is
+  # logged so a slow render stays visible.
+  if [ "$(grep -c . "$EV/$label.ocr.txt" 2>/dev/null)" -le 1 ]; then
+    echo "    $label: only the status bar on screen; looking again in 15 s" | tee -a "$EV/ios.retries"
+    xcrun simctl launch "$UDID" "$BID" >/dev/null 2>&1 || true   # forward if still running; started again if not
+    sleep 15
+    mv "$EV/$label.png" "$EV/$label.first.png"; mv "$EV/$label.ocr.txt" "$EV/$label.first.ocr.txt"
+    xcrun simctl io "$UDID" screenshot "$EV/$label.png" > /dev/null 2>&1
+    swift "$HERE/ocr.swift" "$EV/$label.png" > "$EV/$label.ocr.txt" 2>>"$EV/$label.ocr.err"
+    printf '    %s (again): %s\n' "$label" "$(head -3 "$EV/$label.ocr.txt" | tr '\n' '|')"
+  fi
 }
 reads(){ grep -qx "$2" "$EV/$1.ocr.txt"; }   # the screen has a line exactly equal to $2
 
@@ -260,10 +275,12 @@ grep -q "verifying manifests with portal-ed25519 ${PUB:0:8}" "$C" && ok "P5: ver
 grep -qE "codeLoadFailed.*(signature|verif)" "$C" && ok "P5: the foreign-signed bundle was refused on its signature" \
   || bad "P5: no signature refusal: $(grep -E 'codeLoad' "$C" | head -2 | tr '\n' ' ')"
 grep -q "codeLoadSuccess" "$C" && bad "P5: something loaded" || ok "P5: no code loaded"
-# On its own this is weak: a refused load leaves the screen blank. The console
-# lines above (a signature refusal, no codeLoadSuccess) are the proof.
+# The console lines above (a signature refusal, no codeLoadSuccess) are the
+# proof; the screen says the same.
 reads P5-foreign "Foreign build" && bad "P5: 'Foreign build' is on the screen" \
-  || ok "P5: 'Foreign build' is not on the screen (it reads $(grep -c . "$EV/P5-foreign.ocr.txt") line(s): blank but for the status bar)"
+  || ok "P5: 'Foreign build' is not on the screen"
+reads P5-foreign "Bundle did not load" && ok "P5: the host says the bundle did not load (not a blank screen)" \
+  || bad "P5: no 'Bundle did not load': $(tr '\n' '|' < "$EV/P5-foreign.ocr.txt" | cut -c1-200)"
 portal_down "$FAPP"
 
 # --- P6 -------------------------------------------------------------------------
@@ -284,6 +301,8 @@ reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || b
 
 # shellcheck source=w3/ios-static.sh
 . "$HERE/w3/ios-static.sh"
+# shellcheck source=w2/ios-embed.sh
+. "$HERE/w2/ios-embed.sh"
 
 for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
 echo "ios: passed $pass, failed $fail"

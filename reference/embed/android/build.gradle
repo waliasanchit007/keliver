@@ -1,0 +1,8 @@
+plugins {
+  id 'com.android.application' version '8.12.0' apply false
+  id 'org.jetbrains.kotlin.android' version '2.2.0' apply false
+  // KELIVER EMBED: the library module's plugins, at the versions it needs.
+  id 'com.android.library' version '8.12.0' apply false
+  id 'org.jetbrains.kotlin.plugin.compose' version '2.2.0' apply false
+  id 'app.cash.zipline' version '1.22.0' apply false
+}

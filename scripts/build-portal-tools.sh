@@ -60,10 +60,12 @@ cp scripts/keliver-new-screen.sh scripts/keliver-new-component.sh scripts/kelive
 # the scaffolder. It finds them at bin/../templates.
 mkdir -p "$STAGE/templates"
 cp -R scripts/templates/production-host "$STAGE/templates/"
+cp -R scripts/templates/production-host-embed "$STAGE/templates/"
 # keliver-new-publish-target.sh's signing block, appended to an app's build.gradle.
 cp -R scripts/templates/publish "$STAGE/templates/"
 # keliver-new-ios-host.sh's iOS host: a KMP framework build plus an Xcode app shell.
 cp -R scripts/templates/ios-host "$STAGE/templates/"
+cp -R scripts/templates/ios-host-embed "$STAGE/templates/"
 # The store contract has to travel with the tools. keliver-record-http.sh asks
 # keliver-store-path.sh where this app's store is; without both, an adopter's
 # recording client looks for its token in a directory that stopped being the

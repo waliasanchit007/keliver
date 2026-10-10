@@ -90,6 +90,21 @@ grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v1/manifest.zipline.js
   && ok "S2: signed v1 loaded through bundles/index.json over HTTPS" \
   || { bad "S2: v1 did not load from the static server"; grep "$HOST_TAG" "$EV/logcat-static-v1.txt" | head -8; }
 drive title Depot S2static; fold "S2: v1 shows Depot" $?
+
+# R1 (W2.1): a rotation recreates the activity, not the host. The activity logs
+# each creation (the positive control: it must be two), and the lookup and the
+# load must still have happened exactly once in this process.
+adb -s "$SERIAL" shell settings put system accelerometer_rotation 0
+adb -s "$SERIAL" shell settings put system user_rotation 1; sleep 8
+adb -s "$SERIAL" shell settings put system user_rotation 0; sleep 8
+adb -s "$SERIAL" logcat -d > "$EV/logcat-static-rotate.txt"
+created="$(grep -c "$HOST_TAG: screen created" "$EV/logcat-static-rotate.txt")"
+loads="$(grep -c "$HOST_TAG: loading https://" "$EV/logcat-static-rotate.txt")"
+codeloads="$(grep -c "codeLoadSuccess" "$EV/logcat-static-rotate.txt")"
+[ "$created" -ge 2 ] && ok "R1: the rotation recreated the activity ($created creations)" || bad "R1: the activity was not recreated ($created creations): no rotation happened"
+[ "$loads" = 1 ] && [ "$codeloads" = 1 ] && ok "R1: one lookup and one code load across the rotation (the host is the Application's)" \
+  || bad "R1: $loads lookups and $codeloads code loads across the rotation"
+drive title Depot R1static; fold "R1: after the rotation the screen still reads Depot" $?
 grep -q "^GET /bundles/index.json 200" "$EV/w3-server.log" && grep -q "^GET /bundles/v1/manifest.zipline.json 200" "$EV/w3-server.log" \
   && ok "S2: the static server served index.json and v1's manifest" || bad "S2: the server log lacks the index or the manifest"
 

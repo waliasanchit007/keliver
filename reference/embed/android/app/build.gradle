@@ -1,0 +1,35 @@
+plugins {
+  id 'com.android.application'
+  id 'org.jetbrains.kotlin.android'
+}
+
+android {
+  namespace 'com.example.existing'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'com.example.existing'
+    minSdk 23
+    targetSdk 35
+    versionCode 1
+    versionName '1.0'
+  }
+  buildTypes {
+    // KELIVER EMBED (development only): the CI bundle server is https, so no
+    // cleartext is needed; an http:// development server would need it here.
+    debug { }
+    // W2.7: the app shrunk by R8, as a store build would be (signed with the
+    // debug key here, for the emulator only).
+    release {
+      minifyEnabled true
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+      signingConfig signingConfigs.debug
+    }
+  }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+kotlin { jvmToolchain(17) }
+
+dependencies {
+  implementation 'androidx.core:core-ktx:1.16.0'
+  implementation project(':keliver-host') // KELIVER EMBED
+}

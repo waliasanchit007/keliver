@@ -9,7 +9,8 @@
 #      relay is the published tools release's, which serves no
 #      bundles/index.json, so the host's fallback to /bundles/latest is shown.
 #   4. W3/W4, the static route with no relay (ci/w3/android-static.sh): S2,
-#      S4-S12 against a static HTTPS server fed only by keliver-publish
+#      S4-S15 against a static HTTPS server fed only by keliver-publish
+#   5. W2, the host embedded in an existing app (ci/w2/android-embed.sh): X1-X6
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -265,6 +266,8 @@ drive title Stockroom P7; fold "P7: Stockroom offline" $?
 
 # shellcheck source=w3/android-static.sh
 . "$HERE/w3/android-static.sh"
+# shellcheck source=w2/android-embed.sh
+. "$HERE/w2/android-embed.sh"
 
 echo "device: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

@@ -127,6 +127,113 @@ The scaffolders gain `--embed`, writing a library module instead of an app.
 *Done when:* a plain "existing" Android app and a plain SwiftUI app each show a
 signed Keliver screen next to native screens, on CI.
 
+#### W2 design (draft 2026-10-09; from a read-only survey of the templates)
+
+**One set of host sources for both modes.** Today all host logic is inside the
+app shell: Android `MainActivity.kt` (trust, lookup, floor, Zipline load,
+rendering, via `setContent` and `lifecycleScope`), and iOS
+`MainViewController.kt` (`startHost()` runs in each view controller).
+- **Android.** Split into:
+  - `KeliverHost.kt`: the host object. It owns one scope, one
+    `TreehouseAppFactory`/`TreehouseApp`, one SQL host, one HTTP host and one
+    `ImageLoader`. `start()` is idempotent; `state: StateFlow` is
+    Loading / Message / Running.
+  - `KeliverScreen.kt`: a `@Composable KeliverScreen(host, modifier)`.
+  - `KeliverView.kt`: an `AbstractComposeView`, for apps built on Views.
+
+  The scaffolded app gets a `HostApp : Application` holding the host, and a
+  ~5-line `MainActivity`. These files are byte-identical between the app and
+  `--embed`; the self-tests check that with `cmp`.
+- **iOS.** A `public object Keliver { start(); viewController() }` (not named
+  `KeliverHost`, which is the framework's module name), plus a Swift
+  `KeliverScreen: UIViewControllerRepresentable`. `MainViewController()`
+  becomes an alias.
+- **Process-wide state.** One host per process per key. A second `create()`
+  for the same cache fails loudly; it never opens a second loader on the same
+  Zipline cache. A configuration change no longer reloads anything.
+- **W4 state keeps its keys.** The floor, install id and last-good URL keep
+  their store and names in both modes (the harnesses write them directly).
+  The host version comes from `PackageManager` (`longVersionCode`), because a
+  library's `BuildConfig` has no `VERSION_CODE`.
+- **Trust root.** The key asset moves to `assets/keliver/portal_ed25519.pub`
+  in both modes. An app asset with the same name would silently override a
+  library's, and that file is the trust root.
+
+**`--embed`.**
+- **Android:** `keliver-new-production-host.sh --embed --into <existing-root>
+  [--module keliver-host]` writes a `com.android.library` module.
+  - Plugins are requested without versions, so the adopter's apply.
+  - Configuration goes in `keliver.properties` (a subproject's
+    `gradle.properties` is not read), with `-Pkeliver.*` overrides. App mode
+    uses the same file.
+  - The manifest has INTERNET only; there are consumer R8 rules.
+  - It prints the `include` / `implementation` / `Application` lines and edits
+    no adopter file.
+  - It refuses: no settings file, the module dir exists, `--application-id`.
+  - It warns: no Zipline or compose plugin, or no Kotlin 2.2.x, found in the
+    adopter's build.
+- **iOS:** `keliver-new-ios-host.sh --embed --into <dir>` writes
+  `keliver-host-ios/`: the Gradle build, `src/iosMain`, a wrapper copy,
+  `KeliverScreen.swift` and `EMBED.md`.
+  - `EMBED.md` documents the Xcode edits: the run-script phase,
+    `ENABLE_USER_SCRIPT_SANDBOXING=NO`, `-lsqlite3`, and
+    `CADisableMinimumFrameDurationOnPhone`.
+  - `checkReleaseUrls` reads the Info.plist from Xcode's environment.
+  - It refuses a project that already names a product or module KeliverHost.
+  - An XCFramework route is documented, not proven.
+
+**CI proof.**
+- **Fixtures:** `reference/embed/{android,ios}`. Each is a plain app plus an
+  `embed.diff` with exactly the documented edits, like the inventory app's
+  `hand-edits.diff`.
+- **Android** (reusing W3's static HTTPS server):
+  - X1: one UI dump has a native view and the guest screen, within the
+    `KeliverView`'s bounds;
+  - X2: a signed load;
+  - X3: interaction inside the embedded view;
+  - X4: native navigation, rotation and a second screen leave exactly one
+    lookup and one load;
+  - X5: the floor is stored;
+  - X6: with a foreign key the Keliver slot refuses, while native UI and the
+    process survive.
+- **iOS** (OCR):
+  - I1: a native `Text` and the guest screen in one screenshot;
+  - I2: a signed load;
+  - I3: a native push and pop, still one load;
+  - I4: the floor is stored;
+  - I5: with a foreign key, native UI survives.
+
+**Steps:**
+1. **W2.1** The Android refactor, with no behaviour change. The device run is
+   unchanged (S2–S15), plus a rotation row showing a single lookup.
+2. **W2.2** The iOS refactor. `ios.sh` is unchanged.
+3. **W2.3** Android `--embed`, its self-test and the fixture build.
+4. **W2.4** Android device proof X1–X6.
+5. **W2.5** iOS `--embed`, its self-test and the SwiftUI fixture build.
+6. **W2.6** iOS simulator proof I1–I5.
+7. **W2.7** R8: the fixture `assembleRelease` with minify, then X1–X2.
+8. **W2.8** Docs, an independent review, and Status. It ships in a tools
+   release only with the owner's approval.
+
+**Risks:**
+- **Biggest: the compiler plugin.** The embedded module is compiled by the
+  adopter's Kotlin, and the `app.cash.zipline` compiler plugin pins it
+  (Zipline 1.22.0 ↔ Kotlin 2.2.0). An app on another Kotlin can't embed the
+  source module. The way out is a prebuilt, published host artifact, which is
+  a Maven publication and needs the owner's approval. That is recorded as the
+  follow-up, not done in W2.
+- **Version coupling.** AGP, Compose (androidx 1.8.x) and OkHttp/Coil can be
+  coupled to or force-upgraded by the adopter's own versions. CI proves one
+  combination.
+- **The theme.** It is Material 1, so the adopter's Material 3 theme does not
+  reach Keliver screens.
+- **iOS.** An app that already embeds a Kotlin framework gets two Kotlin
+  runtimes.
+- **Unverified.** Several `TreehouseContent`s on one `TreehouseApp` (X4 tests
+  it).
+- **Backups.** The library can't force `allowBackup=false`: document
+  `dataExtractionRules`.
+
 ### W3 — Headless publishing and static distribution (G3, G4)
 
 1. **A `keliver publish` CLI** that runs without the relay: compile, verify the
@@ -518,6 +625,63 @@ The host exposes:
 *Done when:* unit tests plus one CI scenario (an update applied on resume)
 pass.
 
+#### W5 design (draft 2026-10-10; from Treehouse's and Zipline 1.22's source)
+
+**What the libraries allow.**
+- `TreehouseApp.restart()` builds a new `ZiplineLoader` on the SAME factory,
+  cache and HTTP client, and reads the spec's `manifestUrl` flow and
+  `freshnessChecker` again. So both an update and a fallback reuse the one app
+  and its one cache: no second loader on a cache (the W2 claim stays true).
+- `ZiplineLoader.load(flow)`: first `loadFromLocal` (the pinned cache, used
+  only if the freshness checker accepts it); if that loads, the flow ENDS and
+  later URLs are ignored. Otherwise each URL the flow emits is loaded from the
+  network: an unchanged manifest is skipped; a failure sends `Failure`, unpins
+  that manifest and leaves the running code alone; a success pins it, and
+  Treehouse swaps the code session in.
+
+**Host API (both platforms; Android `KeliverHost`, iOS `Keliver`).**
+- `currentBundle: StateFlow<KeliverBundle?>`: sequence, manifest URL, channel,
+  and whether it came from the network or the cache.
+- `checkForUpdate(): KeliverUpdateCheck`: runs the lookup now (same index,
+  channel, constraints and floor rules) and says `UpToDate`,
+  `Available(sequence)` or `Failed(reason)`. With the `IMMEDIATELY` apply mode
+  it also applies it.
+- `events: SharedFlow<KeliverUpdateEvent>`: `Downloaded`/`Applied(sequence)`,
+  `Failed(sequence, reason)`, `Refused(sequence, reason)` (the floor, a sha256
+  mismatch, a signature), `FellBack(toSequence)`.
+- `KeliverUpdatePolicy(checkOnResume, periodicMinutes, apply)`: `apply` is
+  `NEXT_LAUNCH` (the default: the next process start's lookup takes it, as
+  today) or `IMMEDIATELY`. On resume: Android `ProcessLifecycleOwner` is NOT
+  added (a new dependency); the standalone host's activity calls
+  `checkForUpdate()` in `onResume`, and an embedding app calls it where it
+  likes. iOS observes `UIApplicationWillEnterForegroundNotification`.
+
+**Applying.** The pinning HTTP client and the freshness checker become
+switchable (one object each, owned by the host). After a network start:
+point the pinning client at the new manifest and sha256, emit its URL; Zipline
+loads it while the old code runs; success swaps it in (floor raised as
+today), failure leaves the old one and emits `Failed`. After a cache start
+(the flow has ended): set the not-fresh checker, emit, `restart()`.
+
+**Fall back to the last good bundle.** When the start's network load fails
+before any code ran and a last-good URL exists for this key: switch to
+`AcceptCachedBundle` (the floor still holds), point the pinning client at the
+last-good URL with no sha256, `restart()`. Zipline verifies the cached
+manifest against the key again. Only if that also fails: "Bundle did not
+load". Open question for CI: whether Zipline's unpin of the failed manifest
+can remove files the last-good one shares (it pins per file).
+
+**CI scenarios.** U1 (both platforms): v_n running; publish v_{n+1}; the app
+goes to the background and back; the screen shows the new title with the same
+process, `Applied` logged, floor raised. U2: the lookup names a bundle whose
+`manifestSha256` is wrong (S6) after a good load: the host falls back to the
+cached last good, which renders. Unit tests: the policy and event logic, the
+switchable pinning client.
+
+**Steps.** W5.1 the switchable client and checker plus the fallback (U2);
+W5.2 `checkForUpdate`/`currentBundle`/events/policy (U1); W5.3 docs, an
+independent review, Status.
+
 ### W6 — Visibility (G9)
 
 - **A reporter interface** on the host. Events: install id, bundle sequence,
@@ -575,7 +739,10 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W4.5 rollout and host-version gates | **built 2026-10-09; independently reviewed, findings fixed** (`dfd3e2a7` + `e8c26c57`). Hosts understand `rollout` (bucket = sha256("<installId>:<sequence>")[0..4] mod 100; a random install id kept on the device, never sent; known-answer vectors checked against python) and `minHostVersion`/`maxHostVersion` (Android `versionCode`, iOS `CFBundleVersion`; unknown version skips gated entries). A rollout gates only sequences above the floor, so a halt keeps hosts that ran it. Publisher: `--rollout`, `--min-host-version`, `--max-host-version` on publish, republish and promote; `--set-rollout <sequence> --rollout <percent>` edits the index only, with no key. **The review found one blocking bug**: a republish or promotion could widen a copied host-version gate; now refused. Also fixed: `--set-rollout` on an unconstrained live entry (pre-W4.5 hosts would lose it; refused), a halt on beta that stable's twin entry undoes (warned), a republish copying a rollout whose buckets no longer apply (dropped). Device S13 (0%: not delivered), S14 (100%: delivered, floor 4 -> 5), S14b (halted: the host that ran it keeps it), S15 (`minHostVersion` 999 above host version 1: skipped). | PR #93 |
 | W4.3 CI, first push | **green 2026-10-09 at `42dfbcd3`** (before the reviews' fixes). `reference-app.yml` 37894671231: publish self-test 30/0, device 73/0 with S10 on Android. `ios-host.yml` 37894671308: self-test 50/0, `ios.sh` 67/0 with S10 on iOS. `portal-tools.yml` 37894675395: publish target 40/0 (`--build`, the real `keliverResign`), hosts 41/0, 36/0, 44/0 twice. | PR #93 |
 | W4.3 to W4.5 CI (after all three reviews) | **green 2026-10-09 at `e8c26c57`.** `reference-app.yml` 37902855439: prepare 18/0, publish self-test 40/0, device 98/0, with S8 to S15 on Android. `ios-host.yml` 37902855353: self-test 54/0, `ios.sh` 92/0, with S8 to S15 on iOS. `portal-tools.yml` 37902876551: publish target 41/0 (`--build`, the real `keliverResign`) and 25/0, the production-host scaffolder 45/0 and 40/0, the iOS host 48/0 twice, key permissions 63/0. (37902859854 was a dispatch with a mistyped commit, cancelled.) | PR #93 |
-| W2, W4–W8 | not started | — |
+| tools 0.3.8 candidate 1 (W3 + W4) | **verified 2026-10-09; NOT tagged, awaiting the owner's approval** (PR #94, `release/portal-tools-0.3.8`).<br>• **Identities:** source `c0e71108`; zip `7ea7f11d9fdebce84861cf9224d324c15d00451ac175d84f3cd51b683c43bc14` (90,532,260 bytes); APK `afa9dadd…`.<br>• **Build** 37932744136 (artifact `11617444772`), with the packaged `keliver-publish` self-test 40/0. **Device run** 37935499926: 19/0 and 28/0.<br>• **Local check:** hashes, `VERSION.json`, no key in the APK, the templates and scripts byte-identical, the packaged self-test 40/0 again.<br>• **`ios.sh` on the candidate zip:** run 1 91/1, with the one FAIL in the harness's P2 expectation (a 0.3.8 relay serves the index), fixed in `a60624f0`; run 2 **92/0** (P1–P7, S2–S15 with the zip's own `keliver-publish`).<br>• **Step 3:** clean.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. | PR #94 |
+| W2.1–W2.7 (embed) | **built 2026-10-09; green on CI at `f7ad8415`; the independent review is not done yet** (PR #95, stacked on #94).<br>• **Android:** `KeliverHost` (one per process, owned by an `Application`), `KeliverScreen`/`KeliverView`; `--embed` writes a library module with the same Kotlin, byte-identical (self-test 58/0). The key asset moves under `assets/keliver/`.<br>• **iOS:** a `Keliver` object; `--embed` writes the framework's Gradle build, `KeliverScreen.swift` and `EMBED.md` (self-test 67/0 on CI).<br>• **Fixtures:** `reference/embed/{android,ios}`, plain apps with only the documented edits.<br>• **CI** reference-app 37936654024: device **118/0**, with R1 (a rotation: one lookup, one load) and X1–X7 (native views and the guest on one screen; a signed load; interaction; native navigation and a rotation with one load; the floor stored; another key refused while the native app survives; the R8-minified release loading). ios-host 37936654047: `ios.sh` **102/0**, with I1, I2, I4 and I5.<br>• **Not covered:** no iOS tap driver, so native navigation is checked on Android only.<br>• **Observed once:** at `077c5818` iOS P2's screenshot was blank after a verified load (a late first render); `ios.sh` now re-reads a status-bar-only screen once (`0c47eedd`). | PR #95 |
+| W2.8 docs, review, fixes | **done 2026-10-10** (PR #95).<br>• **Docs** (`fd60bfd5`): the guide's "Embed in an existing app", `DEVICE_HOST.md` §4 (API, settings, trust root, backups, R8, failure behaviour, measured and not measured, limits), the tools README.<br>• **Independent review** (read-only): nothing blocking; five should-fix points, all fixed in `da5bc7e0`: (1) the trust key was read from merged assets, where an app's or another library's asset of that name wins; the build now compiles the checked key into `BuildConfig.KELIVER_PUBLIC_KEY_HEX` and the host reads only that; (2) `start()` ran once per process, so "No bundle" stuck; a start that created nothing is now retried by the next screen, and a failed load shows "Bundle did not load" instead of a blank view (both platforms); (3) a second host for one key failed later inside `start()` as an uncaught exception; the claim is now in `create()`; (4) iOS I5 proved only "nothing loaded"; it now requires the other key's verification line, the v7 lookup, `codeLoadFailed` and the message; (5) the last-good URL is kept per key. Nits fixed: iOS `start()` hops to the main thread; `checkReleaseUrls` fails on a missing Info.plist under Xcode; CDPATH-safe `--into`; the Kotlin warning wants 2.2.0 exactly; the clash check catches a target named KeliverHost; `KeliverView` needs a lifecycle owner (documented). Not changed: the runtime `KeliverConfig` stays public (documented: it skips the build's checks).<br>• **CI at `da5bc7e0`:** reference-app 38031453424: prepare 24/0, device **119/0** (R1, X1–X7, X6 now also sees "Bundle did not load"). ios-host 38031453435: self-test 68/0, `ios.sh` **104/0** (I1, I2, I4, I5 strengthened, P5 sees the message). **W2 is done**, apart from shipping it in a tools release (with approval). | PR #95 |
+| W5–W8 | not started | — |
 
 ## Next action
 
@@ -609,22 +776,28 @@ What was done for the candidate:
 - shipping it in tools 0.3.8 (a candidate, then the owner's approval);
 - the "W3 known, not done" items.
 
-**W4 is built** (W4.1 to W4.5, PR #93): each step independently reviewed,
-its findings fixed, and on CI on both platforms (see Status). The plan's W4
-"done when" (all of the above in the reference app's CI on Android and iOS)
-is met at `e8c26c57`.
+**W4 is built** (W4.1 to W4.5, PR #93), reviewed and green on both platforms.
 
 **Next:**
-- **Tools 0.3.8 (W3 + W4)** is ready for a candidate: build, device run, local
-  verification of the retained artifact, `ios.sh` on the candidate zip, the
-  step-3 workflow check. **Tag and publish only after the owner approves
-  0.3.8 explicitly.**
-- **W2** (embed in an existing app), the next workstream in the order. Then
-  W5 (update API, including the fall-back-to-last-good item) and W6.
-- Known, not done in W4: a reinstall or cleared data resets the floor and the
-  install id (and backups copy both); relay `/publish` has no republish,
-  channels or rollouts (the relay is the development route); W3's own "known,
-  not done" items.
+- **Owner's decision, 2026-10-10: the release is deferred** until more
+  development is done; the changes will then go out together. Candidate 1
+  (`c0e71108`, zip `7ea7f11d…`) stays untagged and will be superseded. The next
+  release is a new candidate with full verification (build, device run, local
+  check, `ios.sh` on the zip, step 3), still only with the owner's explicit
+  approval. Recommended scope: W3 + W4 + W2, cut once W2 is reviewed, not
+  waiting for W5 and W6. The version 0.3.8 is still free (no tag).
+- **Owner's decision, 2026-10-10: merge the PR stack next** (#81 → #95,
+  bottom-up), before W2's remaining work.
+- **W2 (PR #95): done 2026-10-10** (W2.8 docs, the independent review and its
+  fixes, CI green on both platforms at `da5bc7e0`; see Status).
+  - Recorded follow-up, not in W2: a prebuilt, published host artifact for
+    adopters on another Kotlin version. That is a Maven publication and needs
+    the owner's approval.
+- **Next release candidate (W3 + W4 + W2):** ready to cut; build and verify it
+  like candidate 1 (build, device run pinned by APK sha256, local check,
+  `ios.sh` on the zip, step 3), and tag only on the owner's explicit approval.
+- **Then W5** (update API, including falling back to the last good bundle),
+  **then W6.**
 
 ## Standing constraints (from the owner; they apply to every step)
 

@@ -51,20 +51,36 @@ def checkHostConfig = tasks.register('checkHostConfig') {
 }
 // A release framework refuses http://, and refuses an Info.plist that still
 // carries a cleartext exception (the scaffolder writes one for http:// servers,
-// for development).
-def infoPlist = file('iosApp/Info.plist')
+// for development). The Info.plist is the one Xcode is building
+// ($SRCROOT/$INFOPLIST_FILE, from the build phase's environment), so the check
+// also holds when this framework is embedded in another app's project; outside
+// Xcode it is iosApp/Info.plist when there is one.
+def infoPlistFile = { ->
+  def srcRoot = System.getenv('SRCROOT'), rel = System.getenv('INFOPLIST_FILE')
+  (srcRoot && rel) ? new File(rel.startsWith('/') ? rel : "$srcRoot/$rel") : file('iosApp/Info.plist')
+}
 def checkReleaseUrls = tasks.register('checkReleaseUrls') {
   inputs.file(hostConfig)
-  inputs.file(infoPlist)
   doLast {
+    def infoPlist = infoPlistFile()
     def plain = ['BUNDLE_SERVER', 'API_BASE_URL'].findAll { configValue(it)?.startsWith('http://') }
     if (plain) {
       throw new GradleException("A release build needs https:// servers; HostConfig.kt has http:// in ${plain.join(', ')}.")
     }
+    if (!infoPlist.isFile()) {
+      // Under Xcode (INFOPLIST_FILE set) or in the standalone host (iosApp/), the
+      // file must be there. Only an embedded framework built outside Xcode (an
+      // XCFramework) has no Info.plist of its own to check.
+      if (System.getenv('INFOPLIST_FILE') || file('iosApp').isDirectory()) {
+        throw new GradleException("checkReleaseUrls: no Info.plist at ${infoPlist}, so App Transport Security exceptions cannot be checked.")
+      }
+      logger.warn("checkReleaseUrls: no Info.plist at ${infoPlist} to check for App Transport Security exceptions (not under Xcode)")
+      return
+    }
     def exceptions = ['NSExceptionAllowsInsecureHTTPLoads', 'NSAllowsArbitraryLoads', 'NSAllowsLocalNetworking']
       .findAll { infoPlist.text.contains(it) }
     if (exceptions) {
-      throw new GradleException("A release build must not ship App Transport Security exceptions; iosApp/Info.plist has ${exceptions.join(', ')}. Remove its NSAppTransportSecurity block.")
+      throw new GradleException("A release build must not ship App Transport Security exceptions; ${infoPlist} has ${exceptions.join(', ')}. Remove its NSAppTransportSecurity block.")
     }
   }
 }
