@@ -1,0 +1,43 @@
+keliver checkout: <keliver-checkout> (b4ba6f219); host files from b5615637
+android sdk: ~/Library/Android/sdk (platforms: android-35 android-36 android-36.1 )
+=== variant A
+  the three host files are byte-identical to b5615637
+  dependency report: rc=0
+  every dependency resolved from the public repositories
+  assembleDebug: rc=1  BUILD FAILED in 1m 12s
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:35:33 Unresolved reference 'HostApi'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:36:33 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:133:16 Class '<anonymous>' is not abstract and does not implement abstract base class member:
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:133:43 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:138:7 'bindServices' overrides nothing. Potential signatures for overriding:
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:138:68 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:139:22 Unresolved reference 'HostApi'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:139:31 Argument type mismatch: actual type is 'String', but 'String' was expected.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:139:42 Argument type mismatch: actual type is 'RealHostApi', but 'ZiplineService' was expected.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:147:46 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:147:72 Cannot infer type for this parameter. Specify it explicitly.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:147:72 Not enough information to infer type argument for 'T'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:150:23 Cannot infer type for this parameter. Specify it explicitly.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:152:14 Argument type mismatch: actual type is '<anonymous>', but 'TreehouseApp.Spec<uninferred A (of fun <A : AppService> create)>' was expected.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:165:13 Class '<anonymous>' is not abstract and does not implement abstract member:
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:165:45 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:166:15 'get' overrides nothing. Potential signatures for overriding:
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:166:37 Unresolved reference 'PortalPresenter'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:166:66 No value passed for parameter 'block'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:169:11 Cannot infer type for this parameter. Specify it explicitly.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:172:29 Argument type mismatch: actual type is '<anonymous>', but 'TreehouseContentSource<uninferred A (of fun <A : AppService> TreehouseContent)>' was expected.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:182:63 Unresolved reference 'HostApi'.
+    e: app/src/main/kotlin/dev/keliver/portaldevice/host/MainActivity.kt:183:3 'httpCall' overrides nothing.
+    * What went wrong:
+    Execution failed for task ':app:compileDebugKotlin'.
+    > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+       > Compilation error. See log for more details
+    
+=== variant B
+  the three host files are byte-identical to b5615637
+  dependency report: rc=0
+  every dependency resolved from the public repositories
+  assembleDebug: rc=0  BUILD SUCCESSFUL in 13s
+  APK: app-debug.apk, 20741058 bytes
+  it embeds no key (none was asked for)
+exit=0
