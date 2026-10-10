@@ -17,6 +17,7 @@ plugins {
 
 def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
 def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').trim()
+def reportUrl = providers.gradleProperty('keliver.reportUrl').getOrElse('').trim()
 def channel = providers.gradleProperty('keliver.channel').getOrElse('stable').trim()
 def updates = providers.gradleProperty('keliver.updates').getOrElse('next-launch').trim()
 // ASCII URL characters only; the bundle server takes no query or fragment,
@@ -30,13 +31,19 @@ if (!(bundleServer ==~ serverUrl)) {
 if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
   throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
 }
+// The report URL: no user@, query or fragment (a secret there would sit in the
+// APK and in every request line), as for the iOS host's REPORT_URL.
+def reportUrlPattern = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
+if (reportUrl && !(reportUrl ==~ reportUrlPattern)) {
+  throw new GradleException("keliver.reportUrl must be empty or an http:// or https:// URL with no user@, query or fragment (got '$reportUrl').")
+}
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
 }
 if (!(updates in ['next-launch', 'on-resume'])) {
   throw new GradleException("keliver.updates must be next-launch or on-resume (got '$updates').")
 }
-def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
+def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:') || reportUrl.startsWith('http:')
 
 // The embedded key, checked by checkPortalKey (below) and compiled into
 // BuildConfig.KELIVER_PUBLIC_KEY_HEX: the host reads it from there, never from
@@ -60,6 +67,7 @@ android {
     manifestPlaceholders = [usesCleartextTraffic: 'false']
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
+    buildConfigField 'String', 'KELIVER_REPORT_URL', "\"${reportUrl}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
     buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeyHex ==~ /[0-9a-f]{64}/ ? portalKeyHex : ''}\""
@@ -95,7 +103,7 @@ def checkReleaseUrls = tasks.register('checkReleaseUrls') {
   doLast {
     if (cleartext) {
       throw new GradleException("A release build needs https:// servers; keliver.bundleServer is " +
-        "'$bundleServer' and keliver.apiBaseUrl is '$apiBaseUrl'. Use an http:// server only for debug builds.")
+        "'$bundleServer', keliver.apiBaseUrl is '$apiBaseUrl' and keliver.reportUrl is '$reportUrl'. Use an http:// server only for debug builds.")
     }
   }
 }

@@ -68,6 +68,18 @@ internal fun getRequest(url: String, timeoutSeconds: Double): NSURLRequest =
     timeoutInterval = timeoutSeconds,
   )
 
+/** A JSON POST: a host report (W6). */
+internal fun postJsonRequest(url: String, json: String, timeoutSeconds: Double): NSURLRequest =
+  NSMutableURLRequest(
+    uRL = NSURL(string = url) ?: throw IOException("not a URL: $url"),
+    cachePolicy = NSURLRequestReloadIgnoringLocalCacheData,
+    timeoutInterval = timeoutSeconds,
+  ).apply {
+    setHTTPMethod("POST")
+    setValue("application/json", forHTTPHeaderField = "Content-Type")
+    setHTTPBody((json as NSString).dataUsingEncoding(NSUTF8StringEncoding))
+  }
+
 /** Zipline's downloads (manifests and modules), over NSURLSession. */
 internal class NSURLSessionZiplineHttpClient(
   private val session: NSURLSession = NSURLSession.sharedSession,
@@ -93,6 +105,15 @@ private class NoRedirects : NSObject(), NSURLSessionTaskDelegateProtocol {
     newRequest: NSURLRequest,
     completionHandler: (NSURLRequest?) -> Unit,
   ) = completionHandler(null)
+}
+
+/** For host reports (W6): ephemeral, and no redirect is followed (a 3xx is the answer). */
+internal val reportSession: NSURLSession by lazy {
+  NSURLSession.sessionWithConfiguration(
+    configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration,
+    delegate = NoRedirects(),
+    delegateQueue = null,
+  )
 }
 
 /**

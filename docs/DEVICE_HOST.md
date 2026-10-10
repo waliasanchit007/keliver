@@ -194,6 +194,67 @@ that opens.
   manifest again, held to the floor and to the index's sha256 when the lookup
   gave one for that URL.
 
+**Reports** (both hosts, W6). Every outcome becomes a small record:
+- **Fields:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
+  (`network` or `cache`), `outcome`, `reason` and `platform`.
+- **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
+  `not-loaded`, `no-bundle` or `refused`.
+- **Reasons**, a fixed set: `sha256-mismatch`, `below-floor`, `signature`,
+  `lookup-failed`, `network`, `config` or `other`.
+
+Where the records go:
+- **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
+  replays the newest to a new collector, and iOS `Keliver.shared.onReport`.
+  - Here the record also carries `detail`, the full error message. It can hold
+    addresses, file paths or URLs, so it is never sent anywhere by the host.
+  - Forward what you need to your own analytics.
+- **To a URL**, only if you set one: `keliver.reportUrl` (Android) or
+  `REPORT_URL` (iOS `HostConfig.kt`).
+  - The host POSTs each record there as JSON with exactly the eight fields
+    above.
+  - It is best effort: one try, no redirect followed, never blocking or failing
+    a load. Android allows 10 s in all; iOS gives up after 10 s without data.
+  - The URL may not carry `user@`, a query or a fragment, and it is never
+    logged. A release build refuses `http://`.
+  - On iOS, use `https://`: the scaffolded App Transport Security exceptions
+    cover only the bundle and API hosts.
+  - `no-bundle` is sent once per process.
+  - Empty, the default, sends nothing anywhere.
+
+**What a report URL receives about a user:**
+- `installId`, the random id made on the device for rollouts. It is a
+  persistent pseudonymous identifier, which privacy law such as the GDPR may
+  treat as personal data.
+- Like any request, the sender's IP address and the HTTP user agent.
+
+Nothing else identifies the user or the device. Say so in your privacy notice
+if you set a report URL.
+
+The running sequence makes a useful crash key. Use the bundle that is running,
+not every report (an `update-failed` report names the bundle that did not
+run):
+
+```kotlin
+// Android, in your Application, after creating the host:
+appScope.launch {
+  keliver.currentBundle.collect { b ->
+    Firebase.crashlytics.setCustomKey("keliver_sequence", b?.sequence ?: -1)  // or Sentry.setTag(...)
+  }
+}
+```
+
+```swift
+// iOS: after each report, the bundle that is running now
+Keliver.shared.onReport = { _ in
+  let seq = Keliver.shared.currentBundle()?.sequence ?? -1
+  Crashlytics.crashlytics().setCustomValue(seq, forKey: "keliver_sequence")  // or SentrySDK.configureScope
+}
+```
+
+**Measured:** both platforms' CI checks that the reports reach a URL (V1:
+exactly one `loaded`, then one `update-applied`, from one install, with no
+failure reported and only the eight fields).
+
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
 The host remembers the highest sequence it has run for its key: its floor.

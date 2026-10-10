@@ -692,6 +692,42 @@ independent review, Status.
 
 *Done when:* events arrive in CI from both platforms.
 
+#### W6 design (draft 2026-10-11)
+
+**What a host reports.** One small record per outcome, JSON:
+`{"installId", "channel", "hostVersion", "sequence", "source", "outcome", "reason", "platform"}`; `reason` is a fixed category, and the free-text `detail` stays with the app (W6 review).
+- **Outcomes:** `loaded` (the start's bundle ran), `fell-back` (W5),
+  `update-applied`, `update-failed`, `not-loaded` ("Bundle did not load"),
+  `no-bundle`, `refused` (no valid key or server).
+- **`source`:** `network` or `cache`.
+- **`detail`:** a short reason, at most 300 characters (an exception message,
+  never a body).
+
+The install id is the random one W4.5 made for rollouts. Nothing else
+identifies a user or device.
+
+**Where it goes.** Nowhere by default.
+- **In code:** `KeliverHost.reports` (Android, a `SharedFlow`) and
+  `Keliver.onReport` (iOS) hand every record to the app, which can forward it
+  to its own analytics. That is also the place to set the crash key: the
+  sequence goes in as `keliver_sequence` (Crashlytics `setCustomKey`, Sentry
+  `setTag`), and the docs show both.
+- **The documented example**, built in and off unless set:
+  `keliver.reportUrl` (Android) or `REPORT_URL` (iOS `HostConfig.kt`). The host
+  POSTs each record there, best effort: no retries, no queue, never blocking or
+  failing a load. It follows the same URL rules and release `https://` check
+  as the bundle server.
+- **No relay endpoint in W6.** The static route has no relay, and a portal
+  view of the counts is a later, optional step.
+
+**CI proof (V1, both platforms).** The W5 build (U1) also sets the report URL
+to the static test server, whose `POST /report` writes each body to a log.
+After U1, the log holds `loaded` (sequence 8, network) and `update-applied`
+(sequence 9) from that install, with `platform` `android` or `ios`.
+
+**Steps.** W6.1 reports and the example sender on both hosts, with V1. W6.2
+docs (including the crash-key examples), an independent review, Status.
+
 ### W7 — Proof (G11)
 
 Physical Android (arm64), a physical iPhone, a release-signed APK and IPA, and
@@ -746,7 +782,9 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W5.1 fall back to the last good bundle | **built 2026-10-10** (PR #96, stacked on #95). When the lookup names a bundle that then fails to load and a bundle ran before for this key and server, both hosts restart their one Treehouse app from Zipline's verified cache. That is the switchable pinning client and freshness checker, then `stop()`/`start()`. Unit: `BundleIndexTest` 14/0 (pins). **CI Android 38065789428:** S6/U2 (wrong sha256: fell back to cached v2, screen Warehouse) and S8 (replayed v1: fell back to v2) pass. | PR #96 |
 | W5.2 update API | **built 2026-10-10** (PR #96): `checkForUpdate`, `currentBundle`, events, and `keliver.updates` / `UPDATES` = `next-launch` (default) or `on-resume`. U1 in `ci/w5/` on both platforms. First CI (38065789428): U1 failed because the throttle skipped the check silently (v9 was published within 30 s of the start). Fixed in `59ad3f23` (the host logs the mode and skipped checks; the harness waits 40 s). **CI green at `59ad3f23`:** reference-app 38067622371, prepare 25/0, device **130/0**; ios-host 38067622328, self-test 68/0, `ios.sh` **115/0**. Both include S6/U2, S8, and U1: the same process looked up v9, loaded it in place, raised the floor 8 -> 9 and showed Cellar. iOS U1 also passed at `4c19f9b6` (38065789393, 114/0), where its publish happened to take more than 30 s. | PR #96 |
 | W5.3 docs, review, fixes | **done 2026-10-11** (PR #96).<br>• **Docs:** DEVICE_HOST §2 ("Updates while the app runs", the fall-back), §3, §4, the guide.<br>• **Independent review** (read-only): one blocking issue, a W5.2 correctness bug and not a security one. A failed update stopped all updates for the rest of the process: the same URL was set on a `StateFlow`, which doesn't re-emit it. Also: `pin(url, null)` erased an index sha256; iOS `checkForUpdate` continued off the main thread; S6/S8 did not prove the cache; no row covered a fall-back that fails. All fixed in `7afb8498`: the pending update is matched by URL and cleared on success, failure or skip, and given up after 2 min; failed URLs are not retried in the process; a null pin keeps a hash; iOS checks on main; `codeLoadSuccess ... source=cache\|network`, with S6/S8 requiring the cache; new **S9c** (the fall-back refused below the floor: "Bundle did not load"); iOS U1 compares pids.<br>• **CI at `7afb8498`:** reference-app 38073852570, device **133/0**; ios-host 38073852556, `ios.sh` **118/0**. **W5 is done.** | PR #96 |
-| W6–W8 | not started | — |
+| tools 0.3.8 candidate 2 (W3 + W4 + W2 + W5) | **verified 2026-10-11; NOT tagged, awaiting the owner's approval** (built from `feat/w5-update-api`, PR #96).<br>• **Identities:** source `ef625050cbb5a1afd7cb2288567d6df3a35da2fa`; zip `32d47c34b46594dc89c2feef43e3657bf24daa74af77bbff3d4535fd29b0ab68` (90,559,881 bytes); APK `106b2bd4…`.<br>• **Build** 38078500722 (artifact `11679304379`, built 2026-10-11, 30-day retention): every self-test green. **Device run** 38079812823: 19/0 and 28/0.<br>• **Local check:** hashes; 57 packaged files byte-identical to the commit; no key files; the packaged `keliver-publish` 40/0.<br>• **`ios.sh` on the zip** (local, Xcode 26.4.1, iOS 26.4): **118/0**, with W2's I-rows, W5's U1, S6/U2, S8 and S9c.<br>• **Step 3:** clean.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`; candidate 1 is superseded. | PR #96 |
+| W6 reports (W6.1 + review) | **done 2026-10-11** (PR #97, stacked on #96).<br>• **Built:** `KeliverReport` on both hosts (`reports` / `onReport`); an opt-in `keliver.reportUrl` / `REPORT_URL` (one best-effort JSON POST per outcome, no redirects); crash-key docs; V1 in `ci/w5/`.<br>• **Independent review:** nothing blocking. Four should-fix, all fixed in `5360ac7e`. (1) The free-text `detail`, which can hold a LAN IP, paths or URLs, was POSTed; now only a fixed `reason` category leaves the device (`reportReason`, `BundleIndexTest` 15/0). (2) Android accepted and logged a report URL with `user@`, a query or a fragment; it is now refused, and never logged. (3) The iOS crash-key example could name a sequence that never ran. (4) Stale install-id comments; the docs now say it is a pseudonymous id (GDPR) and that requests reveal IP and user agent. Nits fixed: no-redirect sessions, guarded iOS callbacks, `no-bundle` once per process, a stricter V1 (exactly one of each, no failure outcome, exactly 8 fields).<br>• **CI at `5360ac7e`:** reference-app 38086013708, device **134/0**; ios-host 38086013593, `ios.sh` **119/0**. **W6 is done.** | PR #97 |
+| W7–W8 | not started: they need the owner's hardware (physical devices) and decisions (key rotation, U30) | — |
 
 ## Next action
 
@@ -800,12 +838,17 @@ What was done for the candidate:
   - Recorded follow-up, not in W2: a prebuilt, published host artifact for
     adopters on another Kotlin version. That is a Maven publication and needs
     the owner's approval.
-- **Next release candidate, candidate 2 (W3 + W4 + W2 + W5):** built from the
-  top branch `feat/w5-update-api` (it already carries #94's release changes),
-  so nothing is merged into the release branch. Verify it like candidate 1:
-  the build, a device run pinned by the APK sha256, a local check, `ios.sh` on
-  the zip, and step 3. Tag only on the owner's explicit approval.
-- **Then W6** (visibility).
+- **Candidate 2 (W3 + W4 + W2 + W5) is verified and waits for the owner's
+  explicit approval** (Status). On a "go": tag `portal-tools-v0.3.8` on
+  `ef625050`, then attach the zip (`32d47c34…`) from artifact `11679304379` by
+  hand, per `docs/PORTAL_TOOLS_RELEASE.md` step 4. The artifact expires about
+  2026-11-10. Then merge #94–#96 (and #97 if done) into `main`, again only with
+  the owner's word, and drop the `KELIVER_SCAFFOLD_FROM=repo` CI stopgap.
+- **W6 (PR #97): done 2026-10-11.** Not in candidate 2. Ship it in the next
+  tools release (a candidate 3 would need full re-verification) or after 0.3.8,
+  as the owner prefers.
+- **W7 and W8** need the owner: physical devices and an adopter (W7), and
+  decisions on key rotation (W8, U30).
 - **Then W5** (update API, including falling back to the last good bundle),
   **then W6.**
 
