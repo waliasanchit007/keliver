@@ -1,0 +1,83 @@
+{
+    "format": 1,
+    "entries": [
+        {
+            "sequence": 1,
+            "version": 1,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v1/manifest.zipline.json",
+            "manifestSha256": "a53560898c23f448e4281971634136973f21aa9a17b3ede143433e2b2f1f647c",
+            "createdAt": "2026-10-09T13:38:28.351905Z"
+        },
+        {
+            "sequence": 2,
+            "version": 2,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v2/manifest.zipline.json",
+            "manifestSha256": "dd3d602a48361beb8ea48f50cf127f37679b6be6966a1a949f5e9bf8313b5788",
+            "createdAt": "2026-10-09T13:39:24.526643Z"
+        },
+        {
+            "sequence": 3,
+            "version": 3,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v3/manifest.zipline.json",
+            "manifestSha256": "2adb3f69e42754c5f04674b14e525dfba0dc4e6e6c0b2fd920e80368753d698c",
+            "createdAt": "2026-10-09T13:41:02.078288Z",
+            "republishOf": 1
+        },
+        {
+            "sequence": 4,
+            "version": 4,
+            "channel": "beta",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v4/manifest.zipline.json",
+            "manifestSha256": "68c7e7f305b456c8ad49224f24106c88f28aa48a139fcd359317085c9b436890",
+            "createdAt": "2026-10-09T13:41:41.081282Z"
+        },
+        {
+            "sequence": 4,
+            "version": 4,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v4/manifest.zipline.json",
+            "manifestSha256": "68c7e7f305b456c8ad49224f24106c88f28aa48a139fcd359317085c9b436890",
+            "createdAt": "2026-10-09T13:42:21.434Z",
+            "promotedFrom": "beta"
+        },
+        {
+            "sequence": 5,
+            "version": 5,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v5/manifest.zipline.json",
+            "manifestSha256": "de8558bc2be1ca7f9b57aa53e02215c4003ef8cb53af633b770f92bd443fdc85",
+            "createdAt": "2026-10-09T13:42:56.546149Z",
+            "constraints": {
+                "rollout": 0
+            }
+        },
+        {
+            "sequence": 6,
+            "version": 6,
+            "channel": "stable",
+            "widgetVersion": 1,
+            "capabilities": [],
+            "manifest": "v6/manifest.zipline.json",
+            "manifestSha256": "19fe2ba247112e42bfd11d874adeeccbd46c4590450bb13e34142a1ecc6b980b",
+            "createdAt": "2026-10-09T14:55:44.555581Z",
+            "constraints": {
+                "minHostVersion": 999
+            }
+        }
+    ]
+}
