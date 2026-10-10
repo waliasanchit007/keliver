@@ -6,13 +6,11 @@ only after the owner's explicit approval for 0.3.8. Approvals of 0.3.6 and
 libraries, are unchanged. The tools version and the library version are
 separate lines: 0.3.8 still scaffolds against `dev.keliver:*:0.3.3`.
 
-| | |
-|---|---|
-| source commit to tag | **`c0e71108c4821132a3f711137622a80bf8895a6d`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`; tools 0.3.8, Maven dependency 0.3.3) |
-| zip | `keliver-portal-tools-0.3.8.zip`, 90,532,260 bytes; zip sha256 **`7ea7f11d9fdebce84861cf9224d324c15d00451ac175d84f3cd51b683c43bc14`** |
-| bundled dev-host APK sha256 | **`afa9daddf033f6f4c49d9cbaab60c4206965c9c40c0f52b157034dd8228ef09d`**, no embedded portal key |
-| build run | [`37932744136`](https://github.com/waliasanchit007/keliver/actions/runs/37932744136), retained artifact `11617444772` (90,524,155 bytes, `sha256:dd9abb95…`) |
-| device run | [`37935499926`](https://github.com/waliasanchit007/keliver/actions/runs/37935499926): 19/0, 28/0 |
+The candidate to approve is **candidate 2** (W3, W4, W2 and W5). Its
+identities are recorded under "Candidate verification" below, after the build;
+the commit that records them is not the built commit. **Candidate 1
+(`c0e71108`, zip `7ea7f11d…`) is superseded: never tag it.** It carried W3 and
+W4 only, and the owner deferred the release until more was done.
 
 ## New: publish without the relay — `bin/keliver-publish` (W3)
 
@@ -54,6 +52,42 @@ fall back to the relay's `/bundles/latest` only on a 404.
 Details: `docs/DEVICE_HOST.md` §2–3, the adopter guide's "Publish from CI to a
 static server", and the tools README.
 
+## New: embed Keliver in an existing app (W2)
+
+Both host scaffolders take `--embed --into DIR`:
+- **Android:** `keliver-new-production-host.sh --embed` writes a library module
+  (`DIR/keliver-host/`). It holds `KeliverHost` (one per process, made in your
+  `Application`), the `KeliverScreen` Composable and `KeliverView`. Settings
+  are in `keliver.properties`. Your build supplies Kotlin 2.2.0, its Compose
+  plugin and `app.cash.zipline` 1.22.0.
+- **iOS:** `keliver-new-ios-host.sh --embed` writes the `KeliverHost`
+  framework's Gradle build (`DIR/keliver-host-ios/`), `KeliverScreen.swift` and
+  `EMBED.md`, which lists the Xcode edits.
+- **Your files are not edited:** the scaffolders print the lines to add.
+
+## New: updates while the app runs, and the fall-back to the last good bundle (W5)
+
+- **Fall-back.** When the bundle the lookup names fails to load (a sha256
+  mismatch, the floor, a signature, a missing `v<N>/`) and one ran before, the
+  host restarts from Zipline's verified cache instead of showing nothing. The
+  floor still holds. Without one, it shows "Bundle did not load".
+- **The update API.** `checkForUpdate()`, `currentBundle` and update events
+  (applied, failed, fell back).
+- **Updates on resume.** `keliver.updates=on-resume` (Android) or
+  `UPDATES = "on-resume"` (iOS `HostConfig.kt`) applies a newer bundle in place
+  when the app comes back to the foreground, at most every 30 s. The default is
+  `next-launch`.
+
+## Changed: the hosts (W2)
+
+The scaffolded hosts are rebuilt around one host per process:
+- Android: `KeliverHost` plus a thin `MainActivity`; iOS: a `Keliver` object.
+- A rotation or a second screen loads nothing again.
+- The trust key is compiled into the build (`BuildConfig` on Android) and
+  checked there.
+- "No bundle" is retried by the next screen that opens.
+- A failed load shows a message instead of a blank view.
+
 ## Changed: the signing block (v2, with sequence and `keliverResign`)
 
 `keliver-new-publish-target.sh` writes a block that:
@@ -82,6 +116,8 @@ ships them. In candidate mode a missing one is a failure, not a fallback.
   changes) to use static publishing. Hosts from before W4.5 skip any index
   entry that carries `constraints`.
 - **Signing block.** Upgrade it as above.
+- **Hosts scaffolded by 0.3.7** have none of W2's or W5's changes: no embed,
+  no fall-back, no update API. Re-scaffold, or port the template changes.
 
 ## Known issues
 
@@ -93,11 +129,19 @@ ships them. In candidate mode a missing one is a failure, not a fallback.
 - **The next signing-block change** must first add this block to
   `templates/publish/legacy/` as `signing-0.3.8.gradle`, so apps wired by 0.3.8
   can upgrade.
+- **Embedding on Android** needs the app to build with Kotlin 2.2.0 (Zipline
+  1.22.0's compiler plugin). A prebuilt host library would remove that; it is
+  not published. CI builds one combination of AGP, Compose, OkHttp and Coil.
+- **Not measured:** native navigation around an embedded iOS screen (no
+  simulator tap driver), an iOS app that already embeds a Kotlin framework,
+  and an XCFramework build.
+- **Updates.** A process that started from the cache takes a newer bundle at
+  its next start. An update that failed is not tried again in that process.
 - **Carried over.** The 0.3.7 notes' known issues that are not fixed above.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
-### Candidate 1 — `c0e71108`
+### Candidate 1 — `c0e71108` (superseded: never tag it)
 
 It is built from `release/portal-tools-0.3.8` (PR #94), stacked on W4 (#93).
 The verifiers ran from the same branch, at `c0e71108` and then `a60624f0`
@@ -111,7 +155,5 @@ The verifiers ran from the same branch, at `c0e71108` and then `a60624f0`
 | iOS, the candidate zip itself | `reference/inventory/ci/ios.sh` with `KELIVER_CANDIDATE_SHA256=7ea7f11d…`, on this Mac (Xcode 26.4.1, iOS 26.4 simulator, iPhone 17 Pro; disposable simulator, Gradle home and Konan dir). The app was recreated from the candidate zip. The host was scaffolded by the zip's own `bin/keliver-new-ios-host.sh`. W3/W4 used the zip's own `bin/keliver-publish` and `bin/keliver-new-publish-target.sh` (the app already had the current block). **Run 1: 91/1.** The one FAIL was the harness, not the candidate: P2 expected the host to fall back to `/bundles/latest`, which only a 0.3.7-or-earlier relay forces, but the candidate's relay serves `bundles/index.json` and the host correctly looked v1 up through it. The harness was fixed in `a60624f0` (P2 now asks the relay which lookup applies). **Run 2, with that fix: 92/0**, including P1–P7 and S2–S15 (republish, channels and promotion, rollout 0/100/halt, the host-version gate, and the rollback floor on the network, the cache and the fallback). Evidence: `docs/superpowers/evidence/tools-0.3.8-candidate-ios/` (both runs' results; run 2's console logs and screen readings) |
 | tag push | At `c0e71108`, only `portal-tools.yml` matches `portal-tools-v*`, and it is read-only (no job with `contents: write`). `publish.yml` (`packages: write`) fires on `v*` only. `pages.yml` (`id-token: write`) runs only on a push to `main`. `ci.yml` ignores tags. `ios-host`, `reference-app`, `compat-matrix` and `publish-maven-central` don't trigger on tags. Since 0.3.7 only `ios-host.yml`, `reference-app.yml` and `portal-tools.yml` changed; `portal-tools.yml` gained one read-only step |
 
-**Recommendation:** tag `portal-tools-v0.3.8` on `c0e71108` and attach
-`keliver-portal-tools-0.3.8.zip` (`7ea7f11d…`) from the retained artifact
-`11617444772`, per `docs/PORTAL_TOOLS_RELEASE.md` step 4. **Only on the owner's
-explicit approval of 0.3.8.**
+Candidate 1 was verified, then superseded on 2026-10-10 when the owner deferred
+the release until W2 and W5 were in. It is kept here as a record.
