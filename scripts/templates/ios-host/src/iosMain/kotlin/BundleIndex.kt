@@ -20,6 +20,7 @@
 package @@PACKAGE@@
 
 import app.cash.zipline.loader.ZiplineHttpClient
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -183,16 +184,31 @@ internal fun manifestPathOk(path: String): Boolean =
  * very bytes Zipline then verifies and loads, so there is no second fetch to
  * differ from the first. They only ever refuse: a sequence read here is not yet
  * verified, so it never raises the floor. Every other download is unchanged.
+ *
+ * [pin] adds another manifest to check (W5: an update, or the fall-back to the
+ * last good bundle) before the host hands Zipline its URL. Earlier pins stay:
+ * a download still in flight for one of them is checked as before. The host's
+ * one Treehouse app keeps this one client for its whole life.
  */
 internal class ManifestPinningHttpClient(
   private val delegate: ZiplineHttpClient,
-  private val manifestUrl: String,
-  private val sha256: String?,
+  manifestUrl: String,
+  sha256: String?,
   private val floor: () -> Long = { 0 },
 ) : ZiplineHttpClient() {
+  /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
+  @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
+
+  /** Hold [manifestUrl] to [sha256] (null: no index sha256, the floor only) and to the floor. */
+  fun pin(manifestUrl: String, sha256: String?) {
+    pinned = pinned + (manifestUrl to sha256)
+  }
+
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {
     val body = delegate.download(url, requestHeaders)
-    if (url == manifestUrl) {
+    val pinned = pinned
+    if (url in pinned) {
+      val sha256 = pinned[url]
       if (sha256 != null) {
         val actual = body.sha256().hex()
         if (actual != sha256) throw IOException("manifest sha256 mismatch: $url is $actual, the index says $sha256")

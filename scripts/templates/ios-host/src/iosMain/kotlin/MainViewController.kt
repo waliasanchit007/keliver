@@ -75,6 +75,7 @@ import dev.keliver.treehouse.TreehouseApp
 import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -153,6 +154,9 @@ public object Keliver {
   /** Called on the main thread when a code load succeeded. */
   internal fun codeLoaded() { loaded = true }
 
+  /** Whether any code has loaded in this process (main thread). */
+  internal fun hasLoaded(): Boolean = loaded
+
   /** Called on the main thread when a code load failed: before any code ran, say so instead of a blank screen. */
   internal fun codeLoadFailed(reason: String) {
     if (!loaded) state.value = HostState.Message("Bundle did not load", reason.take(300))
@@ -215,11 +219,12 @@ private suspend fun startHost(): HostState {
   return when {
     latest != null -> {
       log("loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
-      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, floor, DefaultFreshnessCheckerNotFresh, apiBase))
+      // A failed load falls back to the cached last good bundle, if there is one (W5).
+      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, floor, DefaultFreshnessCheckerNotFresh, apiBase, fallback = lastGood))
     }
     lastGood != null -> {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
-      HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase))
+      HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase, fallback = null))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.", retry = true)
   }
@@ -286,13 +291,21 @@ private fun createApp(
   floor: () -> Long,
   freshness: FreshnessChecker,
   apiBase: String?,
+  fallback: String?,
 ): TreehouseApp<PortalPresenter> {
   val verifier = ManifestVerifier.Builder()
     .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
     .build()
+  // The manifest held to the index's sha256 (when there is one) and to the rollback floor.
+  val pinning = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)
+  val flow = MutableStateFlow(manifestUrl)
+  // One checker for the app's life, switched for the fall-back (W5): Treehouse
+  // reads the spec's checker each time it (re)starts its loader.
+  val freshnessSwitch = SwitchableFreshness(freshness)
+  var fellBack = false
+  lateinit var app: TreehouseApp<PortalPresenter>
   val factory = TreehouseAppFactory(
-    // The manifest held to the index's sha256 (when there is one) and to the rollback floor.
-    httpClient = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor),
+    httpClient = pinning,
     manifestVerifier = verifier,
     embeddedFileSystem = null,
     embeddedDir = null,
@@ -312,9 +325,9 @@ private fun createApp(
   val http = apiBase?.let { NSURLSessionHostHttp(it) }
   val spec = object : TreehouseApp.Spec<PortalPresenter>() {
     override val name = "keliver-production"
-    override val manifestUrl = MutableStateFlow(manifestUrl)
+    override val manifestUrl = flow
     override val serializersModule = EmptySerializersModule()
-    override val freshnessChecker = freshness
+    override val freshnessChecker: FreshnessChecker = freshnessSwitch
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
       zipline.bind<HostSqlDriver>("HostSqlDriver", sql)
@@ -323,7 +336,7 @@ private fun createApp(
 
     override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
   }
-  return factory.create(
+  app = factory.create(
     appScope = appScope,
     spec = spec,
     // Remember a manifest URL only once code has loaded for it from the
@@ -332,7 +345,26 @@ private fun createApp(
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
       onSuccess = { appScope.launch { Keliver.codeLoaded() } },
-      onFailed = { reason -> appScope.launch { Keliver.codeLoadFailed(reason) } },
+      // Before any code ran: fall back to the cached last good bundle once (W5),
+      // as a start with a failed lookup does (the floor holds; Zipline verifies
+      // the cached manifest again). Otherwise the host says the load failed.
+      onFailed = { reason ->
+        appScope.launch {
+          if (fallback != null && !fellBack && !Keliver.hasLoaded()) {
+            fellBack = true
+            log("the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
+            freshnessSwitch.current = AcceptCachedBundle(floor)
+            pinning.pin(fallback, null)
+            // stop() then start(): after a failed first load the app is still
+            // "starting", which restart() would leave alone.
+            app.stop()
+            flow.value = fallback
+            app.start()
+          } else {
+            Keliver.codeLoadFailed(reason)
+          }
+        }
+      },
       onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = lastGoodKey(trust)) },
       onSequence = { sequence ->
         val defaults = NSUserDefaults.standardUserDefaults
@@ -344,10 +376,17 @@ private fun createApp(
       },
     ),
   )
+  return app
+}
+
+/** The app's one freshness checker, delegating to [current] (W5: switched for the fall-back). */
+private class SwitchableFreshness(@Volatile var current: FreshnessChecker) : FreshnessChecker {
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean = current.isFresh(manifest, freshAtEpochMs)
 }
 
 /**
- * Used only when the lookup failed: accept the bundle Zipline pinned, whatever
+ * Used only when the lookup failed, or a load failed and the host falls back to
+ * the last good bundle (W5): accept the bundle Zipline pinned, whatever
  * its age, unless it is below the rollback floor. Zipline hands it over after
  * verifying it. A refused cache is not used; Zipline then fetches the manifest
  * from the network, through the same floor guard (createApp wraps every client).

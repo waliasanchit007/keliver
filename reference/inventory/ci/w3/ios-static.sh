@@ -10,7 +10,8 @@
 #   S4  an edit, published as v2 by the CLI, reaches the host ("Warehouse")
 #   S5  checked against another app's public key, the CLI refuses this app's
 #       already-built bundle (--skip-build); nothing changes
-#   S6  an index whose sha256 isn't the manifest's: nothing loads
+#   S6  an index whose sha256 isn't the manifest's: that manifest is refused,
+#       and the host falls back to the cached last good bundle (W5, U2)
 #   S8  (W4.2) v1 offered again after v2 ran: refused on its signed sequence
 #   S10 (W4.3) rollback done right: keliver-publish --republish 1 publishes v1's
 #       code again as v3, at sequence 3; the host (floor 2) runs it ("Depot")
@@ -130,7 +131,8 @@ rc=$?
   && ok "S5: against another app's key the CLI refused (exit 4); the site is byte-identical" || bad "S5: exit $rc"
 
 # S6: the newest entry's manifestSha256 is not its manifest's. The host's
-# Zipline client refuses the manifest it fetched, so nothing loads.
+# Zipline client refuses the manifest it fetched; since v2 ran before, the host
+# falls back to the cached v2 (W5, U2).
 cp "$W3/site/bundles/index.json" "$W3/index.good"
 python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); i["entries"][-1]["manifestSha256"]="0"*64; json.dump(i, open(p,"w"))' \
   "$W3/site/bundles/index.json"
@@ -138,12 +140,18 @@ launch S6-pin
 C="$EV/S6-pin.console.txt"
 grep -q "manifest sha256 mismatch" "$C" && ok "S6: the manifest was refused on its sha256" \
   || bad "S6: no sha256 refusal: $(grep -E 'codeLoad' "$C" | head -2 | tr '\n' ' ')"
-grep -q "codeLoadSuccess" "$C" && bad "S6: something loaded" || ok "S6: no code loaded"
+grep -q "KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v2/" "$C" \
+  && grep -q "codeLoadSuccess modules=[0-9]* sequence=2" "$C" && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2" \
+  && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2), and loaded nothing else" \
+  || bad "S6/U2: no fall-back: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
+reads S6-pin Warehouse && ok "S6/U2: the screen still reads 'Warehouse' (v2, from the cache)" \
+  || bad "S6/U2: 'Warehouse' is not on the screen: $(tr '\n' '|' < "$EV/S6-pin.ocr.txt" | cut -c1-200)"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
 # S8 (W4.2): the floor rose when v2 ran; the server then offers v1 again, as the
 # newest entry (a replayed or rolled-back index). v1's manifest is validly
-# signed, but for sequence 1: the host refuses it on the network and runs nothing.
+# signed, but for sequence 1: the host refuses it on the network and does not
+# run it; it falls back to the cached v2 (W5).
 grep -q "rollback floor raised: 1 -> 2" "$EV/S4-static.console.txt" \
   && ok "S8: running v2 raised the host's rollback floor from 1 to 2" || bad "S8: no floor raise logged at v2"
 python3 -c 'import json,sys; p=sys.argv[1]; i=json.load(open(p)); v1=[e for e in i["entries"] if e["version"]==1][0]; i["entries"].append(dict(v1, sequence=max(e["sequence"] for e in i["entries"])+1)); json.dump(i, open(p,"w"))' \
@@ -152,7 +160,10 @@ launch S8-rollback
 C="$EV/S8-rollback.console.txt"
 grep -q "rollback refused: sequence 1 is below 2" "$C" && ok "S8: v1 offered again after v2: refused on its signed sequence (1 < 2)" \
   || bad "S8: no rollback refusal: $(grep -E 'codeLoad|loading' "$C" | head -3 | tr '\n' ' ')"
-grep -q "codeLoadSuccess" "$C" && bad "S8: something loaded" || ok "S8: no code loaded"
+grep -q "falling back to the cached last good bundle" "$C" && grep -q "codeLoadSuccess modules=[0-9]* sequence=2" "$C" \
+  && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2" \
+  && ok "S8: v1 did not run; the host fell back to the cached v2 (sequence 2)" \
+  || bad "S8: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
 # S10 (W4.3): rollback done right. v1's code goes out AGAIN as a new sequence:

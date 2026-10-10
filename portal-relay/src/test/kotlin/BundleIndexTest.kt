@@ -216,6 +216,33 @@ class BundleIndexTest {
   }
 
   @Test
+  fun aPinnedManifestStaysCheckedAfterAnotherIsPinned() = runBlocking {
+    // W5: the host pins an update's (or the last good bundle's) manifest on the
+    // same client. The new one is checked from then on, and the earlier one still
+    // is: a download of it still in flight must not escape its hash or the floor.
+    val v4 = "https://cdn.example/bundles/v4/manifest.zipline.json"
+    val v5 = "https://cdn.example/bundles/v5/manifest.zipline.json"
+    val m4 = """{"modules":{},"metadata":{"keliver.sequence":"4"}}""".encodeUtf8()
+    val m5 = """{"modules":{},"metadata":{"keliver.sequence":"5"}}""".encodeUtf8()
+    val fake = Fake(mapOf(v4 to m4, v5 to m5))
+    var floor = 4L
+    val client = ManifestPinningHttpClient(fake, v4, m4.sha256().hex(), floor = { floor })
+    // Not pinned yet: v5 passes unchecked, as any other download does.
+    assertEquals(m5, client.download(v5, emptyList()))
+    client.pin(v5, "0".repeat(64))
+    assertTrue("sha256 mismatch" in assertFailsWith<IOException> { client.download(v5, emptyList()) }.message!!)
+    client.pin(v5, m5.sha256().hex())
+    assertEquals(m5, client.download(v5, emptyList()))
+    // v4 is still held to its hash and to the floor.
+    assertEquals(m4, client.download(v4, emptyList()))
+    floor = 5
+    assertTrue("below 5" in assertFailsWith<IOException> { client.download(v4, emptyList()) }.message!!)
+    // A pin without a hash (the last good bundle's URL) is still held to the floor.
+    client.pin(v4, null)
+    assertTrue("below 5" in assertFailsWith<IOException> { client.download(v4, emptyList()) }.message!!)
+  }
+
+  @Test
   fun theAndroidAndIosHostsShipTheSameFile() {
     val android = File("../scripts/templates/production-host/src/main/kotlin/BundleIndex.kt").readText()
     val ios = File("../scripts/templates/ios-host/src/iosMain/kotlin/BundleIndex.kt").readText()

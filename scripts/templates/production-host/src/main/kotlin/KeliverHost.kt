@@ -63,7 +63,6 @@ import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
 import app.cash.zipline.loader.FreshnessChecker
 import app.cash.zipline.loader.ManifestVerifier
-import app.cash.zipline.loader.ZiplineHttpClient
 import app.cash.zipline.loader.asZiplineHttpClient
 import coil3.ImageLoader
 import dev.keliver.http.HostHttpProvider
@@ -219,7 +218,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       latest != null -> {
         Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
         val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)
-        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh)
+        // A failed load falls back to the cached last good bundle, if there is one (W5).
+        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh, floor, fallback = lastGood)
       }
       lastGood != null -> {
         Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
@@ -227,7 +227,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // lastGood from the network, and a lookup that failed proves nothing about
         // that server (it may have failed the lookup on purpose).
         val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)
-        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor))
+        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor), floor, fallback = null)
       }
       else -> {
         mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
@@ -316,12 +316,19 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     verifier: ManifestVerifier,
     cacheName: String,
     okhttp: OkHttpClient,
-    ziplineHttp: ZiplineHttpClient,
+    ziplineHttp: ManifestPinningHttpClient,
     apiBase: HttpUrl?,
     manifestUrl: String,
     freshness: FreshnessChecker,
+    floor: () -> Long,
+    fallback: String?,
   ) {
     val flow = MutableStateFlow(manifestUrl)
+    // One checker for the app's life, switched for the fall-back (W5): Treehouse
+    // reads the spec's checker each time it (re)starts its loader.
+    val freshnessSwitch = SwitchableFreshness(freshness)
+    var fellBack = false
+    lateinit var app: TreehouseApp<PortalPresenter>
     val factory = TreehouseAppFactory(
       context = context,
       httpClient = ziplineHttp,
@@ -339,7 +346,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       override val name = "keliver-production"
       override val manifestUrl = flow
       override val serializersModule = EmptySerializersModule()
-      override val freshnessChecker = freshness
+      override val freshnessChecker: FreshnessChecker = freshnessSwitch
 
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
@@ -348,7 +355,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
       override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
     }
-    val app = factory.create(
+    app = factory.create(
       appScope = scope,
       spec = spec,
       // Remember a manifest URL only once code has loaded for it from the
@@ -367,10 +374,26 @@ class KeliverHost private constructor(context: Context, private val config: Keli
             Log.d(TAG, "rollback floor raised: $floor -> $sequence")
           }
         },
-        // Before any code ran, a failed load would leave the screen blank; say so instead.
+        // Before any code ran: fall back to the cached last good bundle once (W5),
+        // the same way a start with a failed lookup uses it (the floor holds, and
+        // Zipline verifies the cached manifest against the key again). Otherwise a
+        // failed load would leave the screen blank; say so instead.
         onFailed = { reason ->
           scope.launch {
-            if (!loaded.get()) mutableState.value = KeliverHostState.Message("Bundle did not load", reason.take(300))
+            if (loaded.get()) return@launch
+            if (fallback != null && !fellBack) {
+              fellBack = true
+              Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
+              freshnessSwitch.current = AcceptCachedBundle(floor)
+              ziplineHttp.pin(fallback, null)
+              // stop() then start(): after a failed first load the app is still
+              // "starting", which restart() would leave alone.
+              app.stop()
+              flow.value = fallback
+              app.start()
+            } else {
+              mutableState.value = KeliverHostState.Message("Bundle did not load", reason.take(300))
+            }
           }
         },
       ),
@@ -401,8 +424,14 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   }
 }
 
+/** The app's one freshness checker, delegating to [current] (W5: switched for the fall-back). */
+private class SwitchableFreshness(@Volatile var current: FreshnessChecker) : FreshnessChecker {
+  override fun isFresh(manifest: ZiplineManifest, freshAtEpochMs: Long): Boolean = current.isFresh(manifest, freshAtEpochMs)
+}
+
 /**
- * Used only when the bundle lookup failed: accept the bundle Zipline pinned in
+ * Used only when the bundle lookup failed, or a load failed and the host falls
+ * back to the last good bundle (W5): accept the bundle Zipline pinned in
  * its cache, whatever its age. Zipline still verifies its manifest against the
  * key before loading it. If the cache holds nothing (cleared, or a new key's
  * cache), Zipline goes on to the network, which fails and reports codeLoadFailed.
