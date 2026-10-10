@@ -237,9 +237,18 @@ class BundleIndexTest {
     assertEquals(m4, client.download(v4, emptyList()))
     floor = 5
     assertTrue("below 5" in assertFailsWith<IOException> { client.download(v4, emptyList()) }.message!!)
-    // A pin without a hash (the last good bundle's URL) is still held to the floor.
+    // A pin without a hash (the last good bundle's URL) keeps the hash v4 has, and the floor.
     client.pin(v4, null)
     assertTrue("below 5" in assertFailsWith<IOException> { client.download(v4, emptyList()) }.message!!)
+    floor = 4
+    assertEquals(m4, client.download(v4, emptyList()))
+    val other = Fake(mapOf(v4 to """{"modules":{"x":{}},"metadata":{"keliver.sequence":"4"}}""".encodeUtf8()))
+    val c2 = ManifestPinningHttpClient(other, v4, m4.sha256().hex(), floor = { 4 })
+    c2.pin(v4, null)
+    assertTrue("sha256 mismatch" in assertFailsWith<IOException> { c2.download(v4, emptyList()) }.message!!)
+    // A URL pinned first without a hash is held to the floor only.
+    val c3 = ManifestPinningHttpClient(fake, v5, null, floor = { 4 })
+    assertEquals(m5, c3.download(v5, emptyList()))
   }
 
   @Test

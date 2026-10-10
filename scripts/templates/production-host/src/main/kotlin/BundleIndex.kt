@@ -187,8 +187,10 @@ internal fun manifestPathOk(path: String): Boolean =
  *
  * [pin] adds another manifest to check (W5: an update, or the fall-back to the
  * last good bundle) before the host hands Zipline its URL. Earlier pins stay:
- * a download still in flight for one of them is checked as before. The host's
- * one Treehouse app keeps this one client for its whole life.
+ * a download still in flight for one of them is checked as before, and a pin
+ * without a hash never erases one a URL already has. The host's one Treehouse
+ * app keeps this one client for its whole life. Called from one thread (the
+ * host's main thread).
  */
 internal class ManifestPinningHttpClient(
   private val delegate: ZiplineHttpClient,
@@ -199,9 +201,12 @@ internal class ManifestPinningHttpClient(
   /** Manifest URL -> the sha256 the index holds it to (null: the floor only). Copied on write. */
   @Volatile private var pinned: Map<String, String?> = mapOf(manifestUrl to sha256)
 
-  /** Hold [manifestUrl] to [sha256] (null: no index sha256, the floor only) and to the floor. */
+  /**
+   * Hold [manifestUrl] to [sha256] and to the floor. A null [sha256] (no index
+   * hash: the last good bundle's URL) keeps a hash the URL is already held to.
+   */
   fun pin(manifestUrl: String, sha256: String?) {
-    pinned = pinned + (manifestUrl to sha256)
+    pinned = pinned + (manifestUrl to (sha256 ?: pinned[manifestUrl]))
   }
 
   override suspend fun download(url: String, requestHeaders: List<Pair<String, String>>): ByteString {

@@ -181,13 +181,18 @@ that opens.
   `Available`, `Failed`); `currentBundle` is the running sequence and whether
   it came from the cache; `events` (Android) or `onUpdateEvent` (iOS) report
   updates applied or failed and fall-backs. Android's standalone host calls
-  `resumed()` in its activity's `onResume`; an embedding app calls it where it
-  likes (the iOS host watches the foreground itself).
+  `resumed()` in its activity's `onResume`; an embedding app calls it on the
+  main thread, after `start()` (the iOS host watches the foreground itself).
+- An update that fails to load is not tried again in that process: a check
+  reports it as available for the next start. A newer one is applied as usual.
 - A process that started from the cache (offline, or after a fall-back) takes
   no further manifest from Zipline: a newer bundle is reported as available
   and applies at the next start.
 - The same rules as a start hold: the index, the channel, the constraints, the
-  floor, the manifest's sha256 and signature.
+  floor, the manifest's sha256 and signature. The fall-back to the last good
+  bundle loads from the cache; only if the cache misses does it fetch that
+  manifest again, held to the floor and to the index's sha256 when the lookup
+  gave one for that URL.
 
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).

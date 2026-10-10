@@ -25,6 +25,8 @@
 #       skipped, the host stays on v5
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
+#   S9c (W5) the lookup answers, but everything it offers is below the floor:
+#       the fall-back to the cached bundle is refused too, and the host says so
 #   S9b (W4.2) the same with the server up but failing the lookup: the network
 #       fallback to the last-good manifest is refused too
 # The app was wired by the published 0.3.7 zip, whose signing block writes no
@@ -141,8 +143,8 @@ C="$EV/S6-pin.console.txt"
 grep -q "manifest sha256 mismatch" "$C" && ok "S6: the manifest was refused on its sha256" \
   || bad "S6: no sha256 refusal: $(grep -E 'codeLoad' "$C" | head -2 | tr '\n' ' ')"
 grep -q "KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v2/" "$C" \
-  && grep -q "codeLoadSuccess modules=[0-9]* sequence=2" "$C" && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2" \
-  && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2), and loaded nothing else" \
+  && grep -q "codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$C" && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2 source=cache" \
+  && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2, from the cache), and loaded nothing else" \
   || bad "S6/U2: no fall-back: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
 reads S6-pin Warehouse && ok "S6/U2: the screen still reads 'Warehouse' (v2, from the cache)" \
   || bad "S6/U2: 'Warehouse' is not on the screen: $(tr '\n' '|' < "$EV/S6-pin.ocr.txt" | cut -c1-200)"
@@ -160,9 +162,9 @@ launch S8-rollback
 C="$EV/S8-rollback.console.txt"
 grep -q "rollback refused: sequence 1 is below 2" "$C" && ok "S8: v1 offered again after v2: refused on its signed sequence (1 < 2)" \
   || bad "S8: no rollback refusal: $(grep -E 'codeLoad|loading' "$C" | head -3 | tr '\n' ' ')"
-grep -q "falling back to the cached last good bundle" "$C" && grep -q "codeLoadSuccess modules=[0-9]* sequence=2" "$C" \
-  && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2" \
-  && ok "S8: v1 did not run; the host fell back to the cached v2 (sequence 2)" \
+grep -q "falling back to the cached last good bundle" "$C" && grep -q "codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$C" \
+  && ! grep "codeLoadSuccess" "$C" | grep -qv "sequence=2 source=cache" \
+  && ok "S8: v1 did not run; the host fell back to the cached v2 (sequence 2, from the cache)" \
   || bad "S8: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
 cp "$W3/index.good" "$W3/site/bundles/index.json"
 
@@ -311,3 +313,21 @@ grep -q "codeLoadSuccess" "$C" && bad "S9b: something loaded" || ok "S9b: no cod
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 mv "$W3/index.hidden" "$W3/site/bundles/index.json"
 mkdir -p "$EV/w3-site" && cp "$W3/site/bundles/index.json" "$EV/w3-site/index.json"
+
+# S9c (W5): the lookup answers, the floor still 9. Every listed bundle is below
+# it, so the newest is refused; the fall-back to the cached last good bundle is
+# refused on the cache and on its network fetch; the host says the bundle did
+# not load. (The fall-back never takes a bundle the floor refuses.)
+python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w3-server-s9c.log" &
+SPID=$!
+for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
+launch S9c-fallback-refused
+C="$EV/S9c-fallback-refused.console.txt"
+grep -q "rollback refused: sequence [0-9]* is below 9" "$C" && grep -q "KeliverHost: the bundle did not load; falling back to the cached last good bundle" "$C" \
+  && grep -q "cached bundle refused: rollback refused: sequence [0-9]* is below 9" "$C" \
+  && ok "S9c: the newest bundle refused below the floor, then the fall-back's cached bundle refused too" \
+  || bad "S9c: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -5 | tr '\n' ' ')"
+grep -q "codeLoadSuccess" "$C" && bad "S9c: something loaded" || ok "S9c: no code loaded"
+reads S9c-fallback-refused "Bundle did not load" && ok "S9c: the screen says 'Bundle did not load'" \
+  || bad "S9c: no 'Bundle did not load': $(tr '\n' '|' < "$EV/S9c-fallback-refused.ocr.txt" | cut -c1-200)"
+kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""

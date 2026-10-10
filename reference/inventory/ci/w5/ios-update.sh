@@ -7,6 +7,7 @@
 #   U1  an update applied on resume: looked up, loaded in place, floor raised,
 #       one process, the new screen shown
 echo "--- W5: an update applied when the app comes back to the foreground"
+app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 sed -i '' 's|UPDATES: String = "[^"]*"|UPDATES: String = "on-resume"|' "$CFG"
 grep -q 'UPDATES: String = "on-resume"' "$CFG" \
@@ -35,6 +36,7 @@ grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; upd
   && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$C")"
 xcrun simctl io "$UDID" screenshot "$EV/U1-before.png" > /dev/null 2>&1
 swift "$HERE/ocr.swift" "$EV/U1-before.png" > "$EV/U1-before.ocr.txt" 2>"$EV/U1-before.ocr.err"
+pid_before="$(app_pid)"
 reads U1-before Garage && ok "U1: the screen reads 'Garage' (v8)" || bad "U1: 'Garage' is not on the screen: $(tr '\n' '|' < "$EV/U1-before.ocr.txt" | cut -c1-200)"
 
 w3_title Garage Cellar && w3_publish v9-update && grep -q "published v9 (sequence 9, channel stable" "$EV/w3-publish-v9-update.log" \
@@ -55,8 +57,11 @@ grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && grep -q "KeliverHost
   && grep -q "rollback floor raised: 8 -> 9" "$C" \
   && ok "U1: v9 loaded in place, applied, and the floor rose 8 -> 9" \
   || bad "U1: v9 was not applied: $(grep -E 'KeliverHost|codeLoad' "$C" | tail -4 | tr '\n' ' ')"
-[ "$(grep -c 'KeliverHost: verifying manifests' "$C")" = 1 ] \
-  && ok "U1: one start in this console: the same process took v9" || bad "U1: the host started more than once ($(grep -c 'KeliverHost: verifying manifests' "$C"))"
+pid_after="$(app_pid)"
+# The update lines above are in the first launch's console, and the process id
+# is unchanged: no relaunch took v9.
+[ -n "$pid_before" ] && [ "$pid_before" = "$pid_after" ] && [ "$(grep -c 'KeliverHost: verifying manifests' "$C")" = 1 ] \
+  && ok "U1: the same process (pid $pid_after) took v9, with one start" || bad "U1: the process changed ($pid_before -> $pid_after) or started again"
 reads U1-after Cellar && ok "U1: the running app now reads 'Cellar' (v9)" \
   || bad "U1: 'Cellar' is not on the screen: $(tr '\n' '|' < "$EV/U1-after.ocr.txt" | cut -c1-200)"
 

@@ -225,7 +225,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val floor: () -> Long,
   )
   private var session: Session? = null
-  private var pendingUpdate: Long? = null
+  /** The update handed to Zipline and not yet reported back: its index sequence, manifest URL, and when. */
+  private class Pending(val sequence: Long, val url: String, val at: Long)
+  private var pending: Pending? = null
+  /** Manifest URLs that failed to load as updates in this process: not tried again until the next start. */
+  private val failedUpdates = mutableSetOf<String>()
   private var lastLookupAt = 0L
 
   /** One image loader, one SQL host per host (not per composition, not per code load). */
@@ -442,16 +446,27 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // Raise the rollback floor to the sequence that just ran: Zipline verified
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
-        onSuccess = { sequence, fromCache ->
+        onSuccess = { sequence, url ->
           loaded.set(true)
           scope.launch {
-            mutableBundle.value = KeliverBundle(sequence, fromCache)
-            val pending = pendingUpdate
-            if (pending != null && sequence == pending) {
-              pendingUpdate = null
+            // url is null for a load from the cache. After one, Zipline takes no
+            // further manifest; after a network load it does.
+            mutableBundle.value = KeliverBundle(sequence, fromCache = url == null)
+            session?.fromCache = url == null
+            val p = pending
+            if (p != null && url == p.url) {
+              pending = null
               Log.d(TAG, "update applied: sequence $sequence")
               mutableEvents.tryEmit(KeliverUpdateEvent.Applied(sequence))
             }
+          }
+        },
+        // Zipline found the manifest unchanged: nothing to apply.
+        onSkipped = {
+          scope.launch {
+            val p = pending ?: return@launch
+            pending = null
+            Log.d(TAG, "update skipped: ${p.url} is the running manifest")
           }
         },
         onLoaded = { url -> prefs.edit().putString(lastGoodKey(cacheName), url).apply() },
@@ -471,16 +486,17 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         onFailed = { reason ->
           scope.launch {
             if (loaded.get()) {
-              // An update that did not load: the running bundle stays (Zipline only swaps on success).
-              val pending = pendingUpdate ?: return@launch
-              pendingUpdate = null
-              Log.d(TAG, "update failed: sequence $pending did not load ($reason); the running bundle stays")
-              mutableEvents.tryEmit(KeliverUpdateEvent.Failed(pending, reason))
+              // An update that did not load: the running bundle stays (Zipline only
+              // swaps on success), and this URL is not tried again in this process.
+              val p = pending ?: return@launch
+              pending = null
+              failedUpdates += p.url
+              Log.d(TAG, "update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
+              mutableEvents.tryEmit(KeliverUpdateEvent.Failed(p.sequence, reason))
               return@launch
             }
             if (fallback != null && !fellBack) {
               fellBack = true
-              session?.fromCache = true
               mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
               Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
               freshnessSwitch.current = AcceptCachedBundle(floor)
@@ -517,11 +533,17 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       Log.d(TAG, "update check: no bundle is running yet")
       return@withContext KeliverUpdateCheck.Failed("no bundle is running yet")
     }
-    pendingUpdate?.let { return@withContext KeliverUpdateCheck.Available(it, applying = true) }
+    pending?.let {
+      // Zipline reports every load (success, failure, unchanged); one not heard
+      // of for two minutes is given up on, so a lost report cannot stop updates.
+      if (SystemClock.elapsedRealtime() - it.at < 120_000) return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true)
+      Log.d(TAG, "update check: sequence ${it.sequence} was never reported back; looking again")
+      pending = null
+    }
     lastLookupAt = SystemClock.elapsedRealtime()
     val facts = HostFacts(s.lookup.prefs.installId(), config.hostVersion ?: appVersionCode(), s.lookup.floor())
     val latest = withContext(Dispatchers.IO) { lookupBundle(s.lookup.client, s.lookup.server, s.lookup.capabilities, facts) }
-    if (pendingUpdate != null) return@withContext KeliverUpdateCheck.Available(pendingUpdate!!, applying = true)
+    pending?.let { return@withContext KeliverUpdateCheck.Available(it.sequence, applying = true) }
     if (latest == null) {
       Log.d(TAG, "update check: the lookup failed")
       return@withContext KeliverUpdateCheck.Failed("the lookup failed")
@@ -529,25 +551,32 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val sequence = latest.sequence
       ?: return@withContext KeliverUpdateCheck.Failed("the bundle server serves no bundles/index.json; updates need one")
     val current = running.sequence
-    if (current != null && sequence <= current) {
+    // The URL Zipline already has (the running bundle, or the one it is on): it
+    // would not see it again, a StateFlow does not repeat a value.
+    if ((current != null && sequence <= current) || latest.manifestUrl == s.manifestUrls.value) {
       Log.d(TAG, "update check: up to date (sequence $current)")
       return@withContext KeliverUpdateCheck.UpToDate(current)
+    }
+    if (latest.manifestUrl in failedUpdates) {
+      Log.d(TAG, "update check: sequence $sequence did not load earlier in this process; it applies at the next start")
+      return@withContext KeliverUpdateCheck.Available(sequence, applying = false)
     }
     if (!apply || s.fromCache) {
       Log.d(TAG, "update check: sequence $sequence is available (running $current); it applies at the next start")
       return@withContext KeliverUpdateCheck.Available(sequence, applying = false)
     }
     Log.d(TAG, "update check: sequence $sequence is available (running $current); applying ${latest.manifestUrl}")
-    pendingUpdate = sequence
+    pending = Pending(sequence, latest.manifestUrl, SystemClock.elapsedRealtime())
     s.pinning.pin(latest.manifestUrl, latest.manifestSha256)
     s.manifestUrls.value = latest.manifestUrl
     KeliverUpdateCheck.Available(sequence, applying = true)
   }
 
   /**
-   * Call when the app comes back to the foreground (the standalone host's
-   * activity does, in onResume). With [KeliverUpdates.ON_RESUME] it checks for a
-   * newer bundle and applies it, at most every 30 s; otherwise it does nothing.
+   * Call on the main thread when the app comes back to the foreground, after
+   * [start] (the standalone host's activity does, in onResume). With
+   * [KeliverUpdates.ON_RESUME] it checks for a newer bundle and applies it, at
+   * most every 30 s; otherwise it does nothing.
    */
   fun resumed() {
     if (config.updates != KeliverUpdates.ON_RESUME) return
@@ -606,30 +635,36 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
 }
 
 private class LoggingEventListenerFactory(
-  private val onSuccess: (sequence: Long?, fromCache: Boolean) -> Unit,
+  private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
+  private val onSkipped: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val onFailed: (String) -> Unit,
 ) : EventListener.Factory {
   override fun create(app: TreehouseApp<*>, manifestUrl: String?): EventListener =
-    LoggingEventListener(manifestUrl, onSuccess, onLoaded, onSequence, onFailed)
+    LoggingEventListener(manifestUrl, onSuccess, onSkipped, onLoaded, onSequence, onFailed)
   override fun close() {}
 }
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
-  private val onSuccess: (sequence: Long?, fromCache: Boolean) -> Unit,
+  private val onSuccess: (sequence: Long?, manifestUrl: String?) -> Unit,
+  private val onSkipped: () -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
   private val onFailed: (String) -> Unit,
 ) : EventListener() {
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
-    Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
     // A load from the cache reports no manifest URL.
-    onSuccess(sequence, manifestUrl == null)
+    Log.d(TAG, "codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"} source=${if (manifestUrl == null) "cache" else "network"}")
+    onSuccess(sequence, manifestUrl)
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
+  }
+  override fun codeLoadSkipped(startValue: Any?) {
+    Log.d(TAG, "codeLoadSkipped: the manifest is unchanged")
+    onSkipped()
   }
   override fun codeLoadFailed(exception: Exception, startValue: Any?) {
     Log.e(TAG, "codeLoadFailed: ${exception.message}", exception)
