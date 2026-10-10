@@ -35,7 +35,13 @@
  * lookup or the load. Once a bundle is loading, it is the one this process
  * runs: a newer bundle is picked up on the next process start. A start that
  * created nothing ("No bundle") is retried by the next screen; a load that
- * fails shows "Bundle did not load" until the next process start.
+ * fails falls back to the cached last good bundle, or shows "Bundle did not
+ * load" until the next process start.
+ *
+ * Updates (W5): checkForUpdate() looks up again and, after a network start,
+ * applies a newer bundle in place (Zipline loads it while the old code runs; a
+ * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt the
+ * host does that each time the app returns to the foreground.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -76,6 +82,8 @@ import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlin.concurrent.Volatile
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,10 +95,13 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.EmptySerializersModule
 import okio.ByteString.Companion.decodeHex
 import platform.Foundation.NSBundle
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSThread
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
@@ -120,6 +131,25 @@ private sealed interface HostState {
   data class Running(val app: TreehouseApp<PortalPresenter>) : HostState
 }
 
+/** The bundle a host runs (W5): its signed sequence (-1: none), and whether it came from Zipline's cache. */
+public data class KeliverBundle(val sequence: Long, val fromCache: Boolean)
+
+/** What [Keliver.checkForUpdate] found: "up-to-date", "available" (applying or at the next start) or "failed". */
+public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, val applying: Boolean, val reason: String)
+
+/** What happened to the bundle the host runs (W5): "applied", "failed" or "fell-back". */
+public data class KeliverUpdateEvent(val kind: String, val sequence: Long, val reason: String)
+
+/** What a running app needs to look up and apply a newer bundle. Main thread only. */
+internal class Session(
+  val app: TreehouseApp<PortalPresenter>,
+  val pinning: ManifestPinningHttpClient,
+  val manifestUrls: MutableStateFlow<String>,
+  val lookup: LookupContext,
+  var fromCache: Boolean,
+)
+internal class LookupContext(val server: BundleServer, val capabilities: List<String>, val floor: () -> Long)
+
 /**
  * This process's Keliver host (Swift: `Keliver.shared`). It looks up and loads
  * the bundle once; [viewController] makes a screen that shows it.
@@ -128,6 +158,16 @@ public object Keliver {
   private val state = MutableStateFlow<HostState>(HostState.Loading)
   private var started = false // read and written on the main thread only
   private var loaded = false
+  private var session: Session? = null
+  private var pendingUpdate: Long? = null
+  private var lastLookup = TimeSource.Monotonic.markNow()
+  private var current: KeliverBundle? = null
+
+  /** The bundle running now, or null before any has loaded (W5). Main thread. */
+  public fun currentBundle(): KeliverBundle? = current
+
+  /** Called on the main thread with each update applied or failed, and each fall-back (W5). */
+  public var onUpdateEvent: ((KeliverUpdateEvent) -> Unit)? = null
 
   /** One image loader for every screen. */
   internal val imageLoader: ImageLoader by lazy {
@@ -144,6 +184,12 @@ public object Keliver {
     }
     if (started) return
     started = true
+    if (UPDATES == "on-resume") {
+      NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
+        resumed()
+      }
+    }
+    lastLookup = TimeSource.Monotonic.markNow()
     appScope.launch {
       val s = startHost()
       state.value = s
@@ -152,7 +198,76 @@ public object Keliver {
   }
 
   /** Called on the main thread when a code load succeeded. */
-  internal fun codeLoaded() { loaded = true }
+  internal fun codeLoaded(sequence: Long?, fromCache: Boolean) {
+    loaded = true
+    current = KeliverBundle(sequence ?: -1, fromCache)
+    val pending = pendingUpdate
+    if (pending != null && sequence == pending) {
+      pendingUpdate = null
+      log("update applied: sequence $sequence")
+      onUpdateEvent?.invoke(KeliverUpdateEvent("applied", pending, ""))
+    }
+  }
+
+  /** Called on the main thread when the running app's session is created. */
+  internal fun attach(session: Session) { this.session = session }
+
+  /** Called on the main thread when the host falls back to the cached last good bundle. */
+  internal fun fellBack(reason: String) {
+    session?.fromCache = true
+    onUpdateEvent?.invoke(KeliverUpdateEvent("fell-back", -1, reason))
+  }
+
+  /** Called on the main thread when a load failed after code had run: an update that did not load. */
+  internal fun updateFailed(reason: String) {
+    val pending = pendingUpdate ?: return
+    pendingUpdate = null
+    log("update failed: sequence $pending did not load ($reason); the running bundle stays")
+    onUpdateEvent?.invoke(KeliverUpdateEvent("failed", pending, reason))
+  }
+
+  /**
+   * Looks up the newest bundle now (W5), with the same index, channel,
+   * constraints and floor as the start. With [apply], and when this process
+   * started from the network, a newer one loads in place: Zipline loads it while
+   * the running code goes on, swaps it in on success and keeps the old one on
+   * failure ([onUpdateEvent]). After a start from the cache, a newer bundle
+   * applies at the next process start. Call from the main thread.
+   */
+  public suspend fun checkForUpdate(apply: Boolean = true): KeliverUpdateCheck {
+    val s = session
+    val running = current
+    if (s == null || running == null) return KeliverUpdateCheck("failed", -1, false, "no bundle is running yet")
+    pendingUpdate?.let { return KeliverUpdateCheck("available", it, true, "") }
+    lastLookup = TimeSource.Monotonic.markNow()
+    val latest = lookupBundle(s.lookup.server, s.lookup.capabilities, HostFacts(installId(), hostVersion(), s.lookup.floor()))
+    pendingUpdate?.let { return KeliverUpdateCheck("available", it, true, "") }
+    if (latest == null) {
+      log("update check: the lookup failed")
+      return KeliverUpdateCheck("failed", -1, false, "the lookup failed")
+    }
+    val sequence = latest.sequence
+      ?: return KeliverUpdateCheck("failed", -1, false, "the bundle server serves no bundles/index.json; updates need one")
+    if (running.sequence >= 0 && sequence <= running.sequence) {
+      log("update check: up to date (sequence ${running.sequence})")
+      return KeliverUpdateCheck("up-to-date", running.sequence, false, "")
+    }
+    if (!apply || s.fromCache) {
+      log("update check: sequence $sequence is available (running ${running.sequence}); it applies at the next start")
+      return KeliverUpdateCheck("available", sequence, false, "")
+    }
+    log("update check: sequence $sequence is available (running ${running.sequence}); applying ${latest.manifestUrl}")
+    pendingUpdate = sequence
+    s.pinning.pin(latest.manifestUrl, latest.manifestSha256)
+    s.manifestUrls.value = latest.manifestUrl
+    return KeliverUpdateCheck("available", sequence, true, "")
+  }
+
+  /** With UPDATES = "on-resume": check and apply, at most every 30 s (the host observes the foreground itself). */
+  private fun resumed() {
+    if (lastLookup.elapsedNow() < 30.seconds) return
+    appScope.launch { checkForUpdate() }
+  }
 
   /** Whether any code has loaded in this process (main thread). */
   internal fun hasLoaded(): Boolean = loaded
@@ -216,22 +331,23 @@ private suspend fun startHost(): HostState {
   val floor = { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust)) }
   // What the index's constraints are checked against (W4.5).
   val latest = lookupBundle(server, capabilities, HostFacts(installId(), hostVersion(), floor()))
+  val lookup = LookupContext(server, capabilities, floor)
   return when {
     latest != null -> {
       log("loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
       // A failed load falls back to the cached last good bundle, if there is one (W5).
-      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, floor, DefaultFreshnessCheckerNotFresh, apiBase, fallback = lastGood))
+      HostState.Running(createApp(trust, latest.manifestUrl, latest.manifestSha256, lookup, DefaultFreshnessCheckerNotFresh, apiBase, fallback = lastGood))
     }
     lastGood != null -> {
       log("lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
-      HostState.Running(createApp(trust, lastGood, null, floor, AcceptCachedBundle(floor), apiBase, fallback = null))
+      HostState.Running(createApp(trust, lastGood, null, lookup, AcceptCachedBundle(floor), apiBase, fallback = null))
     }
     else -> HostState.Message("No bundle", "No compatible bundle at ${server.base}, and none loaded before.", retry = true)
   }
 }
 
 /** The bundle to load: its manifest URL, the sha256 the index holds it to (null from the relay's legacy lookup), and where it came from. */
-private class Lookup(val manifestUrl: String, val manifestSha256: String?, val source: String)
+private class Lookup(val manifestUrl: String, val manifestSha256: String?, val source: String, val sequence: Long? = null)
 
 /**
  * The newest compatible bundle on the bundle server, or null. Reads
@@ -261,6 +377,7 @@ private suspend fun lookupBundle(server: BundleServer, capabilities: List<String
     url,
     pick.manifestSha256,
     "index sequence ${pick.sequence}, channel ${pick.channel} (host: $CHANNEL), host version ${facts.hostVersion}, manifest sha256 ${pick.manifestSha256.take(12)}…",
+    pick.sequence,
   )
 }.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
 
@@ -288,11 +405,12 @@ private fun createApp(
   trust: ProductionTrust.Verified,
   manifestUrl: String,
   manifestSha256: String?,
-  floor: () -> Long,
+  lookup: LookupContext,
   freshness: FreshnessChecker,
   apiBase: String?,
   fallback: String?,
 ): TreehouseApp<PortalPresenter> {
+  val floor = lookup.floor
   val verifier = ManifestVerifier.Builder()
     .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
     .build()
@@ -344,14 +462,17 @@ private fun createApp(
     // Raise the rollback floor to the sequence that just ran: Zipline verified this
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
-      onSuccess = { appScope.launch { Keliver.codeLoaded() } },
+      onSuccess = { sequence, fromCache -> appScope.launch { Keliver.codeLoaded(sequence, fromCache) } },
       // Before any code ran: fall back to the cached last good bundle once (W5),
       // as a start with a failed lookup does (the floor holds; Zipline verifies
       // the cached manifest again). Otherwise the host says the load failed.
       onFailed = { reason ->
         appScope.launch {
-          if (fallback != null && !fellBack && !Keliver.hasLoaded()) {
+          if (Keliver.hasLoaded()) {
+            Keliver.updateFailed(reason) // the running bundle stays: Zipline only swaps on success
+          } else if (fallback != null && !fellBack) {
             fellBack = true
+            Keliver.fellBack(reason)
             log("the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
             freshnessSwitch.current = AcceptCachedBundle(floor)
             pinning.pin(fallback, null)
@@ -376,6 +497,7 @@ private fun createApp(
       },
     ),
   )
+  Keliver.attach(Session(app, pinning, flow, lookup, fromCache = freshness is AcceptCachedBundle))
   return app
 }
 
@@ -400,7 +522,7 @@ private class AcceptCachedBundle(private val floor: () -> Long) : FreshnessCheck
 }
 
 private class LoggingEventListenerFactory(
-  private val onSuccess: () -> Unit,
+  private val onSuccess: (sequence: Long?, fromCache: Boolean) -> Unit,
   private val onFailed: (String) -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
@@ -412,7 +534,7 @@ private class LoggingEventListenerFactory(
 
 private class LoggingEventListener(
   private val manifestUrl: String?,
-  private val onSuccess: () -> Unit,
+  private val onSuccess: (sequence: Long?, fromCache: Boolean) -> Unit,
   private val onFailed: (String) -> Unit,
   private val onLoaded: (String) -> Unit,
   private val onSequence: (Long) -> Unit,
@@ -420,7 +542,7 @@ private class LoggingEventListener(
   override fun codeLoadSuccess(manifest: ZiplineManifest, zipline: Zipline, startValue: Any?) {
     val sequence = manifestSequence(manifest.metadata)
     log("codeLoadSuccess modules=${manifest.modules.keys.size} sequence=${sequence ?: "none"}")
-    onSuccess()
+    onSuccess(sequence, manifestUrl == null) // a load from the cache reports no manifest URL
     manifestUrl?.let(onLoaded)
     sequence?.let(onSequence)
   }

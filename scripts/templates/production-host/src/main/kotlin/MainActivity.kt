@@ -19,4 +19,11 @@ class MainActivity : ComponentActivity() {
     Log.d(TAG, "screen created (the host is the Application's, not this activity's)")
     setContent { KeliverScreen((application as HostApp).keliver, Modifier.fillMaxSize()) }
   }
+
+  // With keliver.updates=on-resume, back in the foreground: look for a newer
+  // bundle and apply it in place (W5). Otherwise this does nothing.
+  override fun onResume() {
+    super.onResume()
+    (application as HostApp).keliver.resumed()
+  }
 }

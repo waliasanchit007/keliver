@@ -164,9 +164,30 @@ ran a bundle before on it, but a new install has nothing to fall back to.
 
 **Lifecycle.** The host looks up and loads once per process, and every screen
 shares that load: a rotation, a second screen or a screen opened again doesn't
-load anything. So a bundle published while the app runs is picked up on the
-next process start, not when a screen reopens. Only a start that created
-nothing (the "No bundle" row above) is retried, by the next screen that opens.
+load anything. So, by default, a bundle published while the app runs is picked
+up on the next process start, not when a screen reopens. Only a start that
+created nothing (the "No bundle" row above) is retried, by the next screen
+that opens.
+
+**Updates while the app runs** (both hosts):
+- `keliver.updates=on-resume` (Android, in `gradle.properties` or
+  `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`):
+  each time the app comes back to the foreground, at most every 30 s, the host
+  looks up again and applies a newer bundle in place. Zipline loads it while
+  the running code goes on, swaps it in on success (the floor rises as for any
+  load), and keeps the running one on failure. The default, `next-launch`,
+  never looks up while the app runs.
+- In code: `checkForUpdate(apply)` does one lookup now (`UpToDate`,
+  `Available`, `Failed`); `currentBundle` is the running sequence and whether
+  it came from the cache; `events` (Android) or `onUpdateEvent` (iOS) report
+  updates applied or failed and fall-backs. Android's standalone host calls
+  `resumed()` in its activity's `onResume`; an embedding app calls it where it
+  likes (the iOS host watches the foreground itself).
+- A process that started from the cache (offline, or after a fall-back) takes
+  no further manifest from Zipline: a newer bundle is reported as available
+  and applies at the next start.
+- The same rules as a start hold: the index, the channel, the constraints, the
+  floor, the manifest's sha256 and signature.
 
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
