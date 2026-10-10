@@ -684,7 +684,8 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W4.3 to W4.5 CI (after all three reviews) | **green 2026-10-09 at `e8c26c57`.** `reference-app.yml` 37902855439: prepare 18/0, publish self-test 40/0, device 98/0, with S8 to S15 on Android. `ios-host.yml` 37902855353: self-test 54/0, `ios.sh` 92/0, with S8 to S15 on iOS. `portal-tools.yml` 37902876551: publish target 41/0 (`--build`, the real `keliverResign`) and 25/0, the production-host scaffolder 45/0 and 40/0, the iOS host 48/0 twice, key permissions 63/0. (37902859854 was a dispatch with a mistyped commit, cancelled.) | PR #93 |
 | tools 0.3.8 candidate 1 (W3 + W4) | **verified 2026-10-09; NOT tagged, awaiting the owner's approval** (PR #94, `release/portal-tools-0.3.8`).<br>• **Identities:** source `c0e71108`; zip `7ea7f11d9fdebce84861cf9224d324c15d00451ac175d84f3cd51b683c43bc14` (90,532,260 bytes); APK `afa9dadd…`.<br>• **Build** 37932744136 (artifact `11617444772`), with the packaged `keliver-publish` self-test 40/0. **Device run** 37935499926: 19/0 and 28/0.<br>• **Local check:** hashes, `VERSION.json`, no key in the APK, the templates and scripts byte-identical, the packaged self-test 40/0 again.<br>• **`ios.sh` on the candidate zip:** run 1 91/1, with the one FAIL in the harness's P2 expectation (a 0.3.8 relay serves the index), fixed in `a60624f0`; run 2 **92/0** (P1–P7, S2–S15 with the zip's own `keliver-publish`).<br>• **Step 3:** clean.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. | PR #94 |
 | W2.1–W2.7 (embed) | **built 2026-10-09; green on CI at `f7ad8415`; the independent review is not done yet** (PR #95, stacked on #94).<br>• **Android:** `KeliverHost` (one per process, owned by an `Application`), `KeliverScreen`/`KeliverView`; `--embed` writes a library module with the same Kotlin, byte-identical (self-test 58/0). The key asset moves under `assets/keliver/`.<br>• **iOS:** a `Keliver` object; `--embed` writes the framework's Gradle build, `KeliverScreen.swift` and `EMBED.md` (self-test 67/0 on CI).<br>• **Fixtures:** `reference/embed/{android,ios}`, plain apps with only the documented edits.<br>• **CI** reference-app 37936654024: device **118/0**, with R1 (a rotation: one lookup, one load) and X1–X7 (native views and the guest on one screen; a signed load; interaction; native navigation and a rotation with one load; the floor stored; another key refused while the native app survives; the R8-minified release loading). ios-host 37936654047: `ios.sh` **102/0**, with I1, I2, I4 and I5.<br>• **Not covered:** no iOS tap driver, so native navigation is checked on Android only.<br>• **Observed once:** at `077c5818` iOS P2's screenshot was blank after a verified load (a late first render); `ios.sh` now re-reads a status-bar-only screen once (`0c47eedd`). | PR #95 |
-| W2, W4–W8 | not started | — |
+| W2.8 docs, review, fixes | **done 2026-10-10** (PR #95).<br>• **Docs** (`fd60bfd5`): the guide's "Embed in an existing app", `DEVICE_HOST.md` §4 (API, settings, trust root, backups, R8, failure behaviour, measured and not measured, limits), the tools README.<br>• **Independent review** (read-only): nothing blocking; five should-fix points, all fixed in `da5bc7e0`: (1) the trust key was read from merged assets, where an app's or another library's asset of that name wins; the build now compiles the checked key into `BuildConfig.KELIVER_PUBLIC_KEY_HEX` and the host reads only that; (2) `start()` ran once per process, so "No bundle" stuck; a start that created nothing is now retried by the next screen, and a failed load shows "Bundle did not load" instead of a blank view (both platforms); (3) a second host for one key failed later inside `start()` as an uncaught exception; the claim is now in `create()`; (4) iOS I5 proved only "nothing loaded"; it now requires the other key's verification line, the v7 lookup, `codeLoadFailed` and the message; (5) the last-good URL is kept per key. Nits fixed: iOS `start()` hops to the main thread; `checkReleaseUrls` fails on a missing Info.plist under Xcode; CDPATH-safe `--into`; the Kotlin warning wants 2.2.0 exactly; the clash check catches a target named KeliverHost; `KeliverView` needs a lifecycle owner (documented). Not changed: the runtime `KeliverConfig` stays public (documented: it skips the build's checks).<br>• **CI at `da5bc7e0`:** reference-app 38031453424: prepare 24/0, device **119/0** (R1, X1–X7, X6 now also sees "Bundle did not load"). ios-host 38031453435: self-test 68/0, `ios.sh` **104/0** (I1, I2, I4, I5 strengthened, P5 sees the message). **W2 is done**, apart from shipping it in a tools release (with approval). | PR #95 |
+| W5–W8 | not started | — |
 
 ## Next action
 
@@ -730,14 +731,14 @@ What was done for the candidate:
   waiting for W5 and W6. The version 0.3.8 is still free (no tag).
 - **Owner's decision, 2026-10-10: merge the PR stack next** (#81 → #95,
   bottom-up), before W2's remaining work.
-- **W2 (PR #95):** W2.1–W2.7 are built and green on CI.
-  1. CI at the latest head (`0c47eedd`, with the merge of #94).
-  2. **W2.8:** the docs (an "Embed in an existing app" guide section,
-     `DEVICE_HOST.md`, the tools README).
-  3. An independent review of W2, then its fixes.
+- **W2 (PR #95): done 2026-10-10** (W2.8 docs, the independent review and its
+  fixes, CI green on both platforms at `da5bc7e0`; see Status).
   - Recorded follow-up, not in W2: a prebuilt, published host artifact for
     adopters on another Kotlin version. That is a Maven publication and needs
     the owner's approval.
+- **Next release candidate (W3 + W4 + W2):** ready to cut; build and verify it
+  like candidate 1 (build, device run pinned by APK sha256, local check,
+  `ios.sh` on the zip, step 3), and tag only on the owner's explicit approval.
 - **Then W5** (update API, including falling back to the last good bundle),
   **then W6.**
 
