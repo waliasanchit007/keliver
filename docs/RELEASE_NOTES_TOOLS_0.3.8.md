@@ -141,6 +141,30 @@ ships them. In candidate mode a missing one is a failure, not a fallback.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
+### Candidate 2 — `ef625050` (W3, W4, W2, W5): the one to approve
+
+It is built from `feat/w5-update-api` (PR #96, on #95 on #94, with `main`
+merged in). The verifiers ran from the same branch, at `ef625050`.
+
+| | |
+|---|---|
+| source commit to tag | **`ef625050cbb5a1afd7cb2288567d6df3a35da2fa`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`; tools 0.3.8, Maven dependency 0.3.3) |
+| zip | `keliver-portal-tools-0.3.8.zip`, 90,559,881 bytes; sha256 **`32d47c34b46594dc89c2feef43e3657bf24daa74af77bbff3d4535fd29b0ab68`** |
+| bundled dev-host APK | sha256 **`106b2bd43eb84ad29b7fe4abc56eec74173466d2150f1f0b96af13613702f69b`**, no embedded portal key |
+| build run | [`38078500722`](https://github.com/waliasanchit007/keliver/actions/runs/38078500722), retained artifact `11679304379` (90,548,700 bytes, `sha256:5ca56ace…`). Every portable check is green: the packaged `keliver-publish` self-test 40/0; the production-host scaffolder 65/0 (`--build`, the scaffolded host compiled) and 60/0 (from the zip); the iOS scaffolder 62/0 twice; the publish target 41/0 (`--build`) and 25/0; U27 key permissions 63/0/0 |
+| device run | [`38079812823`](https://github.com/waliasanchit007/keliver/actions/runs/38079812823): the APK pinned by sha256 (`106b2bd4…`). Device checks 19/0, packaged acceptance 28/0 |
+| local check | The downloaded zip (`32d47c34…`) and its APK (`106b2bd4…`) match the build run; `VERSION.json` is as above. The APK has no `portal_ed25519.pub`. Every `bin/` script is 755, and `relay/bin/keliver-publish-jvm` is present. There are no `.priv`, `.pem`, `.jks` or keystore files. 57 packaged files are byte-identical to the commit: every file under `templates/` (the host templates, the embed templates, the publish blocks and `legacy/`), every `bin/` script that has a counterpart in `scripts/`, `host/README.md` (= `DEVICE_HOST.md`), `README.md`, and the guide inside the MCP jar. The packaged `keliver-publish` self-test, rerun here against the downloaded zip: 40/0 |
+| iOS, the candidate zip itself | `reference/inventory/ci/ios.sh` with `KELIVER_CANDIDATE_SHA256=32d47c34…` and `KELIVER_SCAFFOLD_FROM=zip`, on this Mac: Xcode 26.4.1, iOS 26.4 simulator, iPhone 17 Pro; a disposable simulator (deleted after), Gradle home and Konan dir. The app was recreated from the zip. Every host was scaffolded by the zip's own `bin/` (`keliver-new-ios-host.sh`, with `--embed` for W2), and every publish used the zip's `bin/keliver-publish`. **118/0:** P1–P7; S2–S15, including W5's S6/U2 and S8 (fall-back to the cached v2), and S9c (a refused fall-back: "Bundle did not load"); W2's I1, I2, I4, I5; W5's U1 (v9 applied on resume, same process, floor 8 -> 9, Cellar on screen). No screenshot needed a re-read. Evidence: `docs/superpowers/evidence/tools-0.3.8-candidate2-ios/` (results, console logs, screen readings) |
+| tag push | At `ef625050`, only `portal-tools.yml` matches `portal-tools-v*`, and every job in it is read-only (`contents: read`; the device job also `actions: read`). `publish.yml` fires on `v*` only, `ci.yml` ignores tags, and `pages.yml` runs only on pushes to `main`. Since candidate 1 (`c0e71108`) only the path filters of `ios-host.yml` and `reference-app.yml` changed |
+| PR CI at the same code | `7afb8498` (the code of `ef625050`; only docs changed since): reference-app 38073852570, device 133/0; ios-host 38073852556, `ios.sh` 118/0 |
+
+**Recommendation:** tag `portal-tools-v0.3.8` on `ef625050` and attach
+`keliver-portal-tools-0.3.8.zip` (`32d47c34…`) from the retained artifact
+`11679304379` (30-day retention, built 2026-10-11), per
+`docs/PORTAL_TOOLS_RELEASE.md` step 4. **Only on the owner's explicit approval
+of 0.3.8, candidate 2.** Before publishing, the guide's download block (already
+0.3.8 in the commit) must match the asset as uploaded.
+
 ### Candidate 1 — `c0e71108` (superseded: never tag it)
 
 It is built from `release/portal-tools-0.3.8` (PR #94), stacked on W4 (#93).

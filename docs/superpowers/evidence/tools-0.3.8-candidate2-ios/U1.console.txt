@@ -1,0 +1,9 @@
+KeliverHost: verifying manifests with portal-ed25519 302cb423…; updates on-resume
+KeliverHost: loading https://localhost:8443/bundles/v8/manifest.zipline.json (index sequence 8, channel stable (host: stable), host version 1, manifest sha256 dd77935324d3…); rollback floor 0
+KeliverHost: codeLoadSuccess modules=40 sequence=8 source=network
+KeliverHost: rollback floor raised: 0 -> 8
+KeliverHost: update check: sequence 9 is available (running 8); applying https://localhost:8443/bundles/v9/manifest.zipline.json
+KeliverHost: codeLoadSuccess modules=40 sequence=9 source=network
+KeliverHost: update applied: sequence 9
+KeliverHost: rollback floor raised: 8 -> 9
+inventory.ioshost: 2023

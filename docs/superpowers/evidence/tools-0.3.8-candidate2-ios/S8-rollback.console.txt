@@ -1,0 +1,6 @@
+KeliverHost: verifying manifests with portal-ed25519 302cb423…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v1/manifest.zipline.json (index sequence 3, channel stable (host: stable), host version 1, manifest sha256 79c1956b1edf…); rollback floor 2
+KeliverHost: codeLoadFailed: rollback refused: sequence 1 is below 2, the highest this host has run
+KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v2/manifest.zipline.json)
+KeliverHost: codeLoadSuccess modules=40 sequence=2 source=cache
+inventory.ioshost: 99617

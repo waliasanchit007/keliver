@@ -1,0 +1,6 @@
+KeliverHost: verifying manifests with portal-ed25519 302cb423…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v2/manifest.zipline.json (index sequence 2, channel stable (host: stable), host version 1, manifest sha256 000000000000…); rollback floor 2
+KeliverHost: codeLoadFailed: manifest sha256 mismatch: https://localhost:8443/bundles/v2/manifest.zipline.json is d166d9729ca449acf9a04078d7d23d22f605194f6d1b71031af97d47c3df5e17, the index says 0000000000000000000000000000000000000000000000000000000000000000
+KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v2/manifest.zipline.json)
+KeliverHost: codeLoadSuccess modules=40 sequence=2 source=cache
+inventory.ioshost: 99521
