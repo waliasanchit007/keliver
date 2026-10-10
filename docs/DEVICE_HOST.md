@@ -194,6 +194,46 @@ that opens.
   manifest again, held to the floor and to the index's sha256 when the lookup
   gave one for that URL.
 
+**Reports** (both hosts, W6). Every outcome becomes a small record:
+- **The record:** `installId`, `channel`, `hostVersion`, `sequence`, `source`
+  (`network` or `cache`), `outcome` and `detail` (a short reason).
+- **Outcomes:** `loaded`, `fell-back`, `update-applied`, `update-failed`,
+  `not-loaded`, `no-bundle` or `refused`.
+- **The install id** is the random one made on the device for rollouts.
+  Nothing else identifies the user or the device.
+
+Where the records go:
+- **In code**, always: Android `KeliverHost.reports`, a `SharedFlow` that
+  replays the newest to a new collector, and iOS `Keliver.shared.onReport`.
+  Forward them to your own analytics.
+- **To a URL**, only if you set one: `keliver.reportUrl` (Android) or
+  `REPORT_URL` (iOS `HostConfig.kt`). The host POSTs each record there as JSON,
+  best effort: one try, a 10 s timeout, never blocking or failing a load. A
+  release build refuses an `http://` URL. Empty, the default, sends nothing
+  anywhere.
+
+The running sequence makes a useful crash key. On Android, `currentBundle`
+always has it:
+
+```kotlin
+// Android, in your Application, after creating the host:
+appScope.launch {
+  keliver.currentBundle.collect { b ->
+    Firebase.crashlytics.setCustomKey("keliver_sequence", b?.sequence ?: -1)  // or Sentry.setTag(...)
+  }
+}
+```
+
+```swift
+// iOS
+Keliver.shared.onReport = { r in
+  Crashlytics.crashlytics().setCustomValue(r.sequence, forKey: "keliver_sequence")  // or SentrySDK.configureScope
+}
+```
+
+**Measured:** both platforms' CI checks that the reports reach a URL (V1:
+`loaded`, then `update-applied`, from one install).
+
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
 The host remembers the highest sequence it has run for its key: its floor.

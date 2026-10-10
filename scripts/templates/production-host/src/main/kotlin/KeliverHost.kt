@@ -55,6 +55,11 @@
  * a failure leaves the old one). With keliver.updates=on-resume, resumed()
  * does that when the app comes back to the foreground. currentBundle and
  * events say what runs and what happened.
+ *
+ * Reports (W6): every outcome (loaded, fell back, update applied or failed,
+ * not loaded, no bundle, refused) is a KeliverReport on [reports], for the
+ * app's own analytics or crash keys; with keliver.reportUrl the host also
+ * POSTs it there as JSON, best effort. Nothing leaves the device otherwise.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -94,13 +99,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import kotlinx.serialization.modules.EmptySerializersModule
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okio.ByteString.Companion.decodeHex
 
 internal const val TAG = "KeliverHost"
@@ -137,6 +149,7 @@ class KeliverConfig(
   val apiBaseUrl: String? = null,
   val hostVersion: Long? = null,
   val updates: KeliverUpdates = KeliverUpdates.NEXT_LAUNCH,
+  val reportUrl: String? = null,
 ) {
   companion object {
     fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
@@ -145,6 +158,7 @@ class KeliverConfig(
       channel = BuildConfig.KELIVER_CHANNEL,
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },
       updates = if (BuildConfig.KELIVER_UPDATES == "on-resume") KeliverUpdates.ON_RESUME else KeliverUpdates.NEXT_LAUNCH,
+      reportUrl = BuildConfig.KELIVER_REPORT_URL.takeIf { it.isNotBlank() },
     )
   }
 }
@@ -169,6 +183,34 @@ sealed interface KeliverUpdateCheck {
   data class Available(val sequence: Long, val applying: Boolean) : KeliverUpdateCheck
 
   data class Failed(val reason: String) : KeliverUpdateCheck
+}
+
+/**
+ * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
+ * update-applied, update-failed, not-loaded, no-bundle or refused; [source] is
+ * network or cache (or null); [detail] is a short reason. [installId] is the
+ * random id made on the device for rollouts: nothing else identifies it.
+ */
+data class KeliverReport(
+  val installId: String,
+  val channel: String,
+  val hostVersion: Long?,
+  val sequence: Long?,
+  val source: String?,
+  val outcome: String,
+  val detail: String,
+  val platform: String = "android",
+) {
+  fun toJson(): String = buildJsonObject {
+    put("installId", installId)
+    put("channel", channel)
+    put("hostVersion", hostVersion)
+    put("sequence", sequence)
+    put("source", source)
+    put("outcome", outcome)
+    put("detail", detail)
+    put("platform", platform)
+  }.toString()
 }
 
 /** What happened to the bundle the host runs (W5). */
@@ -209,6 +251,47 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /** Updates applied or failed, and fall-backs (W5). */
   val events: SharedFlow<KeliverUpdateEvent> = mutableEvents.asSharedFlow()
 
+  private val mutableReports = MutableSharedFlow<KeliverReport>(replay = 1, extraBufferCapacity = 16)
+
+  /** Every outcome, for the app's analytics or crash keys (W6); the newest is replayed to a new collector. */
+  val reports: SharedFlow<KeliverReport> = mutableReports.asSharedFlow()
+
+  /** For reports only: no timeouts that could hold anything up, nothing retried. */
+  private val reportClient by lazy {
+    OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).retryOnConnectionFailure(false).build()
+  }
+
+  /**
+   * Hands [outcome] to [reports] and, with a report URL, POSTs it there. Best
+   * effort: a report that cannot be sent is dropped; it never blocks or fails
+   * anything else.
+   */
+  private fun report(outcome: String, sequence: Long? = null, source: String? = null, detail: String = "") {
+    val r = KeliverReport(
+      installId = runCatching { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).installId() }.getOrDefault("unknown"),
+      channel = config.channel,
+      hostVersion = config.hostVersion ?: appVersionCode(),
+      sequence = sequence,
+      source = source,
+      outcome = outcome,
+      detail = detail.take(300),
+    )
+    mutableReports.tryEmit(r)
+    val url = config.reportUrl ?: return
+    Log.d(TAG, "report: $outcome sequence=${sequence ?: "none"} to $url")
+    runCatching {
+      val request = Request.Builder().url(url).post(r.toJson().toRequestBody("application/json".toMediaType())).build()
+      reportClient.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: java.io.IOException) {
+          Log.d(TAG, "report not sent: ${e.message}")
+        }
+        override fun onResponse(call: Call, response: Response) {
+          response.close()
+        }
+      })
+    }.onFailure { Log.d(TAG, "report not sent: ${it.message}") }
+  }
+
   /** What a running app needs to look up and apply a newer bundle. Main thread only. */
   private class Session(
     val app: TreehouseApp<PortalPresenter>,
@@ -248,6 +331,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     if (trust is ProductionTrust.Refused) {
       Log.e(TAG, "refusing to load: ${trust.message}")
       mutableState.value = KeliverHostState.Message("Refusing to load", trust.message)
+      report("refused", detail = trust.message)
       return
     }
     trust as ProductionTrust.Verified
@@ -266,6 +350,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val server = config.bundleServer.toHttpUrlOrNull()
     if (server == null) {
       mutableState.value = KeliverHostState.Message("Refusing to load", "The bundle server '${config.bundleServer}' is not a URL.")
+      report("refused", detail = "the bundle server is not a URL")
       return
     }
     val apiBase = config.apiBaseUrl?.takeIf { it.isNotBlank() }?.toHttpUrlOrNull()
@@ -312,6 +397,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       }
       else -> {
         mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
+        report("no-bundle", detail = "the lookup failed and nothing is cached")
         // Nothing was created, so the next screen to start() may look again.
         started.set(false)
       }
@@ -447,7 +533,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
         onSuccess = { sequence, url ->
-          loaded.set(true)
+          val first = !loaded.getAndSet(true)
           scope.launch {
             // url is null for a load from the cache. After one, Zipline takes no
             // further manifest; after a network load it does.
@@ -458,6 +544,9 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               pending = null
               Log.d(TAG, "update applied: sequence $sequence")
               mutableEvents.tryEmit(KeliverUpdateEvent.Applied(sequence))
+              report("update-applied", sequence, "network")
+            } else if (first) {
+              report("loaded", sequence, if (url == null) "cache" else "network")
             }
           }
         },
@@ -493,11 +582,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               failedUpdates += p.url
               Log.d(TAG, "update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
               mutableEvents.tryEmit(KeliverUpdateEvent.Failed(p.sequence, reason))
+              report("update-failed", p.sequence, "network", reason)
               return@launch
             }
             if (fallback != null && !fellBack) {
               fellBack = true
               mutableEvents.tryEmit(KeliverUpdateEvent.FellBack(reason))
+              report("fell-back", detail = reason)
               Log.d(TAG, "the bundle did not load; falling back to the cached last good bundle (last loaded from $fallback)")
               freshnessSwitch.current = AcceptCachedBundle(floor)
               ziplineHttp.pin(fallback, null)
@@ -508,6 +599,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
               app.start()
             } else {
               mutableState.value = KeliverHostState.Message("Bundle did not load", reason.take(300))
+              report("not-loaded", detail = reason)
             }
           }
         },
