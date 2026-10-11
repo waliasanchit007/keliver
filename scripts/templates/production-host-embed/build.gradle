@@ -1,0 +1,124 @@
+// This app's Keliver host as a LIBRARY module, for an existing Android app.
+// Scaffolded by keliver-new-production-host.sh --embed; yours to edit from here.
+// Its Kotlin is the same as the standalone production host's (KeliverHost,
+// KeliverScreen/KeliverView); only this build and the manifest differ.
+//
+// Your app supplies the plugins (no versions are requested here, so yours
+// apply): Android, Kotlin 2.2.x with its Compose plugin, and app.cash.zipline
+// matching that Kotlin (1.22.0 for 2.2.0) — Zipline's compiler plugin rewrites
+// zipline.take/bind and is tied to one Kotlin version.
+//
+// Production only: it loads only bundles whose manifest verifies against
+// src/main/assets/keliver/portal_ed25519.pub (checked at build time below, and
+// on the device before anything is fetched).
+plugins {
+  id 'com.android.library'
+  id 'org.jetbrains.kotlin.android'
+  id 'org.jetbrains.kotlin.plugin.compose'
+  id 'app.cash.zipline' // IR rewrite of zipline.take/bind
+}
+
+// keliver.properties beside this file (a subproject's gradle.properties is not
+// read), each overridable with -Pkeliver.<name>=...
+def keliverProps = new Properties()
+def keliverPropsFile = file('keliver.properties')
+if (keliverPropsFile.isFile()) keliverPropsFile.withInputStream { keliverProps.load(it) }
+def setting = { String name, String fallback ->
+  providers.gradleProperty(name).getOrElse(keliverProps.getProperty(name, fallback)).trim()
+}
+def bundleServer = setting('keliver.bundleServer', '')
+def apiBaseUrl = setting('keliver.apiBaseUrl', '')
+def channel = setting('keliver.channel', 'stable')
+// ASCII URL characters only; the bundle server takes no query or fragment,
+// because the host appends its own path to it.
+def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
+def apiUrl = /https?:\/\/[A-Za-z0-9._~:\/?#\[\]@!$&()*+,;=%-]+/
+if (!(bundleServer ==~ serverUrl)) {
+  throw new GradleException("keliver.bundleServer must be an http:// or https:// URL without a query " +
+    "(got '$bundleServer'). Set it in ${keliverPropsFile} or pass -Pkeliver.bundleServer=...")
+}
+if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
+  throw new GradleException("keliver.apiBaseUrl must be empty or an http:// or https:// URL (got '$apiBaseUrl').")
+}
+if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
+  throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
+}
+def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
+
+// The embedded key, checked by checkPortalKey (below) and compiled into
+// BuildConfig.KELIVER_PUBLIC_KEY_HEX: the host reads it from there, never from
+// the merged assets, where an app's or another library's file of the same name
+// would win.
+def portalKey = file('src/main/assets/keliver/portal_ed25519.pub')
+def portalKeyHex = portalKey.isFile() ? portalKey.text.trim().toLowerCase() : ''
+
+android {
+  namespace '@@PACKAGE@@'
+  compileSdk 35
+  defaultConfig {
+    minSdk 23
+    consumerProguardFiles 'consumer-rules.pro'
+    buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
+    buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
+    buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
+    buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeyHex ==~ /[0-9a-f]{64}/ ? portalKeyHex : ''}\""
+  }
+  buildFeatures { compose true; buildConfig true }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+kotlin { jvmToolchain(17) }
+
+// The embedded key is the whole of this host's trust: a missing or malformed
+// one fails the BUILD, not just a launch on someone's device.
+def checkPortalKey = tasks.register('checkPortalKey') {
+  inputs.file(portalKey)
+  doLast {
+    def hex = portalKey.text.trim()
+    if (!(hex ==~ /[0-9a-fA-F]{64}/)) {
+      throw new GradleException("$portalKey is not a 64-hex-digit Ed25519 public key. Re-run " +
+        "keliver-new-production-host.sh --embed, or copy your portal store's keys/ed25519.pub there.")
+    }
+  }
+}
+tasks.named('preBuild') { dependsOn checkPortalKey }
+
+// A non-debug variant talks https or not at all. (Cleartext for an http://
+// development server is your APP's manifest decision: this library sets none.)
+def checkReleaseUrls = tasks.register('checkReleaseUrls') {
+  doLast {
+    if (cleartext) {
+      throw new GradleException("A release build needs https:// servers; keliver.bundleServer is " +
+        "'$bundleServer' and keliver.apiBaseUrl is '$apiBaseUrl'. Use an http:// server only for debug builds.")
+    }
+  }
+}
+androidComponents {
+  onVariants(selector().all()) { variant ->
+    if (variant.buildType != 'debug') {
+      def pre = "pre${variant.name.capitalize()}Build"
+      tasks.configureEach { t -> if (t.name == pre) t.dependsOn checkReleaseUrls }
+    }
+  }
+}
+
+dependencies {
+  implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-material-composeui:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-material-protocol-host-web:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:portal-sql:@@KELIVER_VERSION@@'
+  implementation 'dev.keliver:keliver-http:@@KELIVER_VERSION@@'
+  implementation 'app.cash.zipline:zipline:@@ZIPLINE_VERSION@@'
+  implementation 'app.cash.zipline:zipline-loader:@@ZIPLINE_VERSION@@'
+  implementation 'com.squareup.okhttp3:okhttp:5.1.0'
+  // api: your app's screens use KeliverScreen (Compose) or KeliverView.
+  api 'androidx.activity:activity-compose:1.10.1'
+  implementation 'androidx.core:core-ktx:1.16.0'
+  implementation 'io.coil-kt.coil3:coil-compose-core:3.3.0'
+  implementation 'io.coil-kt.coil3:coil-network-okhttp:3.3.0'
+  api 'org.jetbrains.compose.runtime:runtime:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.compose.foundation:foundation:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.compose.material:material:@@COMPOSE_VERSION@@'
+  api 'org.jetbrains.compose.ui:ui:@@COMPOSE_VERSION@@'
+  implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+}

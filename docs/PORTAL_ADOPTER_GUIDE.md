@@ -255,7 +255,7 @@ changes nothing else, `keliver.portal.json` included. Then:
   covers rotation.
 
 It embeds your portal's public key (copied from your store — commit
-`host-android/src/main/assets/portal_ed25519.pub`), verifies every bundle
+`host-android/src/main/assets/keliver/portal_ed25519.pub`), verifies every bundle
 against it, and loads the latest one your relay has published. Use an
 `https://` bundle server for real users — a release build refuses `http://`;
 `DEVICE_HOST.md` §2 (Android) has the options and what the host refuses.
@@ -276,6 +276,68 @@ Your portal's public key and the servers go into
 release build refuses `http://`. A device build needs your team and signing
 (`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
 details.
+
+### Embed in an existing app
+
+The commands above write a standalone host app. To show Keliver screens inside
+an app you already have, next to its native screens, add `--embed`. It writes
+the same host as a module of your app. It edits none of your files: it prints
+the lines to add. This is not in a released tools bundle yet; it ships only
+with a later release.
+
+**Android.** Run from your Keliver app's root (the one with
+`keliver.portal.json`), pointing `--into` at your existing app's Gradle root:
+
+```bash
+$KP/keliver-new-production-host.sh --embed --into ../my-app --bundle-server https://bundles.example.com
+```
+
+It writes `../my-app/keliver-host/`, a `com.android.library` module with the
+same host Kotlin as `host-android/`. Then, in your app:
+- `settings.gradle`: `include ':keliver-host'`;
+- the root `build.gradle`: the library's plugins, `com.android.library`,
+  `org.jetbrains.kotlin.plugin.compose` and `app.cash.zipline` `1.22.0`. The
+  module requests them without versions, so your build applies them. Zipline
+  1.22.0's compiler plugin needs **Kotlin 2.2.0**, so your app must build with
+  it;
+- your app's `build.gradle`: `implementation project(':keliver-host')`;
+- your `Application`: `val keliver by lazy { KeliverHost.create(this) }`. Make
+  one host per process: a second `create()` for the same key throws;
+- a screen: `KeliverScreen(keliver, Modifier.fillMaxSize())` in Compose, or
+  `KeliverView(context).apply { host = keliver }` in a View layout (in a
+  `ComponentActivity` or a `Fragment`).
+
+The settings are in `keliver-host/keliver.properties` (`-Pkeliver.*` overrides
+them), and the key is `keliver-host/src/main/assets/keliver/portal_ed25519.pub`.
+Commit both. Your app keeps its own manifest decisions: cleartext for an
+`http://` development server, backups, the theme. A minified release keeps
+what Zipline needs through the module's consumer R8 rules.
+
+**iOS.**
+
+```bash
+$KP/keliver-new-ios-host.sh --embed --into ../MyApp --bundle-server https://bundles.example.com
+```
+
+It writes `../MyApp/keliver-host-ios/`, the `KeliverHost` framework's Gradle
+build with its own wrapper, plus `KeliverScreen.swift` and `EMBED.md`. Your
+Xcode project is not changed. `EMBED.md` lists the edits:
+- a Run Script phase before Compile Sources that builds the framework;
+- `ENABLE_USER_SCRIPT_SANDBOXING = NO` and `-lsqlite3`;
+- `CADisableMinimumFrameDurationOnPhone` in your Info.plist;
+- adding `KeliverScreen.swift` to your target.
+
+Then `KeliverScreen()` goes in any SwiftUI view. `Keliver.shared.start()` in
+your `App`'s `init` starts the lookup early.
+
+On both platforms, every Keliver screen in the process shares one lookup and
+one load: navigating natively or rotating doesn't load again, and a newer
+bundle is picked up on the next process start. If a bundle doesn't verify, the
+Keliver screen says "Bundle did not load" and your native screens keep working.
+`DEVICE_HOST.md` §4 has the details and the limits. The main limit is on
+Android: the module compiles with your app's Kotlin, and only 2.2.0 works. On
+iOS the framework builds with its own Gradle and Kotlin, but an app that
+already embeds a Kotlin framework would carry two Kotlin runtimes.
 
 ### Publish from CI to a static server
 
@@ -313,7 +375,7 @@ they have run, so serving an older index, or an older `v<N>/` as newest, makes
 them show no bundle. To go back to v`<N>`'s code, republish it:
 
 ```bash
-KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --public-key-file host-android/src/main/assets/portal_ed25519.pub
+KELIVER_SIGNING_KEY_FILE=... $KP/keliver-publish . --out site --republish 3 --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 It copies `v3/`'s modules unchanged into the next `v<M>/` and has your app's
@@ -333,7 +395,7 @@ it is ready for everyone, promote it. Nothing is built or signed, so this step
 needs no private key (only the app's `keliver.portal.json` and the public key):
 
 ```bash
-$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/portal_ed25519.pub
+$KP/keliver-publish . --out site --promote 7 --channel stable --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 **Staged rollouts and host-version gates.** Publish with `--rollout 10` and
@@ -363,7 +425,7 @@ constraints skip any entry that has them.
 A first publish, by hand:
 
 ```bash
-$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/portal_ed25519.pub
+$KP/keliver-publish . --out site --init --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
 ```
 
 Every later one, in GitHub Actions, with S3 as the example. With GCS use
@@ -388,7 +450,7 @@ jobs:
           umask 077
           printf '%s' "$KELIVER_SIGNING_KEY" > "$RUNNER_TEMP/keliver.priv"
           KELIVER_SIGNING_KEY_FILE="$RUNNER_TEMP/keliver.priv" \
-            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/portal_ed25519.pub
+            $KP/keliver-publish . --out site --public-key-file host-android/src/main/assets/keliver/portal_ed25519.pub
           rm -f "$RUNNER_TEMP/keliver.priv"
         env:
           KELIVER_SIGNING_KEY: ${{ secrets.KELIVER_SIGNING_KEY }}

@@ -54,6 +54,8 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Also (from 0.3.8):** publish without the relay
   (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
   rollback protection in the hosts it scaffolds.
+- **Also (unreleased):** `--embed` on both host scaffolders, to show Keliver
+  screens inside an app you already have.
 - **Doesn't (yet):** an in-app update API.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
@@ -86,6 +88,17 @@ your store resolves, any key that is not its `ed25519.pub`. Refuses without
 changing anything if an input is wrong or `host-android/` exists. A release
 build needs `https://` servers and your own signing config.
 
+```bash
+bin/keliver-new-production-host.sh --embed --into DIR [--module keliver-host] --bundle-server URL ...
+```
+
+With `--embed` (unreleased) it writes the same host as a library module,
+`DIR/keliver-host/`, into an existing Android app instead: `KeliverHost` (one
+per process, made in your `Application`), the `KeliverScreen` Composable and
+`KeliverView`. It edits none of your files and prints the lines to add. Your
+build must supply Kotlin 2.2.0, its Compose plugin and `app.cash.zipline`
+1.22.0. `host/README.md` §4 has the details.
+
 ### bin/keliver-new-ios-host.sh
 
 ```bash
@@ -97,6 +110,9 @@ xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulato
 Writes `host-ios/`: your app's production iOS host, a Kotlin framework on Maven
 Central plus an Xcode app. It applies the same key checks and refusals as
 `keliver-new-production-host.sh`. `host/README.md` §3 has what it does.
+With `--embed --into DIR` (unreleased) it writes only the framework's Gradle
+build, `DIR/keliver-host-ios/`, for an existing Xcode app, plus
+`KeliverScreen.swift` and `EMBED.md` with the Xcode edits; `host/README.md` §4.
 
 ### bin/keliver-publish (from 0.3.8)
 

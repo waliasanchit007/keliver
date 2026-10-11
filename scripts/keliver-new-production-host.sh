@@ -10,6 +10,9 @@
 #                                  [--application-id ID]
 #                                  [--public-key-file PATH]
 #                                  [--channel NAME]
+#   keliver-new-production-host.sh --embed --into DIR [--module NAME]
+#                                  --bundle-server URL [--api-base-url URL]
+#                                  [--public-key-file PATH] [--channel NAME]
 #
 # Run from the APP repo root (the directory holding keliver.portal.json).
 #
@@ -22,6 +25,14 @@
 #   --channel          default: stable. The release channel this host takes from
 #                      bundles/index.json besides stable (W4.4), e.g. beta for
 #                      testers: lower-case letters, digits and '-'.
+#   --embed            W2: write the host as a LIBRARY module into an EXISTING
+#                      Android app instead: DIR/NAME (default keliver-host),
+#                      with KeliverHost, KeliverScreen and KeliverView, the
+#                      same Kotlin as the standalone host. DIR is that app's
+#                      root (it has a settings.gradle). Nothing of the existing
+#                      app is edited: this prints the lines to add. Your app
+#                      supplies the plugins: Kotlin 2.2.0 with its Compose
+#                      plugin and app.cash.zipline 1.22.0.
 #   --public-key-file  default: keys/ed25519.pub in this app's portal store,
 #                      found by keliver-store-path.sh. The key is copied into
 #                      the module (it is public and belongs in git), so building
@@ -63,6 +74,7 @@ done
 HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 BUNDLE_SERVER=""; API_BASE_URL=""; APPLICATION_ID=""; KEY_FILE=""; CHANNEL="stable"
+EMBED=false; INTO=""; MODULE="keliver-host"
 need() { [ "$2" -ge 2 ] || { echo "$1 needs a value" >&2; exit 2; }; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -71,7 +83,10 @@ while [ $# -gt 0 ]; do
     --application-id)  need "$1" $#; APPLICATION_ID="$2"; shift 2 ;;
     --public-key-file) need "$1" $#; KEY_FILE="$2"; shift 2 ;;
     --channel)         need "$1" $#; CHANNEL="$2"; shift 2 ;;
-    -h|--help)         sed -n '2,49p' "$SELF"; exit 0 ;;
+    --embed)           EMBED=true; shift ;;
+    --into)            need "$1" $#; INTO="$2"; shift 2 ;;
+    --module)          need "$1" $#; MODULE="$2"; shift 2 ;;
+    -h|--help)         sed -n '2,60p' "$SELF"; exit 0 ;;
     *)                 echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -80,7 +95,20 @@ fail() { echo "keliver-new-production-host: $*" >&2; echo "Nothing was written."
 
 APP="$(pwd -P)"
 [ -f "$APP/keliver.portal.json" ] || fail "no keliver.portal.json here — run from the app root."
-[ -e "$APP/host-android" ] && fail "$APP/host-android already exists — refusing to overwrite."
+if $EMBED; then
+  [ -n "$INTO" ] || fail "--embed needs --into <the existing Android app's root>."
+  [ -z "$APPLICATION_ID" ] || fail "--application-id is for the standalone host; an embedded host is a library in YOUR app."
+  [[ "$MODULE" =~ ^[A-Za-z][A-Za-z0-9_-]{0,63}$ ]] || fail "--module must be a plain module name (got '$MODULE')."
+  [ -d "$INTO" ] || fail "--into $INTO is not a directory."
+  INTO="$(CDPATH= cd -- "$INTO" && pwd -P)"
+  [ -f "$INTO/settings.gradle" ] || [ -f "$INTO/settings.gradle.kts" ] \
+    || fail "$INTO has no settings.gradle(.kts): --into must be the existing app's Gradle root."
+  TARGET="$INTO/$MODULE"
+else
+  [ -z "$INTO" ] || fail "--into is only for --embed."
+  TARGET="$APP/host-android"
+fi
+[ -e "$TARGET" ] && fail "$TARGET already exists — refusing to overwrite."
 
 # The templates sit beside this script in the repository (scripts/templates) and
 # one level up in the tools bundle (templates/).
@@ -89,6 +117,10 @@ for t in "$HERE/templates/production-host" "$HERE/../templates/production-host";
   [ -f "$t/build.gradle" ] && { TEMPLATES="$(cd "$t" && pwd -P)"; break; }
 done
 [ -n "$TEMPLATES" ] || fail "the production-host templates are missing (looked in $HERE/templates and $HERE/../templates)."
+EMBED_TEMPLATES="$(dirname "$TEMPLATES")/production-host-embed"
+if $EMBED && [ ! -f "$EMBED_TEMPLATES/build.gradle" ]; then
+  fail "the embed templates are missing ($EMBED_TEMPLATES)."
+fi
 
 # ASCII URL characters only (gradle.properties is ISO-8859-1 with escapes); the
 # bundle server takes no query or fragment, since the host appends a path.
@@ -179,7 +211,7 @@ fi
 for v in "$NAME" "$PACKAGE" "$APPLICATION_ID" "$BUNDLE_SERVER" "$API_BASE_URL"; do
   case "$v" in *@@*) fail "a value contains '@@', which the templates use as placeholders: '$v'." ;; esac
 done
-STAGE="$(mktemp -d "$APP/.host-android.XXXXXX")"
+STAGE="$(mktemp -d "$(dirname "$TARGET")/.$(basename "$TARGET").XXXXXX")"
 chmod 755 "$STAGE"
 trap 'rm -rf "$STAGE"' EXIT
 PKG_PATH="${PACKAGE//.//}"
@@ -198,26 +230,59 @@ assert '@@' not in s, 'unsubstituted placeholder in ' + src
 open(dst, 'w', encoding='utf-8').write(s)
 PY
 }
-for f in settings.gradle gradle.properties build.gradle src/main/AndroidManifest.xml; do
-  subst "$TEMPLATES/$f" "$STAGE/$f"
-done
+if $EMBED; then
+  for f in build.gradle keliver.properties consumer-rules.pro src/main/AndroidManifest.xml; do
+    subst "$EMBED_TEMPLATES/$f" "$STAGE/$f"
+  done
+else
+  for f in settings.gradle gradle.properties build.gradle src/main/AndroidManifest.xml; do
+    subst "$TEMPLATES/$f" "$STAGE/$f"
+  done
+fi
+# The same Kotlin in both modes; only the app shell (its Application and its
+# activity) stays out of the library.
 for f in "$TEMPLATES"/src/main/kotlin/*.kt; do
+  if $EMBED; then case "$(basename "$f")" in HostApp.kt|MainActivity.kt) continue ;; esac; fi
   subst "$f" "$STAGE/src/main/kotlin/$PKG_PATH/$(basename "$f")"
 done
-mkdir -p "$STAGE/src/main/assets"
-printf '%s\n' "$KEY_HEX" > "$STAGE/src/main/assets/portal_ed25519.pub"
+mkdir -p "$STAGE/src/main/assets/keliver"
+printf '%s\n' "$KEY_HEX" > "$STAGE/src/main/assets/keliver/portal_ed25519.pub"
 cat > "$STAGE/.gitignore" <<'EOF'
 /build/
 /.gradle/
 /local.properties
 EOF
-# mkdir is atomic: if host-android appeared since the check above, this fails
+# mkdir is atomic: if the target appeared since the check above, this fails
 # instead of moving the stage INSIDE it.
-mkdir "$APP/host-android" 2>/dev/null || fail "$APP/host-android appeared while scaffolding — refusing to overwrite."
-( cd "$STAGE" && tar cf - . ) | ( cd "$APP/host-android" && tar xf - ) \
-  || { rm -rf "$APP/host-android"; fail "could not write $APP/host-android."; }
+mkdir "$TARGET" 2>/dev/null || fail "$TARGET appeared while scaffolding — refusing to overwrite."
+( cd "$STAGE" && tar cf - . ) | ( cd "$TARGET" && tar xf - ) \
+  || { rm -rf "$TARGET"; fail "could not write $TARGET."; }
 rm -rf "$STAGE"
 trap - EXIT
+
+if $EMBED; then
+  # What the existing app must supply; warned, not refused (its build may declare
+  # them in ways this cannot see).
+  found(){ grep -rqsE "$1" "$INTO"/settings.gradle* "$INTO"/build.gradle* "$INTO"/gradle/libs.versions.toml 2>/dev/null; }
+  found 'app\.cash\.zipline' || echo "warning: no app.cash.zipline plugin found in $INTO's settings, build or version catalog: the library needs it (1.22.0 for Kotlin 2.2.0)." >&2
+  found 'kotlin\.plugin\.compose|plugin-compose|compose-compiler' || echo "warning: no Kotlin Compose compiler plugin found in $INTO's build: the library needs org.jetbrains.kotlin.plugin.compose." >&2
+  found '2\.2\.0([^0-9]|$)' || echo "warning: no Kotlin 2.2.0 found in $INTO's build: Zipline 1.22.0's compiler plugin needs Kotlin 2.2.0." >&2
+  echo "created $MODULE/ in $INTO — this app's Keliver host, as a library module"
+  echo "  package          $PACKAGE"
+  echo "  bundle server    $BUNDLE_SERVER"
+  echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
+  echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
+  echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
+  echo "                   commit $MODULE/src/main/assets/keliver/portal_ed25519.pub"
+  echo "next, in YOUR app (nothing of it was changed):"
+  echo "  settings.gradle:      include ':$MODULE'"
+  echo "  app/build.gradle:     implementation project(':$MODULE')"
+  echo "  your Application:     val keliver by lazy { $PACKAGE.KeliverHost.create(this) }   (one per process)"
+  echo "  a Compose screen:     $PACKAGE.KeliverScreen(keliver, Modifier.fillMaxSize())"
+  echo "  or a View layout:     $PACKAGE.KeliverView(context).apply { host = keliver }"
+  echo "  settings: $MODULE/keliver.properties (or -Pkeliver.bundleServer=...); an http:// server needs YOUR app's cleartext permission in debug"
+  exit 0
+fi
 
 echo "created host-android/ — this app's production Android host"
 echo "  package          $PACKAGE"
@@ -226,7 +291,7 @@ echo "  bundle server    $BUNDLE_SERVER"
 echo "  channel          $CHANNEL$([ "$CHANNEL" = stable ] || echo ' (and stable)')"
 echo "  HostHttp         ${API_BASE_URL:-not provided (no --api-base-url)}"
 echo "  trusts the key   ${KEY_HEX:0:8}… from $KEY_ORIGIN"
-echo "                   commit host-android/src/main/assets/portal_ed25519.pub"
+echo "                   commit host-android/src/main/assets/keliver/portal_ed25519.pub"
 echo "next:"
 echo "  ./gradlew -p host-android assembleDebug     (needs an Android SDK: ANDROID_HOME, or host-android/local.properties)"
 echo "  a release build needs https:// servers and your own signing config in host-android/build.gradle"
