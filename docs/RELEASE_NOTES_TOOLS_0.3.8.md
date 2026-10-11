@@ -1,14 +1,37 @@
 # keliver-portal-tools 0.3.8 — release notes
 
-**Status: CANDIDATE.** Nothing has been tagged or published. Tag and publish
-only after the owner's explicit approval for 0.3.8. Approvals of 0.3.6 and
-0.3.7 do not carry over. Tools 0.3.7 and earlier, and the Maven 0.3.3
-libraries, are unchanged. The tools version and the library version are
-separate lines: 0.3.8 still scaffolds against `dev.keliver:*:0.3.3`.
+**Status: RELEASED 2026-10-11** (candidate 3), on the owner's approval
+("you have access to push release", 2026-10-11).
 
-The candidate to release is **candidate 3** (W3, W4, W2, W5 and W6). Its
-identities are recorded under "Candidate verification" below, after the build;
-the commit that records them is not the built commit. **Candidates 1
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.8` (annotated, object `ebf64054`) → **`731ebfcefca14f3c9766d782cedb6982086729a7`** |
+| release | [portal-tools-v0.3.8](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.8), published 2026-10-11T15:24:08Z, `--latest=false` (the "Latest" badge stays `v0.3.3`) |
+| zip asset | `keliver-portal-tools-0.3.8.zip`, 90,584,445 bytes; sha256 **`aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d`**: uploaded from the retained artifact `11700407805` of build `38133756571` (downloaded and hashed first), never rebuilt |
+| `.sha256` asset | 97 bytes, sha256 `b475fe60832ed41bdb0f60acbd8678587071a447e7c2fc8c53092428d978df16` |
+| tag push | ran only `portal-tools.yml`'s read-only rebuild (`38150887414`), as step 3 said; its artifact is not attached |
+
+**How the stored asset was checked** (procedure step 4). Downloading the draft
+asset back stalled at 0 bytes: this machine's network blocks the asset host,
+as for 0.3.5. So, as the procedure allows only in this case:
+1. Before publishing, both stored assets' server-side `digest` and `size`
+   were compared with the verified files, and matched: zip
+   `sha256:aafed0d8…`, 90,584,445 bytes; `.sha256` `sha256:b475fe60…`, 97
+   bytes. The tag was re-checked at `731ebfce`. This is GitHub's record of the
+   stored bytes, not a download.
+2. After publishing, the public `.sha256` sidecar downloaded here (97 bytes,
+   naming `aafed0d8…`). The public zip is checked from GitHub-hosted runners:
+   `reference-app.yml` (38151355318) and `ios-host.yml` (38151386539),
+   dispatched on PR #99's branch. Their first step runs `sha256sum -c` against
+   the release's own `.sha256`, then checks the pinned hash.
+
+Tools 0.3.7 and earlier, and the Maven 0.3.3 libraries, are unchanged. The
+tools version and the library version are separate lines: 0.3.8 still
+scaffolds against `dev.keliver:*:0.3.3`.
+
+The released candidate is **candidate 3** (W3, W4, W2, W5 and W6). Its
+verification is recorded under "Candidate verification" below; the commit that
+records it is not the built commit. **Candidates 1
 (`c0e71108`, zip `7ea7f11d…`) and 2 (`ef625050`, zip `32d47c34…`) are
 superseded: never tag them.** Candidate 1 carried W3 and W4; candidate 2 added
 W2 and W5. The owner held each release until more was done.
