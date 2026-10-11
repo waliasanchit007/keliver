@@ -26,11 +26,11 @@ step against a named, retained artifact.
 ## Procedure
 
 The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.7.md`](RELEASE_NOTES_TOOLS_0.3.7.md) (previous:
-[`RELEASE_NOTES_TOOLS_0.3.6.md`](RELEASE_NOTES_TOOLS_0.3.6.md)).
+[`RELEASE_NOTES_TOOLS_0.3.8.md`](RELEASE_NOTES_TOOLS_0.3.8.md) (previous:
+[`RELEASE_NOTES_TOOLS_0.3.7.md`](RELEASE_NOTES_TOOLS_0.3.7.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
-and for 0.3.6 and 0.3.7 on 2026-10-07. For 0.3.7, `gh release create`
+for 0.3.6 and 0.3.7 on 2026-10-07, and for 0.3.8 on 2026-10-11 (the draft download-back was blocked by the network again; the 0.3.5 route below was used). For 0.3.7, `gh release create`
 stayed alive after its uploads had finished: check the draft's assets
 (`state: uploaded`, `digest`) rather than waiting on the client. Where 0.3.5 found the written procedure wrong, the
 text below is corrected and says so. For 0.3.6 the draft download-back
