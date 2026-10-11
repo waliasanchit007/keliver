@@ -144,7 +144,9 @@ esac
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
 sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug ) > "$EV/host-build.log" 2>&1 \
+# W6 (V2): it reports to the relay. A template without keliver.reportUrl
+# (tools 0.3.8 candidate 2 and earlier) ignores the property.
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.reportUrl=http://10.0.2.2:8077/report ) > "$EV/host-build.log" 2>&1 \
   && ok "P1: the scaffolded host built from Maven Central" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.

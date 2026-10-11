@@ -844,9 +844,15 @@ What was done for the candidate:
   hand, per `docs/PORTAL_TOOLS_RELEASE.md` step 4. The artifact expires about
   2026-11-10. Then merge #94–#96 (and #97 if done) into `main`, again only with
   the owner's word, and drop the `KELIVER_SCAFFOLD_FROM=repo` CI stopgap.
-- **W6 (PR #97): done 2026-10-11.** Not in candidate 2. Ship it in the next
-  tools release (a candidate 3 would need full re-verification) or after 0.3.8,
-  as the owner prefers.
+- **Owner's decision, 2026-10-11: hold the release for now; continue with
+  W6.** Candidate 2 stays verified and untagged (its artifact expires about
+  2026-11-10; after that a new build is needed).
+- **W6 (PR #97):** W6.1 and its review are done. **W6.3, the optional relay
+  collector** (`POST /report`, `GET /reports`, `GET /reports/view`;
+  `HostReports.kt`) is built: unit and HTTP tests, and V2 in the harnesses. V2
+  runs only against a relay that has `/reports`, so not on CI until a tools
+  release carries it (CI uses the published relay). Before that, it can be run
+  through a local `ios.sh` on a zip built from this branch.
 - **W7 and W8** need the owner: physical devices and an adopter (W7), and
   decisions on key rotation (W8, U30).
 - **Then W5** (update API, including falling back to the last good bundle),

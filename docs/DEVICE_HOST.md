@@ -221,6 +221,21 @@ Where the records go:
   - `no-bundle` is sent once per process.
   - Empty, the default, sends nothing anywhere.
 
+**The relay as a collector, for development.** Point the report URL at your
+portal relay's `/report`:
+- Android: `http://10.0.2.2:8077/report` from an emulator. Debug builds allow
+  it.
+- iOS: `http://localhost:8077/report` from a simulator, the same host as an
+  `http://` bundle server.
+
+The relay keeps the reports in its store (`reports/`, at most 20,000), and
+refuses anything that is not exactly the eight fields. It shows the counts:
+- `GET /reports`: JSON, per platform, channel and sequence, with distinct
+  installs and outcomes, plus the newest records;
+- `GET /reports/view`: the same as a page.
+
+For real users, use your own collector over `https://`.
+
 **What a report URL receives about a user:**
 - `installId`, the random id made on the device for rollouts. It is a
   persistent pseudonymous identifier, which privacy law such as the GDPR may

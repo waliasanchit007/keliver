@@ -208,6 +208,16 @@ launch prod "$EV/logcat-prod-v2.txt"
 grep -q "codeLoadSuccess" "$EV/logcat-prod-v2.txt" && ok "P4: the signed v2 loaded" || bad "P4: v2 did not load"
 drive title Stockroom P4; fold "P4: the second signed version shows Stockroom" $?
 shot P4-stockroom-production
+# V2 (W6): this host reports to the relay. A relay that collects reports
+# (GET /reports; not in tools 0.3.8 candidate 2 or earlier) must have counted
+# v1's and v2's loads. An older relay is a SKIP, not a pass.
+if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:8077/reports)" = 200 ]; then
+  curl -s -m 5 http://localhost:8077/reports > "$EV/relay-reports.json"
+  python3 "$HERE/w5/relay_reports.py" "$EV/relay-reports.json" android > "$EV/relay-reports.txt" 2>&1 \
+    && ok "V2: the relay counted this host's loads of v1 and v2 (GET /reports)" || bad "V2: $(tail -1 "$EV/relay-reports.txt")"
+else
+  echo "  SKIP  V2: this relay serves no /reports (it predates W6); not counted"
+fi
 portal_down "$APP"
 
 # P5: another app's identity. A COPY with its inherited pointer removed — the
