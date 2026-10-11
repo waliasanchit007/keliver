@@ -34,14 +34,24 @@
 
 echo "--- W3 static HTTPS"
 W3="$WORK/w3"; mkdir -p "$W3"
-PUBLISH="$(bash "$HERE/w3/tools.sh" "$W3/tools" 2> "$EV/w3-tools.log" | tail -1)"
-[ -n "$PUBLISH" ] && [ -x "$PUBLISH" ] && ok "W3: keliver-publish from this checkout, in the tools layout" \
-  || { bad "W3: keliver-publish was not built"; tail -20 "$EV/w3-tools.log"; }
+# Which keliver-publish and publish-target scaffolder: the zip's own bin/ when it
+# ships them (0.3.8 on) and the hosts come from the zip; a CANDIDATE must ship
+# them (no fallback). Otherwise this checkout's, in the tools layout.
+if [ "${KELIVER_SCAFFOLD_FROM:-zip}" = zip ] && [ -x "$KP/keliver-publish" ]; then
+  PUBLISH="$KP/keliver-publish"; PUBLISH_TARGET="$KP/keliver-new-publish-target.sh"
+  ok "W3: keliver-publish and keliver-new-publish-target.sh from the tools $LABEL zip's bin/"
+elif [ "${KELIVER_SCAFFOLD_FROM:-zip}" = zip ] && [ -n "${KELIVER_CANDIDATE_SHA256:-}" ]; then
+  bad "W3: the candidate zip has no executable bin/keliver-publish"; PUBLISH=""; PUBLISH_TARGET="$KP/keliver-new-publish-target.sh"
+else
+  PUBLISH="$(bash "$HERE/w3/tools.sh" "$W3/tools" 2> "$EV/w3-tools.log" | tail -1)"; PUBLISH_TARGET="$REPO/scripts/keliver-new-publish-target.sh"
+  [ -n "$PUBLISH" ] && [ -x "$PUBLISH" ] && ok "W3: keliver-publish from this checkout, in the tools layout" \
+    || { bad "W3: keliver-publish was not built"; tail -20 "$EV/w3-tools.log"; }
+fi
 bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && cp "$W3/tls/ca.pem" "$EV/w3-ca.pem" \
   && xcrun simctl keychain "$UDID" add-root-cert "$W3/tls/ca.pem" \
   && ok "W3: a throwaway CA, trusted by this run's simulator only" || bad "W3: the CA was not installed"
 
-( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/w3-signing-upgrade.log" 2>&1
+( cd "$APP" && "$PUBLISH_TARGET" ) > "$EV/w3-signing-upgrade.log" 2>&1
 if grep -q '(signing-0.3.7) was replaced by the current one' "$EV/w3-signing-upgrade.log"; then
   ( cd "$APP" && git add build.gradle && git -c user.name=w3 -c user.email=w3@invalid commit -qm "W4: the signing block that signs a publish sequence" ) \
     && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's 0.3.7 signing block" || bad "W3: could not commit the upgraded signing block"

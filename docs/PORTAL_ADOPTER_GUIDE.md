@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.7](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7)**:
+  **[tools 0.3.8](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.8)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7/keliver-portal-tools-0.3.7.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.7.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.8/keliver-portal-tools-0.3.8.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.8/keliver-portal-tools-0.3.8.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.8.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.7.zip
-  export KP="$PWD/keliver-portal-tools-0.3.7/bin"
+  unzip keliver-portal-tools-0.3.8.zip
+  export KP="$PWD/keliver-portal-tools-0.3.8/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,7 +30,7 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.7
+  The tools version and the library version are **separate lines**: tools 0.3.8
   scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
   bundle records both in its `VERSION.json`.
 
@@ -289,9 +289,8 @@ Serve that directory from any static host or CDN (S3, GCS, GitHub Pages,
 nginx) over HTTPS. Point `--bundle-server` at it. Hosts from the current
 scaffolders read `bundles/index.json`.
 
-**It is not in a released tools bundle yet.** Until it is, it is
-`scripts/keliver-publish` in the Keliver repository, and it needs
-`portal-relay`'s `installDist` (see `scripts/keliver-publish-selftest.sh`).
+It ships in the tools bundle from **0.3.8** on, as `$KP/keliver-publish`
+(its JVM half is `relay/bin/keliver-publish-jvm`).
 
 **The live index is the state.** The next `v<N>` and `sequence` come from the
 `bundles/` directory you publish into. So:
@@ -413,9 +412,9 @@ Still:
 
 Store the private key (the hex in your store's `keys/ed25519.priv`) as a
 secret. `KELIVER_SIGNING_KEY_FILE` is read by the signing block that
-`keliver-new-publish-target.sh` writes from the tools release that ships
-`keliver-publish` on. Blocks written by 0.3.6 or 0.3.7 don't know this
-variable: run `keliver-new-publish-target.sh` again. It replaces exactly
+`keliver-new-publish-target.sh` writes from tools 0.3.8 on. Blocks written
+by 0.3.6 or 0.3.7 don't know this variable (nor the publish sequence, nor
+`keliverResign`): run `keliver-new-publish-target.sh` again. It replaces exactly
 either of those blocks and changes nothing else.
 
 Exit status:

@@ -1,0 +1,92 @@
+PASS the tools zip is the CANDIDATE 0.3.8 (7ea7f11d9fdebce84861cf9224d324c15d00451ac175d84f3cd51b683c43bc14), not a published release
+PASS the app: keliver-init, device target and publish target from tools candidate 0.3.8
+PASS the relay for this app answered on :8077
+PASS the relay's store is inside the work dir
+PASS publish v1: publish OK: bundle v1 (widgetVersion=1, srcHash=479c5ca1e7c5a951) -> /private/tm
+PASS P1: keliver-new-ios-host.sh (the tools candidate 0.3.8 zip's bin/) scaffolded host-ios/
+PASS P1: HostConfig.kt embeds this app's public key (6e6f06d9…)
+PASS P1: xcodebuild built the host from Maven Central
+PASS P1: the host installed as its own app (inventory.ioshost)
+PASS P2: the host verifies with this app's key
+PASS P2: signed v1 loaded (codeLoadSuccess)
+FAIL P2: no fallback to /bundles/latest in the console
+PASS P2: no failed load, so no empty-URL attempt (U28 absent)
+PASS P2: the screen reads 'Inventory'
+PASS P4: the relay applied the title edit
+PASS P4: publish v2
+PASS P4: the host loaded v2
+PASS P4: the screen reads 'Stockroom'
+PASS P5: a relay for the copy is up
+PASS P5: the copy has its own store and key (0f2126ec… vs 6e6f06d9…)
+PASS P5: the copy published a bundle signed with ITS key
+PASS P5: verification still uses this app's key
+PASS P5: the foreign-signed bundle was refused on its signature
+PASS P5: no code loaded
+PASS P5: 'Foreign build' is not on the screen (it reads 1 line(s): blank but for the status bar)
+PASS P6: this app's signed bundle loads again
+PASS P6: the screen reads 'Stockroom'
+PASS P7: no bundle server is answering
+PASS P7: the lookup failed and the host started from its cache
+PASS P7: code loaded offline (codeLoadSuccess), verified with this app's key
+PASS P7: the screen reads 'Stockroom' offline
+PASS W3: keliver-publish and keliver-new-publish-target.sh from the tools candidate 0.3.8 zip's bin/
+PASS W3: a throwaway CA, trusted by this run's simulator only
+PASS W3: the app's signing block is already the current one (a candidate zip's scaffolder wrote it)
+PASS W3: keliver-publish compiled, verified and wrote published v1 (sequence 1, channel stable, capabilities none)
+PASS W4.1: v1's manifest is signed for sequence 1 (metadata keliver.sequence)
+PASS W3: the static server answers over HTTPS, trusted through that CA
+PASS W3: the host rebuilt for https://localhost:8443
+PASS S2: signed v1 loaded through bundles/index.json over HTTPS
+PASS S2: the screen reads 'Depot'
+PASS S2: the static server served index.json and v1's manifest
+PASS S4: keliver-publish wrote v2 at sequence 2
+PASS W4.1: v2's manifest is signed for sequence 2 (metadata keliver.sequence)
+PASS S4: the host loaded v2
+PASS S4: the screen reads 'Warehouse'
+PASS S5: against another app's key the CLI refused (exit 4); the site is byte-identical
+PASS S6: the manifest was refused on its sha256
+PASS S6: no code loaded
+PASS S8: running v2 raised the host's rollback floor from 1 to 2
+PASS S8: v1 offered again after v2: refused on its signed sequence (1 < 2)
+PASS S8: no code loaded
+PASS S10: republished v1 as v3 (sequence 3, channel stable), by the app's keliverResign
+PASS S10: the republish compiled nothing
+PASS W4.3: v3's manifest is signed for sequence 3
+PASS S10: v3's modules are v1's, byte for byte
+PASS S10: the host that had run v2 (floor 2) loaded the republished v1 as v3
+PASS S10: running v3 raised the floor from 2 to 3
+PASS S10: v1's code is back: the screen reads 'Depot'
+PASS S11: keliver-publish wrote v4 at sequence 4 on channel beta
+PASS S11: the stable host passed over beta's v4 and loaded v3
+PASS S11: the stable host still reads 'Depot'
+PASS S12: v4 promoted from beta to stable; nothing built or signed
+PASS S12: the promotion wrote no new v<N>/
+PASS S12: the stable host loaded the promoted v4
+PASS S12: running v4 raised the floor from 3 to 4
+PASS S12: after the promotion the screen reads 'Backroom'
+PASS S13: keliver-publish wrote v5 at sequence 5 with constraints.rollout 0
+PASS S13: at rollout 0 the host passed over v5 and loaded v4
+PASS S13: the host never asked for v5
+PASS S13: the screen still reads Backroom
+PASS S14: --set-rollout 5 --rollout 100 (no key)
+PASS S14: at rollout 100 the host loaded v5
+PASS S14: running v5 raised the floor from 4 to 5
+PASS S14: the screen reads Loft
+PASS S14b: the rollout of v5 halted (0)
+PASS S14b: halted, the host that ran v5 still loads it
+PASS S14b: nothing was refused
+PASS S14b: the screen still reads Loft
+PASS S15: keliver-publish wrote v6 with constraints.minHostVersion 999
+PASS S15: the host (version 1) skipped v6 and loaded v5
+PASS S15: the host checked the entries against its version, 1
+PASS S15: the host never asked for v6
+PASS S15: the screen still reads Loft
+PASS S7: no bundle server is answering
+PASS S7: offline, the host started from its cached v5
+PASS S7: the screen reads 'Loft' offline
+PASS S9: the host's stored rollback floor is now 9 (in its container's preferences)
+PASS S9: offline, the cached v5 was refused below the floor
+PASS S9: no code loaded
+PASS S9b: lookup failed with the server up; the cache and then the network fetch of v5 were both held to the floor
+PASS S9b: the host did fetch v5's manifest from the network (the guarded path ran)
+PASS S9b: no code loaded

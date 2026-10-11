@@ -214,6 +214,12 @@ jobs:
           KELIVER_PUBLISH_TARGET_SCAFFOLD="$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*/bin)/keliver-new-publish-target.sh" \
             scripts/keliver-new-publish-target-selftest.sh "$RUNNER_TEMP/publish-target-pkg"
           echo "::endgroup::"
+          echo "::group::keliver-publish (static publishing, W3/W4), from the package"
+          # The candidate zip's own bin/keliver-publish and relay/: publish,
+          # refusals, --republish, --promote and constraints, through the wrapper.
+          scripts/keliver-publish-selftest.sh "$RUNNER_TEMP/keliver-publish-pkg" \
+            --package "$(ls -d "$RUNNER_TEMP"/pkg/keliver-portal-tools-*)"
+          echo "::endgroup::"
           echo "::group::private signing key permissions (U27)"
           # The relay used to create keys/ed25519.priv 0644 under 0755
           # directories: readable by every local user. This asserts a fresh key

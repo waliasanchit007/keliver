@@ -38,7 +38,7 @@ bash "$HERE/w3/android-ca.sh" "$SERIAL" "$W3_TLS/ca.pem" > "$EV/w3-android-ca.lo
   || { bad "W3: the CA could not be installed"; cat "$EV/w3-android-ca.log"; }
 cp "$W3_TLS/ca.pem" "$EV/w3-ca.pem"
 
-( cd "$APP" && "$REPO/scripts/keliver-new-publish-target.sh" ) > "$EV/w3-signing-upgrade.log" 2>&1
+( cd "$APP" && "${W3_PUBLISH_TARGET:-$REPO/scripts/keliver-new-publish-target.sh}" ) > "$EV/w3-signing-upgrade.log" 2>&1
 if grep -q '(signing-0.3.7) was replaced by the current one' "$EV/w3-signing-upgrade.log"; then
   ( cd "$APP" && git add build.gradle && git -c user.name=w3 -c user.email=w3@invalid commit -qm "W3: the signing block that reads KELIVER_SIGNING_KEY_FILE" ) \
     && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's 0.3.7 signing block" || bad "W3: could not commit the upgraded signing block"

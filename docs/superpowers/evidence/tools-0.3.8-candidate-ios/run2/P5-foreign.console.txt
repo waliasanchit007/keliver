@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 4838a68e…
+KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json (index sequence 1, channel stable (host: stable), host version 1, manifest sha256 66b05baea757…); rollback floor 0
+KeliverHost: codeLoadFailed: manifest signature for key portal-ed25519 did not verify!
+inventory.ioshost: 91189

@@ -1,0 +1,5 @@
+KeliverHost: verifying manifests with portal-ed25519 4838a68e…
+KeliverHost: bundle lookup failed: Could not connect to the server.
+KeliverHost: lookup failed; starting from the cached bundle (last loaded from https://localhost:8443/bundles/v5/manifest.zipline.json); rollback floor 5
+KeliverHost: codeLoadSuccess modules=40 sequence=5
+inventory.ioshost: 98811
