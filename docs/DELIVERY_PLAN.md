@@ -834,8 +834,10 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W5.3 docs, review, fixes | **done 2026-10-11** (PR #96).<br>• **Docs:** DEVICE_HOST §2 ("Updates while the app runs", the fall-back), §3, §4, the guide.<br>• **Independent review** (read-only): one blocking issue, a W5.2 correctness bug and not a security one. A failed update stopped all updates for the rest of the process: the same URL was set on a `StateFlow`, which doesn't re-emit it. Also: `pin(url, null)` erased an index sha256; iOS `checkForUpdate` continued off the main thread; S6/S8 did not prove the cache; no row covered a fall-back that fails. All fixed in `7afb8498`: the pending update is matched by URL and cleared on success, failure or skip, and given up after 2 min; failed URLs are not retried in the process; a null pin keeps a hash; iOS checks on main; `codeLoadSuccess ... source=cache\|network`, with S6/S8 requiring the cache; new **S9c** (the fall-back refused below the floor: "Bundle did not load"); iOS U1 compares pids.<br>• **CI at `7afb8498`:** reference-app 38073852570, device **133/0**; ios-host 38073852556, `ios.sh` **118/0**. **W5 is done.** | PR #96 |
 | tools 0.3.8 candidate 2 (W3 + W4 + W2 + W5) | **verified 2026-10-11; NOT tagged, awaiting the owner's approval** (built from `feat/w5-update-api`, PR #96).<br>• **Identities:** source `ef625050cbb5a1afd7cb2288567d6df3a35da2fa`; zip `32d47c34b46594dc89c2feef43e3657bf24daa74af77bbff3d4535fd29b0ab68` (90,559,881 bytes); APK `106b2bd4…`.<br>• **Build** 38078500722 (artifact `11679304379`, built 2026-10-11, 30-day retention): every self-test green. **Device run** 38079812823: 19/0 and 28/0.<br>• **Local check:** hashes; 57 packaged files byte-identical to the commit; no key files; the packaged `keliver-publish` 40/0.<br>• **`ios.sh` on the zip** (local, Xcode 26.4.1, iOS 26.4): **118/0**, with W2's I-rows, W5's U1, S6/U2, S8 and S9c.<br>• **Step 3:** clean.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`; candidate 1 is superseded. | PR #96 |
 | W6 reports (W6.1 + review) | **done 2026-10-11** (PR #97, stacked on #96).<br>• **Built:** `KeliverReport` on both hosts (`reports` / `onReport`); an opt-in `keliver.reportUrl` / `REPORT_URL` (one best-effort JSON POST per outcome, no redirects); crash-key docs; V1 in `ci/w5/`.<br>• **Independent review:** nothing blocking. Four should-fix, all fixed in `5360ac7e`. (1) The free-text `detail`, which can hold a LAN IP, paths or URLs, was POSTed; now only a fixed `reason` category leaves the device (`reportReason`, `BundleIndexTest` 15/0). (2) Android accepted and logged a report URL with `user@`, a query or a fragment; it is now refused, and never logged. (3) The iOS crash-key example could name a sequence that never ran. (4) Stale install-id comments; the docs now say it is a pseudonymous id (GDPR) and that requests reveal IP and user agent. Nits fixed: no-redirect sessions, guarded iOS callbacks, `no-bundle` once per process, a stricter V1 (exactly one of each, no failure outcome, exactly 8 fields).<br>• **CI at `5360ac7e`:** reference-app 38086013708, device **134/0**; ios-host 38086013593, `ios.sh` **119/0**. **W6 is done.** | PR #97 |
-| tools 0.3.8 candidate 3 (W3 + W4 + W2 + W5 + W6) | **verified 2026-10-11; the owner approved the release (2026-10-11, "you have access to push release"); NOT yet tagged.** Built from `feat/w6-visibility` (PR #97).<br>• **Identities:** source `731ebfcefca14f3c9766d782cedb6982086729a7`; zip `aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d` (90,584,445 bytes); APK `1a0b6d92…`.<br>• **Build** 38133756571 (artifact `11700407805`, expires about 2026-11-10), every self-test green, `HostReportsTest` included. **Device run** 38134971077: 19/0 and 28/0.<br>• **Local check:** 57 files byte-identical; the packaged publish 40/0.<br>• **`ios.sh` on the zip:** **120/0**, with V2 end to end (the zip's relay counted the host's reports).<br>• **Step 3:** clean.<br>The tag push was **blocked by Claude Code's auto-mode permission check** ("Create Public Surface"), not by any failure: nothing was tagged or published. Candidates 1 and 2 are superseded. | PR #97 |
-| W8 (U30 + design) | **U30 fixed** (measured locally); the rotation design drafted, and it needs the owner's decisions (PR #98, draft) | PR #98 |
+| W6.3 relay collector | **done 2026-10-11:** `POST /report`, `GET /reports`, `GET /reports/view` (`HostReports.kt`). `HostReportsTest` 4/0, on CI in build 38133756571. V2 is in the harnesses: SKIP on CI's published relay, and **passed end to end** in candidate 3's local `ios.sh` on the zip | PR #97 |
+| **tools 0.3.8 RELEASED** (candidate 3: W3 + W4 + W2 + W5 + W6) | **released 2026-10-11** on the owner's approval.<br>• **Tag:** `portal-tools-v0.3.8` → `731ebfce`; the push ran only the read-only rebuild 38150887414.<br>• **Zip** `aafed0d8…` (90,584,445 bytes), uploaded from the verified artifact `11700407805`.<br>• **Checked before publishing:** both stored assets' server digests and sizes (download-back blocked by the network, as for 0.3.5). After publishing: the public `.sha256` here, and the public zip verified from GitHub-hosted runners (`sha256sum -c` OK: 38151355318, 38155942970, 38151386539).<br>• **Published-only proof** (runs started by hand, only the zip's `bin/`): reference-app 38155942970, device **135/0**; ios-host 38151386539, `ios.sh` **120/0**. V2 is on CI now, because the published relay collects reports.<br>• **Candidate 3's verification:** build 38133756571; device 38134971077 (19/0, 28/0); local check; `ios.sh` on the zip 120/0, V2 included.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. Candidates 1 and 2 were superseded and never tagged. | release |
+| PR stack #94–#97 merged | **done 2026-10-11** after the release, by merge commits: #94 `09661866`, #95 `642f4a13`, #96 `6ba680c5`, #97 `2bae5cbb`. Both 0.3.7 and 0.3.8 tags are reachable from `main`; no branch was deleted | `main` |
+| W8 | **U30 fixed** (measured locally); the rotation design is drafted and needs the owner's decisions (PR #98, draft, based on `main`) | PR #98 |
 | W7 | not started: needs the owner's hardware (physical devices) and an adopter | — |
 
 ## Next action
@@ -890,40 +892,18 @@ What was done for the candidate:
   - Recorded follow-up, not in W2: a prebuilt, published host artifact for
     adopters on another Kotlin version. That is a Maven publication and needs
     the owner's approval.
-- **Release 0.3.8 from candidate 3: approved by the owner (2026-10-11);
-  blocked only at the tag push by Claude Code's auto-mode permission check.**
-  To finish, per `docs/PORTAL_TOOLS_RELEASE.md` step 4:
-  1. Allow it, or run it yourself:
-     `git tag -a portal-tools-v0.3.8 731ebfcefca14f3c9766d782cedb6982086729a7 -m "keliver-portal-tools 0.3.8"`
-     then `git push origin portal-tools-v0.3.8`.
-  2. Get the zip from artifact `11700407805` (`gh run download 38133756571`)
-     and check its sha256 is `aafed0d8…912d`. Write the `.sha256` sidecar
-     (`shasum -a 256 <zip> | sed 's|  .*/|  |'`). The release body is generated
-     from this file's feature sections (the identities are in the candidate 3
-     row).
-  3. `gh release create portal-tools-v0.3.8 --draft --verify-tag --title
-     "keliver-portal-tools 0.3.8" --notes-file NOTES.md <zip> <zip>.sha256`.
-     Check the draft's assets (state `uploaded`, `digest`), download back and
-     hash, then `gh release edit portal-tools-v0.3.8 --draft=false
-     --latest=false` and check the public URL.
-  4. Then merge #94 → #97 into `main` (approved). Open the prepared PR
-     `chore/reference-app-0.3.8` (pins move to the published 0.3.8;
-     KELIVER_SCAFFOLD_FROM follows the trigger), dispatch `reference-app.yml`
-     on it for the published-only proof, and record the release (status
-     RELEASED, the PORTAL_TOOLS_RELEASE "current release" pointer, CLAUDE.md).
-- **Owner's decision, 2026-10-11: hold the release for now; continue with
-  W6.** Candidate 2 stays verified and untagged (its artifact expires about
-  2026-11-10; after that a new build is needed).
-- **W6 (PR #97):** W6.1 and its review are done. **W6.3, the optional relay
-  collector** (`POST /report`, `GET /reports`, `GET /reports/view`;
-  `HostReports.kt`) is built: unit and HTTP tests, and V2 in the harnesses. V2
-  runs only against a relay that has `/reports`, so not on CI until a tools
-  release carries it (CI uses the published relay). Before that, it can be run
-  through a local `ios.sh` on a zip built from this branch.
-- **W7 and W8** need the owner: physical devices and an adopter (W7), and
-  decisions on key rotation (W8, U30).
-- **Then W5** (update API, including falling back to the last good bundle),
-  **then W6.**
+- **Done 2026-10-11: tools 0.3.8 released** (candidate 3, W3–W6), and #94–#97
+  merged into `main` (Status).
+- **PR #99** moves the reference app to the published 0.3.8 and makes
+  `KELIVER_SCAFFOLD_FROM` follow the trigger: a pull request tests its own
+  `scripts/`, a run started by hand only the published zip. Published-only and
+  PR runs are green. It also raises `ci.yml`'s job limit to 90 minutes: on
+  cloud macOS the full graph took 50–60 minutes, and the last test steps kept
+  being cut off as "cancelled". **Merged 2026-10-11** (`7a58eadc`) after its
+  full `ci.yml` passed in 63 minutes (38160559466).
+- **W8 (PR #98):** the owner decides on the rotation design. Then build it,
+  with an independent review, CI, and a tools release (0.3.9) with approval.
+- **W7** needs the owner: physical devices and an adopter.
 
 ## Standing constraints (from the owner; they apply to every step)
 

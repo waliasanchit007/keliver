@@ -30,11 +30,13 @@ jobs:
   build:
     name: Build (full graph, incl. iOS)
     runs-on: ${{ vars.CI_RUNNER || 'macos-latest' }}
-    # 60, not 30: these timeouts were calibrated against the self-hosted Mac.
-    # GitHub-hosted macOS runners are slower, and they are free for public
-    # repos, so a generous ceiling costs nothing and a tight one silently
-    # reports a timeout as "cancelled" — which reads like someone stopped it.
-    timeout-minutes: 60
+    # 90: calibrated against the self-hosted Mac at 30, then 60. On GitHub-hosted
+    # macos-latest (CI_RUNNER) the full graph takes 50-60 minutes, and at 60 the
+    # last test steps were cut off as "cancelled" again and again (2026-10-10/11,
+    # e.g. runs 38151539258, 38151768857, 38155940708). They are free for public
+    # repos, so a generous ceiling costs nothing; a tight one reads like someone
+    # stopped the run.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
