@@ -1,0 +1,1 @@
+simulator: 9EE98B44-70BE-4E88-9371-8B8E7BB5A3F5 (com.apple.CoreSimulator.SimRuntime.iOS-26-4 com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
