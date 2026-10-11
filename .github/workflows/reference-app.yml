@@ -1,12 +1,19 @@
 # The inventory reference app (reference/inventory). The app and its
 # development route come from the PUBLISHED tools release and Maven Central.
-# Its production host and its signed publishing are scaffolded by that release's
-# own bin/ scripts and built against Maven Central — no Keliver source is
-# compiled. What is this checkout's: ci/ and the isolation guard (the harness),
-# and the app's overlay files (bootstrap.sh's hand edits). Checked on an emulator: the development route, a D14 layout edit, and
-# production OTA with app-owned disposable keys. Then W3: keliver-publish (built
-# from this checkout; not in a released bundle yet) into a static HTTPS server,
-# with no relay.
+# Its production hosts and its signed publishing are scaffolded by bin/ scripts
+# and built against Maven Central; no Keliver library source is compiled.
+#
+# Whose scripts depends on the trigger (KELIVER_SCAFFOLD_FROM below):
+# - run by hand: the release's own, so the run is a published-only proof;
+# - a pull request: this checkout's scripts/, the change under review.
+# Always this checkout's: ci/ and the isolation guard (the harness), and the
+# app's overlay files (bootstrap.sh's hand edits).
+#
+# Checked on an emulator:
+# - the development route and a D14 layout edit;
+# - production OTA with app-owned disposable keys;
+# - then the static route (W3-W6): keliver-publish into a static HTTPS server
+#   with no relay, the embedded host (W2), updates and reports (W5, W6).
 #
 # This is dogfooding, not adoption: the app is ours.
 #
@@ -43,10 +50,12 @@ jobs:
     permissions:
       contents: read
     env:
-      # W3: the hosts are scaffolded by this repository's scripts/, whose
-      # index-reading templates no release ships yet. Everything else comes from
-      # the published zip. Remove this once a tools release ships W3.
-      KELIVER_SCAFFOLD_FROM: repo
+      # Which scaffolders and keliver-publish are under test. A pull request
+      # tests ITS OWN scripts/ (repo): template changes are what it changes.
+      # A run started by hand (workflow_dispatch) uses only the published zip's
+      # bin/ (zip): the published-only proof of the release pinned below.
+      # Everything else always comes from the published zip.
+      KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -54,29 +63,29 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Download the PUBLIC tools 0.3.7 release, as the adopter guide does
+      - name: Download the PUBLIC tools 0.3.8 release, as the adopter guide does
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/evidence"
           cd "$RUNNER_TEMP/dl"
-          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7
-          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip"
-          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip.sha256"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.8
+          curl -fsSLO "$base/keliver-portal-tools-0.3.8.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.8.zip.sha256"
           {
-            echo "downloaded: $base/keliver-portal-tools-0.3.7.zip"
-            sha256sum -c keliver-portal-tools-0.3.7.zip.sha256
-            sha256sum keliver-portal-tools-0.3.7.zip
-            unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json'
+            echo "downloaded: $base/keliver-portal-tools-0.3.8.zip"
+            sha256sum -c keliver-portal-tools-0.3.8.zip.sha256
+            sha256sum keliver-portal-tools-0.3.8.zip
+            unzip -p keliver-portal-tools-0.3.8.zip 'keliver-portal-tools-0.3.8/VERSION.json'
           } | tee "$GITHUB_WORKSPACE/evidence/public-download.txt"
-          test "$(sha256sum keliver-portal-tools-0.3.7.zip | cut -d' ' -f1)" = \
-            75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
-          unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json' \
-            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'aaa034784ce6e46ee64182c173f1d564998e72c0'"
+          test "$(sha256sum keliver-portal-tools-0.3.8.zip | cut -d' ' -f1)" = \
+            aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d
+          unzip -p keliver-portal-tools-0.3.8.zip 'keliver-portal-tools-0.3.8/VERSION.json' \
+            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '731ebfcefca14f3c9766d782cedb6982086729a7'"
 
       - name: Prepare — bootstrap, ingest, signed v1, scaffolded production host
         run: |
           bash reference/inventory/ci/prepare.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence" \
-            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.7.zip"
+            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.8.zip"
           # Free the app's Gradle daemon before the emulator starts.
           (cd "$RUNNER_TEMP/ref/boot/inventory" && ./gradlew --stop) || true
 

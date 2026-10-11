@@ -8,15 +8,17 @@
 #    - a release refuses http://;
 #    - a malformed key fails the build.
 # 2. reference/inventory/ci/ios.sh:
-#    - the inventory app is recreated from the PUBLIC tools 0.3.7 release
+#    - the inventory app is recreated from the PUBLIC tools 0.3.8 release
 #      (hash pinned);
 #    - it publishes signed v1;
 #    - the host scaffolded by that zip's own bin/keliver-new-ios-host.sh runs on
 #      an iOS simulator through P1, P2 and P4–P7: signed v1, v2 after an edit, a
 #      foreign key refused, recovery, and an offline start from the cache;
-#    - then W3: keliver-publish (built from this checkout) into a static HTTPS
-#      server whose throwaway CA only this run's simulator trusts, and S2, S4-S7
-#      against it with no relay.
+#    - then the static route: keliver-publish into a static HTTPS server whose
+#      throwaway CA only this run's simulator trusts, with no relay (S2-S15),
+#      the embedded host (W2), updates and reports (W5, W6).
+#    The scaffolders and keliver-publish are the zip's own in a run started by
+#    hand, and this checkout's scripts/ in a pull request (KELIVER_SCAFFOLD_FROM).
 #      Screens are read by macOS Vision.
 #
 # Read-only: no secrets, no publishing. The keys are disposable and generated
@@ -50,10 +52,12 @@ jobs:
     permissions:
       contents: read
     env:
-      # W3: the hosts are scaffolded by this repository's scripts/, whose
-      # index-reading templates no release ships yet. Everything else comes from
-      # the published zip. Remove this once a tools release ships W3.
-      KELIVER_SCAFFOLD_FROM: repo
+      # Which scaffolders and keliver-publish are under test. A pull request
+      # tests ITS OWN scripts/ (repo): template changes are what it changes.
+      # A run started by hand (workflow_dispatch) uses only the published zip's
+      # bin/ (zip): the published-only proof of the release pinned below.
+      # Everything else always comes from the published zip.
+      KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -67,24 +71,24 @@ jobs:
           xcrun simctl list runtimes | grep -i ios || true
           java -version 2>&1 | head -1
 
-      - name: Download the PUBLIC tools 0.3.7 release, as the adopter guide does
+      - name: Download the PUBLIC tools 0.3.8 release, as the adopter guide does
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/dl" "$GITHUB_WORKSPACE/ios-evidence"
           cd "$RUNNER_TEMP/dl"
-          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.7
-          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip"
-          curl -fsSLO "$base/keliver-portal-tools-0.3.7.zip.sha256"
+          base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.8
+          curl -fsSLO "$base/keliver-portal-tools-0.3.8.zip"
+          curl -fsSLO "$base/keliver-portal-tools-0.3.8.zip.sha256"
           {
-            echo "downloaded: $base/keliver-portal-tools-0.3.7.zip"
-            shasum -a 256 -c keliver-portal-tools-0.3.7.zip.sha256
-            shasum -a 256 keliver-portal-tools-0.3.7.zip
-            unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json'
+            echo "downloaded: $base/keliver-portal-tools-0.3.8.zip"
+            shasum -a 256 -c keliver-portal-tools-0.3.8.zip.sha256
+            shasum -a 256 keliver-portal-tools-0.3.8.zip
+            unzip -p keliver-portal-tools-0.3.8.zip 'keliver-portal-tools-0.3.8/VERSION.json'
           } | tee "$GITHUB_WORKSPACE/ios-evidence/public-download.txt"
-          test "$(shasum -a 256 keliver-portal-tools-0.3.7.zip | cut -d' ' -f1)" = \
-            75ce0928fdf0a3a759c92641bcba23727360ed7ff8d995fb7207c1c11c03d8cb
-          unzip -p keliver-portal-tools-0.3.7.zip 'keliver-portal-tools-0.3.7/VERSION.json' \
-            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == 'aaa034784ce6e46ee64182c173f1d564998e72c0'"
+          test "$(shasum -a 256 keliver-portal-tools-0.3.8.zip | cut -d' ' -f1)" = \
+            aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d
+          unzip -p keliver-portal-tools-0.3.8.zip 'keliver-portal-tools-0.3.8/VERSION.json' \
+            | python3 -c "import json,sys; assert json.load(sys.stdin)['sourceCommit'] == '731ebfcefca14f3c9766d782cedb6982086729a7'"
 
       - name: The iOS host scaffolder's self-test, with xcodebuild
         run: |
@@ -95,7 +99,7 @@ jobs:
       - name: iOS production OTA on the simulator — P1, P2, P4–P7
         run: |
           bash reference/inventory/ci/ios.sh "$RUNNER_TEMP/ios" "$GITHUB_WORKSPACE/ios-evidence" \
-            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.7.zip"
+            "$RUNNER_TEMP/dl/keliver-portal-tools-0.3.8.zip"
 
       - name: Keep the evidence
         if: always()
