@@ -33,6 +33,7 @@ on:
       - "reference/inventory/ci/ocr.swift"
       - "reference/inventory/ci/w3/**"
       - "reference/inventory/ci/w2/**"
+      - "reference/inventory/ci/w5/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"

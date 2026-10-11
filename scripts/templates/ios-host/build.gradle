@@ -47,6 +47,10 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     if (channel == null || !(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
       throw new GradleException("HostConfig.kt: CHANNEL must be lower-case letters, digits and '-', at most 32 (got '$channel').")
     }
+    def updates = configValue('UPDATES')
+    if (!(updates in ['next-launch', 'on-resume'])) {
+      throw new GradleException("HostConfig.kt: UPDATES must be next-launch or on-resume (got '$updates').")
+    }
   }
 }
 // A release framework refuses http://, and refuses an Info.plist that still

@@ -1,0 +1,4 @@
+KeliverHost: verifying manifests with portal-ed25519 5bdbb850…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v7/manifest.zipline.json (index sequence 7, channel stable (host: stable), host version 1, manifest sha256 770319080388…); rollback floor 0
+KeliverHost: codeLoadFailed: manifest signature for key portal-ed25519 did not verify!
+com.example.existingios: 1803

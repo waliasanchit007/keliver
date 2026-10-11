@@ -18,6 +18,7 @@ plugins {
 def bundleServer = providers.gradleProperty('keliver.bundleServer').getOrElse('').trim()
 def apiBaseUrl = providers.gradleProperty('keliver.apiBaseUrl').getOrElse('').trim()
 def channel = providers.gradleProperty('keliver.channel').getOrElse('stable').trim()
+def updates = providers.gradleProperty('keliver.updates').getOrElse('next-launch').trim()
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
 def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
@@ -31,6 +32,9 @@ if (apiBaseUrl && !(apiBaseUrl ==~ apiUrl)) {
 }
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
+}
+if (!(updates in ['next-launch', 'on-resume'])) {
+  throw new GradleException("keliver.updates must be next-launch or on-resume (got '$updates').")
 }
 def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:')
 
@@ -57,6 +61,7 @@ android {
     buildConfigField 'String', 'KELIVER_BUNDLE_SERVER', "\"${bundleServer.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
+    buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeyHex ==~ /[0-9a-f]{64}/ ? portalKeyHex : ''}\""
   }
   buildTypes {

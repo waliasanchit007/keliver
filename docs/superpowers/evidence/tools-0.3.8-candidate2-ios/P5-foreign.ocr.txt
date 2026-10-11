@@ -1,0 +1,4 @@
+1:05
+Bundle did not load
+manifest signature for key portal-ed25519 did not
+verify!

@@ -26,6 +26,8 @@
 # Then W3/W4, the static route with no relay (ci/w3/ios-static.sh): S2,
 # S4-S15 against a static HTTPS server fed only by keliver-publish; and W2, the
 # host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
+# Then W5's U1: an update applied when the app returns to the foreground
+# (ci/w5/ios-update.sh).
 #
 # The simulator has no view-hierarchy dump. What a screen shows is read from
 # its screenshot by macOS Vision (ci/ocr.swift), and every screenshot is kept.
@@ -303,6 +305,8 @@ reads P7-offline Stockroom && ok "P7: the screen reads 'Stockroom' offline" || b
 . "$HERE/w3/ios-static.sh"
 # shellcheck source=w2/ios-embed.sh
 . "$HERE/w2/ios-embed.sh"
+# shellcheck source=w5/ios-update.sh
+. "$HERE/w5/ios-update.sh"
 
 for f in "$EV"/*.png; do echo "$(basename "$f"): $(python3 "$HERE/shot.py" "$f")"; done > "$EV/shots.results"
 echo "ios: passed $pass, failed $fail"

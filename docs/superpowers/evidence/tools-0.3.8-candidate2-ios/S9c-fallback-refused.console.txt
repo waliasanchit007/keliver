@@ -1,0 +1,7 @@
+KeliverHost: verifying manifests with portal-ed25519 302cb423…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v5/manifest.zipline.json (index sequence 5, channel stable (host: stable), host version 1, manifest sha256 7af3c0953349…); rollback floor 9
+KeliverHost: codeLoadFailed: rollback refused: sequence 5 is below 9, the highest this host has run
+KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v5/manifest.zipline.json)
+KeliverHost: cached bundle refused: rollback refused: sequence 5 is below 9, the highest this host has run
+KeliverHost: codeLoadFailed: rollback refused: sequence 5 is below 9, the highest this host has run
+inventory.ioshost: 1160

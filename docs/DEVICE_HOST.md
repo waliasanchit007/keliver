@@ -136,7 +136,8 @@ The cache is used only on that second row because of how Zipline 1.22 loads:
 it reads its cache *before* the network and only if the `FreshnessChecker`
 accepts the cached manifest, and it never falls back to the cache after a
 network failure. Treehouse's default checker accepts nothing, so the host passes
-one that accepts the cached bundle for that start alone. A cached manifest that
+one that accepts the cached bundle for that start alone (and for the fall-back
+below). A cached manifest that
 no longer verifies is never run: Zipline re-verifies it while reading it, with
 either checker, and throws. What the app then shows is not measured. Because
 that check runs before the network, the host keeps one cache per key (named by
@@ -145,9 +146,12 @@ the new key starts with an empty cache instead of one it cannot verify. That
 key-change path is reasoned from Zipline's source, not run on a device.
 
 When the lookup answers but the bundle itself then fails to download or verify,
-nothing falls back to the cache: the host shows "Bundle did not load" until
-the process restarts. With a static
-server, that includes:
+the host **falls back to the last good bundle**: the one pinned in Zipline's
+cache, which it restarts from exactly as in the second row above (the floor
+holds, and the manifest is verified against the key again). Only when no
+bundle has loaded before for this key and server, or the cached one fails too,
+does it show "Bundle did not load" (until the process restarts). With a static
+server, the failures include:
 - an index entry whose `manifestSha256` isn't the manifest served (a `v<N>/`
   overwritten, or a stale CDN copy);
 - a `v<N>/` that isn't there yet because the index was uploaded first;
@@ -155,15 +159,40 @@ server, that includes:
   rollback floor (below).
 
 Upload `v<N>/` before `index.json`, and never overwrite a `v<N>/` (the adopter
-guide's "Publish from CI to a static server"). Falling back to the last good
-bundle after such a failure is planned (W5 in Keliver's
-`docs/DELIVERY_PLAN.md`).
+guide's "Publish from CI to a static server"): the fall-back keeps hosts that
+ran a bundle before on it, but a new install has nothing to fall back to.
 
 **Lifecycle.** The host looks up and loads once per process, and every screen
 shares that load: a rotation, a second screen or a screen opened again doesn't
-load anything. So a bundle published while the app runs is picked up on the
-next process start, not when a screen reopens. Only a start that created
-nothing (the "No bundle" row above) is retried, by the next screen that opens.
+load anything. So, by default, a bundle published while the app runs is picked
+up on the next process start, not when a screen reopens. Only a start that
+created nothing (the "No bundle" row above) is retried, by the next screen
+that opens.
+
+**Updates while the app runs** (both hosts):
+- `keliver.updates=on-resume` (Android, in `gradle.properties` or
+  `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`):
+  each time the app comes back to the foreground, at most every 30 s, the host
+  looks up again and applies a newer bundle in place. Zipline loads it while
+  the running code goes on, swaps it in on success (the floor rises as for any
+  load), and keeps the running one on failure. The default, `next-launch`,
+  never looks up while the app runs.
+- In code: `checkForUpdate(apply)` does one lookup now (`UpToDate`,
+  `Available`, `Failed`); `currentBundle` is the running sequence and whether
+  it came from the cache; `events` (Android) or `onUpdateEvent` (iOS) report
+  updates applied or failed and fall-backs. Android's standalone host calls
+  `resumed()` in its activity's `onResume`; an embedding app calls it on the
+  main thread, after `start()` (the iOS host watches the foreground itself).
+- An update that fails to load is not tried again in that process: a check
+  reports it as available for the next start. A newer one is applied as usual.
+- A process that started from the cache (offline, or after a fall-back) takes
+  no further manifest from Zipline: a newer bundle is reported as available
+  and applies at the next start.
+- The same rules as a start hold: the index, the channel, the constraints, the
+  floor, the manifest's sha256 and signature. The fall-back to the last good
+  bundle loads from the cache; only if the cache misses does it fetch that
+  manifest again, held to the floor and to the index's sha256 when the lookup
+  gave one for that URL.
 
 **Rollback protection.** Every bundle `keliver-publish` or the relay publishes
 carries its sequence inside the signed manifest (`metadata.keliver.sequence`).
@@ -186,7 +215,8 @@ server can't make it run an older one.
 
 **One key, one sequence space.** The floor is per key, across every server and
 route the host has used. A newest entry below a host's floor shows **no
-bundle** ("Bundle did not load"): the same no-fallback rule as above. So never let sequences go
+bundle** to a new install, and leaves the others on their cached last good
+bundle (the fall-back above), never on the newer one. So never let sequences go
 backwards. Ways a publisher can do that by mistake:
 - an `--init` into an empty directory (it restarts at 1);
 - alternating relay publishing (sequence = relay version) and `keliver-publish`
@@ -257,9 +287,10 @@ It behaves like the Android host in §2:
   `HostConfig.kt`. Without a valid key the host fetches nothing and shows a
   refusal. There is no unverified fallback.
 - **Startup.** The lookup runs first (10 s), then Zipline's verified cache when
-  the lookup fails, then "No bundle". As on Android, a bundle that the lookup
-  names but that then fails to load (a download error, or a `manifestSha256`
-  mismatch) shows "Bundle did not load" even with a cached one; see §2. There is one
+  the lookup fails, then "No bundle". As on Android, when a bundle that the
+  lookup names then fails to load (a download error, a `manifestSha256`
+  mismatch, the floor), the host falls back to the cached last good bundle,
+  and shows "Bundle did not load" only without one; see §2. There is one
   Zipline cache per key, and manifest URLs are followed only on the bundle
   server's origin. (Zipline's downloads follow HTTP redirects, as on Android.)
 - **`HostHttp`** goes over `NSURLSession` to your API base only, when one is
@@ -391,9 +422,9 @@ screen, and nothing else in your app is affected:
 - the lookup failed and nothing is cached: "No bundle", retried by the next
   Keliver screen that opens;
 - a bundle that the lookup named but that then fails (another key's signature,
-  a sha256 mismatch, a sequence below the floor): "Bundle did not load", until
-  the process restarts. There is no fallback to the last good bundle yet (W5
-  in Keliver's `docs/DELIVERY_PLAN.md`).
+  a sha256 mismatch, a sequence below the floor): the cached last good bundle,
+  if one ran before (§2); otherwise "Bundle did not load", until the process
+  restarts.
 
 A running process keeps the bundle it loaded; a newer one is picked up on the
 next process start (§2, "Lifecycle").

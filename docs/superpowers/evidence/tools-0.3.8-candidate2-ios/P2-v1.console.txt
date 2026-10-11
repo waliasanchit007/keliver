@@ -1,0 +1,5 @@
+KeliverHost: verifying manifests with portal-ed25519 302cb423…; updates next-launch
+KeliverHost: loading http://localhost:8077/bundles/v1/manifest.zipline.json (index sequence 1, channel stable (host: stable), host version 1, manifest sha256 493ce70f4f1b…); rollback floor 0
+KeliverHost: codeLoadSuccess modules=40 sequence=1 source=network
+KeliverHost: rollback floor raised: 0 -> 1
+inventory.ioshost: 93240
