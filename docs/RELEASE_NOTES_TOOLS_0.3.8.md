@@ -20,10 +20,19 @@ as for 0.3.5. So, as the procedure allows only in this case:
    bytes. The tag was re-checked at `731ebfce`. This is GitHub's record of the
    stored bytes, not a download.
 2. After publishing, the public `.sha256` sidecar downloaded here (97 bytes,
-   naming `aafed0d8…`). The public zip is checked from GitHub-hosted runners:
-   `reference-app.yml` (38151355318) and `ios-host.yml` (38151386539),
-   dispatched on PR #99's branch. Their first step runs `sha256sum -c` against
-   the release's own `.sha256`, then checks the pinned hash.
+   naming `aafed0d8…`). The **public zip** was checked from GitHub-hosted
+   runners: `sha256sum -c` against the release's own `.sha256` ("OK"), then
+   the pinned hash, in `reference-app.yml` (38151355318, 38155942970) and
+   `ios-host.yml` (38151386539), dispatched on PR #99's branch.
+
+**Published-only proof, after the release.** Runs started by hand use only the
+published zip's `bin/`:
+- `reference-app.yml` 38155942970: prepare 25/0; the zip's own
+  `keliver-publish` 40/0 (`--package`); device **135/0**, V2 included. The
+  first dispatch, 38151355318, stopped at the self-test step, which pointed at a
+  checkout relay that zip mode does not build. That is fixed in PR #99.
+- `ios-host.yml` 38151386539: self-test 68/0; `ios.sh` **120/0**, V2
+  included.
 
 Tools 0.3.7 and earlier, and the Maven 0.3.3 libraries, are unchanged. The
 tools version and the library version are separate lines: 0.3.8 still
