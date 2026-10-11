@@ -89,11 +89,18 @@ jobs:
           # Free the app's Gradle daemon before the emulator starts.
           (cd "$RUNNER_TEMP/ref/boot/inventory" && ./gradlew --stop) || true
 
-      - name: keliver-publish self-test (W3), against the relay install prepare.sh built
+      # zip: the published zip's own bin/keliver-publish and relay/ (--package);
+      # repo: the relay install prepare.sh built from this checkout.
+      - name: keliver-publish self-test (W3), the zip's or this checkout's
         run: |
           set -o pipefail
-          bash scripts/keliver-publish-selftest.sh "$RUNNER_TEMP/publish-selftest" \
-            --relay-home "$GITHUB_WORKSPACE/portal-relay/build/install/portal-relay" \
+          if [ "$KELIVER_SCAFFOLD_FROM" = zip ]; then
+            under_test=(--package "$(dirname "$(ls -d "$RUNNER_TEMP"/ref/boot/tools/keliver-portal-tools-*/bin)")")
+          else
+            under_test=(--relay-home "$GITHUB_WORKSPACE/portal-relay/build/install/portal-relay")
+          fi
+          echo "under test: ${under_test[*]}"
+          bash scripts/keliver-publish-selftest.sh "$RUNNER_TEMP/publish-selftest" "${under_test[@]}" \
             | tee "$GITHUB_WORKSPACE/evidence/keliver-publish-selftest.txt"
 
       - name: Enable KVM
