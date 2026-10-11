@@ -419,7 +419,7 @@ resets it.
 
 `--embed` on either scaffolder writes the host of §2 or §3 as a part of an app
 you already have, instead of as an app of its own. Nothing of your app is
-edited; the scaffolder prints what to add. Not in a released tools bundle yet.
+edited; the scaffolder prints what to add. In the tools bundle from 0.3.8.
 
 ```bash
 keliver-new-production-host.sh --embed --into DIR [--module keliver-host] --bundle-server URL \

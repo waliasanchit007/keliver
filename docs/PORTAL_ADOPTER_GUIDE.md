@@ -282,8 +282,7 @@ details.
 The commands above write a standalone host app. To show Keliver screens inside
 an app you already have, next to its native screens, add `--embed`. It writes
 the same host as a module of your app. It edits none of your files: it prints
-the lines to add. This is not in a released tools bundle yet; it ships only
-with a later release.
+the lines to add. It ships in the tools bundle from **0.3.8** on.
 
 **Android.** Run from your Keliver app's root (the one with
 `keliver.portal.json`), pointing `--into` at your existing app's Gradle root:
