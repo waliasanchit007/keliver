@@ -1,0 +1,3 @@
+  bundle: ios stable 1 installs 1 {'loaded': 1}
+  bundle: ios stable 2 installs 1 {'loaded': 1}
+ok

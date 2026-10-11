@@ -162,6 +162,27 @@ ships them. In candidate mode a missing one is a failure, not a fallback.
 
 ## Candidate verification (recorded after the build; not in the built commit)
 
+### Candidate 3 — `731ebfce` (W3, W4, W2, W5, W6): the one to release
+
+It is built from `feat/w6-visibility` (PR #97, on #96, #95 and #94, with
+`main` merged in). The verifiers ran from the same branch, at `731ebfce`.
+
+| | |
+|---|---|
+| source commit to tag | **`731ebfcefca14f3c9766d782cedb6982086729a7`** (`VERSION.json` `sourceCommit`, `sourceDirtyFiles: 0`; tools 0.3.8, Maven dependency 0.3.3) |
+| zip | `keliver-portal-tools-0.3.8.zip`, 90,584,445 bytes; sha256 **`aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d`** |
+| bundled dev-host APK | sha256 **`1a0b6d920ed46c8008c6d9a8c61f63369ae42f9f55d12734f787d8a3e47fff43`**, no embedded portal key |
+| build run | [`38133756571`](https://github.com/waliasanchit007/keliver/actions/runs/38133756571), retained artifact `11700407805` (90,573,343 bytes, `sha256:64458570…`), built 2026-10-11. Every portable check is green: the packaged `keliver-publish` self-test 40/0; the production-host scaffolder 65/0 (`--build`) and 60/0 (zip); the iOS scaffolder 62/0 twice; the publish target 41/0 (`--build`) and 25/0; U27 63/0/0; the relay's tests, `HostReportsTest` included |
+| device run | [`38134971077`](https://github.com/waliasanchit007/keliver/actions/runs/38134971077): the APK pinned by sha256 (`1a0b6d92…`). Device checks 19/0, packaged acceptance 28/0 |
+| local check | The downloaded zip and its APK match the build run; `VERSION.json` is as above; there is no `portal_ed25519.pub` in the APK. Every `bin/` script is 755, and `relay/bin/keliver-publish-jvm` is present. There are no key files. 57 packaged files are byte-identical to the commit (templates, scripts, `host/README.md`, `README.md`, the guide inside the MCP jar), and the relay jar carries `HostReports`. The packaged `keliver-publish` self-test, rerun against the downloaded zip: 40/0 |
+| iOS, the candidate zip itself | `ios.sh` with `KELIVER_CANDIDATE_SHA256=aafed0d8…` and `KELIVER_SCAFFOLD_FROM=zip`, on this Mac: Xcode 26.4.1, iOS 26.4, iPhone 17 Pro; a disposable simulator (deleted after), Gradle home and Konan dir. Every host and publish came from the zip's own `bin/`. **120/0.** This includes **V2**: the zip's relay counted the development host's reports of v1 and v2 at `GET /reports`, end to end. Also P1–P7; S2–S15 with S6/U2, S8 and S9c; I1, I2, I4, I5; U1; V1. Evidence: `docs/superpowers/evidence/tools-0.3.8-candidate3-ios/` |
+| tag push | Unchanged since candidate 2 (no workflow file differs from `ef625050`): only `portal-tools.yml` matches `portal-tools-v*`, and it is read-only |
+
+**Recommendation:** tag `portal-tools-v0.3.8` on `731ebfce` and attach
+`keliver-portal-tools-0.3.8.zip` (`aafed0d8…`) from the retained artifact
+`11700407805` (it expires about 2026-11-10), per
+`docs/PORTAL_TOOLS_RELEASE.md` step 4.
+
 ### Candidate 2 — `ef625050` (W3, W4, W2, W5): superseded, never tag it
 
 It is built from `feat/w5-update-api` (PR #96, on #95 on #94, with `main`
