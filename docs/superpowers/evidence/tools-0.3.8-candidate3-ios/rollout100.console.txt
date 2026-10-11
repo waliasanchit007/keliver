@@ -1,0 +1,7 @@
+KeliverHost: verifying manifests with portal-ed25519 ee760530…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v5/manifest.zipline.json (index sequence 5, channel stable (host: stable), host version 1, manifest sha256 f8afd7a54c0c…); rollback floor 4
+KeliverHost: codeLoadSuccess modules=40 sequence=5 source=network
+KeliverHost: report: loaded sequence=5 reason=-
+KeliverHost: rollback floor raised: 4 -> 5
+KeliverHost: report not sent: Could not connect to the server.
+inventory.ioshost: 61467

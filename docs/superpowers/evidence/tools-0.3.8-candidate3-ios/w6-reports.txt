@@ -1,0 +1,3 @@
+  report: {'outcome': 'loaded', 'sequence': 8, 'source': 'network', 'platform': 'ios', 'channel': 'stable'}
+  report: {'outcome': 'update-applied', 'sequence': 9, 'source': 'network', 'platform': 'ios', 'channel': 'stable'}
+ok
