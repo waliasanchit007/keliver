@@ -743,6 +743,56 @@ HTTPS. Then one external adopter. These need the owner's hardware or accounts:
 - CI key storage guidance.
 - Fix U30.
 
+#### W8 design (draft 2026-10-11; needs the owner's decisions before it is built)
+
+**U30 is fixed** (`portal-device-android` `syncPortalKey`, on `feat/w8-keys`;
+see `KNOWN_BUGS.md`).
+
+**What constrains a rotation** (Zipline 1.22 and today's hosts):
+- A manifest's signatures are keyed by **name**. A host's `ManifestVerifier`
+  checks the signatures whose names it trusts, and needs at least one to
+  verify.
+- Every host shipped so far trusts exactly one key, under the name
+  `portal-ed25519`.
+- The signing block signs with one key, under that name.
+- The rollback floor and the Zipline cache are kept per key (the key's first
+  16 hex digits).
+
+**Proposed rotation: dual-signing, three phases.**
+1. **Hosts trust a set.** New hosts trust `portal-ed25519` (the current key)
+   and `portal-ed25519-next` (the next key), each a separate line in the key
+   file. The build checks every line. Ship these hosts, and wait until the old
+   ones are gone or forced to update.
+2. **Dual-sign.** The signing block signs each manifest twice, with the
+   current key as `portal-ed25519` and the next key as `portal-ed25519-next`.
+   Old hosts verify the first signature, new hosts either one. Nothing breaks
+   at any point.
+3. **Retire.** The next key becomes the only signer, and later hosts trust
+   only it, under its own name.
+
+**The floor across a rotation.** A host reads the highest floor over all the
+keys it trusts and writes it under each, so a key change never reopens the
+rollback window. Today a new key starts at 0. That reopening is exactly what
+W4.2's "one key, one sequence space" warns about.
+
+**Key custody guidance** (docs only):
+- The private key lives in a CI secret, written to a file at job start, as
+  `KELIVER_SIGNING_KEY_FILE` already supports.
+- It is never in the repository, and never on a command line (U31).
+- Offline backup of the next key.
+- A short "what to do if the key leaks" runbook: rotate, ship hosts trusting
+  only the new key, and raise the floor.
+
+**Decisions needed from the owner:**
+1. Dual-signing (above) or a signed key handover (the old key signs a
+   statement naming the new key). The handover saves a host release, but adds
+   a new trust path to get right. The recommendation is dual-signing: no new
+   format, and each step is checkable with today's verifier.
+2. How many keys a host may trust (proposed: at most 2).
+3. Whether `keliver-publish` refuses to publish when the signing keys and the
+   index's previous signer disagree (a guard against signing with the wrong
+   key by mistake).
+
 ## Order and dependencies
 
 W1 (iOS parity) → W3 (headless publish + static index, which W4 builds on) →
