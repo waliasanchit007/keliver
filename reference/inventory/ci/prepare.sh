@@ -144,7 +144,9 @@ esac
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
 sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug ) > "$EV/host-build.log" 2>&1 \
+# W6 (V2): it reports to the relay. A template without keliver.reportUrl
+# (tools 0.3.8 candidate 2 and earlier) ignores the property.
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.reportUrl=http://10.0.2.2:8077/report ) > "$EV/host-build.log" 2>&1 \
   && ok "P1: the scaffolded host built from Maven Central" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.
@@ -185,12 +187,13 @@ bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway 
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
   && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
 { echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
-# W5 (U1): the same host, built to check for updates when it comes back to the
-# foreground (keliver.updates=on-resume; only that build setting differs).
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 -Pkeliver.updates=on-resume ) \
+# W5 (U1) and W6 (V1): the same host, built to check for updates when it comes
+# back to the foreground (keliver.updates=on-resume) and to POST its reports to
+# the static server's /report (keliver.reportUrl); only those settings differ.
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 -Pkeliver.updates=on-resume -Pkeliver.reportUrl=https://10.0.2.2:8443/report ) \
   > "$EV/w5-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-onresume.apk" \
-  && ok "W5: the production host, built with keliver.updates=on-resume" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
+  && ok "W5: the production host, built with keliver.updates=on-resume and keliver.reportUrl" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
 echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 
 # --- 7. W2: the host embedded in an "existing" app (reference/embed/android) ---

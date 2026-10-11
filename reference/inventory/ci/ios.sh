@@ -146,6 +146,9 @@ esac
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 grep -q "PORTAL_PUBLIC_KEY_HEX: String = \"$PUB\"" "$CFG" \
   && ok "P1: HostConfig.kt embeds this app's public key (${PUB:0:8}…)" || bad "P1: the embedded key is not this app's"
+# W6 (V2): this host reports to the relay (a template without REPORT_URL,
+# tools 0.3.8 candidate 2 and earlier, is left as it is).
+sed -i '' 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "http://localhost:8077/report"|' "$CFG"
 ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
     -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
     CODE_SIGNING_ALLOWED=NO build ) > "$EV/xcodebuild.log" 2>&1 \
@@ -251,6 +254,16 @@ launch P4-v2
 grep -q "loading http://localhost:8077/bundles/v2/manifest.zipline.json" "$EV/P4-v2.console.txt" && grep -q "codeLoadSuccess" "$EV/P4-v2.console.txt" \
   && ok "P4: the host loaded v2" || bad "P4: v2 did not load"
 reads P4-v2 Stockroom && ok "P4: the screen reads 'Stockroom'" || bad "P4: 'Stockroom' is not on the screen"
+# V2 (W6): this host reports to the relay. A relay that collects reports
+# (GET /reports; not in tools 0.3.8 candidate 2 or earlier) must have counted
+# v1's and v2's loads. An older relay is a SKIP, not a pass.
+if [ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 http://localhost:8077/reports)" = 200 ]; then
+  curl -s -m 5 http://localhost:8077/reports > "$EV/relay-reports.json"
+  python3 "$HERE/w5/relay_reports.py" "$EV/relay-reports.json" ios > "$EV/relay-reports.txt" 2>&1 \
+    && ok "V2: the relay counted this host's loads of v1 and v2 (GET /reports)" || bad "V2: $(tail -1 "$EV/relay-reports.txt")"
+else
+  echo "  SKIP  V2: this relay serves no /reports (it predates W6); not counted"
+fi
 portal_down "$APP"
 
 # --- P5 -------------------------------------------------------------------------

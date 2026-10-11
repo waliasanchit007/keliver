@@ -1,0 +1,10 @@
+KeliverHost: verifying manifests with portal-ed25519 ee760530…; updates next-launch
+KeliverHost: loading https://localhost:8443/bundles/v1/manifest.zipline.json (index sequence 3, channel stable (host: stable), host version 1, manifest sha256 3106e3ee3ee6…); rollback floor 2
+KeliverHost: codeLoadFailed: rollback refused: sequence 1 is below 2, the highest this host has run
+KeliverHost: report: fell-back sequence=none reason=below-floor
+KeliverHost: the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v2/manifest.zipline.json)
+KeliverHost: report not sent: Could not connect to the server.
+KeliverHost: codeLoadSuccess modules=40 sequence=2 source=cache
+KeliverHost: report: loaded sequence=2 reason=-
+KeliverHost: report not sent: Could not connect to the server.
+inventory.ioshost: 60853

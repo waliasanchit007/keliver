@@ -1,6 +1,7 @@
 import app.cash.zipline.loader.ZiplineHttpClient
 import hosttemplate.HostFacts
 import hosttemplate.ManifestPinningHttpClient
+import hosttemplate.reportReason
 import hosttemplate.manifestPathOk
 import hosttemplate.manifestSequence
 import hosttemplate.rollbackProblem
@@ -249,6 +250,21 @@ class BundleIndexTest {
     // A URL pinned first without a hash is held to the floor only.
     val c3 = ManifestPinningHttpClient(fake, v5, null, floor = { 4 })
     assertEquals(m5, c3.download(v5, emptyList()))
+  }
+
+  @Test
+  fun aReportSendsACategoryNeverTheMessage() {
+    // W6: what leaves the device is one of a fixed set, whatever the message holds.
+    assertEquals("sha256-mismatch", reportReason("fell-back", "manifest sha256 mismatch: https://cdn/x is ab, the index says cd"))
+    assertEquals("below-floor", reportReason("not-loaded", "rollback refused: sequence 5 is below 9, the highest this host has run"))
+    assertEquals("signature", reportReason("update-failed", "manifest signature did not verify"))
+    assertEquals("network", reportReason("fell-back", "failed to connect to /10.0.2.2 (port 8443) from /10.0.2.16 (port 41234)"))
+    assertEquals("lookup-failed", reportReason("no-bundle", "the lookup failed and nothing is cached"))
+    assertEquals("config", reportReason("refused", "No valid portal public key"))
+    assertEquals("other", reportReason("not-loaded", "TypeError at /data/user/0/com.example/files/x.js"))
+    assertEquals("", reportReason("loaded", ""))
+    val categories = setOf("", "sha256-mismatch", "below-floor", "signature", "lookup-failed", "network", "config", "other")
+    for (m in listOf("/data/user/0/p", "https://u:p@h/q?k=1", "10.1.2.3")) assertTrue(reportReason("not-loaded", m) in categories)
   }
 
   @Test

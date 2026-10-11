@@ -47,6 +47,10 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     if (channel == null || !(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
       throw new GradleException("HostConfig.kt: CHANNEL must be lower-case letters, digits and '-', at most 32 (got '$channel').")
     }
+    def report = configValue('REPORT_URL')
+    if (report == null || (report && !(report ==~ url))) {
+      throw new GradleException("HostConfig.kt: REPORT_URL must be empty or an http:// or https:// URL with no user@, query, fragment or '\$' (got '$report').")
+    }
     def updates = configValue('UPDATES')
     if (!(updates in ['next-launch', 'on-resume'])) {
       throw new GradleException("HostConfig.kt: UPDATES must be next-launch or on-resume (got '$updates').")
@@ -67,7 +71,7 @@ def checkReleaseUrls = tasks.register('checkReleaseUrls') {
   inputs.file(hostConfig)
   doLast {
     def infoPlist = infoPlistFile()
-    def plain = ['BUNDLE_SERVER', 'API_BASE_URL'].findAll { configValue(it)?.startsWith('http://') }
+    def plain = ['BUNDLE_SERVER', 'API_BASE_URL', 'REPORT_URL'].findAll { configValue(it)?.startsWith('http://') }
     if (plain) {
       throw new GradleException("A release build needs https:// servers; HostConfig.kt has http:// in ${plain.join(', ')}.")
     }

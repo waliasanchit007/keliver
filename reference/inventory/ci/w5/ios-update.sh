@@ -6,15 +6,18 @@
 # w3_signed_sequence.
 #   U1  an update applied on resume: looked up, loaded in place, floor raised,
 #       one process, the new screen shown
+#   V1  (W6) the host POSTed its reports to REPORT_URL: loaded (8), then
+#       update-applied (9), from one install
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
-sed -i '' 's|UPDATES: String = "[^"]*"|UPDATES: String = "on-resume"|' "$CFG"
-grep -q 'UPDATES: String = "on-resume"' "$CFG" \
+sed -i '' -e 's|UPDATES: String = "[^"]*"|UPDATES: String = "on-resume"|' \
+  -e 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "https://localhost:8443/report"|' "$CFG"
+grep -q 'UPDATES: String = "on-resume"' "$CFG" && grep -q 'REPORT_URL: String = "https://localhost:8443/report"' "$CFG" \
   && ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
       -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
       CODE_SIGNING_ALLOWED=NO build ) > "$EV/w5-xcodebuild.log" 2>&1 \
-  && ok "U1: the host rebuilt with UPDATES = \"on-resume\"" \
+  && ok "U1: the host rebuilt with UPDATES = \"on-resume\" and REPORT_URL" \
   || { bad "U1: the on-resume build failed"; grep -E '^e: |error:' "$EV/w5-xcodebuild.log" | head; }
 xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w5-server.log" &
@@ -67,5 +70,8 @@ reads U1-after Cellar && ok "U1: the running app now reads 'Cellar' (v9)" \
 
 kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
 xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
-sed -i '' 's|UPDATES: String = "[^"]*"|UPDATES: String = "next-launch"|' "$CFG"
+sed -i '' -e 's|UPDATES: String = "[^"]*"|UPDATES: String = "next-launch"|' -e 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = ""|' "$CFG"
+python3 "$HERE/w5/reports.py" "$EV/w5-server.log" ios > "$EV/w6-reports.txt" 2>&1 \
+  && ok "V1: the host reported loaded (sequence 8, network) and then update-applied (sequence 9) to its report URL" \
+  || bad "V1: $(tail -1 "$EV/w6-reports.txt")"
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""

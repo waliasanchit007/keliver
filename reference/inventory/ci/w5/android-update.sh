@@ -6,6 +6,8 @@
 # w3_publish, w3_signed_sequence.
 #   U1  an update applied on resume: looked up, loaded in place, floor raised,
 #       one process, the new screen shown
+#   V1  (W6) the host POSTed its reports to the report URL: loaded (8), then
+#       update-applied (9), from one install
 echo "--- 6. W5: an update applied when the app comes back to the foreground"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w5-server.log" &
 SERVE_PID=$!
@@ -52,4 +54,8 @@ pid_after="$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')"
   && ok "U1: the same process (pid $pid_after), no new start" || bad "U1: the process restarted ($pid_before -> $pid_after)"
 drive title Cellar U1after; fold "U1: the running app now shows Cellar (v9)" $?
 
+sleep 3  # the reports are sent in the background
+python3 "$HERE/w5/reports.py" "$EV/w5-server.log" android > "$EV/w6-reports.txt" 2>&1 \
+  && ok "V1: the host reported loaded (sequence 8, network) and then update-applied (sequence 9) to its report URL" \
+  || bad "V1: $(tail -1 "$EV/w6-reports.txt")"
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""

@@ -228,3 +228,22 @@ internal class ManifestPinningHttpClient(
     requestHeaders: List<Pair<String, String>>,
   ): Flow<String> = delegate.openDevelopmentServerWebSocket(url, requestHeaders)
 }
+
+/**
+ * The reason a report sends off the device (W6): a fixed category, never the
+ * exception text, which can carry addresses, file paths or URLs. The full text
+ * stays with the app (KeliverHost.reports / Keliver.onReport).
+ */
+internal fun reportReason(outcome: String, detail: String): String {
+  val d = detail.lowercase()
+  return when {
+    outcome == "refused" -> "config"
+    d.isEmpty() -> ""
+    "sha256 mismatch" in d -> "sha256-mismatch"
+    "rollback refused" in d -> "below-floor"
+    "signature" in d || "verif" in d -> "signature"
+    "lookup failed" in d || "nothing is cached" in d -> "lookup-failed"
+    listOf("timeout", "timed out", "connect", "unreachable", "resolve", "unknownhost", "network", "offline", "reset").any { it in d } -> "network"
+    else -> "other"
+  }
+}

@@ -42,6 +42,11 @@
  * applies a newer bundle in place (Zipline loads it while the old code runs; a
  * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt the
  * host does that each time the app returns to the foreground.
+ *
+ * Reports (W6): every outcome (loaded, fell back, update applied or failed,
+ * not loaded, no bundle, refused) goes to Keliver.onReport, for the app's own
+ * analytics or crash keys; with REPORT_URL the host also POSTs it there as
+ * JSON, best effort. Nothing leaves the device otherwise.
  */
 @file:OptIn(dev.keliver.leaks.RedwoodLeakApi::class)
 
@@ -91,6 +96,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.EmptySerializersModule
@@ -114,7 +121,10 @@ private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${t
 private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestUrl-${cacheName(trust)}"
 /** The highest signed sequence this host has run, per key (the rollback floor). */
 private fun floorKey(trust: ProductionTrust.Verified) = "keliver.highestSequence-${cacheName(trust)}"
-/** This install's random id, for staged rollouts (W4.5): made once, kept here, never sent anywhere. */
+/**
+ * This install's random id, for staged rollouts (W4.5): made once, kept here.
+ * It leaves the device only in reports, and only when REPORT_URL is set (W6).
+ */
 private const val INSTALL_ID = "keliver.installId"
 private fun installId(): String {
   val defaults = NSUserDefaults.standardUserDefaults
@@ -137,6 +147,39 @@ public data class KeliverBundle(val sequence: Long, val fromCache: Boolean)
 
 /** What [Keliver.checkForUpdate] found: "up-to-date", "available" (applying or at the next start) or "failed". */
 public data class KeliverUpdateCheck(val outcome: String, val sequence: Long, val applying: Boolean, val reason: String)
+
+/**
+ * One outcome, as the host reports it (W6). [outcome] is loaded, fell-back,
+ * update-applied, update-failed, not-loaded, no-bundle or refused; [source] is
+ * "network", "cache" or ""; [sequence] -1 when there is none; [hostVersion] -1
+ * when CFBundleVersion is not an integer. [reason] is a fixed category
+ * (sha256-mismatch, below-floor, signature, lookup-failed, network, config,
+ * other); [detail] is the full message, for the app only: it can hold
+ * addresses, paths or URLs, so [toJson], what REPORT_URL receives, leaves it
+ * out. [installId] is the random id made on the device for rollouts.
+ */
+public data class KeliverReport(
+  val installId: String,
+  val channel: String,
+  val hostVersion: Long,
+  val sequence: Long,
+  val source: String,
+  val outcome: String,
+  val reason: String,
+  val detail: String,
+  val platform: String = "ios",
+) {
+  public fun toJson(): String = buildJsonObject {
+    put("installId", installId)
+    put("channel", channel)
+    put("hostVersion", hostVersion.takeIf { it >= 0 })
+    put("sequence", sequence.takeIf { it >= 0 })
+    put("source", source.ifEmpty { null })
+    put("outcome", outcome)
+    put("reason", reason)
+    put("platform", platform)
+  }.toString()
+}
 
 /** What happened to the bundle the host runs (W5): "applied", "failed" or "fell-back". */
 public data class KeliverUpdateEvent(val kind: String, val sequence: Long, val reason: String)
@@ -174,6 +217,35 @@ public object Keliver {
   /** Called on the main thread with each update applied or failed, and each fall-back (W5). */
   public var onUpdateEvent: ((KeliverUpdateEvent) -> Unit)? = null
 
+  /** Called on the main thread with every outcome (W6), for the app's analytics or crash keys. */
+  public var onReport: ((KeliverReport) -> Unit)? = null
+
+  /**
+   * Hands [outcome] to [onReport] and, with REPORT_URL, POSTs it there. Best
+   * effort: a report that cannot be sent is dropped; it never blocks or fails
+   * anything else. Main thread.
+   */
+  internal fun report(outcome: String, sequence: Long? = null, source: String = "", detail: String = "") {
+    // A retried start reports its first "no bundle" only.
+    if (outcome == "no-bundle") { if (reportedNoBundle) return; reportedNoBundle = true }
+    val r = KeliverReport(installId(), CHANNEL, hostVersion() ?: -1, sequence ?: -1, source, outcome, reportReason(outcome, detail), detail.take(300))
+    // The app's handler must not take the host down with it.
+    runCatching { onReport?.invoke(r) }.onFailure { log("onReport threw: ${it.message}") }
+    if (REPORT_URL.isEmpty()) return
+    // Not the URL: it is the app's.
+    log("report: $outcome sequence=${sequence ?: "none"} reason=${r.reason.ifEmpty { "-" }}")
+    appScope.launch {
+      runCatching { send(reportSession, postJsonRequest(REPORT_URL, r.toJson(), timeoutSeconds = 10.0)) }
+        .onFailure { log("report not sent: ${it.message}") }
+    }
+  }
+  private var reportedNoBundle = false
+
+  /** Hands [event] to [onUpdateEvent]; the app's handler must not take the host down with it. */
+  private fun emit(event: KeliverUpdateEvent) {
+    runCatching { onUpdateEvent?.invoke(event) }.onFailure { log("onUpdateEvent threw: ${it.message}") }
+  }
+
   /** One image loader for every screen. */
   internal val imageLoader: ImageLoader by lazy {
     ImageLoader.Builder(PlatformContext.INSTANCE)
@@ -198,12 +270,14 @@ public object Keliver {
     appScope.launch {
       val s = startHost()
       state.value = s
+      if (s is HostState.Message) report(if (s.retry) "no-bundle" else "refused", detail = s.text)
       if (s is HostState.Message && s.retry) started = false
     }
   }
 
   /** Called on the main thread when a code load succeeded; [url] is null for a load from the cache. */
   internal fun codeLoaded(sequence: Long?, url: String?) {
+    val first = !loaded
     loaded = true
     current = KeliverBundle(sequence ?: -1, fromCache = url == null)
     // After a load from the cache Zipline takes no further manifest; after a network load it does.
@@ -212,7 +286,10 @@ public object Keliver {
     if (p != null && url == p.url) {
       pending = null
       log("update applied: sequence $sequence")
-      onUpdateEvent?.invoke(KeliverUpdateEvent("applied", sequence ?: -1, ""))
+      emit(KeliverUpdateEvent("applied", sequence ?: -1, ""))
+      report("update-applied", sequence, "network")
+    } else if (first) {
+      report("loaded", sequence, if (url == null) "cache" else "network")
     }
   }
 
@@ -228,7 +305,8 @@ public object Keliver {
 
   /** Called on the main thread when the host falls back to the cached last good bundle. */
   internal fun fellBack(reason: String) {
-    onUpdateEvent?.invoke(KeliverUpdateEvent("fell-back", -1, reason))
+    emit(KeliverUpdateEvent("fell-back", -1, reason))
+    report("fell-back", detail = reason)
   }
 
   /** Called on the main thread when a load failed after code had run: an update that did not load. */
@@ -237,7 +315,8 @@ public object Keliver {
     pending = null
     failedUpdates += p.url // not tried again in this process
     log("update failed: sequence ${p.sequence} did not load ($reason); the running bundle stays")
-    onUpdateEvent?.invoke(KeliverUpdateEvent("failed", p.sequence, reason))
+    emit(KeliverUpdateEvent("failed", p.sequence, reason))
+    report("update-failed", p.sequence, "network", reason)
   }
 
   /**
@@ -311,7 +390,9 @@ public object Keliver {
 
   /** Called on the main thread when a code load failed: before any code ran, say so instead of a blank screen. */
   internal fun codeLoadFailed(reason: String) {
-    if (!loaded) state.value = HostState.Message("Bundle did not load", reason.take(300))
+    if (loaded) return
+    state.value = HostState.Message("Bundle did not load", reason.take(300))
+    report("not-loaded", detail = reason)
   }
 
   /**

@@ -54,9 +54,12 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Also (from 0.3.8):** publish without the relay
   (`bin/keliver-publish`) to a static host or CDN (`bundles/index.json`), with
   rollback protection in the hosts it scaffolds.
-- **Also (unreleased):** `--embed` on both host scaffolders, to show Keliver
+- **Also (from 0.3.8):** `--embed` on both host scaffolders, to show Keliver
   screens inside an app you already have.
-- **Doesn't (yet):** an in-app update API.
+- **Also (from 0.3.8), in the hosts it scaffolds:** updates while the app
+  runs (`checkForUpdate`, or on resume), the fall-back to the last good bundle,
+  and host reports. The relay can collect those reports during development.
+- **Doesn't (yet):** key rotation (a host trusts one key).
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
@@ -92,7 +95,7 @@ build needs `https://` servers and your own signing config.
 bin/keliver-new-production-host.sh --embed --into DIR [--module keliver-host] --bundle-server URL ...
 ```
 
-With `--embed` (unreleased) it writes the same host as a library module,
+With `--embed` (from 0.3.8) it writes the same host as a library module,
 `DIR/keliver-host/`, into an existing Android app instead: `KeliverHost` (one
 per process, made in your `Application`), the `KeliverScreen` Composable and
 `KeliverView`. It edits none of your files and prints the lines to add. Your
@@ -110,7 +113,7 @@ xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulato
 Writes `host-ios/`: your app's production iOS host, a Kotlin framework on Maven
 Central plus an Xcode app. It applies the same key checks and refusals as
 `keliver-new-production-host.sh`. `host/README.md` §3 has what it does.
-With `--embed --into DIR` (unreleased) it writes only the framework's Gradle
+With `--embed --into DIR` (from 0.3.8) it writes only the framework's Gradle
 build, `DIR/keliver-host-ios/`, for an existing Xcode app, plus
 `KeliverScreen.swift` and `EMBED.md` with the Xcode edits; `host/README.md` §4.
 

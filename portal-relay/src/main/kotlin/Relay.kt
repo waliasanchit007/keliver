@@ -871,6 +871,10 @@ fun main(args: Array<String>) {
   startKotlinWatcher()
   val server = HttpServer.create(InetSocketAddress(PORT), 0)
 
+  // W6: POST /report from production hosts built to report here; counts at
+  // GET /reports and /reports/view (HostReports.kt). Kept under the store.
+  HostReports.register(server, HostReports(File(root, "reports"))) { ex, block -> handle(ex, block) }
+
   server.createContext("/projects") { ex ->
     handle(ex) {
       when (ex.requestMethod) {
