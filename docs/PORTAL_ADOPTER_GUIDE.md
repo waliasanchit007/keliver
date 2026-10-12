@@ -250,9 +250,8 @@ changes nothing else, `keliver.portal.json` included. Then:
 - restart the portal, so `/publish` builds with the new block;
 - if other users of the machine, shared CI logs or a cached `.gradle/` could
   have exposed the key, treat it as compromised. A new key means rebuilding
-  and shipping your production hosts with its public key. Keliver has no
-  rotation procedure yet: hosts trust one key, and W8 in the delivery plan
-  covers rotation.
+  and shipping your production hosts with its public key: follow
+  [`KEY_ROTATION.md`](KEY_ROTATION.md), "If a key leaks".
 
 It embeds your portal's public key (copied from your store — commit
 `host-android/src/main/assets/keliver/portal_ed25519.pub`), verifies every bundle

@@ -290,7 +290,9 @@ server can't make it run an older one.
   server that only ever serves old unsequenced bundles keeps it there.
 
 **One key, one sequence space.** The floor is per key, across every server and
-route the host has used. A newest entry below a host's floor shows **no
+route the host has used. During a key rotation (W8) a host reads the highest
+floor over the keys it trusts and writes it under each, so the sequence space
+carries over to the next key ([`KEY_ROTATION.md`](KEY_ROTATION.md)). A newest entry below a host's floor shows **no
 bundle** to a new install, and leaves the others on their cached last good
 bundle (the fall-back above), never on the newer one. So never let sequences go
 backwards. Ways a publisher can do that by mistake:
