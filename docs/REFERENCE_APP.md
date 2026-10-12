@@ -363,3 +363,10 @@ reference/inventory/bootstrap.sh /tmp/ref            # public release; or pass a
 The CI route is `reference/inventory/ci/prepare.sh` then `ci/device.sh` on an
 emulator; both run with the JVM's `user.home` inside the work directory and the
 repository's isolation guard before every relay start.
+On a physical Android phone over USB, the same two scripts run with
+`KELIVER_DEVICE=physical` for `prepare.sh` (W7; [`DEVICE_PROOF.md`](DEVICE_PROOF.md)):
+the hosts reach this machine through `adb reverse` as `127.0.0.1`, the HTTPS
+test APKs carry the throwaway CA, and the generic development host's rows
+(E1–E10, D3) are SKIP, because it has `10.0.2.2` compiled in. A
+`reference-app.yml` run started by hand with `device_route=physical` rehearses
+that route on the emulator; that is not a device result.
