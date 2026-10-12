@@ -40,7 +40,17 @@ on:
       - "portal-relay/src/main/kotlin/StaticIndex.kt"
       - "portal-relay/src/main/kotlin/KeliverPublish.kt"
       - "portal-relay/src/main/kotlin/PublishSignature.kt"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      device_route:
+        # W7: physical rehearses the USB-phone route on this emulator: the hosts
+        # are built for 127.0.0.1 behind adb reverse, and the HTTPS test APKs
+        # carry the throwaway CA instead of the emulator's system store taking
+        # it. A rehearsal of the harness, never a physical-device result.
+        description: "emulator (default), or physical: rehearse the USB-phone route (docs/DEVICE_PROOF.md) on the emulator"
+        type: choice
+        options: [emulator, physical]
+        default: emulator
 permissions:
   contents: read
 jobs:
@@ -56,6 +66,8 @@ jobs:
       # bin/ (zip): the published-only proof of the release pinned below.
       # Everything else always comes from the published zip.
       KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
+      # W7: the device route prepare.sh builds for (emulator on a pull request).
+      KELIVER_DEVICE: ${{ inputs.device_route || 'emulator' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

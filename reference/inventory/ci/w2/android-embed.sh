@@ -67,7 +67,7 @@ PY
 
 # X2: a signed load, from the static server, verified with this app's key.
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-embed.txt" \
-  && grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$EV/logcat-embed.txt" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$EV/logcat-embed.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-embed.txt" \
   && ok "X2: the embedded host verified with this app's key and loaded v7 from the static server" \
   || bad "X2: $(grep -E "$HOST_TAG" "$EV/logcat-embed.txt" | head -3 | tr '\n' ' ')"

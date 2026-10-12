@@ -31,7 +31,10 @@ EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
 SERIAL="${3:-$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')}"
 [ -n "$SERIAL" ] || { echo "no adb device" >&2; exit 2; }
 # shellcheck source=/dev/null
-. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK
+. "$WORK/env"   # APP, KP, STORE, APK, PROD_ID, W3_PUBLISH, W3_TLS, W3_APK, DEVICE_KIND, HOST_ADDR
+# W7: what prepare.sh built the hosts for (KELIVER_DEVICE there). A work dir
+# from before W7 has neither line: it was built for the emulator.
+DEVICE_KIND="${DEVICE_KIND:-emulator}"; HOST_ADDR="${HOST_ADDR:-10.0.2.2}"
 export KP JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
@@ -43,6 +46,8 @@ HOST_TAG=KeliverHost
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/device.results"; }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/device.results"; }
+# Not run on this kind of device, and why; never counted as a pass.
+skip(){ printf '  SKIP  %s\n' "$1"; echo "SKIP $1" >> "$EV/device.results"; }
 sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 : > "$EV/device.results"
 drive(){ python3 "$HERE/drive.py" "$SERIAL" "$EV" "$@"; }
@@ -55,6 +60,7 @@ shot(){  # $1 = label
   local f="$EV/shot-$1-screencap.png" d="$EV/shot-$1-emulator.d" g
   adb -s "$SERIAL" exec-out screencap -p > "$f" 2>/dev/null
   printf '%s screencap %s\n' "$1" "$(python3 "$HERE/shot.py" "$f")" | tee -a "$EV/shots.results"
+  [ "$IS_EMU" = 1 ] || return 0   # the host-side capture exists only on an emulator
   mkdir -p "$d"
   adb -s "$SERIAL" emu screenrecord screenshot "$d" > "$d.log" 2>&1
   g="$(ls "$d"/*.png 2>/dev/null | head -1)"
@@ -69,7 +75,14 @@ shot(){  # $1 = label
 
 . "$REPO/scripts/keliver-test-isolation-guard.sh"
 SERVE_PID=""
-cleanup(){ [ -n "$SERVE_PID" ] && kill "$SERVE_PID" 2>/dev/null; for a in "$APP" "$WORK/foreign/inventory"; do
+REVERSED=""; ROTATION=""; STAY_ON=""
+cleanup(){ [ -n "$SERVE_PID" ] && kill "$SERVE_PID" 2>/dev/null
+  # W7: undo what this run changed on a phone: its adb reverse ports, and the
+  # auto-rotate setting the rotation checks switch off.
+  for port in $REVERSED; do adb -s "$SERIAL" reverse --remove "tcp:$port" >/dev/null 2>&1; done
+  [ -n "$ROTATION" ] && adb -s "$SERIAL" shell settings put system accelerometer_rotation "$ROTATION" >/dev/null 2>&1
+  [ -n "$STAY_ON" ] && adb -s "$SERIAL" shell settings put global stay_on_while_plugged_in "$STAY_ON" >/dev/null 2>&1
+  for a in "$APP" "$WORK/foreign/inventory"; do
   [ -d "$a" ] && ( cd "$a" && "$KP/keliver-portal" stop . >/dev/null 2>&1 ); done; return 0; }
 trap cleanup EXIT
 
@@ -112,9 +125,48 @@ serve_down(){
 }
 
 echo "==> device $SERIAL: api $(adb -s "$SERIAL" shell getprop ro.build.version.sdk | tr -d '\r'), abi $(adb -s "$SERIAL" shell getprop ro.product.cpu.abi | tr -d '\r')"
+# W7: is this an emulator? Kept as evidence with the device's identity; the
+# hosts must have been built for it (10.0.2.2 exists only on an emulator).
+prop(){ adb -s "$SERIAL" shell getprop "$1" | tr -d '\r'; }
+IS_EMU=0
+{ [ "$(prop ro.kernel.qemu)" = 1 ] || [ "$(prop ro.boot.qemu)" = 1 ]; } && IS_EMU=1
+case "$SERIAL:$(prop ro.hardware)" in emulator-*|*:ranchu|*:goldfish) IS_EMU=1 ;; esac
+{ echo "serial=$SERIAL"; echo "emulator=$IS_EMU"; echo "route=$DEVICE_KIND (hosts built for $HOST_ADDR)"
+  for k in ro.product.manufacturer ro.product.model ro.product.cpu.abi ro.build.version.release \
+           ro.build.version.sdk ro.build.fingerprint ro.build.type; do echo "$k=$(prop "$k")"; done
+} > "$EV/device-facts.txt"
+sed 's/^/    /' "$EV/device-facts.txt"
+if [ "$DEVICE_KIND" = emulator ] && [ "$IS_EMU" = 0 ]; then
+  bad "W7: $SERIAL is not an emulator, but the hosts were built for 10.0.2.2; run prepare.sh again with KELIVER_DEVICE=physical"
+  echo "device: passed $pass, failed $fail"; exit 1
+fi
+if [ "$DEVICE_KIND" = physical ]; then
+  [ "$IS_EMU" = 1 ] && echo "    NOTE: the physical-device route on an EMULATOR: a rehearsal, not a physical-device run"
+  # The hosts reach this machine as 127.0.0.1: the relay (:8077) and the static
+  # HTTPS server (:8443), each through the USB connection.
+  for port in 8077 8443; do
+    adb -s "$SERIAL" reverse "tcp:$port" "tcp:$port" >/dev/null && REVERSED="$REVERSED $port" \
+      && ok "W7: adb reverse tcp:$port (the device reaches this machine's :$port as 127.0.0.1:$port)" \
+      || bad "W7: adb reverse tcp:$port failed"
+  done
+  ROTATION="$(adb -s "$SERIAL" shell settings get system accelerometer_rotation | tr -d '\r')"
+  # The checks read the screen (uiautomator): keep it on while on USB, wake it,
+  # and dismiss a swipe lock screen (a PIN or pattern needs a person; set the
+  # lock to None or Swipe for the session: docs/DEVICE_PROOF.md).
+  STAY_ON="$(adb -s "$SERIAL" shell settings get global stay_on_while_plugged_in | tr -d '\r')"
+  adb -s "$SERIAL" shell svc power stayon usb >/dev/null 2>&1
+  adb -s "$SERIAL" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1
+  adb -s "$SERIAL" shell wm dismiss-keyguard >/dev/null 2>&1
+  [ "$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null | grep -cE 'mDreamingLockscreen=true|isKeyguardShowing=true|mShowingLockscreen=true')" = 0 ] \
+    || echo "    WARNING: the lock screen still shows; unlock the phone, or the screen checks will fail"
+fi
 
 # --- 1. the development route on the generic host ----------------------------
 echo "--- 1. development route (generic host from the tools bundle)"
+# The generic development host has http://10.0.2.2:8080 compiled in (portal-
+# device-android), so on a phone it cannot reach this machine: not run there.
+DEV_ROUTE=1; [ "$DEVICE_KIND" = physical ] && DEV_ROUTE=0
+if [ "$DEV_ROUTE" = 1 ]; then
 adb -s "$SERIAL" uninstall "$PKGID" >/dev/null 2>&1 || true
 "$KP/keliver-install-device-host.sh" --serial "$SERIAL" > "$EV/install-dev-host.log" 2>&1 \
   && ok "the bundle's installer installed the generic development host" || bad "the development host did not install"
@@ -124,6 +176,9 @@ launch dev "$EV/logcat-dev-1.txt"
 grep -q "mode=dev" "$EV/logcat-dev-1.txt" && ok "the generic host entered the development path" || bad "no development path in the log"
 drive dev Inventory E; fold "E1-E10 on the development route" $?
 shot E-end
+else
+  skip "E1-E10: the generic development host reaches only 10.0.2.2 (an emulator's address); physical-device route"
+fi
 
 # --- 2. D14: edit through the relay, rebuild, observe ------------------------
 echo "--- 2. D14 layout edit"
@@ -154,6 +209,7 @@ grep -q 'Compiled_inventory.kt' "$EV/git-status-after-edit.txt" && ok "D2: the C
 ( cd "$APP/src/jsMain/kotlin/logic" && sha256 *.kt ) > "$EV/logic-after.sha256"
 cmp -s "$EV/logic-before.sha256" "$EV/logic-after.sha256" \
   && ok "D2: every file under logic/ is byte-identical after the edit" || bad "D2: logic/ changed"
+if [ "$DEV_ROUTE" = 1 ]; then
 serve_down; serve_up v2 && ok "rebuilt and serving the edited app" || bad "the rebuilt bundle was not served"
 launch dev "$EV/logcat-dev-2.txt"
 drive title Stockroom D3; fold "D3: the device shows the edited title" $?
@@ -162,6 +218,9 @@ shot D3-stockroom
 # on the rebuilt bundle, with the new title.
 drive dev Stockroom D3E; fold "D3: E1-E10 unchanged after the edit" $?
 serve_down
+else
+  skip "D3: shown on the development host, which a phone cannot reach (P4 below shows the edit, signed, in production)"
+fi
 
 # --- 3. production on this app's own host ------------------------------------
 echo "--- 3. production"
@@ -182,11 +241,11 @@ adb -s "$SERIAL" shell pm list packages | tr -d '\r' | grep -qx "package:$PROD_I
 # serves no bundles/index.json (the host falls back to /bundles/latest on the
 # 404); from 0.3.8 it serves the index.
 if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8077/bundles/index.json)" = 404 ]; then
-  grep -q "$HOST_TAG: no bundles/index.json at http://10.0.2.2:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
+  grep -q "$HOST_TAG: no bundles/index.json at http://$HOST_ADDR:8077/; asking bundles/latest" "$EV/logcat-prod-v1.txt" \
     && ok "P2: the relay serves no index; the host fell back to /bundles/latest on the 404" \
     || bad "P2: no fallback to /bundles/latest in the log"
 else
-  grep -q "$HOST_TAG: loading http://10.0.2.2:8077/bundles/v1/manifest.zipline.json (index sequence 1," "$EV/logcat-prod-v1.txt" \
+  grep -q "$HOST_TAG: loading http://$HOST_ADDR:8077/bundles/v1/manifest.zipline.json (index sequence 1," "$EV/logcat-prod-v1.txt" \
     && ! grep -q "asking bundles/latest" "$EV/logcat-prod-v1.txt" \
     && ok "P2: the relay serves bundles/index.json; the host looked v1 up through it" \
     || bad "P2: the relay serves an index, but the host did not look up through it"

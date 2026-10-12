@@ -3,7 +3,7 @@
 # SERVE_PID, and its ok/bad/launch/drive/fold; prepare.sh built W3_PUBLISH
 # (keliver-publish from this checkout), W3_TLS (a throwaway CA and server
 # certificate) and W3_APK (the same production host, built for
-# https://10.0.2.2:8443).
+# https://$HOST_ADDR:8443; 10.0.2.2 on the emulator).
 #   S2  signed v1 loads through bundles/index.json over HTTPS ("Depot")
 #   S4  an edit, published as v2 by the CLI, reaches the host ("Warehouse")
 #   S5  checked against another app's public key, the CLI refuses this app's
@@ -36,9 +36,17 @@
 
 echo "--- 4. W3: static HTTPS, no relay"
 W3="$WORK/w3"
+if [ "$DEVICE_KIND" = physical ]; then
+  # W7: a stock phone's system store takes no CA without root; prepare.sh built
+  # the HTTPS test APKs with the CA inside them (ci/w7/android-test-ca.sh).
+  unzip -l "$W3_APK" 2>/dev/null | grep -q 'res/raw/keliver_test_ca.pem' \
+    && ok "W3: the static host's test APK carries the throwaway CA (physical-device route; no system store change)" \
+    || bad "W3: the static host's test APK does not carry the throwaway CA"
+else
 bash "$HERE/w3/android-ca.sh" "$SERIAL" "$W3_TLS/ca.pem" > "$EV/w3-android-ca.log" 2>&1 \
   && ok "W3: the throwaway CA is trusted by this emulator (system store, until reboot)" \
   || { bad "W3: the CA could not be installed"; cat "$EV/w3-android-ca.log"; }
+fi
 cp "$W3_TLS/ca.pem" "$EV/w3-ca.pem"
 
 ( cd "$APP" && "${W3_PUBLISH_TARGET:-$REPO/scripts/keliver-new-publish-target.sh}" ) > "$EV/w3-signing-upgrade.log" 2>&1
@@ -84,11 +92,11 @@ curl -sf --cacert "$W3_TLS/ca.pem" -o /dev/null https://localhost:8443/bundles/i
   && ok "W3: the static server answers over HTTPS, trusted through that CA" || bad "W3: the static server did not answer"
 
 adb -s "$SERIAL" install -r "$W3_APK" > "$EV/install-static-host.log" 2>&1 \
-  && ok "W3: installed the host built for https://10.0.2.2:8443 ($(sha256sum "$W3_APK" | cut -c1-12)…)" || bad "W3: the static host did not install"
+  && ok "W3: installed the host built for https://$HOST_ADDR:8443 ($(sha256sum "$W3_APK" | cut -c1-12)…)" || bad "W3: the static host did not install"
 adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 
 launch prod "$EV/logcat-static-v1.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v1/manifest.zipline.json (index sequence 1" "$EV/logcat-static-v1.txt" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v1/manifest.zipline.json (index sequence 1" "$EV/logcat-static-v1.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-v1.txt" \
   && ok "S2: signed v1 loaded through bundles/index.json over HTTPS" \
   || { bad "S2: v1 did not load from the static server"; grep "$HOST_TAG" "$EV/logcat-static-v1.txt" | head -8; }
@@ -117,7 +125,7 @@ cp "$W3/site/bundles/index.json" "$EV/w3-index-v2.json" 2>/dev/null
 w3_signed_sequence 2 && ok "W4.1: v2's manifest is signed for sequence 2 (metadata keliver.sequence)" \
   || bad "W4.1: v2's manifest does not carry signed sequence 2"
 launch prod "$EV/logcat-static-v2.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v2/manifest.zipline.json (index sequence 2" "$EV/logcat-static-v2.txt" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v2/manifest.zipline.json (index sequence 2" "$EV/logcat-static-v2.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-v2.txt" && ok "S4: the host loaded v2" || bad "S4: v2 did not load"
 drive title Warehouse S4static; fold "S4: v2 shows Warehouse" $?
 
@@ -139,7 +147,7 @@ grep -q "manifest sha256 mismatch" "$EV/logcat-static-pin.txt" && ok "S6: the ma
   || bad "S6: no sha256 refusal: $(grep -E 'codeLoad' "$EV/logcat-static-pin.txt" | head -2 | tr '\n' ' ')"
 # W5 (U2): v2 ran before, so instead of nothing the host falls back to the
 # cached v2, verified again; nothing else loads.
-grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://10.0.2.2:8443/bundles/v2/" "$EV/logcat-static-pin.txt" \
+grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://$HOST_ADDR:8443/bundles/v2/" "$EV/logcat-static-pin.txt" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=2 source=cache" "$EV/logcat-static-pin.txt" \
   && ! grep "codeLoadSuccess" "$EV/logcat-static-pin.txt" | grep -qv "sequence=2 source=cache" \
   && ok "S6/U2: the host fell back to the cached last good bundle (v2, sequence 2, from the cache), and loaded nothing else" \
@@ -180,7 +188,7 @@ cp "$W3/site/bundles/index.json" "$EV/w3-index-v3.json" 2>/dev/null
 w3_signed_sequence 3 && ok "W4.3: v3's manifest is signed for sequence 3" || bad "W4.3: v3's manifest does not carry signed sequence 3"
 w3_same_modules 1 3 && ok "S10: v3's modules are v1's, byte for byte" || bad "S10: v3's modules differ from v1's"
 launch prod "$EV/logcat-static-republish.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v3/manifest.zipline.json (index sequence 3" "$EV/logcat-static-republish.txt" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v3/manifest.zipline.json (index sequence 3" "$EV/logcat-static-republish.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-republish.txt" \
   && ok "S10: the host that had run v2 (floor 2) loaded the republished v1 as v3" \
   || bad "S10: v3 did not load: $(grep -E "$HOST_TAG" "$EV/logcat-static-republish.txt" | head -3 | tr '\n' ' ')"
@@ -195,7 +203,7 @@ w3_title Warehouse Backroom && w3_publish v4-beta --channel beta && grep -q "pub
   && ok "S11: keliver-publish wrote v4 at sequence 4 on channel beta" || { bad "S11: publish v4 to beta"; tail -20 "$EV/w3-publish-v4-beta.log"; }
 launch prod "$EV/logcat-static-beta.txt"
 C="$EV/logcat-static-beta.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v3/manifest.zipline.json (index sequence 3, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v3/manifest.zipline.json (index sequence 3, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
   && ! grep -q "bundles/v4/" "$C" && ok "S11: the stable host passed over beta's v4 and loaded v3" \
   || bad "S11: $(grep -E 'loading|codeLoad' "$C" | head -3 | tr '\n' ' ')"
 drive title Depot S11static; fold "S11: the stable host still reads Depot" $?
@@ -210,7 +218,7 @@ cp "$W3/site/bundles/index.json" "$EV/w3-index-promoted.json" 2>/dev/null
 [ "$(ls "$W3/site/bundles" | grep -c '^v')" = 4 ] && ok "S12: the promotion wrote no new v<N>/" || bad "S12: the bundle directories changed"
 launch prod "$EV/logcat-static-promoted.txt"
 C="$EV/logcat-static-promoted.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v4/manifest.zipline.json (index sequence 4, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v4/manifest.zipline.json (index sequence 4, channel stable" "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S12: the stable host loaded the promoted v4" || bad "S12: v4 did not load: $(grep -E 'loading|codeLoad|refused' "$C" | head -3 | tr '\n' ' ')"
 grep -q "rollback floor raised: 3 -> 4" "$C" && ok "S12: running v4 raised the floor from 3 to 4" || bad "S12: no floor raise logged at v4"
 drive title Backroom S12static; fold "S12: after the promotion the screen reads Backroom" $?
@@ -221,7 +229,7 @@ w3_title Backroom Loft && w3_publish v5-rollout0 --rollout 0 && grep -q "publish
   && ok "S13: keliver-publish wrote v5 at sequence 5 with constraints.rollout 0" || { bad "S13: publish v5 at rollout 0"; tail -20 "$EV/w3-publish-v5-rollout0.log"; }
 launch prod "$EV/logcat-static-rollout0.txt"
 C="$EV/logcat-static-rollout0.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v4/manifest.zipline.json (index sequence 4," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v4/manifest.zipline.json (index sequence 4," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S13: at rollout 0 the host passed over v5 and loaded v4" || bad "S13: at rollout 0 the host passed over v5 and loaded v4: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "bundles/v5/" "$C" && bad "S13: the host asked for v5" || ok "S13: the host never asked for v5"
 drive title Backroom S13static; fold "S13: the screen still reads Backroom" $?
@@ -232,7 +240,7 @@ drive title Backroom S13static; fold "S13: the screen still reads Backroom" $?
   || { bad "S14: set the rollout"; tail -10 "$EV/w3-rollout-100.log"; }
 launch prod "$EV/logcat-static-rollout100.txt"
 C="$EV/logcat-static-rollout100.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S14: at rollout 100 the host loaded v5" || bad "S14: at rollout 100 the host loaded v5: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "rollback floor raised: 4 -> 5" "$C" && ok "S14: running v5 raised the floor from 4 to 5" || bad "S14: no floor raise logged at v5"
 drive title Loft S14static; fold "S14: the screen reads Loft" $?
@@ -244,7 +252,7 @@ drive title Loft S14static; fold "S14: the screen reads Loft" $?
   || { bad "S14b: halt the rollout"; tail -10 "$EV/w3-rollout-halt.log"; }
 launch prod "$EV/logcat-static-rollout-halted.txt"
 C="$EV/logcat-static-rollout-halted.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S14b: halted, the host that ran v5 still loads it" || bad "S14b: halted, the host that ran v5 still loads it: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "refused" "$C" && bad "S14b: something was refused" || ok "S14b: nothing was refused"
 drive title Loft S14bstatic; fold "S14b: the screen still reads Loft" $?
@@ -257,7 +265,7 @@ w3_title Loft Attic && w3_publish v6-gated --min-host-version 999 && grep -q "pu
 cp "$W3/site/bundles/index.json" "$EV/w3-index-w45.json" 2>/dev/null
 launch prod "$EV/logcat-static-gated.txt"
 C="$EV/logcat-static-gated.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S15: the host (version 1) skipped v6 and loaded v5" || bad "S15: the host (version 1) skipped v6 and loaded v5: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "host version 1," "$C" && ok "S15: the host checked the entries against its version, 1" || bad "S15: the lookup did not name host version 1"
 grep -q "bundles/v6/" "$C" && bad "S15: the host asked for v6" || ok "S15: the host never asked for v6"
@@ -270,7 +278,7 @@ kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \
   && bad "S7: the static server is still answering" || ok "S7: no bundle server is answering"
 launch prod "$EV/logcat-static-offline.txt"
-grep -q "$HOST_TAG: lookup failed; starting from the cached bundle (last loaded from https://10.0.2.2:8443/bundles/v$LAST_V/" "$EV/logcat-static-offline.txt" \
+grep -q "$HOST_TAG: lookup failed; starting from the cached bundle (last loaded from https://$HOST_ADDR:8443/bundles/v$LAST_V/" "$EV/logcat-static-offline.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-static-offline.txt" && ok "S7: offline, the host started from its cached v$LAST_V" || bad "S7: no start from the cache"
 drive title "$LAST_TITLE" S7static; fold "S7: $LAST_TITLE offline" $?
 
