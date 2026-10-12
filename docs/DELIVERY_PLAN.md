@@ -743,7 +743,7 @@ HTTPS. Then one external adopter. These need the owner's hardware or accounts:
 - CI key storage guidance.
 - Fix U30.
 
-#### W8 design (draft 2026-10-11; needs the owner's decisions before it is built)
+#### W8 design (2026-10-11; built 2026-10-12 with the recommended answers)
 
 **U30 is fixed** (`portal-device-android` `syncPortalKey`, on `feat/w8-keys`;
 see `KNOWN_BUGS.md`).
@@ -783,15 +783,44 @@ W4.2's "one key, one sequence space" warns about.
 - A short "what to do if the key leaks" runbook: rotate, ship hosts trusting
   only the new key, and raise the floor.
 
-**Decisions needed from the owner:**
-1. Dual-signing (above) or a signed key handover (the old key signs a
-   statement naming the new key). The handover saves a host release, but adds
-   a new trust path to get right. The recommendation is dual-signing: no new
-   format, and each step is checkable with today's verifier.
-2. How many keys a host may trust (proposed: at most 2).
-3. Whether `keliver-publish` refuses to publish when the signing keys and the
-   index's previous signer disagree (a guard against signing with the wrong
-   key by mistake).
+**Decisions (2026-10-12).** The owner gave full control overnight. W8 was
+built with the recommended answers, which the owner can still change:
+1. **Dual-signing**, not a signed key handover.
+2. **At most 2 keys** per host: this app's key, then the next one.
+3. **A publish guard:** `keliver-publish` refuses a bundle that shares no
+   signing key with the newest published bundle, unless `--accept-key-change`.
+
+**One change from the draft above: signature names.** Zipline 1.22 checks only
+the FIRST signature in a manifest whose name the host trusts, and fails if
+that one does not verify. Positional names (`portal-ed25519`,
+`portal-ed25519-next`) would therefore break at the retire step. So:
+- Each key signs under its own name, `keliver-ed25519-<first 16 hex>`, first.
+- `portal-ed25519`, signed by the first key, comes LAST: it is all a host from
+  before W8 trusts.
+- A host trusts each of its keys under its own name, and its first key under
+  `portal-ed25519` too.
+
+**Built:**
+- **Hosts** (Android key file lines; iOS `PORTAL_NEXT_PUBLIC_KEY_HEX`) trust
+  one or two keys.
+- **The rollback floor** is the highest over the trusted keys, written under
+  each, also at start.
+- **The signing block** (v3) signs with one or two keys. The 0.3.8 block is
+  saved as `templates/publish/legacy/signing-0.3.8.gradle`, so
+  `keliver-new-publish-target.sh` upgrades it.
+- **`keliver-publish`:**
+  - one or two public keys;
+  - the guard;
+  - `--new-signing-key <dir>`;
+  - a republish source needs only a listed key's signature;
+  - it refuses a bundle whose `portal-ed25519` is not this app's key when that
+    key signed.
+- **Docs:** `docs/KEY_ROTATION.md` (the three steps, the guard, the floor,
+  custody, a leaked key).
+
+**Known gap (documented):** an install that jumps from a host trusting only the
+old key straight to one trusting only the new key starts the new key's floor
+at 0, until its first load.
 
 ## Order and dependencies
 
@@ -837,7 +866,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W6.3 relay collector | **done 2026-10-11:** `POST /report`, `GET /reports`, `GET /reports/view` (`HostReports.kt`). `HostReportsTest` 4/0, on CI in build 38133756571. V2 is in the harnesses: SKIP on CI's published relay, and **passed end to end** in candidate 3's local `ios.sh` on the zip | PR #97 |
 | **tools 0.3.8 RELEASED** (candidate 3: W3 + W4 + W2 + W5 + W6) | **released 2026-10-11** on the owner's approval.<br>• **Tag:** `portal-tools-v0.3.8` → `731ebfce`; the push ran only the read-only rebuild 38150887414.<br>• **Zip** `aafed0d8…` (90,584,445 bytes), uploaded from the verified artifact `11700407805`.<br>• **Checked before publishing:** both stored assets' server digests and sizes (download-back blocked by the network, as for 0.3.5). After publishing: the public `.sha256` here, and the public zip verified from GitHub-hosted runners (`sha256sum -c` OK: 38151355318, 38155942970, 38151386539).<br>• **Published-only proof** (runs started by hand, only the zip's `bin/`): reference-app 38155942970, device **135/0**; ios-host 38151386539, `ios.sh` **120/0**. V2 is on CI now, because the published relay collects reports.<br>• **Candidate 3's verification:** build 38133756571; device 38134971077 (19/0, 28/0); local check; `ios.sh` on the zip 120/0, V2 included.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. Candidates 1 and 2 were superseded and never tagged. | release |
 | PR stack #94–#97 merged | **done 2026-10-11** after the release, by merge commits: #94 `09661866`, #95 `642f4a13`, #96 `6ba680c5`, #97 `2bae5cbb`. Both 0.3.7 and 0.3.8 tags are reachable from `main`; no branch was deleted | `main` |
-| W8 | **U30 fixed** (measured locally); the rotation design is drafted and needs the owner's decisions (PR #98, draft, based on `main`) | PR #98 |
+| W8 | **built 2026-10-12** with the recommended answers (W8 design above). U30 fixed. Evidence:<br>• **Unit:** `KeyRotationTest` 14/0 (Zipline's own signer and verifier over a whole rotation, and the publisher's check never accepting what a W8 or pre-W8 host refuses); portal-relay 192/0.<br>• **Scaffold self-tests:** `keliver-publish` 41/0 locally; publish-target `--build` 44/0 on CI, which signs with two keys in a real Gradle build and refuses three (portal-tools 38214047382).<br>• **Earlier commit `15e52646`:** `ci.yml` 38214024406 green.<br>• **Rows K1–K8** (the guard, dual-signed, a pre-W8 host from the published zip, the floor across keys, the next key alone, each side refusing the other's): CI pending at `52be15a4`.<br>• **Independent review:** no blocking point; its 6 should-fix points and the relevant nits are fixed (`52be15a4`). | PR #98 |
 | W7 | not started: needs the owner's hardware (physical devices) and an adopter | — |
 
 ## Next action
