@@ -511,6 +511,10 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     }
     val source = body.source()
     if (source.request(MAX_INDEX_BYTES + 1)) throw java.io.IOException("the answer is larger than $MAX_INDEX_BYTES bytes")
+    // JSON is UTF-8; skip a byte order mark, as ResponseBody.string() did.
+    if (source.buffer.size >= 3 && source.buffer[0] == 0xEF.toByte() && source.buffer[1] == 0xBB.toByte() && source.buffer[2] == 0xBF.toByte()) {
+      source.buffer.skip(3)
+    }
     return source.buffer.readUtf8()
   }
 
