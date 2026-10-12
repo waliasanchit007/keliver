@@ -1033,6 +1033,35 @@ check that greps for it — sees a failure on every start. The reference app's
 `ci/device.sh` asserts the *signature* failure specifically for that reason. A
 fix is to not emit until the lookup has a URL.
 
+### U32. The iOS host's `TEAM_ID` setting did nothing, and `Config.local.xcconfig` was never read — FIXED (unreleased; found 2026-10-12)
+
+Found while preparing W7 (`docs/DEVICE_PROOF.md`). No device build was run;
+measured with `xcodebuild -showBuildSettings` on the template's project: with
+`TEAM_ID=ABCDE12345` in the released `Config.xcconfig`, `TEAM_ID` was set and
+`DEVELOPMENT_TEAM` was not; with the fix and the id only in
+`Config.local.xcconfig`, `DEVELOPMENT_TEAM = ABCDE12345`.
+
+**What happened.** `keliver-new-ios-host.sh` writes
+`host-ios/Configuration/Config.xcconfig` with `TEAM_ID=` and a comment: "for a
+device, set TEAM_ID here (or in a gitignored Config.local.xcconfig)". Nothing
+read `TEAM_ID`: the Xcode project names no `DEVELOPMENT_TEAM` (on purpose; the
+self-test refuses one), and the xcconfig had no `DEVELOPMENT_TEAM = $(TEAM_ID)`.
+Nothing included `Config.local.xcconfig` either, although the scaffolder
+gitignores it. So following the comment, a device build still failed with
+"Signing for iosApp requires a development team". Simulator builds are not
+signed and were unaffected (all CI so far).
+
+**Affected:** iOS hosts scaffolded by tools 0.3.7 and 0.3.8 (not `--embed`,
+which writes no Xcode project).
+
+**Workaround for those hosts:** add `DEVELOPMENT_TEAM=<team id>` to
+`host-ios/Configuration/Config.xcconfig`, or pass `DEVELOPMENT_TEAM=<team id>` to
+`xcodebuild`, or pick the team in Xcode (Signing & Capabilities; that writes it
+into the project file).
+
+**Fix:** the template sets `DEVELOPMENT_TEAM=$(TEAM_ID)` and ends with
+`#include? "Config.local.xcconfig"`. Ships in the next tools release.
+
 ### U31. The publish signing block exposed the private key: argv, `--info` logs, `.gradle/` — FIXED in tools 0.3.7 (2026-10-07)
 
 Found on 2026-10-07 while acting on the independent review of W3 (PR #90). The
