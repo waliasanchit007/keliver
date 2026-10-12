@@ -115,7 +115,10 @@ internal fun checkSignatures(manifestJson: String, publicKeysText: String): Sign
     signers += keys.first()
   }
   if (signers.isEmpty()) {
-    return refused("the manifest is not signed by this app's public key${if (keys.size > 1) "s" else ""} (signatures: ${signatures.keys})")
+    return refused(
+      "the manifest is signed by another key, so it does not verify against this app's public key" +
+        "${if (keys.size > 1) "s" else ""} (signatures: ${signatures.keys})",
+    )
   }
   return SignatureCheck(keys.filter { it in signers }, null)
 }

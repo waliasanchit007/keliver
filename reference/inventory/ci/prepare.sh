@@ -196,6 +196,42 @@ bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway 
   && ok "W5: the production host, built with keliver.updates=on-resume and keliver.reportUrl" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
 echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 
+# W8 (key rotation): the next signing key, made by keliver-publish
+# --new-signing-key, and the same host built trusting this app's key AND the
+# next one, then the next one only (only the key file differs). Only with tools
+# that have W8: a published zip from before it has no --new-signing-key, and
+# ci/w8/android-rotation.sh then SKIPs.
+W8="$WORK/w8"; mkdir -p "$W8"
+if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key'; then
+  "$W3_PUBLISH" --new-signing-key "$W8/next" > "$EV/w8-new-key.log" 2>&1
+  mode="$(stat -c %a "$W8/next/ed25519.priv" 2>/dev/null || stat -f %Lp "$W8/next/ed25519.priv" 2>/dev/null)"
+  NEXT_PUB="$(tr -d ' \n' < "$W8/next/ed25519.pub" 2>/dev/null)"
+  [ "$mode" = 600 ] && [[ "$NEXT_PUB" =~ ^[0-9a-f]{64}$ ]] && [ "$NEXT_PUB" != "$PUB" ] \
+    && grep -q "$NEXT_PUB" "$EV/w8-new-key.log" && ! grep -qFf "$W8/next/ed25519.priv" "$EV/w8-new-key.log" \
+    && ok "W8: keliver-publish --new-signing-key made the next key pair (private key mode $mode, never printed)" \
+    || bad "W8: --new-signing-key (mode '$mode'): $(head -3 "$EV/w8-new-key.log" | tr '\n' ' ')"
+  HKEY="$APP/host-android/src/main/assets/keliver/portal_ed25519.pub"; cp "$HKEY" "$W8/key.saved"
+  w8_host(){  # $1 label: build the host for the static server with the key file as it is now
+    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 ) \
+      > "$EV/w8-host-$1-build.log" 2>&1 \
+      && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-$1.apk"
+  }
+  printf '%s\n%s\n' "$PUB" "$NEXT_PUB" > "$HKEY"
+  w8_host both && [ "$(unzip -p "$EV/production-host-both.apk" assets/keliver/portal_ed25519.pub | tr -d ' ' | grep -c .)" = 2 ] \
+    && ok "W8: the host built trusting this app's key and the next one (two lines in assets/keliver/portal_ed25519.pub)" \
+    || { bad "W8: the two-key host did not build"; tail -30 "$EV/w8-host-both-build.log"; }
+  printf '%s\n' "$NEXT_PUB" > "$HKEY"
+  w8_host next && ok "W8: the host built trusting only the next key" || { bad "W8: the next-key host did not build"; tail -30 "$EV/w8-host-next-build.log"; }
+  printf '%s\n%s\n%s\n' "$PUB" "$NEXT_PUB" "$(printf '5a%.0s' $(seq 1 32))" > "$HKEY"
+  ! w8_host three && grep -q "a host trusts at most two" "$EV/w8-host-three-build.log" \
+    && ok "W8: a key file with three keys fails the build (checkPortalKey: at most two)" || bad "W8: a three-key host built, or failed otherwise"
+  cp "$W8/key.saved" "$HKEY"
+  { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"; } >> "$WORK/env"
+else
+  echo "  SKIP  W8: $W3_PUBLISH has no --new-signing-key (it predates key rotation); not counted"
+  echo "W8_OK=0" >> "$WORK/env"
+fi
+
 # --- 7. W2: the host embedded in an "existing" app (reference/embed/android) ---
 # The same scaffolder, with --embed, writes keliver-host/ into a plain View-based
 # app whose own files carry only the documented edits (KELIVER EMBED). Built

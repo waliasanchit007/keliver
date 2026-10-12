@@ -40,6 +40,7 @@ on:
       - "portal-relay/src/main/kotlin/StaticIndex.kt"
       - "portal-relay/src/main/kotlin/KeliverPublish.kt"
       - "portal-relay/src/main/kotlin/PublishSignature.kt"
+      - "portal-relay/src/main/kotlin/KeyRotation.kt"
   workflow_dispatch: {}
 permissions:
   contents: read
