@@ -147,19 +147,57 @@ class KeyRotationTest {
   @Test
   fun thePublishersCheckNeverAcceptsWhatAHostRefuses() {
     val m = manifest()
+    // Bundle name -> (the bundle, the keys that signed it, in signing-key-file order).
     val bundles = mapOf(
-      "k0" to signW8(m, k0), "k0+k1" to signW8(m, k0, k1), "k1" to signW8(m, k1), "k1+k2" to signW8(m, k1, k2),
-      "k2" to signW8(m, k2), "legacy k0" to signLegacy(m, k0), "legacy k1" to signLegacy(m, k1),
+      "k0" to (signW8(m, k0) to listOf(k0)), "k0+k1" to (signW8(m, k0, k1) to listOf(k0, k1)),
+      "k1+k0" to (signW8(m, k1, k0) to listOf(k1, k0)), "k1" to (signW8(m, k1) to listOf(k1)),
+      "k1+k2" to (signW8(m, k1, k2) to listOf(k1, k2)), "k2+k0" to (signW8(m, k2, k0) to listOf(k2, k0)),
+      "k2" to (signW8(m, k2) to listOf(k2)), "legacy k0" to (signLegacy(m, k0) to listOf(k0)),
+      "legacy k1" to (signLegacy(m, k1) to listOf(k1)),
     )
     val keyFiles = listOf(listOf(k0), listOf(k0, k1), listOf(k1), listOf(k1, k2), listOf(k1, k0))
     for (keys in keyFiles) {
       val text = keys.joinToString("\n") { it.publicHex } + "\n"
-      for ((name, b) in bundles) {
-        val hostAccepts = host(*keys.toTypedArray()).accepts(b)
+      for ((name, signed) in bundles) {
+        val (b, signers) = signed
+        // A W8 host trusting the file's keys must load it; and when this app's key (the file's first)
+        // signed, so must every host from before W8, which trusts only portal-ed25519 with that key.
+        val expected = host(*keys.toTypedArray()).accepts(b) && (keys.first() !in signers || oldHost(keys.first()).accepts(b))
         val check = checkSignatures(b.encodeJson(), text)
-        assertEquals(hostAccepts, check.problem == null, "key file ${keys.map { it.publicHex.take(4) }}, bundle $name: ${check.problem}")
+        assertEquals(expected, check.problem == null, "key file ${keys.map { it.publicHex.take(4) }}, bundle $name: ${check.problem}")
+        if (check.problem == null) assertTrue(host(*keys.toTypedArray()).accepts(b))
       }
     }
+  }
+
+  @Test
+  fun theNextKeyListedFirstIsRefusedBecauseOlderHostsWouldBeStranded() {
+    val swapped = signW8(manifest(), k1, k0).encodeJson()
+    val problem = checkSignatures(swapped, "${k0.publicHex}\n${k1.publicHex}").problem
+    assertNotNull(problem)
+    assertTrue("List this app's key FIRST" in problem, problem)
+    assertFalse(oldHost(k0).accepts(signW8(manifest(), k1, k0)))
+  }
+
+  @Test
+  fun aRepublishSourceNeedsOnlyAListedKeysSignature() {
+    // A bundle signed before W8 by k0, checked against a file that now lists k1 first.
+    val legacy = signLegacy(manifest(), k0).encodeJson()
+    assertNotNull(checkSignatures(legacy, "${k1.publicHex}\n${k0.publicHex}").problem)
+    assertEquals(listOf(k0.publicHex), checkSignatures(legacy, "${k1.publicHex}\n${k0.publicHex}", authenticOnly = true).signers)
+    assertNull(checkSignatures(legacy, "${k1.publicHex}\n${k0.publicHex}", authenticOnly = true).problem)
+    // Still refused when no listed key signed it.
+    assertNotNull(checkSignatures(legacy, k2.publicHex, authenticOnly = true).problem)
+  }
+
+  @Test
+  fun theGuardRefusesWhenItCannotTellTheNewestSigner() {
+    val site = File(tmp, "site")
+    publishStatic(output("a", 1) { signW8(it, k0) }, site, k0.publicHex, init = true)
+    File(site, "bundles/v1").deleteRecursively() // a CI job that downloaded only index.json
+    val e = assertFailsWith<PublishRefused> { publishStatic(output("b", 2) { signW8(it, k0) }, site, k0.publicHex) }
+    assertTrue("cannot tell which key signed" in e.message!!, e.message)
+    publishStatic(output("c", 2) { signW8(it, k0) }, site, k0.publicHex, acceptKeyChange = true)
   }
 
   @Test

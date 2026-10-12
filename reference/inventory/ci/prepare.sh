@@ -17,8 +17,10 @@
 # its keys and the relay's state are all inside <work-dir>. The repository's own
 # isolation guard checks the EFFECTIVE user.home and store before each relay
 # start and refuses otherwise. The keys are disposable and app-owned; nothing in
-# this harness reads, prints or copies a private key — the Zipline compile task's
-# signing block in the app's build.gradle is the only reader, on each publish.
+# this harness prints a private key. The Zipline compile task's signing block
+# reads it on each publish; the W8 rows (ci/w8/) also write both disposable
+# private keys into one owner-only signing key file under <work-dir>/w8, as a CI
+# secret holds them during a rotation, never into the evidence directory.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -201,8 +203,9 @@ echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 # next one, then the next one only (only the key file differs). Only with tools
 # that have W8: a published zip from before it has no --new-signing-key, and
 # ci/w8/android-rotation.sh then SKIPs.
-W8="$WORK/w8"; mkdir -p "$W8"
-if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key'; then
+W8="$WORK/w8"; rm -rf "$W8"; mkdir -p "$W8"   # this run's own: --new-signing-key never replaces a key
+if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
+   && grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$APP/host-android/build.gradle"; then
   "$W3_PUBLISH" --new-signing-key "$W8/next" > "$EV/w8-new-key.log" 2>&1
   mode="$(stat -c %a "$W8/next/ed25519.priv" 2>/dev/null || stat -f %Lp "$W8/next/ed25519.priv" 2>/dev/null)"
   NEXT_PUB="$(tr -d ' \n' < "$W8/next/ed25519.pub" 2>/dev/null)"
@@ -226,9 +229,27 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key'; then
   ! w8_host three && grep -q "a host trusts at most two" "$EV/w8-host-three-build.log" \
     && ok "W8: a key file with three keys fails the build (checkPortalKey: at most two)" || bad "W8: a three-key host built, or failed otherwise"
   cp "$W8/key.saved" "$HKEY"
-  { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"; } >> "$WORK/env"
+  # The hosts already in the field: one from the published zip's own scaffolder
+  # (before W8: one key, trusted only as portal-ed25519), for K3 and K6. Written
+  # where host-android/ is, which is moved aside and put back.
+  W8_LEGACY_APK=""
+  if [ -x "$KP/keliver-new-production-host.sh" ] && [ -f "$KP/../templates/production-host/build.gradle" ] \
+     && ! grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$KP/../templates/production-host/build.gradle"; then
+    mv "$APP/host-android" "$W8/host-android.w8"
+    ( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server https://10.0.2.2:8443 --application-id "$PROD_ID" ) \
+      > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
+      && printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties" \
+      && w8_host legacy && W8_LEGACY_APK="$EV/production-host-legacy.apk" \
+      && ok "W8: a host from the published zip's own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6" \
+      || { bad "W8: the zip's pre-W8 host did not scaffold or build"; tail -20 "$EV/w8-legacy-host-scaffold.log"; tail -20 "$EV/w8-host-legacy-build.log" 2>/dev/null; }
+    rm -rf "$APP/host-android"; mv "$W8/host-android.w8" "$APP/host-android"
+  else
+    echo "  NOTE  W8: the zip's host template already has W8 (or is missing): K3 and K6 use this checkout's one-key host"
+  fi
+  { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"
+    echo "W8_LEGACY_APK=${W8_LEGACY_APK:-$W3_APK}"; echo "W8_LEGACY_IS_PRE_W8=$([ -n "$W8_LEGACY_APK" ] && echo 1 || echo 0)"; } >> "$WORK/env"
 else
-  echo "  SKIP  W8: $W3_PUBLISH has no --new-signing-key (it predates key rotation); not counted"
+  echo "  SKIP  W8: $W3_PUBLISH has no --new-signing-key, or the host template predates key rotation; not counted"
   echo "W8_OK=0" >> "$WORK/env"
 fi
 

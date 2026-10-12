@@ -117,11 +117,11 @@ internal fun sha256Hex(bytes: ByteArray): String =
  *    the one the signed manifest records. Zipline checks this again on the
  *    device; checking it here stops an incomplete layout reaching a server.
  */
-internal fun staticOutputProblem(output: File, publicKeyHex: String): String? {
+internal fun staticOutputProblem(output: File, publicKeyHex: String, authenticOnly: Boolean = false): String? {
   val manifestFile = File(output, "manifest.zipline.json")
   if (!manifestFile.isFile) return "no manifest.zipline.json in $output"
   val manifestJson = manifestFile.readText()
-  publishedSignatureProblem(manifestJson, publicKeyHex)?.let { return it }
+  checkSignatures(manifestJson, publicKeyHex, authenticOnly).problem?.let { return it }
   val modules = runCatching { Json.parseToJsonElement(manifestJson) as JsonObject }.getOrNull()
     ?.get("modules") as? JsonObject ?: return "the manifest has no modules"
   val root = output.canonicalFile
@@ -277,14 +277,18 @@ internal data class StaticPublish(val version: Int, val sequence: Long, val dir:
 internal fun keyChangeProblem(bundlesDir: File, index: JsonObject, manifestJson: String, publicKeysText: String): String? {
   val newest = (index["entries"] as JsonArray).map { it as JsonObject }
     .maxByOrNull { (it["sequence"] as? JsonPrimitive)?.longOrNull ?: -1L } ?: return null
-  val version = (newest["version"] as? JsonPrimitive)?.intOrNull ?: return null
-  val previous = File(File(bundlesDir, "v$version"), "manifest.zipline.json").takeIf { it.isFile } ?: return null
-  val before = checkSignatures(previous.readText(), publicKeysText).signers
+  val sequence = (newest["sequence"] as JsonPrimitive).content
+  val version = (newest["version"] as? JsonPrimitive)?.intOrNull
+  val previous = version?.let { File(File(bundlesDir, "v$it"), "manifest.zipline.json") }?.takeIf { it.isFile }
+    ?: return "cannot tell which key signed the newest published bundle (sequence $sequence): its v<N>/manifest.zipline.json " +
+      "is not in ${bundlesDir}. Download every served bundles/v<N>/ first, or, if a change of signing key is meant, " +
+      "publish again with --accept-key-change."
+  val before = checkSignatures(previous.readText(), publicKeysText, authenticOnly = true).signers
   val now = checkSignatures(manifestJson, publicKeysText).signers
   if (now.any { it in before }) return null
   fun names(keys: List<String>) = keys.joinToString(" and ") { keySignatureName(it) }.ifEmpty { "no key in this app's public key file" }
   return "this bundle is signed by ${names(now)}, but the newest published one (v$version, sequence " +
-    "${(newest["sequence"] as JsonPrimitive).content}) is signed by ${names(before)}. Hosts that trust only the old key " +
+    "$sequence) is signed by ${names(before)}. Hosts that trust only the old key " +
     "would refuse it. Rotate in steps (docs/KEY_ROTATION.md): ship hosts that trust both keys, sign with both, then " +
     "with the new key only. If this change of signing key is meant, publish again with --accept-key-change."
 }
@@ -616,7 +620,8 @@ internal fun republishStatic(
   if (!sourceManifest.isFile || sha256Hex(sourceManifest.readBytes()) != expectedSha) {
     throw PublishRefused("$sourceManifest is not the manifest the index entry for v$version names (manifestSha256); it was left as it is")
   }
-  staticOutputProblem(source, publicKeyHex)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
+  // Only whether a listed key signed it: the copy is signed again, and checked as a new publish.
+  staticOutputProblem(source, publicKeyHex, authenticOnly = true)?.let { throw PublishRefused("v$version: $it", aboutSigning = true) }
   val entryChannel = channel ?: (original["channel"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: DEFAULT_CHANNEL
   val capabilities = (original["capabilities"] as JsonArray).map { (it as JsonPrimitive).content }
   val extra = buildMap<String, JsonElement> {

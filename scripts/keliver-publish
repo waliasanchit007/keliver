@@ -73,7 +73,10 @@ ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) sed -n '2,59p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    --new-signing-key) exec "$JVM" --new-signing-key "${2:-}" ;;
+    --new-signing-key)
+      [ $# = 2 ] && [ -z "$APP_ARG" ] && [ ${#ARGS[@]} = 0 ] \
+        || { echo "keliver-publish: --new-signing-key <dir> takes nothing else" >&2; exit 2; }
+      exec "$JVM" --new-signing-key "$2" ;;
     --public-key-file) HAS_KEY=true; ARGS+=("$1" "${2:-}"); shift ;;
     --out|--channel|--republish|--promote|--rollout|--min-host-version|--max-host-version) ARGS+=("$1" "${2:-}"); shift ;;
     --set-rollout) SET_ROLLOUT=true; ARGS+=("$1" "${2:-}"); shift ;;

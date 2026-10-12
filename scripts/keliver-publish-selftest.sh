@@ -69,6 +69,7 @@ cat > "$WORK/Fixture.java" <<'JAVA'
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.*;
+import java.security.spec.NamedParameterSpec;
 import java.util.*;
 
 /**
@@ -80,7 +81,16 @@ public class Fixture {
   static String hex(byte[] b) { StringBuilder s = new StringBuilder(); for (byte x : b) s.append(String.format("%02x", x)); return s.toString(); }
   public static void main(String[] a) throws Exception {
     Path out = Paths.get(a[0]); Files.createDirectories(out);
-    KeyPair pair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+    // This app's fixtures share one key, as an app's bundles do (W8's publish guard refuses a
+    // change of signing key between publishes): a fixed seed, so every run makes the same pair.
+    // "foreign" is signed by a key of its own.
+    KeyPairGenerator g = KeyPairGenerator.getInstance("Ed25519");
+    if (!a[2].equals("foreign")) {
+      SecureRandom seeded = SecureRandom.getInstance("SHA1PRNG");
+      seeded.setSeed("keliver-publish-selftest: this app's key".getBytes(StandardCharsets.UTF_8));
+      g.initialize(new NamedParameterSpec("Ed25519"), seeded);
+    }
+    KeyPair pair = g.generateKeyPair();
     byte[] pub = pair.getPublic().getEncoded();
     Files.writeString(Paths.get(a[3]), hex(Arrays.copyOfRange(pub, pub.length - 32, pub.length)) + "\n");
     StringBuilder modules = new StringBuilder();
@@ -115,7 +125,8 @@ public class Fixture {
 }
 JAVA
 fixture(){ "$JAVA_HOME/bin/java" "$WORK/Fixture.java" "$@" 2>/dev/null; }
-# Each signed fixture is signed by its own run's key; that run wrote the public half to <name>.pub.
+# Every signed fixture is signed by this app's one key (a fixed seed), except "foreign", signed by a key
+# of its own; each run writes the public half to <name>.pub.
 # one-s4 / one-s1: v1's manifest signed again by v1's key, as keliverResign would for sequence 4 (and,
 # wrongly, for 1 again).
 fixture "$WORK/fx/one" One signed "$WORK/fx/one.pub" 1 "$WORK/fx/one-s4=4" "$WORK/fx/one-s1=1"
@@ -199,9 +210,14 @@ refused(){  # $1 label, $2 expected text, rest: env + command
     bad "$label: exit $rc, $(grep -m1 REFUSED "$WORK/r.log")"; tail -5 "$WORK/r.log"
   fi
 }
-fixture "$WORK/fx/foreign" Foreign signed "$WORK/fx/foreign.pub" 2
+fixture "$WORK/fx/foreign" Foreign foreign "$WORK/fx/foreign.pub" 2
 refused "a bundle signed by another key" "does not verify" \
   FIXTURE="$WORK/fx/foreign" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
+# W8: both keys listed (the other one first, as after a switch), but v1 was signed by this app's key
+# and this bundle only by the other one: no key in common with the newest published bundle.
+cat "$WORK/fx/foreign.pub" "$WORK/fx/one.pub" > "$WORK/fx/both.pub"
+refused "a change of signing key with no overlap (W8's guard)" "--accept-key-change" \
+  FIXTURE="$WORK/fx/foreign" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/both.pub"
 refused "an unsigned bundle" "UNSIGNED" \
   FIXTURE="$WORK/fx/unsigned" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub"
 # W4: v1's own build again, now that the index is at sequence 2 (a replay of an old bundle).
@@ -274,7 +290,7 @@ done
 refused "republishing a version the index has no entry for" "no entry for v9" \
   RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 9
 refused "republishing v1 checked against another key" "does not verify" \
-  RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --republish 1
+  RESIGN_FIXTURE="$WORK/fx/one-s4" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/foreign.pub" --republish 1
 [ ! -s "$APP/gradlew.calls" ] && ok "neither refusal ran a re-sign" || bad "a refused republish ran: $(cat "$APP/gradlew.calls")"
 refused "a re-sign that signs the old sequence again" "signed for sequence 1, but this publish is sequence 4" \
   RESIGN_FIXTURE="$WORK/fx/one-s1" "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --republish 1
@@ -324,7 +340,7 @@ refused "promoting to a channel that already has it" "already on channel stable"
 refused "promoting below the channel's newest" "already take sequence 4, above 2" \
   "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 2 --channel stable
 refused "promoting a bundle checked against another key" "does not verify" \
-  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/two.pub" --promote 4 --channel beta
+  "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/foreign.pub" --promote 4 --channel beta
 "$PUBLISH" "$APP" --out "$SITE" --public-key-file "$WORK/fx/one.pub" --promote 4 --channel beta > "$WORK/pr.log" 2>&1; rc=$?
 [ "$rc" = 0 ] && grep -q "promoted sequence 4 (v4) from stable to beta" "$WORK/pr.log" && [ ! -s "$APP/gradlew.calls" ] \
   && ok "v4 promoted to beta: nothing built or signed" || { bad "promote: exit $rc"; cat "$WORK/pr.log"; }

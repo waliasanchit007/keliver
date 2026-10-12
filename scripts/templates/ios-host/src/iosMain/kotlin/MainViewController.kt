@@ -441,7 +441,7 @@ private suspend fun startHost(): HostState {
     return HostState.Message("Refusing to load", trust.message)
   }
   trust as ProductionTrust.Verified
-  log("verifying manifests with ${trust.publicKeysHex.joinToString(" and ") { "portal-ed25519 ${it.take(8)}…" }}; updates $UPDATES")
+  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates $UPDATES")
   val server = BundleServer.parse(BUNDLE_SERVER)
     ?: return HostState.Message("Refusing to load", "The bundle server '$BUNDLE_SERVER' is not an http(s) URL.")
   val apiBase = API_BASE_URL.takeIf { it.isNotBlank() }

@@ -150,7 +150,8 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
   && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)' "$M" \
   && grep -q 'putLong(floorKey(it), sequence)' "$M" && grep -q 'prefs.raiseFloor(floorNames, sequence)' "$M" \
   && grep -q 'edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()' "$M" \
-  && grep -q 'floorAcross(cacheNames.map { floor(it) })' "$M" \
+  && grep -q 'floorAcross(cacheNames.map { floor(it) })' "$M" && grep -q 'val floor = { prefs.floor(floorNames) }' "$M" \
+  && grep -q 'prefs.raiseFloor(floorNames, floor())' "$M" \
   && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
   && ok "W4.2: the rollback floor guards the network load, the cache start and its network fallback, and rises (committed) after a load" \
   || bad "W4.2: the rollback floor is not wired"

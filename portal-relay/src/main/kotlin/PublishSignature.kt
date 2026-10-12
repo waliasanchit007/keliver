@@ -67,11 +67,19 @@ internal fun publishedSignatureProblem(manifestJson: String, publicKeyHex: Strin
  *   names the first signing key: in a W8 manifest, the key of the first named
  *   signature (checked when listed); in an older one, it must verify against
  *   the file's FIRST key, the one hosts trust under that name;
- * - at least one listed key signed.
+ * - at least one listed key signed;
+ * - when the file's FIRST key (this app's key) signed, `portal-ed25519` is its
+ *   signature too: hosts from before W8 trust only that name, with that key.
+ *   A signing key file that lists the next key first would strand them all.
  * A named signature of a key the file does not list is not checked (no host
  * that trusts only listed keys reads it).
+ *
+ * With [authenticOnly] (the source of a `--republish`, signed again anyway) the
+ * question is only whether a listed key signed it: no signature that names a
+ * listed key may fail, and one of them, or `portal-ed25519`, must verify
+ * against a listed key. The order rules above do not apply.
  */
-internal fun checkSignatures(manifestJson: String, publicKeysText: String): SignatureCheck {
+internal fun checkSignatures(manifestJson: String, publicKeysText: String, authenticOnly: Boolean = false): SignatureCheck {
   fun refused(problem: String, signers: List<String> = emptyList()) = SignatureCheck(signers, problem)
   val root = runCatching { Json.parseToJsonElement(manifestJson) as? JsonObject }.getOrNull()
     ?: return refused("the manifest is not a JSON object")
@@ -85,6 +93,21 @@ internal fun checkSignatures(manifestJson: String, publicKeysText: String): Sign
   }
   val keys = parsePublicKeys(publicKeysText).getOrElse { return refused(it.message ?: "this app's public key is not usable") }
   val payload = Json.encodeToString(JsonElement.serializer(), JsonObject(root - "unsigned")).encodeToByteArray()
+  if (authenticOnly) {
+    val signers = linkedSetOf<String>()
+    for ((name, sig) in signatures) {
+      val hex = (sig as? JsonPrimitive)?.content.orEmpty()
+      if (name == PORTAL_SIGNING_KEY_NAME) {
+        keys.firstOrNull { verifies(payload, it, hex) }?.let { signers += it }
+      } else {
+        val key = keys.firstOrNull { keySignatureName(it) == name } ?: continue
+        if (!verifies(payload, key, hex)) return refused("the $name signature does not verify against this app's public key ${key.take(16)}…")
+        signers += key
+      }
+    }
+    if (signers.isEmpty()) return refused("the manifest is signed by another key, so it does not verify against this app's public key (signatures: ${signatures.keys})")
+    return SignatureCheck(keys.filter { it in signers }, null)
+  }
   if (signatures.keys.last() != PORTAL_SIGNING_KEY_NAME) {
     return refused("the $PORTAL_SIGNING_KEY_NAME signature is not the last one (signatures: ${signatures.keys}); hosts check only the first signature they trust")
   }
@@ -103,6 +126,14 @@ internal fun checkSignatures(manifestJson: String, publicKeysText: String): Sign
       if (!verifies(payload, first, legacyHex)) {
         return refused("the $PORTAL_SIGNING_KEY_NAME signature does not verify against this app's public key ${first.take(16)}… (the first signer's)")
       }
+    }
+    if (keys.first() in signers && keySignatureName(keys.first()) != named.first()) {
+      return refused(
+        "this app's key (${keySignatureName(keys.first())}, the first line of the public key file) signed, but " +
+          "$PORTAL_SIGNING_KEY_NAME was signed by ${named.first()}: hosts from before W8 trust only " +
+          "$PORTAL_SIGNING_KEY_NAME, with this app's key, and would refuse the bundle. List this app's key FIRST in " +
+          "the signing key file, and the next key second (docs/KEY_ROTATION.md)",
+      )
     }
   } else {
     // A manifest from a signing block before W8: hosts check portal-ed25519 against their FIRST key.

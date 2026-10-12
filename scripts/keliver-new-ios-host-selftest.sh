@@ -149,7 +149,8 @@ grep -q '^public object Keliver {' "$K/MainViewController.kt" && grep -q 'if (st
 # start, and rises only from a verified successful load. W8: across the trusted
 # keys (the highest), and written under each.
 grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'floorAcross(trust.publicKeysHex.map' "$K/MainViewController.kt" \
-  && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor)' "$K/MainViewController.kt" \
+  && grep -q 'raiseFloor(trust, sequence)' "$K/MainViewController.kt" && grep -q 'raiseFloor(trust, floor())' "$K/MainViewController.kt" \
+  && grep -q 'val floor = { floorOf(trust) }' "$K/MainViewController.kt" && grep -q 'AcceptCachedBundle(floor)' "$K/MainViewController.kt" \
   && grep -q 'manifestSequence(manifest.metadata)' "$K/MainViewController.kt" && grep -q 'sequence?.let(onSequence)' "$K/MainViewController.kt" \
   && ok "W4.2: the rollback floor guards the network load and the cache start, and rises after a load" \
   || bad "W4.2: the rollback floor is not wired"

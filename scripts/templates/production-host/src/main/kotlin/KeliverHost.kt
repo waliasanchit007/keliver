@@ -367,7 +367,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       return
     }
     trust as ProductionTrust.Verified
-    Log.d(TAG, "verifying manifests with ${trust.publicKeysHex.joinToString(" and ") { "portal-ed25519 ${it.take(8)}…" }}; updates ${config.updates.name.lowercase().replace('_', '-')}")
+    Log.d(TAG, "verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates ${config.updates.name.lowercase().replace('_', '-')}")
     // Each key under its own name, and the first under portal-ed25519 too (W8,
     // BundleIndex.kt: trustedSignatures).
     val verifier = ManifestVerifier.Builder().apply {

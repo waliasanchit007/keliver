@@ -2,27 +2,32 @@
 # W3's static HTTPS server (its site continues: v10 on). The counterpart of
 # ci/w8/android-rotation.sh, with the same rows (K1-K8, below). The next key is
 # made here by keliver-publish --new-signing-key; the host is rebuilt trusting
-# both keys (PORTAL_NEXT_PUBLIC_KEY_HEX), then the next key only. Each
+# both keys (PORTAL_NEXT_PUBLIC_KEY_HEX), then the next key only. K3 and K6 run
+# a host from the published zip's own scaffolder, from before W8 (one key,
+# trusted only as portal-ed25519), as every app in the field has today (with a
+# zip whose template already has W8: the host installed before these rows). Each
 # `simctl install` over the installed app keeps its data, as an App Store
 # update does. Uses ios.sh's APP, STORE, PUB, UDID, BID, APPB, WORK, EV, HERE,
 # SPID, ok/bad/launch/reads, and ios-static.sh's W3, PUBLISH, w3_title, w3_site.
 #   K1  the publish guard: a bundle signed only by the next key, straight after
 #       bundles signed only by this app's key, is refused; nothing is written
 #   K2  dual-signed v10: one signature per key, then portal-ed25519, last
-#   K3  the host trusting only this app's key loads the dual-signed v10
+#   K3  a host from before W8 (portal-ed25519 only) loads the dual-signed v10
 #   K4  upgraded to the host trusting both keys: v10 again, and the rollback
 #       floor (10) is copied under the next key too
 #   K5  v11, signed by the next key only, reaches the two-key host
-#   K6  a host trusting only the old key refuses v11 (nothing loads)
+#   K6  that host refuses v11 (nothing loads): its portal-ed25519 is the next key's
 #   K7  upgraded to the host trusting only the next key: v11 loads, and the
 #       floor it starts from is 11, carried over by the two-key host
 #   K8  that host refuses v12, signed by the old key only (published with
 #       --accept-key-change), and falls back to the cached v11
 echo "--- W8: a signing-key rotation"
-if [ -z "${PUBLISH:-}" ] || ! "$PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key'; then
-  echo "  SKIP  W8: this keliver-publish predates key rotation; not counted"
+CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
+if [ -z "${PUBLISH:-}" ] || ! "$PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
+   || ! grep -q PORTAL_NEXT_PUBLIC_KEY_HEX "$CFG"; then
+  echo "  SKIP  W8: this keliver-publish or the iOS host template predates key rotation; not counted"
 else
-W8D="$WORK/w8"; mkdir -p "$W8D"
+W8D="$WORK/w8"; rm -rf "$W8D"; mkdir -p "$W8D"   # this run's own: --new-signing-key never replaces a key
 "$PUBLISH" --new-signing-key "$W8D/next" > "$EV/w8-new-key.log" 2>&1
 mode="$(stat -f %Lp "$W8D/next/ed25519.priv" 2>/dev/null)"
 NEXT_PUB="$(tr -d ' \n' < "$W8D/next/ed25519.pub" 2>/dev/null)"
@@ -47,7 +52,6 @@ w8_floor(){  # $1 = a public key: the rollback floor the host keeps under it (th
   prefs="$(xcrun simctl get_app_container "$UDID" "$BID" data)/Library/Preferences/$BID"
   xcrun simctl spawn "$UDID" defaults read "$prefs" "keliver.highestSequence-keliver-production-${1:0:16}" 2>/dev/null | tr -dc '0-9'
 }
-CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 w8_build(){  # $1 label: rebuild the host with HostConfig.kt as it is now, and keep a copy of the app
   ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
       -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
@@ -55,7 +59,27 @@ w8_build(){  # $1 label: rebuild the host with HostConfig.kt as it is now, and k
     && rm -rf "$W8D/$1.app" && cp -R "$APPB" "$W8D/$1.app"
 }
 OLD_NAME="keliver-ed25519-${PUB:0:16}"; NEXT_NAME="keliver-ed25519-${NEXT_PUB:0:16}"
-rm -rf "$W8D/old.app"; cp -R "$APPB" "$W8D/old.app"   # the host installed now: this app's key only
+# What a host says when the first signature it trusts is not from its key (Zipline 1.22).
+REFUSED_LINE="manifest signature for key portal-ed25519 did not verify"
+# The hosts already in the field: the published zip's own scaffolder, written
+# where host-ios/ is (moved aside and put back), built into its own derived data.
+LEGACY_CFG_TEMPLATE="$KP/../templates/ios-host/src/iosMain/kotlin/HostConfig.kt"
+OLD_HOST="the host installed before these rows (this checkout's, one key)"
+rm -rf "$W8D/old.app"; cp -R "$APPB" "$W8D/old.app"
+if [ -x "$KP/keliver-new-ios-host.sh" ] && [ -f "$LEGACY_CFG_TEMPLATE" ] && ! grep -q PORTAL_NEXT_PUBLIC_KEY_HEX "$LEGACY_CFG_TEMPLATE"; then
+  mv "$APP/host-ios" "$W8D/host-ios.w8"
+  if ( cd "$APP" && "$KP/keliver-new-ios-host.sh" --bundle-server https://localhost:8443 --bundle-id "$BID" ) > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
+     && ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd-legacy" \
+          CODE_SIGNING_ALLOWED=NO build ) > "$EV/w8-xcodebuild-legacy.log" 2>&1; then
+    rm -rf "$W8D/old.app"; cp -R "$(find "$WORK/dd-legacy/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)" "$W8D/old.app"
+    OLD_HOST="the host from before W8 (the published zip's template)"
+    ok "W8: a host from the published zip's own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6"
+  else
+    bad "W8: the zip's pre-W8 host did not scaffold or build"; tail -5 "$EV/w8-legacy-host-scaffold.log"; grep -E '^e: |error:' "$EV/w8-xcodebuild-legacy.log" | head
+  fi
+  rm -rf "$APP/host-ios"; mv "$W8D/host-ios.w8" "$APP/host-ios"
+fi
 
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w8-server.log" &
 SPID=$!
@@ -75,16 +99,17 @@ w8_publish v10 "$W8D/both.priv" && grep -q "published v10 (sequence 10, channel 
   && grep -q "signed manifest.zipline.json with this app's portal-ed25519 key ($OLD_NAME) and the next key ($NEXT_NAME)" "$EV/w8-publish-v10.log" \
   && ok "K2: keliver-publish wrote v10 (\"Vault\"), signed with both keys" || { bad "K2: publish v10"; tail -20 "$EV/w8-publish-v10.log"; }
 [ "$(w8_signatures 10)" = "$OLD_NAME,$NEXT_NAME,portal-ed25519" ] \
-  && ok "K2: v10's signatures: $OLD_NAME, $NEXT_NAME, then portal-ed25519 (the only one older hosts read), last" \
+  && ok "K2: v10's signatures: $OLD_NAME, $NEXT_NAME, then portal-ed25519 (the only one hosts before W8 trust), last" \
   || bad "K2: v10's signatures are $(w8_signatures 10)"
 
 # K3: the host every app has today.
+xcrun simctl install "$UDID" "$W8D/old.app"
 launch K3-old
 C="$EV/K3-old.console.txt"
 grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates" "$C" \
   && grep -q "loading https://localhost:8443/bundles/v10/manifest.zipline.json (index sequence 10," "$C" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=10 source=network" "$C" \
-  && ok "K3: the host trusting only this app's key loaded the dual-signed v10" \
+  && ok "K3: $OLD_HOST loaded the dual-signed v10" \
   || bad "K3: $(grep -E 'KeliverHost|codeLoad' "$C" | head -4 | tr '\n' ' ')"
 reads K3-old Vault && ok "K3: the screen reads 'Vault' (v10)" || bad "K3: 'Vault' is not on the screen"
 
@@ -95,7 +120,7 @@ grep -q "PORTAL_NEXT_PUBLIC_KEY_HEX: String = \"$NEXT_PUB\"" "$CFG" && w8_build 
   || { bad "K4: the two-key host did not build or install"; grep -E '^e: |error:' "$EV/w8-xcodebuild-both.log" | head; }
 launch K4-both
 C="$EV/K4-both.console.txt"
-grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}… and portal-ed25519 ${NEXT_PUB:0:8}…; updates" "$C" \
+grep -q "KeliverHost: verifying manifests with portal-ed25519 ${PUB:0:8}… and the next key ${NEXT_PUB:0:8}…; updates" "$C" \
   && grep -q "loading https://localhost:8443/bundles/v10/manifest.zipline.json (.*); rollback floor 10" "$C" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$C" \
   && ok "K4: the two-key host verifies with both keys and loaded v10 (floor 10)" \
@@ -122,8 +147,8 @@ xcrun simctl install "$UDID" "$W8D/old.app"
 launch K6-old
 C="$EV/K6-old.console.txt"
 grep -q "loading https://localhost:8443/bundles/v11/manifest.zipline.json" "$C" \
-  && grep -qE "did not verify|no keys in the manifest were recognized" "$C" && ! grep -q "codeLoadSuccess" "$C" \
-  && ok "K6: the host trusting only the old key refused v11 (signature did not verify) and loaded nothing" \
+  && grep -q "$REFUSED_LINE" "$C" && ! grep -q "codeLoadSuccess" "$C" \
+  && ok "K6: $OLD_HOST refused v11 ($REFUSED_LINE) and loaded nothing" \
   || bad "K6: $(grep -E 'KeliverHost|codeLoad' "$C" | head -5 | tr '\n' ' ')"
 
 # K7: the release after the rotation trusts only the next key.
@@ -149,7 +174,7 @@ w8_publish v12 "$STORE/keys/ed25519.priv" --accept-key-change && grep -q "publis
   || { bad "K8: publish v12"; tail -20 "$EV/w8-publish-v12.log"; }
 launch K8-next
 C="$EV/K8-next.console.txt"
-grep -q "loading https://localhost:8443/bundles/v12/manifest.zipline.json" "$C" && grep -qE "did not verify|no keys in the manifest were recognized" "$C" \
+grep -q "loading https://localhost:8443/bundles/v12/manifest.zipline.json" "$C" && grep -q "$REFUSED_LINE" "$C" \
   && grep -q "the bundle did not load; falling back to the cached last good bundle (last loaded from https://localhost:8443/bundles/v11/" "$C" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=11 source=cache" "$C" && ! grep -q "codeLoadSuccess modules=[0-9]* sequence=12" "$C" \
   && ok "K8: the next-key host refused v12 (old key only) and fell back to the cached v11" \

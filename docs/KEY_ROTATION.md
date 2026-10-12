@@ -73,7 +73,9 @@ Store `ed25519.priv` as a CI secret, next to A's, and make an offline backup
 
 **2. Sign with A and B.**
 
-- Put both private keys in the signing key file, A first, one per line.
+- Put both private keys in the signing key file, **A first**, one per line.
+  The first key signs `portal-ed25519`, the only signature hosts from before
+  W8 read. `keliver-publish` refuses the bundle if B comes first.
 - Give `keliver-publish --public-key-file` a file with both public keys, A
   first. Your Android host's asset is exactly that file.
 - Publish as usual.
@@ -175,10 +177,18 @@ first.
 
   Re-scaffolding into a scratch directory and copying those files over is the
   simplest way.
-- **Republishing a bundle signed before W8:** `--republish` checks the source
-  bundle against the public key file. A bundle signed before W8 only by a key
-  you have since dropped from the file can no longer be republished: rebuild
-  that code from git instead.
+- **Republishing:** `--republish` checks only that a key in the public key
+  file signed the source bundle (it is signed again, and that copy is checked
+  like any publish). A bundle signed only by a key you have since dropped from
+  the file can no longer be republished: keep that key in the file while you
+  may need to, or rebuild the code from git.
+- **A `KeliverConfig` built by hand** (Android) trusts only what you pass:
+  set `nextPublicKeyHex` too, or the host trusts one key whatever the asset
+  says. `KeliverConfig.fromBuild` reads both lines.
+- **Order matters in both key files.** This app's (current) key comes first,
+  the next one second. `keliver-publish` refuses a bundle whose
+  `portal-ed25519` signature isn't this app's key, when that key signed: hosts
+  from before W8 would refuse it.
 - **The Zipline cache follows the first key.** A host that trusts A and B uses
   A's cache (no download after the upgrade). A host that trusts only B starts
   a new cache, so its first start after the upgrade needs the network.
