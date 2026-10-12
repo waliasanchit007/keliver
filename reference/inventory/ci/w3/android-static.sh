@@ -39,7 +39,7 @@ W3="$WORK/w3"
 if [ "$DEVICE_KIND" = physical ]; then
   # W7: a stock phone's system store takes no CA without root; prepare.sh built
   # the HTTPS test APKs with the CA inside them (ci/w7/android-test-ca.sh).
-  unzip -l "$W3_APK" 2>/dev/null | grep -q 'res/raw/keliver_test_ca.pem' \
+  unzip -Z1 "$W3_APK" res/raw/keliver_test_ca.pem > /dev/null 2>&1 \
     && ok "W3: the static host's test APK carries the throwaway CA (physical-device route; no system store change)" \
     || bad "W3: the static host's test APK does not carry the throwaway CA"
 else
@@ -76,7 +76,10 @@ w3_signed_sequence(){  # $1 = N: v<N>'s manifest carries keliver.sequence "N" in
   python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); sys.exit(0 if m.get("metadata",{}).get("keliver.sequence")==sys.argv[2] else 1)' \
     "$W3/site/bundles/v$1/manifest.zipline.json" "$1"
 }
-w3_site(){ ( cd "$W3/site" && find . -type f -exec sha256sum {} + | sort ); }
+# shasum where sha256sum is missing (macOS before 14): an empty listing would
+# make S5's "site unchanged" compare nothing with nothing.
+w3_site(){ ( cd "$W3/site" && if command -v sha256sum >/dev/null 2>&1; then find . -type f -exec sha256sum {} +
+  else find . -type f -exec shasum -a 256 {} +; fi | sort ); }
 
 w3_title Stockroom Depot && w3_publish v1 --init && grep -q "published v1 (sequence 1" "$EV/w3-publish-v1.log" \
   && ok "W3: keliver-publish compiled (key from KELIVER_SIGNING_KEY_FILE), verified and wrote $(grep -o 'published v1 ([^)]*)' "$EV/w3-publish-v1.log")" \
@@ -92,7 +95,7 @@ curl -sf --cacert "$W3_TLS/ca.pem" -o /dev/null https://localhost:8443/bundles/i
   && ok "W3: the static server answers over HTTPS, trusted through that CA" || bad "W3: the static server did not answer"
 
 adb -s "$SERIAL" install -r "$W3_APK" > "$EV/install-static-host.log" 2>&1 \
-  && ok "W3: installed the host built for https://$HOST_ADDR:8443 ($(sha256sum "$W3_APK" | cut -c1-12)…)" || bad "W3: the static host did not install"
+  && ok "W3: installed the host built for https://$HOST_ADDR:8443 ($(sha256 "$W3_APK" | cut -c1-12)…)" || bad "W3: the static host did not install"
 adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 
 launch prod "$EV/logcat-static-v1.txt"

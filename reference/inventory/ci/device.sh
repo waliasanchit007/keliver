@@ -157,8 +157,14 @@ if [ "$DEVICE_KIND" = physical ]; then
   adb -s "$SERIAL" shell svc power stayon usb >/dev/null 2>&1
   adb -s "$SERIAL" shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1
   adb -s "$SERIAL" shell wm dismiss-keyguard >/dev/null 2>&1
-  [ "$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null | grep -cE 'mDreamingLockscreen=true|isKeyguardShowing=true|mShowingLockscreen=true')" = 0 ] \
+  # Best effort: Android versions print the keyguard state differently, so no
+  # warning does not prove the phone is unlocked.
+  [ "$(adb -s "$SERIAL" shell dumpsys window 2>/dev/null | grep -cE 'mDreamingLockscreen=true|isKeyguardShowing=true|mShowingLockscreen=true|mKeyguardShowing=true|keyguardShowing=true')" = 0 ] \
     || echo "    WARNING: the lock screen still shows; unlock the phone, or the screen checks will fail"
+  # The debug key is per work dir (every JVM's user.home is inside it), so hosts
+  # from an earlier run, or a release-signed build, would refuse `install -r`
+  # (INSTALL_FAILED_UPDATE_INCOMPATIBLE). Start this phone clean.
+  for id in "$PROD_ID" "${W2_ID:-com.example.existing}"; do adb -s "$SERIAL" uninstall "$id" >/dev/null 2>&1; done
 fi
 
 # --- 1. the development route on the generic host ----------------------------

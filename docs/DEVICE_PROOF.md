@@ -9,8 +9,10 @@ records.
 **Status of this page (2026-10-12): written and rehearsed without hardware.**
 No phone or iPhone was attached when it was written. The Android harness's
 physical-device route has been run only on the CI emulator, as a rehearsal of
-the harness. That is not a device result. The iOS device script
-(`ci/w7/ios-device.sh`) has never run.
+the harness: `reference-app.yml` run 38202773284 (`device_route=physical`),
+prepare 28/0, device 130/0, with E1–E10 and D3 SKIP. That is not a device
+result. The iOS device script (`ci/w7/ios-device.sh`) has never run on a
+device; only its settings and device lookup were tried, with no iPhone attached.
 
 Everything runs from a checkout of this repository on the owner's Mac. The app
 and its tools come from the **published tools 0.3.8** and Maven Central, as in
@@ -25,8 +27,9 @@ CI.
 - [ ] **JDK 17:** `export JAVA_HOME=$(/usr/libexec/java_home -v 17)`.
 - [ ] **Android SDK platform-tools:** `adb version`. Use the SDK copy
       (`~/Library/Android/sdk/platform-tools/adb`), not an old one on `PATH`.
-- [ ] **Xcode** with its command-line tools: `xcodebuild -version`, and
-      `xcrun devicectl --version`, which needs Xcode 15 or later.
+- [ ] **Xcode 16 or later** with its command-line tools: `xcodebuild -version`.
+      `ci/w7/ios-device.sh` uses `devicectl device process launch --console`,
+      which Xcode 15's `devicectl` does not have.
 - [ ] **The tools zip, downloaded once.** If this network blocks GitHub release
       assets, download it on another network and pass the path:
       ```bash
@@ -40,8 +43,8 @@ CI.
 - [ ] **A fresh work directory per run**, e.g. `~/w7/run1`. The harness keeps
       `user.home`, the portal store and its disposable keys inside it. It never
       reads `~/.keliver-portal`.
-- [ ] **Disk:** a run needs about 6 GB, for the app, three host builds and the
-      Gradle caches.
+- [ ] **Disk:** a run needs about 6 GB: the app, six APKs (three of
+      `host-android`, three of the embed fixture) and the Gradle caches.
 
 ## 1. Android phone over USB (the harness)
 
@@ -116,7 +119,14 @@ bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 - *No device / unauthorized:* replug the cable and accept the prompt.
 - *`INSTALL_FAILED_USER_RESTRICTED`:* see the MIUI switches above.
 - *Screen checks fail but the logcat rows pass:* the screen was locked or off.
-  Unlock it and run again from a fresh work dir.
+  Unlock it and run again from a fresh work dir. (The lock-screen warning is
+  best effort: Android versions report the keyguard differently.)
+- *Every row after a point fails at once:* the USB connection dropped, which
+  also drops `adb reverse`. Replug, then start again from a fresh work dir.
+- *`INSTALL_FAILED_UPDATE_INCOMPATIBLE`:* an app with the same id but another
+  signing key is installed. On the physical route `device.sh` uninstalls
+  `inventory.host` and `com.example.existing` first, because each work dir has
+  its own debug key. Uninstall anything else by hand.
 - *X4 or R1 (rotation):* some launchers ignore `user_rotation`. Record it as a
   device quirk rather than a pass.
 - **Never** delete `<app>/.gradle/` in the work dir. It holds
@@ -147,8 +157,10 @@ The harness installs debug builds, plus one R8 release signed with the debug key
    $ANDROID_HOME/build-tools/<ver>/apksigner verify --print-certs host-android/build/outputs/apk/release/*.apk
    ```
    Keep the certificate's SHA-256 digest and the APK's sha256.
-5. **Install, launch and keep the log:**
+5. **Install, launch and keep the log.** Uninstall the harness's debug build
+   first: it is signed with another key, so `install -r` over it fails.
    ```bash
+   adb uninstall inventory.host
    adb install -r <apk>
    adb logcat -c
    # launch the app from the phone's launcher
@@ -185,19 +197,28 @@ The harness installs debug builds, plus one R8 release signed with the debug key
   - The iPhone has no `adb reverse`, so `localhost` on the phone is the phone
     itself.
   - Use the §3 real-certificate server (recommended), or for a Debug build
-    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi.
+    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. macOS may ask
+    whether Java may accept incoming connections: allow it, or the phone gets
+    no answer (the relay listens on all interfaces).
   - With a LAN IP, scaffold with `--bundle-server http://<LAN IP>:8077`, so the
     ATS exception names that host. Accept the **Local Network** prompt on the
-    first launch.
+    first launch. That prompt appears inside the script's first 40-second
+    window, so expect D3 to FAIL on the very first launch; tap Allow, then run
+    the script again.
   - Whether ATS accepts an exception for a bare IP address is not verified here.
     If the load fails with an ATS error (`-1022`), use the https route.
 
 **Team setting:** a host scaffolded by tools 0.3.7 or 0.3.8 ignores `TEAM_ID`
-(**U32** in `KNOWN_BUGS.md`; fixed on `main` for the next release). For those
-hosts, do one of:
+(**U32** in `KNOWN_BUGS.md`; fixed on this branch for the next release). For
+those hosts, do one of:
 - add `DEVELOPMENT_TEAM=<team id>` to `host-ios/Configuration/Config.xcconfig`;
-- pass it to `xcodebuild`, as `ci/w7/ios-device.sh` does;
+- set `DEVELOPMENT_TEAM` in the environment for `ci/w7/ios-device.sh`, which
+  passes it to `xcodebuild`;
 - pick the team in Xcode under Signing & Capabilities.
+
+A host with the U32 fix takes `TEAM_ID` from the gitignored
+`Configuration/Config.local.xcconfig`. Run `ci/w7/ios-device.sh` *without*
+`DEVELOPMENT_TEAM` once to check that path.
 
 ### 2a. Build, install and first load (`ci/w7/ios-device.sh`, unexecuted)
 
@@ -212,16 +233,15 @@ $KP/keliver-new-ios-host.sh --bundle-server https://<your server>
 scaffolder with `JAVA_TOOL_OPTIONS="-Duser.home=$HOME/w7/run1/home"`, so it
 finds the run's store and key.
 
-**Find the phone's udid:**
-
-```bash
-xcrun devicectl list devices
-```
+**Find the phone:** `xcrun devicectl list devices` lists its Identifier (a
+CoreDevice UUID). `xcodebuild -destination id=` needs the *hardware* UDID
+(`00008xxx-…`; also in `xcrun xctrace list devices`). The script accepts either
+and looks up the other through `devicectl list devices --json-output`.
 
 **Run the script:**
 
 ```bash
-DEVELOPMENT_TEAM=<team id> bash reference/inventory/ci/w7/ios-device.sh ~/w7/run1/boot/inventory ~/w7/ios-evidence <udid>
+DEVELOPMENT_TEAM=<team id> bash reference/inventory/ci/w7/ios-device.sh ~/w7/run1/boot/inventory ~/w7/ios-evidence <udid or identifier>
 ```
 
 It does four things:
@@ -229,7 +249,11 @@ It does four things:
   `codesign -dvv` to check the team and bundle id.
 - **D2:** `devicectl device install app`, then
   `devicectl device process launch --console`, reading the host's stdout for
-  40 s.
+  40 s. Untested risk: if devicectl hands the app a pipe rather than a terminal,
+  stdout may be buffered and lost when the script stops the launch. If D2 finds
+  no `KeliverHost:` line although the screen shows the app, read the log in
+  Console.app instead (select the iPhone, filter on `KeliverHost`) and record
+  it by hand.
 - **D3:** checks the log for verification with this app's key, a lookup at your
   server, `codeLoadSuccess`, and no refusal.
 - **D4,** with `KELIVER_IOS_OFFLINE_CHECK=1`: you stop the server when asked,
@@ -254,7 +278,7 @@ cat > ~/w7/export.plist <<'EOF'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>method</key><string>debugging</string>
-  <key>teamID</key><string>TEAMID</string>
+  <key>teamID</key><string>TEAMID</string>  <!-- replace with your team id -->
 </dict></plist>
 EOF
 xcodebuild -exportArchive -archivePath ~/w7/host.xcarchive -exportPath ~/w7/ipa \

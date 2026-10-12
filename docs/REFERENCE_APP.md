@@ -351,8 +351,29 @@ either way. Runs 6 (`35969509784`, head `98d06e43c`) and 7 (`35969576311`, head
 `1cc24cf88`) repeated it exactly: device 32/0, 6 of 6 captures BLANK each.
 **Visual verification of the device render is therefore incomplete, and D14's
 screenshot leg is not met for this app.** The behavioural evidence is unaffected.
-Not tried: another system image (`google_apis`), other `-gpu` modes, a physical
-device. The PNGs are in the run's artifact (`shot-*.png`, `shots.results`).
+Not tried then: another system image, other `-gpu` modes, a physical device.
+The PNGs are in the run's artifact (`shot-*.png`, `shots.results`).
+
+**2026-10-12, W7 prep (PR #100): it is the `aosp_atd` image.** `reference-app.yml`
+gained dispatch-only inputs for the image and the `-gpu` mode (pull requests
+keep the defaults). Same harness and head (`0ca0f8806`), one variable changed
+each:
+
+| run | image | `-gpu` | captures | device |
+|---|---|---|---|---|
+| [`38203248691`](https://github.com/waliasanchit007/keliver/actions/runs/38203248691) (pull request) | `aosp_atd` | `swiftshader_indirect` | 6 of 6 BLANK | 135/0 |
+| [`38203257164`](https://github.com/waliasanchit007/keliver/actions/runs/38203257164) | `aosp_atd` | `swangle_indirect` | 6 of 6 BLANK | 135/0 |
+| [`38203251404`](https://github.com/waliasanchit007/keliver/actions/runs/38203251404) | `google_apis` | `swiftshader_indirect` | **6 of 6 VALID** (both methods; 325–993 colours, 96–97% non-black) | 133/2 |
+
+So the black frames come from the Automated Test Device image, not from
+headless capture or the renderer: `screencap` and the emulator's own capture
+both return real frames from `google_apis` under the same options. A person
+still has to look at the VALID PNGs (shot.py only says a frame was drawn).
+The two failures on `google_apis` were E2/E3: `adb shell input text` dropped
+characters (`bean` became `bn`), not an app fault. `drive.py` now checks the
+field and types again, one character at a time, when that happens.
+Moving CI to `google_apis` would close D14's screenshot leg for this app; it is
+a slower, larger image, and that switch is left as a decision (not made here).
 
 ## Reproducing
 

@@ -39,7 +39,7 @@ SERVE_PID=$!
 for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
 
 adb -s "$SERIAL" install -r "$W2_APK" > "$EV/install-embed-app.log" 2>&1 \
-  && ok "W2: installed the existing app ($(sha256sum "$W2_APK" | cut -c1-12)…)" || bad "W2: the existing app did not install"
+  && ok "W2: installed the existing app ($(sha256 "$W2_APK" | cut -c1-12)…)" || bad "W2: the existing app did not install"
 adb -s "$SERIAL" shell pm clear "$W2_ID" > /dev/null
 w2_launch "$EV/logcat-embed.txt"
 

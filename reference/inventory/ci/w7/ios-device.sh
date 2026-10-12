@@ -9,13 +9,18 @@
 # NOT YET EXECUTED: written on 2026-10-12 with no iPhone attached and without
 # the owner's Apple team. Its first run is the owner's.
 #
-#   DEVELOPMENT_TEAM=<team id> ci/w7/ios-device.sh <app-dir> <evidence-dir> <device udid> [Debug|Release]
+#   [DEVELOPMENT_TEAM=<team id>] ci/w7/ios-device.sh <app-dir> <evidence-dir> <device> [Debug|Release]
 #
 # <app-dir> holds host-ios/ (keliver-new-ios-host.sh), with HostConfig.kt's
 # BUNDLE_SERVER set to a server the PHONE can reach: an https:// URL with a real
 # certificate, or http://<this Mac's LAN IP>:8077 for a Debug build (the iPhone
 # has no adb reverse; the scaffolder writes the ATS exception for that host).
-# The udid is `xcrun devicectl list devices`' Identifier.
+# <device> is the iPhone's hardware UDID (00008xxx-...) or devicectl's
+# Identifier (a CoreDevice UUID); either is resolved to both through
+# `devicectl list devices --json-output`: xcodebuild's destination takes the
+# hardware UDID. The team is DEVELOPMENT_TEAM from the environment, or else
+# what the project's settings give (TEAM_ID in Config.xcconfig or the
+# gitignored Config.local.xcconfig; U32), which this script then exercises.
 #   D1  the app is signed by the given team, for this bundle id
 #   D2  installed on the device, launched, and its log read
 #   D3  the host verified with this app's key, looked a bundle up and loaded it
@@ -26,12 +31,18 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 APP="$(cd "${1:?usage: DEVELOPMENT_TEAM=<team> $0 <app-dir> <evidence-dir> <udid> [Debug|Release]}" && pwd -P)"
 EV="$(mkdir -p "${2:?}" && cd "$2" && pwd -P)"
-UDID="${3:?device udid}"
+DEVICE="${3:?device: hardware UDID or devicectl Identifier}"
 CONFIG="${4:-Debug}"
-TEAM="${DEVELOPMENT_TEAM:-}"
-[ -n "$TEAM" ] || { echo "set DEVELOPMENT_TEAM to your Apple developer team id (Xcode > Settings > Accounts)" >&2; exit 2; }
 H="$APP/host-ios"
 [ -d "$H/iosApp.xcodeproj" ] || { echo "no host-ios/iosApp.xcodeproj under $APP" >&2; exit 2; }
+# The settings Xcode will build with (Config.local.xcconfig included), not a
+# re-reading of one file.
+TEAM_ARG=(); [ -n "${DEVELOPMENT_TEAM:-}" ] && TEAM_ARG=(DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM")
+SETTINGS="$(xcodebuild -project "$H/iosApp.xcodeproj" -scheme iosApp -configuration "$CONFIG" -sdk iphoneos \
+  -showBuildSettings ${TEAM_ARG[@]+"${TEAM_ARG[@]}"} 2>/dev/null)"
+setting(){ printf '%s\n' "$SETTINGS" | sed -n "s/^ *$1 = //p" | head -1; }
+TEAM="$(setting DEVELOPMENT_TEAM)"; BID="$(setting PRODUCT_BUNDLE_IDENTIFIER)"; APPNAME="$(setting FULL_PRODUCT_NAME)"
+[ -n "$TEAM" ] || { echo "no development team: set TEAM_ID in host-ios/Configuration/Config.local.xcconfig, or DEVELOPMENT_TEAM in the environment (Xcode > Settings > Accounts)" >&2; exit 2; }
 pass=0; fail=0
 ok(){ printf '  PASS  %s\n' "$1"; pass=$((pass+1)); echo "PASS $1" >> "$EV/ios-device.results"; }
 bad(){ printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); echo "FAIL $1" >> "$EV/ios-device.results"; }
@@ -41,27 +52,36 @@ CFG="$(find "$H/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
 [ -f "$CFG" ] || { echo "no HostConfig.kt under $H/src/iosMain/kotlin" >&2; exit 2; }
 val(){ sed -n "s/^internal const val $1: String = \"\\(.*\\)\"\$/\\1/p" "$CFG"; }
 KEY="$(val PORTAL_PUBLIC_KEY_HEX)"; SERVER="$(val BUNDLE_SERVER)"
-BID="$(sed -n 's/^PRODUCT_BUNDLE_IDENTIFIER=//p' "$H/Configuration/Config.xcconfig")"
-PRODUCT="$(sed -n 's/^PRODUCT_NAME=//p' "$H/Configuration/Config.xcconfig")"
-echo "==> $BID ($PRODUCT), $CONFIG, team $TEAM, server $SERVER, key ${KEY:0:8}…, device $UDID"
+echo "==> $BID ($APPNAME), $CONFIG, team $TEAM${DEVELOPMENT_TEAM:+ (from the environment)}, server $SERVER, key ${KEY:0:8}…"
 case "$SERVER" in
   http://localhost*|http://127.*) bad "BUNDLE_SERVER is $SERVER: the phone's own loopback, not this Mac; use the LAN IP or an https:// server"; exit 1 ;;
 esac
 
 # The device, as devicectl sees it (kept as evidence).
 xcrun devicectl list devices > "$EV/ios-devices.txt" 2>&1
-grep -q "$UDID" "$EV/ios-devices.txt" || { bad "device $UDID is not in devicectl list devices (paired, unlocked, Developer Mode on?)"; exit 1; }
+xcrun devicectl list devices --json-output "$EV/ios-devices.json" > /dev/null 2>&1
+read -r UDID CDID < <(python3 - "$EV/ios-devices.json" "$DEVICE" <<'PY2'
+import json, sys
+devs = json.load(open(sys.argv[1])).get('result', {}).get('devices', [])
+for d in devs:
+    hw = d.get('hardwareProperties', {}).get('udid', '')
+    if sys.argv[2] in (hw, d.get('identifier')):
+        print(hw, d.get('identifier')); break
+PY2
+)
+[ -n "${UDID:-}" ] || { bad "device $DEVICE is not in devicectl list devices (paired, unlocked, Developer Mode on?)"; exit 1; }
+echo "    device: hardware UDID $UDID, CoreDevice $CDID"
 xcrun devicectl device info details --device "$UDID" > "$EV/ios-device-details.txt" 2>&1 || true
 
 # D1: build and sign for the device. -allowProvisioningUpdates lets Xcode create
 # the development profile for this bundle id under your team.
 DD="$EV/../ios-device-derived"   # outside the evidence dir: not evidence
 xcodebuild -project "$H/iosApp.xcodeproj" -scheme iosApp -configuration "$CONFIG" \
-  -destination "id=$UDID" -derivedDataPath "$DD" DEVELOPMENT_TEAM="$TEAM" -allowProvisioningUpdates build \
+  -destination "id=$UDID" -derivedDataPath "$DD" ${TEAM_ARG[@]+"${TEAM_ARG[@]}"} -allowProvisioningUpdates build \
   > "$EV/ios-device-build.log" 2>&1 \
   && ok "D1: xcodebuild built and signed iosApp for the device ($CONFIG)" \
   || { bad "D1: the device build failed: $(grep -E 'error:' "$EV/ios-device-build.log" | head -3 | tr '\n' ' ')"; exit 1; }
-APPB="$DD/Build/Products/$CONFIG-iphoneos/$PRODUCT.app"
+APPB="$DD/Build/Products/$CONFIG-iphoneos/$APPNAME"
 codesign -dvv "$APPB" > "$EV/ios-device-codesign.txt" 2>&1
 grep -q "^TeamIdentifier=$TEAM$" "$EV/ios-device-codesign.txt" && grep -q "^Identifier=$BID$" "$EV/ios-device-codesign.txt" \
   && ok "D1: signed by team $TEAM for $BID ($(grep -m1 '^Authority=' "$EV/ios-device-codesign.txt"))" \

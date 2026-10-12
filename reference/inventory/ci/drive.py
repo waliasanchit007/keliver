@@ -118,29 +118,42 @@ def type_query(query, tag):
     and only type once it is empty. The query is checked the same way.
     """
     _, _, root = wait_for(tag + "-field", lambda t: True, timeout=1)
-    field = edit_field(root)
-    if field is None:
-        return False
-    x, y = bounds_center(field)
-    adb("shell", "input", "tap", str(x), str(y))
-    time.sleep(1)
-    for attempt in range(4):
-        current = field_text(root) or ""
-        if not current:
-            break
-        adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
-        for _ in range(len(current) + 4):
-            adb("shell", "input", "keyevent", "KEYCODE_DEL")
+    # W7: `input text` can drop characters when the device is slow to render
+    # ("bean" became "bn" on the google_apis image, run 38203251404; a phone
+    # may do the same). Then clear and type again, one character at a time.
+    for typing in range(3):
+        field = edit_field(root)
+        if field is None:
+            return False
+        x, y = bounds_center(field)
+        adb("shell", "input", "tap", str(x), str(y))
         time.sleep(1)
-        _, _, root = wait_for(f"{tag}-cleared-{attempt}", lambda t: True, timeout=1)
-    if field_text(root):
-        return False
-    if query:
-        adb("shell", "input", "text", query)
-    adb("shell", "input", "keyevent", "KEYCODE_ESCAPE")  # dismiss the keyboard
-    time.sleep(1)
-    _, _, root = wait_for(f"{tag}-typed", lambda t: field_text_of(t, query), timeout=10)
-    return field_text(root) == query
+        for attempt in range(4):
+            current = field_text(root) or ""
+            if not current:
+                break
+            adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
+            for _ in range(len(current) + 4):
+                adb("shell", "input", "keyevent", "KEYCODE_DEL")
+            time.sleep(1)
+            _, _, root = wait_for(f"{tag}-cleared-{typing}-{attempt}" if typing else f"{tag}-cleared-{attempt}",
+                                  lambda t: True, timeout=1)
+        if field_text(root):
+            return False
+        if query and typing == 0:
+            adb("shell", "input", "text", query)
+        elif query:
+            for ch in query:
+                adb("shell", "input", "text", ch)
+                time.sleep(0.4)
+        adb("shell", "input", "keyevent", "KEYCODE_ESCAPE")  # dismiss the keyboard
+        time.sleep(1)
+        label = f"{tag}-typed" if typing == 0 else f"{tag}-typed-retry{typing}"
+        _, _, root = wait_for(label, lambda t: field_text_of(t, query), timeout=10)
+        if field_text(root) == query:
+            return True
+        print(f"    {tag}: typed {query!r}, the field reads {field_text(root)!r}; typing again", flush=True)
+    return False
 
 
 def field_text_of(t, query):
