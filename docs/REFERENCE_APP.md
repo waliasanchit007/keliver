@@ -364,6 +364,7 @@ each:
 | [`38203248691`](https://github.com/waliasanchit007/keliver/actions/runs/38203248691) (pull request) | `aosp_atd` | `swiftshader_indirect` | 6 of 6 BLANK | 135/0 |
 | [`38203257164`](https://github.com/waliasanchit007/keliver/actions/runs/38203257164) | `aosp_atd` | `swangle_indirect` | 6 of 6 BLANK | 135/0 |
 | [`38203251404`](https://github.com/waliasanchit007/keliver/actions/runs/38203251404) | `google_apis` | `swiftshader_indirect` | **6 of 6 VALID** (both methods; 325–993 colours, 96–97% non-black) | 133/2 |
+| [`38213948442`](https://github.com/waliasanchit007/keliver/actions/runs/38213948442) (head `ebdd0b31d`, with the retyping fix) | `google_apis` | `swiftshader_indirect` | **6 of 6 VALID** | **135/0** (E3 retyped once: `zzz` read `z`) |
 
 So the black frames come from the Automated Test Device image, not from
 headless capture or the renderer: `screencap` and the emulator's own capture
@@ -372,8 +373,10 @@ still has to look at the VALID PNGs (shot.py only says a frame was drawn).
 The two failures on `google_apis` were E2/E3: `adb shell input text` dropped
 characters (`bean` became `bn`), not an app fault. `drive.py` now checks the
 field and types again, one character at a time, when that happens.
-Moving CI to `google_apis` would close D14's screenshot leg for this app; it is
-a slower, larger image, and that switch is left as a decision (not made here).
+With that fix the `google_apis` run is 135/0 with every capture VALID. Moving CI
+to `google_apis` would close D14's screenshot leg for this app (once a person
+has looked at the PNGs). It is a larger image; the switch is left as a decision,
+not made here.
 
 ## Reproducing
 
