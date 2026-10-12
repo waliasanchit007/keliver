@@ -119,8 +119,16 @@ private const val TAG = "KeliverHost"
 private fun cacheName(trust: ProductionTrust.Verified) = "keliver-production-${trust.publicKeyHex.lowercase().take(16)}"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
 private fun lastGoodKey(trust: ProductionTrust.Verified) = "keliver.lastGoodManifestUrl-${cacheName(trust)}"
-/** The highest signed sequence this host has run, per key (the rollback floor). */
-private fun floorKey(trust: ProductionTrust.Verified) = "keliver.highestSequence-${cacheName(trust)}"
+/** The highest signed sequence this host has run, per key (the rollback floor); [publicKeyHex]: any trusted key. */
+private fun floorKey(publicKeyHex: String) = "keliver.highestSequence-keliver-production-${publicKeyHex.lowercase().take(16)}"
+/** W8: the floor across every trusted key's own floor, so a rotation never lowers it. */
+private fun floorOf(trust: ProductionTrust.Verified): Long =
+  floorAcross(trust.publicKeysHex.map { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(it)) })
+/** Writes [sequence] as the floor under every trusted key that holds a lower one. */
+private fun raiseFloor(trust: ProductionTrust.Verified, sequence: Long) {
+  val defaults = NSUserDefaults.standardUserDefaults
+  trust.publicKeysHex.filter { defaults.integerForKey(floorKey(it)) < sequence }.forEach { defaults.setInteger(sequence, forKey = floorKey(it)) }
+}
 /**
  * This install's random id, for staged rollouts (W4.5): made once, kept here.
  * It leaves the device only in reports, and only when REPORT_URL is set (W6).
@@ -427,13 +435,13 @@ public fun MainViewController(): UIViewController = Keliver.viewController()
 
 private suspend fun startHost(): HostState {
   // Decided BEFORE any fetch: no valid key, no network, no bundle.
-  val trust = decideProductionTrust(PORTAL_PUBLIC_KEY_HEX)
+  val trust = decideProductionTrust(PORTAL_PUBLIC_KEY_HEX, PORTAL_NEXT_PUBLIC_KEY_HEX)
   if (trust is ProductionTrust.Refused) {
     log("refusing to load: ${trust.message}")
     return HostState.Message("Refusing to load", trust.message)
   }
   trust as ProductionTrust.Verified
-  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…; updates $UPDATES")
+  log("verifying manifests with ${trust.publicKeysHex.joinToString(" and ") { "portal-ed25519 ${it.take(8)}…" }}; updates $UPDATES")
   val server = BundleServer.parse(BUNDLE_SERVER)
     ?: return HostState.Message("Refusing to load", "The bundle server '$BUNDLE_SERVER' is not an http(s) URL.")
   val apiBase = API_BASE_URL.takeIf { it.isNotBlank() }
@@ -446,7 +454,10 @@ private suspend fun startHost(): HostState {
   val lastGood = NSUserDefaults.standardUserDefaults.stringForKey(lastGoodKey(trust))?.takeIf { server.owns(it) }
   // Read when each manifest arrives, not once here: a restart after a crash must
   // see a floor raised since the host started.
-  val floor = { NSUserDefaults.standardUserDefaults.integerForKey(floorKey(trust)) }
+  // Kept under every trusted key and read as the highest (W8): a host that trusts
+  // the next key carries the floor over to it.
+  val floor = { floorOf(trust) }
+  raiseFloor(trust, floor())
   // What the index's constraints are checked against (W4.5).
   val latest = lookupBundle(server, capabilities, HostFacts(installId(), hostVersion(), floor()))
   val lookup = LookupContext(server, capabilities, floor)
@@ -529,9 +540,11 @@ private fun createApp(
   fallback: String?,
 ): TreehouseApp<PortalPresenter> {
   val floor = lookup.floor
-  val verifier = ManifestVerifier.Builder()
-    .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
-    .build()
+  // Each key under its own name, and the first under portal-ed25519 too (W8,
+  // BundleIndex.kt: trustedSignatures).
+  val verifier = ManifestVerifier.Builder().apply {
+    trustedSignatures(trust.publicKeysHex).forEach { (name, key) -> addEd25519(name, key.decodeHex()) }
+  }.build()
   // The manifest held to the index's sha256 (when there is one) and to the rollback floor.
   val pinning = ManifestPinningHttpClient(NSURLSessionZiplineHttpClient(), manifestUrl, manifestSha256, floor)
   val flow = MutableStateFlow(manifestUrl)
@@ -607,10 +620,9 @@ private fun createApp(
       },
       onLoaded = { url -> NSUserDefaults.standardUserDefaults.setObject(url, forKey = lastGoodKey(trust)) },
       onSequence = { sequence ->
-        val defaults = NSUserDefaults.standardUserDefaults
-        val current = defaults.integerForKey(floorKey(trust))
+        val current = floorOf(trust)
         if (sequence > current) {
-          defaults.setInteger(sequence, forKey = floorKey(trust))
+          raiseFloor(trust, sequence)
           log("rollback floor raised: $current -> $sequence")
         }
       },

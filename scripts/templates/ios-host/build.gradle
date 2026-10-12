@@ -13,8 +13,8 @@ plugins {
   id 'app.cash.zipline' version '@@ZIPLINE_VERSION@@' // IR rewrite of zipline.take/bind
 }
 
-// HostConfig.kt holds the embedded PUBLIC key and the servers. It was written
-// at scaffold time and is committed; edit it there, keeping the three
+// HostConfig.kt holds the embedded PUBLIC key(s) and the servers. It was written
+// at scaffold time and is committed; edit it there, keeping its
 // `const val NAME: String = "..."` lines in that form, since these checks
 // read them.
 def hostConfig = file('src/iosMain/kotlin/@@PKG_PATH@@/HostConfig.kt')
@@ -37,6 +37,19 @@ def checkHostConfig = tasks.register('checkHostConfig') {
     if (key == null || !(key ==~ /[0-9a-fA-F]{64}/)) {
       throw new GradleException("HostConfig.kt: PORTAL_PUBLIC_KEY_HEX is not a 64-hex-digit Ed25519 " +
         "public key, so no bundle could be verified. Copy this app's keys/ed25519.pub into it.")
+    }
+    // W8, key rotation: the NEXT key, trusted too while a rotation is under way
+    // (docs/KEY_ROTATION.md); empty otherwise. A host trusts at most these two.
+    def next = configValue('PORTAL_NEXT_PUBLIC_KEY_HEX')
+    if (next == null) {
+      throw new GradleException("HostConfig.kt has no PORTAL_NEXT_PUBLIC_KEY_HEX line. Add " +
+        "`internal const val PORTAL_NEXT_PUBLIC_KEY_HEX: String = \"\"` (empty: no rotation under way).")
+    }
+    if (next && !(next ==~ /[0-9a-fA-F]{64}/)) {
+      throw new GradleException("HostConfig.kt: PORTAL_NEXT_PUBLIC_KEY_HEX must be empty or a 64-hex-digit Ed25519 public key (the next key of a rotation).")
+    }
+    if (next && next.equalsIgnoreCase(key)) {
+      throw new GradleException("HostConfig.kt: PORTAL_NEXT_PUBLIC_KEY_HEX is PORTAL_PUBLIC_KEY_HEX again; it must be the NEXT key of a rotation, or empty.")
     }
     if (server == null || !(server ==~ url)) {
       throw new GradleException("HostConfig.kt: BUNDLE_SERVER must be an http:// or https:// URL with no user@, query, fragment or '\$' (got '$server').")

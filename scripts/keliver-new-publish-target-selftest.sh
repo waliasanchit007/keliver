@@ -200,6 +200,29 @@ assert after == before.replace(legacy, new) and after.count(new) == 1
 PY
 then ok "a 0.3.7 signing block is swapped for the current one, without the U31 advice"
 else bad "upgrading a 0.3.7 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
+# An app wired by tools 0.3.8 (one key, W4 sequences): swapped for the current
+# block (W8: up to two keys), also without the U31 advice.
+LEGACY38="$ROOT/scripts/templates/publish/legacy/signing-0.3.8.gradle"
+make_app wired38 device
+( cd "$DISP/wired38" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/wired38/build.gradle" "$LEGACY38" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy)
+PY
+cp "$DISP/wired38/build.gradle" "$DISP/wired38.before"
+out="$( cd "$DISP/wired38" && "$SCAFFOLD" 2>&1 )"; rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q '(signing-0.3.8) was replaced by the current one' \
+   && ! printf '%s' "$out" | grep -q 'U31' \
+   && python3 - "$DISP/wired38.before" "$DISP/wired38/build.gradle" "$LEGACY38" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY'
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert after == before.replace(legacy, new) and after.count(new) == 1
+PY
+then ok "a 0.3.8 signing block is swapped for the current one, without the U31 advice"
+else bad "upgrading a 0.3.8 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
 # The upgrade swaps the block only: an app on another publish variant keeps it.
 make_app prodvariant device
 ( cd "$DISP/prodvariant" && "$SCAFFOLD" > /dev/null 2>&1 )

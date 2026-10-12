@@ -1,0 +1,151 @@
+
+// ---------------------------------------------------------------------------
+// keliver: PUBLISH SIGNING (v2) — written by keliver-new-publish-target.sh.
+//
+// The relay's POST /publish runs `publishTask` (keliver.portal.json) and keeps
+// its output as a versioned bundle ONLY if the manifest is signed with this
+// app's key: production hosts refuse anything else. The relay does not sign.
+// This block does, with <store>/keys/ed25519.priv. The store is asked of the
+// tools bundle's resolver (keliver-store-path.sh), never derived here.
+//
+// In CI, with no store: -Pkeliver.signingKeyFile, else KELIVER_SIGNING_KEY_FILE,
+// names a file holding the private key's hex (a secret written to a 0600 file;
+// never print it). It takes precedence over the store, and a named file that is
+// missing fails the build.
+//
+// Otherwise, where the tools are: -Pkeliver.toolsBin, else KELIVER_TOOLS_BIN
+// (keliver-portal and keliver-publish set it, so neither needs anything more),
+// else KP. With none of them, or before the first portal start has created the
+// key, the bundle compiles UNSIGNED: fine for development, and both /publish
+// and keliver-publish refuse it. A resolver that answers with an error fails
+// the build instead.
+//
+// HOW IT SIGNS, AND WHY NOT WITH ZIPLINE'S signingKeys (U31). Zipline's compile
+// task passes each signing key to a child JVM as `--sign <alg>:<name>:<hex>`:
+// the private key is on a command line any local user can read while it runs,
+// in full in a `--info` or `--debug` build log, and — as the task's @Input —
+// in <app>/.gradle/<version>/executionHistory/executionHistory.bin, mode 0644.
+// So the compile task here runs UNSIGNED, and a last action of that task signs
+// the manifest it wrote, in this Gradle process, with Zipline's own
+// ManifestSigner. The key is read from its file into memory for that and never
+// becomes a task input, an argument or a log line. The task's input is a
+// one-way id of the key (a SHA-256), so a changed key rebuilds the bundle.
+//
+// SEQUENCE (W4, rollback protection). With -Pkeliver.sequence=<N>, else
+// KELIVER_PUBLISH_SEQUENCE, the manifest's metadata gets "keliver.sequence": "<N>"
+// before it is signed, so the signature covers it. keliver-publish and the
+// relay's /publish pass the sequence the bundle is published at, and refuse a
+// manifest signed for another; production hosts built from the W4 templates
+// refuse a sequence below the highest they have run. N is a positive integer;
+// anything else fails the build, signed or not.
+// Without it (a development build) the manifest carries no sequence.
+//
+// REPUBLISH (W4.3, rollback). Hosts refuse a sequence below the highest they
+// have run, so older code goes out again as a new sequence:
+// `keliver-publish --republish <v>` copies published bundle v<v> to a scratch
+// directory and runs `./gradlew keliverResign -Pkeliver.resignDir=<that copy>
+// -Pkeliver.sequence=<N>`. That task writes N into the copy's manifest and signs
+// it again, with the key found exactly as for a build (so, as there, the key
+// never becomes an input, an argument or a log line). Nothing is compiled and
+// the modules are not touched: keliver-publish checks that only the sequence
+// and the signature changed. Without a key it fails rather than leave the copy
+// unsigned.
+//
+// Not configuration-cache compatible: the store is resolved by running a
+// process (keliver-init leaves the cache off).
+//
+// Unlike the block it replaces, this one works anywhere in build.gradle:
+// configureEach reaches compile tasks registered after it, and it never sets a
+// value the zipline plugin overwrites. The scaffolder still appends it last.
+def keliverSigningKeyFile = { ->
+  def keyFile = providers.gradleProperty('keliver.signingKeyFile')
+    .orElse(providers.environmentVariable('KELIVER_SIGNING_KEY_FILE'))
+    .getOrNull()
+  if (keyFile) {
+    def named = new File(keyFile)
+    if (!named.isFile()) throw new GradleException("keliver: the signing key file ${named} does not exist")
+    return named
+  }
+  def bin = providers.gradleProperty('keliver.toolsBin')
+    .orElse(providers.environmentVariable('KELIVER_TOOLS_BIN'))
+    .orElse(providers.environmentVariable('KP'))
+    .getOrNull()
+  if (!bin) {
+    logger.warn('keliver: no tools bin (-Pkeliver.toolsBin, KELIVER_TOOLS_BIN or KP), so this bundle is UNSIGNED')
+    return null
+  }
+  def proc = [new File(bin, 'keliver-store-path.sh').absolutePath, rootDir.absolutePath,
+              '--home', System.getProperty('user.home')].execute()
+  def out = new StringBuilder(), err = new StringBuilder()
+  proc.waitForProcessOutput(out, err)
+  if (proc.exitValue() != 0) throw new GradleException("keliver: keliver-store-path.sh exited ${proc.exitValue()}: ${err.toString().trim()}")
+  def path = out.toString().trim()
+  if (!path.startsWith('/')) throw new GradleException("keliver: keliver-store-path.sh returned a non-absolute path: '${path}'")
+  def key = new File(path, 'keys/ed25519.priv')
+  if (!key.isFile()) {
+    logger.warn("keliver: no signing key at ${key} yet (the first portal start creates it), so this bundle is UNSIGNED")
+    return null
+  }
+  key
+}.memoize()
+def keliverPublishSequence = providers.gradleProperty('keliver.sequence')
+  .orElse(providers.environmentVariable('KELIVER_PUBLISH_SEQUENCE'))
+// Signs manifestFile in place, after writing the publish sequence (if any) into its metadata.
+def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
+  def sequence = keliverPublishSequence.getOrNull()
+  if (sequence != null && !(sequence ==~ /[1-9][0-9]{0,17}/)) {
+    throw new GradleException("keliver: keliver.sequence must be a positive integer, not '${sequence}'")
+  }
+  def key = keliverSigningKeyFile()
+  if (key == null) {
+    if (keyRequired) throw new GradleException("keliver: no signing key, so ${manifestFile} cannot be signed again")
+    return
+  }
+  if (!manifestFile.isFile()) throw new GradleException("keliver: ${missing} ${manifestFile} to sign")
+  def hex = key.text.trim()
+  // Checked before decoding: okio's error for a malformed string quotes all of it.
+  if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
+  def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
+    .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
+    .build()
+  // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
+  def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
+  if (sequence != null) {
+    // metadata is in the signed part of the manifest, so the signature below covers it.
+    manifest = manifest.copy(manifest.unsigned, manifest.modules, manifest.mainModuleId, manifest.mainFunction,
+      manifest.version, manifest.metadata + ['keliver.sequence': sequence])
+  }
+  manifestFile.text = signer.sign(manifest).encodeJson()
+  logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key" +
+    (sequence != null ? ", for sequence ${sequence}" : ""))
+}
+tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
+  compileTask.inputs.property('keliverPublishSequence', keliverPublishSequence.orElse(''))
+  compileTask.inputs.property('keliverSigningKeyId', providers.provider {
+    def key = keliverSigningKeyFile()
+    if (key == null) return 'unsigned'
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    digest.update('keliver-signing-key-id\n'.getBytes('UTF-8'))
+    digest.update(key.text.trim().getBytes('UTF-8'))
+    digest.digest().encodeHex().toString()
+  })
+  compileTask.doLast {
+    keliverSign(new File(compileTask.outputDir.get().asFile, 'manifest.zipline.json'), false, "${compileTask.path} wrote no")
+  }
+}
+tasks.register('keliverResign') {
+  description = 'Signs a copy of a published bundle again for a new keliver.sequence (keliver-publish --republish).'
+  doLast {
+    def dir = providers.gradleProperty('keliver.resignDir').getOrNull()
+    if (!dir || !new File(dir).isAbsolute()) {
+      throw new GradleException('keliver: keliverResign needs -Pkeliver.resignDir=<the absolute path of a copy of the bundle to sign again>')
+    }
+    // keliver-publish passes a scratch copy. A published bundles/v<N>/ (beside an
+    // index.json) is never rewritten in place: its manifestSha256 would no longer match.
+    if (new File(new File(dir).parentFile, 'index.json').exists()) {
+      throw new GradleException("keliver: ${dir} is a published bundle (its directory holds index.json); keliverResign signs only a copy (keliver-publish --republish makes one)")
+    }
+    if (keliverPublishSequence.getOrNull() == null) throw new GradleException('keliver: keliverResign needs -Pkeliver.sequence=<N>')
+    keliverSign(new File(dir, 'manifest.zipline.json'), true, 'there is no')
+  }
+}

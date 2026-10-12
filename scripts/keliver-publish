@@ -7,6 +7,7 @@
 #   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] --republish <version> [--channel <name>]
 #   keliver-publish [app-dir] --out <dir> [--public-key-file <file>] --promote <sequence> --channel <name>
 #   keliver-publish [app-dir] --out <dir> --set-rollout <sequence> --rollout <percent> [--channel <name>]
+#   keliver-publish --new-signing-key <dir>
 #
 # Writes <dir>/bundles/v<N>/ (the compile task's output, unchanged) and
 # <dir>/bundles/index.json (the next sequence). Serve <dir> as-is; production
@@ -45,6 +46,13 @@
 # KELIVER_PUBLIC_KEY_HEX, else this app's store (keys/ed25519.pub, located by
 # keliver-store-path.sh, the one shell mirror of the store contract).
 #
+# Key rotation (W8, docs/KEY_ROTATION.md): the public key file may list two
+# keys, one per line (this app's key, then the next one; pass your hosts' key
+# file). A publish that shares no signing key with the newest published bundle
+# is refused unless --accept-key-change. --new-signing-key <dir> makes the next
+# key pair there (ed25519.priv owner-only, ed25519.pub) and prints the public
+# half only.
+#
 # Exit status: 0 published; 2 usage; 3 the build (or re-sign) failed; 4 refused, nothing
 # written (except bundles/.publish.lock when another publish held it); 5 an I/O
 # error while writing (the index is unchanged or complete, but a v<N>/ that no
@@ -64,11 +72,12 @@ SET_ROLLOUT=false
 ARGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,51p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,59p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    --new-signing-key) exec "$JVM" --new-signing-key "${2:-}" ;;
     --public-key-file) HAS_KEY=true; ARGS+=("$1" "${2:-}"); shift ;;
     --out|--channel|--republish|--promote|--rollout|--min-host-version|--max-host-version) ARGS+=("$1" "${2:-}"); shift ;;
     --set-rollout) SET_ROLLOUT=true; ARGS+=("$1" "${2:-}"); shift ;;
-    --skip-build|--init) ARGS+=("$1") ;;
+    --skip-build|--init|--accept-key-change) ARGS+=("$1") ;;
     -*) echo "keliver-publish: unknown option $1" >&2; exit 2 ;;
     *) [ -z "$APP_ARG" ] || { echo "keliver-publish: one app directory only (got '$APP_ARG' and '$1')" >&2; exit 2; }
        APP_ARG="$1" ;;

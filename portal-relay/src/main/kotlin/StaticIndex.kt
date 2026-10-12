@@ -110,8 +110,9 @@ internal fun sha256Hex(bytes: ByteArray): String =
 /**
  * Why the compile output in [output] must not be published, or null.
  *
- * 1. The manifest carries a portal-ed25519 signature that verifies against
- *    [publicKeyHex] (the relay's own check, [publishedSignatureProblem]).
+ * 1. The manifest is signed so that a host trusting the key(s) in
+ *    [publicKeyHex] loads it (the relay's own check, [checkSignatures]; W8:
+ *    one key per line, at most two).
  * 2. Every module the manifest names is a file INSIDE [output] whose sha256 is
  *    the one the signed manifest records. Zipline checks this again on the
  *    device; checking it here stops an incomplete layout reaching a server.
@@ -264,6 +265,31 @@ internal fun entryJson(
 internal data class StaticPublish(val version: Int, val sequence: Long, val dir: File, val entry: JsonObject)
 
 /**
+ * W8: a guard against signing with the wrong key by mistake. Null when the
+ * bundle in [manifestJson] shares a signing key with the newest bundle already
+ * published (the highest sequence in [index], read from its `v<N>/` in
+ * [bundlesDir]), or when nothing was published before; otherwise why not. Only
+ * keys listed in [publicKeysText] count. A rotation never trips it: hosts that
+ * trust both keys ship first, then bundles are signed with both keys, then with
+ * the new key only (docs/KEY_ROTATION.md). Jumping from one key straight to
+ * another does, and `--accept-key-change` says that is meant.
+ */
+internal fun keyChangeProblem(bundlesDir: File, index: JsonObject, manifestJson: String, publicKeysText: String): String? {
+  val newest = (index["entries"] as JsonArray).map { it as JsonObject }
+    .maxByOrNull { (it["sequence"] as? JsonPrimitive)?.longOrNull ?: -1L } ?: return null
+  val version = (newest["version"] as? JsonPrimitive)?.intOrNull ?: return null
+  val previous = File(File(bundlesDir, "v$version"), "manifest.zipline.json").takeIf { it.isFile } ?: return null
+  val before = checkSignatures(previous.readText(), publicKeysText).signers
+  val now = checkSignatures(manifestJson, publicKeysText).signers
+  if (now.any { it in before }) return null
+  fun names(keys: List<String>) = keys.joinToString(" and ") { keySignatureName(it) }.ifEmpty { "no key in this app's public key file" }
+  return "this bundle is signed by ${names(now)}, but the newest published one (v$version, sequence " +
+    "${(newest["sequence"] as JsonPrimitive).content}) is signed by ${names(before)}. Hosts that trust only the old key " +
+    "would refuse it. Rotate in steps (docs/KEY_ROTATION.md): ship hosts that trust both keys, sign with both, then " +
+    "with the new key only. If this change of signing key is meant, publish again with --accept-key-change."
+}
+
+/**
  * Publish the compile output [output] into the static layout under [outDir]:
  * verified first, then copied to `bundles/v<N>/` (staged and renamed), then
  * `bundles/index.json` rewritten through a temp file and an atomic rename, with
@@ -292,6 +318,7 @@ internal fun publishStatic(
   init: Boolean = false,
   constraints: Constraints = Constraints(),
   extraFields: Map<String, JsonElement> = emptyMap(), // added to (or replacing) the new entry's fields
+  acceptKeyChange: Boolean = false, // W8: publish although no signing key is shared with the newest published bundle
   beforeLock: () -> Unit = {}, // a test hook: another publish landing between the checks and the lock
 ): StaticPublish {
   if (!CHANNEL_RE.matches(channel)) throw PublishRefused("channel '$channel' must match ${CHANNEL_RE.pattern}")
@@ -313,6 +340,7 @@ internal fun publishStatic(
   // signed sequence against it: a refusal here writes nothing.
   val manifestText = File(output, "manifest.zipline.json").readText()
   sequenceProblem(manifestText, nextSequence(readIndex(bundlesDir), bundlesDir))?.let { throw PublishRefused(it) }
+  if (!acceptKeyChange) keyChangeProblem(bundlesDir, readIndex(bundlesDir), manifestText, publicKeyHex)?.let { throw PublishRefused(it) }
   beforeLock()
 
   return withPublishLock(bundlesDir) {
@@ -335,6 +363,7 @@ internal fun publishStatic(
       }
       // Under the lock: another publish may have taken this sequence since the build.
       sequenceProblem(File(staging, "manifest.zipline.json").readText(), sequence)?.let { throw PublishRefused(it) }
+      if (!acceptKeyChange) keyChangeProblem(bundlesDir, index, File(staging, "manifest.zipline.json").readText(), publicKeyHex)?.let { throw PublishRefused(it) }
       Files.move(staging.toPath(), dest.toPath(), StandardCopyOption.ATOMIC_MOVE)
     } finally {
       if (staging.exists()) staging.deleteRecursively()
@@ -555,6 +584,7 @@ internal fun republishStatic(
   channel: String? = null,
   now: Instant = Instant.now(),
   constraints: Constraints = Constraints(), // set on top of the original's (W4.5)
+  acceptKeyChange: Boolean = false, // W8, as for publishStatic
   resign: (dir: File, sequence: Long) -> Int,
 ): StaticPublish {
   constraints.problem?.let { throw PublishRefused(it) }
@@ -607,7 +637,7 @@ internal fun republishStatic(
     if (code != 0) throw BuildFailed(code)
     republishProblem(sourceManifest.readText(), File(copy, "manifest.zipline.json").readText())?.let { throw PublishRefused(it) }
     try {
-      return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra)
+      return publishStatic(copy, outDir, publicKeyHex, entryChannel, capabilities, now, extraFields = extra, acceptKeyChange = acceptKeyChange)
     } catch (e: PublishRefused) {
       // Another publish took this sequence while the re-sign ran: the advice is not "build again".
       val signedFor = signedSequenceText(File(copy, "manifest.zipline.json").readText())

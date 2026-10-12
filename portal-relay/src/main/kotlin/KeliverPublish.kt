@@ -50,12 +50,20 @@ import kotlinx.serialization.json.JsonPrimitive
  *   half-written, but a `v<N>/` that no entry names may be left. It is never
  *   served as current, and its number is never reused.
  * An unexpected error exits 1 with a stack trace.
+ *
+ * Key rotation (W8, docs/KEY_ROTATION.md): the public key file may list two
+ * keys, one per line (this app's key, then the next one). A publish is refused
+ * when the bundle shares no signing key with the newest published bundle,
+ * unless `--accept-key-change`. `--new-signing-key <dir>` makes the next key
+ * pair (`<dir>/ed25519.priv`, owner-only, and `ed25519.pub`) and prints only
+ * the public half.
  */
 object KeliverPublish {
   private const val USAGE =
     "usage: keliver-publish [app-dir] --out <dir> (--public-key-file <file> | KELIVER_PUBLIC_KEY_HEX) " +
       "[--channel stable] [--skip-build] [--init] [--republish <version> | --promote <sequence> --channel <name>] " +
-      "[--rollout <percent>] [--min-host-version <n>] [--max-host-version <n>] | --set-rollout <sequence> --rollout <percent>"
+      "[--rollout <percent>] [--min-host-version <n>] [--max-host-version <n>] [--accept-key-change] | " +
+      "--set-rollout <sequence> --rollout <percent> | --new-signing-key <dir>"
 
   @JvmStatic
   fun main(args: Array<String>) {
@@ -80,6 +88,8 @@ object KeliverPublish {
     var maxHostVersion: Long? = null
     var skipBuild = false
     var init = false
+    var acceptKeyChange = false
+    var newSigningKey: String? = null
     val it = args.iterator()
     while (it.hasNext()) {
       when (val a = it.next()) {
@@ -99,10 +109,20 @@ object KeliverPublish {
         "--max-host-version" -> maxHostVersion = it.nextOrNull()?.takeIf { v -> v.matches(Regex("[0-9]{1,15}")) }?.toLong()
           ?: return usage("--max-host-version needs a non-negative integer (the host build's version)")
         "--skip-build" -> skipBuild = true
+        "--accept-key-change" -> acceptKeyChange = true
+        "--new-signing-key" -> newSigningKey = it.nextOrNull()?.takeIf { d -> d.isNotBlank() } ?: return usage("--new-signing-key needs a directory")
         "--init" -> init = true
         "-h", "--help" -> { println(USAGE); return 0 }
         else -> if (a.startsWith("-") || app != null) return usage("unexpected argument: $a") else app = a
       }
+    }
+    if (newSigningKey != null) {
+      if (args.size != 2) return usage("--new-signing-key <dir> takes nothing else")
+      val publicHex = runCatching { writeNewSigningKey(File(newSigningKey)) }.getOrElse { return refuse(it.message ?: "could not write the key") }
+      println("keliver-publish: a new signing key is in $newSigningKey: ${PRIVATE_KEY_FILE} (owner-only; never print it) and ${PUBLIC_KEY_FILE}")
+      println("keliver-publish: its public key, ${keySignatureName(publicHex)}: $publicHex")
+      println("keliver-publish: next, add that public key as the SECOND line of your hosts' key (docs/KEY_ROTATION.md)")
+      return 0
     }
     val repoDir = File(app ?: ".").absoluteFile.normalize()
     if (out.isNullOrBlank()) return usage("--out is required (a directory; it is never the current one by default)")
@@ -134,7 +154,7 @@ object KeliverPublish {
     }
 
     if (promote != null) return runPromote(File(out), promote, channel!!, publicKeyHex, constraints)
-    if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, constraints, resign)
+    if (republish != null) return runRepublish(repoDir, File(out), republish, publicKeyHex, channel, constraints, resign, acceptKeyChange)
 
     // Checked again under the lock; this only spares a build that could not be published.
     if (!init && !File(File(out, "bundles"), INDEX_FILE).exists()) {
@@ -173,7 +193,10 @@ object KeliverPublish {
       emptyList()
     }
     val result = try {
-      publishStatic(File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init, constraints = constraints)
+      publishStatic(
+        File(repoDir, config.publishOutput), File(out), publicKeyHex, channel ?: DEFAULT_CHANNEL, caps, init = init,
+        constraints = constraints, acceptKeyChange = acceptKeyChange,
+      )
     } catch (e: PublishRefused) {
       return refuse(e.message.orEmpty(), e.aboutSigning)
     } catch (e: java.io.IOException) {
@@ -200,9 +223,10 @@ object KeliverPublish {
     channel: String?,
     constraints: Constraints,
     resign: (File, File, Long) -> Int,
+    acceptKeyChange: Boolean,
   ): Int {
     val result = try {
-      republishStatic(out, version, publicKeyHex, channel, constraints = constraints) { dir, sequence ->
+      republishStatic(out, version, publicKeyHex, channel, constraints = constraints, acceptKeyChange = acceptKeyChange) { dir, sequence ->
         println("keliver-publish: re-signing a copy of v$version for sequence $sequence (keliverResign in $repoDir); nothing is compiled")
         resign(repoDir, dir, sequence)
       }
