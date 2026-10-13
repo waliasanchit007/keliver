@@ -132,12 +132,17 @@ import json, sys, hashlib
 p = sys.argv[1]; raw = open(p, 'rb').read(); m = json.loads(raw)
 sig = m.get('unsigned', {}).get('signatures', {})
 print('manifest sha256', hashlib.sha256(raw).hexdigest())
-print('signed by', sorted(sig))
+print('signed by', list(sig))
 print('modules', len(m['modules']))
 PY
 cat "$EV/manifest-v1.summary"
-grep -q "signed by \['portal-ed25519'\]" "$EV/manifest-v1.summary" \
-  && ok "v1's manifest carries a portal-ed25519 signature" || bad "v1's manifest is not signed"
+# In manifest order: portal-ed25519 alone (signing blocks before tools 0.3.9),
+# or this app's key under its own name, then portal-ed25519 LAST (0.3.9 on;
+# hosts before W8 trust only that name, and Zipline checks the first it trusts).
+KEYNAME="keliver-ed25519-$(printf %s "$PUB" | tr 'A-F' 'a-f' | cut -c1-16)"
+grep -qxE "signed by \[('$KEYNAME', )?'portal-ed25519'\]" "$EV/manifest-v1.summary" \
+  && ok "v1's manifest is signed with this app's key, portal-ed25519 last ($(grep '^signed by' "$EV/manifest-v1.summary"))" \
+  || bad "v1's manifest is not signed as expected (portal-ed25519 last, by this app's key; $KEYNAME)"
 portal_down "$APP"
 
 # --- 5. P1: the production host, scaffolded, with THIS app's key ------------
