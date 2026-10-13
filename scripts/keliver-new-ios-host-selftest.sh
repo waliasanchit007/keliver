@@ -156,6 +156,13 @@ grep -q 'integerForKey(floorKey(it))' "$K/MainViewController.kt" && grep -q 'flo
   || bad "W4.2: the rollback floor is not wired"
 grep -q 'DEVELOPMENT_TEAM' "$H/iosApp.xcodeproj/project.pbxproj" && bad "the Xcode project names a development team" \
   || ok "the Xcode project names no development team"
+# U32: TEAM_ID (in Config.xcconfig, or the gitignored Config.local.xcconfig)
+# becomes DEVELOPMENT_TEAM for a device build.
+grep -qx 'DEVELOPMENT_TEAM=$(TEAM_ID)' "$H/Configuration/Config.xcconfig" \
+  && [ "$(tail -1 "$H/Configuration/Config.xcconfig")" = '#include? "Config.local.xcconfig"' ] \
+  && grep -qx '/Configuration/Config.local.xcconfig' "$H/.gitignore" \
+  && ok "U32: TEAM_ID sets DEVELOPMENT_TEAM; Config.local.xcconfig (gitignored) is included last" \
+  || bad "U32: Config.xcconfig does not wire TEAM_ID to DEVELOPMENT_TEAM or include Config.local.xcconfig"
 grep -q 'gradlew -p host-ios --console=plain embedAndSignAppleFrameworkForXcode' "$H/iosApp.xcodeproj/project.pbxproj" \
   && ok "the Xcode build phase builds the framework with the app's ./gradlew -p host-ios" || bad "the build phase"
 grep -v '^[[:space:]]*//' "$H/settings.gradle" "$H/build.gradle" | grep -q "mavenLocal\|includeBuild\|project(\|maven {" && bad "the host build reaches beyond Maven Central/Google" \

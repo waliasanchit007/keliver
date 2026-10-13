@@ -74,7 +74,7 @@ w8_publish v10 "$W8D/both.priv" && grep -q "published v10 (sequence 10, channel 
 adb -s "$SERIAL" install -r "$W8_LEGACY_APK" > "$EV/install-w8-old.log" 2>&1 && adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 launch prod "$EV/logcat-w8-old-v10.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates" "$EV/logcat-w8-old-v10.txt" \
-  && grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v10/manifest.zipline.json (index sequence 10," "$EV/logcat-w8-old-v10.txt" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v10/manifest.zipline.json (index sequence 10," "$EV/logcat-w8-old-v10.txt" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=10 source=network" "$EV/logcat-w8-old-v10.txt" \
   && ok "K3: $OLD_HOST loaded the dual-signed v10" \
   || bad "K3: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-w8-old-v10.txt" | head -4 | tr '\n' ' ')"
@@ -85,7 +85,7 @@ adb -s "$SERIAL" install -r "$W8_BOTH_APK" > "$EV/install-w8-both.log" 2>&1 \
   && ok "K4: upgraded in place to the host trusting both keys" || bad "K4: the two-key host did not install"
 launch prod "$EV/logcat-w8-both-v10.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}… and the next key ${NEXT_PUB:0:8}…; updates" "$EV/logcat-w8-both-v10.txt" \
-  && grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v10/manifest.zipline.json (.*); rollback floor 10" "$EV/logcat-w8-both-v10.txt" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v10/manifest.zipline.json (.*); rollback floor 10" "$EV/logcat-w8-both-v10.txt" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=10" "$EV/logcat-w8-both-v10.txt" \
   && ok "K4: the two-key host verifies with both keys and loaded v10 (floor 10)" \
   || bad "K4: $(grep -E "$HOST_TAG|codeLoad" "$EV/logcat-w8-both-v10.txt" | head -4 | tr '\n' ' ')"
@@ -110,7 +110,7 @@ drive title Bunker K5; fold "K5: v11 shows Bunker" $?
 adb -s "$SERIAL" install -r "$W8_LEGACY_APK" > "$EV/install-w8-old-again.log" 2>&1
 launch prod "$EV/logcat-w8-old-v11.txt"
 F="$EV/logcat-w8-old-v11.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v11/manifest.zipline.json" "$F" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v11/manifest.zipline.json" "$F" \
   && grep -q "$REFUSED_LINE" "$F" && ! grep -q "codeLoadSuccess" "$F" \
   && ok "K6: $OLD_HOST refused v11 ($REFUSED_LINE) and loaded nothing" \
   || bad "K6: $(grep -E "$HOST_TAG|codeLoad" "$F" | head -5 | tr '\n' ' ')"
@@ -121,7 +121,7 @@ adb -s "$SERIAL" install -r "$W8_NEXT_APK" > "$EV/install-w8-next.log" 2>&1 \
 launch prod "$EV/logcat-w8-next-v11.txt"
 F="$EV/logcat-w8-next-v11.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${NEXT_PUB:0:8}…; updates" "$F" \
-  && grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v11/manifest.zipline.json (.*); rollback floor 11" "$F" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v11/manifest.zipline.json (.*); rollback floor 11" "$F" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=11 source=network" "$F" \
   && ok "K7: the next-key host loaded v11, starting from floor 11 (carried over by the two-key host)" \
   || bad "K7: $(grep -E "$HOST_TAG|codeLoad" "$F" | head -4 | tr '\n' ' ')"
@@ -135,8 +135,8 @@ w8_publish v12 "$STORE/keys/ed25519.priv" --accept-key-change && grep -q "publis
   || { bad "K8: publish v12"; tail -20 "$EV/w8-publish-v12.log"; }
 launch prod "$EV/logcat-w8-next-v12.txt"
 F="$EV/logcat-w8-next-v12.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v12/manifest.zipline.json" "$F" && grep -q "$REFUSED_LINE" "$F" \
-  && grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://10.0.2.2:8443/bundles/v11/" "$F" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v12/manifest.zipline.json" "$F" && grep -q "$REFUSED_LINE" "$F" \
+  && grep -q "$HOST_TAG: the bundle did not load; falling back to the cached last good bundle (last loaded from https://$HOST_ADDR:8443/bundles/v11/" "$F" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=11 source=cache" "$F" && ! grep -q "codeLoadSuccess modules=[0-9]* sequence=12" "$F" \
   && ok "K8: the next-key host refused v12 (old key only) and fell back to the cached v11" \
   || bad "K8: $(grep -E "$HOST_TAG|codeLoad" "$F" | tail -5 | tr '\n' ' ')"

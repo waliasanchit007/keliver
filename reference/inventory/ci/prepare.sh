@@ -40,6 +40,19 @@ sha256(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else sha
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Duser.home=$WORK/home"
 unset PORTAL_STORE KELIVER_USE_MAVEN_LOCAL
 
+# W7: the device the hosts are built for. emulator (the default; CI): it reaches
+# this machine as 10.0.2.2, and ci/w3/android-ca.sh puts the throwaway CA in its
+# system store. physical: a USB phone. It reaches this machine as 127.0.0.1
+# through `adb reverse` (device.sh sets that up), and its system store cannot
+# take the CA without root, so the HTTPS test builds carry the CA themselves
+# (ci/w7/android-test-ca.sh). docs/DEVICE_PROOF.md has the whole session.
+DEVICE_KIND="${KELIVER_DEVICE:-emulator}"
+case "$DEVICE_KIND" in
+  emulator) HOST_ADDR=10.0.2.2 ;;
+  physical) HOST_ADDR=127.0.0.1 ;;
+  *) bad "KELIVER_DEVICE must be emulator or physical, not $DEVICE_KIND"; exit 1 ;;
+esac
+
 # --- 1. the app, from the public release ------------------------------------
 echo "==> bootstrap"
 if "$HERE/../bootstrap.sh" "$WORK/boot" $ZIP > "$EV/bootstrap.log" 2>&1; then
@@ -52,6 +65,7 @@ APP="$WORK/boot/inventory"
 export KP="$(ls -d "$WORK"/boot/tools/keliver-portal-tools-*/bin)"
 cp "$APP/hand-edits.diff" "$EV/hand-edits.diff"
 echo "APP=$APP" > "$WORK/env"; echo "KP=$KP" >> "$WORK/env"
+{ echo "DEVICE_KIND=$DEVICE_KIND"; echo "HOST_ADDR=$HOST_ADDR"; } >> "$WORK/env"
 
 ( cd "$APP" && ./gradlew compileKotlinJs --console=plain ) > "$EV/compile.log" 2>&1 \
   && ok "compile: ./gradlew compileKotlinJs against Maven Central 0.3.3" \
@@ -129,7 +143,8 @@ portal_down "$APP"
 # --- 5. P1: the production host, scaffolded, with THIS app's key ------------
 # keliver-new-production-host.sh reads the PUBLIC key from this app's store
 # (resolved under this run's user.home) and writes host-android/, a standalone
-# build on Maven Central only. 10.0.2.2 is how the emulator reaches the relay.
+# build on Maven Central only. HOST_ADDR is how the device reaches the relay
+# (10.0.2.2 on the emulator).
 PROD_ID=inventory.host
 # Which scaffolder writes the host. By default the published zip's own bin/
 # copy. KELIVER_SCAFFOLD_FROM=repo selects this repository's scripts/ instead:
@@ -140,7 +155,7 @@ case "${KELIVER_SCAFFOLD_FROM:-zip}" in
   repo) PROD_SCAFFOLD="$REPO/scripts/keliver-new-production-host.sh"; PROD_WHICH="this repository's scripts/ (W3, unreleased)" ;;
   *)    bad "KELIVER_SCAFFOLD_FROM must be zip or repo, not ${KELIVER_SCAFFOLD_FROM}"; exit 1 ;;
 esac
-( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server http://10.0.2.2:8077 \
+( cd "$APP" && "$PROD_SCAFFOLD" --bundle-server "http://$HOST_ADDR:8077" \
     --application-id "$PROD_ID" ) > "$EV/host-scaffold.log" 2>&1 \
   && ok "P1: keliver-new-production-host.sh ($PROD_WHICH) scaffolded host-android/" \
   || { bad "P1: the production host was not scaffolded"; cat "$EV/host-scaffold.log"; exit 1; }
@@ -148,7 +163,7 @@ sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
 # W6 (V2): it reports to the relay. A template without keliver.reportUrl
 # (tools 0.3.8 candidate 2 and earlier) ignores the property.
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.reportUrl=http://10.0.2.2:8077/report ) > "$EV/host-build.log" 2>&1 \
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.reportUrl="http://$HOST_ADDR:8077/report" ) > "$EV/host-build.log" 2>&1 \
   && ok "P1: the scaffolded host built from Maven Central" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.
@@ -170,7 +185,7 @@ echo "APK=$EV/production-host.apk" >> "$WORK/env"
 # The static route (ci/w3/android-static.sh, run by device.sh) needs no relay:
 # keliver-publish from this checkout (no published tools bundle has it yet), a
 # CA and server certificate that only the emulator will trust, and the same
-# production host built for https://10.0.2.2:8443 (only the server differs).
+# production host built for https://$HOST_ADDR:8443 (only the server differs).
 W3="$WORK/w3"; mkdir -p "$W3"
 # The zip's own keliver-publish and publish-target scaffolder when it ships them
 # (0.3.8 on) and the hosts come from the zip; otherwise this checkout's.
@@ -182,17 +197,23 @@ else
   [ -n "$W3_PUBLISH" ] && [ -x "$W3_PUBLISH" ] && ok "W3: keliver-publish built from this checkout, in the tools layout" \
     || { bad "W3: keliver-publish was not built"; tail -20 "$EV/w3-tools.log"; }
 fi
-bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway CA and a server certificate for 10.0.2.2" \
+bash "$HERE/w3/tls.sh" "$W3/tls" > "$EV/w3-tls.txt" 2>&1 && ok "W3: a throwaway CA and a server certificate for $HOST_ADDR" \
   || { bad "W3: no certificates"; cat "$EV/w3-tls.txt"; }
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 ) \
+# W7: on a phone, the HTTPS builds of host-android trust the CA themselves.
+if [ "$DEVICE_KIND" = physical ]; then
+  bash "$HERE/w7/android-test-ca.sh" "$APP/host-android/src/debug" "$W3/tls/ca.pem" > "$EV/w7-test-ca-host.log" 2>&1 \
+    && ok "W7: the HTTPS debug builds of host-android trust the throwaway CA in the APK (physical device)" \
+    || { bad "W7: the test CA overlay failed"; cat "$EV/w7-test-ca-host.log"; }
+fi
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
   > "$EV/w3-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
-  && ok "W3: the production host, built for https://10.0.2.2:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
+  && ok "W3: the production host, built for https://$HOST_ADDR:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
 { echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
 # W5 (U1) and W6 (V1): the same host, built to check for updates when it comes
 # back to the foreground (keliver.updates=on-resume) and to POST its reports to
 # the static server's /report (keliver.reportUrl); only those settings differ.
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 -Pkeliver.updates=on-resume -Pkeliver.reportUrl=https://10.0.2.2:8443/report ) \
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.updates=on-resume -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) \
   > "$EV/w5-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-onresume.apk" \
   && ok "W5: the production host, built with keliver.updates=on-resume and keliver.reportUrl" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
@@ -215,7 +236,7 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
     || bad "W8: --new-signing-key (mode '$mode'): $(head -3 "$EV/w8-new-key.log" | tr '\n' ' ')"
   HKEY="$APP/host-android/src/main/assets/keliver/portal_ed25519.pub"; cp "$HKEY" "$W8/key.saved"
   w8_host(){  # $1 label: build the host for the static server with the key file as it is now
-    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer=https://10.0.2.2:8443 ) \
+    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
       > "$EV/w8-host-$1-build.log" 2>&1 \
       && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-$1.apk"
   }
@@ -236,9 +257,10 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
   if [ -x "$KP/keliver-new-production-host.sh" ] && [ -f "$KP/../templates/production-host/build.gradle" ] \
      && ! grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$KP/../templates/production-host/build.gradle"; then
     mv "$APP/host-android" "$W8/host-android.w8"
-    ( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server https://10.0.2.2:8443 --application-id "$PROD_ID" ) \
+    ( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server "https://$HOST_ADDR:8443" --application-id "$PROD_ID" ) \
       > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
       && printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties" \
+      && { [ "$DEVICE_KIND" != physical ] || bash "$HERE/w7/android-test-ca.sh" "$APP/host-android/src/debug" "$W3/tls/ca.pem" >> "$EV/w7-test-ca-host.log" 2>&1; } \
       && w8_host legacy && W8_LEGACY_APK="$EV/production-host-legacy.apk" \
       && ok "W8: a host from the published zip's own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6" \
       || { bad "W8: the zip's pre-W8 host did not scaffold or build"; tail -20 "$EV/w8-legacy-host-scaffold.log"; tail -20 "$EV/w8-host-legacy-build.log" 2>/dev/null; }
@@ -261,9 +283,18 @@ fi
 EMB_APP="$WORK/embed"; rm -rf "$EMB_APP"; cp -R "$REPO/reference/embed/android" "$EMB_APP"
 cp "$APP/gradlew" "$EMB_APP/" && cp -R "$APP/gradle" "$EMB_APP/"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$EMB_APP/local.properties"
-( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server https://10.0.2.2:8443 ) > "$EV/w2-embed-scaffold.log" 2>&1 \
+( cd "$APP" && "$PROD_SCAFFOLD" --embed --into "$EMB_APP" --bundle-server "https://$HOST_ADDR:8443" ) > "$EV/w2-embed-scaffold.log" 2>&1 \
   && ok "W2: keliver-new-production-host.sh --embed ($PROD_WHICH) wrote keliver-host/ into the existing app" \
   || { bad "W2: --embed failed"; cat "$EV/w2-embed-scaffold.log"; }
+# W7: on a phone, the fixture's debug and R8 release builds trust the CA themselves
+# (a release build is not debuggable, so the CA goes in its own source set too).
+if [ "$DEVICE_KIND" = physical ]; then
+  for t in debug release; do
+    bash "$HERE/w7/android-test-ca.sh" "$EMB_APP/app/src/$t" "$W3/tls/ca.pem" >> "$EV/w7-test-ca-embed.log" 2>&1 \
+      && ok "W7: the existing app's $t build trusts the throwaway CA in the APK (physical device)" \
+      || { bad "W7: the test CA overlay failed for the existing app's $t build"; cat "$EV/w7-test-ca-embed.log"; }
+  done
+fi
 grep -q "^warning:" "$EV/w2-embed-scaffold.log" && bad "W2: --embed warned about the existing app's build: $(grep '^warning:' "$EV/w2-embed-scaffold.log" | head -2 | tr '\n' ' ')" \
   || ok "W2: the existing app's build declares what the library needs (no warning)"
 ( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-build.log" 2>&1 \

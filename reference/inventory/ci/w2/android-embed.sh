@@ -39,7 +39,7 @@ SERVE_PID=$!
 for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
 
 adb -s "$SERIAL" install -r "$W2_APK" > "$EV/install-embed-app.log" 2>&1 \
-  && ok "W2: installed the existing app ($(sha256sum "$W2_APK" | cut -c1-12)…)" || bad "W2: the existing app did not install"
+  && ok "W2: installed the existing app ($(sha256 "$W2_APK" | cut -c1-12)…)" || bad "W2: the existing app did not install"
 adb -s "$SERIAL" shell pm clear "$W2_ID" > /dev/null
 w2_launch "$EV/logcat-embed.txt"
 
@@ -67,7 +67,7 @@ PY
 
 # X2: a signed load, from the static server, verified with this app's key.
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}" "$EV/logcat-embed.txt" \
-  && grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$EV/logcat-embed.txt" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v7/manifest.zipline.json (index sequence 7," "$EV/logcat-embed.txt" \
   && grep -q "codeLoadSuccess" "$EV/logcat-embed.txt" \
   && ok "X2: the embedded host verified with this app's key and loaded v7 from the static server" \
   || bad "X2: $(grep -E "$HOST_TAG" "$EV/logcat-embed.txt" | head -3 | tr '\n' ' ')"

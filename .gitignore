@@ -24,3 +24,6 @@ redwood-layout-view/out/failures
 
 # DOM testing
 redwood-dom-testing/snapshots
+
+# Python bytecode (the CI harness runs drive.py)
+__pycache__/
