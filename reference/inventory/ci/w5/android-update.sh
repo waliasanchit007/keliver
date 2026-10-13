@@ -22,7 +22,7 @@ t0="$(date +%s)"
 launch prod "$EV/logcat-update-v8.txt"
 grep -q "$HOST_TAG: verifying manifests with portal-ed25519 ${PUB:0:8}…; updates on-resume" "$EV/logcat-update-v8.txt" \
   && ok "U1: the host runs with updates on-resume" || bad "U1: the host is not set to update on resume: $(grep -m1 'verifying manifests' "$EV/logcat-update-v8.txt")"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$EV/logcat-update-v8.txt" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v8/manifest.zipline.json (index sequence 8," "$EV/logcat-update-v8.txt" \
   && grep -q "codeLoadSuccess modules=[0-9]* sequence=8" "$EV/logcat-update-v8.txt" \
   && ok "U1: the host started on v8" || bad "U1: v8 did not load: $(grep -E "$HOST_TAG" "$EV/logcat-update-v8.txt" | head -3 | tr '\n' ' ')"
 drive title Garage U1before; fold "U1: v8 shows Garage" $?
@@ -42,7 +42,7 @@ adb -s "$SERIAL" shell am start -a android.intent.action.MAIN -c android.intent.
 sleep 20
 adb -s "$SERIAL" logcat -d > "$EV/logcat-update-resume.txt"
 L="$EV/logcat-update-resume.txt"
-grep -q "$HOST_TAG: update check: sequence 9 is available (running 8); applying https://10.0.2.2:8443/bundles/v9/manifest.zipline.json" "$L" \
+grep -q "$HOST_TAG: update check: sequence 9 is available (running 8); applying https://$HOST_ADDR:8443/bundles/v9/manifest.zipline.json" "$L" \
   && ok "U1: back in the foreground the host looked up and found v9" \
   || bad "U1: no update check on resume: $(grep -E "$HOST_TAG" "$L" | head -4 | tr '\n' ' ')"
 grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "$HOST_TAG: update applied: sequence 9" "$L" \

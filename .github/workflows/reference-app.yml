@@ -40,7 +40,30 @@ on:
       - "portal-relay/src/main/kotlin/StaticIndex.kt"
       - "portal-relay/src/main/kotlin/KeliverPublish.kt"
       - "portal-relay/src/main/kotlin/PublishSignature.kt"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      device_route:
+        # W7: physical rehearses the USB-phone route on this emulator: the hosts
+        # are built for 127.0.0.1 behind adb reverse, and the HTTPS test APKs
+        # carry the throwaway CA instead of the emulator's system store taking
+        # it. A rehearsal of the harness, never a physical-device result.
+        description: "emulator (default), or physical: rehearse the USB-phone route (docs/DEVICE_PROOF.md) on the emulator"
+        type: choice
+        options: [emulator, physical]
+        default: emulator
+      # D14's screenshot leg: every capture on aosp_atd with swiftshader_indirect
+      # has been black (docs/REFERENCE_APP.md, "Device screenshots"). These try
+      # other images and renderers by hand; pull requests keep the defaults.
+      emulator_target:
+        description: "system image (aosp_atd is CI's)"
+        type: choice
+        options: [aosp_atd, google_apis, default]
+        default: aosp_atd
+      emulator_gpu:
+        description: "emulator -gpu mode (swiftshader_indirect is CI's)"
+        type: choice
+        options: [swiftshader_indirect, swangle_indirect, guest]
+        default: swiftshader_indirect
 permissions:
   contents: read
 jobs:
@@ -56,6 +79,8 @@ jobs:
       # bin/ (zip): the published-only proof of the release pinned below.
       # Everything else always comes from the published zip.
       KELIVER_SCAFFOLD_FROM: ${{ github.event_name == 'workflow_dispatch' && 'zip' || 'repo' }}
+      # W7: the device route prepare.sh builds for (emulator on a pull request).
+      KELIVER_DEVICE: ${{ inputs.device_route || 'emulator' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -115,10 +140,10 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: aosp_atd
+          target: ${{ inputs.emulator_target || 'aosp_atd' }}
           arch: x86_64
           profile: pixel_5
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu ${{ inputs.emulator_gpu || 'swiftshader_indirect' }}
           disable-animations: true
           script: bash reference/inventory/ci/device.sh "$RUNNER_TEMP/ref" "$GITHUB_WORKSPACE/evidence"
 
