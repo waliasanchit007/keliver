@@ -148,7 +148,10 @@ grep -q 'addPathSegments("bundles/index.json")' "$M" && grep -q 'response.code =
 # start, and rises only from a verified successful load.
 grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(floor)' "$M" \
   && grep -q 'ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)' "$M" \
-  && grep -q 'putLong(floorKey(cacheName), sequence).commit()' "$M" \
+  && grep -q 'putLong(floorKey(it), sequence)' "$M" && grep -q 'prefs.raiseFloor(floorNames, sequence)' "$M" \
+  && grep -q 'edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()' "$M" \
+  && grep -q 'floorAcross(cacheNames.map { floor(it) })' "$M" && grep -q 'val floor = { prefs.floor(floorNames) }' "$M" \
+  && grep -q 'prefs.raiseFloor(floorNames, floor())' "$M" \
   && grep -q 'manifestSequence(manifest.metadata)' "$M" && grep -q 'sequence?.let(onSequence)' "$M" \
   && ok "W4.2: the rollback floor guards the network load, the cache start and its network fallback, and rises (committed) after a load" \
   || bad "W4.2: the rollback floor is not wired"
@@ -207,8 +210,10 @@ grep -q '^keliver.bundleServer=http://10.0.2.2:8077$' "$L/keliver.properties" &&
   && ok "the settings are in keliver.properties (a subproject's gradle.properties is not read)" || bad "keliver.properties"
 cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$L/src/main/assets/keliver/portal_ed25519.pub") \
   && ok "the key is the module's src/main/assets/keliver/portal_ed25519.pub" || bad "the embedded module's key"
-grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyHex" "$L/build.gradle" && grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyHex" "$H/build.gradle" \
-  && grep -q 'publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX' "$LK/KeliverHost.kt" && ! grep -q 'assets.open' "$LK/KeliverHost.kt" \
+grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$L/build.gradle" && grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$H/build.gradle" \
+  && grep -q "KELIVER_NEXT_PUBLIC_KEY_HEX'.*portalKeyLines\[1\]" "$L/build.gradle" && grep -q "KELIVER_NEXT_PUBLIC_KEY_HEX'.*portalKeyLines\[1\]" "$H/build.gradle" \
+  && grep -q 'publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX' "$LK/KeliverHost.kt" && grep -q 'nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX' "$LK/KeliverHost.kt" \
+  && ! grep -q 'assets.open' "$LK/KeliverHost.kt" \
   && ok "the host trusts the checked key compiled into BuildConfig, never the merged assets (another asset of that name cannot replace it)" \
   || bad "the host still reads its key from the merged assets"
 grep -q 'claim(cacheNameFor(it.publicKeyHex))' "$LK/KeliverHost.kt" && ! grep -q '^    claim(cacheName)' "$LK/KeliverHost.kt" \

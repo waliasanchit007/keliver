@@ -1140,7 +1140,26 @@ error would quote the whole string.
 - A CRLF `build.gradle` comes back with LF line endings, as with the append.
 - Any copy of the old block an adopter edited by hand.
 
-### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — OPEN
+### U30. `syncPortalKey` empties its directory through symlinks, and ignores failures — FIXED (2026-10-11, W8)
+
+> **Fixed** in `portal-device-android/build.gradle`'s `syncPortalKey`, with
+> `generatePortalKey`'s pattern:
+> - a link at `build/portalKeys` itself is refused;
+> - the tree is deleted with `Files.walk` + `Files.delete`, which never follow
+>   a link;
+> - the key is written with `CREATE_NEW`;
+> - the build fails unless the directory then holds exactly what the task
+>   wrote.
+>
+> **Measured locally** (the development-only shape, `-Pkeliver.devOnlyHost=true`):
+> - a link planted inside the directory, pointing at a directory holding a
+>   file: the link is removed, and the target and its file are untouched;
+> - a link at the directory itself: the task fails ("is a symbolic link"), and
+>   the target is untouched.
+>
+> Not in tools 0.3.8: it changes the development host's build, and 0.3.8's
+> candidate had already been verified.
+
 
 Found by the independent review of the #77 fix, 2026-09-24.
 `portal-device-android/build.gradle`'s `syncPortalKey` empties

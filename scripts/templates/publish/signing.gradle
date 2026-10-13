@@ -1,6 +1,6 @@
 
 // ---------------------------------------------------------------------------
-// keliver: PUBLISH SIGNING (v2) — written by keliver-new-publish-target.sh.
+// keliver: PUBLISH SIGNING (v3) — written by keliver-new-publish-target.sh.
 //
 // The relay's POST /publish runs `publishTask` (keliver.portal.json) and keeps
 // its output as a versioned bundle ONLY if the manifest is signed with this
@@ -50,6 +50,13 @@
 // the modules are not touched: keliver-publish checks that only the sequence
 // and the signature changed. Without a key it fails rather than leave the copy
 // unsigned.
+//
+// KEY ROTATION (W8, docs/KEY_ROTATION.md). The key file may hold TWO private
+// keys, one per line: this app's key, then the next one. Each key signs under
+// a name of its own (keliver-ed25519-<its public key's first 16 hex digits>),
+// in that order, and the first key also signs as portal-ed25519, LAST: hosts
+// from before W8 trust only that name, and Zipline checks only the first
+// signature a host trusts. Hosts that trust either key load the bundle.
 //
 // Not configuration-cache compatible: the store is resolved by running a
 // process (keliver-init leaves the cache off).
@@ -102,12 +109,25 @@ def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
     return
   }
   if (!manifestFile.isFile()) throw new GradleException("keliver: ${missing} ${manifestFile} to sign")
-  def hex = key.text.trim()
+  // One private key per line (W8): this app's key, then, during a rotation, the next one.
+  def lines = key.readLines().collect { it.trim() }.findAll { it }
   // Checked before decoding: okio's error for a malformed string quotes all of it.
-  if (!(hex ==~ /[0-9a-fA-F]{64}/)) throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key (its content is not shown)")
-  def signer = new app.cash.zipline.loader.ManifestSigner.Builder()
-    .addEd25519('portal-ed25519', okio.ByteString.decodeHex(hex))
-    .build()
+  if (lines.isEmpty() || !lines.every { it ==~ /[0-9a-fA-F]{64}/ }) {
+    throw new GradleException("keliver: ${key} is not a 64-hex-digit Ed25519 private key on each line (its content is not shown)")
+  }
+  if (lines.size() > 2) throw new GradleException("keliver: ${key} holds ${lines.size()} keys; at most two (this app's key, then the next one during a rotation)")
+  if (lines.size() == 2 && lines[0].equalsIgnoreCase(lines[1])) throw new GradleException("keliver: ${key} holds the same key twice")
+  def builder = new app.cash.zipline.loader.ManifestSigner.Builder()
+  def names = []
+  lines.each { hex ->
+    def seed = okio.ByteString.decodeHex(hex.toLowerCase())
+    def pub = app.cash.zipline.loader.internal.tink.subtle.KeyPairKt.newKeyPairFromSeed(seed).publicKey.hex()
+    def name = "keliver-ed25519-${pub.substring(0, 16)}".toString()
+    builder.addEd25519(name, seed)
+    names << name
+  }
+  // Last: the only name hosts from before W8 trust.
+  def signer = builder.addEd25519('portal-ed25519', okio.ByteString.decodeHex(lines[0].toLowerCase())).build()
   // The Kotlin companion object (Groovy would take `.Companion` for the nested class).
   def manifest = app.cash.zipline.ZiplineManifest.getField('Companion').get(null).decodeJson(manifestFile.text)
   if (sequence != null) {
@@ -116,8 +136,8 @@ def keliverSign = { File manifestFile, boolean keyRequired, String missing ->
       manifest.version, manifest.metadata + ['keliver.sequence': sequence])
   }
   manifestFile.text = signer.sign(manifest).encodeJson()
-  logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key" +
-    (sequence != null ? ", for sequence ${sequence}" : ""))
+  logger.lifecycle("keliver: signed ${manifestFile.name} with this app's portal-ed25519 key (${names[0]})" +
+    (names.size() > 1 ? " and the next key (${names[1]})" : "") + (sequence != null ? ", for sequence ${sequence}" : ""))
 }
 tasks.withType(app.cash.zipline.gradle.ZiplineCompileTask).configureEach { compileTask ->
   compileTask.inputs.property('keliverPublishSequence', keliverPublishSequence.orElse(''))

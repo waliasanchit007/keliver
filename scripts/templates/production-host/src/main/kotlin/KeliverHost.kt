@@ -126,6 +126,19 @@ private fun floorKey(cacheName: String) = "highestSequence-$cacheName"
 /** The stored floor; a value of the wrong type (only tampering writes one) reads as unreadable, i.e. refuse all. */
 private fun SharedPreferences.floor(cacheName: String): Long =
   runCatching { getLong(floorKey(cacheName), 0L) }.getOrDefault(Long.MAX_VALUE)
+/** W8: the floor across every trusted key's own floor ([cacheNames]: one per key), so a rotation never lowers it. */
+private fun SharedPreferences.floor(cacheNames: List<String>): Long = floorAcross(cacheNames.map { floor(it) })
+/**
+ * Writes [sequence] as the floor under every key in [cacheNames] that holds a
+ * lower one. commit(), not apply(): a floor write lost to a kill would let an
+ * older sequence run again. An unreadable floor (Long.MAX_VALUE) is never copied.
+ */
+private fun SharedPreferences.raiseFloor(cacheNames: List<String>, sequence: Long) {
+  if (sequence == Long.MAX_VALUE) return
+  val lower = cacheNames.filter { floor(it) < sequence }
+  if (lower.isEmpty()) return
+  edit().apply { lower.forEach { putLong(floorKey(it), sequence) } }.commit()
+}
 /**
  * This install's random id, for staged rollouts (W4.5): made once, kept here.
  * It leaves the device only in reports, and only when a report URL is set (W6).
@@ -153,6 +166,8 @@ class KeliverConfig(
   val hostVersion: Long? = null,
   val updates: KeliverUpdates = KeliverUpdates.NEXT_LAUNCH,
   val reportUrl: String? = null,
+  /** W8: the NEXT signing key's public half, trusted too while a rotation is under way (docs/KEY_ROTATION.md). */
+  val nextPublicKeyHex: String? = null,
 ) {
   companion object {
     fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
@@ -162,6 +177,7 @@ class KeliverConfig(
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },
       updates = if (BuildConfig.KELIVER_UPDATES == "on-resume") KeliverUpdates.ON_RESUME else KeliverUpdates.NEXT_LAUNCH,
       reportUrl = BuildConfig.KELIVER_REPORT_URL.takeIf { it.isNotBlank() },
+      nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
     )
   }
 }
@@ -343,7 +359,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
 
   private suspend fun run() {
     // Decided BEFORE any fetch: no valid key, no network, no bundle.
-    val trust = decideProductionTrust(config.publicKeyHex)
+    val trust = decideProductionTrust(config.publicKeyHex, config.nextPublicKeyHex)
     if (trust is ProductionTrust.Refused) {
       Log.e(TAG, "refusing to load: ${trust.message}")
       mutableState.value = KeliverHostState.Message("Refusing to load", trust.message)
@@ -351,16 +367,21 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       return
     }
     trust as ProductionTrust.Verified
-    Log.d(TAG, "verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…; updates ${config.updates.name.lowercase().replace('_', '-')}")
-    val verifier = ManifestVerifier.Builder()
-      .addEd25519("portal-ed25519", trust.publicKeyHex.decodeHex())
-      .build()
+    Log.d(TAG, "verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates ${config.updates.name.lowercase().replace('_', '-')}")
+    // Each key under its own name, and the first under portal-ed25519 too (W8,
+    // BundleIndex.kt: trustedSignatures).
+    val verifier = ManifestVerifier.Builder().apply {
+      trustedSignatures(trust.publicKeysHex).forEach { (name, key) -> addEd25519(name, key.decodeHex()) }
+    }.build()
     // One Zipline cache per key. Zipline verifies its pinned manifest before it
     // tries the network, and throws if that fails; a cache shared across a key
     // change would hold a manifest the new key cannot verify, and no bundle
     // would load, online or not. The old key's cache stays on disk, unused.
     // (Claimed in create(), so a second host for this key fails there.)
     val cacheName = cacheNameFor(trust.publicKeyHex)
+    // The rollback floor is kept under every trusted key, and read as the highest
+    // (W8): a host that trusts the next key carries the floor over to it.
+    val floorNames = trust.publicKeysHex.map(::cacheNameFor)
 
     val okhttp = OkHttpClient()
     val server = config.bundleServer.toHttpUrlOrNull()
@@ -384,7 +405,8 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val lastGood = prefs.getString(lastGoodKey(cacheName), null)?.takeIf { sameOrigin(it.toHttpUrlOrNull(), server) }
     // Read when each manifest arrives, not once here: a restart after a crash
     // must see a floor raised since this host started.
-    val floor = { prefs.floor(cacheName) }
+    val floor = { prefs.floor(floorNames) }
+    prefs.raiseFloor(floorNames, floor())
     // Short timeouts: offline, this decides how long the app waits before it
     // starts from the cache. Each lookup gives its calls only what is left of
     // LOOKUP_BUDGET_MILLIS (lookupBundle).
@@ -402,7 +424,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         Log.d(TAG, "loading ${latest.manifestUrl} (${latest.source}); rollback floor ${floor()}")
         val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), latest.manifestUrl, latest.manifestSha256, floor)
         // A failed load falls back to the cached last good bundle, if there is one (W5).
-        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh, lookup, fallback = lastGood)
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, latest.manifestUrl, DefaultFreshnessCheckerNotFresh, lookup, fallback = lastGood)
       }
       lastGood != null -> {
         Log.d(TAG, "lookup failed; starting from the cached bundle (last loaded from $lastGood); rollback floor ${floor()}")
@@ -410,7 +432,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         // lastGood from the network, and a lookup that failed proves nothing about
         // that server (it may have failed the lookup on purpose).
         val http = ManifestPinningHttpClient(okhttp.asZiplineHttpClient(), lastGood, null, floor)
-        startTreehouse(prefs, verifier, cacheName, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor), lookup, fallback = null)
+        startTreehouse(prefs, verifier, cacheName, floorNames, okhttp, http, apiBase, lastGood, AcceptCachedBundle(floor), lookup, fallback = null)
       }
       else -> {
         mutableState.value = KeliverHostState.Message("No bundle", "No compatible bundle at $server, and none loaded before.")
@@ -525,6 +547,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     prefs: SharedPreferences,
     verifier: ManifestVerifier,
     cacheName: String,
+    floorNames: List<String>,
     okhttp: OkHttpClient,
     ziplineHttp: ManifestPinningHttpClient,
     apiBase: HttpUrl?,
@@ -602,11 +625,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
         },
         onLoaded = { url -> prefs.edit().putString(lastGoodKey(cacheName), url).apply() },
         onSequence = { sequence ->
-          val floor = prefs.floor(cacheName)
+          val floor = prefs.floor(floorNames)
           if (sequence > floor) {
-            // commit(), not apply(): Zipline has already pinned this bundle, and a
-            // floor write lost to a kill would let the previous sequence run again.
-            prefs.edit().putLong(floorKey(cacheName), sequence).commit()
+            // Committed before this returns: Zipline has already pinned this bundle,
+            // and a floor write lost to a kill would let the previous sequence run again.
+            prefs.raiseFloor(floorNames, sequence)
             Log.d(TAG, "rollback floor raised: $floor -> $sequence")
           }
         },
@@ -739,7 +762,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
      * throws here.
      */
     fun create(context: Context, config: KeliverConfig = KeliverConfig.fromBuild(context)): KeliverHost {
-      (decideProductionTrust(config.publicKeyHex) as? ProductionTrust.Verified)?.let { claim(cacheNameFor(it.publicKeyHex)) }
+      (decideProductionTrust(config.publicKeyHex, config.nextPublicKeyHex) as? ProductionTrust.Verified)?.let { claim(cacheNameFor(it.publicKeyHex)) }
       return KeliverHost(context, config)
     }
   }

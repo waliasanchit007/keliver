@@ -36,11 +36,15 @@ on:
       - "reference/inventory/ci/w3/**"
       - "reference/inventory/ci/w2/**"
       - "reference/inventory/ci/w5/**"
+      - "reference/inventory/ci/w8/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"
       - "portal-relay/src/main/kotlin/StaticIndex.kt"
       - "portal-relay/src/main/kotlin/KeliverPublish.kt"
+      - "portal-relay/src/main/kotlin/PublishSignature.kt"
+      - "portal-relay/src/main/kotlin/KeyRotation.kt"
+      - "scripts/templates/publish/**"
       - ".github/workflows/ios-host.yml"
   workflow_dispatch: {}
 permissions:

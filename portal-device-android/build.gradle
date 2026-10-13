@@ -121,11 +121,30 @@ tasks.register('syncPortalKey') {
   outputs.upToDateWhen { false }
   doLast {
     def dir = portalKeyDir.get().asFile
-    dir.deleteDir()
-    dir.mkdirs()
+    def path = dir.toPath()
+    // U30: never through a link. Groovy's deleteDir() recursed through a
+    // symbolic link into its target (emptying it) and reported a failure only
+    // as `false`. This is generatePortalKey's (portal-device-ios) fix: refuse a
+    // link at the directory, delete the tree without following links, and check
+    // that the directory then holds exactly what this task wrote. The directory
+    // is an assets.srcDirs entry, so anything left in it would ship.
+    if (java.nio.file.Files.isSymbolicLink(path)) {
+      throw new GradleException("syncPortalKey: $dir is a symbolic link. Refusing to empty or write " +
+        "through it; remove it (it is under the build directory) and build again.")
+    }
+    if (java.nio.file.Files.exists(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+      // Files.walk does not follow links, and Files.delete removes a link itself.
+      def doomed = java.nio.file.Files.walk(path).withCloseable { it.sorted(Comparator.reverseOrder()).toList() }
+      doomed.each { java.nio.file.Files.delete(it) }
+    }
+    java.nio.file.Files.createDirectories(path)
+    def expected = []
     if (embedPortalKey.get()) {
       def src = portalPubKey.get()
-      new File(dir, 'portal_ed25519.pub').bytes = src.bytes
+      // CREATE_NEW: fails if anything, a link included, appeared at that name.
+      java.nio.file.Files.write(path.resolve('portal_ed25519.pub'), src.bytes,
+        java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE)
+      expected = ['portal_ed25519.pub']
       logger.lifecycle("portal-device-android: embedding portal key from ${src}")
     } else if (devOnlyHost) {
       // Not "=true": true 1 yes on are all accepted, and echoing a value the
@@ -140,6 +159,11 @@ tasks.register('syncPortalKey') {
       logger.lifecycle("portal-device-android: no portal key embedded — no key at " +
         "${portalPubKey.get()}. This host is NOT marked development-only, so production " +
         "mode will have no identity to verify against.")
+    }
+    def held = ((dir.list() ?: new String[0]) as List).sort()
+    if (held != expected) {
+      throw new GradleException("syncPortalKey: $dir holds $held after syncing, not exactly $expected. " +
+        "It is an assets directory, so refusing to package from it.")
     }
   }
 }

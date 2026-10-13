@@ -743,6 +743,85 @@ HTTPS. Then one external adopter. These need the owner's hardware or accounts:
 - CI key storage guidance.
 - Fix U30.
 
+#### W8 design (2026-10-11; built 2026-10-12 with the recommended answers)
+
+**U30 is fixed** (`portal-device-android` `syncPortalKey`, on `feat/w8-keys`;
+see `KNOWN_BUGS.md`).
+
+**What constrains a rotation** (Zipline 1.22 and today's hosts):
+- A manifest's signatures are keyed by **name**. A host's `ManifestVerifier`
+  checks the signatures whose names it trusts, and needs at least one to
+  verify.
+- Every host shipped so far trusts exactly one key, under the name
+  `portal-ed25519`.
+- The signing block signs with one key, under that name.
+- The rollback floor and the Zipline cache are kept per key (the key's first
+  16 hex digits).
+
+**Proposed rotation: dual-signing, three phases.**
+1. **Hosts trust a set.** New hosts trust `portal-ed25519` (the current key)
+   and `portal-ed25519-next` (the next key), each a separate line in the key
+   file. The build checks every line. Ship these hosts, and wait until the old
+   ones are gone or forced to update.
+2. **Dual-sign.** The signing block signs each manifest twice, with the
+   current key as `portal-ed25519` and the next key as `portal-ed25519-next`.
+   Old hosts verify the first signature, new hosts either one. Nothing breaks
+   at any point.
+3. **Retire.** The next key becomes the only signer, and later hosts trust
+   only it, under its own name.
+
+**The floor across a rotation.** A host reads the highest floor over all the
+keys it trusts and writes it under each, so a key change never reopens the
+rollback window. Today a new key starts at 0. That reopening is exactly what
+W4.2's "one key, one sequence space" warns about.
+
+**Key custody guidance** (docs only):
+- The private key lives in a CI secret, written to a file at job start, as
+  `KELIVER_SIGNING_KEY_FILE` already supports.
+- It is never in the repository, and never on a command line (U31).
+- Offline backup of the next key.
+- A short "what to do if the key leaks" runbook: rotate, ship hosts trusting
+  only the new key, and raise the floor.
+
+**Decisions (2026-10-12).** The owner gave full control overnight. W8 was
+built with the recommended answers, which the owner can still change:
+1. **Dual-signing**, not a signed key handover.
+2. **At most 2 keys** per host: this app's key, then the next one.
+3. **A publish guard:** `keliver-publish` refuses a bundle that shares no
+   signing key with the newest published bundle, unless `--accept-key-change`.
+
+**One change from the draft above: signature names.** Zipline 1.22 checks only
+the FIRST signature in a manifest whose name the host trusts, and fails if
+that one does not verify. Positional names (`portal-ed25519`,
+`portal-ed25519-next`) would therefore break at the retire step. So:
+- Each key signs under its own name, `keliver-ed25519-<first 16 hex>`, first.
+- `portal-ed25519`, signed by the first key, comes LAST: it is all a host from
+  before W8 trusts.
+- A host trusts each of its keys under its own name, and its first key under
+  `portal-ed25519` too.
+
+**Built:**
+- **Hosts** (Android key file lines; iOS `PORTAL_NEXT_PUBLIC_KEY_HEX`) trust
+  one or two keys.
+- **The rollback floor** is the highest over the trusted keys, written under
+  each, also at start.
+- **The signing block** (v3) signs with one or two keys. The 0.3.8 block is
+  saved as `templates/publish/legacy/signing-0.3.8.gradle`, so
+  `keliver-new-publish-target.sh` upgrades it.
+- **`keliver-publish`:**
+  - one or two public keys;
+  - the guard;
+  - `--new-signing-key <dir>`;
+  - a republish source needs only a listed key's signature;
+  - it refuses a bundle whose `portal-ed25519` is not this app's key when that
+    key signed.
+- **Docs:** `docs/KEY_ROTATION.md` (the three steps, the guard, the floor,
+  custody, a leaked key).
+
+**Known gap (documented):** an install that jumps from a host trusting only the
+old key straight to one trusting only the new key starts the new key's floor
+at 0, until its first load.
+
 ## Order and dependencies
 
 W1 (iOS parity) → W3 (headless publish + static index, which W4 builds on) →
@@ -787,7 +866,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | W6.3 relay collector | **done 2026-10-11:** `POST /report`, `GET /reports`, `GET /reports/view` (`HostReports.kt`). `HostReportsTest` 4/0, on CI in build 38133756571. V2 is in the harnesses: SKIP on CI's published relay, and **passed end to end** in candidate 3's local `ios.sh` on the zip | PR #97 |
 | **tools 0.3.8 RELEASED** (candidate 3: W3 + W4 + W2 + W5 + W6) | **released 2026-10-11** on the owner's approval.<br>• **Tag:** `portal-tools-v0.3.8` → `731ebfce`; the push ran only the read-only rebuild 38150887414.<br>• **Zip** `aafed0d8…` (90,584,445 bytes), uploaded from the verified artifact `11700407805`.<br>• **Checked before publishing:** both stored assets' server digests and sizes (download-back blocked by the network, as for 0.3.5). After publishing: the public `.sha256` here, and the public zip verified from GitHub-hosted runners (`sha256sum -c` OK: 38151355318, 38155942970, 38151386539).<br>• **Published-only proof** (runs started by hand, only the zip's `bin/`): reference-app 38155942970, device **135/0**; ios-host 38151386539, `ios.sh` **120/0**. V2 is on CI now, because the published relay collects reports.<br>• **Candidate 3's verification:** build 38133756571; device 38134971077 (19/0, 28/0); local check; `ios.sh` on the zip 120/0, V2 included.<br>The record is in `docs/RELEASE_NOTES_TOOLS_0.3.8.md`. Candidates 1 and 2 were superseded and never tagged. | release |
 | PR stack #94–#97 merged | **done 2026-10-11** after the release, by merge commits: #94 `09661866`, #95 `642f4a13`, #96 `6ba680c5`, #97 `2bae5cbb`. Both 0.3.7 and 0.3.8 tags are reachable from `main`; no branch was deleted | `main` |
-| W8 | **U30 fixed** (measured locally); the rotation design is drafted and needs the owner's decisions (PR #98, draft, based on `main`) | PR #98 |
+| W8 | **built 2026-10-12** with the recommended answers (W8 design above). U30 fixed. Evidence:<br>• **Unit:** `KeyRotationTest` 14/0 (Zipline's own signer and verifier over a whole rotation, and the publisher's check never accepting what a W8 or pre-W8 host refuses); portal-relay 192/0.<br>• **Scaffold self-tests:** `keliver-publish` 41/0 locally; publish-target `--build` 44/0 on CI, which signs with two keys in a real Gradle build and refuses three (portal-tools 38214047382).<br>• **Earlier commit `15e52646`:** `ci.yml` 38214024406 green.<br>• **Rows K1–K8, all passing on both platforms at `52be15a4`:** the guard, dual-signed, a pre-W8 host from the published zip, the floor across keys, the next key alone, each side refusing the other's. Runs: reference-app 38215749144 (device **153/0**, prepare 30/0, `keliver-publish` self-test 41/0); ios-host 38215749105 (`ios.sh` **140/0**, self-test 68/0); `ci.yml` 38215749027 green; portal-tools 38215747969 (all self-tests green).<br>• **Independent review:** no blocking point; its 6 should-fix points and the relevant nits are fixed (`52be15a4`). | PR #98 |
 | W7 | **prep done 2026-10-12; not executed on hardware** (PR #100). `docs/DEVICE_PROOF.md`: the session's checklist (Android over USB, iPhone signing and `devicectl`, real-certificate HTTPS, release-signed APK and IPA, the embed proof, what to record, what it does not prove). The Android harness has a physical-device route (`KELIVER_DEVICE=physical`: hosts built for `127.0.0.1` behind `adb reverse`, the throwaway CA inside the test APKs, the development host's rows SKIP), **rehearsed on the CI emulator only** (`reference-app.yml` 38202773284, `device_route=physical`: prepare 28/0, device 130/0, E1–E10 and D3 SKIP; not a device result). `ci/w7/ios-device.sh` (build, sign, install, first load on an iPhone) has never run. Found and fixed: **U32**, the iOS host ignored `TEAM_ID`. D14 screenshots: black only on the `aosp_atd` image; `google_apis` gives VALID captures, device 135/0 (38213948442; `REFERENCE_APP.md`). Moving CI to it is a decision left open. CI at `ebdd0b31d`: reference-app 38213936318 (135/0), physical rehearsal 38213940854 (28/0, 130/0), ios-host 38213936321 (self-test 69/0, `ios.sh` 120/0), `ci.yml` 38213936497. Still needs the owner: the devices, an Apple team, a real-certificate server, an adopter app | PR #100 |
 
 ## Next action
@@ -849,7 +928,8 @@ What was done for the candidate:
   `scripts/`, a run started by hand only the published zip. Published-only and
   PR runs are green. It also raises `ci.yml`'s job limit to 90 minutes: on
   cloud macOS the full graph took 50–60 minutes, and the last test steps kept
-  being cut off as "cancelled". Merge it once its `ci.yml` is green.
+  being cut off as "cancelled". **Merged 2026-10-11** (`7a58eadc`) after its
+  full `ci.yml` passed in 63 minutes (38160559466).
 - **W8 (PR #98):** the owner decides on the rotation design. Then build it,
   with an independent review, CI, and a tools release (0.3.9) with approval.
 - **W7** needs the owner: physical devices and an adopter. The preparation is

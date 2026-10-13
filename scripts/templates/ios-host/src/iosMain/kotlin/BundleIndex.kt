@@ -267,3 +267,34 @@ internal fun reportReason(outcome: String, detail: String): String {
     else -> "other"
   }
 }
+
+/*
+ * W8, signing-key rotation (docs/KEY_ROTATION.md). A host trusts this app's key
+ * and, during a rotation, the next one. Zipline 1.22's ManifestVerifier checks
+ * only the FIRST signature in a manifest whose name the host trusts, and fails
+ * if that one does not verify, so a name must mean the same key to every host
+ * and every signer: each key signs under a name of its own, made from its first
+ * 16 hex digits, and those signatures come first. The signing block then adds
+ * `portal-ed25519`, signed by its first key, LAST: hosts from before W8 trust
+ * only that name. A host trusts each of its keys under the key's own name, and
+ * its first key under `portal-ed25519` too, so bundles signed before W8 load.
+ */
+
+/** The only signature name hosts from before W8 trust. */
+internal const val LEGACY_SIGNATURE_NAME = "portal-ed25519"
+
+/** The name a key's own signature carries in a manifest (W8). */
+internal fun keySignatureName(publicKeyHex: String): String = "keliver-ed25519-${publicKeyHex.lowercase().take(16)}"
+
+/** The (name, public key hex) pairs a host trusting [publicKeysHex] verifies manifests with, in that order. */
+internal fun trustedSignatures(publicKeysHex: List<String>): List<Pair<String, String>> {
+  require(publicKeysHex.size in 1..2 && publicKeysHex.toSet().size == publicKeysHex.size) { "one or two distinct keys" }
+  return publicKeysHex.map { keySignatureName(it) to it.lowercase() } + (LEGACY_SIGNATURE_NAME to publicKeysHex.first().lowercase())
+}
+
+/**
+ * The rollback floor across a rotation (W8): the highest of the floors kept for
+ * each trusted key ([floors], null where a key has none). A host writes it back
+ * under each key, so a key change never lowers it.
+ */
+internal fun floorAcross(floors: List<Long?>): Long = floors.maxOf { it ?: 0L }

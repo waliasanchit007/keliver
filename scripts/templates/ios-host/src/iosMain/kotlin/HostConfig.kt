@@ -7,6 +7,10 @@ package @@PACKAGE@@
 // is never here. Keep each line in the form `const val NAME: String = "..."`;
 // the build checks them (build.gradle: checkHostConfig, checkReleaseUrls).
 //
+// PORTAL_NEXT_PUBLIC_KEY_HEX (W8) is empty, except while a signing key is being
+// rotated: then it is the NEXT key's public half, and the host trusts bundles
+// signed by either key (docs/KEY_ROTATION.md).
+//
 // CHANNEL is the release channel this host takes from bundles/index.json,
 // besides stable (W4.4): e.g. beta for testers. Lower-case letters, digits and '-'.
 //
@@ -19,6 +23,7 @@ package @@PACKAGE@@
 // collector. Empty: no reports leave the device (Keliver.onReport still gets
 // them). A release build refuses http://.
 internal const val PORTAL_PUBLIC_KEY_HEX: String = "@@KEY_HEX@@"
+internal const val PORTAL_NEXT_PUBLIC_KEY_HEX: String = ""
 internal const val BUNDLE_SERVER: String = "@@BUNDLE_SERVER@@"
 internal const val API_BASE_URL: String = "@@API_BASE_URL@@"
 internal const val CHANNEL: String = "@@CHANNEL@@"

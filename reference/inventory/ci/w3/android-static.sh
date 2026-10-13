@@ -52,13 +52,13 @@ fi
 cp "$W3_TLS/ca.pem" "$EV/w3-ca.pem"
 
 ( cd "$APP" && "${W3_PUBLISH_TARGET:-$REPO/scripts/keliver-new-publish-target.sh}" ) > "$EV/w3-signing-upgrade.log" 2>&1
-if grep -q '(signing-0.3.7) was replaced by the current one' "$EV/w3-signing-upgrade.log"; then
+if grep -qE '\(signing-0\.3\.[0-9]+\) was replaced by the current one' "$EV/w3-signing-upgrade.log"; then
   ( cd "$APP" && git add build.gradle && git -c user.name=w3 -c user.email=w3@invalid commit -qm "W3: the signing block that reads KELIVER_SIGNING_KEY_FILE" ) \
-    && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's 0.3.7 signing block" || bad "W3: could not commit the upgraded signing block"
+    && ok "W3: this checkout's keliver-new-publish-target.sh upgraded the app's $(grep -oE 'signing-0\.3\.[0-9]+' "$EV/w3-signing-upgrade.log" | head -1) signing block" || bad "W3: could not commit the upgraded signing block"
 elif grep -q 'already has the signing block this script writes' "$EV/w3-signing-upgrade.log"; then
   ok "W3: the app's signing block is already the current one (a candidate zip's scaffolder wrote it)"
 else
-  bad "W3: upgrading the 0.3.7 signing block"; cat "$EV/w3-signing-upgrade.log"
+  bad "W3: upgrading the app's signing block"; cat "$EV/w3-signing-upgrade.log"
 fi
 
 SCREEN="$APP/src/jsMain/kotlin/screens/inventory.kt"

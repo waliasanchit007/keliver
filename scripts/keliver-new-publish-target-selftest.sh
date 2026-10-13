@@ -200,6 +200,29 @@ assert after == before.replace(legacy, new) and after.count(new) == 1
 PY
 then ok "a 0.3.7 signing block is swapped for the current one, without the U31 advice"
 else bad "upgrading a 0.3.7 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
+# An app wired by tools 0.3.8 (one key, W4 sequences): swapped for the current
+# block (W8: up to two keys), also without the U31 advice.
+LEGACY38="$ROOT/scripts/templates/publish/legacy/signing-0.3.8.gradle"
+make_app wired38 device
+( cd "$DISP/wired38" && "$SCAFFOLD" > /dev/null 2>&1 )
+python3 - "$DISP/wired38/build.gradle" "$LEGACY38" <<'PY'
+import sys
+p, legacy = sys.argv[1], open(sys.argv[2]).read()
+s = open(p).read()
+i = s.index('// ---------------------------------------------------------------------------\n// keliver: PUBLISH SIGNING')
+open(p, 'w').write(s[:i] + legacy)
+PY
+cp "$DISP/wired38/build.gradle" "$DISP/wired38.before"
+out="$( cd "$DISP/wired38" && "$SCAFFOLD" 2>&1 )"; rc=$?
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q '(signing-0.3.8) was replaced by the current one' \
+   && ! printf '%s' "$out" | grep -q 'U31' \
+   && python3 - "$DISP/wired38.before" "$DISP/wired38/build.gradle" "$LEGACY38" "$ROOT/scripts/templates/publish/signing.gradle" <<'PY'
+import sys
+before, after, legacy, new = (open(p).read() for p in sys.argv[1:5])
+assert after == before.replace(legacy, new) and after.count(new) == 1
+PY
+then ok "a 0.3.8 signing block is swapped for the current one, without the U31 advice"
+else bad "upgrading a 0.3.8 block: rc=$rc $(printf '%s' "$out" | head -2 | tr '\n' ' ')"; fi
 # The upgrade swaps the block only: an app on another publish variant keeps it.
 make_app prodvariant device
 ( cd "$DISP/prodvariant" && "$SCAFFOLD" > /dev/null 2>&1 )
@@ -348,6 +371,49 @@ PY
   [ "$rc" != 0 ] && grep -q "the signing key file $DISP/no-such.priv does not exist" "$DISP/build-nokeyfile.log" \
     && ok "a KELIVER_SIGNING_KEY_FILE that does not exist fails the build" \
     || bad "a missing KELIVER_SIGNING_KEY_FILE: rc=$rc"
+
+  # W8: a key file with TWO private keys (this app's, then the next one) signs
+  # with each under its own name, then portal-ed25519 with the first, last; every
+  # signature verifies against its key, and neither key leaks. Three keys fail.
+  mkdir -p "$DISP/next"; ( umask 077; "$JAVA_HOME/bin/java" "$T/KeyGen.java" "$DISP/next" ) || bad "could not generate the next key pair"
+  NEXT="$(tr -d '[:space:]' < "$DISP/next/ed25519.pub")"
+  ( umask 077; { cat "$STORE/keys/ed25519.priv"; echo; cat "$DISP/next/ed25519.priv"; echo; } > "$DISP/both.priv" )
+  rm -rf "$APP"/.gradle/*/executionHistory
+  compile "$DISP/build-twokeys.log" KELIVER_SIGNING_KEY_FILE="$DISP/both.priv"; rc=$?
+  HIST="$(find "$APP/.gradle" -name executionHistory.bin 2>/dev/null | head -1)"
+  sigs="$(python3 - "$MANIFEST" "$T/payload.bin" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+sigs = m.get('unsigned', {}).get('signatures', {})
+del m['unsigned']
+open(sys.argv[2], 'w', encoding='utf-8').write(json.dumps(m, separators=(',', ':'), ensure_ascii=False))
+print(' '.join(f'{k}={v}' for k, v in sigs.items()))
+PY
+)"
+  verdict="$(set -- $sigs; [ $# = 3 ] || { echo "$# signatures"; exit; }
+    n1="${1%%=*}" n2="${2%%=*}" n3="${3%%=*}"
+    [ "$n1 $n2 $n3" = "keliver-ed25519-${PUB:0:16} keliver-ed25519-${NEXT:0:16} portal-ed25519" ] || { echo "names $n1 $n2 $n3"; exit; }
+    v1="$("$JAVA_HOME/bin/java" "$T/Verify.java" "$T/payload.bin" "$PUB" "${1#*=}")"
+    v2="$("$JAVA_HOME/bin/java" "$T/Verify.java" "$T/payload.bin" "$NEXT" "${2#*=}")"
+    v3="$("$JAVA_HOME/bin/java" "$T/Verify.java" "$T/payload.bin" "$PUB" "${3#*=}")"
+    echo "$v1 $v2 $v3")"
+  leak="$(python3 - "$DISP/next/ed25519.priv" "$DISP/build-twokeys.log" ${HIST:+"$HIST"} <<'PY'
+import sys
+hexk = open(sys.argv[1]).read().strip().lower(); raw = bytes.fromhex(hexk)
+print('absent' if not [p for p in sys.argv[2:] if raw in open(p, 'rb').read() or hexk.encode() in open(p, 'rb').read().lower()] else 'PRESENT')
+PY
+)"
+  if [ "$rc" = 0 ] && [ "$verdict" = "true true true" ] && [ -n "$HIST" ] && [ "$leak" = absent ] \
+     && [ "$(key_in "$DISP/build-twokeys.log" "$HIST")" = absent ] \
+     && grep -q "and the next key (keliver-ed25519-${NEXT:0:16})" "$DISP/build-twokeys.log"; then
+    ok "W8: two keys sign under their own names, then portal-ed25519 (first key) last; all verify; neither key leaks"
+  else
+    bad "W8: two-key signing: rc=$rc, verdict '$verdict', next key $leak, history ${HIST:-none}"
+  fi
+  ( umask 077; { cat "$STORE/keys/ed25519.priv"; echo; cat "$DISP/next/ed25519.priv"; echo; printf '5a%.0s' $(seq 1 32); echo; } > "$DISP/three.priv" )
+  compile "$DISP/build-threekeys.log" KELIVER_SIGNING_KEY_FILE="$DISP/three.priv"; rc=$?
+  [ "$rc" != 0 ] && grep -q "holds 3 keys; at most two" "$DISP/build-threekeys.log" \
+    && ok "W8: a signing key file with three keys fails the build" || bad "W8: three keys: rc=$rc"
 
   # W4: a publish sequence goes into the SIGNED metadata. signature_of verifies the
   # payload, which includes metadata, so "signed:true" covers the number too.

@@ -110,7 +110,8 @@ class StaticPublishTest {
     File(bundles, INDEX_FILE).writeText(
       """{"format":1,"note":"kept","entries":[{"sequence":7,"version":3,"channel":"beta","constraints":{"minHostVersion":4},"manifest":"v3/manifest.zipline.json"}]}""",
     )
-    val p = publishStatic(output("next", seq = 8), site, app.publicHex)
+    // This hand-written index has no v3/ to read its signer from (W8's guard would refuse); not what is tested here.
+    val p = publishStatic(output("next", seq = 8), site, app.publicHex, acceptKeyChange = true)
     assertEquals(4 to 8L, p.version to p.sequence) // past the highest version AND the highest sequence
     assertEquals("kept", index()["note"]!!.jsonPrimitive.content)
     assertEquals(JsonObject(mapOf("minHostVersion" to JsonPrimitive(4))), entries()[0]["constraints"])
