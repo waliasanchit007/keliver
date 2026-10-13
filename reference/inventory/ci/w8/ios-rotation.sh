@@ -63,18 +63,24 @@ OLD_NAME="keliver-ed25519-${PUB:0:16}"; NEXT_NAME="keliver-ed25519-${NEXT_PUB:0:
 REFUSED_LINE="manifest signature for key portal-ed25519 did not verify"
 # The hosts already in the field: the published zip's own scaffolder, written
 # where host-ios/ is (moved aside and put back), built into its own derived data.
-LEGACY_CFG_TEMPLATE="$KP/../templates/ios-host/src/iosMain/kotlin/HostConfig.kt"
+# Its scaffolder: the tools zip's own while that predates W8, else the published
+# tools 0.3.8 (ci/w8/legacy-tools.sh, hash-pinned).
+LKP="$KP"
+if grep -q PORTAL_NEXT_PUBLIC_KEY_HEX "$KP/../templates/ios-host/src/iosMain/kotlin/HostConfig.kt" 2>/dev/null; then
+  LKP="$(bash "$HERE/w8/legacy-tools.sh" "$W8D/legacy-tools" 2> "$EV/w8-legacy-tools.log")"
+fi
+LEGACY_CFG_TEMPLATE="$LKP/../templates/ios-host/src/iosMain/kotlin/HostConfig.kt"
 OLD_HOST="the host installed before these rows (this checkout's, one key)"
 rm -rf "$W8D/old.app"; cp -R "$APPB" "$W8D/old.app"
-if [ -x "$KP/keliver-new-ios-host.sh" ] && [ -f "$LEGACY_CFG_TEMPLATE" ] && ! grep -q PORTAL_NEXT_PUBLIC_KEY_HEX "$LEGACY_CFG_TEMPLATE"; then
+if [ -n "$LKP" ] && [ -x "$LKP/keliver-new-ios-host.sh" ] && [ -f "$LEGACY_CFG_TEMPLATE" ] && ! grep -q PORTAL_NEXT_PUBLIC_KEY_HEX "$LEGACY_CFG_TEMPLATE"; then
   mv "$APP/host-ios" "$W8D/host-ios.w8"
-  if ( cd "$APP" && "$KP/keliver-new-ios-host.sh" --bundle-server https://localhost:8443 --bundle-id "$BID" ) > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
+  if ( cd "$APP" && "$LKP/keliver-new-ios-host.sh" --bundle-server https://localhost:8443 --bundle-id "$BID" ) > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
      && ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
           -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd-legacy" \
           CODE_SIGNING_ALLOWED=NO build ) > "$EV/w8-xcodebuild-legacy.log" 2>&1; then
     rm -rf "$W8D/old.app"; cp -R "$(find "$WORK/dd-legacy/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)" "$W8D/old.app"
-    OLD_HOST="the host from before W8 (the published zip's template)"
-    ok "W8: a host from the published zip's own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6"
+    OLD_HOST="the host from before W8 ($(basename "$(dirname "$LKP")")'s template)"
+    ok "W8: a host from $(basename "$(dirname "$LKP")")'s own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6"
   else
     bad "W8: the zip's pre-W8 host did not scaffold or build"; tail -5 "$EV/w8-legacy-host-scaffold.log"; grep -E '^e: |error:' "$EV/w8-xcodebuild-legacy.log" | head
   fi

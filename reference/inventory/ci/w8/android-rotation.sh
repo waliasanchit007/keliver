@@ -46,7 +46,7 @@ w8_floor(){  # $1 = a public key: the rollback floor the (debuggable) host keeps
 OLD_NAME="keliver-ed25519-${PUB:0:16}"; NEXT_NAME="keliver-ed25519-${NEXT_PUB:0:16}"
 # What a host says when the first signature it trusts is not from its key (Zipline 1.22).
 REFUSED_LINE="manifest signature for key portal-ed25519 did not verify"
-if [ "${W8_LEGACY_IS_PRE_W8:-0}" = 1 ]; then OLD_HOST="the host from before W8 (the published zip's template)"
+if [ "${W8_LEGACY_IS_PRE_W8:-0}" = 1 ]; then OLD_HOST="the host from before W8 (published tools from before W8, their own template)"
 else OLD_HOST="this checkout's one-key host (the zip's template already has W8)"; fi
 
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w8-server.log" &

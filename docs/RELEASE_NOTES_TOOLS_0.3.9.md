@@ -1,7 +1,25 @@
 # keliver-portal-tools 0.3.9 — release notes
 
-**Status: CANDIDATE.** Not tagged or published yet. The verification is
-recorded below as it happens.
+**Status: RELEASED 2026-10-13** (candidate 1). The owner had given full
+control over releases and publications ("you have full control on release or
+publications", 2026-10-12).
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.9` (annotated, object `bb244761`) → **`6069da99f75390b1effe8934dbb1e607c0a275fc`** |
+| release | [portal-tools-v0.3.9](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.9), `--latest=false` (the "Latest" badge stays `v0.3.3`) |
+| zip asset | `keliver-portal-tools-0.3.9.zip`, 90,611,347 bytes, sha256 **`31c4214cdd4588316f153f6edc9e96c865b44e1ed6475fa70a007653c75f6fa1`**, uploaded from the retained artifact `11843942421` of build run 38454753493 |
+| `.sha256` asset | 97 bytes, sha256 `e1210db34845694221306b7eea013b1088e369d82aab5bcdfbe62234049f0eb7` |
+| device host APK | `keliver-device-host-0.3.9.apk`, sha256 `2df637b8dd67fedc6a8b49ec6cbecfef1efd628f547656b3ddec3e6c911835e3` (no embedded portal key) |
+| tag push | ran only `portal-tools.yml`'s read-only rebuild (38468214547); its artifact is not attached |
+
+**How the stored asset was checked** (procedure step 4):
+1. The draft's server-side `digest` and `size` matched both files.
+2. **The draft download-back worked this time.** It returned 90,611,347 bytes,
+   sha256 `31c4214c…`, identical to the verified artifact. The tag was
+   re-checked at `6069da99`.
+3. After publishing, the public zip and its `.sha256` were downloaded here, and
+   `shasum -a 256 -c` printed OK.
 
 Tools 0.3.8 and earlier, and the Maven 0.3.3 libraries, are unchanged. The
 tools and library versions are separate lines: 0.3.9 still scaffolds against
@@ -66,8 +84,42 @@ The physical-device harness mode and `docs/DEVICE_PROOF.md` (W7 preparation)
 live in the repository. **Nothing in this release has run on a physical device
 yet.**
 
-## Candidate verification
+## Candidate verification (candidate 1, source `6069da99`)
 
-To be recorded: the build run and its retained artifact, the device run, the
-local check of the artifact, `ios.sh` on the zip, and the step-3 workflow
-check.
+- **Build:** `portal-tools.yml` 38454753493 (dispatched from
+  `release/portal-tools-0.3.9`). Retained artifact `11843942421`, zip
+  `31c4214c…`.
+  - The packaged self-tests: production-host 65/0 and 60/0; ios-host 63/0 and
+    63/0; publish-target 44/0 (with `--build`: two-key signing in a real
+    Gradle build) and 26/0; `keliver-publish` 41/0; key-permissions 63/0.
+  - The adopter acceptance and the U21 identity gate.
+- **Device:** `portal-tools.yml` 38463890634 on the APK `2df637b8…`: 19/0 and
+  28/0, with no FAIL lines. The verifier came from the same branch.
+- **Local check of the retained artifact** (step 2):
+  - The downloaded zip hashes to the build's.
+  - `VERSION.json`: toolsVersion 0.3.9, sourceCommit `6069da99`, 0 dirty
+    files, Maven dependency 0.3.3.
+  - The APK hashes to the device run's and holds no `portal_ed25519.pub`.
+  - The bundle's `bin/`, `templates/`, `README.md`, `KEY_ROTATION.md` and
+    `host/README.md` (58 files) are byte-identical to the source commit.
+- **`ios.sh` on the candidate zip, locally:** **146/0**
+  (`KELIVER_CANDIDATE_SHA256`; the zip's own scaffolders and
+  `keliver-publish`; a disposable simulator, deleted). That includes the W8
+  rows K1–K8. With a zip that already has W8, K3/K6 used the one-key host;
+  the pre-W8 host ran in the merged PRs' CI.
+  - The first two local attempts failed before testing anything. macOS's
+    periodic `/tmp` cleaning had deleted files in the disposable Gradle home
+    and Konan directory, which were repaired. Nothing about the candidate was
+    involved.
+- **Step 3**, the workflows at `6069da99`: only `portal-tools.yml` listens on
+  `portal-tools-v*`, with no write permission. `publish.yml` listens on `v*`.
+  `ci.yml` ignores tags.
+- **Before the candidate:** every change in it was reviewed independently and
+  green on CI with the PRs merged together:
+  - #98 at `40e14fd7`: device 160/0, `ios.sh` 147/0;
+  - #100 at `5e1c3ffe`: device 142/0, the physical-route rehearsal 137/0,
+    `ios.sh` 127/0;
+  - #101 at `99883d7a`: device 142/0, `ios.sh` 127/0.
+
+**Published-only proof after the release:** the reference app pinned to this
+release (PR "reference app: the published 0.3.9"), with run ids recorded there.

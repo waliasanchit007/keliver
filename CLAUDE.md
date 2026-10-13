@@ -23,7 +23,7 @@ them visually in a web portal that round-trips to the .kt files in git.
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
   checked on an emulator by `.github/workflows/reference-app.yml` and on an iOS
   simulator by `ios-host.yml`. Its production route is published-only
-  when the workflow is run by hand: tools **0.3.8**'s own `bin/` scaffolders
+  when the workflow is run by hand: tools **0.3.9**'s own `bin/` scaffolders
   write the signing, the Android host and the iOS host, which build against
   Maven Central, and `keliver-publish` comes from the zip too. On a pull request
   the same harness scaffolds from this checkout's `scripts/` instead
@@ -100,13 +100,14 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.8** (Maven dependency **0.3.3**), released
-2026-10-11 from `731ebfce`: `keliver-publish` and static distribution (W3),
-release controls (W4), embedding in an existing app (W2), updates and the
-last-good fall-back (W5), and host reports (W6). Its identities and how the
-stored asset was checked are in
-[`docs/RELEASE_NOTES_TOOLS_0.3.8.md`](docs/RELEASE_NOTES_TOOLS_0.3.8.md).
-0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.9** (Maven dependency **0.3.3**), released
+2026-10-13 from `6069da99`: signing-key rotation (W8, `docs/KEY_ROTATION.md`),
+bundle-lookup hardening and the iOS team fix (U32), on top of 0.3.8's
+`keliver-publish` and static distribution (W3), release controls (W4),
+embedding (W2), updates and the last-good fall-back (W5) and host reports (W6).
+Its identities and how the stored asset was checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.9.md`](docs/RELEASE_NOTES_TOOLS_0.3.9.md).
+0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then
