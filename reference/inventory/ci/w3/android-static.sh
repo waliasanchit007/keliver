@@ -290,7 +290,7 @@ w3_caps HostCamera@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s16-missi
   && ok "S16: v6's entry now requires HostCamera@1 and nothing else gates it" || bad "S16: could not edit the index"
 launch prod "$EV/logcat-static-caps-missing.txt"
 C="$EV/logcat-static-caps-missing.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S16: v6 needs a capability this host lacks: skipped, v5 loaded" || bad "S16: v6 needs a capability this host lacks: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 grep -q "bundles/v6/" "$C" && bad "S16: the host asked for v6" || ok "S16: the host never asked for v6"
 drive title Loft S16static; fold "S16: the screen still reads Loft" $?
@@ -299,7 +299,7 @@ w3_caps HostSqlDriver@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s16-me
   && ok "S16b: v6's entry now requires HostSqlDriver@1 and nothing else gates it" || bad "S16b: could not edit the index"
 launch prod "$EV/logcat-static-caps-met.txt"
 C="$EV/logcat-static-caps-met.txt"
-grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "codeLoadSuccess" "$C" \
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "codeLoadSuccess" "$C" \
   && ok "S16b: v6 needs a capability this host provides: loaded" || bad "S16b: v6 needs a capability this host provides: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
 drive title Attic S16bstatic; fold "S16b: the screen reads Attic" $?
 cp "$W3/index.s15" "$W3/site/bundles/index.json"
