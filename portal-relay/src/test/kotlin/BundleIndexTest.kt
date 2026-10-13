@@ -1,5 +1,6 @@
 import app.cash.zipline.loader.ZiplineHttpClient
 import hosttemplate.HostFacts
+import hosttemplate.MAX_INDEX_BYTES
 import hosttemplate.ManifestPinningHttpClient
 import hosttemplate.reportReason
 import hosttemplate.manifestPathOk
@@ -151,6 +152,33 @@ class BundleIndexTest {
     for (bad in listOf("nope", "[]", """{"format":2,"entries":[${entry(1)}]}""", """{"entries":[${entry(1)}]}""", """{"format":1}""")) {
       assertTrue(pickFromIndex(bad, caps).isFailure, bad)
     }
+  }
+
+  @Test
+  fun quotedNumbersAreNotNumbers() {
+    // An entry whose sequence or widget version is a string is unusable; the rest still count.
+    val pick = pickFromIndex(
+      index(
+        entry(3),
+        entry(9).replace("\"sequence\":9", "\"sequence\":\"9\""),
+        entry(8).replace("\"widgetVersion\":1", "\"widgetVersion\":\"1\""),
+        entry(7, extra = ""","constraints":{"maxHostVersion":"9"}"""),
+      ),
+      caps,
+      facts = HostFacts("i", 5, 0),
+    ).getOrThrow()
+    assertEquals(3L, pick.sequence)
+    assertTrue(pickFromIndex("""{"format":"1","entries":[${entry(1)}]}""", caps).isFailure)
+  }
+
+  @Test
+  fun anIndexLargerThanTheLimitIsRefused() {
+    val small = index(entry(1))
+    // Padded with JSON whitespace: exactly at the limit is read, one byte over is not.
+    val atLimit = small + " ".repeat((MAX_INDEX_BYTES - small.length).toInt())
+    assertEquals(1L, pickFromIndex(atLimit, caps).getOrThrow().sequence)
+    val failure = pickFromIndex("$atLimit ", caps).exceptionOrNull()
+    assertTrue(failure is IOException && "larger than $MAX_INDEX_BYTES" in failure.message!!, "$failure")
   }
 
   @Test

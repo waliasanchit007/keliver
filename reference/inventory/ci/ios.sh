@@ -24,7 +24,7 @@
 # fallback to /bundles/latest on a 404.
 #
 # Then W3/W4, the static route with no relay (ci/w3/ios-static.sh): S2,
-# S4-S15 against a static HTTPS server fed only by keliver-publish; and W2, the
+# S4-S16 against a static HTTPS server fed only by keliver-publish; and W2, the
 # host framework embedded in an existing SwiftUI app (ci/w2/ios-embed.sh).
 # Then W5's U1: an update applied when the app returns to the foreground
 # (ci/w5/ios-update.sh).

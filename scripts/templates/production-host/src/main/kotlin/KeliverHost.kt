@@ -386,10 +386,11 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     // must see a floor raised since this host started.
     val floor = { prefs.floor(cacheName) }
     // Short timeouts: offline, this decides how long the app waits before it
-    // starts from the cache.
+    // starts from the cache. Each lookup gives its calls only what is left of
+    // LOOKUP_BUDGET_MILLIS (lookupBundle).
     val lookupClient = okhttp.newBuilder()
       .connectTimeout(5, TimeUnit.SECONDS)
-      .callTimeout(10, TimeUnit.SECONDS)
+      .callTimeout(LOOKUP_BUDGET_MILLIS, TimeUnit.MILLISECONDS)
       .build()
     // What the index's constraints are checked against (W4.5).
     val facts = HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())
@@ -432,17 +433,20 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   /**
    * The newest compatible bundle on the bundle server, or null. Reads
    * bundles/index.json; on a 404 for it, asks the relay's bundles/latest.
-   * Either way the manifest must be on the bundle server's own origin.
+   * Either way the manifest must be on the bundle server's own origin. Both
+   * requests share one deadline, LOOKUP_BUDGET_MILLIS from now, and neither
+   * answer is read past MAX_INDEX_BYTES.
    */
   private fun lookupBundle(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>, facts: HostFacts): Lookup? = runCatching {
+    val deadline = SystemClock.elapsedRealtime() + LOOKUP_BUDGET_MILLIS
     val indexUrl = server.newBuilder().addPathSegments("bundles/index.json").build()
     val request = Request.Builder().url(indexUrl).header("Cache-Control", "no-cache").build()
-    okhttp.newCall(request).execute().use { response ->
+    okhttp.newCall(request).within(deadline).execute().use { response ->
       if (response.code == 404) {
         Log.d(TAG, "no bundles/index.json at $server; asking bundles/latest (a relay from tools 0.3.7 or earlier)")
-        return@runCatching legacyLatest(okhttp, server, capabilities)
+        return@runCatching legacyLatest(okhttp, server, capabilities, deadline)
       }
-      val body = response.body?.string().orEmpty()
+      val body = response.boundedBody()
       if (!response.isSuccessful) {
         Log.e(TAG, "bundle index: HTTP ${response.code}")
         return@runCatching null
@@ -467,13 +471,13 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   }.onFailure { Log.e(TAG, "bundle lookup failed", it) }.getOrNull()
 
   /** The relay's /bundles/latest, for relays that serve no index. */
-  private fun legacyLatest(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>): Lookup? {
+  private fun legacyLatest(okhttp: OkHttpClient, server: HttpUrl, capabilities: List<String>, deadline: Long): Lookup? {
     val lookup = server.newBuilder().addPathSegments("bundles/latest")
       .addQueryParameter("widgetVersion", HOST_WIDGET_VERSION.toString())
       .addQueryParameter("caps", capabilities.joinToString(","))
       .build()
-    okhttp.newCall(Request.Builder().url(lookup).build()).execute().use { response ->
-      val body = response.body?.string().orEmpty()
+    okhttp.newCall(Request.Builder().url(lookup).build()).within(deadline).execute().use { response ->
+      val body = response.boundedBody()
       if (!response.isSuccessful) {
         Log.e(TAG, "bundle lookup: HTTP ${response.code} ($body)")
         return null
@@ -490,6 +494,28 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       }
       return Lookup(url.toString(), null, "relay bundles/latest")
     }
+  }
+
+  /** This call, given only what is left until the lookup's [deadline] (elapsedRealtime). */
+  private fun Call.within(deadline: Long): Call = apply {
+    val left = deadline - SystemClock.elapsedRealtime()
+    if (left <= 0) throw java.io.IOException("the bundle lookup used up its $LOOKUP_BUDGET_MILLIS ms")
+    timeout().timeout(left, TimeUnit.MILLISECONDS)
+  }
+
+  /** The body as text, refused past MAX_INDEX_BYTES: at its Content-Length, or as soon as more arrives. */
+  private fun Response.boundedBody(): String {
+    val body = body ?: return ""
+    if (body.contentLength() > MAX_INDEX_BYTES) {
+      throw java.io.IOException("the answer is larger than $MAX_INDEX_BYTES bytes (Content-Length ${body.contentLength()})")
+    }
+    val source = body.source()
+    if (source.request(MAX_INDEX_BYTES + 1)) throw java.io.IOException("the answer is larger than $MAX_INDEX_BYTES bytes")
+    // JSON is UTF-8; skip a byte order mark, as ResponseBody.string() did.
+    if (source.buffer.size >= 3 && source.buffer[0] == 0xEF.toByte() && source.buffer[1] == 0xBB.toByte() && source.buffer[2] == 0xBF.toByte()) {
+      source.buffer.skip(3)
+    }
+    return source.buffer.readUtf8()
   }
 
   private fun sameOrigin(url: HttpUrl?, server: HttpUrl): Boolean =
