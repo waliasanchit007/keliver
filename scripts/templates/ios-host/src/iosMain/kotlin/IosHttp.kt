@@ -7,13 +7,16 @@ import dev.keliver.http.HostHttpProvider
 import dev.keliver.http.HttpRequest
 import dev.keliver.http.HttpResponse
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlin.time.Duration
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import okio.ByteString
 import okio.ByteString.Companion.toByteString
 import okio.IOException
 import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSHTTPURLResponse
+import platform.Foundation.NSMutableData
 import platform.Foundation.NSMutableURLRequest
 import platform.Foundation.NSString
 import platform.Foundation.NSURL
@@ -23,10 +26,16 @@ import platform.Foundation.NSURLRequestUseProtocolCachePolicy
 import platform.Foundation.NSURLResponse
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSURLSessionConfiguration
+import platform.Foundation.NSURLSessionDataDelegateProtocol
+import platform.Foundation.NSURLSessionDataTask
+import platform.Foundation.NSURLSessionResponseAllow
+import platform.Foundation.NSURLSessionResponseCancel
+import platform.Foundation.NSURLSessionResponseDisposition
 import platform.Foundation.NSURLSessionTask
 import platform.Foundation.NSURLSessionTaskDelegateProtocol
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.addValue
+import platform.Foundation.appendData
 import platform.Foundation.dataTaskWithRequest
 import platform.Foundation.dataUsingEncoding
 import platform.Foundation.setHTTPBody
@@ -67,6 +76,80 @@ internal fun getRequest(url: String, timeoutSeconds: Double): NSURLRequest =
     cachePolicy = NSURLRequestReloadIgnoringLocalCacheData,
     timeoutInterval = timeoutSeconds,
   )
+
+/**
+ * A GET for the bundle lookup: refused past [maxBytes] (at its Content-Length,
+ * or as soon as more arrives, so a huge answer is never held in memory), and
+ * cancelled at [timeout] in all. NSURLRequest's timeoutInterval is only an idle
+ * timeout: a server that trickles bytes never trips it.
+ *
+ * One session per request, invalidated when its task finishes, because the
+ * delegate (which counts the bytes) belongs to this one task.
+ */
+internal suspend fun sendBounded(request: NSURLRequest, maxBytes: Long, timeout: Duration): Pair<Int, ByteString> {
+  if (!timeout.isPositive()) throw IOException("the bundle lookup used up its time")
+  return withTimeoutOrNull(timeout) {
+    suspendCancellableCoroutine { continuation ->
+      val session = NSURLSession.sessionWithConfiguration(
+        configuration = NSURLSessionConfiguration.ephemeralSessionConfiguration,
+        delegate = BoundedFetch(maxBytes) { continuation.resumeWith(it) },
+        delegateQueue = null,
+      )
+      val task = session.dataTaskWithRequest(request)
+      continuation.invokeOnCancellation { task.cancel() }
+      task.resume()
+      session.finishTasksAndInvalidate()
+    }
+  } ?: throw IOException("timed out: ${request.URL?.absoluteString} did not answer within $timeout")
+}
+
+/** Collects one task's body up to [maxBytes]; [done] is called once, when the task completes. */
+private class BoundedFetch(
+  private val maxBytes: Long,
+  private val done: (Result<Pair<Int, ByteString>>) -> Unit,
+) : NSObject(), NSURLSessionDataDelegateProtocol {
+  private val data = NSMutableData()
+  private var status = 0
+  private var refused: String? = null
+
+  override fun URLSession(
+    session: NSURLSession,
+    dataTask: NSURLSessionDataTask,
+    didReceiveResponse: NSURLResponse,
+    completionHandler: (NSURLSessionResponseDisposition) -> Unit,
+  ) {
+    status = (didReceiveResponse as? NSHTTPURLResponse)?.statusCode?.toInt() ?: 0
+    val declared = didReceiveResponse.expectedContentLength
+    if (declared > maxBytes) {
+      refused = "the answer is larger than $maxBytes bytes (Content-Length $declared)"
+      completionHandler(NSURLSessionResponseCancel)
+    } else {
+      completionHandler(NSURLSessionResponseAllow)
+    }
+  }
+
+  override fun URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData: NSData) {
+    if (refused != null) return
+    if (data.length.toLong() + didReceiveData.length.toLong() > maxBytes) {
+      refused = "the answer is larger than $maxBytes bytes"
+      dataTask.cancel()
+      return
+    }
+    data.appendData(didReceiveData)
+  }
+
+  override fun URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError: NSError?) {
+    val why = refused
+    done(
+      when {
+        why != null -> Result.failure(IOException(why))
+        didCompleteWithError != null -> Result.failure(IOException(didCompleteWithError.localizedDescription))
+        status == 0 -> Result.failure(IOException("not an HTTP response"))
+        else -> Result.success(status to data.toByteString())
+      },
+    )
+  }
+}
 
 /** A JSON POST: a host report (W6). */
 internal fun postJsonRequest(url: String, json: String, timeoutSeconds: Double): NSURLRequest =

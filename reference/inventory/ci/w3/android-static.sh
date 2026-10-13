@@ -21,6 +21,8 @@
 #   S14b (W4.5) halted again (0): the host that ran v5 keeps it (its floor)
 #   S15 (W4.5) v6 ("Attic") with minHostVersion 999, above this host's 1:
 #       skipped, the host stays on v5
+#   S16 (W3) capability filtering: v6's entry, edited to require HostCamera@1
+#       (not provided), is skipped; edited to require HostSqlDriver@1, it loads
 #   S7  server down: the host starts from its cached newest bundle ($LAST_V)
 #   S9  (W4.2) the stored floor above that cached bundle, offline: refused
 #   S9c (W5) the lookup answers, but everything it offers is below the floor:
@@ -263,8 +265,36 @@ grep -q "host version 1," "$C" && ok "S15: the host checked the entries against 
 grep -q "bundles/v6/" "$C" && bad "S15: the host asked for v6" || ok "S15: the host never asked for v6"
 drive title Loft S15static; fold "S15: the screen still reads Loft" $?
 
+# S16 (W3): capability filtering on a device, not only in BundleIndexTest. The
+# index is edited by hand, as S6 does: v6's entry loses its host-version gate and
+# requires one capability. HostCamera@1 is one this host does not provide, so
+# v6 is skipped and v5 stays; HostSqlDriver@1 is one it does (HOST_SQL_CAPABILITY),
+# so v6 loads ("Attic"). The CLI's index is put back afterwards.
+cp "$W3/site/bundles/index.json" "$W3/index.s15"
+w3_caps(){  # $1 = the one capability v6's entry requires
+  python3 -c 'import json,sys; p,c=sys.argv[1:3]; i=json.load(open(p)); e=[x for x in i["entries"] if x["sequence"]==6][0]; e.pop("constraints",None); e["capabilities"]=[c]; json.dump(i,open(p,"w"))' \
+    "$W3/site/bundles/index.json" "$1"
+}
+w3_caps HostCamera@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s16-missing.json" \
+  && ok "S16: v6's entry now requires HostCamera@1 and nothing else gates it" || bad "S16: could not edit the index"
+launch prod "$EV/logcat-static-caps-missing.txt"
+C="$EV/logcat-static-caps-missing.txt"
+grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v5/manifest.zipline.json (index sequence 5," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S16: v6 needs a capability this host lacks: skipped, v5 loaded" || bad "S16: v6 needs a capability this host lacks: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+grep -q "bundles/v6/" "$C" && bad "S16: the host asked for v6" || ok "S16: the host never asked for v6"
+drive title Loft S16static; fold "S16: the screen still reads Loft" $?
+cp "$W3/index.s15" "$W3/site/bundles/index.json"
+w3_caps HostSqlDriver@1 && cp "$W3/site/bundles/index.json" "$EV/w3-index-s16-met.json" \
+  && ok "S16b: v6's entry now requires HostSqlDriver@1 and nothing else gates it" || bad "S16b: could not edit the index"
+launch prod "$EV/logcat-static-caps-met.txt"
+C="$EV/logcat-static-caps-met.txt"
+grep -q "$HOST_TAG: loading https://10.0.2.2:8443/bundles/v6/manifest.zipline.json (index sequence 6," "$C" && grep -q "codeLoadSuccess" "$C" \
+  && ok "S16b: v6 needs a capability this host provides: loaded" || bad "S16b: v6 needs a capability this host provides: $(grep -E 'loading|codeLoad|refused|index' "$C" | head -3 | tr '\n' ' ')"
+drive title Attic S16bstatic; fold "S16b: the screen reads Attic" $?
+cp "$W3/index.s15" "$W3/site/bundles/index.json"
+
 # The newest bundle this host has run, for S7, S9 and S9b.
-LAST_V=5; LAST_TITLE=Loft
+LAST_V=6; LAST_TITLE=Attic
 
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""
 curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json \

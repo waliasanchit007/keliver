@@ -87,7 +87,9 @@ import dev.keliver.treehouse.TreehouseAppFactory
 import dev.keliver.treehouse.TreehouseContentSource
 import dev.keliver.treehouse.composeui.TreehouseContent
 import kotlin.concurrent.Volatile
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,7 +108,6 @@ import platform.Foundation.NSBundle
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSThread
-import platform.Foundation.NSURLSession
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
@@ -481,14 +482,21 @@ private class Lookup(val manifestUrl: String, val manifestSha256: String?, val s
 /**
  * The newest compatible bundle on the bundle server, or null. Reads
  * bundles/index.json; on a 404 for it, asks the relay's bundles/latest. Either
- * way the manifest must be on the bundle server's own origin.
+ * way the manifest must be on the bundle server's own origin. Both requests
+ * share one deadline, LOOKUP_BUDGET_MILLIS from now (a total, unlike
+ * timeoutInterval), and neither answer is read past MAX_INDEX_BYTES.
  */
 private suspend fun lookupBundle(server: BundleServer, capabilities: List<String>, facts: HostFacts): Lookup? = runCatching {
   // Short: offline, this decides how long the app waits before it starts from the cache.
-  val (status, body, _) = send(NSURLSession.sharedSession, getRequest("${server.base}/bundles/index.json", timeoutSeconds = 10.0))
+  val deadline = TimeSource.Monotonic.markNow() + LOOKUP_BUDGET_MILLIS.milliseconds
+  val (status, body) = sendBounded(
+    getRequest("${server.base}/bundles/index.json", timeoutSeconds = 10.0),
+    MAX_INDEX_BYTES,
+    timeout = -deadline.elapsedNow(),
+  )
   if (status == 404) {
     log("no bundles/index.json at ${server.base}; asking bundles/latest (a relay from tools 0.3.7 or earlier)")
-    return@runCatching legacyLatest(server, capabilities)
+    return@runCatching legacyLatest(server, capabilities, deadline)
   }
   if (status !in 200 until 300) {
     log("bundle index: HTTP $status")
@@ -511,9 +519,9 @@ private suspend fun lookupBundle(server: BundleServer, capabilities: List<String
 }.onFailure { log("bundle lookup failed: ${it.message}") }.getOrNull()
 
 /** The relay's /bundles/latest, for relays that serve no index. */
-private suspend fun legacyLatest(server: BundleServer, capabilities: List<String>): Lookup? {
+private suspend fun legacyLatest(server: BundleServer, capabilities: List<String>, deadline: TimeMark): Lookup? {
   val lookup = "${server.base}/bundles/latest?widgetVersion=$HOST_WIDGET_VERSION&caps=${percentEncode(capabilities.joinToString(","))}"
-  val (status, body, _) = send(NSURLSession.sharedSession, getRequest(lookup, timeoutSeconds = 10.0))
+  val (status, body) = sendBounded(getRequest(lookup, timeoutSeconds = 10.0), MAX_INDEX_BYTES, timeout = -deadline.elapsedNow())
   if (status !in 200 until 300) {
     log("bundle lookup: HTTP $status (${body.utf8()})")
     return null

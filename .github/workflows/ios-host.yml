@@ -15,7 +15,7 @@
 #      an iOS simulator through P1, P2 and P4–P7: signed v1, v2 after an edit, a
 #      foreign key refused, recovery, and an offline start from the cache;
 #    - then the static route: keliver-publish into a static HTTPS server whose
-#      throwaway CA only this run's simulator trusts, with no relay (S2-S15),
+#      throwaway CA only this run's simulator trusts, with no relay (S2-S16),
 #      the embedded host (W2), updates and reports (W5, W6).
 #    The scaffolders and keliver-publish are the zip's own in a run started by
 #    hand, and this checkout's scripts/ in a pull request (KELIVER_SCAFFOLD_FROM).

@@ -36,6 +36,21 @@ import okio.IOException
 internal const val HOST_WIDGET_VERSION = 1
 
 /**
+ * The whole bundle lookup's time budget: the index and, on a 404 for it, the
+ * relay's bundles/latest share it, so a slow 404 and a slow fallback never add
+ * up to two timeouts. Offline, this is how long the app waits before it starts
+ * from the cache.
+ */
+internal const val LOOKUP_BUDGET_MILLIS = 10_000L
+
+/**
+ * The largest index (or bundles/latest answer) a host reads. Each published
+ * sequence adds an entry of a few hundred bytes, so 1 MiB is thousands of
+ * them; anything larger is refused rather than held in memory.
+ */
+internal const val MAX_INDEX_BYTES = 1L shl 20
+
+/**
  * The base channel. An entry without a channel is on it, and every host takes it:
  * a host built for another channel (HostConfig / BuildConfig, W4.4) takes that
  * channel's entries AND stable's, so it is never behind stable.
@@ -104,7 +119,8 @@ internal data class IndexPick(val sequence: Long, val manifestPath: String, val 
  * this host doesn't know, its constraints admit [facts], its widget version is
  * at most [widgetVersion], every capability it requires is in [capabilities],
  * and its manifest path and sha256 are well formed. Of those, the highest
- * `sequence` wins.
+ * `sequence` wins. `format`, `sequence`, `widgetVersion` and the constraints are
+ * JSON numbers; a quoted number makes the entry (or the index) unusable.
  *
  * Constraints (W4.5):
  * - `minHostVersion` / `maxHostVersion`: this host's version must be within
@@ -120,8 +136,11 @@ internal fun pickFromIndex(
   channel: String = DEFAULT_CHANNEL,
   facts: HostFacts = HostFacts(installId = "", hostVersion = null, floor = 0),
 ): Result<IndexPick> = runCatching {
+  // The hosts stop reading past MAX_INDEX_BYTES; this holds for any other caller.
+  // (A string longer than that in chars is longer in UTF-8 bytes too.)
+  if (indexJson.length > MAX_INDEX_BYTES) throw IOException("the index is larger than $MAX_INDEX_BYTES bytes")
   val root = Json.parseToJsonElement(indexJson) as? JsonObject ?: throw IOException("the index is not a JSON object")
-  val format = (root["format"] as? JsonPrimitive)?.intOrNull
+  val format = (root["format"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
   if (format != 1) throw IOException("index format $format is not 1")
   val entries = root["entries"] as? JsonArray ?: throw IOException("the index has no entries")
   entries.mapNotNull { usable(it as? JsonObject ?: return@mapNotNull null, capabilities, widgetVersion, channel, facts) }
@@ -130,7 +149,8 @@ internal fun pickFromIndex(
 }
 
 private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersion: Int, channel: String, facts: HostFacts): IndexPick? {
-  val sequence = (e["sequence"] as? JsonPrimitive)?.longOrNull?.takeIf { it > 0 } ?: return null
+  // Numbers are JSON numbers: "8" (a string) is not a sequence, a widget version or a constraint.
+  val sequence = (e["sequence"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it > 0 } ?: return null
   val entryChannel = when (val c = e["channel"]) {
     null -> DEFAULT_CHANNEL
     else -> (c as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return null
@@ -141,7 +161,7 @@ private fun usable(e: JsonObject, capabilities: Collection<String>, widgetVersio
     is JsonObject -> if (!KNOWN_CONSTRAINTS.containsAll(c.keys) || !admits(c, sequence, facts)) return null
     else -> return null
   }
-  val wv = (e["widgetVersion"] as? JsonPrimitive)?.intOrNull ?: return null
+  val wv = (e["widgetVersion"] as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull ?: return null
   if (wv > widgetVersion) return null
   val required = (e["capabilities"] as? JsonArray ?: return null).map {
     (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content ?: return null
