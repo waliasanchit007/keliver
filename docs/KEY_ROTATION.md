@@ -5,9 +5,9 @@ public key built into it. That key is the whole of the host's trust: a bundle
 signed by anything else is refused. This page is how to change that key
 without stranding a single install, and how to look after it until then.
 
-**Needs:** host templates and a signing block from the release after tools
-0.3.8 (W8). Hosts and signing blocks from 0.3.8 and earlier trust or sign with
-exactly one key; they keep working throughout, as described below.
+**Needs:** host templates and a signing block from tools **0.3.9** on (W8).
+Hosts and signing blocks from 0.3.8 and earlier trust or sign with exactly one
+key; they keep working throughout, as described below.
 
 ## What W8 adds
 
