@@ -16,6 +16,7 @@
 package dev.keliver.widget.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -51,7 +52,12 @@ public class ComposeWidgetChildren @JvmOverloads constructor(
 
     for (index in _widgets.indices) {
       val widget = _widgets[index]
-      _widgets[index].value(keliverVisualModifierApplier(Modifier, widget.modifier))
+      // key(widget): what a child remembers (scroll position, text, animation) belongs to that
+      // widget, not to its index. Without it, a widget inserted where another was removed (a
+      // new page, a new sheet view) inherited the old one's state.
+      key(widget) {
+        widget.value(keliverVisualModifierApplier(Modifier, widget.modifier))
+      }
     }
   }
 

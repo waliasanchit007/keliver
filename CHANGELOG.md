@@ -8,7 +8,20 @@
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+- **keliver-widget-composeui:** `ComposeWidgetChildren.Render()` now renders each child inside
+  `key(widget)`. Before, what a child remembered (a scroll position, a text field's value, an
+  animation) belonged to its INDEX, so a widget the guest inserted where another was removed
+  inherited the old one's state. Found on a device: the next page of a nav stack opened at the
+  previous page's scroll position. Regression test: `ComposeWidgetChildrenStateTest`.
+
+### Known, not yet fixed (found adopting Keliver in a production app; worked around host-side)
+- keliver-material `BottomSheet` opens half-expanded (no `skipPartiallyExpanded`) on Material's
+  default `surfaceContainerLow`.
+- keliver-material `Theme` starts from a fresh `lightColorScheme()`, not the host's scheme, so
+  every colour role the guest does not set (slider track, containers) is Material's default
+  purple.
+- Text-field content alignment cannot be set (a quantity field cannot centre its number).
 
 ## [0.3.3] - 2026-09-05
 
