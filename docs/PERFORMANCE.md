@@ -12,6 +12,12 @@
 > warm-mount / update-latency rows are device-dependent and queued
 > for the perf workstream's Phase 2.
 
+> **First real-device numbers (2026-10).** Runtime latency, memory and linked
+> app size from a 13-screen guest inside two production apps, on a Samsung
+> SM-S938B and an iPhone 13, are in
+> [`ADOPTION_RETRO_2026-10.md`](ADOPTION_RETRO_2026-10.md#measurements). They
+> are not from `sample/` and not yet re-run per release.
+
 All baseline numbers below come from the `sample/` reference app
 (`Box { Text("Hello, Keliver!") }`) built against
 `1.0.0-caliclan.4-SNAPSHOT`. Re-running every measurement is a
