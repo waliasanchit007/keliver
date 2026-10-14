@@ -631,6 +631,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("supportingText" in node.props) sb.append("${indent}  supportingText = ${fmtString(node.props["supportingText"] ?: "")},\n")
       if ("borderArgb" in node.props) sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n")
       if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
+      if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -804,6 +805,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
+      if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }

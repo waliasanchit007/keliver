@@ -21,6 +21,15 @@ kotlin {
       }
     }
 
+    // Real Compose UI tests on the desktop JVM, headless (see keliver-material-composeui).
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+      }
+    }
+
     androidUnitTest {
       dependencies {
         implementation projects.keliverLayoutComposeui

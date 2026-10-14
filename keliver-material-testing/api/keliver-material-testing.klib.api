@@ -870,8 +870,10 @@ final class dev.keliver.material.testing/OutlinedCardValue : dev.keliver.testing
 }
 
 final class dev.keliver.material.testing/OutlinedTextFieldValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/OutlinedTextFieldValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/Function1<kotlin/String, kotlin/Unit>? = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/OutlinedTextFieldValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>?;kotlin.String;kotlin.String;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Boolean;kotlin.String;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/Function1<kotlin/String, kotlin/Unit>? = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // dev.keliver.material.testing/OutlinedTextFieldValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>?;kotlin.String;kotlin.String;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Boolean;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
 
+    final val align // dev.keliver.material.testing/OutlinedTextFieldValue.align|{}align[0]
+        final fun <get-align>(): kotlin/Int // dev.keliver.material.testing/OutlinedTextFieldValue.align.<get-align>|<get-align>(){}[0]
     final val borderArgb // dev.keliver.material.testing/OutlinedTextFieldValue.borderArgb|{}borderArgb[0]
         final fun <get-borderArgb>(): kotlin/Int // dev.keliver.material.testing/OutlinedTextFieldValue.borderArgb.<get-borderArgb>|<get-borderArgb>(){}[0]
     final val childrenLists // dev.keliver.material.testing/OutlinedTextFieldValue.childrenLists|{}childrenLists[0]
@@ -1297,8 +1299,10 @@ final class dev.keliver.material.testing/TextButtonValue : dev.keliver.testing/W
 }
 
 final class dev.keliver.material.testing/TextFieldValue : dev.keliver.testing/WidgetValue { // dev.keliver.material.testing/TextFieldValue|null[0]
-    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/Function1<kotlin/String, kotlin/Unit>? = ...) // dev.keliver.material.testing/TextFieldValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>?){}[0]
+    constructor <init>(dev.keliver/Modifier = ..., kotlin/String, kotlin/String = ..., kotlin/Function1<kotlin/String, kotlin/Unit>? = ..., kotlin/Int = ...) // dev.keliver.material.testing/TextFieldValue.<init>|<init>(dev.keliver.Modifier;kotlin.String;kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>?;kotlin.Int){}[0]
 
+    final val align // dev.keliver.material.testing/TextFieldValue.align|{}align[0]
+        final fun <get-align>(): kotlin/Int // dev.keliver.material.testing/TextFieldValue.align.<get-align>|<get-align>(){}[0]
     final val childrenLists // dev.keliver.material.testing/TextFieldValue.childrenLists|{}childrenLists[0]
         final fun <get-childrenLists>(): kotlin.collections/List<kotlin.collections/List<dev.keliver.testing/WidgetValue>> // dev.keliver.material.testing/TextFieldValue.childrenLists.<get-childrenLists>|<get-childrenLists>(){}[0]
     final val modifier // dev.keliver.material.testing/TextFieldValue.modifier|{}modifier[0]

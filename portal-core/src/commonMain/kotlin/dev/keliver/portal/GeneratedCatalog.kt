@@ -163,6 +163,7 @@ public val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("supportingText", PropKind.Text, "Supporting text"),
     PropSpec("borderArgb", PropKind.Color, "Border argb"),
     PropSpec("cornerRadiusDp", PropKind.Int, "Corner radius dp"),
+    PropSpec("align", PropKind.Int, "Align"),
   ), acceptsChildren = false, sampleProps = mapOf("text" to "New OutlinedTextField"), events = listOf("onValueChange")),
   WidgetSpec("RadioButton", "Material", listOf(
     PropSpec("selected", PropKind.Bool, "Selected"),
@@ -260,6 +261,7 @@ public val widgetSpecs: List<WidgetSpec> = listOf(
   WidgetSpec("TextField", "Material", listOf(
     PropSpec("text", PropKind.Text, "Text"),
     PropSpec("placeholder", PropKind.Text, "Placeholder"),
+    PropSpec("align", PropKind.Int, "Align"),
   ), acceptsChildren = false, sampleProps = mapOf("text" to "New TextField"), events = listOf("onValueChange")),
   WidgetSpec("TextInput", "Material", listOf(
     PropSpec("hint", PropKind.Text, "Hint"),

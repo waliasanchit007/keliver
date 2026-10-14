@@ -6,11 +6,13 @@ package dev.keliver.material.composeui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text as M3FieldText
 import androidx.compose.material3.ElevatedButton as M3ElevatedButton
@@ -192,6 +194,7 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
   private var supportingText by mutableStateOf("")
   private var borderArgb by mutableStateOf(0)
   private var cornerRadiusDp by mutableStateOf(0)
+  private var align by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
     // Host-local editing buffer (see ComposeUiTextField) — keeps typing responsive.
@@ -211,7 +214,11 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
     M3OutlinedTextField(
       value = local,
       onValueChange = { local = it; onValueChange?.invoke(it.text) },
-      placeholder = { if (placeholderState.isNotEmpty()) M3FieldText(placeholderState) },
+      placeholder = {
+        if (placeholderState.isNotEmpty()) {
+          M3FieldText(placeholderState, modifier = Modifier.fillMaxWidth(), textAlign = fieldTextAlign(align))
+        }
+      },
       label = if (label.isNotEmpty()) ({ M3FieldText(label) }) else null,
       leadingIcon = if (leadingText.isNotEmpty()) ({ M3FieldText(leadingText) }) else null,
       supportingText = if (supportingText.isNotEmpty()) ({ M3FieldText(supportingText) }) else null,
@@ -222,6 +229,7 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
       colors = colors,
       visualTransformation = if (keyboardType == 5) PasswordVisualTransformation() else VisualTransformation.None,
       keyboardOptions = KeyboardOptions(keyboardType = toKeyboardType(keyboardType)),
+      textStyle = LocalTextStyle.current.copy(textAlign = fieldTextAlign(align)),
       modifier = m,
     )
   }
@@ -237,6 +245,7 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
   override fun supportingText(supportingText: String) { this.supportingText = supportingText }
   override fun borderArgb(borderArgb: Int) { this.borderArgb = borderArgb }
   override fun cornerRadiusDp(cornerRadiusDp: Int) { this.cornerRadiusDp = cornerRadiusDp }
+  override fun align(align: Int) { this.align = align }
 }
 
 private fun toKeyboardType(i: Int): KeyboardType = when (i) {

@@ -5,6 +5,7 @@
 package dev.keliver.material.composeui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -14,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import dev.keliver.material.widget.Theme
 import dev.keliver.widget.Widget
 import dev.keliver.widget.compose.ComposeWidgetChildren
@@ -51,7 +53,16 @@ internal class ComposeUiTheme : Theme<@Composable (Modifier) -> Unit> {
   override val content: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
-    val base = if (dark) darkColorScheme() else lightColorScheme()
+    // Start from the host's own scheme, so every role the guest does not set (containers,
+    // tracks, outlines…) is the app's, not Material's default purple. Only when the guest asks
+    // for the other mode (dark on a light host, or light on a dark one) does it start from
+    // Material's scheme for that mode, as before.
+    val ambient = MaterialTheme.colorScheme
+    val base = when {
+      dark == ambient.isDark() -> ambient
+      dark -> darkColorScheme()
+      else -> lightColorScheme()
+    }
     fun ov(argb: Int, default: Color) = if (argb != 0) Color(argb) else default
     val scheme = base.copy(
       primary = ov(primaryArgb, base.primary),
@@ -85,3 +96,6 @@ internal class ComposeUiTheme : Theme<@Composable (Modifier) -> Unit> {
   override fun errorArgb(errorArgb: Int) { this.errorArgb = errorArgb }
   override fun outlineArgb(outlineArgb: Int) { this.outlineArgb = outlineArgb }
 }
+
+/** Whether [this] is a dark scheme, judged by its background. */
+internal fun ColorScheme.isDark(): Boolean = background.luminance() < 0.5f

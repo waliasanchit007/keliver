@@ -20,6 +20,15 @@
 // the resolver subprocess once per query rather than once per build. A FAILURE
 // is memoised too and rethrown, so the diagnostic is identical wherever it
 // surfaces and a broken resolver is not re-run dozens of times.
+// Skia's desktop runtime for the machine running the tests, for modules whose jvmTest renders
+// real Compose UI headless (runComposeUiTest): macos-arm64, linux-x64, windows-x64...
+ext.skikoHostRuntime = { ->
+  def os = System.getProperty('os.name').toLowerCase()
+  def arch = System.getProperty('os.arch') in ['aarch64', 'arm64'] ? 'arm64' : 'x64'
+  def target = os.contains('mac') ? "macos-$arch" : os.contains('win') ? "windows-$arch" : "linux-$arch"
+  "org.jetbrains.skiko:skiko-awt-runtime-$target:${libs.versions.skiko.get()}"
+}
+
 ext.keliverStoreMemo = [:]
 
 // The deliberate escape, for all three consumers rather than only the Android

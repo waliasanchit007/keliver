@@ -13,10 +13,13 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card as M3Card
 import androidx.compose.material3.Checkbox as M3Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton as M3IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch as M3Switch
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text as M3Text
 import androidx.compose.material3.TextField as M3TextField
 import androidx.compose.runtime.Composable
@@ -41,6 +44,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
@@ -181,6 +185,7 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
   private var incoming by mutableStateOf("")
   private var placeholderState by mutableStateOf("")
   private var onValueChange by mutableStateOf<((String) -> Unit)?>(null)
+  private var align by mutableStateOf(0)
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
     // Host-local editing buffer: typing updates `local` immediately so the field
@@ -194,14 +199,23 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
     M3TextField(
       value = local,
       onValueChange = { local = it; onValueChange?.invoke(it.text) },
-      placeholder = { M3Text(placeholderState) },
+      placeholder = { M3Text(placeholderState, modifier = Modifier.fillMaxWidth(), textAlign = fieldTextAlign(align)) },
       singleLine = true,
+      textStyle = LocalTextStyle.current.copy(textAlign = fieldTextAlign(align)),
       modifier = m,
     )
   }
   override fun text(text: String) { this.incoming = text }
   override fun placeholder(placeholder: String) { this.placeholderState = placeholder }
   override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
+  override fun align(align: Int) { this.align = align }
+}
+
+/** A text field's `align`: 0 start, 1 center, 2 end. */
+internal fun fieldTextAlign(align: Int): TextAlign = when (align) {
+  1 -> TextAlign.Center
+  2 -> TextAlign.End
+  else -> TextAlign.Start
 }
 
 internal class ComposeUiDivider : Divider<@Composable (Modifier) -> Unit> {
@@ -287,22 +301,44 @@ internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifie
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { m ->
-    FoundationColumn(modifier = m.verticalScroll(rememberScrollState())) {
-      (children as ComposeWidgetChildren).Render()
+    // A vertical scroll needs a bounded height. Inside something that is itself vertically
+    // unbounded (another scrolling column, a lazy list item) Compose throws ("measured with an
+    // infinity maximum height"), which took a whole screen down on a device. There the parent
+    // already scrolls, so this column lays its children out at full height instead.
+    BoxWithConstraints(modifier = m) {
+      val scroll = if (constraints.hasBoundedHeight) Modifier.verticalScroll(rememberScrollState()) else Modifier
+      FoundationColumn(modifier = scroll) {
+        (children as ComposeWidgetChildren).Render()
+      }
     }
   }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit> {
-  private var visible by mutableStateOf(false)
+  internal var visible by mutableStateOf(false)
+    private set
   private var onDismiss by mutableStateOf<(() -> Unit)?>(null)
   private var contentPaddingDp by mutableStateOf(0)
+  /** Whether this show's dismiss was already reported. */
+  private var dismissReported = false
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { _ ->
-    if (visible) {
-      ModalBottomSheet(onDismissRequest = { onDismiss?.invoke() }) {
+    // Fully expanded: a sheet taller than half the screen otherwise stops half way, cutting off
+    // the end of its content (often its buttons).
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Closed by the guest: slide out, as a sheet the user dismissed does, instead of vanishing.
+    LaunchedEffect(visible) {
+      if (!visible && sheetState.isVisible) sheetState.hide()
+    }
+    if (visible || sheetState.isVisible) {
+      ModalBottomSheet(
+        onDismissRequest = { dismissed() },
+        sheetState = sheetState,
+        // The theme's surface (a guest Theme can set it), not Material's surfaceContainerLow.
+        containerColor = MaterialTheme.colorScheme.surface,
+      ) {
         // fillMaxWidth so Constraint.Fill children get a width; navigationBarsPadding
         // + imePadding so content (text fields) lifts above the soft keyboard,
         // matching native ModalBottomSheet ime insets.
@@ -314,7 +350,22 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
       }
     }
   }
-  override fun visible(visible: Boolean) { this.visible = visible }
+  /**
+   * The user dismissed the sheet (swipe, scrim, Back). Several of those can fire while it
+   * animates out; the guest hears about it once per show. With no [onDismiss] the sheet closes
+   * itself, so it never stays composed but hidden.
+   */
+  internal fun dismissed() {
+    if (dismissReported) return
+    dismissReported = true
+    val onDismiss = onDismiss
+    if (onDismiss != null) onDismiss() else visible = false
+  }
+
+  override fun visible(visible: Boolean) {
+    if (visible && !this.visible) dismissReported = false
+    this.visible = visible
+  }
   override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
   override fun contentPaddingDp(contentPaddingDp: Int) { this.contentPaddingDp = contentPaddingDp }
 }

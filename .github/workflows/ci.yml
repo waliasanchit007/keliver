@@ -112,6 +112,9 @@ jobs:
       # List the tasks EXPLICITLY. Do not "simplify" this to `allTests`: that
       # also drags in the gated test-app JS modules, whose npm dependency
       # superset conflicts with the strict yarn.lock check in the build above.
+      # The composeui jvmTests are the widgets' real Compose UI tests (desktop,
+      # headless: HostGapsTest, LazyListItemStateTest). Like the portal modules,
+      # `test` skips them.
       - name: Test (portal multiplatform modules)
         run: >
           ./gradlew
@@ -122,6 +125,8 @@ jobs:
           :portal-editor:wasmJsTest
           :portal-app-lib:wasmJsTest
           :portal-sql:jvmTest
+          :keliver-material-composeui:jvmTest
+          :keliver-lazylayout-composeui:jvmTest
           -DRELEASE_SIGNING_ENABLED=false
 
       # The full inherited Redwood test suite that asserts against the

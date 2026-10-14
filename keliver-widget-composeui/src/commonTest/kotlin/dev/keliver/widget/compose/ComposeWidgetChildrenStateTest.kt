@@ -25,7 +25,7 @@ import kotlinx.coroutines.yield
  * State a child remembers (a scroll position, a text field's value) belongs to that WIDGET, not
  * to its index: when the guest replaces the widget at an index (a new page, a new sheet view),
  * the new widget starts fresh. Without a key per widget, the calculator page opened at the
- * scroll position Home had left at the same index (found on a device, Stashfin Bonds).
+ * scroll position Home had left at the same index (found on a device, in a production app).
  */
 class ComposeWidgetChildrenStateTest {
   @Test fun rememberedStateFollowsTheWidgetNotItsIndex() = runTest {
