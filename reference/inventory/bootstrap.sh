@@ -2,9 +2,9 @@
 #
 # Recreate the inventory reference app from the PUBLIC tools release.
 #
-#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.8.zip]
+#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.9.zip]
 #
-# With no zip, downloads the published tools 0.3.8 release and checks it against
+# With no zip, downloads the published tools 0.3.9 release and checks it against
 # the release's own .sha256 AND the hash pinned below. With a zip, checks that
 # zip against the pinned hash, so a rebuild cannot be substituted by accident.
 #
@@ -23,8 +23,8 @@
 # isolation that run needs.
 set -euo pipefail
 
-TOOLS_VERSION=0.3.8
-TOOLS_SHA256=aafed0d810243bf0a44e800f4ad3e958eda443ee138af49bbae432b2b0be912d
+TOOLS_VERSION=0.3.9
+TOOLS_SHA256=31c4214cdd4588316f153f6edc9e96c865b44e1ed6475fa70a007653c75f6fa1
 RELEASE=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v$TOOLS_VERSION
 ZIPNAME=keliver-portal-tools-$TOOLS_VERSION.zip
 

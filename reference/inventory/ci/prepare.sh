@@ -132,12 +132,17 @@ import json, sys, hashlib
 p = sys.argv[1]; raw = open(p, 'rb').read(); m = json.loads(raw)
 sig = m.get('unsigned', {}).get('signatures', {})
 print('manifest sha256', hashlib.sha256(raw).hexdigest())
-print('signed by', sorted(sig))
+print('signed by', list(sig))
 print('modules', len(m['modules']))
 PY
 cat "$EV/manifest-v1.summary"
-grep -q "signed by \['portal-ed25519'\]" "$EV/manifest-v1.summary" \
-  && ok "v1's manifest carries a portal-ed25519 signature" || bad "v1's manifest is not signed"
+# In manifest order: portal-ed25519 alone (signing blocks before tools 0.3.9),
+# or this app's key under its own name, then portal-ed25519 LAST (0.3.9 on;
+# hosts before W8 trust only that name, and Zipline checks the first it trusts).
+KEYNAME="keliver-ed25519-$(printf %s "$PUB" | tr 'A-F' 'a-f' | cut -c1-16)"
+grep -qxE "signed by \[('$KEYNAME', )?'portal-ed25519'\]" "$EV/manifest-v1.summary" \
+  && ok "v1's manifest is signed with this app's key, portal-ed25519 last ($(grep '^signed by' "$EV/manifest-v1.summary"))" \
+  || bad "v1's manifest is not signed as expected (portal-ed25519 last, by this app's key; $KEYNAME)"
 portal_down "$APP"
 
 # --- 5. P1: the production host, scaffolded, with THIS app's key ------------
@@ -254,19 +259,26 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
   # (before W8: one key, trusted only as portal-ed25519), for K3 and K6. Written
   # where host-android/ is, which is moved aside and put back.
   W8_LEGACY_APK=""
-  if [ -x "$KP/keliver-new-production-host.sh" ] && [ -f "$KP/../templates/production-host/build.gradle" ] \
-     && ! grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$KP/../templates/production-host/build.gradle"; then
+  # Its scaffolder: the tools zip's own while that predates W8, else the
+  # published tools 0.3.8 (ci/w8/legacy-tools.sh, hash-pinned).
+  if [ -f "$KP/../templates/production-host/build.gradle" ] && ! grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$KP/../templates/production-host/build.gradle"; then
+    LKP="$KP"
+  else
+    LKP="$(bash "$HERE/w8/legacy-tools.sh" "$W8/legacy-tools" 2> "$EV/w8-legacy-tools.log")"
+  fi
+  if [ -n "$LKP" ] && [ -x "$LKP/keliver-new-production-host.sh" ] \
+     && ! grep -q KELIVER_NEXT_PUBLIC_KEY_HEX "$LKP/../templates/production-host/build.gradle"; then
     mv "$APP/host-android" "$W8/host-android.w8"
-    ( cd "$APP" && "$KP/keliver-new-production-host.sh" --bundle-server "https://$HOST_ADDR:8443" --application-id "$PROD_ID" ) \
+    ( cd "$APP" && "$LKP/keliver-new-production-host.sh" --bundle-server "https://$HOST_ADDR:8443" --application-id "$PROD_ID" ) \
       > "$EV/w8-legacy-host-scaffold.log" 2>&1 \
       && printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties" \
       && { [ "$DEVICE_KIND" != physical ] || bash "$HERE/w7/android-test-ca.sh" "$APP/host-android/src/debug" "$W3/tls/ca.pem" >> "$EV/w7-test-ca-host.log" 2>&1; } \
       && w8_host legacy && W8_LEGACY_APK="$EV/production-host-legacy.apk" \
-      && ok "W8: a host from the published zip's own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6" \
+      && ok "W8: a host from $(basename "$(dirname "$LKP")")'s own scaffolder (before W8: one key, portal-ed25519 only), for K3 and K6" \
       || { bad "W8: the zip's pre-W8 host did not scaffold or build"; tail -20 "$EV/w8-legacy-host-scaffold.log"; tail -20 "$EV/w8-host-legacy-build.log" 2>/dev/null; }
     rm -rf "$APP/host-android"; mv "$W8/host-android.w8" "$APP/host-android"
   else
-    echo "  NOTE  W8: the zip's host template already has W8 (or is missing): K3 and K6 use this checkout's one-key host"
+    echo "  NOTE  W8: no tools from before W8 to scaffold with ($(tail -1 "$EV/w8-legacy-tools.log" 2>/dev/null)): K3 and K6 use this checkout's one-key host"
   fi
   { echo "W8_OK=1"; echo "W8_NEXT=$W8/next"; echo "W8_BOTH_APK=$EV/production-host-both.apk"; echo "W8_NEXT_APK=$EV/production-host-next.apk"
     echo "W8_LEGACY_APK=${W8_LEGACY_APK:-$W3_APK}"; echo "W8_LEGACY_IS_PRE_W8=$([ -n "$W8_LEGACY_APK" ] && echo 1 || echo 0)"; } >> "$WORK/env"

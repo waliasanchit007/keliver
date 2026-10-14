@@ -59,7 +59,7 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Also (from 0.3.8), in the hosts it scaffolds:** updates while the app
   runs (`checkForUpdate`, or on resume), the fall-back to the last good bundle,
   and host reports. The relay can collect those reports during development.
-- **Key rotation (W8, after 0.3.8):** a host trusts this app's key and, during a rotation, the next one; the
+- **Key rotation (W8, from 0.3.9):** a host trusts this app's key and, during a rotation, the next one; the
   signing block signs with both; `keliver-publish` guards against a key change by mistake
   ([`KEY_ROTATION.md`](KEY_ROTATION.md)).
 

@@ -868,8 +868,26 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | PR stack #94–#97 merged | **done 2026-10-11** after the release, by merge commits: #94 `09661866`, #95 `642f4a13`, #96 `6ba680c5`, #97 `2bae5cbb`. Both 0.3.7 and 0.3.8 tags are reachable from `main`; no branch was deleted | `main` |
 | W8 | **built 2026-10-12** with the recommended answers (W8 design above). U30 fixed. Evidence:<br>• **Unit:** `KeyRotationTest` 14/0 (Zipline's own signer and verifier over a whole rotation, and the publisher's check never accepting what a W8 or pre-W8 host refuses); portal-relay 192/0.<br>• **Scaffold self-tests:** `keliver-publish` 41/0 locally; publish-target `--build` 44/0 on CI, which signs with two keys in a real Gradle build and refuses three (portal-tools 38214047382).<br>• **Earlier commit `15e52646`:** `ci.yml` 38214024406 green.<br>• **Rows K1–K8, all passing on both platforms at `52be15a4`:** the guard, dual-signed, a pre-W8 host from the published zip, the floor across keys, the next key alone, each side refusing the other's. Runs: reference-app 38215749144 (device **153/0**, prepare 30/0, `keliver-publish` self-test 41/0); ios-host 38215749105 (`ios.sh` **140/0**, self-test 68/0); `ci.yml` 38215749027 green; portal-tools 38215747969 (all self-tests green).<br>• **Independent review:** no blocking point; its 6 should-fix points and the relevant nits are fixed (`52be15a4`). | PR #98 |
 | W7 | **prep done 2026-10-12; not executed on hardware** (PR #100). `docs/DEVICE_PROOF.md`: the session's checklist (Android over USB, iPhone signing and `devicectl`, real-certificate HTTPS, release-signed APK and IPA, the embed proof, what to record, what it does not prove). The Android harness has a physical-device route (`KELIVER_DEVICE=physical`: hosts built for `127.0.0.1` behind `adb reverse`, the throwaway CA inside the test APKs, the development host's rows SKIP), **rehearsed on the CI emulator only** (`reference-app.yml` 38202773284, `device_route=physical`: prepare 28/0, device 130/0, E1–E10 and D3 SKIP; not a device result). `ci/w7/ios-device.sh` (build, sign, install, first load on an iPhone) has never run. Found and fixed: **U32**, the iOS host ignored `TEAM_ID`. D14 screenshots: black only on the `aosp_atd` image; `google_apis` gives VALID captures, device 135/0 (38213948442; `REFERENCE_APP.md`). Moving CI to it is a decision left open. CI at `ebdd0b31d`: reference-app 38213936318 (135/0), physical rehearsal 38213940854 (28/0, 130/0), ios-host 38213936321 (self-test 69/0, `ios.sh` 120/0), `ci.yml` 38213936497. Still needs the owner: the devices, an Apple team, a real-certificate server, an adopter app | PR #100 |
+| **tools 0.3.9 RELEASED** (W8 + the W3 hardening + U32) | **released 2026-10-13** under the owner's full control of releases (2026-10-12).<br>• **Tag** `portal-tools-v0.3.9` → `6069da99`.<br>• **Zip** `31c4214c…` (90,611,347 bytes), from the verified artifact `11843942421` (build 38454753493).<br>• **Device:** 38463890634 (19/0, 28/0).<br>• **Local check:** 58 files byte-identical; `ios.sh` on the zip **146/0**.<br>• **Stored asset:** the draft download-back worked (`31c4214c`); the public zip checked here (`shasum -c` OK).<br>• **Merged first, all green:** #101 (`993c43d6`), #100 (`f2dafdab`), #98 (`f4de3a34`).<br>• **Published-only proof (PR #102):** reference-app dispatch 38494338455 at `5ca15f16` (scaffolders from the published zip): prepare 30/0, device **160/0**; ios-host dispatch 38468862546 at `4c19479d` (`ios.sh` is unchanged since): **147/0**. These are the first runs where K1–K8 come entirely from a published zip, with the pre-W8 host from the published 0.3.8. The PR runs are also green (38483538737: 160/0; 38483538839: 147/0; CI 38483538738). | `docs/RELEASE_NOTES_TOOLS_0.3.9.md` |
 
 ## Next action
+
+**2026-10-14, current state.** Tools **0.3.9** is published (W8, the W3
+hardening, U32), and `main` holds #98, #100 and #101. #102 (merging) pins the reference app to the published 0.3.9 (published-only proof: device 160/0, `ios.sh`
+147/0, K1–K8 from a published zip). **Next:**
+- **W7 (the owner, with hardware):** the session is in `docs/DEVICE_PROOF.md`.
+  It uses the published 0.3.9, whose iOS host takes `TEAM_ID` (U32). It covers
+  a USB Android phone (`KELIVER_DEVICE=physical`), an iPhone
+  (`ci/w7/ios-device.sh`, the owner's Apple team), HTTPS with a real
+  certificate, a release-signed APK and IPA, and the W2 embed in a real app.
+- **The owner can still change the W8 decisions** (W8 design, "Decisions").
+- **Open, recorded:**
+  - the W3 deadline and the size cap have no device row;
+  - "same origin" is not a boundary;
+  - a host that jumps straight from the old key to the new one starts the new
+    key's floor at 0;
+  - D14 screenshots: `google_apis` captures are VALID and `aosp_atd` captures
+    are black, so moving CI's emulator image is the owner's call.
 
 **On 2026-10-07 the owner said: start both in parallel — the tools 0.3.7
 release and W3.**

@@ -101,6 +101,8 @@ cp docs/DEVICE_HOST.md "$STAGE/host/README.md"
 cp gradlew gradlew.bat "$STAGE/wrapper/" 2>/dev/null || true
 cp gradle/wrapper/* "$STAGE/wrapper/gradle/wrapper/"
 cp docs/PORTAL_TOOLS_README.md "$STAGE/README.md"
+# W8: the signing-key rotation procedure, which README.md, host/README.md and the guide point to.
+cp docs/KEY_ROTATION.md "$STAGE/KEY_ROTATION.md"
 
 # What this package IS, recorded inside it. An adopter holding only the zip can
 # answer: which tools build is this, what source produced it, and which Maven
