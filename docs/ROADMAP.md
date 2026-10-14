@@ -23,7 +23,8 @@ From the brownfield product proof in
 [`ADOPTION_RETRO_2026-10.md`](ADOPTION_RETRO_2026-10.md): one WebView feature
 (13 screens) rebuilt as a Keliver guest inside two existing production apps, with
 first real-device timings, memory and app-size numbers. Ordered by what a second
-adopter would hit first.
+adopter would hit first. Items 3–6 are planned step by step in
+[`ADOPTION_PLAN_2026-10.md`](ADOPTION_PLAN_2026-10.md).
 
 1. **Library 0.3.4: the widget gaps every host had to patch.** Both hosts carry
    the same 206-line override file. Each fix with a test:
