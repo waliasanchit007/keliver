@@ -121,5 +121,37 @@ yet.**
     `ios.sh` 127/0;
   - #101 at `99883d7a`: device 142/0, `ios.sh` 127/0.
 
-**Published-only proof after the release:** the reference app pinned to this
-release (PR "reference app: the published 0.3.9"), with run ids recorded there.
+## Published-only proof after the release
+
+PR #102 pins the reference app and its harness to this published zip (`31c4214c…`).
+All of its runs are green at `5ca15f16`, or at `4c19479d` where only the Android
+harness changed in between.
+
+| run | mode | result |
+|---|---|---|
+| reference-app 38494338455 | **dispatch: scaffolders from the published zip** (`KELIVER_SCAFFOLD_FROM: zip`) | prepare **30/0**, device **160/0**, K1–K8 all PASS (18 checks) |
+| reference-app 38483538737 | pull request: this checkout's scaffolders | prepare 30/0, device 160/0, K1–K8 all PASS |
+| ios-host 38468862546 | **dispatch: scaffolders from the published zip** (at `4c19479d`; `ios.sh` is unchanged since) | `ios.sh` **147/0**, K1–K8 all PASS |
+| ios-host 38483538839 | pull request | `ios.sh` 147/0, K1–K8 all PASS |
+| CI 38483538738 | pull request | success |
+
+- **The two dispatches are the first runs where the W8 rows come entirely from a
+  published zip.** That covers:
+  - the scaffolders and `keliver-publish` from 0.3.9;
+  - the pre-W8 host for K3/K6, taken from the **published** tools 0.3.8
+    (`ci/w8/legacy-tools.sh`, hash-pinned `aafed0d8…`).
+- In those runs:
+  - K3: the pre-W8 host loaded the dual-signed v10.
+  - K6: it refused v11, signed by the next key only ("manifest signature for key
+    portal-ed25519 did not verify").
+- **What these runs caught first** (runs 38468857400 and 38468858084). The harness's
+  own v1 check still expected `portal-ed25519` as the only signature. 0.3.9 signs
+  with this app's key name first, then `portal-ed25519` last.
+  - The check now reads the signatures in order and accepts either shape.
+  - This was not a defect in the release.
+- **Interrupted runs, not failures in the code:**
+  - CI 38468857261: the hosted runner lost communication.
+  - ios-host 38468857330: it hit its time limit while four heavy jobs shared the
+    machine.
+
+  Both reran green.
