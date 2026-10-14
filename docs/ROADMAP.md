@@ -1,17 +1,77 @@
 # Keliver — Roadmap & improvement backlog
 
 Ordered by (impact on the adoption thesis) × (how soon it bites). Every item lists
-its evidence — nothing here is speculative. **Status: 2026-09-23**, after tools
+its evidence — nothing here is speculative. **Status: 2026-10-15**: "Adoption
+findings (2026-10)" below is the newest list and comes first. The rest was written
+2026-09-23, after tools
 0.3.5 and the first reference app whose development route uses only published
 artifacts (`reference/inventory`, `docs/REFERENCE_APP.md`; its production host
 still comes from Keliver source). The P0–P3 sections below are
-the 2026-07-27 backlog and its history; **"Current priorities" is the part to
-pick work from.** `CURRENT_STATE.md` opens with a status-at-a-glance that
+the 2026-07-27 backlog and its history; after the adoption findings, **"Current
+priorities" is the part to pick work from.** `CURRENT_STATE.md` opens with a status-at-a-glance that
 separates what is shipped, what was demonstrated and on what, what is broken,
 and which evidence can no longer be re-run.
 
 **There is no external adopter.** Everything below that says "verified" was
-verified by us, on apps we wrote.
+verified by us. Since 2026-10 one proof was run on production apps we did **not**
+write (still by us, never shipped): its findings are the next section, and they
+come before "Current priorities".
+
+## Adoption findings (2026-10) — pick work from here first
+
+From the brownfield product proof in
+[`ADOPTION_RETRO_2026-10.md`](ADOPTION_RETRO_2026-10.md): one WebView feature
+(13 screens) rebuilt as a Keliver guest inside two existing production apps, with
+first real-device timings, memory and app-size numbers. Ordered by what a second
+adopter would hit first.
+
+1. **Library 0.3.4: the widget gaps every host had to patch.** Both hosts carry
+   the same 206-line override file. Each fix with a test:
+   - `BottomSheet` opens fully expanded (`skipPartiallyExpanded`) on the theme's
+     surface, and slides out when the guest closes it;
+   - `Theme` starts from the ambient `MaterialTheme.colorScheme`, not
+     `lightColorScheme()` (unset roles came out Material purple);
+   - text fields take a content alignment;
+   - lazy lists and pagers key their items by widget, as #103 did for
+     `ComposeWidgetChildren` (merged, unreleased);
+   - a `ScrollableColumn` with unbounded height is caught at ingest, or rendered
+     bounded, instead of crashing on device.
+2. **Startup and memory.** On Android (debug builds) the native screen reached
+   content in 1.5 s cold against 1.1 s for the cached web page it replaced (equal
+   on a reopen, 0.6 s); on an iPhone 13 a warm open takes ≈ 1.5 s, ≈ 1 s of it
+   the guest's own work between frames. The iOS first open adds ≈ 76 MB of
+   footprint, runtime start included (Android native adds ≈ 10 MB, the web page
+   ≈ 165 MB). Start loading code when the host starts, not when the first
+   screen opens; profile the guest's frame work in QuickJS; find the iOS
+   memory. Make Production bundles the default `publishTask` (Development is
+   the default today: 4.3 MB against 2.4 MB, and slower to evaluate).
+3. **Brownfield host kit, on top of W2's `--embed`.** `--embed` gave a working
+   start; each host then needed ≈ 900 lines of glue, and every serious defect
+   (no web fallback, a bypassable request block, an authenticated client that
+   would follow any URL, developer text shown to users) was in that glue, found
+   only by review, and fixed twice. Ship: a fallback hook (show the page the
+   screen replaced), a status API, user-safe loading and failure states, routes
+   and close, a request allow-list hook, and a recipe for an app on an older
+   Kotlin (a separate host build plus an AAR) with the dependency floor it forces
+   (the proof's app moved to Compose 1.8.2, material3 1.3.2 and OkHttp 5.1,
+   touching 17 unrelated files).
+4. **Bridge generator.** One contract, hand-copied byte-identical into three
+   repositories, with hand-written Kotlin and Swift delegates. Generate both host
+   sides from the contract, and make the request allow-list part of it.
+5. **Device state catalogue.** iOS was checked with `?demo=` routes, launch
+   environment switches and an in-app snapshot hook, all improvised; the test
+   data was a hand-written fake while the relay already records and replays
+   HTTP. Ship named states, an on-device snapshot runner, and recorded data a
+   device can use.
+6. **Dev loop.** The first publish after another Gradle build fails with a
+   Kotlin/JS "Internal compiler error" and the retry works (cause not diagnosed;
+   keep the full Gradle output); the relay reads `keliver.portal.json` only at
+   start; a new bundle needs an app restart; an iPhone needs a tunnel because of
+   the Local Network prompt, and the debug bundle origin is compiled in.
+7. **Bundle delivery.** A download is one request per module, three in flight,
+   so it is latency-bound; a one-line guest change re-downloaded the
+   stdlib module too. Measure more parallelism or an archive, and why stdlib
+   changed.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 
