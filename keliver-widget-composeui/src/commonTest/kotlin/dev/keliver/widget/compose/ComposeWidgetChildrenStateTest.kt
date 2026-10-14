@@ -18,7 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 
 /**
@@ -28,7 +28,7 @@ import kotlinx.coroutines.yield
  * scroll position Home had left at the same index (found on a device, Stashfin Bonds).
  */
 class ComposeWidgetChildrenStateTest {
-  @Test fun rememberedStateFollowsTheWidgetNotItsIndex() = runBlocking {
+  @Test fun rememberedStateFollowsTheWidgetNotItsIndex() = runTest {
     val clock = BroadcastFrameClock()
     val job = Job()
     val recomposer = Recomposer(coroutineContext + clock + job)
@@ -39,19 +39,21 @@ class ComposeWidgetChildrenStateTest {
     children.insert(0, StatefulWidget("home", seen))
 
     val composition = Composition(NoNodesApplier(), recomposer)
-    composition.setContent { children.Render() }
-    assertEquals(listOf("home"), seen)
+    try {
+      composition.setContent { children.Render() }
+      assertEquals(listOf("home"), seen)
 
-    // The guest navigates: the widget at index 0 is replaced by a different one.
-    children.remove(0, 1)
-    children.insert(0, StatefulWidget("calculator", seen))
-    Snapshot.sendApplyNotifications()
-    repeat(5) { clock.sendFrame(0L); yield() }
+      // The guest navigates: the widget at index 0 is replaced by a different one.
+      children.remove(0, 1)
+      children.insert(0, StatefulWidget("calculator", seen))
+      Snapshot.sendApplyNotifications()
+      repeat(5) { clock.sendFrame(0L); yield() }
 
-    assertEquals(listOf("home", "calculator"), seen)
-
-    composition.dispose()
-    job.cancel()
+      assertEquals(listOf("home", "calculator"), seen)
+    } finally {
+      composition.dispose()
+      job.cancel()
+    }
   }
 }
 

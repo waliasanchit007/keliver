@@ -14,6 +14,10 @@
   animation) belonged to its INDEX, so a widget the guest inserted where another was removed
   inherited the old one's state. Found on a device: the next page of a nav stack opened at the
   previous page's scroll position. Regression test: `ComposeWidgetChildrenStateTest`.
+  Scope: containers that render through `ComposeWidgetChildren` (layout Column/Row/Box,
+  material containers); lazy lists and pagers still key their items by index. Side effect:
+  after a Treehouse code swap or hot reload re-inserts the root, host-side remembered state
+  (scroll, text) starts fresh instead of surviving by position.
 
 ### Known, not yet fixed (found adopting Keliver in a production app; worked around host-side)
 - keliver-material `BottomSheet` opens half-expanded (no `skipPartiallyExpanded`) on Material's
