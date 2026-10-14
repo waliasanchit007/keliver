@@ -6,7 +6,8 @@ kotlinx-serialization = "1.9.0"
 androidx-activity = "1.10.1"
 androidx-compose-ui = "1.8.3"
 jbCompose = "1.8.2"
-# The Skia build jbCompose uses; only its desktop runtime is a direct (test) dependency.
+# The Skia build jbCompose uses (bump it with jbCompose: the desktop runtime must match the
+# skiko that compose-ui pulls in). Only its desktop runtime is a direct (test) dependency.
 skiko = "0.9.4.2"
 ksp = "2.2.0-2.0.2"
 lint = "31.12.0"

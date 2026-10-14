@@ -50,4 +50,3 @@ android {
     androidResources = true
   }
 }
-

@@ -199,7 +199,9 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
     M3TextField(
       value = local,
       onValueChange = { local = it; onValueChange?.invoke(it.text) },
-      placeholder = { M3Text(placeholderState, modifier = Modifier.fillMaxWidth(), textAlign = fieldTextAlign(align)) },
+      // Aligned placeholders fill the field so the alignment shows; at the default (start) the
+      // placeholder keeps its own width, as before, so it never widens an unsized field.
+      placeholder = { M3Text(placeholderState, modifier = alignedPlaceholder(align), textAlign = fieldTextAlign(align)) },
       singleLine = true,
       textStyle = LocalTextStyle.current.copy(textAlign = fieldTextAlign(align)),
       modifier = m,
@@ -210,6 +212,12 @@ internal class ComposeUiTextField : TextField<@Composable (Modifier) -> Unit> {
   override fun onValueChange(onValueChange: ((String) -> Unit)?) { this.onValueChange = onValueChange }
   override fun align(align: Int) { this.align = align }
 }
+
+/**
+ * A text field's placeholder modifier: full width when [align] is center or end, so the alignment
+ * shows. (Give such a field a width: an unsized one then grows to the space it is offered.)
+ */
+internal fun alignedPlaceholder(align: Int): Modifier = if (align == 1 || align == 2) Modifier.fillMaxWidth() else Modifier
 
 /** A text field's `align`: 0 start, 1 center, 2 end. */
 internal fun fieldTextAlign(align: Int): TextAlign = when (align) {
@@ -305,6 +313,8 @@ internal class ComposeUiScrollableColumn : ScrollableColumn<@Composable (Modifie
     // unbounded (another scrolling column, a lazy list item) Compose throws ("measured with an
     // infinity maximum height"), which took a whole screen down on a device. There the parent
     // already scrolls, so this column lays its children out at full height instead.
+    // BoxWithConstraints is a SubcomposeLayout: it cannot answer intrinsic-size queries
+    // (IntrinsicSize.Min/Max on a parent), which plain verticalScroll could.
     BoxWithConstraints(modifier = m) {
       val scroll = if (constraints.hasBoundedHeight) Modifier.verticalScroll(rememberScrollState()) else Modifier
       FoundationColumn(modifier = scroll) {
@@ -320,8 +330,6 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
     private set
   private var onDismiss by mutableStateOf<(() -> Unit)?>(null)
   private var contentPaddingDp by mutableStateOf(0)
-  /** Whether this show's dismiss was already reported. */
-  private var dismissReported = false
   override val children: Widget.Children<@Composable (Modifier) -> Unit> = ComposeWidgetChildren()
   override var modifier: RedwoodModifier = RedwoodModifier
   override val value: @Composable (Modifier) -> Unit = { _ ->
@@ -329,8 +337,14 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
     // the end of its content (often its buttons).
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     // Closed by the guest: slide out, as a sheet the user dismissed does, instead of vanishing.
+    // Reopened while still on screen (mid slide-out): slide back in. ModalBottomSheet shows
+    // itself only when it first enters composition, so it would otherwise stop part-way.
     LaunchedEffect(visible) {
-      if (!visible && sheetState.isVisible) sheetState.hide()
+      if (visible) {
+        if (sheetState.isVisible) sheetState.show()
+      } else if (sheetState.isVisible) {
+        sheetState.hide()
+      }
     }
     if (visible || sheetState.isVisible) {
       ModalBottomSheet(
@@ -351,21 +365,17 @@ internal class ComposeUiBottomSheet : BottomSheet<@Composable (Modifier) -> Unit
     }
   }
   /**
-   * The user dismissed the sheet (swipe, scrim, Back). Several of those can fire while it
-   * animates out; the guest hears about it once per show. With no [onDismiss] the sheet closes
-   * itself, so it never stays composed but hidden.
+   * The user dismissed the sheet (swipe, scrim, Back); Material reports it once the sheet has
+   * slid out. The guest's [onDismiss] decides what happens next. With no [onDismiss] the sheet
+   * closes itself, so it never stays composed but hidden (the guest's own `visible` then still
+   * says true: it reopens the sheet by setting false, then true).
    */
   internal fun dismissed() {
-    if (dismissReported) return
-    dismissReported = true
     val onDismiss = onDismiss
     if (onDismiss != null) onDismiss() else visible = false
   }
 
-  override fun visible(visible: Boolean) {
-    if (visible && !this.visible) dismissReported = false
-    this.visible = visible
-  }
+  override fun visible(visible: Boolean) { this.visible = visible }
   override fun onDismiss(onDismiss: (() -> Unit)?) { this.onDismiss = onDismiss }
   override fun contentPaddingDp(contentPaddingDp: Int) { this.contentPaddingDp = contentPaddingDp }
 }

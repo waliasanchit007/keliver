@@ -6,7 +6,6 @@ package dev.keliver.material.composeui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -216,7 +215,7 @@ internal class ComposeUiOutlinedTextField : OutlinedTextField<@Composable (Modif
       onValueChange = { local = it; onValueChange?.invoke(it.text) },
       placeholder = {
         if (placeholderState.isNotEmpty()) {
-          M3FieldText(placeholderState, modifier = Modifier.fillMaxWidth(), textAlign = fieldTextAlign(align))
+          M3FieldText(placeholderState, modifier = alignedPlaceholder(align), textAlign = fieldTextAlign(align))
         }
       },
       label = if (label.isNotEmpty()) ({ M3FieldText(label) }) else null,

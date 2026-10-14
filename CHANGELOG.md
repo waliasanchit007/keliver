@@ -29,25 +29,30 @@ where every host had patched them with its own widget overrides:
 - **keliver-material `BottomSheet`** opens fully expanded (`skipPartiallyExpanded`): a sheet
   taller than half the screen used to stop half way, cutting off its end (often its buttons).
   It is drawn on the theme's `surface` instead of Material's `surfaceContainerLow`, slides out
-  when the guest closes it instead of vanishing, reports a user dismiss once per show, and
-  closes itself when the guest gave no `onDismiss`.
+  when the guest closes it instead of vanishing (and back in if the guest reopens it mid-slide),
+  and closes itself when the guest gave no `onDismiss` (the guest's `visible` then still says
+  true: it reopens the sheet by setting false, then true). Every dismiss still reaches the
+  guest's `onDismiss`, as in 0.3.3.
 - **keliver-material `Theme`** starts from the host's `MaterialTheme.colorScheme` instead of a
   fresh `lightColorScheme()`, so every colour role the guest does not set (containers, slider
   tracks, outlines) is the app's, not Material's default purple. Only when the guest asks for
   the other mode (`dark` on a light host, or the reverse) does it start from Material's scheme
-  for that mode, as before. A host with no `MaterialTheme` around the content is unchanged.
+  for that mode, as before. A host with no `MaterialTheme` around the content is unchanged. A
+  guest `Theme` nested in another guest `Theme` now inherits the outer one's overrides.
 - **keliver-material `ScrollableColumn`** no longer crashes when its height is unbounded (inside
   another vertically scrolling container, or a lazy list item): there it lays its children out
-  at full height and lets the parent scroll.
+  at full height and lets the parent scroll. It now measures through `BoxWithConstraints`, so it
+  cannot answer intrinsic-size queries (`IntrinsicSize.Min/Max` on a parent), which it could.
 
 Tests: `HostGapsTest` (jvmTest, real Compose UI on the desktop JVM, headless; now run by CI).
-Each fails on 0.3.3's widgets.
+The tests of what 0.3.3 got wrong fail on 0.3.3's widgets; the rest pin behaviour kept or added.
 
 ### Added
 - **keliver-material schema:** `TextField.align` and `OutlinedTextField.align` (0 start,
-  1 center, 2 end), for the text and the placeholder. Additive on the wire: a guest that sets it
-  on a host built with 0.3.3 gets start alignment (the host reports an unknown property and
-  carries on). Like every new schema property it changes the generated `TextField` /
+  1 center, 2 end), for the text and the placeholder. A centred or end-aligned field should be
+  given a width (its placeholder fills the field); at the default, layout is unchanged. Additive
+  on the wire: a guest that sets it on a Treehouse host built with 0.3.3 gets start alignment
+  (the host's protocol mismatch handler reports an unknown property and carries on). Like every new schema property it changes the generated `TextField` /
   `OutlinedTextField` composables' and widget interfaces' signatures: guests recompile (they
   always do, per bundle), and a host's own `TextField` / `OutlinedTextField` widget implements
   `align(Int)` (a delegating wrapper gets it for free).

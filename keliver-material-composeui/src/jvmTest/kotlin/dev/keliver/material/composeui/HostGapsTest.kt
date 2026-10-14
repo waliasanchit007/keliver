@@ -38,8 +38,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The gaps a production host had to patch around keliver-material (docs/ADOPTION_RETRO_2026-10.md):
- * each test fails on 0.3.3's widgets.
+ * The gaps a production host had to patch around keliver-material (docs/ADOPTION_RETRO_2026-10.md).
+ * The tests of what 0.3.3 got wrong fail on 0.3.3's widgets; the others pin behaviour kept or added
+ * alongside (the dismiss contract, the dark branch, a bounded column still scrolling, an unsized
+ * field keeping its width).
  */
 @OptIn(ExperimentalTestApi::class)
 class HostGapsTest {
@@ -58,20 +60,33 @@ class HostGapsTest {
     assertTrue(top < 250.dp, "the sheet's content starts at $top: it opened half-expanded")
   }
 
-  @Test fun bottomSheetReportsOneDismissPerShow() {
+  @Test fun bottomSheetReopenedWhileSlidingOutComesBackFullyExpanded() = runComposeUiTest {
+    val sheet = ComposeUiBottomSheet()
+    sheet.children.insert(0, Probe("tall") { Box(it.fillMaxWidth().height(600.dp)) })
+    sheet.visible(true)
+    setContent { sheet.value(Modifier) }
+    waitForIdle()
+    val expandedTop = onNodeWithTag("tall").getBoundsInRoot().top
+
+    mainClock.autoAdvance = false
+    sheet.visible(false) // the guest closes it...
+    mainClock.advanceTimeBy(100) // ...part-way through the slide-out...
+    sheet.visible(true) // ...and opens it again
+    mainClock.autoAdvance = true
+    waitForIdle()
+
+    assertEquals(expandedTop, onNodeWithTag("tall").getBoundsInRoot().top)
+  }
+
+  @Test fun bottomSheetPassesEveryDismissToTheGuest() {
     val sheet = ComposeUiBottomSheet()
     var dismisses = 0
     sheet.onDismiss { dismisses++ }
-
-    sheet.visible(true)
-    sheet.dismissed() // a swipe
-    sheet.dismissed() // the scrim, while it animates out
-    assertEquals(1, dismisses)
-
-    sheet.visible(false)
     sheet.visible(true)
     sheet.dismissed()
+    sheet.dismissed() // the guest kept it open (a "discard changes?" confirm): Back still reaches it
     assertEquals(2, dismisses)
+    assertTrue(sheet.visible) // the guest decides
   }
 
   @Test fun bottomSheetWithoutOnDismissClosesItself() {
@@ -143,6 +158,13 @@ class HostGapsTest {
     val startLeft = onNodeWithTag("start").firstLineLeft()
     val centerLeft = onNodeWithTag("center").firstLineLeft()
     assertTrue(centerLeft > startLeft + 50f, "centred text starts at $centerLeft, start-aligned at $startLeft")
+  }
+
+  @Test fun unsizedFieldKeepsItsWidthAtTheDefaultAlignment() = runComposeUiTest {
+    val field = ComposeUiOutlinedTextField().apply { text(""); placeholder("Amount") }
+    setContent { Box(Modifier.width(1000.dp)) { field.value(Modifier.testTag("field")) } }
+    val width = onNodeWithTag("field").getBoundsInRoot().let { it.right - it.left }
+    assertTrue(width < 500.dp, "an unsized, start-aligned field grew to $width")
   }
 
   @Test fun textFieldAlignsItsText() = runComposeUiTest {
