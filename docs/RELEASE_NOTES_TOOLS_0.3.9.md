@@ -151,7 +151,7 @@ harness changed in between.
   - This was not a defect in the release.
 - **Interrupted runs, not failures in the code:**
   - CI 38468857261: the hosted runner lost communication.
-  - ios-host 38468857330: it hit its time limit while four heavy jobs shared the
-    machine.
+  - ios-host 38468857330: it hit its 2-hour time limit.
 
-  Both reran green.
+  Neither was rerun green. Both were superseded by green runs at `5ca15f16`:
+  CI 38483538738 and ios-host 38483538839.
