@@ -9,33 +9,35 @@ those apps is in this repository.
 It is the first time Keliver met an app that **we did not write**: an existing codebase with its own
 Kotlin and Compose versions, its own network stack, auth, analytics, navigation and release
 flavours. Every earlier adoption gate in this repo (`docs/REFERENCE_APP.md`, `sample/`) was
-dogfooding. Read this alongside [`ROADMAP.md`](ROADMAP.md) ("Adoption findings, 2026-10"), where
-each finding below becomes a prioritised item.
+dogfooding. Read this alongside
+[`ROADMAP.md` — Adoption findings (2026-10)](ROADMAP.md#adoption-findings-2026-10--pick-work-from-here-first),
+where each finding below becomes a prioritised item. It runs real devices, but debug builds of a
+proof app, so it does not close `DELIVERY_PLAN.md` G11 (release-signed app, external adopter).
 
 ## The proof in one paragraph
 
-A React web feature (13 routes: a product list with a purchase sheet, a calculator, order history,
-order and payment status, KYC hand-offs to third-party web pages) was rebuilt as one Keliver guest:
+A transactional web feature (13 routes, with lists, bottom sheets, forms, status pages and
+hand-offs to third-party web pages) was rebuilt as one Keliver guest:
 13 portal screens, all ingesting with **0 RawCode**, 42 unit tests, published as signed bundles
 through the portal relay (v1 → v10 over two days). Each app got a production host scaffolded by
 `keliver-new-production-host.sh --embed` (tools 0.3.9), a seam at the point where the app opened
 the web page, and a fallback to that web page when no bundle can load. Both hosts were reviewed
 independently; every blocking finding was fixed. On devices (Samsung SM-S938B, Android 17; iPhone 13)
 the screens ran from test data end to end, and on Android also against the live backend, read-only.
-Nothing that moves money or starts KYC was ever run.
+Nothing that commits a transaction or starts a third-party flow was ever run.
 
 ## What it cost
 
 | | Android | iOS |
 |---|---|---|
-| Lines added (all files) | 3,974 | 3,811 |
+| Lines added (all files, before the measurement commits) | 3,974 | 3,811 |
 | Host module (scaffolded, then edited) | 2,911 (`KeliverHost` 848, bundle index 300, widget overrides 206, screen activity 148, …) | 2,755 (host 796, bundle index 300, HTTP 257, widget overrides 206, …) |
 | App-side glue (bridge delegate, web-result screen, seam, settings, debug switches) | ≈ 900 | ≈ 990 (Swift) |
 | Existing app files touched only because of a dependency upgrade | **17** (+45 / −38 lines), plus a new 59-line pull-to-refresh compatibility shim | 0 |
 
-The guest itself was ≈ 7,600 lines (1,700 screens, 3,300 presenter/logic, 2,000 components).
-It was scaffolded at 05:11, and by late morning its eighth bundle was running on both phones
-through both hosts. **The guest was the cheap part.** The two hosts and their glue cost
+The guest itself was ≈ 7,000 lines (1,700 screens, 3,300 presenter/logic, 2,000 components),
+plus ≈ 500 lines of tests. It was scaffolded at 05:11 (its first commit), and its eighth bundle was
+running on both phones through both hosts the same morning. **The guest was the cheap part.** The two hosts and their glue cost
 more lines than the guest, and that is where every serious defect was:
 
 1. **No fallback.** The first hosts showed the host's own message ("No bundle", a server address)
@@ -43,7 +45,7 @@ more lines than the guest, and that is where every serious defect was:
    the original arguments, whenever the host fails — before or during the screen.
 2. **The order block could be bypassed.** The guest's generic `request` was checked by path
    prefix; the reviews required an exact `(method, path)` allow-list in each host, with the one
-   money-moving POST allowed only in production release builds.
+   state-changing POST allowed only in production release builds.
 3. **Token-leak risk.** A host forwarded any URL the guest asked for through the app's
    authenticated client. Fixed by pinning the scheme, host and port to the API base URL and
    refusing everything else before any network call.
@@ -59,14 +61,16 @@ boundary, and both copies needed the same five fixes.
 
 ## The Kotlin version gap
 
-The apps were on Kotlin 2.1. Keliver 0.3.3 needs Kotlin 2.2. The Android host therefore had to be
+The Android app was on Kotlin 2.1. Keliver 0.3.3 needs Kotlin 2.2. The Android host therefore had to be
 **its own Gradle build** (Gradle 9, AGP 8.12, Kotlin 2.2) producing an AAR that the app consumes,
 so the app kept its compiler. That worked, but the AAR's runtime dependencies still forced
-app-wide upgrades: **Compose 1.6 → 1.8, material3 1.2 → 1.3, OkHttp 4 → 5.** Seventeen unrelated
-screens had to change (pull-to-refresh API, `BottomSheet` and dialog parameters), and the whole app
-needs a regression pass that has nothing to do with the feature. On iOS the host is a separate
+app-wide upgrades of what the app resolved: **Compose 1.7.8 → 1.8.2, material3 1.2.1 → 1.3.2,
+OkHttp 4.12 → 5.1**, and a second image library (Coil 3 next to the app's Coil 2). Seventeen
+unrelated files had to change (an experimental pull-to-refresh API was removed, Material's sheet
+`windowInsets` and text-field colour parameters were renamed), and the whole app needs a
+regression pass that has nothing to do with the feature. On iOS the host is a separate
 Kotlin/Native framework, so there was no gap to bridge — at the price of a second Gradle build
-inside the Xcode build (≈ 2 minutes per incremental build).
+inside the Xcode build (an incremental Xcode build with a host change took ≈ 2 minutes).
 
 A team evaluating Keliver will see the dependency bump before it sees a screen.
 
@@ -127,8 +131,10 @@ guest had no route to use it from a device.
 
 ## Measurements
 
-All on 2026-10-14/15, orders off, in test-data mode (a fake API that answers after 450 ms) unless
-a row says live. Times are
+All on 2026-10-14/15, on **debug builds** of both apps (debuggable Compose and Kotlin are slower
+than release; the WebView is not affected, so native-vs-web comparisons below lean against
+native), with orders off, in test-data mode (a fake API that answers after 450 ms) unless a row
+says live. Sizes are in MB of 10^6 bytes unless marked MiB. Times are
 from the moment the screen was asked for. "Shell" is the first frame after the guest started;
 "content" is the frame after the screen's first data was composed (the guest's
 "page viewed" analytics event). Raw logs, scripts and method:
@@ -138,8 +144,8 @@ from the moment the screen was asked for. "Shell" is the first frame after the g
 
 | | Development (published v1–v9) | Production (v10) | Web feature (for comparison) |
 |---|---|---|---|
-| Raw | 4.28 MB, 41 modules | 2.36 MB (modules and manifest) | 1.03 MB entry + 1.24 MB in 57 lazy chunks |
-| Compressed | 1.57 MB (gzip -9) | 0.98 MB (gzip -9) | 0.33 MB entry + 0.44 MB lazy (brotli, as served) |
+| Raw | 4.28 MB, 41 modules | 2.36 MB, 41 modules | 1.03 MB entry + 0.98 MB in 52 lazy chunks |
+| Compressed | 1.57 MB (gzip -9) | 0.98 MB (gzip -9) | 0.33 MB entry + 0.34 MB lazy (brotli, as served) |
 | Largest module | the guest, 845 KB | the guest, 717 KB | the entry chunk, 679 KB |
 
 Compose runtime (435 KB), Kotlin stdlib (251 KB), coroutines (151 KB) and serialization (239 KB)
@@ -152,7 +158,7 @@ iPhone 13 (5 cold launches each, median; the bundle came through a quick tunnel,
 
 | | v8 Development | v10 Production |
 |---|---|---|
-| Code loaded (lookup done at launch; manifest fetched on open) | 0.75 s | 0.34 s |
+| Code loaded (lookup done at launch; manifest fetched on open; includes tunnel latency, 0.33 s vs 0.17 s) | 0.75 s | 0.34 s |
 | … of which module evaluation (41 modules) | 0.31 s | 0.17 s |
 | Shell | 0.82 s | 0.40 s |
 | Content, **cold** (first open in the process) | 2.41 s | 1.82 s |
@@ -175,12 +181,16 @@ read-only, the web page with its assets already in the WebView's HTTP cache):
 | Native, test data, warm | – | 0.08 s | 0.74 s | 1.00 s |
 | Native, live, **cold** | 0.50 s | 0.61 s | 1.10 s | **1.51 s** |
 | Native, live, **warm** | – | 0.11 s | 0.39 s | **0.63 s** |
-| Web, live, **cold** | – | 0.58 s | 0.95 s | **1.09 s** |
+| Web, live, **cold** | – | 0.58 s | 0.95 s | **1.11 s** |
 | Web, live, **warm** | – | 0.31 s | – | **0.61 s** |
+
+The web's content time is the later of its last LCP entry and the data response (in three of
+five cold runs LCP came before the data); warm, the page did not refetch, so it is LCP alone.
 
 **The native screen was not faster than the cached web page.** It was ≈ 0.4 s slower on a first
 open (half a second of code loading, then the data call starts later than the web's), and the
-same on a reopen. The guest's composition on Android costs ≈ 0.2 s before the data call and
+same on a reopen. These are debug builds; a release build would narrow the cold gap, by an
+amount not measured here. The guest's composition on Android costs ≈ 0.2 s before the data call and
 ≈ 0.25 s after it; on the iPhone ≈ 0.55 s and ≈ 0.4 s. The iPhone web page was not measured
 (without a signed-in session it would have called a production token endpoint).
 
@@ -188,9 +198,10 @@ same on a reopen. The guest's composition on Android costs ≈ 0.2 s before the 
 
 - A one-line change published as v9 reached the iPhone on its **next launch**: code ready 1.75 s
   after the screen opened (0.72 s manifest, two changed modules downloaded in parallel).
-- Switching to the Production build (v10, every module changed) took 2.1 s on a launch where
-  about half the modules were already cached: 18 downloads, three at a time, ≈ 0.3 s each through
-  the tunnel. A full download is **latency-bound**: 41 separate requests, three in flight.
+- The Production build (v10; about 20 of its 41 modules differed from what the phone had, and an
+  interrupted earlier launch had already fetched 6 of them) was ready 2.1 s after the screen
+  opened: the manifest and 14 modules, three requests at a time, ≈ 0.3 s each through the
+  tunnel. A download is **latency-bound**: one request per module, three in flight.
 - Propagation is therefore "publish → the user's next cold launch of the app → the screen
   opened". There is no faster path today (no on-resume check was enabled here, and no push).
 
@@ -206,19 +217,20 @@ same on a reopen. The guest's composition on Android costs ≈ 0.2 s before the 
 On Android, the native screen costs ≈ 10 MB of app PSS (whole-app PSS moves ±30 MB between readings),
 where the web page cost ≈ 91 MB in the app process and ≈ 73–92 MB more in the WebView's renderer:
 **memory is where native clearly wins on Android.** On iOS the first open costs **≈ 76 MB** of
-footprint and a second open adds ≈ 15 MB more without the first being released; that is three
-times the ≤ 25 MB `PERFORMANCE.md` proposed, and it needs explaining (Compose Multiplatform's
-Skia/Metal surface, QuickJS, or a leak).
+footprint and a second open adds ≈ 15 MB more without the first being released. The app had no
+Compose Multiplatform before, so this includes starting that runtime (Skia, Metal) as well as
+QuickJS and the guest; it is not the per-screen figure `PERFORMANCE.md` proposes a budget for, and
+it needs breaking down.
 
 ### App size
 
 Android (R8 release APKs of the commit before the feature and the branch, built the same way):
 **+3.55 MB** universal APK, **≈ +2.1 MB** for an arm64 device — dex +1.23 MB compressed
 (+3.7 MB raw; this includes the forced Compose and OkHttp upgrades, not only Keliver) and QuickJS
-+0.84 MB (`libquickjs.so`, per ABI).
++0.84 MB on arm64 (`libquickjs.so`; 0.54 MB armv7, 0.86 MB x86_64).
 
 iOS (Release build with a link map; the bytes the linker kept from the host framework):
-**37.4 MB** of the 92 MB linked into the app binary, ≈ **14 MB** compressed (an estimate at the
+**37.4 MiB** of the 92 MiB linked into the app binary, ≈ **14 MB** compressed (an estimate at the
 binary's own compression ratio). Almost all of it is Compose Multiplatform's iOS stack (Skia,
 HarfBuzz, a 6.3 MB ICU data object) and Kotlin/Native code; Keliver's own share was not separated.
 On iOS, Keliver brings a UI toolkit with it; on Android the toolkit is already in the app.
@@ -230,12 +242,12 @@ On iOS, Keliver brings a UI toolkit with it; on Android the toolkit is already i
 3. Publish Production bundles; Development is the default.
 4. Write the request allow-list on day one.
 5. Plan device testing on iOS before you need it.
-6. Measure against the page you replace. A cached web page was as fast as the native screen on
-   Android; native won on memory, not on time.
+6. Measure against the page you replace. On Android a cached web page was faster than the native
+   screen on a first open and equal on a reopen; native won on memory, not on time.
 
 ## What changes in Keliver
 
-Prioritised in [`ROADMAP.md`](ROADMAP.md) under "Adoption findings (2026-10)":
+Prioritised in [`ROADMAP.md`](ROADMAP.md#adoption-findings-2026-10--pick-work-from-here-first):
 
 1. **Library 0.3.4** — the widget gaps above, each with a test.
 2. **Brownfield host kit** — the fallback, a status API, user-safe loading and error states,
