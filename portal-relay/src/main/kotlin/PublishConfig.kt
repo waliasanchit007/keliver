@@ -16,8 +16,15 @@ internal object PublishConfig {
 
   private val json = Json { encodeDefaults = true }
 
-  /** The file now, or why it cannot be used: a publish never guesses past a broken config. */
-  fun current(repoDir: File): Result<PortalConfig> = runCatching { loadPortalConfig(repoDir) }
+  /**
+   * The file now, or why it cannot be used: a publish never guesses past a broken config. A file
+   * that is not there when it was at start ([existedAtStart]) is a failure too, not the defaults
+   * (which name Keliver's own guest project).
+   */
+  fun current(repoDir: File, existedAtStart: Boolean): Result<PortalConfig> = runCatching {
+    check(!existedAtStart || File(repoDir, "keliver.portal.json").isFile) { "keliver.portal.json is gone (it was there at start)" }
+    loadPortalConfig(repoDir)
+  }
 
   /** Settings other than [PER_PUBLISH] that differ between [started] and [now], sorted. */
   fun restartNeeded(started: PortalConfig, now: PortalConfig): List<String> {

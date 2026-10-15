@@ -226,7 +226,8 @@ newest 20 are kept), and the response names that file.
 
 Each publish reads `keliver.portal.json` again and uses its `publishTask` and
 `publishOutput` as they are now, so switching the bundle task needs no relay
-restart. A file that does not parse refuses the publish. Other settings are
+restart. A file that does not parse or fails validation, or that was there at
+start and is gone, refuses the publish. Other settings are
 read at start only; the publish response names any that changed since.
 
 ## Project config & scaffolding (separability groundwork)

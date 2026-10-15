@@ -60,6 +60,7 @@ private val repoDir = repoResolution.second
 
 /** Separability: the repo's keliver.portal.json (all fields default to this repo's layout). */
 private val config = loadPortalConfig(repoDir)
+private val configFileAtStart = File(repoDir, "keliver.portal.json").isFile
 
 private val PORT = config.port
 
@@ -422,16 +423,17 @@ private fun publish(): Pair<Boolean, String> {
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
   // The publish task and output come from keliver.portal.json as it is now (PublishConfig).
-  val current = PublishConfig.current(repoDir).getOrElse {
+  val current = PublishConfig.current(repoDir, configFileAtStart).getOrElse {
     return false to log.appendLine("publish REFUSED: keliver.portal.json cannot be read: ${it.message}\nNothing was compiled or signed.").toString()
   }
   PublishConfig.restartNeeded(config, current).takeIf { it.isNotEmpty() }?.let {
     log.appendLine(
-      "publish: keliver.portal.json changed since the relay started. ${it.joinToString()} take effect after a restart; " +
-        "publishTask and publishOutput are read at every publish.",
+      "publish: keliver.portal.json changed since the relay started. Restart the relay for these to take effect: " +
+        "${it.joinToString()}. (publishTask and publishOutput are read at every publish.)",
     )
   }
   if (current.publishTask != config.publishTask) log.appendLine("publish: publishTask is now ${current.publishTask}")
+  if (current.publishOutput != config.publishOutput) log.appendLine("publish: publishOutput is now ${current.publishOutput}")
 
   // W4: the bundle is signed for the version it will be stored as. The relay
   // numbers its bundles in publish order, so its sequence is the version.
