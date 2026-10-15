@@ -40,6 +40,8 @@ internal object PublishLogs {
       Files.createDirectories(dir)
     }
     val file = dir.resolve("publish-v$sequence-$nowMillis.log")
+    // CREATE_NEW: a name collision throws rather than overwriting (the relay's caller reports it
+    // and publishes anyway); publishes run one at a time and the name carries the sequence.
     val options = setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
     val channel = if (posix) {
       FileChannel.open(file, options, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))

@@ -272,7 +272,6 @@ private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), 
 
 private fun screenFile(project: String, screen: String) = File(File(root, safe(project)), "${safe(screen)}.json")
 
-
 private fun projectNames(): List<String> =
   root.listFiles { f -> f.isDirectory && f.name !in RESERVED_ROOT_DIRS }
     ?.map { it.name }?.sorted() ?: emptyList()
