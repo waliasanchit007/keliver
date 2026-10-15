@@ -22,27 +22,38 @@ build or a user's device. The delivery plan's W7 (real devices, an adopter) stay
   evaluate.
 
 **Steps.**
-1. M0: **timing marks in both host templates**, debug builds only. The proof added them by hand.
-   - Marks: `open` (the screen was asked for), `code` (the bundle's code loaded), `first-frame`
-     (the first guest frame applied), `content` (the guest says its data is shown).
-   - Sources: `code` from the Treehouse `EventListener`'s `codeLoadSuccess`. `first-frame` from a
-     new host hook called when a change list is applied to the screen's view: `EventListener` has
-     no frame callback, so M0 adds one. `content` from a guest-side `mark(name)`.
-   - Each mark is taken one frame after the host applies the change (Android: two
-     `Choreographer` callbacks; iOS: the next `CADisplayLink` tick), so it counts what the
-     user can see.
-   - Output: Android logs one `KeliverTiming` logcat line per mark and iOS exposes
-     `Keliver.onTrace(name, epochMillis)`; both are also handed to a debug-only file sink that
-     the snapshot runner (item 5) reads.
+1. M0: **timing marks in both host templates.** The proof added them by hand.
+   - **Which builds:** debug builds, and a benchmark build with release settings that is never
+     shipped (Android: a `benchmark` build type, minified, not debuggable, profileable; iOS: a
+     Release-based `Benchmark` configuration). The store build compiles none of it.
+   - **Marks:** `open` (the screen was asked for), `code` (the bundle's code loaded),
+     `first-frame` (the first guest frame applied), `content` (the guest says its data is
+     shown).
+   - **Sources:**
+     - `code` from the Treehouse `EventListener`'s `codeLoadSuccess`.
+     - `first-frame` from a new host hook called when a change list is applied to the screen's
+       view. `EventListener` has no frame callback, so M0 adds one.
+     - `content` from the guest's `mark(name)`, which calls a small `KeliverTrace` service that
+       only debug and benchmark hosts bind. Where it is not bound, `mark` does nothing.
+   - **What is visible:** `first-frame` and `content` are taken one frame after the host applies
+     the change (Android: two `Choreographer` callbacks; iOS: the next `CADisplayLink` tick), so
+     they count what the user can see. `open` and `code` are taken when they happen.
+   - **Timestamps are monotonic:** Android `SystemClock.elapsedRealtimeNanos()`, iOS
+     `CACurrentMediaTime()`.
+   - **Output:** Android logs one `KeliverTiming` logcat line per mark, and iOS exposes
+     `Keliver.onTrace(name, nanos)`. Both also go to a file sink that the snapshot runner
+     (item 5) reads.
    - Steps 2–4 and item 7 use these marks.
 2. M1: **Production bundles by default.** `publishTask` defaults to the Production executable,
    and Development sits behind a flag. This is a behaviour change, so it gets a release note.
 3. M2: **release-build numbers.** The proof's harness (cold, warm, reopen, footprint), run on
-   release builds of the reference app, with M0's marks.
-4. M3: **start the code load at host start**, not at the first screen. Today a prewarm does only
-   the bundle lookup. Measure the cold-open gain with M2's harness.
+   the reference app's benchmark build (M0), which has release settings.
+4. M3: **start the code load at host start**, not at the first screen. Today the host's
+   `start()` at app launch only looks up the bundle. Measure the cold-open gain with M2's harness.
 5. M4: **a guest frame profile**: time per frame in composition, protocol encoding and host
-   apply, from M0's change-list hook plus the `EventListener`'s `callStart` and `callEnd`.
+   apply. The host side comes from M0's change-list hook. `callStart` and `callEnd` time a whole
+   guest call, so splitting composition from encoding needs spans inside the guest's runtime,
+   reported through M0's `KeliverTrace` service.
 6. M5: **an iOS memory breakdown**: the Compose Multiplatform runtime vs QuickJS vs the guest,
    and whether a second open leaks.
 
@@ -55,8 +66,9 @@ Decide on optimisations only after M2–M5.
   start.
 - The app glue then took ≈ 900 lines on Android and ≈ 990 lines of Swift on iOS.
 - Both copies needed the same review fixes: a fallback to the replaced page, a request allow-list,
-  an authenticated client pinned to one origin, user-safe failure text, and safe external links.
+  an authenticated client pinned to one origin, and user-safe failure text.
 - Android also needed:
+  - safe external links (`intent://` opened without the browser's rules);
   - a permission on an exported debug receiver;
   - honouring a re-delivered intent's new route;
   - an `https` release origin;
@@ -75,8 +87,8 @@ The kit builds on these. It does not add a second status channel.
 
 | Piece | What it does | Where it was hand-written in the proof |
 |---|---|---|
-| Status, public on both | Android's `KeliverHostState` gains typed `Loading` and `Unavailable(reason)`, next to `Message` and `Running`, where `reason` is W6's category. iOS makes its `HostState` public with the same shape, delivered on the main thread. The app hides its own chrome while `Running`. | iOS (Android inferred it from `Message`) |
-| `onUnavailable(reason, route)` | Called when the host cannot show a screen: `no-bundle`, `refused`, `not-loaded`, or the code failed mid-screen. The app opens what the screen replaced, with the original route. This is not W5's `FellBack`: there, the host still runs the cached last-good bundle. | Both apps' screen controllers |
+| Status, public on both | Android's `KeliverHostState` gains typed `Loading` and `Unavailable(outcome, reason)`, next to `Message` and `Running`. `outcome` is W6's outcome (`no-bundle`, `refused`, `not-loaded`, plus a new `screen-failed`); `reason` is W6's fixed category. iOS makes its `HostState` public with the same shape, delivered on the main thread. The app hides its own chrome while `Running`. | iOS (Android inferred it from `Message`) |
+| `onUnavailable(outcome, reason, route)` | Called when the host cannot show a screen: `no-bundle`, `refused`, `not-loaded`, or the new `screen-failed` (the code failed or was unloaded while a screen showed it; W6 reports it too). The app opens what the screen replaced, with the original route. This is not W5's `FellBack`: there, the host still runs the cached last-good bundle. | Both apps' screen controllers |
 | Release message policy | Debug builds keep the host's diagnostic text. Release builds show "Loading…" or a generic failure line, which the app can override. | Both hosts |
 | `RequestPolicy` | Three rules, checked before any network: an exact `(method, path)` allow-list; one pinned origin (scheme, host, port) that must be `https` in release builds; and a per-build switch for state-changing calls. It is applied by the `HostHttpProvider` adapter (item 4). | Both apps' bridge delegates |
 | `ExternalLinkPolicy` | `https` opens in an in-app browser and `intent://` is handled only as a browser would. Everything else is refused. | Android |
@@ -101,20 +113,25 @@ areas. Measure it on the next adoption: glue lines per app, and review findings.
 - One 11-call `ZiplineService` contract was copied byte for byte into three repositories.
 - Delegates were hand-written in Kotlin (Android) and in Swift through a Kotlin adapter (iOS).
 - The allow-list existed only in the two delegates.
-- Most of the 11 calls were data reads that sent the app's authenticated request and returned
-  the body. They were per-endpoint because the app's authenticated client is not reachable
-  through `HostHttp`.
+- The 11 calls were context, request, web-for-result, HTML-for-result, open URL, track, haptic,
+  toast, share, download and close. All of the data went through the one generic `request` call,
+  and the rest are actions.
+- `request` duplicated `HostHttp` because the embed did not wire the app's authenticated client
+  into it. Android's `OkHttpHostHttp` already takes any `OkHttpClient`, pinned to one base, with
+  no redirects and `..` refused. iOS's `NSURLSessionHostHttp` has no way to add the app's auth
+  headers.
 
 **Direction (D13).** Data goes through the narrow generic transport, not a per-endpoint
 contract. The guest owns endpoints, types and parsing. Only actions (open a route, close, share,
 analytics) need a contract.
 
 **What ships.**
-1. **A `HostHttpProvider` adapter over the app's own authenticated client.**
-   - Android: an OkHttp `Call.Factory`. iOS: a `URLSession` plus a header callback.
-   - It is wrapped in item 3's `RequestPolicy`, so the allow-list and the pinned origin are
-     enforced once, in Keliver code.
-   - This replaces the data calls, and it also makes item 5's recorded data and D7 preview
+1. **`HostHttp` over the app's own authenticated client.**
+   - Android: the embed wires the app's `OkHttpClient` into the existing `OkHttpHostHttp`.
+   - iOS: `NSURLSessionHostHttp` gains a header callback, so the app can add its auth headers.
+   - Both apply item 3's `RequestPolicy`, so the allow-list and the pinned origin are enforced
+     once, in Keliver code.
+   - This replaces the bridge's `request` call, and it also makes item 5's recorded data and D7 preview
      substitutes work for them, because both already exist at the `HostHttp` layer.
 2. **Generated action bridges.**
    - From an annotated Kotlin interface in a contract module that the guest and both hosts
@@ -127,18 +144,20 @@ analytics) need a contract.
      directly. The hand-written Kotlin adapter goes away.
    - Return types follow D13's rule: no `List<@Serializable>`; wrap it in one type.
 3. **The contract version in the compatibility gate (D2).**
-   - The signed manifest carries `bridge: {name, min}`, the oldest contract version the bundle
-     can talk to.
-   - A host declares the version it implements, and the lookup refuses a bundle whose `min` is
-     newer, exactly as `widgetVersion` is gated today.
+   - A bundle declares `bridge: {name, min}`, the oldest contract version it can talk to, and a
+     host declares the version it implements.
+   - **Lookup:** `bridge.min` goes in the bundle index entry, as `widgetVersion` does today, so
+     the lookup skips a bundle the host cannot serve. The index entry is not signed.
+   - **Load:** the same value is in the signed manifest's metadata, and the host checks it again
+     before loading, the way it checks the sequence floor today. A bundle whose `min` is newer
+     is refused.
 
 **Steps.**
-1. B1: the `HostHttpProvider` adapter with `RequestPolicy`, on Android, tested against a local
-   server (allowed, refused, wrong origin, redirect).
-2. B2: the same on iOS.
+1. B1: `RequestPolicy` in `OkHttpHostHttp` and the app-client wiring in the Android embed, tested
+   against a local server (allowed, refused, wrong origin, redirect).
+2. B2: the header callback and `RequestPolicy` in `NSURLSessionHostHttp`, with the same tests.
 3. B3: action generation with a golden-file test, on both platforms.
-4. B4: the contract version in the manifest and in the host gate (W4's host-version gate is the
-   template).
+4. B4: the contract version in the index entry and the signed manifest, and both host checks.
 5. B5: migrate the reference app.
 
 ## Item 5. Device state catalogue and snapshot runner
@@ -152,7 +171,7 @@ analytics) need a contract.
 
 **What ships.**
 - **Named states**, declared next to a screen in the guest:
-  `@NamedState("review") fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")`.
+  `@ScreenState("review") fun review() = NamedState(route = ItemDetail(id = "sample"), fixtures = "review")`.
   - A state is a typed route (D8) plus an HTTP fixture set. The presenter runs for real, and
     only the `HostHttp` capability gets the fixture substitute (D7).
   - The portal lists the states, the editor previews them, and a debug device can open them.
@@ -166,6 +185,10 @@ analytics) need a contract.
   - A debug build of the host embeds the reviewed fixture sets as data. A debug-only
     `HostHttpProvider` replays them in-process: an exact match or a 424-style miss, and never an
     outbound call.
+  - It must match exactly as the relay does: normalised fields, duplicates in file order, and
+    `reuse`. That matcher is JVM-only today, in `portal-relay`'s `HttpReplay.kt`. It moves to a
+    multiplatform module that the relay and both hosts share, so a device can't drift from
+    preview.
   - So a device needs no token, no relay route and no tunnel to the relay. Release builds
     contain neither the fixtures nor the replay provider, and a self-test checks that.
 - **A snapshot runner** in both host templates, debug builds only, started by launch arguments.
@@ -182,10 +205,10 @@ analytics) need a contract.
   - No UI-automation driver is needed.
 
 **Steps.**
-1. S1: `@NamedState` in the guest API, with ingest support and an editor list (states preview
+1. S1: `@ScreenState` in the guest API, with ingest support and an editor list (states preview
    with their fixture set as the persona's `httpFixtureSet`).
-2. S2: the embedded fixture replay provider (debug only), with a release-build self-test that it
-   is absent.
+2. S2: the shared multiplatform fixture matcher, then the embedded replay provider (debug only),
+   with a release-build self-test that it is absent.
 3. S3: the Android runner, plus a CI emulator job that publishes the PNGs and timings as
    artifacts.
 4. S4: the iOS runner on the simulator in CI (`simctl`).
@@ -225,13 +248,13 @@ Production bundles by default (the proof's fifth dev-loop finding) is item 2's M
 ## Order
 
 The work follows the ROADMAP's order, with one exception: item 6's small fixes run alongside
-item 2, because they are a day or less each and every later step uses them.
+item 2, because each is small and every later step uses them.
 
 1. Item 1: #105, released as library 0.3.4 after its device render.
 2. Item 2, M0–M2, and item 6's first four rows, alongside.
 3. Item 2, M3–M5.
-4. Items 3 and 4 together (K1–K2 with B1–B2), because `RequestPolicy` is shared.
-5. Item 5 (S1–S3), then K3–K4, B3–B5 and S4.
+4. Items 3 and 4 together (K1–K4 with B1–B5), because `RequestPolicy` is shared.
+5. Item 5 (S1–S4).
 6. Item 7, and item 6's device proxy.
 
 Each step gets an independent review and green CI.

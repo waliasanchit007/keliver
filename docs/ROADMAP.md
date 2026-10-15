@@ -58,10 +58,10 @@ run alongside item 2.
    (the proof's app moved to Compose 1.8.2, material3 1.3.2 and OkHttp 5.1,
    touching 17 unrelated files).
 4. **Bridge generator.** One contract, hand-copied byte-identical into three
-   repositories, with hand-written Kotlin and Swift delegates. Most calls were
-   authenticated data reads: route those through `HostHttp` over the app's own
-   client, behind the request allow-list (D13), and generate only the action
-   calls.
+   repositories, with hand-written Kotlin and Swift delegates. Its one generic
+   `request` call duplicated `HostHttp` because the embed did not wire the app's
+   authenticated client into it: wire it, behind the request allow-list (D13),
+   and generate only the action calls.
 5. **Device state catalogue.** iOS was checked with `?demo=` routes, launch
    environment switches and an in-app snapshot hook, all improvised; the test
    data was a hand-written fake while the relay already records and replays
