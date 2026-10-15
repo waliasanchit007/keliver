@@ -67,11 +67,11 @@ Decide on optimisations only after M2–M5.
 - The app glue then took ≈ 900 lines on Android and ≈ 990 lines of Swift on iOS.
 - Both copies needed the same review fixes: a fallback to the replaced page, a request allow-list,
   an authenticated client pinned to one origin, and user-safe failure text.
+- One host's release bundle origin was left on `http://`.
 - Android also needed:
   - safe external links (`intent://` opened without the browser's rules);
   - a permission on an exported debug receiver;
   - honouring a re-delivered intent's new route;
-  - an `https` release origin;
   - a separate host build, because the app was on an older Kotlin.
 
 **What already exists.**
@@ -90,7 +90,7 @@ The kit builds on these. It does not add a second status channel.
 | Status, public on both | Android's `KeliverHostState` gains typed `Loading` and `Unavailable(outcome, reason)`, next to `Message` and `Running`. `outcome` is W6's outcome (`no-bundle`, `refused`, `not-loaded`, plus a new `screen-failed`); `reason` is W6's fixed category. iOS makes its `HostState` public with the same shape, delivered on the main thread. The app hides its own chrome while `Running`. | iOS (Android inferred it from `Message`) |
 | `onUnavailable(outcome, reason, route)` | Called when the host cannot show a screen: `no-bundle`, `refused`, `not-loaded`, or the new `screen-failed` (the code failed or was unloaded while a screen showed it; W6 reports it too). The app opens what the screen replaced, with the original route. This is not W5's `FellBack`: there, the host still runs the cached last-good bundle. | Both apps' screen controllers |
 | Release message policy | Debug builds keep the host's diagnostic text. Release builds show "Loading…" or a generic failure line, which the app can override. | Both hosts |
-| `RequestPolicy` | Three rules, checked before any network: an exact `(method, path)` allow-list; one pinned origin (scheme, host, port) that must be `https` in release builds; and a per-build switch for state-changing calls. It is applied by the `HostHttpProvider` adapter (item 4). | Both apps' bridge delegates |
+| `RequestPolicy` | Three rules, checked before any network: an exact `(method, path)` allow-list; one pinned origin (scheme, host, port) that must be `https` in release builds; and a per-build switch for state-changing calls. K1 and K2 define it; item 4's B1 and B2 apply it in the `HostHttp` adapters. | Both apps' bridge delegates |
 | `ExternalLinkPolicy` | `https` opens in an in-app browser and `intent://` is handled only as a browser would. Everything else is refused. | Android |
 | Routes and close | `open(route)` takes the typed route from D8, filtered through a query-key allow-list, and honours a re-delivered intent's new route (`onNewIntent`) on Android. `closeScreen()` pops or dismisses, whichever way the screen was shown. | Both apps |
 | Debug-only surfaces | Debug receivers and launch switches are unexported, or need a signature permission. A release build has none of them. | Android |
@@ -98,7 +98,8 @@ The kit builds on these. It does not add a second status channel.
 
 **Steps.**
 1. K1: the Android embed template (the first seven pieces), with self-tests.
-2. K2: the same on iOS.
+2. K2: the five pieces that apply on iOS (all but `ExternalLinkPolicy` and the Android-only
+   debug surfaces).
 3. K3: the dependency-floor report in the scaffolder, with a consumer-smoke fixture on an older
    Compose.
 4. K4: a device proof in the reference app: the unavailable, refusal and route cases on the CI
@@ -149,8 +150,8 @@ analytics) need a contract.
    - **Lookup:** `bridge.min` goes in the bundle index entry, as `widgetVersion` does today, so
      the lookup skips a bundle the host cannot serve. The index entry is not signed.
    - **Load:** the same value is in the signed manifest's metadata, and the host checks it again
-     before loading, the way it checks the sequence floor today. A bundle whose `min` is newer
-     is refused.
+     before loading, the way it checks the sequence floor today. A bundle whose `min` is newer,
+     or whose `name` is not the host's contract, is refused.
 
 **Steps.**
 1. B1: `RequestPolicy` in `OkHttpHostHttp` and the app-client wiring in the Android embed, tested
