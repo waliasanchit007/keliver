@@ -2,7 +2,7 @@
 #
 # keliver new-publish-target — let the portal publish SIGNED bundles of this app.
 #
-#   keliver-new-publish-target.sh
+#   keliver-new-publish-target.sh [--development]
 #
 # Run from the APP repo root (the directory holding keliver.portal.json), after
 # keliver-new-device-target.sh: publishing compiles the same Zipline bundle the
@@ -15,8 +15,9 @@
 # neither the two settings (the defaults name Keliver's own repository) nor any
 # signing, so this writes:
 #
-#   1. keliver.portal.json: "publishTask": ":compileDevelopmentExecutableKotlinJsZipline"
-#                           "publishOutput": "build/zipline/Development"
+#   1. keliver.portal.json: "publishTask": ":compileProductionExecutableKotlinJsZipline"
+#                           "publishOutput": "build/zipline/Production"
+#      (--development: the Development pair instead, unminified, for debugging)
 #   2. build.gradle: a signing block appended at the END. It signs the
 #      compiled manifest with keys/ed25519.priv of the store
 #      keliver-store-path.sh resolves for this app, in the Gradle process, after
@@ -36,15 +37,19 @@
 # store; and treat the key as exposed if other local users or CI logs could have
 # read it.
 #
-# The development variant is what the reference app's production checks ran on;
-# the production (minified) variant has not been run on a device.
+# PRODUCTION BY DEFAULT. A Production bundle is about half the size of a
+# Development one (2.4 MB against 4.3 MB in the 2026-10 adoption proof) and
+# faster to evaluate; that proof ran Production bundles on Android and iOS
+# devices. Tools 0.3.9 and earlier wrote the Development pair. An app that
+# already has either known pair keeps it, so rerunning this to upgrade a signing
+# block changes no bundle; to switch, edit keliver.portal.json (the relay reads
+# it at every publish).
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
 # A rejected input leaves the app byte-identical.
 set -euo pipefail
 
-PUBLISH_TASK=":compileDevelopmentExecutableKotlinJsZipline"
-PUBLISH_OUTPUT="build/zipline/Development"
+VARIANT=""
 
 SELF="${BASH_SOURCE[0]}"
 while [ -L "$SELF" ]; do
@@ -54,12 +59,20 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,40p' "$SELF"; exit 0 ;;
+    -h|--help) sed -n '2,49p' "$SELF"; exit 0 ;;
+    --development) VARIANT=development ;;
     *)         echo "unknown option: $1" >&2; exit 2 ;;
   esac
+  shift
 done
 
 fail() { echo "keliver-new-publish-target: $*" >&2; echo "Nothing was written." >&2; exit 1; }
+
+if [ "$VARIANT" = development ]; then
+  PUBLISH_TASK=":compileDevelopmentExecutableKotlinJsZipline"; PUBLISH_OUTPUT="build/zipline/Development"
+else
+  PUBLISH_TASK=":compileProductionExecutableKotlinJsZipline"; PUBLISH_OUTPUT="build/zipline/Production"
+fi
 
 APP="$(pwd -P)"
 [ -f "$APP/keliver.portal.json" ] || fail "no keliver.portal.json here — run from the app root."
@@ -80,7 +93,11 @@ trap 'rm -rf "$STAGE"' EXIT
 # (Written to a file first: bash 3.2 misparses a heredoc inside $(...).)
 cat > "$STAGE/plan.py" <<'PY'
 import json, os, re, shutil, sys
-app, block_path, stage, task, output, legacy_dir = sys.argv[1:7]
+app, block_path, stage, task, output, legacy_dir, explicit = sys.argv[1:8]
+KNOWN = {
+    (':compileProductionExecutableKotlinJsZipline', 'build/zipline/Production'),
+    (':compileDevelopmentExecutableKotlinJsZipline', 'build/zipline/Development'),
+}
 
 def fail(msg):
     print("ERROR " + msg); sys.exit(0)
@@ -154,11 +171,21 @@ except ValueError as e:
     fail(f"keliver.portal.json is not valid JSON: {e}")
 if not isinstance(cfg, dict):
     fail("keliver.portal.json is not a JSON object.")
+have = (cfg.get('publishTask'), cfg.get('publishOutput'))
+if have in KNOWN and have != (task, output):
+    if explicit == 'yes':
+        fail(f'keliver.portal.json already publishes {have[0]}. To switch, edit its publishTask and '
+             f'publishOutput by hand; this script never changes the bundle an app publishes.')
+    task, output = have  # wired by an earlier release: it keeps its bundle
 for key, want in (('publishTask', task), ('publishOutput', output)):
     have = cfg.get(key)
     if have is not None and have != want:
+        dev = {'publishTask': ':compileDevelopmentExecutableKotlinJsZipline', 'publishOutput': 'build/zipline/Development'}
+        hint = (" That is the Development pair's: run with --development to complete it."
+                if have == dev[key] and explicit != 'yes'
+                and all(cfg.get(k) in (None, v) for k, v in dev.items()) else "")
         fail(f'keliver.portal.json already sets "{key}": "{have}". This writes "{want}"; '
-             f"remove yours first if that is what you want.")
+             f"remove yours first if that is what you want.{hint}")
 
 changes = []
 if cfg.get('publishTask') != task or cfg.get('publishOutput') != output:
@@ -175,8 +202,11 @@ changes.append('build.gradle')
 for name in ('keliver.portal.json', 'build.gradle'):
     shutil.copymode(os.path.join(app, name), os.path.join(stage, name))
 print('ok ' + ' '.join(changes))
+with open(os.path.join(stage, 'variant'), 'w') as f:
+    f.write(task + ' ' + output + '\n')
 PY
-PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" "$(dirname "$BLOCK")/legacy" 2>"$STAGE/plan.err")" \
+PLAN="$(python3 "$STAGE/plan.py" "$APP" "$BLOCK" "$STAGE" "$PUBLISH_TASK" "$PUBLISH_OUTPUT" "$(dirname "$BLOCK")/legacy" \
+  "$([ -n "$VARIANT" ] && echo yes || echo no)" 2>"$STAGE/plan.err")" \
   || fail "validation failed: $(tail -1 "$STAGE/plan.err" 2>/dev/null || echo 'python3 is required')"
 UPGRADED=""
 case "$PLAN" in
@@ -185,6 +215,11 @@ case "$PLAN" in
   ERROR*) fail "${PLAN#ERROR }" ;;
   *) fail "unexpected validation output: $PLAN" ;;
 esac
+# The pair actually written or kept (an app wired by an earlier release keeps its own). An
+# upgrade swaps the signing block only and never reads them.
+if [ -z "$UPGRADED" ]; then
+  read -r PUBLISH_TASK PUBLISH_OUTPUT < "$STAGE/variant" || fail "validation wrote no publish settings."
+fi
 
 # Write: each file is replaced by a rename from the same directory, with its
 # mode kept. Nothing above this line touched the app. The two renames are not

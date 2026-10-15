@@ -310,7 +310,8 @@ crash reporting on `codeLoadFailed` gets a false failure on every start.
 this repository (there is none — finding 1); a production host built from the
 **published** Maven Central 0.3.3 libraries (this one compiles Keliver's source
 at `b5615637`); production *builds* of the bundles (every bundle here is
-`compileDevelopmentExecutableKotlinJsZipline` output); a physical device, where
+`compileDevelopmentExecutableKotlinJsZipline` output, in the runs recorded here: the publish
+scaffolder now wires the Production bundle); a physical device, where
 `10.0.2.2` does not reach the relay; HTTPS; a release-signed APK; arm64; iOS; and,
 for runs 1–4, any device screenshot.
 
