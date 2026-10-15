@@ -23,8 +23,9 @@ From the brownfield product proof in
 [`ADOPTION_RETRO_2026-10.md`](ADOPTION_RETRO_2026-10.md): one WebView feature
 (13 screens) rebuilt as a Keliver guest inside two existing production apps, with
 first real-device timings, memory and app-size numbers. Ordered by what a second
-adopter would hit first. Items 3–6 are planned step by step in
-[`ADOPTION_PLAN_2026-10.md`](ADOPTION_PLAN_2026-10.md).
+adopter would hit first. Items 2–7 are planned step by step in
+[`ADOPTION_PLAN_2026-10.md`](ADOPTION_PLAN_2026-10.md); item 6's small fixes
+run alongside item 2.
 
 1. **Library 0.3.4: the widget gaps every host had to patch.** Both hosts carry
    the same 206-line override file. Each fix with a test:
@@ -57,8 +58,10 @@ adopter would hit first. Items 3–6 are planned step by step in
    (the proof's app moved to Compose 1.8.2, material3 1.3.2 and OkHttp 5.1,
    touching 17 unrelated files).
 4. **Bridge generator.** One contract, hand-copied byte-identical into three
-   repositories, with hand-written Kotlin and Swift delegates. Generate both host
-   sides from the contract, and make the request allow-list part of it.
+   repositories, with hand-written Kotlin and Swift delegates. Most calls were
+   authenticated data reads: route those through `HostHttp` over the app's own
+   client, behind the request allow-list (D13), and generate only the action
+   calls.
 5. **Device state catalogue.** iOS was checked with `?demo=` routes, launch
    environment switches and an in-app snapshot hook, all improvised; the test
    data was a hand-written fake while the relay already records and replays
