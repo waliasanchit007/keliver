@@ -435,6 +435,10 @@ private fun publish(): Pair<Boolean, String> {
   val out = proc.inputStream.bufferedReader().readText()
   val code = proc.waitFor()
   log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
+  // The response keeps the last 30 lines; the whole output goes to a file (PublishLogs).
+  runCatching { PublishLogs.save(root, version, out) }
+    .onSuccess { log.appendLine("publish: full Gradle output: ${it.absolutePath}") }
+    .onFailure { log.appendLine("publish: the full Gradle output could not be saved: ${it.message}") }
   if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
   val ziplineOut = File(repoDir, config.publishOutput)
