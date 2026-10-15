@@ -8,6 +8,9 @@
 #       one process, the new screen shown
 #   V1  (W6) the host POSTed its reports to the report URL: loaded (8), then
 #       update-applied (9), from one install
+#   L1-L3  a debug host takes a bundle server set on the device
+#       (files/keliver/bundle-server), refuses a malformed one, and without it
+#       uses its built-in server again
 echo "--- 6. W5: an update applied when the app comes back to the foreground"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/w5-server.log" &
 SERVE_PID=$!
@@ -58,4 +61,43 @@ sleep 3  # the reports are sent in the background
 python3 "$HERE/w5/reports.py" "$EV/w5-server.log" android > "$EV/w6-reports.txt" 2>&1 \
   && ok "V1: the host reported loaded (sequence 8, network) and then update-applied (sequence 9) to its report URL" \
   || bad "V1: $(tail -1 "$EV/w6-reports.txt")"
+
+# L1-L3: a DEBUG host takes a bundle server set on the device
+# (files/keliver/bundle-server, written with run-as), so a new tunnel URL needs
+# no rebuild. The installed debug build names https://$HOST_ADDR:8443; a second
+# server on 8444 serves the same site. L3 removes the file, so the cached last
+# good bundle is 8443's again for the rows after this one.
+echo "--- a debug host takes a bundle server set on the device"
+python3 "$HERE/w3/static_https.py" "$W3/site" 8444 "$W3_TLS/server.pem" "$W3_TLS/server.key" "$EV/l1-server.log" &
+LPID=$!
+for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null https://localhost:8444/bundles/index.json && break; sleep 1; done
+set_server() { # <url, or empty to remove the file>
+  if [ -n "$1" ]; then
+    adb -s "$SERIAL" shell run-as "$PROD_ID" sh -c "'mkdir -p files/keliver && echo $1 > files/keliver/bundle-server'"
+  else
+    adb -s "$SERIAL" shell run-as "$PROD_ID" rm -f files/keliver/bundle-server
+  fi
+}
+set_server "https://$HOST_ADDR:8444"
+launch prod "$EV/logcat-L1.txt"
+L="$EV/logcat-L1.txt"
+grep -q "$HOST_TAG: bundle server from files/keliver/bundle-server (a debug build): https://$HOST_ADDR:8444" "$L" \
+  && grep -q "$HOST_TAG: loading https://$HOST_ADDR:8444/bundles/v9/manifest.zipline.json (index sequence 9," "$L" \
+  && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$L" && grep -q "GET /bundles/index.json" "$EV/l1-server.log" \
+  && ok "L1: with files/keliver/bundle-server set to :8444, the debug host verified and loaded v9 from there" \
+  || bad "L1: the server set on the device was not used: $(grep -E "$HOST_TAG" "$L" | head -3 | tr '\n' ' ')"
+set_server "https://$HOST_ADDR:8444/?x=1"
+launch prod "$EV/logcat-L2.txt"
+grep -q "$HOST_TAG: refusing to load: the bundle server 'https://$HOST_ADDR:8444/?x=1' is not an http(s) URL without a user, query or fragment" "$EV/logcat-L2.txt" \
+  && ! grep -q "codeLoadSuccess" "$EV/logcat-L2.txt" \
+  && ok "L2: a server with a query is refused, and nothing loads" \
+  || bad "L2: a malformed server was not refused: $(grep -E "$HOST_TAG" "$EV/logcat-L2.txt" | head -3 | tr '\n' ' ')"
+kill "$LPID" 2>/dev/null; wait "$LPID" 2>/dev/null
+set_server ""
+launch prod "$EV/logcat-L3.txt"
+grep -q "$HOST_TAG: loading https://$HOST_ADDR:8443/bundles/v9/manifest.zipline.json" "$EV/logcat-L3.txt" \
+  && ! grep -q "bundle server from files/" "$EV/logcat-L3.txt" \
+  && ok "L3: with the file removed, the host is back on its built-in https://$HOST_ADDR:8443" \
+  || bad "L3: the host did not return to its built-in server: $(grep -E "$HOST_TAG" "$EV/logcat-L3.txt" | head -3 | tr '\n' ' ')"
+adb -s "$SERIAL" shell am force-stop "$PROD_ID"
 kill "$SERVE_PID" 2>/dev/null; wait "$SERVE_PID" 2>/dev/null; SERVE_PID=""

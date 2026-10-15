@@ -14,6 +14,10 @@ package @@PACKAGE@@
 // CHANNEL is the release channel this host takes from bundles/index.json,
 // besides stable (W4.4): e.g. beta for testers. Lower-case letters, digits and '-'.
 //
+// BUNDLE_SERVER is where bundles come from. A DEBUG build also takes it from
+// the KELIVER_BUNDLE_SERVER launch environment variable, when set (a tunnel's
+// new URL without a rebuild); a release build uses only this line.
+//
 // UPDATES is when the running host looks for a newer bundle (W5): "next-launch"
 // (only when the process starts) or "on-resume" (also each time the app returns
 // to the foreground, at most every 30 s, applying a newer bundle at once).

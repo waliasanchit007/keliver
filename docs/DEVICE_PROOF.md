@@ -321,7 +321,14 @@ HTTPS. Pick one option:
   ```
   - This prints an `https://<random>.trycloudflare.com` URL with a publicly
     trusted certificate.
-  - The URL changes on every start, so build the hosts after starting it.
+  - The URL changes on every start, so build the hosts after starting it. A
+    **debug** iOS build can instead take it at launch, without a rebuild:
+    `xcrun devicectl device process launch --device <udid> --environment-variables
+    '{"KELIVER_BUNDLE_SERVER":"https://<random>.trycloudflare.com"}' <bundle id>`
+    (on a simulator, `SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=… xcrun simctl launch`).
+    A debug Android build reads it from the device: `adb shell run-as <application id>
+    sh -c 'mkdir -p files/keliver && echo https://<random>.trycloudflare.com >
+    files/keliver/bundle-server'`, then restart the app. Release builds ignore both.
   - A managed network (Netskope) may block the tunnel. A phone on mobile data
     or another Wi-Fi then works better.
 - **A LAN server with a CA you install on the phones** (`mkcert`, or the
