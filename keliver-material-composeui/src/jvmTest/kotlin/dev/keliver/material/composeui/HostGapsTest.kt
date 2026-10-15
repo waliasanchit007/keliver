@@ -167,6 +167,13 @@ class HostGapsTest {
     assertTrue(width < 500.dp, "an unsized, start-aligned field grew to $width")
   }
 
+  @Test fun unsizedTextFieldKeepsItsWidthAtTheDefaultAlignment() = runComposeUiTest {
+    val field = ComposeUiTextField().apply { text(""); placeholder("Amount") }
+    setContent { Box(Modifier.width(1000.dp)) { field.value(Modifier.testTag("field")) } }
+    val width = onNodeWithTag("field").getBoundsInRoot().let { it.right - it.left }
+    assertTrue(width < 500.dp, "an unsized, start-aligned field grew to $width")
+  }
+
   @Test fun textFieldAlignsItsText() = runComposeUiTest {
     val start = ComposeUiTextField().apply { text("42") }
     val end = ComposeUiTextField().apply { text("42"); align(2) }
