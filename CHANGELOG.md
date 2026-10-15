@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-15
+
+Widget fixes for Compose UI hosts, plus one additive schema property. Published sources changed
+only in `keliver-widget-composeui`, `keliver-lazylayout-composeui`, `keliver-material-composeui`,
+`keliver-material-schema` and the regenerated portal catalog (`portal-core`, `portal-render`).
+No dependency versions moved (Compose UI test and the Skia desktop runtime are test-only). The
+Zipline wire format is unchanged; the one schema addition is additive (`align`, below). The tools bundle (0.3.9) still scaffolds
+against 0.3.3 until a tools release moves it.
+
 ### Fixed
 - **keliver-widget-composeui:** `ComposeWidgetChildren.Render()` now renders each child inside
   `key(widget)`. Before, what a child remembered (a scroll position, a text field's value, an
