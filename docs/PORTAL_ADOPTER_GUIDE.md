@@ -229,6 +229,16 @@ $KP/keliver-new-production-host.sh --bundle-server http://10.0.2.2:8077   # an e
 ./gradlew -p host-android assembleDebug
 ```
 
+A debug build also takes its bundle server from the device, so a new tunnel
+URL needs no rebuild:
+`adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo https://… > files/keliver/bundle-server'`,
+then `adb shell am force-stop <applicationId>` and start it again (delete the
+file to go back). Every bundle still has to verify against the embedded key; a
+rollback floor raised by bundles from that server stays, so the built-in server
+must then offer that sequence or newer. Only a debug build of a debuggable app
+reads the file, never a release build. An `http://` value also needs a built-in
+server that is `http://` (debug cleartext is allowed only then).
+
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
 public key. Without the signing block the build still succeeds and `/publish`
@@ -272,7 +282,12 @@ xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -sdk iphonesimulato
 
 Your portal's public key and the servers go into
 `host-ios/src/iosMain/kotlin/<package>/HostConfig.kt`; commit that file. A
-release build refuses `http://`. A device build needs your team and signing
+release build refuses `http://`. A debug build also takes the bundle server
+from the `KELIVER_BUNDLE_SERVER` launch environment variable (for example a new
+tunnel URL, without a rebuild); every bundle still has to verify against the
+key in `HostConfig.kt`, a rollback floor it raises stays, an `http://` value
+needs an App Transport Security exception for its host, and a release build
+ignores the variable. A device build needs your team and signing
 (`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
 details.
 
