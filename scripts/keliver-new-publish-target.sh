@@ -182,7 +182,8 @@ for key, want in (('publishTask', task), ('publishOutput', output)):
     if have is not None and have != want:
         dev = {'publishTask': ':compileDevelopmentExecutableKotlinJsZipline', 'publishOutput': 'build/zipline/Development'}
         hint = (" That is the Development pair's: run with --development to complete it."
-                if have == dev[key] and explicit != 'yes' else "")
+                if have == dev[key] and explicit != 'yes'
+                and all(cfg.get(k) in (None, v) for k, v in dev.items()) else "")
         fail(f'keliver.portal.json already sets "{key}": "{have}". This writes "{want}"; '
              f"remove yours first if that is what you want.{hint}")
 
