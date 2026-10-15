@@ -155,6 +155,17 @@ cp "$DISP/same/keliver.portal.json" "$DISP/same.json.before"
   && cmp -s "$DISP/same.json.before" "$DISP/same/keliver.portal.json" \
   && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused or rewritten"
 
+echo "=== half a Development pair: the refusal points at --development"
+make_app halfdev device
+python3 - "$DISP/halfdev/keliver.portal.json" <<'PY'
+import json, sys
+p = sys.argv[1]; c = json.load(open(p)); c['publishTask'] = ':compileDevelopmentExecutableKotlinJsZipline'
+open(p, 'w').write(json.dumps(c, indent=2) + '\n')
+PY
+refuses "half a Development pair without --development" "run with --development to complete it" "$DISP/halfdev"
+( cd "$DISP/halfdev" && "$SCAFFOLD" --development > /dev/null 2>&1 ) && grep -q '"publishOutput": "build/zipline/Development"' "$DISP/halfdev/keliver.portal.json" \
+  && ok "--development completes half a Development pair" || bad "--development did not complete half a Development pair"
+
 echo "=== an app that already publishes the Development pair keeps it"
 make_app keepdev device
 python3 - "$DISP/keepdev/keliver.portal.json" <<'PY'

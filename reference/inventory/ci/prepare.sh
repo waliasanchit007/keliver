@@ -328,7 +328,8 @@ cp "$WORK/embed-key.saved" "$KEYF"
 ( cd "$EMB_APP" && ./gradlew --stop ) > /dev/null 2>&1 || true
 { echo "W2_APK=$EV/embed-app.apk"; echo "W2_RELEASE_APK=$EV/embed-app-release.apk"; echo "W2_FOREIGN_APK=$EV/embed-app-foreign.apk"; echo "W2_ID=com.example.existing"; } >> "$WORK/env"
 
-# Warm the development bundle so the device step does not wait on it.
+# Warm the development bundle so the device step's serveDevelopmentZipline does not wait on it.
+# (Publishing builds the Production bundle, which keliver-new-publish-target.sh wires by default.)
 ( cd "$APP" && ./gradlew compileDevelopmentExecutableKotlinJsZipline --console=plain ) > "$EV/dev-bundle.log" 2>&1 \
   && ok "the development bundle builds" || bad "the development bundle did not build"
 

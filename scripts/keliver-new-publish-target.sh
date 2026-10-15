@@ -59,7 +59,7 @@ HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,48p' "$SELF"; exit 0 ;;
+    -h|--help) sed -n '2,49p' "$SELF"; exit 0 ;;
     --development) VARIANT=development ;;
     *)         echo "unknown option: $1" >&2; exit 2 ;;
   esac
@@ -180,8 +180,11 @@ if have in KNOWN and have != (task, output):
 for key, want in (('publishTask', task), ('publishOutput', output)):
     have = cfg.get(key)
     if have is not None and have != want:
+        dev = {'publishTask': ':compileDevelopmentExecutableKotlinJsZipline', 'publishOutput': 'build/zipline/Development'}
+        hint = (" That is the Development pair's: run with --development to complete it."
+                if have == dev[key] and explicit != 'yes' else "")
         fail(f'keliver.portal.json already sets "{key}": "{have}". This writes "{want}"; '
-             f"remove yours first if that is what you want.")
+             f"remove yours first if that is what you want.{hint}")
 
 changes = []
 if cfg.get('publishTask') != task or cfg.get('publishOutput') != output:

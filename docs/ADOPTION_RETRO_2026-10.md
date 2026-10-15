@@ -239,7 +239,8 @@ On iOS, Keliver brings a UI toolkit with it; on Android the toolkit is already i
 
 1. Budget for the host, not the screens.
 2. Check the Kotlin and Compose versions first; the dependency bump is the first cost you pay.
-3. Publish Production bundles; Development is the default.
+3. Publish Production bundles; Development was the default (through tools 0.3.9; the publish
+   scaffolder now writes Production).
 4. Write the request allow-list on day one.
 5. Plan device testing on iOS before you need it.
 6. Measure against the page you replace. On Android a cached web page was faster than the native

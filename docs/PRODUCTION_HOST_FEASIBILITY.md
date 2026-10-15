@@ -109,7 +109,7 @@ built by the checkout route (option C below).
    `"publishTask": ":compileDevelopmentExecutableKotlinJsZipline", "publishOutput": "build/zipline/Development"`.
    The default is Keliver's own `:portal-published-guest:…`, which fails on a
    scaffolded app. (This measurement used the Development pair, which
-   `keliver-new-publish-target.sh` wrote until tools 0.3.9; it now writes
+   `keliver-new-publish-target.sh` wrote through tools 0.3.9; it now writes
    `:compileProductionExecutableKotlinJsZipline` / `build/zipline/Production`.)
 2. `build.gradle`, **after** the `kotlin {}` block: set `ZiplineCompileTask.signingKeys`
    from `<store>/keys/ed25519.priv`, using the tools bundle's
