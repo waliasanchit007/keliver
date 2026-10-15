@@ -10,12 +10,21 @@
 
 ## [0.3.4] - 2026-10-15
 
-Widget fixes for Compose UI hosts, plus one additive schema property. Published sources changed
-only in `keliver-widget-composeui`, `keliver-lazylayout-composeui`, `keliver-material-composeui`,
-`keliver-material-schema` and the regenerated portal catalog (`portal-core`, `portal-render`).
-No dependency versions moved (Compose UI test and the Skia desktop runtime are test-only). The
-Zipline wire format is unchanged; the one schema addition is additive (`align`, below). The tools bundle (0.3.9) still scaffolds
-against 0.3.3 until a tools release moves it.
+Widget fixes for Compose UI hosts, plus one schema property. Hand-written sources changed only
+in `keliver-widget-composeui`, `keliver-lazylayout-composeui`, `keliver-material-composeui` and
+`keliver-material-schema`. Code generated from the schema changed with them in
+`keliver-material-compose`, `keliver-material-widget`, `keliver-material-testing` and the portal
+catalog (`portal-core`, `portal-render`). No dependency versions moved: Compose UI test and the
+Skia desktop runtime are test-only.
+
+**Binary-incompatible with 0.3.3** in those generated APIs. For `TextField` and `OutlinedTextField`,
+the composables and the schema and testing value classes gain an `align` parameter, and the
+widget interfaces an `align(Int)` member, so code compiled against 0.3.3 that uses them must be
+recompiled. Guests are recompiled for every
+bundle anyway. The Zipline wire format is unchanged and the property is additive on it (see
+`align`, below).
+
+The tools bundle (0.3.9) still scaffolds against 0.3.3 until a tools release moves it.
 
 ### Fixed
 - **keliver-widget-composeui:** `ComposeWidgetChildren.Render()` now renders each child inside
@@ -61,7 +70,7 @@ The tests of what 0.3.3 got wrong fail on 0.3.3's widgets; the rest pin behaviou
   1 center, 2 end), for the text and the placeholder. A centred or end-aligned field should be
   given a width (its placeholder fills the field); at the default, layout is unchanged. Additive
   on the wire: a guest that sets it on a Treehouse host built with 0.3.3 gets start alignment
-  (the host's protocol mismatch handler reports an unknown property and carries on). Like every new schema property it changes the generated `TextField` /
+  (a Treehouse host's protocol mismatch handler reports an unknown property and carries on; a host using `HostProtocol` directly defaults to the throwing handler). Like every new schema property it changes the generated `TextField` /
   `OutlinedTextField` composables' and widget interfaces' signatures: guests recompile (they
   always do, per bundle), and a host's own `TextField` / `OutlinedTextField` widget implements
   `align(Int)` (a delegating wrapper gets it for free).

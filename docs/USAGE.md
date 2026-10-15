@@ -407,7 +407,7 @@ pinned to the current `0.3.4` line. Paste it and trim what you don't use:
 
 ```toml
 [versions]
-keliver = "0.3.3"
+keliver = "0.3.4"
 kotlin = "2.2.0"            # keliver's metadata floor; see the Toolchain note
 ksp = "2.2.0-2.0.2"         # bump to a 2.3.10-line KSP for a warning-free log
 zipline = "1.26.0"          # NOTE: floats the build's Kotlin compiler to 2.3.10
@@ -712,7 +712,7 @@ The `libs.keliver.host` reference assumes a version catalog entry:
 ```toml
 # gradle/libs.versions.toml
 [versions]
-keliver = "0.3.3"
+keliver = "0.3.4"
 
 [libraries]
 keliver-host  = { module = "dev.keliver:keliver-host",  version.ref = "keliver" }
@@ -1762,7 +1762,7 @@ them:
   dispatcher pattern as gotcha #12. Pattern works but no example yet.
 
 Already shipped (these used to be listed here): **Maven Central publishing**
-(`dev.keliver:keliver-*:0.3.3`, no auth — see the Maven Central section above),
+(`dev.keliver:keliver-*:0.3.4`, no auth — see the Maven Central section above),
 the **single-import facades** (`keliver-host` / `keliver-guest`), and the
 **`keliver-material` widget library** (no schema authoring — see the fast-path
 section above).
