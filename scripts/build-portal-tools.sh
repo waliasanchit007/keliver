@@ -15,8 +15,20 @@ export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17 2>/dev/null || tru
 # script. Bumping one must never force a bump of the other — naming a ZIP is not
 # a reason to move a published library coordinate.
 TOOLS_VERSION="${1:-$(tr -d ' \n' < "$ROOT/build-support/portal-tools.version")}"
-# The Maven version this bundle's scaffolders wire new projects to.
-MAVEN_VERSION="$(grep 'KELIVER_VERSION' build-support/src/main/kotlin/dev/keliver/buildsupport/RedwoodBuildPlugin.kt | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
+# The Maven version this bundle's scaffolders wire new projects to: read from
+# the scaffolders themselves, not from KELIVER_VERSION. The library line can move
+# (a release-prep commit bumps KELIVER_VERSION before Central serves it) while
+# the scaffolders stay on the published version until a tools release moves
+# them, and VERSION.json must describe what the bundle actually wires in.
+scaffold_default() { sed -nE 's/^KELIVER_VERSION="\$\{KELIVER_VERSION:-([^}]+)\}".*/\1/p' "$ROOT/scripts/$1" | head -1; }
+MAVEN_VERSION="$(scaffold_default keliver-init)"
+for s in keliver-new-editor.sh keliver-new-device-target.sh; do
+  v="$(scaffold_default "$s")"
+  [ -n "$MAVEN_VERSION" ] && [ "$v" = "$MAVEN_VERSION" ] || {
+    echo "build-portal-tools: scripts/$s wires keliver '${v:-?}' but keliver-init wires '${MAVEN_VERSION:-?}'; move them together" >&2
+    exit 1
+  }
+done
 SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 SOURCE_DIRTY="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 VERSION="$TOOLS_VERSION"
