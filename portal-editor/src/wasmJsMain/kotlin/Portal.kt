@@ -1597,6 +1597,19 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     return rowEl
   }
 
+  // A multi-line text needs a <textarea>: an <input type=text> strips newlines
+  // from its value, so the first keystroke would join the lines (U33).
+  val text = props[key] as? String
+  if (kind == PropKind.Text && text != null && '\n' in text) {
+    val area = Ui.textarea()
+    area.rows = text.lines().size.coerceAtMost(6)
+    area.value = text
+    area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
+    rowEl.appendChild(area)
+    if (keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
+    return rowEl
+  }
+
   val input = Ui.input()
   when (kind) {
     PropKind.Text -> {
@@ -1644,15 +1657,14 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     }
   }
   rowEl.appendChild(input)
-  if (kind in BINDABLE && keyPrefix.isEmpty()) {
-    rowEl.appendChild(
-      Ui.button("@", "btn icon") {
-        sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(name))))
-      },
-    )
-  }
+  if (kind in BINDABLE && keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
 }
+
+private fun bindButton(nodeId: Int, key: String, name: String): HTMLElement =
+  Ui.button("@", "btn icon") {
+    sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(name))))
+  }
 
 private fun renderMods() {
   Ui.clear(modsEl)

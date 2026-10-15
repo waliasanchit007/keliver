@@ -88,7 +88,7 @@ object Components {
   }
 
   private fun specJson(s: ComponentSpec): String {
-    fun str(x: String) = "\"" + x.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    fun str(x: String) = kotlinx.serialization.json.JsonPrimitive(x).toString() // escapes control chars too
     val props = s.props.joinToString(",") { propJson(it) }
     val events = s.events.joinToString(",") { eventJson(it) }
     val slots = s.slots.joinToString(",") { slotJson(it) }
@@ -119,7 +119,7 @@ object Components {
 
   private fun defaultJson(v: Any?): String = when (v) {
     null -> "null"
-    is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    is String -> kotlinx.serialization.json.JsonPrimitive(v).toString()
     is Boolean, is Int, is Double -> v.toString()
     else -> "\"$v\""
   }
