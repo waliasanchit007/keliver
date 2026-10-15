@@ -924,7 +924,8 @@ it is now RawCode, children included. A screen that met D14's "0 RawCode" can st
 meeting it. The remedy is the screen grammar's own: format the text in the presenter
 and bind it (`title = b.totalLabel`). In-repo screens and fixtures have no such case.
 Not changed: string-list items containing a comma still re-ingest as RawCode (the list
-split is not quote-aware); route keys in flows still strip quotes by hand.
+split is not quote-aware); route keys in flows still strip quotes by hand; a
+`<textarea>` reports `\r\n` as `\n`, so editing a text that holds `\r\n` drops the `\r`.
 
 ### U27. The relay wrote the private signing key readable by every local user — FIXED in tools 0.3.6
 
