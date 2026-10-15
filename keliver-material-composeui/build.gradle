@@ -30,6 +30,15 @@ kotlin {
         implementation libs.kotlin.test.junit
       }
     }
+    // Real Compose UI tests (sheets, themes, layout) on the desktop JVM, where Compose runs
+    // headless without an emulator or Robolectric (which would clash with Paparazzi above).
+    jvmTest {
+      dependencies {
+        implementation libs.kotlin.test
+        implementation libs.jetbrains.compose.ui.test
+        implementation rootProject.ext.skikoHostRuntime()
+      }
+    }
   }
 }
 

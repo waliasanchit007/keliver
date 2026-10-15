@@ -38,6 +38,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -58,7 +59,7 @@ internal class ComposeUiLazyVerticalGrid : LazyVerticalGrid<@Composable (Modifie
   override val value: @Composable (Modifier) -> Unit = { m ->
     val kids = children as ComposeWidgetChildren
     M3LazyVerticalGrid(columns = GridCells.Fixed(columns.coerceAtLeast(1)), modifier = m) {
-      items(kids.widgets.size) { index -> kids.widgets[index].value(Modifier) }
+      items(kids.widgets.size) { index -> kids.widgets[index].let { w -> key(w) { w.value(Modifier) } } }
     }
   }
   override fun columns(columns: Int) { this.columns = columns }
@@ -71,7 +72,7 @@ internal class ComposeUiLazyHorizontalGrid : LazyHorizontalGrid<@Composable (Mod
   override val value: @Composable (Modifier) -> Unit = { m ->
     val kids = children as ComposeWidgetChildren
     M3LazyHorizontalGrid(rows = GridCells.Fixed(rows.coerceAtLeast(1)), modifier = m) {
-      items(kids.widgets.size) { index -> kids.widgets[index].value(Modifier) }
+      items(kids.widgets.size) { index -> kids.widgets[index].let { w -> key(w) { w.value(Modifier) } } }
     }
   }
   override fun rows(rows: Int) { this.rows = rows }
@@ -106,7 +107,7 @@ internal class ComposeUiHorizontalPager : HorizontalPager<@Composable (Modifier)
         contentPadding = PaddingValues(horizontal = contentPaddingDp.dp),
         modifier = Modifier.fillMaxWidth(),
       ) { page ->
-        if (page < count) kids.widgets[page].value(Modifier)
+        if (page < count) kids.widgets[page].let { w -> key(w) { w.value(Modifier) } }
       }
       if (showIndicator && count > 1) {
         Spacer(Modifier.height(8.dp))
@@ -137,7 +138,7 @@ internal class ComposeUiVerticalPager : VerticalPager<@Composable (Modifier) -> 
     val kids = children as ComposeWidgetChildren
     val state = rememberPagerState(pageCount = { kids.widgets.size })
     M3VerticalPager(state = state, modifier = m) { page ->
-      if (page < kids.widgets.size) kids.widgets[page].value(Modifier)
+      if (page < kids.widgets.size) kids.widgets[page].let { w -> key(w) { w.value(Modifier) } }
     }
   }
 }

@@ -238,6 +238,8 @@ public data class TextField(
   @Property(1) val text: String,
   @Property(2) val placeholder: String = "",
   @Property(3) val onValueChange: ((String) -> Unit)? = null,
+  /** Where the text sits in the field: 0 start, 1 center, 2 end. */
+  @Property(4) val align: Int = 0,
 )
 
 /** Horizontal divider of [thickness] dp. */
@@ -386,6 +388,8 @@ public data class OutlinedTextField(
   @Property(11) val borderArgb: Int = 0,
   /** Corner radius in dp; 0 => Material default. */
   @Property(12) val cornerRadiusDp: Int = 0,
+  /** Where the text sits in the field: 0 start, 1 center, 2 end. */
+  @Property(13) val align: Int = 0,
 )
 
 // ---------------------------------------------------------------------------

@@ -319,6 +319,7 @@ public abstract interface class dev/keliver/material/widget/OutlinedCard : dev/k
 }
 
 public abstract interface class dev/keliver/material/widget/OutlinedTextField : dev/keliver/widget/Widget {
+	public abstract fun align (I)V
 	public abstract fun borderArgb (I)V
 	public abstract fun cornerRadiusDp (I)V
 	public abstract fun isError (Z)V
@@ -460,6 +461,7 @@ public abstract interface class dev/keliver/material/widget/TextButton : dev/kel
 }
 
 public abstract interface class dev/keliver/material/widget/TextField : dev/keliver/widget/Widget {
+	public abstract fun align (I)V
 	public abstract fun onValueChange (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun placeholder (Ljava/lang/String;)V
 	public abstract fun text (Ljava/lang/String;)V

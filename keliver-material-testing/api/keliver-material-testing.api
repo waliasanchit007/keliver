@@ -686,9 +686,10 @@ public final class dev/keliver/material/testing/OutlinedCardValue : dev/keliver/
 }
 
 public final class dev/keliver/material/testing/OutlinedTextFieldValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ljava/lang/String;Ljava/lang/String;IZIZLjava/lang/String;II)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ljava/lang/String;Ljava/lang/String;IZIZLjava/lang/String;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ljava/lang/String;Ljava/lang/String;IZIZLjava/lang/String;III)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Ljava/lang/String;Ljava/lang/String;IZIZLjava/lang/String;IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlign ()I
 	public final fun getBorderArgb ()I
 	public fun getChildrenLists ()Ljava/util/List;
 	public final fun getCornerRadiusDp ()I
@@ -983,9 +984,10 @@ public final class dev/keliver/material/testing/TextButtonValue : dev/keliver/te
 }
 
 public final class dev/keliver/material/testing/TextFieldValue : dev/keliver/testing/WidgetValue {
-	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
-	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;I)V
+	public synthetic fun <init> (Ldev/keliver/Modifier;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlign ()I
 	public fun getChildrenLists ()Ljava/util/List;
 	public fun getModifier ()Ldev/keliver/Modifier;
 	public final fun getOnValueChange ()Lkotlin/jvm/functions/Function1;

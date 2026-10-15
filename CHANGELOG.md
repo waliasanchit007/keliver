@@ -15,17 +15,47 @@
   inherited the old one's state. Found on a device: the next page of a nav stack opened at the
   previous page's scroll position. Regression test: `ComposeWidgetChildrenStateTest`.
   Scope: containers that render through `ComposeWidgetChildren` (layout Column/Row/Box,
-  material containers); lazy lists and pagers still key their items by index. Side effect:
+  material containers); lazy lists and pagers are the next entry. Side effect:
   after a Treehouse code swap or hot reload re-inserts the root, host-side remembered state
   (scroll, text) starts fresh instead of surviving by position.
+- **keliver-material-composeui / keliver-lazylayout-composeui:** lazy lists, lazy grids and
+  pagers render each item inside `key(widget)` too, so item state follows the widget (the
+  `items { }` key itself stays the index: on Android a lazy key must fit in a Bundle). Tests:
+  `HostGapsTest` (grid, pager), `LazyListItemStateTest`.
 
-### Known, not yet fixed (found adopting Keliver in a production app; worked around host-side)
-- keliver-material `BottomSheet` opens half-expanded (no `skipPartiallyExpanded`) on Material's
-  default `surfaceContainerLow`.
-- keliver-material `Theme` starts from a fresh `lightColorScheme()`, not the host's scheme, so
-  every colour role the guest does not set (slider track, containers) is Material's default
-  purple.
-- Text-field content alignment cannot be set (a quantity field cannot centre its number).
+The rest were found adopting Keliver in a production app (`docs/ADOPTION_RETRO_2026-10.md`),
+where every host had patched them with its own widget overrides:
+
+- **keliver-material `BottomSheet`** opens fully expanded (`skipPartiallyExpanded`): a sheet
+  taller than half the screen used to stop half way, cutting off its end (often its buttons).
+  It is drawn on the theme's `surface` instead of Material's `surfaceContainerLow`, slides out
+  when the guest closes it instead of vanishing (and back in if the guest reopens it mid-slide),
+  and closes itself when the guest gave no `onDismiss` (the guest's `visible` then still says
+  true: it reopens the sheet by setting false, then true). Every dismiss still reaches the
+  guest's `onDismiss`, as in 0.3.3.
+- **keliver-material `Theme`** starts from the host's `MaterialTheme.colorScheme` instead of a
+  fresh `lightColorScheme()`, so every colour role the guest does not set (containers, slider
+  tracks, outlines) is the app's, not Material's default purple. Only when the guest asks for
+  the other mode (`dark` on a light host, or the reverse) does it start from Material's scheme
+  for that mode, as before. A host with no `MaterialTheme` around the content is unchanged. A
+  guest `Theme` nested in another guest `Theme` now inherits the outer one's overrides.
+- **keliver-material `ScrollableColumn`** no longer crashes when its height is unbounded (inside
+  another vertically scrolling container, or a lazy list item): there it lays its children out
+  at full height and lets the parent scroll. It now measures through `BoxWithConstraints`, so it
+  cannot answer intrinsic-size queries (`IntrinsicSize.Min/Max` on a parent), which it could.
+
+Tests: `HostGapsTest` (jvmTest, real Compose UI on the desktop JVM, headless; now run by CI).
+The tests of what 0.3.3 got wrong fail on 0.3.3's widgets; the rest pin behaviour kept or added.
+
+### Added
+- **keliver-material schema:** `TextField.align` and `OutlinedTextField.align` (0 start,
+  1 center, 2 end), for the text and the placeholder. A centred or end-aligned field should be
+  given a width (its placeholder fills the field); at the default, layout is unchanged. Additive
+  on the wire: a guest that sets it on a Treehouse host built with 0.3.3 gets start alignment
+  (the host's protocol mismatch handler reports an unknown property and carries on). Like every new schema property it changes the generated `TextField` /
+  `OutlinedTextField` composables' and widget interfaces' signatures: guests recompile (they
+  always do, per bundle), and a host's own `TextField` / `OutlinedTextField` widget implements
+  `align(Int)` (a delegating wrapper gets it for free).
 
 ## [0.3.3] - 2026-09-05
 

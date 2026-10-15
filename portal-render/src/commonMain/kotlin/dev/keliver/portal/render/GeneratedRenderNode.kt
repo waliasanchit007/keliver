@@ -345,6 +345,7 @@ public fun RenderNode(node: WidgetNode) {
       supportingText = node.strB("supportingText"),
       borderArgb = node.intB("borderArgb", 0),
       cornerRadiusDp = node.intB("cornerRadiusDp", 0),
+      align = node.intB("align", 0),
       onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "RadioButton" -> RadioButton(
@@ -472,6 +473,7 @@ public fun RenderNode(node: WidgetNode) {
       modifier = nodeModifier(node),
       text = node.strB("text"),
       placeholder = node.strB("placeholder"),
+      align = node.intB("align", 0),
       onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "TextInput" -> TextInput(

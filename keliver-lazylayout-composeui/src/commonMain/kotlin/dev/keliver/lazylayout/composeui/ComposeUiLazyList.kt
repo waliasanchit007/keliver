@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -131,7 +132,9 @@ internal class ComposeUiLazyList : LazyList<@Composable (Modifier) -> Unit> {
         } else {
           Modifier.fillMaxHeight()
         }
-        item.value.invoke(modifier)
+        // Keyed by the widget, not its index: what an item remembers stays with that item when
+        // the guest replaces the widget at an index (a placeholder filled in, a list re-sorted).
+        key(item) { item.value.invoke(modifier) }
       }
     }
     Box(modifier) {

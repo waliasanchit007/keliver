@@ -338,6 +338,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedCard : d
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/OutlinedTextField : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/OutlinedTextField|null[0]
+    abstract fun align(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.align|align(kotlin.Int){}[0]
     abstract fun borderArgb(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.borderArgb|borderArgb(kotlin.Int){}[0]
     abstract fun cornerRadiusDp(kotlin/Int) // dev.keliver.material.widget/OutlinedTextField.cornerRadiusDp|cornerRadiusDp(kotlin.Int){}[0]
     abstract fun isError(kotlin/Boolean) // dev.keliver.material.widget/OutlinedTextField.isError|isError(kotlin.Boolean){}[0]
@@ -487,6 +488,7 @@ abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextButton : dev
 }
 
 abstract interface <#A: kotlin/Any> dev.keliver.material.widget/TextField : dev.keliver.widget/Widget<#A> { // dev.keliver.material.widget/TextField|null[0]
+    abstract fun align(kotlin/Int) // dev.keliver.material.widget/TextField.align|align(kotlin.Int){}[0]
     abstract fun onValueChange(kotlin/Function1<kotlin/String, kotlin/Unit>?) // dev.keliver.material.widget/TextField.onValueChange|onValueChange(kotlin.Function1<kotlin.String,kotlin.Unit>?){}[0]
     abstract fun placeholder(kotlin/String) // dev.keliver.material.widget/TextField.placeholder|placeholder(kotlin.String){}[0]
     abstract fun text(kotlin/String) // dev.keliver.material.widget/TextField.text|text(kotlin.String){}[0]
