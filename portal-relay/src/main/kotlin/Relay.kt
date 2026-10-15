@@ -272,8 +272,6 @@ private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), 
 
 private fun screenFile(project: String, screen: String) = File(File(root, safe(project)), "${safe(screen)}.json")
 
-/** Relay-owned storage that sits beside the projects under [root]. Never a project. */
-private val RESERVED_ROOT_DIRS = setOf("bundles", "keys", "kotlin")
 
 private fun projectNames(): List<String> =
   root.listFiles { f -> f.isDirectory && f.name !in RESERVED_ROOT_DIRS }
@@ -435,6 +433,10 @@ private fun publish(): Pair<Boolean, String> {
   val out = proc.inputStream.bufferedReader().readText()
   val code = proc.waitFor()
   log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
+  // The response keeps the last 30 lines; the whole output goes to a file (PublishLogs).
+  runCatching { PublishLogs.save(root, version, out) }
+    .onSuccess { log.appendLine("publish: full Gradle output: ${it.absolutePath}") }
+    .onFailure { log.appendLine("publish: the full Gradle output could not be saved: $it") }
   if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
   val ziplineOut = File(repoDir, config.publishOutput)

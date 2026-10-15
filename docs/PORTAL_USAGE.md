@@ -219,6 +219,11 @@ host-capability gated) and verify the signature:
 adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
 ```
 
+The response shows the last 30 lines of the build. The whole Gradle output of
+every publish, failed or not, is saved under the store in
+`publish-logs/publish-v<N>-<millis>.log` (owner-readable, never served; the
+newest 20 are kept), and the response names that file.
+
 ## Project config & scaffolding (separability groundwork)
 
 `keliver.portal.json` at the repo root tells the portal-server everything about
