@@ -462,7 +462,9 @@ private suspend fun startHost(): HostState {
   log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates $UPDATES")
   val (serverUrl, fromLaunch) = bundleServerSetting()
   if (fromLaunch) log("bundle server from the launch environment (a debug build): $serverUrl")
-  val server = BundleServer.parse(serverUrl) ?: run {
+  // parse() reads only the origin and path; a query or fragment must not reach the base URL the
+  // host appends its paths to (the build checks BUNDLE_SERVER for both; the launch value is checked here).
+  val server = BundleServer.parse(serverUrl)?.takeIf { '?' !in serverUrl && '#' !in serverUrl } ?: run {
     log("refusing to load: the bundle server '$serverUrl' is not an http(s) URL without a query")
     return HostState.Message("Refusing to load", "The bundle server '$serverUrl' is not an http(s) URL.")
   }

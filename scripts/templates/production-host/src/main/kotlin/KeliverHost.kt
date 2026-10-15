@@ -191,16 +191,20 @@ class KeliverConfig(
  *
  *   adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo https://… > files/keliver/bundle-server'
  *
- * then restart the app; delete the file to go back. Only a debuggable build can be written that way
- * (run-as), and a release build never reads it. It moves only where bundles come from: every
+ * then `adb shell am force-stop <applicationId>` and start it again; delete the file to go back. It is
+ * read only by this module's debug variant in a debuggable app (run-as needs one too), never by a
+ * release build. It moves only where bundles come from: every
  * manifest still verifies against the embedded key, the rollback floor still holds, and the cached
  * last good bundle is used only on the origin it came from. A plain http:// server also needs a
  * build whose own server is http:// (debug cleartext is allowed only then).
  */
 private fun debugBundleServer(context: Context): String? {
+  // Both: this module's debug variant (an app build type that falls back to it, a staging build,
+  // say, would have it too) AND a debuggable app, which run-as also needs.
   if (!BuildConfig.DEBUG) return null
+  if ((context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return null
   val file = java.io.File(context.filesDir, DEBUG_BUNDLE_SERVER_FILE)
-  val value = runCatching { file.takeIf { it.isFile && it.length() <= 2048 }?.readText()?.trim() }.getOrNull()
+  val value = runCatching { file.takeIf { it.isFile && it.length() <= 2048 }?.readText()?.trim()?.trimEnd('/') }.getOrNull()
   if (value.isNullOrEmpty()) return null
   Log.i(TAG, "bundle server from files/$DEBUG_BUNDLE_SERVER_FILE (a debug build): $value")
   return value

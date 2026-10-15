@@ -144,8 +144,8 @@ fi
 if [ "$DEVICE_KIND" = physical ]; then
   [ "$IS_EMU" = 1 ] && echo "    NOTE: the physical-device route on an EMULATOR: a rehearsal, not a physical-device run"
   # The hosts reach this machine as 127.0.0.1: the relay (:8077) and the static
-  # HTTPS server (:8443), each through the USB connection.
-  for port in 8077 8443; do
+  # HTTPS servers (:8443, and :8444 for W5's L rows), each through the USB connection.
+  for port in 8077 8443 8444; do
     adb -s "$SERIAL" reverse "tcp:$port" "tcp:$port" >/dev/null && REVERSED="$REVERSED $port" \
       && ok "W7: adb reverse tcp:$port (the device reaches this machine's :$port as 127.0.0.1:$port)" \
       || bad "W7: adb reverse tcp:$port failed"

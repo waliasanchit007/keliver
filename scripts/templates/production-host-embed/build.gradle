@@ -33,7 +33,7 @@ def channel = setting('keliver.channel', 'stable')
 def updates = setting('keliver.updates', 'next-launch')
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
-def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]@!$&()*+,;=%-]+/
+def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
 def apiUrl = /https?:\/\/[A-Za-z0-9._~:\/?#\[\]@!$&()*+,;=%-]+/
 if (!(bundleServer ==~ serverUrl)) {
   throw new GradleException("keliver.bundleServer must be an http:// or https:// URL without a query " +

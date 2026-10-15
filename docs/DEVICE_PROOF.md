@@ -328,7 +328,9 @@ HTTPS. Pick one option:
     (on a simulator, `SIMCTL_CHILD_KELIVER_BUNDLE_SERVER=… xcrun simctl launch`).
     A debug Android build reads it from the device: `adb shell run-as <application id>
     sh -c 'mkdir -p files/keliver && echo https://<random>.trycloudflare.com >
-    files/keliver/bundle-server'`, then restart the app. Release builds ignore both.
+    files/keliver/bundle-server'`, then `adb shell am force-stop <application id>` and
+    start it. Release builds ignore both. Every bundle still verifies against the
+    built-in key, and a rollback floor raised from the tunnel stays.
   - A managed network (Netskope) may block the tunnel. A phone on mobile data
     or another Wi-Fi then works better.
 - **A LAN server with a CA you install on the phones** (`mkcert`, or the
