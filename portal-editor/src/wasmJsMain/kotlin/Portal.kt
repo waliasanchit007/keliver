@@ -1597,12 +1597,13 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     return rowEl
   }
 
-  // A multi-line text needs a <textarea>: an <input type=text> strips newlines
-  // from its value, so the first keystroke would join the lines (U33).
-  val text = props[key] as? String
-  if (kind == PropKind.Text && text != null && '\n' in text) {
+  // Text is a <textarea>: an <input type=text> strips newlines from its value,
+  // so the first keystroke would join a multi-line text's lines, and a first
+  // line break could never be typed (U33).
+  if (kind == PropKind.Text) {
+    val text = props[key] as? String ?: ""
     val area = Ui.textarea()
-    area.rows = text.lines().size.coerceAtMost(6)
+    area.rows = text.lines().size.coerceIn(1, 6)
     area.value = text
     area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
     rowEl.appendChild(area)

@@ -96,4 +96,19 @@ class StringLiteralRoundTripTest {
     }
     assertEquals("cost \$ 5", parseKotlinStringLiteral("\"cost \$ 5\""))
   }
+
+  @Test fun reviewEdgeCases() {
+    // `${'$'}` is the idiomatic constant dollar.
+    assertEquals("\$5 off", parseKotlinStringLiteral("\"\${'$'}5 off\""))
+    // `$` before a non-BMP letter may be a template: refused.
+    assertNull(parseKotlinStringLiteral("\"\$\uD835\uDC65\""))
+    // Invisible and unencodable characters are written as \uXXXX, and round-trip.
+    for (v in listOf("\u0085", "\u007F", "\u2028", "\u2029", "\uFEFF", "lone \uD800", "lone \uDC00 x")) {
+      val lit = kotlinStringLiteral(v)
+      assertTrue(lit.all { it in ' '..'~' }, lit)
+      assertEquals(v, parseKotlinStringLiteral(lit), lit)
+    }
+    // A valid pair stays raw.
+    assertEquals("\"😀\"", kotlinStringLiteral("😀"))
+  }
 }

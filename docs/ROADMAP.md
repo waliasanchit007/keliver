@@ -76,7 +76,7 @@ run alongside item 2.
    so it is latency-bound; a one-line guest change re-downloaded the
    stdlib module too. Measure more parallelism or an archive, and why stdlib
    changed.
-8. **The editor on a real app (found 2026-10-16).** One screen of the proof was
+8. **The editor on a real app (found 2026-10-16).** One screen of the product proof was
    changed through the web editor end to end: 0 RawCode on 13 screens, a one-line
    surgical diff, a signed Production bundle from the Publish button (81 s cold,
    30 s warm) and the change on the phone after a relaunch. What was rough:

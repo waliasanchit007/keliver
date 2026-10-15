@@ -10,7 +10,7 @@ package dev.keliver.portal
 /** [value] as a Kotlin string literal, quotes included. */
 public fun kotlinStringLiteral(value: String): String = buildString(value.length + 2) {
   append('"')
-  for (c in value) {
+  for ((i, c) in value.withIndex()) {
     when (c) {
       '\\' -> append("\\\\")
       '"' -> append("\\\"")
@@ -19,10 +19,24 @@ public fun kotlinStringLiteral(value: String): String = buildString(value.length
       '\r' -> append("\\r")
       '\t' -> append("\\t")
       '\b' -> append("\\b")
-      else -> if (c < ' ') append("\\u").append(c.code.toString(16).padStart(4, '0')) else append(c)
+      else -> if (needsUnicodeEscape(value, i)) append("\\u").append(c.code.toString(16).padStart(4, '0')) else append(c)
     }
   }
   append('"')
+}
+
+/**
+ * Control characters (C0, DEL, C1), the invisible line/paragraph separators and BOM,
+ * and a lone surrogate (which UTF-8 cannot encode) are written as `\uXXXX`.
+ */
+private fun needsUnicodeEscape(s: String, i: Int): Boolean {
+  val c = s[i]
+  return when {
+    c < ' ' || c in '\u007F'..'\u009F' || c == '\u2028' || c == '\u2029' || c == '\uFEFF' -> true
+    c.isHighSurrogate() -> i + 1 >= s.length || !s[i + 1].isLowSurrogate()
+    c.isLowSurrogate() -> i == 0 || !s[i - 1].isHighSurrogate()
+    else -> false
+  }
 }
 
 /**
@@ -65,8 +79,15 @@ public fun parseKotlinStringLiteral(text: String): String? {
         i += 2
       }
       c == '$' -> {
+        // `${'$'}` is the idiomatic constant dollar: a literal `$`, not a template.
+        if (text.startsWith("\${'$'}", i) && i + 6 <= end) {
+          out.append('$')
+          i += 6
+          continue
+        }
         val next = if (i + 1 < end) text[i + 1] else null
-        if (next != null && (next == '{' || next == '_' || next == '`' || next.isLetter())) return null
+        // A surrogate pair may start an identifier outside the BMP: refuse, conservatively.
+        if (next != null && (next == '{' || next == '_' || next == '`' || next.isLetter() || next.isHighSurrogate())) return null
         out.append(c)
         i++
       }

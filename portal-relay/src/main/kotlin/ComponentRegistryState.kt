@@ -121,6 +121,6 @@ object Components {
     null -> "null"
     is String -> kotlinx.serialization.json.JsonPrimitive(v).toString()
     is Boolean, is Int, is Double -> v.toString()
-    else -> "\"$v\""
+    else -> kotlinx.serialization.json.JsonPrimitive(v.toString()).toString() // e.g. a list default
   }
 }

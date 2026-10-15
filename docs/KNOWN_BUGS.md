@@ -880,8 +880,8 @@ threading bug rather than a wiring bug.
 
 ### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED (unreleased; found 2026-10-16)
 
-Found changing a real app's screen through the web editor (the D14 round-trip on an
-adopter's guest, 13 screens).
+Found changing a real app's screen through the web editor (the D14 round-trip on a
+product-proof app's guest, 13 screens; see `ADOPTION_RETRO_2026-10.md`).
 
 **What.** The portal keeps a string's *value*; the `.kt` file holds a Kotlin *literal*.
 Ingest decoded only `\"` and `\\`, and export encoded only those two, so:
@@ -904,15 +904,27 @@ Ingest decoded only `\"` and `\\`, and export encoded only those two, so:
 **Fixed.** `portal-core` has one pair, `kotlinStringLiteral` and
 `parseKotlinStringLiteral`. Ingest decodes every Kotlin escape (`\n \t \r \b \' \"
 \\ \$ \uXXXX`) and refuses a template, a raw string, a concatenation or a malformed
-escape, which keeps them as code (RawCode) instead of misreading them as text. The
+escape, which keeps them as code (RawCode) instead of misreading them as text (the
+idiomatic constant `${'$'}` is read as a `$`). The
 exporter (through `portal-schema-codegen`) encodes `\ " $` and control characters,
 in props, string lists and component arguments; preview mock args use the same parser;
-the relay's hand-written JSON (component defaults, flows) now escapes control
-characters. The editor shows a text that has a line break in a `<textarea>`.
+the relay's hand-written JSON for component defaults and flows now
+escapes control characters. The editor's Text field is a `<textarea>`, so a line break
+can be kept and typed. Export also writes C1 controls, U+2028/2029, U+FEFF and a lone
+surrogate as `\uXXXX`.
 Tests: `StringLiteralRoundTripTest` (ingest, surgical write-back, templates, helper
 round-trip). On the real guest: 13 screens, 0 RawCode; editing the two-line heading
 in the editor wrote `"…\nat a glance today"` and a typed `$b` wrote `\$b`, each a
 one-line diff.
+
+**Behaviour change when upgrading.** A widget whose literal argument holds a template
+(`Card(title = "Total: ${b.total}") { … }`) or several literals in one action
+(`{ b.go("a", "b") }`) used to ingest as a widget whose text was the template's source;
+it is now RawCode, children included. A screen that met D14's "0 RawCode" can stop
+meeting it. The remedy is the screen grammar's own: format the text in the presenter
+and bind it (`title = b.totalLabel`). In-repo screens and fixtures have no such case.
+Not changed: string-list items containing a comma still re-ingest as RawCode (the list
+split is not quote-aware); route keys in flows still strip quotes by hand.
 
 ### U27. The relay wrote the private signing key readable by every local user — FIXED in tools 0.3.6
 
