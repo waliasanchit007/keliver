@@ -112,9 +112,20 @@ out="$( cd "$APP" && "$SCAFFOLD" 2>&1 )"; rc=$?
 python3 - "$DISP/portal.json.before" "$APP/keliver.portal.json" <<'PY' && ok "keliver.portal.json gains publishTask/publishOutput and keeps every other setting" || bad "keliver.portal.json is wrong"
 import json, sys
 before, after = (json.load(open(p)) for p in sys.argv[1:3])
-assert after.pop('publishTask') == ':compileDevelopmentExecutableKotlinJsZipline'
-assert after.pop('publishOutput') == 'build/zipline/Development'
+assert after.pop('publishTask') == ':compileProductionExecutableKotlinJsZipline'
+assert after.pop('publishOutput') == 'build/zipline/Production'
 assert after == before, (after, before)
+PY
+printf '%s' "$out" | grep -q 'publishTask :compileProductionExecutableKotlinJsZipline, publishOutput build/zipline/Production' \
+  && ok "the Production bundle is the default, and the output says so" || bad "the output does not name the Production pair"
+
+echo "=== --development writes the Development pair"
+make_app devvariant device
+( cd "$DISP/devvariant" && "$SCAFFOLD" --development > /dev/null 2>&1 ) && python3 - "$DISP/devvariant/keliver.portal.json" <<'PY' \
+  && ok "--development: publishTask/publishOutput are the Development pair" || bad "--development did not write the Development pair"
+import json, sys
+c = json.load(open(sys.argv[1]))
+assert (c['publishTask'], c['publishOutput']) == (':compileDevelopmentExecutableKotlinJsZipline', 'build/zipline/Development'), c
 PY
 python3 - "$APP/build.gradle" <<'PY' && ok "the signing block is appended once, after the kotlin {} block" || bad "the signing block is missing, doubled or above kotlin {}"
 import re, sys
@@ -136,11 +147,43 @@ make_app same device
 python3 - "$DISP/same/keliver.portal.json" <<'PY'
 import json, sys
 p = sys.argv[1]; c = json.load(open(p))
+c['publishTask'] = ':compileProductionExecutableKotlinJsZipline'; c['publishOutput'] = 'build/zipline/Production'
+open(p, 'w').write(json.dumps(c, indent=2) + '\n')
+PY
+cp "$DISP/same/keliver.portal.json" "$DISP/same.json.before"
+( cd "$DISP/same" && "$SCAFFOLD" > /dev/null 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/same/build.gradle" \
+  && cmp -s "$DISP/same.json.before" "$DISP/same/keliver.portal.json" \
+  && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused or rewritten"
+
+echo "=== an app that already publishes the Development pair keeps it"
+make_app keepdev device
+python3 - "$DISP/keepdev/keliver.portal.json" <<'PY'
+import json, sys
+p = sys.argv[1]; c = json.load(open(p))
 c['publishTask'] = ':compileDevelopmentExecutableKotlinJsZipline'; c['publishOutput'] = 'build/zipline/Development'
 open(p, 'w').write(json.dumps(c, indent=2) + '\n')
 PY
-( cd "$DISP/same" && "$SCAFFOLD" > /dev/null 2>&1 ) && grep -q 'keliver: PUBLISH SIGNING' "$DISP/same/build.gradle" \
-  && ok "matching publish settings: only the signing block is added" || bad "matching publish settings were refused"
+cp "$DISP/keepdev/keliver.portal.json" "$DISP/keepdev.json.before"
+out="$( cd "$DISP/keepdev" && "$SCAFFOLD" 2>&1 )"; rc=$?
+[ "$rc" = 0 ] && cmp -s "$DISP/keepdev.json.before" "$DISP/keepdev/keliver.portal.json" \
+  && printf '%s' "$out" | grep -q 'publishTask :compileDevelopmentExecutableKotlinJsZipline' \
+  && ok "without a flag, an app's existing Development pair is kept and named" || bad "the Development pair was not kept: rc=$rc"
+make_app switchdev device
+cp "$DISP/keepdev.json.before" "$DISP/switchdev/keliver.portal.json"
+( cd "$DISP/switchdev" && "$SCAFFOLD" --development > /dev/null 2>&1 ) && cmp -s "$DISP/keepdev.json.before" "$DISP/switchdev/keliver.portal.json" \
+  && ok "--development on an app already on the Development pair is accepted" || bad "--development on a matching app failed"
+python3 - "$DISP/switchdev/keliver.portal.json" <<'PY'
+import json, sys
+p = sys.argv[1]; c = json.load(open(p))
+c['publishTask'] = ':compileProductionExecutableKotlinJsZipline'; c['publishOutput'] = 'build/zipline/Production'
+open(p, 'w').write(json.dumps(c, indent=2) + '\n')
+PY
+make_app explicit device
+cp "$DISP/switchdev/keliver.portal.json" "$DISP/explicit/keliver.portal.json"
+before="$(snapshot "$DISP/explicit")"
+out="$( cd "$DISP/explicit" && "$SCAFFOLD" --development 2>&1 )"; rc=$?
+[ "$rc" != 0 ] && printf '%s' "$out" | grep -q 'To switch, edit its publishTask' && [ "$before" = "$(snapshot "$DISP/explicit")" ] \
+  && ok "refuses --development on an app that publishes Production, and the app is byte-identical" || bad "an explicit switch was not refused: rc=$rc"
 
 echo "=== an app wired by tools 0.3.6 is upgraded in place (U31)"
 LEGACY="$ROOT/scripts/templates/publish/legacy/signing-0.3.6.gradle"
@@ -299,12 +342,12 @@ public class Verify { public static void main(String[] a) throws Exception {
 JAVA
   ( umask 077; "$JAVA_HOME/bin/java" "$T/KeyGen.java" "$STORE/keys" ) || bad "could not generate the disposable key pair"
   PUB="$(tr -d '[:space:]' < "$STORE/keys/ed25519.pub")"
-  MANIFEST="$APP/build/zipline/Development/manifest.zipline.json"
+  MANIFEST="$APP/build/zipline/Production/manifest.zipline.json"
 
   compile() { # <log> [env assignments...]: compile the bundle at --info; returns gradle's exit
     local log="$1"; shift
     rm -f "$MANIFEST"   # so a stale manifest can never answer for this compile
-    ( cd "$APP" && env "$@" ./gradlew --console=plain --info compileDevelopmentExecutableKotlinJsZipline > "$log" 2>&1 )
+    ( cd "$APP" && env "$@" ./gradlew --console=plain --info compileProductionExecutableKotlinJsZipline > "$log" 2>&1 )
   }
   # U31: "absent" when the private key (hex or raw) is in none of the files given.
   key_in() {
@@ -434,12 +477,12 @@ PY
   cp "$T/signed.json" "$MANIFEST"
 
   # W4.3: keliverResign, on a copy of that bundle (signed for 7), for sequence 12.
-  RS="$T/resign"; rm -rf "$RS"; cp -R "$APP/build/zipline/Development" "$RS"
+  RS="$T/resign"; rm -rf "$RS"; cp -R "$APP/build/zipline/Production" "$RS"
   rm -rf "$APP"/.gradle/*/executionHistory
   ( cd "$APP" && KELIVER_SIGNING_KEY_FILE="$STORE/keys/ed25519.priv" ./gradlew --console=plain --info keliverResign \
       -Pkeliver.resignDir="$RS" -Pkeliver.sequence=12 > "$DISP/build-resign.log" 2>&1 ); rc=$?
   BUILT="$MANIFEST"; MANIFEST="$RS/manifest.zipline.json"; got="$(signature_of)"; MANIFEST="$BUILT"
-  same="$(python3 - "$BUILT" "$RS/manifest.zipline.json" "$APP/build/zipline/Development" "$RS" <<'PY'
+  same="$(python3 - "$BUILT" "$RS/manifest.zipline.json" "$APP/build/zipline/Production" "$RS" <<'PY'
 import json, os, sys
 a, b = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
 ok = all(a.get(k) == b.get(k) for k in ('modules', 'mainModuleId', 'mainFunction', 'version'))
