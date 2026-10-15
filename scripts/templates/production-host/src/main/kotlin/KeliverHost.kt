@@ -117,6 +117,9 @@ import okio.ByteString.Companion.decodeHex
 
 internal const val TAG = "KeliverHost"
 private const val PREFS = "keliver-host"
+
+/** DEBUG builds only: where a bundle server set on the device is read from, under filesDir (KeliverConfig.fromBuild). */
+const val DEBUG_BUNDLE_SERVER_FILE = "keliver/bundle-server"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
 private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
 /** One Zipline cache per key, and one rollback floor and last-good URL with it. */
@@ -171,7 +174,7 @@ class KeliverConfig(
 ) {
   companion object {
     fun fromBuild(context: Context): KeliverConfig = KeliverConfig(
-      bundleServer = BuildConfig.KELIVER_BUNDLE_SERVER,
+      bundleServer = debugBundleServer(context) ?: BuildConfig.KELIVER_BUNDLE_SERVER,
       publicKeyHex = BuildConfig.KELIVER_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
       channel = BuildConfig.KELIVER_CHANNEL,
       apiBaseUrl = BuildConfig.KELIVER_API_BASE_URL.takeIf { it.isNotBlank() },
@@ -180,6 +183,31 @@ class KeliverConfig(
       nextPublicKeyHex = BuildConfig.KELIVER_NEXT_PUBLIC_KEY_HEX.takeIf { it.isNotBlank() },
     )
   }
+}
+
+/**
+ * DEBUG builds only: a bundle server set on the device takes the place of keliver.bundleServer,
+ * so a tunnel's new URL needs no rebuild:
+ *
+ *   adb shell run-as <applicationId> sh -c 'mkdir -p files/keliver && echo https://… > files/keliver/bundle-server'
+ *
+ * then `adb shell am force-stop <applicationId>` and start it again; delete the file to go back. It is
+ * read only by this module's debug variant in a debuggable app (run-as needs one too), never by a
+ * release build. It moves only where bundles come from: every
+ * manifest still verifies against the embedded key, the rollback floor still holds, and the cached
+ * last good bundle is used only on the origin it came from. A plain http:// server also needs a
+ * build whose own server is http:// (debug cleartext is allowed only then).
+ */
+private fun debugBundleServer(context: Context): String? {
+  // Both: this module's debug variant (an app build type that falls back to it, a staging build,
+  // say, would have it too) AND a debuggable app, which run-as also needs.
+  if (!BuildConfig.DEBUG) return null
+  if ((context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return null
+  val file = java.io.File(context.filesDir, DEBUG_BUNDLE_SERVER_FILE)
+  val value = runCatching { file.takeIf { it.isFile && it.length() <= 2048 }?.readText()?.trim()?.trimEnd('/') }.getOrNull()
+  if (value.isNullOrEmpty()) return null
+  Log.i(TAG, "bundle server from files/$DEBUG_BUNDLE_SERVER_FILE (a debug build): $value")
+  return value
 }
 
 /** When a running host looks for a newer bundle by itself (W5; keliver.updates). */
@@ -384,8 +412,12 @@ class KeliverHost private constructor(context: Context, private val config: Keli
     val floorNames = trust.publicKeysHex.map(::cacheNameFor)
 
     val okhttp = OkHttpClient()
+    // A server with a user, query or fragment is refused too: the host appends its own paths, and a
+    // config built by hand (or a debug override) skipped the build's checks.
     val server = config.bundleServer.toHttpUrlOrNull()
+      ?.takeIf { it.username.isEmpty() && it.password.isEmpty() && it.query == null && it.fragment == null }
     if (server == null) {
+      Log.w(TAG, "refusing to load: the bundle server '${config.bundleServer}' is not an http(s) URL without a user, query or fragment")
       mutableState.value = KeliverHostState.Message("Refusing to load", "The bundle server '${config.bundleServer}' is not a URL.")
       report("refused", detail = "the bundle server is not a URL")
       return

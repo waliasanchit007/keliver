@@ -219,6 +219,17 @@ host-capability gated) and verify the signature:
 adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.MainActivity --es mode prod
 ```
 
+The response shows the last 30 lines of the build. The whole Gradle output of
+every publish, failed or not, is saved under the store in
+`publish-logs/publish-v<N>-<millis>.log` (owner-readable, never served; the
+newest 20 are kept), and the response names that file.
+
+Each publish reads `keliver.portal.json` again and uses its `publishTask` and
+`publishOutput` as they are now, so switching the bundle task needs no relay
+restart. A file that does not parse or fails validation, or that was there at
+start and is gone, refuses the publish. Other settings are
+read at start only; the publish response names any that changed since.
+
 ## Project config & scaffolding (separability groundwork)
 
 `keliver.portal.json` at the repo root tells the portal-server everything about

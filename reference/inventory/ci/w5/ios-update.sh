@@ -8,6 +8,9 @@
 #       one process, the new screen shown
 #   V1  (W6) the host POSTed its reports to REPORT_URL: loaded (8), then
 #       update-applied (9), from one install
+#   L1-L3  a debug host takes its bundle server from the launch environment
+#       (KELIVER_BUNDLE_SERVER), refuses a malformed one, and without it uses
+#       its built-in server again
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
@@ -74,4 +77,50 @@ sed -i '' -e 's|UPDATES: String = "[^"]*"|UPDATES: String = "next-launch"|' -e '
 python3 "$HERE/w5/reports.py" "$EV/w5-server.log" ios > "$EV/w6-reports.txt" 2>&1 \
   && ok "V1: the host reported loaded (sequence 8, network) and then update-applied (sequence 9) to its report URL" \
   || bad "V1: $(tail -1 "$EV/w6-reports.txt")"
+
+# L1-L3: a DEBUG host takes its bundle server from the launch environment
+# (KELIVER_BUNDLE_SERVER), so a new tunnel URL needs no rebuild. The installed
+# build names https://localhost:8443; a second server on 8444 serves the same
+# site. L3 relaunches without it, so the cached last good bundle is 8443's again
+# for the rows after this one.
+# Only a host scaffolded from these templates has the override: a hand-run
+# (published-only) route builds from the released tools zip, which may not.
+if grep -rqs KELIVER_BUNDLE_SERVER "$APP/host-ios/src/iosMain/kotlin"; then
+  echo "--- a debug host takes its bundle server from the launch environment"
+  python3 "$HERE/w3/static_https.py" "$W3/site" 8444 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/l1-server.log" &
+  LPID=$!
+  for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8444/bundles/index.json && break; sleep 1; done
+  env_launch() { # <name> <KELIVER_BUNDLE_SERVER or empty>
+    xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+    if [ -n "$2" ]; then
+      SIMCTL_CHILD_KELIVER_BUNDLE_SERVER="$2" xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
+    else
+      xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
+    fi
+    local pid=$!; sleep 25; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+  }
+  env_launch L1 https://localhost:8444
+  C="$EV/L1.console.txt"
+  grep -q "KeliverHost: bundle server from the launch environment (a debug build): https://localhost:8444" "$C" \
+    && grep -q "loading https://localhost:8444/bundles/v9/manifest.zipline.json (index sequence 9," "$C" \
+    && grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && grep -q "GET /bundles/index.json" "$EV/l1-server.log" \
+    && ok "L1: launched with KELIVER_BUNDLE_SERVER=https://localhost:8444, the debug host verified and loaded v9 from there" \
+    || bad "L1: the launch environment's server was not used: $(grep -E 'KeliverHost' "$C" | head -3 | tr '\n' ' ')"
+  for bad_server in "ftp://localhost:8444" "https://localhost:8444/?x=1"; do
+    env_launch L2 "$bad_server"
+    grep -qF "KeliverHost: refusing to load: the bundle server '$bad_server' is not an http(s) URL" "$EV/L2.console.txt" \
+      && ! grep -q "codeLoadSuccess" "$EV/L2.console.txt" \
+      && ok "L2: a launch environment server $bad_server is refused, and nothing loads" \
+      || bad "L2: $bad_server was not refused: $(grep -E 'KeliverHost' "$EV/L2.console.txt" | head -3 | tr '\n' ' ')"
+  done
+  kill "$LPID" 2>/dev/null; wait "$LPID" 2>/dev/null
+  env_launch L3 ""
+  grep -q "loading https://localhost:8443/bundles/v9/manifest.zipline.json" "$EV/L3.console.txt" \
+    && ! grep -q "launch environment" "$EV/L3.console.txt" \
+    && ok "L3: launched without it, the host is back on its built-in https://localhost:8443" \
+    || bad "L3: the host did not return to its built-in server: $(grep -E 'KeliverHost' "$EV/L3.console.txt" | head -3 | tr '\n' ' ')"
+  xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+else
+  echo "  SKIP  L1-L3: this host predates the launch-environment bundle server (not counted)"
+fi
 kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""

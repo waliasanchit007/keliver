@@ -60,6 +60,7 @@ private val repoDir = repoResolution.second
 
 /** Separability: the repo's keliver.portal.json (all fields default to this repo's layout). */
 private val config = loadPortalConfig(repoDir)
+private val configFileAtStart = File(repoDir, "keliver.portal.json").isFile
 
 private val PORT = config.port
 
@@ -272,9 +273,6 @@ private fun safe(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), 
 
 private fun screenFile(project: String, screen: String) = File(File(root, safe(project)), "${safe(screen)}.json")
 
-/** Relay-owned storage that sits beside the projects under [root]. Never a project. */
-private val RESERVED_ROOT_DIRS = setOf("bundles", "keys", "kotlin")
-
 private fun projectNames(): List<String> =
   root.listFiles { f -> f.isDirectory && f.name !in RESERVED_ROOT_DIRS }
     ?.map { it.name }?.sorted() ?: emptyList()
@@ -424,20 +422,37 @@ private fun publish(): Pair<Boolean, String> {
   keyProblem()?.let { return false to "publish REFUSED: $it\nNothing was compiled or signed." }
   log.appendLine("publish: compiling the canonical project (screens/${canonical.name} + hand-owned logic/)")
 
+  // The publish task and output come from keliver.portal.json as it is now (PublishConfig).
+  val current = PublishConfig.current(repoDir, configFileAtStart).getOrElse {
+    return false to log.appendLine("publish REFUSED: keliver.portal.json cannot be read: ${it.message}\nNothing was compiled or signed.").toString()
+  }
+  PublishConfig.restartNeeded(config, current).takeIf { it.isNotEmpty() }?.let {
+    log.appendLine(
+      "publish: keliver.portal.json changed since the relay started. Restart the relay for these to take effect: " +
+        "${it.joinToString()}. (publishTask and publishOutput are read at every publish.)",
+    )
+  }
+  if (current.publishTask != config.publishTask) log.appendLine("publish: publishTask is now ${current.publishTask}")
+  if (current.publishOutput != config.publishOutput) log.appendLine("publish: publishOutput is now ${current.publishOutput}")
+
   // W4: the bundle is signed for the version it will be stored as. The relay
   // numbers its bundles in publish order, so its sequence is the version.
   val version = nextBundleVersion()
   val gradlew = File(repoDir, "gradlew").absolutePath
-  val proc = ProcessBuilder(gradlew, config.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
+  val proc = ProcessBuilder(gradlew, current.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
     .directory(repoDir)
     .redirectErrorStream(true)
     .start()
   val out = proc.inputStream.bufferedReader().readText()
   val code = proc.waitFor()
   log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
+  // The response keeps the last 30 lines; the whole output goes to a file (PublishLogs).
+  runCatching { PublishLogs.save(root, version, out) }
+    .onSuccess { log.appendLine("publish: full Gradle output: ${it.absolutePath}") }
+    .onFailure { log.appendLine("publish: the full Gradle output could not be saved: $it") }
   if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
-  val ziplineOut = File(repoDir, config.publishOutput)
+  val ziplineOut = File(repoDir, current.publishOutput)
   if (!ziplineOut.exists()) return false to log.appendLine("publish FAILED: no zipline output at $ziplineOut").toString()
   // Never store a bundle that every production host would refuse. The relay
   // does not sign; the compile task does, and when its signing block is
@@ -453,7 +468,7 @@ private fun publish(): Pair<Boolean, String> {
   if (unsignedWhy != null) {
     return false to log.appendLine("publish REFUSED: $unsignedWhy.").appendLine(
       """
-      |  Nothing was stored. The relay does not sign: `${config.publishTask}` must, with
+      |  Nothing was stored. The relay does not sign: `${current.publishTask}` must, with
       |  ${File(keysDir, "ed25519.priv")} (never printed). In a keliver-init app, run
       |  keliver-new-publish-target.sh once: it writes publishTask, publishOutput and the
       |  signing block. That block must stay BELOW `kotlin {}`, and the build finds the

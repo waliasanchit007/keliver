@@ -177,7 +177,10 @@ bin/keliver-new-publish-target.sh
 ```
 
 Wires `POST /publish` for your app: `publishTask`/`publishOutput` in
-`keliver.portal.json` (the development Zipline bundle), and a signing block
+`keliver.portal.json` (the Production Zipline bundle: about half the size of the
+Development one and faster to load; `--development` writes the unminified
+Development pair instead, and an app that already has either pair keeps it.
+Tools 0.3.9 and earlier wrote the Development pair), and a signing block
 appended to `build.gradle` that signs the compiled manifest with your store's
 `keys/ed25519.priv`, inside Gradle. The key is never passed on a command line,
 logged, or stored in `.gradle/` (U31). The relay keeps a published bundle only

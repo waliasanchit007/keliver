@@ -107,6 +107,7 @@ import okio.ByteString.Companion.decodeHex
 import platform.Foundation.NSBundle
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
+import platform.Foundation.NSProcessInfo
 import platform.Foundation.NSThread
 import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
@@ -431,6 +432,22 @@ public object Keliver {
   }
 }
 
+/**
+ * The bundle server this start uses, and whether it came from the launch: BUNDLE_SERVER, or in a
+ * DEBUG binary the KELIVER_BUNDLE_SERVER launch environment variable when it is set (`xcrun simctl
+ * launch` with SIMCTL_CHILD_KELIVER_BUNDLE_SERVER, `xcrun devicectl device process launch
+ * --environment-variables`, or the Xcode scheme's environment): a tunnel's new URL without a
+ * rebuild. It moves only where bundles come from. Every manifest still verifies against the
+ * embedded key, the rollback floor still holds, and the cached last good bundle is used only on
+ * the origin it came from. A release binary ignores the environment.
+ */
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+internal fun bundleServerSetting(): Pair<String, Boolean> {
+  if (!kotlin.native.Platform.isDebugBinary) return BUNDLE_SERVER to false
+  val fromLaunch = (NSProcessInfo.processInfo.environment["KELIVER_BUNDLE_SERVER"] as? String)?.trim()
+  return if (fromLaunch.isNullOrEmpty()) BUNDLE_SERVER to false else fromLaunch to true
+}
+
 /** The view controller your Xcode app shows (MainViewControllerKt.MainViewController()): Keliver's screen. */
 public fun MainViewController(): UIViewController = Keliver.viewController()
 
@@ -443,8 +460,14 @@ private suspend fun startHost(): HostState {
   }
   trust as ProductionTrust.Verified
   log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates $UPDATES")
-  val server = BundleServer.parse(BUNDLE_SERVER)
-    ?: return HostState.Message("Refusing to load", "The bundle server '$BUNDLE_SERVER' is not an http(s) URL.")
+  val (serverUrl, fromLaunch) = bundleServerSetting()
+  if (fromLaunch) log("bundle server from the launch environment (a debug build): $serverUrl")
+  // parse() reads only the origin and path; a query or fragment must not reach the base URL the
+  // host appends its paths to (the build checks BUNDLE_SERVER for both; the launch value is checked here).
+  val server = BundleServer.parse(serverUrl)?.takeIf { '?' !in serverUrl && '#' !in serverUrl } ?: run {
+    log("refusing to load: the bundle server '$serverUrl' is not an http(s) URL without a query")
+    return HostState.Message("Refusing to load", "The bundle server '$serverUrl' is not an http(s) URL.")
+  }
   val apiBase = API_BASE_URL.takeIf { it.isNotBlank() }
   // Advertise only what this host really provides: the lookup picks a bundle that needs no more.
   val capabilities = buildList {
