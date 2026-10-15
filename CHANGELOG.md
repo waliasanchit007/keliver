@@ -8,7 +8,7 @@
 
 ## [Unreleased]
 
-## [0.3.4] - 2026-10-15
+## [0.3.4] - 2026-10-16
 
 Widget fixes for Compose UI hosts, plus one schema property. Hand-written sources changed only
 in `keliver-widget-composeui`, `keliver-lazylayout-composeui`, `keliver-material-composeui` and
