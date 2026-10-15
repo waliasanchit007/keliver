@@ -222,7 +222,7 @@ adb shell am start -n dev.keliver.portaldevice/dev.keliver.portaldevice.host.Mai
 The response shows the last 30 lines of the build. The whole Gradle output of
 every publish, failed or not, is saved under the store in
 `publish-logs/publish-v<N>-<millis>.log` (owner-readable, never served; the
-newest 20 are kept), and the response ends with that file's path.
+newest 20 are kept), and the response names that file.
 
 ## Project config & scaffolding (separability groundwork)
 
