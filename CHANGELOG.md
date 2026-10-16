@@ -18,6 +18,10 @@
   **Behaviour change:** a widget whose literal argument is a template (`"Total: ${b.total}"`) or a
   concatenation is now RawCode instead of a widget with that text; format it in the presenter and
   bind it.
+- **portal-relay:** a publish whose Gradle build fails with a Kotlin "Internal compiler error" is
+  built once more, with both outputs kept in `<store>/publish-logs/` (KNOWN_BUGS U34: the first
+  publish after another Gradle build sometimes failed that way and passed on a retry; the cause
+  is not known). Any other build failure is reported at once.
 
 ## [0.3.4] - 2026-10-16
 

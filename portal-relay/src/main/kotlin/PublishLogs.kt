@@ -60,3 +60,15 @@ internal object PublishLogs {
     return file.toFile()
   }
 }
+
+/**
+ * U34: the first relay publish after another Gradle build of the app sometimes failed in the
+ * Kotlin/JS compiler ("Internal compiler error"), and the same publish passed when run again. The
+ * cause is not known (KNOWN_BUGS U34), so a publish whose build fails THAT way runs once more;
+ * every other failure is reported at once. Both outputs are kept in publish-logs/.
+ */
+internal object PublishRetry {
+  private val compilerCrash = Regex("""internal compiler error|backend internal error""", RegexOption.IGNORE_CASE)
+
+  fun isCompilerCrash(exitCode: Int, output: String): Boolean = exitCode != 0 && compilerCrash.containsMatchIn(output)
+}

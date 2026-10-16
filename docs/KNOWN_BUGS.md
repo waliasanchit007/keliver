@@ -878,6 +878,36 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND (unreleased; found 2026-10-14, cause not known)
+
+Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").
+
+**What.** Twice, a `POST /publish` failed on its first try and passed when run again: once
+with "Internal compiler error" in the Kotlin/JS link, once with a `BUILD FAILED` two
+seconds in. Both came after another Gradle build of the same app (a `jsNodeTest` run).
+The relay then kept only the last 30 lines of Gradle output, so the stack trace was lost.
+
+**Tried on 2026-10-17, none reproduced it.** All on that app (Kotlin 2.2.0, Gradle 9.0.0,
+Zipline 1.22.0), comparing the publish task's result with a retry:
+* a test build, then the publish task, with nothing changed (all up to date);
+* a source change, a test build, then the Production publish task, twice;
+* the same through the Development publish task, which shares its incremental caches with
+  the test link;
+* a test build and the publish task started together, three times;
+* the test build in one Gradle user home and the publish in another, and back;
+* the test build on JDK 17 and the publish on JDK 21 (the `java` on `PATH` a relay
+  started without `JAVA_HOME` gives its builds), and back.
+
+**Worked around.** Every publish keeps its whole Gradle output in `<store>/publish-logs/`
+(the response names the file), so the next occurrence has its stack trace. A publish whose
+build fails with "Internal compiler error" or "Backend Internal error" is built once more,
+never twice, with both outputs kept; any other failure is reported at once
+(`PublishRetry`, `PublishLogsTest`). `keliver-publish` (CI) does not retry: its output goes
+to the console, and a CI job is rerun as a whole.
+
+**Still open.** The cause, and the two-second `BUILD FAILED`. When it happens again, attach
+the publish log to this entry.
+
 ### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED (unreleased; found 2026-10-16)
 
 Found changing a real app's screen through the web editor (the D14 round-trip on a

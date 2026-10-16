@@ -57,4 +57,14 @@ class PublishLogsTest {
     repeat(PublishLogs.KEEP + 1) { i -> PublishLogs.save(store, sequence = i + 1, output = "", nowMillis = 1000L + i) }
     assertTrue(other.isFile)
   }
+
+  @Test
+  fun onlyACompilerCrashIsBuiltAgain() {
+    val crash = "e: java.lang.IllegalStateException: Internal compiler error. See log for more details\nBUILD FAILED in 4s"
+    assertTrue(PublishRetry.isCompilerCrash(1, crash))
+    assertTrue(PublishRetry.isCompilerCrash(1, "org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering"))
+    assertFalse(PublishRetry.isCompilerCrash(0, crash)) // it passed: nothing to retry
+    assertFalse(PublishRetry.isCompilerCrash(1, "e: file:///app/src/jsMain/kotlin/screens/a.kt:3:5 Unresolved reference 'x'.\nBUILD FAILED in 2s"))
+    assertFalse(PublishRetry.isCompilerCrash(1, "FAILURE: Build failed with an exception."))
+  }
 }

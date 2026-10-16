@@ -439,17 +439,28 @@ private fun publish(): Pair<Boolean, String> {
   // numbers its bundles in publish order, so its sequence is the version.
   val version = nextBundleVersion()
   val gradlew = File(repoDir, "gradlew").absolutePath
-  val proc = ProcessBuilder(gradlew, current.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
-    .directory(repoDir)
-    .redirectErrorStream(true)
-    .start()
-  val out = proc.inputStream.bufferedReader().readText()
-  val code = proc.waitFor()
-  log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
-  // The response keeps the last 30 lines; the whole output goes to a file (PublishLogs).
-  runCatching { PublishLogs.save(root, version, out) }
-    .onSuccess { log.appendLine("publish: full Gradle output: ${it.absolutePath}") }
-    .onFailure { log.appendLine("publish: the full Gradle output could not be saved: $it") }
+  fun build(): Pair<Int, String> {
+    val proc = ProcessBuilder(gradlew, current.publishTask, "-Pkeliver.sequence=$version", "--console=plain")
+      .directory(repoDir)
+      .redirectErrorStream(true)
+      .start()
+    val out = proc.inputStream.bufferedReader().readText()
+    val code = proc.waitFor()
+    log.appendLine(out.lines().filter { it.isNotBlank() }.takeLast(30).joinToString("\n"))
+    // The response keeps the last 30 lines; the whole output goes to a file (PublishLogs).
+    runCatching { PublishLogs.save(root, version, out) }
+      .onSuccess { log.appendLine("publish: full Gradle output: ${it.absolutePath}") }
+      .onFailure { log.appendLine("publish: the full Gradle output could not be saved: $it") }
+    return code to out
+  }
+  val (firstCode, firstOut) = build()
+  val code = if (PublishRetry.isCompilerCrash(firstCode, firstOut)) {
+    // U34: a Kotlin compiler crash that a second run has always passed. Once more, never twice.
+    log.appendLine("publish: the Kotlin compiler crashed (Internal compiler error, KNOWN_BUGS U34); building once more")
+    build().first
+  } else {
+    firstCode
+  }
   if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
   val ziplineOut = File(repoDir, current.publishOutput)
