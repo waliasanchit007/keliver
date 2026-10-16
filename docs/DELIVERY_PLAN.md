@@ -874,7 +874,7 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 ## Next action
 
 **2026-10-16.** Libraries **0.3.4** are on Maven Central (row above). Next, from
-`ADOPTION_PLAN_2026-10.md`: debug hosts updating on resume (`keliver.debugUpdates`),
+`ADOPTION_PLAN_2026-10.md`: debug hosts defaulting to `on-resume` updates,
 the first-publish Kotlin/JS compiler error, timing marks in the host templates, and a
 tools release whose scaffolders wire 0.3.4. The 2026-10-14 entry below is kept as written.
 
