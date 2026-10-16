@@ -360,6 +360,47 @@ yourself:** your own signing config for a release APK.
 The generic host above deliberately does not grow into that. It exists so that
 a new adopter can see their screens on a device without writing Android code.
 
+**Timing marks** (both hosts, from tools 0.3.10; M0 of `ADOPTION_PLAN_2026-10.md`).
+For measuring startup, a host records these moments:
+
+| Mark | When |
+|---|---|
+| `process` | Android only: when the OS started the process (`Process.getStartElapsedRealtime`) |
+| `open` | a Keliver screen was asked for (`KeliverScreen` composed; iOS `viewController()`) |
+| `code` | the bundle's code loaded (Zipline's `codeLoadSuccess`), each load |
+| `first-frame` | one frame after the host applied a screen's first change list |
+| `content` | one frame after the guest said its data is shown |
+
+- **Clocks:** monotonic, in nanoseconds: Android `SystemClock.elapsedRealtimeNanos()`,
+  iOS `CACurrentMediaTime()`. `first-frame` and the guest's marks are taken one frame
+  later (Android: two `Choreographer` callbacks; iOS: the next `CADisplayLink` tick), so
+  they count a frame the user can see.
+- **Output:** Android logs `KeliverTiming: <name> <nanos>` (tag `KeliverTiming`) and
+  appends the same `<name> <nanos>` line to `files/keliver/timing.log`
+  (`adb shell run-as <applicationId> cat files/keliver/timing.log`). iOS calls
+  `Keliver.shared.onTrace(name, nanos)` on the main thread, prints the line to the
+  console, and appends it to `Library/Caches/keliver/timing.log` in the app's container.
+  A file over 256 KB starts again when the host starts.
+- **The guest's mark:** `keliver-new-device-target.sh` writes
+  `src/jsMain/kotlin/device/KeliverTiming.kt` (copy it from a newer tools bundle into an
+  older guest). Call `KeliverTiming.mark("content")` once the screen's data is shown;
+  pass it to a presenter as a lambda, since presenters are common code. Names are `a-z`,
+  `0-9` and `-`, at most 32 characters. It calls the `KeliverTrace` service, which only a
+  build with the marks binds; anywhere else it does nothing.
+- **Which builds have them:** debug builds, and a **benchmark** build that is never
+  shipped: release settings (minified with R8, not debuggable, `https://` only) plus
+  `profileable`, signed with the debug key so it installs. Android:
+  `./gradlew -p host-android assembleBenchmark` (the `benchmark` build type; an embedded
+  host takes your app's own `benchmark` build type). iOS: the `Benchmark` configuration
+  (Release settings, `KOTLIN_FRAMEWORK_BUILD_TYPE = release`), e.g.
+  `xcodebuild -configuration Benchmark`.
+- **The store build compiles none of it.** Android adds `src/timing/` to the debug and
+  benchmark build types only, and `src/notiming/` (the same calls, doing nothing) to
+  every other one. iOS compiles `src/timing/` only when Xcode's build setting
+  `KELIVER_TIMING` is `YES`, which Debug and Benchmark set; Release, and a build outside
+  Xcode, compile `src/notiming/`. An embedded iOS host needs that setting in your own
+  project (its `EMBED.md`).
+
 ## 3. Your own production iOS host
 
 `keliver-new-ios-host.sh` (run from the app root; scaffolding needs bash and

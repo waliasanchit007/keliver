@@ -88,11 +88,25 @@ android {
     // Your app's debug build uses this module's debug variant (and a build type
     // of yours that falls back to debug does too).
     debug { buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\"" }
+    // For measuring (M0): your app's own benchmark build type (release settings,
+    // never shipped) takes this variant, which has the timing marks.
+    benchmark {
+      initWith release
+      matchingFallbacks = ['release']
+    }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 kotlin { jvmToolchain(17) }
+
+// Timing marks (M0) are compiled into the debug and benchmark build types only
+// (src/timing/); every other build type, release among them, gets the no-op
+// src/notiming/ instead.
+def timingBuildTypes = ['debug', 'benchmark']
+android.buildTypes.configureEach { bt ->
+  android.sourceSets.maybeCreate(bt.name).kotlin.srcDir(bt.name in timingBuildTypes ? 'src/timing/kotlin' : 'src/notiming/kotlin')
+}
 
 // The embedded key is the whole of this host's trust: a missing or malformed
 // one fails the BUILD, not just a launch on someone's device.

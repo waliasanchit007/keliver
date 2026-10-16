@@ -181,6 +181,15 @@ grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', '
   && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
   && ok "updates: on-resume in a debug binary, next-launch in a release one; a debug-only check-now notification" \
   || bad "updates: the debug default or the check-now notification is not wired"
+# M0: timing marks only when KELIVER_TIMING=YES (Debug, Benchmark); a no-op elsewhere.
+grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
+  && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/com/example/demo/host/KeliverTiming.kt" 2>/dev/null \
+  && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/com/example/demo/host/KeliverTiming.kt" \
+  && grep -q "System.getenv('KELIVER_TIMING') == 'YES'" "$H/build.gradle" \
+  && [ "$(grep -c 'KELIVER_TIMING = YES;' "$H/iosApp.xcodeproj/project.pbxproj")" = 2 ] \
+  && grep -q 'name = Benchmark;' "$H/iosApp.xcodeproj/project.pbxproj" && grep -q 'KOTLIN_FRAMEWORK_BUILD_TYPE = release;' "$H/iosApp.xcodeproj/project.pbxproj" \
+  && ok "M0: timing marks when KELIVER_TIMING=YES (Debug, Benchmark), a no-op elsewhere; a Benchmark configuration" \
+  || bad "M0: the timing marks or the Benchmark configuration are not wired"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \

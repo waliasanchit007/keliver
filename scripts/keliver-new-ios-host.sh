@@ -283,6 +283,10 @@ fi
 for f in "$TEMPLATES"/src/iosMain/kotlin/*.kt; do
   subst "$f" "$STAGE/src/iosMain/kotlin/$PKG_PATH/$(basename "$f")"
 done
+# Timing marks (M0): the real ones when Xcode's KELIVER_TIMING is YES (Debug, Benchmark), a no-op otherwise.
+for set in timing notiming; do
+  subst "$TEMPLATES/src/$set/kotlin/KeliverTiming.kt" "$STAGE/src/$set/kotlin/$PKG_PATH/KeliverTiming.kt"
+done
 cat > "$STAGE/.gitignore" <<'GI'
 /build/
 /.gradle/

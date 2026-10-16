@@ -83,6 +83,9 @@ if [ -f "$A/src/jsMain/kotlin/device/Main.kt" ]; then
 else
   bad "single-screen: no Main.kt generated"
 fi
+T="$A/src/jsMain/kotlin/device/KeliverTiming.kt"
+[ -f "$T" ] && grep -q '^package single\.device$' "$T" && grep -q 'if ("KeliverTrace" in zipline.clientNames)' "$T" \
+  && ok "M0: device/KeliverTiming.kt marks through KeliverTrace only when the host binds it" || bad "M0: device/KeliverTiming.kt"
 
 # --- 2. two screens, explicit selection --------------------------------------
 B="$(scaffold Twin)"; add_second_screen "$B" twin

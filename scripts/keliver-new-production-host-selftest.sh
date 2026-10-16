@@ -167,6 +167,15 @@ grep -q '^keliver.updates=$' "$H/gradle.properties" \
   && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$M" && grep -q 'if (!BuildConfig.DEBUG) return$' "$M" \
   && ok "updates: on-resume in debug builds, next-launch otherwise; a debug-only check-now receiver that needs DUMP" \
   || bad "updates: the debug default or the check-now receiver is not wired"
+# M0: timing marks in the debug and benchmark build types only; a no-op elsewhere.
+P="${M%/*}"; P="${P#$H/src/main/kotlin/}"
+grep -q 'interface KeliverTrace' "$H/src/timing/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
+  && grep -q 'inline fun mark(name: String) = Unit' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" 2>/dev/null \
+  && ! grep -q 'KeliverTrace' "$H/src/notiming/kotlin/$P/KeliverTiming.kt" \
+  && grep -q "def timingBuildTypes = \['debug', 'benchmark'\]" "$H/build.gradle" && grep -q 'profileable true' "$H/build.gradle" \
+  && grep -q 'KeliverTiming.firstFrame(app.launch())' "$H/src/main/kotlin/$P/KeliverScreen.kt" && [ -f "$H/proguard-rules.pro" ] \
+  && ok "M0: timing marks in debug and benchmark (src/timing), a no-op elsewhere (src/notiming); a benchmark build type" \
+  || bad "M0: the timing marks or the benchmark build type are not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \

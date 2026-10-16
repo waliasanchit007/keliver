@@ -26,6 +26,12 @@ standalone host `keliver-new-ios-host.sh` writes). Its settings are in
    build of the framework refuses both an `http://` server and any ATS exception
    in the Info.plist Xcode builds (`$SRCROOT/$INFOPLIST_FILE`).
 4. **Add `KeliverScreen.swift`** (beside this file) to your app target.
+5. **Timing marks (optional, M0):** set the build setting `KELIVER_TIMING = YES`
+   in the configurations that should have them: your Debug one, and a
+   `Benchmark` configuration (duplicate Release, then also set
+   `KOTLIN_FRAMEWORK_BUILD_TYPE = release`) that is never shipped. Every other
+   configuration compiles a no-op instead. `Keliver.shared.onTrace` gets each
+   mark (docs/DEVICE_HOST.md, "Timing marks").
 
 ## In your code
 
