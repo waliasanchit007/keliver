@@ -37,6 +37,8 @@ on:
       - "reference/inventory/ci/w2/**"
       - "reference/inventory/ci/w5/**"
       - "reference/inventory/ci/w8/**"
+      - "reference/inventory/ci/m0/**"
+      - "reference/inventory/app/src/jsMain/kotlin/device/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"
