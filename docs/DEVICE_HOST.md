@@ -174,7 +174,8 @@ that opens.
   `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`),
   which is also what a DEBUG build does when the setting is empty (the
   templates' default from tools 0.3.10 on; a release build then stays
-  `next-launch`):
+  `next-launch`; this is a build setting, so a `KeliverConfig` built by hand
+  takes its own `updates`, `NEXT_LAUNCH` unless set):
   each time the app comes back to the foreground, at most every 30 s, the host
   looks up again and applies a newer bundle in place. Zipline loads it while
   the running code goes on, swaps it in on success (the floor rises as for any
@@ -185,7 +186,8 @@ that opens.
   `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
   (a receiver registered at run time by a debug build of a debuggable app,
   reachable only by a sender holding `android.permission.DUMP`, which adb's
-  shell has and an installed app cannot get); on iOS the Darwin notification
+  shell has and an installed app does not, short of an `adb shell pm grant`);
+  on iOS the Darwin notification
   `<bundle id>.keliver.check-for-update` (`xcrun simctl spawn <udid> notifyutil
   -p …`, `xcrun devicectl device notification post --device <id> --name …`).
   A release build has neither.

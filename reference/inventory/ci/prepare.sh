@@ -234,7 +234,8 @@ if grep -rqs DEBUG_CHECK_FOR_UPDATE "$APP/host-android/src/main/kotlin"; then W5
 # other one next-launch (the release variant's BuildConfig, https servers).
 if [ -z "$W5_UPDATES" ]; then
   ( cd "$APP" && ./gradlew --console=plain -p host-android generateDebugBuildConfig generateReleaseBuildConfig \
-      -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) > "$EV/u0-buildconfig.log" 2>&1
+      -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) > "$EV/u0-buildconfig.log" 2>&1 \
+    || bad "U0: generating the debug and release BuildConfig failed: $(grep -E 'What went wrong' -A2 "$EV/u0-buildconfig.log" | head -3 | tr '\n' ' ')"
   u0(){ find "$APP/host-android/build/generated/source/buildConfig/$1" -name BuildConfig.java -exec grep -h KELIVER_UPDATES {} + 2>/dev/null | sed 's/.*= *"\([^"]*\)".*/\1/'; }
   [ "$(u0 debug)" = on-resume ] && [ "$(u0 release)" = next-launch ] \
     && ok "U0: keliver.updates unset: the debug build is on-resume, the release build next-launch" \

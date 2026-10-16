@@ -243,7 +243,8 @@ A debug build picks up a bundle you publish while it runs when you switch back
 to the app (on-resume updates, at most one lookup every 30 s), and looks at once
 on `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
 (only adb's shell can send that one). Every other build type looks only at the
-next launch. `keliver.updates` in `host-android/gradle.properties` chooses for
+next launch, except one made with `initWith(debug)` (or, for the embedded
+library, one that falls back to `debug`), which takes debug's settings. `keliver.updates` in `host-android/gradle.properties` chooses for
 every build type instead (hosts from tools 0.3.9 and earlier wrote
 `next-launch` there: empty it to get these defaults).
 

@@ -280,7 +280,10 @@ public object Keliver {
     }
     if (started) return
     started = true
-    if (updatesMode() == "on-resume") {
+    // Once: a start that created nothing runs again (started is reset), and a
+    // second observer would make every foreground check twice.
+    if (updatesMode() == "on-resume" && !resumeObserved) {
+      resumeObserved = true
       NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
         resumed()
       }
@@ -396,6 +399,7 @@ public object Keliver {
   }
 
   private var debugCheckRegistered = false // main thread
+  private var resumeObserved = false // main thread
 
   /**
    * A DEBUG binary only: a check now, applying a newer bundle, not held to the 30 s between

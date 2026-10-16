@@ -134,7 +134,8 @@ const val DEBUG_BUNDLE_SERVER_FILE = "keliver/bundle-server"
  * It runs [KeliverHost.checkForUpdate] (applying a newer bundle), not held to the 30 s between
  * on-resume checks. The receiver is registered at run time by this module's debug variant in a
  * debuggable app, never by a release build, and only a sender holding android.permission.DUMP
- * reaches it: adb's shell holds it, an installed app cannot. Every rule of an update still holds
+ * reaches it: adb's shell holds it, an installed app does not (unless someone grants it one with
+ * adb shell pm grant). Every rule of an update still holds
  * (the index, the channel, the constraints, the floor, the signature).
  */
 const val DEBUG_CHECK_FOR_UPDATE = "dev.keliver.debug.CHECK_FOR_UPDATE"
