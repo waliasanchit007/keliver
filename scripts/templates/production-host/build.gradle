@@ -88,9 +88,10 @@ android {
       manifestPlaceholders = [usesCleartextTraffic: cleartext.toString()]
       buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\""
     }
-    // For measuring (M0), never shipped: release settings (minified, not
-    // debuggable, https only) plus profileable and the timing marks, signed with
-    // the debug key so it installs. ./gradlew -p host-android assembleBenchmark
+    // For measuring (M0), never shipped: release settings (not debuggable, https
+    // only), minified with R8 as a store build should be (this template's release
+    // leaves minifying to you), plus profileable and the timing marks, signed
+    // with the debug key so it installs. ./gradlew -p host-android assembleBenchmark
     benchmark {
       initWith release
       matchingFallbacks = ['release']

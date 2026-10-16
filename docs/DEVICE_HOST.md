@@ -373,7 +373,7 @@ For measuring startup, a host records these moments:
 
 - **Clocks:** monotonic, in nanoseconds: Android `SystemClock.elapsedRealtimeNanos()`,
   iOS `CACurrentMediaTime()`. `first-frame` and the guest's marks are taken one frame
-  later (Android: two `Choreographer` callbacks; iOS: the next `CADisplayLink` tick), so
+  later (Android: two `Choreographer` callbacks; iOS: two `CADisplayLink` ticks), so
   they count a frame the user can see.
 - **Output:** Android logs `KeliverTiming: <name> <nanos>` (tag `KeliverTiming`) and
   appends the same `<name> <nanos>` line to `files/keliver/timing.log`
@@ -388,8 +388,9 @@ For measuring startup, a host records these moments:
   `0-9` and `-`, at most 32 characters. It calls the `KeliverTrace` service, which only a
   build with the marks binds; anywhere else it does nothing.
 - **Which builds have them:** debug builds, and a **benchmark** build that is never
-  shipped: release settings (minified with R8, not debuggable, `https://` only) plus
-  `profileable`, signed with the debug key so it installs. Android:
+  shipped: release settings (not debuggable, `https://` only), minified with R8 as a
+  store build should be (the standalone template's `release` leaves minifying to you),
+  plus `profileable`, signed with the debug key so it installs. Android:
   `./gradlew -p host-android assembleBenchmark` (the `benchmark` build type; an embedded
   host takes your app's own `benchmark` build type). iOS: the `Benchmark` configuration
   (Release settings, `KOTLIN_FRAMEWORK_BUILD_TYPE = release`), e.g.

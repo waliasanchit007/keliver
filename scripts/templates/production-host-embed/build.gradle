@@ -90,10 +90,7 @@ android {
     debug { buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\"" }
     // For measuring (M0): your app's own benchmark build type (release settings,
     // never shipped) takes this variant, which has the timing marks.
-    benchmark {
-      initWith release
-      matchingFallbacks = ['release']
-    }
+    benchmark { initWith release }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

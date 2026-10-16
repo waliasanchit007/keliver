@@ -14,6 +14,14 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   for _ in $(seq 1 30); do curl -sf --cacert "$W3/tls/ca.pem" -m 2 -o /dev/null https://localhost:8443/bundles/index.json && break; sleep 1; done
   m0_at(){ sed -n "s/.*KeliverTiming: $2 \([0-9][0-9]*\)\r*$/\1/p" "$1" | head -1; }
   m0_count(){ grep -c "KeliverTiming: $2 [0-9]" "$1"; }
+  # One launch, one console, no relaunch: ios.sh's launch() relaunches without a
+  # console when the first screenshot is blank, which would lose the marks.
+  m0_launch(){  # $1 label
+    local pid
+    xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
+    xcrun simctl launch --console-pty "$UDID" "$BID" > "$EV/$1.console.txt" 2>&1 &
+    pid=$!; sleep 30; kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+  }
   m0_marks(){  # $1 label, $2 console file
     local f="$2" o c ff ct n
     for n in open code first-frame content; do
@@ -28,7 +36,7 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   }
 
   # T1: the Debug build W5 left installed (its server is https://localhost:8443).
-  launch T1
+  m0_launch T1
   C="$EV/T1.console.txt"
   m0_marks T1 "$C"
   grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T1: the Debug build ran v9" || bad "T1: v9 did not load"
@@ -50,8 +58,9 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
   if m0_build Benchmark; then
     ok "T2: the Benchmark configuration built (a release Kotlin framework)"
     BAPP="$(find "$WORK/dd-m0/Build/Products/Benchmark-iphonesimulator" -maxdepth 1 -name '*.app' | head -1)"
-    xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$BAPP"
-    launch T2
+    # Installed over the Debug build: the app's data (cache, rollback floor) stays for W8.
+    xcrun simctl install "$UDID" "$BAPP"
+    m0_launch T2
     C="$EV/T2.console.txt"
     grep -q "codeLoadSuccess modules=[0-9]* sequence=9" "$C" && ok "T2: the Benchmark build verified and ran v9" \
       || bad "T2: v9 did not load: $(grep -E 'KeliverHost|codeLoad' "$C" | head -3 | tr '\n' ' ')"
@@ -68,8 +77,8 @@ if grep -rqs "interface KeliverTrace" "$APP/host-ios/src/timing"; then
     bad "T2: the Release build failed"; grep -E '^e: |error:' "$EV/m0-xcodebuild-Release.log" | head
   fi
   cp "$WORK/m0-info.plist.saved" "$PLIST"
-  # Back to the Debug build for the rows after this one.
-  xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
+  # Back to the Debug build for the rows after this one, its data kept.
+  xcrun simctl install "$UDID" "$APPB"
   kill "$SPID" 2>/dev/null; wait "$SPID" 2>/dev/null; SPID=""
 else
   echo "  SKIP  T1-T2: this host predates the timing marks (not counted)"

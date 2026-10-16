@@ -10,8 +10,8 @@
  *
  *   open         a Keliver screen was made (Keliver.viewController())
  *   code         the bundle's code loaded (Zipline's codeLoadSuccess), each load
- *   first-frame  one display-link tick after the host applied a screen's first change list
- *   content      one display-link tick after the guest said its data is shown:
+ *   first-frame  two display-link ticks after the host applied a screen's first change list
+ *   content      two display-link ticks after the guest said its data is shown:
  *                KeliverTiming.mark("content") in the guest, through KeliverTrace
  */
 @file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
@@ -80,12 +80,16 @@ internal object KeliverTiming {
     dispatch_async(dispatch_get_main_queue()) { record(name, nanos) }
   }
 
-  /** A mark at the next display-link tick after the main-thread work queued so far. */
+  /**
+   * A mark two display-link ticks after the main-thread work queued so far: the first tick can
+   * come in the same vsync as Compose's own draw, so the second is after a frame was shown.
+   */
   fun markAfterFrame(name: String) {
-    dispatch_async(dispatch_get_main_queue()) {
-      val tick = FrameTick { mark(name) }
-      CADisplayLink.displayLinkWithTarget(tick, NSSelectorFromString("tick:")).addToRunLoop(NSRunLoop.mainRunLoop, NSRunLoopCommonModes)
-    }
+    dispatch_async(dispatch_get_main_queue()) { afterTick { afterTick { mark(name) } } }
+  }
+
+  private fun afterTick(then: () -> Unit) {
+    CADisplayLink.displayLinkWithTarget(FrameTick(then), NSSelectorFromString("tick:")).addToRunLoop(NSRunLoop.mainRunLoop, NSRunLoopCommonModes)
   }
 
   /** [ui], reporting first-frame after its first change list. */
@@ -97,6 +101,7 @@ internal object KeliverTiming {
   }
 
   private fun record(name: String, nanos: Long) {
+    start() // a screen's open can come before the host's start()
     val line = "$name $nanos"
     println("KeliverTiming: $line")
     runCatching { Keliver.onTrace?.invoke(name, nanos) }.onFailure { println("KeliverTiming: onTrace threw: ${it.message}") }
