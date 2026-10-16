@@ -14,7 +14,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INIT="$ROOT/scripts/keliver-init"
 DEV="$ROOT/scripts/keliver-new-device-target.sh"
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.3}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
 DO_COMPILE=0
 [ "${1:-}" = "--compile" ] && DO_COMPILE=1
 

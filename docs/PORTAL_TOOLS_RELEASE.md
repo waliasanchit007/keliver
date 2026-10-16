@@ -26,8 +26,8 @@ step against a named, retained artifact.
 ## Procedure
 
 The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.9.md`](RELEASE_NOTES_TOOLS_0.3.9.md) (previous:
-[`RELEASE_NOTES_TOOLS_0.3.8.md`](RELEASE_NOTES_TOOLS_0.3.8.md)).
+[`RELEASE_NOTES_TOOLS_0.3.10.md`](RELEASE_NOTES_TOOLS_0.3.10.md) (previous:
+[`RELEASE_NOTES_TOOLS_0.3.9.md`](RELEASE_NOTES_TOOLS_0.3.9.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
 for 0.3.6 and 0.3.7 on 2026-10-07, for 0.3.8 on 2026-10-11 (the draft download-back was blocked by the network again; the 0.3.5 route below was used), and for 0.3.9 on 2026-10-13 (the draft download-back worked). For 0.3.7, `gh release create`
