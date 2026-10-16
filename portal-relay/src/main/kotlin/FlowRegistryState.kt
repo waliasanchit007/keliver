@@ -32,7 +32,7 @@ object Flows {
    * screen an edge leaves from; edges from [deriveFlowEdges]).
    */
   fun toJson(project: String, screens: Map<String, WidgetNode>): String {
-    fun str(x: String) = "\"" + x.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    fun str(x: String) = kotlinx.serialization.json.JsonPrimitive(x).toString() // escapes control chars too
     val sb = StringBuilder("[")
     specs(project).values.forEachIndexed { i, s ->
       if (i > 0) sb.append(",")

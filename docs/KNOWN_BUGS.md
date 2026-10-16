@@ -878,6 +878,55 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED (unreleased; found 2026-10-16)
+
+Found changing a real app's screen through the web editor (the D14 round-trip on a
+product-proof app's guest, 13 screens; see `ADOPTION_RETRO_2026-10.md`).
+
+**What.** The portal keeps a string's *value*; the `.kt` file holds a Kotlin *literal*.
+Ingest decoded only `\"` and `\\`, and export encoded only those two, so:
+
+* a heading written `text = "Your savings\nat a glance"` reached the editor as the
+  characters `\` `n`: the canvas showed a literal `\n` (the device, which compiles the
+  Kotlin, showed a line break);
+* editing that text wrote back `"Your savings\\nat a glance today"`, so the next
+  bundle showed a backslash and an `n` on the device: a one-line "surgical" diff that
+  changed what the screen says;
+* a `$` typed in the editor was written unescaped: `" $b"` became a string template
+  that interpolated the screen's bindings parameter (it compiles, and prints an
+  object's `toString()`);
+* a template in the source (`"Hi $name"`) or a concatenation (`"a" + "b"`) was taken
+  for a literal: the canvas showed it as text (`a" + "b` for the second);
+* separately, the editor's Text field was an `<input type="text">`, which strips
+  newlines from its value, so the first keystroke in a multi-line text joined the
+  lines.
+
+**Fixed.** `portal-core` has one pair, `kotlinStringLiteral` and
+`parseKotlinStringLiteral`. Ingest decodes every Kotlin escape (`\n \t \r \b \' \"
+\\ \$ \uXXXX`) and refuses a template, a raw string, a concatenation or a malformed
+escape, which keeps them as code (RawCode) instead of misreading them as text (the
+idiomatic constant `${'$'}` is read as a `$`). The
+exporter (through `portal-schema-codegen`) encodes `\ " $` and control characters,
+in props, string lists and component arguments; preview mock args use the same parser;
+the relay's hand-written JSON for component defaults and flows now
+escapes control characters. The editor's Text field is a `<textarea>`, so a line break
+can be kept and typed. Export also writes C1 controls, U+2028/2029, U+FEFF and a lone
+surrogate as `\uXXXX`.
+Tests: `StringLiteralRoundTripTest` (ingest, surgical write-back, templates, helper
+round-trip). On the real guest: 13 screens, 0 RawCode; editing the two-line heading
+in the editor wrote `"…\nat a glance today"` and a typed `$b` wrote `\$b`, each a
+one-line diff.
+
+**Behaviour change when upgrading.** A widget whose literal argument holds a template
+(`Card(title = "Total: ${b.total}") { … }`) or several literals in one action
+(`{ b.go("a", "b") }`) used to ingest as a widget whose text was the template's source;
+it is now RawCode, children included. A screen that met D14's "0 RawCode" can stop
+meeting it. The remedy is the screen grammar's own: format the text in the presenter
+and bind it (`title = b.totalLabel`). In-repo screens and fixtures have no such case.
+Not changed: string-list items containing a comma still re-ingest as RawCode (the list
+split is not quote-aware); route keys in flows still strip quotes by hand; a
+`<textarea>` reports `\r\n` as `\n`, so editing a text that holds `\r\n` drops the `\r`.
+
 ### U27. The relay wrote the private signing key readable by every local user — FIXED in tools 0.3.6
 
 Found building the reference app (`docs/REFERENCE_APP.md`), 2026-09-22.

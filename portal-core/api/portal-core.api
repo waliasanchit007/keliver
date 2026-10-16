@@ -204,6 +204,11 @@ public final class dev/keliver/portal/ItemMocksKt {
 	public static final fun resolveItemRow (Ldev/keliver/portal/WidgetNode;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/functions/Function1;)Ldev/keliver/portal/WidgetNode;
 }
 
+public final class dev/keliver/portal/KotlinStringLiteralKt {
+	public static final fun kotlinStringLiteral (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun parseKotlinStringLiteral (Ljava/lang/String;)Ljava/lang/String;
+}
+
 public final class dev/keliver/portal/MapComponentRegistry : dev/keliver/portal/ComponentRegistry {
 	public fun <init> (Ljava/util/Collection;)V
 	public fun names ()Ljava/util/Set;

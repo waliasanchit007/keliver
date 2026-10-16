@@ -8,6 +8,7 @@ import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.HTMLTextAreaElement
 
 internal object Ui {
   internal const val STYLE = """
@@ -50,6 +51,7 @@ internal object Ui {
     .row label { width: 96px; color: var(--muted); flex-shrink: 0; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; }
     .row .input, .row .select { flex: 1; min-width: 0; }
+    textarea.input { resize: vertical; line-height: 1.35; }
     .tree-row { display: flex; align-items: center; padding: 3px 6px; border-radius: 5px;
       cursor: pointer; white-space: nowrap; user-select: none; }
     .tree-row:hover { background: var(--sel); }
@@ -104,6 +106,9 @@ internal object Ui {
 
   internal fun input(cls: String = "input"): HTMLInputElement =
     (document.createElement("input") as HTMLInputElement).also { it.className = cls }
+
+  internal fun textarea(cls: String = "input"): HTMLTextAreaElement =
+    (document.createElement("textarea") as HTMLTextAreaElement).also { it.className = cls }
 
   internal fun select(cls: String = "select"): HTMLSelectElement =
     (document.createElement("select") as HTMLSelectElement).also { it.className = cls }

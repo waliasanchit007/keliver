@@ -76,6 +76,26 @@ run alongside item 2.
    so it is latency-bound; a one-line guest change re-downloaded the
    stdlib module too. Measure more parallelism or an archive, and why stdlib
    changed.
+8. **The editor on a real app (found 2026-10-16).** One screen of the product proof was
+   changed through the web editor end to end: 0 RawCode on 13 screens, a one-line
+   surgical diff, a signed Production bundle from the Publish button (81 s cold,
+   30 s warm) and the change on the phone after a relaunch. What was rough:
+   - escapes and `$` changed a text's meaning on write-back: **U33, fixed**;
+   - the tools bundle's generic editor draws every project component as an
+     "opaque" grey placeholder (its name overlaps the placeholder label), so a
+     component-built screen is mostly grey boxes; `keliver-new-editor.sh` (a
+     per-app editor) is the answer, and the editor should say so;
+   - the canvas ignores `Theme` (a Slider draws in default lavender where the
+     device shows the app's colour), and the Bold box is unchecked for
+     `weight = 700`;
+   - the persona and flow pickers list the generic editor's own sample app
+     ("signed-out", "field-researcher", "FieldNotes"), not the adopter's;
+   - Undo is per keystroke, so undoing a retyped text steps through every
+     intermediate state;
+   - `Compiled_<screen>.kt` changes on every edit and restarts its number after a
+     relay restart, so the stamp the guide says to commit churns in git;
+   - the publish dialog is titled "Exported Kotlin" and names only the active
+     screen's file.
 
 ## P0 — Write-back trust (the thesis-critical gate) — ✅ DONE 2026-07-12
 

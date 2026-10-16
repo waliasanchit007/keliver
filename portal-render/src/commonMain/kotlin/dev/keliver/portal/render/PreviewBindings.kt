@@ -43,11 +43,7 @@ public fun Action.previewArg(eventValue: Any?): String? {
 
 private fun String.decodePreviewLiteral(): String {
   val t = trim()
-  return if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) {
-    t.substring(1, t.length - 1).replace("\\\"", "\"").replace("\\\\", "\\")
-  } else {
-    t
-  }
+  return dev.keliver.portal.parseKotlinStringLiteral(t) ?: t
 }
 
 // Bind-aware getters: resolve Bind via mocks, else use the literal, else default.

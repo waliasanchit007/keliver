@@ -176,7 +176,7 @@ private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, Stri
 // P1-B: a dotted Bind field ("item.title") is item-scoped -> emit as-is;
 // a bare field ("title") is a screen binding -> b.title.
 private fun bindRef(field: String): String = if ('.' in field) field else "b.$field"
-private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else "\"" + v.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
 private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
 private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
 private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
@@ -184,7 +184,7 @@ private fun fmtFloat(v: Any?): String = "${fmtDouble(v)}f"
 private fun fmtDp(v: Any?): String = "Dp(${fmtDouble(v)})"
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
 private fun fmtStringList(v: Any?): String =
-  "listOf(" + ((v as? List<*>)?.joinToString(", ") { "\"" + it.toString().replace("\\", "\\\\").replace("\"", "\\\"") + "\"" } ?: "") + ")"
+  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
 private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${it}f" } ?: "") + ")"
 private fun fmtConstraint(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
 private fun fmtCrossAxis(v: Any?): String = when ((v as? Int) ?: 0) {
@@ -881,11 +881,11 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       val rendered = when (v) {
         is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
         is Bind -> bindRef(v.field)
-        is String -> "\"" + v.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+        is String -> kotlinStringLiteral(v)
         is Boolean -> v.toString()
         is Int -> v.toString()
         is Double -> v.toString()
-        is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) "\"" + it + "\"" else it.toString() } + ")"
+        is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
         else -> v.toString()
       }
       sb.append("$indent  $k = $rendered,\n")

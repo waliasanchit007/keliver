@@ -1,0 +1,42 @@
+import java.nio.file.Files
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+
+/**
+ * U33: ingest now decodes escapes, so a component default can hold a real
+ * newline. The hand-written /components JSON must stay valid: the editor parses
+ * it in one piece and drops EVERY project component when it fails.
+ */
+class ComponentsJsonTest {
+  @Test fun defaultsWithControlCharactersStayValidJson() {
+    val dir = Files.createTempDirectory("components-json").toFile()
+    try {
+      dir.resolve("Note.kt").writeText(
+        """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.material.compose.StyledText
+
+        @Composable
+        fun Note(
+          title: String = "two\nlines \"quoted\"",
+          tags: List<String> = listOf("a\tb"),
+        ) {
+          StyledText(text = title)
+        }
+        """.trimIndent(),
+      )
+      Components.rebuild("json-test", dir)
+      val json = Json.parseToJsonElement(Components.toJson("json-test")).jsonArray
+      val defaults = json.single().jsonObject.getValue("defaults").jsonObject
+      assertEquals("two\nlines \"quoted\"", defaults.getValue("title").jsonPrimitive.content)
+      // A list default is not recorded today (null); a non-primitive default is written
+      // as an escaped JSON string if it ever is.
+    } finally {
+      dir.deleteRecursively()
+    }
+  }
+}

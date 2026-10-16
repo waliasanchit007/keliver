@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+### Fixed
+- **portal (ingest, exporter, editor, relay):** a text with an escape or a `$` keeps its meaning
+  through an editor edit (KNOWN_BUGS U33). Ingest decoded only `\"` and `\\`, so `"A\nB"` showed a
+  literal `\n` in the editor and an edit wrote `\\n` back (the device then showed a backslash and
+  an `n`); a typed `$` became a string template. `portal-core` adds `kotlinStringLiteral` /
+  `parseKotlinStringLiteral`, used by ingest, the generated exporter and preview mocks; the
+  editor's Text field is a `<textarea>` (an `<input>` strips newlines).
+  **Behaviour change:** a widget whose literal argument is a template (`"Total: ${b.total}"`) or a
+  concatenation is now RawCode instead of a widget with that text; format it in the presenter and
+  bind it.
+
 ## [0.3.4] - 2026-10-16
 
 Widget fixes for Compose UI hosts, plus one schema property. Hand-written sources changed only

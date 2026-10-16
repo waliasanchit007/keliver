@@ -455,8 +455,9 @@ object Recognizer {
     t == "false" -> PropValue.Lit("b", b = false)
     Regex("^-?\\d+$").matches(t) -> PropValue.Lit("i", i = t.toInt())
     Regex("^-?\\d*\\.\\d+$").matches(t) -> PropValue.Lit("d", d = t.toDouble())
+    // A template, raw string or concatenation is not a literal (null -> preserved as code).
     t.length >= 2 && t.startsWith('"') && t.endsWith('"') ->
-      PropValue.Lit("s", s = t.substring(1, t.length - 1).replace("\\\"", "\"").replace("\\\\", "\\"))
+      dev.keliver.portal.parseKotlinStringLiteral(t)?.let { PropValue.Lit("s", s = it) }
     t.startsWith("Dp(") && t.endsWith(")") ->
       t.removePrefix("Dp(").removeSuffix(")").toDoubleOrNull()?.let { PropValue.Lit("d", d = it) }
     t.startsWith("listOf(") && t.endsWith(")") -> parseList(t.removePrefix("listOf(").removeSuffix(")"))
@@ -477,7 +478,7 @@ object Recognizer {
       items.all { it.length >= 2 && it.startsWith('"') && it.endsWith('"') } -> {
         // STRING_LIST ("ls"): listOf("A", "B") — commas inside strings aren't in
         // the exporter's output grammar, so the simple split is round-trip safe.
-        PropValue.Lit("ls", ls = items.map { it.substring(1, it.length - 1).replace("\\\"", "\"").replace("\\\\", "\\") })
+        PropValue.Lit("ls", ls = items.map { dev.keliver.portal.parseKotlinStringLiteral(it) ?: return null })
       }
       items.all { it.endsWith("f") } -> {
         val floats = items.map { it.removeSuffix("f").toFloatOrNull() ?: return null }
