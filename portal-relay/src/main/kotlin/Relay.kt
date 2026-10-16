@@ -453,15 +453,14 @@ private fun publish(): Pair<Boolean, String> {
       .onFailure { log.appendLine("publish: the full Gradle output could not be saved: $it") }
     return code to out
   }
-  val (firstCode, firstOut) = build()
-  val code = if (PublishRetry.isCompilerCrash(firstCode, firstOut)) {
-    // U34: a Kotlin compiler crash that a second run has always passed. Once more, never twice.
-    log.appendLine("publish: the Kotlin compiler crashed (Internal compiler error, KNOWN_BUGS U34); building once more")
-    build().first
-  } else {
-    firstCode
+  // U34: a Kotlin compiler crash that a second run has always passed. Once more, never twice.
+  val (code, retried) = PublishRetry.run(
+    onRetry = { log.appendLine("publish: the Kotlin compiler crashed (Internal compiler error, KNOWN_BUGS U34); building once more") },
+    build = ::build,
+  )
+  if (code != 0) {
+    return false to log.appendLine("publish FAILED${if (retried) " after one retry" else ""} (gradle exit $code)").toString()
   }
-  if (code != 0) return false to log.appendLine("publish FAILED (gradle exit $code)").toString()
 
   val ziplineOut = File(repoDir, current.publishOutput)
   if (!ziplineOut.exists()) return false to log.appendLine("publish FAILED: no zipline output at $ziplineOut").toString()

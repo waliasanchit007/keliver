@@ -882,9 +882,10 @@ threading bug rather than a wiring bug.
 
 Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").
 
-**What.** Twice, a `POST /publish` failed on its first try and passed when run again: once
-with "Internal compiler error" in the Kotlin/JS link, once with a `BUILD FAILED` two
-seconds in. Both came after another Gradle build of the same app (a `jsNodeTest` run).
+**What.** A `POST /publish` failed on its first try with "Internal compiler error" in the
+Kotlin/JS link, after another Gradle build of the same app (a `jsNodeTest` run), and passed
+when run again. (The proof's working notes also record one first-try `BUILD FAILED` two
+seconds in, which passed on a retry; its output was not kept.)
 The relay then kept only the last 30 lines of Gradle output, so the stack trace was lost.
 
 **Tried on 2026-10-17, none reproduced it.** All on that app (Kotlin 2.2.0, Gradle 9.0.0,
@@ -901,7 +902,9 @@ Zipline 1.22.0), comparing the publish task's result with a retry:
 **Worked around.** Every publish keeps its whole Gradle output in `<store>/publish-logs/`
 (the response names the file), so the next occurrence has its stack trace. A publish whose
 build fails with "Internal compiler error" or "Backend Internal error" is built once more,
-never twice, with both outputs kept; any other failure is reported at once
+never twice, with both outputs kept; any other failure is reported at once. A crash that
+the app's code causes on every build therefore costs one extra build per publish (the relay
+answers nothing else meanwhile) and is reported as "publish FAILED after one retry"
 (`PublishRetry`, `PublishLogsTest`). `keliver-publish` (CI) does not retry: its output goes
 to the console, and a CI job is rerun as a whole.
 

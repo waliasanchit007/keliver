@@ -41,7 +41,8 @@ internal object PublishLogs {
     }
     val file = dir.resolve("publish-v$sequence-$nowMillis.log")
     // CREATE_NEW: a name collision throws rather than overwriting (the relay's caller reports it
-    // and publishes anyway); publishes run one at a time and the name carries the sequence.
+    // and publishes anyway). Publishes run one at a time; a publish built twice (PublishRetry)
+    // writes two logs for one sequence, told apart by the time.
     val options = setOf(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
     val channel = if (posix) {
       FileChannel.open(file, options, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
@@ -71,4 +72,12 @@ internal object PublishRetry {
   private val compilerCrash = Regex("""internal compiler error|backend internal error""", RegexOption.IGNORE_CASE)
 
   fun isCompilerCrash(exitCode: Int, output: String): Boolean = exitCode != 0 && compilerCrash.containsMatchIn(output)
+
+  /** The build's exit code, and whether it was built twice. [build] returns (exit code, output). */
+  fun run(onRetry: () -> Unit, build: () -> Pair<Int, String>): Pair<Int, Boolean> {
+    val (code, output) = build()
+    if (!isCompilerCrash(code, output)) return code to false
+    onRetry()
+    return build().first to true
+  }
 }
