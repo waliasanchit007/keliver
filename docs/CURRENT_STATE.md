@@ -1,7 +1,7 @@
 # Keliver current state
 
 **Base snapshot date:** 2026-07-23
-**Last updated:** 2026-09-23 (status at a glance below; details in the `Post-snapshot:` sections)
+**Last updated:** 2026-10-16 (status at a glance below; details in the `Post-snapshot:` sections)
 **Repository baseline:** `94519abf5` (`#13` flow preview complete and live-verified)
 
 This document is the factual handoff point before the next implementation
@@ -27,9 +27,10 @@ reference app we wrote ourselves is dogfooding, not adoption.
 
 | what | version | where |
 |---|---|---|
-| libraries `dev.keliver:*` | **0.3.3** | Maven Central (unchanged since 2026-09-05) |
-| `keliver-portal-tools` | **0.3.7** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7), 2026-10-07, tag → `aaa03478`; zip `75ce0928…`. Adds the iOS production-host scaffolder; fixes U31 |
-| `keliver-portal-tools` | 0.3.6, 0.3.5, 0.3.4 | still published, unchanged (0.3.6's signing block has U31: upgrade) |
+| libraries `dev.keliver:*` | **0.3.4** | Maven Central, 2026-10-16: tag `v0.3.4` → `502416e9` (#107), publish run `38814070981` (preflight + upload green), all 378 artifacts and the Gradle plugin markers resolve from `repo1.maven.org`. Host widget fixes (BottomSheet, Theme, text-field `align`, keyed lazy/pager items, ScrollableColumn); generated TextField APIs are binary-incompatible, see [`CHANGELOG.md`](../CHANGELOG.md). Device-rendered before release on a Samsung S25 Ultra (text-field `align` covered by `HostGapsTest` only) |
+| libraries `dev.keliver:*` | 0.3.3 | still published, unchanged (2026-09-05) |
+| `keliver-portal-tools` | **0.3.9** (Maven dependency 0.3.3) | [release](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.9), 2026-10-13, tag → `6069da99`; zip `31c4214c…` ([notes](RELEASE_NOTES_TOOLS_0.3.9.md)). Its scaffolders still wire 0.3.3; the next tools release moves them to 0.3.4 |
+| `keliver-portal-tools` | 0.3.8 … 0.3.4 | still published, unchanged (0.3.6's signing block has U31: upgrade) |
 | a production host for keliver-material screens | tools 0.3.6 | **scaffolded**, not shipped as a binary: `bin/keliver-new-production-host.sh` writes the app's own host. The bundled host stays development-only. |
 
 **Demonstrated, and on what** — runs we did, on apps we wrote:
