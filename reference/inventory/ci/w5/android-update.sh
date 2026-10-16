@@ -1,11 +1,14 @@
 # Sourced by ci/device.sh after W2: W5's U1 on Android. The production host,
-# built with keliver.updates=on-resume (W5_APK, prepare.sh), runs v8; v9 is
+# built with keliver.updates=on-resume, or from tools 0.3.10 on with it unset (a
+# debug build's default) (W5_APK, prepare.sh), runs v8; v9 is
 # published while it runs; the app goes to the background and comes back, and
 # the SAME process now shows v9. Uses device.sh's SERIAL, EV, HERE, PROD_ID,
 # HOST_TAG, ok/bad/drive/fold, and android-static.sh's W3, W3_TLS, w3_title,
 # w3_publish, w3_signed_sequence.
 #   U1  an update applied on resume: looked up, loaded in place, floor raised,
 #       one process, the new screen shown
+#   U2  a debug build checks at once when told to from adb, twice in a row:
+#       not held to the 30 s between on-resume checks
 #   V1  (W6) the host POSTed its reports to the report URL: loaded (8), then
 #       update-applied (9), from one install
 #   L1-L3  a debug host takes a bundle server set on the device
@@ -19,7 +22,7 @@ for _ in $(seq 1 30); do curl -sf --cacert "$W3_TLS/ca.pem" -m 2 -o /dev/null ht
 w3_title Attic Garage && w3_publish v8-update && grep -q "published v8 (sequence 8, channel stable" "$EV/w3-publish-v8-update.log" && w3_signed_sequence 8 \
   && ok "U1: keliver-publish wrote v8 (\"Garage\")" || { bad "U1: publish v8"; tail -20 "$EV/w3-publish-v8-update.log"; }
 adb -s "$SERIAL" install -r "$W5_APK" > "$EV/install-update-host.log" 2>&1 \
-  && ok "U1: installed the host built with keliver.updates=on-resume" || bad "U1: the on-resume host did not install"
+  && ok "U1: installed the host built for on-resume updates" || bad "U1: the on-resume host did not install"
 adb -s "$SERIAL" shell pm clear "$PROD_ID" > /dev/null
 t0="$(date +%s)"
 launch prod "$EV/logcat-update-v8.txt"
@@ -56,6 +59,24 @@ pid_after="$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')"
 ! grep -q "$HOST_TAG: verifying manifests" "$L" && [ -n "$pid_before" ] && [ "$pid_before" = "$pid_after" ] \
   && ok "U1: the same process (pid $pid_after), no new start" || bad "U1: the process restarted ($pid_before -> $pid_after)"
 drive title Cellar U1after; fold "U1: the running app now shows Cellar (v9)" $?
+
+# U2: "check now" in a debug build, from adb: two broadcasts a few seconds apart,
+# each a lookup (up to date on v9), in the same process.
+if grep -rqs DEBUG_CHECK_FOR_UPDATE "$APP/host-android/src/main/kotlin"; then
+  adb -s "$SERIAL" logcat -c || true
+  for _ in 1 2; do
+    adb -s "$SERIAL" shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p "$PROD_ID" >> "$EV/U2-broadcast.txt" 2>&1; sleep 6
+  done
+  adb -s "$SERIAL" logcat -d > "$EV/logcat-U2.txt"
+  L="$EV/logcat-U2.txt"
+  [ "$(grep -c "$HOST_TAG: update check requested from adb (a debug build)" "$L")" = 2 ] \
+    && [ "$(grep -c "$HOST_TAG: update check: up to date (sequence 9)" "$L")" = 2 ] && ! grep -q "update check skipped" "$L" \
+    && [ "$(adb -s "$SERIAL" shell pidof "$PROD_ID" | tr -d '\r')" = "$pid_after" ] \
+    && ok "U2: two adb broadcasts, two lookups at once (up to date on v9), same process" \
+    || bad "U2: the debug check-now hook: $(grep -E "$HOST_TAG: update check" "$L" | tail -4 | tr '\n' ' ')"
+else
+  echo "  SKIP  U2: this host predates the debug check-now hook (not counted)"
+fi
 
 sleep 3  # the reports are sent in the background
 python3 "$HERE/w5/reports.py" "$EV/w5-server.log" android > "$EV/w6-reports.txt" 2>&1 \

@@ -40,8 +40,10 @@
  *
  * Updates (W5): checkForUpdate() looks up again and, after a network start,
  * applies a newer bundle in place (Zipline loads it while the old code runs; a
- * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt the
- * host does that each time the app returns to the foreground.
+ * failure leaves the old one). With UPDATES = "on-resume" in HostConfig.kt (by
+ * default in a DEBUG build) the host does that each time the app returns to the
+ * foreground. A DEBUG build also checks when told to from the computer
+ * (debugCheckForUpdateName()).
  *
  * Reports (W6): every outcome (loaded, fell back, update applied or failed,
  * not loaded, no bundle, refused) goes to Keliver.onReport, for the app's own
@@ -91,6 +93,11 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.IntVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -113,8 +120,10 @@ import platform.Foundation.NSUUID
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIViewController
+import platform.darwin.NOTIFY_STATUS_OK
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
+import platform.darwin.notify_register_dispatch
 
 private const val TAG = "KeliverHost"
 /** One Zipline cache per key, and one rollback floor and last-good URL per key with it. */
@@ -271,11 +280,15 @@ public object Keliver {
     }
     if (started) return
     started = true
-    if (UPDATES == "on-resume") {
+    // Once: a start that created nothing runs again (started is reset), and a
+    // second observer would make every foreground check twice.
+    if (updatesMode() == "on-resume" && !resumeObserved) {
+      resumeObserved = true
       NSNotificationCenter.defaultCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, null, NSOperationQueue.mainQueue) { _ ->
         resumed()
       }
     }
+    registerDebugCheckForUpdate()
     lastLookup = TimeSource.Monotonic.markNow()
     appScope.launch {
       val s = startHost()
@@ -385,7 +398,33 @@ public object Keliver {
     return KeliverUpdateCheck("available", sequence, true, "")
   }
 
-  /** With UPDATES = "on-resume": check and apply, at most every 30 s (the host observes the foreground itself). */
+  private var debugCheckRegistered = false // main thread
+  private var resumeObserved = false // main thread
+
+  /**
+   * A DEBUG binary only: a check now, applying a newer bundle, not held to the 30 s between
+   * on-resume checks, when the Darwin notification [debugCheckForUpdateName] is posted
+   * (`xcrun devicectl device notification post --device <id> --name <name>` on a phone,
+   * `xcrun simctl spawn <udid> notifyutil -p <name>` on a simulator). A release binary never
+   * registers it. Every rule of an update still holds (the index, the channel, the constraints,
+   * the floor, the signature). Main thread.
+   */
+  @OptIn(kotlin.experimental.ExperimentalNativeApi::class, ExperimentalForeignApi::class)
+  private fun registerDebugCheckForUpdate() {
+    if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return
+    debugCheckRegistered = true
+    val name = debugCheckForUpdateName()
+    val status = memScoped {
+      val token = alloc<IntVar>()
+      notify_register_dispatch(name, token.ptr, dispatch_get_main_queue()) { _ ->
+        log("update check requested by $name (a debug build)")
+        appScope.launch { checkForUpdate() }
+      }
+    }
+    if (status != NOTIFY_STATUS_OK.toUInt()) log("could not register $name (notify status $status)")
+  }
+
+  /** With UPDATES = "on-resume" (by default in a DEBUG build): check and apply, at most every 30 s (the host observes the foreground itself). */
   private fun resumed() {
     val since = lastLookup.elapsedNow()
     if (since < 30.seconds) {
@@ -448,6 +487,13 @@ internal fun bundleServerSetting(): Pair<String, Boolean> {
   return if (fromLaunch.isNullOrEmpty()) BUNDLE_SERVER to false else fromLaunch to true
 }
 
+/** UPDATES, or when it is empty: "on-resume" in a DEBUG binary and "next-launch" in a release one. */
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+internal fun updatesMode(): String = UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "on-resume" else "next-launch" }
+
+/** The Darwin notification a DEBUG binary checks for an update on: `<bundle id>.keliver.check-for-update`. */
+internal fun debugCheckForUpdateName(): String = "${NSBundle.mainBundle.bundleIdentifier ?: "keliver"}.keliver.check-for-update"
+
 /** The view controller your Xcode app shows (MainViewControllerKt.MainViewController()): Keliver's screen. */
 public fun MainViewController(): UIViewController = Keliver.viewController()
 
@@ -459,7 +505,7 @@ private suspend fun startHost(): HostState {
     return HostState.Message("Refusing to load", trust.message)
   }
   trust as ProductionTrust.Verified
-  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates $UPDATES")
+  log("verifying manifests with portal-ed25519 ${trust.publicKeyHex.take(8)}…${trust.publicKeysHex.getOrNull(1)?.let { " and the next key ${it.take(8)}…" } ?: ""}; updates ${updatesMode()}")
   val (serverUrl, fromLaunch) = bundleServerSetting()
   if (fromLaunch) log("bundle server from the launch environment (a debug build): $serverUrl")
   // parse() reads only the origin and path; a query or fragment must not reach the base URL the

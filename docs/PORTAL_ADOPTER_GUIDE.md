@@ -239,6 +239,15 @@ must then offer that sequence or newer. Only a debug build of a debuggable app
 reads the file, never a release build. An `http://` value also needs a built-in
 server that is `http://` (debug cleartext is allowed only then).
 
+A debug build picks up a bundle you publish while it runs when you switch back
+to the app (on-resume updates, at most one lookup every 30 s), and looks at once
+on `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
+(only adb's shell can send that one). Every other build type looks only at the
+next launch, except one made with `initWith(debug)` (or, for the embedded
+library, one that falls back to `debug`), which takes debug's settings. `keliver.updates` in `host-android/gradle.properties` chooses for
+every build type instead (hosts from tools 0.3.9 and earlier wrote
+`next-launch` there: empty it to get these defaults).
+
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
 public key. Without the signing block the build still succeeds and `/publish`
@@ -287,7 +296,12 @@ from the `KELIVER_BUNDLE_SERVER` launch environment variable (for example a new
 tunnel URL, without a rebuild); every bundle still has to verify against the
 key in `HostConfig.kt`, a rollback floor it raises stays, an `http://` value
 needs an App Transport Security exception for its host, and a release build
-ignores the variable. A device build needs your team and signing
+ignores the variable. A debug build also takes a newly published bundle when
+the app comes back to the foreground, and looks at once on the Darwin
+notification `<bundle id>.keliver.check-for-update` (`xcrun simctl spawn <udid>
+notifyutil -p …`, or `xcrun devicectl device notification post --device <id>
+--name …` on an iPhone); a release build looks only at the next launch.
+`UPDATES` in `HostConfig.kt` chooses for every build instead. A device build needs your team and signing
 (`host-ios/Configuration/Config.xcconfig`). `DEVICE_HOST.md` §3 has the
 details.
 

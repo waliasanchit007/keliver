@@ -174,6 +174,13 @@ grep -q "NO_SIGNATURE_CHECKS\|DevelopmentUnsigned\|10\.0\.2\.2\|http-replay\|Hos
 grep -q 'CHANNEL: String = "stable"' "$K/HostConfig.kt" && grep -q "configValue('CHANNEL')" "$H/build.gradle" \
   && grep -q 'pickFromIndex(body.utf8(), capabilities, channel = CHANNEL' "$K/MainViewController.kt" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
+# Updates: UPDATES empty by default (on-resume in a DEBUG binary, next-launch in a
+# release one); a DEBUG binary also checks on a Darwin notification.
+grep -q 'UPDATES: String = ""' "$K/HostConfig.kt" && grep -q "updates in \['', 'next-launch', 'on-resume'\]" "$H/build.gradle" \
+  && grep -q 'UPDATES.ifEmpty { if (kotlin.native.Platform.isDebugBinary) "on-resume" else "next-launch" }' "$K/MainViewController.kt" \
+  && grep -q 'if (!kotlin.native.Platform.isDebugBinary || debugCheckRegistered) return' "$K/MainViewController.kt" \
+  && ok "updates: on-resume in a debug binary, next-launch in a release one; a debug-only check-now notification" \
+  || bad "updates: the debug default or the check-now notification is not wired"
 # W4.5: constraints are checked against this install's id, CFBundleVersion and the floor.
 grep -q 'HostFacts(installId(), hostVersion(), floor())' "$K/MainViewController.kt" && grep -q 'facts = facts' "$K/MainViewController.kt" \
   && grep -q 'setOf("rollout", "minHostVersion", "maxHostVersion")' "$K/BundleIndex.kt" \

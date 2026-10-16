@@ -52,9 +52,10 @@
  *
  * Updates (W5): checkForUpdate() looks up again and, after a network start,
  * applies a newer bundle in place (Zipline loads it while the old code runs;
- * a failure leaves the old one). With keliver.updates=on-resume, resumed()
- * does that when the app comes back to the foreground. currentBundle and
- * events say what runs and what happened.
+ * a failure leaves the old one). With keliver.updates=on-resume (by default in
+ * a debug build), resumed() does that when the app comes back to the
+ * foreground. currentBundle and events say what runs and what happened. A
+ * debug build also checks when told to from adb ([DEBUG_CHECK_FOR_UPDATE]).
  *
  * Reports (W6): every outcome (loaded, fell back, update applied or failed,
  * not loaded, no bundle, refused) is a KeliverReport on [reports], for the
@@ -65,11 +66,15 @@
 
 package @@PACKAGE@@
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.ContextCompat
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineManifest
 import app.cash.zipline.loader.DefaultFreshnessCheckerNotFresh
@@ -120,6 +125,20 @@ private const val PREFS = "keliver-host"
 
 /** DEBUG builds only: where a bundle server set on the device is read from, under filesDir (KeliverConfig.fromBuild). */
 const val DEBUG_BUNDLE_SERVER_FILE = "keliver/bundle-server"
+
+/**
+ * DEBUG builds only: "check for an update now", from the computer, without leaving the app:
+ *
+ *   adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>
+ *
+ * It runs [KeliverHost.checkForUpdate] (applying a newer bundle), not held to the 30 s between
+ * on-resume checks. The receiver is registered at run time by this module's debug variant in a
+ * debuggable app, never by a release build, and only a sender holding android.permission.DUMP
+ * reaches it: adb's shell holds it, an installed app does not (unless someone grants it one with
+ * adb shell pm grant). Every rule of an update still holds
+ * (the index, the channel, the constraints, the floor, the signature).
+ */
+const val DEBUG_CHECK_FOR_UPDATE = "dev.keliver.debug.CHECK_FOR_UPDATE"
 /** The last manifest URL that loaded from the network, per key: it says that key's cache holds a bundle. */
 private fun lastGoodKey(cacheName: String) = "lastGoodManifestUrl-$cacheName"
 /** One Zipline cache per key, and one rollback floor and last-good URL with it. */
@@ -375,12 +394,33 @@ class KeliverHost private constructor(context: Context, private val config: Keli
   private val failedUpdates = mutableSetOf<String>()
   private var lastLookupAt = 0L
 
+  private val debugReceiverRegistered = AtomicBoolean(false)
+
+  /** Registers the debug build's [DEBUG_CHECK_FOR_UPDATE] receiver, once (a start that found nothing runs again). */
+  private fun registerDebugCheckForUpdate() {
+    // Both, as for the bundle server set on the device: this module's debug variant AND a debuggable app.
+    if (!BuildConfig.DEBUG) return
+    if ((context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return
+    if (!debugReceiverRegistered.compareAndSet(false, true)) return
+    val receiver = object : BroadcastReceiver() {
+      override fun onReceive(c: Context, intent: Intent) {
+        Log.d(TAG, "update check requested from adb (a debug build)")
+        scope.launch { checkForUpdate() }
+      }
+    }
+    ContextCompat.registerReceiver(
+      context, receiver, IntentFilter(DEBUG_CHECK_FOR_UPDATE),
+      "android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED,
+    )
+  }
+
   /** One image loader, one SQL host per host (not per composition, not per code load). */
   internal val imageLoader: ImageLoader by lazy { ImageLoader.Builder(this.context).build() }
   private val sqlHost by lazy { AndroidSqlHost(this.context) }
 
   /** Looks up and loads the bundle, once per process; later calls do nothing. */
   fun start() {
+    registerDebugCheckForUpdate()
     if (!started.compareAndSet(false, true)) return
     scope.launch { run() }
   }

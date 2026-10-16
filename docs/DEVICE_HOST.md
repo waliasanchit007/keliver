@@ -171,12 +171,26 @@ that opens.
 
 **Updates while the app runs** (both hosts):
 - `keliver.updates=on-resume` (Android, in `gradle.properties` or
-  `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`):
+  `keliver.properties`) or `UPDATES = "on-resume"` (iOS, `HostConfig.kt`),
+  which is also what a DEBUG build does when the setting is empty (the
+  templates' default from tools 0.3.10 on; a release build then stays
+  `next-launch`; this is a build setting, so a `KeliverConfig` built by hand
+  takes its own `updates`, `NEXT_LAUNCH` unless set):
   each time the app comes back to the foreground, at most every 30 s, the host
   looks up again and applies a newer bundle in place. Zipline loads it while
   the running code goes on, swaps it in on success (the floor rises as for any
-  load), and keeps the running one on failure. The default, `next-launch`,
-  never looks up while the app runs.
+  load), and keeps the running one on failure. `next-launch` (a release
+  build's default) never looks up while the app runs.
+- A DEBUG build also checks at once, applying a newer bundle and not held to
+  the 30 s, when told to from the computer: on Android
+  `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
+  (a receiver registered at run time by a debug build of a debuggable app,
+  reachable only by a sender holding `android.permission.DUMP`, which adb's
+  shell has and an installed app does not, short of an `adb shell pm grant`);
+  on iOS the Darwin notification
+  `<bundle id>.keliver.check-for-update` (`xcrun simctl spawn <udid> notifyutil
+  -p …`, `xcrun devicectl device notification post --device <id> --name …`).
+  A release build has neither.
 - In code: `checkForUpdate(apply)` does one lookup now (`UpToDate`,
   `Available`, `Failed`); `currentBundle` is the running sequence and whether
   it came from the cache; `events` (Android) or `onUpdateEvent` (iOS) report

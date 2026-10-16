@@ -14,6 +14,8 @@ EMB="$WORK/embed-ios"; rm -rf "$EMB"; cp -R "$REPO/reference/embed/ios" "$EMB"
 ( cd "$APP" && "$IOS_SCAFFOLD" --embed --into "$EMB" --bundle-server https://localhost:8443 ) > "$EV/w2-embed-scaffold.log" 2>&1 \
   && ok "W2: keliver-new-ios-host.sh --embed ($WHICH) wrote keliver-host-ios/ into the existing app" \
   || { bad "W2: --embed failed"; cat "$EV/w2-embed-scaffold.log"; }
+# As for host-ios/ (ios.sh): next-launch, whatever the template's default.
+find "$EMB/keliver-host-ios/src/iosMain/kotlin" -name HostConfig.kt -exec sed -i '' 's|UPDATES: String = ""|UPDATES: String = "next-launch"|' {} +
 cp "$EMB/keliver-host-ios/KeliverScreen.swift" "$EMB/iosApp/" # EMBED.md step 4
 w2_build(){  # $1 = log: the existing app, through its own Xcode build phase
   ( cd "$EMB" && xcodebuild -project ExistingApp.xcodeproj -scheme iosApp -configuration Debug \

@@ -1,11 +1,14 @@
 # Sourced by ci/ios.sh after W2: W5's U1 on iOS. The production host, rebuilt
-# with UPDATES = "on-resume" in HostConfig.kt, runs v8; v9 is published while it
+# with UPDATES = "on-resume" in HostConfig.kt (or, from tools 0.3.10 on, with
+# UPDATES empty: a debug build's default), runs v8; v9 is published while it
 # runs; the app goes to the background (Settings comes forward) and back, and
 # the SAME process now shows v9. Uses ios.sh's APP, UDID, BID, APPB, WORK, EV,
 # HERE, ok/bad/reads, and ios-static.sh's W3, w3_title, w3_publish,
 # w3_signed_sequence.
 #   U1  an update applied on resume: looked up, loaded in place, floor raised,
 #       one process, the new screen shown
+#   U2  a debug build checks at once when told to (a Darwin notification), twice
+#       in a row: not held to the 30 s between on-resume checks
 #   V1  (W6) the host POSTed its reports to REPORT_URL: loaded (8), then
 #       update-applied (9), from one install
 #   L1-L3  a debug host takes its bundle server from the launch environment
@@ -14,13 +17,16 @@
 echo "--- W5: an update applied when the app comes back to the foreground"
 app_pid(){ xcrun simctl spawn "$UDID" launchctl list 2>/dev/null | awk -v b="UIKitApplication:$BID" 'index($3, b) == 1 { print $1 }' | head -1; }
 CFG="$(find "$APP/host-ios/src/iosMain/kotlin" -name HostConfig.kt | head -1)"
-sed -i '' -e 's|UPDATES: String = "[^"]*"|UPDATES: String = "on-resume"|' \
+# A host with a debug default (tools 0.3.10 on) is built with UPDATES empty, so
+# U1 shows that default; an older one is set to on-resume.
+if grep -qs 'fun updatesMode' "$(dirname "$CFG")/MainViewController.kt"; then U1_UPDATES=""; else U1_UPDATES="on-resume"; fi
+sed -i '' -e "s|UPDATES: String = \"[^\"]*\"|UPDATES: String = \"$U1_UPDATES\"|" \
   -e 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "https://localhost:8443/report"|' "$CFG"
-grep -q 'UPDATES: String = "on-resume"' "$CFG" && grep -q 'REPORT_URL: String = "https://localhost:8443/report"' "$CFG" \
+grep -q "UPDATES: String = \"$U1_UPDATES\"" "$CFG" && grep -q 'REPORT_URL: String = "https://localhost:8443/report"' "$CFG" \
   && ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
       -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
       CODE_SIGNING_ALLOWED=NO build ) > "$EV/w5-xcodebuild.log" 2>&1 \
-  && ok "U1: the host rebuilt with UPDATES = \"on-resume\" and REPORT_URL" \
+  && ok "U1: the host rebuilt (Debug) with UPDATES = \"$U1_UPDATES\" and REPORT_URL" \
   || { bad "U1: the on-resume build failed"; grep -E '^e: |error:' "$EV/w5-xcodebuild.log" | head; }
 xcrun simctl uninstall "$UDID" "$BID" > /dev/null 2>&1; xcrun simctl install "$UDID" "$APPB"
 python3 "$HERE/w3/static_https.py" "$W3/site" 8443 "$W3/tls/server.pem" "$W3/tls/server.key" "$EV/w5-server.log" &
@@ -70,6 +76,22 @@ pid_after="$(app_pid)"
   && ok "U1: the same process (pid $pid_after) took v9, with one start" || bad "U1: the process changed ($pid_before -> $pid_after) or started again"
 reads U1-after Cellar && ok "U1: the running app now reads 'Cellar' (v9)" \
   || bad "U1: 'Cellar' is not on the screen: $(tr '\n' '|' < "$EV/U1-after.ocr.txt" | cut -c1-200)"
+
+# U2: "check now" in a debug build, from the computer: two Darwin notifications
+# a few seconds apart, each a lookup (up to date on v9), in the same process.
+if [ -z "$U1_UPDATES" ]; then
+  U2_NAME="$BID.keliver.check-for-update"
+  n0="$(grep -c 'KeliverHost: update check: up to date (sequence 9)' "$C")"
+  xcrun simctl spawn "$UDID" notifyutil -p "$U2_NAME"; sleep 6
+  xcrun simctl spawn "$UDID" notifyutil -p "$U2_NAME"; sleep 6
+  n1="$(grep -c 'KeliverHost: update check: up to date (sequence 9)' "$C")"
+  [ "$(grep -c "KeliverHost: update check requested by $U2_NAME (a debug build)" "$C")" = 2 ] && [ $(( n1 - n0 )) = 2 ] \
+    && ! grep -q 'update check skipped' "$C" && [ "$(app_pid)" = "$pid_before" ] \
+    && ok "U2: two '$U2_NAME' notifications, two lookups at once (up to date on v9), same process" \
+    || bad "U2: the debug check-now hook: $(grep -E 'KeliverHost: update check' "$C" | tail -4 | tr '\n' ' ')"
+else
+  echo "  SKIP  U2: this host predates the debug check-now hook (not counted)"
+fi
 
 kill "$CPID" 2>/dev/null; wait "$CPID" 2>/dev/null
 xcrun simctl terminate "$UDID" "$BID" > /dev/null 2>&1
