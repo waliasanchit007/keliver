@@ -259,16 +259,23 @@ interface KeliverTrace : ZiplineService {
  * Marks a moment in the host's timing (docs/DEVICE_HOST.md, "Timing marks"): call
  * KeliverTiming.mark("content") once the screen's data is shown. Names are a-z, 0-9 and '-',
  * at most 32. With a host that does not bind KeliverTrace (a release build, or a host from
- * before the marks) it does nothing.
+ * before the marks) the first call fails, and from then on it does nothing.
  */
 object KeliverTiming {
-  private val trace: KeliverTrace? by lazy {
-    val zipline = Zipline.get()
-    if ("KeliverTrace" in zipline.clientNames) zipline.take<KeliverTrace>("KeliverTrace") else null
-  }
+  private var trace: KeliverTrace? = null
+  private var unavailable = false
 
   fun mark(name: String) {
-    trace?.mark(name)
+    if (unavailable) return
+    try {
+      val t = trace ?: Zipline.get().take<KeliverTrace>("KeliverTrace").also { trace = it }
+      t.mark(name)
+    } catch (e: Exception) {
+      // No KeliverTrace on this host: stop asking.
+      unavailable = true
+      trace?.close()
+      trace = null
+    }
   }
 }
 EOF
