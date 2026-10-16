@@ -57,4 +57,30 @@ class PublishLogsTest {
     repeat(PublishLogs.KEEP + 1) { i -> PublishLogs.save(store, sequence = i + 1, output = "", nowMillis = 1000L + i) }
     assertTrue(other.isFile)
   }
+
+  @Test
+  fun onlyACompilerCrashIsBuiltAgain() {
+    val crash = "e: java.lang.IllegalStateException: Internal compiler error. See log for more details\nBUILD FAILED in 4s"
+    assertTrue(PublishRetry.isCompilerCrash(1, crash))
+    assertTrue(PublishRetry.isCompilerCrash(1, "org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering"))
+    assertFalse(PublishRetry.isCompilerCrash(0, crash)) // it passed: nothing to retry
+    assertFalse(PublishRetry.isCompilerCrash(1, "e: file:///app/src/jsMain/kotlin/screens/a.kt:3:5 Unresolved reference 'x'.\nBUILD FAILED in 2s"))
+    assertFalse(PublishRetry.isCompilerCrash(1, "FAILURE: Build failed with an exception."))
+  }
+
+  @Test
+  fun aCompilerCrashIsBuiltOnceMoreNeverTwice() {
+    val crash = 1 to "e: Internal compiler error"
+    fun runWith(vararg results: Pair<Int, String>): Triple<Int, Boolean, Int> {
+      var calls = 0
+      var retries = 0
+      val (code, retried) = PublishRetry.run(onRetry = { retries++ }, build = { results[calls++] })
+      assertEquals(if (retried) 1 else 0, retries)
+      return Triple(code, retried, calls)
+    }
+    assertEquals(Triple(0, true, 2), runWith(crash, 0 to "BUILD SUCCESSFUL")) // the retry passed
+    assertEquals(Triple(1, true, 2), runWith(crash, crash, crash)) // crashed again: reported, not a third build
+    assertEquals(Triple(1, false, 1), runWith(1 to "e: Unresolved reference 'x'.", 0 to "unused")) // a real error: once
+    assertEquals(Triple(0, false, 1), runWith(0 to "BUILD SUCCESSFUL"))
+  }
 }
