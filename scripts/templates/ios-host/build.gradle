@@ -65,8 +65,8 @@ def checkHostConfig = tasks.register('checkHostConfig') {
       throw new GradleException("HostConfig.kt: REPORT_URL must be empty or an http:// or https:// URL with no user@, query, fragment or '\$' (got '$report').")
     }
     def updates = configValue('UPDATES')
-    if (!(updates in ['next-launch', 'on-resume'])) {
-      throw new GradleException("HostConfig.kt: UPDATES must be next-launch or on-resume (got '$updates').")
+    if (!(updates in ['', 'next-launch', 'on-resume'])) {
+      throw new GradleException("HostConfig.kt: UPDATES must be next-launch, on-resume or empty (got '$updates').")
     }
   }
 }

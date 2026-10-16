@@ -150,6 +150,10 @@ grep -q "PORTAL_PUBLIC_KEY_HEX: String = \"$PUB\"" "$CFG" \
 # W6 (V2): this host reports to the relay (a template without REPORT_URL,
 # tools 0.3.8 candidate 2 and earlier, is left as it is).
 sed -i '' 's|REPORT_URL: String = "[^"]*"|REPORT_URL: String = "http://localhost:8077/report"|' "$CFG"
+# The rows before W5 (U1) expect a bundle published while the app runs to show
+# only after a relaunch: pin next-launch (a template from tools 0.3.10 on leaves
+# UPDATES empty, which a debug build takes as on-resume).
+sed -i '' 's|UPDATES: String = ""|UPDATES: String = "next-launch"|' "$CFG"
 ( cd "$APP" && xcodebuild -project host-ios/iosApp.xcodeproj -scheme iosApp -configuration Debug \
     -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$WORK/dd" \
     CODE_SIGNING_ALLOWED=NO build ) > "$EV/xcodebuild.log" 2>&1 \

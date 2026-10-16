@@ -112,7 +112,7 @@ bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 | E1–E10, D3 | **SKIP** | The generic *development* host from the tools bundle has `http://10.0.2.2:8080` compiled in, and a phone cannot reach that. P4 still shows the D2 edit, signed, in production. |
 | D2 | runs | It needs only the relay, not the device. |
 | P1–P7, V2 | run | Production host against the relay, through `adb reverse :8077`. |
-| S2–S15, X1–X7, U1, V1 | run | The static HTTPS route, through `adb reverse :8443`. The test APKs trust the throwaway CA. |
+| S2–S15, X1–X7, U1, U2, V1 | run | The static HTTPS route, through `adb reverse :8443`. The test APKs trust the throwaway CA. |
 | device screenshots | `screencap` only | Outside the pass/fail count. The emulator's host-side capture does not exist on a phone. |
 
 **If something fails:**

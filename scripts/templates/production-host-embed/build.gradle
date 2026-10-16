@@ -30,7 +30,7 @@ def bundleServer = setting('keliver.bundleServer', '')
 def apiBaseUrl = setting('keliver.apiBaseUrl', '')
 def reportUrl = setting('keliver.reportUrl', '')
 def channel = setting('keliver.channel', 'stable')
-def updates = setting('keliver.updates', 'next-launch')
+def updates = setting('keliver.updates', '')
 // ASCII URL characters only; the bundle server takes no query or fragment,
 // because the host appends its own path to it.
 def serverUrl = /https?:\/\/[A-Za-z0-9._~:\/\[\]!$&()*+,;=%-]+/
@@ -51,8 +51,11 @@ if (reportUrl && !(reportUrl ==~ reportUrlPattern)) {
 if (!(channel ==~ /[a-z0-9][a-z0-9-]{0,31}/)) {
   throw new GradleException("keliver.channel must be lower-case letters, digits and '-', at most 32 (got '$channel').")
 }
-if (!(updates in ['next-launch', 'on-resume'])) {
-  throw new GradleException("keliver.updates must be next-launch or on-resume (got '$updates').")
+// Empty (the default): on-resume in DEBUG builds, so a bundle published while
+// you work shows when you switch back to the app; next-launch in every other
+// build type. A value set here applies to every build type.
+if (updates && !(updates in ['next-launch', 'on-resume'])) {
+  throw new GradleException("keliver.updates must be next-launch, on-resume or empty (got '$updates').")
 }
 def cleartext = bundleServer.startsWith('http:') || apiBaseUrl.startsWith('http:') || reportUrl.startsWith('http:')
 
@@ -77,9 +80,14 @@ android {
     buildConfigField 'String', 'KELIVER_API_BASE_URL', "\"${apiBaseUrl.replaceAll('/+$', '')}\""
     buildConfigField 'String', 'KELIVER_REPORT_URL', "\"${reportUrl}\""
     buildConfigField 'String', 'KELIVER_CHANNEL', "\"${channel}\""
-    buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates}\""
+    buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'next-launch'}\""
     buildConfigField 'String', 'KELIVER_PUBLIC_KEY_HEX', "\"${portalKeysOk ? portalKeyLines[0] : ''}\""
     buildConfigField 'String', 'KELIVER_NEXT_PUBLIC_KEY_HEX', "\"${portalKeysOk && portalKeyLines.size() == 2 ? portalKeyLines[1] : ''}\""
+  }
+  buildTypes {
+    // Your app's debug build uses this module's debug variant (and a build type
+    // of yours that falls back to debug does too).
+    debug { buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\"" }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

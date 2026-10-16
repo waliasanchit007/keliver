@@ -159,6 +159,14 @@ grep -q 'getLong(floorKey(cacheName), 0L)' "$M" && grep -q 'AcceptCachedBundle(f
 grep -q '^keliver.channel=stable$' "$H/gradle.properties" && grep -q "buildConfigField 'String', 'KELIVER_CHANNEL'" "$H/build.gradle" \
   && grep -q 'channel = BuildConfig.KELIVER_CHANNEL' "$M" && grep -q 'pickFromIndex(body, capabilities, channel = config.channel' "$M" \
   && ok "W4.4: the channel defaults to stable and selects the index entries" || bad "W4.4: the channel is not wired"
+# Updates: keliver.updates empty by default, so a debug build checks on resume and
+# every other build type at the next launch; a debug build also checks on adb's word.
+grep -q '^keliver.updates=$' "$H/gradle.properties" \
+  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updates ?: 'next-launch'}" "$H/build.gradle" \
+  && grep -q "buildConfigField 'String', 'KELIVER_UPDATES', \"\\\\\"\${updates ?: 'on-resume'}" "$H/build.gradle" \
+  && grep -q '"android.permission.DUMP", null, ContextCompat.RECEIVER_EXPORTED' "$M" && grep -q 'if (!BuildConfig.DEBUG) return$' "$M" \
+  && ok "updates: on-resume in debug builds, next-launch otherwise; a debug-only check-now receiver that needs DUMP" \
+  || bad "updates: the debug default or the check-now receiver is not wired"
 # W4.5: constraints are checked against this install's id, the build's versionCode and the floor.
 grep -q 'HostFacts(prefs.installId(), config.hostVersion ?: appVersionCode(), floor())' "$M" && grep -q 'facts = facts' "$M" \
   && grep -q 'longVersionCode' "$M" \
@@ -207,7 +215,8 @@ grep -q "id 'com.android.library'" "$L/build.gradle" && ! grep -q "applicationId
   && ! grep -q "<application" "$L/src/main/AndroidManifest.xml" && grep -q "android.permission.INTERNET" "$L/src/main/AndroidManifest.xml" \
   && ok "a library: com.android.library, no application id, no plugin versions, a manifest without <application>" || bad "the embedded module is not a plain library"
 grep -q '^keliver.bundleServer=http://10.0.2.2:8077$' "$L/keliver.properties" && grep -q '^keliver.channel=beta$' "$L/keliver.properties" \
-  && ok "the settings are in keliver.properties (a subproject's gradle.properties is not read)" || bad "keliver.properties"
+  && grep -q '^keliver.updates=$' "$L/keliver.properties" && grep -q "debug { buildConfigField 'String', 'KELIVER_UPDATES'" "$L/build.gradle" \
+  && ok "the settings are in keliver.properties (a subproject's gradle.properties is not read); updates by build type" || bad "keliver.properties"
 cmp -s <(tr -d '[:space:]' < "$KEY") <(tr -d '[:space:]' < "$L/src/main/assets/keliver/portal_ed25519.pub") \
   && ok "the key is the module's src/main/assets/keliver/portal_ed25519.pub" || bad "the embedded module's key"
 grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$L/build.gradle" && grep -q "KELIVER_PUBLIC_KEY_HEX'.*portalKeyLines\[0\]" "$H/build.gradle" \
@@ -244,6 +253,8 @@ if [ "$BUILD" = 1 ]; then
       unzip -p "$apk" assets/keliver/portal_ed25519.pub | tr -d '[:space:]' | cmp -s - <(tr -d '[:space:]' < "$KEY") \
         && ok "the APK embeds exactly the scaffolded public key" || bad "the APK's embedded key differs"
       unzip -l "$apk" | grep -q ' AndroidManifest.xml$' && ok "the APK has a manifest" || bad "the APK has no manifest"
+      find "$H/build/generated/source/buildConfig/debug" -name BuildConfig.java -exec cat {} + | grep -q 'KELIVER_UPDATES = "on-resume"' \
+        && ok "the debug build, keliver.updates empty, checks for updates on resume" || bad "the debug build's KELIVER_UPDATES is not on-resume"
     else
       bad "assembleDebug failed (rc=$rc): $(grep -E '^e: |What went wrong' -A2 "$DISP/assemble.log" | head -6 | tr '\n' ' ')"
     fi

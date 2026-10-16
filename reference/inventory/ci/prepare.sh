@@ -168,7 +168,10 @@ sed 's/^/    /' "$EV/host-scaffold.log"
 printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}" > "$APP/host-android/local.properties"
 # W6 (V2): it reports to the relay. A template without keliver.reportUrl
 # (tools 0.3.8 candidate 2 and earlier) ignores the property.
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.reportUrl="http://$HOST_ADDR:8077/report" ) > "$EV/host-build.log" 2>&1 \
+# Every host but W5's is pinned to next-launch: the rows expect a bundle published
+# while the app runs to show only after a relaunch (a template from tools 0.3.10
+# on leaves keliver.updates empty, which a debug build takes as on-resume).
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.reportUrl="http://$HOST_ADDR:8077/report" ) > "$EV/host-build.log" 2>&1 \
   && ok "P1: the scaffolded host built from Maven Central" \
   || { bad "P1: the scaffolded host did not build"; tail -40 "$EV/host-build.log"; exit 1; }
 # Where every Keliver artifact in that build came from.
@@ -210,18 +213,33 @@ if [ "$DEVICE_KIND" = physical ]; then
     && ok "W7: the HTTPS debug builds of host-android trust the throwaway CA in the APK (physical device)" \
     || { bad "W7: the test CA overlay failed"; cat "$EV/w7-test-ca-host.log"; }
 fi
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
   > "$EV/w3-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-static.apk" \
   && ok "W3: the production host, built for https://$HOST_ADDR:8443" || { bad "W3: the static host did not build"; tail -30 "$EV/w3-host-build.log"; }
 { echo "W3_PUBLISH=$W3_PUBLISH"; echo "W3_PUBLISH_TARGET=$W3_PUBLISH_TARGET"; echo "W3_TLS=$W3/tls"; echo "W3_APK=$EV/production-host-static.apk"; } >> "$WORK/env"
 # W5 (U1) and W6 (V1): the same host, built to check for updates when it comes
-# back to the foreground (keliver.updates=on-resume) and to POST its reports to
-# the static server's /report (keliver.reportUrl); only those settings differ.
-( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.updates=on-resume -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) \
+# back to the foreground (on-resume) and to POST its reports to the static
+# server's /report (keliver.reportUrl); only those settings differ. A host with
+# a debug default (tools 0.3.10 on: it has the debug check-now hook) is built
+# with keliver.updates unset, so U1 shows that default; an older one is set to
+# on-resume.
+if grep -rqs DEBUG_CHECK_FOR_UPDATE "$APP/host-android/src/main/kotlin"; then W5_UPDATES=""; else W5_UPDATES="-Pkeliver.updates=on-resume"; fi
+# shellcheck disable=SC2086 # W5_UPDATES: one argument or none
+( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" $W5_UPDATES -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) \
   > "$EV/w5-host-build.log" 2>&1 \
   && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-onresume.apk" \
-  && ok "W5: the production host, built with keliver.updates=on-resume and keliver.reportUrl" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
+  && ok "W5: the production host, built with ${W5_UPDATES:-keliver.updates unset (the debug default)} and keliver.reportUrl" || { bad "W5: the on-resume host did not build"; tail -30 "$EV/w5-host-build.log"; }
+# U0: with keliver.updates unset, the debug build type takes on-resume and every
+# other one next-launch (the release variant's BuildConfig, https servers).
+if [ -z "$W5_UPDATES" ]; then
+  ( cd "$APP" && ./gradlew --console=plain -p host-android generateDebugBuildConfig generateReleaseBuildConfig \
+      -Pkeliver.bundleServer="https://$HOST_ADDR:8443" -Pkeliver.reportUrl="https://$HOST_ADDR:8443/report" ) > "$EV/u0-buildconfig.log" 2>&1
+  u0(){ find "$APP/host-android/build/generated/source/buildConfig/$1" -name BuildConfig.java -exec grep -h KELIVER_UPDATES {} + 2>/dev/null | sed 's/.*= *"\([^"]*\)".*/\1/'; }
+  [ "$(u0 debug)" = on-resume ] && [ "$(u0 release)" = next-launch ] \
+    && ok "U0: keliver.updates unset: the debug build is on-resume, the release build next-launch" \
+    || { bad "U0: debug '$(u0 debug)', release '$(u0 release)'"; tail -20 "$EV/u0-buildconfig.log"; }
+fi
 echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
 
 # W8 (key rotation): the next signing key, made by keliver-publish
@@ -241,7 +259,7 @@ if "$W3_PUBLISH" --help 2>/dev/null | grep -q -- '--new-signing-key' \
     || bad "W8: --new-signing-key (mode '$mode'): $(head -3 "$EV/w8-new-key.log" | tr '\n' ' ')"
   HKEY="$APP/host-android/src/main/assets/keliver/portal_ed25519.pub"; cp "$HKEY" "$W8/key.saved"
   w8_host(){  # $1 label: build the host for the static server with the key file as it is now
-    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
+    ( cd "$APP" && ./gradlew --console=plain -p host-android assembleDebug -Pkeliver.updates=next-launch -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
       > "$EV/w8-host-$1-build.log" 2>&1 \
       && cp "$(find "$APP/host-android/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/production-host-$1.apk"
   }
@@ -309,7 +327,7 @@ if [ "$DEVICE_KIND" = physical ]; then
 fi
 grep -q "^warning:" "$EV/w2-embed-scaffold.log" && bad "W2: --embed warned about the existing app's build: $(grep '^warning:' "$EV/w2-embed-scaffold.log" | head -2 | tr '\n' ' ')" \
   || ok "W2: the existing app's build declares what the library needs (no warning)"
-( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-build.log" 2>&1 \
+( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug -Pkeliver.updates=next-launch ) > "$EV/w2-embed-build.log" 2>&1 \
   && cp "$(find "$EMB_APP/app/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/embed-app.apk" \
   && ok "W2: the existing app built with the embedded host, from Maven Central" \
   || { bad "W2: the existing app did not build"; grep -E '^e: |What went wrong' -A3 "$EV/w2-embed-build.log" | head -20; }
@@ -321,7 +339,7 @@ EMB_KEY="$(unzip -p "$EV/embed-app.apk" assets/keliver/portal_ed25519.pub 2>/dev
   && ok "W2.7: the existing app's minified release (R8) built" || { bad "W2.7: the release build failed"; grep -E 'Missing class|ERROR|What went wrong' -A3 "$EV/w2-embed-release-build.log" | head -20; }
 KEYF="$EMB_APP/keliver-host/src/main/assets/keliver/portal_ed25519.pub"; cp "$KEYF" "$WORK/embed-key.saved"
 printf '%s\n' "$(printf '5a%.0s' $(seq 1 32))" > "$KEYF"
-( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug ) > "$EV/w2-embed-foreign-build.log" 2>&1 \
+( cd "$EMB_APP" && ./gradlew --console=plain assembleDebug -Pkeliver.updates=next-launch ) > "$EV/w2-embed-foreign-build.log" 2>&1 \
   && cp "$(find "$EMB_APP/app/build/outputs/apk/debug" -name '*.apk' | head -1)" "$EV/embed-app-foreign.apk" \
   && ok "W2: the same app, built trusting another key (for the refusal check)" || bad "W2: the foreign-key build failed"
 cp "$WORK/embed-key.saved" "$KEYF"
