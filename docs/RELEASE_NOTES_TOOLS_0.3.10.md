@@ -168,11 +168,19 @@ Checked locally, on the downloaded artifact (2026-10-17):
   every host and app scaffolded by the zip's own `bin/`), on this Mac's iOS
   simulator: 158/0, P1-P7, W3/W4, W2, W5, M0 (T1 Debug, T2 Benchmark) and W8.
 
-Still to run: `keliver-device-verify.sh` on a phone. On the Samsung S25
-(2026-10-17, twice) the install of the bundled host APK was refused by the
-phone's Play Protect install-time check (`INSTALL_FAILED_VERIFICATION_FAILURE`,
-verifier result -1); nothing was installed. The same script on the same APK
-passed on GitHub's emulator (the device job above).
+- `keliver-device-verify.sh` on a phone, a Samsung S25 Ultra (SM-S938B) over
+  wireless adb, 2026-10-17: the install, both production refusals (U22, cold
+  6/6 and warm 6/6, nothing requested or loaded) and the development route
+  after a refusal (4/4) passed: 18/18. Its packaged adopter acceptance with
+  `--serial` passed 27 of 28: the one failure, "the device does not show the
+  edit", is the bundled host's documented emulator-only development loop
+  (`DEVICE_HOST.md`: it reaches the machine at `10.0.2.2`; on the phone,
+  `codeLoadFailed: failed to connect to /10.0.2.2 (port 8080)`). The same
+  script passed in full on GitHub's emulator (the device job above). The
+  phone's Play Protect asked before each install; it was allowed by hand. Two
+  earlier attempts on the phone were not runs of the candidate's checks: one
+  was refused by Play Protect, one met port 8080 held by a Gradle daemon left
+  from this Mac's `ios.sh` run (the check refuses a port it does not own).
 
 Candidates 1 (`7ab383110`, build 38995449572) and 2 (`555150a9f`, build
 38996130488) are superseded by the review fixes: never tag or attach them.

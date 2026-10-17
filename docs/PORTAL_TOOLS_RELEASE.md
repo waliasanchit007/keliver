@@ -66,6 +66,13 @@ gh workflow run portal-tools.yml --ref <branch> \
   -f device_apk_sha256=<apk sha256 from the build run>
 ```
 
+`keliver-device-verify.sh` on a physical phone proves the install and the
+production refusals, but its packaged acceptance step ends on the bundled
+host's development loop, which reaches the machine at `10.0.2.2` and so works
+only on an emulator: on a phone, "the device does not show the edit" is
+expected. Run it locally without exporting a shared `GRADLE_USER_HOME`: the
+acceptance isolates its own, and a reused daemon outlives the serve it stops.
+
 The build job checks `VERSION.json`'s Maven line against the literal in
 `portal-tools.yml`, so dispatching today's workflow to rebuild an older tools
 commit (whose scaffolders wire an older library) fails there, as it should.
