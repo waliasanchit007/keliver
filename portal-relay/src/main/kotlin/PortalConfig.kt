@@ -232,7 +232,28 @@ data class PortalConfig(
    * can make the editor's resolved version differ from the app's target.
    */
   val appRuntime: AppRuntimeMetadata? = null,
-)
+  /**
+   * K5: image hosts the editor canvas may load through the relay's
+   * `/preview-asset` pass-through (exact host names, e.g. `img.example.com`;
+   * no scheme, port, path or wildcard; no IP literals). Empty = off. Preview
+   * only — devices load images themselves.
+   */
+  val previewAssetHosts: List<String> = emptyList(),
+) {
+  init {
+    previewAssetHosts.forEach { host ->
+      require(PREVIEW_ASSET_HOST.matches(host) && !isIpLiteral(host)) {
+        "previewAssetHosts entries must be lowercase DNS host names (no scheme, port, path, wildcard or IP literal): $host"
+      }
+    }
+    require(previewAssetHosts.distinct().size == previewAssetHosts.size) { "previewAssetHosts must be unique" }
+  }
+}
+
+private val PREVIEW_ASSET_HOST = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$")
+
+private fun isIpLiteral(host: String): Boolean =
+  ':' in host || (host.split('.').size == 4 && host.split('.').all { it.toIntOrNull() in 0..255 })
 
 fun PortalConfig.resolvedLogicDirs(): List<String> =
   logicDirs ?: listOf(

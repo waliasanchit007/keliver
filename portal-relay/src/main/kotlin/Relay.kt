@@ -1118,6 +1118,15 @@ fun main(args: Array<String>) {
     }
   }
 
+  // K5: the canvas's image pass-through for the app's declared image hosts
+  // (PreviewAssets.kt holds every rule), and the host list the editor reads.
+  val previewAssets = PreviewAssets(config.previewAssetHosts)
+  if (previewAssets.enabled) println("portal-server: preview images via /preview-asset for ${previewAssets.hosts.joinToString()}")
+  server.createContext("/preview-asset") { ex -> previewAssets.serve(ex) }
+  server.createContext("/preview-assets") { ex ->
+    handle(ex) { respond(ex, 200, previewAssets.describeJson()) }
+  }
+
   // P3-12: live-preview build status (id/promotedId/state/error) for the editor.
   server.createContext("/preview-build") { ex ->
     handle(ex) { respond(ex, 200, previewBuilder.statusJson()) }
