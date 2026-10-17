@@ -3,10 +3,13 @@ package dev.keliver.portal.ingest
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.tokenKindOf
+import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtBlockStringTemplateEntry
+import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtConstantExpression
+import org.jetbrains.kotlin.psi.KtDestructuringDeclarationEntry
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
@@ -14,7 +17,10 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtModifierListOwner
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtPrefixExpression
 import org.jetbrains.kotlin.psi.KtProperty
@@ -27,13 +33,16 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
  * top-level `object`:
  *
  * ```kotlin
- * object C { const val Ink = -14737633 }
+ * object C { const val Ink = -14737633; const val Line = 0xFFE0E0E0.toInt() }
  * object Assets { private const val WEB = "https://example.com"; const val Logo = "$WEB/logo.png" }
  * ```
  *
- * Values are computed at ingest: Int/Long/Double/Boolean literals (negative
- * too) and String literals, templates and `+` concatenations made only of
- * other resolvable constants, resolved transitively with cycle detection.
+ * Values are computed at ingest: Int/Long/Double/Boolean literals (negative,
+ * hex, binary, `_` separators; finite only), `<Int or Long constant>.toInt()`
+ * (two's complement, as Kotlin computes it), and String literals, templates
+ * and `+` concatenations made only of other String/Int/Long/Boolean constants
+ * — resolved transitively with cycle detection. A Double is never rendered
+ * into a String (Kotlin/JVM and Kotlin/JS print it differently).
  */
 class TokenDecl internal constructor(
   /** The declaring file's package; null = the default package. */
@@ -41,7 +50,7 @@ class TokenDecl internal constructor(
   /** The top-level object holding it, null for a top-level property. */
   val owner: String?,
   val name: String,
-  /** The declaring file's name (private top-level and private objects are file-scoped). */
+  /** The declaring file's identity — its repo-relative path in the relay (private visibility is per file). */
   val fileName: String,
   /** Private in its object (only that object sees it) or private at file level. */
   val isPrivate: Boolean,
@@ -68,52 +77,83 @@ class TokenDecl internal constructor(
 /** A [TokenDecl] with its computed value (null when it does not resolve: unsupported, cyclic, unknown reference). */
 data class TokenEntry(val decl: TokenDecl, val value: Any?, val ambiguous: Boolean = false) {
   val kind: String? get() = tokenKindOf(value)
+
+  /** A value a prop can hold: String, Int, Double or Boolean (a Long fits no portal prop). */
+  val isLiteralKind: Boolean get() = kind in TokenTable.LITERAL_KINDS
 }
 
 /**
- * The name-resolution context of one file: its package and its imports
- * (exact `import a.b.C` and star `import a.b.*`). Aliased imports
- * (`import a.b.C as D`) are deliberately not followed — a reference written
- * through an alias cannot be inserted into another file — so such a
- * reference stays RawCode.
+ * The name-resolution context of one file: its package, its imports (exact
+ * `import a.b.C` and star `import a.b.*`), the names it aliases
+ * (`import a.b.C as D` — a reference through an alias, and any name an alias
+ * shadows, is never a token) and its own top-level declarations.
  */
 class FileScope internal constructor(
   val packageName: String?,
+  /** The file's identity (see [TokenDecl.fileName]). */
   val fileName: String,
   internal val exact: Map<String, String>,
   internal val stars: Set<String>,
+  internal val aliases: Set<String>,
+  internal val ownNames: Set<String>,
   /** Set while evaluating an initializer inside an object (its members resolve bare). */
   internal val enclosingOwner: String? = null,
 ) {
-  internal fun inside(owner: String?) = FileScope(packageName, fileName, exact, stars, owner)
+  internal fun inside(owner: String?) = FileScope(packageName, fileName, exact, stars, aliases, ownNames, owner)
+
+  /** This scope with `import [fq]` added. */
+  internal fun withImport(fq: String) =
+    FileScope(packageName, fileName, exact + (fq.substringAfterLast('.') to fq), stars, aliases, ownNames, enclosingOwner)
 
   companion object {
-    fun of(file: KtFile): FileScope {
+    fun of(file: KtFile, fileName: String = file.name): FileScope {
       val exact = LinkedHashMap<String, String>()
       val stars = LinkedHashSet<String>()
+      val aliases = LinkedHashSet<String>()
       for (d in file.importDirectives) {
         val fq = d.importedFqName?.asString() ?: continue
         when {
           d.isAllUnder -> stars += fq
           d.aliasName == null -> exact[fq.substringAfterLast('.')] = fq
+          else -> aliases += d.aliasName!!
         }
       }
-      return FileScope(file.packageFqName.asString().ifEmpty { null }, file.name, exact, stars)
+      val own = file.declarations.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
+      return FileScope(file.packageFqName.asString().ifEmpty { null }, fileName, exact, stars, aliases, own)
     }
   }
 }
 
 /** Resolves a reference expression's text in one file to a token value (null = not a token). */
-internal fun interface TokenLookup {
+fun interface TokenLookup {
   fun lookup(text: String): PropValue.Token?
 }
+
+/**
+ * One scanned source file: its token declarations and the names of ALL its
+ * top-level declarations (classes, objects, typealiases, functions,
+ * properties) — a same-package declaration of a name beats a star import, so
+ * resolution must know them. Immutable; the relay caches it per file.
+ */
+class TokenFileScan internal constructor(
+  val fileName: String,
+  internal val packageName: String?,
+  internal val decls: List<TokenDecl>,
+  internal val topLevelNames: Set<String>,
+)
 
 /**
  * The design tokens of one app: every constant declaration in the scanned
  * sources, evaluated once. Immutable; the relay rebuilds it when a source changes.
  */
-class TokenTable private constructor(decls: List<TokenDecl>) {
+class TokenTable private constructor(scans: List<TokenFileScan>) {
+  private val decls = scans.flatMap { it.decls }
   private val byOwnerName = decls.groupBy { it.owner to it.name }
+
+  /** package -> every top-level declaration name in the scanned files of that package. */
+  private val packageNames: Map<String?, Set<String>> =
+    scans.groupBy { it.packageName }.mapValues { (_, s) -> s.flatMapTo(HashSet()) { it.topLevelNames } }
+
   private val memo = HashMap<TokenDecl, Any?>()
   private val evaluating = LinkedHashSet<TokenDecl>()
   private val NONE = Any()
@@ -125,68 +165,126 @@ class TokenTable private constructor(decls: List<TokenDecl>) {
       .sortedWith(compareBy({ it.decl.packageName ?: "" }, { it.decl.owner ?: "" }, { it.decl.name }))
   }
 
-  /** What the editor may OFFER: exported, resolvable, and not ambiguous by simple reference. */
-  val offered: List<TokenEntry> get() = entries.filter { it.decl.isExported && it.value != null && !it.ambiguous }
+  /**
+   * What the editor may OFFER: exported, of a kind a prop can hold
+   * (String/Int/Double/Boolean — never a Long), and not ambiguous by its
+   * simple reference.
+   */
+  val offered: List<TokenEntry> get() = entries.filter { it.decl.isExported && it.isLiteralKind && !it.ambiguous }
 
-  /** The offered token a client names by its [ref] and [importFq] (null when there is none). */
-  fun offered(ref: String, importFq: String?): TokenEntry? =
-    offered.firstOrNull { it.decl.ref == ref && it.decl.importFq == importFq }
+  /**
+   * The token a client names by [ref] and [importFq] that a file [fileName]
+   * may use: of a literal kind, not private in its object, and either
+   * exported or declared in a private object of that same file. Ambiguity is
+   * not refused here — [bindingProblem] checks what the reference means in
+   * the target file.
+   */
+  fun usable(ref: String, importFq: String?, fileName: String): TokenEntry? = entries.firstOrNull { e ->
+    e.decl.ref == ref && e.decl.importFq == importFq && e.isLiteralKind && !e.decl.isPrivate &&
+      (!e.decl.ownerPrivate || e.decl.fileName == fileName)
+  }
 
   /** Structural equality of what resolution can observe — the relay re-ingests when this changes. */
   fun signature(): List<String> = entries.map {
     "${it.decl.fqName}|${it.decl.isPrivate}|${it.decl.ownerPrivate}|${it.decl.fileName}|${it.kind}|${it.value}"
-  }
+  } + packageNames.entries.sortedBy { it.key ?: "" }.map { "${it.key}:${it.value.sorted()}" }
 
-  /** A [TokenLookup] for references written in [file]. */
-  internal fun lookupFor(file: KtFile): TokenLookup {
+  /**
+   * A [TokenLookup] for references written in [file] (identity [fileName]).
+   * Names in [shadowed] — the function's parameters, lambda parameters,
+   * locals — are what Kotlin binds first, so a reference starting with one
+   * is never a token.
+   */
+  internal fun lookupFor(file: KtFile, fileName: String = file.name, shadowed: Set<String> = emptySet()): TokenLookup {
     if (entries.isEmpty()) return TokenLookup { null }
-    val scope = FileScope.of(file)
-    return TokenLookup { text -> resolveRef(text.trim(), scope) }
+    val scope = FileScope.of(file, fileName)
+    return TokenLookup { text ->
+      val t = text.trim()
+      if (t.substringBefore('.') in shadowed) null else resolveRef(t, scope)
+    }
   }
 
   /** The value a reference in [scope] resolves to, as a PropValue.Token — the text kept as written. */
   internal fun resolveRef(text: String, scope: FileScope): PropValue.Token? {
-    val m = REF.matchEntire(text) ?: return null
-    val decl = if (m.groupValues[2].isEmpty()) bare(m.groupValues[1], scope) else qualified(m.groupValues[1], m.groupValues[2], scope)
-    decl ?: return null
+    val decl = declFor(text, scope) ?: return null
     val value = valueOf(decl) ?: return null
     if (tokenKindOf(value) !in LITERAL_KINDS) return null
     return PropValue.Token(text, lit(value), decl.importFq)
   }
 
-  /** `Owner.Name`: the owner object as Kotlin finds it (explicit import, same package, star), then its member. */
-  private fun qualified(ownerName: String, name: String, scope: FileScope): TokenDecl? {
-    val candidates = byOwnerName[ownerName to name].orEmpty()
-    if (candidates.isEmpty()) return null
-    fun visible(d: TokenDecl) =
-      (!d.ownerPrivate || d.fileName == scope.fileName) &&
-        (!d.isPrivate || (scope.enclosingOwner == d.owner && d.fileName == scope.fileName))
-    scope.exact[ownerName]?.let { fq ->
-      return candidates.singleOrNull { "${it.packageName?.let { p -> "$p." } ?: ""}${it.owner}" == fq }?.takeIf(::visible)
-    }
-    candidates.filter { it.packageName == scope.packageName }.let { same ->
-      if (same.isNotEmpty()) return same.singleOrNull()?.takeIf(::visible)
-    }
-    return candidates.filter { it.packageName in scope.stars }.singleOrNull()?.takeIf(::visible)
+  private fun declFor(text: String, scope: FileScope): TokenDecl? {
+    val m = REF.matchEntire(text) ?: return null
+    return if (m.groupValues[2].isEmpty()) bare(m.groupValues[1], scope) else qualified(m.groupValues[1], m.groupValues[2], scope)
   }
 
-  /** A bare `Name`: a member of the enclosing object, else a top-level constant (import, same package, star). */
+  /**
+   * K2 (S3): why writing [token] into the file [text] (identity [fileName])
+   * would not mean the declaration the client chose — or null when it would.
+   * The token's import is what write-back adds; adding it must not change
+   * what an existing reference in the file means either.
+   */
+  fun bindingProblem(text: String, fileName: String, token: PropValue.Token): String? {
+    val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
+    val file = runCatching { PsiEnv.parse(fileName, text) }.getOrNull() ?: return null
+    var scope = FileScope.of(file, fileName)
+    val simple = token.ref.substringBefore('.')
+    val fq = token.import
+    if (fq != null) {
+      val covered = scope.exact[simple] == fq || fq.substringBeforeLast('.') in scope.stars ||
+        fq.substringBeforeLast('.') == scope.packageName
+      when {
+        covered -> {}
+        scope.exact.containsKey(simple) ->
+          return "this file imports a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
+        simple in scope.aliases || simple in scope.ownNames || simple in samePackage(scope) ||
+          scope.stars.any { simple in packageNames[it].orEmpty() } ->
+          return "importing $fq would change what $simple means in this file"
+        else -> scope = scope.withImport(fq)
+      }
+    }
+    val bound = declFor(token.ref, scope)
+    return if (bound?.fqName == chosen.fqName) null
+    else "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: "")
+  }
+
+  private fun samePackage(scope: FileScope): Set<String> = packageNames[scope.packageName].orEmpty() + scope.ownNames
+
+  /**
+   * The token declaration a simple name [n] with member [name] (owner
+   * object `n`, or a top-level constant when [name] is null) means in
+   * [scope], following Kotlin: an aliased name is never ours; an explicit
+   * import wins; then the file's own package (any declaration of the name
+   * there — a class, a typealias — beats a star import); then exactly one
+   * star-imported package that declares the name.
+   */
+  private fun lookupName(n: String, scope: FileScope, candidates: List<TokenDecl>, matchesFq: (TokenDecl, String) -> Boolean): TokenDecl? {
+    if (candidates.isEmpty() || n in scope.aliases) return null
+    scope.exact[n]?.let { fq -> return candidates.singleOrNull { matchesFq(it, fq) } }
+    if (n in samePackage(scope)) return candidates.filter { it.packageName == scope.packageName }.singleOrNull()
+    val starPkgs = scope.stars.filter { n in packageNames[it].orEmpty() }
+    val pkg = starPkgs.singleOrNull() ?: return null
+    return candidates.filter { it.packageName == pkg }.singleOrNull()
+  }
+
+  /** `Owner.Name`: the owner object as Kotlin finds it, then its member (with Kotlin visibility). */
+  private fun qualified(ownerName: String, name: String, scope: FileScope): TokenDecl? {
+    val decl = lookupName(ownerName, scope, byOwnerName[ownerName to name].orEmpty()) { d, fq ->
+      "${d.packageName?.let { p -> "$p." } ?: ""}${d.owner}" == fq
+    } ?: return null
+    val visible = (!decl.ownerPrivate || decl.fileName == scope.fileName) &&
+      (!decl.isPrivate || (scope.enclosingOwner == decl.owner && decl.fileName == scope.fileName))
+    return decl.takeIf { visible }
+  }
+
+  /** A bare `Name`: a member of the enclosing object, else a top-level constant. */
   private fun bare(name: String, scope: FileScope): TokenDecl? {
     if (scope.enclosingOwner != null) {
       byOwnerName[scope.enclosingOwner to name].orEmpty()
         .singleOrNull { it.packageName == scope.packageName && it.fileName == scope.fileName }
         ?.let { return it }
     }
-    val candidates = byOwnerName[null to name].orEmpty()
-    if (candidates.isEmpty()) return null
-    fun visible(d: TokenDecl) = !d.isPrivate || d.fileName == scope.fileName
-    scope.exact[name]?.let { fq ->
-      return candidates.singleOrNull { it.fqName == fq }?.takeIf(::visible)
-    }
-    candidates.filter { it.packageName == scope.packageName }.let { same ->
-      if (same.isNotEmpty()) return same.filter(::visible).singleOrNull()
-    }
-    return candidates.filter { it.packageName in scope.stars }.singleOrNull()?.takeIf(::visible)
+    val decl = lookupName(name, scope, byOwnerName[null to name].orEmpty()) { d, fq -> d.fqName == fq } ?: return null
+    return decl.takeIf { !it.isPrivate || it.fileName == scope.fileName }
   }
 
   // ── evaluation (all of it runs while [entries] is built; lookups only read [memo]) ──
@@ -242,16 +340,24 @@ class TokenTable private constructor(decls: List<TokenDecl>) {
         null
       } else {
         val l = eval(e.left, scope)
-        val r = eval(e.right, scope)
-        if (l is String && r != null) l + stringOf(r) else null
+        val r = eval(e.right, scope)?.let(::stringOf)
+        if (l is String && r != null) l + r else null
       }
     }
     is KtNameReferenceExpression -> bare(e.getReferencedName(), scope)?.let(::valueOf)
     is KtDotQualifiedExpression -> {
-      val recv = e.receiverExpression as? KtNameReferenceExpression
-      val sel = e.selectorExpression as? KtNameReferenceExpression
-      if (recv == null || sel == null) null
-      else qualified(recv.getReferencedName(), sel.getReferencedName(), scope)?.let(::valueOf)
+      val recv = e.receiverExpression
+      when (val sel = e.selectorExpression) {
+        // `0xFF1F1F1F.toInt()` — the ARGB idiom: Long.toInt() keeps the low 32 bits (two's complement).
+        is KtCallExpression -> {
+          val plain = sel.valueArguments.isEmpty() && sel.lambdaArguments.isEmpty() && sel.typeArgumentList == null
+          if (!plain || sel.calleeExpression?.text != "toInt") null
+          else when (val v = eval(recv, scope)) { is Long -> v.toInt(); is Int -> v; else -> null }
+        }
+        is KtNameReferenceExpression -> (recv as? KtNameReferenceExpression)
+          ?.let { qualified(it.getReferencedName(), sel.getReferencedName(), scope) }?.let(::valueOf)
+        else -> null
+      }
     }
     else -> null
   }
@@ -264,41 +370,45 @@ class TokenTable private constructor(decls: List<TokenDecl>) {
         is KtLiteralStringTemplateEntry -> sb.append(entry.text)
         is KtEscapeStringTemplateEntry -> sb.append(entry.unescapedValue)
         is KtSimpleNameStringTemplateEntry, is KtBlockStringTemplateEntry ->
-          sb.append(stringOf(eval(entry.expression, scope) ?: return null))
+          sb.append(eval(entry.expression, scope)?.let(::stringOf) ?: return null)
         else -> return null
       }
     }
     return sb.toString()
   }
 
-  /** How Kotlin writes a value into a string (JVM rendering for Double). */
-  private fun stringOf(v: Any): String = v.toString()
+  /** How Kotlin writes a value into a string — refused for a Double (JVM `1.0`, JS `1`). */
+  private fun stringOf(v: Any): String? = if (v is Double) null else v.toString()
 
   companion object {
     val EMPTY: TokenTable = TokenTable(emptyList())
 
     private val REF = Regex("^([A-Za-z_][A-Za-z0-9_]*)(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$")
-    private val LITERAL_KINDS = setOf("String", "Int", "Double", "Boolean")
+    internal val LITERAL_KINDS = setOf("String", "Int", "Double", "Boolean")
 
     /** Scan sources ([fileName] to text) for token declarations. A file that does not parse contributes nothing. */
-    fun scan(sources: List<Pair<String, String>>): TokenTable {
+    fun scan(sources: List<Pair<String, String>>): TokenTable = of(sources.mapNotNull { (name, text) -> scanFile(name, text) })
+
+    /** A table from already-scanned files (the relay re-scans only files that changed). */
+    fun of(scans: List<TokenFileScan>): TokenTable = TokenTable(scans)
+
+    /** Scan one file; [fileName] is its identity (the relay passes the repo-relative path). Null when it does not parse. */
+    fun scanFile(fileName: String, text: String): TokenFileScan? {
+      val file = runCatching { PsiEnv.parse(fileName, text) }.getOrNull() ?: return null
+      val scope = FileScope.of(file, fileName)
       val decls = mutableListOf<TokenDecl>()
-      for ((name, text) in sources) {
-        val file = runCatching { PsiEnv.parse(name, text) }.getOrNull() ?: continue
-        val scope = FileScope.of(file)
-        for (top in file.declarations) {
-          when (top) {
-            is KtProperty -> declOf(top, null, false, scope)?.let(decls::add)
-            is KtObjectDeclaration -> {
-              if (top.isCompanion() || top.isObjectLiteral()) continue
-              val owner = top.name ?: continue
-              val ownerPrivate = top.isPrivateLike()
-              top.body?.properties?.forEach { p -> declOf(p, owner, ownerPrivate, scope)?.let(decls::add) }
-            }
+      for (top in file.declarations) {
+        when (top) {
+          is KtProperty -> declOf(top, null, false, scope)?.let(decls::add)
+          is KtObjectDeclaration -> {
+            if (top.isCompanion() || top.isObjectLiteral()) continue
+            val owner = top.name ?: continue
+            val ownerPrivate = top.isPrivateLike()
+            top.body?.properties?.forEach { p -> declOf(p, owner, ownerPrivate, scope)?.let(decls::add) }
           }
         }
       }
-      return TokenTable(decls)
+      return TokenFileScan(fileName, scope.packageName, decls, scope.ownNames)
     }
 
     private fun declOf(p: KtProperty, owner: String?, ownerPrivate: Boolean, scope: FileScope): TokenDecl? {
@@ -323,7 +433,21 @@ class TokenTable private constructor(decls: List<TokenDecl>) {
     private fun KtModifierListOwner.isPrivateLike(): Boolean =
       hasModifier(KtTokens.PRIVATE_KEYWORD) || hasModifier(KtTokens.PROTECTED_KEYWORD)
 
-    /** Kotlin literal text -> Int/Long/Double/Boolean (null for Float, Char, unsigned, null). */
+    /**
+     * The names a composable function body binds before any top-level
+     * declaration: its parameters, every lambda parameter (`forEach { label
+     * -> }`, and the implicit `it`), every local `val`/`var` and destructured
+     * name. A reference starting with one of these is never a token.
+     */
+    internal fun shadowedNames(fn: KtNamedFunction): Set<String> {
+      val out = linkedSetOf("it")
+      PsiTreeUtil.collectElementsOfType(fn, KtParameter::class.java).forEach { p -> p.name?.let(out::add) }
+      PsiTreeUtil.collectElementsOfType(fn, KtProperty::class.java).forEach { p -> p.name?.let(out::add) }
+      PsiTreeUtil.collectElementsOfType(fn, KtDestructuringDeclarationEntry::class.java).forEach { p -> p.name?.let(out::add) }
+      return out
+    }
+
+    /** Kotlin literal text -> Int/Long/Double/Boolean (null for Float, Char, unsigned, null, non-finite). */
     internal fun constant(text: String): Any? {
       val t = text.replace("_", "")
       return when {
@@ -332,7 +456,8 @@ class TokenTable private constructor(decls: List<TokenDecl>) {
         Regex("^0[xX][0-9a-fA-F]+[lL]?$").matches(t) -> integer(t.substring(2), 16)
         Regex("^0[bB][01]+[lL]?$").matches(t) -> integer(t.substring(2), 2)
         Regex("^\\d+[lL]?$").matches(t) -> integer(t, 10)
-        Regex("^(\\d+\\.\\d*|\\.\\d+|\\d+)([eE][+-]?\\d+)?$").matches(t) && ('.' in t || 'e' in t || 'E' in t) -> t.toDoubleOrNull()
+        Regex("^(\\d+\\.\\d*|\\.\\d+|\\d+)([eE][+-]?\\d+)?$").matches(t) && ('.' in t || 'e' in t || 'E' in t) ->
+          t.toDoubleOrNull()?.takeIf { it.isFinite() }
         else -> null // Float (`1f`), Char, unsigned (`1u`), null
       }
     }

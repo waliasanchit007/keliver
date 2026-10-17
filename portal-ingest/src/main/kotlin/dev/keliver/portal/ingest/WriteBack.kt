@@ -37,7 +37,7 @@ object WriteBack {
     val targetRoot = target.root as? DocNode.Widget ?: return null
     val written = LinkedHashSet<String>()
     needed.set(written)
-    lookup.set(tokens.lookupFor(file))
+    lookup.set(rec.tokenLookup)
     try {
       if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     } finally {
@@ -353,17 +353,27 @@ object WriteBack {
     }
     if (parsed.modifiers != target.modifiers) {
       val oldExpr = sourceArg("modifier") ?: return false
+      // K2: the canonical chain may reference a token the FILE cannot resolve yet
+      // (its import is added below), so the target's own tokens resolve first.
+      val tokens = targetTokens(target.modifiers.values, lookup.get())
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, lookup.get(),
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens,
       ) ?: return false
       edits += oldExpr to text
-      imports += FragmentImports.chain(text, parentType, lookup.get())
+      imports += FragmentImports.chain(text, parentType, tokens)
+      target.modifiers.values.forEach { imports += FragmentImports.token(it) }
     }
     for ((oldExpr, text) in edits) {
       if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
     }
     need(imports)
     return true
+  }
+
+  /** A lookup that knows [values]' tokens by their reference first, then the file's own resolution. */
+  private fun targetTokens(values: Collection<dev.keliver.portal.document.PropValue>, file: TokenLookup?): TokenLookup {
+    val own = values.filterIsInstance<dev.keliver.portal.document.PropValue.Token>().associateBy { it.ref }
+    return TokenLookup { t -> own[t.trim()] ?: file?.lookup(t) }
   }
 
   /** `Foo(\n  a = 1,\n  b = 2,\n)` → `Foo(a = 1, b = 2)` (grammar props never hold raw newlines). */
