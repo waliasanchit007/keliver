@@ -13,10 +13,14 @@
   phone shows (K5; see `docs/EDITOR_FIDELITY.md`).
   - **Images:** a new keliver.portal.json `previewAssetHosts` (exact host names; empty = off)
     turns on the relay's `GET /preview-asset?url=…`, which fetches images from those hosts for
-    the canvas (whose page cannot read hosts that send no CORS headers): loopback callers, GET
-    only, no client header forwarded, redirects only to listed hosts, `image/*` except SVG, 10 MB
-    cap, timeouts, an in-memory LRU cache, the caller's origin allowed only when loopback.
-    `GET /preview-assets` lists the hosts; the editor's image fetcher rewrites only those URLs.
+    the canvas (whose page cannot read hosts that send no CORS headers): loopback peers only,
+    GET only, default ports only, no client header forwarded, redirects only to listed hosts and
+    never https to http, one raster type from a fixed list (no SVG) served under its canonical
+    name, 10 MB cap, one deadline per request, its own bounded thread pool (503 when full) so a
+    slow host never delays other relay endpoints, an in-memory LRU cache and a short memory of
+    failures, the caller's origin allowed only when loopback. Host entries refuse `localhost`,
+    single labels and IP literals in any form; DNS for a listed name is trusted. `GET
+    /preview-assets` lists the hosts; the editor's image fetcher rewrites only those URLs.
   - **Theme:** `AppPreviewEntry` gains `screenWrapper` (the app's guest-side wrapper around
     every screen, e.g. its `Theme`) and `hostWrapper` (the native host's `MaterialTheme`, whose
     scheme a guest `Theme` starts from); the canvas renders inside both. New portal-render API:

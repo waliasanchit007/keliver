@@ -59,19 +59,40 @@ be read there. For hosts the app lists, the relay fetches instead:
 "previewAssetHosts": ["img.example.com"]
 ```
 
-- Entries are exact lowercase host names: no scheme, port, path or wildcard,
-  no IP literal; a subdomain must be listed itself. Absent or empty = off
+- Entries are exact lowercase host names of at least two labels: no scheme,
+  port, path or wildcard; a subdomain must be listed itself. Refused at config
+  load: `localhost` and `*.localhost`, single-label names, IP literals in any
+  form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex — so any
+  all-numeric label, and a last label like `0x7f`). Absent or empty = off
   (`/preview-asset` answers 404).
 - The editor reads the list from `GET /preview-assets` and rewrites a URL whose
-  host is listed to `GET /preview-asset?url=<encoded URL>`; any other URL loads
-  directly as before.
-- The relay answers loopback callers only (its listening socket accepts every
-  interface, so the endpoint checks the caller's address itself), GET only, for `http`/`https` URLs
-  without user-info. It forwards nothing from the caller (no cookies, no
-  `Authorization`, no other header) and sends a fixed `User-Agent`. It follows
-  at most five redirects itself, each only to a listed host.
-- It serves only a `200` with an `image/*` type other than `image/svg+xml`, up
-  to 10 MB, with connect/read/call timeouts. SVG is refused because the
+  host is listed, on its scheme's default port, to
+  `GET /preview-asset?url=<encoded URL>`; any other URL loads directly as
+  before. If the list never arrives, the first image waits for it at most 3 s
+  and later images do not wait.
+- The relay checks the caller's address is loopback: its listening socket
+  accepts every interface, so this keeps other machines on the network off
+  the endpoint. It does not stop a web page in the developer's own browser,
+  which also connects from loopback; the relay's Host/Origin gate is what
+  refuses those (KNOWN_BUGS U36).
+- GET only, for `http`/`https` URLs without user-info, on the scheme's default
+  port (80/443; another port is refused, an invalid one is a 400). It forwards
+  nothing from the caller (no cookies, no `Authorization`, no other header)
+  and sends a fixed `User-Agent`. It follows at most five redirects itself,
+  each only to a listed host on a default port, and never from `https` down to
+  `http`.
+- One 10 s deadline covers the whole request, every redirect included. Each
+  request runs on the endpoint's own small pool (4 threads, 16 waiting), not
+  on the thread that serves the relay's other endpoints, so a slow image host
+  never delays edits or write-back; when the pool is full the endpoint answers
+  `503`. A failure is remembered for 30 s — per URL, and per host when the
+  host could not be reached — so a re-render does not wait on a dead host
+  again.
+- It serves only a `200` with exactly one `Content-Type` naming one of
+  `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/avif`,
+  `image/bmp`, `image/x-icon`, `image/vnd.microsoft.icon` (parameters ignored;
+  a comma-separated list is refused), up to 10 MB, and sends that type as
+  named here, never the upstream's string. SVG is refused because the
   response comes from the relay's own origin: opened directly, an SVG is an
   active document that could call the relay's write endpoints (the canvas
   could not decode it anyway). Responses carry `X-Content-Type-Options:
@@ -81,9 +102,10 @@ be read there. For hosts the app lists, the relay fetches instead:
 - Images are cached in memory (LRU, 256 entries / 64 MB, ten minutes).
 - Refusals are logged with the host and the reason, never the URL's path or
   query.
-- An allowlisted host name is trusted as configured: the relay does not check
-  what address it resolves to. List only hosts you would let the relay fetch
-  from.
+- DNS is trusted: the relay does not check what address a listed name
+  resolves to, so a listed name that resolves to a private or loopback
+  address is fetched. Listing a host says you trust it and its DNS; list only
+  hosts you would let the relay fetch from.
 - Preview only. Devices load images themselves and never use this.
 
 The relay reads `keliver.portal.json` at start; restart it after changing the
