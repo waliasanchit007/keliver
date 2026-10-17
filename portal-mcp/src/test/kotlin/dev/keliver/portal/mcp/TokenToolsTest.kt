@@ -33,10 +33,14 @@ class TokenToolsTest {
     )
     assertEquals(
       listOf(
-        "home: StyledText#2.colorArgb uses token 'C.Ink'",
-        "home: StyledText#3.mod.Background.colorArgb uses token 'C.Ink'",
+        "home: StyledText#2.colorArgb uses token 'C.Ink' (app.components.C.Ink)",
+        "home: StyledText#3.mod.Background.colorArgb uses token 'C.Ink' (app.components.C.Ink)",
       ),
       Tools.usagesIn("home", doc, "C.Ink"),
     )
+    // By fully-qualified name, a same-named token of another package does not match.
+    assertEquals(2, Tools.usagesIn("home", doc, "app.components.C.Ink").size)
+    assertEquals(emptyList(), Tools.usagesIn("home", doc, "other.C.Ink"))
+    assertEquals("app.components.TopGap", Tools.tokenFqName(PropValue.Token("TopGap", lit(4.0), "app.components.TopGap")))
   }
 }
