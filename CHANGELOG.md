@@ -44,7 +44,9 @@
   parameters, locals, aliases and same-package declarations shadow); values are exact on every
   target (no Double rendered into a String, finite literals only, `0xFFxxxxxx.toInt()` supported); the
   relay checks fits on its own values, refuses a token that would mean something else in the
-  target file (or rebind an existing reference), re-reads token values on undo/redo, routes a
+  target file (or rebind an existing reference — the screen's own locals, one import scope per
+  batch, Kotlin default imports), re-reads the tokens an undo/redo restores (keeping a refused
+  step), routes a
   screen edit as a screen even under a `tokensDirs` ancestor, re-parses only changed files, and
   identifies files by repo-relative path. **Release pairing:** `GET /doc` serves `PropValue.Token`
   only to clients that send `tokens=1` (this release's editor and MCP server); an older per-app

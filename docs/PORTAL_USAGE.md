@@ -323,7 +323,9 @@ numbers.
   reference (and adds its `import` when the file lacks it). **detach**
   replaces the reference with its literal value. **@** (bind) is unchanged.
 - A token fits only a prop of exactly its type — never a Dp, Float, enum or
-  Long. `private` constants are evaluated but never offered. A reference is a
+  Long. `private` constants are evaluated but never offered (a screen's own
+  private top-level constant is still recognized, and survives duplicate,
+  paste and undo in that screen). A reference is a
   token only where Kotlin would bind it to that constant: a parameter, lambda
   parameter (a list item variable) or local of the same name, an aliased
   import, or a same-package declaration of the name keeps it RawCode.

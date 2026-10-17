@@ -377,7 +377,9 @@ fun SectionCard(content: @Composable () -> Unit) {
     device tree carries the literal under its usual tag plus a `"token"` key,
     so an older device guest renders the value.
   - *When a declaration changes.* The relay re-scans (re-parsing only files
-    whose mtime or size changed; never for its own write-back); if anything
+    whose content changed — a SHA-256 of the bytes, so a same-size edit
+    inside the filesystem's mtime granularity is seen — and forgetting
+    deleted files; never for its own write-back); if anything
     resolution observes changed, components rebuild and every screen is
     re-recognized from its file: a new value updates the canvas; a token that
     vanished or changed kind turns the argument's call RawCode. Change events
@@ -387,16 +389,26 @@ fun SectionCard(content: @Composable () -> Unit) {
     `ambiguous` when the same `Owner.Name` exists in two packages — the
     picker does not offer those).
   - *The server owns token values.* A client names a token by `ref` +
-    `import`. The relay accepts one that is of a literal kind, not private in
-    its object, and exported — or in a private object of the target file
-    itself; it replaces the value with its own BEFORE any check (a stale or
-    forged client value never decides a fit); and it refuses a token that
-    would not mean the chosen declaration in the target file (the file
-    imports a different owner of that name) or whose import would change what
-    an existing reference means (the name is declared in the file's package,
-    star-imported, aliased or declared in the file). An ambiguous reference is
-    accepted when it binds correctly. Undo/redo re-read token values and are
-    refused when a token no longer exists. (`portal-relay`
+    `import`. The relay accepts one that Kotlin lets the target file's top
+    level see: of a literal kind, never private in its object, and exported —
+    or a private top-level constant, or one in a private object, of the target
+    file itself. It replaces the value with its own BEFORE any check (a stale
+    or forged client value never decides a fit); and it refuses a token that
+    would not mean the chosen declaration in the target file: the screen
+    function binds the name itself (a parameter, lambda parameter or local);
+    the file imports a different owner of that name; or its import would
+    change what an existing reference means (the name is declared in the
+    file's package, star-imported, aliased, declared in the file, or a Kotlin
+    default import such as `Pair` the file mentions). One scope runs through
+    the whole batch, seeded with the imports the document's tokens already
+    imply (the document can be ahead of the file inside the write-back
+    window), so two owners sharing a simple name (`x.C`, `q.C`) are refused
+    rather than written as clashing imports. Functions never shadow a token.
+    An ambiguous reference is accepted when it binds correctly. Undo/redo
+    re-read the values of the tokens the step restores (only those) and are
+    refused when one no longer exists or no longer fits its prop; such a
+    refused step stays on its stack, so it applies once the declaration is
+    back. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
     (`ParityTokens.kt`) renders the same value tree as the interpreted golden
     (`portal-render` `TokenParityTest`).
