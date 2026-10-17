@@ -63,7 +63,13 @@ object WriteBack {
   /**
    * Adds `import <fq>` for each of [fqs] the file lacks — skipping ones already
    * imported, covered by a star import, in the file's own package, or whose
-   * simple name the file already imports from elsewhere (never create a clash).
+   * simple name the file already imports from elsewhere (never clash with them).
+   * Two of [fqs] that share a simple name from different owners (`x.C`,
+   * `q.C`) are both written: the relay's gate and undo/redo refuse such a
+   * document before it gets here, and if one is forced past them the result
+   * is a loud conflicting-import compile error — never a silent choice of
+   * which `C` the references mean (writing neither could let another `C` in
+   * scope bind them).
    * Each lands at its sorted position among the imports. Adds only.
    */
   internal fun ensureImports(text: String, fqs: Set<String>): String {

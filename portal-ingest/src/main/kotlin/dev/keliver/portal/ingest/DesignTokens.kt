@@ -118,7 +118,9 @@ class FileScope internal constructor(
           else -> aliases += d.aliasName!!
         }
       }
-      val own = file.declarations.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
+      // Classifiers, properties and typealiases can bind `C` in `C.X` or a bare value
+      // reference; a function cannot (functions live in a separate namespace).
+      val own = file.declarations.filter { it !is KtNamedFunction }.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
       return FileScope(file.packageFqName.asString().ifEmpty { null }, fileName, exact, stars, aliases, own)
     }
   }
@@ -130,10 +132,11 @@ fun interface TokenLookup {
 }
 
 /**
- * One scanned source file: its token declarations and the names of ALL its
- * top-level declarations (classes, objects, typealiases, functions,
- * properties) — a same-package declaration of a name beats a star import, so
- * resolution must know them. Immutable; the relay caches it per file.
+ * One scanned source file: its token declarations and the names of its
+ * top-level classifiers, objects, typealiases and properties — a same-package
+ * declaration of a name beats a star import, so resolution must know them.
+ * Functions are not kept: they live in a separate namespace and never bind
+ * `C` in `C.X` or a bare value reference. Immutable; the relay caches it per file.
  */
 class TokenFileScan internal constructor(
   val fileName: String,
@@ -174,14 +177,17 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
 
   /**
    * The token a client names by [ref] and [importFq] that a file [fileName]
-   * may use: of a literal kind, not private in its object, and either
-   * exported or declared in a private object of that same file. Ambiguity is
-   * not refused here — [bindingProblem] checks what the reference means in
-   * the target file.
+   * may use — Kotlin's visibility from that file's top-level code: of a
+   * literal kind; a constant private in its object never (only that object
+   * sees it); a private top-level constant, or one in a private object, only
+   * in its own file. Ambiguity is not refused here — [bindingProblem] checks
+   * what the reference means in the target file.
    */
   fun usable(ref: String, importFq: String?, fileName: String): TokenEntry? = entries.firstOrNull { e ->
-    e.decl.ref == ref && e.decl.importFq == importFq && e.isLiteralKind && !e.decl.isPrivate &&
-      (!e.decl.ownerPrivate || e.decl.fileName == fileName)
+    val d = e.decl
+    val sameFile = d.fileName == fileName
+    d.ref == ref && d.importFq == importFq && e.isLiteralKind &&
+      (!d.isPrivate || (d.owner == null && sameFile)) && (!d.ownerPrivate || sameFile)
   }
 
   /** Structural equality of what resolution can observe — the relay re-ingests when this changes. */
@@ -217,34 +223,109 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     return if (m.groupValues[2].isEmpty()) bare(m.groupValues[1], scope) else qualified(m.groupValues[1], m.groupValues[2], scope)
   }
 
+  /** [bindingProblem] for one token. */
+  fun bindingProblem(text: String, fileName: String, token: PropValue.Token): String? =
+    bindingProblem(text, fileName, listOf(token))
+
   /**
-   * K2 (S3): why writing [token] into the file [text] (identity [fileName])
-   * would not mean the declaration the client chose — or null when it would.
-   * The token's import is what write-back adds; adding it must not change
-   * what an existing reference in the file means either.
+   * K2 (S3): why writing [tokens] (in order) into the file [text] (identity
+   * [fileName]) would not mean the declarations the client chose — or null
+   * when every one would. Write-back adds each token's import, and adding it
+   * must not change what any existing reference means:
+   *  - the composable's own names (parameters, lambda parameters, locals —
+   *    [shadowedNames]) bind first, so a token named like one is refused;
+   *  - a file that already imports a different owner of that simple name, or
+   *    an earlier token of this batch / [pending] import (the document may be
+   *    ahead of the file) that claimed it, is refused;
+   *  - an import that would rebind a name the file already uses — declared
+   *    in its package or in the file, star-imported, aliased, or a Kotlin
+   *    default import the file mentions — is refused.
+   * [pending]: imports implied by tokens already in the document, which the
+   * next write-back will add.
    */
-  fun bindingProblem(text: String, fileName: String, token: PropValue.Token): String? {
-    val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
+  fun bindingProblem(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): String? =
+    bindingIssue(text, fileName, tokens, pending)?.message
+
+  /**
+   * Why [bindingProblem] refused, and what can clear it. Surgical write-back
+   * only ADDS imports, so a refusal caused by the file's own import text
+   * ([BindingCause.FILE_IMPORT]) usually clears only when someone edits the
+   * file by hand (a whole-file export can also drop an unused import); every
+   * other cause can clear without that (a declaration removed
+   * elsewhere, the document's other tokens changed, a token restored).
+   */
+  class BindingIssue(val message: String, val cause: BindingCause)
+
+  enum class BindingCause {
+    /** The file itself imports a different owner of the simple name (exactly or as an alias). */
+    FILE_IMPORT,
+    /** A token already in the document (its import not yet written back) claims the simple name. */
+    DOCUMENT_IMPORT,
+    /** An earlier token of the same batch claims the simple name. */
+    BATCH,
+    /** The composable's own parameter or local of that name binds first. */
+    SHADOWED,
+    /** The import would rebind a name the file uses (same package, star import, Kotlin default import). */
+    REBINDS,
+    /** The token is not one this file may use. */
+    UNKNOWN,
+    /** In this file's scope the reference would resolve to another declaration. */
+    MISBOUND,
+  }
+
+  /** [bindingProblem] with its [BindingCause]. */
+  fun bindingIssue(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): BindingIssue? {
     val file = runCatching { PsiEnv.parse(fileName, text) }.getOrNull() ?: return null
+    val fn = file.declarations.filterIsInstance<KtNamedFunction>()
+      .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+    val shadowed = fn?.let(::shadowedNames).orEmpty()
     var scope = FileScope.of(file, fileName)
-    val simple = token.ref.substringBefore('.')
-    val fq = token.import
-    if (fq != null) {
-      val covered = scope.exact[simple] == fq || fq.substringBeforeLast('.') in scope.stars ||
-        fq.substringBeforeLast('.') == scope.packageName
-      when {
-        covered -> {}
-        scope.exact.containsKey(simple) ->
-          return "this file imports a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
-        simple in scope.aliases || simple in scope.ownNames || simple in samePackage(scope) ||
-          scope.stars.any { simple in packageNames[it].orEmpty() } ->
-          return "importing $fq would change what $simple means in this file"
-        else -> scope = scope.withImport(fq)
+    // The simple names the FILE imports (exactly, not through an alias) — any
+    // other entry of scope.exact came from the document or this batch.
+    val fileImported = scope.exact.keys.toSet()
+    fun covered(fq: String) = scope.exact[fq.substringAfterLast('.')] == fq ||
+      fq.substringBeforeLast('.') in scope.stars || fq.substringBeforeLast('.') == scope.packageName
+    // Imports the document already implies (written back soon) count as present.
+    for (fq in pending.sorted()) {
+      if (!covered(fq) && !scope.exact.containsKey(fq.substringAfterLast('.'))) scope = scope.withImport(fq)
+    }
+    val documentImported = scope.exact.keys - fileImported
+    for (token in tokens) {
+      val chosen = usable(token.ref, token.import, fileName)?.decl
+        ?: return BindingIssue("unknown design token ${token.ref}", BindingCause.UNKNOWN)
+      val simple = token.ref.substringBefore('.')
+      if (simple in shadowed) {
+        return BindingIssue("${token.ref} would mean the screen's own `$simple` (a parameter or local), not the token", BindingCause.SHADOWED)
+      }
+      val fq = token.import
+      if (fq != null && !covered(fq)) {
+        val rebinds = "importing $fq would change what $simple means in this file"
+        when {
+          scope.exact.containsKey(simple) -> {
+            val (who, cause) = when (simple) {
+              in fileImported -> "this file imports" to BindingCause.FILE_IMPORT
+              in documentImported -> "this screen already uses" to BindingCause.DOCUMENT_IMPORT
+              else -> "this change also uses" to BindingCause.BATCH
+            }
+            return BindingIssue("$who a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq", cause)
+          }
+          simple in scope.aliases -> return BindingIssue(rebinds, BindingCause.FILE_IMPORT)
+          simple in samePackage(scope) ||
+            scope.stars.any { simple in packageNames[it].orEmpty() } ||
+            (simple in KOTLIN_DEFAULT_IMPORTED && Regex("\\b${Regex.escape(simple)}\\b").containsMatchIn(text)) ->
+            return BindingIssue(rebinds, BindingCause.REBINDS)
+          else -> scope = scope.withImport(fq)
+        }
+      }
+      val bound = declFor(token.ref, scope)
+      if (bound?.fqName != chosen.fqName) {
+        return BindingIssue(
+          "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: ""),
+          BindingCause.MISBOUND,
+        )
       }
     }
-    val bound = declFor(token.ref, scope)
-    return if (bound?.fqName == chosen.fqName) null
-    else "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: "")
+    return null
   }
 
   private fun samePackage(scope: FileScope): Set<String> = packageNames[scope.packageName].orEmpty() + scope.ownNames
@@ -386,6 +467,36 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     private val REF = Regex("^([A-Za-z_][A-Za-z0-9_]*)(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$")
     internal val LITERAL_KINDS = setOf("String", "Int", "Double", "Boolean")
 
+    /**
+     * Classifier names every Kotlin file sees through default imports
+     * (kotlin.*, kotlin.collections.*, kotlin.ranges.*, kotlin.text.*,
+     * kotlin.sequences.*, kotlin.comparisons.*, kotlin.annotation.*, common
+     * java.lang.* on the JVM, and kotlin.js.* — screens also build for js and
+     * wasm): an explicit import of the same simple name would rebind every
+     * existing use of it.
+     */
+    internal val KOTLIN_DEFAULT_IMPORTED: Set<String> = setOf(
+      "Any", "Array", "Boolean", "BooleanArray", "Byte", "ByteArray", "Char", "CharArray", "CharSequence",
+      "Comparable", "Comparator", "Deprecated", "Double", "DoubleArray", "Enum", "Error", "Exception", "Float",
+      "FloatArray", "Function", "Int", "IntArray", "Lazy", "Long", "LongArray", "Nothing", "Number", "Pair",
+      "Result", "Short", "ShortArray", "String", "Suppress", "Throwable", "Triple", "UByte", "UInt", "ULong",
+      "UShort", "Unit", "ArithmeticException", "IllegalArgumentException", "IllegalStateException",
+      "IndexOutOfBoundsException", "NoSuchElementException", "NullPointerException", "RuntimeException",
+      "UnsupportedOperationException", "ClassCastException", "NumberFormatException",
+      "AbstractCollection", "AbstractList", "AbstractMap", "AbstractSet", "ArrayDeque", "ArrayList", "Collection",
+      "HashMap", "HashSet", "Iterable", "Iterator", "LinkedHashMap", "LinkedHashSet", "List", "ListIterator", "Map",
+      "MutableCollection", "MutableIterable", "MutableIterator", "MutableList", "MutableListIterator", "MutableMap",
+      "MutableSet", "RandomAccess", "Set", "Grouping", "IndexedValue",
+      "CharRange", "ClosedRange", "IntProgression", "IntRange", "LongProgression", "LongRange", "OpenEndRange",
+      "Appendable", "CharCategory", "Charsets", "MatchGroup", "MatchResult", "Regex", "RegexOption", "StringBuilder",
+      "Sequence", "Annotation", "Retention", "Target", "MustBeDocumented", "Repeatable",
+      "Math", "System", "Thread", "Object", "Runnable", "Process", "StrictMath", "Character", "Integer",
+      "OptIn", "RequiresOptIn", "ReplaceWith", "DeprecationLevel", "DslMarker", "PublishedApi",
+      "NotImplementedError", "KotlinVersion", "LazyThreadSafetyMode", "Typography", "CharDirectionality",
+      "AnnotationTarget", "AnnotationRetention", "UIntRange", "ULongRange", "SequenceScope",
+      "JsName", "JsExport", "Promise", "Json", "JsAny",
+    )
+
     /** Scan sources ([fileName] to text) for token declarations. A file that does not parse contributes nothing. */
     fun scan(sources: List<Pair<String, String>>): TokenTable = of(sources.mapNotNull { (name, text) -> scanFile(name, text) })
 
@@ -408,7 +519,7 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
           }
         }
       }
-      return TokenFileScan(fileName, scope.packageName, decls, scope.ownNames)
+      return TokenFileScan(fileName, scope.packageName, decls, scope.ownNames) // classifiers/properties/typealiases
     }
 
     private fun declOf(p: KtProperty, owner: String?, ownerPrivate: Boolean, scope: FileScope): TokenDecl? {
