@@ -63,11 +63,13 @@ object WriteBack {
   /**
    * Adds `import <fq>` for each of [fqs] the file lacks — skipping ones already
    * imported, covered by a star import, in the file's own package, or whose
-   * simple name the file already imports from elsewhere (never create a clash).
+   * simple name the file already imports from elsewhere (never clash with them).
    * Two of [fqs] that share a simple name from different owners (`x.C`,
-   * `q.C`) are BOTH skipped: one of them would silently rebind the other's
-   * references, and choosing is not write-back's call (the relay's gate and
-   * undo/redo refuse such a document before it gets here).
+   * `q.C`) are both written: the relay's gate and undo/redo refuse such a
+   * document before it gets here, and if one is forced past them the result
+   * is a loud conflicting-import compile error — never a silent choice of
+   * which `C` the references mean (writing neither could let another `C` in
+   * scope bind them).
    * Each lands at its sorted position among the imports. Adds only.
    */
   internal fun ensureImports(text: String, fqs: Set<String>): String {
@@ -95,7 +97,7 @@ object WriteBack {
     val missing = fqs.filter { fq ->
       val owner = fq.substringBeforeLast('.')
       fq !in exact && owner !in stars && owner != pkg && fq.substringAfterLast('.') !in simpleNames
-    }.groupBy { it.substringAfterLast('.') }.values.filter { it.size == 1 }.flatten().sorted()
+    }.sorted()
     if (missing.isEmpty()) return text
     val lines = text.lines().toMutableList()
     val importIdx = lines.indices.filter { lines[it].startsWith("import ") }
