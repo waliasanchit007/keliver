@@ -162,6 +162,11 @@ object ${NAME}Preview : AppPreviewEntry {
     //   )
     // },
   )
+
+  // Canvas fidelity: put each screen inside what your app puts around it on a
+  // device, so a Theme the app applies outside the screen file shows here too.
+  // override val screenWrapper = dev.keliver.portal.render.PreviewWrapper { content -> AppTheme { content() } } // guest side: your keliver Theme
+  // override val hostWrapper = dev.keliver.portal.render.PreviewWrapper { content -> MaterialTheme(appColorScheme) { content() } } // your native host's scheme
 }
 EOF
 

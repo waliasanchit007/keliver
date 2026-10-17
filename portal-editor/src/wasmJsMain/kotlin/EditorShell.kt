@@ -186,7 +186,10 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       // before RenderNode reads the mocks it feeds.
       composition.setContent {
         LivePresenterHost()
-        RenderNode(selectionTagged(portalTree.value))
+        // K5: inside the app's own screen wrapper (its Theme), as on a device.
+        dev.keliver.portal.render.AppScreenFrame(entry) {
+          RenderNode(selectionTagged(portalTree.value))
+        }
       }
       guestAdapter.emitChanges() // initial render
 
@@ -197,7 +200,9 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
     }
 
     // The DOM chrome (mountPortalChrome) drives edits to portalTree; the canvas
-    // just shows the live preview.
-    root.Render()
+    // just shows the live preview. K5: inside the app's host wrapper (its
+    // MaterialTheme), as the native host does on a device.
+    val hostWrapper = entry.hostWrapper
+    if (hostWrapper != null) hostWrapper.Wrap { root.Render() } else root.Render()
   }
 }
