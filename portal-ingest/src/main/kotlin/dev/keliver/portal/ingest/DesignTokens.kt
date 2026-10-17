@@ -243,7 +243,37 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
    * [pending]: imports implied by tokens already in the document, which the
    * next write-back will add.
    */
-  fun bindingProblem(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): String? {
+  fun bindingProblem(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): String? =
+    bindingIssue(text, fileName, tokens, pending)?.message
+
+  /**
+   * Why [bindingProblem] refused, and what can clear it. Write-back only ever
+   * ADDS imports, so a refusal caused by the file's own import text
+   * ([BindingCause.FILE_IMPORT]) clears only when someone edits the file by
+   * hand; every other cause can clear without that (a declaration removed
+   * elsewhere, the document's other tokens changed, a token restored).
+   */
+  class BindingIssue(val message: String, val cause: BindingCause)
+
+  enum class BindingCause {
+    /** The file itself imports a different owner of the simple name (exactly or as an alias). */
+    FILE_IMPORT,
+    /** A token already in the document (its import not yet written back) claims the simple name. */
+    DOCUMENT_IMPORT,
+    /** An earlier token of the same batch claims the simple name. */
+    BATCH,
+    /** The composable's own parameter or local of that name binds first. */
+    SHADOWED,
+    /** The import would rebind a name the file uses (same package, star import, Kotlin default import). */
+    REBINDS,
+    /** The token is not one this file may use. */
+    UNKNOWN,
+    /** In this file's scope the reference would resolve to another declaration. */
+    MISBOUND,
+  }
+
+  /** [bindingProblem] with its [BindingCause]. */
+  fun bindingIssue(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): BindingIssue? {
     val file = runCatching { PsiEnv.parse(fileName, text) }.getOrNull() ?: return null
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
@@ -260,28 +290,38 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     }
     val documentImported = scope.exact.keys - fileImported
     for (token in tokens) {
-      val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
+      val chosen = usable(token.ref, token.import, fileName)?.decl
+        ?: return BindingIssue("unknown design token ${token.ref}", BindingCause.UNKNOWN)
       val simple = token.ref.substringBefore('.')
-      if (simple in shadowed) return "${token.ref} would mean the screen's own `$simple` (a parameter or local), not the token"
+      if (simple in shadowed) {
+        return BindingIssue("${token.ref} would mean the screen's own `$simple` (a parameter or local), not the token", BindingCause.SHADOWED)
+      }
       val fq = token.import
       if (fq != null && !covered(fq)) {
+        val rebinds = "importing $fq would change what $simple means in this file"
         when {
-          scope.exact.containsKey(simple) ->
-            return when (simple) {
-              in fileImported -> "this file imports"
-              in documentImported -> "this screen already uses"
-              else -> "this edit also uses"
-            } + " a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
-          simple in scope.aliases || simple in samePackage(scope) ||
+          scope.exact.containsKey(simple) -> {
+            val (who, cause) = when (simple) {
+              in fileImported -> "this file imports" to BindingCause.FILE_IMPORT
+              in documentImported -> "this screen already uses" to BindingCause.DOCUMENT_IMPORT
+              else -> "this change also uses" to BindingCause.BATCH
+            }
+            return BindingIssue("$who a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq", cause)
+          }
+          simple in scope.aliases -> return BindingIssue(rebinds, BindingCause.FILE_IMPORT)
+          simple in samePackage(scope) ||
             scope.stars.any { simple in packageNames[it].orEmpty() } ||
             (simple in KOTLIN_DEFAULT_IMPORTED && Regex("\\b${Regex.escape(simple)}\\b").containsMatchIn(text)) ->
-            return "importing $fq would change what $simple means in this file"
+            return BindingIssue(rebinds, BindingCause.REBINDS)
           else -> scope = scope.withImport(fq)
         }
       }
       val bound = declFor(token.ref, scope)
       if (bound?.fqName != chosen.fqName) {
-        return "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: "")
+        return BindingIssue(
+          "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: ""),
+          BindingCause.MISBOUND,
+        )
       }
     }
     return null

@@ -271,7 +271,7 @@ fun HomeScreen() {
     assertFalse(svc.dryRun(both).ok)
     val refused = svc.submit(both)
     assertFalse(refused.ok)
-    assertTrue("this edit also uses a different C" in refused.error!!, refused.error)
+    assertTrue("this change also uses a different C" in refused.error!!, refused.error)
     // Two batches inside the write-back window: the second sees the first's pending import.
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(a.handle, "colorArgb", xInk))).ok)
     val second = svc.submit(batch(svc, DocOp.SetProp(b.handle, "colorArgb", qMuted)))
