@@ -29,7 +29,6 @@ import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
 import kotlinx.serialization.encodeToString
 import java.io.File
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.security.MessageDigest
@@ -530,12 +529,6 @@ private fun publish(): Pair<Boolean, String> {
   return true to log.toString()
 }
 
-private fun cors(ex: HttpExchange) {
-  ex.responseHeaders.add("Access-Control-Allow-Origin", "*")
-  ex.responseHeaders.add("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
-  ex.responseHeaders.add("Access-Control-Allow-Headers", "*")
-}
-
 private fun query(ex: HttpExchange): Map<String, String> =
   (ex.requestURI.rawQuery ?: "").split('&').filter { '=' in it }.associate {
     val (k, v) = it.split('=', limit = 2)
@@ -559,8 +552,10 @@ private fun readBoundedBody(ex: HttpExchange, maxBytes: Int): String {
 private fun jsonList(items: List<String>): String =
   items.joinToString(",", "[", "]") { "\"${it.replace("\"", "\\\"")}\"" }
 
+// Every request reaches a handler only through RelayAccess.admit (the server is
+// created through RelayAccess.gate), which also sets the CORS headers for an
+// admitted loopback origin. A preflight that gets here was admitted.
 private fun handle(ex: HttpExchange, block: () -> Unit) {
-  cors(ex)
   if (ex.requestMethod == "OPTIONS") { respond(ex, 204); return }
   runCatching(block).onFailure {
     // A named screen that does not exist is a client error, and saying so is
@@ -579,10 +574,9 @@ private fun handleRecording(ex: HttpExchange, block: () -> Unit) {
       respond(ex, 404)
       return
     }
-    origin?.let { ex.responseHeaders.add("Access-Control-Allow-Origin", it) }
-    ex.responseHeaders.add("Vary", "Origin")
-    ex.responseHeaders.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-    ex.responseHeaders.add("Access-Control-Allow-Headers", "Content-Type, X-Portal-Record-Token")
+    // RelayAccess.admit already named the (loopback) origin; narrow what it allows.
+    ex.responseHeaders.set("Access-Control-Allow-Methods", "POST, OPTIONS")
+    ex.responseHeaders.set("Access-Control-Allow-Headers", "Content-Type, X-Portal-Record-Token")
     respond(ex, 204)
     return
   }
@@ -591,8 +585,6 @@ private fun handleRecording(ex: HttpExchange, block: () -> Unit) {
     respond(ex, 404)
     return
   }
-  origin?.let { ex.responseHeaders.add("Access-Control-Allow-Origin", it) }
-  ex.responseHeaders.add("Vary", "Origin")
   runCatching(block).onFailure {
     println("portal-server: HTTP recording request failed safely")
     runCatching { respond(ex, 500, """{"error":"recording_failed","reason":"internal"}""") }
@@ -889,24 +881,39 @@ fun main(args: Array<String>) {
     )
     kotlin.system.exitProcess(64)
   }
+  // U35: where the relay listens is settled before anything is scanned or
+  // written, and a port something else already answers on is refused, not shared.
+  val bindAddress = runCatching { RelayAccess.bindAddress(System.getenv(RelayAccess.BIND_ENV)) }.getOrElse {
+    System.err.println("portal-server: ${it.message}")
+    kotlin.system.exitProcess(64)
+  }
+  RelayAccess.portTakenBy(PORT)?.let { taken ->
+    System.err.println(
+      "portal-server: port $PORT is already in use (answering on $taken). Stop that process, " +
+        "or set another \"port\" in keliver.portal.json.",
+    )
+    kotlin.system.exitProcess(64)
+  }
   println("portal-server: repo=$repoDir (via $repoDirSource)")
   ensureDefaults()
   httpRecordingService.startupMessage()?.let(::println)
   bootScan()
   reconcileStore()
   startKotlinWatcher()
-  // The relay has write endpoints (edits, publish), so it listens on loopback
-  // only. An emulator (10.0.2.2), a simulator, `adb reverse` and a local tunnel
-  // proxy all arrive there. KELIVER_RELAY_BIND=<address> opts in to another
-  // interface, e.g. this machine's LAN address for a physical phone on the same
-  // Wi-Fi (docs/DEVICE_PROOF.md); everyone on that network can then reach it.
-  val bindAddress = System.getenv("KELIVER_RELAY_BIND")?.trim()?.takeIf { it.isNotEmpty() }
-    ?.let { InetAddress.getByName(it) } ?: InetAddress.getLoopbackAddress()
-  val server = HttpServer.create(InetSocketAddress(bindAddress, PORT), 0)
-  println(
-    "portal-server: listening on ${bindAddress.hostAddress}:$PORT" +
-      if (bindAddress.isLoopbackAddress) "" else " — NOT loopback: anyone who can reach this address can edit and publish",
-  )
+  // The relay has write endpoints (edits, write-back, publish), so it listens on
+  // 127.0.0.1 only. An emulator (10.0.2.2), a simulator and `adb reverse` all
+  // arrive there. KELIVER_RELAY_BIND=all opts in to every interface, for a
+  // physical phone on the same Wi-Fi (docs/DEVICE_PROOF.md); everyone on that
+  // network can then reach it. Every context passes RelayAccess.admit (U36).
+  val server = RelayAccess.gate(HttpServer.create(InetSocketAddress(bindAddress, PORT), 0))
+  if (bindAddress == RelayAccess.LOOPBACK) {
+    println("portal-server: listening on 127.0.0.1:$PORT (loopback only)")
+  } else {
+    println(
+      "portal-server: listening on every interface (*:$PORT, ${RelayAccess.BIND_ENV}=all) — NOT loopback: " +
+        "anyone on this network can reach its edit and publish endpoints",
+    )
+  }
 
   // W6: POST /report from production hosts built to report here; counts at
   // GET /reports and /reports/view (HostReports.kt). Kept under the store.
@@ -1006,8 +1013,9 @@ fun main(args: Array<String>) {
     }
   }
 
-  // #16 H2: explicit, loopback-only recording. Unlike normal editor routes,
-  // these never receive wildcard CORS and return 404 for every failed guard.
+  // #16 H2: explicit, loopback-only recording. Past RelayAccess.admit (which
+  // every route passes), these also require a loopback peer, an origin from
+  // httpRecording.allowedOrigins and the token, and return 404 for every failed guard.
   server.createContext("/http-record/sessions") { ex ->
     handleRecording(ex) {
       if (ex.requestMethod != "POST") {
@@ -1155,14 +1163,20 @@ fun main(args: Array<String>) {
       respond(ex, code, DocJson.encodeToString(ack))
     }
   }
+  // POST only: they change the document, and a GET is what a page's <img> sends.
   server.createContext("/undo") { ex ->
-    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).undo(session(ex)))) }
+    handle(ex) {
+      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
+      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).undo(session(ex))))
+    }
   }
   server.createContext("/redo") { ex ->
-    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex)))) }
+    handle(ex) {
+      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
+      respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex))))
+    }
   }
   server.createContext("/doc-events") { ex -> // SSE: {"version":N} on every change
-    cors(ex)
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)
