@@ -118,7 +118,9 @@ class FileScope internal constructor(
           else -> aliases += d.aliasName!!
         }
       }
-      val own = file.declarations.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
+      // Classifiers, properties and typealiases can bind `C` in `C.X` or a bare value
+      // reference; a function cannot (functions live in a separate namespace).
+      val own = file.declarations.filter { it !is KtNamedFunction }.mapNotNull { (it as? KtNamedDeclaration)?.name }.toSet()
       return FileScope(file.packageFqName.asString().ifEmpty { null }, fileName, exact, stars, aliases, own)
     }
   }
@@ -174,14 +176,17 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
 
   /**
    * The token a client names by [ref] and [importFq] that a file [fileName]
-   * may use: of a literal kind, not private in its object, and either
-   * exported or declared in a private object of that same file. Ambiguity is
-   * not refused here — [bindingProblem] checks what the reference means in
-   * the target file.
+   * may use — Kotlin's visibility from that file's top-level code: of a
+   * literal kind; a constant private in its object never (only that object
+   * sees it); a private top-level constant, or one in a private object, only
+   * in its own file. Ambiguity is not refused here — [bindingProblem] checks
+   * what the reference means in the target file.
    */
   fun usable(ref: String, importFq: String?, fileName: String): TokenEntry? = entries.firstOrNull { e ->
-    e.decl.ref == ref && e.decl.importFq == importFq && e.isLiteralKind && !e.decl.isPrivate &&
-      (!e.decl.ownerPrivate || e.decl.fileName == fileName)
+    val d = e.decl
+    val sameFile = d.fileName == fileName
+    d.ref == ref && d.importFq == importFq && e.isLiteralKind &&
+      (!d.isPrivate || (d.owner == null && sameFile)) && (!d.ownerPrivate || sameFile)
   }
 
   /** Structural equality of what resolution can observe — the relay re-ingests when this changes. */
@@ -217,34 +222,60 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     return if (m.groupValues[2].isEmpty()) bare(m.groupValues[1], scope) else qualified(m.groupValues[1], m.groupValues[2], scope)
   }
 
+  /** [bindingProblem] for one token. */
+  fun bindingProblem(text: String, fileName: String, token: PropValue.Token): String? =
+    bindingProblem(text, fileName, listOf(token))
+
   /**
-   * K2 (S3): why writing [token] into the file [text] (identity [fileName])
-   * would not mean the declaration the client chose — or null when it would.
-   * The token's import is what write-back adds; adding it must not change
-   * what an existing reference in the file means either.
+   * K2 (S3): why writing [tokens] (in order) into the file [text] (identity
+   * [fileName]) would not mean the declarations the client chose — or null
+   * when every one would. Write-back adds each token's import, and adding it
+   * must not change what any existing reference means:
+   *  - the composable's own names (parameters, lambda parameters, locals —
+   *    [shadowedNames]) bind first, so a token named like one is refused;
+   *  - a file that already imports a different owner of that simple name, or
+   *    an earlier token of this batch / [pending] import (the document may be
+   *    ahead of the file) that claimed it, is refused;
+   *  - an import that would rebind a name the file already uses — declared
+   *    in its package or in the file, star-imported, aliased, or a Kotlin
+   *    default import the file mentions — is refused.
+   * [pending]: imports implied by tokens already in the document, which the
+   * next write-back will add.
    */
-  fun bindingProblem(text: String, fileName: String, token: PropValue.Token): String? {
-    val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
+  fun bindingProblem(text: String, fileName: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet()): String? {
     val file = runCatching { PsiEnv.parse(fileName, text) }.getOrNull() ?: return null
+    val fn = file.declarations.filterIsInstance<KtNamedFunction>()
+      .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+    val shadowed = fn?.let(::shadowedNames).orEmpty()
     var scope = FileScope.of(file, fileName)
-    val simple = token.ref.substringBefore('.')
-    val fq = token.import
-    if (fq != null) {
-      val covered = scope.exact[simple] == fq || fq.substringBeforeLast('.') in scope.stars ||
-        fq.substringBeforeLast('.') == scope.packageName
-      when {
-        covered -> {}
-        scope.exact.containsKey(simple) ->
-          return "this file imports a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
-        simple in scope.aliases || simple in scope.ownNames || simple in samePackage(scope) ||
-          scope.stars.any { simple in packageNames[it].orEmpty() } ->
-          return "importing $fq would change what $simple means in this file"
-        else -> scope = scope.withImport(fq)
+    fun covered(fq: String) = scope.exact[fq.substringAfterLast('.')] == fq ||
+      fq.substringBeforeLast('.') in scope.stars || fq.substringBeforeLast('.') == scope.packageName
+    // Imports the document already implies (written back soon) count as present.
+    for (fq in pending.sorted()) {
+      if (!covered(fq) && !scope.exact.containsKey(fq.substringAfterLast('.'))) scope = scope.withImport(fq)
+    }
+    for (token in tokens) {
+      val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
+      val simple = token.ref.substringBefore('.')
+      if (simple in shadowed) return "${token.ref} would mean the screen's own `$simple` (a parameter or local), not the token"
+      val fq = token.import
+      if (fq != null && !covered(fq)) {
+        when {
+          scope.exact.containsKey(simple) ->
+            return "this file imports a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
+          simple in scope.aliases || simple in samePackage(scope) ||
+            scope.stars.any { simple in packageNames[it].orEmpty() } ||
+            (simple in KOTLIN_DEFAULT_IMPORTED && Regex("\\b${Regex.escape(simple)}\\b").containsMatchIn(text)) ->
+            return "importing $fq would change what $simple means in this file"
+          else -> scope = scope.withImport(fq)
+        }
+      }
+      val bound = declFor(token.ref, scope)
+      if (bound?.fqName != chosen.fqName) {
+        return "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: "")
       }
     }
-    val bound = declFor(token.ref, scope)
-    return if (bound?.fqName == chosen.fqName) null
-    else "${token.ref} does not mean ${chosen.fqName} in this file" + (bound?.let { " (it means ${it.fqName})" } ?: "")
+    return null
   }
 
   private fun samePackage(scope: FileScope): Set<String> = packageNames[scope.packageName].orEmpty() + scope.ownNames
@@ -386,6 +417,31 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     private val REF = Regex("^([A-Za-z_][A-Za-z0-9_]*)(?:\\.([A-Za-z_][A-Za-z0-9_]*))?$")
     internal val LITERAL_KINDS = setOf("String", "Int", "Double", "Boolean")
 
+    /**
+     * Classifier names every Kotlin file sees through default imports
+     * (kotlin.*, kotlin.collections.*, kotlin.ranges.*, kotlin.text.*,
+     * kotlin.sequences.*, kotlin.comparisons.*, kotlin.annotation.*, and
+     * common java.lang.* on the JVM): an explicit import of the same simple
+     * name would rebind every existing use of it.
+     */
+    internal val KOTLIN_DEFAULT_IMPORTED: Set<String> = setOf(
+      "Any", "Array", "Boolean", "BooleanArray", "Byte", "ByteArray", "Char", "CharArray", "CharSequence",
+      "Comparable", "Comparator", "Deprecated", "Double", "DoubleArray", "Enum", "Error", "Exception", "Float",
+      "FloatArray", "Function", "Int", "IntArray", "Lazy", "Long", "LongArray", "Nothing", "Number", "Pair",
+      "Result", "Short", "ShortArray", "String", "Suppress", "Throwable", "Triple", "UByte", "UInt", "ULong",
+      "UShort", "Unit", "ArithmeticException", "IllegalArgumentException", "IllegalStateException",
+      "IndexOutOfBoundsException", "NoSuchElementException", "NullPointerException", "RuntimeException",
+      "UnsupportedOperationException", "ClassCastException", "NumberFormatException",
+      "AbstractCollection", "AbstractList", "AbstractMap", "AbstractSet", "ArrayDeque", "ArrayList", "Collection",
+      "HashMap", "HashSet", "Iterable", "Iterator", "LinkedHashMap", "LinkedHashSet", "List", "ListIterator", "Map",
+      "MutableCollection", "MutableIterable", "MutableIterator", "MutableList", "MutableListIterator", "MutableMap",
+      "MutableSet", "RandomAccess", "Set", "Grouping", "IndexedValue",
+      "CharRange", "ClosedRange", "IntProgression", "IntRange", "LongProgression", "LongRange", "OpenEndRange",
+      "Appendable", "CharCategory", "Charsets", "MatchGroup", "MatchResult", "Regex", "RegexOption", "StringBuilder",
+      "Sequence", "Annotation", "Retention", "Target", "MustBeDocumented", "Repeatable",
+      "Math", "System", "Thread", "Object", "Runnable", "Process", "StrictMath", "Character", "Integer",
+    )
+
     /** Scan sources ([fileName] to text) for token declarations. A file that does not parse contributes nothing. */
     fun scan(sources: List<Pair<String, String>>): TokenTable = of(sources.mapNotNull { (name, text) -> scanFile(name, text) })
 
@@ -408,7 +464,7 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
           }
         }
       }
-      return TokenFileScan(fileName, scope.packageName, decls, scope.ownNames)
+      return TokenFileScan(fileName, scope.packageName, decls, scope.ownNames) // classifiers/properties/typealiases
     }
 
     private fun declOf(p: KtProperty, owner: String?, ownerPrivate: Boolean, scope: FileScope): TokenDecl? {

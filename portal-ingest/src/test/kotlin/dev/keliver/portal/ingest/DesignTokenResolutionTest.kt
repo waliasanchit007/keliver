@@ -214,4 +214,60 @@ class DesignTokenResolutionTest {
       assertTrue("import $imp\n" in m3, m3)
     }
   }
+
+  // ── re-review: the screen's own names, one scope per batch, default imports, functions ──
+
+  @Test fun aTokenNamedLikeTheScreensOwnNameIsRefused() {
+    val inkTop = PropValue.Token("Ink", lit(3), "app.components.Ink")
+    val table = TokenTable.scan(listOf("app/components/T.kt" to "package app.components\n\nconst val Ink = 3\n"))
+    val local = screen("val Ink = 1\nStyledText(text = \"a\")", emptyList(), pkg = "app.other")
+    assertNotNull(table.bindingProblem(local, "app/other/S.kt", inkTop))
+    val param = screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other", params = "C: Int")
+    assertNotNull(tokens.bindingProblem(param, "app/other/S.kt", ink))
+    assertNull(tokens.bindingProblem(screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other"), "app/other/S.kt", ink))
+  }
+
+  @Test fun twoOwnersWithOneSimpleNameCannotBothBeImported() {
+    val two = TokenTable.scan(
+      listOf(
+        "x/C.kt" to "package x\nobject C { const val Ink = 9 }\n",
+        "q/C.kt" to "package q\nobject C { const val Muted = 8 }\n",
+      ),
+    )
+    val plain = screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other")
+    val xInk = PropValue.Token("C.Ink", lit(9), "x.C")
+    val qMuted = PropValue.Token("C.Muted", lit(8), "q.C")
+    assertNull(two.bindingProblem(plain, "app/other/S.kt", listOf(xInk)))
+    // In one batch.
+    assertNotNull(two.bindingProblem(plain, "app/other/S.kt", listOf(xInk, qMuted)))
+    // Across batches, while the file still lacks the first import: the document's tokens count.
+    assertNotNull(two.bindingProblem(plain, "app/other/S.kt", listOf(qMuted), pending = setOf("x.C")))
+    assertNull(two.bindingProblem(plain, "app/other/S.kt", listOf(xInk), pending = setOf("x.C")))
+  }
+
+  @Test fun importingADefaultImportedNameTheFileUsesIsRefused() {
+    val pair = TokenTable.scan(listOf("app/components/Pair.kt" to "package app.components\nobject Pair { const val Gap = 4 }\n"))
+    val token = PropValue.Token("Pair.Gap", lit(4), "app.components.Pair")
+    val uses = screen("val p = Pair(1, 2)\nStyledText(text = \"a\")", emptyList(), pkg = "app.other")
+    assertNotNull(pair.bindingProblem(uses, "app/other/S.kt", token))
+    assertNull(pair.bindingProblem(screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other"), "app/other/S.kt", token))
+  }
+
+  @Test fun aFunctionOfTheSameNameDoesNotBlockAToken() {
+    val withFn = TokenTable.scan(
+      listOf(
+        "app/components/Tokens.kt" to tokensKt,
+        "app/screens/Fns.kt" to "package app.screens\nfun C(): Int = 1\nfun label(): String = \"x\"\n",
+      ),
+    )
+    val starred = screen("Column {\n  StyledText(text = \"a\", colorArgb = C.Ink)\n}", listOf("app.components.*"))
+    assertEquals(listOf("C.Ink"), tokensIn(starred, withFn).map { it.ref })
+  }
+
+  @Test fun aPrivateTopLevelConstantIsUsableInItsOwnFileOnly() {
+    val text = "package app.screens\n\nprivate const val Accent = 5\n"
+    val table = TokenTable.scan(listOf("app/screens/home.kt" to text))
+    assertNotNull(table.usable("Accent", "app.screens.Accent", "app/screens/home.kt"))
+    assertNull(table.usable("Accent", "app.screens.Accent", "app/screens/other.kt"))
+  }
 }
