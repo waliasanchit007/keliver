@@ -10,6 +10,11 @@
 #   • editor         (:8096) — the wasm portal editor (open in a browser)
 #   • zipline serve  (:8080) — the dev guest bundle for on-device live preview
 #
+# KELIVER_RELAY_BIND=all makes portal-server listen on every network interface
+# (a physical phone on the same Wi-Fi); unset, it listens on 127.0.0.1 only.
+# The dev guest server on :8080 (Zipline's serveDevelopmentZipline) listens on
+# every interface either way; it serves the read-only dev guest bundle.
+#
 # Ctrl-C stops everything.
 set -euo pipefail
 
@@ -25,6 +30,20 @@ SERVER_PORT=$(python3 -c "import json;print(json.load(open('$ROOT/keliver.portal
 ZIPLINE_PORT=8080
 WITH_ANDROID=false
 [[ "${1:-}" == "--android" ]] && WITH_ANDROID=true
+
+# U35: refuse what the relay would refuse, before building anything.
+RELAY_BIND="$(printf '%s' "${KELIVER_RELAY_BIND:-}" | tr -d '[:space:]')"
+case "$RELAY_BIND" in
+  "") ;;
+  all)
+    printf "\033[1;33m!  KELIVER_RELAY_BIND=all: portal-server listens on EVERY network interface, not only this machine.\033[0m\n" >&2
+    printf "\033[1;33m!  Anyone on this network can reach its edit and publish endpoints. Use it only on a network you trust.\033[0m\n" >&2
+    ;;
+  *)
+    echo "keliver-dev: KELIVER_RELAY_BIND=$KELIVER_RELAY_BIND is not supported: leave it unset (this machine only) or set it to 'all'" >&2
+    exit 64
+    ;;
+esac
 
 pids=()
 cleaned=false
