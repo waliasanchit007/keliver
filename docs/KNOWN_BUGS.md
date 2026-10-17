@@ -907,10 +907,12 @@ server applies it to every context, including ones registered outside
   unless a browser marked it `Sec-Fetch-Site: cross-site` (a page's `<img>` or
   link).
 
-Refusals are 403, and the handler does not run. `/ops`, `/undo` and `/redo`,
-which change the document, take POST only, so no GET changes anything (a
-browser marks only some cross-site GETs, see `RelayAccess.admit`). The `/http-record*` endpoints keep their
-own stricter checks (loopback peer, configured origin, token) after this one.
+Refusals are 403, and the handler does not run. Every endpoint that changes
+state refuses GET (`/ops`, `/undo` and `/redo` were the ones that did not),
+because a browser marks only some cross-site GETs (see `RelayAccess.admit`);
+`RelayAccessTest` fails if a new endpoint neither checks its method nor is
+listed as read-only. The `/http-record*` endpoints keep their own stricter
+checks (loopback peer, configured origin, token) after this one.
 
 **Affects** every released tools bundle up to and including 0.3.10. Until a
 release carries the fix, don't keep the relay running while browsing other

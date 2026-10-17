@@ -243,13 +243,18 @@ class RelayAccessTest {
   @Test
   fun everyServerTheRelayCreatesIsGated() {
     val creates = relaySources.flatMap { f ->
-      Regex("""(\S*)HttpServer\.create\(""").findAll(f.readText()).map { f.name to it.groupValues[1] }.toList()
+      Regex("""(\S*)Https?Server\.create\(""").findAll(f.readText()).map { f.name to it.groupValues[1] }.toList()
     }
     assertTrue(creates.isNotEmpty(), "the scan found the relay's server")
     for ((file, prefix) in creates) assertTrue(prefix.endsWith("RelayAccess.gate("), "$file: an ungated HttpServer")
   }
 
-  /** Read-only: they answer every method the same way and change nothing. */
+  /**
+   * Read-only: they answer every method the same way, and no request can make
+   * them change anything. (/doc and /doc-events may materialise an existing
+   * screen's store mirror and .kt on first touch: catch-up from state the
+   * relay already holds, the same for any request.)
+   */
   private val readOnlyContexts = setOf(
     "/devstate", "/capabilities", "/runtime-metadata", "/preview-build", "/components", "/flow",
     "/doc", "/doc-events", "/publickey", "/bundles", "/reports",
@@ -260,9 +265,11 @@ class RelayAccessTest {
     // A page's GET to http://10.0.2.2 or a LAN address carries no Sec-Fetch-Site
     // (RelayAccess.admit), so a handler that changes state on GET is reachable.
     val seen = mutableSetOf<String>()
-    for (f in relaySources) {
+    for (f in relaySources.filter { it.name != "RelayAccess.kt" }) { // the gate's own forwarding
       val text = f.readText()
-      val starts = Regex("""server\.createContext\("([^"]+)"\)""").findAll(text).toList()
+      val starts = Regex("""\b\w+\.createContext\(\s*"([^"]+)"""").findAll(text).toList()
+      // Any other form (a path in a variable, another call shape) would hide a context from this scan.
+      assertEquals(Regex("""\.createContext\(""").findAll(text).count(), starts.size, "${f.name}: a context this scan cannot read")
       for ((i, m) in starts.withIndex()) {
         val path = m.groupValues[1]
         seen += path
