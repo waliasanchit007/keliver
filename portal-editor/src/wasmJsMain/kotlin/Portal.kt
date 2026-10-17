@@ -11,6 +11,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.Token
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
 import dev.keliver.portal.collectPreviewBindingKeys
@@ -1271,13 +1272,16 @@ private fun loadRuntimeMetadata() {
   xhr.send()
 }
 
-/** C3: pull the active project's component registry for palette + preview. */
+/** C3: pull the active project's component registry (and, K2, its design tokens) for palette + preview. */
 private fun fetchComponents(then: (() -> Unit)? = null) {
   if (playground) { then?.invoke(); return }
   serverGet("/components?project=$currentProject") { txt ->
     setEditorComponents(parseComponents(txt))
     renderPalette(paletteFilter)
-    then?.invoke()
+    serverGet("/tokens?project=$currentProject") { tokens ->
+      setEditorTokens(parseTokens(tokens))
+      then?.invoke()
+    }
   }
 }
 
@@ -1572,13 +1576,47 @@ private fun renderBindings() {
 
 private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKind.Double, PropKind.Color)
 
-/** One editable property row; [keyPrefix] namespaces modifier props ("mod.X."). */
+/**
+ * One editable property row; [keyPrefix] namespaces modifier props ("mod.X.").
+ * K2: wrapped with the row's design-token picker (opened from the ◆ button).
+ */
 private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
+  val wrap = Ui.el("div")
+  val picker = Ui.el("div")
+  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker))
+  wrap.appendChild(picker)
+  return wrap
+}
+
+private fun propRowInner(
+  nodeId: Int,
+  nodeType: String,
+  props: Map<String, Any?>,
+  name: String,
+  kind: PropKind,
+  label: String,
+  keyPrefix: String,
+  picker: HTMLElement,
+): HTMLElement {
   val key = keyPrefix + name
   val rowEl = Ui.el("div", "row")
   val lab = Ui.el("label", "", label)
   lab.setAttribute("title", label)
   rowEl.appendChild(lab)
+
+  // K2: a prop bound to a design token shows the token (reference + value),
+  // can switch token, or detach to the literal value.
+  val token = props[key] as? Token
+  if (token != null) {
+    rowEl.appendChild(tokenChip(token.ref, token.value, kind))
+    rowEl.appendChild(tokenButton(nodeId, nodeType, key, picker))
+    rowEl.appendChild(
+      Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
+        .also { it.setAttribute("title", "replace ${token.ref} with its value (${token.value})") },
+    )
+    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
+    return rowEl
+  }
 
   // P3: bound props show a field-name input instead of a literal editor.
   val bound = props[key] as? Bind
@@ -1610,6 +1648,7 @@ private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, nam
     area.value = text
     area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
     rowEl.appendChild(area)
+    tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
     if (keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
     return rowEl
   }
@@ -1668,9 +1707,78 @@ private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, nam
     }
   }
   rowEl.appendChild(input)
+  tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
   // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
   if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
+}
+
+/** K2: a token's chip — a colour swatch for a colour, its reference, and its value. */
+private fun tokenChip(ref: String, value: Any?, kind: PropKind): HTMLElement {
+  val chip = Ui.el("span", "pill")
+  chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden;")
+  chip.setAttribute("title", "$ref = $value")
+  if (kind == PropKind.Color && value is Int) {
+    val sw = Ui.el("span")
+    sw.setAttribute("style", "width:12px; height:12px; border-radius:3px; flex-shrink:0; border:1px solid var(--border); background:${argbToHex(value)};")
+    chip.appendChild(sw)
+  }
+  chip.appendChild(Ui.el("span", "", "◆ $ref"))
+  val shown = if (kind == PropKind.Color && value is Int) argbToHex(value) else value.toString()
+  chip.appendChild(Ui.el("span", "muted", shown).also { it.setAttribute("style", "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;") })
+  return chip
+}
+
+/** K2: the ◆ button that opens [key]'s token picker — only when some token fits the prop. */
+private fun tokenButtonIfAny(nodeId: Int, nodeType: String, key: String, picker: HTMLElement): HTMLElement? =
+  if (tokensFor(nodeType, key, editorComponents).isEmpty()) null else tokenButton(nodeId, nodeType, key, picker)
+
+private fun tokenButton(nodeId: Int, nodeType: String, key: String, picker: HTMLElement): HTMLElement =
+  Ui.button("◆", "btn icon") {
+    if (picker.firstChild != null) Ui.clear(picker) else renderTokenPicker(nodeId, nodeType, key, picker)
+  }.also { it.setAttribute("title", "use a design token") }
+
+/** K2: a searchable list of the tokens that fit [key]; choosing one binds the prop to it. */
+private fun renderTokenPicker(nodeId: Int, nodeType: String, key: String, picker: HTMLElement) {
+  Ui.clear(picker)
+  val box = Ui.el("div", "card")
+  val search = Ui.input()
+  search.setAttribute("type", "text")
+  search.setAttribute("placeholder", "search tokens")
+  search.setAttribute("style", "width:100%; margin-bottom:4px;")
+  val list = Ui.el("div")
+  list.setAttribute("style", "max-height:180px; overflow:auto;")
+  val kind = when (key.startsWith("mod.")) {
+    true -> modifierSpecs.firstOrNull { it.name == key.removePrefix("mod.").substringBefore('.') }
+      ?.props?.firstOrNull { it.name == key.removePrefix("mod.").substringAfter('.') }?.kind
+    false -> (editorComponents.spec(nodeType)?.props ?: editableProps(nodeType)).firstOrNull { it.name == key }?.kind
+  } ?: PropKind.Text
+  fun fill() {
+    Ui.clear(list)
+    val fits = tokensFor(nodeType, key, editorComponents, query = search.value)
+    if (fits.isEmpty()) list.appendChild(Ui.el("div", "muted", "no matching token"))
+    fits.forEach { t ->
+      val row = Ui.el("div", "pal-row")
+      row.setAttribute("title", listOfNotNull(t.ref, t.file?.let { "in $it" }).joinToString(" "))
+      row.appendChild(tokenChip(t.ref, t.value, kind))
+      row.addEventListener("click", { _ ->
+        val op = if (key.startsWith("mod.")) {
+          DocOp.SetModifier(Handle(nodeId.toLong()), key.removePrefix("mod."), t.toPropValue())
+        } else {
+          DocOp.SetProp(Handle(nodeId.toLong()), key, t.toPropValue())
+        }
+        Ui.clear(picker)
+        sendOps(listOf(op))
+      })
+      list.appendChild(row)
+    }
+  }
+  search.addEventListener("input", { _ -> fill() })
+  box.appendChild(search)
+  box.appendChild(list)
+  picker.appendChild(box)
+  fill()
+  search.focus()
 }
 
 private fun bindButton(nodeId: Int, key: String, name: String): HTMLElement =
@@ -1795,14 +1903,17 @@ private fun findParentId(root: WidgetNode, childId: Int): Int? {
 }
 
 private fun editProp(id: Int, name: String, value: Any?) {
-  val op = if (name.startsWith("mod.")) {
+  // refreshPanels=false: keeps input focus while typing; the preview updates live.
+  sendOps(listOf(literalOp(id, name, value)), refreshPanels = false)
+}
+
+/** The op setting wire key [name] (a prop, or "mod.X.p") of node [id] to the literal [value]. */
+private fun literalOp(id: Int, name: String, value: Any?): DocOp =
+  if (name.startsWith("mod.")) {
     DocOp.SetModifier(Handle(id.toLong()), name.removePrefix("mod."), lit(value))
   } else {
     DocOp.SetProp(Handle(id.toLong()), name, lit(value))
   }
-  // refreshPanels=false: keeps input focus while typing; the preview updates live.
-  sendOps(listOf(op), refreshPanels = false)
-}
 
 private fun argbToHex(argb: Int): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
 private fun hexToArgb(hex: String): Int = (0xFF shl 24) or (hex.removePrefix("#").toIntOrNull(16) ?: 0)

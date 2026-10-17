@@ -66,8 +66,9 @@ public fun propSourceType(nodeType: String, key: String, components: ComponentRe
   }
   widgetPropSourceTypes["$nodeType.$key"]?.let { return it }
   val comp = components.spec(nodeType) ?: return null
-  return comp.paramTypes[key]?.trim()?.removeSuffix("?")?.trim()
-    ?.takeIf { comp.props.any { p -> p.name == key } }
+  val prop = comp.props.firstOrNull { it.name == key } ?: return null
+  // A registry built without signatures (the editor's) still knows the scalar kind.
+  return comp.paramTypes[key]?.trim()?.removeSuffix("?")?.trim() ?: kotlinTypeOf(prop.kind)
 }
 
 /**
