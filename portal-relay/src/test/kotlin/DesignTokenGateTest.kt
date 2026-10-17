@@ -116,7 +116,6 @@ fun HomeScreen() {
 
   @Test fun aTokenMustMeanTheChosenDeclarationInTheTargetFile() {
     // (a) the file imports a different C.
-    File(root, "x").mkdirs()
     val svc = service(home(imports = "import x.C\n", body = "StyledText(text = \"a\")"))
     assertRefused(svc, DocOp.SetProp(text(svc).handle, "colorArgb", token("C.Ink", 0)), "imports a different C")
     // (b) the file's own package has an object C: importing app.components.C would rebind C.Muted.
@@ -260,8 +259,6 @@ fun HomeScreen() {
   }
 
   @Test fun twoOwnersWithOneSimpleNameAreRefusedInABatchAndAcrossTheWriteWindow() {
-    File(root, "x").mkdirs()
-    File(root, "q").mkdirs()
     val svc = service(home(imports = "", body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
     File(screens, "X.kt").writeText("package x\nobject C { const val Ink = 9 }\n")
     File(components, "Q.kt").writeText("package q\nobject C { const val Muted = 8 }\n")
@@ -272,12 +269,14 @@ fun HomeScreen() {
     // One batch, two owners named C: refused (the imports would clash).
     val both = batch(svc, DocOp.SetProp(a.handle, "colorArgb", xInk), DocOp.SetProp(b.handle, "colorArgb", qMuted))
     assertFalse(svc.dryRun(both).ok)
-    assertFalse(svc.submit(both).ok)
+    val refused = svc.submit(both)
+    assertFalse(refused.ok)
+    assertTrue("this edit also uses a different C" in refused.error!!, refused.error)
     // Two batches inside the write-back window: the second sees the first's pending import.
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(a.handle, "colorArgb", xInk))).ok)
     val second = svc.submit(batch(svc, DocOp.SetProp(b.handle, "colorArgb", qMuted)))
     assertFalse(second.ok)
-    assertTrue("different C" in second.error!!, second.error)
+    assertTrue("this screen already uses a different C (x.C)" in second.error!!, second.error)
   }
 
   @Test fun aSameSizeEditWithTheSameMtimeIsReparsedAndADeletedFileForgotten() {
@@ -288,9 +287,15 @@ fun HomeScreen() {
     f.setLastModified(stamp)
     assertTrue(rebuild(), "a content change is seen even when size and mtime are unchanged")
     assertEquals(-14737634, Tokens.table(project).entries.single { it.decl.ref == "C.Ink" }.value)
+    val content = f.readText()
     f.delete()
     assertTrue(rebuild())
     assertTrue(Tokens.table(project).entries.none { it.decl.ref == "C.Ink" })
+    // Forgotten = evicted from the scan cache: the same bytes coming back are parsed again.
+    val before = Tokens.parses.get()
+    f.writeText(content)
+    assertTrue(rebuild())
+    assertEquals(before + 1, Tokens.parses.get(), "a deleted file's cache entry was evicted")
   }
 
   @Test fun aTokenNamedLikeALocalOfTheTargetScreenIsRefused() {
@@ -317,5 +322,134 @@ fun HomeScreen() {
       (n as? DocNode.Widget)?.let { listOf(it) + it.children.flatMap(::widgets) }.orEmpty()
     val styled = widgets(svc.doc.root).first { it.type == "StyledText" }
     assertRefused(svc, DocOp.SetProp(styled.handle, "colorArgb", token("Ink", 3, "app.components.Ink")), "screen's own")
+  }
+
+  // ── undo/redo run the same binding check as an edit ──
+
+  private fun widgets(svc: DocumentService) = (svc.doc.root as DocNode.Widget).children.map { it as DocNode.Widget }
+
+  private fun asSession(svc: DocumentService, session: String, op: DocOp) =
+    svc.submit(OpBatch(svc.doc.version, OpEnvelope(session, 0L), listOf(op)))
+
+  /** A `C` in the screen's own package: it beats `import app.components.*`. */
+  private fun samePackageC() =
+    File(screens, "Local.kt").apply { writeText("package app.screens\n\nobject C { const val Ink = 3 }\n") }
+
+  @Test fun anUndoIsBlockedWhenASamePackageOwnerNowBeatsTheStarImport() {
+    // Scenario A: the screen reaches C through `import app.components.*`.
+    val svc = service(home(imports = "import app.components.*\n"))
+    val node = text(svc)
+    assertEquals(token("C.Ink", -14737633), node.props["colorArgb"])
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "colorArgb", lit(1)))).ok) // detach
+    val version = svc.doc.version
+    val local = samePackageC()
+    rebuild()
+    val undone = svc.undo("t")
+    assertFalse(undone.ok, "undo restored C.Ink, which now means app.screens.C.Ink")
+    assertTrue(undone.error!!.startsWith("undo blocked (step kept): "), undone.error)
+    assertTrue("does not mean app.components.C.Ink" in undone.error!!, undone.error)
+    assertEquals(version, svc.doc.version, "the document is untouched")
+    assertEquals(lit(1), text(svc).props["colorArgb"])
+    assertEquals("nothing to redo", svc.redo("t").error, "nothing was pushed onto the redo stack")
+    // The entry was kept: once nothing clashes the same undo applies.
+    local.delete()
+    rebuild()
+    assertTrue(svc.undo("t").ok, "the kept step applies once nothing clashes")
+    assertEquals(token("C.Ink", -14737633), text(svc).props["colorArgb"])
+  }
+
+  @Test fun aRedoIsBlockedWhenASamePackageOwnerNowBeatsTheStarImport() {
+    val svc = service(home(imports = "import app.components.*\n", body = "StyledText(text = \"a\", colorArgb = 1)"))
+    val node = text(svc)
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "colorArgb", token("C.Ink", 0)))).ok)
+    assertTrue(svc.undo("t").ok)
+    val local = samePackageC()
+    rebuild()
+    val version = svc.doc.version
+    val redone = svc.redo("t")
+    assertFalse(redone.ok)
+    assertTrue(redone.error!!.startsWith("redo blocked (step kept): "), redone.error)
+    assertTrue("does not mean app.components.C.Ink" in redone.error!!, redone.error)
+    assertEquals(version, svc.doc.version)
+    assertEquals(lit(1), text(svc).props["colorArgb"])
+    local.delete()
+    rebuild()
+    assertTrue(svc.redo("t").ok, "the kept step applies once nothing clashes")
+    assertEquals(token("C.Ink", -14737633), text(svc).props["colorArgb"])
+  }
+
+  /**
+   * Scenario B's setup: two StyledTexts, `x.C.Ink` and `q.C.Muted` declared,
+   * and a read-only screen file — every step happens inside the write-back
+   * window, as when two sessions act within one debounce.
+   */
+  private fun twoOwners(): DocumentService {
+    val svc = service(home(imports = "", body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
+    File(screens, "X.kt").writeText("package x\nobject C { const val Ink = 9 }\n")
+    File(components, "Q.kt").writeText("package q\nobject C { const val Muted = 8 }\n")
+    rebuild()
+    homeFile.setWritable(false)
+    return svc
+  }
+
+  @Test fun aRedoAcrossSessionsNeverAddsASecondOwnerOfASimpleName() {
+    val svc = twoOwners()
+    try {
+      val (a, b) = widgets(svc)
+      // Session S sets b = q.C.Muted, then undoes it before it is written.
+      assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "colorArgb", token("C.Muted", 8, "q.C"))).ok)
+      assertTrue(svc.undo("S").ok)
+      // Session T sets a = x.C.Ink: nothing in the document uses a C now, so it is accepted.
+      assertTrue(asSession(svc, "T", DocOp.SetProp(a.handle, "colorArgb", token("C.Ink", 9, "x.C"))).ok)
+      val version = svc.doc.version
+      // S redoes: q.C.Muted would need `import q.C` beside the pending `import x.C`.
+      val redone = svc.redo("S")
+      assertFalse(redone.ok, "redo would put two owners named C into one screen")
+      assertTrue(redone.error!!.startsWith("redo blocked (step kept): "), redone.error)
+      assertTrue("this screen already uses a different C (x.C)" in redone.error!!, redone.error)
+      assertEquals(version, svc.doc.version)
+      // Once T's token is undone, S's kept redo applies.
+      assertTrue(svc.undo("T").ok)
+      assertTrue(svc.redo("S").ok)
+      assertEquals(token("C.Muted", 8, "q.C"), widgets(svc)[1].props["colorArgb"])
+    } finally {
+      homeFile.setWritable(true)
+    }
+  }
+
+  @Test fun anUndoAcrossSessionsNeverAddsASecondOwnerOfASimpleName() {
+    val svc = twoOwners()
+    try {
+      val (a, b) = widgets(svc)
+      // Session S sets b = q.C.Muted and then detaches it: its undo restores q.C.Muted.
+      assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "colorArgb", token("C.Muted", 8, "q.C"))).ok)
+      assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "colorArgb", lit(2))).ok)
+      // Session T sets a = x.C.Ink: b no longer uses q.C, so it is accepted.
+      assertTrue(asSession(svc, "T", DocOp.SetProp(a.handle, "colorArgb", token("C.Ink", 9, "x.C"))).ok)
+      val version = svc.doc.version
+      val undone = svc.undo("S")
+      assertFalse(undone.ok, "undo would put two owners named C into one screen")
+      assertTrue(undone.error!!.startsWith("undo blocked (step kept): "), undone.error)
+      assertTrue("this screen already uses a different C (x.C)" in undone.error!!, undone.error)
+      assertEquals(version, svc.doc.version)
+      assertEquals(lit(2), widgets(svc)[1].props["colorArgb"])
+      assertTrue(svc.undo("T").ok)
+      assertTrue(svc.undo("S").ok, "the kept step applies once T's C is gone")
+      assertEquals(token("C.Muted", 8, "q.C"), widgets(svc)[1].props["colorArgb"])
+    } finally {
+      homeFile.setWritable(true)
+    }
+  }
+
+  @Test fun anUndoTheTreeCannotTakeIsDroppedAndSaysSo() {
+    val svc = service(home(body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
+    val (_, b) = widgets(svc)
+    assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "fontSize", lit(20))).ok)
+    // Another session deletes the node S's undo targets.
+    assertTrue(asSession(svc, "T", DocOp.DeleteNode(b.handle)).ok)
+    val undone = svc.undo("S")
+    assertFalse(undone.ok)
+    assertTrue(undone.error!!.startsWith("undo failed (step dropped): "), undone.error)
+    assertEquals("nothing to undo", svc.undo("S").error, "the step was dropped")
   }
 }

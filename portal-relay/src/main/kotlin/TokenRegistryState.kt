@@ -111,8 +111,9 @@ object Tokens {
    * The client-op gate for token values: the batch with every token's value
    * replaced by the table's, or the refusal. A client names a token by its
    * reference and import; it must be one [table] lets the file [fileId] use
-   * ([TokenTable.usable]: of a literal kind, not private in its object, and
-   * exported or declared in a private object of that same file). An
+   * ([TokenTable.usable]: of a literal kind, never private in its object, and
+   * either exported, or a private top-level constant or a member of a private
+   * object declared in that same file). An
    * ambiguous reference (the same `Owner.Name` in two packages) is accepted
    * here — the binding check that follows decides what it means in the file.
    */
@@ -178,12 +179,23 @@ object Tokens {
   }
 
   /**
+   * What [refresh] produced: the document with every restored token re-read,
+   * those [restored] tokens (in document order) and the imports the tokens it
+   * did NOT touch imply ([keptImports]) — what the binding check seeds its
+   * scope with, so a restored token is checked against every other token the
+   * document holds but never against its own (stale) self.
+   */
+  class Refreshed(val doc: UiDocument, val restored: List<PropValue.Token>, val keptImports: Set<String>)
+
+  /**
    * After an undo/redo turned [before] into [after]: every token the inverse
    * RESTORED (a token value that differs from what that node held before)
    * re-read from [table] — inverse ops carry values from when they were
    * recorded. Refused when a restored token is no longer usable from the
    * file [fileId], or its kind no longer fits the prop. Tokens the inverse did
-   * not touch are left alone.
+   * not touch are left alone. The caller still runs the binding check
+   * ([TokenTable.bindingProblem]) on [Refreshed.restored], as the gate does
+   * for an edit.
    */
   fun refresh(
     before: UiDocument,
@@ -191,22 +203,25 @@ object Tokens {
     table: TokenTable,
     fileId: String,
     components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
-  ): Pair<UiDocument?, String?> {
+  ): Pair<Refreshed?, String?> {
     val old = HashMap<Long, DocNode.Widget>()
     fun index(n: DocNode) {
       if (n is DocNode.Widget) { old[n.handle.v] = n; n.children.forEach(::index) }
     }
     index(before.root)
     var error: String? = null
+    val restored = ArrayList<PropValue.Token>()
+    val kept = LinkedHashSet<String>()
     fun fix(type: String, key: String, v: PropValue, was: PropValue?): PropValue {
-      if (v !is PropValue.Token || error != null || v == was) return v
+      if (v !is PropValue.Token || error != null) return v
+      if (v == was) return v.also { t -> t.import?.let(kept::add) }
       val entry = table.usable(v.ref, v.import, fileId)
         ?: return v.also { error = "design token ${v.ref} no longer exists" }
       if (!dev.keliver.portal.tokenFits(dev.keliver.portal.propSourceType(type, key, components), entry.value)) {
         error = "design token ${v.ref} is now a ${entry.kind} and no longer fits $type.$key"
         return v
       }
-      return v.copy(value = lit(entry.value))
+      return v.copy(value = lit(entry.value)).also(restored::add)
     }
     fun node(n: DocNode): DocNode = when (n) {
       is DocNode.RawCode -> n
@@ -220,7 +235,7 @@ object Tokens {
       }
     }
     val root = node(after.root)
-    return if (error != null) null to error else after.copy(root = root) to null
+    return if (error != null) null to error else Refreshed(after.copy(root = root), restored, kept) to null
   }
 
   /**

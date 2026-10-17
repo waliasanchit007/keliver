@@ -161,44 +161,45 @@ class DocumentService(
   }
 
   @Synchronized
-  fun undo(session: String): OpAck {
-    // Peek. A token refusal keeps the entry (restoring the declaration makes
-    // it work again); an inverse the tree can no longer take is dropped, as
-    // before K2 — it never could apply, and keeping it would wedge the stack.
-    val stack = undoStacks[session]
-    val inverses = stack?.lastOrNull()
-      ?: return OpAck(false, doc.version, "nothing to undo")
-    val res = doc.applyBatch(inverses)
-    val ok = res.result ?: run {
-      stack.removeLastOrNull()
-      return OpAck(false, doc.version, "undo failed: ${res.error}")
-    }
-    // K2: an inverse carries token values from when it was recorded; re-resolve
-    // the tokens it restores (and only those).
-    val (fresh, stale) = Tokens.refresh(doc, ok.doc, tokens(), tokenFileId, components())
-    if (fresh == null) return OpAck(false, doc.version, "undo failed: $stale")
-    stack.removeLastOrNull()
-    redoStacks.getOrPut(session) { ArrayDeque() }.addLast(ok.inverseBatch)
-    doc = fresh.copy(version = doc.version + 1)
-    changed()
-    return OpAck(true, doc.version)
-  }
+  fun undo(session: String): OpAck = step("undo", undoStacks[session], redoStacks.getOrPut(session) { ArrayDeque() })
 
   @Synchronized
-  fun redo(session: String): OpAck {
-    val stack = redoStacks[session]
-    val inverses = stack?.lastOrNull()
-      ?: return OpAck(false, doc.version, "nothing to redo")
+  fun redo(session: String): OpAck = step("redo", redoStacks[session], undoStacks.getOrPut(session) { ArrayDeque() })
+
+  /**
+   * One undo/redo: apply the top of [from] and push its inverse onto [to].
+   * Peek first. A token refusal keeps the entry ("blocked (step kept)":
+   * restoring the declaration, or removing what now clashes, makes it work
+   * again); an inverse the tree can no longer take is dropped ("failed (step
+   * dropped)"), as before K2 — it never could apply, and keeping it would
+   * wedge the stack. Either way the document and the other stack are untouched.
+   */
+  private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: ArrayDeque<List<DocOp>>): OpAck {
+    val inverses = from?.lastOrNull()
+      ?: return OpAck(false, doc.version, "nothing to $verb")
     val res = doc.applyBatch(inverses)
     val ok = res.result ?: run {
-      stack.removeLastOrNull()
-      return OpAck(false, doc.version, "redo failed: ${res.error}")
+      from.removeLastOrNull()
+      return OpAck(false, doc.version, "$verb failed (step dropped): ${res.error}")
     }
-    val (fresh, stale) = Tokens.refresh(doc, ok.doc, tokens(), tokenFileId, components())
-    if (fresh == null) return OpAck(false, doc.version, "redo failed: $stale")
-    stack.removeLastOrNull()
-    undoStacks.getOrPut(session) { ArrayDeque() }.addLast(ok.inverseBatch)
-    doc = fresh.copy(version = doc.version + 1)
+    // K2: an inverse carries token values from when it was recorded; re-resolve
+    // the tokens it restores (and only those) ...
+    val table = tokens()
+    val (fresh, stale) = Tokens.refresh(doc, ok.doc, table, tokenFileId, components())
+    if (fresh == null) return OpAck(false, doc.version, "$verb blocked (step kept): $stale")
+    // ... and check, as the gate checks an edit, that each one still means its
+    // declaration in this file: something may have been declared or imported
+    // since (scenario: a same-package `C` now beats the star import), or
+    // another session may have added a different owner of the same simple
+    // name. One scope, seeded with the imports of every token the step did NOT
+    // restore — the restored ones are checked, not assumed.
+    if (fresh.restored.isNotEmpty() && kotlinFile.exists()) {
+      table.bindingProblem(kotlinFile.readText(), tokenFileId, fresh.restored, fresh.keptImports)
+        ?.let { return OpAck(false, doc.version, "$verb blocked (step kept): $it") }
+    }
+    from.removeLastOrNull()
+    to.addLast(ok.inverseBatch)
+    doc = fresh.doc.copy(version = doc.version + 1)
     changed()
     return OpAck(true, doc.version)
   }
