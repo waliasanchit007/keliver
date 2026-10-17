@@ -69,7 +69,7 @@ class DesignTokenRelayTest {
   private val projected = mutableListOf<WidgetNode>()
 
   private fun service(screens: File, components: File, registry: MapComponentRegistry = MapComponentRegistry(emptyList())): DocumentService {
-    Tokens.rebuild(project, listOf(screens, components))
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
     return DocumentService.fromFileOrTree(
       screenKey = "$project/home",
       treeJson = null,
@@ -79,6 +79,8 @@ class DesignTokenRelayTest {
       packageName = "app.screens",
       components = { registry },
       tokens = { Tokens.table(project) },
+      tokenFileId = "screens/home.kt",
+      tokensVersion = { Tokens.version(project) },
     )
   }
 
@@ -97,12 +99,12 @@ class DesignTokenRelayTest {
 
   @Test fun theRegistryListsExportedTokensWithTheirValueAndImport() {
     val (_, screens, components) = app()
-    assertTrue(Tokens.rebuild(project, listOf(screens, components)))
-    assertFalse(Tokens.rebuild(project, listOf(screens, components)), "an unchanged rescan reports no change")
+    assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
+    assertFalse(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile), "an unchanged rescan reports no change")
     val json = Tokens.toJson(project)
     assertTrue(
       "{\"ref\":\"C.Ink\",\"owner\":\"C\",\"name\":\"Ink\",\"kind\":\"Int\",\"value\":-14737633,\"const\":true," +
-        "\"package\":\"app.components\",\"import\":\"app.components.C\",\"file\":\"Tokens.kt\",\"ambiguous\":false}" in json,
+        "\"package\":\"app.components\",\"import\":\"app.components.C\",\"file\":\"components/Tokens.kt\",\"ambiguous\":false}" in json,
       json,
     )
     assertTrue("\"ref\":\"C.Title\"" in json && "\"value\":\"Funds\"" in json, json)
@@ -116,7 +118,7 @@ class DesignTokenRelayTest {
     assertEquals(PropValue.Token("C.Ink", lit(-14737633), "app.components.C"), node.props["colorArgb"])
     // The declaration changes; the screen file does not.
     File(components, "Tokens.kt").writeText(tokens(ink = "-16777216"))
-    assertTrue(Tokens.rebuild(project, listOf(screens, components)))
+    assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
     assertTrue(svc.reingest())
     val updated = text(svc) as DocNode.Widget
     assertEquals(node.handle, updated.handle, "the node keeps its identity")
@@ -125,11 +127,11 @@ class DesignTokenRelayTest {
     assertEquals(Token("C.Ink", -16777216, "app.components.C"), projected.last().children.single().props["colorArgb"])
     // A token that changes kind (or disappears) makes the argument RawCode — never silently wrong.
     File(components, "Tokens.kt").writeText(tokens(ink = "\"#1F1F1F\""))
-    assertTrue(Tokens.rebuild(project, listOf(screens, components)))
+    assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
     assertTrue(svc.reingest())
     assertIs<DocNode.RawCode>(text(svc))
     File(components, "Tokens.kt").delete()
-    Tokens.rebuild(project, listOf(screens, components))
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
     assertTrue(svc.reingest())
     assertIs<DocNode.RawCode>(text(svc))
   }
