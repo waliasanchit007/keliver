@@ -382,8 +382,9 @@ For measuring startup, a host records these moments:
   console, and appends it to `Library/Caches/keliver/timing.log` in the app's container.
   A file over 256 KB starts again when the host starts.
 - **The guest's mark:** `keliver-new-device-target.sh` writes
-  `src/jsMain/kotlin/device/KeliverTiming.kt` (copy it from a newer tools bundle into an
-  older guest). Call `KeliverTiming.mark("content")` once the screen's data is shown;
+  `src/jsMain/kotlin/device/KeliverTiming.kt`. For an older guest, copy the tools bundle's
+  `templates/guest/KeliverTiming.kt` there and replace `@@PACKAGE@@` with the package of
+  your `device/Main.kt` minus `.device`. Call `KeliverTiming.mark("content")` once the screen's data is shown;
   pass it to a presenter as a lambda, since presenters are common code. Names are `a-z`,
   `0-9` and `-`, at most 32 characters. It calls the `KeliverTrace` service, which only a
   build with the marks binds; anywhere else it does nothing.

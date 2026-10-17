@@ -25,9 +25,9 @@ step against a named, retained artifact.
 
 ## Procedure
 
-The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.9.md`](RELEASE_NOTES_TOOLS_0.3.9.md) (previous:
-[`RELEASE_NOTES_TOOLS_0.3.8.md`](RELEASE_NOTES_TOOLS_0.3.8.md)).
+The notes for the release in preparation (a candidate until it is published)
+are [`RELEASE_NOTES_TOOLS_0.3.10.md`](RELEASE_NOTES_TOOLS_0.3.10.md) (previous:
+[`RELEASE_NOTES_TOOLS_0.3.9.md`](RELEASE_NOTES_TOOLS_0.3.9.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
 for 0.3.6 and 0.3.7 on 2026-10-07, for 0.3.8 on 2026-10-11 (the draft download-back was blocked by the network again; the 0.3.5 route below was used), and for 0.3.9 on 2026-10-13 (the draft download-back worked). For 0.3.7, `gh release create`
@@ -65,6 +65,17 @@ gh workflow run portal-tools.yml --ref <branch> \
   -f device_run_id=<build run id> \
   -f device_apk_sha256=<apk sha256 from the build run>
 ```
+
+`keliver-device-verify.sh` on a physical phone proves the install and the
+production refusals, but its packaged acceptance step ends on the bundled
+host's development loop, which reaches the machine at `10.0.2.2` and so works
+only on an emulator: on a phone, "the device does not show the edit" is
+expected. Run it locally without exporting a shared `GRADLE_USER_HOME`: the
+acceptance isolates its own, and a reused daemon outlives the serve it stops.
+
+The build job checks `VERSION.json`'s Maven line against the literal in
+`portal-tools.yml`, so dispatching today's workflow to rebuild an older tools
+commit (whose scaffolders wire an older library) fails there, as it should.
 
 Both must be green. The device job refuses to run against an APK whose sha256
 does not match, or one carrying an embedded portal key.

@@ -29,6 +29,15 @@ for s in keliver-new-editor.sh keliver-new-device-target.sh; do
     exit 1
   }
 done
+# The host scaffolders' fallback (an app whose keliver.portal.json names no
+# version) must be the same version.
+for s in keliver-new-production-host.sh keliver-new-ios-host.sh; do
+  v="$(sed -nE "s/.*(v\.strip\(\) else|except Exception: print\()[ ]*'([^']+)'.*/\2/p" "$ROOT/scripts/$s" | sort -u)"
+  [ "$v" = "$MAVEN_VERSION" ] || {
+    echo "build-portal-tools: scripts/$s falls back to keliver '$(echo $v)' but keliver-init wires '$MAVEN_VERSION'; move them together" >&2
+    exit 1
+  }
+done
 SOURCE_COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 SOURCE_DIRTY="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 VERSION="$TOOLS_VERSION"
@@ -78,6 +87,8 @@ cp -R scripts/templates/publish "$STAGE/templates/"
 # keliver-new-ios-host.sh's iOS host: a KMP framework build plus an Xcode app shell.
 cp -R scripts/templates/ios-host "$STAGE/templates/"
 cp -R scripts/templates/ios-host-embed "$STAGE/templates/"
+# keliver-new-device-target.sh's guest timing file (also for upgrading an app by hand).
+cp -R scripts/templates/guest "$STAGE/templates/"
 # The store contract has to travel with the tools. keliver-record-http.sh asks
 # keliver-store-path.sh where this app's store is; without both, an adopter's
 # recording client looks for its token in a directory that stopped being the
