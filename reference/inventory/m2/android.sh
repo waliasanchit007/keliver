@@ -17,6 +17,8 @@
 # Scenarios, each [runs] times (default 5) after one discarded warm-up round:
 #   first  the first launch after `pm clear`: lookup, download, load, show
 #   cold   the process stopped, the bundle cached: process start to content
+#          (`process` is Process.getStartElapsedRealtime(), at bindApplication:
+#          the fork and zygote work before it are in am_total_ms, not in it)
 #   warm   the process running, the app sent home, then opened again in a new
 #          task (so a new KeliverScreen; the proof's "warm reopen"): open to
 #          content, with no `process` or `code` mark (asserted)
@@ -27,6 +29,11 @@
 # `content` is the reference guest's first composition (LaunchedEffect(Unit)),
 # so it lands with first-frame: there is no data load to wait for.
 # Memory: `dumpsys meminfo` TOTAL PSS, about 1 s after each content mark.
+# Compilation: the APK as `adb install` leaves it (no baseline profile in the
+# host); background dexopt is not controlled, so the state is recorded before
+# and after the runs (m2-android.env). The build pins keliver.updates and
+# keliver.channel (stable); a first or cold run must load the site's newest
+# stable entry.
 # Output: <evidence-dir>/m2-android.tsv (one row per good run), the raw logcat
 # and `am start -W` output of each run, m2-android.errors (empty when every run
 # was good), m2-android.env; summarise with m2/summarise.py. Exit 1 when any run
@@ -56,9 +63,13 @@ phone_free(){
   local p
   p="$(adb_ shell dumpsys power | tr -d '\r')"
   grep -q "mWakefulness=Awake" <<<"$p" || { echo "the phone is not awake"; return 1; }
-  adb_ shell dumpsys window | tr -d '\r' | grep -q "isKeyguardShowing=true" && { echo "the phone is locked"; return 1; }
-  adb_ shell dumpsys telephony.registry | tr -d '\r' | grep -E "mCallState=[12]" -q && { echo "a phone call is in progress"; return 1; }
-  adb_ shell dumpsys audio | tr -d '\r' | grep -Eq "^- Actual mode = MODE_(IN_CALL|IN_COMMUNICATION|CALL_SCREENING|RINGTONE)" && { echo "a call (audio in communication mode) is in progress"; return 1; }
+  # Each check needs its line to be there (an unknown format refuses), then its value.
+  p="$(adb_ shell dumpsys window | tr -d '\r' | sed -nE 's/^ *isKeyguardShowing=(true|false).*/\1/p' | head -1)"
+  [ "$p" = false ] || { echo "the phone is locked (isKeyguardShowing=${p:-not reported})"; return 1; }
+  p="$(adb_ shell dumpsys telephony.registry | tr -d '\r' | sed -nE 's/^ *mCallState=([0-9]+).*/\1/p' | sort -u | paste -sd, -)"
+  [ "$p" = 0 ] || { echo "a phone call may be in progress (mCallState=${p:-not reported})"; return 1; }
+  p="$(adb_ shell dumpsys audio | tr -d '\r' | sed -nE 's/^[ -]*Actual mode = ([A-Z_]+).*/\1/p' | head -1)"
+  [ "$p" = MODE_NORMAL ] || { echo "the audio mode is ${p:-not reported}, not MODE_NORMAL (a call?)"; return 1; }
   return 0
 }
 why="$(phone_free)" || { echo "not starting: $why" >&2; exit 3; }
@@ -72,7 +83,7 @@ else
     || { echo "the test CA overlay failed: $(cat "$EV/test-ca.log")" >&2; exit 1; }
 fi
 ( cd "$APP" && ./gradlew --console=plain -p host-android assembleBenchmark \
-    -Pkeliver.bundleServer=https://127.0.0.1:8443 -Pkeliver.updates=next-launch ) > "$EV/build.log" 2>&1 \
+    -Pkeliver.bundleServer=https://127.0.0.1:8443 -Pkeliver.updates=next-launch -Pkeliver.channel=stable ) > "$EV/build.log" 2>&1 \
   || { echo "assembleBenchmark failed" >&2; tail -30 "$EV/build.log" >&2; exit 1; }
 APK="$(find "$H/build/outputs/apk/benchmark" -name '*.apk' | head -1)"
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
@@ -129,7 +140,9 @@ dexopt(){ adb_ shell dumpsys package "$ID" | tr -d '\r' | sed -n '/Dexopt state:
 MARKS="process open code first-frame content"
 start_stream(){  # $1 file
   adb_ logcat -c || { err "logcat -c failed"; return 1; }
-  adb_ logcat -v brief -s KeliverTiming:I KeliverHost:D > "$1" 2>/dev/null &
+  # adb itself, not adb_: a backgrounded function is a subshell, and killing
+  # it would leave this adb reading the phone's log.
+  adb -s "$SERIAL" logcat -v brief -s KeliverTiming:I KeliverHost:D > "$1" 2>/dev/null &
   LOGCAT=$!
 }
 stop_stream(){ kill "$LOGCAT" 2>/dev/null; wait "$LOGCAT" 2>/dev/null; LOGCAT=""; }
@@ -152,16 +165,19 @@ printf 'scenario\trun\tprocess_open\tprocess_code\tprocess_first_frame\tprocess_
 # measure <scenario> <run> [am start flags]: one launch; a row only when it is sound.
 measure(){
   local s="$1" r="$2"; shift 2
-  local L="$EV/$s-$r.txt" A="$EV/$s-$r.am.txt" n0 why m expect prev v
+  local L="$EV/$s-$r.txt" A="$EV/$s-$r.am.txt" n0 why m expect pairs pr want
   why="$(phone_free)" || { err "$s $r: stopped: $why"; exit 3; }
-  n0="$(wc -l < "$EV/server.log" 2>/dev/null || echo 0)"
+  sleep 3   # the checks' dumpsys work settles before the measured launch
+  n0=0; [ -f "$EV/server.log" ] && n0="$(wc -l < "$EV/server.log")"
   start_stream "$L" || return 1
   adb_ shell am start -W -n "$ID/$CMP" "$@" > "$A" 2>&1
   if ! wait_content "$L"; then stop_stream; err "$s $r: no content mark"; return 1; fi
   local p_kb; p_kb="$(pss)"
   stop_stream
   tail -n +"$((n0 + 1))" "$EV/server.log" > "$EV/$s-$r.server.txt"
-  # Each mark exactly once (none of process/code on a warm open), in order.
+  # Each mark exactly once (none of process/code on a warm open), in the
+  # orders that are guaranteed (as M0's rows): code may come before open,
+  # since the host starts the load in Application.onCreate.
   if [ "$s" = warm ]; then expect="open first-frame content"; else expect="$MARKS"; fi
   for m in $MARKS; do
     case " $expect " in
@@ -169,15 +185,16 @@ measure(){
       *) [ "$(count "$L" "$m")" = 0 ] || { err "$s $r: '$m' logged on a warm open (not the same process, or the code reloaded)"; return 1; } ;;
     esac
   done
-  prev=0
-  for m in $expect; do
-    v="$(at "$L" "$m")"
-    [ "$v" -ge "$prev" ] || { err "$s $r: '$m' is before the mark that precedes it"; return 1; }
-    prev="$v"
+  if [ "$s" = warm ]; then pairs="open:first-frame open:content"
+  else pairs="process:open process:code code:first-frame code:content open:first-frame open:content"; fi
+  for pr in $pairs; do
+    [ "$(at "$L" "${pr#*:}")" -ge "$(at "$L" "${pr%%:*}")" ] || { err "$s $r: '${pr#*:}' is before '${pr%%:*}'"; return 1; }
   done
+  want=COLD; [ "$s" = warm ] && want=WARM
+  [ "$(amv "$A" LaunchState)" = "$want" ] || { err "$s $r: am start says LaunchState $(amv "$A" LaunchState), not $want"; return 1; }
   if [ "$s" != warm ]; then
     grep -qE "codeLoadSuccess modules=[0-9]+ sequence=$SEQ " "$L" \
-      || { err "$s $r: sequence $SEQ did not load: $(grep -m1 codeLoad "$L")"; return 1; }
+      || { err "$s $r: sequence $SEQ (the site's newest stable entry) did not load: $(grep -m1 codeLoad "$L")"; return 1; }
   fi
   local p o c f t
   p="$(at "$L" process)"; o="$(at "$L" open)"; c="$(at "$L" code)"; f="$(at "$L" first-frame)"; t="$(at "$L" content)"
@@ -187,26 +204,28 @@ measure(){
 }
 
 round(){  # $1 run number (0: the discarded warm-up)
-  local r="$1" pid out
+  local r="$1" out
   # first: no data, nothing cached
   adb_ shell am force-stop "$ID"
   out="$(adb_ shell pm clear "$ID" | tr -d '\r')"
   [ "$out" = Success ] || { err "pm clear $ID: $out"; exit 1; }
   measure first "$r"
   # cold: the process stopped, the bundle cached
-  sleep 2; adb_ shell am force-stop "$ID"; sleep 2
+  sleep 2; adb_ shell am force-stop "$ID"
   measure cold "$r"
-  pid="$(adb_ shell pidof "$ID" | tr -d '\r')"
-  # warm: home, then a new task in the same process
-  adb_ shell input keyevent KEYCODE_HOME; sleep 3
+  # warm: home, then a new task in the same process (measure asserts WARM
+  # and no process or code mark)
+  adb_ shell input keyevent KEYCODE_HOME
   measure warm "$r" -f 0x10008000
-  [ -n "$pid" ] && [ "$(adb_ shell pidof "$ID" | tr -d '\r')" = "$pid" ] \
-    || err "warm $r: the process changed (${pid:-none} before)"
   return 0
 }
 
 round 0 > /dev/null
-# The warm-up's rows and errors are not results.
+# The warm-up's rows and errors are not results; but a warm-up with no good
+# launch at all means the setup is wrong, and the runs would only time out.
+for sc in first cold warm; do
+  cut -f1 "$TSV" | grep -qx "$sc" || { echo "the warm-up had no good '$sc' launch: see $ERR" >&2; exit 1; }
+done
 head -1 "$TSV" > "$TSV.tmp" && mv "$TSV.tmp" "$TSV"
 [ -s "$ERR" ] && { mv "$ERR" "$EV/m2-android.warmup-errors"; : > "$ERR"; }
 for r in $(seq 1 "$RUNS"); do round "$r"; done

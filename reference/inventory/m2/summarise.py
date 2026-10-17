@@ -12,6 +12,8 @@ import csv, os, statistics, sys
 args = sys.argv[1:]
 want = None
 if args[:1] == ["--runs"]:
+    if len(args) < 2 or not args[1].isdigit():
+        sys.exit("usage: summarise.py [--runs N] <m2-android.tsv> [more.tsv ...]")
     want, args = int(args[1]), args[2:]
 for path in args:
     rows = list(csv.DictReader(open(path), delimiter="\t"))
