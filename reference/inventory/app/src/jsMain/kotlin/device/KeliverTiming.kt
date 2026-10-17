@@ -27,9 +27,9 @@ object KeliverTiming {
       val t = trace ?: Zipline.get().take<KeliverTrace>("KeliverTrace").also { trace = it }
       t.mark(name)
     } catch (e: Throwable) {
-      // No KeliverTrace on this host (one failed call, then none): stop asking.
+      // No KeliverTrace on this host (one failed call, then none): stop asking. Not
+      // close()d: that is a call to the same missing service, and it would throw too.
       unavailable = true
-      trace?.close()
       trace = null
     }
   }

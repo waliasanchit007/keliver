@@ -86,7 +86,8 @@ APP="$WORK/inventory"
   cp "$REF"/app/src/jsMain/kotlin/logic/*.kt src/jsMain/kotlin/logic/
   "$KP/keliver-new-device-target.sh" --screen InventoryScreen --presenter InventoryPresenter
   # The files the scaffolders cannot produce (bootstrap.sh's overlay).
-  for f in keliver.portal.json build.gradle settings.gradle src/jsMain/kotlin/device/Main.kt; do cp "$REF/app/$f" "$f"; done
+  for f in keliver.portal.json build.gradle settings.gradle \
+           src/jsMain/kotlin/device/Main.kt src/jsMain/kotlin/device/KeliverTiming.kt; do cp "$REF/app/$f" "$f"; done
   "$KP/keliver-new-publish-target.sh"
   git init -q && git add -A && git -c user.name=ci -c user.email=ci@invalid commit -qm "inventory, tools $LABEL"
 ) > "$EV/app.log" 2>&1 && ok "the app: keliver-init, device target and publish target from tools $LABEL" \
