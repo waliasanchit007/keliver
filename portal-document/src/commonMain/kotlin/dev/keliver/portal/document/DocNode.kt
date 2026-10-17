@@ -32,6 +32,17 @@ public sealed interface PropValue {
    */
   @Serializable
   public data class Action(val name: String, val arg: String? = null) : PropValue
+
+  /**
+   * K2: a reference to a design-token constant (`C.Ink`) in the app's own
+   * sources. [ref] is written back verbatim; [value] is the constant's value
+   * resolved at ingest (what the canvas renders — tags s/i/d/b only); [import]
+   * is the declaration a file using [ref] imports (null = none needed).
+   * Valid only where [value]'s kind is the prop's plain literal kind
+   * (`dev.keliver.portal.tokenFits`).
+   */
+  @Serializable
+  public data class Token(val ref: String, val value: Lit, val import: String? = null) : PropValue
 }
 
 /** Convenience constructor mirroring the V1 tree's prop kinds. */
