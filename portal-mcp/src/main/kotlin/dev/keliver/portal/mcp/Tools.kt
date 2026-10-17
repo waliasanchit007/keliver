@@ -71,6 +71,9 @@ object Tools {
             if (m.scopes.isNotEmpty()) {
               put("scopes", buildJsonArray { m.scopes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
             }
+            // The source call: `Modifier.<extension>(<argTypes…>)` — e.g. LayoutSize is `size(Dp, Dp)`.
+            put("extension", m.extension)
+            put("argTypes", buildJsonArray { m.argTypes.forEach { add(kotlinx.serialization.json.JsonPrimitive(it)) } })
             put("props", buildJsonArray {
               m.props.forEach { p ->
                 add(buildJsonObject { put("name", p.name); put("kind", p.kind.name) })
