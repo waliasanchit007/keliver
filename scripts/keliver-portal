@@ -6,6 +6,11 @@
 #   keliver-portal stop   [app-dir]     # stop a running instance
 #   keliver-portal status [app-dir]     # is it up?
 #
+# Environment (start only):
+#   KELIVER_RELAY_BIND=all  the server listens on every network interface, not
+#                       only on this machine (a physical phone on the same Wi-Fi).
+#                       Anyone on that network can then edit and publish.
+#
 # Options (start only):
 #   --no-editor-build   serve the bundled editor even if <app>/editor exists
 #   --rerun-tasks       force a clean editor rebuild (webpack can serve a stale
@@ -42,7 +47,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --no-editor-build) EDITOR_BUILD=false ;;
     --rerun-tasks)     RERUN_TASKS=true ;;
-    -h|--help)         sed -n '2,18p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)         sed -n '2,23p' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)                echo "keliver-portal: unknown option $1" >&2; exit 2 ;;
     *)                 APP_ARG="$1" ;;
   esac
@@ -120,6 +125,16 @@ esac
 [ -x "$RELAY" ] || die "portal-relay not found at $RELAY (run from an unpacked keliver-portal-tools)"
 [ -f "$APP_DIR/keliver.portal.json" ] || warn "no keliver.portal.json in $APP_DIR — using defaults (run keliver-init first)"
 
+# U35: the server listens on 127.0.0.1 unless KELIVER_RELAY_BIND=all. The relay
+# refuses any other value; refuse it here too, before anything starts.
+RELAY_BIND="$(printf '%s' "${KELIVER_RELAY_BIND:-}" | tr -d '[:space:]')"
+case "$RELAY_BIND" in
+  "") ;;
+  all) warn "KELIVER_RELAY_BIND=all: the portal server listens on EVERY network interface, not only this machine."
+       warn "Anyone on this network can reach its edit and publish endpoints. Use it only on a network you trust." ;;
+  *) die "KELIVER_RELAY_BIND=$KELIVER_RELAY_BIND is not supported: leave it unset (this machine only) or set it to 'all'" ;;
+esac
+
 # Refuse to double-start rather than fighting over ports.
 if healthy; then
   die "a portal server is already answering on :$PORT — 'keliver-portal stop' first, or use a different port in keliver.portal.json"
@@ -176,7 +191,7 @@ say "portal-server against $APP_DIR (:$PORT)"
 echo $! >> "$PIDFILE"
 
 say "editor (:$EDITOR_PORT) from $EDITOR_DIR"
-( cd "$EDITOR_DIR" && python3 -m http.server "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
+( cd "$EDITOR_DIR" && python3 -m http.server --bind 127.0.0.1 "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
 # --- health-wait: don't claim success until the server actually answers ------
@@ -203,6 +218,7 @@ $READY || {
 printf "\n\033[1;32m✓ keliver portal is live\033[0m\n\n"
 printf "  Editor   →  http://localhost:%s\n" "$EDITOR_PORT"
 printf "  Server   →  http://localhost:%s\n" "$PORT"
+[ "$RELAY_BIND" = all ] && printf "  \033[1;33mServer listens on every network interface (KELIVER_RELAY_BIND=all)\033[0m\n"
 printf "  MCP      →  PORTAL_REPO=%s %s/mcp/bin/portal-mcp   (stdio, for AI agents)\n" "$APP_DIR" "$BUNDLE"
 [ "$EDITOR_DIR" = "$BUNDLED_EDITOR" ] \
   && printf "  Preview  →  bundled editor (generic widgets; run keliver-new-editor.sh for real presenters)\n" \
