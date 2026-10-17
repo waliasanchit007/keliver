@@ -779,6 +779,7 @@ final value class dev.keliver.portal.document/Handle { // dev.keliver.portal.doc
 final val dev.keliver.portal.document/DocJson // dev.keliver.portal.document/DocJson|{}DocJson[0]
     final fun <get-DocJson>(): kotlinx.serialization.json/Json // dev.keliver.portal.document/DocJson.<get-DocJson>|<get-DocJson>(){}[0]
 
+final fun (dev.keliver.portal.document/DocOp).dev.keliver.portal.document/isClientOp(): kotlin/Boolean // dev.keliver.portal.document/isClientOp|isClientOp@dev.keliver.portal.document.DocOp(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Lit).dev.keliver.portal.document/toAny(): kotlin/Any? // dev.keliver.portal.document/toAny|toAny@dev.keliver.portal.document.PropValue.Lit(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/toWidgetTree(kotlin.collections/Map<kotlin/String, kotlin/Any?> = ..., kotlin/Boolean = ...): dev.keliver.portal/WidgetNode // dev.keliver.portal.document/toWidgetTree|toWidgetTree@dev.keliver.portal.document.UiDocument(kotlin.collections.Map<kotlin.String,kotlin.Any?>;kotlin.Boolean){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.document/toDocNode(): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/toDocNode|toDocNode@dev.keliver.portal.WidgetNode(){}[0]

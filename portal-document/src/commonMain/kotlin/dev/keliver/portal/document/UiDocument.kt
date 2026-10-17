@@ -57,7 +57,7 @@ public data class UiDocument(
           return err("anchor ${op.after.v} is not a child of ${op.parent.v}")
         }
         val (allocated, next) = allocate(op.node, nextHandle)
-        val renumbered = sanitize(allocated, childScope(parent), deep = true)
+        val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         TryResult(ApplyResult(replaced(newParent).copy(nextHandle = next), DocOp.DeleteNode(renumbered.handle)), null)
@@ -92,23 +92,44 @@ public data class UiDocument(
           return err("anchor ${op.after.v} is not a child of ${op.newParent.v}")
         }
         // K1: the node's (and, through Condition/Repeat, its children's) scope may change.
-        val moved = sanitize(node, deleted.childScope(target), deep = false)
+        val stripped = LinkedHashMap<Long, Map<String, PropValue>>()
+        val moved = sanitize(node, deleted.childScope(target), deep = false, stripped = stripped)
         val res = deleted.apply(InsertExisting(op.newParent, op.after, moved))
-        val inverse = if (moved == node) {
+        val inverse = if (stripped.isEmpty()) {
           DocOp.MoveNode(op.target, oldParent.handle, oldAfter)
         } else {
-          MoveRestore(op.target, oldParent.handle, oldAfter, node) // put the stripped modifiers back too
+          // Undo = move back, then re-apply ONLY the stripped entries onto the
+          // LIVE nodes — never a subtree snapshot (another session may have
+          // edited or moved those nodes since).
+          MoveBack(op.target, oldParent.handle, oldAfter, stripped, modifierOrder(node, stripped.keys))
         }
         TryResult(ApplyResult(res.doc, inverse), null)
       }
 
-      is MoveRestore -> {
+      is MoveBack -> {
         val current = parentOf(root, op.target) ?: return err("unknown handle ${op.target.v}")
         val idx = current.children.indexOfFirst { it.handle == op.target }
         val after = if (idx == 0) null else current.children[idx - 1].handle
-        val deleted = apply(DocOp.DeleteNode(op.target)).doc
-        val res = deleted.apply(InsertExisting(op.parent, op.after, op.node))
-        TryResult(ApplyResult(res.doc, DocOp.MoveNode(op.target, current.handle, after)), null)
+        val back = tryApply(DocOp.MoveNode(op.target, op.parent, op.after))
+        var d = (back.result ?: return back).doc
+        for ((h, entries) in op.restore) {
+          val w = d.find(Handle(h)) as? DocNode.Widget ?: continue // gone since: skip
+          val scope = scopeParentOf(d.root, Handle(h))
+          val keep = entries.filter { (key, _) ->
+            key !in w.modifiers && // a concurrent edit set it since: theirs wins
+              modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) != false
+          }
+          if (keep.isEmpty()) continue
+          // Back in the original (author) order; entries added since keep their place after.
+          val merged = w.modifiers + keep
+          val order = op.order[h].orEmpty()
+          val ordered = LinkedHashMap<String, PropValue>()
+          order.forEach { k -> merged[k]?.let { ordered[k] = it } }
+          merged.forEach { (k, v) -> if (k !in ordered) ordered[k] = v }
+          d = d.replaced(w.copy(modifiers = ordered))
+        }
+        // Redo = the forward move, which strips again whatever is invalid there.
+        TryResult(ApplyResult(d, DocOp.MoveNode(op.target, current.handle, after)), null)
       }
 
       is DocOp.SetProp -> withWidget(op.target) { w ->
@@ -175,7 +196,7 @@ public data class UiDocument(
     return TryResult(f(w), null)
   }
 
-  private fun replaced(newNode: DocNode): UiDocument = copy(root = replaceIn(root, newNode))
+  internal fun replaced(newNode: DocNode): UiDocument = copy(root = replaceIn(root, newNode))
 
   /** The scope-giving widget for children of [parent] (Condition/Repeat looked through). */
   private fun childScope(parent: DocNode.Widget): String? =
@@ -184,11 +205,38 @@ public data class UiDocument(
 
 /**
  * Internal op: the inverse of a Move that stripped scoped modifiers — move the
- * node back AND restore its original subtree (original handles). Never
+ * node back, then re-apply the stripped modifier entries ([restore]: node
+ * handle -> entries) onto the nodes that still exist and still qualify. Never
  * accepted from clients.
  */
 @Serializable
-internal data class MoveRestore(val target: Handle, val parent: Handle, val after: Handle?, val node: DocNode) : DocOp
+internal data class MoveBack(
+  val target: Handle,
+  val parent: Handle,
+  val after: Handle?,
+  val restore: Map<Long, Map<String, PropValue>>,
+  /** node handle -> its modifier keys' original order, to restore author order. */
+  val order: Map<Long, List<String>> = emptyMap(),
+) : DocOp
+
+private fun modifierOrder(n: DocNode, handles: Set<Long>): Map<Long, List<String>> {
+  val out = LinkedHashMap<Long, List<String>>()
+  fun walk(x: DocNode) {
+    if (x !is DocNode.Widget) return
+    if (x.handle.v in handles) out[x.handle.v] = x.modifiers.keys.toList()
+    x.children.forEach(::walk)
+  }
+  walk(n)
+  return out
+}
+
+/**
+ * False for the engine's internal ops (the inverses [InsertExisting] and
+ * [MoveBack]): they carry trusted snapshots/handles and are only ever produced
+ * by the engine itself. Servers must refuse them from clients — in validation
+ * (dry runs) as well as in submission.
+ */
+public fun DocOp.isClientOp(): Boolean = this !is InsertExisting && this !is MoveBack
 
 private val LOGIC_TYPES = setOf("Condition", "Repeat")
 
@@ -204,16 +252,25 @@ private fun scopeParentOf(root: DocNode, h: Handle): String? {
  * values. Condition/Repeat pass [scope] to their children; [deep] also checks
  * every other descendant against its own parent (a freshly inserted subtree).
  */
-private fun sanitize(n: DocNode, scope: String?, deep: Boolean): DocNode {
+private fun sanitize(
+  n: DocNode,
+  scope: String?,
+  deep: Boolean,
+  /** Receives node handle -> the modifier entries removed from it. */
+  stripped: MutableMap<Long, Map<String, PropValue>>?,
+): DocNode {
   if (n !is DocNode.Widget) return n
-  val modifiers = n.modifiers
-    .filterKeys { key -> modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) ?: true }
+  val (kept, removed) = n.modifiers.entries.partition { (key, _) ->
+    modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) ?: true
+  }
+  if (removed.isNotEmpty()) stripped?.put(n.handle.v, removed.associate { it.key to it.value })
+  val modifiers = kept.associate { it.key to it.value }
     .mapValues { (key, v) -> if (isDpProp(n.type, "mod.$key")) clampDp(v) else v }
   val props = n.props.mapValues { (key, v) -> if (isDpProp(n.type, key)) clampDp(v) else v }
   val children = n.children.map { c ->
     when {
-      n.type in LOGIC_TYPES -> sanitize(c, scope, deep)
-      deep -> sanitize(c, n.type, deep)
+      n.type in LOGIC_TYPES -> sanitize(c, scope, deep, stripped)
+      deep -> sanitize(c, n.type, deep, stripped)
       else -> c
     }
   }

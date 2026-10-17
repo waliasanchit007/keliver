@@ -75,4 +75,53 @@ class LayoutInvariantsTest {
     assertEquals(d(0.0), mods(t, 4)["Margin.margin.top"])
     assertEquals(PropValue.Lit("i", i = -2), (t.find(Handle(4)) as DocNode.Widget).props["fontSize"])
   }
+
+  private fun handles(n: DocNode): List<Long> =
+    listOf(n.handle.v) + ((n as? DocNode.Widget)?.children?.flatMap(::handles) ?: emptyList())
+
+  /** N-1: undo of a stripping move never re-inserts a snapshot over another session's edits. */
+  @Test fun undoOfAStrippingMoveIsSafeAgainstAConcurrentSession() {
+    val withSibling = doc.apply(DocOp.InsertNode(Handle(3), Handle(4),
+      DocNode.Widget(Handle(0), "StyledText", mapOf("text" to PropValue.Lit("s", s = "y"))))).doc // handle 6
+    // Session A: move the Condition (X=4 has flex) Row -> StyledBox; X is stripped.
+    val a = withSibling.apply(DocOp.MoveNode(Handle(3), Handle(5), null))
+    // Session B: moves X out of the Condition to the Column root, and edits the sibling inside it.
+    val b = a.doc
+      .apply(DocOp.MoveNode(Handle(4), Handle(1), null)).doc
+      .apply(DocOp.SetProp(Handle(6), "text", PropValue.Lit("s", s = "edited by B"))).doc
+    // Session A undoes.
+    val undone = b.apply(a.inverse!!).doc
+    val all = handles(undone.root)
+    assertEquals(all.toSet().size, all.size, "no duplicated handles: $all")
+    val cond = undone.find(Handle(3)) as DocNode.Widget
+    assertEquals(listOf(6L), cond.children.map { it.handle.v }) // X stays where B put it
+    assertEquals(PropValue.Lit("s", s = "edited by B"), (undone.find(Handle(6)) as DocNode.Widget).props["text"])
+    assertEquals(Handle(2), (undone.root as DocNode.Widget).children.first { it.handle == Handle(2) }.handle)
+    assertTrue((undone.find(Handle(2)) as DocNode.Widget).children.any { it.handle == Handle(3) }) // C back in the Row
+    // X now sits in the Column, where flex is valid: its stripped entry is re-applied.
+    assertEquals(d(1.0), mods(undone, 4)["Flex.value"])
+  }
+
+  @Test fun undoSkipsStrippedEntriesThatNoLongerQualify() {
+    val a = doc.apply(DocOp.MoveNode(Handle(3), Handle(5), null)) // X (4) stripped of flex
+    // B moves X under the StyledBox directly (still no flex scope there) ...
+    val b = a.doc.apply(DocOp.MoveNode(Handle(4), Handle(5), null)).doc
+    val undone = b.apply(a.inverse!!).doc
+    assertEquals(null, mods(undone, 4)["Flex.value"]) // ... so undo does not re-apply it
+    // ... and a handle deleted since is skipped, not an error.
+    val c = a.doc.apply(DocOp.DeleteNode(Handle(4))).doc
+    assertNull(c.apply(a.inverse!!).doc.find(Handle(4)))
+  }
+
+  @Test fun engineOnlyOpsAreNotClientOps() {
+    val moved = doc.apply(DocOp.MoveNode(Handle(3), Handle(5), null))
+    assertTrue(!moved.inverse!!.isClientOp()) // MoveBack
+    assertTrue(!doc.apply(DocOp.DeleteNode(Handle(5))).inverse!!.isClientOp()) // InsertExisting
+    assertTrue(DocOp.MoveNode(Handle(3), Handle(5), null).isClientOp())
+  }
+
+  /** N8: the codegen copy of the Margin sides must match portal-core's (see EmitCatalogTest). */
+  @Test fun marginSidesAreTheWireOrder() {
+    assertEquals(listOf("start", "end", "top", "bottom"), dev.keliver.portal.MARGIN_SIDES)
+  }
 }
