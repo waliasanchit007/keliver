@@ -253,7 +253,9 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     appendLine("/** The exported `modifier = Modifier.x().y()` chain, or null when the node has no mod props. */")
     appendLine("private fun modifierExpr(node: WidgetNode): String? {")
     appendLine("  val parts = mutableListOf<String>()")
-    for (mod in mods) {
+    // Unscoped first, then scoped — the order RenderNode applies them in, so a
+    // compiled export and the preview build the same modifier chain.
+    for (mod in mods.sortedBy { it.isScoped }) {
       if (mod.props.isEmpty()) {
         appendLine("  if (node.props[\"mod.${mod.name}\"] == true) parts += \"${mod.extensionName}()\"")
       } else {
