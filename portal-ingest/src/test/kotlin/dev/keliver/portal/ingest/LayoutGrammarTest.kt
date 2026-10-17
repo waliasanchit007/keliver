@@ -207,6 +207,20 @@ class LayoutGrammarTest {
     assertIs<DocNode.RawCode>(r.children[2]) // flex takes a Double; `1` does not compile
   }
 
+  @Test fun typedArgumentsRoundTripTheExportersOwnOutput() {
+    // aspectRatio takes a Float: the exporter writes `1.5f`, which must re-ingest.
+    val r = root("""
+      Column {
+        StyledText(text = "a", modifier = Modifier.aspectRatio(1.5f).padding(2))
+      }
+    """)
+    val a = r.children.single() as DocNode.Widget
+    assertEquals(d(1.5), a.modifiers["AspectRatio.ratio"])
+    val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertTrue("Modifier.aspectRatio(1.5f).padding(2)" in out, out)
+    assertEquals(stripHandles(r), stripHandles(Recognizer.recognize("S.kt", out)!!.root))
+  }
+
   @Test fun exportPrintsTheShortestExactMarginAndRoundTrips() {
     val rc = Recognizer.recognizeComponent("StatsCard.kt", statsCard)!!
     val doc = UiDocument("_", rc.root!!, dev.keliver.portal.document.Contract(), 0, 0)
