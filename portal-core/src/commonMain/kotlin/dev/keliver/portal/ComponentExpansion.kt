@@ -84,10 +84,32 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
     ))
   }
 
-  val expanded = substitute(body)
+  val expanded = substitute(forwardInstanceModifiers(body, node, spec))
   return Expansion.Transparent(
     expanded.singleOrNull() ?: WidgetNode("Column", children = expanded),
   )
+}
+
+/**
+ * K5: when the body's root forwards the component's `modifier` parameter, the
+ * instance's modifiers (`MyCard(modifier = Modifier.flex(1.0))`) go on that
+ * root FIRST, then the body's own chain — the order `modifier.padding(8)`
+ * builds on a device. Only for a component that declares `modifier: Modifier`.
+ * A modifier both sides set previews once, with the instance's value (a device
+ * applies both; the tree holds one value per modifier).
+ */
+private fun forwardInstanceModifiers(body: WidgetNode, instance: WidgetNode, spec: ComponentSpec): WidgetNode {
+  if (body.props[COMPONENT_FORWARDS_MODIFIER_PROP] != true) return body
+  val own = body.props - COMPONENT_FORWARDS_MODIFIER_PROP
+  if (!spec.acceptsModifier) return body.copy(props = own)
+  fun modName(key: String) = key.removePrefix("mod.").substringBefore('.')
+  val fromInstance = instance.props.filterKeys { it.startsWith("mod.") }
+  val instanceNames = fromInstance.keys.mapTo(HashSet(), ::modName)
+  val props = LinkedHashMap<String, Any?>()
+  own.forEach { (k, v) -> if (!k.startsWith("mod.")) props[k] = v }
+  props.putAll(fromInstance)
+  own.forEach { (k, v) -> if (k.startsWith("mod.") && modName(k) !in instanceNames) props[k] = v }
+  return body.copy(props = props)
 }
 
 /**
