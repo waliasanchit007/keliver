@@ -31,7 +31,10 @@ public data class ModifierSpec(
   val scopes: List<String> = emptyList(),
   val extension: String = name.replaceFirstChar { it.lowercase() },
   val argTypes: List<String> = emptyList(),
-)
+) {
+  /** The pre-K1 shape (unscoped, untyped args) — kept so compiled callers still link. */
+  public constructor(name: String, props: List<PropSpec>) : this(name, props, emptyList())
+}
 
 /** True when [spec] may sit on a node whose scope-giving parent is [parentType] (null = no layout parent). */
 public fun ModifierSpec.isValidUnder(parentType: String?): Boolean =
