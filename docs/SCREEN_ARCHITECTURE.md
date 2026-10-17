@@ -229,6 +229,45 @@ fun SectionCard(content: @Composable () -> Unit) {
   (props/events substituted, defaults applied, nested components recursed, cycles
   guarded). A body with non-grammar code stays **opaque**: still a real device
   composable, previewed as a labeled placeholder.
+- **Layout is grammar (D9, K1).** A layout widget's `margin = Margin(…)` and the
+  scoped layout modifiers — `flex`, `grow`, `shrink`, `margin`, `width`,
+  `height`, `size(Dp, Dp)`, `horizontalAlignment`, `verticalAlignment` — keep a
+  body transparent:
+
+  ```kotlin
+  Row(width = Constraint.Fill, margin = Margin(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp)) {
+    Column(horizontalAlignment = CrossAxisAlignment.Center, modifier = Modifier.flex(1.0)) { … }
+    Column(modifier = Modifier.flex(1.0).margin(Margin(all = 4.dp))) { … }
+  }
+  ```
+
+  - *Margin values* parse as `Margin.Zero`, `Margin(X)` (= all), `Margin(all =
+    X)`, `Margin(horizontal = X, vertical = Y)` (either alone), or any named
+    subset of `start`/`end`/`top`/`bottom`, with X as `N.dp`, `N.M.dp`, `Dp(N)`
+    or `Dp(N.M)`. Two or more **positional** arguments (`Margin(8.dp, 4.dp)`)
+    stay RawCode: the class constructor and the `(horizontal, vertical)`
+    function both take two positional Dp, and the portal does not guess. On the
+    wire a Margin is four Double props `<prop>.start/.end/.top/.bottom` (absent =
+    0), edited as four number fields; export writes the shortest exact form
+    (`Margin.Zero`, `Margin(all = …)`, `Margin(horizontal = …, vertical = …)`,
+    else the non-zero named sides).
+  - *Scoped modifiers* are members of `RowScope`/`ColumnScope`/`BoxScope`, so
+    they resolve against the node's **parent** — `if`/`forEach` add no receiver
+    and are looked through. A scoped modifier under a parent that is not one of
+    its scopes (or at the body's root, or under a material container) is not
+    grammar. Kotlin tries a scope member before an imported top-level
+    extension but skips a member whose arguments don't fit, so inside a Row
+    `Modifier.size(12, 12)` is material's `Size` while `Modifier.size(12.dp,
+    12.dp)` is the layout one, catalogued as **`LayoutSize`** (its extension
+    stays `size`). Exported code imports no scoped extension (they are scope
+    members), only their argument types (`Dp`, `Margin`, `dp`,
+    `CrossAxisAlignment`); unscoped modifiers are written first, then scoped
+    ones — the order the preview applies them in.
+  - The editor offers a scoped modifier only under one of its scopes, and the
+    preview applies it with the parent's receiver, so preview and device build
+    the same value tree (`portal-render` `LayoutParityTest`).
+  - Still outside the grammar: design-token constants (`C.Red`), helper
+    functions (`m(8)`), and file-local helper composables.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add

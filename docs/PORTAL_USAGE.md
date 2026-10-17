@@ -292,6 +292,16 @@ them under **"Project components"** in the palette. See
 - Optional/defaulted, wrapperless, and multiple slots are not guessed: those
   definitions are **opaque** with a diagnostic. Any other non-grammar body is likewise opaque (renders on
   devices, previews as a placeholder).
+- Layout stays editable: `margin = Margin(…)` on Row/Column/Box and the scoped
+  layout modifiers (`Modifier.flex(1.0)`, `.margin(Margin(all = 4.dp))`,
+  `.width(…)`, `.height(…)`, `.size(12.dp, 12.dp)`, `.grow`, `.shrink`,
+  `.horizontalAlignment`, `.verticalAlignment`) are grammar. The modifier panel
+  offers a scoped modifier only on a node whose parent is one of its scopes
+  (Row/Column/Box — looking through `if`/`forEach`); a margin shows as its four
+  sides. Write `Margin(…)` with named arguments or a single value:
+  `Margin(8.dp, 4.dp)` (two positional values) makes the call RawCode, and a
+  scoped modifier under a non-layout parent does too. Details:
+  `docs/SCREEN_ARCHITECTURE.md` §7, "Layout is grammar".
 
 ## Live-presenter preview (P3-12)
 
