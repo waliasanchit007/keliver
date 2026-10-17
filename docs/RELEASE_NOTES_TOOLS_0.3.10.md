@@ -1,7 +1,22 @@
 # keliver-portal-tools 0.3.10 — release notes
 
-**Status: CANDIDATE.** Not tagged or published yet. The verification is
-recorded below as it happens.
+**Status: RELEASED 2026-10-17** (candidate 3), on the owner's explicit go.
+
+| | |
+|---|---|
+| tag | `portal-tools-v0.3.10` (annotated, object `cdf80822`) → **`78bcfa0ad64bf4321699654d99a48647c14fac83`** |
+| release | [portal-tools-v0.3.10](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.10), published 2026-10-17T05:43:07Z, `--latest=false` |
+| zip asset | `keliver-portal-tools-0.3.10.zip`, 90,653,818 bytes, sha256 **`0ba5c07b88c869084ee80870682d577aabc8ce83edcdb9caf19b4493db0e87bf`**, uploaded from the retained artifact `12087402781` of build run 38996395407 |
+| `.sha256` asset | 98 bytes, sha256 `acf5e839e02919cde6c6d99c57ce8a65576218fd23364dc9e56f1b66ac7bad59` |
+| tag push | ran only `portal-tools.yml` (run 39007100251, the read-only rebuild; its artifact is not attached) |
+
+How the stored asset was checked: the draft download-back stalled at 0 bytes
+(the releasing machine's network blocks the release-asset host, as for 0.3.5
+and 0.3.8), so before publishing, both stored assets' server `digest` and
+`size` were compared with the verified files (GitHub's record of the stored
+bytes, not a download), with the tag re-checked at `78bcfa0ad`. The public
+download is checked from a GitHub-hosted runner by the reference app's move to
+0.3.10.
 
 **New apps get the 0.3.4 libraries** (`dev.keliver:*:0.3.4`, on Maven Central
 since 2026-10-16): `keliver-init` writes 0.3.4, and so does every scaffolder
