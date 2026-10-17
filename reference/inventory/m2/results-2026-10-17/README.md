@@ -69,9 +69,10 @@ device: `m2-android.env`; medians, minimums and maximums: `summary.txt`.
 For scale: the M0 run on the same phone (2026-10-17, about 02:40 IST), with a
 **debug** host and a **Development** bundle (3.3 MB, plain HTTP on
 `127.0.0.1:8090`), took about 1.44 s from process to content on its **first
-launch after install** (process → open 389 ms, open → code 926 ms). This
-build's first launch takes 1.02 s (45 ms and about 904 ms). Nearly all of the
-gain is process → open (the release-settings host); open → code barely moved,
+launch after install** (process → open 389 ms, open → code 926 ms, code →
+content about 122 ms). This build's first launch takes 1.02 s (45 ms, about
+904 ms and about 70 ms). Most of the 413 ms gain (344 ms) is process → open
+(the release-settings host); open → code barely moved,
 with less than half the bytes but TLS added. That M0 run's logs are not in
 the repository.
 
