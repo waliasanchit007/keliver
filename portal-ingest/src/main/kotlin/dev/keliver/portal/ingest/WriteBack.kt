@@ -31,7 +31,7 @@ object WriteBack {
     // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return null
-    if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components)) return null
+    if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     return file.text
   }
 
@@ -42,6 +42,8 @@ object WriteBack {
     psi: Map<Long, KtExpression>,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
+    /** The layout parent scoped modifiers resolve against (see Recognizer.parseModifierChain). */
+    parentType: String?,
   ): Boolean {
     // Type/shape mismatch at a matched position → not surgical.
     if (parsed::class != target::class) return false
@@ -61,7 +63,7 @@ object WriteBack {
     if (parsed.type == "Condition" || parsed.type == "Repeat") {
       if (parsed.props != target.props) return false
       val block = logicBlock(psi[parsed.handle.v]) ?: return false
-      return mergeChildren(parsed.children, target.children, block, psi, factory, components)
+      return mergeChildren(parsed.children, target.children, block, psi, factory, components, parentType)
     }
 
     val call = psi[parsed.handle.v] as? KtCallExpression ?: return false
@@ -72,7 +74,7 @@ object WriteBack {
     // Prop add/remove or modifier changes fall back to a whole-list replace,
     // re-indented to the call's depth (and kept single-line if the source was).
     if (parsed.props != target.props || parsed.modifiers != target.modifiers) {
-      if (!editArgumentValues(call, parsed, target, factory, components)) {
+      if (!editArgumentValues(call, parsed, target, factory, components, parentType)) {
         val oldList = call.valueArgumentList ?: return false
         var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call), components)
         if ('\n' !in oldList.text) callText = collapseCall(callText)
@@ -88,7 +90,7 @@ object WriteBack {
       ?.getLambdaExpression()?.bodyExpression as? KtBlockExpression
       ?: return target.children.isEmpty() // no lambda in file → only OK if no children wanted
 
-    return mergeChildren(parsed.children, target.children, block, psi, factory, components)
+    return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
   }
 
   private fun mergeChildren(
@@ -98,6 +100,7 @@ object WriteBack {
     psi: Map<Long, KtExpression>,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
   ): Boolean {
     // Greedy in-order match by shape; require matched parsed indices strictly
     // increasing (else it's a reorder → bail).
@@ -120,7 +123,7 @@ object WriteBack {
     // Recurse matched pairs first (prop/child edits within kept nodes).
     for ((ti, tc) in targetChildren.withIndex()) {
       val pi = matchOf[ti] ?: continue
-      if (!mergeWidget(parsedChildren[pi], tc, psi, factory, components)) return false
+      if (!mergeWidget(parsedChildren[pi], tc, psi, factory, components, parentType)) return false
     }
 
     // Deletes: parsed children never matched.
@@ -204,16 +207,31 @@ object WriteBack {
     }
   }
 
-  /** Same prop KEYS, some values changed → replace just those value exprs. */
+  /**
+   * Same ARGUMENTS, some values changed → replace just those value exprs.
+   *
+   * K1: a Margin prop's four wire sides are ONE argument; when only some sides
+   * changed, only those sides' value texts inside the `Margin(…)` are
+   * rewritten (falling back to the canonical Margin expression when the
+   * author's form can't express the change). A modifier change with the same
+   * modifier set rewrites only the changed modifiers' arguments inside the
+   * chain; an added/removed modifier replaces just the `modifier = …` value.
+   * Each edit is offset-based text surgery on one argument expression.
+   */
   private fun editArgumentValues(
     call: KtCallExpression,
     parsed: DocNode.Widget,
     target: DocNode.Widget,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
   ): Boolean {
-    if (parsed.modifiers != target.modifiers) return false
-    if (parsed.props.keys != target.props.keys) return false
+    val margins = dev.keliver.portal.widgetSpec(target.type)
+      ?.let { dev.keliver.portal.marginProps(it.props) }.orEmpty()
+    fun argName(key: String) = if (key.substringBefore('.') in margins) key.substringBefore('.') else key
+    val parsedArgs = parsed.props.keys.groupBy(::argName)
+    val targetArgs = target.props.keys.groupBy(::argName)
+    if (parsedArgs.keys != targetArgs.keys) return false
     // Canonical values come from the emitter so write-back matches a fresh export.
     val canonical = factory.createExpression(
       NodeEmitter.statementText(target.copy(children = emptyList()), "", components),
@@ -222,13 +240,33 @@ object WriteBack {
       { it.getArgumentName()?.asName?.asString() },
       { it.getArgumentExpression() },
     )
-    for ((k, v) in target.props) {
-      if (parsed.props[k] == v) continue
-      val arg = call.valueArguments.firstOrNull { it.getArgumentName()?.asName?.asString() == k }
-        ?: return false // positional/absent arg — not safely surgical here
-      val newExpr = newByName[k] ?: return false
-      val oldExpr = arg.getArgumentExpression() ?: return false
-      oldExpr.replace(newExpr)
+    fun sourceArg(name: String) = call.valueArguments
+      .firstOrNull { it.getArgumentName()?.asName?.asString() == name }
+      ?.getArgumentExpression() // null = positional/absent arg — not safely surgical here
+    val edits = mutableListOf<Pair<KtExpression, String>>()
+    for (name in targetArgs.keys) {
+      val keys = (parsedArgs.getValue(name) + targetArgs.getValue(name)).distinct()
+      if (keys.all { parsed.props[it] == target.props[it] }) continue
+      val oldExpr = sourceArg(name) ?: return false
+      val canonicalText = newByName[name]?.text
+      val text = if (name in margins) {
+        val sideKeys = dev.keliver.portal.MARGIN_SIDES.map { "$name.$it" }
+        MarginSyntax.surgical(oldExpr.text, sidesOf(parsed.props, sideKeys), sidesOf(target.props, sideKeys))
+          ?: canonicalText
+      } else {
+        canonicalText
+      } ?: return false
+      edits += oldExpr to text
+    }
+    if (parsed.modifiers != target.modifiers) {
+      val oldExpr = sourceArg("modifier") ?: return false
+      val text = ModifierChain.surgical(
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text,
+      ) ?: return false
+      edits += oldExpr to text
+    }
+    for ((oldExpr, text) in edits) {
+      if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
     }
     return true
   }

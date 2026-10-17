@@ -15,7 +15,7 @@ import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toWidgetTree
-import dev.keliver.portal.modifierSpecs
+import dev.keliver.portal.marginProps
 import dev.keliver.portal.widgetSpec
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -276,20 +276,26 @@ object Recognizer {
     private fun track(h: Handle, e: KtExpression): Handle { psiByHandle[h.v] = e; return h }
 
     fun rootOf(body: KtBlockExpression): DocNode.Widget {
-      val statements = body.statements.map { statementToNode(it, emptySet()) }
+      // Top-level statements have no layout parent: no scope receiver in source.
+      val statements = body.statements.map { statementToNode(it, emptySet(), null) }
       return statements.singleOrNull() as? DocNode.Widget
         ?: DocNode.Widget(nextTemp(), "Column", children = statements)
     }
 
-    private fun statementToNode(expr: KtExpression, itemScope: Set<String>): DocNode {
+    /**
+     * [parentType] is the widget whose content lambda holds [expr] — what a
+     * scoped layout modifier (`Modifier.flex(…)`) resolves against. `if` and
+     * `forEach` add no receiver, so Condition/Repeat pass it straight through.
+     */
+    private fun statementToNode(expr: KtExpression, itemScope: Set<String>, parentType: String?): DocNode {
       recognizeCondition(expr, ctx)?.let { (field, thenStmts) ->
         return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
-          children = thenStmts.map { statementToNode(it, itemScope) })
+          children = thenStmts.map { statementToNode(it, itemScope, parentType) })
       }
       recognizeRepeat(expr, ctx)?.let { (items, itemVar, bodyStmts) ->
         return DocNode.Widget(track(nextTemp(), expr), "Repeat",
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = bodyStmts.map { statementToNode(it, itemScope + itemVar) })
+          children = bodyStmts.map { statementToNode(it, itemScope + itemVar, parentType) })
       }
 
       val call = expr as? KtCallExpression
@@ -318,14 +324,22 @@ object Recognizer {
 
       val props = mutableMapOf<String, PropValue>()
       val modifiers = mutableMapOf<String, PropValue>()
+      // K1: Margin-valued widget props (Row/Column/Box `margin`) ride as four sides.
+      val margins = widgetSpec(type!!)?.let { marginProps(it.props) }.orEmpty()
       for (arg in call.valueArguments) {
         if (arg is KtLambdaArgument) continue
         val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         if (name == "modifier") {
-          val mods = parseModifierChain(ve.text)
+          val mods = parseModifierChain(ve.text, parentType)
             ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
           modifiers += mods
+          continue
+        }
+        if (name in margins) {
+          val sides = MarginSyntax.parse(ve.text)
+            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+          dev.keliver.portal.MARGIN_SIDES.forEachIndexed { i, side -> props["$name.$side"] = PropValue.Lit("d", d = sides[i]) }
           continue
         }
         val value = parseValue(ve, ctx, itemScope, componentNames)
@@ -334,7 +348,7 @@ object Recognizer {
       }
       val children = call.lambdaArguments.firstOrNull()
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
-        .map { statementToNode(it, itemScope) }
+        .map { statementToNode(it, itemScope, type) }
       return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
     }
   }
@@ -460,6 +474,8 @@ object Recognizer {
       dev.keliver.portal.parseKotlinStringLiteral(t)?.let { PropValue.Lit("s", s = it) }
     t.startsWith("Dp(") && t.endsWith(")") ->
       t.removePrefix("Dp(").removeSuffix(")").toDoubleOrNull()?.let { PropValue.Lit("d", d = it) }
+    // K1: `16.dp` / `16.5.dp` — the same Dp, written with the extension.
+    Regex("^\\d+(?:\\.\\d+)?\\.dp$").matches(t) -> PropValue.Lit("d", d = t.removeSuffix(".dp").toDouble())
     t.startsWith("listOf(") && t.endsWith(")") -> parseList(t.removePrefix("listOf(").removeSuffix(")"))
     t.startsWith("Constraint.") -> PropValue.Lit("i", i = if (t.endsWith("Fill")) 1 else 0)
     t.startsWith("CrossAxisAlignment.") -> enumLit(t, listOf("Start", "Center", "End", "Stretch"))
@@ -491,49 +507,17 @@ object Recognizer {
     }
   }
 
-  /** "Modifier.padding(8).animateContentSize()" → {"Padding.allDp": 8, "AnimateContentSize": true}. */
-  internal fun parseModifierChain(text: String): Map<String, PropValue>? {
-    val t = text.trim()
-    if (t == "Modifier") return emptyMap()
-    if (!t.startsWith("Modifier.")) return null
-    val out = mutableMapOf<String, PropValue>()
-    // split top-level chain segments: name(args)
-    for (m in Regex("([A-Za-z_][A-Za-z0-9_]*)\\(([^()]*)\\)").findAll(t.removePrefix("Modifier."))) {
-      val ext = m.groupValues[1]
-      val argsText = m.groupValues[2].trim()
-      val spec = modifierSpecs.firstOrNull { it.name.replaceFirstChar { c -> c.lowercase() } == ext } ?: return null
-      if (spec.props.isEmpty()) {
-        out[spec.name] = PropValue.Lit("b", b = true)
-      } else {
-        val args = if (argsText.isEmpty()) emptyList() else splitTopLevel(argsText)
-        if (args.size != spec.props.size) return null
-        spec.props.forEachIndexed { i, p ->
-          val lit = parseLiteral(args[i].trim()) ?: return null
-          out["${spec.name}.${p.name}"] = coerce(lit, p.kind)
-        }
-      }
-    }
+  /**
+   * "Modifier.padding(8).animateContentSize()" → {"Padding.allDp": 8, "AnimateContentSize": true}.
+   * [parentType] is the node's layout parent (null = none): scoped layout
+   * modifiers (`flex`, `margin`, `size(Dp, Dp)`, …) only resolve under a
+   * parent that is one of their scopes. Null = not in the grammar.
+   */
+  internal fun parseModifierChain(text: String, parentType: String? = null): Map<String, PropValue>? {
+    val segments = ModifierChain.segments(text) ?: return null
+    val resolved = ModifierChain.resolve(segments, parentType) ?: return null
+    val out = LinkedHashMap<String, PropValue>()
+    resolved.forEach { out += it.props }
     return out
-  }
-
-  /** Exported modifier args are positional primitives; coerce to catalog kind. */
-  private fun coerce(lit: PropValue.Lit, kind: PropKind): PropValue.Lit = when {
-    kind == PropKind.Double && lit.tag == "i" -> PropValue.Lit("d", d = lit.i?.toDouble())
-    else -> lit
-  }
-
-  private fun splitTopLevel(s: String): List<String> {
-    val parts = mutableListOf<String>()
-    var depth = 0
-    var start = 0
-    s.forEachIndexed { i, c ->
-      when (c) {
-        '(', '[' -> depth++
-        ')', ']' -> depth--
-        ',' -> if (depth == 0) { parts += s.substring(start, i); start = i + 1 }
-      }
-    }
-    parts += s.substring(start)
-    return parts
   }
 }
