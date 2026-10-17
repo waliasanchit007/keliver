@@ -86,10 +86,11 @@ git -c user.name=bootstrap -c user.email=bootstrap@invalid commit -qm \
   "scaffolded: keliver-init + device target + editor (tools $TOOLS_VERSION), inventory screens and logic"
 
 for f in keliver.portal.json build.gradle settings.gradle \
-         src/jsMain/kotlin/device/Main.kt \
+         src/jsMain/kotlin/device/Main.kt src/jsMain/kotlin/device/KeliverTiming.kt \
          editor/src/wasmJsMain/kotlin/InventoryPreview.kt; do
   cp "$HERE/app/$f" "$f"
 done
+git add -N . # a file the scaffolders did not write shows in the diff too
 git diff > hand-edits.diff
 git add -A
 git -c user.name=bootstrap -c user.email=bootstrap@invalid commit -qm \

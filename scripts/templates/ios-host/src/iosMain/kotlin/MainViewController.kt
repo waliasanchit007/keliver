@@ -240,6 +240,13 @@ public object Keliver {
   public var onReport: ((KeliverReport) -> Unit)? = null
 
   /**
+   * Called on the main thread with each timing mark (M0; docs/DEVICE_HOST.md, "Timing marks"):
+   * its name and CACurrentMediaTime() in nanoseconds. Only builds with the marks (Debug and
+   * Benchmark) call it.
+   */
+  public var onTrace: ((name: String, nanos: Long) -> Unit)? = null
+
+  /**
    * Hands [outcome] to [onReport] and, with REPORT_URL, POSTs it there. Best
    * effort: a report that cannot be sent is dropped; it never blocks or fails
    * anything else. Main thread.
@@ -280,6 +287,7 @@ public object Keliver {
     }
     if (started) return
     started = true
+    KeliverTiming.start() // Debug and Benchmark builds only (M0); nothing elsewhere
     // Once: a start that created nothing runs again (started is reset), and a
     // second observer would make every foreground check twice.
     if (updatesMode() == "on-resume" && !resumeObserved) {
@@ -450,6 +458,7 @@ public object Keliver {
    * the containing layout already does.
    */
   public fun viewController(safeArea: Boolean = true): UIViewController = ComposeUIViewController {
+    remember { KeliverTiming.mark("open") } // Debug and Benchmark builds only (M0)
     LaunchedEffect(Unit) { start() }
     val current by state.collectAsState()
     val modifier = if (safeArea) Modifier.fillMaxSize().safeDrawingPadding() else Modifier.fillMaxSize()
@@ -460,7 +469,8 @@ public object Keliver {
         val widgetSystem = remember { ComposeUiKeliverMaterialWidgetSystem(imageLoader) }
         val contentSource = remember {
           object : TreehouseContentSource<PortalPresenter> {
-            override fun get(app: PortalPresenter) = app.launch()
+            // first-frame, in Debug and Benchmark builds only (M0); the UI itself elsewhere.
+            override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
           }
         }
         Box(modifier) {
@@ -657,6 +667,7 @@ private fun createApp(
 
     override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
       zipline.bind<HostSqlDriver>("HostSqlDriver", sql)
+      KeliverTiming.bindServices(zipline) // KeliverTrace, in Debug and Benchmark builds only (M0)
       if (http != null) zipline.bind<HostHttpProvider>("HostHttp", http)
     }
 
@@ -670,7 +681,10 @@ private fun createApp(
     // Raise the rollback floor to the sequence that just ran: Zipline verified this
     // manifest's signature, and so its metadata, before loading it.
     eventListenerFactory = LoggingEventListenerFactory(
-      onSuccess = { sequence, url -> appScope.launch { Keliver.codeLoaded(sequence, url) } },
+      onSuccess = { sequence, url ->
+        KeliverTiming.mark("code")
+        appScope.launch { Keliver.codeLoaded(sequence, url) }
+      },
       onSkipped = { appScope.launch { Keliver.codeSkipped() } },
       // Before any code ran: fall back to the cached last good bundle once (W5),
       // as a start with a failed lookup does (the floor holds; Zipline verifies

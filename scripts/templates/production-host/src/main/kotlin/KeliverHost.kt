@@ -303,6 +303,10 @@ sealed interface KeliverHostState {
 
 class KeliverHost private constructor(context: Context, private val config: KeliverConfig) {
   private val context = context.applicationContext
+
+  init {
+    KeliverTiming.start(this.context) // debug and benchmark builds only (M0); nothing elsewhere
+  }
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
   private val started = AtomicBoolean(false)
   private val loaded = AtomicBoolean(false)
@@ -657,6 +661,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       override suspend fun bindServices(treehouseApp: TreehouseApp<PortalPresenter>, zipline: Zipline) {
         zipline.bind<HostSqlDriver>("HostSqlDriver", sqlHost)
         if (apiBase != null) zipline.bind<HostHttpProvider>("HostHttp", OkHttpHostHttp(okhttp, apiBase))
+        KeliverTiming.bindServices(zipline) // KeliverTrace, in debug and benchmark builds only (M0)
       }
 
       override fun create(zipline: Zipline): PortalPresenter = zipline.take("PortalPresenter")
@@ -670,6 +675,7 @@ class KeliverHost private constructor(context: Context, private val config: Keli
       // this manifest's signature, and so its metadata, before loading it.
       eventListenerFactory = LoggingEventListenerFactory(
         onSuccess = { sequence, url ->
+          KeliverTiming.mark("code")
           val first = !loaded.getAndSet(true)
           scope.launch {
             // url is null for a load from the cache. After one, Zipline takes no

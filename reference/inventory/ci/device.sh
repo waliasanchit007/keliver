@@ -12,7 +12,8 @@
 #      S4-S16 against a static HTTPS server fed only by keliver-publish
 #   5. W2, the host embedded in an existing app (ci/w2/android-embed.sh): X1-X7
 #   6. W5, an update applied on resume (ci/w5/android-update.sh): U1
-#   7. W8, a signing-key rotation (ci/w8/android-rotation.sh): K1-K8
+#   7. M0, timing marks (ci/m0/android-timing.sh): T1-T2
+#   8. W8, a signing-key rotation (ci/w8/android-rotation.sh): K1-K8
 #
 #   ci/device.sh <work-dir> <evidence-dir> [serial]
 #
@@ -347,6 +348,8 @@ drive title Stockroom P7; fold "P7: Stockroom offline" $?
 . "$HERE/w2/android-embed.sh"
 # shellcheck source=w5/android-update.sh
 . "$HERE/w5/android-update.sh"
+# shellcheck source=m0/android-timing.sh
+. "$HERE/m0/android-timing.sh"
 # shellcheck source=w8/android-rotation.sh
 . "$HERE/w8/android-rotation.sh"
 

@@ -129,6 +129,10 @@ kotlin {
   }
   sourceSets {
     iosMain {
+      // Timing marks (M0) only when Xcode's build setting KELIVER_TIMING is YES, which the
+      // Debug and Benchmark configurations set (Benchmark: Release settings, never shipped).
+      // Release, and a build outside Xcode, compile the no-op src/notiming/ instead.
+      kotlin.srcDir(System.getenv('KELIVER_TIMING') == 'YES' ? 'src/timing/kotlin' : 'src/notiming/kotlin')
       dependencies {
         implementation 'dev.keliver:keliver-treehouse-host:@@KELIVER_VERSION@@'
         implementation 'dev.keliver:keliver-treehouse-host-composeui:@@KELIVER_VERSION@@'

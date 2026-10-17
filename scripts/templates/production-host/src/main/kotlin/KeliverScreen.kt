@@ -37,6 +37,7 @@ import dev.keliver.treehouse.composeui.TreehouseContent
 /** Shows [host]: its messages while it looks up and loads, then the guest's screen. Starts the host if nobody has. */
 @Composable
 fun KeliverScreen(host: KeliverHost, modifier: Modifier = Modifier) {
+  remember(host) { KeliverTiming.mark("open") } // debug and benchmark builds only (M0)
   LaunchedEffect(host) { host.start() }
   val state by host.state.collectAsState()
   MaterialTheme {
@@ -47,7 +48,8 @@ fun KeliverScreen(host: KeliverHost, modifier: Modifier = Modifier) {
           val widgetSystem = remember(host) { ComposeUiKeliverMaterialWidgetSystem(host.imageLoader) }
           val contentSource = remember {
             object : TreehouseContentSource<PortalPresenter> {
-              override fun get(app: PortalPresenter) = app.launch()
+              // first-frame, in debug and benchmark builds only (M0); the UI itself elsewhere.
+              override fun get(app: PortalPresenter) = KeliverTiming.firstFrame(app.launch())
             }
           }
           TreehouseContent(

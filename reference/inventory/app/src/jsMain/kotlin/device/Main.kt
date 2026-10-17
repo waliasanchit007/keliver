@@ -1,6 +1,7 @@
 package inventory.device
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import app.cash.zipline.Zipline
 import app.cash.zipline.ZiplineService
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
@@ -28,6 +29,8 @@ private class AppUi : TreehouseUi {
     // Hand-edited: the scaffolder wires one screen + one presenter; this app
     // navigates between two, so it mounts its own root (logic/InventoryApp.kt).
     InventoryApp()
+    // The inventory is in memory: shown on the first frame (M0's content mark).
+    LaunchedEffect(Unit) { KeliverTiming.mark("content") }
   }
 }
 

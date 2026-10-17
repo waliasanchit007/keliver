@@ -37,6 +37,8 @@ on:
       - "reference/inventory/ci/w2/**"
       - "reference/inventory/ci/w5/**"
       - "reference/inventory/ci/w8/**"
+      - "reference/inventory/ci/m0/**"
+      - "reference/inventory/app/src/jsMain/kotlin/device/**"
       - "reference/embed/ios/**"
       - "scripts/templates/ios-host-embed/**"
       - "scripts/keliver-publish"
@@ -52,7 +54,8 @@ permissions:
 jobs:
   ios-host:
     runs-on: macos-15
-    timeout-minutes: 120
+    # About 100 minutes before M0; the Benchmark configuration's release framework adds 25.
+    timeout-minutes: 160
     permissions:
       contents: read
     env:

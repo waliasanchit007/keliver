@@ -235,10 +235,14 @@ if $EMBED; then
     subst "$EMBED_TEMPLATES/$f" "$STAGE/$f"
   done
 else
-  for f in settings.gradle gradle.properties build.gradle src/main/AndroidManifest.xml; do
+  for f in settings.gradle gradle.properties build.gradle proguard-rules.pro src/main/AndroidManifest.xml; do
     subst "$TEMPLATES/$f" "$STAGE/$f"
   done
 fi
+# Timing marks (M0): the real ones for debug and benchmark, a no-op for every other build type.
+for set in timing notiming; do
+  subst "$TEMPLATES/src/$set/kotlin/KeliverTiming.kt" "$STAGE/src/$set/kotlin/$PKG_PATH/KeliverTiming.kt"
+done
 # The same Kotlin in both modes; only the app shell (its Application and its
 # activity) stays out of the library.
 for f in "$TEMPLATES"/src/main/kotlin/*.kt; do

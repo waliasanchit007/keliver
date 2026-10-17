@@ -88,11 +88,32 @@ android {
       manifestPlaceholders = [usesCleartextTraffic: cleartext.toString()]
       buildConfigField 'String', 'KELIVER_UPDATES', "\"${updates ?: 'on-resume'}\""
     }
+    // For measuring (M0), never shipped: release settings (not debuggable, https
+    // only), minified with R8 as a store build should be (this template's release
+    // leaves minifying to you), plus profileable and the timing marks, signed
+    // with the debug key so it installs. ./gradlew -p host-android assembleBenchmark
+    benchmark {
+      initWith release
+      matchingFallbacks = ['release']
+      minifyEnabled true
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+      debuggable false
+      profileable true
+      signingConfig signingConfigs.debug
+    }
   }
   buildFeatures { compose true; buildConfig true }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 kotlin { jvmToolchain(17) }
+
+// Timing marks (M0) are compiled into the debug and benchmark build types only
+// (src/timing/); every other build type, release among them, gets the no-op
+// src/notiming/ instead.
+def timingBuildTypes = ['debug', 'benchmark']
+android.buildTypes.configureEach { bt ->
+  android.sourceSets.maybeCreate(bt.name).kotlin.srcDir(bt.name in timingBuildTypes ? 'src/timing/kotlin' : 'src/notiming/kotlin')
+}
 
 // The embedded key is the whole of this host's trust: a missing or malformed
 // one fails the BUILD, not just a launch on someone's device.

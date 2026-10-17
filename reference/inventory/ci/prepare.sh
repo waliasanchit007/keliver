@@ -242,6 +242,31 @@ if [ -z "$W5_UPDATES" ]; then
     || { bad "U0: debug '$(u0 debug)', release '$(u0 release)'"; tail -20 "$EV/u0-buildconfig.log"; }
 fi
 echo "W5_APK=$EV/production-host-onresume.apk" >> "$WORK/env"
+# M0 (T0): the benchmark build (release settings, timing marks) for the static
+# server, and the release build to show it has no marks. Not on a phone: the
+# test CA is in the debug build only.
+if grep -rqs "interface KeliverTrace" "$APP/host-android/src/timing" && [ "$DEVICE_KIND" != physical ]; then
+  ( cd "$APP" && ./gradlew --console=plain -p host-android assembleBenchmark assembleRelease -Pkeliver.bundleServer="https://$HOST_ADDR:8443" ) \
+    > "$EV/m0-benchmark-build.log" 2>&1 \
+    && cp "$(find "$APP/host-android/build/outputs/apk/benchmark" -name '*.apk' | head -1)" "$EV/production-host-benchmark.apk" \
+    && echo "M0_BENCH_APK=$EV/production-host-benchmark.apk" >> "$WORK/env" \
+    && ok "T0: the benchmark build (minified with R8) built" || { bad "T0: the benchmark build failed"; tail -30 "$EV/m0-benchmark-build.log"; }
+  AAPT2="$(ls "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"/build-tools/*/aapt2 2>/dev/null | tail -1)"
+  if [ -f "$EV/production-host-benchmark.apk" ] && [ -n "$AAPT2" ]; then
+    "$AAPT2" dump xmltree --file AndroidManifest.xml "$EV/production-host-benchmark.apk" > "$EV/m0-benchmark-manifest.txt" 2>&1
+    grep -q "profileable" "$EV/m0-benchmark-manifest.txt" && ! grep -q "debuggable" "$EV/m0-benchmark-manifest.txt" \
+      && ok "T0: the benchmark build is profileable and not debuggable" || bad "T0: the benchmark manifest: $(grep -iE 'profileable|debuggable' "$EV/m0-benchmark-manifest.txt" | tr '\n' ' ')"
+  fi
+  # The store build has none of it: not the file sink, not the guest's service.
+  rel="$(find "$APP/host-android/build/outputs/apk/release" -name '*.apk' | head -1)"
+  if [ -n "$rel" ]; then
+    rm -rf "$WORK/m0-dex" && mkdir -p "$WORK/m0-dex" && unzip -q -o "$rel" 'classes*.dex' -d "$WORK/m0-dex"
+    ! cat "$WORK"/m0-dex/*.dex | grep -aq -e 'keliver/timing.log' -e 'KeliverTrace' -e 'first-frame' \
+      && ok "T0: the release build has no timing marks (no file sink, no KeliverTrace, no first-frame)" || bad "T0: the release build carries timing code"
+  else
+    bad "T0: no release APK to check"
+  fi
+fi
 
 # W8 (key rotation): the next signing key, made by keliver-publish
 # --new-signing-key, and the same host built trusting this app's key AND the
