@@ -408,13 +408,24 @@ fun SectionCard(content: @Composable () -> Unit) {
     re-read the values of the tokens the step restores (only those) and are
     refused when one no longer exists, no longer fits its prop, or would no
     longer mean its declaration in the file — the same binding check as an
-    edit, seeded with the imports of every token the step does not restore
-    (so a same-package `C` declared since, or another session's `x.C`, blocks
-    restoring `q.C.Muted`). Such a refused step stays on its stack ("undo
-    blocked (step kept)") and applies once the clash or the missing
-    declaration is resolved; a step the tree can no longer take is dropped
-    ("undo failed (step dropped)"). Write-back itself never adds two imports
-    sharing a simple name. (`portal-relay`
+    edit, seeded with the imports of every token the step does not restore.
+    So a `C` declared in the screen's package since the edit fails the
+    same-package check (restoring `app.components.C.Ink` through
+    `import app.components.*` would now mean `app.screens.C.Ink`), and another
+    session's pending `x.C` blocks restoring `q.C.Muted`. A refusal that can
+    clear without a hand edit of the screen file — a token missing or unfit,
+    a same-package or star-imported owner declared since, a clash with
+    another token the document holds — keeps the step on its stack ("undo
+    blocked (step kept)"), and it applies once that is resolved. A refusal
+    caused by the file's own imports (it already imports a different `C`,
+    exactly or as an alias) drops the step ("undo failed (step dropped)"):
+    write-back only adds imports, so only a hand edit clears it, and that
+    arrives as an external change that clears both stacks anyway. A step the
+    tree can no longer take is dropped the same way. The gate and undo/redo
+    are what keep two owners of one simple name out of a document; if one is
+    forced past them, write-back (surgical or the full-export fallback)
+    writes both imports and the result is a conflicting-import compile error,
+    never a silent rebinding. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
     (`ParityTokens.kt`) renders the same value tree as the interpreted golden
     (`portal-render` `TokenParityTest`).
