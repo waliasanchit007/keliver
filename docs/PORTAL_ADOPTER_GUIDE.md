@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.9](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.9)**:
+  **[tools 0.3.10](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.10)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.9/keliver-portal-tools-0.3.9.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.9/keliver-portal-tools-0.3.9.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.9.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.10/keliver-portal-tools-0.3.10.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.10/keliver-portal-tools-0.3.10.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.10.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.9.zip
-  export KP="$PWD/keliver-portal-tools-0.3.9/bin"
+  unzip keliver-portal-tools-0.3.10.zip
+  export KP="$PWD/keliver-portal-tools-0.3.10/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,8 +30,8 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.9
-  scaffolds projects against Maven libraries **`dev.keliver:*:0.3.3`**. The
+  The tools version and the library version are **separate lines**: tools 0.3.10
+  scaffolds projects against Maven libraries **`dev.keliver:*:0.3.4`**. The
   bundle records both in its `VERSION.json`.
 
 * For the device route only: the **Android SDK platform-tools** (`adb`) and a
@@ -242,11 +242,12 @@ server that is `http://` (debug cleartext is allowed only then).
 A debug build picks up a bundle you publish while it runs when you switch back
 to the app (on-resume updates, at most one lookup every 30 s), and looks at once
 on `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
-(only adb's shell can send that one). Every other build type looks only at the
+(the receiver needs the `DUMP` permission, which adb's shell has and ordinary apps do not). Every other build type looks only at the
 next launch, except one made with `initWith(debug)` (or, for the embedded
 library, one that falls back to `debug`), which takes debug's settings. `keliver.updates` in `host-android/gradle.properties` chooses for
-every build type instead (hosts from tools 0.3.9 and earlier wrote
-`next-launch` there: empty it to get these defaults).
+every build type instead. Hosts from tools 0.3.9 and earlier wrote
+`next-launch` there, and their `build.gradle` does not accept an empty value:
+take this release's `build.gradle` before emptying it, or set `on-resume`.
 
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
@@ -650,9 +651,9 @@ Verified from a scaffolded app in Chrome — see
 `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md` for the exact
 sequence and its limits.
 
-**Which build you need.** The published `dev.keliver:portal-editor:0.3.3` — the
-version an adopter gets from Maven Central today. Both behaviours were measured
-against it directly. An earlier revision of this guide said the published editor
+**Which build you need.** The published `dev.keliver:portal-editor:0.3.3`, or
+later. Both behaviours were measured against 0.3.3 directly; 0.3.4 did not
+change the editor's preview path. An earlier revision of this guide said the published editor
 had a defect here and that an unreleased fix was required; that was wrong, and
 the fix in question turned out to change nothing observable
 (`KNOWN_BUGS.md` U19). If a preview value ever does look stuck, hard-reload

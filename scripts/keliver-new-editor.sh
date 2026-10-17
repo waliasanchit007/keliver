@@ -3,11 +3,11 @@
 # a STANDALONE gradle build under <app>/editor/ that consumes keliver's
 # PUBLISHED portal-editor shell and compiles the app's real presenters into the
 # preview wasm (no dynamic linking on Kotlin/Wasm). No keliver source checkout
-# and no composite build. Modeled 1:1 on the verified stashfin-sdui/editor.
+# and no composite build.
 #
 # Usage (from the APP repo root):
 #   /path/to/keliver/scripts/keliver-new-editor.sh <AppName> [srcDir...]
-#     <AppName>     UpperCamelCase, e.g. Stashfin  -> StashfinPreview / main()
+#     <AppName>     UpperCamelCase, e.g. Acme  -> AcmePreview / main()
 #     [srcDir...]   optional app source dirs compiled straight into the editor
 #                   via kotlin.srcDir — e.g.
 #                   guest/src/jsMain/kotlin/com/acme/guest/logic
@@ -26,9 +26,21 @@
 # Requires: the app on the SAME Kotlin/Compose/Gradle versions as the consumed
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.3}"
+KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
+# The app's own Keliver version (appRuntime.keliverVersion) unless
+# KELIVER_VERSION is set, so an app on an older release gets a matching editor.
+if [ -z "$KELIVER_VERSION_GIVEN" ] && [ -f "$APP/keliver.portal.json" ]; then
+  v="$(python3 -c 'import json,sys
+try:
+    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
+    print(v.strip() if isinstance(v, str) else "")
+except Exception: print("")' "$APP/keliver.portal.json")"
+  [ -n "$v" ] && KELIVER_VERSION="$v"
+fi
+[[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] || { echo "the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [srcDir...]}"
 shift || true
 SRC_DIRS=("$@")

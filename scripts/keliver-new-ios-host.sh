@@ -54,7 +54,7 @@
 # and signing (host-ios/Configuration/Config.xcconfig).
 #
 # Version overrides (normally unset): KELIVER_HOST_KELIVER_VERSION (default: the
-# app's appRuntime.keliverVersion, else 0.3.3), KELIVER_HOST_ZIPLINE_VERSION,
+# app's appRuntime.keliverVersion, else 0.3.4), KELIVER_HOST_ZIPLINE_VERSION,
 # KELIVER_HOST_KOTLIN_VERSION, KELIVER_HOST_COMPOSE_VERSION.
 #
 # ALL-OR-NOTHING: everything is validated and staged before anything is written.
@@ -157,8 +157,8 @@ PACKAGE="$ROOT_PKG.host"
 KELIVER_VERSION="${KELIVER_HOST_KELIVER_VERSION:-$(python3 -c "import json,sys
 try:
     v = json.load(open(sys.argv[1]))['appRuntime']['keliverVersion']
-    print(v if isinstance(v, str) and v.strip() else '0.3.3')
-except Exception: print('0.3.3')" "$APP/keliver.portal.json")}"
+    print(v if isinstance(v, str) and v.strip() else '0.3.4')
+except Exception: print('0.3.4')" "$APP/keliver.portal.json")}"
 [[ "$KELIVER_VERSION" =~ $VERSION_RE ]] || fail "the Keliver version '$KELIVER_VERSION' is not a version."
 [ -n "$APPLICATION_ID" ] || APPLICATION_ID="$PACKAGE"
 ID_RE='^[A-Za-z][A-Za-z0-9-]*(\.[A-Za-z0-9-]+)+$'

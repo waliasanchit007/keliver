@@ -14,7 +14,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INIT="$ROOT/scripts/keliver-init"
 DEV="$ROOT/scripts/keliver-new-device-target.sh"
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.3}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
 DO_COMPILE=0
 [ "${1:-}" = "--compile" ] && DO_COMPILE=1
 
@@ -86,6 +86,7 @@ fi
 T="$A/src/jsMain/kotlin/device/KeliverTiming.kt"
 [ -f "$T" ] && grep -q '^package single\.device$' "$T" && grep -q 'take<KeliverTrace>("KeliverTrace")' "$T" && grep -q 'unavailable = true' "$T" \
   && ok "M0: device/KeliverTiming.kt marks through KeliverTrace, and stops when the host does not bind it" || bad "M0: device/KeliverTiming.kt"
+grep -q '@@' "$T" && bad "M0: a template placeholder is left in KeliverTiming.kt" || ok "M0: no template placeholder left in KeliverTiming.kt"
 
 # --- 2. two screens, explicit selection --------------------------------------
 B="$(scaffold Twin)"; add_second_screen "$B" twin
@@ -142,6 +143,37 @@ chk "unknown --screen rejected" 3 "$rc"
 # --- 7. refuses to overwrite an existing device dir --------------------------
 ( cd "$A" && "$DEV" >/dev/null 2>&1 ); rc=$?
 chk "existing device dir not overwritten" 1 "$rc"
+
+# --- 7b. the Keliver version follows the app's appRuntime.keliverVersion ------
+set_app_version() { python3 -c 'import json,sys
+p=sys.argv[1]; d=json.load(open(p)); d["appRuntime"]["keliverVersion"]=sys.argv[2]; json.dump(d,open(p,"w"),indent=2)' "$1/keliver.portal.json" "$2"; }
+O="$(KELIVER_VERSION=0.3.3 scaffold Older)"   # keliver-init for an app on 0.3.3
+( cd "$O" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+chk "an app pinned to 0.3.3 scaffolds" 0 "$rc"
+grep -q 'keliver-treehouse-guest:0\.3\.3' "$O/build.gradle" && ! grep -q 'dev\.keliver:[a-z-]*:0\.3\.4' "$O/build.gradle" \
+  && ok "an app pinned to 0.3.3 gets 0.3.3 guest dependencies, none of 0.3.4" || bad "an app pinned to 0.3.3 got another version: $(grep -o 'dev\.keliver:[a-z-]*:[0-9.]*' "$O/build.gradle" | sort -u | tr '\n' ' ')"
+V="$(scaffold Override)"; set_app_version "$V" 0.3.3
+( cd "$V" && KELIVER_VERSION=0.3.4 "$DEV" >/dev/null 2>&1 ); rc=$?
+grep -q 'keliver-treehouse-guest:0\.3\.4' "$V/build.gradle" && ok "KELIVER_VERSION overrides the app's version" || bad "KELIVER_VERSION did not override the app's version (exit $rc)"
+X="$(scaffold Badver)"; set_app_version "$X" 'x"y'; before="$(fingerprint "$X")"
+( cd "$X" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
+chk "a malformed appRuntime.keliverVersion is refused" 1 "$rc"
+[ "$(fingerprint "$X")" = "$before" ] && ok "the refused app is byte-identical" || bad "the refused app was changed"
+
+# --- 7c. the tools bundle's layout (bin/ beside templates/), a symlink, no template
+KP="$WORK/bundle"; mkdir -p "$KP/bin" "$KP/templates" "$WORK/links"
+cp "$DEV" "$KP/bin/"; cp -R "$ROOT/scripts/templates/guest" "$KP/templates/"
+ln -s "$KP/bin/keliver-new-device-target.sh" "$WORK/links/kndt"
+L1="$(scaffold Linked)"
+( cd "$L1" && "$WORK/links/kndt" >/dev/null 2>&1 ); rc=$?
+chk "the bundle layout, through a symlink" 0 "$rc"
+grep -q '^package linked\.device$' "$L1/src/jsMain/kotlin/device/KeliverTiming.kt" 2>/dev/null \
+  && ok "the bundle layout: KeliverTiming.kt from templates/guest" || bad "the bundle layout: no KeliverTiming.kt"
+rm -r "$KP/templates/guest"
+N="$(scaffold Notmpl)"; before="$(fingerprint "$N")"
+( cd "$N" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
+chk "no templates/guest is refused" 1 "$rc"
+[ "$(fingerprint "$N")" = "$before" ] && ok "no templates/guest: app unchanged" || bad "no templates/guest: the app was changed"
 
 # --- 8. the generated output actually compiles -------------------------------
 if [ $DO_COMPILE = 1 ]; then
