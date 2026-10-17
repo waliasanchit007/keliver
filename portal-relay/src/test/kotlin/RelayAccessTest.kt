@@ -235,4 +235,43 @@ class RelayAccessTest {
     val free = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1")).use { it.localPort }
     assertNull(RelayAccess.portTakenBy(free))
   }
+
+  // ── wiring (a source scan: these rules hold only if nobody bypasses them) ─
+
+  private val relaySources = java.io.File("src/main/kotlin").walkTopDown().filter { it.extension == "kt" }.toList()
+
+  @Test
+  fun everyServerTheRelayCreatesIsGated() {
+    val creates = relaySources.flatMap { f ->
+      Regex("""(\S*)HttpServer\.create\(""").findAll(f.readText()).map { f.name to it.groupValues[1] }.toList()
+    }
+    assertTrue(creates.isNotEmpty(), "the scan found the relay's server")
+    for ((file, prefix) in creates) assertTrue(prefix.endsWith("RelayAccess.gate("), "$file: an ungated HttpServer")
+  }
+
+  /** Read-only: they answer every method the same way and change nothing. */
+  private val readOnlyContexts = setOf(
+    "/devstate", "/capabilities", "/runtime-metadata", "/preview-build", "/components", "/flow",
+    "/doc", "/doc-events", "/publickey", "/bundles", "/reports",
+  )
+
+  @Test
+  fun everyOtherContextChecksItsMethod() {
+    // A page's GET to http://10.0.2.2 or a LAN address carries no Sec-Fetch-Site
+    // (RelayAccess.admit), so a handler that changes state on GET is reachable.
+    val seen = mutableSetOf<String>()
+    for (f in relaySources) {
+      val text = f.readText()
+      val starts = Regex("""server\.createContext\("([^"]+)"\)""").findAll(text).toList()
+      for ((i, m) in starts.withIndex()) {
+        val path = m.groupValues[1]
+        seen += path
+        val body = text.substring(m.range.first, starts.getOrNull(i + 1)?.range?.first ?: text.length)
+        if (path in readOnlyContexts) continue
+        assertTrue("requestMethod" in body, "${f.name}: $path changes state? then check the method, or list it as read-only")
+      }
+    }
+    for (p in listOf("/ops", "/undo", "/redo", "/publish")) assertTrue(p in seen, "the scan found $p")
+    assertTrue(seen.containsAll(readOnlyContexts), "a read-only context was removed: ${readOnlyContexts - seen}")
+  }
 }

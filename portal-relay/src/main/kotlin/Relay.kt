@@ -1155,6 +1155,7 @@ fun main(args: Array<String>) {
   }
   server.createContext("/ops") { ex ->
     handle(ex) {
+      if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }
       val q = query(ex)
       val batch = DocJson.decodeFromString<OpBatch>(ex.requestBody.readBytes().decodeToString())
       val svc = docFor(q)
@@ -1163,7 +1164,7 @@ fun main(args: Array<String>) {
       respond(ex, code, DocJson.encodeToString(ack))
     }
   }
-  // POST only: they change the document, and a GET is what a page's <img> sends.
+  // POST only, like /ops: they change the document, and a GET is what a page's <img> sends.
   server.createContext("/undo") { ex ->
     handle(ex) {
       if (ex.requestMethod != "POST") { respond(ex, 405); return@handle }

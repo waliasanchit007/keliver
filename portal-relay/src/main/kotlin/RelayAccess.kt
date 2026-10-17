@@ -110,6 +110,10 @@ internal object RelayAccess {
     if (origin == null) {
       // No Origin: a native host, curl, or a browser's no-cors GET (an <img>, a
       // link). Browsers mark the last as cross-site; nothing legitimate is.
+      // They send Sec-Fetch-Site only to https, localhost and 127.0.0.1, so a
+      // page's GET to http://10.0.2.2 or a LAN address passes unmarked. That is
+      // safe only because no GET changes anything: a handler that changes
+      // state must refuse every method but POST (RelayAccessTest checks this).
       if (ex.requestHeaders.getFirst("Sec-Fetch-Site").equals("cross-site", ignoreCase = true)) {
         refuse(ex, "a cross-site request from a web page is refused")
         return false

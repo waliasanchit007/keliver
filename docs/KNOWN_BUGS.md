@@ -901,13 +901,15 @@ server applies it to every context, including ones registered outside
   (`DEVICE_PROOF.md` §3) serves a published directory, not the relay.
 - A request with an `Origin` must come from `http(s)://localhost`, `127.0.0.1`
   or `[::1]` (any port). The CORS headers echo that origin, never `*`. A
-  preflight is answered by the same rule.
+  preflight is answered by the same rule. Any port means any other web server
+  on the developer's machine is trusted too: a local page is the developer's.
 - A request without an `Origin` (a native host, curl, the MCP server) passes,
   unless a browser marked it `Sec-Fetch-Site: cross-site` (a page's `<img>` or
   link).
 
-Refusals are 403, and the handler does not run. `/undo` and `/redo`, which
-change the document, take POST only. The `/http-record*` endpoints keep their
+Refusals are 403, and the handler does not run. `/ops`, `/undo` and `/redo`,
+which change the document, take POST only, so no GET changes anything (a
+browser marks only some cross-site GETs, see `RelayAccess.admit`). The `/http-record*` endpoints keep their
 own stricter checks (loopback peer, configured origin, token) after this one.
 
 **Affects** every released tools bundle up to and including 0.3.10. Until a
