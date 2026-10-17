@@ -344,6 +344,8 @@ final object dev.keliver.portal/EmptyComponentRegistry : dev.keliver.portal/Comp
     final fun spec(kotlin/String): dev.keliver.portal/ComponentSpec? // dev.keliver.portal/EmptyComponentRegistry.spec|spec(kotlin.String){}[0]
 }
 
+final const val dev.keliver.portal/COMPONENT_FORWARDS_MODIFIER_PROP // dev.keliver.portal/COMPONENT_FORWARDS_MODIFIER_PROP|{}COMPONENT_FORWARDS_MODIFIER_PROP[0]
+    final fun <get-COMPONENT_FORWARDS_MODIFIER_PROP>(): kotlin/String // dev.keliver.portal/COMPONENT_FORWARDS_MODIFIER_PROP.<get-COMPONENT_FORWARDS_MODIFIER_PROP>|<get-COMPONENT_FORWARDS_MODIFIER_PROP>(){}[0]
 final const val dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP // dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP|{}COMPONENT_SOURCE_HANDLE_PROP[0]
     final fun <get-COMPONENT_SOURCE_HANDLE_PROP>(): kotlin/String // dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP.<get-COMPONENT_SOURCE_HANDLE_PROP>|<get-COMPONENT_SOURCE_HANDLE_PROP>(){}[0]
 
@@ -395,6 +397,7 @@ final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev
 final fun dev.keliver.portal/exportKotlin(dev.keliver.portal/WidgetNode, kotlin/String = ..., dev.keliver.portal/ComponentRegistry = ...): kotlin/String // dev.keliver.portal/exportKotlin|exportKotlin(dev.keliver.portal.WidgetNode;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/isDpProp(kotlin/String, kotlin/String): kotlin/Boolean // dev.keliver.portal/isDpProp|isDpProp(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/isKnownWidgetType(kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/Boolean // dev.keliver.portal/isKnownWidgetType|isKnownWidgetType(kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
+final fun dev.keliver.portal/isModifierType(kotlin/String): kotlin/Boolean // dev.keliver.portal/isModifierType|isModifierType(kotlin.String){}[0]
 final fun dev.keliver.portal/kotlinDoubleLiteral(kotlin/Double): kotlin/String // dev.keliver.portal/kotlinDoubleLiteral|kotlinDoubleLiteral(kotlin.Double){}[0]
 final fun dev.keliver.portal/kotlinDpLiteral(kotlin/Double): kotlin/String // dev.keliver.portal/kotlinDpLiteral|kotlinDpLiteral(kotlin.Double){}[0]
 final fun dev.keliver.portal/kotlinStringLiteral(kotlin/String): kotlin/String // dev.keliver.portal/kotlinStringLiteral|kotlinStringLiteral(kotlin.String){}[0]
