@@ -141,6 +141,31 @@ beside yours and compare; the scaffolders fill them in):
 
 ## Candidate verification
 
-To be recorded: the build run and its retained artifact, the device run, the
-local check of the artifact, the acceptance and identity checks, the device
-verify on a phone, `ios.sh` on the zip, and the step-3 workflow check.
+**Candidate 3** (the one to tag, if approved):
+
+| | |
+|---|---|
+| Source commit | `78bcfa0ad64bf4321699654d99a48647c14fac83` |
+| Zip | `keliver-portal-tools-0.3.10.zip`, sha256 `0ba5c07b88c869084ee80870682d577aabc8ce83edcdb9caf19b4493db0e87bf` |
+| Bundled host APK | sha256 `48b004cedc39af7c3f42764ca802241a543a95691888b88343878d696d1b0083`, no `assets/portal_ed25519.pub` |
+| Build | run 38996395407, retained artifact `12087402781` (`keliver-portal-tools-0.3.10-78bcfa0ad…`, expires 2026-11-16) |
+| Device job | run 38997931981 (dispatched from `release/portal-tools-0.3.10`, pinned to the build's APK): 19/0 and 28/0, on GitHub's emulator |
+
+Checked locally, on the downloaded artifact (2026-10-17):
+
+- its sha256 equals the build run's; `VERSION.json`: tools 0.3.10, source
+  commit as above, 0 dirty files, Maven dependency 0.3.4; the APK's sha256
+  equals the device run's and it carries no portal key;
+- the 61 files under `bin/` and `templates/` are byte-identical to the source
+  commit's `scripts/` and `scripts/templates/`;
+- `keliver-adopter-acceptance.sh`: 25/0; `keliver-acceptance-identity-check.sh`: 6/0;
+- step 3 at the source commit: a `portal-tools-v0.3.10` tag runs only
+  `portal-tools.yml`, which has no write permission; `publish.yml` takes `v*`
+  only, `ci.yml` ignores tags, `pages.yml` runs on `main` only, the rest are
+  dispatch- or pull-request-only.
+
+Still to run: `ios.sh` on the zip (running), and `keliver-device-verify.sh`
+on a phone.
+
+Candidates 1 (`7ab383110`, build 38995449572) and 2 (`555150a9f`, build
+38996130488) are superseded by the review fixes: never tag or attach them.
