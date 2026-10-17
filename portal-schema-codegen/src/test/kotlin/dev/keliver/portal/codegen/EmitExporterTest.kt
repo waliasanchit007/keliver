@@ -50,7 +50,7 @@ class EmitExporterTest {
     // N4: author order; N5: imports from what the body writes.
     assertContains(src, "for (name in modifierNames(node)) {")
     // S2: imports are collected structurally while emitting.
-    assertContains(src, "\"Padding\" -> { parts += \"padding(\" + fmtInt(node.props[\"mod.Padding.allDp\"]) + \")\"; imports += \"dev.keliver.material.compose.padding\" }")
+    assertContains(src, "\"Padding\" -> { parts += \"padding(\" + fmtInt(node.props[\"mod.Padding.allDp\"]) + \")\"; imports += \"dev.keliver.material.compose.padding\"; imports.addTokenImport(node.props[\"mod.Padding.allDp\"], \"Int\") }")
     assertContains(src, "imports.sorted().forEach")
   }
 
@@ -71,7 +71,7 @@ class EmitExporterTest {
     assertContains(src, "\"Width\" to listOf(\"dev.keliver.ui.Dp\"),")
     // B1: a scoped modifier is written only under a parent that is one of its scopes.
     // A scoped modifier records no extension import — only its argument types.
-    assertContains(src, "\"Flex\" -> if ((parent == \"Row\" || parent == \"Column\")) { parts += \"flex(\" + fmtDouble(node.props[\"mod.Flex.value\"]) + \")\" }")
+    assertContains(src, "\"Flex\" -> if ((parent == \"Row\" || parent == \"Column\")) { parts += \"flex(\" + fmtDouble(node.props[\"mod.Flex.value\"]) + \")\"; imports.addTokenImport(node.props[\"mod.Flex.value\"], \"Double\") }")
     assertContains(src, "\"Margin\" -> if ((parent == \"Row\" || parent == \"Column\" || parent == \"Box\")) { parts += \"margin(\" + fmtMargin(node, \"mod.Margin.margin\") + \")\"; imports += marginImports(node, \"mod.Margin.margin\") }")
     assertContains(src, "\"Width\" -> if ((parent == \"Row\")) { parts += \"width(\" + fmtDp(node.props[\"mod.Width.width\"]) + \")\"; imports += listOf(\"dev.keliver.ui.Dp\") }")
   }
@@ -81,5 +81,20 @@ class EmitExporterTest {
     val src = emitExporter(listOf(row))
     assertContains(src, "if (\"margin.start\" in node.props || \"margin.end\" in node.props || \"margin.top\" in node.props || \"margin.bottom\" in node.props) { sb.append(\"\${indent}  margin = \${fmtMargin(node, \"margin\")},\\n\"); imports += marginImports(node, \"margin\") }")
     assertContains(src, "\"Row\" to listOf(\"dev.keliver.ui.Margin\", \"dev.keliver.ui.dp\")")
+  }
+
+  @Test fun designTokensExportAsReferencesWithTheirImportOnlyForPlainLiteralKinds() {
+    val src = emitExporter(listOf(text, box))
+    // K2: a Text/Int prop records the token's import (the formatter writes `C.Ink`)…
+    assertContains(src, "imports.addTokenImport(node.props[\"text\"], \"String\")")
+    assertContains(src, "imports.addTokenImport(node.props[\"fontSize\"], \"Int\")")
+    assertContains(src, "v is Token && v.value is String -> v.ref")
+    assertContains(src, "v is Token && v.value is Int -> v.ref")
+    // …an enum (Constraint) or list prop never takes a token: no import, the value is unwrapped.
+    assertFalse("addTokenImport(node.props[\"width\"]" in src)
+    assertFalse("addTokenImport(node.props[\"gradientStops\"]" in src)
+    assertContains(src, "private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1)")
+    // A component argument is a reference only where it fits the parameter's type.
+    assertContains(src, "tokenFits(propSourceType(node.type, k, components), it.value)")
   }
 }

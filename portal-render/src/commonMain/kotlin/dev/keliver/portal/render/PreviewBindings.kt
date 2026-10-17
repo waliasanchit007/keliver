@@ -6,6 +6,7 @@ import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.resolveItemRow
+import dev.keliver.portal.tokenValue
 
 /**
  * P3 dev-preview binding resolution. The editor fills [mocks] (string-typed;
@@ -46,27 +47,28 @@ private fun String.decodePreviewLiteral(): String {
   return dev.keliver.portal.parseKotlinStringLiteral(t) ?: t
 }
 
-// Bind-aware getters: resolve Bind via mocks, else use the literal, else default.
+// Bind-aware getters: resolve Bind via mocks, else use the literal (a design
+// token's resolved value — K2 — counts as its literal), else default.
 
-public fun WidgetNode.strB(key: String, default: String = ""): String = when (val v = props[key]) {
+public fun WidgetNode.strB(key: String, default: String = ""): String = when (val v = tokenValue(props[key])) {
   is Bind -> PreviewBindings.mocks[v.field] ?: "{${v.field}}"
   is String -> v
   else -> default
 }
 
-public fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = props[key]) {
+public fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = tokenValue(props[key])) {
   is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
   is Int -> v
   else -> default
 }
 
-public fun WidgetNode.boolB(key: String, default: Boolean = false): Boolean = when (val v = props[key]) {
+public fun WidgetNode.boolB(key: String, default: Boolean = false): Boolean = when (val v = tokenValue(props[key])) {
   is Bind -> PreviewBindings.mocks[v.field]?.toBooleanStrictOrNull() ?: default
   is Boolean -> v
   else -> default
 }
 
-public fun WidgetNode.dblB(key: String, default: Double = 0.0): Double = when (val v = props[key]) {
+public fun WidgetNode.dblB(key: String, default: Double = 0.0): Double = when (val v = tokenValue(props[key])) {
   is Bind -> PreviewBindings.mocks[v.field]?.toDoubleOrNull() ?: default
   is Double -> v
   is Int -> v.toDouble()

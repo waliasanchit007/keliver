@@ -22,10 +22,11 @@ public data class WidgetNode(
   val id: Int = nextNodeId(),
 )
 
-public fun WidgetNode.str(key: String, default: String = ""): String = props[key] as? String ?: default
-public fun WidgetNode.int(key: String, default: Int = 0): Int = props[key] as? Int ?: default
-public fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = props[key] as? Boolean ?: default
-public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = props[key] as? Double ?: default
+// A design-token value (K2) reads as its resolved literal.
+public fun WidgetNode.str(key: String, default: String = ""): String = tokenValue(props[key]) as? String ?: default
+public fun WidgetNode.int(key: String, default: Int = 0): Int = tokenValue(props[key]) as? Int ?: default
+public fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = tokenValue(props[key]) as? Boolean ?: default
+public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = tokenValue(props[key]) as? Double ?: default
 
 @Suppress("UNCHECKED_CAST")
 public fun WidgetNode.intList(key: String): List<Int> = props[key] as? List<Int> ?: emptyList()
