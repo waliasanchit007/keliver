@@ -62,7 +62,8 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
 - **Key rotation (W8, from 0.3.9):** a host trusts this app's key and, during a rotation, the next one; the
   signing block signs with both; `keliver-publish` guards against a key change by mistake
   ([`KEY_ROTATION.md`](KEY_ROTATION.md)).
-- **From 0.3.10:** the scaffolders wire the 0.3.4 libraries; publishing builds
+- **From 0.3.10:** new apps get the 0.3.4 libraries, and the scaffolders follow
+  an existing app's `appRuntime.keliverVersion`; publishing builds
   Production bundles by default; debug hosts check for updates on resume, take
   "check now" from adb or a Darwin notification, and take their bundle server
   at launch; timing marks in debug builds and a benchmark build

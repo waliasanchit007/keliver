@@ -3,11 +3,11 @@
 # a STANDALONE gradle build under <app>/editor/ that consumes keliver's
 # PUBLISHED portal-editor shell and compiles the app's real presenters into the
 # preview wasm (no dynamic linking on Kotlin/Wasm). No keliver source checkout
-# and no composite build. Modeled 1:1 on the verified stashfin-sdui/editor.
+# and no composite build.
 #
 # Usage (from the APP repo root):
 #   /path/to/keliver/scripts/keliver-new-editor.sh <AppName> [srcDir...]
-#     <AppName>     UpperCamelCase, e.g. Stashfin  -> StashfinPreview / main()
+#     <AppName>     UpperCamelCase, e.g. Acme  -> AcmePreview / main()
 #     [srcDir...]   optional app source dirs compiled straight into the editor
 #                   via kotlin.srcDir — e.g.
 #                   guest/src/jsMain/kotlin/com/acme/guest/logic
@@ -40,7 +40,7 @@ try:
 except Exception: print("")' "$APP/keliver.portal.json")"
   [ -n "$v" ] && KELIVER_VERSION="$v"
 fi
-[[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] || { echo "the Keliver version '$KELIVER_VERSION' is not a version"; exit 1; }
+[[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] || { echo "the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
 NAME="${1:?usage: keliver-new-editor.sh <AppName> [srcDir...]}"
 shift || true
 SRC_DIRS=("$@")

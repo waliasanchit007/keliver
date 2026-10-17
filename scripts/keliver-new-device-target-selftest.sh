@@ -160,6 +160,21 @@ X="$(scaffold Badver)"; set_app_version "$X" 'x"y'; before="$(fingerprint "$X")"
 chk "a malformed appRuntime.keliverVersion is refused" 1 "$rc"
 [ "$(fingerprint "$X")" = "$before" ] && ok "the refused app is byte-identical" || bad "the refused app was changed"
 
+# --- 7c. the tools bundle's layout (bin/ beside templates/), a symlink, no template
+KP="$WORK/bundle"; mkdir -p "$KP/bin" "$KP/templates" "$WORK/links"
+cp "$DEV" "$KP/bin/"; cp -R "$ROOT/scripts/templates/guest" "$KP/templates/"
+ln -s "$KP/bin/keliver-new-device-target.sh" "$WORK/links/kndt"
+L1="$(scaffold Linked)"
+( cd "$L1" && "$WORK/links/kndt" >/dev/null 2>&1 ); rc=$?
+chk "the bundle layout, through a symlink" 0 "$rc"
+grep -q '^package linked\.device$' "$L1/src/jsMain/kotlin/device/KeliverTiming.kt" 2>/dev/null \
+  && ok "the bundle layout: KeliverTiming.kt from templates/guest" || bad "the bundle layout: no KeliverTiming.kt"
+rm -r "$KP/templates/guest"
+N="$(scaffold Notmpl)"; before="$(fingerprint "$N")"
+( cd "$N" && "$KP/bin/keliver-new-device-target.sh" >/dev/null 2>&1 ); rc=$?
+chk "no templates/guest is refused" 1 "$rc"
+[ "$(fingerprint "$N")" = "$before" ] && ok "no templates/guest: app unchanged" || bad "no templates/guest: the app was changed"
+
 # --- 8. the generated output actually compiles -------------------------------
 if [ $DO_COMPILE = 1 ]; then
   compile_app "$A"; chk "single-screen generated output COMPILES" 0 "$?"

@@ -24,8 +24,10 @@ See the library CHANGELOG's [0.3.4]. Two things to know:
   binary break for compiled callers (recompile) and a source break for a host
   with its OWN implementation of either widget, which must add `align(Int)`.
   The scaffolded hosts implement neither, so they are unaffected.
-- Hosts already installed on 0.3.3 accept a bundle from a 0.3.4 guest: the
-  unknown property is reported and the text aligns to the start.
+- Treehouse hosts already installed on 0.3.3 (every scaffolded host is one)
+  accept a bundle from a 0.3.4 guest: the unknown property is reported and the
+  text aligns to the start. A host that uses `HostProtocol` directly throws on
+  it unless it sets a lenient mismatch handler.
 
 **This bundle's editor and development host are built with 0.3.4.** An app
 still on 0.3.3 sees the editor's "Keliver version skew" warning, and the
@@ -49,8 +51,9 @@ inspector offers `TextField`/`OutlinedTextField` "Align", which the app's
   library's `keliver.properties`) and `UPDATES` (iOS `HostConfig.kt`) are empty
   by default: `on-resume` in a debug build, `next-launch` in every other build. A
   value there applies to every build. Hosts scaffolded by 0.3.9 and earlier wrote
-  `next-launch` and keep it. Their `build.gradle` (and, on iOS,
-  `MainViewController.kt`) do not accept an empty value: either take this
+  `next-launch` and keep it. Their `build.gradle` does not accept an empty
+  value (and an old iOS `MainViewController.kt` would treat it as next-launch):
+  either take this
   release's files first (see "Upgrading a host") and then empty the setting, or
   set `on-resume` explicitly. An embedded Android host checks on resume only if
   the app calls `KeliverHost.resumed()` from its activity's `onResume`
@@ -60,10 +63,11 @@ inspector offers `TextField`/`OutlinedTextField` "Align", which the app's
   changed settings are named in the response as needing one. A
   `keliver.portal.json` that is missing or does not parse now refuses the
   publish, instead of the relay using what it read at start.
-- **Bundle server URLs are checked more strictly.** `keliver.bundleServer` with
-  a user (`https://user@host`) is refused at build time; the Android host
-  refuses at run time a server with a user, query or fragment (it appends its
-  own paths); the iOS host refuses a launch-time server with a query.
+- **Bundle server URLs are checked more strictly.** On Android,
+  `keliver.bundleServer` with a user (`https://user@host`) is refused at build
+  time, and the host refuses at run time a server with a user, query or
+  fragment (it appends its own paths); the iOS host refuses a launch-time
+  server with a query or a fragment.
 
 ## New
 
@@ -101,7 +105,8 @@ inspector offers `TextField`/`OutlinedTextField` "Align", which the app's
 
 - **U33: editing a text with an escape or a `$`** changed what the screen says
   (a `\n` became a literal backslash and `n`; a typed `$` became a template).
-  Fixed in this bundle's editor and relay, whose text field is now multi-line.
+  Fixed in this bundle's editor and relay; the bundled editor's text field is
+  now multi-line.
   An app's own editor (`keliver-new-editor.sh`, `dev.keliver:portal-editor`)
   gets the fix with the next library release. **Behaviour change:** a widget
   whose literal argument is a template or a concatenation is now RawCode in the
@@ -119,10 +124,10 @@ beside yours and compare; the scaffolders fill them in):
 - **Android, standalone** (`templates/production-host/`): `KeliverHost.kt`,
   `KeliverScreen.kt`, `build.gradle`, `src/timing/`, `src/notiming/`,
   `proguard-rules.pro`.
-- **Android, embedded**: the Kotlin sources, `src/timing/` and `src/notiming/`
-  from `templates/production-host/` (the scaffolder puts them in the library
-  too), and `build.gradle`, `consumer-rules.pro` and `keliver.properties` from
-  `templates/production-host-embed/`.
+- **Android, embedded**: `KeliverHost.kt`, `KeliverScreen.kt`, `src/timing/`
+  and `src/notiming/` from `templates/production-host/` (not `HostApp.kt` or
+  `MainActivity.kt`, which the library leaves out), and `build.gradle` and
+  `keliver.properties` from `templates/production-host-embed/`.
 - **iOS** (`templates/ios-host/`): `MainViewController.kt`, `HostConfig.kt`'s
   `UPDATES` line, `build.gradle`, `src/timing/`, `src/notiming/`, and in the
   Xcode project the `Benchmark` configuration and `KELIVER_TIMING = YES` in
