@@ -15,11 +15,12 @@ How the stored asset was checked: the draft download-back stalled at 0 bytes
 and 0.3.8), so before publishing, both stored assets' server `digest` and
 `size` were compared with the verified files (GitHub's record of the stored
 bytes, not a download), with the tag re-checked at `78bcfa0ad`. The public
-download was checked from a GitHub-hosted runner on 2026-10-17: the reference
-app's dispatch 39015039884 (PR #118) downloaded the public asset, checked it
-against the release's own `.sha256`, the pinned hash `0ba5c07b…` and
-`VERSION.json`'s source commit `78bcfa0ad`, then ran the whole route scaffolded
-from that zip, green.
+download was checked from GitHub-hosted runners on 2026-10-17 (PR #118): each
+dispatch downloaded the public asset and checked it against the release's own
+`.sha256`, the pinned hash `0ba5c07b…` and `VERSION.json`'s source commit
+`78bcfa0ad`, then ran the route scaffolded from that zip, green: Android
+`reference-app.yml` 39015039884 (prepare 34/0, device 171/0) and iOS
+`ios-host.yml` 39030961195 (self-test 71/0, `ios.sh` 159/0).
 
 **New apps get the 0.3.4 libraries** (`dev.keliver:*:0.3.4`, on Maven Central
 since 2026-10-16): `keliver-init` writes 0.3.4, and so does every scaffolder

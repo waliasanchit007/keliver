@@ -76,6 +76,9 @@ else
 fi
 mkdir -p "$WORK/tools" && ( cd "$WORK/tools" && unzip -q "$ZIP" )
 KP="$WORK/tools/keliver-portal-tools-$TOOLS_VERSION/bin"
+# The app's own library version for every scaffolder, as bootstrap.sh does.
+KELIVER_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"])' "$REF/app/keliver.portal.json")"
+export KELIVER_VERSION
 ( cd "$WORK" && "$KP/keliver-init" Inventory ) > "$EV/init.log" 2>&1 || { bad "keliver-init failed"; exit 1; }
 APP="$WORK/inventory"
 (

@@ -65,6 +65,11 @@ unzip -p "$ZIP" "keliver-portal-tools-$TOOLS_VERSION/VERSION.json"
 # mavenLocal() first into the editor's settings when this is 1, which would
 # resolve dev.keliver:* from this machine's ~/.m2 instead of Maven Central.
 unset KELIVER_USE_MAVEN_LOCAL
+# The app stays on its own Keliver libraries (app/keliver.portal.json's
+# appRuntime.keliverVersion), so every scaffolder wires that version, not the
+# tools bundle's newer default (tools 0.3.10 defaults to 0.3.4).
+KELIVER_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"])' "$HERE/app/keliver.portal.json")"
+export KELIVER_VERSION
 cd "$PARENT"
 "$KP/keliver-init" Inventory
 APP="$PARENT/inventory"

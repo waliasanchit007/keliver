@@ -54,8 +54,7 @@ permissions:
 jobs:
   ios-host:
     runs-on: macos-15
-    # About 100 minutes before M0; the Benchmark configuration's release framework adds 25,
-    # and a dispatch that scaffolds everything from the published zip takes about 160 in all.
+    # Observed 99-162 minutes with M0 (runner speed varies; 160 was hit once).
     timeout-minutes: 200
     permissions:
       contents: read
