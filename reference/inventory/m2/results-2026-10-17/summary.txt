@@ -1,0 +1,30 @@
+== reference/inventory/m2/results-2026-10-17/m2-android.tsv
+-- first: 5 runs
+   process_open         median       45  min       36  max       76  n 5
+   process_code         median      954  min      921  max      980  n 5
+   process_first_frame  median     1022  min      976  max     1048  n 5
+   process_content      median     1024  min      976  max     1048  n 5
+   open_first_frame     median      971  min      907  max      980  n 5
+   open_content         median      971  min      939  max      980  n 5
+   am_state             COLD x5
+   am_total_ms          median      108  min      105  max      139  n 5
+   pss_kb               median   111073  min   109664  max   112334  n 5
+   battery_dC           median      369  min      367  max      370  n 5
+-- cold: 5 runs
+   process_open         median       48  min       41  max       66  n 5
+   process_code         median      202  min      196  max      219  n 5
+   process_first_frame  median      243  min      238  max      256  n 5
+   process_content      median      243  min      238  max      263  n 5
+   open_first_frame     median      194  min      176  max      201  n 5
+   open_content         median      196  min      176  max      201  n 5
+   am_state             COLD x5
+   am_total_ms          median      101  min       91  max      120  n 5
+   pss_kb               median    88811  min    88292  max    88916  n 5
+   battery_dC           median      370  min      368  max      370  n 5
+-- warm: 5 runs
+   open_first_frame     median       35  min       30  max       40  n 5
+   open_content         median       35  min       30  max       40  n 5
+   am_state             WARM x5
+   am_total_ms          median       35  min       30  max       58  n 5
+   pss_kb               median    91086  min    90017  max    91358  n 5
+   battery_dC           median      370  min      368  max      370  n 5
