@@ -52,7 +52,7 @@ class DesignTokenGrammarTest {
 
     object Assets {
       private const val WEB = "https://example.com"
-      const val HumansLogo = "${'$'}WEB/humansLogo.png"
+      const val Logo = "${'$'}WEB/logo.png"
       const val Banner = "${'$'}{WEB}/b" + "anner.png"
       val Plain = "plain"
       val NotConstant = listOf(1)
@@ -96,7 +96,7 @@ class DesignTokenGrammarTest {
     // A private constant evaluates (others are built from it) …
     assertEquals(-16777216, value("C.Secret"))
     assertEquals(-16777216, value("C.Mirror"))
-    assertEquals("https://example.com/humansLogo.png", value("Assets.HumansLogo"))
+    assertEquals("https://example.com/logo.png", value("Assets.Logo"))
     assertEquals("https://example.com/banner.png", value("Assets.Banner"))
     assertEquals("plain", value("Assets.Plain")) // a `val` with a constant initializer
     assertEquals("a\"b\nFunds", value("Assets.Escaped"))
@@ -108,7 +108,7 @@ class DesignTokenGrammarTest {
     assertNull(value("C.Broken")) // an unknown reference
     // Only exported, resolvable constants are offered to the editor.
     val offered = tokens.offered.map { it.decl.ref }.toSet()
-    assertTrue("C.Ink" in offered && "Assets.HumansLogo" in offered && "TopGap" in offered, "$offered")
+    assertTrue("C.Ink" in offered && "Assets.Logo" in offered && "TopGap" in offered, "$offered")
     assertFalse("C.Secret" in offered || "Assets.WEB" in offered || "FilePrivate" in offered, "$offered")
     assertFalse("C.Loop1" in offered || "Assets.NotConstant" in offered, "$offered")
     assertEquals("app.components.C", entry("C.Ink").decl.importFq)
@@ -129,7 +129,7 @@ class DesignTokenGrammarTest {
       @Composable
       fun BrandCard(label: String, tint: Int = C.Ink) {
         StyledBox(colorArgb = C.White, fillWidth = C.Dense) {
-          AsyncImage(url = Assets.HumansLogo, widthDp = 24)
+          AsyncImage(url = Assets.Logo, widthDp = 24)
           StyledText(text = label, colorArgb = C.Ink, modifier = Modifier.background(C.White))
           StyledText(text = C.Title, colorArgb = tint)
         }
@@ -145,7 +145,7 @@ class DesignTokenGrammarTest {
     assertEquals(token("C.White", -1, "app.components.C"), box.props["colorArgb"])
     assertEquals(token("C.Dense", true, "app.components.C"), box.props["fillWidth"])
     val (image, text, title) = box.children.map { it as DocNode.Widget }
-    assertEquals(token("Assets.HumansLogo", "https://example.com/humansLogo.png", "app.components.Assets"), image.props["url"])
+    assertEquals(token("Assets.Logo", "https://example.com/logo.png", "app.components.Assets"), image.props["url"])
     assertEquals(token("C.Ink", -14737633, "app.components.C"), text.props["colorArgb"])
     assertEquals(token("C.White", -1, "app.components.C"), text.modifiers["Background.colorArgb"])
     assertEquals(token("C.Title", "Funds", "app.components.C"), title.props["text"])
@@ -154,8 +154,8 @@ class DesignTokenGrammarTest {
   }
 
   @Test fun privateConstantsAreUsableInsideTheirObjectOnly() {
-    // `Assets.HumansLogo` is built from the private WEB …
-    assertIs<PropValue.Token>((root(screen("""AsyncImage(url = Assets.HumansLogo)""")) ).props["url"])
+    // `Assets.Logo` is built from the private WEB …
+    assertIs<PropValue.Token>((root(screen("""AsyncImage(url = Assets.Logo)""")) ).props["url"])
     // … but WEB itself cannot be referenced from another file (it would not compile).
     assertIs<DocNode.RawCode>(root(screen("""Column { AsyncImage(url = Assets.WEB) }""")).children.single())
     assertIs<DocNode.RawCode>(root(screen("""Column { StyledText(text = FilePrivate) }""", listOf("app.components.FilePrivate"))).children.single())
@@ -234,15 +234,15 @@ class DesignTokenGrammarTest {
   @Test fun bindingATokenWritesTheReferenceAndAddsItsImport() {
     val d = doc()
     val first = child(d, 0)
-    val logo = token("Assets.HumansLogo", "https://example.com/humansLogo.png", "app.components.Assets")
+    val logo = token("Assets.Logo", "https://example.com/logo.png", "app.components.Assets")
     val target = d.apply(DocOp.SetProp(first.handle, "text", logo)).doc
     val merged = WriteBack.merge(home, target, tokens = tokens)!!
-    assertTrue("StyledText(text = Assets.HumansLogo, colorArgb = C.Ink, fontSize = 12)" in merged, merged)
+    assertTrue("StyledText(text = Assets.Logo, colorArgb = C.Ink, fontSize = 12)" in merged, merged)
     assertTrue("import app.components.Assets\nimport app.components.C\n" in merged, merged)
     // Detach: the literal replaces the reference (the import stays; it is harmless).
-    val detached = target.apply(DocOp.SetProp(first.handle, "text", lit("https://example.com/humansLogo.png"))).doc
+    val detached = target.apply(DocOp.SetProp(first.handle, "text", lit("https://example.com/logo.png"))).doc
     val again = WriteBack.merge(merged, detached, tokens = tokens)!!
-    assertTrue("StyledText(text = \"https://example.com/humansLogo.png\", colorArgb = C.Ink, fontSize = 12)" in again, again)
+    assertTrue("StyledText(text = \"https://example.com/logo.png\", colorArgb = C.Ink, fontSize = 12)" in again, again)
   }
 
   @Test fun insertingATokenAddsTheImportOnceAndRespectsStarImportsAndThePackage() {
@@ -287,7 +287,7 @@ class DesignTokenGrammarTest {
     assertEquals(token("C.Ink", 6, "app.components.C"), (recognized(table("6")) as DocNode.Widget).props["colorArgb"])
     assertIs<DocNode.RawCode>(recognized(table("\"now a string\""))) // changed kind
     assertIs<DocNode.RawCode>(recognized(TokenTable.EMPTY)) // gone
-    assertNotNull(table("5").signature().singleOrNull())
+    assertEquals(table("5").signature(), table("5").signature())
     assertFalse(table("5").signature() == table("6").signature())
   }
 

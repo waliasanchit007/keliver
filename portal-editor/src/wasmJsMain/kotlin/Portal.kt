@@ -12,6 +12,7 @@ import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.Token
+import dev.keliver.portal.tokenValue
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
 import dev.keliver.portal.collectPreviewBindingKeys
@@ -89,6 +90,9 @@ private var currentScreen = "main"
 // V2 M1: the SERVER owns the document; the editor is an op-emitting client.
 // portalTree is a projection with WidgetNode.id == document HANDLE.
 private var docVersion: Long = -1
+
+/** K2: the relay's design-token table version last seen on the change stream. */
+private var tokensVersionSeen: Long = -1
 private var eventSource: EventSource? = null
 private val opQueue = ArrayDeque<Pair<List<DocOp>, Boolean>>() // ops to refreshPanels
 private var opInFlight = false
@@ -357,7 +361,8 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     return
   }
   val xhr = XMLHttpRequest()
-  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen")
+  // K2: `tokens=1` — this editor understands PropValue.Token (an older one is served literals).
+  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
@@ -383,7 +388,14 @@ private fun subscribeDocEvents() {
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       // C3 master updates: a component edit re-ingests screens (doc bumps) — refresh
       // the registry too so instance previews reflect the new definition without reload.
-      if (v != null && v != docVersion) fetchComponents { refetchDoc(true) }
+      // K2: the project's design-token table version rides on the same event.
+      val t = (ev.data as? String)?.let { Regex("\"tokens\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+      val tokensChanged = t != null && t != tokensVersionSeen
+      if (t != null) tokensVersionSeen = t
+      when {
+        v != null && v != docVersion -> fetchComponents { refetchDoc(true) }
+        tokensChanged -> fetchComponents { refresh() } // tokens changed, the document did not: refresh the picker
+      }
     }
     es.onerror = { _ ->
       // Server restart kills the stream; recreate after a beat (fresh subscribe).
@@ -404,7 +416,7 @@ private fun startVersionPoll() {
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
       val xhr = XMLHttpRequest()
-      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen")
+      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
       xhr.addEventListener("load", { _ ->
         val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
         if (v != null && v != docVersion) refetchDoc(true)
@@ -1458,7 +1470,7 @@ private fun renderOutline() {
     val r = Ui.el("div", "tree-row" + if (node.id == selectedId) " selected" else "")
     r.setAttribute("style", "padding-left:${6 + depth * 14}px;")
     r.appendChild(Ui.el("span", "t", node.type))
-    (node.props["text"] as? String)?.let { r.appendChild(Ui.el("span", "hint", "“$it”")) }
+    (tokenValue(node.props["text"]) as? String)?.let { r.appendChild(Ui.el("span", "hint", "“$it”")) }
     r.addEventListener("click", { _ -> selectedId = node.id; refresh() })
     r.setAttribute("draggable", "true")
     r.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}"); ev.stopPropagation() })

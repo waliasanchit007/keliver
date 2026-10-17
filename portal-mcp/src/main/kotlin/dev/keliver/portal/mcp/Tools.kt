@@ -86,25 +86,39 @@ object Tools {
     }.toString()
   }
 
+  /** A token's declaration: its import plus the member (`app.components.C` + `Ink`), or the reference itself. */
+  internal fun tokenFqName(t: PropValue.Token): String {
+    val import = t.import ?: return t.ref
+    return if ('.' in t.ref) "$import.${t.ref.substringAfter('.')}" else import
+  }
+
   private fun findUsages(project: String, name: String): String {
     val screens = Regex("\"([^\"]+)\"").findAll(get("/screens?project=$project")).map { it.groupValues[1] }
     val hits = StringBuilder()
     screens.forEach { screen ->
-      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen")) }.getOrNull()
+      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1")) }.getOrNull()
         ?: return@forEach
       usagesIn(screen, doc, name).forEach { hits.appendLine(it) }
     }
     return hits.toString().ifEmpty { "no usages of '$name' in project '$project'" }
   }
 
-  /** Where [name] — a bound field, a wired action, or (K2) a design token like `C.Ink` — is used in [doc]. */
+  /**
+   * Where [name] — a bound field, a wired action, or (K2) a design token — is
+   * used in [doc]. A token matches by its fully-qualified name
+   * (`app.components.C.Ink`), or by its reference (`C.Ink`) — each hit names
+   * the declaration, so same-named tokens of different packages stay apart.
+   */
   internal fun usagesIn(screen: String, doc: UiDocument, name: String): List<String> {
     val hits = mutableListOf<String>()
     fun check(n: DocNode.Widget, key: String, v: PropValue) {
       when (v) {
         is PropValue.Bind -> if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key binds field '$name'"
         is PropValue.Action -> if (v.name == name) hits += "$screen: ${n.type}#${n.handle.v}.$key wires action '$name'"
-        is PropValue.Token -> if (v.ref == name) hits += "$screen: ${n.type}#${n.handle.v}.$key uses token '$name'"
+        is PropValue.Token -> {
+          val fq = tokenFqName(v)
+          if (name == fq || name == v.ref) hits += "$screen: ${n.type}#${n.handle.v}.$key uses token '${v.ref}' ($fq)"
+        }
         else -> {}
       }
     }
@@ -210,7 +224,7 @@ object Tools {
       val project = args.str("project", "default")
       val screen = normalizeScreen(project, args.str("screen", "main"))
       rejectUnknownScreen(project, screen)
-        ?: toolText(get("/doc?project=$project&screen=$screen"))
+        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1"))
     },
 
     Tool(

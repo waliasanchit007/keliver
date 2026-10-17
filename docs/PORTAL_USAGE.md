@@ -329,8 +329,18 @@ numbers.
   opens a searchable list of the tokens that fit it; choosing one writes the
   reference (and adds its `import` when the file lacks it). **detach**
   replaces the reference with its literal value. **@** (bind) is unchanged.
-- A token fits only a prop of exactly its type — never a Dp, Float or enum
-  prop. `private` constants are evaluated but never offered.
+- A token fits only a prop of exactly its type — never a Dp, Float, enum or
+  Long. `private` constants are evaluated but never offered. A reference is a
+  token only where Kotlin would bind it to that constant: a parameter, lambda
+  parameter (a list item variable) or local of the same name, an aliased
+  import, or a same-package declaration of the name keeps it RawCode.
+- The relay refuses a token that would mean something else in the target file
+  (the file imports a different `C`, or importing it would change what an
+  existing `C.…` means) — pick another or fix the imports.
+- `tokensDirs` entries may be repo-relative or absolute; a missing one is
+  skipped (the relay never creates it).
+- An editor built before this release is served the literal values (it does
+  not ask with `tokens=1`): it still renders and edits, without chips.
 - Change a constant and the canvas follows; delete it (or change its type) and
   the call that used it becomes RawCode until you fix the reference.
 - Endpoint: `GET /tokens?project=<p>`; agents: the MCP `list_tokens` tool.

@@ -52,6 +52,8 @@ data class Recognized(
   val file: KtFile? = null,
   /** M4: the screen function's Bindings interface, if present, for contract write-back. */
   val bindingsInterface: KtClass? = null,
+  /** K2: design-token resolution in this file (shadowing honoured), for write-back. Transient. */
+  internal val tokenLookup: TokenLookup? = null,
 )
 
 /**
@@ -102,7 +104,8 @@ object Recognizer {
       ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
-    val walk = Walker(NameCtx.Screen(bindingsParam), components, tokens.lookupFor(file))
+    val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
+    val walk = Walker(NameCtx.Screen(bindingsParam), components, lookup)
     val root = walk.rootOf(body)
 
     val ifaceClass = file.declarations.filterIsInstance<KtClass>()
@@ -120,7 +123,7 @@ object Recognizer {
       )
     } ?: Contract()
 
-    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass)
+    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup)
   }
 
   /**
@@ -139,11 +142,11 @@ object Recognizer {
     tokens: TokenTable = TokenTable.EMPTY,
   ): RecognizedComponent? {
     val file = PsiEnv.parse(fileName, source)
-    val lookup = tokens.lookupFor(file)
     val pkg = file.packageFqName.asString().takeIf { it.isNotEmpty() }
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
+    val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
     val name = fn.name ?: return null
     if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) {
       return RecognizedComponent(

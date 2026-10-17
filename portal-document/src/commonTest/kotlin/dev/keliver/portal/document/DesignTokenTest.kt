@@ -77,4 +77,9 @@ class DesignTokenTest {
     // A component instance's props are the server's to check (it knows signatures).
     assertNull(d.tryApply(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Badge2", props = mapOf("label" to ink)))).error)
   }
+
+  @Test fun aLongHasNoLiteralTag() {
+    // A Long token (`const val Big = 0xFFFFFFFF`) fits no prop; lit() refuses it rather than writing a String.
+    kotlin.test.assertFailsWith<IllegalArgumentException> { lit(4294967295L) }
+  }
 }

@@ -37,7 +37,8 @@ object PsiEnv {
 
   val factory: KtPsiFactory by lazy { KtPsiFactory(env.project) }
 
-  fun parse(name: String, source: String): KtFile = factory.createFile(name, source)
+  /** [name] may be a path (a file's identity, K2); the PSI file is named by its last segment. */
+  fun parse(name: String, source: String): KtFile = factory.createFile(name.substringAfterLast('/'), source)
 
   /** ktlint/detekt recipe — required for PSI mutation (M4), harmless for parse. */
   private fun enablePsiMutations(project: MockProject) {
