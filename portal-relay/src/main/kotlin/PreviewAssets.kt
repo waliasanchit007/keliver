@@ -119,7 +119,11 @@ class PreviewAssets(
           return image
         }
       } catch (e: IOException) {
-        return refuse(uri, 504, "upstream failed (${e.javaClass.simpleName})")
+        // OkHttp tries a host's addresses in parallel and throws the LAST
+        // failure; the others ride as suppressed. Name them all: an IPv6
+        // "no route" can hide the TLS failure that actually mattered.
+        val causes = (listOf(e) + e.suppressed).map { it.javaClass.simpleName }.distinct()
+        return refuse(uri, 504, "upstream failed (${causes.joinToString("; ")})")
       }
     }
     return refuse(uri, 502, "more than $MAX_REDIRECTS redirects")
