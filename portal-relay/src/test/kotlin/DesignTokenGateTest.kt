@@ -201,4 +201,121 @@ fun HomeScreen() {
     svc.announce()
     assertNotNull(Regex("\"tokens\":${v + 1}").find(out.toString()), out.toString())
   }
+
+  // ── re-review ──
+
+  private fun withAccent() = """
+package app.screens
+
+import androidx.compose.runtime.Composable
+import dev.keliver.layout.compose.Column
+import dev.keliver.material.compose.StyledText
+
+private const val Accent = 5
+
+@Composable
+fun HomeScreen() {
+  Column {
+    StyledText(text = "a", colorArgb = Accent, fontSize = 12)
+  }
+}
+"""
+
+  @Test fun undoRedoAndDuplicateWorkWithAFilePrivateConstant() {
+    val svc = service(withAccent())
+    val node = text(svc)
+    assertEquals(token("Accent", 5, "app.screens.Accent"), node.props["colorArgb"])
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "fontSize", lit(14)))).ok)
+    assertTrue(svc.undo("t").ok, "undo on a screen using a file-private constant")
+    assertTrue(svc.redo("t").ok)
+    // Duplicate (insert a copy carrying the token).
+    val copy = DocOp.InsertNode(svc.doc.root.handle, node.handle, node.copy(handle = Handle(0)))
+    val ack = svc.submit(batch(svc, copy))
+    assertTrue(ack.ok, ack.error)
+  }
+
+  @Test fun aFailedUndoKeepsItsEntry() {
+    val svc = service()
+    val node = text(svc)
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "colorArgb", lit(1)))).ok) // detach C.Ink
+    val f = File(components, "Tokens.kt")
+    f.writeText(tokens().replace("const val Ink = -14737633", ""))
+    rebuild()
+    assertFalse(svc.undo("t").ok)
+    f.writeText(tokens())
+    rebuild()
+    assertTrue(svc.undo("t").ok, "the entry survived the failed attempt")
+    assertEquals(token("C.Ink", -14737633), text(svc).props["colorArgb"])
+  }
+
+  @Test fun anUndoNeverRestoresATokenThatNoLongerFits() {
+    val svc = service()
+    val node = text(svc)
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "colorArgb", lit(1)))).ok)
+    File(components, "Tokens.kt").writeText(tokens(ink = "\"now a String\""))
+    rebuild()
+    val undone = svc.undo("t")
+    assertFalse(undone.ok)
+    assertTrue("no longer fits" in undone.error!!, undone.error)
+  }
+
+  @Test fun twoOwnersWithOneSimpleNameAreRefusedInABatchAndAcrossTheWriteWindow() {
+    File(root, "x").mkdirs()
+    File(root, "q").mkdirs()
+    val svc = service(home(imports = "", body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
+    File(screens, "X.kt").writeText("package x\nobject C { const val Ink = 9 }\n")
+    File(components, "Q.kt").writeText("package q\nobject C { const val Muted = 8 }\n")
+    rebuild()
+    val (a, b) = (svc.doc.root as DocNode.Widget).children.map { it as DocNode.Widget }
+    val xInk = token("C.Ink", 9, "x.C")
+    val qMuted = token("C.Muted", 8, "q.C")
+    // One batch, two owners named C: refused (the imports would clash).
+    val both = batch(svc, DocOp.SetProp(a.handle, "colorArgb", xInk), DocOp.SetProp(b.handle, "colorArgb", qMuted))
+    assertFalse(svc.dryRun(both).ok)
+    assertFalse(svc.submit(both).ok)
+    // Two batches inside the write-back window: the second sees the first's pending import.
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(a.handle, "colorArgb", xInk))).ok)
+    val second = svc.submit(batch(svc, DocOp.SetProp(b.handle, "colorArgb", qMuted)))
+    assertFalse(second.ok)
+    assertTrue("different C" in second.error!!, second.error)
+  }
+
+  @Test fun aSameSizeEditWithTheSameMtimeIsReparsedAndADeletedFileForgotten() {
+    service()
+    val f = File(components, "Tokens.kt")
+    val stamp = f.lastModified()
+    f.writeText(tokens(ink = "-14737634")) // same length, one digit different
+    f.setLastModified(stamp)
+    assertTrue(rebuild(), "a content change is seen even when size and mtime are unchanged")
+    assertEquals(-14737634, Tokens.table(project).entries.single { it.decl.ref == "C.Ink" }.value)
+    f.delete()
+    assertTrue(rebuild())
+    assertTrue(Tokens.table(project).entries.none { it.decl.ref == "C.Ink" })
+  }
+
+  @Test fun aTokenNamedLikeALocalOfTheTargetScreenIsRefused() {
+    // The screen binds `Ink` itself: a bare `Ink` written there would mean the local.
+    val text = """
+package app.screens
+
+import androidx.compose.runtime.Composable
+import dev.keliver.layout.compose.Column
+import dev.keliver.material.compose.StyledText
+
+@Composable
+fun HomeScreen() {
+  val Ink = 1
+  Column {
+    StyledText(text = "a")
+  }
+}
+"""
+    val svc = service(text)
+    File(components, "Top.kt").writeText("package app.components\n\nconst val Ink = 3\n")
+    rebuild()
+    fun widgets(n: DocNode): List<DocNode.Widget> =
+      (n as? DocNode.Widget)?.let { listOf(it) + it.children.flatMap(::widgets) }.orEmpty()
+    val styled = widgets(svc.doc.root).first { it.type == "StyledText" }
+    assertRefused(svc, DocOp.SetProp(styled.handle, "colorArgb", token("Ink", 3, "app.components.Ink")), "screen's own")
+  }
 }

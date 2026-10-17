@@ -75,8 +75,10 @@ class DocumentService(
     refusal(normalized)?.let { return null to it }
     val chosen = Tokens.tokensIn(normalized)
     if (chosen.isNotEmpty() && kotlinFile.exists()) {
-      val text = kotlinFile.readText()
-      chosen.forEach { t -> table.bindingProblem(text, tokenFileId, t)?.let { return null to it } }
+      // One scope through the whole batch, seeded with the imports the
+      // document's tokens already imply (it may be ahead of the file).
+      val pending = Tokens.importsIn(doc)
+      table.bindingProblem(kotlinFile.readText(), tokenFileId, chosen.toList(), pending)?.let { return null to it }
     }
     return normalized to null
   }
@@ -160,13 +162,22 @@ class DocumentService(
 
   @Synchronized
   fun undo(session: String): OpAck {
-    val inverses = undoStacks[session]?.removeLastOrNull()
+    // Peek. A token refusal keeps the entry (restoring the declaration makes
+    // it work again); an inverse the tree can no longer take is dropped, as
+    // before K2 — it never could apply, and keeping it would wedge the stack.
+    val stack = undoStacks[session]
+    val inverses = stack?.lastOrNull()
       ?: return OpAck(false, doc.version, "nothing to undo")
     val res = doc.applyBatch(inverses)
-    val ok = res.result ?: return OpAck(false, doc.version, "undo failed: ${res.error}")
-    // K2: an inverse carries token values from when it was recorded; re-resolve them.
-    val (fresh, stale) = Tokens.refresh(ok.doc, tokens(), tokenFileId)
+    val ok = res.result ?: run {
+      stack.removeLastOrNull()
+      return OpAck(false, doc.version, "undo failed: ${res.error}")
+    }
+    // K2: an inverse carries token values from when it was recorded; re-resolve
+    // the tokens it restores (and only those).
+    val (fresh, stale) = Tokens.refresh(doc, ok.doc, tokens(), tokenFileId, components())
     if (fresh == null) return OpAck(false, doc.version, "undo failed: $stale")
+    stack.removeLastOrNull()
     redoStacks.getOrPut(session) { ArrayDeque() }.addLast(ok.inverseBatch)
     doc = fresh.copy(version = doc.version + 1)
     changed()
@@ -175,12 +186,17 @@ class DocumentService(
 
   @Synchronized
   fun redo(session: String): OpAck {
-    val inverses = redoStacks[session]?.removeLastOrNull()
+    val stack = redoStacks[session]
+    val inverses = stack?.lastOrNull()
       ?: return OpAck(false, doc.version, "nothing to redo")
     val res = doc.applyBatch(inverses)
-    val ok = res.result ?: return OpAck(false, doc.version, "redo failed: ${res.error}")
-    val (fresh, stale) = Tokens.refresh(ok.doc, tokens(), tokenFileId)
+    val ok = res.result ?: run {
+      stack.removeLastOrNull()
+      return OpAck(false, doc.version, "redo failed: ${res.error}")
+    }
+    val (fresh, stale) = Tokens.refresh(doc, ok.doc, tokens(), tokenFileId, components())
     if (fresh == null) return OpAck(false, doc.version, "redo failed: $stale")
+    stack.removeLastOrNull()
     undoStacks.getOrPut(session) { ArrayDeque() }.addLast(ok.inverseBatch)
     doc = fresh.copy(version = doc.version + 1)
     changed()
