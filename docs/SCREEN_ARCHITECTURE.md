@@ -406,9 +406,15 @@ fun SectionCard(content: @Composable () -> Unit) {
     rather than written as clashing imports. Functions never shadow a token.
     An ambiguous reference is accepted when it binds correctly. Undo/redo
     re-read the values of the tokens the step restores (only those) and are
-    refused when one no longer exists or no longer fits its prop; such a
-    refused step stays on its stack, so it applies once the declaration is
-    back. (`portal-relay`
+    refused when one no longer exists, no longer fits its prop, or would no
+    longer mean its declaration in the file — the same binding check as an
+    edit, seeded with the imports of every token the step does not restore
+    (so a same-package `C` declared since, or another session's `x.C`, blocks
+    restoring `q.C.Muted`). Such a refused step stays on its stack ("undo
+    blocked (step kept)") and applies once the clash or the missing
+    declaration is resolved; a step the tree can no longer take is dropped
+    ("undo failed (step dropped)"). Write-back itself never adds two imports
+    sharing a simple name. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
     (`ParityTokens.kt`) renders the same value tree as the interpreted golden
     (`portal-render` `TokenParityTest`).
