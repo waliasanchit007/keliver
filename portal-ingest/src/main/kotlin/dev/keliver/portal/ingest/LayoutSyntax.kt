@@ -376,3 +376,60 @@ internal object ModifierChain {
 /** start/end/top/bottom from wire props [keys] (absent or non-numeric = 0). */
 internal fun sidesOf(props: Map<String, PropValue>, keys: List<String>): DoubleArray =
   DoubleArray(4) { (props[keys[it]] as? PropValue.Lit)?.let { l -> l.d ?: l.i?.toDouble() } ?: 0.0 }
+
+/**
+ * K1: the imports a write-back FRAGMENT needs, derived from the grammar that
+ * produced it (the modifier spec / argument type / Margin form) — never by
+ * pattern-matching symbol names over text, so a scoped `.size(Dp(…), Dp(…))`
+ * never pulls in material's top-level `size`.
+ */
+internal object FragmentImports {
+  private const val UI = "dev.keliver.ui"
+  private const val LAYOUT_API = "dev.keliver.layout.api"
+  private val layoutEnums = setOf("Constraint", "CrossAxisAlignment", "MainAxisAlignment", "Overflow")
+
+  /** A Dp literal: `N.dp` needs `dp`, `Dp(N.0)` needs `Dp`. */
+  fun dp(text: String): Set<String> = when {
+    text.trim().startsWith("Dp(") -> setOf("$UI.Dp")
+    text.trim().endsWith(".dp") -> setOf("$UI.dp")
+    else -> emptySet()
+  }
+
+  /** A Margin expression: `Margin` plus each argument's Dp spelling. */
+  fun margin(text: String): Set<String> {
+    val t = text.trim()
+    if (t == "Margin.Zero") return setOf("$UI.Margin")
+    val args = splitArgs(t.removePrefix("Margin(").removeSuffix(")"), 0).orEmpty()
+    return setOf("$UI.Margin") + args.flatMap { dp(it.value) }
+  }
+
+  /** One argument of declared source type [type] (ModifierSpec.argTypes). */
+  fun arg(type: String?, text: String): Set<String> = when (type) {
+    "Dp" -> dp(text)
+    "Margin" -> margin(text)
+    in layoutEnums -> setOf("$LAYOUT_API.$type")
+    else -> emptySet()
+  }
+
+  /** A widget prop value as the exporter writes it (Dp, Margin, layout enum, or a plain literal). */
+  fun value(text: String): Set<String> {
+    val t = text.trim()
+    return when {
+      t.startsWith("Margin") -> margin(t)
+      MarginSyntax.parseDp(t) != null -> dp(t)
+      t.substringBefore('.') in layoutEnums && '(' !in t -> setOf("$LAYOUT_API.${t.substringBefore('.')}")
+      else -> emptySet()
+    }
+  }
+
+  /** A whole `Modifier.…` chain resolved under [parentType]: the extension (unscoped only) + its args. */
+  fun chain(text: String, parentType: String?): Set<String> {
+    val resolved = ModifierChain.segments(text)?.let { ModifierChain.resolve(it, parentType) } ?: return emptySet()
+    val out = linkedSetOf("dev.keliver.Modifier")
+    for (seg in resolved) {
+      if (seg.spec.scopes.isEmpty()) dev.keliver.portal.modifierImport[seg.spec.name]?.let { out += it }
+      seg.segment.args.forEachIndexed { j, a -> out += arg(seg.spec.argTypes.getOrNull(j), a.value) }
+    }
+    return out
+  }
+}

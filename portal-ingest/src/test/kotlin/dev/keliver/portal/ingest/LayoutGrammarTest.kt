@@ -472,8 +472,11 @@ class LayoutGrammarTest {
     val movedText = ((moved.doc.root as DocNode.Widget).children[1] as DocNode.Widget).children.single() as DocNode.Widget
     assertEquals(mapOf("Padding.allDp" to PropValue.Lit("i", i = 4)), movedText.modifiers) // stripped in the doc
     // Whatever the relay saves — surgical merge or full export — carries no flex.
+    // The relay's path here is the SURGICAL merge (delete + insert): it must carry no flex.
     val merged = WriteBack.merge(src, moved.doc)
-    assertTrue(merged == null || ("flex(" !in merged && "Modifier.padding(4)" in merged), merged)
+    assertNotNull(merged)
+    assertFalse("flex(" in merged, merged)
+    assertTrue("Modifier.padding(4)" in merged, merged)
     val out = exportKotlin(moved.doc.toWidgetTree(), functionName = "S")
     assertTrue("modifier = Modifier.padding(4)," in out, out)
     assertFalse("flex(" in out, out)
@@ -531,6 +534,9 @@ class LayoutGrammarTest {
         Column {
           Row(margin = Margin(all = Dp(1.0))) {}
           StyledText(text = "a", modifier = Modifier.margin(Margin(all = Dp(4.0))))
+          Row(margin = Margin(all = Dp(2.0))) {
+            StyledText(text = "b")
+          }
         }
       }
     """.trimIndent() + "\n"
@@ -539,15 +545,21 @@ class LayoutGrammarTest {
     val col = doc.root as DocNode.Widget
     val row = col.children[0]
     val text = col.children[1]
+    val inner = (col.children[2] as DocNode.Widget).children.single()
     val t = doc
       .apply(DocOp.SetModifier(text.handle, "Margin.margin.start", d(6.0))).doc // all= can't say it -> canonical .dp
       .apply(DocOp.SetModifier(text.handle, "HorizontalAlignment.alignment", PropValue.Lit("i", i = 1))).doc
       .apply(DocOp.SetProp(row.handle, "width", PropValue.Lit("i", i = 1))).doc // a new arg: Constraint
+      .apply(DocOp.SetModifier(inner.handle, "LayoutSize.width", d(12.0))).doc // scoped size(Dp, Dp)
+      .apply(DocOp.SetModifier(inner.handle, "LayoutSize.height", d(12.0))).doc
     val merged = WriteBack.merge(src, t)!!
     for (fq in listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.ui.dp")) {
       assertEquals(1, Regex("^import ${Regex.escape(fq)}$", RegexOption.MULTILINE).findAll(merged).count(), merged)
     }
     assertFalse("import dev.keliver.layout.api.Overflow" in merged, merged)
+    // The scoped LayoutSize is a scope member: never material's top-level `size`.
+    assertTrue(".size(Dp(12.0), Dp(12.0))" in merged, merged)
+    assertFalse("import dev.keliver.material.compose.size" in merged, merged)
     assertFalse("import dev.keliver.layout.api.MainAxisAlignment" in merged, merged)
     // Kept sorted among the existing imports.
     val imports = merged.lines().filter { it.startsWith("import ") }
@@ -558,5 +570,68 @@ class LayoutGrammarTest {
     // A star import already covers it; an existing same-name import is never shadowed.
     assertEquals("import dev.keliver.ui.*\nx", WriteBack.ensureImports("import dev.keliver.ui.*\nx", setOf("dev.keliver.ui.dp")))
     assertEquals("import foo.dp\nx", WriteBack.ensureImports("import foo.dp\nx", setOf("dev.keliver.ui.dp")))
+  }
+
+  @Test fun ensureImportsHandlesCommentsSemicolonsBackticksAndFileAnnotations() {
+    // Existing imports written with a trailing comment / semicolon / backticks are recognized.
+    for (existing in listOf(
+      "import dev.keliver.ui.dp // spacing",
+      "import dev.keliver.ui.dp;",
+      "import dev.keliver.`ui`.dp",
+      "import dev.keliver.ui.dp /* why */",
+    )) {
+      val text = "$existing\n\nfun f() {}\n"
+      assertEquals(text, WriteBack.ensureImports(text, setOf("dev.keliver.ui.dp")), existing)
+    }
+    // No package, no imports: after the @file: annotations, set off by blank lines.
+    val annotated = "@file:Suppress(\"x\")\n\nfun f() {}\n"
+    assertEquals(
+      "@file:Suppress(\"x\")\n\nimport dev.keliver.ui.dp\n\nfun f() {}\n",
+      WriteBack.ensureImports(annotated, setOf("dev.keliver.ui.dp")),
+    )
+    // A package and no imports: a blank line after `package`, one before the code.
+    assertEquals(
+      "package a.b\n\nimport dev.keliver.ui.dp\n\nfun f() {}\n",
+      WriteBack.ensureImports("package a.b\n\nfun f() {}\n", setOf("dev.keliver.ui.dp")),
+    )
+    assertEquals(
+      "package a.b\n\nimport dev.keliver.ui.dp\n\nfun f() {}\n",
+      WriteBack.ensureImports("package a.b\nfun f() {}\n", setOf("dev.keliver.ui.dp")),
+    )
+  }
+
+  @Test fun componentInstancesNeverExportModifiersAsNamedArgs() {
+    fun spec(withModifier: Boolean) = dev.keliver.portal.ComponentSpec(
+      name = "Tile",
+      props = listOf(dev.keliver.portal.PropSpec("weight", dev.keliver.portal.PropKind.Double, "Weight")),
+      events = emptyList(),
+      paramTypes = mapOf("weight" to "Double") + (if (withModifier) mapOf("modifier" to "Modifier") else emptyMap()),
+    )
+    val tree = DocNode.Widget(
+      dev.keliver.portal.document.Handle(1), "Row",
+      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "Tile",
+        props = mapOf("weight" to d(1.0E-4)), modifiers = mapOf("Flex.value" to d(1.0)))),
+    )
+    val wire = UiDocument("_", tree, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
+    val without = exportKotlin(wire, components = dev.keliver.portal.MapComponentRegistry(listOf(spec(false))))
+    assertFalse("mod." in without, without)
+    assertFalse("flex(" in without, without)
+    assertTrue("weight = 0.0001," in without, without) // N3: no exponent
+    val with = exportKotlin(wire, components = dev.keliver.portal.MapComponentRegistry(listOf(spec(true))))
+    assertTrue("Tile(\n      modifier = Modifier.flex(1.0),\n      weight = 0.0001," in with, with)
+    assertTrue("import dev.keliver.Modifier\n" in with, with)
+    assertFalse("mod." in with, with)
+  }
+
+  @Test fun layoutSizeExportImportsNoMaterialSize() {
+    val r = root("""
+      Row {
+        StyledText(text = "a", modifier = Modifier.size(12.dp, 12.dp))
+      }
+    """)
+    val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertTrue("Modifier.size(Dp(12.0), Dp(12.0))" in out, out)
+    assertFalse("import dev.keliver.material.compose.size" in out, out)
+    assertTrue("import dev.keliver.ui.Dp\n" in out, out)
   }
 }

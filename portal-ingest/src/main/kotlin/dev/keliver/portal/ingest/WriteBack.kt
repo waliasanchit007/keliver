@@ -31,24 +31,24 @@ object WriteBack {
     // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return null
-    val written = StringBuilder()
-    inserted.set(written)
+    val written = LinkedHashSet<String>()
+    needed.set(written)
     try {
       if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     } finally {
-      inserted.remove()
+      needed.remove()
     }
-    // K1: the text write-back added may name symbols the file never imported
+    // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
-    return ensureImports(file.text, dev.keliver.portal.requiredImports(written.toString()))
+    // Each splice reports its imports STRUCTURALLY (exporter / grammar).
+    return ensureImports(file.text, written)
   }
 
-  /** Every source text this merge splices in (for [ensureImports]); per thread, per merge. */
-  private val inserted = ThreadLocal<StringBuilder>()
+  /** The imports this merge's splices need (for [ensureImports]); per thread, per merge. */
+  private val needed = ThreadLocal<MutableSet<String>>()
 
-  private fun record(text: String): String {
-    inserted.get()?.append(text)?.append('\n')
-    return text
+  private fun need(imports: Set<String>) {
+    needed.get()?.addAll(imports)
   }
 
   /**
@@ -59,35 +59,53 @@ object WriteBack {
    */
   internal fun ensureImports(text: String, fqs: Set<String>): String {
     if (fqs.isEmpty()) return text
-    val importRe = Regex("""^import\s+([\w.]+?)(\.\*)?(?:\s+as\s+(\w+))?\s*$""", RegexOption.MULTILINE)
+    // `import a.b.C`, `import a.b.*`, `import a.b.C as D` — with backticked
+    // segments, a trailing `;` and/or a trailing comment.
+    val importRe = Regex(
+      """^import\s+([\w.`]+?)(\.\*)?(?:\s+as\s+(`?\w+`?))?\s*;?\s*(?://.*|/\*.*)?$""",
+      RegexOption.MULTILINE,
+    )
     val exact = mutableSetOf<String>()
     val stars = mutableSetOf<String>()
     val simpleNames = mutableSetOf<String>()
     for (m in importRe.findAll(text)) {
-      val (path, star, alias) = m.destructured
-      if (star.isNotEmpty()) {
+      val path = m.groupValues[1].replace("`", "")
+      val alias = m.groupValues[3].replace("`", "")
+      if (m.groupValues[2].isNotEmpty()) {
         stars += path
       } else {
         exact += path
         simpleNames += alias.ifEmpty { path.substringAfterLast('.') }
       }
     }
-    val pkg = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE).find(text)?.groupValues?.get(1)
-    val needed = fqs.filter { fq ->
+    val pkg = Regex("""^package\s+([\w.`]+)""", RegexOption.MULTILINE).find(text)?.groupValues?.get(1)?.replace("`", "")
+    val missing = fqs.filter { fq ->
       val owner = fq.substringBeforeLast('.')
       fq !in exact && owner !in stars && owner != pkg && fq.substringAfterLast('.') !in simpleNames
     }.sorted()
-    if (needed.isEmpty()) return text
+    if (missing.isEmpty()) return text
     val lines = text.lines().toMutableList()
-    for (fq in needed) {
-      val line = "import $fq"
-      val importIdx = lines.indices.filter { lines[it].startsWith("import ") }
-      val at = when {
-        importIdx.isEmpty() -> lines.indexOfFirst { it.startsWith("package ") }.let { if (it >= 0) it + 1 else 0 }
-        else -> importIdx.firstOrNull { lines[it] > line } ?: (importIdx.last() + 1)
+    val importIdx = lines.indices.filter { lines[it].startsWith("import ") }
+    if (importIdx.isNotEmpty()) {
+      for (fq in missing) {
+        val line = "import $fq"
+        val current = lines.indices.filter { lines[it].startsWith("import ") }
+        lines.add(current.firstOrNull { lines[it] > line } ?: (current.last() + 1), line)
       }
-      lines.add(at, line)
+      return lines.joinToString("\n")
     }
+    // No imports yet: after the package line, else after any @file: annotations
+    // (they must stay first), else at the top — set off by blank lines.
+    val anchor = lines.indexOfFirst { it.startsWith("package ") }
+      .takeIf { it >= 0 }
+      ?: lines.indexOfLast { it.trimStart().startsWith("@file:") }.takeIf { it >= 0 }
+    val block = missing.map { "import $it" }.toMutableList()
+    var at = if (anchor == null) 0 else anchor + 1
+    if (anchor != null) {
+      if (at < lines.size && lines[at].isBlank()) at++ else block.add(0, "")
+    }
+    if (at >= lines.size || lines[at].isNotBlank()) block.add("")
+    lines.addAll(at, block)
     return lines.joinToString("\n")
   }
 
@@ -132,12 +150,13 @@ object WriteBack {
     if (parsed.props != target.props || parsed.modifiers != target.modifiers) {
       if (!editArgumentValues(call, parsed, target, factory, components, parentType)) {
         val oldList = call.valueArgumentList ?: return false
-        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call), components, parentType)
+        val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType)
+        var callText = emitted.text
         if ('\n' !in oldList.text) callText = collapseCall(callText)
         val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
-        record(newList.text)
+        need(emitted.imports)
       }
     }
 
@@ -224,7 +243,7 @@ object WriteBack {
     components: dev.keliver.portal.ComponentRegistry,
     parentType: String?,
   ) {
-    fun text(indent: String) = record(NodeEmitter.statementText(node, indent, components, parentType))
+    fun text(indent: String) = NodeEmitter.statement(node, indent, components, parentType).also { need(it.imports) }.text
     // P0 indent fix: every insertion carries "\n" + the destination indent, and
     // the statement text itself is emitted re-indented to that depth (the old
     // bare createNewLine() left inserted/shifted lines at column 0).
@@ -303,6 +322,7 @@ object WriteBack {
       .firstOrNull { it.getArgumentName()?.asName?.asString() == name }
       ?.getArgumentExpression() // null = positional/absent arg — not safely surgical here
     val edits = mutableListOf<Pair<KtExpression, String>>()
+    val imports = LinkedHashSet<String>()
     for (name in targetArgs.keys) {
       val keys = (parsedArgs.getValue(name) + targetArgs.getValue(name)).distinct()
       if (keys.all { parsed.props[it] == target.props[it] }) continue
@@ -318,6 +338,7 @@ object WriteBack {
         if (v != null && MarginSyntax.parseDp(oldExpr.text) != null) MarginSyntax.dpLike(oldExpr.text, v) else canonicalText
       } ?: return false
       edits += oldExpr to text
+      imports += FragmentImports.value(text)
     }
     if (parsed.modifiers != target.modifiers) {
       val oldExpr = sourceArg("modifier") ?: return false
@@ -325,10 +346,12 @@ object WriteBack {
         oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text,
       ) ?: return false
       edits += oldExpr to text
+      imports += FragmentImports.chain(text, parentType)
     }
     for ((oldExpr, text) in edits) {
-      if (oldExpr.text != text) oldExpr.replace(factory.createExpression(record(text)))
+      if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
     }
+    need(imports)
     return true
   }
 
