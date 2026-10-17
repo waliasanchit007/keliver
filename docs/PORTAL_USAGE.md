@@ -236,8 +236,8 @@ read at start only; the publish response names any that changed since.
 the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
 `previewDist`, `previewServeDir`, `httpFixturesDir`, optional `httpRecording`,
-and `appRuntime`. Path fields default relative to `screensDir`, so the file can
-stay small.
+`appRuntime`, and optional `tokensDirs` (extra design-token directories). Path
+fields default relative to `screensDir`, so the file can stay small.
 `PORTAL_REPO` can point one relay at an external app checkout.
 
 Declare the app/device runtime target explicitly; the editor cannot infer it
@@ -304,6 +304,30 @@ them under **"Project components"** in the palette. See
   saved file always compiles. Write `Margin(…)` with named arguments or
   positional values only (not both), and Dp values as `8.dp` or `Dp(8.0)`.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Layout is grammar".
+
+## Design tokens
+
+Constants your app already uses for colours, sizes and asset URLs are portal
+grammar: `colorArgb = C.Ink`, `url = Assets.Logo`, `Modifier.background(C.White)`
+keep a component transparent and a screen editable — no need to inline magic
+numbers.
+
+- Declare them as `const val` (or a `val` with a constant initializer) at top
+  level or in a top-level `object`, in the screens or components dir, or in a
+  directory listed under `tokensDirs` in keliver.portal.json. String values
+  may be built from other constants (`"$BASE/logo.png"`, `"a" + B`).
+- The canvas renders the resolved value; the saved file keeps the reference.
+- A prop bound to a token shows a chip in the property panel (`◆ C.Ink`, a
+  swatch for colours, the value). **◆** on a Color/Int/Text/Double/Bool row
+  opens a searchable list of the tokens that fit it; choosing one writes the
+  reference (and adds its `import` when the file lacks it). **detach**
+  replaces the reference with its literal value. **@** (bind) is unchanged.
+- A token fits only a prop of exactly its type — never a Dp, Float or enum
+  prop. `private` constants are evaluated but never offered.
+- Change a constant and the canvas follows; delete it (or change its type) and
+  the call that used it becomes RawCode until you fix the reference.
+- Endpoint: `GET /tokens?project=<p>`; agents: the MCP `list_tokens` tool.
+  Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Design tokens are grammar".
 
 ## Live-presenter preview (P3-12)
 

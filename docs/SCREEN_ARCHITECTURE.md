@@ -300,8 +300,77 @@ fun SectionCard(content: @Composable () -> Unit) {
   - The editor offers a scoped modifier only under one of its scopes, and the
     preview applies it with the parent's receiver, so preview and device build
     the same value tree (`portal-render` `LayoutParityTest`).
-  - Still outside the grammar: design-token constants (`C.Red`), helper
-    functions (`m(8)`), and file-local helper composables.
+  - Still outside the grammar: helper functions (`m(8)`) and file-local
+    helper composables. Design-token constants are grammar (below).
+- **Design tokens are grammar (D9, K2).** An argument that references a
+  constant in the app's own sources is a token reference, not RawCode — so a
+  component written with the app's tokens stays transparent, and a screen
+  can use `C.Ink` instead of a magic number:
+
+  ```kotlin
+  object C {                 // components/Tokens.kt
+    const val White = -1     // #FFFFFF
+    const val Ink = -14737633 // #1F1F1F
+  }
+  object Assets {            // may share a file with other declarations
+    private const val WEB = "https://example.com"
+    const val Logo = "$WEB/logo.png"
+  }
+
+  StyledBox(colorArgb = C.White) {
+    AsyncImage(url = Assets.Logo, widthDp = 24)
+    StyledText(text = title, colorArgb = C.Ink, modifier = Modifier.background(C.White))
+  }
+  ```
+
+  - *What is a token.* A `const val`, or a `val` whose initializer is a
+    compile-time constant, declared at top level or in a top-level `object`
+    in the scanned sources: the screens and components dirs, plus any
+    `tokensDirs` (keliver.portal.json, scanned recursively). Its value is
+    computed at ingest: Int/Long/Double/Boolean literals (negative, hex,
+    binary, `_` separators) and String literals, templates (`"$WEB/x.png"`,
+    `"${A}b"`) and `+` concatenations made only of other constants —
+    transitively, with cycle detection. A declared type is honoured (`val X:
+    Long = 7` is a Long). Anything else (a function call, `listOf(…)`, a
+    `Float`, a cycle, an unknown name) does not resolve.
+  - *How a reference resolves.* `Owner.Name` (one qualifier) or a bare
+    top-level `Name`, found the way Kotlin finds it: an explicit import, then
+    the file's own package, then a star import (inside an object, its own
+    members first). Aliased imports are not followed. Visibility is Kotlin's:
+    a `private` constant evaluates (others may be built from it) but can be
+    referenced only inside its object (a private top-level one only in its
+    file), and is never offered by the editor; `internal`/public are fine.
+  - *Where it fits.* Only where source takes a plain literal of the token's
+    own type: an Int token on an Int or Color prop, a String on Text, a
+    Double on Double, a Boolean on Bool — for widget props, material modifier
+    arguments (`background(C.Ink)`), scoped Double arguments (`flex(C.W)`)
+    and project-component parameters. Never a `Dp` (`Spacer(height = …)`,
+    Margin sides, `width(…)`), a `Float`, an enum (`Constraint`, alignments) or
+    a list — Kotlin converts none of them, so those stay literals; a token
+    there, or an unknown, private, cyclic or wrong-kind reference, keeps the
+    call RawCode rather than becoming silently wrong. Event-action arguments
+    and component signature defaults are not token sites (a default that
+    references a token previews as its value).
+  - *On the wire.* `PropValue.Token(ref, value, import)`: the reference as
+    written, the resolved literal, and the declaration a file must import. The
+    canvas renders the value; export and write-back write the reference (an
+    unchanged one is never touched; a changed argument is written by the
+    exporter, adding `import <pkg>.<Owner>` structurally — no duplicate, star
+    imports and the file's own package respected). Detaching writes the
+    literal. The device tree carries the literal under its usual tag plus a
+    `"token"` key, so an older device guest renders the value.
+  - *When a declaration changes.* The relay rebuilds its token table on any
+    change under the scanned dirs; if anything resolution observes changed,
+    components rebuild and every screen is re-recognized from its file: a new
+    value updates the canvas; a token that vanished or changed kind turns the
+    argument's call RawCode. `GET /tokens` lists every exported token (ref,
+    kind, value, package, import, declaring file, `ambiguous` when the same
+    `Owner.Name` exists in two packages — such a token is never offered).
+  - *The server owns token values.* A client names a token by `ref` +
+    `import`; the relay refuses one it does not offer and replaces the value
+    with its own (`portal-relay` `DesignTokenRelayTest`). A compiled fixture
+    (`ParityTokens.kt`) renders the same value tree as the interpreted golden
+    (`portal-render` `TokenParityTest`).
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add

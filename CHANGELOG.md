@@ -9,6 +9,37 @@
 ## [Unreleased]
 
 ### Added
+- **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** design tokens are
+  portal grammar (D9, K2). An argument referencing a constant in the app's own sources —
+  `colorArgb = C.Ink`, `url = Assets.Logo`, `Modifier.background(C.White)` — no longer makes a
+  component opaque or a call RawCode. A token is a `const val` (or a `val` with a constant
+  initializer) at top level or in a top-level `object` in the screens/components dirs or a new
+  optional keliver.portal.json `tokensDirs`; its value is computed at ingest (Int/Long/Double/
+  Boolean literals, String literals, templates and `+` concatenations of other constants,
+  transitively, cycle-safe). References resolve as Kotlin resolves them (explicit import, same
+  package, star import; aliases not followed) with Kotlin's visibility (`private` constants
+  evaluate but are referencable only inside their object and never offered). A token is grammar
+  only where source takes a plain literal of its own type (String/Int/Double/Boolean props,
+  material modifier arguments, scoped Double arguments, component parameters) — never Dp, Float,
+  enum or list values; an unknown, private, cyclic or mismatched reference stays RawCode. The
+  document carries `PropValue.Token(ref, value, import)` (new wire variant), the canvas renders
+  the resolved value, export and write-back write the reference (an unchanged one untouched; an
+  inserted one adds its import structurally), and detach writes the literal. The device tree
+  carries the literal plus a `"token"` key, so older device guests render the value. The relay
+  builds a per-project token table at boot, serves `GET /tokens`, re-recognizes every screen
+  when a declaration changes (new value on the canvas; a vanished or re-kinded token becomes
+  RawCode), and owns token values (a client names `ref` + `import`; unknown, private or
+  ambiguous tokens are refused, values are replaced by the server's). The editor shows a token
+  chip (swatch, `◆ C.Ink`, value), a searchable picker of fitting tokens, and detach; the MCP
+  server adds `list_tokens`, documents `PropValue.Token` in the op schema and reports token
+  usages. New portal-core API: `Token`, `propSourceType`, `tokenFits`, `tokenKindOf`,
+  `tokenValue`; portal-document: `PropValue.Token`, `toTreeValue`, `toPropValue`.
+  **Behaviour changes:** a WidgetNode prop may now hold a `Token` (its `str`/`int`/`bool`/`dbl`
+  getters and the preview's `*B` getters read its value; code reading `props[key] as? Int`
+  directly sees a `Token`); `PropValue` has a fourth subclass (an exhaustive `when` over it in
+  consumer code needs a branch); a component signature default that references a token now
+  previews as its value instead of null; a tree-bootstrapped relay document now passes its
+  component registry to write-back.
 - **portal (codegen, ingest, document, exporter, render, editor):** layout is portal grammar (D9).
   A layout widget's `margin = Margin(…)` and layout's scoped modifiers (`flex`, `grow`, `shrink`,
   `margin`, `width`, `height`, `size(Dp, Dp)`, `horizontalAlignment`, `verticalAlignment`) no
