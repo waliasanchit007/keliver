@@ -338,6 +338,32 @@ public val modifierSpecs: List<ModifierSpec> = listOf(
   ModifierSpec("Width", listOf(PropSpec("width", PropKind.Double, "Width")), scopes = listOf("Row", "Column", "Box"), argTypes = listOf("Dp")),
 )
 
+/** Wire keys ("Widget.prop", "mod.Modifier.prop") holding a Dp — see isDpProp. */
+public val dpPropKeys: Set<String> = setOf(
+  "Box.margin.start",
+  "Box.margin.end",
+  "Box.margin.top",
+  "Box.margin.bottom",
+  "Column.margin.start",
+  "Column.margin.end",
+  "Column.margin.top",
+  "Column.margin.bottom",
+  "Row.margin.start",
+  "Row.margin.end",
+  "Row.margin.top",
+  "Row.margin.bottom",
+  "Spacer.width",
+  "Spacer.height",
+  "mod.Height.height",
+  "mod.LayoutSize.width",
+  "mod.LayoutSize.height",
+  "mod.Margin.margin.start",
+  "mod.Margin.margin.end",
+  "mod.Margin.margin.top",
+  "mod.Margin.margin.bottom",
+  "mod.Width.width",
+)
+
 private val specsByType = widgetSpecs.associateBy { it.type }
 
 public fun widgetSpec(type: String): WidgetSpec? = specsByType[type]

@@ -534,64 +534,86 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
 }
 
 /**
- * Builds the Modifier chain from a node's namespaced "mod.*" props: unscoped
- * modifiers first, then the scoped ones valid in [scope]. A scoped modifier
- * whose scope does not match the parent is not applied (it has no meaning there).
+ * Builds the Modifier chain from a node's namespaced "mod.*" props in AUTHOR
+ * order (the order the document keeps, as the device's chain does). A scoped
+ * layout modifier applies with(scope) of the parent's content lambda, and is
+ * skipped when [scope] is not one of its scopes (it has no meaning there).
  */
 private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {
   var m: Modifier = Modifier
-  if ("mod.Alpha.pct" in node.props) m = m.alpha(node.intB("mod.Alpha.pct", 0))
-  if (node.bool("mod.AnimateContentSize")) m = m.animateContentSize()
-  if ("mod.AspectRatio.ratio" in node.props) m = m.aspectRatio(node.dblB("mod.AspectRatio.ratio", 0.0).toFloat())
-  if ("mod.Background.colorArgb" in node.props) m = m.background(node.intB("mod.Background.colorArgb", 0))
-  if ("mod.Blur.radiusDp" in node.props) m = m.blur(node.intB("mod.Blur.radiusDp", 0))
-  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) m = m.border(node.intB("mod.Border.widthDp", 0), node.intB("mod.Border.colorArgb", 0))
-  if ("mod.CornerRadius.radiusDp" in node.props) m = m.cornerRadius(node.intB("mod.CornerRadius.radiusDp", 0))
-  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) m = m.cornerRadiusEach(node.intB("mod.CornerRadiusEach.topStartDp", 0), node.intB("mod.CornerRadiusEach.topEndDp", 0), node.intB("mod.CornerRadiusEach.bottomEndDp", 0), node.intB("mod.CornerRadiusEach.bottomStartDp", 0))
-  if (node.bool("mod.FillMaxHeight")) m = m.fillMaxHeight()
-  if (node.bool("mod.FillMaxSize")) m = m.fillMaxSize()
-  if (node.bool("mod.FillWidth")) m = m.fillWidth()
-  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) m = m.gradientBackground(node.intB("mod.GradientBackground.startArgb", 0), node.intB("mod.GradientBackground.endArgb", 0))
-  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) m = m.offset(node.intB("mod.Offset.xDp", 0), node.intB("mod.Offset.yDp", 0))
-  if ("mod.Padding.allDp" in node.props) m = m.padding(node.intB("mod.Padding.allDp", 0))
-  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
-  if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.intB("mod.Rotate.degrees", 0))
-  if ("mod.Scale.percent" in node.props) m = m.scale(node.intB("mod.Scale.percent", 0))
-  if ("mod.SelectionTag.handle" in node.props) m = m.selectionTag(node.intB("mod.SelectionTag.handle", 0))
-  if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.intB("mod.Shadow.elevationDp", 0))
-  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
-  if (scope is BoxScope) {
-    with(scope) {
-      if ("mod.Height.height" in node.props) m = m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.HorizontalAlignment.alignment" in node.props) m = m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0)))
-      if ("mod.LayoutSize.width" in node.props || "mod.LayoutSize.height" in node.props) m = m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.Margin.margin.start" in node.props || "mod.Margin.margin.end" in node.props || "mod.Margin.margin.top" in node.props || "mod.Margin.margin.bottom" in node.props) m = m.margin(marginOf(node, "mod.Margin.margin"))
-      if ("mod.VerticalAlignment.alignment" in node.props) m = m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0)))
-      if ("mod.Width.width" in node.props) m = m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0)))
-    }
-  }
-  if (scope is ColumnScope) {
-    with(scope) {
-      if ("mod.Flex.value" in node.props) m = m.flex(node.dblB("mod.Flex.value", 0.0))
-      if ("mod.Grow.value" in node.props) m = m.grow(node.dblB("mod.Grow.value", 0.0))
-      if ("mod.Height.height" in node.props) m = m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.HorizontalAlignment.alignment" in node.props) m = m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0)))
-      if ("mod.LayoutSize.width" in node.props || "mod.LayoutSize.height" in node.props) m = m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.Margin.margin.start" in node.props || "mod.Margin.margin.end" in node.props || "mod.Margin.margin.top" in node.props || "mod.Margin.margin.bottom" in node.props) m = m.margin(marginOf(node, "mod.Margin.margin"))
-      if ("mod.Shrink.value" in node.props) m = m.shrink(node.dblB("mod.Shrink.value", 0.0))
-      if ("mod.Width.width" in node.props) m = m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0)))
-    }
-  }
-  if (scope is RowScope) {
-    with(scope) {
-      if ("mod.Flex.value" in node.props) m = m.flex(node.dblB("mod.Flex.value", 0.0))
-      if ("mod.Grow.value" in node.props) m = m.grow(node.dblB("mod.Grow.value", 0.0))
-      if ("mod.Height.height" in node.props) m = m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.LayoutSize.width" in node.props || "mod.LayoutSize.height" in node.props) m = m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0)))
-      if ("mod.Margin.margin.start" in node.props || "mod.Margin.margin.end" in node.props || "mod.Margin.margin.top" in node.props || "mod.Margin.margin.bottom" in node.props) m = m.margin(marginOf(node, "mod.Margin.margin"))
-      if ("mod.Shrink.value" in node.props) m = m.shrink(node.dblB("mod.Shrink.value", 0.0))
-      if ("mod.VerticalAlignment.alignment" in node.props) m = m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0)))
-      if ("mod.Width.width" in node.props) m = m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0)))
+  val names = node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
+  for (name in names) {
+    m = when (name) {
+      "Alpha" -> m.alpha(node.intB("mod.Alpha.pct", 0))
+      "AnimateContentSize" -> if (node.bool("mod.AnimateContentSize")) m.animateContentSize() else m
+      "AspectRatio" -> m.aspectRatio(node.dblB("mod.AspectRatio.ratio", 0.0).toFloat())
+      "Background" -> m.background(node.intB("mod.Background.colorArgb", 0))
+      "Blur" -> m.blur(node.intB("mod.Blur.radiusDp", 0))
+      "Border" -> m.border(node.intB("mod.Border.widthDp", 0), node.intB("mod.Border.colorArgb", 0))
+      "CornerRadius" -> m.cornerRadius(node.intB("mod.CornerRadius.radiusDp", 0))
+      "CornerRadiusEach" -> m.cornerRadiusEach(node.intB("mod.CornerRadiusEach.topStartDp", 0), node.intB("mod.CornerRadiusEach.topEndDp", 0), node.intB("mod.CornerRadiusEach.bottomEndDp", 0), node.intB("mod.CornerRadiusEach.bottomStartDp", 0))
+      "FillMaxHeight" -> if (node.bool("mod.FillMaxHeight")) m.fillMaxHeight() else m
+      "FillMaxSize" -> if (node.bool("mod.FillMaxSize")) m.fillMaxSize() else m
+      "FillWidth" -> if (node.bool("mod.FillWidth")) m.fillWidth() else m
+      "Flex" -> when (scope) {
+        is ColumnScope -> with(scope) { m.flex(node.dblB("mod.Flex.value", 0.0)) }
+        is RowScope -> with(scope) { m.flex(node.dblB("mod.Flex.value", 0.0)) }
+        else -> m
+      }
+      "GradientBackground" -> m.gradientBackground(node.intB("mod.GradientBackground.startArgb", 0), node.intB("mod.GradientBackground.endArgb", 0))
+      "Grow" -> when (scope) {
+        is ColumnScope -> with(scope) { m.grow(node.dblB("mod.Grow.value", 0.0)) }
+        is RowScope -> with(scope) { m.grow(node.dblB("mod.Grow.value", 0.0)) }
+        else -> m
+      }
+      "Height" -> when (scope) {
+        is BoxScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      "HorizontalAlignment" -> when (scope) {
+        is BoxScope -> with(scope) { m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0))) }
+        is ColumnScope -> with(scope) { m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0))) }
+        else -> m
+      }
+      "LayoutSize" -> when (scope) {
+        is BoxScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      "Margin" -> when (scope) {
+        is BoxScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        is ColumnScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        is RowScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        else -> m
+      }
+      "Offset" -> m.offset(node.intB("mod.Offset.xDp", 0), node.intB("mod.Offset.yDp", 0))
+      "Padding" -> m.padding(node.intB("mod.Padding.allDp", 0))
+      "PaddingEach" -> m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
+      "Rotate" -> m.rotate(node.intB("mod.Rotate.degrees", 0))
+      "Scale" -> m.scale(node.intB("mod.Scale.percent", 0))
+      "SelectionTag" -> m.selectionTag(node.intB("mod.SelectionTag.handle", 0))
+      "Shadow" -> m.shadow(node.intB("mod.Shadow.elevationDp", 0))
+      "Shrink" -> when (scope) {
+        is ColumnScope -> with(scope) { m.shrink(node.dblB("mod.Shrink.value", 0.0)) }
+        is RowScope -> with(scope) { m.shrink(node.dblB("mod.Shrink.value", 0.0)) }
+        else -> m
+      }
+      "Size" -> m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
+      "VerticalAlignment" -> when (scope) {
+        is BoxScope -> with(scope) { m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0))) }
+        is RowScope -> with(scope) { m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0))) }
+        else -> m
+      }
+      "Width" -> when (scope) {
+        is BoxScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      else -> m
     }
   }
   return m

@@ -25,15 +25,42 @@ public data class PropSpec(val name: String, val kind: PropKind, val label: Stri
  * `size(12.dp, 12.dp)` are different modifiers). A "Margin" argument spans
  * four Double props — see [MARGIN_SIDES].
  */
-public data class ModifierSpec(
-  val name: String,
-  val props: List<PropSpec>,
-  val scopes: List<String> = emptyList(),
-  val extension: String = name.replaceFirstChar { it.lowercase() },
-  val argTypes: List<String> = emptyList(),
+public class ModifierSpec(
+  public val name: String,
+  public val props: List<PropSpec>,
+  public val scopes: List<String> = emptyList(),
+  public val extension: String = name.replaceFirstChar { it.lowercase() },
+  public val argTypes: List<String> = emptyList(),
 ) {
-  /** The pre-K1 shape (unscoped, untyped args) — kept so compiled callers still link. */
+  // A regular class (not a data class) so the pre-K1 binary surface —
+  // (name, props) constructor, component1/2, copy(name, props) — stays intact
+  // while the K1 fields are added.
+
+  /** The pre-K1 shape (unscoped, untyped args). */
   public constructor(name: String, props: List<PropSpec>) : this(name, props, emptyList())
+
+  public operator fun component1(): String = name
+  public operator fun component2(): List<PropSpec> = props
+
+  /** The pre-K1 copy: a new name/props, keeping [scopes], [extension] and [argTypes]. */
+  public fun copy(name: String = this.name, props: List<PropSpec> = this.props): ModifierSpec =
+    ModifierSpec(name, props, scopes, extension, argTypes)
+
+  override fun equals(other: Any?): Boolean =
+    other is ModifierSpec && name == other.name && props == other.props && scopes == other.scopes &&
+      extension == other.extension && argTypes == other.argTypes
+
+  override fun hashCode(): Int {
+    var h = name.hashCode()
+    h = 31 * h + props.hashCode()
+    h = 31 * h + scopes.hashCode()
+    h = 31 * h + extension.hashCode()
+    h = 31 * h + argTypes.hashCode()
+    return h
+  }
+
+  override fun toString(): String =
+    "ModifierSpec(name=$name, props=$props, scopes=$scopes, extension=$extension, argTypes=$argTypes)"
 }
 
 /** True when [spec] may sit on a node whose scope-giving parent is [parentType] (null = no layout parent). */
@@ -50,6 +77,15 @@ public fun ModifierSpec.isValidUnder(parentType: String?): Boolean =
  * else the named sides that are non-zero).
  */
 public val MARGIN_SIDES: List<String> = listOf("start", "end", "top", "bottom")
+
+/**
+ * True when [key] on a node of [nodeType] holds a `Dp` (a Dp widget prop, a
+ * Margin side, or a Dp/Margin modifier argument — see the generated
+ * [dpPropKeys]). Dp is non-negative (its constructor requires it), so the
+ * document, the exporter, write-back and the preview all clamp these at 0.
+ */
+public fun isDpProp(nodeType: String, key: String): Boolean =
+  if (key.startsWith("mod.")) key in dpPropKeys else "$nodeType.$key" in dpPropKeys
 
 /** The Margin-valued prop names among [props] (prefixes that carry all four [MARGIN_SIDES]). */
 public fun marginProps(props: List<PropSpec>): Set<String> {

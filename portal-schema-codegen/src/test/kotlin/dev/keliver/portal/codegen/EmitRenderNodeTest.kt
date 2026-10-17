@@ -79,11 +79,13 @@ class EmitRenderNodeTest {
     assertContains(src, "import dev.keliver.material.compose.padding")
     assertContains(src, "modifier = nodeModifier(node, scope),")
     assertContains(src, "private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
-    assertContains(src, "if (\"mod.Padding.allDp\" in node.props) m = m.padding(node.intB(\"mod.Padding.allDp\", 0))")
-    assertContains(src, "if (node.bool(\"mod.AnimateContentSize\")) m = m.animateContentSize()")
+    // N4: applied in the node's (author) key order, one branch per modifier.
+    assertContains(src, "for (name in names) {")
+    assertContains(src, "\"Padding\" -> m.padding(node.intB(\"mod.Padding.allDp\", 0))")
+    assertContains(src, "\"AnimateContentSize\" -> if (node.bool(\"mod.AnimateContentSize\")) m.animateContentSize() else m")
   }
 
-  @Test fun scopedModifiersApplyWithTheParentsReceiverAfterUnscopedOnes() {
+  @Test fun scopedModifiersApplyWithTheParentsReceiver() {
     val padding = ModPlan("Padding", "padding", "dev.keliver.material.compose",
       listOf(MappedProp("allDp", MappedKind.INT, required = true, defaultExpr = null)))
     val flex = ModPlan("Flex", "flex", "dev.keliver.layout.compose",
@@ -97,14 +99,9 @@ class EmitRenderNodeTest {
     assertContains(src, "import dev.keliver.layout.compose.BoxScope")
     // Scoped extensions are scope members: never imported.
     assertFalse("import dev.keliver.layout.compose.flex" in src)
-    assertContains(src, "if (scope is RowScope) {\n    with(scope) {\n      if (\"mod.Flex.value\" in node.props) m = m.flex(node.dblB(\"mod.Flex.value\", 0.0))")
-    assertContains(src, "m = m.margin(marginOf(node, \"mod.Margin.margin\"))")
-    // BoxScope has margin but not flex.
-    val box = src.substringAfter("if (scope is BoxScope) {").substringBefore("\n  }\n")
-    assertContains(box, "m.margin(")
-    assertFalse("m.flex(" in box)
-    // Unscoped first, then scoped.
-    assertTrue(src.indexOf("m = m.padding(") < src.indexOf("if (scope is BoxScope)"))
+    assertContains(src, "\"Flex\" -> when (scope) {\n        is ColumnScope -> with(scope) { m.flex(node.dblB(\"mod.Flex.value\", 0.0)) }\n        is RowScope -> with(scope) { m.flex(node.dblB(\"mod.Flex.value\", 0.0)) }\n        else -> m\n      }")
+    assertContains(src, "is BoxScope -> with(scope) { m.margin(marginOf(node, \"mod.Margin.margin\")) }")
+    assertTrue("is BoxScope -> with(scope) { m.flex(" !in src) // BoxScope has no flex
   }
 
   @Test fun marginWidgetPropReachesTheComposable() {

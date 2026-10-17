@@ -122,33 +122,38 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   if (mods.isNotEmpty()) {
     appendLine()
     appendLine("/**")
-    appendLine(" * Builds the Modifier chain from a node's namespaced \"mod.*\" props: unscoped")
-    appendLine(" * modifiers first, then the scoped ones valid in [scope]. A scoped modifier")
-    appendLine(" * whose scope does not match the parent is not applied (it has no meaning there).")
+    appendLine(" * Builds the Modifier chain from a node's namespaced \"mod.*\" props in AUTHOR")
+    appendLine(" * order (the order the document keeps, as the device's chain does). A scoped")
+    appendLine(" * layout modifier applies with(scope) of the parent's content lambda, and is")
+    appendLine(" * skipped when [scope] is not one of its scopes (it has no meaning there).")
     appendLine(" */")
     appendLine("private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
     appendLine("  var m: Modifier = Modifier")
-    for (mod in unscoped) appendLine(applyLine(mod, "  "))
-    for ((scope, _) in scopes) {
-      val inScope = mods.filter { scope in it.scopes }
-      appendLine("  if (scope is $scope) {")
-      appendLine("    with(scope) {")
-      for (mod in inScope) appendLine(applyLine(mod, "      "))
-      appendLine("    }")
-      appendLine("  }")
+    appendLine("  val names = node.props.keys.filter { it.startsWith(\"mod.\") }.map { it.removePrefix(\"mod.\").substringBefore('.') }.distinct()")
+    appendLine("  for (name in names) {")
+    appendLine("    m = when (name) {")
+    for (mod in mods) {
+      if (!mod.isScoped) {
+        appendLine("      \"${mod.name}\" -> ${applyExpr(mod)}")
+      } else {
+        appendLine("      \"${mod.name}\" -> when (scope) {")
+        for (sc in mod.scopes.sorted()) appendLine("        is $sc -> with(scope) { ${applyExpr(mod)} }")
+        appendLine("        else -> m")
+        appendLine("      }")
+      }
     }
+    appendLine("      else -> m")
+    appendLine("    }")
+    appendLine("  }")
     appendLine("  return m")
     appendLine("}")
   }
 }
 
-private fun applyLine(mod: ModPlan, indent: String): String =
+private fun applyExpr(mod: ModPlan): String =
   if (mod.props.isEmpty()) {
-    "${indent}if (node.bool(\"mod.${mod.name}\")) m = m.${mod.extensionName}()"
+    "if (node.bool(\"mod.${mod.name}\")) m.${mod.extensionName}() else m"
   } else {
-    val presence = mod.props.joinToString(" || ") { p ->
-      wireKeys("mod.${mod.name}.${p.name}", p.kind).joinToString(" || ") { "\"$it\" in node.props" }
-    }
     val args = mod.props.joinToString(", ") { p -> getterExpr(p.copy(name = "mod.${mod.name}.${p.name}")) }
-    "${indent}if ($presence) m = m.${mod.extensionName}($args)"
+    "m.${mod.extensionName}($args)"
   }

@@ -90,17 +90,9 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine()
   appendLine(
     """
-    |private fun collectTypes(node: WidgetNode, out: MutableSet<String>) {
-    |  out += node.type
-    |  node.children.forEach { collectTypes(it, out) }
-    |}
-    |
-    |private fun collectModifierNames(node: WidgetNode, out: MutableSet<String>) {
-    |  for (key in node.props.keys) {
-    |    if (key.startsWith("mod.")) out += key.removePrefix("mod.").substringBefore('.')
-    |  }
-    |  node.children.forEach { collectModifierNames(it, out) }
-    |}
+    |/** A node's modifier names in AUTHOR order (first "mod.<Name>" key wins). */
+    |private fun modifierNames(node: WidgetNode): List<String> =
+    |  node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
     |
     |// P2: single-arg actions. arg=="it" -> the event payload; "item.field" -> item-scoped data.
     |private fun fmtAction(a: Action, paramCount: Int): String {
@@ -160,9 +152,12 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
     |private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
     |private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
-    |private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
+    |private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinDoubleLiteral((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0)
     |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(v)}f"
-    |private fun fmtDp(v: Any?): String = "Dp(${'$'}{fmtDouble(v)})"
+    |// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
+    |private fun fmtDp(v: Any?): String =
+    |  if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
+    |  else "Dp(${'$'}{kotlinDoubleLiteral(((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})"
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
     |private fun fmtStringList(v: Any?): String =
     |  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
@@ -189,8 +184,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// so a negative side is written as 0.
     |private fun marginSide(node: WidgetNode, key: String): Double =
     |  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
-    |private fun fmtDpValue(v: Double): String =
-    |  if (v % 1.0 == 0.0 && v < 1e15) "${'$'}{v.toLong()}.dp" else "${'$'}v.dp"
+    |private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
     |private fun fmtMargin(node: WidgetNode, prefix: String): String {
     |  val s = marginSide(node, "${'$'}prefix.start")
     |  val e = marginSide(node, "${'$'}prefix.end")
@@ -211,10 +205,6 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   )
   appendLine()
   appendLine("public fun exportKotlin(tree: WidgetNode, functionName: String = \"ExportedScreen\", components: ComponentRegistry = EmptyComponentRegistry): String {")
-  appendLine("  val used = mutableSetOf<String>()")
-  appendLine("  collectTypes(tree, used)")
-  appendLine("  val usedMods = mutableSetOf<String>()")
-  appendLine("  collectModifierNames(tree, usedMods)")
   appendLine("  val contract = collectContract(tree, components)")
   appendLine("  val logicFields = LinkedHashMap<String, String>()")
   appendLine("  val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()")
@@ -222,13 +212,15 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  contract.fields.keys.forEach { logicFields.remove(it) }") // widget binds win the type
   appendLine("  val hasContract = !contract.isEmpty || logicFields.isNotEmpty()")
   appendLine("  val sb = StringBuilder()")
+  // K1: imports come from what the body actually writes (requiredImports), so
+  // a Row without a margin imports no Margin, and a dropped modifier no type.
+  appendLine("  val body = StringBuilder()")
+  appendLine("  emitNode(body, tree, \"  \", components, null)")
   appendLine("  sb.append(\"import androidx.compose.runtime.Composable\\n\")")
-  appendLine("  val modImports = usedMods.mapNotNull { modifierImport[it] } + usedMods.flatMap { modifierSupportImports[it] ?: emptyList() } + (if (usedMods.isNotEmpty()) listOf(\"dev.keliver.Modifier\") else emptyList())")
-  appendLine("  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()")
-  appendLine("  imports.forEach { sb.append(\"import \$it\\n\") }")
+  appendLine("  requiredImports(body.toString()).forEach { sb.append(\"import \$it\\n\") }")
   appendLine("  val param = if (!hasContract) \"\" else \"b: \${functionName}Bindings\"")
   appendLine("  sb.append(\"\\n@Composable\\nfun \$functionName(\$param) {\\n\")")
-  appendLine("  emitNode(sb, tree, \"  \", components)")
+  appendLine("  sb.append(body)")
   appendLine("  sb.append(\"}\\n\")")
   appendLine("  if (hasContract) {")
   appendLine("    itemIfaces.forEach { (name, fields) ->")
@@ -250,45 +242,61 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("}")
   appendLine()
   if (mods.isNotEmpty()) {
-    appendLine("/** The exported `modifier = Modifier.x().y()` chain, or null when the node has no mod props. */")
-    appendLine("private fun modifierExpr(node: WidgetNode): String? {")
+    appendLine("/**")
+    appendLine(" * The exported `modifier = Modifier.x().y()` chain in AUTHOR order, or null when")
+    appendLine(" * the node has none. K1: a scoped layout modifier is written only when [parent]")
+    appendLine(" * (the widget whose content lambda holds the node) is one of its scopes — it")
+    appendLine(" * would not compile anywhere else, so it is dropped, as the preview ignores it.")
+    appendLine(" */")
+    appendLine("private fun modifierExpr(node: WidgetNode, parent: String?): String? {")
     appendLine("  val parts = mutableListOf<String>()")
-    // Unscoped first, then scoped — the order RenderNode applies them in, so a
-    // compiled export and the preview build the same modifier chain.
-    for (mod in mods.sortedBy { it.isScoped }) {
-      if (mod.props.isEmpty()) {
-        appendLine("  if (node.props[\"mod.${mod.name}\"] == true) parts += \"${mod.extensionName}()\"")
+    appendLine("  for (name in modifierNames(node)) {")
+    appendLine("    when (name) {")
+    for (mod in mods) {
+      val call = if (mod.props.isEmpty()) {
+        "\"${mod.extensionName}()\""
       } else {
-        val presence = mod.props.joinToString(" || ") { presenceExpr("mod.${mod.name}.${it.name}", it.kind) }
-        val args = mod.props.joinToString(" + \", \" + ") { p -> modLiteralExpr(p.kind, "mod.${mod.name}.${p.name}") }
-        appendLine("  if ($presence) parts += \"${mod.extensionName}(\" + $args + \")\"")
+        "\"${mod.extensionName}(\" + " + mod.props.joinToString(" + \", \" + ") { p -> modLiteralExpr(p.kind, "mod.${mod.name}.${p.name}") } + " + \")\""
+      }
+      val conds = buildList {
+        if (mod.props.isEmpty()) add("node.props[\"mod.${mod.name}\"] == true")
+        if (mod.isScoped) add("(${mod.parentTypes.joinToString(" || ") { "parent == \"$it\"" }})")
+      }
+      if (conds.isEmpty()) {
+        appendLine("      \"${mod.name}\" -> parts += $call")
+      } else {
+        appendLine("      \"${mod.name}\" -> if (${conds.joinToString(" && ")}) parts += $call")
       }
     }
+    appendLine("      else -> {}")
+    appendLine("    }")
+    appendLine("  }")
     appendLine("  return if (parts.isEmpty()) null else \"Modifier.\" + parts.joinToString(\".\")")
     appendLine("}")
     appendLine()
   }
-  appendLine("private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {")
+  appendLine("/** [parent] is the widget whose content lambda holds [node] (Condition/Repeat looked through). */")
+  appendLine("private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?) {")
   appendLine("  when (node.type) {")
   // M5: logic nodes export as real control flow, not composable calls.
   appendLine("    \"Condition\" -> {")
   appendLine("      val cond = (node.props[\"field\"] as? String) ?: \"cond\"")
   appendLine("      sb.append(\"\${indent}if (b.\$cond) {\\n\")")
-  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
+  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components, parent) }")
   appendLine("      sb.append(\"\$indent}\\n\")")
   appendLine("    }")
   appendLine("    \"Repeat\" -> {")
   appendLine("      val item = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val items = (node.props[\"items\"] as? String) ?: \"items\"")
   appendLine("      sb.append(\"\${indent}b.\$items.forEach { \$item ->\\n\")")
-  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
+  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components, parent) }")
   appendLine("      sb.append(\"\$indent}\\n\")")
   appendLine("    }")
   for (w in sorted) {
     appendLine("    \"${w.name}\" -> {")
     appendLine("      sb.append(\"\${indent}${w.name}(\\n\")")
     if (mods.isNotEmpty()) {
-      appendLine("      modifierExpr(node)?.let { sb.append(\"\${indent}  modifier = \$it,\\n\") }")
+      appendLine("      modifierExpr(node, parent)?.let { sb.append(\"\${indent}  modifier = \$it,\\n\") }")
     }
     for (p in w.props) {
       if (p.required) {
@@ -302,7 +310,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     }
     if (w.hasChildren) {
       appendLine("      sb.append(\"\$indent) {\\n\")")
-      appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components) }")
+      appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components, \"${w.name}\") }")
       appendLine("      sb.append(\"\$indent}\\n\")")
     } else {
       appendLine("      sb.append(\"\$indent)\\n\")")
@@ -344,7 +352,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |    if (!hasSlot && node.children.isEmpty()) { sb.append("${'$'}indent)\n"); return }
     |    sb.append("${'$'}indent) {\n")
     |  }
-    |  node.children.forEach { emitNode(sb, it, "${'$'}indent  ", components) }
+    |  node.children.forEach { emitNode(sb, it, "${'$'}indent  ", components, node.type) }
     |  sb.append("${'$'}indent}\n")
     |}
     """.trimMargin(),

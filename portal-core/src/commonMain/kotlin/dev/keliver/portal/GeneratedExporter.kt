@@ -119,17 +119,9 @@ public val eventParamType: Map<String, String> = mapOf(
   "TextField.onValueChange" to "String",
 )
 
-private fun collectTypes(node: WidgetNode, out: MutableSet<String>) {
-  out += node.type
-  node.children.forEach { collectTypes(it, out) }
-}
-
-private fun collectModifierNames(node: WidgetNode, out: MutableSet<String>) {
-  for (key in node.props.keys) {
-    if (key.startsWith("mod.")) out += key.removePrefix("mod.").substringBefore('.')
-  }
-  node.children.forEach { collectModifierNames(it, out) }
-}
+/** A node's modifier names in AUTHOR order (first "mod.<Name>" key wins). */
+private fun modifierNames(node: WidgetNode): List<String> =
+  node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
 
 // P2: single-arg actions. arg=="it" -> the event payload; "item.field" -> item-scoped data.
 private fun fmtAction(a: Action, paramCount: Int): String {
@@ -189,9 +181,12 @@ private fun bindRef(field: String): String = if ('.' in field) field else "b.$fi
 private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
 private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
 private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
-private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
+private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinDoubleLiteral((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0)
 private fun fmtFloat(v: Any?): String = "${fmtDouble(v)}f"
-private fun fmtDp(v: Any?): String = "Dp(${fmtDouble(v)})"
+// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
+private fun fmtDp(v: Any?): String =
+  if (v is Bind) "Dp(${bindRef(v.field)})"
+  else "Dp(${kotlinDoubleLiteral(((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})"
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
 private fun fmtStringList(v: Any?): String =
   "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
@@ -218,8 +213,7 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
 // so a negative side is written as 0.
 private fun marginSide(node: WidgetNode, key: String): Double =
   ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
-private fun fmtDpValue(v: Double): String =
-  if (v % 1.0 == 0.0 && v < 1e15) "${v.toLong()}.dp" else "$v.dp"
+private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
 private fun fmtMargin(node: WidgetNode, prefix: String): String {
   val s = marginSide(node, "$prefix.start")
   val e = marginSide(node, "$prefix.end")
@@ -238,10 +232,6 @@ private fun fmtMargin(node: WidgetNode, prefix: String): String {
 }
 
 public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen", components: ComponentRegistry = EmptyComponentRegistry): String {
-  val used = mutableSetOf<String>()
-  collectTypes(tree, used)
-  val usedMods = mutableSetOf<String>()
-  collectModifierNames(tree, usedMods)
   val contract = collectContract(tree, components)
   val logicFields = LinkedHashMap<String, String>()
   val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()
@@ -249,13 +239,13 @@ public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen
   contract.fields.keys.forEach { logicFields.remove(it) }
   val hasContract = !contract.isEmpty || logicFields.isNotEmpty()
   val sb = StringBuilder()
+  val body = StringBuilder()
+  emitNode(body, tree, "  ", components, null)
   sb.append("import androidx.compose.runtime.Composable\n")
-  val modImports = usedMods.mapNotNull { modifierImport[it] } + usedMods.flatMap { modifierSupportImports[it] ?: emptyList() } + (if (usedMods.isNotEmpty()) listOf("dev.keliver.Modifier") else emptyList())
-  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()
-  imports.forEach { sb.append("import $it\n") }
+  requiredImports(body.toString()).forEach { sb.append("import $it\n") }
   val param = if (!hasContract) "" else "b: ${functionName}Bindings"
   sb.append("\n@Composable\nfun $functionName($param) {\n")
-  emitNode(sb, tree, "  ", components)
+  sb.append(body)
   sb.append("}\n")
   if (hasContract) {
     itemIfaces.forEach { (name, fields) ->
@@ -276,58 +266,69 @@ public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen
   return sb.toString()
 }
 
-/** The exported `modifier = Modifier.x().y()` chain, or null when the node has no mod props. */
-private fun modifierExpr(node: WidgetNode): String? {
+/**
+ * The exported `modifier = Modifier.x().y()` chain in AUTHOR order, or null when
+ * the node has none. K1: a scoped layout modifier is written only when [parent]
+ * (the widget whose content lambda holds the node) is one of its scopes — it
+ * would not compile anywhere else, so it is dropped, as the preview ignores it.
+ */
+private fun modifierExpr(node: WidgetNode, parent: String?): String? {
   val parts = mutableListOf<String>()
-  if ("mod.Alpha.pct" in node.props) parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"
-  if (node.props["mod.AnimateContentSize"] == true) parts += "animateContentSize()"
-  if ("mod.AspectRatio.ratio" in node.props) parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"
-  if ("mod.Background.colorArgb" in node.props) parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"
-  if ("mod.Blur.radiusDp" in node.props) parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"
-  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"
-  if ("mod.CornerRadius.radiusDp" in node.props) parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"
-  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"
-  if (node.props["mod.FillMaxHeight"] == true) parts += "fillMaxHeight()"
-  if (node.props["mod.FillMaxSize"] == true) parts += "fillMaxSize()"
-  if (node.props["mod.FillWidth"] == true) parts += "fillWidth()"
-  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"
-  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"
-  if ("mod.Padding.allDp" in node.props) parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"
-  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"
-  if ("mod.Rotate.degrees" in node.props) parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"
-  if ("mod.Scale.percent" in node.props) parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"
-  if ("mod.Shadow.elevationDp" in node.props) parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"
-  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"
-  if ("mod.Flex.value" in node.props) parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")"
-  if ("mod.Grow.value" in node.props) parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")"
-  if ("mod.Height.height" in node.props) parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"
-  if ("mod.HorizontalAlignment.alignment" in node.props) parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"
-  if ("mod.LayoutSize.width" in node.props || "mod.LayoutSize.height" in node.props) parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"
-  if ("mod.Margin.margin.start" in node.props || "mod.Margin.margin.end" in node.props || "mod.Margin.margin.top" in node.props || "mod.Margin.margin.bottom" in node.props) parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"
-  if ("mod.Shrink.value" in node.props) parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")"
-  if ("mod.VerticalAlignment.alignment" in node.props) parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"
-  if ("mod.Width.width" in node.props) parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"
+  for (name in modifierNames(node)) {
+    when (name) {
+      "Alpha" -> parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"
+      "AnimateContentSize" -> if (node.props["mod.AnimateContentSize"] == true) parts += "animateContentSize()"
+      "AspectRatio" -> parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"
+      "Background" -> parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"
+      "Blur" -> parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"
+      "Border" -> parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"
+      "CornerRadius" -> parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"
+      "CornerRadiusEach" -> parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"
+      "FillMaxHeight" -> if (node.props["mod.FillMaxHeight"] == true) parts += "fillMaxHeight()"
+      "FillMaxSize" -> if (node.props["mod.FillMaxSize"] == true) parts += "fillMaxSize()"
+      "FillWidth" -> if (node.props["mod.FillWidth"] == true) parts += "fillWidth()"
+      "Flex" -> if ((parent == "Row" || parent == "Column")) parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")"
+      "GradientBackground" -> parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"
+      "Grow" -> if ((parent == "Row" || parent == "Column")) parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")"
+      "Height" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"
+      "HorizontalAlignment" -> if ((parent == "Column" || parent == "Box")) parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"
+      "LayoutSize" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"
+      "Margin" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"
+      "Offset" -> parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"
+      "Padding" -> parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"
+      "PaddingEach" -> parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"
+      "Rotate" -> parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"
+      "Scale" -> parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"
+      "Shadow" -> parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"
+      "Shrink" -> if ((parent == "Row" || parent == "Column")) parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")"
+      "Size" -> parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"
+      "VerticalAlignment" -> if ((parent == "Row" || parent == "Box")) parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"
+      "Width" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"
+      else -> {}
+    }
+  }
   return if (parts.isEmpty()) null else "Modifier." + parts.joinToString(".")
 }
 
-private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {
+/** [parent] is the widget whose content lambda holds [node] (Condition/Repeat looked through). */
+private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?) {
   when (node.type) {
     "Condition" -> {
       val cond = (node.props["field"] as? String) ?: "cond"
       sb.append("${indent}if (b.$cond) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, parent) }
       sb.append("$indent}\n")
     }
     "Repeat" -> {
       val item = (node.props["item"] as? String) ?: "item"
       val items = (node.props["items"] as? String) ?: "items"
       sb.append("${indent}b.$items.forEach { $item ->\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, parent) }
       sb.append("$indent}\n")
     }
     "AlertDialog" -> {
       sb.append("${indent}AlertDialog(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("confirmText" in node.props) sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n")
@@ -338,7 +339,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "AnimatedBorder" -> {
       sb.append("${indent}AnimatedBorder(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
       if ("strokeWidthDp" in node.props) sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n")
       if ("baseColorArgb" in node.props) sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n")
@@ -349,20 +350,20 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("colorsArgb" in node.props) sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedBorder") }
       sb.append("$indent}\n")
     }
     "AnimatedVisibility" -> {
       sb.append("${indent}AnimatedVisibility(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("visible" in node.props) sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedVisibility") }
       sb.append("$indent}\n")
     }
     "AsyncImage" -> {
       sb.append("${indent}AsyncImage(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
       if ("contentScale" in node.props) sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n")
       if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
@@ -375,42 +376,42 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Badge" -> {
       sb.append("${indent}Badge(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "BottomAppBar" -> {
       sb.append("${indent}BottomAppBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomAppBar") }
       sb.append("$indent}\n")
     }
     "BottomSheet" -> {
       sb.append("${indent}BottomSheet(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
       if ("contentPaddingDp" in node.props) sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n")
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomSheet") }
       sb.append("$indent}\n")
     }
     "Box" -> {
       sb.append("${indent}Box(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
       if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Box") }
       sb.append("$indent}\n")
     }
     "Button" -> {
       sb.append("${indent}Button(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       if ("containerArgb" in node.props) sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n")
@@ -421,14 +422,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Card" -> {
       sb.append("${indent}Card(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Card") }
       sb.append("$indent}\n")
     }
     "Checkbox" -> {
       sb.append("${indent}Checkbox(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
@@ -436,28 +437,28 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Chip" -> {
       sb.append("${indent}Chip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "CircularProgressIndicator" -> {
       sb.append("${indent}CircularProgressIndicator(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
       sb.append("$indent)\n")
     }
     "Clickable" -> {
       sb.append("${indent}Clickable(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Clickable") }
       sb.append("$indent}\n")
     }
     "Column" -> {
       sb.append("${indent}Column(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
@@ -466,26 +467,26 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtMainAxis(node.props["verticalAlignment"])},\n")
       (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Column") }
       sb.append("$indent}\n")
     }
     "Dialog" -> {
       sb.append("${indent}Dialog(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Dialog") }
       sb.append("$indent}\n")
     }
     "Divider" -> {
       sb.append("${indent}Divider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
       sb.append("$indent)\n")
     }
     "DropdownMenu" -> {
       sb.append("${indent}DropdownMenu(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("expanded" in node.props) sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n")
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
@@ -494,7 +495,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "ElevatedButton" -> {
       sb.append("${indent}ElevatedButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -502,21 +503,21 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "ElevatedCard" -> {
       sb.append("${indent}ElevatedCard(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "ElevatedCard") }
       sb.append("$indent}\n")
     }
     "ExtendedFloatingActionButton" -> {
       sb.append("${indent}ExtendedFloatingActionButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FilledTonalButton" -> {
       sb.append("${indent}FilledTonalButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -524,7 +525,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "FilterChip" -> {
       sb.append("${indent}FilterChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -532,40 +533,40 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "FloatingActionButton" -> {
       sb.append("${indent}FloatingActionButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FlowColumn" -> {
       sb.append("${indent}FlowColumn(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "FlowColumn") }
       sb.append("$indent}\n")
     }
     "FlowRow" -> {
       sb.append("${indent}FlowRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "FlowRow") }
       sb.append("$indent}\n")
     }
     "HorizontalPager" -> {
       sb.append("${indent}HorizontalPager(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("autoScrollMs" in node.props) sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n")
       if ("showIndicator" in node.props) sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n")
       if ("indicatorActiveArgb" in node.props) sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n")
       if ("indicatorInactiveArgb" in node.props) sb.append("${indent}  indicatorInactiveArgb = ${fmtInt(node.props["indicatorInactiveArgb"])},\n")
       if ("contentPaddingDp" in node.props) sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "HorizontalPager") }
       sb.append("$indent}\n")
     }
     "Icon" -> {
       sb.append("${indent}Icon(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  name = ${fmtString(node.props["name"] ?: "")},\n")
       if ("sizeDp" in node.props) sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n")
       if ("tintArgb" in node.props) sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n")
@@ -574,21 +575,21 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "IconButton" -> {
       sb.append("${indent}IconButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Image" -> {
       sb.append("${indent}Image(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "InputChip" -> {
       sb.append("${indent}InputChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -596,29 +597,29 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "LazyHorizontalGrid" -> {
       sb.append("${indent}LazyHorizontalGrid(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("rows" in node.props) sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyHorizontalGrid") }
       sb.append("$indent}\n")
     }
     "LazyVerticalGrid" -> {
       sb.append("${indent}LazyVerticalGrid(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("columns" in node.props) sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyVerticalGrid") }
       sb.append("$indent}\n")
     }
     "LinearProgressIndicator" -> {
       sb.append("${indent}LinearProgressIndicator(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
       sb.append("$indent)\n")
     }
     "ListItem" -> {
       sb.append("${indent}ListItem(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  headline = ${fmtString(node.props["headline"] ?: "")},\n")
       if ("supporting" in node.props) sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n")
       if ("overline" in node.props) sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n")
@@ -629,21 +630,21 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "NavigationBar" -> {
       sb.append("${indent}NavigationBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "NavigationBar") }
       sb.append("$indent}\n")
     }
     "NavigationRail" -> {
       sb.append("${indent}NavigationRail(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "NavigationRail") }
       sb.append("$indent}\n")
     }
     "OutlinedButton" -> {
       sb.append("${indent}OutlinedButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       if ("iconUrl" in node.props) sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n")
@@ -657,14 +658,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "OutlinedCard" -> {
       sb.append("${indent}OutlinedCard(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "OutlinedCard") }
       sb.append("$indent}\n")
     }
     "OutlinedTextField" -> {
       sb.append("${indent}OutlinedTextField(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
       if ("label" in node.props) sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
@@ -682,7 +683,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "RadioButton" -> {
       sb.append("${indent}RadioButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -690,7 +691,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Row" -> {
       sb.append("${indent}Row(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
       if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
@@ -699,19 +700,19 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")
       (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Row") }
       sb.append("$indent}\n")
     }
     "ScrollableColumn" -> {
       sb.append("${indent}ScrollableColumn(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "ScrollableColumn") }
       sb.append("$indent}\n")
     }
     "SegmentedButtonRow" -> {
       sb.append("${indent}SegmentedButtonRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
       if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
@@ -719,7 +720,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Shimmer" -> {
       sb.append("${indent}Shimmer(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
       if ("heightDp" in node.props) sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n")
       if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
@@ -727,7 +728,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Slider" -> {
       sb.append("${indent}Slider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("position" in node.props) sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
@@ -735,20 +736,20 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Snackbar" -> {
       sb.append("${indent}Snackbar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  message = ${fmtString(node.props["message"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Spacer" -> {
       sb.append("${indent}Spacer(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n")
       sb.append("$indent)\n")
     }
     "StyledBox" -> {
       sb.append("${indent}StyledBox(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("colorArgb" in node.props) sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n")
       if ("gradientStartArgb" in node.props) sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n")
       if ("gradientEndArgb" in node.props) sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n")
@@ -772,12 +773,12 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("cornerBottomEndDp" in node.props) sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "StyledBox") }
       sb.append("$indent}\n")
     }
     "StyledText" -> {
       sb.append("${indent}StyledText(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("fontSize" in node.props) sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n")
       if ("bold" in node.props) sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n")
@@ -796,21 +797,21 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "SuggestionChip" -> {
       sb.append("${indent}SuggestionChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Surface" -> {
       sb.append("${indent}Surface(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Surface") }
       sb.append("$indent}\n")
     }
     "Switch" -> {
       sb.append("${indent}Switch(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
@@ -818,7 +819,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "Tab" -> {
       sb.append("${indent}Tab(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -826,21 +827,21 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "TabRow" -> {
       sb.append("${indent}TabRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "TabRow") }
       sb.append("$indent}\n")
     }
     "Text" -> {
       sb.append("${indent}Text(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "TextButton" -> {
       sb.append("${indent}TextButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
@@ -848,7 +849,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "TextField" -> {
       sb.append("${indent}TextField(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
       if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
@@ -857,14 +858,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
     }
     "TextInput" -> {
       sb.append("${indent}TextInput(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("hint" in node.props) sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n")
       (node.props["onChange"] as? Action)?.let { a -> sb.append("${indent}  onChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Theme" -> {
       sb.append("${indent}Theme(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("dark" in node.props) sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n")
       if ("primaryArgb" in node.props) sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n")
       if ("onPrimaryArgb" in node.props) sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n")
@@ -879,34 +880,34 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("errorArgb" in node.props) sb.append("${indent}  errorArgb = ${fmtInt(node.props["errorArgb"])},\n")
       if ("outlineArgb" in node.props) sb.append("${indent}  outlineArgb = ${fmtInt(node.props["outlineArgb"])},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Theme") }
       sb.append("$indent}\n")
     }
     "Tooltip" -> {
       sb.append("${indent}Tooltip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Tooltip") }
       sb.append("$indent}\n")
     }
     "TopAppBar" -> {
       sb.append("${indent}TopAppBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "VerticalDivider" -> {
       sb.append("${indent}VerticalDivider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
       sb.append("$indent)\n")
     }
     "VerticalPager" -> {
       sb.append("${indent}VerticalPager(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "VerticalPager") }
       sb.append("$indent}\n")
     }
     else -> emitComponentInstance(sb, node, indent, components)
@@ -939,6 +940,6 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
     if (!hasSlot && node.children.isEmpty()) { sb.append("$indent)\n"); return }
     sb.append("$indent) {\n")
   }
-  node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+  node.children.forEach { emitNode(sb, it, "$indent  ", components, node.type) }
   sb.append("$indent}\n")
 }

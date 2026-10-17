@@ -85,6 +85,21 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
   }
   appendLine(")")
   appendLine()
+  // K1: every wire key that holds a Dp (Dp props, Margin sides, Dp/Margin
+  // modifier args) — Dp is non-negative, so these clamp at 0 everywhere.
+  val dpKeys = buildList {
+    for (w in widgets.sortedBy { it.name }) for (p in w.props) {
+      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys(p.name, p.kind).forEach { add("${w.name}.$it") }
+    }
+    for (m in modifiers.sortedBy { it.name }) for (p in m.props) {
+      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys("mod.${m.name}.${p.name}", p.kind).forEach { add(it) }
+    }
+  }
+  appendLine("/** Wire keys (\"Widget.prop\", \"mod.Modifier.prop\") holding a Dp — see isDpProp. */")
+  appendLine("public val dpPropKeys: Set<String> = setOf(")
+  for (k in dpKeys) appendLine("  \"$k\",")
+  appendLine(")")
+  appendLine()
   appendLine("private val specsByType = widgetSpecs.associateBy { it.type }")
   appendLine()
   appendLine("public fun widgetSpec(type: String): WidgetSpec? = specsByType[type]")
