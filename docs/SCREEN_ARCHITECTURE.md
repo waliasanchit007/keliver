@@ -241,16 +241,23 @@ fun SectionCard(content: @Composable () -> Unit) {
   }
   ```
 
-  - *Margin values* parse as `Margin.Zero`, `Margin(X)` (= all), `Margin(all =
-    X)`, `Margin(horizontal = X, vertical = Y)` (either alone), or any named
-    subset of `start`/`end`/`top`/`bottom`, with X as `N.dp`, `N.M.dp`, `Dp(N)`
-    or `Dp(N.M)`. Two or more **positional** arguments (`Margin(8.dp, 4.dp)`)
-    stay RawCode: the class constructor and the `(horizontal, vertical)`
-    function both take two positional Dp, and the portal does not guess. On the
-    wire a Margin is four Double props `<prop>.start/.end/.top/.bottom` (absent =
-    0), edited as four number fields; export writes the shortest exact form
-    (`Margin.Zero`, `Margin(all = …)`, `Margin(horizontal = …, vertical = …)`,
-    else the non-zero named sides).
+  - *Margin values* parse as `Margin.Zero`, `Margin(all = X)`,
+    `Margin(horizontal = X, vertical = Y)` (either alone), any named subset of
+    `start`/`end`/`top`/`bottom`, or positional values read the way Kotlin's
+    overload resolution reads them: `Margin(X)` = all, `Margin(X, Y)` =
+    (horizontal, vertical), three or four values = (start, end, top, bottom).
+    A compiled fixture (`portal-parity-fixtures/.../ParityLayout.kt`) pins each
+    reading. X is `N.dp`, `N.M.dp` or `Dp(N.M)` — `Dp(N)` with an Int literal
+    does not compile and is not grammar; mixing positional and named arguments
+    is not grammar either. On the wire a Margin is four Double props
+    `<prop>.start/.end/.top/.bottom` (absent = 0), edited as four number
+    fields; export writes the shortest exact form (`Margin.Zero`, `Margin(all =
+    …)`, `Margin(horizontal = …, vertical = …)`, else the non-zero named sides).
+  - *Dp values are never negative* (Dp's constructor rejects them): the
+    editor's number field has `min = 0`, and the document, the exporter,
+    write-back and the preview all clamp a Dp prop, Margin side or Dp modifier
+    argument at 0, so what you see is what is saved. Numbers are written
+    without exponent notation (`0.0001`, never `1.0E-4`).
   - *Scoped modifiers* are members of `RowScope`/`ColumnScope`/`BoxScope`, so
     they resolve against the node's **parent** — `if`/`forEach` add no receiver
     and are looked through. A scoped modifier under a parent that is not one of
@@ -259,10 +266,21 @@ fun SectionCard(content: @Composable () -> Unit) {
     extension but skips a member whose arguments don't fit, so inside a Row
     `Modifier.size(12, 12)` is material's `Size` while `Modifier.size(12.dp,
     12.dp)` is the layout one, catalogued as **`LayoutSize`** (its extension
-    stays `size`). Exported code imports no scoped extension (they are scope
-    members), only their argument types (`Dp`, `Margin`, `dp`,
-    `CrossAxisAlignment`); unscoped modifiers are written first, then scoped
-    ones — the order the preview applies them in.
+    stays `size`).
+  - *What you see is what is saved, and saved code compiles.* The document
+    refuses a scoped modifier on a node whose parent is not one of its scopes,
+    and a move/insert that puts a node under such a parent strips the scoped
+    modifiers that became invalid (undo restores them). As a safety net the
+    exporter writes a scoped modifier only under a valid parent; the preview
+    likewise ignores it elsewhere.
+  - *Order and imports.* Modifiers keep their AUTHOR order through ingest,
+    the document, export and the preview (scoped and unscoped mixed). Exported
+    code and surgical write-back import exactly what the written text uses
+    (`Margin`, `dp`, `Dp`, `CrossAxisAlignment`, composables, top-level
+    modifier extensions — never a scoped one, they are scope members); write-
+    back never adds an import a star import already covers or one whose simple
+    name the file imports from elsewhere. A surgical Dp edit keeps the
+    author's spelling (`12.dp` stays `.dp`, `Dp(10.0)` stays `Dp(…)`).
   - The editor offers a scoped modifier only under one of its scopes, and the
     preview applies it with the parent's receiver, so preview and device build
     the same value tree (`portal-render` `LayoutParityTest`).

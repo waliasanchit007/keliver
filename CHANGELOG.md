@@ -9,23 +9,35 @@
 ## [Unreleased]
 
 ### Added
-- **portal (codegen, ingest, exporter, render, editor):** layout is portal grammar (D9). A layout
-  widget's `margin = Margin(…)` and layout's scoped modifiers (`flex`, `grow`, `shrink`, `margin`,
-  `width`, `height`, `size(Dp, Dp)`, `horizontalAlignment`, `verticalAlignment`) no longer make a
-  component opaque or a call RawCode. A Margin rides as four Double props
-  `<prop>.start/.end/.top/.bottom` and exports in its shortest exact form; `Margin(a, b)` with two
-  positional values stays RawCode (ambiguous to a reader). Scoped modifiers resolve against the
-  node's parent (through `if`/`forEach`), are written without an import, are offered by the editor
-  only under a Row/Column/Box they fit, and are applied in the preview with the parent's receiver
-  (`RenderNode(node, scope)`, `componentPreviewInScope`). Layout's `Size` collides with material's
-  and is catalogued as `LayoutSize` (source stays `Modifier.size(…)`); `size(12, 12)` inside a Row
-  is still material's. Margin and modifier edits write back surgically: only the changed side or
-  argument is rewritten. `16.dp` is accepted wherever `Dp(16.0)` was. `ModifierSpec` gains
-  `scopes`, `extension` and `argTypes` (its two-argument constructor is kept).
-  **Behaviour change:** a Row/Column/Box `margin` that was silently dropped from the preview is now
-  rendered; a repeated modifier in one chain (`.flex(1.0).flex(2.0)`) and a Double/Float modifier
-  argument written as an integer (`flex(1)`) are now RawCode instead of being coerced, while
-  `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
+- **portal (codegen, ingest, document, exporter, render, editor):** layout is portal grammar (D9).
+  A layout widget's `margin = Margin(…)` and layout's scoped modifiers (`flex`, `grow`, `shrink`,
+  `margin`, `width`, `height`, `size(Dp, Dp)`, `horizontalAlignment`, `verticalAlignment`) no
+  longer make a component opaque or a call RawCode. A Margin rides as four Double props
+  `<prop>.start/.end/.top/.bottom` and exports in its shortest exact form; positional `Margin(…)`
+  values are read as Kotlin resolves them (one = all, two = horizontal/vertical, three or four =
+  start/end/top/bottom). Scoped modifiers resolve against the node's parent (through
+  `if`/`forEach`), are written without an import, are offered by the editor only under a
+  Row/Column/Box they fit, and are applied in the preview with the parent's receiver
+  (`RenderNode(node, scope)`, `componentPreviewInScope`). Layout's `Size` collides with
+  material's and is catalogued as `LayoutSize` (source stays `Modifier.size(…)`); `size(12, 12)`
+  inside a Row is still material's. The document refuses a scoped modifier outside its scope and
+  strips the ones a move/insert invalidates (undo restores them); the exporter drops any left
+  outside a valid parent, so saved code compiles. Dp values (Dp props, Margin sides, Dp modifier
+  args) are clamped at 0 by the editor, document, exporter, write-back and preview alike. Modifier
+  chains keep their author order end to end. Margin and modifier edits write back surgically
+  (only the changed side or argument; a Dp keeps its `.dp`/`Dp(…)` spelling), and write-back now
+  adds the imports its inserted text needs. Exported files import only what they use. Numbers are
+  written without exponent notation. `16.dp` is accepted wherever `Dp(16.0)` was.
+  `ModifierSpec` gains `scopes`, `extension` and `argTypes` and is now a regular class; its
+  constructor, `component1/2` and two-argument `copy` are kept (binary compatible). New
+  portal-core helpers: `isValidUnder`, `isDpProp`/`dpPropKeys`, `MARGIN_SIDES`, `marginProps`,
+  `modifierSupportImports`, `requiredImports`, `kotlinDoubleLiteral`, `kotlinDpLiteral`.
+  **Behaviour changes:** a Row/Column/Box `margin` that was silently dropped from the preview is
+  now rendered; the preview applies modifiers in author order (it was alphabetical); exported
+  files no longer import unused layout types; `Dp(16)` (an Int literal, which does not compile) is
+  now RawCode; a repeated modifier in one chain (`.flex(1.0).flex(2.0)`) and a Double/Float
+  modifier argument written as an integer (`flex(1)`) are now RawCode instead of being coerced,
+  while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
 ### Fixed
 - **portal (ingest, exporter, editor, relay):** a text with an escape or a `$` keeps its meaning

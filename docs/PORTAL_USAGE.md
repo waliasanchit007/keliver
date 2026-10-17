@@ -298,10 +298,12 @@ them under **"Project components"** in the palette. See
   `.horizontalAlignment`, `.verticalAlignment`) are grammar. The modifier panel
   offers a scoped modifier only on a node whose parent is one of its scopes
   (Row/Column/Box — looking through `if`/`forEach`); a margin shows as its four
-  sides. Write `Margin(…)` with named arguments or a single value:
-  `Margin(8.dp, 4.dp)` (two positional values) makes the call RawCode, and a
-  scoped modifier under a non-layout parent does too. Details:
-  `docs/SCREEN_ARCHITECTURE.md` §7, "Layout is grammar".
+  sides, which cannot go below 0. Moving a node under a parent where one of
+  its scoped modifiers means nothing (e.g. a `flex` node into a `StyledBox`)
+  removes that modifier from the document — undo brings it back — so the
+  saved file always compiles. Write `Margin(…)` with named arguments or
+  positional values only (not both), and Dp values as `8.dp` or `Dp(8.0)`.
+  Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Layout is grammar".
 
 ## Live-presenter preview (P3-12)
 
