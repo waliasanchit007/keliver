@@ -235,15 +235,22 @@ data class PortalConfig(
   /**
    * K5: image hosts the editor canvas may load through the relay's
    * `/preview-asset` pass-through (exact host names, e.g. `img.example.com`;
-   * no scheme, port, path or wildcard; no IP literals). Empty = off. Preview
-   * only — devices load images themselves.
+   * no scheme, port, path or wildcard). Empty = off. Preview only — devices
+   * load images themselves.
+   *
+   * Refused: `localhost` and `*.localhost`, single-label names, IP literals in
+   * any form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex — any
+   * all-numeric label, or a hex last label), so no entry names the relay's
+   * own machine or network by address. What a listed name resolves to in DNS
+   * is trusted, not checked: listing a host says its DNS is trusted.
    */
   val previewAssetHosts: List<String> = emptyList(),
 ) {
   init {
     previewAssetHosts.forEach { host ->
-      require(PREVIEW_ASSET_HOST.matches(host) && !isIpLiteral(host)) {
-        "previewAssetHosts entries must be lowercase DNS host names (no scheme, port, path, wildcard or IP literal): $host"
+      require(isPreviewAssetHost(host)) {
+        "previewAssetHosts entries must be lowercase multi-label DNS host names (no scheme, port, path, " +
+          "wildcard, IP literal, numeric label or localhost): $host"
       }
     }
     require(previewAssetHosts.distinct().size == previewAssetHosts.size) { "previewAssetHosts must be unique" }
@@ -252,8 +259,24 @@ data class PortalConfig(
 
 private val PREVIEW_ASSET_HOST = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$")
 
-private fun isIpLiteral(host: String): Boolean =
-  ':' in host || (host.split('.').size == 4 && host.split('.').all { it.toIntOrNull() in 0..255 })
+private val HEX_LABEL = Regex("^0x[0-9a-f]*$")
+
+/**
+ * A [PortalConfig.previewAssetHosts] entry: a lowercase DNS name of at least
+ * two labels that no URL parser reads as an IP address and that is not
+ * `localhost`. Any all-numeric label is refused (`127.1`, `2130706433`,
+ * `0177.0.0.1`), as is a hex last label (`0x7f.0.0.0x1`): browsers and
+ * resolvers read those as IPv4. `:`/`[` (IPv6) never match [PREVIEW_ASSET_HOST].
+ */
+internal fun isPreviewAssetHost(host: String): Boolean {
+  if (!PREVIEW_ASSET_HOST.matches(host) || ':' in host) return false
+  val labels = host.split('.')
+  if (labels.size < 2) return false
+  if (host == "localhost" || host.endsWith(".localhost")) return false
+  if (labels.any { label -> label.all { it.isDigit() } }) return false
+  if (HEX_LABEL.matches(labels.last())) return false
+  return true
+}
 
 fun PortalConfig.resolvedLogicDirs(): List<String> =
   logicDirs ?: listOf(
