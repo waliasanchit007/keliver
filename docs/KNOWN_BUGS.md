@@ -878,6 +878,27 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U35. The relay and the editor's file server listened on every network interface — FIXED (unreleased; found 2026-10-17)
+
+**What happened.** `portal-relay` created its server with `InetSocketAddress(PORT)`,
+which listens on all interfaces, and `keliver-portal` / `keliver-dev.sh` served the
+editor with `python3 -m http.server`, which does too. The relay has write
+endpoints: anyone who could reach the machine on its network could edit an app's
+screens, change its source through write-back, and publish signed bundles. Found
+while adding the preview image pass-through (whose endpoint checks the caller);
+on the machine where it was found, the macOS firewall was off.
+
+**Fix.** The relay listens on loopback only. `KELIVER_RELAY_BIND=<address>` opts
+in to another interface, and the relay then says so at start (the documented
+use: a physical iPhone reaching a Debug relay over Wi-Fi, `DEVICE_PROOF.md`).
+Every script that serves the editor binds `127.0.0.1`. Emulators (`10.0.2.2`),
+simulators, `adb reverse` and a local tunnel proxy all arrive on loopback, so no
+documented route changes.
+
+**Affects** every released tools bundle up to and including 0.3.10. Until a
+release carries the fix, run the relay on a trusted network or with the macOS
+firewall on.
+
 ### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND (unreleased; found 2026-10-14, cause not known)
 
 Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").

@@ -63,7 +63,7 @@ pids+=($!)
 step "Serving the editor on :$EDITOR_PORT"
 DIST="$ROOT/web-spike/build/dist/wasmJs/developmentExecutable"
 lsof -ti ":$EDITOR_PORT" | xargs kill 2>/dev/null || true
-( cd "$DIST" && python3 -m http.server "$EDITOR_PORT" >/tmp/keliver-dev-editor.log 2>&1 ) &
+( cd "$DIST" && python3 -m http.server --bind 127.0.0.1 "$EDITOR_PORT" >/tmp/keliver-dev-editor.log 2>&1 ) &
 pids+=($!)
 
 step "Serving the live device bundle on :$ZIPLINE_PORT (for on-device preview)"

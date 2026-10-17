@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### Security
+- **portal-relay, keliver-portal, keliver-dev.sh:** the relay and the editor's file server listen on
+  loopback only (KNOWN_BUGS U35). They listened on every interface, which exposed the relay's edit and
+  publish endpoints to the local network. `KELIVER_RELAY_BIND=<address>` opts the relay in to another
+  interface (a physical phone on the same Wi-Fi), and it then says so at start.
+
 ### Added
 - **portal (codegen, ingest, document, exporter, render, editor):** layout is portal grammar (D9).
   A layout widget's `margin = Margin(…)` and layout's scoped modifiers (`flex`, `grow`, `shrink`,

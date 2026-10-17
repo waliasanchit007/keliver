@@ -176,7 +176,7 @@ say "portal-server against $APP_DIR (:$PORT)"
 echo $! >> "$PIDFILE"
 
 say "editor (:$EDITOR_PORT) from $EDITOR_DIR"
-( cd "$EDITOR_DIR" && python3 -m http.server "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
+( cd "$EDITOR_DIR" && python3 -m http.server --bind 127.0.0.1 "$EDITOR_PORT" ) >"$EDITOR_LOG" 2>&1 &
 echo $! >> "$PIDFILE"
 
 # --- health-wait: don't claim success until the server actually answers ------

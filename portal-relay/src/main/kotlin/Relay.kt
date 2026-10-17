@@ -29,6 +29,7 @@ import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
 import kotlinx.serialization.encodeToString
 import java.io.File
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.URLDecoder
 import java.security.MessageDigest
@@ -894,7 +895,18 @@ fun main(args: Array<String>) {
   bootScan()
   reconcileStore()
   startKotlinWatcher()
-  val server = HttpServer.create(InetSocketAddress(PORT), 0)
+  // The relay has write endpoints (edits, publish), so it listens on loopback
+  // only. An emulator (10.0.2.2), a simulator, `adb reverse` and a local tunnel
+  // proxy all arrive there. KELIVER_RELAY_BIND=<address> opts in to another
+  // interface, e.g. this machine's LAN address for a physical phone on the same
+  // Wi-Fi (docs/DEVICE_PROOF.md); everyone on that network can then reach it.
+  val bindAddress = System.getenv("KELIVER_RELAY_BIND")?.trim()?.takeIf { it.isNotEmpty() }
+    ?.let { InetAddress.getByName(it) } ?: InetAddress.getLoopbackAddress()
+  val server = HttpServer.create(InetSocketAddress(bindAddress, PORT), 0)
+  println(
+    "portal-server: listening on ${bindAddress.hostAddress}:$PORT" +
+      if (bindAddress.isLoopbackAddress) "" else " — NOT loopback: anyone who can reach this address can edit and publish",
+  )
 
   // W6: POST /report from production hosts built to report here; counts at
   // GET /reports and /reports/view (HostReports.kt). Kept under the store.
