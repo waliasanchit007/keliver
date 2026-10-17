@@ -2,6 +2,7 @@ package dev.keliver.portal.document
 
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.Token
 import dev.keliver.portal.WidgetNode
 
 /**
@@ -9,7 +10,9 @@ import dev.keliver.portal.WidgetNode
  * pipeline consumes (editor preview, devices, exporter): binds resolve via
  * [mocks] or stay as V1 typed [Bind] values, actions become V1 [Action]
  * values, modifiers ride as "mod.<Name>.<prop>" keys, RawCode becomes the
- * "RawCode" placeholder type.
+ * "RawCode" placeholder type. A design-token reference (K2) becomes a V1
+ * [Token] carrying its resolved value (the preview renders the value, the
+ * exporter writes the reference).
  */
 public fun UiDocument.toWidgetTree(
   mocks: Map<String, Any?> = emptyMap(),
@@ -32,9 +35,16 @@ private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>, handleIds: Boolean)
           is PropValue.Lit -> put(name, v.toAny())
           is PropValue.Bind -> put(name, if (v.field in mocks) mocks[v.field] else Bind(v.field))
           is PropValue.Action -> put(name, Action(v.name, v.arg))
+          is PropValue.Token -> put(name, v.toTreeValue())
         }
       }
-      n.modifiers.forEach { (name, v) -> if (v is PropValue.Lit) put("mod.$name", v.toAny()) }
+      n.modifiers.forEach { (name, v) ->
+        when (v) {
+          is PropValue.Lit -> put("mod.$name", v.toAny())
+          is PropValue.Token -> put("mod.$name", v.toTreeValue())
+          else -> {}
+        }
+      }
     }
     val children = n.children.map { nodeToTree(it, mocks, handleIds) }
     if (handleIds) WidgetNode(n.type, props, children, id = n.handle.v.toInt()) else WidgetNode(n.type, props, children)
@@ -49,10 +59,17 @@ public fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
     when (v) {
       is Bind -> PropValue.Bind(v.field)
       is Action -> PropValue.Action(v.name, v.arg)
+      is Token -> v.toPropValue()
       else -> lit(v)
     }
   },
   modifiers = props.filterKeys { it.startsWith("mod.") }
-    .map { (k, v) -> k.removePrefix("mod.") to lit(v) }.toMap(),
+    .map { (k, v) -> k.removePrefix("mod.") to if (v is Token) v.toPropValue() else lit(v) }.toMap(),
   children = children.map { it.toDocNode() },
 )
+
+/** K2: the V1 tree value of a token reference. */
+public fun PropValue.Token.toTreeValue(): Token = Token(ref, value.toAny(), import)
+
+/** K2: a V1 [Token] lifted back into the document's [PropValue.Token]. */
+public fun Token.toPropValue(): PropValue.Token = PropValue.Token(ref, lit(value), importFq)

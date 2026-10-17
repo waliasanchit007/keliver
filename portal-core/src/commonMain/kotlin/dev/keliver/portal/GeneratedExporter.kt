@@ -178,28 +178,47 @@ private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, Stri
 // P1-B: a dotted Bind field ("item.title") is item-scoped -> emit as-is;
 // a bare field ("title") is a screen binding -> b.title.
 private fun bindRef(field: String): String = if ('.' in field) field else "b.$field"
-private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
-private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
-private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
-private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinDoubleLiteral((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0)
-private fun fmtFloat(v: Any?): String = "${fmtDouble(v)}f"
+// K2: a design-token reference (`C.Ink`) is written back as its REFERENCE where
+// the token's kind is the literal's kind; anywhere else (never produced by
+// ingest or the document) its resolved value is written, so saved code compiles.
+private fun fmtString(v: Any?): String = when {
+  v is Bind -> bindRef(v.field)
+  v is Token && v.value is String -> v.ref
+  else -> kotlinStringLiteral(tokenValue(v).toString())
+}
+private fun fmtInt(v: Any?): String = when {
+  v is Bind -> bindRef(v.field)
+  v is Token && v.value is Int -> v.ref
+  else -> ((tokenValue(v) as? Int) ?: 0).toString()
+}
+private fun fmtBool(v: Any?): String = when {
+  v is Bind -> bindRef(v.field)
+  v is Token && v.value is Boolean -> v.ref
+  else -> ((tokenValue(v) as? Boolean) ?: false).toString()
+}
+private fun fmtDouble(v: Any?): String = when {
+  v is Bind -> bindRef(v.field)
+  v is Token && v.value is Double -> v.ref
+  else -> tokenValue(v).let { x -> kotlinDoubleLiteral((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0) }
+}
+private fun fmtFloat(v: Any?): String = "${fmtDouble(tokenValue(v))}f"
 // Dp is non-negative (its init requires it): clamp, as the document and the preview do.
 private fun fmtDp(v: Any?): String =
   if (v is Bind) "Dp(${bindRef(v.field)})"
-  else "Dp(${kotlinDoubleLiteral(((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})"
+  else tokenValue(v).let { x -> "Dp(${kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
 private fun fmtStringList(v: Any?): String =
   "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
 private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${it}f" } ?: "") + ")"
-private fun fmtConstraint(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
-private fun fmtCrossAxis(v: Any?): String = when ((v as? Int) ?: 0) {
+private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
+private fun fmtCrossAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
   1 -> "CrossAxisAlignment.Center"
   2 -> "CrossAxisAlignment.End"
   3 -> "CrossAxisAlignment.Stretch"
   else -> "CrossAxisAlignment.Start"
 }
-private fun fmtOverflow(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
-private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
+private fun fmtOverflow(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
+private fun fmtMainAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
   1 -> "MainAxisAlignment.Center"
   2 -> "MainAxisAlignment.End"
   3 -> "MainAxisAlignment.SpaceBetween"
@@ -212,7 +231,7 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
 // (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
 // so a negative side is written as 0.
 private fun marginSide(node: WidgetNode, key: String): Double =
-  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
+  tokenValue(node.props[key]).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
 private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
 private fun fmtMargin(node: WidgetNode, prefix: String): String {
   val s = marginSide(node, "$prefix.start")
@@ -280,32 +299,32 @@ private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<
   val parts = mutableListOf<String>()
   for (name in modifierNames(node)) {
     when (name) {
-      "Alpha" -> { parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"; imports += "dev.keliver.material.compose.alpha" }
+      "Alpha" -> { parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"; imports += "dev.keliver.material.compose.alpha"; imports.addTokenImport(node.props["mod.Alpha.pct"], "Int") }
       "AnimateContentSize" -> if (node.props["mod.AnimateContentSize"] == true) { parts += "animateContentSize()"; imports += "dev.keliver.material.compose.animateContentSize" }
       "AspectRatio" -> { parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"; imports += "dev.keliver.material.compose.aspectRatio" }
-      "Background" -> { parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.background" }
-      "Blur" -> { parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.blur" }
-      "Border" -> { parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.border" }
-      "CornerRadius" -> { parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadius" }
-      "CornerRadiusEach" -> { parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadiusEach" }
+      "Background" -> { parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.background"; imports.addTokenImport(node.props["mod.Background.colorArgb"], "Int") }
+      "Blur" -> { parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.blur"; imports.addTokenImport(node.props["mod.Blur.radiusDp"], "Int") }
+      "Border" -> { parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.border"; imports.addTokenImport(node.props["mod.Border.widthDp"], "Int"); imports.addTokenImport(node.props["mod.Border.colorArgb"], "Int") }
+      "CornerRadius" -> { parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadius"; imports.addTokenImport(node.props["mod.CornerRadius.radiusDp"], "Int") }
+      "CornerRadiusEach" -> { parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadiusEach"; imports.addTokenImport(node.props["mod.CornerRadiusEach.topStartDp"], "Int"); imports.addTokenImport(node.props["mod.CornerRadiusEach.topEndDp"], "Int"); imports.addTokenImport(node.props["mod.CornerRadiusEach.bottomEndDp"], "Int"); imports.addTokenImport(node.props["mod.CornerRadiusEach.bottomStartDp"], "Int") }
       "FillMaxHeight" -> if (node.props["mod.FillMaxHeight"] == true) { parts += "fillMaxHeight()"; imports += "dev.keliver.material.compose.fillMaxHeight" }
       "FillMaxSize" -> if (node.props["mod.FillMaxSize"] == true) { parts += "fillMaxSize()"; imports += "dev.keliver.material.compose.fillMaxSize" }
       "FillWidth" -> if (node.props["mod.FillWidth"] == true) { parts += "fillWidth()"; imports += "dev.keliver.material.compose.fillWidth" }
-      "Flex" -> if ((parent == "Row" || parent == "Column")) { parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")" }
-      "GradientBackground" -> { parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"; imports += "dev.keliver.material.compose.gradientBackground" }
-      "Grow" -> if ((parent == "Row" || parent == "Column")) { parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")" }
+      "Flex" -> if ((parent == "Row" || parent == "Column")) { parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")"; imports.addTokenImport(node.props["mod.Flex.value"], "Double") }
+      "GradientBackground" -> { parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"; imports += "dev.keliver.material.compose.gradientBackground"; imports.addTokenImport(node.props["mod.GradientBackground.startArgb"], "Int"); imports.addTokenImport(node.props["mod.GradientBackground.endArgb"], "Int") }
+      "Grow" -> if ((parent == "Row" || parent == "Column")) { parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")"; imports.addTokenImport(node.props["mod.Grow.value"], "Double") }
       "Height" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
       "HorizontalAlignment" -> if ((parent == "Column" || parent == "Box")) { parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
       "LayoutSize" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports += listOf("dev.keliver.ui.Dp") }
       "Margin" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"; imports += marginImports(node, "mod.Margin.margin") }
-      "Offset" -> { parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"; imports += "dev.keliver.material.compose.offset" }
-      "Padding" -> { parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"; imports += "dev.keliver.material.compose.padding" }
-      "PaddingEach" -> { parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"; imports += "dev.keliver.material.compose.paddingEach" }
-      "Rotate" -> { parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"; imports += "dev.keliver.material.compose.rotate" }
-      "Scale" -> { parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"; imports += "dev.keliver.material.compose.scale" }
-      "Shadow" -> { parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"; imports += "dev.keliver.material.compose.shadow" }
-      "Shrink" -> if ((parent == "Row" || parent == "Column")) { parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")" }
-      "Size" -> { parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"; imports += "dev.keliver.material.compose.size" }
+      "Offset" -> { parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"; imports += "dev.keliver.material.compose.offset"; imports.addTokenImport(node.props["mod.Offset.xDp"], "Int"); imports.addTokenImport(node.props["mod.Offset.yDp"], "Int") }
+      "Padding" -> { parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"; imports += "dev.keliver.material.compose.padding"; imports.addTokenImport(node.props["mod.Padding.allDp"], "Int") }
+      "PaddingEach" -> { parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"; imports += "dev.keliver.material.compose.paddingEach"; imports.addTokenImport(node.props["mod.PaddingEach.startDp"], "Int"); imports.addTokenImport(node.props["mod.PaddingEach.topDp"], "Int"); imports.addTokenImport(node.props["mod.PaddingEach.endDp"], "Int"); imports.addTokenImport(node.props["mod.PaddingEach.bottomDp"], "Int") }
+      "Rotate" -> { parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"; imports += "dev.keliver.material.compose.rotate"; imports.addTokenImport(node.props["mod.Rotate.degrees"], "Int") }
+      "Scale" -> { parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"; imports += "dev.keliver.material.compose.scale"; imports.addTokenImport(node.props["mod.Scale.percent"], "Int") }
+      "Shadow" -> { parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"; imports += "dev.keliver.material.compose.shadow"; imports.addTokenImport(node.props["mod.Shadow.elevationDp"], "Int") }
+      "Shrink" -> if ((parent == "Row" || parent == "Column")) { parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")"; imports.addTokenImport(node.props["mod.Shrink.value"], "Double") }
+      "Size" -> { parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"; imports += "dev.keliver.material.compose.size"; imports.addTokenImport(node.props["mod.Size.widthDp"], "Int"); imports.addTokenImport(node.props["mod.Size.heightDp"], "Int") }
       "VerticalAlignment" -> if ((parent == "Row" || parent == "Box")) { parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
       "Width" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
       else -> {}
@@ -336,10 +355,10 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.AlertDialog"
       sb.append("${indent}AlertDialog(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("confirmText" in node.props) { sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n") }
-      if ("dismissText" in node.props) { sb.append("${indent}  dismissText = ${fmtString(node.props["dismissText"] ?: "")},\n") }
+      sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n"); imports.addTokenImport(node.props["title"], "String")
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("confirmText" in node.props) { sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n"); imports.addTokenImport(node.props["confirmText"], "String") }
+      if ("dismissText" in node.props) { sb.append("${indent}  dismissText = ${fmtString(node.props["dismissText"] ?: "")},\n"); imports.addTokenImport(node.props["dismissText"], "String") }
       (node.props["onConfirm"] as? Action)?.let { a -> sb.append("${indent}  onConfirm = ${fmtAction(a, 0)},\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
@@ -348,13 +367,13 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.AnimatedBorder"
       sb.append("${indent}AnimatedBorder(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
-      if ("strokeWidthDp" in node.props) { sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n") }
-      if ("baseColorArgb" in node.props) { sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n") }
-      if ("cometColorArgb" in node.props) { sb.append("${indent}  cometColorArgb = ${fmtInt(node.props["cometColorArgb"])},\n") }
-      if ("durationMs" in node.props) { sb.append("${indent}  durationMs = ${fmtInt(node.props["durationMs"])},\n") }
-      if ("segmentLenDp" in node.props) { sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n") }
-      if ("effect" in node.props) { sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
+      if ("strokeWidthDp" in node.props) { sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n"); imports.addTokenImport(node.props["strokeWidthDp"], "Int") }
+      if ("baseColorArgb" in node.props) { sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n"); imports.addTokenImport(node.props["baseColorArgb"], "Int") }
+      if ("cometColorArgb" in node.props) { sb.append("${indent}  cometColorArgb = ${fmtInt(node.props["cometColorArgb"])},\n"); imports.addTokenImport(node.props["cometColorArgb"], "Int") }
+      if ("durationMs" in node.props) { sb.append("${indent}  durationMs = ${fmtInt(node.props["durationMs"])},\n"); imports.addTokenImport(node.props["durationMs"], "Int") }
+      if ("segmentLenDp" in node.props) { sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n"); imports.addTokenImport(node.props["segmentLenDp"], "Int") }
+      if ("effect" in node.props) { sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n"); imports.addTokenImport(node.props["effect"], "Int") }
       if ("colorsArgb" in node.props) { sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
@@ -365,7 +384,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.AnimatedVisibility"
       sb.append("${indent}AnimatedVisibility(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("visible" in node.props) { sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n") }
+      if ("visible" in node.props) { sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n"); imports.addTokenImport(node.props["visible"], "Boolean") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedVisibility", imports) }
       sb.append("$indent}\n")
@@ -374,13 +393,13 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.AsyncImage"
       sb.append("${indent}AsyncImage(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
-      if ("contentScale" in node.props) { sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n") }
-      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
-      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
-      if ("blurDp" in node.props) { sb.append("${indent}  blurDp = ${fmtInt(node.props["blurDp"])},\n") }
-      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n") }
-      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n") }
+      sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n"); imports.addTokenImport(node.props["url"], "String")
+      if ("contentScale" in node.props) { sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n"); imports.addTokenImport(node.props["contentScale"], "Int") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n"); imports.addTokenImport(node.props["widthDp"], "Int") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n"); imports.addTokenImport(node.props["heightDp"], "Int") }
+      if ("blurDp" in node.props) { sb.append("${indent}  blurDp = ${fmtInt(node.props["blurDp"])},\n"); imports.addTokenImport(node.props["blurDp"], "Int") }
+      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n"); imports.addTokenImport(node.props["fillWidth"], "Boolean") }
+      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n"); imports.addTokenImport(node.props["tintArgb"], "Int") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -388,7 +407,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Badge"
       sb.append("${indent}Badge(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n") }
+      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String") }
       sb.append("$indent)\n")
     }
     "BottomAppBar" -> {
@@ -403,8 +422,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.BottomSheet"
       sb.append("${indent}BottomSheet(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
-      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n") }
+      sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n"); imports.addTokenImport(node.props["visible"], "Boolean")
+      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n"); imports.addTokenImport(node.props["contentPaddingDp"], "Int") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomSheet", imports) }
@@ -427,11 +446,11 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Button"
       sb.append("${indent}Button(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
-      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n") }
-      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
+      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n"); imports.addTokenImport(node.props["containerArgb"], "Int") }
+      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n"); imports.addTokenImport(node.props["contentArgb"], "Int") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -447,8 +466,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Checkbox"
       sb.append("${indent}Checkbox(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n"); imports.addTokenImport(node.props["checked"], "Boolean")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -456,7 +475,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Chip"
       sb.append("${indent}Chip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
+      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -504,14 +523,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Divider"
       sb.append("${indent}Divider(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n") }
+      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n"); imports.addTokenImport(node.props["thickness"], "Int") }
       sb.append("$indent)\n")
     }
     "DropdownMenu" -> {
       imports += "dev.keliver.material.compose.DropdownMenu"
       sb.append("${indent}DropdownMenu(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("expanded" in node.props) { sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n") }
+      if ("expanded" in node.props) { sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n"); imports.addTokenImport(node.props["expanded"], "Boolean") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
@@ -521,8 +540,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.ElevatedButton"
       sb.append("${indent}ElevatedButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -538,7 +557,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.ExtendedFloatingActionButton"
       sb.append("${indent}ExtendedFloatingActionButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -546,8 +565,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.FilledTonalButton"
       sb.append("${indent}FilledTonalButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -555,8 +574,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.FilterChip"
       sb.append("${indent}FilterChip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
-      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
+      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -564,7 +583,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.FloatingActionButton"
       sb.append("${indent}FloatingActionButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n") }
+      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -588,11 +607,11 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.HorizontalPager"
       sb.append("${indent}HorizontalPager(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("autoScrollMs" in node.props) { sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n") }
-      if ("showIndicator" in node.props) { sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n") }
-      if ("indicatorActiveArgb" in node.props) { sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n") }
-      if ("indicatorInactiveArgb" in node.props) { sb.append("${indent}  indicatorInactiveArgb = ${fmtInt(node.props["indicatorInactiveArgb"])},\n") }
-      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n") }
+      if ("autoScrollMs" in node.props) { sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n"); imports.addTokenImport(node.props["autoScrollMs"], "Int") }
+      if ("showIndicator" in node.props) { sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n"); imports.addTokenImport(node.props["showIndicator"], "Boolean") }
+      if ("indicatorActiveArgb" in node.props) { sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n"); imports.addTokenImport(node.props["indicatorActiveArgb"], "Int") }
+      if ("indicatorInactiveArgb" in node.props) { sb.append("${indent}  indicatorInactiveArgb = ${fmtInt(node.props["indicatorInactiveArgb"])},\n"); imports.addTokenImport(node.props["indicatorInactiveArgb"], "Int") }
+      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n"); imports.addTokenImport(node.props["contentPaddingDp"], "Int") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "HorizontalPager", imports) }
       sb.append("$indent}\n")
@@ -601,17 +620,17 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Icon"
       sb.append("${indent}Icon(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  name = ${fmtString(node.props["name"] ?: "")},\n")
-      if ("sizeDp" in node.props) { sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n") }
-      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n") }
-      if ("contentDescription" in node.props) { sb.append("${indent}  contentDescription = ${fmtString(node.props["contentDescription"] ?: "")},\n") }
+      sb.append("${indent}  name = ${fmtString(node.props["name"] ?: "")},\n"); imports.addTokenImport(node.props["name"], "String")
+      if ("sizeDp" in node.props) { sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n"); imports.addTokenImport(node.props["sizeDp"], "Int") }
+      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n"); imports.addTokenImport(node.props["tintArgb"], "Int") }
+      if ("contentDescription" in node.props) { sb.append("${indent}  contentDescription = ${fmtString(node.props["contentDescription"] ?: "")},\n"); imports.addTokenImport(node.props["contentDescription"], "String") }
       sb.append("$indent)\n")
     }
     "IconButton" -> {
       imports += "dev.keliver.material.compose.IconButton"
       sb.append("${indent}IconButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n")
+      sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n"); imports.addTokenImport(node.props["imageUrl"], "String")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -619,7 +638,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Image"
       sb.append("${indent}Image(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
+      sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n"); imports.addTokenImport(node.props["url"], "String")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -627,8 +646,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.InputChip"
       sb.append("${indent}InputChip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
-      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
+      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -636,7 +655,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.LazyHorizontalGrid"
       sb.append("${indent}LazyHorizontalGrid(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("rows" in node.props) { sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n") }
+      if ("rows" in node.props) { sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n"); imports.addTokenImport(node.props["rows"], "Int") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyHorizontalGrid", imports) }
       sb.append("$indent}\n")
@@ -645,7 +664,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.LazyVerticalGrid"
       sb.append("${indent}LazyVerticalGrid(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("columns" in node.props) { sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n") }
+      if ("columns" in node.props) { sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n"); imports.addTokenImport(node.props["columns"], "Int") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyVerticalGrid", imports) }
       sb.append("$indent}\n")
@@ -661,11 +680,11 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.ListItem"
       sb.append("${indent}ListItem(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  headline = ${fmtString(node.props["headline"] ?: "")},\n")
-      if ("supporting" in node.props) { sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n") }
-      if ("overline" in node.props) { sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n") }
-      if ("leadingIcon" in node.props) { sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n") }
-      if ("trailingIcon" in node.props) { sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n") }
+      sb.append("${indent}  headline = ${fmtString(node.props["headline"] ?: "")},\n"); imports.addTokenImport(node.props["headline"], "String")
+      if ("supporting" in node.props) { sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n"); imports.addTokenImport(node.props["supporting"], "String") }
+      if ("overline" in node.props) { sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n"); imports.addTokenImport(node.props["overline"], "String") }
+      if ("leadingIcon" in node.props) { sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n"); imports.addTokenImport(node.props["leadingIcon"], "String") }
+      if ("trailingIcon" in node.props) { sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n"); imports.addTokenImport(node.props["trailingIcon"], "String") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -689,14 +708,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.OutlinedButton"
       sb.append("${indent}OutlinedButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
-      if ("iconUrl" in node.props) { sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n") }
-      if ("iconSizeDp" in node.props) { sb.append("${indent}  iconSizeDp = ${fmtInt(node.props["iconSizeDp"])},\n") }
-      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n") }
-      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n") }
-      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
+      if ("iconUrl" in node.props) { sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n"); imports.addTokenImport(node.props["iconUrl"], "String") }
+      if ("iconSizeDp" in node.props) { sb.append("${indent}  iconSizeDp = ${fmtInt(node.props["iconSizeDp"])},\n"); imports.addTokenImport(node.props["iconSizeDp"], "Int") }
+      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n"); imports.addTokenImport(node.props["containerArgb"], "Int") }
+      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n"); imports.addTokenImport(node.props["contentArgb"], "Int") }
+      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n"); imports.addTokenImport(node.props["borderArgb"], "Int") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -712,18 +731,18 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.OutlinedTextField"
       sb.append("${indent}OutlinedTextField(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n") }
-      if ("label" in node.props) { sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n") }
-      if ("leadingText" in node.props) { sb.append("${indent}  leadingText = ${fmtString(node.props["leadingText"] ?: "")},\n") }
-      if ("keyboardType" in node.props) { sb.append("${indent}  keyboardType = ${fmtInt(node.props["keyboardType"])},\n") }
-      if ("singleLine" in node.props) { sb.append("${indent}  singleLine = ${fmtBool(node.props["singleLine"])},\n") }
-      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n") }
-      if ("isError" in node.props) { sb.append("${indent}  isError = ${fmtBool(node.props["isError"])},\n") }
-      if ("supportingText" in node.props) { sb.append("${indent}  supportingText = ${fmtString(node.props["supportingText"] ?: "")},\n") }
-      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
-      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n"); imports.addTokenImport(node.props["placeholder"], "String") }
+      if ("label" in node.props) { sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String") }
+      if ("leadingText" in node.props) { sb.append("${indent}  leadingText = ${fmtString(node.props["leadingText"] ?: "")},\n"); imports.addTokenImport(node.props["leadingText"], "String") }
+      if ("keyboardType" in node.props) { sb.append("${indent}  keyboardType = ${fmtInt(node.props["keyboardType"])},\n"); imports.addTokenImport(node.props["keyboardType"], "Int") }
+      if ("singleLine" in node.props) { sb.append("${indent}  singleLine = ${fmtBool(node.props["singleLine"])},\n"); imports.addTokenImport(node.props["singleLine"], "Boolean") }
+      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n"); imports.addTokenImport(node.props["maxLines"], "Int") }
+      if ("isError" in node.props) { sb.append("${indent}  isError = ${fmtBool(node.props["isError"])},\n"); imports.addTokenImport(node.props["isError"], "Boolean") }
+      if ("supportingText" in node.props) { sb.append("${indent}  supportingText = ${fmtString(node.props["supportingText"] ?: "")},\n"); imports.addTokenImport(node.props["supportingText"], "String") }
+      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n"); imports.addTokenImport(node.props["borderArgb"], "Int") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n"); imports.addTokenImport(node.props["align"], "Int") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -731,8 +750,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.RadioButton"
       sb.append("${indent}RadioButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -764,7 +783,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}SegmentedButtonRow(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
-      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n") }
+      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n"); imports.addTokenImport(node.props["selectedIndex"], "Int") }
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -772,9 +791,9 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Shimmer"
       sb.append("${indent}Shimmer(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
-      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n"); imports.addTokenImport(node.props["widthDp"], "Int") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n"); imports.addTokenImport(node.props["heightDp"], "Int") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
       sb.append("$indent)\n")
     }
     "Slider" -> {
@@ -782,7 +801,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}Slider(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("position" in node.props) { sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n") }
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -790,7 +809,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Snackbar"
       sb.append("${indent}Snackbar(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  message = ${fmtString(node.props["message"] ?: "")},\n")
+      sb.append("${indent}  message = ${fmtString(node.props["message"] ?: "")},\n"); imports.addTokenImport(node.props["message"], "String")
       sb.append("$indent)\n")
     }
     "Spacer" -> {
@@ -805,27 +824,27 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.StyledBox"
       sb.append("${indent}StyledBox(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n") }
-      if ("gradientStartArgb" in node.props) { sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n") }
-      if ("gradientEndArgb" in node.props) { sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n") }
-      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
-      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
-      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
-      if ("paddingDp" in node.props) { sb.append("${indent}  paddingDp = ${fmtInt(node.props["paddingDp"])},\n") }
-      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n") }
-      if ("contentAlignment" in node.props) { sb.append("${indent}  contentAlignment = ${fmtInt(node.props["contentAlignment"])},\n") }
-      if ("offsetYDp" in node.props) { sb.append("${indent}  offsetYDp = ${fmtInt(node.props["offsetYDp"])},\n") }
-      if ("elevationDp" in node.props) { sb.append("${indent}  elevationDp = ${fmtInt(node.props["elevationDp"])},\n") }
-      if ("borderColorArgb" in node.props) { sb.append("${indent}  borderColorArgb = ${fmtInt(node.props["borderColorArgb"])},\n") }
-      if ("borderWidthDp" in node.props) { sb.append("${indent}  borderWidthDp = ${fmtInt(node.props["borderWidthDp"])},\n") }
-      if ("gradientVertical" in node.props) { sb.append("${indent}  gradientVertical = ${fmtBool(node.props["gradientVertical"])},\n") }
+      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n"); imports.addTokenImport(node.props["colorArgb"], "Int") }
+      if ("gradientStartArgb" in node.props) { sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n"); imports.addTokenImport(node.props["gradientStartArgb"], "Int") }
+      if ("gradientEndArgb" in node.props) { sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n"); imports.addTokenImport(node.props["gradientEndArgb"], "Int") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n"); imports.addTokenImport(node.props["widthDp"], "Int") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n"); imports.addTokenImport(node.props["heightDp"], "Int") }
+      if ("paddingDp" in node.props) { sb.append("${indent}  paddingDp = ${fmtInt(node.props["paddingDp"])},\n"); imports.addTokenImport(node.props["paddingDp"], "Int") }
+      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n"); imports.addTokenImport(node.props["fillWidth"], "Boolean") }
+      if ("contentAlignment" in node.props) { sb.append("${indent}  contentAlignment = ${fmtInt(node.props["contentAlignment"])},\n"); imports.addTokenImport(node.props["contentAlignment"], "Int") }
+      if ("offsetYDp" in node.props) { sb.append("${indent}  offsetYDp = ${fmtInt(node.props["offsetYDp"])},\n"); imports.addTokenImport(node.props["offsetYDp"], "Int") }
+      if ("elevationDp" in node.props) { sb.append("${indent}  elevationDp = ${fmtInt(node.props["elevationDp"])},\n"); imports.addTokenImport(node.props["elevationDp"], "Int") }
+      if ("borderColorArgb" in node.props) { sb.append("${indent}  borderColorArgb = ${fmtInt(node.props["borderColorArgb"])},\n"); imports.addTokenImport(node.props["borderColorArgb"], "Int") }
+      if ("borderWidthDp" in node.props) { sb.append("${indent}  borderWidthDp = ${fmtInt(node.props["borderWidthDp"])},\n"); imports.addTokenImport(node.props["borderWidthDp"], "Int") }
+      if ("gradientVertical" in node.props) { sb.append("${indent}  gradientVertical = ${fmtBool(node.props["gradientVertical"])},\n"); imports.addTokenImport(node.props["gradientVertical"], "Boolean") }
       if ("gradientColorsArgb" in node.props) { sb.append("${indent}  gradientColorsArgb = ${fmtIntList(node.props["gradientColorsArgb"])},\n") }
       if ("gradientStops" in node.props) { sb.append("${indent}  gradientStops = ${fmtFloatList(node.props["gradientStops"])},\n") }
-      if ("gradientDirection" in node.props) { sb.append("${indent}  gradientDirection = ${fmtInt(node.props["gradientDirection"])},\n") }
-      if ("cornerTopStartDp" in node.props) { sb.append("${indent}  cornerTopStartDp = ${fmtInt(node.props["cornerTopStartDp"])},\n") }
-      if ("cornerTopEndDp" in node.props) { sb.append("${indent}  cornerTopEndDp = ${fmtInt(node.props["cornerTopEndDp"])},\n") }
-      if ("cornerBottomStartDp" in node.props) { sb.append("${indent}  cornerBottomStartDp = ${fmtInt(node.props["cornerBottomStartDp"])},\n") }
-      if ("cornerBottomEndDp" in node.props) { sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n") }
+      if ("gradientDirection" in node.props) { sb.append("${indent}  gradientDirection = ${fmtInt(node.props["gradientDirection"])},\n"); imports.addTokenImport(node.props["gradientDirection"], "Int") }
+      if ("cornerTopStartDp" in node.props) { sb.append("${indent}  cornerTopStartDp = ${fmtInt(node.props["cornerTopStartDp"])},\n"); imports.addTokenImport(node.props["cornerTopStartDp"], "Int") }
+      if ("cornerTopEndDp" in node.props) { sb.append("${indent}  cornerTopEndDp = ${fmtInt(node.props["cornerTopEndDp"])},\n"); imports.addTokenImport(node.props["cornerTopEndDp"], "Int") }
+      if ("cornerBottomStartDp" in node.props) { sb.append("${indent}  cornerBottomStartDp = ${fmtInt(node.props["cornerBottomStartDp"])},\n"); imports.addTokenImport(node.props["cornerBottomStartDp"], "Int") }
+      if ("cornerBottomEndDp" in node.props) { sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n"); imports.addTokenImport(node.props["cornerBottomEndDp"], "Int") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "StyledBox", imports) }
@@ -835,27 +854,27 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.StyledText"
       sb.append("${indent}StyledText(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("fontSize" in node.props) { sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n") }
-      if ("bold" in node.props) { sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n") }
-      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n") }
-      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
-      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n") }
-      if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtInt(node.props["overflow"])},\n") }
-      if ("lineHeightSp" in node.props) { sb.append("${indent}  lineHeightSp = ${fmtInt(node.props["lineHeightSp"])},\n") }
-      if ("letterSpacingX100" in node.props) { sb.append("${indent}  letterSpacingX100 = ${fmtInt(node.props["letterSpacingX100"])},\n") }
-      if ("italic" in node.props) { sb.append("${indent}  italic = ${fmtBool(node.props["italic"])},\n") }
-      if ("underline" in node.props) { sb.append("${indent}  underline = ${fmtBool(node.props["underline"])},\n") }
-      if ("strikethrough" in node.props) { sb.append("${indent}  strikethrough = ${fmtBool(node.props["strikethrough"])},\n") }
-      if ("weight" in node.props) { sb.append("${indent}  weight = ${fmtInt(node.props["weight"])},\n") }
-      if ("colorRole" in node.props) { sb.append("${indent}  colorRole = ${fmtInt(node.props["colorRole"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("fontSize" in node.props) { sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n"); imports.addTokenImport(node.props["fontSize"], "Int") }
+      if ("bold" in node.props) { sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n"); imports.addTokenImport(node.props["bold"], "Boolean") }
+      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n"); imports.addTokenImport(node.props["colorArgb"], "Int") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n"); imports.addTokenImport(node.props["align"], "Int") }
+      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n"); imports.addTokenImport(node.props["maxLines"], "Int") }
+      if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtInt(node.props["overflow"])},\n"); imports.addTokenImport(node.props["overflow"], "Int") }
+      if ("lineHeightSp" in node.props) { sb.append("${indent}  lineHeightSp = ${fmtInt(node.props["lineHeightSp"])},\n"); imports.addTokenImport(node.props["lineHeightSp"], "Int") }
+      if ("letterSpacingX100" in node.props) { sb.append("${indent}  letterSpacingX100 = ${fmtInt(node.props["letterSpacingX100"])},\n"); imports.addTokenImport(node.props["letterSpacingX100"], "Int") }
+      if ("italic" in node.props) { sb.append("${indent}  italic = ${fmtBool(node.props["italic"])},\n"); imports.addTokenImport(node.props["italic"], "Boolean") }
+      if ("underline" in node.props) { sb.append("${indent}  underline = ${fmtBool(node.props["underline"])},\n"); imports.addTokenImport(node.props["underline"], "Boolean") }
+      if ("strikethrough" in node.props) { sb.append("${indent}  strikethrough = ${fmtBool(node.props["strikethrough"])},\n"); imports.addTokenImport(node.props["strikethrough"], "Boolean") }
+      if ("weight" in node.props) { sb.append("${indent}  weight = ${fmtInt(node.props["weight"])},\n"); imports.addTokenImport(node.props["weight"], "Int") }
+      if ("colorRole" in node.props) { sb.append("${indent}  colorRole = ${fmtInt(node.props["colorRole"])},\n"); imports.addTokenImport(node.props["colorRole"], "Int") }
       sb.append("$indent)\n")
     }
     "SuggestionChip" -> {
       imports += "dev.keliver.material.compose.SuggestionChip"
       sb.append("${indent}SuggestionChip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
+      sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -871,8 +890,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Switch"
       sb.append("${indent}Switch(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n"); imports.addTokenImport(node.props["checked"], "Boolean")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -880,8 +899,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Tab"
       sb.append("${indent}Tab(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -889,7 +908,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.TabRow"
       sb.append("${indent}TabRow(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n") }
+      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n"); imports.addTokenImport(node.props["selectedIndex"], "Int") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "TabRow", imports) }
       sb.append("$indent}\n")
@@ -898,15 +917,15 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Text"
       sb.append("${indent}Text(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       sb.append("$indent)\n")
     }
     "TextButton" -> {
       imports += "dev.keliver.material.compose.TextButton"
       sb.append("${indent}TextButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
@@ -914,9 +933,9 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.TextField"
       sb.append("${indent}TextField(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n") }
-      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
+      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n"); imports.addTokenImport(node.props["placeholder"], "String") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n"); imports.addTokenImport(node.props["align"], "Int") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -924,7 +943,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.TextInput"
       sb.append("${indent}TextInput(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("hint" in node.props) { sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n") }
+      if ("hint" in node.props) { sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n"); imports.addTokenImport(node.props["hint"], "String") }
       (node.props["onChange"] as? Action)?.let { a -> sb.append("${indent}  onChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
@@ -932,19 +951,19 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Theme"
       sb.append("${indent}Theme(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("dark" in node.props) { sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n") }
-      if ("primaryArgb" in node.props) { sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n") }
-      if ("onPrimaryArgb" in node.props) { sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n") }
-      if ("secondaryArgb" in node.props) { sb.append("${indent}  secondaryArgb = ${fmtInt(node.props["secondaryArgb"])},\n") }
-      if ("onSecondaryArgb" in node.props) { sb.append("${indent}  onSecondaryArgb = ${fmtInt(node.props["onSecondaryArgb"])},\n") }
-      if ("surfaceArgb" in node.props) { sb.append("${indent}  surfaceArgb = ${fmtInt(node.props["surfaceArgb"])},\n") }
-      if ("onSurfaceArgb" in node.props) { sb.append("${indent}  onSurfaceArgb = ${fmtInt(node.props["onSurfaceArgb"])},\n") }
-      if ("surfaceVariantArgb" in node.props) { sb.append("${indent}  surfaceVariantArgb = ${fmtInt(node.props["surfaceVariantArgb"])},\n") }
-      if ("onSurfaceVariantArgb" in node.props) { sb.append("${indent}  onSurfaceVariantArgb = ${fmtInt(node.props["onSurfaceVariantArgb"])},\n") }
-      if ("backgroundArgb" in node.props) { sb.append("${indent}  backgroundArgb = ${fmtInt(node.props["backgroundArgb"])},\n") }
-      if ("onBackgroundArgb" in node.props) { sb.append("${indent}  onBackgroundArgb = ${fmtInt(node.props["onBackgroundArgb"])},\n") }
-      if ("errorArgb" in node.props) { sb.append("${indent}  errorArgb = ${fmtInt(node.props["errorArgb"])},\n") }
-      if ("outlineArgb" in node.props) { sb.append("${indent}  outlineArgb = ${fmtInt(node.props["outlineArgb"])},\n") }
+      if ("dark" in node.props) { sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n"); imports.addTokenImport(node.props["dark"], "Boolean") }
+      if ("primaryArgb" in node.props) { sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n"); imports.addTokenImport(node.props["primaryArgb"], "Int") }
+      if ("onPrimaryArgb" in node.props) { sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n"); imports.addTokenImport(node.props["onPrimaryArgb"], "Int") }
+      if ("secondaryArgb" in node.props) { sb.append("${indent}  secondaryArgb = ${fmtInt(node.props["secondaryArgb"])},\n"); imports.addTokenImport(node.props["secondaryArgb"], "Int") }
+      if ("onSecondaryArgb" in node.props) { sb.append("${indent}  onSecondaryArgb = ${fmtInt(node.props["onSecondaryArgb"])},\n"); imports.addTokenImport(node.props["onSecondaryArgb"], "Int") }
+      if ("surfaceArgb" in node.props) { sb.append("${indent}  surfaceArgb = ${fmtInt(node.props["surfaceArgb"])},\n"); imports.addTokenImport(node.props["surfaceArgb"], "Int") }
+      if ("onSurfaceArgb" in node.props) { sb.append("${indent}  onSurfaceArgb = ${fmtInt(node.props["onSurfaceArgb"])},\n"); imports.addTokenImport(node.props["onSurfaceArgb"], "Int") }
+      if ("surfaceVariantArgb" in node.props) { sb.append("${indent}  surfaceVariantArgb = ${fmtInt(node.props["surfaceVariantArgb"])},\n"); imports.addTokenImport(node.props["surfaceVariantArgb"], "Int") }
+      if ("onSurfaceVariantArgb" in node.props) { sb.append("${indent}  onSurfaceVariantArgb = ${fmtInt(node.props["onSurfaceVariantArgb"])},\n"); imports.addTokenImport(node.props["onSurfaceVariantArgb"], "Int") }
+      if ("backgroundArgb" in node.props) { sb.append("${indent}  backgroundArgb = ${fmtInt(node.props["backgroundArgb"])},\n"); imports.addTokenImport(node.props["backgroundArgb"], "Int") }
+      if ("onBackgroundArgb" in node.props) { sb.append("${indent}  onBackgroundArgb = ${fmtInt(node.props["onBackgroundArgb"])},\n"); imports.addTokenImport(node.props["onBackgroundArgb"], "Int") }
+      if ("errorArgb" in node.props) { sb.append("${indent}  errorArgb = ${fmtInt(node.props["errorArgb"])},\n"); imports.addTokenImport(node.props["errorArgb"], "Int") }
+      if ("outlineArgb" in node.props) { sb.append("${indent}  outlineArgb = ${fmtInt(node.props["outlineArgb"])},\n"); imports.addTokenImport(node.props["outlineArgb"], "Int") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Theme", imports) }
       sb.append("$indent}\n")
@@ -953,7 +972,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Tooltip"
       sb.append("${indent}Tooltip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
+      sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Tooltip", imports) }
       sb.append("$indent}\n")
@@ -962,14 +981,14 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.TopAppBar"
       sb.append("${indent}TopAppBar(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
+      sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n"); imports.addTokenImport(node.props["title"], "String")
       sb.append("$indent)\n")
     }
     "VerticalDivider" -> {
       imports += "dev.keliver.material.compose.VerticalDivider"
       sb.append("${indent}VerticalDivider(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n") }
+      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n"); imports.addTokenImport(node.props["thickness"], "Int") }
       sb.append("$indent)\n")
     }
     "VerticalPager" -> {
@@ -1000,15 +1019,19 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
     sb.append("$indent${node.type}(\n")
     modifier?.let { sb.append("$indent  modifier = $it,\n") }
     for ((k, v) in args) {
-      val rendered = when (v) {
-        is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
-        is Bind -> bindRef(v.field)
-        is String -> kotlinStringLiteral(v)
-        is Boolean -> v.toString()
-        is Int -> v.toString()
-        is Double -> kotlinDoubleLiteral(v)
-        is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
-        else -> v.toString()
+      // K2: a token is written as its reference where it fits the parameter's type.
+      val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
+      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
+      val rendered = when (val x = if (token != null) token else tokenValue(v)) {
+        is Token -> x.ref
+        is Action -> fmtAction(x, if (x.arg == "it") 1 else 0)
+        is Bind -> bindRef(x.field)
+        is String -> kotlinStringLiteral(x)
+        is Boolean -> x.toString()
+        is Int -> x.toString()
+        is Double -> kotlinDoubleLiteral(x)
+        is List<*> -> "listOf(" + x.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
+        else -> x.toString()
       }
       sb.append("$indent  $k = $rendered,\n")
     }

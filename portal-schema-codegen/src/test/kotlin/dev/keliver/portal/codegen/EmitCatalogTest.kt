@@ -58,4 +58,18 @@ class EmitCatalogTest {
   @Test fun marginSidesAreTheWireOrder() {
     kotlin.test.assertEquals(listOf("start", "end", "top", "bottom"), MARGIN_SIDES)
   }
+
+  @Test fun everyWidgetPropRecordsItsSourceTypeForDesignTokens() {
+    val row = card.copy(name = "Row", category = "Layout", props = listOf(
+      MappedProp("width", MappedKind.CONSTRAINT, required = false, defaultExpr = "Constraint.Wrap"),
+      MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero"),
+    ))
+    val src = emitCatalog(listOf(text, row))
+    // K2: a token fits only a plain literal of its own type — the catalog says which.
+    assertContains(src, "internal val widgetPropSourceTypes: Map<String, String> = mapOf(")
+    assertContains(src, "\"StyledText.text\" to \"String\",")
+    assertContains(src, "\"StyledText.colorArgb\" to \"Int\",")
+    assertContains(src, "\"Row.width\" to \"Constraint\",")
+    assertContains(src, "\"Row.margin.start\" to \"Dp\",")
+  }
 }

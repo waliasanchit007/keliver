@@ -3,6 +3,7 @@ package dev.keliver.portal.ingest
 import dev.keliver.portal.MARGIN_SIDES
 import dev.keliver.portal.ModifierSpec
 import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.toAny
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.parseKotlinStringLiteral
 
@@ -227,18 +228,21 @@ internal object ModifierChain {
     }
   }
 
-  /** Resolve every segment; null when any is outside the grammar or a modifier repeats. */
-  fun resolve(segments: List<ChainSegment>, parentType: String?): List<ResolvedSegment>? {
-    val out = segments.map { resolveSegment(it, parentType) ?: return null }
+  /**
+   * Resolve every segment; null when any is outside the grammar or a modifier
+   * repeats. [tokens] (K2) resolves design-token arguments (`background(C.Ink)`).
+   */
+  fun resolve(segments: List<ChainSegment>, parentType: String?, tokens: TokenLookup? = null): List<ResolvedSegment>? {
+    val out = segments.map { resolveSegment(it, parentType, tokens) ?: return null }
     if (out.map { it.spec.name }.toSet().size != out.size) return null // a repeat would be lossy
     return out
   }
 
-  fun resolveSegment(seg: ChainSegment, parentType: String?): ResolvedSegment? {
+  fun resolveSegment(seg: ChainSegment, parentType: String?, tokens: TokenLookup? = null): ResolvedSegment? {
     val candidates = modifierSpecs.filter { it.extension == seg.ext }
     val scoped = candidates.filter { it.scopes.isNotEmpty() && parentType != null && parentType in it.scopes }
     for (spec in scoped + candidates.filter { it.scopes.isEmpty() }) {
-      parseArgs(spec, seg.args)?.let { return ResolvedSegment(seg, spec, it) }
+      parseArgs(spec, seg.args, tokens)?.let { return ResolvedSegment(seg, spec, it) }
     }
     return null
   }
@@ -261,7 +265,7 @@ internal object ModifierChain {
     return out
   }
 
-  private fun parseArgs(spec: ModifierSpec, args: List<SourceArg>): Map<String, PropValue>? {
+  private fun parseArgs(spec: ModifierSpec, args: List<SourceArg>, tokens: TokenLookup?): Map<String, PropValue>? {
     if (spec.props.isEmpty()) return if (args.isEmpty()) mapOf(spec.name to PropValue.Lit("b", b = true)) else null
     if (args.any { it.name != null }) return null // positional only (what the exporter writes)
     val keys = argKeys(spec)
@@ -273,7 +277,10 @@ internal object ModifierChain {
         val sides = MarginSyntax.parse(arg.value) ?: return null
         keys[j].forEachIndexed { s, k -> out[k] = PropValue.Lit("d", d = sides[s]) }
       } else {
-        out[keys[j].single()] = typedLiteral(type, arg.value) ?: return null
+        out[keys[j].single()] = typedLiteral(type, arg.value)
+          // K2: a design token of exactly the argument's plain literal type.
+          ?: tokens?.lookup(arg.value)?.takeIf { dev.keliver.portal.tokenFits(type, it.value.toAny()) }
+          ?: return null
       }
     }
     return out
@@ -313,11 +320,12 @@ internal object ModifierChain {
     new: Map<String, PropValue>,
     parentType: String?,
     canonical: String?,
+    tokens: TokenLookup? = null,
   ): String? {
     val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.toSet() }
     if (names(old) != names(new)) return canonical
-    val source = segments(text)?.let { resolve(it, parentType) } ?: return canonical
-    val canon = canonical?.let { c -> segments(c)?.let { resolve(it, parentType) } }
+    val source = segments(text)?.let { resolve(it, parentType, tokens) } ?: return canonical
+    val canon = canonical?.let { c -> segments(c)?.let { resolve(it, parentType, tokens) } }
     val edits = mutableListOf<Pair<SourceArg, String>>()
     for (seg in source) {
       val spec = seg.spec
@@ -422,14 +430,22 @@ internal object FragmentImports {
     }
   }
 
-  /** A whole `Modifier.…` chain resolved under [parentType]: the extension (unscoped only) + its args. */
-  fun chain(text: String, parentType: String?): Set<String> {
-    val resolved = ModifierChain.segments(text)?.let { ModifierChain.resolve(it, parentType) } ?: return emptySet()
+  /**
+   * A whole `Modifier.…` chain resolved under [parentType]: the extension
+   * (unscoped only) + its args — a design-token argument (K2) needs its
+   * declaring object, taken from the resolved token, never from the text.
+   */
+  fun chain(text: String, parentType: String?, tokens: TokenLookup? = null): Set<String> {
+    val resolved = ModifierChain.segments(text)?.let { ModifierChain.resolve(it, parentType, tokens) } ?: return emptySet()
     val out = linkedSetOf("dev.keliver.Modifier")
     for (seg in resolved) {
       if (seg.spec.scopes.isEmpty()) dev.keliver.portal.modifierImport[seg.spec.name]?.let { out += it }
       seg.segment.args.forEachIndexed { j, a -> out += arg(seg.spec.argTypes.getOrNull(j), a.value) }
+      seg.props.values.forEach { v -> token(v).let { out += it } }
     }
     return out
   }
+
+  /** What a design-token value written as its reference imports (K2). */
+  fun token(v: PropValue?): Set<String> = (v as? PropValue.Token)?.import?.let { setOf(it) }.orEmpty()
 }

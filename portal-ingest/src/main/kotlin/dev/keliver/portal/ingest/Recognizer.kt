@@ -16,6 +16,8 @@ import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.marginProps
+import dev.keliver.portal.propSourceType
+import dev.keliver.portal.tokenFits
 import dev.keliver.portal.widgetSpec
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -48,6 +50,8 @@ data class Recognized(
   val file: KtFile? = null,
   /** M4: the screen function's Bindings interface, if present, for contract write-back. */
   val bindingsInterface: KtClass? = null,
+  /** K2: design-token resolution in this file (shadowing honoured), for write-back. Transient. */
+  internal val tokenLookup: TokenLookup? = null,
 )
 
 /**
@@ -77,12 +81,14 @@ object Recognizer {
   /**
    * Recognize a SCREEN. [components] lets calls to known project components
    * (e.g. `MenuRow(...)`) become Widget nodes instead of RawCode; default empty
-   * keeps every existing caller primitive-only.
+   * keeps every existing caller primitive-only. [tokens] (K2) lets references
+   * to the app's design-token constants (`C.Ink`) be values instead of RawCode.
    */
   fun recognize(
     fileName: String,
     source: String,
     components: ComponentRegistry = EmptyComponentRegistry,
+    tokens: TokenTable = TokenTable.EMPTY,
   ): Recognized? {
     val file = PsiEnv.parse(fileName, source)
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
@@ -90,7 +96,8 @@ object Recognizer {
       ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
-    val walk = Walker(NameCtx.Screen(bindingsParam), components)
+    val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
+    val walk = Walker(NameCtx.Screen(bindingsParam), components, lookup)
     val root = walk.rootOf(body)
 
     val ifaceClass = file.declarations.filterIsInstance<KtClass>()
@@ -108,7 +115,7 @@ object Recognizer {
       )
     } ?: Contract()
 
-    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass)
+    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup)
   }
 
   /**
@@ -124,12 +131,14 @@ object Recognizer {
     fileName: String,
     source: String,
     components: ComponentRegistry = EmptyComponentRegistry,
+    tokens: TokenTable = TokenTable.EMPTY,
   ): RecognizedComponent? {
     val file = PsiEnv.parse(fileName, source)
     val pkg = file.packageFqName.asString().takeIf { it.isNotEmpty() }
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
+    val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
     val name = fn.name ?: return null
     if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) {
       return RecognizedComponent(
@@ -152,7 +161,10 @@ object Recognizer {
       val typeRef = p.typeReference
       val typeText = typeRef?.text ?: continue
       paramTypes[pName] = typeText
-      p.defaultValue?.let { defaults[pName] = parseLiteral(it.text.trim())?.let { l -> litValue(l) } }
+      // A default that references a design token (`color: Int = C.Ink`) previews as its value.
+      p.defaultValue?.let {
+        defaults[pName] = (parseLiteral(it.text.trim()) ?: lookup.lookup(it.text)?.value)?.let { l -> litValue(l) }
+      }
       val fnType = typeRef.typeElement as? KtFunctionType
       if (fnType != null) {
         if (typeText.contains("@Composable")) {
@@ -201,7 +213,7 @@ object Recognizer {
         null, name, emptyMap(), file,
       )
     }
-    val walk = Walker(NameCtx.Component(valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }), components)
+    val walk = Walker(NameCtx.Component(valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }), components, lookup)
     val root = walk.rootOf(body)
     val hasRaw = containsRawCode(root)
     val slotCalls = countSlotCalls(root)
@@ -268,7 +280,11 @@ object Recognizer {
    * Shared body walker for both recognition modes. Holds the temp-handle
    * counter + psiByHandle map; [ctx] drives bind/action resolution.
    */
-  internal class Walker(private val ctx: NameCtx, private val components: ComponentRegistry) {
+  internal class Walker(
+    private val ctx: NameCtx,
+    private val components: ComponentRegistry,
+    private val tokens: TokenLookup = TokenLookup { null },
+  ) {
     private val componentNames = components.names()
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
@@ -331,7 +347,7 @@ object Recognizer {
         val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         if (name == "modifier") {
-          val mods = parseModifierChain(ve.text, parentType)
+          val mods = parseModifierChain(ve.text, parentType, tokens)
             ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
           modifiers += mods
           continue
@@ -343,6 +359,7 @@ object Recognizer {
           continue
         }
         val value = parseValue(ve, ctx, itemScope, componentNames)
+          ?: tokenArg(type, name, ve.text)
           ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
         props[name] = value
       }
@@ -350,6 +367,17 @@ object Recognizer {
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
         .map { statementToNode(it, itemScope, type) }
       return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
+    }
+
+    /**
+     * K2: a design-token reference as the value of [type]'s [name] — only
+     * where it resolves and its kind is the argument's plain literal kind;
+     * otherwise (unknown, private elsewhere, cyclic, a kind mismatch) null,
+     * so the call stays RawCode rather than becoming silently wrong.
+     */
+    private fun tokenArg(type: String, name: String, text: String): PropValue.Token? {
+      val token = tokens.lookup(text) ?: return null
+      return token.takeIf { tokenFits(propSourceType(type, name, components), litValue(it.value)) }
     }
   }
 
@@ -511,9 +539,9 @@ object Recognizer {
    * modifiers (`flex`, `margin`, `size(Dp, Dp)`, …) only resolve under a
    * parent that is one of their scopes. Null = not in the grammar.
    */
-  internal fun parseModifierChain(text: String, parentType: String? = null): Map<String, PropValue>? {
+  internal fun parseModifierChain(text: String, parentType: String? = null, tokens: TokenLookup? = null): Map<String, PropValue>? {
     val segments = ModifierChain.segments(text) ?: return null
-    val resolved = ModifierChain.resolve(segments, parentType) ?: return null
+    val resolved = ModifierChain.resolve(segments, parentType, tokens) ?: return null
     val out = LinkedHashMap<String, PropValue>()
     resolved.forEach { out += it.props }
     return out

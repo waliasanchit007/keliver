@@ -32,6 +32,14 @@ private fun presenceExpr(key: String, kind: MappedKind): String =
 private fun importStmt(kind: MappedKind, key: String): String? = when {
   kind == MappedKind.MARGIN -> "imports += marginImports(node, \"$key\")"
   kindImports(kind).isNotEmpty() -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }})"
+  // K2: a design-token reference written for this literal needs its declaring object imported.
+  tokenSourceType(kind) != null -> "imports.addTokenImport(node.props[\"$key\"], \"${tokenSourceType(kind)}\")"
+  else -> null
+}
+
+/** The literal kinds a design-token reference may stand in for (their Kotlin source type), else null. */
+private fun tokenSourceType(kind: MappedKind): String? = when (kind) {
+  MappedKind.TEXT, MappedKind.INT, MappedKind.BOOL, MappedKind.DOUBLE -> sourceType(kind)
   else -> null
 }
 
@@ -160,28 +168,47 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// P1-B: a dotted Bind field ("item.title") is item-scoped -> emit as-is;
     |// a bare field ("title") is a screen binding -> b.title.
     |private fun bindRef(field: String): String = if ('.' in field) field else "b.${'$'}field"
-    |private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
-    |private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
-    |private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
-    |private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinDoubleLiteral((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0)
-    |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(v)}f"
+    |// K2: a design-token reference (`C.Ink`) is written back as its REFERENCE where
+    |// the token's kind is the literal's kind; anywhere else (never produced by
+    |// ingest or the document) its resolved value is written, so saved code compiles.
+    |private fun fmtString(v: Any?): String = when {
+    |  v is Bind -> bindRef(v.field)
+    |  v is Token && v.value is String -> v.ref
+    |  else -> kotlinStringLiteral(tokenValue(v).toString())
+    |}
+    |private fun fmtInt(v: Any?): String = when {
+    |  v is Bind -> bindRef(v.field)
+    |  v is Token && v.value is Int -> v.ref
+    |  else -> ((tokenValue(v) as? Int) ?: 0).toString()
+    |}
+    |private fun fmtBool(v: Any?): String = when {
+    |  v is Bind -> bindRef(v.field)
+    |  v is Token && v.value is Boolean -> v.ref
+    |  else -> ((tokenValue(v) as? Boolean) ?: false).toString()
+    |}
+    |private fun fmtDouble(v: Any?): String = when {
+    |  v is Bind -> bindRef(v.field)
+    |  v is Token && v.value is Double -> v.ref
+    |  else -> tokenValue(v).let { x -> kotlinDoubleLiteral((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0) }
+    |}
+    |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(tokenValue(v))}f"
     |// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
     |private fun fmtDp(v: Any?): String =
     |  if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
-    |  else "Dp(${'$'}{kotlinDoubleLiteral(((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})"
+    |  else tokenValue(v).let { x -> "Dp(${'$'}{kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
     |private fun fmtStringList(v: Any?): String =
     |  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
     |private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${'$'}{it}f" } ?: "") + ")"
-    |private fun fmtConstraint(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
-    |private fun fmtCrossAxis(v: Any?): String = when ((v as? Int) ?: 0) {
+    |private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
+    |private fun fmtCrossAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
     |  1 -> "CrossAxisAlignment.Center"
     |  2 -> "CrossAxisAlignment.End"
     |  3 -> "CrossAxisAlignment.Stretch"
     |  else -> "CrossAxisAlignment.Start"
     |}
-    |private fun fmtOverflow(v: Any?): String = if (((v as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
-    |private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
+    |private fun fmtOverflow(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
+    |private fun fmtMainAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
     |  1 -> "MainAxisAlignment.Center"
     |  2 -> "MainAxisAlignment.End"
     |  3 -> "MainAxisAlignment.SpaceBetween"
@@ -194,7 +221,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
     |// so a negative side is written as 0.
     |private fun marginSide(node: WidgetNode, key: String): Double =
-    |  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
+    |  tokenValue(node.props[key]).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
     |private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
     |private fun fmtMargin(node: WidgetNode, prefix: String): String {
     |  val s = marginSide(node, "${'$'}prefix.start")
@@ -370,15 +397,19 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |    sb.append("${'$'}indent${'$'}{node.type}(\n")
     |    modifier?.let { sb.append("${'$'}indent  modifier = ${'$'}it,\n") }
     |    for ((k, v) in args) {
-    |      val rendered = when (v) {
-    |        is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
-    |        is Bind -> bindRef(v.field)
-    |        is String -> kotlinStringLiteral(v)
-    |        is Boolean -> v.toString()
-    |        is Int -> v.toString()
-    |        is Double -> kotlinDoubleLiteral(v)
-    |        is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
-    |        else -> v.toString()
+    |      // K2: a token is written as its reference where it fits the parameter's type.
+    |      val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
+    |      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
+    |      val rendered = when (val x = if (token != null) token else tokenValue(v)) {
+    |        is Token -> x.ref
+    |        is Action -> fmtAction(x, if (x.arg == "it") 1 else 0)
+    |        is Bind -> bindRef(x.field)
+    |        is String -> kotlinStringLiteral(x)
+    |        is Boolean -> x.toString()
+    |        is Int -> x.toString()
+    |        is Double -> kotlinDoubleLiteral(x)
+    |        is List<*> -> "listOf(" + x.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
+    |        else -> x.toString()
     |      }
     |      sb.append("${'$'}indent  ${'$'}k = ${'$'}rendered,\n")
     |    }

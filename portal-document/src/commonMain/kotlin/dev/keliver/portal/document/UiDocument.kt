@@ -3,6 +3,10 @@ package dev.keliver.portal.document
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
+import dev.keliver.portal.propSourceType
+import dev.keliver.portal.tokenFits
+import dev.keliver.portal.tokenKindOf
+import dev.keliver.portal.widgetSpec
 import kotlinx.serialization.Serializable
 
 /**
@@ -19,6 +23,12 @@ import kotlinx.serialization.Serializable
  *    new position invalidates (undo restores them);
  *  - a Dp-holding value (Dp prop, Margin side, Dp modifier arg) is never
  *    negative: SetProp/SetModifier/Insert clamp it at 0.
+ *
+ * K2: a design-token reference sits only where its resolved kind is the
+ * plain literal kind of the prop or modifier argument (an Int token on an Int
+ * or Color prop, a String token on a Text prop, …): SetProp/SetModifier/Insert
+ * refuse one that does not fit. Component-instance props are checked by the
+ * server, which knows the component signatures.
  */
 @Serializable
 public data class UiDocument(
@@ -56,6 +66,7 @@ public data class UiDocument(
         if (op.after != null && parent.children.none { it.handle == op.after }) {
           return err("anchor ${op.after.v} is not a child of ${op.parent.v}")
         }
+        tokenMisfit(op.node)?.let { return err(it) }
         val (allocated, next) = allocate(op.node, nextHandle)
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
@@ -132,11 +143,13 @@ public data class UiDocument(
         TryResult(ApplyResult(d, DocOp.MoveNode(op.target, current.handle, after)), null)
       }
 
-      is DocOp.SetProp -> withWidget(op.target) { w ->
+      is DocOp.SetProp -> {
+        val w = find(op.target) as? DocNode.Widget ?: return err("unknown handle ${op.target.v}")
+        tokenMisfit(w.type, op.name, op.value)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(op.value) else op.value
-        ApplyResult(replaced(w.copy(props = w.props + (op.name to value))), inv)
+        TryResult(ApplyResult(replaced(w.copy(props = w.props + (op.name to value))), inv), null)
       }
 
       is DocOp.RemoveProp -> withWidget(op.target) { w ->
@@ -152,6 +165,7 @@ public data class UiDocument(
         if (spec != null && !spec.isValidUnder(scope)) {
           return err("${spec.name} is only valid inside ${spec.scopes.joinToString("/")} (this node's parent is ${scope ?: "none"})")
         }
+        tokenMisfit(w.type, "mod.${op.name}", op.value)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(op.value) else op.value
@@ -276,6 +290,28 @@ private fun sanitize(
   }
   val out = n.copy(props = props, modifiers = modifiers, children = children)
   return if (out == n) n else out
+}
+
+/**
+ * K2: why a design-token value may not sit at wire key [key] on a node of
+ * [nodeType], or null when it may (or [v] is not a token). Keys the catalog
+ * does not know — a project component's parameters — are left to the server.
+ */
+private fun tokenMisfit(nodeType: String, key: String, v: PropValue): String? {
+  if (v !is PropValue.Token) return null
+  if (!key.startsWith("mod.") && widgetSpec(nodeType) == null) return null
+  val type = propSourceType(nodeType, key)
+  val value = v.value.toAny()
+  if (tokenFits(type, value)) return null
+  return "token ${v.ref} (${tokenKindOf(value) ?: v.value.tag}) does not fit $nodeType.$key (${type ?: "unknown"})"
+}
+
+/** [tokenMisfit] for every prop and modifier of an inserted subtree. */
+private fun tokenMisfit(n: DocNode): String? {
+  if (n !is DocNode.Widget) return null
+  n.props.forEach { (k, v) -> tokenMisfit(n.type, k, v)?.let { return it } }
+  n.modifiers.forEach { (k, v) -> tokenMisfit(n.type, "mod.$k", v)?.let { return it } }
+  return n.children.firstNotNullOfOrNull { tokenMisfit(it) }
 }
 
 /** A Dp is never negative: a negative literal becomes 0. */

@@ -82,31 +82,55 @@ object Tools {
           })
         }
       })
-      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action>; Lit tags: s/i/d/b/li/lf; positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
+      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token>; Lit tags: s/i/d/b/li/lf; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
     }.toString()
+  }
+
+  /** A token's declaration: its import plus the member (`app.components.C` + `Ink`), or the reference itself. */
+  internal fun tokenFqName(t: PropValue.Token): String {
+    val import = t.import ?: return t.ref
+    return if ('.' in t.ref) "$import.${t.ref.substringAfter('.')}" else import
   }
 
   private fun findUsages(project: String, name: String): String {
     val screens = Regex("\"([^\"]+)\"").findAll(get("/screens?project=$project")).map { it.groupValues[1] }
     val hits = StringBuilder()
     screens.forEach { screen ->
-      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen")) }.getOrNull()
+      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1")) }.getOrNull()
         ?: return@forEach
-      fun walk(n: DocNode) {
-        if (n is DocNode.Widget) {
-          n.props.forEach { (prop, v) ->
-            when (v) {
-              is PropValue.Bind -> if (v.field == name) hits.appendLine("$screen: ${n.type}#${n.handle.v}.$prop binds field '$name'")
-              is PropValue.Action -> if (v.name == name) hits.appendLine("$screen: ${n.type}#${n.handle.v}.$prop wires action '$name'")
-              else -> {}
-            }
-          }
-          n.children.forEach(::walk)
-        }
-      }
-      walk(doc.root)
+      usagesIn(screen, doc, name).forEach { hits.appendLine(it) }
     }
     return hits.toString().ifEmpty { "no usages of '$name' in project '$project'" }
+  }
+
+  /**
+   * Where [name] — a bound field, a wired action, or (K2) a design token — is
+   * used in [doc]. A token matches by its fully-qualified name
+   * (`app.components.C.Ink`), or by its reference (`C.Ink`) — each hit names
+   * the declaration, so same-named tokens of different packages stay apart.
+   */
+  internal fun usagesIn(screen: String, doc: UiDocument, name: String): List<String> {
+    val hits = mutableListOf<String>()
+    fun check(n: DocNode.Widget, key: String, v: PropValue) {
+      when (v) {
+        is PropValue.Bind -> if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key binds field '$name'"
+        is PropValue.Action -> if (v.name == name) hits += "$screen: ${n.type}#${n.handle.v}.$key wires action '$name'"
+        is PropValue.Token -> {
+          val fq = tokenFqName(v)
+          if (name == fq || name == v.ref) hits += "$screen: ${n.type}#${n.handle.v}.$key uses token '${v.ref}' ($fq)"
+        }
+        else -> {}
+      }
+    }
+    fun walk(n: DocNode) {
+      if (n is DocNode.Widget) {
+        n.props.forEach { (prop, v) -> check(n, prop, v) }
+        n.modifiers.forEach { (key, v) -> check(n, "mod.$key", v) }
+        n.children.forEach(::walk)
+      }
+    }
+    walk(doc.root)
+    return hits
   }
 
   /**
@@ -182,19 +206,25 @@ object Tools {
     Tool("list_projects", "List portal projects.", emptyMap()) { toolText(get("/projects")) },
 
     Tool(
+      "list_tokens",
+      "The app's design tokens: constants (`object C { const val Ink = … }`) declared in its scanned sources, with kind, resolved value, declaring file and the import a screen needs. Use a token instead of a magic literal: SetProp with value {kind:...PropValue.Token, ref, value:{tag,...}, import} exactly as listed (the server supplies the value). A token fits only a prop of its kind; ambiguous ones (same ref in two packages) are refused.",
+      mapOf("project" to "project name (default 'default')"),
+    ) { args -> toolText(get("/tokens?project=${args.str("project", "default")}")) },
+
+    Tool(
       "list_screens", "List screens in a project.",
       mapOf("project" to "project name (default 'default')"),
     ) { args -> toolText(get("/screens?project=${args.str("project", "default")}")) },
 
     Tool(
       "get_document",
-      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action), modifiers, version. Ops target these handles.",
+      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action/Token), modifiers, version. Ops target these handles.",
       mapOf("project" to "project (default 'default')", "screen" to "screen (default 'main')"),
     ) { args ->
       val project = args.str("project", "default")
       val screen = normalizeScreen(project, args.str("screen", "main"))
       rejectUnknownScreen(project, screen)
-        ?: toolText(get("/doc?project=$project&screen=$screen"))
+        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1"))
     },
 
     Tool(
@@ -242,8 +272,8 @@ object Tools {
 
     Tool(
       "find_usages",
-      "Where a bound field or wired action name is used across a project's screens.",
-      mapOf("project" to "project (default 'default')", "name" to "field or action name"),
+      "Where a bound field, wired action name, or design token (`C.Ink`) is used across a project's screens.",
+      mapOf("project" to "project (default 'default')", "name" to "field, action or token reference"),
       required = listOf("name"),
     ) { args -> toolText(findUsages(args.str("project", "default"), args.str("name"))) },
 

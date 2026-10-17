@@ -32,10 +32,26 @@ public sealed interface PropValue {
    */
   @Serializable
   public data class Action(val name: String, val arg: String? = null) : PropValue
+
+  /**
+   * K2: a reference to a design-token constant (`C.Ink`) in the app's own
+   * sources. [ref] is written back verbatim; [value] is the constant's value
+   * resolved at ingest (what the canvas renders — tags s/i/d/b only); [import]
+   * is the declaration a file using [ref] imports (null = none needed).
+   * Valid only where [value]'s kind is the prop's plain literal kind
+   * (`dev.keliver.portal.tokenFits`).
+   */
+  @Serializable
+  public data class Token(val ref: String, val value: Lit, val import: String? = null) : PropValue
 }
 
-/** Convenience constructor mirroring the V1 tree's prop kinds. */
+/**
+ * Convenience constructor mirroring the V1 tree's prop kinds. A Long has no
+ * tag and fits no prop: it is refused rather than silently stringified (a
+ * Long design token written as a Text would not compile).
+ */
 public fun lit(v: Any?): PropValue.Lit = when (v) {
+  is Long -> throw IllegalArgumentException("a Long fits no portal prop: $v")
   is String -> PropValue.Lit("s", s = v)
   is Int -> PropValue.Lit("i", i = v)
   is Double -> PropValue.Lit("d", d = v)

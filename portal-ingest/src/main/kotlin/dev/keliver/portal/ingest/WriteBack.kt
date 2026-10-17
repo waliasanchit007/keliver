@@ -22,8 +22,12 @@ object WriteBack {
     fileText: String,
     target: UiDocument,
     components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
+    /** K2: the app's design tokens — the SAME table the document was ingested with. */
+    tokens: TokenTable = TokenTable.EMPTY,
+    /** The file's name as the token table knows it (a private top-level constant is file-scoped). */
+    fileName: String = "Screen.kt",
   ): String? {
-    val rec = Recognizer.recognize("Screen.kt", fileText, components) ?: return null
+    val rec = Recognizer.recognize(fileName, fileText, components, tokens) ?: return null
     val file = rec.file ?: return null
     val factory = PsiEnv.factory
 
@@ -33,10 +37,12 @@ object WriteBack {
     val targetRoot = target.root as? DocNode.Widget ?: return null
     val written = LinkedHashSet<String>()
     needed.set(written)
+    lookup.set(rec.tokenLookup)
     try {
       if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     } finally {
       needed.remove()
+      lookup.remove()
     }
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
@@ -47,6 +53,9 @@ object WriteBack {
   /** The imports this merge's splices need (for [ensureImports]); per thread, per merge. */
   private val needed = ThreadLocal<MutableSet<String>>()
 
+  /** K2: design-token resolution for the file being merged; per thread, per merge. */
+  private val lookup = ThreadLocal<TokenLookup?>()
+
   private fun need(imports: Set<String>) {
     needed.get()?.addAll(imports)
   }
@@ -54,7 +63,13 @@ object WriteBack {
   /**
    * Adds `import <fq>` for each of [fqs] the file lacks — skipping ones already
    * imported, covered by a star import, in the file's own package, or whose
-   * simple name the file already imports from elsewhere (never create a clash).
+   * simple name the file already imports from elsewhere (never clash with them).
+   * Two of [fqs] that share a simple name from different owners (`x.C`,
+   * `q.C`) are both written: the relay's gate and undo/redo refuse such a
+   * document before it gets here, and if one is forced past them the result
+   * is a loud conflicting-import compile error — never a silent choice of
+   * which `C` the references mean (writing neither could let another `C` in
+   * scope bind them).
    * Each lands at its sorted position among the imports. Adds only.
    */
   internal fun ensureImports(text: String, fqs: Set<String>): String {
@@ -339,20 +354,32 @@ object WriteBack {
       } ?: return false
       edits += oldExpr to text
       imports += FragmentImports.value(text)
+      // K2: a token written as its reference needs its declaring object (structural).
+      keys.forEach { imports += FragmentImports.token(target.props[it]) }
     }
     if (parsed.modifiers != target.modifiers) {
       val oldExpr = sourceArg("modifier") ?: return false
+      // K2: the canonical chain may reference a token the FILE cannot resolve yet
+      // (its import is added below), so the target's own tokens resolve first.
+      val tokens = targetTokens(target.modifiers.values, lookup.get())
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text,
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens,
       ) ?: return false
       edits += oldExpr to text
-      imports += FragmentImports.chain(text, parentType)
+      imports += FragmentImports.chain(text, parentType, tokens)
+      target.modifiers.values.forEach { imports += FragmentImports.token(it) }
     }
     for ((oldExpr, text) in edits) {
       if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
     }
     need(imports)
     return true
+  }
+
+  /** A lookup that knows [values]' tokens by their reference first, then the file's own resolution. */
+  private fun targetTokens(values: Collection<dev.keliver.portal.document.PropValue>, file: TokenLookup?): TokenLookup {
+    val own = values.filterIsInstance<dev.keliver.portal.document.PropValue.Token>().associateBy { it.ref }
+    return TokenLookup { t -> own[t.trim()] ?: file?.lookup(t) }
   }
 
   /** `Foo(\n  a = 1,\n  b = 2,\n)` → `Foo(a = 1, b = 2)` (grammar props never hold raw newlines). */
