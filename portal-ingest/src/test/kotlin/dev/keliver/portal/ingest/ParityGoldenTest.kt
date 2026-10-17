@@ -80,6 +80,17 @@ class ParityGoldenTest {
     assertGolden("parity-layout-body", layout.spec.body!!)
   }
 
+  /** K2: design-token references recognize transparently and carry their resolved values. */
+  @Test
+  fun designTokenFixtureMatchesItsGolden() {
+    val text = source("ParityTokens")
+    val tokens = TokenTable.scan(listOf("ParityTokens.kt" to text))
+    val card = Recognizer.recognizeComponent("ParityTokens.kt", text, tokens = tokens)!!
+    assertTrue(card.spec.transparent, card.spec.diagnostic)
+    assertEquals("ParityTokenCard", card.spec.name)
+    assertGolden("parity-tokens-body", card.spec.body!!)
+  }
+
   private fun WidgetNode.canonicalIds(): WidgetNode =
     copy(id = 0, children = children.map { it.canonicalIds() })
 }

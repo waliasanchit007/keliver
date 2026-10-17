@@ -100,6 +100,17 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
   for (k in dpKeys) appendLine("  \"$k\",")
   appendLine(")")
   appendLine()
+  // K2: the Kotlin source type of every widget prop's wire key — a design-token
+  // reference is grammar only where the source takes a plain literal of the
+  // token's own type (an Int constant fits `Int`, not `Constraint` or `Dp`).
+  appendLine("/** \"Widget.prop\" wire key -> its Kotlin source type (\"Int\", \"Dp\", \"Constraint\", …) — see propSourceType. */")
+  appendLine("internal val widgetPropSourceTypes: Map<String, String> = mapOf(")
+  for (w in widgets.sortedBy { it.name }) for (p in w.props) {
+    val type = if (p.kind == MappedKind.MARGIN) "Dp" else sourceType(p.kind)
+    for (k in wireKeys(p.name, p.kind)) appendLine("  \"${w.name}.$k\" to \"$type\",")
+  }
+  appendLine(")")
+  appendLine()
   appendLine("private val specsByType = widgetSpecs.associateBy { it.type }")
   appendLine()
   appendLine("public fun widgetSpec(type: String): WidgetSpec? = specsByType[type]")

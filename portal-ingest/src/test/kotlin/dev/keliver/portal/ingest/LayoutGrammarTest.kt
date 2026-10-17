@@ -570,6 +570,12 @@ class LayoutGrammarTest {
     // A star import already covers it; an existing same-name import is never shadowed.
     assertEquals("import dev.keliver.ui.*\nx", WriteBack.ensureImports("import dev.keliver.ui.*\nx", setOf("dev.keliver.ui.dp")))
     assertEquals("import foo.dp\nx", WriteBack.ensureImports("import foo.dp\nx", setOf("dev.keliver.ui.dp")))
+    // Two owners of one simple name in a single merge: both are written — a loud
+    // conflicting-import compile error, never a silent choice of which `C` binds.
+    assertEquals(
+      "import a.A\nimport q.C\nimport x.C\nimport z.D\nx",
+      WriteBack.ensureImports("import a.A\nx", setOf("x.C", "q.C", "z.D")),
+    )
   }
 
   @Test fun ensureImportsHandlesCommentsSemicolonsBackticksAndFileAnnotations() {

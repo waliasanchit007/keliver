@@ -635,6 +635,30 @@ private fun componentsDirFor(project: String): File =
   else File(screensDirFor(project).parentFile, "components")
 
 /**
+ * K2: extra design-token dirs (keliver.portal.json `tokensDirs`, relative to
+ * the repo or absolute); the screens and components dirs are scanned anyway.
+ * A missing one is skipped with a note — the relay never creates it in the
+ * app's tree. They belong to the "default" project (the app); a legacy store
+ * project scans only its own screens/components dirs.
+ */
+private val appTokensDirs: List<File> = config.resolvedTokensDirs()
+  .map { File(it).let { f -> if (f.isAbsolute) f else File(repoDir, it) } }
+  .filter { d ->
+    d.isDirectory.also { ok -> if (!ok) println("portal-server: tokensDirs entry $d does not exist — skipped") }
+  }
+
+/** K2: a file's token identity — its path relative to the app repo. */
+private fun tokenFileId(f: File): String = Tokens.fileId(f, repoDir)
+
+/** K2: rescan [project]'s design tokens; true when anything resolution can observe changed. */
+private fun rebuildTokens(project: String): Boolean = Tokens.rebuild(
+  project,
+  flatDirs = listOf(screensDirFor(project), componentsDirFor(project)),
+  deepDirs = if (project == "default") appTokensDirs else emptyList(),
+  root = repoDir,
+)
+
+/**
  * The package a NEWLY created screen file should declare.
  *
  * This was hardcoded to `dev.keliver.portalpublished.screens` — this repo's own
@@ -710,6 +734,9 @@ private fun docFor(q: Map<String, String>): DocumentService {
       functionName = screenFunctionName(screen),
       packageName = if (inProject) screensPackageFor(project) else null,
       components = { Components.registry(project) },
+      tokens = { Tokens.table(project) },
+      tokenFileId = tokenFileId(File(screensDirFor(project), "$screen.kt")),
+      tokensVersion = { Tokens.version(project) },
     ).also { it.ensureKotlinFile() }
   }
 }
@@ -732,9 +759,14 @@ private val pendingIngest = java.util.concurrent.ConcurrentHashMap<String, java.
  * mirrors from past sessions otherwise shadow the /screens picker forever.
  */
 private fun bootScan() {
+  // K2: design tokens first — component bodies and screens reference them.
+  rebuildTokens("default")
+  println("portal-server: tokens boot scan -> ${Tokens.table("default").offered.size} token(s)")
+  // Legacy store projects (their screens under <store>/kotlin/<project>) get their tables too.
+  File(root, "kotlin").listFiles { f -> f.isDirectory }?.forEach { d -> runCatching { rebuildTokens(d.name) } }
   // C1: components FIRST so screens recognize their calls on the first pass.
   if (appComponentsDir.exists()) {
-    val reg = Components.rebuild("default", appComponentsDir)
+    val reg = Components.rebuild("default", appComponentsDir, Tokens.table("default"), ::tokenFileId)
     println("portal-server: components boot scan -> ${reg.names().sorted()} from $appComponentsDir")
   }
   // #13 F1: flow declarations (screens don't depend on them; order is free).
@@ -774,6 +806,8 @@ private fun startKotlinWatcher() {
       appFlowsDir.mkdirs()
       add(appFlowsDir)
     }
+    // K2: watch extra design-token dirs — a changed constant re-resolves the canvas.
+    addAll(appTokensDirs)
     // P3-12: watch logic dirs — presenter edits trigger the preview rebuild.
     config.resolvedLogicDirs().forEach { rel ->
       val d = File(repoDir, rel)
@@ -789,10 +823,15 @@ private fun startKotlinWatcher() {
           val key = f.absolutePath
           pendingIngest[key]?.cancel(false)
           val task = Runnable {
-            when {
-              isComponentFile(f) -> ingestComponentFile(f)
-              isFlowFile(f) -> ingestFlowFile(f)
-              else -> ingestFile(f)
+            // K2 (B2): screen/component/flow membership first; a tokens dir may contain them.
+            for (route in routeKtEvent(f, ::isComponentFile, ::isFlowFile, listOf(appScreensDir), File(root, "kotlin"), appTokensDirs)) {
+              when (route) {
+                KtRoute.COMPONENT -> ingestComponentFile(f)
+                KtRoute.FLOW -> ingestFlowFile(f)
+                KtRoute.SCREEN -> ingestScreenFile(f)
+                KtRoute.TOKENS -> ingestTokenFile(f)
+                KtRoute.OTHER -> ingestFile(f)
+              }
             }
           }
           pendingIngest[key] = ingestExec.schedule(task, 300, java.util.concurrent.TimeUnit.MILLISECONDS)
@@ -816,12 +855,65 @@ private fun ingestFile(f: File) {
     if (svc.wasSelfWrite(text)) return
     // C1: recognize with the project's component registry so component calls
     // become editable Widget nodes instead of RawCode.
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(f.name, text, Components.registry(project))
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(
+      tokenFileId(f), text, Components.registry(project), Tokens.table(project),
+    )
       ?: return println("ingest: ${f.name}: no @Composable screen function — skipped")
     val newDoc = dev.keliver.portal.ingest.Reconciler.reconcile(svc.doc, recognized)
     svc.acceptExternal(newDoc)
     println("ingest: $project/$screen -> v${newDoc.version} (file edit)")
   }.onFailure { println("ingest failed for $f: $it") }
+}
+
+/** The project a screen file belongs to (repo screens dir = "default"; legacy dir = its name). */
+private fun screenProject(f: File): String =
+  if (f.parentFile.absolutePath == appScreensDir.absolutePath) "default" else f.parentFile.name
+
+/**
+ * K2: a screen file changed. Screen files may declare design tokens too: when
+ * the token table changed, every screen (and component) re-resolves;
+ * otherwise only this file is ingested.
+ */
+private fun ingestScreenFile(f: File) {
+  val project = screenProject(f)
+  // The relay's own write-back (~400 ms after every edit) is not an edit: skip
+  // it before rescanning anything (review S6). Unchanged files are cached anyway.
+  val open = documents["$project/${f.nameWithoutExtension}"]
+  if (open != null && f.exists() && open.wasSelfWrite(f.readText())) return
+  val tokensChanged = runCatching { rebuildTokens(project) }.getOrDefault(false)
+  if (tokensChanged) refreshProject(project, "${f.name} changed tokens") else ingestFile(f)
+}
+
+/** K2: a file in a design-token dir changed — rescan; re-resolve everything if the table changed. */
+private fun ingestTokenFile(f: File) {
+  runCatching {
+    if (rebuildTokens("default")) refreshProject("default", "${f.name} changed tokens")
+  }.onFailure { println("token ingest failed for $f: $it") }
+}
+
+/**
+ * K2: a design-token declaration changed. Components rebuild against the new
+ * table and every screen is re-recognized from its file — even one the relay
+ * wrote itself, since its TEXT did not change — so a changed value updates the
+ * canvas and a vanished or re-kinded token becomes RawCode.
+ */
+private fun refreshProject(project: String, why: String) {
+  val dir = componentsDirFor(project)
+  if (dir.exists()) Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
+  println("ingest(tokens): $project -> ${Tokens.table(project).offered.size} token(s) ($why)")
+  reingestScreens(project, force = true)
+  // Open editors refresh their token picker even when no document changed.
+  documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
+}
+
+/** Re-recognize one screen against the current registries; retried while its write-back is pending. */
+private fun forceReingest(project: String, screen: String) {
+  runCatching {
+    val svc = docFor(mapOf("project" to project, "screen" to screen))
+    if (!svc.reingest()) {
+      ingestExec.schedule({ forceReingest(project, screen) }, 600, java.util.concurrent.TimeUnit.MILLISECONDS)
+    }
+  }.onFailure { println("re-ingest failed for $project/$screen: $it") }
 }
 
 /** C1: whether [f] is a component definition file (not a screen). */
@@ -840,9 +932,12 @@ private fun ingestComponentFile(f: File) {
   runCatching {
     val project = if (isDefaultComponents(f)) "default" else (f.parentFile.parentFile?.name ?: "default")
     val dir = componentsDirFor(project)
-    val reg = Components.rebuild(project, dir)
+    // K2: component files may declare design tokens; a changed table re-resolves every screen.
+    val tokensChanged = rebuildTokens(project)
+    val reg = Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
-    reingestScreens(project)
+    reingestScreens(project, force = tokensChanged)
+    if (tokensChanged) documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
   }.onFailure { println("component ingest failed for $f: $it") }
 }
 
@@ -864,11 +959,14 @@ private fun ingestFlowFile(f: File) {
 private fun isDefaultComponents(f: File): Boolean =
   f.parentFile?.absolutePath == appComponentsDir.absolutePath
 
-/** Re-ingest every open/known screen of [project] against the current registry. */
-private fun reingestScreens(project: String) {
+/**
+ * Re-ingest every open/known screen of [project] against the current registry.
+ * [force] (K2) re-recognizes files the relay wrote itself too.
+ */
+private fun reingestScreens(project: String, force: Boolean = false) {
   val dir = screensDirFor(project)
   (dir.listFiles { x -> x.name.endsWith(".kt") && !x.name.startsWith("Compiled_") } ?: emptyArray())
-    .forEach { runCatching { ingestFile(it) } }
+    .forEach { f -> runCatching { if (force) forceReingest(project, f.nameWithoutExtension) else ingestFile(f) } }
 }
 
 fun main(args: Array<String>) {
@@ -1078,6 +1176,15 @@ fun main(args: Array<String>) {
     }
   }
 
+  // K2: the project's design tokens (ref, kind, resolved value, declaring
+  // file, package/import) for the editor's token picker and agents.
+  server.createContext("/tokens") { ex ->
+    handle(ex) {
+      val project = safe(query(ex)["project"] ?: "default")
+      respond(ex, 200, Tokens.toJson(project))
+    }
+  }
+
   // #13 F1: declared flows + the nav graph DERIVED from the project's current
   // screen trees (read from the store mirrors — each screen's live projection).
   server.createContext("/flow") { ex ->
@@ -1151,7 +1258,13 @@ fun main(args: Array<String>) {
 
   // ── V2 M1 document routes ──────────────────────────────────────────────
   server.createContext("/doc") { ex ->
-    handle(ex) { respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).doc)) }
+    handle(ex) {
+      // K2 (review S5): only a client that advertises design tokens (`tokens=1`)
+      // gets PropValue.Token; an older editor gets their literal values.
+      val q = query(ex)
+      val doc = docFor(q).doc
+      respond(ex, 200, DocJson.encodeToString(if (q["tokens"] == "1") doc else Tokens.withoutTokens(doc)))
+    }
   }
   server.createContext("/ops") { ex ->
     handle(ex) {

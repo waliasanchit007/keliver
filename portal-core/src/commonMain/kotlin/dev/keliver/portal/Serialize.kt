@@ -19,11 +19,21 @@ import kotlinx.serialization.json.put
  * Type-tagged tree (de)serialization for pushing a WidgetNode tree over the wire
  * (M2 device sync). props is Map<String, Any?>; the render getters need the exact
  * Kotlin type back, so every value is tagged with its kind (i/d/b/s/li/lf).
+ *
+ * K2: a design-token value carries its RESOLVED literal under the usual tag plus
+ * `"token"` (the source reference) and `"tokenImport"`: a reader that predates
+ * tokens (an installed device guest) sees — and renders — the plain literal.
  */
 
 private val JSON = Json { }
 
 private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
+  if (v is Token) {
+    encodeValue(v.value).forEach { (k, e) -> put(k, e) }
+    put("token", v.ref)
+    v.importFq?.let { put("tokenImport", it) }
+    return@buildJsonObject
+  }
   when (v) {
     is Int -> put("i", v)
     is Double -> put("d", v)
@@ -44,6 +54,11 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
 }
 
 private fun decodeValue(o: JsonObject): Any? = when {
+  "token" in o -> Token(
+    o.getValue("token").jsonPrimitive.content,
+    decodeValue(JsonObject(o - "token" - "tokenImport")),
+    o["tokenImport"]?.jsonPrimitive?.content,
+  )
   "i" in o -> o.getValue("i").jsonPrimitive.int
   "d" in o -> o.getValue("d").jsonPrimitive.double
   "b" in o -> o.getValue("b").jsonPrimitive.boolean

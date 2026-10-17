@@ -198,6 +198,12 @@ data class PortalConfig(
   /** #13 F1: flow declarations (flow{} DSL). Null = a `flows` sibling of [screensDir]. */
   val flowsDir: String? = null,
   /**
+   * K2: EXTRA directories (scanned recursively) holding design-token
+   * constants (`object C { const val Ink = … }`). The screens and components
+   * dirs are always scanned; null/empty = only those.
+   */
+  val tokensDirs: List<String>? = null,
+  /**
    * The per-app editor build. EMPTY = this app has no editor of its own, so
    * the relay does not attempt a preview build at all and the bundled generic
    * editor is served instead.
@@ -236,6 +242,9 @@ fun PortalConfig.resolvedLogicDirs(): List<String> =
 /** The resolved components dir: explicit [componentsDir], else a `components` sibling of screens. */
 fun PortalConfig.resolvedComponentsDir(): String =
   componentsDir ?: (screensDir.substringBeforeLast('/', "").let { if (it.isEmpty()) "components" else "$it/components" })
+
+/** K2: the extra token dirs ([PortalConfig.tokensDirs]); the screens and components dirs are scanned anyway. */
+fun PortalConfig.resolvedTokensDirs(): List<String> = tokensDirs.orEmpty().filter { it.isNotBlank() }
 
 /** The resolved flows dir: explicit [flowsDir], else a `flows` sibling of screens. */
 fun PortalConfig.resolvedFlowsDir(): String =
