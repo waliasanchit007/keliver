@@ -22,7 +22,7 @@
 #
 #   library:  v0.3.4               -> publish.yml (GitHub Packages) and, manually,
 #                                     publish-maven-central.yml
-#   tools:    portal-tools-v0.3.5  -> this workflow, and ONLY this workflow
+#   tools:    portal-tools-v0.3.10 -> this workflow, and ONLY this workflow
 #
 # `portal-tools-v*` does not match the `v*` pattern publish.yml listens on, so a
 # tools release cannot publish libraries. That is the point of the convention:
@@ -116,7 +116,7 @@ jobs:
           # only made this workflow reject the next candidate. The MAVEN line stays
           # hardcoded on purpose: that is the one that must not move.
           test "$tv" = "${{ steps.v.outputs.version }}"
-          test "$mv" = "0.3.4"                 # the Maven line must NOT move (tools 0.3.10 moved it, on purpose)
+          test "$mv" = "0.3.4"                 # pinned: only a tools release that means to move it changes this
           test "$sc" = "$(git rev-parse HEAD)" # the package names the commit actually built
           echo "--- hashes"
           sha256sum "$zip"

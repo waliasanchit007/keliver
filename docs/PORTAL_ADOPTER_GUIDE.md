@@ -242,11 +242,12 @@ server that is `http://` (debug cleartext is allowed only then).
 A debug build picks up a bundle you publish while it runs when you switch back
 to the app (on-resume updates, at most one lookup every 30 s), and looks at once
 on `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <applicationId>`
-(only adb's shell can send that one). Every other build type looks only at the
+(the receiver needs the `DUMP` permission, which adb's shell has and ordinary apps do not). Every other build type looks only at the
 next launch, except one made with `initWith(debug)` (or, for the embedded
 library, one that falls back to `debug`), which takes debug's settings. `keliver.updates` in `host-android/gradle.properties` chooses for
-every build type instead (hosts from tools 0.3.9 and earlier wrote
-`next-launch` there: empty it to get these defaults).
+every build type instead. Hosts from tools 0.3.9 and earlier wrote
+`next-launch` there, and their `build.gradle` does not accept an empty value:
+take this release's `build.gradle` before emptying it, or set `on-resume`.
 
 The relay does not sign: your build does, with your store's private key, and
 `/publish` keeps a bundle only if its manifest verifies against your store's
@@ -650,9 +651,9 @@ Verified from a scaffolded app in Chrome — see
 `docs/superpowers/evidence/adopter-preview-route/U19-ASYNC.md` for the exact
 sequence and its limits.
 
-**Which build you need.** The published `dev.keliver:portal-editor:0.3.3` — the
-version an adopter gets from Maven Central today. Both behaviours were measured
-against it directly. An earlier revision of this guide said the published editor
+**Which build you need.** The published `dev.keliver:portal-editor:0.3.3`, or
+later. Both behaviours were measured against 0.3.3 directly; 0.3.4 did not
+change the editor's preview path. An earlier revision of this guide said the published editor
 had a defect here and that an unreleased fix was required; that was wrong, and
 the fix in question turned out to change nothing observable
 (`KNOWN_BUGS.md` U19). If a preview value ever does look stuck, hard-reload

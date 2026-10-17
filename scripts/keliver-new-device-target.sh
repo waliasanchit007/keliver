@@ -27,6 +27,7 @@
 #
 set -euo pipefail
 
+KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
 KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
 ZIPLINE_VERSION="${ZIPLINE_VERSION:-1.22.0}"
 SCREEN=""
@@ -45,6 +46,33 @@ APP="$(pwd)"
 [ -f "$APP/build.gradle" ] || { echo "error: no build.gradle here" >&2; exit 1; }
 [ -f "$APP/settings.gradle" ] || { echo "error: no settings.gradle here" >&2; exit 1; }
 [ -e "$APP/src/jsMain/kotlin/device" ] && { echo "error: $APP/src/jsMain/kotlin/device already exists — refusing to overwrite" >&2; exit 1; }
+
+# The Keliver version: the app's own (appRuntime.keliverVersion, which
+# keliver-init writes), so an app that stays on an older release does not get a
+# mix; KELIVER_VERSION overrides it; this bundle's version when neither is set.
+if [ -z "$KELIVER_VERSION_GIVEN" ]; then
+  v="$(python3 -c 'import json,sys
+try:
+    v = json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"]
+    print(v.strip() if isinstance(v, str) else "")
+except Exception: print("")' "$APP/keliver.portal.json")"
+  [ -n "$v" ] && KELIVER_VERSION="$v"
+fi
+[[ "$KELIVER_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?$ ]] \
+  || { echo "error: the Keliver version '$KELIVER_VERSION' is not a version" >&2; exit 1; }
+
+# The guest's timing file, from the templates (beside this script in the
+# repository, one level up in the tools bundle).
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+  link="$(readlink "$SELF")"; case "$link" in /*) SELF="$link" ;; *) SELF="$(dirname "$SELF")/$link" ;; esac
+done
+HERE="$(cd "$(dirname "$SELF")" && pwd -P)"
+GUEST_TIMING=""
+for t in "$HERE/templates/guest/KeliverTiming.kt" "$HERE/../templates/guest/KeliverTiming.kt"; do
+  [ -f "$t" ] && { GUEST_TIMING="$t"; break; }
+done
+[ -n "$GUEST_TIMING" ] || { echo "error: templates/guest/KeliverTiming.kt is missing (looked beside $HERE and one level up)" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
 # Resolve + validate EVERYTHING before writing. Python because per-file parsing
@@ -241,44 +269,7 @@ fun main() {
 EOF
 echo "    src/jsMain/kotlin/device/Main.kt"
 
-cat > "$APP/src/jsMain/kotlin/device/KeliverTiming.kt" <<EOF
-package ${PKG}.device
-
-import app.cash.zipline.Zipline
-import app.cash.zipline.ZiplineService
-
-/**
- * The host's timing service (M0), declared BY SHAPE as PortalPresenter is. Only debug and
- * benchmark hosts bind it.
- */
-interface KeliverTrace : ZiplineService {
-  fun mark(name: String)
-}
-
-/**
- * Marks a moment in the host's timing (docs/DEVICE_HOST.md, "Timing marks"): call
- * KeliverTiming.mark("content") once the screen's data is shown. Names are a-z, 0-9 and '-',
- * at most 32. With a host that does not bind KeliverTrace (a release build, or a host from
- * before the marks) the first call fails, and from then on it does nothing.
- */
-object KeliverTiming {
-  private var trace: KeliverTrace? = null
-  private var unavailable = false
-
-  fun mark(name: String) {
-    if (unavailable) return
-    try {
-      val t = trace ?: Zipline.get().take<KeliverTrace>("KeliverTrace").also { trace = it }
-      t.mark(name)
-    } catch (e: Throwable) {
-      // No KeliverTrace on this host (one failed call, then none): stop asking. Not
-      // close()d: that is a call to the same missing service, and it would throw too.
-      unavailable = true
-      trace = null
-    }
-  }
-}
-EOF
+sed "s/@@PACKAGE@@/${PKG}/g" "$GUEST_TIMING" > "$APP/src/jsMain/kotlin/device/KeliverTiming.kt"
 echo "    src/jsMain/kotlin/device/KeliverTiming.kt"
 
 cat <<EOF

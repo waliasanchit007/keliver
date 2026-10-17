@@ -25,8 +25,8 @@ step against a named, retained artifact.
 
 ## Procedure
 
-The notes for the current release are
-[`RELEASE_NOTES_TOOLS_0.3.10.md`](RELEASE_NOTES_TOOLS_0.3.10.md) (previous:
+The notes for the release in preparation (a candidate until it is published)
+are [`RELEASE_NOTES_TOOLS_0.3.10.md`](RELEASE_NOTES_TOOLS_0.3.10.md) (previous:
 [`RELEASE_NOTES_TOOLS_0.3.9.md`](RELEASE_NOTES_TOOLS_0.3.9.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,
@@ -65,6 +65,10 @@ gh workflow run portal-tools.yml --ref <branch> \
   -f device_run_id=<build run id> \
   -f device_apk_sha256=<apk sha256 from the build run>
 ```
+
+The build job checks `VERSION.json`'s Maven line against the literal in
+`portal-tools.yml`, so dispatching today's workflow to rebuild an older tools
+commit (whose scaffolders wire an older library) fails there, as it should.
 
 Both must be green. The device job refuses to run against an APK whose sha256
 does not match, or one carrying an embedded portal key.
