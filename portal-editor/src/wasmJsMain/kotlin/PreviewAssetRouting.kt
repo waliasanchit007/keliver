@@ -5,7 +5,8 @@
  * that sends no CORS headers cannot be read from the editor's page. The relay
  * serves such images at /preview-asset for the hosts keliver.portal.json lists
  * in `previewAssetHosts` (GET /preview-assets says which). A URL on one of
- * those hosts is rewritten to the relay; every other URL loads as before.
+ * those hosts, on its scheme's default port, is rewritten to the relay; every
+ * other URL loads as before.
  */
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
@@ -14,7 +15,12 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-internal object PreviewAssetRouting {
+internal object PreviewAssetRouting : PreviewAssetHostGate() {
+  fun route(url: String): String = route(url, SERVER)
+}
+
+/** The relay's host list, and the one wait for it. */
+internal open class PreviewAssetHostGate(private val waitMillis: Long = 3_000) {
   private var hosts: Set<String> = emptySet()
   private val loaded = CompletableDeferred<Unit>()
 
@@ -24,12 +30,18 @@ internal object PreviewAssetRouting {
     loaded.complete(Unit)
   }
 
-  /** Images requested before the list arrives wait for it, briefly. */
+  /**
+   * Images requested before the list arrives wait for it, briefly — once. If
+   * nothing delivers it within [waitMillis] (neither the workspace load nor
+   * playground mode ran), the wait ends for good with no hosts, so later
+   * images do not each wait again. A list that arrives afterwards still
+   * routes the images requested after it.
+   */
   suspend fun awaitLoaded() {
-    withTimeoutOrNull(3_000) { loaded.await() }
+    if (withTimeoutOrNull(waitMillis) { loaded.await() } == null) loaded.complete(Unit)
   }
 
-  fun route(url: String): String = previewAssetUrl(url, hosts, SERVER) ?: url
+  fun route(url: String, server: String): String = previewAssetUrl(url, hosts, server) ?: url
 }
 
 /** The host list from `GET /preview-assets`; empty when absent or malformed. */
@@ -40,15 +52,19 @@ internal fun parsePreviewAssetHosts(json: String): Set<String> = runCatching {
 
 /**
  * The relay URL serving [url], or null when [url] loads directly: not
- * http(s), carries user-info, or its host is not exactly one of [hosts].
+ * http(s), carries user-info, names a port other than its scheme's default
+ * (the relay refuses those), or its host is not exactly one of [hosts].
  */
 internal fun previewAssetUrl(url: String, hosts: Set<String>, server: String): String? {
   if (hosts.isEmpty()) return null
-  val m = Regex("^(?i:https?)://([^/?#]*)").find(url) ?: return null
-  val authority = m.groupValues[1]
+  val m = Regex("^((?i:https?))://([^/?#]*)").find(url) ?: return null
+  val scheme = m.groupValues[1].lowercase()
+  val authority = m.groupValues[2]
   if ('@' in authority || authority.startsWith("[")) return null
   val host = authority.substringBefore(':').lowercase()
   if (host !in hosts) return null
+  val port = authority.substringAfter(':', "")
+  if (port.isNotEmpty() && port != if (scheme == "https") "443" else "80") return null
   return "$server/preview-asset?url=${encodeUriComponent(url)}"
 }
 

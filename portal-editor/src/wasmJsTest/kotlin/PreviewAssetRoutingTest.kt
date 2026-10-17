@@ -1,3 +1,7 @@
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -12,10 +16,14 @@ class PreviewAssetRoutingTest {
       "$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fa%20b%2Fc.png%3Fw%3D2%26h%3D3",
       previewAssetUrl("https://img.example.com/a%20b/c.png?w=2&h=3".replace("%20", " "), hosts, relay),
     )
-    // Case-insensitive scheme and host; a port does not change the host.
+    // Case-insensitive scheme and host; the scheme's own default port is fine.
     assertEquals(
-      "$relay/preview-asset?url=HTTP%3A%2F%2FIMG.example.com%3A8443%2Fx.png",
-      previewAssetUrl("HTTP://IMG.example.com:8443/x.png", hosts, relay),
+      "$relay/preview-asset?url=HTTP%3A%2F%2FIMG.example.com%3A80%2Fx.png",
+      previewAssetUrl("HTTP://IMG.example.com:80/x.png", hosts, relay),
+    )
+    assertEquals(
+      "$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%3A443%2Fx.png",
+      previewAssetUrl("https://img.example.com:443/x.png", hosts, relay),
     )
   }
 
@@ -27,6 +35,11 @@ class PreviewAssetRoutingTest {
       "data:image/png;base64,AAAA",
       "file:///img.example.com/x.png",
       "https://[::1]/x.png",
+      // Any other port: the relay would refuse it.
+      "HTTP://IMG.example.com:8443/x.png",
+      "http://img.example.com:443/x.png",
+      "https://img.example.com:80/x.png",
+      "http://img.example.com:6379/x",
     )) {
       assertNull(previewAssetUrl(url, hosts, relay), url)
     }
@@ -37,6 +50,30 @@ class PreviewAssetRoutingTest {
     assertEquals(setOf("img.example.com", "cdn.example.org"), parsePreviewAssetHosts("""{"endpoint":"/preview-asset","hosts":["img.example.com","CDN.example.org"]}"""))
     assertEquals(emptySet(), parsePreviewAssetHosts("<html>404</html>"))
     assertEquals(emptySet(), parsePreviewAssetHosts("{}"))
+  }
+
+  @Test fun withoutAListImagesWaitOnceNotEveryTime() = runTest {
+    val gate = PreviewAssetHostGate(waitMillis = 3_000)
+    gate.awaitLoaded()
+    assertEquals(3_000L, currentTime)
+    gate.awaitLoaded()
+    gate.awaitLoaded()
+    assertEquals(3_000L, currentTime, "later images do not wait again")
+    assertEquals("https://img.example.com/x.png", gate.route("https://img.example.com/x.png", relay))
+    // A list that arrives late still routes the images after it.
+    gate.loaded(hosts)
+    assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", gate.route("https://img.example.com/x.png", relay))
+  }
+
+  @Test fun theListEndsTheWaitWhenItArrives() = runTest {
+    val gate = PreviewAssetHostGate(waitMillis = 3_000)
+    launch {
+      delay(200)
+      gate.loaded(hosts)
+    }
+    gate.awaitLoaded()
+    assertEquals(200L, currentTime)
+    assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", gate.route("https://img.example.com/x.png", relay))
   }
 
   @Test fun encodingMatchesEncodeUriComponent() {
