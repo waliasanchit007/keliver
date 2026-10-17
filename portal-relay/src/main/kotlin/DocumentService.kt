@@ -15,8 +15,14 @@ import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.isClientOp
 import dev.keliver.portal.document.lit
+import dev.keliver.portal.document.toAny
+import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.exportKotlin
+import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.ingest.TokenTable
+import dev.keliver.portal.propSourceType
+import dev.keliver.portal.tokenFits
 import java.io.File
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -36,6 +42,8 @@ class DocumentService(
   private val packageName: String? = null,
   /** C1: the project's component registry provider (component-aware write-back). */
   private val components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
+  /** K2: the project's design-token table provider (token-aware ingest, gate and write-back). */
+  private val tokens: () -> TokenTable = { TokenTable.EMPTY },
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -49,14 +57,42 @@ class DocumentService(
   private var pendingWrite: ScheduledFuture<*>? = null
 
   /**
-   * The client-op gate shared by [dryRun] and [submit] (null = acceptable):
+   * The client-op gate shared by [dryRun] and [submit]: the batch to apply, or
+   * the refusal. Token values are normalized to the server's table (K2).
+   */
+  private fun gate(batch: OpBatch): Pair<OpBatch?, String?> {
+    refusal(batch)?.let { return null to it }
+    return Tokens.normalize(batch, tokens(), kotlinFile.name)
+  }
+
+  /**
+   * The client-op refusals (null = acceptable):
    *  - the engine's internal ops (undo inverses) are never accepted from clients;
    *  - K1: a project-component instance carries modifiers only when its
-   *    signature declares a `modifier: Modifier` parameter.
+   *    signature declares a `modifier: Modifier` parameter;
+   *  - K2: a design token on a project-component instance must fit the
+   *    parameter's declared type (the document checks catalogued widgets).
    */
   private fun refusal(batch: OpBatch): String? {
     if (batch.ops.any { !it.isClientOp() }) return "internal op not accepted"
     val registry = components()
+    fun refuseToken(type: String, key: String, v: PropValue): String? {
+      if (v !is PropValue.Token || !registry.isComponent(type)) return null
+      val sourceType = propSourceType(type, key, registry)
+      return if (tokenFits(sourceType, v.value.toAny())) null
+      else "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
+    }
+    fun walkTokens(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
+      w.props.entries.firstNotNullOfOrNull { (k, v) -> refuseToken(w.type, k, v) }
+        ?: w.children.firstNotNullOfOrNull(::walkTokens)
+    }
+    for (op in batch.ops) {
+      when (op) {
+        is DocOp.SetProp -> (doc.find(op.target) as? DocNode.Widget)?.let { w -> refuseToken(w.type, op.name, op.value)?.let { return it } }
+        is DocOp.InsertNode -> walkTokens(op.node)?.let { return it }
+        else -> {}
+      }
+    }
     fun refuseMods(type: String, hasMods: Boolean): String? {
       if (!hasMods || !registry.isComponent(type)) return null
       return if (registry.spec(type)?.acceptsModifier == true) null
@@ -81,8 +117,9 @@ class DocumentService(
     if (batch.baseVersion != doc.version) {
       return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
     }
-    refusal(batch)?.let { return OpAck(false, doc.version, it) }
-    val res = doc.applyBatch(batch.ops)
+    val (gated, refused) = gate(batch)
+    if (gated == null) return OpAck(false, doc.version, refused)
+    val res = doc.applyBatch(gated.ops)
     return if (res.result == null) OpAck(false, doc.version, res.error) else OpAck(true, doc.version)
   }
 
@@ -91,8 +128,9 @@ class DocumentService(
     if (batch.baseVersion != doc.version) {
       return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
     }
-    refusal(batch)?.let { return OpAck(false, doc.version, it) }
-    val res = doc.applyBatch(batch.ops)
+    val (gated, refused) = gate(batch)
+    if (gated == null) return OpAck(false, doc.version, refused)
+    val res = doc.applyBatch(gated.ops)
     val ok = res.result ?: return OpAck(false, doc.version, res.error)
     doc = ok.doc.copy(version = doc.version + 1)
     undoStacks.getOrPut(batch.envelope.session) { ArrayDeque() }.apply {
@@ -143,6 +181,25 @@ class DocumentService(
     changed(writeBack = false)
   }
 
+  /**
+   * K2: re-recognize the file as it is on disk against the CURRENT component
+   * and token registries — a declaration it depends on changed although the
+   * file did not (so the self-write check must not skip it). A token whose
+   * value changed re-resolves; one that vanished or changed kind becomes
+   * RawCode. False when a write-back is still pending (the document is ahead
+   * of the file — the caller retries after it lands).
+   */
+  @Synchronized
+  fun reingest(): Boolean {
+    if (pendingWrite?.isDone == false) return false
+    if (!kotlinFile.exists()) return true
+    val rec = dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText(), components(), tokens())
+      ?: return true
+    val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
+    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next)
+    return true
+  }
+
   /** Self-write suppression for the file watcher. */
   @Volatile private var lastWrittenText: String? = null
   fun wasSelfWrite(text: String): Boolean = text == lastWrittenText
@@ -176,7 +233,7 @@ class DocumentService(
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
       // C1: component-aware surgical merge so a screen using a component isn't
       // forced into a whole-file regen (its call stays byte-stable in place).
-      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry) }
+      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry, tokens(), kotlinFile.name) }
       // P0: the file's OWN package wins over the configured default — a full-
       // export fallback must never rewrite a foreign-package screen (e.g.
       // com.stashfin.*) into dev.keliver.portalpublished.screens.
@@ -216,10 +273,11 @@ class DocumentService(
       functionName: String,
       packageName: String?,
       components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
+      tokens: () -> TokenTable = { TokenTable.EMPTY },
     ): DocumentService {
       if (kotlinFile.exists()) {
         val rec = runCatching {
-          dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText(), components())
+          dev.keliver.portal.ingest.Recognizer.recognize(kotlinFile.name, kotlinFile.readText(), components(), tokens())
         }.getOrNull()
         if (rec != null) {
           var next = 1L
@@ -230,11 +288,11 @@ class DocumentService(
           }
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
-          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components)
+          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens)
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }
-      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components)
+      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components, tokens)
     }
 
     /** M1 bootstrap: lift an existing V1 draft tree into a Document. */
@@ -246,6 +304,7 @@ class DocumentService(
       functionName: String = "PortalScreen",
       packageName: String? = null,
       components: () -> dev.keliver.portal.ComponentRegistry = { dev.keliver.portal.EmptyComponentRegistry },
+      tokens: () -> TokenTable = { TokenTable.EMPTY },
     ): DocumentService {
       var next = 1L
       fun lift(n: WidgetNode): DocNode.Widget = DocNode.Widget(
@@ -256,18 +315,19 @@ class DocumentService(
             when (v) {
               is dev.keliver.portal.Bind -> dev.keliver.portal.document.PropValue.Bind(v.field)
               is dev.keliver.portal.Action -> dev.keliver.portal.document.PropValue.Action(v.name)
+              is dev.keliver.portal.Token -> v.toPropValue()
               else -> lit(v)
             }
           },
         modifiers = n.props.filterKeys { it.startsWith("mod.") }
-          .map { (k, v) -> k.removePrefix("mod.") to lit(v) }.toMap(),
+          .map { (k, v) -> k.removePrefix("mod.") to if (v is dev.keliver.portal.Token) v.toPropValue() else lit(v) }.toMap(),
         children = n.children.map { lift(it) },
       )
       val root = treeJson?.takeIf { it.isNotBlank() && it != "{}" }
         ?.let { lift(deserializeTree(it)) }
         ?: DocNode.Widget(Handle(next++), "Column")
       val doc = UiDocument(screenKey, root, Contract(), version = 0, nextHandle = next)
-      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName)
+      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens)
     }
   }
 }

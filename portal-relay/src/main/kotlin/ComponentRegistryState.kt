@@ -7,6 +7,7 @@ import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.serializeTree
 import dev.keliver.portal.ingest.Recognizer
+import dev.keliver.portal.ingest.TokenTable
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -22,8 +23,11 @@ object Components {
 
   fun registry(project: String): ComponentRegistry = byProject[project] ?: EmptyComponentRegistry
 
-  /** Rebuild [project]'s registry from all .kt files in [dir]. Returns the new registry. */
-  fun rebuild(project: String, dir: File): ComponentRegistry {
+  /**
+   * Rebuild [project]'s registry from all .kt files in [dir]. Returns the new
+   * registry. [tokens] (K2) lets component bodies reference design tokens.
+   */
+  fun rebuild(project: String, dir: File, tokens: TokenTable = TokenTable.EMPTY): ComponentRegistry {
     val files = (dir.listFiles { f -> f.name.endsWith(".kt") } ?: emptyArray())
       .sortedBy { it.name } // deterministic order
     if (files.isEmpty()) {
@@ -32,13 +36,13 @@ object Components {
     }
     // Pass 1: names only (nested calls may RawCode here — we just need the set).
     val firstPass = files.mapNotNull {
-      runCatching { Recognizer.recognizeComponent(it.name, it.readText()) }.getOrNull()?.spec
+      runCatching { Recognizer.recognizeComponent(it.name, it.readText(), tokens = tokens) }.getOrNull()?.spec
     }
     val skeleton = MapComponentRegistry(firstPass)
     // Pass 2: full recognition with all names known → nested calls resolve.
     val specs = LinkedHashMap<String, ComponentSpec>()
     for (f in files) {
-      val rc = runCatching { Recognizer.recognizeComponent(f.name, f.readText(), skeleton) }.getOrNull() ?: continue
+      val rc = runCatching { Recognizer.recognizeComponent(f.name, f.readText(), skeleton, tokens) }.getOrNull() ?: continue
       specs[rc.spec.name] = rc.spec
     }
     val withCycles = flagCycles(specs)
