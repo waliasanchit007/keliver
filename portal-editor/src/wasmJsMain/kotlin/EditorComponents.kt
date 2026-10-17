@@ -60,7 +60,9 @@ internal fun parseComponents(json: String): ComponentRegistry = runCatching {
       name = o["name"]!!.jsonPrimitive.content,
       props = props,
       events = events,
-      paramTypes = emptyMap(), // contract typing is relay-side; editor doesn't need it
+      // K5: needed for acceptsModifier (modifier panel + preview expansion).
+      // A relay older than K5 sends none: no component then takes modifiers here.
+      paramTypes = o["paramTypes"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content }.orEmpty(),
       slots = slots,
       defaults = defaults,
       body = body,

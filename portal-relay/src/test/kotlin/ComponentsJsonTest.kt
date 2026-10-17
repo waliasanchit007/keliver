@@ -39,4 +39,30 @@ class ComponentsJsonTest {
       dir.deleteRecursively()
     }
   }
+
+  @Test fun parameterTypesAreListed() {
+    val dir = Files.createTempDirectory("components-json").toFile()
+    try {
+      dir.resolve("InfoCard.kt").writeText(
+        """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.Modifier
+        import dev.keliver.layout.compose.Column
+
+        @Composable
+        fun InfoCard(title: String, modifier: Modifier = Modifier) {
+          Column(modifier = modifier) {}
+        }
+        """.trimIndent(),
+      )
+      Components.rebuild("json-types", dir)
+      val card = Json.parseToJsonElement(Components.toJson("json-types")).jsonArray.single().jsonObject
+      val types = card.getValue("paramTypes").jsonObject
+      assertEquals("String", types.getValue("title").jsonPrimitive.content)
+      assertEquals("Modifier", types.getValue("modifier").jsonPrimitive.content)
+      assertEquals(true, card.getValue("transparent").jsonPrimitive.content.toBoolean())
+    } finally {
+      dir.deleteRecursively()
+    }
+  }
 }

@@ -98,6 +98,9 @@ object Components {
     val slots = s.slots.joinToString(",") { slotJson(it) }
     val defaults = s.defaults.entries.joinToString(",") { (k, v) -> "${str(k)}:${defaultJson(v)}" }
     val deps = s.dependencies.sorted().joinToString(",") { str(it) }
+    // K5: the editor needs the parameter types too — without them every
+    // component looked like it had no `modifier: Modifier` parameter there.
+    val paramTypes = s.paramTypes.entries.joinToString(",") { (k, v) -> "${str(k)}:${str(v)}" }
     val body = s.body?.let { serializeTree(it) } ?: "null"
     return "{" +
       "\"name\":${str(s.name)}," +
@@ -105,6 +108,7 @@ object Components {
       "\"events\":[$events]," +
       "\"slots\":[$slots]," +
       "\"defaults\":{$defaults}," +
+      "\"paramTypes\":{$paramTypes}," +
       "\"transparent\":${s.transparent}," +
       "\"dependencies\":[$deps]," +
       (s.diagnostic?.let { "\"diagnostic\":${str(it)}," } ?: "") +
