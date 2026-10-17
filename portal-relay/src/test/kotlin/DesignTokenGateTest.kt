@@ -441,6 +441,56 @@ fun HomeScreen() {
     }
   }
 
+  private fun awaitFile(predicate: (String) -> Boolean): String {
+    val deadline = System.currentTimeMillis() + 10_000
+    while (System.currentTimeMillis() < deadline) {
+      val text = homeFile.readText()
+      if (predicate(text)) return text
+      Thread.sleep(25)
+    }
+    error("the screen file never matched:\n${homeFile.readText()}")
+  }
+
+  @Test fun aRedoTheFilesOwnImportRefusesIsDroppedNotKept() {
+    // The production path (the file writable): T's `import x.C` LANDS, and
+    // write-back never removes an import, so S's q.C.Muted can never be
+    // restored without a hand edit of the file — the step is dropped.
+    val svc = service(home(imports = "", body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
+    File(screens, "X.kt").writeText("package x\nobject C { const val Ink = 9 }\n")
+    File(components, "Q.kt").writeText("package q\nobject C { const val Muted = 8 }\n")
+    rebuild()
+    val (a, b) = widgets(svc)
+    // S: b = q.C.Muted, then b.fontSize = 20; both undone before anything is written.
+    // S's redo stack: Muted on top, fontSize beneath.
+    assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "colorArgb", token("C.Muted", 8, "q.C"))).ok)
+    assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "fontSize", lit(20))).ok)
+    assertTrue(svc.undo("S").ok)
+    assertTrue(svc.undo("S").ok)
+    // T: a = x.C.Ink, and that write lands.
+    assertTrue(asSession(svc, "T", DocOp.SetProp(a.handle, "colorArgb", token("C.Ink", 9, "x.C"))).ok)
+    awaitFile { "import x.C\n" in it && "C.Ink" in it }
+    // T undoes; the import stays (write-back only adds imports).
+    assertTrue(svc.undo("T").ok)
+    val written = awaitFile { "C.Ink" !in it }
+    assertTrue("import x.C\n" in written, written)
+    assertTrue("import q.C" !in written, written)
+    val version = svc.doc.version
+    val before = svc.doc.root
+    val redone = svc.redo("S")
+    assertFalse(redone.ok, "q.C.Muted would not mean q.C.Muted beside the file's `import x.C`")
+    assertTrue(redone.error!!.startsWith("redo failed (step dropped): "), redone.error)
+    assertTrue("this file imports a different C (x.C)" in redone.error!!, redone.error)
+    assertEquals(version, svc.doc.version, "the document is untouched")
+    assertEquals(before, svc.doc.root)
+    assertEquals("nothing to undo", svc.undo("S").error, "nothing was pushed onto S's undo stack")
+    // The dropped step is gone: the next older entry (fontSize) is reachable.
+    val next = svc.redo("S")
+    assertTrue(next.ok, next.error)
+    assertEquals(lit(20), widgets(svc)[1].props["fontSize"])
+    assertEquals(null, widgets(svc)[1].props["colorArgb"])
+    assertEquals("nothing to redo", svc.redo("S").error)
+  }
+
   @Test fun anUndoTheTreeCannotTakeIsDroppedAndSaysSo() {
     val svc = service(home(body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
     val (_, b) = widgets(svc)

@@ -161,27 +161,34 @@ class DocumentService(
   }
 
   @Synchronized
-  fun undo(session: String): OpAck = step("undo", undoStacks[session], redoStacks.getOrPut(session) { ArrayDeque() })
+  fun undo(session: String): OpAck = step("undo", undoStacks[session]) { redoStacks.getOrPut(session) { ArrayDeque() } }
 
   @Synchronized
-  fun redo(session: String): OpAck = step("redo", redoStacks[session], undoStacks.getOrPut(session) { ArrayDeque() })
+  fun redo(session: String): OpAck = step("redo", redoStacks[session]) { undoStacks.getOrPut(session) { ArrayDeque() } }
 
   /**
-   * One undo/redo: apply the top of [from] and push its inverse onto [to].
-   * Peek first. A token refusal keeps the entry ("blocked (step kept)":
-   * restoring the declaration, or removing what now clashes, makes it work
-   * again); an inverse the tree can no longer take is dropped ("failed (step
-   * dropped)"), as before K2 — it never could apply, and keeping it would
-   * wedge the stack. Either way the document and the other stack are untouched.
+   * One undo/redo: apply the top of [from] and push its inverse onto [to]
+   * (created only when the step applies). Peek first; a refused step leaves
+   * the document and the other stack untouched, and is
+   *  - KEPT ("blocked (step kept)") when the refusal can clear without an
+   *    edit of this file — a token missing or unfit (restore the
+   *    declaration), a same-package or star-imported owner declared since
+   *    (remove it), a clash with another of the document's tokens (undo it);
+   *  - DROPPED ("failed (step dropped)") when it never can: the tree can no
+   *    longer take the inverse (as before K2), or the file's OWN imports name
+   *    a different owner — write-back only adds imports, so only a hand edit
+   *    clears that, and it arrives as an external change that clears both
+   *    stacks anyway. Keeping such a step would wedge the stack.
    */
-  private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: ArrayDeque<List<DocOp>>): OpAck {
+  private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: () -> ArrayDeque<List<DocOp>>): OpAck {
     val inverses = from?.lastOrNull()
       ?: return OpAck(false, doc.version, "nothing to $verb")
-    val res = doc.applyBatch(inverses)
-    val ok = res.result ?: run {
+    fun dropped(why: String?): OpAck {
       from.removeLastOrNull()
-      return OpAck(false, doc.version, "$verb failed (step dropped): ${res.error}")
+      return OpAck(false, doc.version, "$verb failed (step dropped): $why")
     }
+    val res = doc.applyBatch(inverses)
+    val ok = res.result ?: return dropped(res.error)
     // K2: an inverse carries token values from when it was recorded; re-resolve
     // the tokens it restores (and only those) ...
     val table = tokens()
@@ -194,11 +201,13 @@ class DocumentService(
     // name. One scope, seeded with the imports of every token the step did NOT
     // restore — the restored ones are checked, not assumed.
     if (fresh.restored.isNotEmpty() && kotlinFile.exists()) {
-      table.bindingProblem(kotlinFile.readText(), tokenFileId, fresh.restored, fresh.keptImports)
-        ?.let { return OpAck(false, doc.version, "$verb blocked (step kept): $it") }
+      table.bindingIssue(kotlinFile.readText(), tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
+        return if (issue.cause == TokenTable.BindingCause.FILE_IMPORT) dropped(issue.message)
+        else OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
+      }
     }
     from.removeLastOrNull()
-    to.addLast(ok.inverseBatch)
+    to().addLast(ok.inverseBatch)
     doc = fresh.doc.copy(version = doc.version + 1)
     changed()
     return OpAck(true, doc.version)
