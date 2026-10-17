@@ -100,13 +100,16 @@ class LayoutGrammarTest {
     assertEquals(listOf(0.0, 0.0, 0.0, 0.0), m("Margin.Zero"))
     assertEquals(listOf(0.0, 0.0, 0.0, 0.0), m("Margin()"))
     // Every Dp spelling.
-    assertEquals(listOf(4.0, 4.0, 4.0, 4.0), m("Margin(all = Dp(4))"))
+    assertNull(m("Margin(all = Dp(4))")) // Dp takes a Double: `Dp(4)` does not compile
     assertEquals(listOf(4.0, 4.0, 4.0, 4.0), m("Margin(all = Dp(4.0))"))
     assertEquals(listOf(4.0, 4.0, 4.0, 4.0), m("Margin(all = 4.0.dp)"))
     assertEquals(listOf(4.5, 4.5, 4.5, 4.5), m("Margin(all = 4.5.dp)"))
     // Not grammar.
-    assertNull(m("Margin(8.dp, 4.dp)")) // positional pair: constructor or (horizontal, vertical)?
-    assertNull(m("Margin(1.dp, 2.dp, 3.dp, 4.dp)"))
+    // Positional values read as Kotlin resolves them (pinned by ParityLayout.kt):
+    assertEquals(listOf(8.0, 8.0, 4.0, 4.0), m("Margin(8.dp, 4.dp)")) // (horizontal, vertical)
+    assertEquals(listOf(1.0, 2.0, 3.0, 0.0), m("Margin(1.dp, 2.dp, 3.dp)")) // constructor
+    assertEquals(listOf(1.0, 2.0, 3.0, 4.0), m("Margin(1.dp, 2.dp, 3.dp, 4.dp)"))
+    assertNull(m("Margin(1.dp, 2.dp, 3.dp, 4.dp, 5.dp)"))
     assertNull(m("Margin(all = gap)"))
     assertNull(m("Margin(all = 4)"))
     assertNull(m("Margin(start = 1.dp, horizontal = 2.dp)"))
@@ -120,10 +123,10 @@ class LayoutGrammarTest {
     val row = root("""Row(margin = Margin(horizontal = 16.dp)) {}""")
     assertEquals(d(16.0), row.props["margin.start"])
     assertEquals(d(0.0), row.props["margin.top"])
-    // Two positional args: not grammar -> the call stays RawCode.
+    // Mixed positional + named: not grammar -> the call stays RawCode.
     val raw = root("""
       Column {
-        Row(margin = Margin(16.dp, 4.dp)) {}
+        Row(margin = Margin(16.dp, top = 4.dp)) {}
       }
     """)
     assertIs<DocNode.RawCode>(raw.children.single())
@@ -351,5 +354,209 @@ class LayoutGrammarTest {
   private fun stripHandles(n: DocNode): String = when (n) {
     is DocNode.RawCode -> "RAW(${n.text.trim()})"
     is DocNode.Widget -> "${n.type}${n.props.toSortedMap()}${n.modifiers.toSortedMap()}[${n.children.joinToString { stripHandles(it) }}]"
+  }
+
+  // ── Review follow-ups ──────────────────────────────────────────────────
+
+  @Test fun commentsBetweenChainLinksStayGrammar() {
+    val r = root("""
+      Row {
+        StyledText(
+          text = "a",
+          modifier = Modifier.padding(8)
+            // why the weight
+            .flex(1.0) /* end */,
+        )
+      }
+    """)
+    val a = r.children.single() as DocNode.Widget
+    assertEquals(mapOf("Padding.allDp" to PropValue.Lit("i", i = 8), "Flex.value" to d(1.0)), a.modifiers)
+  }
+
+  @Test fun exportKeepsAuthorModifierOrder() {
+    val r = root("""
+      Row {
+        StyledText(text = "a", modifier = Modifier.margin(Margin(all = 4.dp)).padding(8).flex(1.0))
+      }
+    """)
+    val out = exportKotlin(UiDocument("_", r, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertTrue("modifier = Modifier.margin(Margin(all = 4.dp)).padding(8).flex(1.0)," in out, out)
+  }
+
+  @Test fun exportImportsOnlyWhatTheBodyWrites() {
+    val out = exportKotlin(UiDocument("_", root("""Row {}"""), dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertTrue("import dev.keliver.layout.compose.Row\n" in out, out)
+    for (unused in listOf("Margin", "ui.dp", "Constraint", "CrossAxisAlignment", "Overflow", "Modifier")) {
+      assertFalse("import dev.keliver.$unused\n" in out || Regex("import [\\w.]*\\.$unused\n").containsMatchIn(out), out)
+    }
+  }
+
+  @Test fun numbersNeverUseExponentNotation() {
+    assertEquals("0.0001", dev.keliver.portal.kotlinDoubleLiteral(1.0E-4))
+    assertEquals("16.0", dev.keliver.portal.kotlinDoubleLiteral(16.0))
+    assertEquals("16.5", dev.keliver.portal.kotlinDoubleLiteral(16.5))
+    assertEquals("100000000000000000000.0", dev.keliver.portal.kotlinDoubleLiteral(1.0E20))
+    assertEquals("0.0000001.dp", dev.keliver.portal.kotlinDpLiteral(1.0E-7))
+    val row = DocNode.Widget(
+      dev.keliver.portal.document.Handle(1), "Row",
+      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "StyledText",
+        props = mapOf("text" to PropValue.Lit("s", s = "a")),
+        modifiers = mapOf("Flex.value" to d(1.0E-4), "Margin.margin.start" to d(1.0E-4)))),
+    )
+    val out = exportKotlin(UiDocument("_", row, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertFalse("E-" in out, out)
+    val back = (Recognizer.recognize("S.kt", out)!!.root.children.single() as DocNode.Widget).modifiers
+    assertEquals(d(1.0E-4), back["Flex.value"])
+    assertEquals(d(1.0E-4), back["Margin.margin.start"])
+  }
+
+  @Test fun negativeDpValuesNeverReachTheFile() {
+    val doc = layoutDoc()
+    // The document clamps a Dp (Margin side / Dp modifier arg) at 0.
+    val t1 = doc.apply(DocOp.SetProp(doc.root.handle, "margin.top", d(-4.0))).doc
+    assertEquals(d(0.0), (t1.root as DocNode.Widget).props["margin.top"])
+    val merged = WriteBack.merge(layoutScreen, t1)!!
+    assertEquals(layoutScreen.replace("top = 8.dp", "top = 0.dp"), merged)
+    // Even a tree that bypassed the document never prints a negative Dp.
+    assertEquals("0.dp", MarginSyntax.dpLike("8.dp", -4.0))
+    assertEquals("Dp(0.0)", MarginSyntax.dpLike("Dp(8.0)", -4.0))
+    val raw = DocNode.Widget(
+      dev.keliver.portal.document.Handle(1), "Row",
+      props = mapOf("margin.start" to d(-3.0)),
+      children = listOf(DocNode.Widget(dev.keliver.portal.document.Handle(2), "Spacer",
+        props = mapOf("width" to d(-2.0)), modifiers = mapOf("Width.width" to d(-1.0)))),
+    )
+    val out = exportKotlin(UiDocument("_", raw, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertFalse("-" in out.substringAfter("fun "), out)
+    assertTrue("width = Dp(0.0)" in out && "Modifier.width(Dp(0.0))" in out && "margin = Margin.Zero" in out, out)
+  }
+
+  @Test fun aScopedModifierUnderANonScopeParentIsNotExported() {
+    // B1 safety net: a tree that bypassed the document still exports compiling code.
+    val tree = DocNode.Widget(
+      dev.keliver.portal.document.Handle(1), "Column",
+      children = listOf(
+        DocNode.Widget(dev.keliver.portal.document.Handle(2), "StyledBox", children = listOf(
+          DocNode.Widget(dev.keliver.portal.document.Handle(3), "StyledText",
+            props = mapOf("text" to PropValue.Lit("s", s = "x")),
+            modifiers = mapOf("Flex.value" to d(1.0), "Padding.allDp" to PropValue.Lit("i", i = 2))),
+        )),
+        DocNode.Widget(dev.keliver.portal.document.Handle(4), "StyledText",
+          props = mapOf("text" to PropValue.Lit("s", s = "y")), modifiers = mapOf("Flex.value" to d(2.0))),
+      ),
+      modifiers = mapOf("Flex.value" to d(3.0)), // root: no layout parent
+    )
+    val out = exportKotlin(UiDocument("_", tree, dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree())
+    assertTrue("modifier = Modifier.padding(2)," in out, out)
+    assertTrue("modifier = Modifier.flex(2.0)," in out, out) // valid under the Column
+    assertFalse("flex(1.0)" in out || "flex(3.0)" in out, out)
+  }
+
+  @Test fun exportAfterMovingUnderANonScopeParentDropsTheModifier() {
+    val src = screen("""
+      Column {
+        Row {
+          StyledText(text = "a", modifier = Modifier.flex(1.0).padding(4))
+        }
+        StyledBox {
+        }
+      }
+    """)
+    val rec = Recognizer.recognize("S.kt", src)!!
+    val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
+    val col = doc.root as DocNode.Widget
+    val row = col.children[0] as DocNode.Widget
+    val box = col.children[1] as DocNode.Widget
+    val text = row.children.single()
+    val moved = doc.apply(DocOp.MoveNode(text.handle, box.handle, null))
+    val movedText = ((moved.doc.root as DocNode.Widget).children[1] as DocNode.Widget).children.single() as DocNode.Widget
+    assertEquals(mapOf("Padding.allDp" to PropValue.Lit("i", i = 4)), movedText.modifiers) // stripped in the doc
+    // Whatever the relay saves — surgical merge or full export — carries no flex.
+    val merged = WriteBack.merge(src, moved.doc)
+    assertTrue(merged == null || ("flex(" !in merged && "Modifier.padding(4)" in merged), merged)
+    val out = exportKotlin(moved.doc.toWidgetTree(), functionName = "S")
+    assertTrue("modifier = Modifier.padding(4)," in out, out)
+    assertFalse("flex(" in out, out)
+    // Undo restores the modifier exactly.
+    val undone = moved.doc.apply(moved.inverse!!).doc
+    assertEquals(stripHandles(doc.root), stripHandles(undone.root))
+  }
+
+  @Test fun surgicalDpModifierEditKeepsTheDpSpelling() {
+    val src = "import dev.keliver.Modifier\nimport dev.keliver.ui.Dp\nimport dev.keliver.ui.dp\n" + screen("""
+      Row {
+        StyledText(text = "a", modifier = Modifier.width(12.dp).height(Dp(10.0)))
+      }
+    """)
+    val rec = Recognizer.recognize("S.kt", src)!!
+    val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
+    val text = (doc.root as DocNode.Widget).children.single()
+    val t = doc.apply(DocOp.SetModifier(text.handle, "Width.width", d(14.5))).doc
+      .apply(DocOp.SetModifier(text.handle, "Height.height", d(11.0))).doc
+    assertEquals(src.replace("width(12.dp)", "width(14.5.dp)").replace("height(Dp(10.0))", "height(Dp(11.0))"), WriteBack.merge(src, t))
+  }
+
+  @Test fun editingAMarginZeroSourceWritesTheCanonicalMarginAndItsImport() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Row
+      import dev.keliver.ui.Margin
+
+      @Composable
+      fun S() {
+        Row(margin = Margin.Zero) {}
+      }
+    """.trimIndent() + "\n"
+    val rec = Recognizer.recognize("S.kt", src)!!
+    val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
+    val t = doc.apply(DocOp.SetProp(doc.root.handle, "margin.top", d(8.0))).doc
+    val merged = WriteBack.merge(src, t)!!
+    assertTrue("Row(margin = Margin(top = 8.dp)) {}" in merged, merged)
+    assertTrue("import dev.keliver.ui.Margin\nimport dev.keliver.ui.dp\n" in merged, merged)
+    assertFalse(containsRaw(Recognizer.recognize("S.kt", merged)!!.root))
+  }
+
+  @Test fun writeBackAddsTheImportsItsTextNeedsAndOnlyThose() {
+    val src = """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.Modifier
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.layout.compose.Row
+      import dev.keliver.material.compose.StyledText
+      import dev.keliver.ui.Dp
+      import dev.keliver.ui.Margin
+
+      @Composable
+      fun S() {
+        Column {
+          Row(margin = Margin(all = Dp(1.0))) {}
+          StyledText(text = "a", modifier = Modifier.margin(Margin(all = Dp(4.0))))
+        }
+      }
+    """.trimIndent() + "\n"
+    val rec = Recognizer.recognize("S.kt", src)!!
+    val doc = UiDocument("s", rec.root, rec.contract, 0, 0)
+    val col = doc.root as DocNode.Widget
+    val row = col.children[0]
+    val text = col.children[1]
+    val t = doc
+      .apply(DocOp.SetModifier(text.handle, "Margin.margin.start", d(6.0))).doc // all= can't say it -> canonical .dp
+      .apply(DocOp.SetModifier(text.handle, "HorizontalAlignment.alignment", PropValue.Lit("i", i = 1))).doc
+      .apply(DocOp.SetProp(row.handle, "width", PropValue.Lit("i", i = 1))).doc // a new arg: Constraint
+    val merged = WriteBack.merge(src, t)!!
+    for (fq in listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.ui.dp")) {
+      assertEquals(1, Regex("^import ${Regex.escape(fq)}$", RegexOption.MULTILINE).findAll(merged).count(), merged)
+    }
+    assertFalse("import dev.keliver.layout.api.Overflow" in merged, merged)
+    assertFalse("import dev.keliver.layout.api.MainAxisAlignment" in merged, merged)
+    // Kept sorted among the existing imports.
+    val imports = merged.lines().filter { it.startsWith("import ") }
+    assertEquals(imports.sorted(), imports)
+    val reread = Recognizer.recognize("S.kt", merged)!!
+    assertFalse(containsRaw(reread.root), merged)
+
+    // A star import already covers it; an existing same-name import is never shadowed.
+    assertEquals("import dev.keliver.ui.*\nx", WriteBack.ensureImports("import dev.keliver.ui.*\nx", setOf("dev.keliver.ui.dp")))
+    assertEquals("import foo.dp\nx", WriteBack.ensureImports("import foo.dp\nx", setOf("dev.keliver.ui.dp")))
   }
 }

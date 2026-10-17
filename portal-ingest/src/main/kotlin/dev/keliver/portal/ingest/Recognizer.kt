@@ -472,10 +472,8 @@ object Recognizer {
     // A template, raw string or concatenation is not a literal (null -> preserved as code).
     t.length >= 2 && t.startsWith('"') && t.endsWith('"') ->
       dev.keliver.portal.parseKotlinStringLiteral(t)?.let { PropValue.Lit("s", s = it) }
-    t.startsWith("Dp(") && t.endsWith(")") ->
-      t.removePrefix("Dp(").removeSuffix(")").toDoubleOrNull()?.let { PropValue.Lit("d", d = it) }
-    // K1: `16.dp` / `16.5.dp` — the same Dp, written with the extension.
-    Regex("^\\d+(?:\\.\\d+)?\\.dp$").matches(t) -> PropValue.Lit("d", d = t.removeSuffix(".dp").toDouble())
+    // A Dp: `Dp(16.0)`, or (K1) `16.dp` / `16.5.dp`. `Dp(16)` does not compile (Dp takes a Double).
+    t.startsWith("Dp(") || t.endsWith(".dp") -> MarginSyntax.parseDp(t)?.let { PropValue.Lit("d", d = it) }
     t.startsWith("listOf(") && t.endsWith(")") -> parseList(t.removePrefix("listOf(").removeSuffix(")"))
     t.startsWith("Constraint.") -> PropValue.Lit("i", i = if (t.endsWith("Fill")) 1 else 0)
     t.startsWith("CrossAxisAlignment.") -> enumLit(t, listOf("Start", "Center", "End", "Stretch"))

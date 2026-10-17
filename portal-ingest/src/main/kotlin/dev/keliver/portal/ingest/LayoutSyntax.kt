@@ -69,51 +69,59 @@ private fun skipString(t: String, open: Int): Int? {
 
 /**
  * K1: `dev.keliver.ui.Margin` values in source. Accepted (all exact):
- * `Margin.Zero`, `Margin()`, `Margin(X)` (one positional = all),
- * `Margin(all = X)`, `Margin(horizontal = X, vertical = Y)` (either alone),
- * any named subset of `start`/`end`/`top`/`bottom` (the class constructor),
- * with X as `N.dp`, `N.M.dp`, `Dp(N)`, `Dp(N.M)`. Two or more POSITIONAL
- * arguments are not grammar: `Margin(a, b)` reads as the class constructor
- * (start, end) or the (horizontal, vertical) function depending on overload
- * resolution, so the portal refuses to guess.
+ * `Margin.Zero`, `Margin()`, `Margin(all = X)`, `Margin(horizontal = X,
+ * vertical = Y)` (either alone), any named subset of `start`/`end`/`top`/
+ * `bottom` (the class constructor), and POSITIONAL forms as Kotlin's overload
+ * resolution reads them (the candidate leaving the fewest defaults unused wins):
+ * `Margin(X)` = `Margin(all = X)`, `Margin(X, Y)` = `Margin(horizontal = X,
+ * vertical = Y)`, and 3 or 4 values = the class constructor's start, end, top,
+ * bottom (its only candidate). A compiled fixture (ParityLayout.kt) pins each
+ * reading. X is `N.dp`, `N.M.dp` or `Dp(N.M)` (`Dp(N)` with an Int literal
+ * does not compile: Dp takes a Double). Mixed positional + named is not grammar.
  */
 internal object MarginSyntax {
   /** start, end, top, bottom (dp) — null when [text] is not a Margin in the grammar. */
   fun parse(text: String): DoubleArray? = parseArgs(text.trim())?.let { (form, args) -> sides(form, args) }
 
-  /** A Dp literal's value: `16.dp`, `16.0.dp`, `Dp(16)`, `Dp(16.0)`. */
+  /** A Dp literal's value: `16.dp`, `16.5.dp`, `Dp(16.0)`. Never negative. */
   fun parseDp(text: String): Double? {
     val t = text.trim()
     Regex("^(\\d+(?:\\.\\d+)?)\\.dp$").find(t)?.let { return it.groupValues[1].toDouble() }
-    Regex("^Dp\\(\\s*(\\d+(?:\\.\\d+)?)\\s*\\)$").find(t)?.let { return it.groupValues[1].toDouble() }
+    Regex("^Dp\\(\\s*(\\d+\\.\\d+)\\s*\\)$").find(t)?.let { return it.groupValues[1].toDouble() }
     return null
   }
 
   private enum class Form { ZERO, ALL, AXES, SIDES }
 
-  /** The recognized form + its args (offsets relative to [t]). */
-  private fun parseArgs(t: String): Pair<Form, List<SourceArg>>? {
+  /** The recognized form + its args keyed by LOGICAL name ("all", "horizontal", "start", …). */
+  private fun parseArgs(t: String): Pair<Form, List<Pair<String, SourceArg>>>? {
     if (t == "Margin.Zero") return Form.ZERO to emptyList()
     if (!t.startsWith("Margin(") || !t.endsWith(")")) return null
     val args = splitArgs(t.substring(7, t.length - 1), 7) ?: return null
-    if (args.isEmpty()) return Form.ZERO to args
+    if (args.isEmpty()) return Form.ZERO to emptyList()
     if (args.any { parseDp(it.value) == null }) return null
-    val positional = args.filter { it.name == null }
-    if (positional.isNotEmpty()) {
-      return if (args.size == 1) Form.ALL to args else null
+    if (args.all { it.name == null }) {
+      return when (args.size) {
+        1 -> Form.ALL to listOf("all" to args[0])
+        2 -> Form.AXES to listOf("horizontal" to args[0], "vertical" to args[1])
+        3, 4 -> Form.SIDES to args.mapIndexed { i, a -> MARGIN_SIDES[i] to a }
+        else -> null
+      }
     }
+    if (args.any { it.name == null }) return null // mixed positional + named
     val names = args.map { it.name!! }
     if (names.toSet().size != names.size) return null
+    val named = args.map { it.name!! to it }
     return when {
-      names == listOf("all") -> Form.ALL to args
-      names.all { it == "horizontal" || it == "vertical" } -> Form.AXES to args
-      names.all { it in MARGIN_SIDES } -> Form.SIDES to args
+      names == listOf("all") -> Form.ALL to named
+      names.all { it == "horizontal" || it == "vertical" } -> Form.AXES to named
+      names.all { it in MARGIN_SIDES } -> Form.SIDES to named
       else -> null
     }
   }
 
-  private fun sides(form: Form, args: List<SourceArg>): DoubleArray {
-    val v = args.associate { (it.name ?: "all") to parseDp(it.value)!! }
+  private fun sides(form: Form, args: List<Pair<String, SourceArg>>): DoubleArray {
+    val v = args.associate { (name, arg) -> name to parseDp(arg.value)!! }
     return when (form) {
       Form.ZERO -> DoubleArray(4)
       Form.ALL -> DoubleArray(4) { v.getValue("all") }
@@ -130,46 +138,50 @@ internal object MarginSyntax {
    * Surgical edit of a Margin expression: rewrite only the VALUE texts of the
    * arguments whose side changed, keeping the author's form and Dp style.
    * Null when the change does not fit the existing form (e.g. a side that is
-   * not written, or `all = X` with now-unequal sides) — the caller then
-   * replaces the whole expression with the canonical one.
+   * not written, `Margin.Zero`, or `all = X` with now-unequal sides) — the
+   * caller then replaces the whole expression with the canonical one.
    */
   fun surgical(text: String, old: DoubleArray, new: DoubleArray): String? {
     val (form, args) = parseArgs(text) ?: return null
+    fun arg(name: String) = args.firstOrNull { it.first == name }?.second
     val edits = mutableListOf<Pair<SourceArg, Double>>()
     when (form) {
       Form.ZERO -> return null
       Form.ALL -> {
         if (new.any { it != new[0] }) return null
-        edits += args.single() to new[0]
+        edits += arg("all")!! to new[0]
       }
       Form.AXES -> {
         if (new[0] != new[1] || new[2] != new[3]) return null
         for ((axis, idx) in listOf("horizontal" to 0, "vertical" to 2)) {
           if (old[idx] == new[idx]) continue
-          edits += (args.firstOrNull { it.name == axis } ?: return null) to new[idx]
+          edits += (arg(axis) ?: return null) to new[idx]
         }
       }
       Form.SIDES -> {
         for ((idx, side) in MARGIN_SIDES.withIndex()) {
           if (old[idx] == new[idx]) continue
-          edits += (args.firstOrNull { it.name == side } ?: return null) to new[idx]
+          edits += (arg(side) ?: return null) to new[idx]
         }
       }
     }
     var out = text
-    for ((arg, v) in edits.sortedByDescending { it.first.start }) {
-      out = out.substring(0, arg.start) + dpLike(arg.value, v) + out.substring(arg.end)
+    for ((a, v) in edits.sortedByDescending { it.first.start }) {
+      out = out.substring(0, a.start) + dpLike(a.value, v) + out.substring(a.end)
     }
     return out
   }
 
-  /** [v] written in the same Dp style as [previous] (`N.dp` or `Dp(N.0)`). */
-  private fun dpLike(previous: String, v: Double): String {
-    val whole = v % 1.0 == 0.0 && v < 1e15
+  /**
+   * [v] written in the same Dp style as [previous] (`N.dp` or `Dp(N.0)`),
+   * clamped at 0 (Dp is non-negative) and never in exponent notation.
+   */
+  fun dpLike(previous: String, v: Double): String {
+    val c = if (v.isFinite()) v.coerceAtLeast(0.0) else 0.0
     return if (previous.trim().startsWith("Dp(")) {
-      "Dp(" + (if (whole) "${v.toLong()}.0" else "$v") + ")"
+      "Dp(${dev.keliver.portal.kotlinDoubleLiteral(c)})"
     } else {
-      (if (whole) "${v.toLong()}" else "$v") + ".dp"
+      dev.keliver.portal.kotlinDpLiteral(c)
     }
   }
 }
@@ -314,10 +326,13 @@ internal object ModifierChain {
         if (argKeys.all { old[it] == new[it] }) continue
         val arg = seg.segment.args[j]
         val canonArg = canon?.firstOrNull { it.spec.name == spec.name }?.segment?.args?.getOrNull(j)?.value
-        val replacement = if (spec.argTypes.getOrNull(j) == "Margin") {
-          MarginSyntax.surgical(arg.value, sidesOf(old, argKeys), sidesOf(new, argKeys)) ?: canonArg
-        } else {
-          canonArg
+        val newDp = if (spec.argTypes.getOrNull(j) == "Dp") (new[argKeys.single()] as? PropValue.Lit)?.d else null
+        val replacement = when {
+          spec.argTypes.getOrNull(j) == "Margin" ->
+            MarginSyntax.surgical(arg.value, sidesOf(old, argKeys), sidesOf(new, argKeys)) ?: canonArg
+          // A Dp keeps the author's spelling (`12.dp` stays `.dp`).
+          newDp != null -> MarginSyntax.dpLike(arg.value, newDp)
+          else -> canonArg
         } ?: return null
         edits += arg to replacement
       }
@@ -329,9 +344,17 @@ internal object ModifierChain {
     return out
   }
 
+  /** Skips whitespace AND comments between chain links (`Modifier.a()\n  // why\n  .b()`). */
   private fun skipWs(t: String, from: Int): Int {
     var i = from
-    while (i < t.length && t[i].isWhitespace()) i++
+    while (i < t.length) {
+      when {
+        t[i].isWhitespace() -> i++
+        t.startsWith("//", i) -> i = t.indexOf('\n', i).let { if (it < 0) t.length else it + 1 }
+        t.startsWith("/*", i) -> i = t.indexOf("*/", i + 2).let { if (it < 0) return t.length + 1 else it + 2 }
+        else -> return i
+      }
+    }
     return i
   }
 

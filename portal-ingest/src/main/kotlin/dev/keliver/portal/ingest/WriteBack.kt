@@ -31,8 +31,64 @@ object WriteBack {
     // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return null
-    if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
-    return file.text
+    val written = StringBuilder()
+    inserted.set(written)
+    try {
+      if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
+    } finally {
+      inserted.remove()
+    }
+    // K1: the text write-back added may name symbols the file never imported
+    // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
+    return ensureImports(file.text, dev.keliver.portal.requiredImports(written.toString()))
+  }
+
+  /** Every source text this merge splices in (for [ensureImports]); per thread, per merge. */
+  private val inserted = ThreadLocal<StringBuilder>()
+
+  private fun record(text: String): String {
+    inserted.get()?.append(text)?.append('\n')
+    return text
+  }
+
+  /**
+   * Adds `import <fq>` for each of [fqs] the file lacks — skipping ones already
+   * imported, covered by a star import, in the file's own package, or whose
+   * simple name the file already imports from elsewhere (never create a clash).
+   * Each lands at its sorted position among the imports. Adds only.
+   */
+  internal fun ensureImports(text: String, fqs: Set<String>): String {
+    if (fqs.isEmpty()) return text
+    val importRe = Regex("""^import\s+([\w.]+?)(\.\*)?(?:\s+as\s+(\w+))?\s*$""", RegexOption.MULTILINE)
+    val exact = mutableSetOf<String>()
+    val stars = mutableSetOf<String>()
+    val simpleNames = mutableSetOf<String>()
+    for (m in importRe.findAll(text)) {
+      val (path, star, alias) = m.destructured
+      if (star.isNotEmpty()) {
+        stars += path
+      } else {
+        exact += path
+        simpleNames += alias.ifEmpty { path.substringAfterLast('.') }
+      }
+    }
+    val pkg = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE).find(text)?.groupValues?.get(1)
+    val needed = fqs.filter { fq ->
+      val owner = fq.substringBeforeLast('.')
+      fq !in exact && owner !in stars && owner != pkg && fq.substringAfterLast('.') !in simpleNames
+    }.sorted()
+    if (needed.isEmpty()) return text
+    val lines = text.lines().toMutableList()
+    for (fq in needed) {
+      val line = "import $fq"
+      val importIdx = lines.indices.filter { lines[it].startsWith("import ") }
+      val at = when {
+        importIdx.isEmpty() -> lines.indexOfFirst { it.startsWith("package ") }.let { if (it >= 0) it + 1 else 0 }
+        else -> importIdx.firstOrNull { lines[it] > line } ?: (importIdx.last() + 1)
+      }
+      lines.add(at, line)
+    }
+    return lines.joinToString("\n")
   }
 
   /** True = merged surgically; false = bail to full export. */
@@ -76,11 +132,12 @@ object WriteBack {
     if (parsed.props != target.props || parsed.modifiers != target.modifiers) {
       if (!editArgumentValues(call, parsed, target, factory, components, parentType)) {
         val oldList = call.valueArgumentList ?: return false
-        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call), components)
+        var callText = NodeEmitter.statementText(target.copy(children = emptyList()), indentOf(call), components, parentType)
         if ('\n' !in oldList.text) callText = collapseCall(callText)
         val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
+        record(newList.text)
       }
     }
 
@@ -139,7 +196,7 @@ object WriteBack {
       if (matchOf[ti] != null) continue
       val anchorTargetIdx = (ti - 1 downTo 0).firstOrNull { matchOf[it] != null }
       val anchorPsi = anchorTargetIdx?.let { psi[parsedChildren[matchOf[it]!!].handle.v] }
-      insertStatement(block, tc, anchorPsi, factory, components)
+      insertStatement(block, tc, anchorPsi, factory, components, parentType)
     }
     return true
   }
@@ -165,20 +222,22 @@ object WriteBack {
     after: KtExpression?,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
   ) {
+    fun text(indent: String) = record(NodeEmitter.statementText(node, indent, components, parentType))
     // P0 indent fix: every insertion carries "\n" + the destination indent, and
     // the statement text itself is emitted re-indented to that depth (the old
     // bare createNewLine() left inserted/shifted lines at column 0).
     if (after != null) {
       val indent = indentOf(after)
-      val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
+      val stmt = factory.createExpression(text(indent))
       val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), after)
       block.addAfter(stmt, ws)
     } else {
       val first = block.statements.firstOrNull()
       if (first != null) {
         val indent = indentOf(first)
-        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
+        val stmt = factory.createExpression(text(indent))
         val inserted = block.addBefore(stmt, first)
         block.addAfter(factory.createWhiteSpace("\n$indent"), inserted)
       } else {
@@ -191,7 +250,7 @@ object WriteBack {
           ?: owningCall(block)?.let(::indentOf)
           ?: lineLeadingIndent(block)
         val indent = "$braceIndent  "
-        val stmt = factory.createExpression(NodeEmitter.statementText(node, indent, components))
+        val stmt = factory.createExpression(text(indent))
         val inserted = block.addAfter(stmt, block.lBrace)
         val leading = factory.createWhiteSpace("\n$indent")
         val trailing = factory.createWhiteSpace("\n$braceIndent")
@@ -234,7 +293,7 @@ object WriteBack {
     if (parsedArgs.keys != targetArgs.keys) return false
     // Canonical values come from the emitter so write-back matches a fresh export.
     val canonical = factory.createExpression(
-      NodeEmitter.statementText(target.copy(children = emptyList()), "", components),
+      NodeEmitter.statementText(target.copy(children = emptyList()), "", components, parentType),
     ) as? KtCallExpression ?: return false
     val newByName = canonical.valueArguments.associateBy(
       { it.getArgumentName()?.asName?.asString() },
@@ -254,7 +313,9 @@ object WriteBack {
         MarginSyntax.surgical(oldExpr.text, sidesOf(parsed.props, sideKeys), sidesOf(target.props, sideKeys))
           ?: canonicalText
       } else {
-        canonicalText
+        // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
+        val v = (target.props[name] as? dev.keliver.portal.document.PropValue.Lit)?.d
+        if (v != null && MarginSyntax.parseDp(oldExpr.text) != null) MarginSyntax.dpLike(oldExpr.text, v) else canonicalText
       } ?: return false
       edits += oldExpr to text
     }
@@ -266,7 +327,7 @@ object WriteBack {
       edits += oldExpr to text
     }
     for ((oldExpr, text) in edits) {
-      if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
+      if (oldExpr.text != text) oldExpr.replace(factory.createExpression(record(text)))
     }
     return true
   }
