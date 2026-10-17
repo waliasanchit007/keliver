@@ -28,6 +28,7 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
+import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
@@ -1658,7 +1659,8 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     }
   }
   rowEl.appendChild(input)
-  if (kind in BINDABLE && keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
+  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
+  if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
 }
 
@@ -1678,12 +1680,20 @@ private fun renderMods() {
   // Modifiers currently on the node (any prop key "mod.<Name>" or "mod.<Name>.<prop>").
   val onNode = node.props.keys.filter { it.startsWith("mod.") }
     .map { it.removePrefix("mod.").substringBefore('.') }.distinct().sorted()
+  // K1: scoped layout modifiers (flex, margin, …) only exist inside their
+  // parent's content lambda — offer them only under a Row/Column/Box they fit.
+  val parentType = scopeParentType(portalTree.value, node.id)
 
   onNode.forEach { name ->
     val spec = modifierSpecs.firstOrNull { it.name == name }
     val chip = Ui.el("div", "mod-chip")
     val head = Ui.el("div", "mod-head")
     head.appendChild(Ui.el("span", "t", name))
+    if (spec != null && !spec.isValidUnder(parentType)) {
+      val warn = Ui.el("span", "muted", " · no effect here (needs a ${spec.scopes.joinToString("/")} parent)")
+      warn.setAttribute("title", "scoped layout modifier: only meaningful inside ${spec.scopes.joinToString(", ")}")
+      head.appendChild(warn)
+    }
     val x = Ui.el("span", "x", "✕")
     x.addEventListener("click", { _ ->
       val keys = node.props.keys.filter { it == "mod.$name" || it.startsWith("mod.$name.") }
@@ -1700,7 +1710,7 @@ private fun renderMods() {
   // Add-modifier control.
   val addRow = Ui.el("div", "row")
   val sel = Ui.select()
-  val available = modifierSpecs.map { it.name }.filter { it !in onNode }
+  val available = modifiersOfferedUnder(parentType).filter { it !in onNode }
   available.forEach { name ->
     val o = document.createElement("option") as HTMLOptionElement
     o.value = name; o.textContent = name
@@ -1715,12 +1725,17 @@ private fun renderMods() {
         mapOf(name to true)
       } else {
         spec.props.associate { p ->
-          "$name.${p.name}" to when (p.kind) {
-            PropKind.Int -> 8
-            PropKind.Double -> 8.0
-            PropKind.Bool -> true
-            PropKind.Color -> 0xFF8B7CF7.toInt()
-            else -> ""
+          "$name.${p.name}" to when {
+            // flex/grow/shrink weights start at 1; alignments at Start (0).
+            p.kind == PropKind.Double && p.name == "value" -> 1.0
+            p.kind == PropKind.Int && "Alignment" in spec.argTypes.joinToString() -> 0
+            else -> when (p.kind) {
+              PropKind.Int -> 8
+              PropKind.Double -> 8.0
+              PropKind.Bool -> true
+              PropKind.Color -> 0xFF8B7CF7.toInt()
+              else -> ""
+            }
           }
         }
       }
