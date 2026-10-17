@@ -45,8 +45,13 @@ public sealed interface PropValue {
   public data class Token(val ref: String, val value: Lit, val import: String? = null) : PropValue
 }
 
-/** Convenience constructor mirroring the V1 tree's prop kinds. */
+/**
+ * Convenience constructor mirroring the V1 tree's prop kinds. A Long has no
+ * tag and fits no prop: it is refused rather than silently stringified (a
+ * Long design token written as a Text would not compile).
+ */
 public fun lit(v: Any?): PropValue.Lit = when (v) {
+  is Long -> throw IllegalArgumentException("a Long fits no portal prop: $v")
   is String -> PropValue.Lit("s", s = v)
   is Int -> PropValue.Lit("i", i = v)
   is Double -> PropValue.Lit("d", d = v)
