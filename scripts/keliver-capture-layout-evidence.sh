@@ -130,7 +130,7 @@ start_services() {
     step "Serving evidence-mode editor on :$EDITOR_PORT"
     (
       cd "$ROOT/web-spike/build/dist/wasmJs/developmentExecutable"
-      python3 -m http.server "$EDITOR_PORT"
+      python3 -m http.server --bind 127.0.0.1 "$EDITOR_PORT"
     ) >"$ROOT/build/k3-editor.log" 2>&1 &
     owned_pids+=("$!")
     editor_started=true
@@ -141,7 +141,7 @@ start_services() {
     step "Serving development guest on :$ZIPLINE_PORT"
     (
       cd "$ROOT/portal-device-guest/build/zipline/Development"
-      python3 -m http.server "$ZIPLINE_PORT"
+      python3 -m http.server --bind 127.0.0.1 "$ZIPLINE_PORT"
     ) >"$ROOT/build/k3-zipline.log" 2>&1 &
     owned_pids+=("$!")
     zipline_started=true

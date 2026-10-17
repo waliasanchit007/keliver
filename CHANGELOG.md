@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+### Security
+- **portal-relay, keliver-portal, keliver-dev.sh:** the relay and the editor's file server listen on
+  127.0.0.1 only (KNOWN_BUGS U35). They listened on every interface, so anyone on the local network
+  could read the relay and use its edit, write-back and publish endpoints. `KELIVER_RELAY_BIND=all`
+  opts the relay in to every interface (a physical phone on the same Wi-Fi); the relay and both
+  launchers then say so, and any other value is refused. The relay also refuses to start when
+  something already answers on its port.
+- **portal-relay:** a web page in the developer's browser can no longer drive the relay (KNOWN_BUGS
+  U36). Every endpoint answered `Access-Control-Allow-Origin: *` and nothing checked `Host`, so any
+  page on any site, and a DNS-rebinding page, could read the relay and call its write endpoints,
+  whichever interface it listened on. Every request now passes one check before its handler: `Host`
+  must name this machine, a request with an `Origin` must come from a loopback origin (echoed, never
+  `*`), and a no-`Origin` request a browser marks cross-site is refused. `/undo` and `/redo` take
+  POST only.
+
 ### Added
 - **portal (relay, editor, render, ingest, core):** the editor canvas shows more of what the
   phone shows (K5; see `docs/EDITOR_FIDELITY.md`).

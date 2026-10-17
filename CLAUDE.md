@@ -52,7 +52,7 @@ schemas change, CI has a staleness guard).
 **Dev loop (current):** relay `PORTAL_REPO=$PWD ./gradlew :portal-relay:run`
 (:8077; boot-scans screens+components, watches logic/, debounce-rebuilds the
 preview editor and promotes ON SUCCESS to `build/portal-editor-live`). Serve
-the editor with `python3 -m http.server 8096` FROM `build/portal-editor-live`
+the editor with `python3 -m http.server --bind 127.0.0.1 8096` FROM `build/portal-editor-live`
 (the promoted last-known-good — NOT web-spike/build/dist directly; serving
 from the wrong dir = white screen, app .wasm 404s). `GET /preview-build` =
 build status. Config paths in keliver.portal.json point at

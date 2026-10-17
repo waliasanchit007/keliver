@@ -197,9 +197,13 @@ The harness installs debug builds, plus one R8 release signed with the debug key
   - The iPhone has no `adb reverse`, so `localhost` on the phone is the phone
     itself.
   - Use the §3 real-certificate server (recommended), or for a Debug build
-    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. macOS may ask
-    whether Java may accept incoming connections: allow it, or the phone gets
-    no answer (the relay listens on all interfaces).
+    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. From the first tools
+    release that carries KNOWN_BUGS U35/U36, the relay listens on this Mac only
+    unless started with `KELIVER_RELAY_BIND=all` (tools 0.3.10 and earlier
+    listen on every interface anyway). With it, anyone on that Wi-Fi can reach
+    the relay's edit and publish endpoints, so use it only on a network you
+    trust and only for this step. macOS may ask whether Java may accept
+    incoming connections: allow it, or the phone gets no answer.
   - With a LAN IP, scaffold with `--bundle-server http://<LAN IP>:8077`, so the
     ATS exception names that host. Accept the **Local Network** prompt on the
     first launch. That prompt appears inside the script's first 40-second
