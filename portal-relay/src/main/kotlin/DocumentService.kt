@@ -176,9 +176,11 @@ class DocumentService(
    *    (remove it), a clash with another of the document's tokens (undo it);
    *  - DROPPED ("failed (step dropped)") when it never can: the tree can no
    *    longer take the inverse (as before K2), or the file's OWN imports name
-   *    a different owner — write-back only adds imports, so only a hand edit
-   *    clears that, and it arrives as an external change that clears both
-   *    stacks anyway. Keeping such a step would wedge the stack.
+   *    a different owner — surgical write-back only adds imports, so usually
+   *    only a hand edit clears that, and it arrives as an external change that
+   *    clears both stacks anyway. (A whole-file export can drop an unused
+   *    import, so such a step might have applied later: dropping is the
+   *    chosen trade against a stack wedged behind it.)
    */
   private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: () -> ArrayDeque<List<DocOp>>): OpAck {
     val inverses = from?.lastOrNull()

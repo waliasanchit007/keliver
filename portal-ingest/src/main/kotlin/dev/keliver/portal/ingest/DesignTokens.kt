@@ -247,10 +247,11 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     bindingIssue(text, fileName, tokens, pending)?.message
 
   /**
-   * Why [bindingProblem] refused, and what can clear it. Write-back only ever
-   * ADDS imports, so a refusal caused by the file's own import text
-   * ([BindingCause.FILE_IMPORT]) clears only when someone edits the file by
-   * hand; every other cause can clear without that (a declaration removed
+   * Why [bindingProblem] refused, and what can clear it. Surgical write-back
+   * only ADDS imports, so a refusal caused by the file's own import text
+   * ([BindingCause.FILE_IMPORT]) usually clears only when someone edits the
+   * file by hand (a whole-file export can also drop an unused import); every
+   * other cause can clear without that (a declaration removed
    * elsewhere, the document's other tokens changed, a token restored).
    */
   class BindingIssue(val message: String, val cause: BindingCause)

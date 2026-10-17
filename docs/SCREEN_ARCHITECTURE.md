@@ -416,16 +416,24 @@ fun SectionCard(content: @Composable () -> Unit) {
     clear without a hand edit of the screen file — a token missing or unfit,
     a same-package or star-imported owner declared since, a clash with
     another token the document holds — keeps the step on its stack ("undo
-    blocked (step kept)"), and it applies once that is resolved. A refusal
-    caused by the file's own imports (it already imports a different `C`,
-    exactly or as an alias) drops the step ("undo failed (step dropped)"):
-    write-back only adds imports, so only a hand edit clears it, and that
-    arrives as an external change that clears both stacks anyway. A step the
+    blocked (step kept)"), and it applies once that is resolved. (A clash
+    with another token usually lasts only until that token's import is
+    written back; from then on it is the file's own import, below.) A
+    refusal caused by the file's own imports (it already imports a different
+    `C`, exactly or as an alias) drops the step ("undo failed (step
+    dropped)"): surgical write-back only adds imports, so usually only a hand
+    edit clears it, and that arrives as an external change that clears both
+    stacks anyway. A whole-file export (the fallback when a surgical merge
+    is not possible) rebuilds the imports and can remove an unused one, so a
+    dropped step might have applied later; dropping is the deliberate trade
+    against a stack wedged behind a step that may never apply. A step the
     tree can no longer take is dropped the same way. The gate and undo/redo
-    are what keep two owners of one simple name out of a document; if one is
-    forced past them, write-back (surgical or the full-export fallback)
-    writes both imports and the result is a conflicting-import compile error,
-    never a silent rebinding. (`portal-relay`
+    are what keep two owners of one simple name out of a document; if two
+    *missing* exact imports are forced past them, write-back (surgical or
+    the full-export fallback) writes both and the result is a
+    conflicting-import compile error. Write-back does not guard every other
+    shape (an owner covered by a star import or the package beside an
+    explicit one); the gate does. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
     (`ParityTokens.kt`) renders the same value tree as the interpreted golden
     (`portal-render` `TokenParityTest`).

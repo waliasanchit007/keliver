@@ -245,6 +245,38 @@ class DesignTokenResolutionTest {
     assertNull(two.bindingProblem(plain, "app/other/S.kt", listOf(xInk), pending = setOf("x.C")))
   }
 
+  // Undo/redo drop a step only for FILE_IMPORT (the relay's DocumentService.step).
+  @Test fun everyRefusalNamesItsCause() {
+    val table = TokenTable.scan(
+      listOf(
+        "app/components/Tokens.kt" to tokensKt,
+        "app/screens/C.kt" to "package app.screens\nobject C { const val Ink = 7; const val Muted = 8 }\n",
+        "x/C.kt" to "package x\nobject C { const val Ink = 9 }\n",
+        "q/C.kt" to "package q\nobject C { const val Muted = 8 }\n",
+      ),
+    )
+    val ink = PropValue.Token("C.Ink", lit(-14737633), "app.components.C")
+    val xInk = PropValue.Token("C.Ink", lit(9), "x.C")
+    val qMuted = PropValue.Token("C.Muted", lit(8), "q.C")
+    val plain = screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other")
+    fun cause(text: String, tokens: List<PropValue.Token>, pending: Set<String> = emptySet(), file: String = "app/other/S.kt") =
+      table.bindingIssue(text, file, tokens, pending)?.cause
+
+    assertEquals(null, cause(plain, listOf(ink)))
+    assertEquals(TokenTable.BindingCause.FILE_IMPORT, cause(screen("StyledText(text = \"a\")", listOf("x.C"), pkg = "app.other"), listOf(ink)))
+    assertEquals(TokenTable.BindingCause.FILE_IMPORT, cause(screen("StyledText(text = \"a\")", listOf("x.C as C"), pkg = "app.other"), listOf(qMuted)))
+    assertEquals(TokenTable.BindingCause.DOCUMENT_IMPORT, cause(plain, listOf(qMuted), pending = setOf("x.C")))
+    assertEquals(TokenTable.BindingCause.BATCH, cause(plain, listOf(xInk, qMuted)))
+    assertEquals(TokenTable.BindingCause.SHADOWED, cause(screen("StyledText(text = \"a\")", emptyList(), pkg = "app.other", params = "C: Int"), listOf(ink)))
+    assertEquals(TokenTable.BindingCause.UNKNOWN, cause(plain, listOf(PropValue.Token("C.Nope", lit(1), "app.components.C"))))
+    // Importing app.components.C would rebind the screen package's C.Muted.
+    assertEquals(TokenTable.BindingCause.REBINDS, cause(screen("StyledText(text = \"a\", colorArgb = C.Muted)", emptyList()), listOf(ink), file = "app/screens/S.kt"))
+    // Star-covered, but the screen's own package declares C since: it binds there.
+    assertEquals(TokenTable.BindingCause.MISBOUND, cause(screen("StyledText(text = \"a\")", listOf("app.components.*")), listOf(ink), file = "app/screens/S.kt"))
+    // The message is the same refusal bindingProblem gives.
+    assertEquals(table.bindingProblem(plain, "app/other/S.kt", listOf(xInk, qMuted)), table.bindingIssue(plain, "app/other/S.kt", listOf(xInk, qMuted))?.message)
+  }
+
   @Test fun importingADefaultImportedNameTheFileUsesIsRefused() {
     val pair = TokenTable.scan(listOf("app/components/Pair.kt" to "package app.components\nobject Pair { const val Gap = 4 }\n"))
     val token = PropValue.Token("Pair.Gap", lit(4), "app.components.Pair")
