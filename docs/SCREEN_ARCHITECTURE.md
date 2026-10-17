@@ -326,51 +326,87 @@ fun SectionCard(content: @Composable () -> Unit) {
   - *What is a token.* A `const val`, or a `val` whose initializer is a
     compile-time constant, declared at top level or in a top-level `object`
     in the scanned sources: the screens and components dirs, plus any
-    `tokensDirs` (keliver.portal.json, scanned recursively). Its value is
+    `tokensDirs` (keliver.portal.json — repo-relative or absolute, scanned
+    recursively; a missing entry is skipped, never created). Its value is
     computed at ingest: Int/Long/Double/Boolean literals (negative, hex,
-    binary, `_` separators) and String literals, templates (`"$WEB/x.png"`,
-    `"${A}b"`) and `+` concatenations made only of other constants —
-    transitively, with cycle detection. A declared type is honoured (`val X:
-    Long = 7` is a Long). Anything else (a function call, `listOf(…)`, a
-    `Float`, a cycle, an unknown name) does not resolve.
+    binary, `_` separators; finite only), `<Int or Long constant>.toInt()` —
+    the ARGB idiom `0xFF1F1F1F.toInt()`, with Kotlin's two's complement — and
+    String literals, templates (`"$WEB/x.png"`, `"${A}b"`) and `+`
+    concatenations of other String/Int/Long/Boolean constants, transitively,
+    with cycle detection. A Double is never rendered into a String (Kotlin/JVM
+    and Kotlin/JS print it differently). A declared type is honoured (`val X:
+    Long = 7` is a Long). Anything else does not resolve; known conservative
+    misses: a `Float`, a `Char` (so `"${'$'}"`), other conversions
+    (`toLong()`), arithmetic, and `-2147483648` (read as a Long, so declared
+    `Int` it is not a token).
   - *How a reference resolves.* `Owner.Name` (one qualifier) or a bare
-    top-level `Name`, found the way Kotlin finds it: an explicit import, then
-    the file's own package, then a star import (inside an object, its own
-    members first). Aliased imports are not followed. Visibility is Kotlin's:
-    a `private` constant evaluates (others may be built from it) but can be
-    referenced only inside its object (a private top-level one only in its
-    file), and is never offered by the editor; `internal`/public are fine.
+    top-level `Name`, bound the way Kotlin binds it: a name the composable
+    binds first — any of its parameters, any lambda parameter (a Repeat item
+    variable, the implicit `it`), any local or destructured name anywhere in
+    the function — is never a token (conservatively for the whole function);
+    an aliased import (`import q.C as Colors`) is never followed and shadows
+    what it names; then an explicit import, then the file's own package (ANY
+    top-level declaration of the name there — a class, a typealias, a
+    function, in a scanned file or the referencing file — beats a star import,
+    and wins over a token elsewhere), then exactly one star-imported package
+    declaring the name. A same-package declaration in a file OUTSIDE the
+    scanned dirs is not known to the portal. Visibility is Kotlin's, per file
+    (a file's identity is its repo-relative path): a `private` constant
+    evaluates (others may be built from it) but can be referenced only inside
+    its object (a private top-level one only in its file); a private object's
+    constants only in its file; `internal`/public are fine.
   - *Where it fits.* Only where source takes a plain literal of the token's
     own type: an Int token on an Int or Color prop, a String on Text, a
     Double on Double, a Boolean on Bool — for widget props, material modifier
     arguments (`background(C.Ink)`), scoped Double arguments (`flex(C.W)`)
     and project-component parameters. Never a `Dp` (`Spacer(height = …)`,
-    Margin sides, `width(…)`), a `Float`, an enum (`Constraint`, alignments) or
-    a list — Kotlin converts none of them, so those stay literals; a token
-    there, or an unknown, private, cyclic or wrong-kind reference, keeps the
-    call RawCode rather than becoming silently wrong. Event-action arguments
-    and component signature defaults are not token sites (a default that
-    references a token previews as its value).
+    Margin sides, `width(…)`), a `Float`, an enum (`Constraint`, alignments), a
+    list, or a Long (no portal prop holds one) — Kotlin converts none of them,
+    so those stay literals; a token there, or an unknown, private, cyclic or
+    wrong-kind reference, keeps the call RawCode rather than becoming silently
+    wrong. Event-action arguments and component signature defaults are not
+    token sites (a default that references a token previews as its value).
   - *On the wire.* `PropValue.Token(ref, value, import)`: the reference as
     written, the resolved literal, and the declaration a file must import. The
     canvas renders the value; export and write-back write the reference (an
-    unchanged one is never touched; a changed argument is written by the
-    exporter, adding `import <pkg>.<Owner>` structurally — no duplicate, star
-    imports and the file's own package respected). Detaching writes the
-    literal. The device tree carries the literal under its usual tag plus a
-    `"token"` key, so an older device guest renders the value.
-  - *When a declaration changes.* The relay rebuilds its token table on any
-    change under the scanned dirs; if anything resolution observes changed,
-    components rebuild and every screen is re-recognized from its file: a new
-    value updates the canvas; a token that vanished or changed kind turns the
-    argument's call RawCode. `GET /tokens` lists every exported token (ref,
-    kind, value, package, import, declaring file, `ambiguous` when the same
-    `Owner.Name` exists in two packages — such a token is never offered).
+    unchanged one is never touched; a changed argument — a prop or a modifier
+    argument, including a modifier added with a token — is written by the
+    exporter, adding `import <pkg>.<Owner>` and whatever the modifier needs,
+    taken from the token itself, not the text; no duplicate, star imports and
+    the file's own package respected). Detaching writes the literal. The
+    device tree carries the literal under its usual tag plus a `"token"` key,
+    so an older device guest renders the value.
+  - *When a declaration changes.* The relay re-scans (re-parsing only files
+    whose mtime or size changed; never for its own write-back); if anything
+    resolution observes changed, components rebuild and every screen is
+    re-recognized from its file: a new value updates the canvas; a token that
+    vanished or changed kind turns the argument's call RawCode. Change events
+    carry the token table's version, so an open editor refreshes its picker
+    even when no document changed. `GET /tokens` lists every exported token a
+    prop can hold (ref, kind, value, package, import, declaring file,
+    `ambiguous` when the same `Owner.Name` exists in two packages — the
+    picker does not offer those).
   - *The server owns token values.* A client names a token by `ref` +
-    `import`; the relay refuses one it does not offer and replaces the value
-    with its own (`portal-relay` `DesignTokenRelayTest`). A compiled fixture
+    `import`. The relay accepts one that is of a literal kind, not private in
+    its object, and exported — or in a private object of the target file
+    itself; it replaces the value with its own BEFORE any check (a stale or
+    forged client value never decides a fit); and it refuses a token that
+    would not mean the chosen declaration in the target file (the file
+    imports a different owner of that name) or whose import would change what
+    an existing reference means (the name is declared in the file's package,
+    star-imported, aliased or declared in the file). An ambiguous reference is
+    accepted when it binds correctly. Undo/redo re-read token values and are
+    refused when a token no longer exists. (`portal-relay`
+    `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
     (`ParityTokens.kt`) renders the same value tree as the interpreted golden
     (`portal-render` `TokenParityTest`).
+  - *Editors that predate tokens.* The relay sends `PropValue.Token` only to
+    a client that asks with `GET /doc?…&tokens=1` (this release's editor and
+    MCP server do); an older per-app editor gets the literal values, renders
+    them, and its edits to other props leave the references in the document
+    and the file (a prop it rewrites becomes a literal). Libraries (the
+    per-app editor) and the tools bundle (relay) release independently: a new
+    editor against an old relay simply sees no tokens.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add

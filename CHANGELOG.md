@@ -39,7 +39,17 @@
   directly sees a `Token`); `PropValue` has a fourth subclass (an exhaustive `when` over it in
   consumer code needs a branch); a component signature default that references a token now
   previews as its value instead of null; a tree-bootstrapped relay document now passes its
-  component registry to write-back.
+  component registry to write-back; `lit(Long)` now throws instead of producing a String literal.
+  Review hardening: a reference is a token only where Kotlin binds it (parameters, lambda
+  parameters, locals, aliases and same-package declarations shadow); values are exact on every
+  target (no Double rendered into a String, finite literals only, `0xFFxxxxxx.toInt()` supported); the
+  relay checks fits on its own values, refuses a token that would mean something else in the
+  target file (or rebind an existing reference), re-reads token values on undo/redo, routes a
+  screen edit as a screen even under a `tokensDirs` ancestor, re-parses only changed files, and
+  identifies files by repo-relative path. **Release pairing:** `GET /doc` serves `PropValue.Token`
+  only to clients that send `tokens=1` (this release's editor and MCP server); an older per-app
+  editor (a library release) is served literal values and keeps working against a newer relay
+  (a tools release), and a newer editor against an older relay sees no tokens.
 - **portal (codegen, ingest, document, exporter, render, editor):** layout is portal grammar (D9).
   A layout widget's `margin = Margin(…)` and layout's scoped modifiers (`flex`, `grow`, `shrink`,
   `margin`, `width`, `height`, `size(Dp, Dp)`, `horizontalAlignment`, `verticalAlignment`) no
