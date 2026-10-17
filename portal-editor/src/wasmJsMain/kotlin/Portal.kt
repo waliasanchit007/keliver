@@ -218,6 +218,7 @@ private fun enterPlayground() {
   if (playground) return
   playground = true
   runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay unavailable in playground mode")
+  PreviewAssetRouting.loaded(emptySet())
   saveTextEl.textContent = "playground — edits are local to this tab"
   PreviewBindings.mocks.putAll(demoMocks)
   mountPlaygroundStrip()
@@ -1221,6 +1222,7 @@ private fun restoreSnapshotIfAny(): Boolean {
 private fun loadWorkspace() {
   startPreviewBuildPoll()
   loadRuntimeMetadata()
+  loadPreviewAssetHosts()
   serverGet("/active") { txt ->
     runCatching {
       val o = Json.parseToJsonElement(txt).jsonObject
@@ -1269,6 +1271,17 @@ private fun loadRuntimeMetadata() {
     runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay request failed")
     renderMockFidelity()
   })
+  xhr.send()
+}
+
+/** K5: which image hosts the relay serves for the canvas (none from an older relay). */
+private fun loadPreviewAssetHosts() {
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/preview-assets")
+  xhr.addEventListener("load", { _ ->
+    PreviewAssetRouting.loaded(if (xhr.status.toInt() == 200) parsePreviewAssetHosts(xhr.responseText) else emptySet())
+  })
+  xhr.addEventListener("error", { _ -> PreviewAssetRouting.loaded(emptySet()) })
   xhr.send()
 }
 
