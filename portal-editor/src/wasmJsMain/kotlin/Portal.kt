@@ -28,6 +28,7 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
+import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
@@ -1713,6 +1714,14 @@ private fun renderMods() {
       chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name."))
     }
     modsEl.appendChild(chip)
+  }
+
+  // K1: a component instance takes modifiers only if its signature declares
+  // `modifier: Modifier` (the relay refuses them otherwise).
+  val comp = editorComponents.spec(node.type)
+  if (comp != null && !comp.acceptsModifier) {
+    modsEl.appendChild(Ui.el("div", "muted", "${node.type} has no `modifier: Modifier` parameter"))
+    return
   }
 
   // Add-modifier control.

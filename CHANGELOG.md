@@ -21,18 +21,23 @@
   (`RenderNode(node, scope)`, `componentPreviewInScope`). Layout's `Size` collides with
   material's and is catalogued as `LayoutSize` (source stays `Modifier.size(…)`); `size(12, 12)`
   inside a Row is still material's. The document refuses a scoped modifier outside its scope and
-  strips the ones a move/insert invalidates (undo restores them); the exporter drops any left
-  outside a valid parent, so saved code compiles. Dp values (Dp props, Margin sides, Dp modifier
+  strips the ones a move/insert invalidates (undo re-applies only the stripped entries to the live
+  nodes); the exporter drops any left outside a valid parent, so saved code compiles. A
+  component instance takes modifiers only when its signature declares `modifier: Modifier`. Dp values (Dp props, Margin sides, Dp modifier
   args) are clamped at 0 by the editor, document, exporter, write-back and preview alike. Modifier
   chains keep their author order end to end. Margin and modifier edits write back surgically
   (only the changed side or argument; a Dp keeps its `.dp`/`Dp(…)` spelling), and write-back now
-  adds the imports its inserted text needs. Exported files import only what they use. Numbers are
+  adds the imports its inserted text needs. Exported files import only what they use (imports
+  are derived structurally from what is emitted). Numbers are
   written without exponent notation. `16.dp` is accepted wherever `Dp(16.0)` was.
   `ModifierSpec` gains `scopes`, `extension` and `argTypes` and is now a regular class; its
   constructor, `component1/2` and two-argument `copy` are kept (binary compatible). New
   portal-core helpers: `isValidUnder`, `isDpProp`/`dpPropKeys`, `MARGIN_SIDES`, `marginProps`,
-  `modifierSupportImports`, `requiredImports`, `kotlinDoubleLiteral`, `kotlinDpLiteral`.
-  **Behaviour changes:** a Row/Column/Box `margin` that was silently dropped from the preview is
+  `modifierSupportImports`, `acceptsModifier`, `kotlinDoubleLiteral`, `kotlinDpLiteral`;
+  portal-document: `isClientOp` (engine-internal undo ops are refused by the relay's dry run and
+  submit alike).
+  **Behaviour changes:** a component instance's `mod.*` entries were exported as invalid named
+  arguments (`mod.Flex.value = 1.0`) and are no longer; a Row/Column/Box `margin` that was silently dropped from the preview is
   now rendered; the preview applies modifiers in author order (it was alphabetical); exported
   files no longer import unused layout types; `Dp(16)` (an Int literal, which does not compile) is
   now RawCode; a repeated modifier in one chain (`.flex(1.0).flex(2.0)`) and a Double/Float

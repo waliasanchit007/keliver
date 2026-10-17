@@ -270,16 +270,32 @@ fun SectionCard(content: @Composable () -> Unit) {
   - *What you see is what is saved, and saved code compiles.* The document
     refuses a scoped modifier on a node whose parent is not one of its scopes,
     and a move/insert that puts a node under such a parent strips the scoped
-    modifiers that became invalid (undo restores them). As a safety net the
-    exporter writes a scoped modifier only under a valid parent; the preview
-    likewise ignores it elsewhere.
+    modifiers that became invalid. Undo moves the node back and re-applies
+    only the stripped entries to the nodes as they are NOW — a node another
+    session deleted or moved under a non-scope parent since is skipped, and an
+    entry another session set since is kept — never a snapshot of the old
+    subtree. As a safety net the exporter writes a scoped modifier only under
+    a valid parent; the preview likewise ignores it elsewhere.
+  - *A legacy off-scope entry* (from a document saved before these rules):
+    it shows in the panel as "no effect here and not saved"; editing its value
+    is refused, removing it works, and undoing that removal is refused too —
+    the document never re-creates an invalid entry. The next save drops it.
+  - *Component instances* take modifiers only when the component's signature
+    declares a `modifier: Modifier` parameter: they are then written as
+    `modifier = Modifier…`; otherwise the relay refuses them (SetModifier, or
+    an inserted instance carrying them) and the exporter never writes them.
   - *Order and imports.* Modifiers keep their AUTHOR order through ingest,
-    the document, export and the preview (scoped and unscoped mixed). Exported
-    code and surgical write-back import exactly what the written text uses
-    (`Margin`, `dp`, `Dp`, `CrossAxisAlignment`, composables, top-level
-    modifier extensions — never a scoped one, they are scope members); write-
-    back never adds an import a star import already covers or one whose simple
-    name the file imports from elsewhere. A surgical Dp edit keeps the
+    the document, export and the preview (scoped and unscoped mixed). Imports
+    are derived STRUCTURALLY from what is emitted, never by matching names
+    over text: the exporter records each widget, modifier (a top-level
+    extension only — a scoped one is a scope member, so layout's `size` never
+    pulls in material's) and literal type it writes; surgical write-back
+    derives a fragment's imports from the grammar that produced it (Margin
+    form, Dp spelling, modifier spec and argument types). Write-back adds a
+    missing import at its sorted place (after `package`, or after `@file:`
+    annotations when there is no package), never one an exact or star import
+    already covers — trailing comments, `;` and backticks included — and
+    never one whose simple name the file imports from elsewhere. A surgical Dp edit keeps the
     author's spelling (`12.dp` stays `.dp`, `Dp(10.0)` stays `Dp(…)`).
   - The editor offers a scoped modifier only under one of its scopes, and the
     preview applies it with the parent's receiver, so preview and device build
