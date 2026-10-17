@@ -69,13 +69,13 @@ public val composableImport: Map<String, String> = mapOf(
 )
 
 public val supportImports: Map<String, List<String>> = mapOf(
-  "Box" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment"),
-  "Column" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.Overflow"),
-  "Row" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.Overflow"),
+  "Box" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.CrossAxisAlignment"),
+  "Column" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.Overflow", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment"),
+  "Row" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.Overflow", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.CrossAxisAlignment"),
   "Spacer" to listOf("dev.keliver.ui.Dp"),
 )
 
-/** modifier name -> the import its extension function needs in exported code. */
+/** modifier name -> the import its extension function needs in exported code. Scoped modifiers are scope members: no import. */
 public val modifierImport: Map<String, String> = mapOf(
   "Alpha" to "dev.keliver.material.compose.alpha",
   "AnimateContentSize" to "dev.keliver.material.compose.animateContentSize",
@@ -96,6 +96,16 @@ public val modifierImport: Map<String, String> = mapOf(
   "Scale" to "dev.keliver.material.compose.scale",
   "Shadow" to "dev.keliver.material.compose.shadow",
   "Size" to "dev.keliver.material.compose.size",
+)
+
+/** modifier name -> imports its ARGUMENT literals need in exported code (Dp, Margin, CrossAxisAlignment, ...). */
+public val modifierSupportImports: Map<String, List<String>> = mapOf(
+  "Height" to listOf("dev.keliver.ui.Dp"),
+  "HorizontalAlignment" to listOf("dev.keliver.layout.api.CrossAxisAlignment"),
+  "LayoutSize" to listOf("dev.keliver.ui.Dp"),
+  "Margin" to listOf("dev.keliver.ui.Margin", "dev.keliver.ui.dp"),
+  "VerticalAlignment" to listOf("dev.keliver.layout.api.CrossAxisAlignment"),
+  "Width" to listOf("dev.keliver.ui.Dp"),
 )
 
 /** "Widget.event" -> the single param's Kotlin type (typed action contracts, P2). */
@@ -203,6 +213,30 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
   else -> "MainAxisAlignment.Start"
 }
 
+// K1: a Margin value rides as four Double sides "<prefix>.start/.end/.top/.bottom"
+// (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
+// so a negative side is written as 0.
+private fun marginSide(node: WidgetNode, key: String): Double =
+  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
+private fun fmtDpValue(v: Double): String =
+  if (v % 1.0 == 0.0 && v < 1e15) "${v.toLong()}.dp" else "$v.dp"
+private fun fmtMargin(node: WidgetNode, prefix: String): String {
+  val s = marginSide(node, "$prefix.start")
+  val e = marginSide(node, "$prefix.end")
+  val t = marginSide(node, "$prefix.top")
+  val b = marginSide(node, "$prefix.bottom")
+  return when {
+    s == 0.0 && e == 0.0 && t == 0.0 && b == 0.0 -> "Margin.Zero"
+    s == e && e == t && t == b -> "Margin(all = ${fmtDpValue(s)})"
+    s == e && t == b -> listOfNotNull(
+      if (s != 0.0) "horizontal = ${fmtDpValue(s)}" else null,
+      if (t != 0.0) "vertical = ${fmtDpValue(t)}" else null,
+    ).joinToString(", ", "Margin(", ")")
+    else -> listOf("start" to s, "end" to e, "top" to t, "bottom" to b).filter { it.second != 0.0 }
+      .joinToString(", ", "Margin(", ")") { "${it.first} = ${fmtDpValue(it.second)}" }
+  }
+}
+
 public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen", components: ComponentRegistry = EmptyComponentRegistry): String {
   val used = mutableSetOf<String>()
   collectTypes(tree, used)
@@ -216,7 +250,7 @@ public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen
   val hasContract = !contract.isEmpty || logicFields.isNotEmpty()
   val sb = StringBuilder()
   sb.append("import androidx.compose.runtime.Composable\n")
-  val modImports = usedMods.mapNotNull { modifierImport[it] } + (if (usedMods.isNotEmpty()) listOf("dev.keliver.Modifier") else emptyList())
+  val modImports = usedMods.mapNotNull { modifierImport[it] } + usedMods.flatMap { modifierSupportImports[it] ?: emptyList() } + (if (usedMods.isNotEmpty()) listOf("dev.keliver.Modifier") else emptyList())
   val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()
   imports.forEach { sb.append("import $it\n") }
   val param = if (!hasContract) "" else "b: ${functionName}Bindings"
@@ -256,14 +290,23 @@ private fun modifierExpr(node: WidgetNode): String? {
   if (node.props["mod.FillMaxHeight"] == true) parts += "fillMaxHeight()"
   if (node.props["mod.FillMaxSize"] == true) parts += "fillMaxSize()"
   if (node.props["mod.FillWidth"] == true) parts += "fillWidth()"
+  if ("mod.Flex.value" in node.props) parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")"
   if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"
+  if ("mod.Grow.value" in node.props) parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")"
+  if ("mod.Height.height" in node.props) parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"
+  if ("mod.HorizontalAlignment.alignment" in node.props) parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"
+  if ("mod.LayoutSize.width" in node.props || "mod.LayoutSize.height" in node.props) parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"
+  if ("mod.Margin.margin.start" in node.props || "mod.Margin.margin.end" in node.props || "mod.Margin.margin.top" in node.props || "mod.Margin.margin.bottom" in node.props) parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"
   if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"
   if ("mod.Padding.allDp" in node.props) parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"
   if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"
   if ("mod.Rotate.degrees" in node.props) parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"
   if ("mod.Scale.percent" in node.props) parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"
   if ("mod.Shadow.elevationDp" in node.props) parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"
+  if ("mod.Shrink.value" in node.props) parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")"
   if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"
+  if ("mod.VerticalAlignment.alignment" in node.props) parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"
+  if ("mod.Width.width" in node.props) parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"
   return if (parts.isEmpty()) null else "Modifier." + parts.joinToString(".")
 }
 
@@ -358,6 +401,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
       if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")
       sb.append("$indent) {\n")
@@ -416,6 +460,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
       if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
       if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtMainAxis(node.props["verticalAlignment"])},\n")
@@ -648,6 +693,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
       if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n")
       if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
       if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtMainAxis(node.props["horizontalAlignment"])},\n")
       if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")

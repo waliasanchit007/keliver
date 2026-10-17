@@ -16,17 +16,17 @@ private fun literalExpr(p: MappedProp): String {
     MappedKind.CROSS_AXIS -> "fmtCrossAxis($v)"
     MappedKind.MAIN_AXIS -> "fmtMainAxis($v)"
     MappedKind.OVERFLOW -> "fmtOverflow($v)"
+    MappedKind.MARGIN -> "fmtMargin(node, \"${p.name}\")"
   }
 }
 
+/** The exporter's "is this prop set on the node?" test (a MARGIN is set when any side is). */
+private fun presenceExpr(key: String, kind: MappedKind): String =
+  wireKeys(key, kind).joinToString(" || ") { "\"$it\" in node.props" }
+
 /** Support imports the EXPORTED code needs when a widget with these kinds is used. */
-private fun supportImports(w: WidgetPlan.Include): List<String> = buildList {
-  if (w.props.any { it.kind == MappedKind.DP }) add("dev.keliver.ui.Dp")
-  if (w.props.any { it.kind == MappedKind.CONSTRAINT }) add("dev.keliver.layout.api.Constraint")
-  if (w.props.any { it.kind == MappedKind.CROSS_AXIS }) add("dev.keliver.layout.api.CrossAxisAlignment")
-  if (w.props.any { it.kind == MappedKind.MAIN_AXIS }) add("dev.keliver.layout.api.MainAxisAlignment")
-  if (w.props.any { it.kind == MappedKind.OVERFLOW }) add("dev.keliver.layout.api.Overflow")
-}
+private fun supportImports(w: WidgetPlan.Include): List<String> =
+  w.props.flatMap { kindImports(it.kind) }.distinct()
 
 /** The exported-literal expression for a modifier prop at tree key [key]. */
 private fun modLiteralExpr(kind: MappedKind, key: String): String {
@@ -45,6 +45,7 @@ private fun modLiteralExpr(kind: MappedKind, key: String): String {
     MappedKind.CROSS_AXIS -> "fmtCrossAxis($v)"
     MappedKind.MAIN_AXIS -> "fmtMainAxis($v)"
     MappedKind.OVERFLOW -> "fmtOverflow($v)"
+    MappedKind.MARGIN -> "fmtMargin(node, \"$key\")"
   }
 }
 
@@ -65,9 +66,17 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   }
   appendLine(")")
   appendLine()
-  appendLine("/** modifier name -> the import its extension function needs in exported code. */")
+  appendLine("/** modifier name -> the import its extension function needs in exported code. Scoped modifiers are scope members: no import. */")
   appendLine("public val modifierImport: Map<String, String> = mapOf(")
-  for (m in mods) appendLine("  \"${m.name}\" to \"${m.composePackage}.${m.extensionName}\",")
+  for (m in mods) if (!m.isScoped) appendLine("  \"${m.name}\" to \"${m.composePackage}.${m.extensionName}\",")
+  appendLine(")")
+  appendLine()
+  appendLine("/** modifier name -> imports its ARGUMENT literals need in exported code (Dp, Margin, CrossAxisAlignment, ...). */")
+  appendLine("public val modifierSupportImports: Map<String, List<String>> = mapOf(")
+  for (m in mods) {
+    val sup = m.props.flatMap { kindImports(it.kind) }.distinct()
+    if (sup.isNotEmpty()) appendLine("  \"${m.name}\" to listOf(${sup.joinToString(", ") { "\"$it\"" }}),")
+  }
   appendLine(")")
   appendLine()
   appendLine("/** \"Widget.event\" -> the single param's Kotlin type (typed action contracts, P2). */")
@@ -174,6 +183,30 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  5 -> "MainAxisAlignment.SpaceEvenly"
     |  else -> "MainAxisAlignment.Start"
     |}
+    |
+    |// K1: a Margin value rides as four Double sides "<prefix>.start/.end/.top/.bottom"
+    |// (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
+    |// so a negative side is written as 0.
+    |private fun marginSide(node: WidgetNode, key: String): Double =
+    |  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
+    |private fun fmtDpValue(v: Double): String =
+    |  if (v % 1.0 == 0.0 && v < 1e15) "${'$'}{v.toLong()}.dp" else "${'$'}v.dp"
+    |private fun fmtMargin(node: WidgetNode, prefix: String): String {
+    |  val s = marginSide(node, "${'$'}prefix.start")
+    |  val e = marginSide(node, "${'$'}prefix.end")
+    |  val t = marginSide(node, "${'$'}prefix.top")
+    |  val b = marginSide(node, "${'$'}prefix.bottom")
+    |  return when {
+    |    s == 0.0 && e == 0.0 && t == 0.0 && b == 0.0 -> "Margin.Zero"
+    |    s == e && e == t && t == b -> "Margin(all = ${'$'}{fmtDpValue(s)})"
+    |    s == e && t == b -> listOfNotNull(
+    |      if (s != 0.0) "horizontal = ${'$'}{fmtDpValue(s)}" else null,
+    |      if (t != 0.0) "vertical = ${'$'}{fmtDpValue(t)}" else null,
+    |    ).joinToString(", ", "Margin(", ")")
+    |    else -> listOf("start" to s, "end" to e, "top" to t, "bottom" to b).filter { it.second != 0.0 }
+    |      .joinToString(", ", "Margin(", ")") { "${'$'}{it.first} = ${'$'}{fmtDpValue(it.second)}" }
+    |  }
+    |}
     """.trimMargin(),
   )
   appendLine()
@@ -190,7 +223,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  val hasContract = !contract.isEmpty || logicFields.isNotEmpty()")
   appendLine("  val sb = StringBuilder()")
   appendLine("  sb.append(\"import androidx.compose.runtime.Composable\\n\")")
-  appendLine("  val modImports = usedMods.mapNotNull { modifierImport[it] } + (if (usedMods.isNotEmpty()) listOf(\"dev.keliver.Modifier\") else emptyList())")
+  appendLine("  val modImports = usedMods.mapNotNull { modifierImport[it] } + usedMods.flatMap { modifierSupportImports[it] ?: emptyList() } + (if (usedMods.isNotEmpty()) listOf(\"dev.keliver.Modifier\") else emptyList())")
   appendLine("  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()")
   appendLine("  imports.forEach { sb.append(\"import \$it\\n\") }")
   appendLine("  val param = if (!hasContract) \"\" else \"b: \${functionName}Bindings\"")
@@ -224,7 +257,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
       if (mod.props.isEmpty()) {
         appendLine("  if (node.props[\"mod.${mod.name}\"] == true) parts += \"${mod.extensionName}()\"")
       } else {
-        val presence = mod.props.joinToString(" || ") { "\"mod.${mod.name}.${it.name}\" in node.props" }
+        val presence = mod.props.joinToString(" || ") { presenceExpr("mod.${mod.name}.${it.name}", it.kind) }
         val args = mod.props.joinToString(" + \", \" + ") { p -> modLiteralExpr(p.kind, "mod.${mod.name}.${p.name}") }
         appendLine("  if ($presence) parts += \"${mod.extensionName}(\" + $args + \")\"")
       }
@@ -259,7 +292,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
       if (p.required) {
         appendLine("      sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")")
       } else {
-        appendLine("      if (\"${p.name}\" in node.props) sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")")
+        appendLine("      if (${presenceExpr(p.name, p.kind)}) sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")")
       }
     }
     for (e in w.events) {

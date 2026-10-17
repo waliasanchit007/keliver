@@ -7,7 +7,43 @@ import dev.keliver.tooling.schema.Widget
  * The portal's supported property kinds — the bridge between schema trait types
  * and what the WidgetNode tree wire format (i/d/b/s/li/lf tags) can carry.
  */
-enum class MappedKind { TEXT, INT, BOOL, DOUBLE, FLOAT, INT_LIST, FLOAT_LIST, STRING_LIST, DP, CONSTRAINT, CROSS_AXIS, MAIN_AXIS, OVERFLOW }
+enum class MappedKind { TEXT, INT, BOOL, DOUBLE, FLOAT, INT_LIST, FLOAT_LIST, STRING_LIST, DP, CONSTRAINT, CROSS_AXIS, MAIN_AXIS, OVERFLOW, MARGIN }
+
+/** The four Double sub-props a MARGIN value rides as (`<prop>.start` …). Mirrors portal-core MARGIN_SIDES. */
+internal val MARGIN_SIDES = listOf("start", "end", "top", "bottom")
+
+/** The wire keys a prop occupies: itself, or its four sides for a MARGIN. */
+internal fun wireKeys(name: String, kind: MappedKind): List<String> =
+  if (kind == MappedKind.MARGIN) MARGIN_SIDES.map { "$name.$it" } else listOf(name)
+
+/** The Kotlin source type of a mapped kind (ModifierSpec.argTypes). */
+internal fun sourceType(kind: MappedKind): String = when (kind) {
+  MappedKind.TEXT -> "String"
+  MappedKind.INT -> "Int"
+  MappedKind.BOOL -> "Boolean"
+  MappedKind.DOUBLE -> "Double"
+  MappedKind.FLOAT -> "Float"
+  MappedKind.INT_LIST -> "List<Int>"
+  MappedKind.FLOAT_LIST -> "List<Float>"
+  MappedKind.STRING_LIST -> "List<String>"
+  MappedKind.DP -> "Dp"
+  MappedKind.CONSTRAINT -> "Constraint"
+  MappedKind.CROSS_AXIS -> "CrossAxisAlignment"
+  MappedKind.MAIN_AXIS -> "MainAxisAlignment"
+  MappedKind.OVERFLOW -> "Overflow"
+  MappedKind.MARGIN -> "Margin"
+}
+
+/** Imports exported code needs to WRITE a literal of this kind. */
+internal fun kindImports(kind: MappedKind): List<String> = when (kind) {
+  MappedKind.DP -> listOf("dev.keliver.ui.Dp")
+  MappedKind.CONSTRAINT -> listOf("dev.keliver.layout.api.Constraint")
+  MappedKind.CROSS_AXIS -> listOf("dev.keliver.layout.api.CrossAxisAlignment")
+  MappedKind.MAIN_AXIS -> listOf("dev.keliver.layout.api.MainAxisAlignment")
+  MappedKind.OVERFLOW -> listOf("dev.keliver.layout.api.Overflow")
+  MappedKind.MARGIN -> listOf("dev.keliver.ui.Margin", "dev.keliver.ui.dp")
+  else -> emptyList()
+}
 
 data class MappedProp(
   val name: String,
@@ -41,6 +77,8 @@ sealed interface WidgetPlan {
     val skippedProps: List<String>, // unsupported-with-default, omitted from calls
     val events: List<EventPlan>,    // nullable events, wired to Action props
     val hasChildren: Boolean,
+    /** The children lambda's receiver scope's simple name ("RowScope"), null when it has none. */
+    val childScope: String? = null,
   ) : WidgetPlan
 
   data class Exclude(val name: String, val reason: String) : WidgetPlan
@@ -65,6 +103,7 @@ internal fun mapType(t: FqType): MappedKind? = when {
   t.key() == "dev.keliver.layout.api.CrossAxisAlignment" -> MappedKind.CROSS_AXIS
   t.key() == "dev.keliver.layout.api.MainAxisAlignment" -> MappedKind.MAIN_AXIS
   t.key() == "dev.keliver.layout.api.Overflow" -> MappedKind.OVERFLOW
+  t.key() == "dev.keliver.ui.Margin" -> MappedKind.MARGIN
   else -> null
 }
 
@@ -95,18 +134,28 @@ internal fun mainAxisDefault(e: String?): Int = when {
 /**
  * A modifier the portal can offer. Rides on nodes as namespaced props:
  * `"mod.Padding.allDp" to 12`, or `"mod.AnimateContentSize" to true` for
- * object (flag) modifiers. Unscoped modifiers only — scoped ones (layout's
- * margin/flex/…) need parent-scope awareness, deferred.
+ * object (flag) modifiers.
+ *
+ * Scoped modifiers (layout's flex/margin/width/…) carry [scopes] — the scope
+ * objects' simple names ("RowScope"). In compose they are member extensions
+ * of `<composePackage>.<Scope>`, so exported code needs no import for them,
+ * and the preview applies them `with(scope)` of the parent's content lambda.
+ * The parent WIDGET a scope belongs to is the scope name minus "Scope".
  */
 data class ModPlan(
-  val name: String,           // e.g. "Padding"
+  val name: String,           // catalog/wire name, e.g. "Padding" (or "LayoutSize" after a collision rename)
   val extensionName: String,  // e.g. "padding" — the generated Modifier extension
-  val composePackage: String, // where the extension lives
+  val composePackage: String, // where the extension (or its scope interfaces) lives
   val props: List<MappedProp>, // empty for object modifiers (flags)
-)
+  val scopes: List<String> = emptyList(), // e.g. ["RowScope", "ColumnScope"]; empty = unscoped
+) {
+  val isScoped: Boolean get() = scopes.isNotEmpty()
+
+  /** Parent widget simple names this modifier is valid under ("Row", "Column", "Box"). */
+  val parentTypes: List<String> get() = scopes.map { it.removeSuffix("Scope") }
+}
 
 fun planModifier(composePackage: String, modifier: dev.keliver.tooling.schema.Modifier): ModPlan? {
-  if (modifier.scopes.isNotEmpty()) return null // unscoped only
   val name = modifier.type.names.last()
   if (name == "Reuse") return null // internal recycling marker, not a style
   val props = mutableListOf<MappedProp>()
@@ -114,7 +163,23 @@ fun planModifier(composePackage: String, modifier: dev.keliver.tooling.schema.Mo
     val kind = mapType(p.type) ?: return null // any unsupported prop -> skip modifier
     props += MappedProp(p.name, kind, required = p.defaultExpression == null, defaultExpr = p.defaultExpression)
   }
-  return ModPlan(name, name.replaceFirstChar { it.lowercase() }, composePackage, props)
+  return ModPlan(
+    name,
+    name.replaceFirstChar { it.lowercase() },
+    composePackage,
+    props,
+    scopes = modifier.scopes.map { it.names.last() },
+  )
+}
+
+/**
+ * Gives every scoped modifier whose name collides with an unscoped one a
+ * distinct catalog/wire name ("Layout" + name). Its extension name is kept:
+ * in source both are `Modifier.size(…)`, told apart by scope and arg types.
+ */
+fun disambiguateModifiers(mods: List<ModPlan>): List<ModPlan> {
+  val unscoped = mods.filter { !it.isScoped }.map { it.name }.toSet()
+  return mods.map { m -> if (m.isScoped && m.name in unscoped) m.copy(name = "Layout${m.name}") else m }
 }
 
 fun planWidget(composePackage: String, category: String, widget: Widget): WidgetPlan {
@@ -123,6 +188,7 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
   val skipped = mutableListOf<String>()
   val events = mutableListOf<EventPlan>()
   var childrenCount = 0
+  var childScope: String? = null
   for (trait in widget.traits) {
     when (trait) {
       is Widget.Property -> {
@@ -144,12 +210,15 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
           trait.parameters.singleOrNull()?.type?.let { mapEventParamType(it) },
         )
       }
-      is Widget.Children -> childrenCount++
+      is Widget.Children -> {
+        childrenCount++
+        childScope = trait.scope?.names?.last()
+      }
       // Protocol* trait interfaces extend Property/Event/Children, so the
       // branches above already match them — this only satisfies exhaustiveness.
       else -> {}
     }
   }
   if (childrenCount > 1) return WidgetPlan.Exclude(name, "multiple children slots ($childrenCount)")
-  return WidgetPlan.Include(name, composePackage, category, props, skipped, events, childrenCount == 1)
+  return WidgetPlan.Include(name, composePackage, category, props, skipped, events, childrenCount == 1, childScope)
 }

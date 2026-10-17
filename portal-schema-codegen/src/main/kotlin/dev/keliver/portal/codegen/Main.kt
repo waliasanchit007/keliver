@@ -46,11 +46,15 @@ fun main(argv: Array<String>) {
   val includes = plans.values.filterIsInstance<WidgetPlan.Include>()
   val excluded = plans.values.filterIsInstance<WidgetPlan.Exclude>()
 
-  // Unscoped modifiers (material's live at top level; layout's are scoped -> skipped).
-  val mods = (
-    material.schema.modifiers.map { it to "dev.keliver.material.compose" } +
-      layout.schema.modifiers.map { it to "dev.keliver.layout.compose" }
-    ).mapNotNull { (m, pkg) -> planModifier(pkg, m) }
+  // Material's modifiers are top-level extensions; layout's are SCOPED (members
+  // of RowScope/ColumnScope/BoxScope) and carry their scopes. A scoped name that
+  // collides with an unscoped one (layout Size vs material Size) is renamed.
+  val mods = disambiguateModifiers(
+    (
+      material.schema.modifiers.map { it to "dev.keliver.material.compose" } +
+        layout.schema.modifiers.map { it to "dev.keliver.layout.compose" }
+      ).mapNotNull { (m, pkg) -> planModifier(pkg, m) },
+  )
 
   // P3-11: portal-INTERNAL modifiers render in the preview (RenderNode) but are
   // invisible to users — not in the palette/prop-panel (catalog) and never

@@ -2,6 +2,7 @@ package dev.keliver.portal.codegen
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertFalse
 
 class EmitExporterTest {
   private val text = WidgetPlan.Include(
@@ -46,5 +47,32 @@ class EmitExporterTest {
     assertContains(src, "if (\"mod.Padding.allDp\" in node.props) parts += \"padding(\" + fmtInt(node.props[\"mod.Padding.allDp\"]) + \")\"")
     assertContains(src, "modifierExpr(node)?.let { sb.append(\"\${indent}  modifier = \$it,\\n\") }")
     assertContains(src, "collectModifierNames")
+  }
+
+  @Test fun scopedModifiersExportWithoutAnImportButWithTheirArgTypes() {
+    val flex = ModPlan("Flex", "flex", "dev.keliver.layout.compose",
+      listOf(MappedProp("value", MappedKind.DOUBLE, required = true, defaultExpr = null)),
+      scopes = listOf("RowScope", "ColumnScope"))
+    val margin = ModPlan("Margin", "margin", "dev.keliver.layout.compose",
+      listOf(MappedProp("margin", MappedKind.MARGIN, required = true, defaultExpr = null)),
+      scopes = listOf("RowScope", "ColumnScope", "BoxScope"))
+    val width = ModPlan("Width", "width", "dev.keliver.layout.compose",
+      listOf(MappedProp("width", MappedKind.DP, required = true, defaultExpr = null)),
+      scopes = listOf("RowScope"))
+    val src = emitExporter(listOf(text), listOf(flex, margin, width))
+    val imports = src.substringAfter("public val modifierImport").substringBefore("\n)\n")
+    assertFalse("flex" in imports, imports)
+    assertContains(src, "\"Margin\" to listOf(\"dev.keliver.ui.Margin\", \"dev.keliver.ui.dp\"),")
+    assertContains(src, "\"Width\" to listOf(\"dev.keliver.ui.Dp\"),")
+    assertContains(src, "parts += \"flex(\" + fmtDouble(node.props[\"mod.Flex.value\"]) + \")\"")
+    assertContains(src, "\"mod.Margin.margin.start\" in node.props || \"mod.Margin.margin.end\" in node.props")
+    assertContains(src, "parts += \"margin(\" + fmtMargin(node, \"mod.Margin.margin\") + \")\"")
+  }
+
+  @Test fun marginWidgetPropIsPresentWhenAnySideIs() {
+    val row = box.copy(name = "Row", props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")))
+    val src = emitExporter(listOf(row))
+    assertContains(src, "if (\"margin.start\" in node.props || \"margin.end\" in node.props || \"margin.top\" in node.props || \"margin.bottom\" in node.props) sb.append(\"\${indent}  margin = \${fmtMargin(node, \"margin\")},\\n\")")
+    assertContains(src, "\"Row\" to listOf(\"dev.keliver.ui.Margin\", \"dev.keliver.ui.dp\")")
   }
 }

@@ -29,4 +29,28 @@ class EmitCatalogTest {
     assertContains(src, "\"text\" to \"New StyledText\"")
     assertContains(src, "fun editableProps(type: String): List<PropSpec>")
   }
+
+  @Test fun marginIsCataloguedAsFourDoubleSides() {
+    val row = card.copy(name = "Row", category = "Layout",
+      props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")))
+    val src = emitCatalog(listOf(row))
+    for (side in listOf("start", "end", "top", "bottom")) {
+      assertContains(src, "PropSpec(\"margin.$side\", PropKind.Double, \"Margin $side\")")
+    }
+  }
+
+  @Test fun scopedModifierSpecsCarryScopesExtensionAndArgTypes() {
+    val size = ModPlan("Size", "size", "dev.keliver.material.compose", listOf(
+      MappedProp("widthDp", MappedKind.INT, required = true, defaultExpr = null),
+      MappedProp("heightDp", MappedKind.INT, required = true, defaultExpr = null),
+    ))
+    val layoutSize = ModPlan("Size", "size", "dev.keliver.layout.compose", listOf(
+      MappedProp("width", MappedKind.DP, required = true, defaultExpr = null),
+      MappedProp("height", MappedKind.DP, required = true, defaultExpr = null),
+    ), scopes = listOf("RowScope", "ColumnScope", "BoxScope"))
+    val mods = disambiguateModifiers(listOf(size, layoutSize))
+    val src = emitCatalog(emptyList(), mods)
+    assertContains(src, "ModifierSpec(\"Size\", listOf(PropSpec(\"widthDp\", PropKind.Int, \"Width dp\"), PropSpec(\"heightDp\", PropKind.Int, \"Height dp\")), argTypes = listOf(\"Int\", \"Int\")),")
+    assertContains(src, "ModifierSpec(\"LayoutSize\", listOf(PropSpec(\"width\", PropKind.Double, \"Width\"), PropSpec(\"height\", PropKind.Double, \"Height\")), scopes = listOf(\"Row\", \"Column\", \"Box\"), extension = \"size\", argTypes = listOf(\"Dp\", \"Dp\")),")
+  }
 }

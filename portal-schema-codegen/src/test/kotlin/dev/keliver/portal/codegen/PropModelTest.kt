@@ -76,10 +76,15 @@ class PropModelTest {
     assertEquals("padding", plan.extensionName)
     assertEquals(listOf("allDp"), plan.props.map { it.name })
 
+    // K1: scoped (layout) modifiers are planned, carrying their scopes.
     val scoped = FakeModifier(fq("dev.keliver.layout", "Margin"),
-      scopes = listOf(fq("dev.keliver.layout", "RowScope")),
-      properties = emptyList())
-    assertEquals(null, planModifier("dev.keliver.layout.compose", scoped))
+      scopes = listOf(fq("dev.keliver.layout", "RowScope"), fq("dev.keliver.layout", "BoxScope")),
+      properties = listOf(FakeModifierProperty("margin", fq("dev.keliver.ui", "Margin"))))
+    val scopedPlan = planModifier("dev.keliver.layout.compose", scoped)!!
+    assertEquals(listOf("RowScope", "BoxScope"), scopedPlan.scopes)
+    assertEquals(listOf("Row", "Box"), scopedPlan.parentTypes)
+    assertEquals(MappedKind.MARGIN, scopedPlan.props.single().kind)
+    assertEquals("margin", scopedPlan.extensionName)
 
     val flag = FakeModifier(fq("dev.keliver.material", "AnimateContentSize"))
     assertEquals("animateContentSize", planModifier("dev.keliver.material.compose", flag)!!.extensionName)
@@ -87,6 +92,34 @@ class PropModelTest {
     val unsupported = FakeModifier(fq("dev.keliver.material", "Weird"),
       properties = listOf(FakeModifierProperty("thing", fq("dev.keliver.material.api", "TextSpan"))))
     assertEquals(null, planModifier("dev.keliver.material.compose", unsupported))
+  }
+
+  @Test fun scopedNameCollisionIsRenamedButKeepsItsExtension() {
+    val material = FakeModifier(fq("dev.keliver.material", "Size"), properties = listOf(
+      FakeModifierProperty("widthDp", fq("kotlin", "Int")), FakeModifierProperty("heightDp", fq("kotlin", "Int"))))
+    val layout = FakeModifier(fq("dev.keliver.layout", "Size"), scopes = listOf(fq("dev.keliver.layout", "RowScope")),
+      properties = listOf(FakeModifierProperty("width", fq("dev.keliver.ui", "Dp")), FakeModifierProperty("height", fq("dev.keliver.ui", "Dp"))))
+    val flex = FakeModifier(fq("dev.keliver.layout", "Flex"), scopes = listOf(fq("dev.keliver.layout", "RowScope")),
+      properties = listOf(FakeModifierProperty("value", fq("kotlin", "Double"))))
+    val plans = disambiguateModifiers(listOfNotNull(
+      planModifier("dev.keliver.material.compose", material),
+      planModifier("dev.keliver.layout.compose", layout),
+      planModifier("dev.keliver.layout.compose", flex),
+    ))
+    assertEquals(listOf("Size", "LayoutSize", "Flex"), plans.map { it.name })
+    assertEquals(listOf("size", "size", "flex"), plans.map { it.extensionName })
+  }
+
+  @Test fun marginTypeMapsAndLayoutChildrenScopeIsKept() {
+    assertEquals(MappedKind.MARGIN, mapType(fq("dev.keliver.ui", "Margin")))
+    val row = FakeWidget(fq("dev.keliver.layout", "Row"), listOf(
+      FakeProperty("margin", fq("dev.keliver.ui", "Margin"), defaultExpression = "Margin.Zero"),
+      FakeChildren("children", scope = fq("dev.keliver.layout", "RowScope")),
+    ))
+    val inc = assertIs<WidgetPlan.Include>(planWidget("dev.keliver.layout.compose", "Layout", row))
+    assertEquals(listOf("margin"), inc.props.map { it.name })
+    assertEquals(emptyList(), inc.skippedProps)
+    assertEquals("RowScope", inc.childScope)
   }
 
   @Test fun defaultParsing() {
