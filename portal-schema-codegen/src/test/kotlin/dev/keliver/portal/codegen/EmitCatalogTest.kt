@@ -53,4 +53,9 @@ class EmitCatalogTest {
     assertContains(src, "ModifierSpec(\"Size\", listOf(PropSpec(\"widthDp\", PropKind.Int, \"Width dp\"), PropSpec(\"heightDp\", PropKind.Int, \"Height dp\")), argTypes = listOf(\"Int\", \"Int\")),")
     assertContains(src, "ModifierSpec(\"LayoutSize\", listOf(PropSpec(\"width\", PropKind.Double, \"Width\"), PropSpec(\"height\", PropKind.Double, \"Height\")), scopes = listOf(\"Row\", \"Column\", \"Box\"), extension = \"size\", argTypes = listOf(\"Dp\", \"Dp\")),")
   }
+
+  /** N8: this copy must equal portal-core's MARGIN_SIDES (asserted in portal-document's LayoutInvariantsTest). */
+  @Test fun marginSidesAreTheWireOrder() {
+    kotlin.test.assertEquals(listOf("start", "end", "top", "bottom"), MARGIN_SIDES)
+  }
 }
