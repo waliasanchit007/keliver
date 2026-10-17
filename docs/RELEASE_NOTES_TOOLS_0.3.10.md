@@ -164,8 +164,15 @@ Checked locally, on the downloaded artifact (2026-10-17):
   only, `ci.yml` ignores tags, `pages.yml` runs on `main` only, the rest are
   dispatch- or pull-request-only.
 
-Still to run: `ios.sh` on the zip (running), and `keliver-device-verify.sh`
-on a phone.
+- `reference/inventory/ci/ios.sh` on the zip (`KELIVER_CANDIDATE_SHA256` set,
+  every host and app scaffolded by the zip's own `bin/`), on this Mac's iOS
+  simulator: 158/0, P1-P7, W3/W4, W2, W5, M0 (T1 Debug, T2 Benchmark) and W8.
+
+Still to run: `keliver-device-verify.sh` on a phone. On the Samsung S25
+(2026-10-17, twice) the install of the bundled host APK was refused by the
+phone's Play Protect install-time check (`INSTALL_FAILED_VERIFICATION_FAILURE`,
+verifier result -1); nothing was installed. The same script on the same APK
+passed on GitHub's emulator (the device job above).
 
 Candidates 1 (`7ab383110`, build 38995449572) and 2 (`555150a9f`, build
 38996130488) are superseded by the review fixes: never tag or attach them.
