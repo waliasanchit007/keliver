@@ -22,8 +22,12 @@ object WriteBack {
     fileText: String,
     target: UiDocument,
     components: dev.keliver.portal.ComponentRegistry = dev.keliver.portal.EmptyComponentRegistry,
+    /** K2: the app's design tokens — the SAME table the document was ingested with. */
+    tokens: TokenTable = TokenTable.EMPTY,
+    /** The file's name as the token table knows it (a private top-level constant is file-scoped). */
+    fileName: String = "Screen.kt",
   ): String? {
-    val rec = Recognizer.recognize("Screen.kt", fileText, components) ?: return null
+    val rec = Recognizer.recognize(fileName, fileText, components, tokens) ?: return null
     val file = rec.file ?: return null
     val factory = PsiEnv.factory
 
@@ -33,10 +37,12 @@ object WriteBack {
     val targetRoot = target.root as? DocNode.Widget ?: return null
     val written = LinkedHashSet<String>()
     needed.set(written)
+    lookup.set(tokens.lookupFor(file))
     try {
       if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     } finally {
       needed.remove()
+      lookup.remove()
     }
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
@@ -46,6 +52,9 @@ object WriteBack {
 
   /** The imports this merge's splices need (for [ensureImports]); per thread, per merge. */
   private val needed = ThreadLocal<MutableSet<String>>()
+
+  /** K2: design-token resolution for the file being merged; per thread, per merge. */
+  private val lookup = ThreadLocal<TokenLookup?>()
 
   private fun need(imports: Set<String>) {
     needed.get()?.addAll(imports)
@@ -339,14 +348,16 @@ object WriteBack {
       } ?: return false
       edits += oldExpr to text
       imports += FragmentImports.value(text)
+      // K2: a token written as its reference needs its declaring object (structural).
+      keys.forEach { imports += FragmentImports.token(target.props[it]) }
     }
     if (parsed.modifiers != target.modifiers) {
       val oldExpr = sourceArg("modifier") ?: return false
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text,
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, lookup.get(),
       ) ?: return false
       edits += oldExpr to text
-      imports += FragmentImports.chain(text, parentType)
+      imports += FragmentImports.chain(text, parentType, lookup.get())
     }
     for ((oldExpr, text) in edits) {
       if (oldExpr.text != text) oldExpr.replace(factory.createExpression(text))
