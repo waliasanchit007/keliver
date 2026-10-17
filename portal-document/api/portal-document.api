@@ -531,6 +531,8 @@ public final class dev/keliver/portal/document/OpEnvelope$Companion {
 
 public final class dev/keliver/portal/document/ProjectKt {
 	public static final fun toDocNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/document/DocNode$Widget;
+	public static final fun toPropValue (Ldev/keliver/portal/Token;)Ldev/keliver/portal/document/PropValue$Token;
+	public static final fun toTreeValue (Ldev/keliver/portal/document/PropValue$Token;)Ldev/keliver/portal/Token;
 	public static final fun toWidgetTree (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;Z)Ldev/keliver/portal/WidgetNode;
 	public static synthetic fun toWidgetTree$default (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;ZILjava/lang/Object;)Ldev/keliver/portal/WidgetNode;
 }
@@ -636,6 +638,37 @@ public final synthetic class dev/keliver/portal/document/PropValue$Lit$$serializ
 }
 
 public final class dev/keliver/portal/document/PropValue$Lit$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Token : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Token$Companion;
+	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/document/PropValue$Lit;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ldev/keliver/portal/document/PropValue$Lit;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/keliver/portal/document/PropValue$Lit;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/document/PropValue$Lit;Ljava/lang/String;)Ldev/keliver/portal/document/PropValue$Token;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Token;Ljava/lang/String;Ldev/keliver/portal/document/PropValue$Lit;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Token;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getImport ()Ljava/lang/String;
+	public final fun getRef ()Ljava/lang/String;
+	public final fun getValue ()Ldev/keliver/portal/document/PropValue$Lit;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Token$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Token$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Token;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Token;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Token$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
