@@ -9,6 +9,25 @@
 ## [Unreleased]
 
 ### Added
+- **portal (relay, editor, render, ingest, core):** the editor canvas shows more of what the
+  phone shows (K5; see `docs/EDITOR_FIDELITY.md`).
+  - **Images:** a new keliver.portal.json `previewAssetHosts` (exact host names; empty = off)
+    turns on the relay's `GET /preview-asset?url=…`, which fetches images from those hosts for
+    the canvas (whose page cannot read hosts that send no CORS headers): loopback callers, GET
+    only, no client header forwarded, redirects only to listed hosts, `image/*` except SVG, 10 MB
+    cap, timeouts, an in-memory LRU cache, the caller's origin allowed only when loopback.
+    `GET /preview-assets` lists the hosts; the editor's image fetcher rewrites only those URLs.
+  - **Theme:** `AppPreviewEntry` gains `screenWrapper` (the app's guest-side wrapper around
+    every screen, e.g. its `Theme`) and `hostWrapper` (the native host's `MaterialTheme`, whose
+    scheme a guest `Theme` starts from); the canvas renders inside both. New portal-render API:
+    `PreviewWrapper`, `AppScreenFrame`.
+  - **Component modifiers:** a component that declares `modifier: Modifier` and passes it to its
+    root (`modifier` or `modifier.ext(…)`) is now grammar instead of opaque, and an instance's
+    modifiers apply to that root in the instance's parent scope. `/components` lists each
+    component's `paramTypes`, so the editor knows which components take modifiers. New
+    portal-core API: `COMPONENT_FORWARDS_MODIFIER_PROP`, `isModifierType`.
+  - **Editor:** a "Large phone 412×915" frame preset; the Bold box of a StyledText reflects an
+    explicit `weight` (which wins on a device) and is disabled while `weight` is set.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** design tokens are
   portal grammar (D9, K2). An argument referencing a constant in the app's own sources —
   `colorArgb = C.Ink`, `url = Assets.Logo`, `Modifier.background(C.White)` — no longer makes a
@@ -76,6 +95,11 @@
   while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
 ### Fixed
+- **portal (core):** an opaque component's placeholder drew its name over the "opaque" reason;
+  the name now sits above the reason, each ellipsized.
+- **portal (editor):** the editor parsed project components without parameter types, so every
+  component looked like it had no `modifier: Modifier` parameter there (the modifier panel
+  refused modifiers for components that accept them).
 - **portal (ingest, exporter, editor, relay):** a text with an escape or a `$` keeps its meaning
   through an editor edit (KNOWN_BUGS U33). Ingest decoded only `\"` and `\\`, so `"A\nB"` showed a
   literal `\n` in the editor and an edit wrote `\\n` back (the device then showed a backslash and

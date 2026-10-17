@@ -84,10 +84,14 @@ run alongside item 2.
    - the tools bundle's generic editor draws every project component as an
      "opaque" grey placeholder (its name overlaps the placeholder label), so a
      component-built screen is mostly grey boxes; `keliver-new-editor.sh` (a
-     per-app editor) is the answer, and the editor should say so;
+     per-app editor) is the answer, and the editor should say so. *K5: the
+     label overlap is fixed, and a component forwarding `modifier` to its root
+     (a common cause of "opaque") is now grammar;*
    - the canvas ignores `Theme` (a Slider draws in default lavender where the
      device shows the app's colour), and the Bold box is unchecked for
-     `weight = 700`;
+     `weight = 700`. *K5: a per-app editor's `screenWrapper`/`hostWrapper` put
+     the app's Theme and host scheme around the canvas; Bold follows `weight`;
+     see docs/EDITOR_FIDELITY.md;*
    - the persona and flow pickers list the generic editor's own sample app
      ("signed-out", "field-researcher", "FieldNotes"), not the adopter's;
    - Undo is per keystroke, so undoing a retyped text steps through every
