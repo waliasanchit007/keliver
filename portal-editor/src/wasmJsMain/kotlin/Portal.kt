@@ -28,6 +28,9 @@ import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.editableProps
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.findNode
+import dev.keliver.portal.acceptsModifier
+import dev.keliver.portal.isDpProp
+import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
@@ -1472,7 +1475,7 @@ private fun renderProps() {
   val specs = comp?.props ?: editableProps(node.type)
   if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
-    propsEl.appendChild(propRow(node.id, node.props, s.name, s.kind, s.label, keyPrefix = ""))
+    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = ""))
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()
@@ -1570,7 +1573,7 @@ private fun renderBindings() {
 private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKind.Double, PropKind.Color)
 
 /** One editable property row; [keyPrefix] namespaces modifier props ("mod.X."). */
-private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
+private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
   val key = keyPrefix + name
   val rowEl = Ui.el("div", "row")
   val lab = Ui.el("label", "", label)
@@ -1626,8 +1629,15 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     PropKind.Double -> {
       input.setAttribute("type", "number")
       input.setAttribute("step", "0.1")
+      // K1: a Dp (Dp prop, Margin side, Dp modifier arg) is never negative —
+      // the document clamps it too, so input, canvas and saved file agree.
+      val nonNegative = isDpProp(nodeType, key)
+      if (nonNegative) input.setAttribute("min", "0")
       input.value = (props[key] as? Double ?: 0.0).toString()
-      input.addEventListener("input", { _ -> editProp(nodeId, key, input.value.toDoubleOrNull() ?: 0.0) })
+      input.addEventListener("input", { _ ->
+        val v = input.value.toDoubleOrNull() ?: 0.0
+        editProp(nodeId, key, if (nonNegative) v.coerceAtLeast(0.0) else v)
+      })
     }
     PropKind.Bool -> {
       input.setAttribute("type", "checkbox")
@@ -1658,7 +1668,8 @@ private fun propRow(nodeId: Int, props: Map<String, Any?>, name: String, kind: P
     }
   }
   rowEl.appendChild(input)
-  if (kind in BINDABLE && keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
+  // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
+  if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
 }
 
@@ -1678,12 +1689,20 @@ private fun renderMods() {
   // Modifiers currently on the node (any prop key "mod.<Name>" or "mod.<Name>.<prop>").
   val onNode = node.props.keys.filter { it.startsWith("mod.") }
     .map { it.removePrefix("mod.").substringBefore('.') }.distinct().sorted()
+  // K1: scoped layout modifiers (flex, margin, …) only exist inside their
+  // parent's content lambda — offer them only under a Row/Column/Box they fit.
+  val parentType = scopeParentType(portalTree.value, node.id)
 
   onNode.forEach { name ->
     val spec = modifierSpecs.firstOrNull { it.name == name }
     val chip = Ui.el("div", "mod-chip")
     val head = Ui.el("div", "mod-head")
     head.appendChild(Ui.el("span", "t", name))
+    if (spec != null && !spec.isValidUnder(parentType)) {
+      val warn = Ui.el("span", "muted", " · no effect here and not saved (needs a ${spec.scopes.joinToString("/")} parent)")
+      warn.setAttribute("title", "scoped layout modifier: only meaningful inside ${spec.scopes.joinToString(", ")}")
+      head.appendChild(warn)
+    }
     val x = Ui.el("span", "x", "✕")
     x.addEventListener("click", { _ ->
       val keys = node.props.keys.filter { it == "mod.$name" || it.startsWith("mod.$name.") }
@@ -1692,15 +1711,23 @@ private fun renderMods() {
     head.appendChild(x)
     chip.appendChild(head)
     spec?.props?.forEach { p ->
-      chip.appendChild(propRow(node.id, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name."))
+      chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name."))
     }
     modsEl.appendChild(chip)
+  }
+
+  // K1: a component instance takes modifiers only if its signature declares
+  // `modifier: Modifier` (the relay refuses them otherwise).
+  val comp = editorComponents.spec(node.type)
+  if (comp != null && !comp.acceptsModifier) {
+    modsEl.appendChild(Ui.el("div", "muted", "${node.type} has no `modifier: Modifier` parameter"))
+    return
   }
 
   // Add-modifier control.
   val addRow = Ui.el("div", "row")
   val sel = Ui.select()
-  val available = modifierSpecs.map { it.name }.filter { it !in onNode }
+  val available = modifiersOfferedUnder(parentType).filter { it !in onNode }
   available.forEach { name ->
     val o = document.createElement("option") as HTMLOptionElement
     o.value = name; o.textContent = name
@@ -1715,12 +1742,17 @@ private fun renderMods() {
         mapOf(name to true)
       } else {
         spec.props.associate { p ->
-          "$name.${p.name}" to when (p.kind) {
-            PropKind.Int -> 8
-            PropKind.Double -> 8.0
-            PropKind.Bool -> true
-            PropKind.Color -> 0xFF8B7CF7.toInt()
-            else -> ""
+          "$name.${p.name}" to when {
+            // flex/grow/shrink weights start at 1; alignments at Start (0).
+            p.kind == PropKind.Double && p.name == "value" -> 1.0
+            p.kind == PropKind.Int && "Alignment" in spec.argTypes.joinToString() -> 0
+            else -> when (p.kind) {
+              PropKind.Int -> 8
+              PropKind.Double -> 8.0
+              PropKind.Bool -> true
+              PropKind.Color -> 0xFF8B7CF7.toInt()
+              else -> ""
+            }
           }
         }
       }

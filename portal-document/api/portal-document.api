@@ -730,3 +730,7 @@ public final class dev/keliver/portal/document/UiDocument$TryResult {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/portal/document/UiDocumentKt {
+	public static final fun isClientOp (Ldev/keliver/portal/document/DocOp;)Z
+}
+

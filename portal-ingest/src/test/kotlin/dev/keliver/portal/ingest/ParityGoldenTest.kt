@@ -71,6 +71,15 @@ class ParityGoldenTest {
     )
   }
 
+  /** K1: Margin values + scoped layout modifiers recognize transparently, scope-resolved. */
+  @Test
+  fun layoutModifierFixtureMatchesItsGolden() {
+    val layout = Recognizer.recognizeComponent("ParityLayout.kt", source("ParityLayout"))!!
+    assertTrue(layout.spec.transparent, layout.spec.diagnostic)
+    assertEquals(listOf("left", "right"), layout.spec.props.map { it.name })
+    assertGolden("parity-layout-body", layout.spec.body!!)
+  }
+
   private fun WidgetNode.canonicalIds(): WidgetNode =
     copy(id = 0, children = children.map { it.canonicalIds() })
 }

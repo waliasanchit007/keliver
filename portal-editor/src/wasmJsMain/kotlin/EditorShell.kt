@@ -171,13 +171,15 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       // C3: component instances render via transparent expansion; the whole
       // expansion carries the INSTANCE handle so click-to-select picks the
       // instance (one selectable unit), never an internal expanded primitive.
-      dev.keliver.portal.render.componentPreview = { node ->
+      // K1: the instance's parent scope (RowScope/…) rides along, so the expanded
+      // root sits in its parent exactly as the compiled component call does.
+      dev.keliver.portal.render.componentPreviewInScope = { node, scope ->
         val expanded = when (val e = dev.keliver.portal.expandForPreview(node, editorComponents)) {
           is dev.keliver.portal.Expansion.Transparent -> e.tree
           is dev.keliver.portal.Expansion.Opaque -> dev.keliver.portal.placeholder(e.name, e.reason)
           is dev.keliver.portal.Expansion.Cycle -> dev.keliver.portal.cycleChip(e.path)
         }
-        RenderNode(tagWith(expanded, node.id))
+        RenderNode(tagWith(expanded, node.id), scope)
       }
       // P3-12: register the per-app preview entry (the app's REAL presenters are
       // compiled in) and host the live presenter INSIDE the guest composition,

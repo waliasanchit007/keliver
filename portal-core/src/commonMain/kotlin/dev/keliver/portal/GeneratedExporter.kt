@@ -69,13 +69,13 @@ public val composableImport: Map<String, String> = mapOf(
 )
 
 public val supportImports: Map<String, List<String>> = mapOf(
-  "Box" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment"),
-  "Column" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.Overflow"),
-  "Row" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.Overflow"),
+  "Box" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.CrossAxisAlignment"),
+  "Column" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.Overflow", "dev.keliver.layout.api.CrossAxisAlignment", "dev.keliver.layout.api.MainAxisAlignment"),
+  "Row" to listOf("dev.keliver.layout.api.Constraint", "dev.keliver.ui.Margin", "dev.keliver.ui.dp", "dev.keliver.layout.api.Overflow", "dev.keliver.layout.api.MainAxisAlignment", "dev.keliver.layout.api.CrossAxisAlignment"),
   "Spacer" to listOf("dev.keliver.ui.Dp"),
 )
 
-/** modifier name -> the import its extension function needs in exported code. */
+/** modifier name -> the import its extension function needs in exported code. Scoped modifiers are scope members: no import. */
 public val modifierImport: Map<String, String> = mapOf(
   "Alpha" to "dev.keliver.material.compose.alpha",
   "AnimateContentSize" to "dev.keliver.material.compose.animateContentSize",
@@ -98,6 +98,16 @@ public val modifierImport: Map<String, String> = mapOf(
   "Size" to "dev.keliver.material.compose.size",
 )
 
+/** modifier name -> imports its ARGUMENT literals need in exported code (Dp, Margin, CrossAxisAlignment, ...). */
+public val modifierSupportImports: Map<String, List<String>> = mapOf(
+  "Height" to listOf("dev.keliver.ui.Dp"),
+  "HorizontalAlignment" to listOf("dev.keliver.layout.api.CrossAxisAlignment"),
+  "LayoutSize" to listOf("dev.keliver.ui.Dp"),
+  "Margin" to listOf("dev.keliver.ui.Margin", "dev.keliver.ui.dp"),
+  "VerticalAlignment" to listOf("dev.keliver.layout.api.CrossAxisAlignment"),
+  "Width" to listOf("dev.keliver.ui.Dp"),
+)
+
 /** "Widget.event" -> the single param's Kotlin type (typed action contracts, P2). */
 public val eventParamType: Map<String, String> = mapOf(
   "Checkbox.onCheckedChange" to "Boolean",
@@ -109,17 +119,9 @@ public val eventParamType: Map<String, String> = mapOf(
   "TextField.onValueChange" to "String",
 )
 
-private fun collectTypes(node: WidgetNode, out: MutableSet<String>) {
-  out += node.type
-  node.children.forEach { collectTypes(it, out) }
-}
-
-private fun collectModifierNames(node: WidgetNode, out: MutableSet<String>) {
-  for (key in node.props.keys) {
-    if (key.startsWith("mod.")) out += key.removePrefix("mod.").substringBefore('.')
-  }
-  node.children.forEach { collectModifierNames(it, out) }
-}
+/** A node's modifier names in AUTHOR order (first "mod.<Name>" key wins). */
+private fun modifierNames(node: WidgetNode): List<String> =
+  node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
 
 // P2: single-arg actions. arg=="it" -> the event payload; "item.field" -> item-scoped data.
 private fun fmtAction(a: Action, paramCount: Int): String {
@@ -179,9 +181,12 @@ private fun bindRef(field: String): String = if ('.' in field) field else "b.$fi
 private fun fmtString(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinStringLiteral(v.toString())
 private fun fmtInt(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Int) ?: 0).toString()
 private fun fmtBool(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Boolean) ?: false).toString()
-private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else ((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).toString()
+private fun fmtDouble(v: Any?): String = if (v is Bind) bindRef(v.field) else kotlinDoubleLiteral((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0)
 private fun fmtFloat(v: Any?): String = "${fmtDouble(v)}f"
-private fun fmtDp(v: Any?): String = "Dp(${fmtDouble(v)})"
+// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
+private fun fmtDp(v: Any?): String =
+  if (v is Bind) "Dp(${bindRef(v.field)})"
+  else "Dp(${kotlinDoubleLiteral(((v as? Double) ?: (v as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})"
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
 private fun fmtStringList(v: Any?): String =
   "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
@@ -203,11 +208,33 @@ private fun fmtMainAxis(v: Any?): String = when ((v as? Int) ?: 0) {
   else -> "MainAxisAlignment.Start"
 }
 
+// K1: a Margin value rides as four Double sides "<prefix>.start/.end/.top/.bottom"
+// (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
+// so a negative side is written as 0.
+private fun marginSide(node: WidgetNode, key: String): Double =
+  ((node.props[key] as? Double) ?: (node.props[key] as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0)
+private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
+private fun fmtMargin(node: WidgetNode, prefix: String): String {
+  val s = marginSide(node, "$prefix.start")
+  val e = marginSide(node, "$prefix.end")
+  val t = marginSide(node, "$prefix.top")
+  val b = marginSide(node, "$prefix.bottom")
+  return when {
+    s == 0.0 && e == 0.0 && t == 0.0 && b == 0.0 -> "Margin.Zero"
+    s == e && e == t && t == b -> "Margin(all = ${fmtDpValue(s)})"
+    s == e && t == b -> listOfNotNull(
+      if (s != 0.0) "horizontal = ${fmtDpValue(s)}" else null,
+      if (t != 0.0) "vertical = ${fmtDpValue(t)}" else null,
+    ).joinToString(", ", "Margin(", ")")
+    else -> listOf("start" to s, "end" to e, "top" to t, "bottom" to b).filter { it.second != 0.0 }
+      .joinToString(", ", "Margin(", ")") { "${it.first} = ${fmtDpValue(it.second)}" }
+  }
+}
+/** What a written Margin imports: `Margin.Zero` needs no `dp`. */
+private fun marginImports(node: WidgetNode, prefix: String): List<String> =
+  if (fmtMargin(node, prefix) == "Margin.Zero") listOf("dev.keliver.ui.Margin") else listOf("dev.keliver.ui.Margin", "dev.keliver.ui.dp")
+
 public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen", components: ComponentRegistry = EmptyComponentRegistry): String {
-  val used = mutableSetOf<String>()
-  collectTypes(tree, used)
-  val usedMods = mutableSetOf<String>()
-  collectModifierNames(tree, usedMods)
   val contract = collectContract(tree, components)
   val logicFields = LinkedHashMap<String, String>()
   val itemIfaces = LinkedHashMap<String, LinkedHashMap<String, String>>()
@@ -215,13 +242,14 @@ public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen
   contract.fields.keys.forEach { logicFields.remove(it) }
   val hasContract = !contract.isEmpty || logicFields.isNotEmpty()
   val sb = StringBuilder()
+  val body = StringBuilder()
+  val imports = mutableSetOf<String>()
+  emitNode(body, tree, "  ", components, null, imports)
   sb.append("import androidx.compose.runtime.Composable\n")
-  val modImports = usedMods.mapNotNull { modifierImport[it] } + (if (usedMods.isNotEmpty()) listOf("dev.keliver.Modifier") else emptyList())
-  val imports = (used.mapNotNull { composableImport[it] } + used.flatMap { supportImports[it] ?: emptyList() } + modImports).distinct().sorted()
-  imports.forEach { sb.append("import $it\n") }
+  imports.sorted().forEach { sb.append("import $it\n") }
   val param = if (!hasContract) "" else "b: ${functionName}Bindings"
   sb.append("\n@Composable\nfun $functionName($param) {\n")
-  emitNode(sb, tree, "  ", components)
+  sb.append(body)
   sb.append("}\n")
   if (hasContract) {
     itemIfaces.forEach { (name, fields) ->
@@ -242,641 +270,735 @@ public fun exportKotlin(tree: WidgetNode, functionName: String = "ExportedScreen
   return sb.toString()
 }
 
-/** The exported `modifier = Modifier.x().y()` chain, or null when the node has no mod props. */
-private fun modifierExpr(node: WidgetNode): String? {
+/**
+ * The exported `modifier = Modifier.x().y()` chain in AUTHOR order, or null when
+ * the node has none. K1: a scoped layout modifier is written only when [parent]
+ * (the widget whose content lambda holds the node) is one of its scopes — it
+ * would not compile anywhere else, so it is dropped, as the preview ignores it.
+ */
+private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<String>): String? {
   val parts = mutableListOf<String>()
-  if ("mod.Alpha.pct" in node.props) parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"
-  if (node.props["mod.AnimateContentSize"] == true) parts += "animateContentSize()"
-  if ("mod.AspectRatio.ratio" in node.props) parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"
-  if ("mod.Background.colorArgb" in node.props) parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"
-  if ("mod.Blur.radiusDp" in node.props) parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"
-  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"
-  if ("mod.CornerRadius.radiusDp" in node.props) parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"
-  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"
-  if (node.props["mod.FillMaxHeight"] == true) parts += "fillMaxHeight()"
-  if (node.props["mod.FillMaxSize"] == true) parts += "fillMaxSize()"
-  if (node.props["mod.FillWidth"] == true) parts += "fillWidth()"
-  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"
-  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"
-  if ("mod.Padding.allDp" in node.props) parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"
-  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"
-  if ("mod.Rotate.degrees" in node.props) parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"
-  if ("mod.Scale.percent" in node.props) parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"
-  if ("mod.Shadow.elevationDp" in node.props) parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"
-  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"
-  return if (parts.isEmpty()) null else "Modifier." + parts.joinToString(".")
+  for (name in modifierNames(node)) {
+    when (name) {
+      "Alpha" -> { parts += "alpha(" + fmtInt(node.props["mod.Alpha.pct"]) + ")"; imports += "dev.keliver.material.compose.alpha" }
+      "AnimateContentSize" -> if (node.props["mod.AnimateContentSize"] == true) { parts += "animateContentSize()"; imports += "dev.keliver.material.compose.animateContentSize" }
+      "AspectRatio" -> { parts += "aspectRatio(" + fmtFloat(node.props["mod.AspectRatio.ratio"]) + ")"; imports += "dev.keliver.material.compose.aspectRatio" }
+      "Background" -> { parts += "background(" + fmtInt(node.props["mod.Background.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.background" }
+      "Blur" -> { parts += "blur(" + fmtInt(node.props["mod.Blur.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.blur" }
+      "Border" -> { parts += "border(" + fmtInt(node.props["mod.Border.widthDp"]) + ", " + fmtInt(node.props["mod.Border.colorArgb"]) + ")"; imports += "dev.keliver.material.compose.border" }
+      "CornerRadius" -> { parts += "cornerRadius(" + fmtInt(node.props["mod.CornerRadius.radiusDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadius" }
+      "CornerRadiusEach" -> { parts += "cornerRadiusEach(" + fmtInt(node.props["mod.CornerRadiusEach.topStartDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.topEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomEndDp"]) + ", " + fmtInt(node.props["mod.CornerRadiusEach.bottomStartDp"]) + ")"; imports += "dev.keliver.material.compose.cornerRadiusEach" }
+      "FillMaxHeight" -> if (node.props["mod.FillMaxHeight"] == true) { parts += "fillMaxHeight()"; imports += "dev.keliver.material.compose.fillMaxHeight" }
+      "FillMaxSize" -> if (node.props["mod.FillMaxSize"] == true) { parts += "fillMaxSize()"; imports += "dev.keliver.material.compose.fillMaxSize" }
+      "FillWidth" -> if (node.props["mod.FillWidth"] == true) { parts += "fillWidth()"; imports += "dev.keliver.material.compose.fillWidth" }
+      "Flex" -> if ((parent == "Row" || parent == "Column")) { parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")" }
+      "GradientBackground" -> { parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"; imports += "dev.keliver.material.compose.gradientBackground" }
+      "Grow" -> if ((parent == "Row" || parent == "Column")) { parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")" }
+      "Height" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
+      "HorizontalAlignment" -> if ((parent == "Column" || parent == "Box")) { parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
+      "LayoutSize" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports += listOf("dev.keliver.ui.Dp") }
+      "Margin" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"; imports += marginImports(node, "mod.Margin.margin") }
+      "Offset" -> { parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"; imports += "dev.keliver.material.compose.offset" }
+      "Padding" -> { parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"; imports += "dev.keliver.material.compose.padding" }
+      "PaddingEach" -> { parts += "paddingEach(" + fmtInt(node.props["mod.PaddingEach.startDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.topDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.endDp"]) + ", " + fmtInt(node.props["mod.PaddingEach.bottomDp"]) + ")"; imports += "dev.keliver.material.compose.paddingEach" }
+      "Rotate" -> { parts += "rotate(" + fmtInt(node.props["mod.Rotate.degrees"]) + ")"; imports += "dev.keliver.material.compose.rotate" }
+      "Scale" -> { parts += "scale(" + fmtInt(node.props["mod.Scale.percent"]) + ")"; imports += "dev.keliver.material.compose.scale" }
+      "Shadow" -> { parts += "shadow(" + fmtInt(node.props["mod.Shadow.elevationDp"]) + ")"; imports += "dev.keliver.material.compose.shadow" }
+      "Shrink" -> if ((parent == "Row" || parent == "Column")) { parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")" }
+      "Size" -> { parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"; imports += "dev.keliver.material.compose.size" }
+      "VerticalAlignment" -> if ((parent == "Row" || parent == "Box")) { parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
+      "Width" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
+      else -> {}
+    }
+  }
+  if (parts.isEmpty()) return null
+  imports += "dev.keliver.Modifier"
+  return "Modifier." + parts.joinToString(".")
 }
 
-private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {
+/** [parent] is the widget whose content lambda holds [node] (Condition/Repeat looked through). */
+private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?, imports: MutableSet<String>) {
   when (node.type) {
     "Condition" -> {
       val cond = (node.props["field"] as? String) ?: "cond"
       sb.append("${indent}if (b.$cond) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, parent, imports) }
       sb.append("$indent}\n")
     }
     "Repeat" -> {
       val item = (node.props["item"] as? String) ?: "item"
       val items = (node.props["items"] as? String) ?: "items"
       sb.append("${indent}b.$items.forEach { $item ->\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, parent, imports) }
       sb.append("$indent}\n")
     }
     "AlertDialog" -> {
+      imports += "dev.keliver.material.compose.AlertDialog"
       sb.append("${indent}AlertDialog(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("confirmText" in node.props) sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n")
-      if ("dismissText" in node.props) sb.append("${indent}  dismissText = ${fmtString(node.props["dismissText"] ?: "")},\n")
+      if ("confirmText" in node.props) { sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n") }
+      if ("dismissText" in node.props) { sb.append("${indent}  dismissText = ${fmtString(node.props["dismissText"] ?: "")},\n") }
       (node.props["onConfirm"] as? Action)?.let { a -> sb.append("${indent}  onConfirm = ${fmtAction(a, 0)},\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "AnimatedBorder" -> {
+      imports += "dev.keliver.material.compose.AnimatedBorder"
       sb.append("${indent}AnimatedBorder(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
-      if ("strokeWidthDp" in node.props) sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n")
-      if ("baseColorArgb" in node.props) sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n")
-      if ("cometColorArgb" in node.props) sb.append("${indent}  cometColorArgb = ${fmtInt(node.props["cometColorArgb"])},\n")
-      if ("durationMs" in node.props) sb.append("${indent}  durationMs = ${fmtInt(node.props["durationMs"])},\n")
-      if ("segmentLenDp" in node.props) sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n")
-      if ("effect" in node.props) sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n")
-      if ("colorsArgb" in node.props) sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      if ("strokeWidthDp" in node.props) { sb.append("${indent}  strokeWidthDp = ${fmtInt(node.props["strokeWidthDp"])},\n") }
+      if ("baseColorArgb" in node.props) { sb.append("${indent}  baseColorArgb = ${fmtInt(node.props["baseColorArgb"])},\n") }
+      if ("cometColorArgb" in node.props) { sb.append("${indent}  cometColorArgb = ${fmtInt(node.props["cometColorArgb"])},\n") }
+      if ("durationMs" in node.props) { sb.append("${indent}  durationMs = ${fmtInt(node.props["durationMs"])},\n") }
+      if ("segmentLenDp" in node.props) { sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n") }
+      if ("effect" in node.props) { sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n") }
+      if ("colorsArgb" in node.props) { sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedBorder", imports) }
       sb.append("$indent}\n")
     }
     "AnimatedVisibility" -> {
+      imports += "dev.keliver.material.compose.AnimatedVisibility"
       sb.append("${indent}AnimatedVisibility(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("visible" in node.props) sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("visible" in node.props) { sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedVisibility", imports) }
       sb.append("$indent}\n")
     }
     "AsyncImage" -> {
+      imports += "dev.keliver.material.compose.AsyncImage"
       sb.append("${indent}AsyncImage(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
-      if ("contentScale" in node.props) sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n")
-      if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
-      if ("heightDp" in node.props) sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n")
-      if ("blurDp" in node.props) sb.append("${indent}  blurDp = ${fmtInt(node.props["blurDp"])},\n")
-      if ("fillWidth" in node.props) sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n")
-      if ("tintArgb" in node.props) sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n")
+      if ("contentScale" in node.props) { sb.append("${indent}  contentScale = ${fmtInt(node.props["contentScale"])},\n") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
+      if ("blurDp" in node.props) { sb.append("${indent}  blurDp = ${fmtInt(node.props["blurDp"])},\n") }
+      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n") }
+      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Badge" -> {
+      imports += "dev.keliver.material.compose.Badge"
       sb.append("${indent}Badge(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n") }
       sb.append("$indent)\n")
     }
     "BottomAppBar" -> {
+      imports += "dev.keliver.material.compose.BottomAppBar"
       sb.append("${indent}BottomAppBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomAppBar", imports) }
       sb.append("$indent}\n")
     }
     "BottomSheet" -> {
+      imports += "dev.keliver.material.compose.BottomSheet"
       sb.append("${indent}BottomSheet(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n")
-      if ("contentPaddingDp" in node.props) sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n")
+      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomSheet", imports) }
       sb.append("$indent}\n")
     }
     "Box" -> {
+      imports += "dev.keliver.layout.compose.Box"
       sb.append("${indent}Box(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
-      if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
-      if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
-      if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("width" in node.props) { sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("height" in node.props) { sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) { sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n"); imports += marginImports(node, "margin") }
+      if ("horizontalAlignment" in node.props) { sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
+      if ("verticalAlignment" in node.props) { sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Box", imports) }
       sb.append("$indent}\n")
     }
     "Button" -> {
+      imports += "dev.keliver.material.compose.Button"
       sb.append("${indent}Button(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
-      if ("containerArgb" in node.props) sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n")
-      if ("contentArgb" in node.props) sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n")
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n") }
+      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Card" -> {
+      imports += "dev.keliver.material.compose.Card"
       sb.append("${indent}Card(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Card", imports) }
       sb.append("$indent}\n")
     }
     "Checkbox" -> {
+      imports += "dev.keliver.material.compose.Checkbox"
       sb.append("${indent}Checkbox(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Chip" -> {
+      imports += "dev.keliver.material.compose.Chip"
       sb.append("${indent}Chip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "CircularProgressIndicator" -> {
+      imports += "dev.keliver.material.compose.CircularProgressIndicator"
       sb.append("${indent}CircularProgressIndicator(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("progress" in node.props) { sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n") }
       sb.append("$indent)\n")
     }
     "Clickable" -> {
+      imports += "dev.keliver.material.compose.Clickable"
       sb.append("${indent}Clickable(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Clickable", imports) }
       sb.append("$indent}\n")
     }
     "Column" -> {
+      imports += "dev.keliver.layout.compose.Column"
       sb.append("${indent}Column(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
-      if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
-      if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
-      if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n")
-      if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtMainAxis(node.props["verticalAlignment"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("width" in node.props) { sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("height" in node.props) { sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) { sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n"); imports += marginImports(node, "margin") }
+      if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n"); imports += listOf("dev.keliver.layout.api.Overflow") }
+      if ("horizontalAlignment" in node.props) { sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
+      if ("verticalAlignment" in node.props) { sb.append("${indent}  verticalAlignment = ${fmtMainAxis(node.props["verticalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.MainAxisAlignment") }
       (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Column", imports) }
       sb.append("$indent}\n")
     }
     "Dialog" -> {
+      imports += "dev.keliver.material.compose.Dialog"
       sb.append("${indent}Dialog(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Dialog", imports) }
       sb.append("$indent}\n")
     }
     "Divider" -> {
+      imports += "dev.keliver.material.compose.Divider"
       sb.append("${indent}Divider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n") }
       sb.append("$indent)\n")
     }
     "DropdownMenu" -> {
+      imports += "dev.keliver.material.compose.DropdownMenu"
       sb.append("${indent}DropdownMenu(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("expanded" in node.props) sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("expanded" in node.props) { sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
       (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "ElevatedButton" -> {
+      imports += "dev.keliver.material.compose.ElevatedButton"
       sb.append("${indent}ElevatedButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "ElevatedCard" -> {
+      imports += "dev.keliver.material.compose.ElevatedCard"
       sb.append("${indent}ElevatedCard(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "ElevatedCard", imports) }
       sb.append("$indent}\n")
     }
     "ExtendedFloatingActionButton" -> {
+      imports += "dev.keliver.material.compose.ExtendedFloatingActionButton"
       sb.append("${indent}ExtendedFloatingActionButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FilledTonalButton" -> {
+      imports += "dev.keliver.material.compose.FilledTonalButton"
       sb.append("${indent}FilledTonalButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FilterChip" -> {
+      imports += "dev.keliver.material.compose.FilterChip"
       sb.append("${indent}FilterChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
-      if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FloatingActionButton" -> {
+      imports += "dev.keliver.material.compose.FloatingActionButton"
       sb.append("${indent}FloatingActionButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("text" in node.props) sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "FlowColumn" -> {
+      imports += "dev.keliver.material.compose.FlowColumn"
       sb.append("${indent}FlowColumn(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "FlowColumn", imports) }
       sb.append("$indent}\n")
     }
     "FlowRow" -> {
+      imports += "dev.keliver.material.compose.FlowRow"
       sb.append("${indent}FlowRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "FlowRow", imports) }
       sb.append("$indent}\n")
     }
     "HorizontalPager" -> {
+      imports += "dev.keliver.material.compose.HorizontalPager"
       sb.append("${indent}HorizontalPager(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("autoScrollMs" in node.props) sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n")
-      if ("showIndicator" in node.props) sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n")
-      if ("indicatorActiveArgb" in node.props) sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n")
-      if ("indicatorInactiveArgb" in node.props) sb.append("${indent}  indicatorInactiveArgb = ${fmtInt(node.props["indicatorInactiveArgb"])},\n")
-      if ("contentPaddingDp" in node.props) sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("autoScrollMs" in node.props) { sb.append("${indent}  autoScrollMs = ${fmtInt(node.props["autoScrollMs"])},\n") }
+      if ("showIndicator" in node.props) { sb.append("${indent}  showIndicator = ${fmtBool(node.props["showIndicator"])},\n") }
+      if ("indicatorActiveArgb" in node.props) { sb.append("${indent}  indicatorActiveArgb = ${fmtInt(node.props["indicatorActiveArgb"])},\n") }
+      if ("indicatorInactiveArgb" in node.props) { sb.append("${indent}  indicatorInactiveArgb = ${fmtInt(node.props["indicatorInactiveArgb"])},\n") }
+      if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "HorizontalPager", imports) }
       sb.append("$indent}\n")
     }
     "Icon" -> {
+      imports += "dev.keliver.material.compose.Icon"
       sb.append("${indent}Icon(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  name = ${fmtString(node.props["name"] ?: "")},\n")
-      if ("sizeDp" in node.props) sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n")
-      if ("tintArgb" in node.props) sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n")
-      if ("contentDescription" in node.props) sb.append("${indent}  contentDescription = ${fmtString(node.props["contentDescription"] ?: "")},\n")
+      if ("sizeDp" in node.props) { sb.append("${indent}  sizeDp = ${fmtInt(node.props["sizeDp"])},\n") }
+      if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n") }
+      if ("contentDescription" in node.props) { sb.append("${indent}  contentDescription = ${fmtString(node.props["contentDescription"] ?: "")},\n") }
       sb.append("$indent)\n")
     }
     "IconButton" -> {
+      imports += "dev.keliver.material.compose.IconButton"
       sb.append("${indent}IconButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Image" -> {
+      imports += "dev.keliver.material.compose.Image"
       sb.append("${indent}Image(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "InputChip" -> {
+      imports += "dev.keliver.material.compose.InputChip"
       sb.append("${indent}InputChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
-      if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "LazyHorizontalGrid" -> {
+      imports += "dev.keliver.material.compose.LazyHorizontalGrid"
       sb.append("${indent}LazyHorizontalGrid(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("rows" in node.props) sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("rows" in node.props) { sb.append("${indent}  rows = ${fmtInt(node.props["rows"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyHorizontalGrid", imports) }
       sb.append("$indent}\n")
     }
     "LazyVerticalGrid" -> {
+      imports += "dev.keliver.material.compose.LazyVerticalGrid"
       sb.append("${indent}LazyVerticalGrid(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("columns" in node.props) sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("columns" in node.props) { sb.append("${indent}  columns = ${fmtInt(node.props["columns"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "LazyVerticalGrid", imports) }
       sb.append("$indent}\n")
     }
     "LinearProgressIndicator" -> {
+      imports += "dev.keliver.material.compose.LinearProgressIndicator"
       sb.append("${indent}LinearProgressIndicator(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("progress" in node.props) sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("progress" in node.props) { sb.append("${indent}  progress = ${fmtFloat(node.props["progress"])},\n") }
       sb.append("$indent)\n")
     }
     "ListItem" -> {
+      imports += "dev.keliver.material.compose.ListItem"
       sb.append("${indent}ListItem(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  headline = ${fmtString(node.props["headline"] ?: "")},\n")
-      if ("supporting" in node.props) sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n")
-      if ("overline" in node.props) sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n")
-      if ("leadingIcon" in node.props) sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n")
-      if ("trailingIcon" in node.props) sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n")
+      if ("supporting" in node.props) { sb.append("${indent}  supporting = ${fmtString(node.props["supporting"] ?: "")},\n") }
+      if ("overline" in node.props) { sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n") }
+      if ("leadingIcon" in node.props) { sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n") }
+      if ("trailingIcon" in node.props) { sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "NavigationBar" -> {
+      imports += "dev.keliver.material.compose.NavigationBar"
       sb.append("${indent}NavigationBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "NavigationBar", imports) }
       sb.append("$indent}\n")
     }
     "NavigationRail" -> {
+      imports += "dev.keliver.material.compose.NavigationRail"
       sb.append("${indent}NavigationRail(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "NavigationRail", imports) }
       sb.append("$indent}\n")
     }
     "OutlinedButton" -> {
+      imports += "dev.keliver.material.compose.OutlinedButton"
       sb.append("${indent}OutlinedButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
-      if ("iconUrl" in node.props) sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n")
-      if ("iconSizeDp" in node.props) sb.append("${indent}  iconSizeDp = ${fmtInt(node.props["iconSizeDp"])},\n")
-      if ("containerArgb" in node.props) sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n")
-      if ("contentArgb" in node.props) sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n")
-      if ("borderArgb" in node.props) sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n")
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
+      if ("iconUrl" in node.props) { sb.append("${indent}  iconUrl = ${fmtString(node.props["iconUrl"] ?: "")},\n") }
+      if ("iconSizeDp" in node.props) { sb.append("${indent}  iconSizeDp = ${fmtInt(node.props["iconSizeDp"])},\n") }
+      if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n") }
+      if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n") }
+      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "OutlinedCard" -> {
+      imports += "dev.keliver.material.compose.OutlinedCard"
       sb.append("${indent}OutlinedCard(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "OutlinedCard", imports) }
       sb.append("$indent}\n")
     }
     "OutlinedTextField" -> {
+      imports += "dev.keliver.material.compose.OutlinedTextField"
       sb.append("${indent}OutlinedTextField(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
-      if ("label" in node.props) sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
-      if ("leadingText" in node.props) sb.append("${indent}  leadingText = ${fmtString(node.props["leadingText"] ?: "")},\n")
-      if ("keyboardType" in node.props) sb.append("${indent}  keyboardType = ${fmtInt(node.props["keyboardType"])},\n")
-      if ("singleLine" in node.props) sb.append("${indent}  singleLine = ${fmtBool(node.props["singleLine"])},\n")
-      if ("maxLines" in node.props) sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n")
-      if ("isError" in node.props) sb.append("${indent}  isError = ${fmtBool(node.props["isError"])},\n")
-      if ("supportingText" in node.props) sb.append("${indent}  supportingText = ${fmtString(node.props["supportingText"] ?: "")},\n")
-      if ("borderArgb" in node.props) sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n")
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
-      if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
+      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n") }
+      if ("label" in node.props) { sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n") }
+      if ("leadingText" in node.props) { sb.append("${indent}  leadingText = ${fmtString(node.props["leadingText"] ?: "")},\n") }
+      if ("keyboardType" in node.props) { sb.append("${indent}  keyboardType = ${fmtInt(node.props["keyboardType"])},\n") }
+      if ("singleLine" in node.props) { sb.append("${indent}  singleLine = ${fmtBool(node.props["singleLine"])},\n") }
+      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n") }
+      if ("isError" in node.props) { sb.append("${indent}  isError = ${fmtBool(node.props["isError"])},\n") }
+      if ("supportingText" in node.props) { sb.append("${indent}  supportingText = ${fmtString(node.props["supportingText"] ?: "")},\n") }
+      if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "RadioButton" -> {
+      imports += "dev.keliver.material.compose.RadioButton"
       sb.append("${indent}RadioButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Row" -> {
+      imports += "dev.keliver.layout.compose.Row"
       sb.append("${indent}Row(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("width" in node.props) sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n")
-      if ("height" in node.props) sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n")
-      if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n")
-      if ("horizontalAlignment" in node.props) sb.append("${indent}  horizontalAlignment = ${fmtMainAxis(node.props["horizontalAlignment"])},\n")
-      if ("verticalAlignment" in node.props) sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("width" in node.props) { sb.append("${indent}  width = ${fmtConstraint(node.props["width"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("height" in node.props) { sb.append("${indent}  height = ${fmtConstraint(node.props["height"])},\n"); imports += listOf("dev.keliver.layout.api.Constraint") }
+      if ("margin.start" in node.props || "margin.end" in node.props || "margin.top" in node.props || "margin.bottom" in node.props) { sb.append("${indent}  margin = ${fmtMargin(node, "margin")},\n"); imports += marginImports(node, "margin") }
+      if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n"); imports += listOf("dev.keliver.layout.api.Overflow") }
+      if ("horizontalAlignment" in node.props) { sb.append("${indent}  horizontalAlignment = ${fmtMainAxis(node.props["horizontalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.MainAxisAlignment") }
+      if ("verticalAlignment" in node.props) { sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
       (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Row", imports) }
       sb.append("$indent}\n")
     }
     "ScrollableColumn" -> {
+      imports += "dev.keliver.material.compose.ScrollableColumn"
       sb.append("${indent}ScrollableColumn(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "ScrollableColumn", imports) }
       sb.append("$indent}\n")
     }
     "SegmentedButtonRow" -> {
+      imports += "dev.keliver.material.compose.SegmentedButtonRow"
       sb.append("${indent}SegmentedButtonRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
-      if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
+      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n") }
       (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Shimmer" -> {
+      imports += "dev.keliver.material.compose.Shimmer"
       sb.append("${indent}Shimmer(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
-      if ("heightDp" in node.props) sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n")
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
       sb.append("$indent)\n")
     }
     "Slider" -> {
+      imports += "dev.keliver.material.compose.Slider"
       sb.append("${indent}Slider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("position" in node.props) sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("position" in node.props) { sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n") }
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Snackbar" -> {
+      imports += "dev.keliver.material.compose.Snackbar"
       sb.append("${indent}Snackbar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  message = ${fmtString(node.props["message"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "Spacer" -> {
+      imports += "dev.keliver.layout.compose.Spacer"
       sb.append("${indent}Spacer(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("width" in node.props) sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n")
-      if ("height" in node.props) sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("width" in node.props) { sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n"); imports += listOf("dev.keliver.ui.Dp") }
+      if ("height" in node.props) { sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n"); imports += listOf("dev.keliver.ui.Dp") }
       sb.append("$indent)\n")
     }
     "StyledBox" -> {
+      imports += "dev.keliver.material.compose.StyledBox"
       sb.append("${indent}StyledBox(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("colorArgb" in node.props) sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n")
-      if ("gradientStartArgb" in node.props) sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n")
-      if ("gradientEndArgb" in node.props) sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n")
-      if ("cornerRadiusDp" in node.props) sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n")
-      if ("widthDp" in node.props) sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n")
-      if ("heightDp" in node.props) sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n")
-      if ("paddingDp" in node.props) sb.append("${indent}  paddingDp = ${fmtInt(node.props["paddingDp"])},\n")
-      if ("fillWidth" in node.props) sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n")
-      if ("contentAlignment" in node.props) sb.append("${indent}  contentAlignment = ${fmtInt(node.props["contentAlignment"])},\n")
-      if ("offsetYDp" in node.props) sb.append("${indent}  offsetYDp = ${fmtInt(node.props["offsetYDp"])},\n")
-      if ("elevationDp" in node.props) sb.append("${indent}  elevationDp = ${fmtInt(node.props["elevationDp"])},\n")
-      if ("borderColorArgb" in node.props) sb.append("${indent}  borderColorArgb = ${fmtInt(node.props["borderColorArgb"])},\n")
-      if ("borderWidthDp" in node.props) sb.append("${indent}  borderWidthDp = ${fmtInt(node.props["borderWidthDp"])},\n")
-      if ("gradientVertical" in node.props) sb.append("${indent}  gradientVertical = ${fmtBool(node.props["gradientVertical"])},\n")
-      if ("gradientColorsArgb" in node.props) sb.append("${indent}  gradientColorsArgb = ${fmtIntList(node.props["gradientColorsArgb"])},\n")
-      if ("gradientStops" in node.props) sb.append("${indent}  gradientStops = ${fmtFloatList(node.props["gradientStops"])},\n")
-      if ("gradientDirection" in node.props) sb.append("${indent}  gradientDirection = ${fmtInt(node.props["gradientDirection"])},\n")
-      if ("cornerTopStartDp" in node.props) sb.append("${indent}  cornerTopStartDp = ${fmtInt(node.props["cornerTopStartDp"])},\n")
-      if ("cornerTopEndDp" in node.props) sb.append("${indent}  cornerTopEndDp = ${fmtInt(node.props["cornerTopEndDp"])},\n")
-      if ("cornerBottomStartDp" in node.props) sb.append("${indent}  cornerBottomStartDp = ${fmtInt(node.props["cornerBottomStartDp"])},\n")
-      if ("cornerBottomEndDp" in node.props) sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n") }
+      if ("gradientStartArgb" in node.props) { sb.append("${indent}  gradientStartArgb = ${fmtInt(node.props["gradientStartArgb"])},\n") }
+      if ("gradientEndArgb" in node.props) { sb.append("${indent}  gradientEndArgb = ${fmtInt(node.props["gradientEndArgb"])},\n") }
+      if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n") }
+      if ("widthDp" in node.props) { sb.append("${indent}  widthDp = ${fmtInt(node.props["widthDp"])},\n") }
+      if ("heightDp" in node.props) { sb.append("${indent}  heightDp = ${fmtInt(node.props["heightDp"])},\n") }
+      if ("paddingDp" in node.props) { sb.append("${indent}  paddingDp = ${fmtInt(node.props["paddingDp"])},\n") }
+      if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n") }
+      if ("contentAlignment" in node.props) { sb.append("${indent}  contentAlignment = ${fmtInt(node.props["contentAlignment"])},\n") }
+      if ("offsetYDp" in node.props) { sb.append("${indent}  offsetYDp = ${fmtInt(node.props["offsetYDp"])},\n") }
+      if ("elevationDp" in node.props) { sb.append("${indent}  elevationDp = ${fmtInt(node.props["elevationDp"])},\n") }
+      if ("borderColorArgb" in node.props) { sb.append("${indent}  borderColorArgb = ${fmtInt(node.props["borderColorArgb"])},\n") }
+      if ("borderWidthDp" in node.props) { sb.append("${indent}  borderWidthDp = ${fmtInt(node.props["borderWidthDp"])},\n") }
+      if ("gradientVertical" in node.props) { sb.append("${indent}  gradientVertical = ${fmtBool(node.props["gradientVertical"])},\n") }
+      if ("gradientColorsArgb" in node.props) { sb.append("${indent}  gradientColorsArgb = ${fmtIntList(node.props["gradientColorsArgb"])},\n") }
+      if ("gradientStops" in node.props) { sb.append("${indent}  gradientStops = ${fmtFloatList(node.props["gradientStops"])},\n") }
+      if ("gradientDirection" in node.props) { sb.append("${indent}  gradientDirection = ${fmtInt(node.props["gradientDirection"])},\n") }
+      if ("cornerTopStartDp" in node.props) { sb.append("${indent}  cornerTopStartDp = ${fmtInt(node.props["cornerTopStartDp"])},\n") }
+      if ("cornerTopEndDp" in node.props) { sb.append("${indent}  cornerTopEndDp = ${fmtInt(node.props["cornerTopEndDp"])},\n") }
+      if ("cornerBottomStartDp" in node.props) { sb.append("${indent}  cornerBottomStartDp = ${fmtInt(node.props["cornerBottomStartDp"])},\n") }
+      if ("cornerBottomEndDp" in node.props) { sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "StyledBox", imports) }
       sb.append("$indent}\n")
     }
     "StyledText" -> {
+      imports += "dev.keliver.material.compose.StyledText"
       sb.append("${indent}StyledText(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("fontSize" in node.props) sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n")
-      if ("bold" in node.props) sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n")
-      if ("colorArgb" in node.props) sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n")
-      if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
-      if ("maxLines" in node.props) sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n")
-      if ("overflow" in node.props) sb.append("${indent}  overflow = ${fmtInt(node.props["overflow"])},\n")
-      if ("lineHeightSp" in node.props) sb.append("${indent}  lineHeightSp = ${fmtInt(node.props["lineHeightSp"])},\n")
-      if ("letterSpacingX100" in node.props) sb.append("${indent}  letterSpacingX100 = ${fmtInt(node.props["letterSpacingX100"])},\n")
-      if ("italic" in node.props) sb.append("${indent}  italic = ${fmtBool(node.props["italic"])},\n")
-      if ("underline" in node.props) sb.append("${indent}  underline = ${fmtBool(node.props["underline"])},\n")
-      if ("strikethrough" in node.props) sb.append("${indent}  strikethrough = ${fmtBool(node.props["strikethrough"])},\n")
-      if ("weight" in node.props) sb.append("${indent}  weight = ${fmtInt(node.props["weight"])},\n")
-      if ("colorRole" in node.props) sb.append("${indent}  colorRole = ${fmtInt(node.props["colorRole"])},\n")
+      if ("fontSize" in node.props) { sb.append("${indent}  fontSize = ${fmtInt(node.props["fontSize"])},\n") }
+      if ("bold" in node.props) { sb.append("${indent}  bold = ${fmtBool(node.props["bold"])},\n") }
+      if ("colorArgb" in node.props) { sb.append("${indent}  colorArgb = ${fmtInt(node.props["colorArgb"])},\n") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
+      if ("maxLines" in node.props) { sb.append("${indent}  maxLines = ${fmtInt(node.props["maxLines"])},\n") }
+      if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtInt(node.props["overflow"])},\n") }
+      if ("lineHeightSp" in node.props) { sb.append("${indent}  lineHeightSp = ${fmtInt(node.props["lineHeightSp"])},\n") }
+      if ("letterSpacingX100" in node.props) { sb.append("${indent}  letterSpacingX100 = ${fmtInt(node.props["letterSpacingX100"])},\n") }
+      if ("italic" in node.props) { sb.append("${indent}  italic = ${fmtBool(node.props["italic"])},\n") }
+      if ("underline" in node.props) { sb.append("${indent}  underline = ${fmtBool(node.props["underline"])},\n") }
+      if ("strikethrough" in node.props) { sb.append("${indent}  strikethrough = ${fmtBool(node.props["strikethrough"])},\n") }
+      if ("weight" in node.props) { sb.append("${indent}  weight = ${fmtInt(node.props["weight"])},\n") }
+      if ("colorRole" in node.props) { sb.append("${indent}  colorRole = ${fmtInt(node.props["colorRole"])},\n") }
       sb.append("$indent)\n")
     }
     "SuggestionChip" -> {
+      imports += "dev.keliver.material.compose.SuggestionChip"
       sb.append("${indent}SuggestionChip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n")
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "Surface" -> {
+      imports += "dev.keliver.material.compose.Surface"
       sb.append("${indent}Surface(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Surface", imports) }
       sb.append("$indent}\n")
     }
     "Switch" -> {
+      imports += "dev.keliver.material.compose.Switch"
       sb.append("${indent}Switch(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Tab" -> {
+      imports += "dev.keliver.material.compose.Tab"
       sb.append("${indent}Tab(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("selected" in node.props) sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n")
+      if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "TabRow" -> {
+      imports += "dev.keliver.material.compose.TabRow"
       sb.append("${indent}TabRow(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("selectedIndex" in node.props) sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "TabRow", imports) }
       sb.append("$indent}\n")
     }
     "Text" -> {
+      imports += "dev.keliver.material.compose.Text"
       sb.append("${indent}Text(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "TextButton" -> {
+      imports += "dev.keliver.material.compose.TextButton"
       sb.append("${indent}TextButton(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("enabled" in node.props) sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n")
+      if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n") }
       (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
       sb.append("$indent)\n")
     }
     "TextField" -> {
+      imports += "dev.keliver.material.compose.TextField"
       sb.append("${indent}TextField(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
-      if ("placeholder" in node.props) sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n")
-      if ("align" in node.props) sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n")
+      if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n") }
+      if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n") }
       (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "TextInput" -> {
+      imports += "dev.keliver.material.compose.TextInput"
       sb.append("${indent}TextInput(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("hint" in node.props) sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("hint" in node.props) { sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n") }
       (node.props["onChange"] as? Action)?.let { a -> sb.append("${indent}  onChange = ${fmtAction(a, 1)},\n") }
       sb.append("$indent)\n")
     }
     "Theme" -> {
+      imports += "dev.keliver.material.compose.Theme"
       sb.append("${indent}Theme(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("dark" in node.props) sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n")
-      if ("primaryArgb" in node.props) sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n")
-      if ("onPrimaryArgb" in node.props) sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n")
-      if ("secondaryArgb" in node.props) sb.append("${indent}  secondaryArgb = ${fmtInt(node.props["secondaryArgb"])},\n")
-      if ("onSecondaryArgb" in node.props) sb.append("${indent}  onSecondaryArgb = ${fmtInt(node.props["onSecondaryArgb"])},\n")
-      if ("surfaceArgb" in node.props) sb.append("${indent}  surfaceArgb = ${fmtInt(node.props["surfaceArgb"])},\n")
-      if ("onSurfaceArgb" in node.props) sb.append("${indent}  onSurfaceArgb = ${fmtInt(node.props["onSurfaceArgb"])},\n")
-      if ("surfaceVariantArgb" in node.props) sb.append("${indent}  surfaceVariantArgb = ${fmtInt(node.props["surfaceVariantArgb"])},\n")
-      if ("onSurfaceVariantArgb" in node.props) sb.append("${indent}  onSurfaceVariantArgb = ${fmtInt(node.props["onSurfaceVariantArgb"])},\n")
-      if ("backgroundArgb" in node.props) sb.append("${indent}  backgroundArgb = ${fmtInt(node.props["backgroundArgb"])},\n")
-      if ("onBackgroundArgb" in node.props) sb.append("${indent}  onBackgroundArgb = ${fmtInt(node.props["onBackgroundArgb"])},\n")
-      if ("errorArgb" in node.props) sb.append("${indent}  errorArgb = ${fmtInt(node.props["errorArgb"])},\n")
-      if ("outlineArgb" in node.props) sb.append("${indent}  outlineArgb = ${fmtInt(node.props["outlineArgb"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("dark" in node.props) { sb.append("${indent}  dark = ${fmtBool(node.props["dark"])},\n") }
+      if ("primaryArgb" in node.props) { sb.append("${indent}  primaryArgb = ${fmtInt(node.props["primaryArgb"])},\n") }
+      if ("onPrimaryArgb" in node.props) { sb.append("${indent}  onPrimaryArgb = ${fmtInt(node.props["onPrimaryArgb"])},\n") }
+      if ("secondaryArgb" in node.props) { sb.append("${indent}  secondaryArgb = ${fmtInt(node.props["secondaryArgb"])},\n") }
+      if ("onSecondaryArgb" in node.props) { sb.append("${indent}  onSecondaryArgb = ${fmtInt(node.props["onSecondaryArgb"])},\n") }
+      if ("surfaceArgb" in node.props) { sb.append("${indent}  surfaceArgb = ${fmtInt(node.props["surfaceArgb"])},\n") }
+      if ("onSurfaceArgb" in node.props) { sb.append("${indent}  onSurfaceArgb = ${fmtInt(node.props["onSurfaceArgb"])},\n") }
+      if ("surfaceVariantArgb" in node.props) { sb.append("${indent}  surfaceVariantArgb = ${fmtInt(node.props["surfaceVariantArgb"])},\n") }
+      if ("onSurfaceVariantArgb" in node.props) { sb.append("${indent}  onSurfaceVariantArgb = ${fmtInt(node.props["onSurfaceVariantArgb"])},\n") }
+      if ("backgroundArgb" in node.props) { sb.append("${indent}  backgroundArgb = ${fmtInt(node.props["backgroundArgb"])},\n") }
+      if ("onBackgroundArgb" in node.props) { sb.append("${indent}  onBackgroundArgb = ${fmtInt(node.props["onBackgroundArgb"])},\n") }
+      if ("errorArgb" in node.props) { sb.append("${indent}  errorArgb = ${fmtInt(node.props["errorArgb"])},\n") }
+      if ("outlineArgb" in node.props) { sb.append("${indent}  outlineArgb = ${fmtInt(node.props["outlineArgb"])},\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Theme", imports) }
       sb.append("$indent}\n")
     }
     "Tooltip" -> {
+      imports += "dev.keliver.material.compose.Tooltip"
       sb.append("${indent}Tooltip(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n")
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "Tooltip", imports) }
       sb.append("$indent}\n")
     }
     "TopAppBar" -> {
+      imports += "dev.keliver.material.compose.TopAppBar"
       sb.append("${indent}TopAppBar(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  title = ${fmtString(node.props["title"] ?: "")},\n")
       sb.append("$indent)\n")
     }
     "VerticalDivider" -> {
+      imports += "dev.keliver.material.compose.VerticalDivider"
       sb.append("${indent}VerticalDivider(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("thickness" in node.props) sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n")
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
+      if ("thickness" in node.props) { sb.append("${indent}  thickness = ${fmtInt(node.props["thickness"])},\n") }
       sb.append("$indent)\n")
     }
     "VerticalPager" -> {
+      imports += "dev.keliver.material.compose.VerticalPager"
       sb.append("${indent}VerticalPager(\n")
-      modifierExpr(node)?.let { sb.append("${indent}  modifier = $it,\n") }
+      modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("$indent) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+      node.children.forEach { emitNode(sb, it, "$indent  ", components, "VerticalPager", imports) }
       sb.append("$indent}\n")
     }
-    else -> emitComponentInstance(sb, node, indent, components)
+    else -> emitComponentInstance(sb, node, indent, components, parent, imports)
   }
 }
 
 // Generic emitter for a project-component instance. Props emit in insertion
 // order; a declared content slot emits a trailing lambda even when empty.
-private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry) {
-  val args = node.props.entries.toList()
-  val hasSlot = components.spec(node.type)?.slots?.singleOrNull() != null
-  if (args.isEmpty()) {
+// K1: `mod.*` keys are never named args — they become `modifier = Modifier…`
+// only when the component declares a `modifier: Modifier` parameter.
+private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?, imports: MutableSet<String>) {
+  val spec = components.spec(node.type)
+  val args = node.props.entries.filter { !it.key.startsWith("mod.") }
+  val hasSlot = spec?.slots?.singleOrNull() != null
+  val modifier = if (spec?.acceptsModifier == true) modifierExpr(node, parent, imports) else null
+  if (args.isEmpty() && modifier == null) {
     if (!hasSlot && node.children.isEmpty()) { sb.append("$indent${node.type}()\n"); return }
     sb.append("$indent${node.type} {\n")
   } else {
     sb.append("$indent${node.type}(\n")
+    modifier?.let { sb.append("$indent  modifier = $it,\n") }
     for ((k, v) in args) {
       val rendered = when (v) {
         is Action -> fmtAction(v, if (v.arg == "it") 1 else 0)
@@ -884,7 +1006,7 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
         is String -> kotlinStringLiteral(v)
         is Boolean -> v.toString()
         is Int -> v.toString()
-        is Double -> v.toString()
+        is Double -> kotlinDoubleLiteral(v)
         is List<*> -> "listOf(" + v.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
         else -> v.toString()
       }
@@ -893,6 +1015,6 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
     if (!hasSlot && node.children.isEmpty()) { sb.append("$indent)\n"); return }
     sb.append("$indent) {\n")
   }
-  node.children.forEach { emitNode(sb, it, "$indent  ", components) }
+  node.children.forEach { emitNode(sb, it, "$indent  ", components, node.type, imports) }
   sb.append("$indent}\n")
 }

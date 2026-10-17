@@ -3,6 +3,9 @@ package dev.keliver.portal.render
 
 import androidx.compose.runtime.Composable
 import dev.keliver.Modifier
+import dev.keliver.layout.compose.BoxScope
+import dev.keliver.layout.compose.ColumnScope
+import dev.keliver.layout.compose.RowScope
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.bool
 import dev.keliver.portal.floatList
@@ -97,22 +100,32 @@ import dev.keliver.material.compose.size
 /** Interprets a portal WidgetNode tree as live keliver composables. */
 @Composable
 public fun RenderNode(node: WidgetNode) {
+  RenderNode(node, null)
+}
+
+/**
+ * K1: [scope] is the content-lambda receiver of the node's layout parent
+ * (RowScope/ColumnScope/BoxScope), or null. Scoped layout modifiers (flex,
+ * margin, …) only apply with the right receiver — exactly as on a device.
+ */
+@Composable
+public fun RenderNode(node: WidgetNode, scope: Any?) {
   when (node.type) {
     "Condition" -> {
       val field = (node.props["field"] as? String) ?: ""
       if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {
-        node.children.forEach { RenderNode(it) }
+        node.children.forEach { RenderNode(it, scope) }
       }
     }
     "Repeat" -> {
       val itemVar = (node.props["item"] as? String) ?: "item"
       val itemsField = (node.props["items"] as? String) ?: "items"
       repeat(PreviewBindings.rowCount(itemsField)) { i ->
-        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i)) }
+        node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i), scope) }
       }
     }
     "AlertDialog" -> AlertDialog(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       title = node.strB("title"),
       text = node.strB("text"),
       confirmText = node.strB("confirmText", "OK"),
@@ -121,7 +134,7 @@ public fun RenderNode(node: WidgetNode) {
       onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "AnimatedBorder" -> AnimatedBorder(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       cornerRadiusDp = node.intB("cornerRadiusDp", 8),
       strokeWidthDp = node.intB("strokeWidthDp", 1),
       baseColorArgb = node.intB("baseColorArgb", 0),
@@ -131,13 +144,13 @@ public fun RenderNode(node: WidgetNode) {
       effect = node.intB("effect", 0),
       colorsArgb = node.intList("colorsArgb"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "AnimatedVisibility" -> AnimatedVisibility(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       visible = node.boolB("visible", true),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "AsyncImage" -> AsyncImage(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       url = node.strB("url"),
       contentScale = node.intB("contentScale", 0),
       widthDp = node.intB("widthDp", 0),
@@ -148,27 +161,28 @@ public fun RenderNode(node: WidgetNode) {
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Badge" -> Badge(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
     )
     "BottomAppBar" -> BottomAppBar(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "BottomSheet" -> BottomSheet(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       visible = node.boolB("visible", false),
       contentPaddingDp = node.intB("contentPaddingDp", 0),
       onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Box" -> Box(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       width = constraintOf(node.intB("width", 0)),
       height = constraintOf(node.intB("height", 0)),
+      margin = marginOf(node, "margin"),
       horizontalAlignment = crossAxisOf(node.intB("horizontalAlignment", 0)),
       verticalAlignment = crossAxisOf(node.intB("verticalAlignment", 0)),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, this) } }
     "Button" -> Button(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
       containerArgb = node.intB("containerArgb", 0),
@@ -177,133 +191,134 @@ public fun RenderNode(node: WidgetNode) {
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Card" -> Card(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Checkbox" -> Checkbox(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       checked = node.boolB("checked", false),
       enabled = node.boolB("enabled", true),
       onCheckedChange = node.actionOf("onCheckedChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Chip" -> Chip(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       label = node.strB("label"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "CircularProgressIndicator" -> CircularProgressIndicator(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       progress = node.dblB("progress", -1.0).toFloat(),
     )
     "Clickable" -> Clickable(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Column" -> Column(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       width = constraintOf(node.intB("width", 0)),
       height = constraintOf(node.intB("height", 0)),
+      margin = marginOf(node, "margin"),
       overflow = overflowOf(node.intB("overflow", 0)),
       horizontalAlignment = crossAxisOf(node.intB("horizontalAlignment", 0)),
       verticalAlignment = mainAxisOf(node.intB("verticalAlignment", 0)),
       onScroll = node.actionOf("onScroll")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, this) } }
     "Dialog" -> Dialog(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Divider" -> Divider(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       thickness = node.intB("thickness", 1),
     )
     "DropdownMenu" -> DropdownMenu(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       expanded = node.boolB("expanded", false),
       options = node.strList("options"),
       onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
       onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "ElevatedButton" -> ElevatedButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "ElevatedCard" -> ElevatedCard(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "ExtendedFloatingActionButton" -> ExtendedFloatingActionButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FilledTonalButton" -> FilledTonalButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FilterChip" -> FilterChip(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       label = node.strB("label"),
       selected = node.boolB("selected", false),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FloatingActionButton" -> FloatingActionButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "FlowColumn" -> FlowColumn(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "FlowRow" -> FlowRow(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "HorizontalPager" -> HorizontalPager(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       autoScrollMs = node.intB("autoScrollMs", 0),
       showIndicator = node.boolB("showIndicator", false),
       indicatorActiveArgb = node.intB("indicatorActiveArgb", 0),
       indicatorInactiveArgb = node.intB("indicatorInactiveArgb", 0),
       contentPaddingDp = node.intB("contentPaddingDp", 0),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Icon" -> Icon(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       name = node.strB("name"),
       sizeDp = node.intB("sizeDp", 24),
       tintArgb = node.intB("tintArgb", 0),
       contentDescription = node.strB("contentDescription"),
     )
     "IconButton" -> IconButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       imageUrl = node.strB("imageUrl"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Image" -> Image(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       url = node.strB("url"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "InputChip" -> InputChip(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       label = node.strB("label"),
       selected = node.boolB("selected", false),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "LazyHorizontalGrid" -> LazyHorizontalGrid(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       rows = node.intB("rows", 2),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "LazyVerticalGrid" -> LazyVerticalGrid(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       columns = node.intB("columns", 2),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "LinearProgressIndicator" -> LinearProgressIndicator(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       progress = node.dblB("progress", -1.0).toFloat(),
     )
     "ListItem" -> ListItem(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       headline = node.strB("headline"),
       supporting = node.strB("supporting"),
       overline = node.strB("overline"),
@@ -312,13 +327,13 @@ public fun RenderNode(node: WidgetNode) {
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "NavigationBar" -> NavigationBar(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "NavigationRail" -> NavigationRail(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "OutlinedButton" -> OutlinedButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
       iconUrl = node.strB("iconUrl"),
@@ -330,10 +345,10 @@ public fun RenderNode(node: WidgetNode) {
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "OutlinedCard" -> OutlinedCard(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "OutlinedTextField" -> OutlinedTextField(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       placeholder = node.strB("placeholder"),
       label = node.strB("label"),
@@ -349,52 +364,53 @@ public fun RenderNode(node: WidgetNode) {
       onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "RadioButton" -> RadioButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       selected = node.boolB("selected", false),
       enabled = node.boolB("enabled", true),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Row" -> Row(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       width = constraintOf(node.intB("width", 0)),
       height = constraintOf(node.intB("height", 0)),
+      margin = marginOf(node, "margin"),
       overflow = overflowOf(node.intB("overflow", 0)),
       horizontalAlignment = mainAxisOf(node.intB("horizontalAlignment", 0)),
       verticalAlignment = crossAxisOf(node.intB("verticalAlignment", 0)),
       onScroll = node.actionOf("onScroll")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, this) } }
     "ScrollableColumn" -> ScrollableColumn(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "SegmentedButtonRow" -> SegmentedButtonRow(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       options = node.strList("options"),
       selectedIndex = node.intB("selectedIndex", 0),
       onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Shimmer" -> Shimmer(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       widthDp = node.intB("widthDp", 0),
       heightDp = node.intB("heightDp", 16),
       cornerRadiusDp = node.intB("cornerRadiusDp", 8),
     )
     "Slider" -> Slider(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       position = node.dblB("position", 0.0).toFloat(),
       enabled = node.boolB("enabled", true),
       onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Snackbar" -> Snackbar(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       message = node.strB("message"),
     )
     "Spacer" -> Spacer(
-      modifier = nodeModifier(node),
-      width = Dp(node.dblB("width", 0.0)),
-      height = Dp(node.dblB("height", 0.0)),
+      modifier = nodeModifier(node, scope),
+      width = Dp(node.dblB("width", 0.0).coerceAtLeast(0.0)),
+      height = Dp(node.dblB("height", 0.0).coerceAtLeast(0.0)),
     )
     "StyledBox" -> StyledBox(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       colorArgb = node.intB("colorArgb", 0),
       gradientStartArgb = node.intB("gradientStartArgb", 0),
       gradientEndArgb = node.intB("gradientEndArgb", 0),
@@ -417,9 +433,9 @@ public fun RenderNode(node: WidgetNode) {
       cornerBottomStartDp = node.intB("cornerBottomStartDp", -1),
       cornerBottomEndDp = node.intB("cornerBottomEndDp", -1),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "StyledText" -> StyledText(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       fontSize = node.intB("fontSize", 14),
       bold = node.boolB("bold", false),
@@ -436,53 +452,53 @@ public fun RenderNode(node: WidgetNode) {
       colorRole = node.intB("colorRole", 0),
     )
     "SuggestionChip" -> SuggestionChip(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       label = node.strB("label"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "Surface" -> Surface(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Switch" -> Switch(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       checked = node.boolB("checked", false),
       enabled = node.boolB("enabled", true),
       onCheckedChange = node.actionOf("onCheckedChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Tab" -> Tab(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       selected = node.boolB("selected", false),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "TabRow" -> TabRow(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       selectedIndex = node.intB("selectedIndex", 0),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Text" -> Text(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
     )
     "TextButton" -> TextButton(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       enabled = node.boolB("enabled", true),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     )
     "TextField" -> TextField(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
       placeholder = node.strB("placeholder"),
       align = node.intB("align", 0),
       onValueChange = node.actionOf("onValueChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "TextInput" -> TextInput(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       hint = node.strB("hint"),
       onChange = node.actionOf("onChange")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
     "Theme" -> Theme(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       dark = node.boolB("dark", false),
       primaryArgb = node.intB("primaryArgb", 0),
       onPrimaryArgb = node.intB("onPrimaryArgb", 0),
@@ -496,48 +512,109 @@ public fun RenderNode(node: WidgetNode) {
       onBackgroundArgb = node.intB("onBackgroundArgb", 0),
       errorArgb = node.intB("errorArgb", 0),
       outlineArgb = node.intB("outlineArgb", 0),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "Tooltip" -> Tooltip(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       text = node.strB("text"),
-    ) { node.children.forEach { RenderNode(it) } }
+    ) { node.children.forEach { RenderNode(it, null) } }
     "TopAppBar" -> TopAppBar(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       title = node.strB("title"),
     )
     "VerticalDivider" -> VerticalDivider(
-      modifier = nodeModifier(node),
+      modifier = nodeModifier(node, scope),
       thickness = node.intB("thickness", 1),
     )
     "VerticalPager" -> VerticalPager(
-      modifier = nodeModifier(node),
-    ) { node.children.forEach { RenderNode(it) } }
-    else -> componentPreview?.invoke(node) ?: StyledText(text = "\u26a0 unknown widget: ${node.type}", colorArgb = -5238254)
+      modifier = nodeModifier(node, scope),
+    ) { node.children.forEach { RenderNode(it, null) } }
+    else -> componentPreviewInScope?.invoke(node, scope) ?: componentPreview?.invoke(node)
+      ?: StyledText(text = "\u26a0 unknown widget: ${node.type}", colorArgb = -5238254)
   }
 }
 
-/** Builds the Modifier chain from a node's namespaced "mod.*" props. */
-private fun nodeModifier(node: WidgetNode): Modifier {
+/**
+ * Builds the Modifier chain from a node's namespaced "mod.*" props in AUTHOR
+ * order (the order the document keeps, as the device's chain does). A scoped
+ * layout modifier applies with(scope) of the parent's content lambda, and is
+ * skipped when [scope] is not one of its scopes (it has no meaning there).
+ */
+private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {
   var m: Modifier = Modifier
-  if ("mod.Alpha.pct" in node.props) m = m.alpha(node.intB("mod.Alpha.pct", 0))
-  if (node.bool("mod.AnimateContentSize")) m = m.animateContentSize()
-  if ("mod.AspectRatio.ratio" in node.props) m = m.aspectRatio(node.dblB("mod.AspectRatio.ratio", 0.0).toFloat())
-  if ("mod.Background.colorArgb" in node.props) m = m.background(node.intB("mod.Background.colorArgb", 0))
-  if ("mod.Blur.radiusDp" in node.props) m = m.blur(node.intB("mod.Blur.radiusDp", 0))
-  if ("mod.Border.widthDp" in node.props || "mod.Border.colorArgb" in node.props) m = m.border(node.intB("mod.Border.widthDp", 0), node.intB("mod.Border.colorArgb", 0))
-  if ("mod.CornerRadius.radiusDp" in node.props) m = m.cornerRadius(node.intB("mod.CornerRadius.radiusDp", 0))
-  if ("mod.CornerRadiusEach.topStartDp" in node.props || "mod.CornerRadiusEach.topEndDp" in node.props || "mod.CornerRadiusEach.bottomEndDp" in node.props || "mod.CornerRadiusEach.bottomStartDp" in node.props) m = m.cornerRadiusEach(node.intB("mod.CornerRadiusEach.topStartDp", 0), node.intB("mod.CornerRadiusEach.topEndDp", 0), node.intB("mod.CornerRadiusEach.bottomEndDp", 0), node.intB("mod.CornerRadiusEach.bottomStartDp", 0))
-  if (node.bool("mod.FillMaxHeight")) m = m.fillMaxHeight()
-  if (node.bool("mod.FillMaxSize")) m = m.fillMaxSize()
-  if (node.bool("mod.FillWidth")) m = m.fillWidth()
-  if ("mod.GradientBackground.startArgb" in node.props || "mod.GradientBackground.endArgb" in node.props) m = m.gradientBackground(node.intB("mod.GradientBackground.startArgb", 0), node.intB("mod.GradientBackground.endArgb", 0))
-  if ("mod.Offset.xDp" in node.props || "mod.Offset.yDp" in node.props) m = m.offset(node.intB("mod.Offset.xDp", 0), node.intB("mod.Offset.yDp", 0))
-  if ("mod.Padding.allDp" in node.props) m = m.padding(node.intB("mod.Padding.allDp", 0))
-  if ("mod.PaddingEach.startDp" in node.props || "mod.PaddingEach.topDp" in node.props || "mod.PaddingEach.endDp" in node.props || "mod.PaddingEach.bottomDp" in node.props) m = m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
-  if ("mod.Rotate.degrees" in node.props) m = m.rotate(node.intB("mod.Rotate.degrees", 0))
-  if ("mod.Scale.percent" in node.props) m = m.scale(node.intB("mod.Scale.percent", 0))
-  if ("mod.SelectionTag.handle" in node.props) m = m.selectionTag(node.intB("mod.SelectionTag.handle", 0))
-  if ("mod.Shadow.elevationDp" in node.props) m = m.shadow(node.intB("mod.Shadow.elevationDp", 0))
-  if ("mod.Size.widthDp" in node.props || "mod.Size.heightDp" in node.props) m = m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
+  val names = node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
+  for (name in names) {
+    m = when (name) {
+      "Alpha" -> m.alpha(node.intB("mod.Alpha.pct", 0))
+      "AnimateContentSize" -> if (node.bool("mod.AnimateContentSize")) m.animateContentSize() else m
+      "AspectRatio" -> m.aspectRatio(node.dblB("mod.AspectRatio.ratio", 0.0).toFloat())
+      "Background" -> m.background(node.intB("mod.Background.colorArgb", 0))
+      "Blur" -> m.blur(node.intB("mod.Blur.radiusDp", 0))
+      "Border" -> m.border(node.intB("mod.Border.widthDp", 0), node.intB("mod.Border.colorArgb", 0))
+      "CornerRadius" -> m.cornerRadius(node.intB("mod.CornerRadius.radiusDp", 0))
+      "CornerRadiusEach" -> m.cornerRadiusEach(node.intB("mod.CornerRadiusEach.topStartDp", 0), node.intB("mod.CornerRadiusEach.topEndDp", 0), node.intB("mod.CornerRadiusEach.bottomEndDp", 0), node.intB("mod.CornerRadiusEach.bottomStartDp", 0))
+      "FillMaxHeight" -> if (node.bool("mod.FillMaxHeight")) m.fillMaxHeight() else m
+      "FillMaxSize" -> if (node.bool("mod.FillMaxSize")) m.fillMaxSize() else m
+      "FillWidth" -> if (node.bool("mod.FillWidth")) m.fillWidth() else m
+      "Flex" -> when (scope) {
+        is ColumnScope -> with(scope) { m.flex(node.dblB("mod.Flex.value", 0.0)) }
+        is RowScope -> with(scope) { m.flex(node.dblB("mod.Flex.value", 0.0)) }
+        else -> m
+      }
+      "GradientBackground" -> m.gradientBackground(node.intB("mod.GradientBackground.startArgb", 0), node.intB("mod.GradientBackground.endArgb", 0))
+      "Grow" -> when (scope) {
+        is ColumnScope -> with(scope) { m.grow(node.dblB("mod.Grow.value", 0.0)) }
+        is RowScope -> with(scope) { m.grow(node.dblB("mod.Grow.value", 0.0)) }
+        else -> m
+      }
+      "Height" -> when (scope) {
+        is BoxScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.height(Dp(node.dblB("mod.Height.height", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      "HorizontalAlignment" -> when (scope) {
+        is BoxScope -> with(scope) { m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0))) }
+        is ColumnScope -> with(scope) { m.horizontalAlignment(crossAxisOf(node.intB("mod.HorizontalAlignment.alignment", 0))) }
+        else -> m
+      }
+      "LayoutSize" -> when (scope) {
+        is BoxScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.size(Dp(node.dblB("mod.LayoutSize.width", 0.0).coerceAtLeast(0.0)), Dp(node.dblB("mod.LayoutSize.height", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      "Margin" -> when (scope) {
+        is BoxScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        is ColumnScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        is RowScope -> with(scope) { m.margin(marginOf(node, "mod.Margin.margin")) }
+        else -> m
+      }
+      "Offset" -> m.offset(node.intB("mod.Offset.xDp", 0), node.intB("mod.Offset.yDp", 0))
+      "Padding" -> m.padding(node.intB("mod.Padding.allDp", 0))
+      "PaddingEach" -> m.paddingEach(node.intB("mod.PaddingEach.startDp", 0), node.intB("mod.PaddingEach.topDp", 0), node.intB("mod.PaddingEach.endDp", 0), node.intB("mod.PaddingEach.bottomDp", 0))
+      "Rotate" -> m.rotate(node.intB("mod.Rotate.degrees", 0))
+      "Scale" -> m.scale(node.intB("mod.Scale.percent", 0))
+      "SelectionTag" -> m.selectionTag(node.intB("mod.SelectionTag.handle", 0))
+      "Shadow" -> m.shadow(node.intB("mod.Shadow.elevationDp", 0))
+      "Shrink" -> when (scope) {
+        is ColumnScope -> with(scope) { m.shrink(node.dblB("mod.Shrink.value", 0.0)) }
+        is RowScope -> with(scope) { m.shrink(node.dblB("mod.Shrink.value", 0.0)) }
+        else -> m
+      }
+      "Size" -> m.size(node.intB("mod.Size.widthDp", 0), node.intB("mod.Size.heightDp", 0))
+      "VerticalAlignment" -> when (scope) {
+        is BoxScope -> with(scope) { m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0))) }
+        is RowScope -> with(scope) { m.verticalAlignment(crossAxisOf(node.intB("mod.VerticalAlignment.alignment", 0))) }
+        else -> m
+      }
+      "Width" -> when (scope) {
+        is BoxScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        is ColumnScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        is RowScope -> with(scope) { m.width(Dp(node.dblB("mod.Width.width", 0.0).coerceAtLeast(0.0))) }
+        else -> m
+      }
+      else -> m
+    }
+  }
   return m
 }

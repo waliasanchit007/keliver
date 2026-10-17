@@ -15,3 +15,11 @@ import dev.keliver.portal.WidgetNode
  * Devices never invoke this — they render the compiled composable directly.
  */
 public var componentPreview: (@Composable (WidgetNode) -> Unit)? = null
+
+/**
+ * K1: the scope-aware form of [componentPreview], preferred when set. [scope]
+ * is the content-lambda receiver of the instance's layout parent (RowScope /
+ * ColumnScope / BoxScope) or null; the expansion is rendered with it so the
+ * component root sits in its parent exactly as the compiled call does.
+ */
+public var componentPreviewInScope: (@Composable (node: WidgetNode, scope: Any?) -> Unit)? = null

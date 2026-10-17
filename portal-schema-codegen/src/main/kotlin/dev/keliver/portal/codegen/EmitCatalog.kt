@@ -6,12 +6,25 @@ internal fun catalogKind(p: MappedProp): String = when {
     MappedKind.TEXT -> "Text"
     MappedKind.INT, MappedKind.CONSTRAINT, MappedKind.CROSS_AXIS, MappedKind.MAIN_AXIS, MappedKind.OVERFLOW -> "Int"
     MappedKind.BOOL -> "Bool"
-    MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP -> "Double"
+    MappedKind.DOUBLE, MappedKind.FLOAT, MappedKind.DP, MappedKind.MARGIN -> "Double"
     MappedKind.INT_LIST -> "IntList"
     MappedKind.FLOAT_LIST -> "FloatList"
     MappedKind.STRING_LIST -> "StringList"
   }
 }
+
+/**
+ * The catalog PropSpec lines for [p]: one, or — for a MARGIN — four Double
+ * specs `<prop>.start/.end/.top/.bottom` so the existing number editor works.
+ */
+internal fun propSpecs(p: MappedProp): List<String> =
+  if (p.kind == MappedKind.MARGIN) {
+    MARGIN_SIDES.map { side ->
+      "PropSpec(\"${p.name}.$side\", PropKind.Double, \"${humanize(p.name)} $side\")"
+    }
+  } else {
+    listOf("PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\")")
+  }
 
 /** camelCase → "Camel case" */
 internal fun humanize(name: String): String {
@@ -29,6 +42,7 @@ private fun sampleValue(widgetName: String, p: MappedProp): String? = when {
     MappedKind.INT_LIST -> "listOf<Int>()"
     MappedKind.FLOAT_LIST -> "listOf<Float>()"
     MappedKind.STRING_LIST -> "listOf(\"Option A\", \"Option B\")"
+    MappedKind.MARGIN -> null // always defaulted (Margin.Zero) in the schemas
   }
 }
 
@@ -42,7 +56,7 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
     if (w.props.isNotEmpty()) {
       appendLine()
       for (p in w.props) {
-        appendLine("    PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\"),")
+        for (line in propSpecs(p)) appendLine("    $line,")
       }
       append("  )")
     } else {
@@ -62,9 +76,28 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
   appendLine("public val modifierSpecs: List<ModifierSpec> = listOf(")
   for (m in modifiers.sortedBy { it.name }) {
     append("  ModifierSpec(\"${m.name}\", listOf(")
-    append(m.props.joinToString(", ") { p -> "PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\")" })
-    appendLine(")),")
+    append(m.props.flatMap { propSpecs(it) }.joinToString(", "))
+    append(")")
+    if (m.isScoped) append(", scopes = listOf(${m.parentTypes.joinToString(", ") { "\"$it\"" }})")
+    if (m.extensionName != m.name.replaceFirstChar { it.lowercase() }) append(", extension = \"${m.extensionName}\"")
+    if (m.props.isNotEmpty()) append(", argTypes = listOf(${m.props.joinToString(", ") { "\"${sourceType(it.kind)}\"" }})")
+    appendLine("),")
   }
+  appendLine(")")
+  appendLine()
+  // K1: every wire key that holds a Dp (Dp props, Margin sides, Dp/Margin
+  // modifier args) — Dp is non-negative, so these clamp at 0 everywhere.
+  val dpKeys = buildList {
+    for (w in widgets.sortedBy { it.name }) for (p in w.props) {
+      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys(p.name, p.kind).forEach { add("${w.name}.$it") }
+    }
+    for (m in modifiers.sortedBy { it.name }) for (p in m.props) {
+      if (p.kind == MappedKind.DP || p.kind == MappedKind.MARGIN) wireKeys("mod.${m.name}.${p.name}", p.kind).forEach { add(it) }
+    }
+  }
+  appendLine("/** Wire keys (\"Widget.prop\", \"mod.Modifier.prop\") holding a Dp — see isDpProp. */")
+  appendLine("public val dpPropKeys: Set<String> = setOf(")
+  for (k in dpKeys) appendLine("  \"$k\",")
   appendLine(")")
   appendLine()
   appendLine("private val specsByType = widgetSpecs.associateBy { it.type }")

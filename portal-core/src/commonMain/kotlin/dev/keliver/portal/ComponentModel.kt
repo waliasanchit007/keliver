@@ -85,3 +85,13 @@ public const val COMPONENT_SOURCE_HANDLE_PROP: String = "portal.componentSourceH
 /** True when [type] resolves to a primitive widget OR a project component. */
 public fun isKnownWidgetType(type: String, registry: ComponentRegistry = EmptyComponentRegistry): Boolean =
   widgetSpec(type) != null || registry.isComponent(type)
+
+/**
+ * K1: true when the component's signature declares a `modifier: Modifier`
+ * parameter — only then can an instance carry modifiers (exported as
+ * `modifier = Modifier…`); otherwise the relay refuses them and the exporter
+ * never writes them.
+ */
+public val ComponentSpec.acceptsModifier: Boolean
+  get() = paramTypes["modifier"]?.trim()?.removeSuffix("?")?.trim()
+    ?.let { it == "Modifier" || it == "dev.keliver.Modifier" } == true

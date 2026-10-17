@@ -11,7 +11,9 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.OpAck
 import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.isClientOp
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.exportKotlin
@@ -46,12 +48,40 @@ class DocumentService(
   }
   private var pendingWrite: ScheduledFuture<*>? = null
 
+  /**
+   * The client-op gate shared by [dryRun] and [submit] (null = acceptable):
+   *  - the engine's internal ops (undo inverses) are never accepted from clients;
+   *  - K1: a project-component instance carries modifiers only when its
+   *    signature declares a `modifier: Modifier` parameter.
+   */
+  private fun refusal(batch: OpBatch): String? {
+    if (batch.ops.any { !it.isClientOp() }) return "internal op not accepted"
+    val registry = components()
+    fun refuseMods(type: String, hasMods: Boolean): String? {
+      if (!hasMods || !registry.isComponent(type)) return null
+      return if (registry.spec(type)?.acceptsModifier == true) null
+      else "component $type declares no `modifier: Modifier` parameter"
+    }
+    fun walk(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
+      refuseMods(w.type, w.modifiers.isNotEmpty()) ?: w.children.firstNotNullOfOrNull(::walk)
+    }
+    for (op in batch.ops) {
+      when (op) {
+        is DocOp.SetModifier -> (doc.find(op.target) as? DocNode.Widget)?.let { w -> refuseMods(w.type, true)?.let { return it } }
+        is DocOp.InsertNode -> walk(op.node)?.let { return it }
+        else -> {}
+      }
+    }
+    return null
+  }
+
   /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */
   @Synchronized
   fun dryRun(batch: OpBatch): OpAck {
     if (batch.baseVersion != doc.version) {
       return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
     }
+    refusal(batch)?.let { return OpAck(false, doc.version, it) }
     val res = doc.applyBatch(batch.ops)
     return if (res.result == null) OpAck(false, doc.version, res.error) else OpAck(true, doc.version)
   }
@@ -61,9 +91,7 @@ class DocumentService(
     if (batch.baseVersion != doc.version) {
       return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
     }
-    if (batch.ops.any { it::class.simpleName == "InsertExisting" }) {
-      return OpAck(false, doc.version, "internal op not accepted")
-    }
+    refusal(batch)?.let { return OpAck(false, doc.version, it) }
     val res = doc.applyBatch(batch.ops)
     val ok = res.result ?: return OpAck(false, doc.version, res.error)
     doc = ok.doc.copy(version = doc.version + 1)
