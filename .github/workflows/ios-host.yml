@@ -54,7 +54,8 @@ permissions:
 jobs:
   ios-host:
     runs-on: macos-15
-    timeout-minutes: 120
+    # About 100 minutes before M0; the Benchmark configuration's release framework adds 25.
+    timeout-minutes: 160
     permissions:
       contents: read
     env:
