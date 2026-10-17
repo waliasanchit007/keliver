@@ -61,7 +61,7 @@ class DocumentService(
     if (batch.baseVersion != doc.version) {
       return OpAck(false, doc.version, "stale base version ${batch.baseVersion}, document is at ${doc.version}")
     }
-    if (batch.ops.any { it::class.simpleName == "InsertExisting" }) {
+    if (batch.ops.any { it::class.simpleName == "InsertExisting" || it::class.simpleName == "MoveRestore" }) {
       return OpAck(false, doc.version, "internal op not accepted")
     }
     val res = doc.applyBatch(batch.ops)

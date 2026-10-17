@@ -1,5 +1,8 @@
 package dev.keliver.portal.document
 
+import dev.keliver.portal.isDpProp
+import dev.keliver.portal.isValidUnder
+import dev.keliver.portal.modifierSpecs
 import kotlinx.serialization.Serializable
 
 /**
@@ -7,6 +10,15 @@ import kotlinx.serialization.Serializable
  * yields a new document + the INVERSE op that undoes it. Handles are stable
  * for the document's lifetime; InsertNode allocates them from [nextHandle]
  * (clients send handle 0 in inserted subtrees).
+ *
+ * K1 invariants every op keeps (what the editor shows is what is saved, and
+ * saved code compiles):
+ *  - a scoped layout modifier (flex, margin, …) sits only on a node whose
+ *    scope-giving parent (Condition/Repeat looked through) is one of its
+ *    scopes: SetModifier refuses one that isn't; Insert/Move strip the ones a
+ *    new position invalidates (undo restores them);
+ *  - a Dp-holding value (Dp prop, Margin side, Dp modifier arg) is never
+ *    negative: SetProp/SetModifier/Insert clamp it at 0.
  */
 @Serializable
 public data class UiDocument(
@@ -44,7 +56,8 @@ public data class UiDocument(
         if (op.after != null && parent.children.none { it.handle == op.after }) {
           return err("anchor ${op.after.v} is not a child of ${op.parent.v}")
         }
-        val (renumbered, next) = allocate(op.node, nextHandle)
+        val (allocated, next) = allocate(op.node, nextHandle)
+        val renumbered = sanitize(allocated, childScope(parent), deep = true)
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         TryResult(ApplyResult(replaced(newParent).copy(nextHandle = next), DocOp.DeleteNode(renumbered.handle)), null)
@@ -78,14 +91,31 @@ public data class UiDocument(
         if (op.after != null && target.children.none { it.handle == op.after }) {
           return err("anchor ${op.after.v} is not a child of ${op.newParent.v}")
         }
-        val res = deleted.apply(InsertExisting(op.newParent, op.after, node))
-        TryResult(ApplyResult(res.doc, DocOp.MoveNode(op.target, oldParent.handle, oldAfter)), null)
+        // K1: the node's (and, through Condition/Repeat, its children's) scope may change.
+        val moved = sanitize(node, deleted.childScope(target), deep = false)
+        val res = deleted.apply(InsertExisting(op.newParent, op.after, moved))
+        val inverse = if (moved == node) {
+          DocOp.MoveNode(op.target, oldParent.handle, oldAfter)
+        } else {
+          MoveRestore(op.target, oldParent.handle, oldAfter, node) // put the stripped modifiers back too
+        }
+        TryResult(ApplyResult(res.doc, inverse), null)
+      }
+
+      is MoveRestore -> {
+        val current = parentOf(root, op.target) ?: return err("unknown handle ${op.target.v}")
+        val idx = current.children.indexOfFirst { it.handle == op.target }
+        val after = if (idx == 0) null else current.children[idx - 1].handle
+        val deleted = apply(DocOp.DeleteNode(op.target)).doc
+        val res = deleted.apply(InsertExisting(op.parent, op.after, op.node))
+        TryResult(ApplyResult(res.doc, DocOp.MoveNode(op.target, current.handle, after)), null)
       }
 
       is DocOp.SetProp -> withWidget(op.target) { w ->
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
-        ApplyResult(replaced(w.copy(props = w.props + (op.name to op.value))), inv)
+        val value = if (isDpProp(w.type, op.name)) clampDp(op.value) else op.value
+        ApplyResult(replaced(w.copy(props = w.props + (op.name to value))), inv)
       }
 
       is DocOp.RemoveProp -> withWidget(op.target) { w ->
@@ -94,10 +124,17 @@ public data class UiDocument(
         ApplyResult(replaced(w.copy(props = w.props - op.name)), inv)
       }
 
-      is DocOp.SetModifier -> withWidget(op.target) { w ->
+      is DocOp.SetModifier -> {
+        val w = find(op.target) as? DocNode.Widget ?: return err("unknown handle ${op.target.v}")
+        val spec = modifierSpecs.firstOrNull { it.name == op.name.substringBefore('.') }
+        val scope = scopeParentOf(root, op.target)
+        if (spec != null && !spec.isValidUnder(scope)) {
+          return err("${spec.name} is only valid inside ${spec.scopes.joinToString("/")} (this node's parent is ${scope ?: "none"})")
+        }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
-        ApplyResult(replaced(w.copy(modifiers = w.modifiers + (op.name to op.value))), inv)
+        val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(op.value) else op.value
+        TryResult(ApplyResult(replaced(w.copy(modifiers = w.modifiers + (op.name to value))), inv), null)
       }
 
       is DocOp.RemoveModifier -> withWidget(op.target) { w ->
@@ -139,6 +176,56 @@ public data class UiDocument(
   }
 
   private fun replaced(newNode: DocNode): UiDocument = copy(root = replaceIn(root, newNode))
+
+  /** The scope-giving widget for children of [parent] (Condition/Repeat looked through). */
+  private fun childScope(parent: DocNode.Widget): String? =
+    if (parent.type in LOGIC_TYPES) scopeParentOf(root, parent.handle) else parent.type
+}
+
+/**
+ * Internal op: the inverse of a Move that stripped scoped modifiers — move the
+ * node back AND restore its original subtree (original handles). Never
+ * accepted from clients.
+ */
+@Serializable
+internal data class MoveRestore(val target: Handle, val parent: Handle, val after: Handle?, val node: DocNode) : DocOp
+
+private val LOGIC_TYPES = setOf("Condition", "Repeat")
+
+/** The widget whose content lambda holds [h] — Condition/Repeat (if/forEach) looked through. Null at the root. */
+private fun scopeParentOf(root: DocNode, h: Handle): String? {
+  var p = parentOf(root, h) ?: return null
+  while (p.type in LOGIC_TYPES) p = parentOf(root, p.handle) ?: return null
+  return p.type
+}
+
+/**
+ * K1: drop scoped modifiers not valid under [scope] and clamp negative Dp
+ * values. Condition/Repeat pass [scope] to their children; [deep] also checks
+ * every other descendant against its own parent (a freshly inserted subtree).
+ */
+private fun sanitize(n: DocNode, scope: String?, deep: Boolean): DocNode {
+  if (n !is DocNode.Widget) return n
+  val modifiers = n.modifiers
+    .filterKeys { key -> modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) ?: true }
+    .mapValues { (key, v) -> if (isDpProp(n.type, "mod.$key")) clampDp(v) else v }
+  val props = n.props.mapValues { (key, v) -> if (isDpProp(n.type, key)) clampDp(v) else v }
+  val children = n.children.map { c ->
+    when {
+      n.type in LOGIC_TYPES -> sanitize(c, scope, deep)
+      deep -> sanitize(c, n.type, deep)
+      else -> c
+    }
+  }
+  val out = n.copy(props = props, modifiers = modifiers, children = children)
+  return if (out == n) n else out
+}
+
+/** A Dp is never negative: a negative literal becomes 0. */
+private fun clampDp(v: PropValue): PropValue = when {
+  v is PropValue.Lit && (v.d ?: 0.0) < 0.0 -> v.copy(d = 0.0)
+  v is PropValue.Lit && (v.i ?: 0) < 0 -> v.copy(i = 0)
+  else -> v
 }
 
 /**
