@@ -132,10 +132,11 @@ fun interface TokenLookup {
 }
 
 /**
- * One scanned source file: its token declarations and the names of ALL its
- * top-level declarations (classes, objects, typealiases, functions,
- * properties) — a same-package declaration of a name beats a star import, so
- * resolution must know them. Immutable; the relay caches it per file.
+ * One scanned source file: its token declarations and the names of its
+ * top-level classifiers, objects, typealiases and properties — a same-package
+ * declaration of a name beats a star import, so resolution must know them.
+ * Functions are not kept: they live in a separate namespace and never bind
+ * `C` in `C.X` or a bare value reference. Immutable; the relay caches it per file.
  */
 class TokenFileScan internal constructor(
   val fileName: String,
@@ -248,12 +249,16 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
     val shadowed = fn?.let(::shadowedNames).orEmpty()
     var scope = FileScope.of(file, fileName)
+    // The simple names the FILE imports (exactly, not through an alias) — any
+    // other entry of scope.exact came from the document or this batch.
+    val fileImported = scope.exact.keys.toSet()
     fun covered(fq: String) = scope.exact[fq.substringAfterLast('.')] == fq ||
       fq.substringBeforeLast('.') in scope.stars || fq.substringBeforeLast('.') == scope.packageName
     // Imports the document already implies (written back soon) count as present.
     for (fq in pending.sorted()) {
       if (!covered(fq) && !scope.exact.containsKey(fq.substringAfterLast('.'))) scope = scope.withImport(fq)
     }
+    val documentImported = scope.exact.keys - fileImported
     for (token in tokens) {
       val chosen = usable(token.ref, token.import, fileName)?.decl ?: return "unknown design token ${token.ref}"
       val simple = token.ref.substringBefore('.')
@@ -262,7 +267,11 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
       if (fq != null && !covered(fq)) {
         when {
           scope.exact.containsKey(simple) ->
-            return "this file imports a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
+            return when (simple) {
+              in fileImported -> "this file imports"
+              in documentImported -> "this screen already uses"
+              else -> "this edit also uses"
+            } + " a different $simple (${scope.exact[simple]}); ${token.ref} would not mean $fq"
           simple in scope.aliases || simple in samePackage(scope) ||
             scope.stars.any { simple in packageNames[it].orEmpty() } ||
             (simple in KOTLIN_DEFAULT_IMPORTED && Regex("\\b${Regex.escape(simple)}\\b").containsMatchIn(text)) ->
@@ -420,9 +429,10 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
     /**
      * Classifier names every Kotlin file sees through default imports
      * (kotlin.*, kotlin.collections.*, kotlin.ranges.*, kotlin.text.*,
-     * kotlin.sequences.*, kotlin.comparisons.*, kotlin.annotation.*, and
-     * common java.lang.* on the JVM): an explicit import of the same simple
-     * name would rebind every existing use of it.
+     * kotlin.sequences.*, kotlin.comparisons.*, kotlin.annotation.*, common
+     * java.lang.* on the JVM, and kotlin.js.* — screens also build for js and
+     * wasm): an explicit import of the same simple name would rebind every
+     * existing use of it.
      */
     internal val KOTLIN_DEFAULT_IMPORTED: Set<String> = setOf(
       "Any", "Array", "Boolean", "BooleanArray", "Byte", "ByteArray", "Char", "CharArray", "CharSequence",
@@ -440,6 +450,10 @@ class TokenTable private constructor(scans: List<TokenFileScan>) {
       "Appendable", "CharCategory", "Charsets", "MatchGroup", "MatchResult", "Regex", "RegexOption", "StringBuilder",
       "Sequence", "Annotation", "Retention", "Target", "MustBeDocumented", "Repeatable",
       "Math", "System", "Thread", "Object", "Runnable", "Process", "StrictMath", "Character", "Integer",
+      "OptIn", "RequiresOptIn", "ReplaceWith", "DeprecationLevel", "DslMarker", "PublishedApi",
+      "NotImplementedError", "KotlinVersion", "LazyThreadSafetyMode", "Typography", "CharDirectionality",
+      "AnnotationTarget", "AnnotationRetention", "UIntRange", "ULongRange", "SequenceScope",
+      "JsName", "JsExport", "Promise", "Json", "JsAny",
     )
 
     /** Scan sources ([fileName] to text) for token declarations. A file that does not parse contributes nothing. */
