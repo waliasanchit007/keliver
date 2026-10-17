@@ -53,7 +53,7 @@ internal fun splitArgs(inner: String, base: Int): List<SourceArg>? {
   return args
 }
 
-/** Index just past... the closing quote of the string starting at [open]; null when unterminated. */
+/** Index of the closing quote of the string starting at [open]; null when unterminated or raw. */
 private fun skipString(t: String, open: Int): Int? {
   if (t.startsWith("\"\"\"", open)) return null // raw strings are not grammar here
   var i = open + 1
@@ -340,21 +340,9 @@ internal object ModifierChain {
     var i = open
     while (i < t.length) {
       when (t[i]) {
-        '"' -> i = skipStringAt(t, i) ?: return null
+        '"' -> i = skipString(t, i) ?: return null
         '(' -> depth++
         ')' -> { depth--; if (depth == 0) return i }
-      }
-      i++
-    }
-    return null
-  }
-
-  private fun skipStringAt(t: String, open: Int): Int? {
-    var i = open + 1
-    while (i < t.length) {
-      when (t[i]) {
-        '\\' -> i++
-        '"' -> return i
       }
       i++
     }
