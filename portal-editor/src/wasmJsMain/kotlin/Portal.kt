@@ -10,6 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.Conditional
+import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.Token
 import dev.keliver.portal.tokenValue
@@ -361,7 +363,8 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   }
   val xhr = XMLHttpRequest()
   // K2: `tokens=1` — this editor understands PropValue.Token (an older one is served literals).
-  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
+  // K3: `conditionals=1` — and PropValue.Conditional (an older one is served the true branch).
+  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
@@ -415,7 +418,7 @@ private fun startVersionPoll() {
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
       val xhr = XMLHttpRequest()
-      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
+      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
       xhr.addEventListener("load", { _ ->
         val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
         if (v != null && v != docVersion) refetchDoc(true)
@@ -493,7 +496,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
   val sel = selectedId
   val selType = sel?.let { portalTree.value.findNode(it)?.type }
   val acceptsChildren = selType?.let { type ->
-    widgetSpec(type)?.acceptsChildren == true || editorComponents.spec(type)?.slots?.size == 1
+    widgetSpec(type)?.acceptsChildren == true || type == ELSE_TYPE || editorComponents.spec(type)?.slots?.size == 1
   } == true
   val parentId = if (sel != null && acceptsChildren) {
     sel
@@ -1487,6 +1490,15 @@ private fun renderProps() {
   } else {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
   }
+  // K3: a Condition without an else branch can gain one (its last child, an Else node).
+  if (node.type == "Condition" && node.children.none { it.type == ELSE_TYPE }) {
+    propsEl.appendChild(
+      Ui.button("+ else branch", "btn") {
+        sendOps(listOf(DocOp.InsertNode(Handle(node.id.toLong()), lastChildHandle(node.id), WidgetNode(ELSE_TYPE).toDocNode())))
+      },
+    )
+  }
+  if (node.type == ELSE_TYPE) propsEl.appendChild(Ui.el("div", "muted", "else branch: its children render when the Condition does not hold"))
   val spec = widgetSpec(node.type)
   val specs = comp?.props ?: editableProps(node.type)
   if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
@@ -1502,6 +1514,11 @@ private fun renderProps() {
       val lab = Ui.el("label", "", evName)
       lab.setAttribute("title", evName)
       rowEl.appendChild(lab)
+      // K3: a conditional event — `if (b.enabled) b::tap else null`.
+      (node.props[evName] as? Conditional)?.let { c ->
+        propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh -> sendOps(listOf(op), refreshPanels = refresh); renderBindings() })
+        return@forEach
+      }
       val current = node.props[evName] as? Action
       val nameIn = Ui.input()
       nameIn.setAttribute("type", "text")
@@ -1628,6 +1645,11 @@ private fun propRowInner(
     )
     if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
     return rowEl
+  }
+
+  // K3: a conditional value: its condition and both branches, each edited in place.
+  (props[key] as? Conditional)?.let { c ->
+    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh -> sendOps(listOf(op), refreshPanels = refresh); renderBindings() }
   }
 
   // P3: bound props show a field-name input instead of a literal editor.

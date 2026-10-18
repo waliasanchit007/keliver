@@ -56,7 +56,7 @@ private val JSON = Json { ignoreUnknownKeys = true }
  * aren't rendered directly — a Repeat's mock rows inherit the template's
  * handle, so clicking any row selects the template (the editable thing).
  */
-private val UNRENDERED_TYPES = setOf("Repeat", "Condition", "RawCode")
+private val UNRENDERED_TYPES = setOf("Repeat", "Condition", dev.keliver.portal.ELSE_TYPE, "RawCode")
 
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
   val tagged = if (n.type in UNRENDERED_TYPES) n
