@@ -82,7 +82,7 @@ object Tools {
           })
         }
       })
-      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional>; Lit tags: s/i/d/b/li/lf; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), negate = `!`/isNot…; a Boolean test never reads a field the screen uses as a list or text), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; a Condition node takes props field (a plain binding name)/test/negate and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
+      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf>; Lit tags: s/i/d/b/li/lf/ls; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), negate = `!`/isNot…; a Boolean test never reads a field the screen uses as a list or text), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; Template = {parts} is a String template (`\"Rating: ${'$'}{b.rating}\"`) and fits only a String prop or a component's String parameter (also as a Conditional branch): each part is a Lit s (text, its decoded value), a Bind (a screen field, or item.x inside a Repeat over item) or a Token of any literal kind — never an expression; the server stores it canonical (adjacent text merged, no reference left = a plain Lit); ListOf = {tag, items} is a list prop's value with references (`listOf(C.Start, -1)`): tag li (a List<Int> prop) or ls (a List<String> prop), each item a Lit of that kind (tag i/s), a Token of that kind or a Bind, never conditional, never on a component; a Condition node takes props field (a plain binding name)/test/negate and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
     }.toString()
   }
 
@@ -96,7 +96,7 @@ object Tools {
     val screens = Regex("\"([^\"]+)\"").findAll(get("/screens?project=$project")).map { it.groupValues[1] }
     val hits = StringBuilder()
     screens.forEach { screen ->
-      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1")) }.getOrNull()
+      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&templates=1&lists=1")) }.getOrNull()
         ?: return@forEach
       usagesIn(screen, doc, name).forEach { hits.appendLine(it) }
     }
@@ -124,6 +124,9 @@ object Tools {
           val fq = tokenFqName(v)
           if (name == fq || name == v.ref) hits += "$screen: ${n.type}#${n.handle.v}.$key uses token '${v.ref}' ($fq)"
         }
+        // K4: a template's references and a list's elements.
+        is PropValue.Template -> v.parts.forEach { check(n, key, it) }
+        is PropValue.ListOf -> v.items.forEach { check(n, key, it) }
         else -> {}
       }
     }
@@ -226,13 +229,13 @@ object Tools {
 
     Tool(
       "get_document",
-      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action/Token/Conditional), modifiers, version. Ops target these handles.",
+      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action/Token/Conditional/Template/ListOf), modifiers, version. Ops target these handles.",
       mapOf("project" to "project (default 'default')", "screen" to "screen (default 'main')"),
     ) { args ->
       val project = args.str("project", "default")
       val screen = normalizeScreen(project, args.str("screen", "main"))
       rejectUnknownScreen(project, screen)
-        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1"))
+        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&templates=1&lists=1"))
     },
 
     Tool(
