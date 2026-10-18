@@ -96,7 +96,16 @@ private var docVersion: Long = -1
 /** K2: the relay's design-token table version last seen on the change stream. */
 private var tokensVersionSeen: Long = -1
 private var eventSource: EventSource? = null
-private val opQueue = ArrayDeque<Pair<List<DocOp>, Boolean>>() // ops to refreshPanels
+/** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
+private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?)
+private val opQueue = ArrayDeque<QueuedOps>()
+
+/** Drops every queued edit, telling each sender it was not applied. */
+private fun dropQueuedOps() {
+  val dropped = opQueue.toList()
+  opQueue.clear()
+  dropped.forEach { it.onResult?.invoke(false) }
+}
 private var opInFlight = false
 
 // The relay defaults to :8077, overridable via `?relay=<port>` so several per-app
@@ -298,16 +307,17 @@ private lateinit var flowGraphBody: HTMLElement
 // V2 M1 ops client — every edit is a transactional op batch against the
 // server document; the tree state here is only a projection of the ack'd doc.
 
-private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true) {
-  opQueue.addLast(ops to refreshPanels)
+/** Queues [ops]; [onResult] (if any) hears whether the document accepted them. */
+private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true, onResult: ((Boolean) -> Unit)? = null) {
+  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult))
   pumpOps()
 }
 
 private fun pumpOps() {
   if (playground) {
     while (true) {
-      val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: break
-      val t = localDoc.applyBatch(ops)
+      val q = opQueue.removeFirstOrNull() ?: break
+      val t = localDoc.applyBatch(q.ops)
       val r = t.result
       if (r == null) {
         Ui.toast(t.error ?: "edit rejected")
@@ -316,12 +326,15 @@ private fun pumpOps() {
         localUndo.addLast(r.inverseBatch)
         localRedo.clear()
       }
-      localRefresh(refreshPanels)
+      q.onResult?.invoke(r != null)
+      localRefresh(q.refreshPanels)
     }
     return
   }
   if (opInFlight) return
-  val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: return
+  val q = opQueue.removeFirstOrNull() ?: return
+  val ops = q.ops
+  val refreshPanels = q.refreshPanels
   opInFlight = true
   saveDotEl.className = "dot saving"
   saveTextEl.textContent = "Saving…"
@@ -335,16 +348,19 @@ private fun pumpOps() {
     when {
       ack?.ok == true -> {
         docVersion = ack.version
+        q.onResult?.invoke(true)
         refetchDoc(refreshPanels)
         pumpOps()
       }
       xhr.status.toInt() == 409 -> { // raced an external edit — rebase on server state
-        opQueue.clear()
+        q.onResult?.invoke(false)
+        dropQueuedOps()
         Ui.toast("Rebased on newer document")
         refetchDoc(true)
       }
       else -> {
-        opQueue.clear()
+        q.onResult?.invoke(false)
+        dropQueuedOps()
         Ui.toast(ack?.error ?: "edit rejected")
         refetchDoc(true)
       }
@@ -1363,7 +1379,7 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
-  opQueue.clear()
+  dropQueuedOps()
   refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
   updateUndoButtons()
 }
@@ -1550,7 +1566,7 @@ private fun renderProps() {
       rowEl.appendChild(lab)
       // K3: a conditional event — `if (b.enabled) b::tap else null`.
       (node.props[evName] as? Conditional)?.let { c ->
-        propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh -> sendOps(listOf(op), refreshPanels = refresh); renderBindings() })
+        propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() })
         return@forEach
       }
       val current = node.props[evName] as? Action
@@ -1683,7 +1699,7 @@ private fun propRowInner(
 
   // K3: a conditional value: its condition and both branches, each edited in place.
   (props[key] as? Conditional)?.let { c ->
-    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh -> sendOps(listOf(op), refreshPanels = refresh); renderBindings() }
+    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() }
   }
 
   // P3: bound props show a field-name input instead of a literal editor.

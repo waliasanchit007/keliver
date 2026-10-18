@@ -36,7 +36,7 @@ class EditorConditionalsTest {
   @Test fun thePanelRendersBothBranchesAndSendsTheEditedOne() {
     val sent = mutableListOf<DocOp>()
     val text = Conditional(Cond("open"), "Open", "Closed")
-    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, text) { op, _ -> sent += op }
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, text) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
     // field, negate checkbox, then-branch, else-branch
     assertEquals(4, inputs.length)
@@ -49,14 +49,14 @@ class EditorConditionalsTest {
       sent.single(),
     )
     // A token branch shows its reference; the whole thing never crashes on any kind.
-    val colorRow = conditionalRow(7, "StyledText", "colorArgb", "Color", PropKind.Color, color) { op, _ -> sent += op }
+    val colorRow = conditionalRow(7, "StyledText", "colorArgb", "Color", PropKind.Color, color) { op, _, _ -> sent += op }
     assertTrue("◆ C.Ink" in (colorRow.textContent ?: ""), colorRow.textContent)
-    for (kind in PropKind.entries) conditionalRow(7, "StyledText", "x", "x", kind, Conditional(Cond("f"), null, null)) { _, _ -> }
+    for (kind in PropKind.entries) conditionalRow(7, "StyledText", "x", "x", kind, Conditional(Cond("f"), null, null)) { _, _, _ -> }
   }
 
   @Test fun aConditionalEventSendsNullForAnEmptyActionName() {
     val sent = mutableListOf<DocOp>()
-    val row = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _ -> sent += op }
+    val row = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
     val thenInput = inputs.item(2) as HTMLInputElement
     assertEquals("tap", thenInput.value)
@@ -68,7 +68,7 @@ class EditorConditionalsTest {
   // Review S4: the panel is not re-rendered between edits — each op builds on the previous one.
   @Test fun successiveEditsWithoutAReRenderKeepEachOther() {
     val sent = mutableListOf<DocOp>()
-    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _ -> sent += op }
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _, _ -> sent += op }
     val inputs = row.querySelectorAll("input")
     fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")) }
     type(2, "Yes")
@@ -84,7 +84,7 @@ class EditorConditionalsTest {
     )
     // The same for a conditional event.
     val events = mutableListOf<DocOp>()
-    val ev = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _ -> events += op }
+    val ev = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _, _ -> events += op }
     val evInputs = ev.querySelectorAll("input")
     (evInputs.item(3) as HTMLInputElement).let { it.value = "stop"; it.dispatchEvent(Event("input")) }
     (evInputs.item(2) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")) }
@@ -94,10 +94,42 @@ class EditorConditionalsTest {
     )
   }
 
+  // Review S4 nit: an edit the relay refused is not built on — the next one
+  // starts from the last accepted value.
+  @Test fun aRefusedEditIsNotBuiltOn() {
+    val sent = mutableListOf<DocOp>()
+    val results = mutableListOf<(Boolean) -> Unit>()
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _, done ->
+      sent += op
+      results += done
+    }
+    val inputs = row.querySelectorAll("input")
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")) }
+    type(2, "Yes")
+    results.last()(true)
+    type(3, "No")
+    results.last()(false)
+    type(0, "shown")
+    assertEquals(
+      DocOp.SetProp(Handle(7), "text", PropValue.Conditional("shown", whenTrue = lit("Yes"), whenFalse = lit("Closed"))),
+      sent.last(),
+    )
+    // Edits still in flight build on each other; a refusal returns to the last accepted one.
+    results.last()(true)
+    type(2, "A")
+    type(3, "B")
+    results[results.size - 2](false)
+    type(3, "C")
+    assertEquals(
+      DocOp.SetProp(Handle(7), "text", PropValue.Conditional("shown", whenTrue = lit("Yes"), whenFalse = lit("C"))),
+      sent.last(),
+    )
+  }
+
   // Review nit: clearing a bound branch's field name sends nothing (never `Bind("")`).
   @Test fun clearingABoundBranchSendsNothing() {
     val sent = mutableListOf<DocOp>()
-    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), Bind("title"), "-")) { op, _ -> sent += op }
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), Bind("title"), "-")) { op, _, _ -> sent += op }
     val bound = row.querySelectorAll("input").item(2) as HTMLInputElement
     assertEquals("title", bound.value)
     bound.value = "  "

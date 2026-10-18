@@ -46,15 +46,20 @@ internal fun withCondition(cur: PropValue.Conditional, field: String, test: Cond
  * The value a conditional panel edits: the one it was rendered with, then
  * each value it sent. The panel is not re-rendered after its own edits
  * (that would steal the input's focus), so every op builds on the previous
- * one — editing "then" and then "else" keeps both.
+ * one — editing "then" and then "else" keeps both. An op the relay refuses
+ * is not built on: the value returns to the last one the relay accepted (a
+ * refusal also drops every op queued behind it).
  */
 private class Latest(cur: Conditional) {
-  var value: PropValue.Conditional = cur.toPropValue()
+  private var accepted: PropValue.Conditional = cur.toPropValue()
+
+  var value: PropValue.Conditional = accepted
     private set
 
-  fun send(next: PropValue.Conditional, op: (PropValue.Conditional) -> Unit) {
+  /** Sends [next] through [op], which reports whether the relay accepted it. */
+  fun send(next: PropValue.Conditional, op: (PropValue.Conditional, (Boolean) -> Unit) -> Unit) {
     value = next
-    op(next)
+    op(next) { ok -> if (ok) accepted = next else value = accepted }
   }
 }
 
@@ -66,7 +71,8 @@ internal fun valueOp(id: Int, key: String, value: PropValue): DocOp =
 /**
  * A conditional VALUE prop: the condition (field, test, negation), then each
  * branch with an editor for the prop's [kind], and "keep true" to replace the
- * conditional by its true branch. [send] submits one op.
+ * conditional by its true branch. [send] submits one op and later reports
+ * whether the relay accepted it.
  */
 internal fun conditionalRow(
   nodeId: Int,
@@ -75,11 +81,11 @@ internal fun conditionalRow(
   label: String,
   kind: PropKind,
   cur: Conditional,
-  send: (DocOp, Boolean) -> Unit,
+  send: (DocOp, Boolean, (Boolean) -> Unit) -> Unit,
 ): HTMLElement {
   val wrap = Ui.el("div", "card")
   val latest = Latest(cur)
-  fun sendValue(v: PropValue.Conditional) = latest.send(v) { send(valueOp(nodeId, key, it), false) }
+  fun sendValue(v: PropValue.Conditional) = latest.send(v) { next, done -> send(valueOp(nodeId, key, next), false, done) }
   wrap.appendChild(conditionHeader(label, cur) { field, test, negate -> sendValue(withCondition(latest.value, field, test, negate)) })
   for (branch in listOf(true, false)) {
     val row = Ui.el("div", "row")
@@ -90,7 +96,7 @@ internal fun conditionalRow(
   }
   if (cur.whenTrue != null) {
     wrap.appendChild(
-      Ui.button("keep then", "btn") { send(valueOp(nodeId, key, latest.value.whenTrue ?: return@button), true) }
+      Ui.button("keep then", "btn") { send(valueOp(nodeId, key, latest.value.whenTrue ?: return@button), true) {} }
         .also { it.setAttribute("title", "replace the condition with its true branch") },
     )
   }
@@ -101,10 +107,10 @@ internal fun conditionalRow(
  * A conditional EVENT: `if <condition>: [action] else [action]`, an empty
  * action name meaning `null` (no handler in that branch).
  */
-internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, send: (DocOp, Boolean) -> Unit): HTMLElement {
+internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, send: (DocOp, Boolean, (Boolean) -> Unit) -> Unit): HTMLElement {
   val wrap = Ui.el("div", "card")
   val latest = Latest(cur)
-  fun sendValue(v: PropValue.Conditional) = latest.send(v) { send(valueOp(nodeId, evName, it), false) }
+  fun sendValue(v: PropValue.Conditional) = latest.send(v) { next, done -> send(valueOp(nodeId, evName, next), false, done) }
   wrap.appendChild(conditionHeader(evName, cur) { field, test, negate -> sendValue(withCondition(latest.value, field, test, negate)) })
   for (branch in listOf(true, false)) {
     val row = Ui.el("div", "row")
