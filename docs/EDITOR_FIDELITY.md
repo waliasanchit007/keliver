@@ -72,11 +72,26 @@ be read there. For hosts the app lists, the relay fetches instead:
   host is listed, on its scheme's default port, to
   `GET /preview-asset?url=<encoded URL>`; any other URL loads directly as
   before. If the list never arrives, the first image waits for it at most 3 s
-  and later images do not wait. The editor runs at most two image fetches
-  through the relay at once (the browser keeps about six connections to the
-  relay and the editor's event stream holds one), so images waiting on a
-  slow host leave connections free for edits and write-back; images loaded
-  directly are not limited.
+  and later images do not wait. Images loaded directly are not limited.
+- The editor limits its image fetches through the relay twice: at most one
+  at a time per image host (scheme and host: the relay's host:port), and at
+  most three at a time in all. The browser keeps about six HTTP/1.1
+  connections to the relay and the editor's event stream holds one, so at
+  least two stay free for edits and write-back. A fetch takes its host's
+  turn first and a shared one second, and holds both until its body is
+  read: the images queued behind a hanging host wait for that host only and
+  hold none of the three shared turns, so other hosts' images still load.
+  A host's entry is dropped once nothing runs or waits on it. The cost: an
+  app whose images all come from one host loads them through the relay one
+  at a time (each is then cached, below); allowing two per host would let
+  two slow hosts take every shared turn.
+- When an image load is cancelled (the canvas no longer needs it), its
+  browser request is aborted (`AbortController`), so the connection is
+  freed together with its turn rather than staying open until the relay
+  answers. A fetch that fails before reading its body is aborted too. The
+  relay does not see the abort: its own fetch runs on until it finishes or
+  its 10 s deadline, on the relay's image pool (so a burst of cancelled
+  loads can fill that pool and get `503` for images, never for edits).
 - The relay checks the caller's address is loopback. The relay listens on
   loopback by default; with `KELIVER_RELAY_BIND=all` (KNOWN_BUGS U35) this
   check still keeps other machines on the network off the endpoint. It does
@@ -94,18 +109,25 @@ be read there. For hosts the app lists, the relay fetches instead:
   request runs on the endpoint's own small pool (4 threads, 16 waiting), not
   on the thread that serves the relay's other endpoints, so a slow image host
   does not hold up the relay's handling of edits or write-back; when the pool
-  is full the endpoint answers `503`. (In the browser, the editor's cap of two
-  relay image fetches is what keeps connections free for those requests.)
+  is full the endpoint answers `503`. (In the browser, the editor's caps on
+  relay image fetches are what keep connections free for those requests.)
 - A failure is remembered for 30 s for its URL, so a re-render does not ask
   again. The host (with its port) is remembered too only when no connection
   to it could be made: the name did not resolve, the connection was refused
   or had no route, the connect timed out, or the TLS handshake failed; for
-  30 s no other URL on it is tried. A host that accepted the connection is
-  never marked: the 10 s deadline running out (while waiting or while
-  reading the body), a body that breaks off or a protocol error costs that
-  URL only, so one slow image does not fail the other images on its host. A
-  redirect target the deadline left no time to contact is not marked
-  either.
+  30 s no other URL on it is tried, nor is it contacted as a redirect
+  target. A host that accepted the connection is
+  marked only for a run of deadlines: when the 10 s deadline runs out
+  (while waiting or while reading the body) on an accepted connection to
+  the same host:port three times in a row, the third within 30 s of the
+  first, the host is remembered for 30 s the same way. An image served from
+  the host ends the run; any other failure (a status other than 200, a
+  refused type, a size over the cap, a body that breaks off, a protocol
+  error) neither counts nor ends it. Short of that, a deadline, a broken
+  body or a protocol error costs that URL only, so one slow image does not
+  fail the other images on its host. A deadline that runs out before a
+  connection is made does not count, and a redirect target the deadline
+  left no time to contact is not marked.
 - It serves only a `200` with exactly one `Content-Type` naming one of
   `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/avif`,
   `image/bmp`, `image/x-icon`, `image/vnd.microsoft.icon` (parameters ignored;

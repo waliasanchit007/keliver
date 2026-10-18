@@ -557,6 +557,59 @@ class PreviewAssetsTest {
     assertEquals(3, hits.get())
   }
 
+  @Test fun threeDeadlinesInARowRememberTheHost() {
+    val a = assets(deadlineMillis = 200)
+    fun hang(n: Int) = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/hang?n=$n"))
+    // Two in a row: the host still answers other URLs, and its image ends the run.
+    hang(1); hang(2)
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    // Two more: not three in a row, so not marked.
+    hang(3); hang(4)
+    assertEquals(5, hits.get())
+    // A failure that is not the deadline neither counts nor ends the run.
+    assertEquals(502, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/missing.png")).status)
+    assertEquals(6, hits.get())
+    // The third in a row since the image: the host is remembered.
+    val third = hang(5)
+    assertEquals(504, third.status)
+    assertTrue("${PreviewAssets.HOST_DEADLINE_STRIKES} in a row" in third.reason, third.reason)
+    assertTrue(logs.any { "host localhost" in it && "in a row" in it }, "$logs")
+    // Every other URL on it is answered from memory, without a request.
+    val other = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/img2.png"))
+    assertEquals(504, other.status)
+    assertTrue("failed less than" in other.reason, other.reason)
+    assertEquals(7, hits.get())
+    // For 30 s.
+    now += 31_000
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img2.png"))
+    assertEquals(8, hits.get())
+  }
+
+  @Test fun deadlinesFurtherApartThanTheWindowDoNotAddUp() {
+    val a = assets(deadlineMillis = 200)
+    a.fetch("$base/hang?n=1")
+    a.fetch("$base/hang?n=2")
+    now += 31_000
+    // Starts a new run of one: the host is not marked.
+    a.fetch("$base/hang?n=3")
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    assertEquals(4, hits.get())
+  }
+
+  @Test fun anInjectedClientsEventListenerStillHearsItsCalls() {
+    val started = AtomicInteger()
+    val client = PreviewAssets.defaultClient().newBuilder()
+      .eventListener(object : okhttp3.EventListener() {
+        override fun callStart(call: okhttp3.Call) {
+          started.incrementAndGet()
+        }
+      })
+      .build()
+    val a = assets(client = client)
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    assertEquals(1, started.get())
+  }
+
   @Test fun aBodyThatStallsCostsOnlyThatUrl() {
     val a = assets(deadlineMillis = 300)
     assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/slow-body")).status)
@@ -580,6 +633,21 @@ class PreviewAssetsTest {
     now += 31_000
     val later = assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/b.png"))
     assertFalse("failed less than" in later.reason, later.reason)
+  }
+
+  @Test fun aRememberedHostIsNotContactedThroughARedirectEither() {
+    val closed = java.net.ServerSocket(0, 0, InetAddress.getLoopbackAddress()).use { it.localPort }
+    val a = assets(extraPorts = setOf(closed))
+    assertTrue("ConnectException" in assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/a.png")).reason)
+    upstream.createContext("/to-closed") { ex ->
+      ex.responseHeaders.add("Location", "http://localhost:$closed/b.png"); ex.sendResponseHeaders(302, -1); ex.close()
+    }
+    try {
+      val viaRedirect = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/to-closed"))
+      assertTrue("failed less than" in viaRedirect.reason, viaRedirect.reason)
+    } finally {
+      upstream.removeContext("/to-closed")
+    }
   }
 
   @Test fun aNameThatDoesNotResolveIsRememberedForEveryUrlOnIt() {
