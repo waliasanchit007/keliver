@@ -629,7 +629,8 @@ object Recognizer {
         ?.let { return PropValue.Bind(it.groupValues[1]) }
       Regex("^${Regex.escape(bindingsParam)}::([A-Za-z_][A-Za-z0-9_]*)$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
-      Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
+      // `{ _ -> b.x() }`: the exporter's form for an event whose payload the action ignores.
+      Regex("^\\{\\s*(?:_\\s*->\\s*)?${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
       // P2: single-arg actions — { b.name(it) } (event payload) and
       // { b.name(item.field) } (item-scoped data, e.g. a row id).

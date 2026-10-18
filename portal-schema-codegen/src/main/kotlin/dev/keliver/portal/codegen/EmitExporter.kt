@@ -443,10 +443,12 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      // K2: a token is written as its reference where it fits the parameter's type.
     |      val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
     |      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
+    |      // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
+    |      val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
     |      fun render(x: Any?, branch: Boolean): String = when (x) {
     |        is Token -> x.ref
     |        // K3: in an `if` branch an action is a reference or a parenthesized lambda.
-    |        is Action -> if (branch) fmtActionBranch(x, if (x.arg == "it") 1 else 0) else fmtAction(x, if (x.arg == "it") 1 else 0)
+    |        is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
     |        is Bind -> bindRef(x.field)
     |        is String -> kotlinStringLiteral(x)
     |        is Boolean -> x.toString()

@@ -129,4 +129,28 @@ class ConditionalTest {
     // CondTest wire names are what the document carries.
     assertEquals(listOf(null, "empty", "blank", "null"), CondTest.entries.map { it.wire })
   }
+
+  // Review S1: a component event's arity comes from its signature, not from the action's arg.
+  @Test fun aComponentEventBranchMatchesTheEventsSignature() {
+    val picker = dev.keliver.portal.ComponentSpec(
+      "Picker",
+      props = emptyList(),
+      events = listOf(dev.keliver.portal.ComponentEventSpec("onSelect", paramType = "Int", required = false)),
+      paramTypes = mapOf("onSelect" to "((Int) -> Unit)?"),
+    )
+    val registry = dev.keliver.portal.MapComponentRegistry(listOf(picker))
+    fun export(onSelect: PropValue): String =
+      exportKotlin(doc(DocNode.Widget(Handle(2), "Picker", props = mapOf("onSelect" to onSelect))).toWidgetTree(), "Home", registry)
+    // `fun pick()` cannot be `b::pick` for a `(Int) -> Unit`: the branch ignores the payload.
+    val ignoring = export(PropValue.Conditional("open", whenTrue = PropValue.Action("pick"), whenFalse = null))
+    assertTrue("onSelect = if (b.open) ({ _ -> b.pick() }) else null," in ignoring, ignoring)
+    assertTrue("  fun pick()\n" in ignoring, ignoring)
+    // The payload passed on: a reference, and the contract takes it.
+    val passing = export(PropValue.Conditional("open", whenTrue = PropValue.Action("pick", "it"), whenFalse = null))
+    assertTrue("onSelect = if (b.open) b::pick else null," in passing, passing)
+    assertTrue("  fun pick(value: Int)\n" in passing, passing)
+    // A plain (unconditional) action keeps compiling either way.
+    val plain = export(PropValue.Action("pick"))
+    assertTrue("onSelect = { _ -> b.pick() }," in plain, plain)
+  }
 }

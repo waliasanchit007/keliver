@@ -262,6 +262,10 @@ class ConditionalGrammarTest {
     assertIs<DocNode.RawCode>(rawOf("StyledText(text = if (b.subtitle.length > 3) \"a\" else \"b\")"))
     // A null branch fits only a nullable parameter: never a catalog value prop (the editor refuses it too).
     assertIs<DocNode.RawCode>(rawOf("StyledText(text = if (b.open) \"a\" else null)"))
+    // Review S1: the exporter's `{ _ -> b.x() }` (an event payload the action ignores) is an action again.
+    val select = rawOf("DropdownMenu(options = listOf(\"A\"), onSelect = if (b.open) ({ _ -> b.pick() }) else ({ _ -> b.close() }))")
+    assertIs<DocNode.Widget>(select)
+    assertEquals(PropValue.Conditional("open", whenTrue = PropValue.Action("pick"), whenFalse = PropValue.Action("close")), select.props["onSelect"])
     // A branch may be any value the prop takes by itself — here a binding.
     assertIs<DocNode.Widget>(rawOf("StyledText(text = if (b.open) \"a\" else b.subtitle)"))
   }
