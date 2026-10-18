@@ -79,6 +79,14 @@ public class MapComponentRegistry(specs: Collection<ComponentSpec>) : ComponentR
 /** Names reserved by the grammar — a component may not shadow them. */
 public val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", "RawCode", "Slot", ELSE_TYPE)
 
+/**
+ * K5: set (true) on a component body's ROOT when it forwards the component's
+ * own `modifier` parameter (`Column(modifier = modifier)` or
+ * `modifier.padding(8)`). Preview expansion then gives that root the
+ * instance's modifiers before the body's own, as the compiled call does.
+ */
+public const val COMPONENT_FORWARDS_MODIFIER_PROP: String = "portal.forwardsModifier"
+
 /** Internal expansion provenance consumed by the editor's selection tagging. */
 public const val COMPONENT_SOURCE_HANDLE_PROP: String = "portal.componentSourceHandle"
 
@@ -93,5 +101,8 @@ public fun isKnownWidgetType(type: String, registry: ComponentRegistry = EmptyCo
  * never writes them.
  */
 public val ComponentSpec.acceptsModifier: Boolean
-  get() = paramTypes["modifier"]?.trim()?.removeSuffix("?")?.trim()
-    ?.let { it == "Modifier" || it == "dev.keliver.Modifier" } == true
+  get() = paramTypes["modifier"]?.let(::isModifierType) == true
+
+/** K5: true when a parameter's Kotlin type text is keliver's `Modifier` (optionally nullable). */
+public fun isModifierType(typeText: String): Boolean =
+  typeText.trim().removeSuffix("?").trim().let { it == "Modifier" || it == "dev.keliver.Modifier" }

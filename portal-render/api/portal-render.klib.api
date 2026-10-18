@@ -10,6 +10,10 @@ abstract fun interface dev.keliver.portal.render/FlowPreview { // dev.keliver.po
     abstract fun present(dev.keliver.portal.render/PreviewEnv, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.portal.render/FlowFrame // dev.keliver.portal.render/FlowPreview.present|present(dev.keliver.portal.render.PreviewEnv;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 
+abstract fun interface dev.keliver.portal.render/PreviewWrapper { // dev.keliver.portal.render/PreviewWrapper|null[0]
+    abstract fun Wrap(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/PreviewWrapper.Wrap|Wrap(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+}
+
 abstract fun interface dev.keliver.portal.render/ScreenPreview { // dev.keliver.portal.render/ScreenPreview|null[0]
     abstract fun present(dev.keliver.portal.render/PreviewEnv, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.portal.render/PreviewFrame // dev.keliver.portal.render/ScreenPreview.present|present(dev.keliver.portal.render.PreviewEnv;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
@@ -26,10 +30,14 @@ abstract interface dev.keliver.portal.render/AppPreviewEntry { // dev.keliver.po
         abstract fun <get-screens>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.render/ScreenPreview> // dev.keliver.portal.render/AppPreviewEntry.screens.<get-screens>|<get-screens>(){}[0]
     open val defaultPersonaId // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId|{}defaultPersonaId[0]
         open fun <get-defaultPersonaId>(): kotlin/String? // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId.<get-defaultPersonaId>|<get-defaultPersonaId>(){}[0]
+    open val hostWrapper // dev.keliver.portal.render/AppPreviewEntry.hostWrapper|{}hostWrapper[0]
+        open fun <get-hostWrapper>(): dev.keliver.portal.render/PreviewWrapper? // dev.keliver.portal.render/AppPreviewEntry.hostWrapper.<get-hostWrapper>|<get-hostWrapper>(){}[0]
     open val label // dev.keliver.portal.render/AppPreviewEntry.label|{}label[0]
         open fun <get-label>(): kotlin/String // dev.keliver.portal.render/AppPreviewEntry.label.<get-label>|<get-label>(){}[0]
     open val personas // dev.keliver.portal.render/AppPreviewEntry.personas|{}personas[0]
         open fun <get-personas>(): kotlin.collections/List<dev.keliver.portal.render/PreviewPersona> // dev.keliver.portal.render/AppPreviewEntry.personas.<get-personas>|<get-personas>(){}[0]
+    open val screenWrapper // dev.keliver.portal.render/AppPreviewEntry.screenWrapper|{}screenWrapper[0]
+        open fun <get-screenWrapper>(): dev.keliver.portal.render/PreviewWrapper? // dev.keliver.portal.render/AppPreviewEntry.screenWrapper.<get-screenWrapper>|<get-screenWrapper>(){}[0]
 }
 
 final class <#A: kotlin/Any?> dev.keliver.portal.render/FlowNav { // dev.keliver.portal.render/FlowNav|null[0]
@@ -156,6 +164,7 @@ final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/intB(kotlin/
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/strB(kotlin/String, kotlin/String = ...): kotlin/String // dev.keliver.portal.render/strB|strB@dev.keliver.portal.WidgetNode(kotlin.String;kotlin.String){}[0]
 final fun (kotlin.collections/MutableMap<kotlin/String, kotlin/String>).dev.keliver.portal.render/putRows(kotlin/String, kotlin/String, kotlin.collections/List<kotlin.collections/Map<kotlin/String, kotlin/String>>) // dev.keliver.portal.render/putRows|putRows@kotlin.collections.MutableMap<kotlin.String,kotlin.String>(kotlin.String;kotlin.String;kotlin.collections.List<kotlin.collections.Map<kotlin.String,kotlin.String>>){}[0]
 final fun <#A: kotlin/Any?> dev.keliver.portal.render/rememberFlowNav(#A, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.portal.render/FlowNav<#A> // dev.keliver.portal.render/rememberFlowNav|rememberFlowNav(0:0;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any?>}[0]
+final fun dev.keliver.portal.render/AppScreenFrame(dev.keliver.portal.render/AppPreviewEntry?, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/AppScreenFrame|AppScreenFrame(dev.keliver.portal.render.AppPreviewEntry?;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/RenderNode(dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/RenderNode|RenderNode(dev.keliver.portal.WidgetNode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/RenderNode(dev.keliver.portal/WidgetNode, kotlin/Any?, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/RenderNode|RenderNode(dev.keliver.portal.WidgetNode;kotlin.Any?;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/constraintOf(kotlin/Int): dev.keliver.layout.api/Constraint // dev.keliver.portal.render/constraintOf|constraintOf(kotlin.Int){}[0]

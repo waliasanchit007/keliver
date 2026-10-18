@@ -224,6 +224,7 @@ private fun enterPlayground() {
   if (playground) return
   playground = true
   runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay unavailable in playground mode")
+  PreviewAssetRouting.loaded(emptySet())
   saveTextEl.textContent = "playground — edits are local to this tab"
   PreviewBindings.mocks.putAll(demoMocks)
   mountPlaygroundStrip()
@@ -561,7 +562,9 @@ private fun buildTopbar() {
   bar.appendChild(redoBtn)
 
   val preset = Ui.select()
-  listOf("Phone" to "390x780", "Tablet" to "768x900", "Web" to "1080x760").forEach { (name, dims) ->
+  // Frame sizes in dp (1 CSS px = 1 dp on the canvas). K5: a large modern
+  // phone's default 412×915 dp next to the original presets.
+  DEVICE_PRESETS.forEach { (name, dims) ->
     val o = document.createElement("option") as HTMLOptionElement
     o.value = dims; o.textContent = name
     preset.appendChild(o)
@@ -670,6 +673,25 @@ private fun buildLeftPane() {
   pane.appendChild(outlineEl)
 
   document.body?.appendChild(pane)
+}
+
+/** Device frame presets: label to "WIDTHxHEIGHT" in dp. Stored values stay valid across versions. */
+internal val DEVICE_PRESETS: List<Pair<String, String>> = listOf(
+  "Phone" to "390x780",
+  "Large phone 412×915" to "412x915",
+  "Tablet" to "768x900",
+  "Web" to "1080x760",
+)
+
+/**
+ * K5: the Bold box of a StyledText whose `weight` decides its weight on a
+ * device (weight in 100..900 wins over `bold` there): checked when that
+ * weight draws bold (600 and up), null when `bold` itself decides.
+ */
+internal fun boldFromWeight(props: Map<String, Any?>): Boolean? {
+  val raw = props["weight"].let { if (it is Token) it.value else it }
+  val weight = (raw as? Number)?.toInt() ?: return null
+  return if (weight in 100..900) weight >= 600 else null
 }
 
 /** The container ComposeViewport renders into — sized by the device preset. */
@@ -1236,6 +1258,7 @@ private fun restoreSnapshotIfAny(): Boolean {
 private fun loadWorkspace() {
   startPreviewBuildPoll()
   loadRuntimeMetadata()
+  loadPreviewAssetHosts()
   serverGet("/active") { txt ->
     runCatching {
       val o = Json.parseToJsonElement(txt).jsonObject
@@ -1284,6 +1307,17 @@ private fun loadRuntimeMetadata() {
     runtimeMetadataLoad = RuntimeMetadataLoad.Unavailable("relay request failed")
     renderMockFidelity()
   })
+  xhr.send()
+}
+
+/** K5: which image hosts the relay serves for the canvas (none from an older relay). */
+private fun loadPreviewAssetHosts() {
+  val xhr = XMLHttpRequest()
+  xhr.open("GET", "$SERVER/preview-assets")
+  xhr.addEventListener("load", { _ ->
+    PreviewAssetRouting.loaded(if (xhr.status.toInt() == 200) parsePreviewAssetHosts(xhr.responseText) else emptySet())
+  })
+  xhr.addEventListener("error", { _ -> PreviewAssetRouting.loaded(emptySet()) })
   xhr.send()
 }
 
@@ -1715,8 +1749,16 @@ private fun propRowInner(
     PropKind.Bool -> {
       input.setAttribute("type", "checkbox")
       input.className = ""
-      if (props[key] as? Boolean == true) input.setAttribute("checked", "checked")
-      input.addEventListener("change", { _ -> editProp(nodeId, key, input.checked) })
+      val fromWeight = if (nodeType == "StyledText" && key == "bold") boldFromWeight(props) else null
+      if (fromWeight != null) {
+        // The device draws this text at its `weight`; Bold has no effect there.
+        if (fromWeight) input.setAttribute("checked", "checked")
+        input.setAttribute("disabled", "disabled")
+        input.setAttribute("title", "set by weight = ${props["weight"].let { if (it is Token) it.value else it }}; clear Weight to use Bold")
+      } else {
+        if (props[key] as? Boolean == true) input.setAttribute("checked", "checked")
+        input.addEventListener("change", { _ -> editProp(nodeId, key, input.checked) })
+      }
     }
     PropKind.Color -> {
       input.setAttribute("type", "color")

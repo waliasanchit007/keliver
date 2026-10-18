@@ -55,7 +55,34 @@
   catalog event that has a default out of the catalog (every catalog event is nullable); a
   project-component event whose signature takes a payload exports an action that ignores it as
   `{ _ -> b.x() }` (was `{ b.x() }`), which ingest reads back as the action.
-
+- **portal (relay, editor, render, ingest, core):** the editor canvas shows more of what the
+  phone shows (K5; see `docs/EDITOR_FIDELITY.md`).
+  - **Images:** a new keliver.portal.json `previewAssetHosts` (exact host names; empty = off)
+    turns on the relay's `GET /preview-asset?url=…`, which fetches images from those hosts for
+    the canvas (whose page cannot read hosts that send no CORS headers): loopback peers only,
+    GET only, default ports only, no client header forwarded, redirects only to listed hosts and
+    never https to http, one raster type from a fixed list (no SVG) served under its canonical
+    name, 10 MB cap, one deadline per request, its own bounded thread pool (503 when full) so a
+    slow host does not hold up the relay's other endpoints, an in-memory LRU cache, and a 30 s
+    memory of failures: per URL, and per host:port only when no connection to the host could be
+    made (DNS, refused, no route, connect timeout, TLS handshake) — a slow or broken answer
+    costs that URL only. CORS comes from the relay's access gate (U36). Host entries refuse
+    `localhost`, single labels and IP literals in any form (IPv4 by the WHATWG rule: a last
+    label all digits or `0x` hex; `1.bp.blogspot.com` is a name); DNS for a listed name is
+    trusted. `GET /preview-assets` lists the hosts; the editor's image fetcher rewrites only
+    those URLs and runs at most two of them at once, so in the browser slow images leave
+    connections to the relay free for edits and write-back.
+  - **Theme:** `AppPreviewEntry` gains `screenWrapper` (the app's guest-side wrapper around
+    every screen, e.g. its `Theme`) and `hostWrapper` (the native host's `MaterialTheme`, whose
+    scheme a guest `Theme` starts from); the canvas renders inside both. New portal-render API:
+    `PreviewWrapper`, `AppScreenFrame`.
+  - **Component modifiers:** a component that declares `modifier: Modifier` and passes it to its
+    root (`modifier` or `modifier.ext(…)`) is now grammar instead of opaque, and an instance's
+    modifiers apply to that root in the instance's parent scope. `/components` lists each
+    component's `paramTypes`, so the editor knows which components take modifiers. New
+    portal-core API: `COMPONENT_FORWARDS_MODIFIER_PROP`, `isModifierType`.
+  - **Editor:** a "Large phone 412×915" frame preset; the Bold box of a StyledText reflects an
+    explicit `weight` (which wins on a device) and is disabled while `weight` is set.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** design tokens are
   portal grammar (D9, K2). An argument referencing a constant in the app's own sources —
   `colorArgb = C.Ink`, `url = Assets.Logo`, `Modifier.background(C.White)` — no longer makes a
@@ -137,6 +164,11 @@
 ### Fixed
 - **portal-ingest:** a statement inserted after the last statement of an `if` block was written
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
+- **portal (core):** an opaque component's placeholder drew its name over the "opaque" reason;
+  the name now sits above the reason, each ellipsized.
+- **portal (editor):** the editor parsed project components without parameter types, so every
+  component looked like it had no `modifier: Modifier` parameter there (the modifier panel
+  refused modifiers for components that accept them).
 - **portal (ingest, exporter, editor, relay):** a text with an escape or a `$` keeps its meaning
   through an editor edit (KNOWN_BUGS U33). Ingest decoded only `\"` and `\\`, so `"A\nB"` showed a
   literal `\n` in the editor and an edit wrote `\\n` back (the device then showed a backslash and

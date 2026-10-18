@@ -1,5 +1,6 @@
 package dev.keliver.portal.ingest
 
+import dev.keliver.portal.COMPONENT_FORWARDS_MODIFIER_PROP
 import dev.keliver.portal.Cond
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.ComponentEventSpec
@@ -12,6 +13,7 @@ import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.isModifierType
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
@@ -74,6 +76,12 @@ internal sealed interface NameCtx {
     val slotParams: Set<String>,
     /** K3: parameters whose declared type is nullable (a `== null` / `!= null` condition reads them). */
     val nullableParams: Set<String> = emptySet(),
+    /**
+     * K5: the signature declares `modifier: Modifier`, so the body's root may
+     * forward it (`Column(modifier = modifier)`), as a component built to take
+     * a caller's modifiers does.
+     */
+    val modifierParam: Boolean = false,
   ) : NameCtx
 }
 
@@ -242,8 +250,12 @@ object Recognizer {
         null, name, emptyMap(), file,
       )
     }
+    val acceptsModifier = paramTypes["modifier"]?.let(::isModifierType) == true
     val walk = Walker(
-      NameCtx.Component(valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams),
+      NameCtx.Component(
+        valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
+        modifierParam = acceptsModifier,
+      ),
       components,
       lookup,
     )
@@ -338,7 +350,8 @@ object Recognizer {
 
     fun rootOf(body: KtBlockExpression): DocNode.Widget {
       // Top-level statements have no layout parent: no scope receiver in source.
-      val statements = body.statements.map { statementToNode(it, emptySet(), null) }
+      val single = body.statements.size == 1
+      val statements = body.statements.map { statementToNode(it, emptySet(), null, isRoot = single) }
       return statements.singleOrNull() as? DocNode.Widget
         ?: DocNode.Widget(nextTemp(), "Column", children = statements)
     }
@@ -348,7 +361,12 @@ object Recognizer {
      * scoped layout modifier (`Modifier.flex(…)`) resolves against. `if` and
      * `forEach` add no receiver, so Condition/Repeat pass it straight through.
      */
-    private fun statementToNode(expr: KtExpression, itemScope: Set<String>, parentType: String?): DocNode {
+    private fun statementToNode(
+      expr: KtExpression,
+      itemScope: Set<String>,
+      parentType: String?,
+      isRoot: Boolean = false,
+    ): DocNode {
       recognizeCondition(expr, ctx)?.let { (cond, thenStmts, elseBlock) ->
         val handle = track(nextTemp(), expr)
         val props = buildMap {
@@ -405,6 +423,16 @@ object Recognizer {
         val ve = arg.getArgumentExpression() ?: return raw(expr, "`$type(…)` has an empty argument `$name`")
         fun offending() = raw(expr, "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar")
         if (name == "modifier") {
+          // K5: a component forwarding its own `modifier` parameter to its root.
+          // The root is marked so preview expansion puts the instance's
+          // modifiers first, then the body's own chain (`modifier.padding(8)`).
+          if (isRoot && ctx is NameCtx.Component && ctx.modifierParam) {
+            forwardedModifier(ve.text)?.let { own ->
+              props[COMPONENT_FORWARDS_MODIFIER_PROP] = PropValue.Lit("b", b = true)
+              modifiers += own
+              continue
+            }
+          }
           val mods = parseModifierChain(ve.text, parentType, tokens, conds) ?: return offending()
           modifiers += mods
           continue
@@ -424,6 +452,18 @@ object Recognizer {
         ?.getLambdaExpression()?.bodyExpression?.statements.orEmpty()
         .map { statementToNode(it, itemScope, type) }
       return DocNode.Widget(track(nextTemp(), expr), type, props, modifiers, children)
+    }
+
+    /**
+     * K5: `modifier` (nothing of its own) or `modifier.ext(…)…` (the body's own
+     * chain after the caller's). The root has no layout parent in the body, so
+     * a scoped modifier in that chain is not grammar. Null = neither.
+     */
+    private fun forwardedModifier(text: String): Map<String, PropValue>? {
+      val t = text.trim()
+      if (t == "modifier") return emptyMap()
+      val rest = Regex("^modifier\\s*(\\..*)$", RegexOption.DOT_MATCHES_ALL).find(t)?.groupValues?.get(1) ?: return null
+      return parseModifierChain("Modifier$rest", null, tokens)
     }
 
     /**
