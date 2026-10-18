@@ -192,6 +192,18 @@ class WriteBackStatusRelayTest {
     }
   }
 
+  /** The screen is written but its Compiled_ sibling is not: the status must not say the change is not in the file. */
+  @Test fun aCompiledVersionFailureDoesNotDenyTheWrite() {
+    val f = fixture()
+    File(f.file.parentFile, "Compiled_home.kt").mkdirs() // a directory: writing it fails
+    val a = f.svc.children()[1]
+    val ack = f.svc.submit(f.svc.batch(DocOp.SetProp(a.handle, "text", lit("A"))))
+    val status = awaitStatus(f.svc, ack.version)
+    assertEquals("surgical", status.outcome, status.toString())
+    assertTrue("Compiled_home.kt" in status.message && "not in the file" !in status.message, status.message)
+    assertEquals(home.replace("\"a\"", "\"A\""), f.file.readText())
+  }
+
   @Test fun aReplaceRawWithATrailingCommentIsRefusedAsAnOp() {
     val f = fixture()
     val raw = f.svc.children()[0]

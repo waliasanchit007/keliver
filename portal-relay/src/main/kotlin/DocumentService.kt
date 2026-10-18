@@ -502,13 +502,24 @@ class DocumentService(
     // M9 versioned catch-up: bake the doc version this screen was written at
     // into a sibling const. Rebuilding the dev bundle (serve --continuous)
     // picks it up; the device router compares it to the live doc version.
-    (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
-      val screen = kotlinFile.nameWithoutExtension
-      File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
-        "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
+    val how = plan.how.name.lowercase()
+    val compiled = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+    // The screen IS written now: a failure below is reported as that, never as "not in the file".
+    val versionFailure = runCatching {
+      (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
+        val screen = kotlinFile.nameWithoutExtension
+        compiled.writeText(
+          "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
+        )
+      }
+    }.exceptionOrNull()
+    if (versionFailure != null) {
+      println("write-back of $screenKey: ${kotlinFile.name} written, ${compiled.name} not: $versionFailure")
+      return WriteBackStatus(
+        doc.version, how,
+        "written to ${kotlinFile.name} ($how); but ${compiled.name} (the version a device build compares) could not be written: $versionFailure",
       )
     }
-    val how = plan.how.name.lowercase()
     return WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
   }
 

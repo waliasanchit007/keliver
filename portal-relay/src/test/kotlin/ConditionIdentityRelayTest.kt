@@ -79,7 +79,8 @@ class ConditionIdentityRelayTest {
     val (alpha, beta) = children().filter { (it as DocNode.Widget).type == "Condition" }
     val ack = svc.submit(batch(DocOp.DeleteNode(beta.handle), DocOp.SetProp(alpha.handle, "field", lit("beta"))))
     assertTrue(ack.ok, ack.error)
-    val out = awaitFile(file) { "if (b.alpha)" !in it }
+    // (A read can land mid-write and see an empty file: wait for the whole new text.)
+    val out = awaitFile(file) { "if (b.alpha)" !in it && "interface HomeScreenBindings" in it }
     assertEquals(
       afterFirst.replace(
         "    if (b.alpha) {\n      // alpha comment\n      StyledText(text = \"A\")\n    }\n" +
