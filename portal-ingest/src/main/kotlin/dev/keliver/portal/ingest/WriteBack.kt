@@ -2,6 +2,7 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.toWidgetTree
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -38,11 +39,13 @@ object WriteBack {
     val written = LinkedHashSet<String>()
     needed.set(written)
     lookup.set(rec.tokenLookup)
+    conds.set(rec.condParser)
     try {
       if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
     } finally {
       needed.remove()
       lookup.remove()
+      conds.remove()
     }
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
@@ -55,6 +58,9 @@ object WriteBack {
 
   /** K2: design-token resolution for the file being merged; per thread, per merge. */
   private val lookup = ThreadLocal<TokenLookup?>()
+
+  /** K3: condition reading for the file being merged; per thread, per merge. */
+  private val conds = ThreadLocal<CondParser?>()
 
   private fun need(imports: Set<String>) {
     needed.get()?.addAll(imports)
@@ -148,8 +154,9 @@ object WriteBack {
     target as DocNode.Widget
     if (parsed.type != target.type) return false
 
-    // M5 logic nodes (if/forEach): props change → full regen (bail); else recurse children.
-    if (parsed.type == "Condition" || parsed.type == "Repeat") {
+    if (parsed.type == "Condition") return mergeCondition(parsed, target, psi, factory, components, parentType)
+    // M5 logic nodes (forEach): props change → full regen (bail); else recurse children.
+    if (parsed.type == "Repeat") {
       if (parsed.props != target.props) return false
       val block = logicBlock(psi[parsed.handle.v]) ?: return false
       return mergeChildren(parsed.children, target.children, block, psi, factory, components, parentType)
@@ -182,6 +189,47 @@ object WriteBack {
       ?: return target.children.isEmpty() // no lambda in file → only OK if no children wanted
 
     return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+  }
+
+  /**
+   * K3: a `Condition` (`if (c) { … } else { … }`). A changed condition
+   * rewrites only the condition's text; each branch merges like any children
+   * block. Adding or removing the `else` branch re-emits just this `if`
+   * statement (its contents in canonical form); everything around it stays.
+   */
+  private fun mergeCondition(
+    parsed: DocNode.Widget,
+    target: DocNode.Widget,
+    psi: Map<Long, KtExpression>,
+    factory: KtPsiFactory,
+    components: dev.keliver.portal.ComponentRegistry,
+    parentType: String?,
+  ): Boolean {
+    val ifExpr = psi[parsed.handle.v] as? KtIfExpression ?: return false
+    val parsedElse = parsed.children.firstOrNull { it is DocNode.Widget && it.type == dev.keliver.portal.ELSE_TYPE } as DocNode.Widget?
+    val targetElse = target.children.firstOrNull { it is DocNode.Widget && it.type == dev.keliver.portal.ELSE_TYPE } as DocNode.Widget?
+    if ((parsedElse == null) != (targetElse == null)) {
+      val emitted = NodeEmitter.statement(target, indentOf(ifExpr), components, parentType)
+      ifExpr.replace(factory.createExpression(emitted.text))
+      need(emitted.imports)
+      return true
+    }
+    if (parsed.props != target.props) {
+      val tree = UiDocument("_", target.copy(children = emptyList()), dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
+      val cond = dev.keliver.portal.condOf(tree) ?: return false
+      val condition = ifExpr.condition ?: return false
+      condition.replace(factory.createExpression(cond.kotlin { if ('.' in it) it else "b.$it" }))
+    }
+    val thenBlock = ifExpr.then as? KtBlockExpression ?: return false
+    val isElse = { n: DocNode -> n is DocNode.Widget && n.type == dev.keliver.portal.ELSE_TYPE }
+    // Else first: it sits after the then block, so its edits move no offset the then block needs.
+    if (parsedElse != null && targetElse != null) {
+      val elseBlock = ifExpr.`else` as? KtBlockExpression ?: return false
+      if (!mergeChildren(parsedElse.children, targetElse.children, elseBlock, psi, factory, components, parentType)) return false
+    }
+    return mergeChildren(
+      parsed.children.filterNot(isElse), target.children.filterNot(isElse), thenBlock, psi, factory, components, parentType,
+    )
   }
 
   private fun mergeChildren(
@@ -265,8 +313,11 @@ object WriteBack {
     if (after != null) {
       val indent = indentOf(after)
       val stmt = factory.createExpression(text(indent))
-      val ws = block.addAfter(factory.createWhiteSpace("\n$indent"), after)
-      block.addAfter(stmt, ws)
+      // Statement first, then the whitespace before it: in an `if` block the
+      // whitespace before `}` is inside the block, and a new whitespace leaf
+      // added next to it merges with it (the statement then landed after `}`).
+      val inserted = block.addAfter(stmt, after)
+      block.addBefore(factory.createWhiteSpace("\n$indent"), inserted)
     } else {
       val first = block.statements.firstOrNull()
       if (first != null) {
@@ -343,15 +394,22 @@ object WriteBack {
       if (keys.all { parsed.props[it] == target.props[it] }) continue
       val oldExpr = sourceArg(name) ?: return false
       val canonicalText = newByName[name]?.text
-      val text = if (name in margins) {
+      val oldValue = parsed.props[name]
+      val newValue = target.props[name]
+      val text = (if (name in margins) {
         val sideKeys = dev.keliver.portal.MARGIN_SIDES.map { "$name.$it" }
-        MarginSyntax.surgical(oldExpr.text, sidesOf(parsed.props, sideKeys), sidesOf(target.props, sideKeys))
+        MarginSyntax.surgical(oldExpr.text, sideValues(parsed.props, sideKeys), sideValues(target.props, sideKeys), conds.get())
           ?: canonicalText
+      } else if (oldValue is dev.keliver.portal.document.PropValue.Conditional &&
+        newValue is dev.keliver.portal.document.PropValue.Conditional
+      ) {
+        // K3: only the changed part — the condition, or one branch.
+        ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText) ?: canonicalText
       } else {
         // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
-        val v = (target.props[name] as? dev.keliver.portal.document.PropValue.Lit)?.d
+        val v = (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d
         if (v != null && MarginSyntax.parseDp(oldExpr.text) != null) MarginSyntax.dpLike(oldExpr.text, v) else canonicalText
-      } ?: return false
+      }) ?: return false
       edits += oldExpr to text
       imports += FragmentImports.value(text)
       // K2: a token written as its reference needs its declaring object (structural).
@@ -363,10 +421,10 @@ object WriteBack {
       // (its import is added below), so the target's own tokens resolve first.
       val tokens = targetTokens(target.modifiers.values, lookup.get())
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens,
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens, conds.get(),
       ) ?: return false
       edits += oldExpr to text
-      imports += FragmentImports.chain(text, parentType, tokens)
+      imports += FragmentImports.chain(text, parentType, tokens, conds.get())
       target.modifiers.values.forEach { imports += FragmentImports.token(it) }
     }
     for ((oldExpr, text) in edits) {
