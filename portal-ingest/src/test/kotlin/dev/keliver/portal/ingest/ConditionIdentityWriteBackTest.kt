@@ -8,6 +8,7 @@ import dev.keliver.portal.document.lit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 /**
  * K3 review S-c: given the document the file was last written from (`base`),
@@ -157,12 +158,13 @@ class ConditionIdentityWriteBackTest {
     )
   }
 
-  // A base that is not the file's tree (the file changed since) gives no identities:
-  // the positional pairing applies, as without a base.
-  @Test fun aBaseThatDoesNotMatchTheFileIsIgnored() {
+  // B1 (K3 fourth review): a base that is not the file's tree (the file changed
+  // since) is not merged onto at all — pairing by position could delete what
+  // only the file holds. (The relay re-reads such a file instead.)
+  @Test fun aBaseThatDoesNotMatchTheFileIsNotMergedOnto() {
     val d = doc()
     val stale = d.apply(DocOp.DeleteNode(child(d, 3).handle)).doc
     val target = d.apply(DocOp.SetProp(child(d, 1).handle, "negate", lit(true))).doc
-    assertEquals(src.replace("if (b.alpha)", "if (!b.alpha)"), merge(target, stale))
+    assertNull(WriteBack.merge(src, target, fileName = "app/screens/HomeScreen.kt", base = stale))
   }
 }

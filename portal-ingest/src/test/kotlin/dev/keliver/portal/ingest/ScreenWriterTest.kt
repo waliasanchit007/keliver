@@ -115,6 +115,55 @@ class ScreenWriterTest {
     assertTrue("  ) {\n    Legacy(1)\n" in w.text, w.text)
   }
 
+  // ── B1: the file changed since it was last read ──────────────────────────
+
+  private val withLegacy = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column {
+        StyledText(text = "a")
+        Legacy(1)
+        StyledText(text = "b")
+      }
+    }
+
+    interface HomeScreenBindings
+  """.trimIndent() + "\n"
+
+  /**
+   * The IDE-undo sequence: the relay's base is the file WITHOUT `Legacy(1)`
+   * (the author deleted it and that was read), but the file has it again (the
+   * author undid the delete). An edit of `b` must not be merged by position —
+   * that deleted `Legacy(1)` and wrote it as surgical.
+   */
+  @Test fun aFileThatNoLongerReadsAsItsBaseIsReReadNotWritten() {
+    val withoutLegacy = withLegacy.replace("    Legacy(1)\n", "")
+    val base = doc(withoutLegacy)
+    val target = base.apply(DocOp.SetProp((base.root as DocNode.Widget).children[1].handle, "text", lit("B"))).doc
+    val r = assertIs<ScreenWriter.Reread>(plan(withLegacy, target, base))
+    assertTrue("changed since it was last read" in r.reason, r.reason)
+  }
+
+  @Test fun anExistingFileWithNoBaseIsReReadNotMergedByPosition() {
+    val d = doc(withLegacy)
+    val target = d.apply(DocOp.SetProp((d.root as DocNode.Widget).children[2].handle, "text", lit("B"))).doc
+    assertIs<ScreenWriter.Reread>(plan(withLegacy, target, null))
+  }
+
+  @Test fun aBaseThatIsNotTheFilesTreeIsNeverMergedByPosition() {
+    val withoutLegacy = withLegacy.replace("    Legacy(1)\n", "")
+    val base = doc(withoutLegacy)
+    val target = base.apply(DocOp.SetProp((base.root as DocNode.Widget).children[1].handle, "text", lit("B"))).doc
+    val o = WriteBack.attempt(withLegacy, target, fileName = file, base = base)
+    assertIs<WriteBack.Outcome.NotSurgical>(o)
+  }
+
   // ── 5: line endings ────────────────────────────────────────────────────────
 
   private val withRawString = "package app.screens\n\nimport androidx.compose.runtime.Composable\nimport dev.keliver.layout.compose.Column\n" +

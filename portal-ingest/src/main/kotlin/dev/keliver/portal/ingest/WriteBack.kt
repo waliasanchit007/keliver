@@ -55,8 +55,10 @@ object WriteBack {
      * handles [target] shares. When its tree is the file's, every node pairs
      * with its statement only by identity (the same handle): an edit, an
      * insert beside a same-type sibling, a delete and a move are each what
-     * they are. Null (or a base that is not the file's tree) = position and
-     * shape decide, and a reorder is not surgical.
+     * they are. A base that is not the file's tree is not merged onto (the
+     * file changed since it was read). Null = position and shape decide, and
+     * a reorder is not surgical — for callers that know the file; the relay
+     * never merges without a base ([ScreenWriter.plan] re-reads the file).
      */
     base: UiDocument? = null,
   ): Outcome {
@@ -77,7 +79,9 @@ object WriteBack {
       )
     }
     val written = LinkedHashSet<String>()
-    val ids = base?.let { identitiesOf(rec.root, it.root) }
+    // A base that is not the file's tree: the file changed since it was read —
+    // pairing by position could delete what only the file holds (B1).
+    val ids = base?.let { identitiesOf(rec.root, it.root) ?: return no("the file changed since the base document was read") }
     needed.set(written)
     lookup.set(rec.tokenLookup)
     conds.set(rec.condParser)

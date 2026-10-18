@@ -37,6 +37,14 @@ object ScreenWriter {
   /** Write nothing: the change cannot be written without losing code, because [reason]. */
   data class Refuse(val reason: String) : Plan
 
+  /**
+   * Write nothing: the file on disk is not the document the relay last wrote
+   * it from or read it as (the base) — it changed since, or was never read.
+   * Merging onto it would pair statements by position and could delete the
+   * author's code; the caller re-reads the file instead ([reason] says why).
+   */
+  data class Reread(val reason: String) : Plan
+
   enum class How { SURGICAL, EXPORT, CREATED }
 
   private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
@@ -61,14 +69,21 @@ object ScreenWriter {
     fun restored(text: String, how: How): Plan = LineEndings.restore(onDisk, text)?.let { Write(it, how) }
       ?: Refuse("the file mixes CRLF and LF line endings and the change would rewrite a CRLF line")
 
+    val asIs = runCatching { Recognizer.recognize(fileName, lf, components, tokens) }.getOrNull()
+      ?: return Refuse("the file has no @Composable screen function the editor can read, so it is not rewritten")
+    // B1: write only onto the file the relay last wrote or read. A file that
+    // changed since (an IDE save, an IDE undo of an edit that was read) pairs
+    // with the document only by position — which deletes whatever the
+    // document does not hold — so it is re-read, never merged onto.
+    if (base == null) return Reread("the file has not been read since it was created or changed")
+    if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
+
     val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, base)
     if (surgical is WriteBack.Outcome.Merged) return restored(contract(surgical.text, tree, functionName, components), How.SURGICAL)
     val why = (surgical as WriteBack.Outcome.NotSurgical).reason
 
     // The full export only when it is lossless: the file is the export of its own tree.
     val pkg = PKG_RE.find(lf)?.groupValues?.get(1) ?: packageName
-    val asIs = Recognizer.recognize(fileName, lf, components, tokens)
-      ?: return Refuse("$why (and the file does not read as a screen, so it is not rewritten)")
     val asIsExport = export(UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0).toWidgetTree(), pkg, functionName, components)
     if (asIsExport.trimEnd('\n') != lf.trimEnd('\n')) return Refuse(why)
     val text = export(tree, pkg, functionName, components)
