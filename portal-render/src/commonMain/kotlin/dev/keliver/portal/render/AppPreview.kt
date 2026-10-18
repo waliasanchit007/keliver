@@ -83,6 +83,35 @@ public interface AppPreviewEntry {
 
   /** Initial selection. Must name one of [personas] when non-null. */
   public val defaultPersonaId: String? get() = personas.firstOrNull()?.id
+
+  /**
+   * K5: what the app's GUEST puts around every screen on a device — typically
+   * the `Theme(...)` its root composable wraps its routes in. The canvas
+   * renders each screen inside it, so the screen sees the same theme it gets
+   * on a phone. Runs in the guest composition (keliver composables only).
+   */
+  public val screenWrapper: PreviewWrapper? get() = null
+
+  /**
+   * K5: what the app's native HOST puts around the Keliver view — typically
+   * the Material3 `MaterialTheme` whose scheme a guest `Theme` starts from
+   * (roles the guest leaves unset, e.g. a Slider's inactive track, come from
+   * it). Runs in the editor's host composition around the canvas.
+   */
+  public val hostWrapper: PreviewWrapper? get() = null
+}
+
+/** K5: a composable wrapper around preview content (see [AppPreviewEntry.screenWrapper]). */
+public fun interface PreviewWrapper {
+  @Composable
+  public fun Wrap(content: @Composable () -> Unit)
+}
+
+/** K5: [content] inside [entry]'s [AppPreviewEntry.screenWrapper], or bare when it has none. */
+@Composable
+public fun AppScreenFrame(entry: AppPreviewEntry?, content: @Composable () -> Unit) {
+  val wrapper = entry?.screenWrapper
+  if (wrapper == null) content() else wrapper.Wrap(content)
 }
 
 /** Set once by the per-app editor build's main(); null = mock tier only. */

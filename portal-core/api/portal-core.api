@@ -61,11 +61,13 @@ public final class dev/keliver/portal/ComponentExpansionKt {
 }
 
 public final class dev/keliver/portal/ComponentModelKt {
+	public static final field COMPONENT_FORWARDS_MODIFIER_PROP Ljava/lang/String;
 	public static final field COMPONENT_SOURCE_HANDLE_PROP Ljava/lang/String;
 	public static final fun getAcceptsModifier (Ldev/keliver/portal/ComponentSpec;)Z
 	public static final fun getRESERVED_COMPONENT_NAMES ()Ljava/util/Set;
 	public static final fun isKnownWidgetType (Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;)Z
 	public static synthetic fun isKnownWidgetType$default (Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;ILjava/lang/Object;)Z
+	public static final fun isModifierType (Ljava/lang/String;)Z
 }
 
 public abstract interface class dev/keliver/portal/ComponentRegistry {

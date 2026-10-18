@@ -29,6 +29,10 @@ class ComponentExpansionTest {
 
   private fun tree(e: Expansion) = (e as Expansion.Transparent).tree
 
+  /** The texts of a placeholder/cycle box (its labels sit in a Column inside the box). */
+  private fun labels(box: WidgetNode): List<String> =
+    box.children.flatMap { c -> listOf(c) + c.children }.mapNotNull { it.props["text"] as? String }
+
   @Test fun literalAndScreenBindAndEventSubstitution() {
     // Instance: MenuRow(title = b.name, subtitle = "Account", onClick = { b.open("X") })  (icon omitted)
     val inst = WidgetNode("MenuRow", mapOf(
@@ -169,6 +173,23 @@ class ComponentExpansionTest {
     assertEquals("Fancy", (e as Expansion.Opaque).name)
   }
 
+  @Test fun placeholderStacksNameAboveReasonAndClampsBoth() {
+    // K5: StyledBox stacks its children; the labels must sit in a Column so the
+    // name and the reason do not draw over each other.
+    val box = dev.keliver.portal.placeholder("Fancy", "body contains code outside the portal grammar (opaque)")
+    assertEquals("StyledBox", box.type)
+    val column = box.children.single()
+    assertEquals("Column", column.type)
+    assertEquals(1, column.props["width"])
+    val (name, reason) = column.children
+    assertEquals("▢ Fancy", name.props["text"])
+    assertEquals(1, name.props["maxLines"])
+    assertEquals(1, name.props["overflow"]) // ellipsis
+    assertEquals("body contains code outside the portal grammar (opaque)", reason.props["text"])
+    assertEquals(2, reason.props["maxLines"])
+    assertEquals(1, reason.props["overflow"])
+  }
+
   @Test fun unknownTypeIsOpaque() {
     val e = expandForPreview(WidgetNode("Nope", emptyMap()), registry)
     assertTrue(e is Expansion.Opaque)
@@ -185,7 +206,7 @@ class ComponentExpansionTest {
     val t = tree(expandForPreview(WidgetNode("A", emptyMap()), reg))
     // The nested A becomes a cycle chip (StyledBox), not infinite recursion.
     assertEquals("StyledBox", t.type)
-    assertTrue(t.children.any { (it.props["text"] as? String)?.contains("cycle") == true })
+    assertTrue(labels(t).any { it.contains("cycle") })
   }
 
   @Test fun indirectCycleIsGuarded() {
@@ -197,6 +218,6 @@ class ComponentExpansionTest {
     // Expand A -> body B -> body A(in stack [A,B]) -> cycle chip. No hang.
     val t = tree(expandForPreview(WidgetNode("A", emptyMap()), reg))
     assertEquals("StyledBox", t.type)
-    assertTrue(t.children.any { (it.props["text"] as? String)?.contains("cycle") == true })
+    assertTrue(labels(t).any { it.contains("cycle") })
   }
 }

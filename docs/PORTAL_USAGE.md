@@ -131,6 +131,11 @@ fresh capability graph, so mutable fixture, SQL, and navigation state cannot
 leak between personas. Apps that declare no personas keep the existing editor
 UI and behavior.
 
+What the canvas draws the way a phone does — and what it cannot (fonts, the
+native chrome around the screen, frame size) — is in
+[Editor canvas fidelity](EDITOR_FIDELITY.md), with the `screenWrapper` /
+`hostWrapper` hooks that put the app's own theme around the canvas.
+
 ### Deterministic HTTP replay
 
 Real presenters can take the portable `HostHttp` capability and keep endpoints
@@ -236,8 +241,10 @@ read at start only; the publish response names any that changed since.
 the app repo it serves: `port`, `screensDir`, `componentsDir`, `flowsDir`,
 `logicDirs`, `publishTask`, `publishOutput`, `store`, `previewBuildTask`,
 `previewDist`, `previewServeDir`, `httpFixturesDir`, optional `httpRecording`,
-`appRuntime`, and optional `tokensDirs` (extra design-token directories). Path
-fields default relative to `screensDir`, so the file can stay small.
+`appRuntime`, optional `tokensDirs` (extra design-token directories), and
+optional `previewAssetHosts` (image hosts the canvas loads through the relay;
+see [Editor canvas fidelity](EDITOR_FIDELITY.md#images-through-the-relay-previewassethosts)).
+Path fields default relative to `screensDir`, so the file can stay small.
 `PORTAL_REPO` can point one relay at an external app checkout.
 
 Declare the app/device runtime target explicitly; the editor cannot infer it
