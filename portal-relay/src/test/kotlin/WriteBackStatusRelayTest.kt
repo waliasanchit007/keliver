@@ -136,6 +136,33 @@ class WriteBackStatusRelayTest {
     assertTrue(read.written)
   }
 
+  /**
+   * S6: after a refusal every later edit is refused too (the document keeps
+   * the change that cannot be written). The status says so, names the
+   * version that first failed, and how to get out of it.
+   */
+  @Test fun aRefusalBlocksLaterEditsAndSaysWhichChangeFirstFailed() {
+    val f = fixture()
+    val (_, a, b) = f.svc.children()
+    val first = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
+    val refused = awaitStatus(f.svc, first.version)
+    assertEquals("refused", refused.outcome)
+    assertTrue("undo it (from the session that made it) or make it in code" in refused.message, refused.message)
+    assertTrue("until then no edit to this screen is written" in refused.message, refused.message)
+    val later = f.svc.submit(f.svc.batch(DocOp.SetProp(a.handle, "text", lit("A"))))
+    val blocked = awaitStatus(f.svc, later.version)
+    assertEquals("refused", blocked.outcome)
+    assertTrue("v${first.version}" in blocked.message && "earlier change" in blocked.message, blocked.message)
+    assertEquals(home, f.file.readText())
+    // Undoing both writes the file again; a later refusal names its own version.
+    assertTrue(f.svc.undo("t").ok)
+    assertTrue(f.svc.undo("t").ok)
+    assertEquals("surgical", awaitStatus(f.svc, f.svc.doc.version).outcome)
+    val again = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
+    val third = awaitStatus(f.svc, again.version)
+    assertFalse("earlier change" in third.message, third.message)
+  }
+
   @Test fun aWriteFailureIsReportedNotSwallowed() {
     val f = fixture()
     assertTrue(f.file.setWritable(false))

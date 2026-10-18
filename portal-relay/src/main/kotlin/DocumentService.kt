@@ -329,6 +329,7 @@ class DocumentService(
     fileDoc = newDoc
     lastWrittenText = null
     pendingWrite?.cancel(false)
+    firstRefused = null
     writeBack = if (!ahead) {
       WriteBackStatus(newDoc.version, "external", "$name was re-read ($why); the editor shows it as it is")
     } else {
@@ -433,10 +434,7 @@ class DocumentService(
       when (plan) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
           println("write-back REFUSED for $screenKey (v${doc.version}): ${plan.reason} — ${kotlinFile.name} left as it is")
-          WriteBackStatus(
-            doc.version, "refused",
-            "this change could not be written to ${kotlinFile.name} without losing code: ${plan.reason}; undo it or make it in code",
-          )
+          refusedStatus(doc.version, plan.reason)
         }
         // B1: the file is not what the relay last wrote or read — never merged onto: read it.
         is dev.keliver.portal.ingest.ScreenWriter.Reread -> reread(plan.reason, base)
@@ -452,6 +450,28 @@ class DocumentService(
       announce()
     }
   }
+
+  /**
+   * S6: a refusal, worded for what it means. The document keeps the change
+   * that cannot be written, so every later edit of this screen is refused
+   * with it until that change is undone (by the session that made it: undo
+   * is per session) or made in code; a later refusal names the version that
+   * first failed.
+   */
+  @Synchronized
+  private fun refusedStatus(version: Long, reason: String): WriteBackStatus {
+    val first = firstRefused ?: version.also { firstRefused = it }
+    val until = "undo it (from the session that made it) or make it in code — until then no edit to this screen is written"
+    val name = kotlinFile.name
+    return WriteBackStatus(
+      version, "refused",
+      if (first == version) "this change could not be written to $name without losing code: $reason; $until"
+      else "this edit (v$version) is not written to $name either: an earlier change in this screen (v$first) can't be written without losing code — $reason; $until",
+    )
+  }
+
+  /** The document version whose write-back was first refused since the file last matched the document (null = none). */
+  @Volatile private var firstRefused: Long? = null
 
   /**
    * Writes [plan] — only if, at this moment, the file is still [onDisk] and
@@ -472,6 +492,7 @@ class DocumentService(
     lastWrittenText = plan.text
     kotlinFile.writeText(plan.text)
     fileDoc = doc
+    firstRefused = null
     // M9 versioned catch-up: bake the doc version this screen was written at
     // into a sibling const. Rebuilding the dev bundle (serve --continuous)
     // picks it up; the device router compares it to the live doc version.
