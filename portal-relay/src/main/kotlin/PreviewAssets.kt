@@ -71,18 +71,19 @@ import okhttp3.Request
  *    [failureTtlMillis] per URL, so a re-render does not ask again. The
  *    host (with its port) is remembered as well only when no connection to
  *    it could be made: DNS failed, the connection was refused or had no
- *    route, the connect itself timed out, or the TLS handshake failed. A
- *    host that accepted the connection is never marked, however slowly it
- *    answered: the deadline running out, a body that broke off or a
- *    protocol error costs that URL only, so one slow image does not fail
- *    every other image on its host. A redirect target the deadline left no
- *    time to contact is not marked either;
+ *    route, the connect itself timed out, or the TLS handshake failed; or
+ *    when it accepted the connection and then let the deadline run out
+ *    [HOST_DEADLINE_STRIKES] times in a row (see [deadlineStrike]). Any
+ *    other failure after a connection — one deadline, a body that broke
+ *    off, a protocol error — costs that URL only, so one slow image does
+ *    not fail every other image on its host. A redirect target the
+ *    deadline left no time to contact is not marked either;
  *  - requests run on this endpoint's own small pool ([threads] threads,
  *    [queue] waiting), never on the relay's shared dispatcher: a slow host
  *    cannot stall the relay's handling of `/ops`, `/doc` or write-back. (The
  *    browser's few connections to the relay are the editor's to share: it
- *    runs at most two image fetches through here at once.) A full pool
- *    answers 503;
+ *    runs at most three image fetches through here at once, one per image
+ *    host.) A full pool answers 503;
  *  - the response carries `nosniff` and a sandbox CSP; CORS headers are the
  *    relay's access gate's (RelayAccess: a loopback origin is echoed, any
  *    other is refused before this runs);
@@ -125,6 +126,12 @@ class PreviewAssets(
   // Remembered failures, keyed by URL and (hosts no connection reached) by host:port.
   private val failedUrls = boundedMap<Failure>(FAILURES_MAX)
   private val failedHosts = boundedMap<Failure>(FAILURES_MAX)
+
+  // Deadline failures in a row after a connection, by host:port (see [deadlineStrike]).
+  private class Streak(val since: Long) {
+    var count = 0
+  }
+  private val deadlineStreaks = boundedMap<Streak>(FAILURES_MAX)
 
   // Each call reports whether it got a connection: a [Reach] rides as the
   // request's tag, set by a network interceptor (which runs only once a
@@ -218,13 +225,19 @@ class PreviewAssets(
           if (bytes.size > maxBytes) return failed(key, uri, unreachable = false, 413, "larger than $maxBytes bytes")
           val image = Result.Image(type, bytes)
           remember(key, image)
+          answered(uri)
           return image
         }
       } catch (e: IOException) {
-        // The deadline (OkHttp's call timeout cancels the call): this URL only,
-        // whether it ran out while connecting, waiting or reading the body.
+        // The deadline (OkHttp's call timeout cancels the call): this URL
+        // only, whether it ran out while connecting, waiting or reading the
+        // body — unless the host accepted the connection and this is its
+        // HOST_DEADLINE_STRIKES-th such failure in a row: then the host too.
         if (call.isCanceled() || deadline - System.nanoTime() <= 0) {
-          return failed(key, uri, unreachable = false, 504, "no image within $deadlineMillis ms")
+          val tarpit = reach.connected && deadlineStrike(uri)
+          val reason = "no image within $deadlineMillis ms" +
+            if (tarpit) " ($HOST_DEADLINE_STRIKES in a row from this host)" else ""
+          return failed(key, uri, unreachable = tarpit, 504, reason)
         }
         // OkHttp tries a host's addresses in parallel and throws the LAST
         // failure; the others ride as suppressed. Name them all: an IPv6
@@ -300,7 +313,8 @@ class PreviewAssets(
 
   /**
    * Log and remember a failed download for [key]; [unreachable] (no
-   * connection to [at]'s host could be made) also marks that host and port.
+   * connection to [at]'s host could be made, or it let the deadline run out
+   * [HOST_DEADLINE_STRIKES] times in a row) also marks that host and port.
    */
   private fun failed(key: String, at: URI, unreachable: Boolean, status: Int, reason: String): Result.Refused {
     val refused = refuse(at, status, reason)
@@ -310,6 +324,31 @@ class PreviewAssets(
       if (unreachable) failedHosts[hostKey(at)] = f
     }
     return refused
+  }
+
+  /**
+   * Count a deadline failure after [at]'s host accepted the connection; true
+   * when it is the [HOST_DEADLINE_STRIKES]-th in a row, all within
+   * [failureTtlMillis] of the first, and the host is to be remembered like
+   * an unreachable one. Only an image served from the host ([answered])
+   * breaks the run; other failures neither count nor reset it.
+   */
+  @Synchronized private fun deadlineStrike(at: URI): Boolean {
+    val host = hostKey(at)
+    val now = clock()
+    val streak = deadlineStreaks[host]?.takeIf { now - it.since <= failureTtlMillis } ?: Streak(now)
+    streak.count++
+    if (streak.count >= HOST_DEADLINE_STRIKES) {
+      deadlineStreaks.remove(host)
+      return true
+    }
+    deadlineStreaks[host] = streak
+    return false
+  }
+
+  /** [at]'s host served an image: its run of deadline failures ends. */
+  @Synchronized private fun answered(at: URI) {
+    deadlineStreaks.remove(hostKey(at))
   }
 
   /** `host:port`, the port defaulted from the scheme: one host's http and https are told apart. */
@@ -425,6 +464,9 @@ class PreviewAssets(
     const val MAX_REDIRECTS: Int = 5
     const val USER_AGENT: String = "keliver-portal-preview/1"
     private const val FAILURES_MAX = 512
+
+    /** Deadline failures in a row, after a connection, that mark a host (see [deadlineStrike]). */
+    const val HOST_DEADLINE_STRIKES: Int = 3
     private val REDIRECTS = setOf(301, 302, 303, 307, 308)
 
     /** The image types served, each exactly as named here (the canonical type sent back). */
