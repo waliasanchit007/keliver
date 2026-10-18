@@ -324,7 +324,9 @@ class DocumentService(
       // when the change isn't safely surgical (type change, reorder, contract)
       // or the surgical text would not read back as the document (merge checks).
       val registry = components()
-      val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
+      val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
+      // Everything below works on LF text; the file keeps its own line endings (CRLF stays CRLF).
+      val existing = onDisk?.let(dev.keliver.portal.ingest.LineEndings::toLf)
       // C1: component-aware surgical merge so a screen using a component isn't
       // forced into a whole-file regen (its call stays byte-stable in place).
       val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry, tokens(), tokenFileId, base = fileDoc) }
@@ -340,7 +342,7 @@ class DocumentService(
       val tree = doc.toWidgetTree()
       val text = runCatching {
         dev.keliver.portal.ingest.ContractWriteBack.ensure(merged, tree, functionName, registry)
-      }.getOrDefault(merged)
+      }.getOrDefault(merged).let { if (onDisk == null) it else dev.keliver.portal.ingest.LineEndings.restore(onDisk, it) }
       lastWrittenText = text
       kotlinFile.writeText(text)
       fileDoc = doc

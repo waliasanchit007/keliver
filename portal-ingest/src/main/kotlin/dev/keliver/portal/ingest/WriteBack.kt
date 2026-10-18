@@ -71,7 +71,8 @@ object WriteBack {
       println("write-back: surgical merge of $fileName does not read back as the document; writing the full export")
       return null
     }
-    return out
+    // The parse was of the LF text: a CRLF file is written back CRLF.
+    return LineEndings.restore(fileText, out)
   }
 
   /** Test seam: rewrites a merge's text before it is checked (forces a divergence). Per thread. */

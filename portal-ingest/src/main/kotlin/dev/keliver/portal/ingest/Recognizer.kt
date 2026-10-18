@@ -107,7 +107,7 @@ object Recognizer {
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
   ): Recognized? {
-    val file = PsiEnv.parse(fileName, source)
+    val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
@@ -150,7 +150,7 @@ object Recognizer {
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
   ): RecognizedComponent? {
-    val file = PsiEnv.parse(fileName, source)
+    val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
     val pkg = file.packageFqName.asString().takeIf { it.isNotEmpty() }
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
