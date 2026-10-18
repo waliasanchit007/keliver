@@ -120,6 +120,15 @@ object Tokens {
   }
 
   /**
+   * A token's value as a literal, or null when it has none a prop holds — a
+   * Long ([lit] refuses one by throwing; the gate refuses it with a reason),
+   * or no value. The table offers only literal kinds; this keeps a slip from
+   * becoming a 500.
+   */
+  internal fun tokenLit(value: Any?): PropValue.Lit? =
+    if (value == null || value is Long) null else lit(value)
+
+  /**
    * The client-op gate for token values: the batch with every token's value
    * replaced by the table's, or the refusal. A client names a token by its
    * reference and import; it must be one [table] lets the file [fileId] use
@@ -138,7 +147,12 @@ object Tokens {
         error = "unknown design token ${v.ref}" + (v.import?.let { " ($it)" } ?: "")
         return@mapLeaves v
       }
-      v.copy(value = lit(entry.value))
+      val value = tokenLit(entry.value)
+      if (value == null) {
+        error = "design token ${v.ref} is a ${entry.kind ?: "value"} that fits no portal prop"
+        return@mapLeaves v
+      }
+      v.copy(value = value)
     }
     fun fixNode(n: DocNode): DocNode = when (n) {
       is DocNode.RawCode -> n
@@ -259,7 +273,9 @@ object Tokens {
         error = "design token ${v.ref} is now a ${entry.kind} and no longer fits $type.$key"
         return v
       }
-      return v.copy(value = lit(entry.value)).also(restored::add)
+      val restoredValue = tokenLit(entry.value)
+        ?: return v.also { error = "design token ${v.ref} is now a ${entry.kind ?: "value"} that fits no portal prop" }
+      return v.copy(value = restoredValue).also(restored::add)
     }
     fun node(n: DocNode): DocNode = when (n) {
       is DocNode.RawCode -> n

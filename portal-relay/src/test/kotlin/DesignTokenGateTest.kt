@@ -502,4 +502,13 @@ fun HomeScreen() {
     assertTrue(undone.error!!.startsWith("undo failed (step dropped): "), undone.error)
     assertEquals("nothing to undo", svc.undo("S").error, "the step was dropped")
   }
+
+  @Test fun aLongTokenValueIsRefusedNotThrown() {
+    // A Long fits no portal prop (lit(Long) throws): the gate's conversion says no instead.
+    assertEquals(null, Tokens.tokenLit(5L))
+    assertEquals(lit(5), Tokens.tokenLit(5))
+    assertEquals(lit("a"), Tokens.tokenLit("a"))
+    assertEquals(lit(1.5), Tokens.tokenLit(1.5))
+    assertEquals(lit(true), Tokens.tokenLit(true))
+  }
 }
