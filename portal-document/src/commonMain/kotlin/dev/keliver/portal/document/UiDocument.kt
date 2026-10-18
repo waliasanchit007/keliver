@@ -210,6 +210,7 @@ public data class UiDocument(
         conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name, contract.fields)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
+        repeatListMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -236,6 +237,7 @@ public data class UiDocument(
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
         conditionMisfitAt(set.root, op.target, "mod.${op.name}", contract.fields)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        repeatListMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -491,6 +493,7 @@ private fun conditionsMisfit(root: DocNode, h: Handle, fields: Map<String, Strin
       conditionMisfitAt(root, n.handle, k, fields)?.let { return it }
       itemRefMisfitAt(root, n.handle, k)?.let { return it }
       refBooleanMisfitAt(root, n.handle, k, fields)?.let { return it }
+      repeatListMisfitAt(root, n.handle, k)?.let { return it }
     }
     return n.children.firstNotNullOfOrNull(::walk)
   }
@@ -698,6 +701,58 @@ private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String, fields: Ma
   }
   val f = tested(root) ?: return null
   return "${w.type}.$key reads `$f` as text or a list element, but the screen tests it as a Boolean elsewhere (the contract cannot type it both)"
+}
+
+/**
+ * K4: the plain screen fields the value [v] at wire key [key] of a node of
+ * [nodeType] reads as ONE value — a template part, a list element, or a
+ * binding on a prop or modifier argument whose source type is not a List
+ * (also in a conditional's branches). A binding on a project component's
+ * parameter is left out (the server knows its type).
+ */
+private fun scalarReads(nodeType: String, key: String, v: PropValue?): Set<String> {
+  val out = refFields(v).filterTo(LinkedHashSet()) { '.' !in it }
+  val binds = (if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOfNotNull(v))
+    .filterIsInstance<PropValue.Bind>().filter { '.' !in it.field }
+  if (binds.isNotEmpty()) {
+    val type = propSourceType(nodeType, key)?.replace(" ", "")
+    if (type != null && !type.startsWith("List<")) binds.forEach { out += it.field }
+  }
+  return out
+}
+
+/**
+ * K4: a screen field a Repeat iterates (its `items`, a List) that the screen
+ * also reads as one value ([scalarReads]) — a template would print the
+ * list, and neither a list element nor a text or number prop holds one. At
+ * wire key `items` of a Repeat [h], the Repeat's field against every such
+ * read in [root]; at any other key, the fields that value reads against
+ * every Repeat. Null = none. Whatever the contract declares: no type is both
+ * a List and what a template, a list element or a scalar prop reads.
+ */
+private fun repeatListMisfitAt(root: DocNode, h: Handle, key: String): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  fun why(field: String) =
+    "`$field` is a Repeat's List: a template, a list element or a prop that is not a List does not read the whole list (read its items inside the Repeat)"
+  if (w.type == "Repeat" && key == "items") {
+    val field = (w.props["items"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
+    fun reads(n: DocNode): Boolean {
+      if (n !is DocNode.Widget) return false
+      if (n.props.any { (k, v) -> field in scalarReads(n.type, k, v) }) return true
+      if (n.modifiers.any { (k, v) -> field in scalarReads(n.type, "mod.$k", v) }) return true
+      return n.children.any(::reads)
+    }
+    return if (reads(root)) why(field) else null
+  }
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  val read = scalarReads(w.type, key, v)
+  if (read.isEmpty()) return null
+  fun iterated(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Repeat") (n.props["items"] as? PropValue.Lit)?.s?.takeIf { it in read }?.let { return it }
+    return n.children.firstNotNullOfOrNull(::iterated)
+  }
+  return iterated(root)?.let(::why)
 }
 
 /**

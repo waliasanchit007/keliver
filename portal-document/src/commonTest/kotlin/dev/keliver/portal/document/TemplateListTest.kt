@@ -195,6 +195,41 @@ class TemplateListTest {
     assertTrue("as a Boolean" in refused(d(mapOf("on" to "String")), DocOp.InsertNode(Handle(1), null, newCondition)))
   }
 
+  @Test fun aRepeatsWholeListIsNotOneValue() {
+    // `b.notes.forEach { … }` makes `notes` a List: a template would print it, a
+    // list element or a text prop cannot hold it.
+    fun repeat(h: Long, field: String) =
+      DocNode.Widget(Handle(h), "Repeat", props = mapOf("items" to lit(field), "item" to lit("note")), children = listOf(text(h + 100)))
+    val notesText = PropValue.Template(listOf(lit("n: "), PropValue.Bind("notes")))
+    val d = doc(repeat(2, "notes"), text(3), box(4), DocNode.Widget(Handle(5), "SegmentedButtonRow"))
+    val refusedOps = listOf(
+      DocOp.SetProp(Handle(3), "text", notesText),
+      DocOp.SetProp(Handle(3), "text", PropValue.Conditional("on", whenTrue = notesText, whenFalse = lit("-"))),
+      DocOp.SetProp(Handle(4), "gradientColorsArgb", PropValue.ListOf("li", listOf(lit(1), PropValue.Bind("notes")))),
+      DocOp.SetProp(Handle(5), "options", PropValue.ListOf("ls", listOf(PropValue.Bind("notes")))),
+      DocOp.SetProp(Handle(3), "text", PropValue.Bind("notes")),
+      DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to notesText))),
+    )
+    for (op in refusedOps) assertTrue("Repeat" in refused(d, op) && "notes" in refused(d, op), "$op")
+    // A List prop may be bound to the same list; another field, or an item field, is fine.
+    assertNull(d.tryApply(DocOp.SetProp(Handle(5), "options", PropValue.Bind("notes"))).error)
+    assertNull(d.tryApply(DocOp.SetProp(Handle(3), "text", PropValue.Template(listOf(PropValue.Bind("city"))))).error)
+    assertNull(d.tryApply(DocOp.SetProp(Handle(102), "text", PropValue.Template(listOf(PropValue.Bind("note.title"))))).error)
+
+    // The other way round: a Repeat over a field a template, a list or a text prop reads.
+    val reads = doc(
+      DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Template(listOf(PropValue.Bind("tags"))))),
+      DocNode.Widget(Handle(4), "StyledBox", props = mapOf("gradientColorsArgb" to PropValue.ListOf("li", listOf(PropValue.Bind("tints"))))),
+      DocNode.Widget(Handle(5), "StyledText", props = mapOf("text" to PropValue.Bind("label"))),
+      repeat(6, "other"),
+    )
+    for (field in listOf("tags", "tints", "label")) {
+      assertTrue("Repeat" in refused(reads, DocOp.InsertNode(Handle(1), null, repeat(0, field))), field)
+      assertTrue("Repeat" in refused(reads, DocOp.SetProp(Handle(6), "items", lit(field))), field)
+    }
+    assertNull(reads.tryApply(DocOp.InsertNode(Handle(1), null, repeat(0, "notes"))).error)
+  }
+
   @Test fun aReferenceIsBracedWhereWhatFollowsWouldContinueItsName() {
     // U+20000 is a letter outside the BMP: a surrogate pair continues a Kotlin identifier.
     val cjk = "\uD840\uDC00"
