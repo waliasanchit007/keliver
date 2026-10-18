@@ -456,6 +456,46 @@ sealed interface dev.keliver.portal.document/PropValue { // dev.keliver.portal.d
         }
     }
 
+    final class Conditional : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Conditional|null[0]
+        constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/Boolean = ..., dev.keliver.portal.document/PropValue? = ..., dev.keliver.portal.document/PropValue? = ...) // dev.keliver.portal.document/PropValue.Conditional.<init>|<init>(kotlin.String;kotlin.String?;kotlin.Boolean;dev.keliver.portal.document.PropValue?;dev.keliver.portal.document.PropValue?){}[0]
+
+        final val field // dev.keliver.portal.document/PropValue.Conditional.field|{}field[0]
+            final fun <get-field>(): kotlin/String // dev.keliver.portal.document/PropValue.Conditional.field.<get-field>|<get-field>(){}[0]
+        final val negate // dev.keliver.portal.document/PropValue.Conditional.negate|{}negate[0]
+            final fun <get-negate>(): kotlin/Boolean // dev.keliver.portal.document/PropValue.Conditional.negate.<get-negate>|<get-negate>(){}[0]
+        final val test // dev.keliver.portal.document/PropValue.Conditional.test|{}test[0]
+            final fun <get-test>(): kotlin/String? // dev.keliver.portal.document/PropValue.Conditional.test.<get-test>|<get-test>(){}[0]
+        final val whenFalse // dev.keliver.portal.document/PropValue.Conditional.whenFalse|{}whenFalse[0]
+            final fun <get-whenFalse>(): dev.keliver.portal.document/PropValue? // dev.keliver.portal.document/PropValue.Conditional.whenFalse.<get-whenFalse>|<get-whenFalse>(){}[0]
+        final val whenTrue // dev.keliver.portal.document/PropValue.Conditional.whenTrue|{}whenTrue[0]
+            final fun <get-whenTrue>(): dev.keliver.portal.document/PropValue? // dev.keliver.portal.document/PropValue.Conditional.whenTrue.<get-whenTrue>|<get-whenTrue>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.portal.document/PropValue.Conditional.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/PropValue.Conditional.component2|component2(){}[0]
+        final fun component3(): kotlin/Boolean // dev.keliver.portal.document/PropValue.Conditional.component3|component3(){}[0]
+        final fun component4(): dev.keliver.portal.document/PropValue? // dev.keliver.portal.document/PropValue.Conditional.component4|component4(){}[0]
+        final fun component5(): dev.keliver.portal.document/PropValue? // dev.keliver.portal.document/PropValue.Conditional.component5|component5(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/Boolean = ..., dev.keliver.portal.document/PropValue? = ..., dev.keliver.portal.document/PropValue? = ...): dev.keliver.portal.document/PropValue.Conditional // dev.keliver.portal.document/PropValue.Conditional.copy|copy(kotlin.String;kotlin.String?;kotlin.Boolean;dev.keliver.portal.document.PropValue?;dev.keliver.portal.document.PropValue?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.Conditional.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.Conditional.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.Conditional.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.Conditional> { // dev.keliver.portal.document/PropValue.Conditional.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.Conditional.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.Conditional.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.Conditional.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.Conditional // dev.keliver.portal.document/PropValue.Conditional.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.Conditional) // dev.keliver.portal.document/PropValue.Conditional.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.Conditional){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.Conditional.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/PropValue.Conditional.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Conditional> // dev.keliver.portal.document/PropValue.Conditional.Companion.serializer|serializer(){}[0]
+        }
+    }
+
     final class Lit : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Lit|null[0]
         constructor <init>(kotlin/String, kotlin/String? = ..., kotlin/Int? = ..., kotlin/Double? = ..., kotlin/Boolean? = ..., kotlin.collections/List<kotlin/Int>? = ..., kotlin.collections/List<kotlin/Float>? = ..., kotlin.collections/List<kotlin/String>? = ...) // dev.keliver.portal.document/PropValue.Lit.<init>|<init>(kotlin.String;kotlin.String?;kotlin.Int?;kotlin.Double?;kotlin.Boolean?;kotlin.collections.List<kotlin.Int>?;kotlin.collections.List<kotlin.Float>?;kotlin.collections.List<kotlin.String>?){}[0]
 
@@ -812,9 +852,13 @@ final val dev.keliver.portal.document/DocJson // dev.keliver.portal.document/Doc
     final fun <get-DocJson>(): kotlinx.serialization.json/Json // dev.keliver.portal.document/DocJson.<get-DocJson>|<get-DocJson>(){}[0]
 
 final fun (dev.keliver.portal.document/DocOp).dev.keliver.portal.document/isClientOp(): kotlin/Boolean // dev.keliver.portal.document/isClientOp|isClientOp@dev.keliver.portal.document.DocOp(){}[0]
+final fun (dev.keliver.portal.document/PropValue.Conditional).dev.keliver.portal.document/cond(): dev.keliver.portal/Cond // dev.keliver.portal.document/cond|cond@dev.keliver.portal.document.PropValue.Conditional(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Lit).dev.keliver.portal.document/toAny(): kotlin/Any? // dev.keliver.portal.document/toAny|toAny@dev.keliver.portal.document.PropValue.Lit(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Token).dev.keliver.portal.document/toTreeValue(): dev.keliver.portal/Token // dev.keliver.portal.document/toTreeValue|toTreeValue@dev.keliver.portal.document.PropValue.Token(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/toWidgetTree(kotlin.collections/Map<kotlin/String, kotlin/Any?> = ..., kotlin/Boolean = ...): dev.keliver.portal/WidgetNode // dev.keliver.portal.document/toWidgetTree|toWidgetTree@dev.keliver.portal.document.UiDocument(kotlin.collections.Map<kotlin.String,kotlin.Any?>;kotlin.Boolean){}[0]
+final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/withoutConditionals(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/withoutConditionals|withoutConditionals@dev.keliver.portal.document.UiDocument(){}[0]
+final fun (dev.keliver.portal/Conditional).dev.keliver.portal.document/toPropValue(): dev.keliver.portal.document/PropValue.Conditional // dev.keliver.portal.document/toPropValue|toPropValue@dev.keliver.portal.Conditional(){}[0]
 final fun (dev.keliver.portal/Token).dev.keliver.portal.document/toPropValue(): dev.keliver.portal.document/PropValue.Token // dev.keliver.portal.document/toPropValue|toPropValue@dev.keliver.portal.Token(){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.document/toDocNode(): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/toDocNode|toDocNode@dev.keliver.portal.WidgetNode(){}[0]
 final fun dev.keliver.portal.document/lit(kotlin/Any?): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/lit|lit(kotlin.Any?){}[0]
+final fun dev.keliver.portal.document/treeToPropValue(kotlin/Any?): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/treeToPropValue|treeToPropValue(kotlin.Any?){}[0]

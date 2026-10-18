@@ -146,6 +146,8 @@ final var dev.keliver.portal.render/componentPreviewInScope // dev.keliver.porta
 
 final fun (dev.keliver.portal.render/AppPreviewEntry).dev.keliver.portal.render/resolvePersona(kotlin/String?): dev.keliver.portal.render/PreviewPersona? // dev.keliver.portal.render/resolvePersona|resolvePersona@dev.keliver.portal.render.AppPreviewEntry(kotlin.String?){}[0]
 final fun (dev.keliver.portal.render/AppPreviewEntry).dev.keliver.portal.render/validatePersonaCatalog() // dev.keliver.portal.render/validatePersonaCatalog|validatePersonaCatalog@dev.keliver.portal.render.AppPreviewEntry(){}[0]
+final fun (dev.keliver.portal.render/PreviewBindings).dev.keliver.portal.render/chosen(kotlin/Any?): kotlin/Any? // dev.keliver.portal.render/chosen|chosen@dev.keliver.portal.render.PreviewBindings(kotlin.Any?){}[0]
+final fun (dev.keliver.portal.render/PreviewBindings).dev.keliver.portal.render/holds(dev.keliver.portal/Cond): kotlin/Boolean // dev.keliver.portal.render/holds|holds@dev.keliver.portal.render.PreviewBindings(dev.keliver.portal.Cond){}[0]
 final fun (dev.keliver.portal/Action).dev.keliver.portal.render/previewArg(kotlin/Any?): kotlin/String? // dev.keliver.portal.render/previewArg|previewArg@dev.keliver.portal.Action(kotlin.Any?){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/actionOf(kotlin/String): dev.keliver.portal/Action? // dev.keliver.portal.render/actionOf|actionOf@dev.keliver.portal.WidgetNode(kotlin.String){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/boolB(kotlin/String, kotlin/Boolean = ...): kotlin/Boolean // dev.keliver.portal.render/boolB|boolB@dev.keliver.portal.WidgetNode(kotlin.String;kotlin.Boolean){}[0]
