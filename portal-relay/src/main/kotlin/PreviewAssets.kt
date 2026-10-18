@@ -82,7 +82,10 @@ import okhttp3.Request
  *    time to contact is not marked either;
  *  - requests run on this endpoint's own small pool ([threads] threads,
  *    [queue] waiting), never on the relay's shared dispatcher: a slow host
- *    cannot stall `/ops`, `/doc` or write-back. A full pool answers 503;
+ *    cannot stall the relay's handling of `/ops`, `/doc` or write-back. (The
+ *    browser's few connections to the relay are the editor's to share: it
+ *    runs at most two image fetches through here at once.) A full pool
+ *    answers 503;
  *  - the response carries `nosniff` and a sandbox CSP; CORS headers are the
  *    relay's access gate's (RelayAccess: a loopback origin is echoed, any
  *    other is refused before this runs);

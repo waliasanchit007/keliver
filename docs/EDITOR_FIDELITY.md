@@ -62,14 +62,21 @@ be read there. For hosts the app lists, the relay fetches instead:
 - Entries are exact lowercase host names of at least two labels: no scheme,
   port, path or wildcard; a subdomain must be listed itself. Refused at config
   load: `localhost` and `*.localhost`, single-label names, IP literals in any
-  form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex — so any
-  all-numeric label, and a last label like `0x7f`). Absent or empty = off
-  (`/preview-asset` answers 404).
+  form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex). The IPv4
+  test is the WHATWG URL rule browsers use: a name whose last label is all
+  digits or `0x` hex is an address (`127.1`, `2130706433`, `0177.0.0.1`,
+  `0x7f.0.0.0x1`, `img.123`); a numeric label anywhere else is a name
+  (`1.bp.blogspot.com`, `0.gravatar.com` are accepted). Absent or empty =
+  off (`/preview-asset` answers 404).
 - The editor reads the list from `GET /preview-assets` and rewrites a URL whose
   host is listed, on its scheme's default port, to
   `GET /preview-asset?url=<encoded URL>`; any other URL loads directly as
   before. If the list never arrives, the first image waits for it at most 3 s
-  and later images do not wait.
+  and later images do not wait. The editor runs at most two image fetches
+  through the relay at once (the browser keeps about six connections to the
+  relay and the editor's event stream holds one), so images waiting on a
+  slow host leave connections free for edits and write-back; images loaded
+  directly are not limited.
 - The relay checks the caller's address is loopback. The relay listens on
   loopback by default; with `KELIVER_RELAY_BIND=all` (KNOWN_BUGS U35) this
   check still keeps other machines on the network off the endpoint. It does
@@ -77,7 +84,8 @@ be read there. For hosts the app lists, the relay fetches instead:
   from loopback; the relay's Host/Origin gate is what refuses those
   (KNOWN_BUGS U36).
 - GET only, for `http`/`https` URLs without user-info, on the scheme's default
-  port (80/443; another port is refused, an invalid one is a 400). It forwards
+  port (80/443; another port is refused, and a malformed one is refused too:
+  400 when out of range, 403 when it is not a number). It forwards
   nothing from the caller (no cookies, no `Authorization`, no other header)
   and sends a fixed `User-Agent`. It follows at most five redirects itself,
   each only to a listed host on a default port, and never from `https` down to
@@ -85,10 +93,19 @@ be read there. For hosts the app lists, the relay fetches instead:
 - One 10 s deadline covers the whole request, every redirect included. Each
   request runs on the endpoint's own small pool (4 threads, 16 waiting), not
   on the thread that serves the relay's other endpoints, so a slow image host
-  never delays edits or write-back; when the pool is full the endpoint answers
-  `503`. A failure is remembered for 30 s — per URL, and per host when the
-  host could not be reached — so a re-render does not wait on a dead host
-  again.
+  does not hold up the relay's handling of edits or write-back; when the pool
+  is full the endpoint answers `503`. (In the browser, the editor's cap of two
+  relay image fetches is what keeps connections free for those requests.)
+- A failure is remembered for 30 s for its URL, so a re-render does not ask
+  again. The host (with its port) is remembered too only when no connection
+  to it could be made: the name did not resolve, the connection was refused
+  or had no route, the connect timed out, or the TLS handshake failed; for
+  30 s no other URL on it is tried. A host that accepted the connection is
+  never marked: the 10 s deadline running out (while waiting or while
+  reading the body), a body that breaks off or a protocol error costs that
+  URL only, so one slow image does not fail the other images on its host. A
+  redirect target the deadline left no time to contact is not marked
+  either.
 - It serves only a `200` with exactly one `Content-Type` naming one of
   `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/avif`,
   `image/bmp`, `image/x-icon`, `image/vnd.microsoft.icon` (parameters ignored;
