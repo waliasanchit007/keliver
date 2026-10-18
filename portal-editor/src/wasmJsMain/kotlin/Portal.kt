@@ -348,8 +348,8 @@ private fun pumpOps() {
     if (settled) return // load and error/timeout never both count
     settled = true
     opInFlight = false
-    saveDotEl.className = "dot"
-    saveTextEl.textContent = "Saved"
+    // A refusal that is still current keeps the pill "Not written" (settling never hides it).
+    pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
     when (reply) {
       is OpsReply.Accepted -> {
         docVersion = reply.version
@@ -370,26 +370,23 @@ private fun pumpOps() {
         refetchDoc(true)
       }
       OpsReply.Unknown -> {
-        // The relay answered 200 but the editor cannot read it: the edit may
-        // be in. Not rolled back — the document decides; the queue resumes on it.
-        saveTextEl.textContent = "Unconfirmed"
+        // A 200 the editor cannot read, or no answer in 15 s: the edit may be
+        // in. Kept (not rolled back) — the refetched document decides; the
+        // queue resumes on it.
+        q.onResult?.invoke(keepsEdit(reply))
         refetchDoc(true) { pumpOps() }
       }
       OpsReply.NetworkError -> {
         // No answer at all: never leave the edit "in flight" (the queue would wedge).
-        q.onResult?.invoke(false)
+        q.onResult?.invoke(keepsEdit(reply))
         dropQueuedOps()
-        saveDotEl.className = "dot error"
-        saveTextEl.textContent = "Not saved"
         Ui.toast("The relay did not answer; the edit was not saved")
         refetchDoc(true)
       }
     }
   }
   xhr.addEventListener("load", { _ -> settle(opsReply(xhr.status.toInt(), xhr.responseText)) })
-  xhr.addEventListener("error", { _ -> settle(OpsReply.NetworkError) })
-  xhr.addEventListener("timeout", { _ -> settle(OpsReply.NetworkError) })
-  xhr.addEventListener("abort", { _ -> settle(OpsReply.NetworkError) })
+  for (event in listOf("error", "timeout", "abort")) xhr.addEventListener(event, { _ -> settle(replyWithoutLoad(event)) })
   xhr.send(DocJson.encodeToString(batch))
 }
 

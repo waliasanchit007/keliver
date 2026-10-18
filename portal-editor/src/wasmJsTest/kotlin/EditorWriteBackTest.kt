@@ -62,4 +62,21 @@ class EditorWriteBackTest {
     assertTrue(!w.showing, "after a discard the document is the file")
     assertNull(w.next(WriteBackNotice(7, "discarded", false, "discarded it")))
   }
+
+  @Test fun anUnknownReplyOrATimeoutKeepsTheEditAndRefetches() {
+    // A timeout may have been applied: unknown (keep, refetch), never a rollback.
+    assertEquals(OpsReply.Unknown, replyWithoutLoad("timeout"))
+    assertEquals(OpsReply.NetworkError, replyWithoutLoad("error"))
+    assertTrue(keepsEdit(OpsReply.Unknown), "unknown: the edit is kept (the refetch confirms)")
+    assertTrue(keepsEdit(OpsReply.Accepted(3)))
+    assertTrue(!keepsEdit(OpsReply.Rebase) && !keepsEdit(OpsReply.Rejected("x")) && !keepsEdit(OpsReply.NetworkError))
+  }
+
+  @Test fun settlingAReplyNeverHidesACurrentRefusal() {
+    assertEquals(Pill("dot", "Saved"), pillAfterReply(OpsReply.Accepted(3), notWritten = false))
+    assertEquals(Pill("dot error", "Not written"), pillAfterReply(OpsReply.Accepted(3), notWritten = true))
+    assertEquals(Pill("dot error", "Not written"), pillAfterReply(OpsReply.Rejected("x"), notWritten = true))
+    assertEquals(Pill("dot", "Unconfirmed"), pillAfterReply(OpsReply.Unknown, notWritten = false))
+    assertEquals(Pill("dot error", "Not saved"), pillAfterReply(OpsReply.NetworkError, notWritten = true))
+  }
 }

@@ -39,6 +39,32 @@ internal fun opsReply(status: Int?, body: String?): OpsReply {
 }
 
 /**
+ * The reply a request that ended without a `load` stands for: a `timeout` was
+ * sent and may have been applied — unknown (kept, the refetch confirms);
+ * anything else (`error`, `abort`) never reached the relay as far as the
+ * editor knows.
+ */
+internal fun replyWithoutLoad(event: String): OpsReply = if (event == "timeout") OpsReply.Unknown else OpsReply.NetworkError
+
+/** Whether settling [reply] keeps the editor's optimistic edit (else it is rolled back). */
+internal fun keepsEdit(reply: OpsReply): Boolean = reply is OpsReply.Accepted || reply == OpsReply.Unknown
+
+/** The save pill: its dot's CSS class and its text. */
+internal data class Pill(val dot: String, val text: String)
+
+/**
+ * The save pill once an op reply settles. [notWritten] = a refused or failed
+ * write-back is current (the document is ahead of the file): an accepted or
+ * refused op does not make the file current, so the pill stays "Not written".
+ */
+internal fun pillAfterReply(reply: OpsReply, notWritten: Boolean): Pill = when {
+  reply == OpsReply.NetworkError -> Pill("dot error", "Not saved")
+  notWritten -> Pill("dot error", "Not written")
+  reply == OpsReply.Unknown -> Pill("dot", "Unconfirmed")
+  else -> Pill("dot", "Saved")
+}
+
+/**
  * K3 last review round: the relay's last write-back of the screen
  * (`writeBack` on the change stream): [outcome] `surgical`, `export`,
  * `created` — or `refused` (the change would have lost code in the .kt file,
