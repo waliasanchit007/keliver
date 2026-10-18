@@ -23,7 +23,7 @@ them visually in a web portal that round-trips to the .kt files in git.
   the PUBLISHED tools bundle and Maven Central, recreated by `bootstrap.sh` and
   checked on an emulator by `.github/workflows/reference-app.yml` and on an iOS
   simulator by `ios-host.yml`. Its production route is published-only
-  when the workflow is run by hand: tools **0.3.9**'s own `bin/` scaffolders
+  when the workflow is run by hand: tools **0.3.10**'s own `bin/` scaffolders
   write the signing, the Android host and the iOS host, which build against
   Maven Central, and `keliver-publish` comes from the zip too. On a pull request
   the same harness scaffolds from this checkout's `scripts/` instead
@@ -52,7 +52,7 @@ schemas change, CI has a staleness guard).
 **Dev loop (current):** relay `PORTAL_REPO=$PWD ./gradlew :portal-relay:run`
 (:8077; boot-scans screens+components, watches logic/, debounce-rebuilds the
 preview editor and promotes ON SUCCESS to `build/portal-editor-live`). Serve
-the editor with `python3 -m http.server 8096` FROM `build/portal-editor-live`
+the editor with `python3 -m http.server --bind 127.0.0.1 8096` FROM `build/portal-editor-live`
 (the promoted last-known-good — NOT web-spike/build/dist directly; serving
 from the wrong dir = white screen, app .wasm 404s). `GET /preview-build` =
 build status. Config paths in keliver.portal.json point at

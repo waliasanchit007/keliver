@@ -15,7 +15,7 @@ result. The iOS device script (`ci/w7/ios-device.sh`) has never run on a
 device; only its settings and device lookup were tried, with no iPhone attached.
 
 Everything runs from a checkout of this repository on the owner's Mac. The app
-and its tools come from the **published tools 0.3.9** and Maven Central, as in
+and its tools come from the **published tools 0.3.10** and Maven Central, as in
 CI.
 
 ---
@@ -34,11 +34,11 @@ CI.
       assets, download it on another network and pass the path:
       ```bash
       mkdir -p ~/w7/dl && cd ~/w7/dl
-      base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.9
-      curl -fLO "$base/keliver-portal-tools-0.3.9.zip" && curl -fLO "$base/keliver-portal-tools-0.3.9.zip.sha256"
-      shasum -a 256 -c keliver-portal-tools-0.3.9.zip.sha256
-      # must print 31c4214cdd4588316f153f6edc9e96c865b44e1ed6475fa70a007653c75f6fa1
-      shasum -a 256 keliver-portal-tools-0.3.9.zip
+      base=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.10
+      curl -fLO "$base/keliver-portal-tools-0.3.10.zip" && curl -fLO "$base/keliver-portal-tools-0.3.10.zip.sha256"
+      shasum -a 256 -c keliver-portal-tools-0.3.10.zip.sha256
+      # must print 0ba5c07b88c869084ee80870682d577aabc8ce83edcdb9caf19b4493db0e87bf
+      shasum -a 256 keliver-portal-tools-0.3.10.zip
       ```
 - [ ] **A fresh work directory per run**, e.g. `~/w7/run1`. The harness keeps
       `user.home`, the portal store and its disposable keys inside it. It never
@@ -84,7 +84,7 @@ CI.
 cd <this checkout>
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 W=~/w7/run1; E=~/w7/run1-evidence
-KELIVER_DEVICE=physical bash reference/inventory/ci/prepare.sh "$W" "$E" ~/w7/dl/keliver-portal-tools-0.3.9.zip
+KELIVER_DEVICE=physical bash reference/inventory/ci/prepare.sh "$W" "$E" ~/w7/dl/keliver-portal-tools-0.3.10.zip
 bash reference/inventory/ci/device.sh "$W" "$E" <serial>
 ```
 
@@ -197,9 +197,13 @@ The harness installs debug builds, plus one R8 release signed with the debug key
   - The iPhone has no `adb reverse`, so `localhost` on the phone is the phone
     itself.
   - Use the §3 real-certificate server (recommended), or for a Debug build
-    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. macOS may ask
-    whether Java may accept incoming connections: allow it, or the phone gets
-    no answer (the relay listens on all interfaces).
+    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. From the first tools
+    release that carries KNOWN_BUGS U35/U36, the relay listens on this Mac only
+    unless started with `KELIVER_RELAY_BIND=all` (tools 0.3.10 and earlier
+    listen on every interface anyway). With it, anyone on that Wi-Fi can reach
+    the relay's edit and publish endpoints, so use it only on a network you
+    trust and only for this step. macOS may ask whether Java may accept
+    incoming connections: allow it, or the phone gets no answer.
   - With a LAN IP, scaffold with `--bundle-server http://<LAN IP>:8077`, so the
     ATS exception names that host. Accept the **Local Network** prompt on the
     first launch. That prompt appears inside the script's first 40-second
@@ -209,7 +213,7 @@ The harness installs debug builds, plus one R8 release signed with the debug key
     If the load fails with an ATS error (`-1022`), use the https route.
 
 **Team setting:** a host scaffolded by tools 0.3.7 or 0.3.8 ignores `TEAM_ID`
-(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9, which this checklist uses).
+(**U32** in `KNOWN_BUGS.md`; fixed in tools 0.3.9; this checklist uses 0.3.10).
 For those older hosts, do one of:
 - add `DEVELOPMENT_TEAM=<team id>` to `host-ios/Configuration/Config.xcconfig`;
 - set `DEVELOPMENT_TEAM` in the environment for `ci/w7/ios-device.sh`, which
@@ -229,7 +233,7 @@ A host with the U32 fix takes `TEAM_ID` from the gitignored
 $KP/keliver-new-ios-host.sh --bundle-server https://<your server>
 ```
 
-`$KP` is `~/w7/run1/boot/tools/keliver-portal-tools-0.3.9/bin`. Run the
+`$KP` is `~/w7/run1/boot/tools/keliver-portal-tools-0.3.10/bin`. Run the
 scaffolder with `JAVA_TOOL_OPTIONS="-Duser.home=$HOME/w7/run1/home"`, so it
 finds the run's store and key.
 
@@ -344,7 +348,7 @@ HTTPS. Pick one option:
 
 ## 4. The real-app proof (W2 embed, then an adopter)
 
-- **Embedding into an existing app from the published 0.3.9** is in the adopter
+- **Embedding into an existing app from the published tools (0.3.9 on)** is in the adopter
   guide, "Ship to production → Embed in an existing app", and `DEVICE_HOST.md`
   §4.
   - Android: `keliver-new-production-host.sh --embed --into <app root>`.

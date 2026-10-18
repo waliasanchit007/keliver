@@ -878,6 +878,76 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U36. Any web page open in the developer's browser could drive the relay — FIXED (unreleased; found 2026-10-17)
+
+**What happened.** Every relay endpoint answered `Access-Control-Allow-Origin: *`,
+allowed GET, POST, PUT and any header, and nothing checked the `Host` header.
+A page on any site, open in the developer's browser while the relay ran, could
+therefore read the relay (projects, screens, documents) and call its
+write endpoints: submit ops, change screens through write-back, and publish
+signed bundles. A DNS-rebinding page (a name that first resolves to its own
+server, then to `127.0.0.1`) could do the same. This did not depend on the
+interface the relay listened on (U35): a browser reaches loopback. Found in
+the review of the U35 fix.
+
+**Fix.** Every request passes one check before its handler runs (the relay's
+server applies it to every context, including ones registered outside
+`Relay.kt`):
+- `Host` must name this machine: `localhost`, a loopback address, the
+  emulators' `10.0.2.2` / `10.0.3.2`, or the address the connection arrived on
+  (a phone using the LAN address with `KELIVER_RELAY_BIND=all`). Any other name
+  is refused, which is what DNS rebinding sends. So is a tunnel or proxy that
+  passes its own host name through to the relay; the documented tunnel route
+  (`DEVICE_PROOF.md` §3) serves a published directory, not the relay.
+- A request with an `Origin` must come from `http(s)://localhost`, `127.0.0.1`
+  or `[::1]` (any port). The CORS headers echo that origin, never `*`. A
+  preflight is answered by the same rule. Any port means any other web server
+  on the developer's machine is trusted too: a local page is the developer's.
+- A request without an `Origin` (a native host, curl, the MCP server) passes,
+  unless a browser marked it `Sec-Fetch-Site: cross-site` (a page's `<img>` or
+  link).
+
+Refusals are 403, and the handler does not run. Every endpoint that changes
+state refuses GET (`/ops`, `/undo` and `/redo` were the ones that did not),
+because a browser marks only some cross-site GETs (see `RelayAccess.admit`);
+`RelayAccessTest` fails if a new endpoint neither checks its method nor is
+listed as read-only. The `/http-record*` endpoints keep their own stricter
+checks (loopback peer, configured origin, token) after this one.
+
+**Affects** every released tools bundle up to and including 0.3.10. Until a
+release carries the fix, don't keep the relay running while browsing other
+sites.
+
+### U35. The relay and the editor's file server listened on every network interface — FIXED (unreleased; found 2026-10-17)
+
+**What happened.** `portal-relay` created its server with `InetSocketAddress(PORT)`,
+which listens on all interfaces, and `keliver-portal` / `keliver-dev.sh` served the
+editor with `python3 -m http.server`, which does too. The relay has write
+endpoints: anyone who could reach the machine on its network could edit an app's
+screens, change its source through write-back, and publish signed bundles. Found
+while adding the preview image pass-through (whose endpoint checks the caller);
+on the machine where it was found, the macOS firewall was off.
+
+**Fix.** The relay listens on `127.0.0.1` only. `KELIVER_RELAY_BIND=all` opts in
+to every interface (the documented use: a physical iPhone reaching a Debug relay
+over Wi-Fi, `DEVICE_PROOF.md`); the relay prints a warning at start, and
+`keliver-portal` / `keliver-dev.sh` print one to the terminal. Any other value
+is refused before anything starts (the relay exits 64). The relay also refuses
+to start when something already answers on its port on `127.0.0.1` or `::1`,
+instead of binding beside it. Every script that serves the editor binds
+`127.0.0.1`. Emulators (`10.0.2.2`), simulators and `adb reverse` all arrive on
+loopback, so no other documented route changes.
+
+**Still listening on every interface:** `keliver-dev.sh` (this repository's
+own dev loop) starts `:portal-device-guest:serveDevelopmentZipline` on `:8080`.
+That is Zipline's own development server: it serves the read-only development
+guest JavaScript and a directory listing of it, and where it listens cannot be
+set from here.
+
+**Affects** every released tools bundle up to and including 0.3.10. Until a
+release carries the fix, run the relay on a trusted network or with the macOS
+firewall on.
+
 ### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND (unreleased; found 2026-10-14, cause not known)
 
 Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").
