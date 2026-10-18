@@ -56,9 +56,9 @@ private val TEMPLATE_TOKEN_KINDS = setOf("String", "Int", "Boolean")
  * (Kotlin/JS) and the preview (wasm, JVM) print alike: `String`, `Int`,
  * `Long`, `Boolean`. A `Double` or `Float` prints `1` on the device and
  * `1.0` in the preview; a nullable value prints `null` on the device and
- * nothing in the preview.
+ * nothing in the preview. Each may be spelled fully qualified (`kotlin.Int`).
  */
-public fun templateRefTypeFits(type: String?): Boolean = type == null || type.replace(" ", "") in TEMPLATE_REF_TYPES
+public fun templateRefTypeFits(type: String?): Boolean = type == null || type.replace(" ", "").removePrefix("kotlin.") in TEMPLATE_REF_TYPES
 
 private val TEMPLATE_REF_TYPES = setOf("String", "Int", "Long", "Boolean")
 

@@ -120,7 +120,7 @@ public data class UiDocument(
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         val inserted = replaced(newParent).copy(nextHandle = next)
-        conditionsMisfit(inserted.root, renumbered.handle)?.let { return err(it) }
+        conditionsMisfit(inserted.root, renumbered.handle, contract.fields)?.let { return err(it) }
         TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
@@ -158,7 +158,7 @@ public data class UiDocument(
         val moved = sanitize(node, deleted.childScope(target), deep = false, stripped = stripped)
         val res = deleted.apply(InsertExisting(op.newParent, op.after, moved))
         // K3: an item-scoped condition stays inside a Repeat over its item.
-        conditionsMisfit(res.doc.root, op.target)?.let { return err(it) }
+        conditionsMisfit(res.doc.root, op.target, contract.fields)?.let { return err(it) }
         val inverse = if (stripped.isEmpty()) {
           DocOp.MoveNode(op.target, oldParent.handle, oldAfter)
         } else {
@@ -207,9 +207,9 @@ public data class UiDocument(
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name)?.let { return err(it) }
+        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name, contract.fields)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
-        refBooleanMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
+        refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -234,7 +234,7 @@ public data class UiDocument(
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        conditionMisfitAt(set.root, op.target, "mod.${op.name}", contract.fields)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
@@ -479,18 +479,18 @@ private val CONDITION_PROPS = setOf("field", "test", "negate")
  * over that item, or a test the field's other uses contradict
  * ([conditionTypeMisfit]). Null = every condition fits.
  */
-private fun conditionsMisfit(root: DocNode, h: Handle): String? {
+private fun conditionsMisfit(root: DocNode, h: Handle, fields: Map<String, String>): String? {
   val top = findIn(root, h) as? DocNode.Widget ?: return null
   fun walk(n: DocNode): String? {
     if (n !is DocNode.Widget) return null
     if (n.type == "Condition") {
       n.props.forEach { (k, v) -> conditionPropMisfit(n.type, k, v)?.let { return it } }
-      conditionMisfitAt(root, n.handle, null)?.let { return it }
+      conditionMisfitAt(root, n.handle, null, fields)?.let { return it }
     }
     (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
-      conditionMisfitAt(root, n.handle, k)?.let { return it }
+      conditionMisfitAt(root, n.handle, k, fields)?.let { return it }
       itemRefMisfitAt(root, n.handle, k)?.let { return it }
-      refBooleanMisfitAt(root, n.handle, k)?.let { return it }
+      refBooleanMisfitAt(root, n.handle, k, fields)?.let { return it }
     }
     return n.children.firstNotNullOfOrNull(::walk)
   }
@@ -502,7 +502,7 @@ private fun conditionsMisfit(root: DocNode, h: Handle): String? {
  * condition when [key] is null (a `Condition`), else the conditional value at
  * wire key [key] ("mod.X.p" for a modifier). Null when it fits (or is none).
  */
-private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?): String? {
+private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?, fields: Map<String, String>): String? {
   val w = findIn(root, h) as? DocNode.Widget ?: return null
   val (field, test, where) = if (key == null) {
     val field = (w.props["field"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
@@ -516,7 +516,7 @@ private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?): String? {
     return if (item in itemVarsAt(root, h)) null
     else "$where reads `$field` outside a Repeat over `$item` (an item field is read only inside its Repeat)"
   }
-  return conditionTypeMisfit(root, field, test, skip = h to key, where = where)
+  return conditionTypeMisfit(root, field, test, skip = h to key, where = where, fields = fields)
 }
 
 /** The item variables in scope at node [h]: each enclosing Repeat's `item`. */
@@ -536,9 +536,18 @@ private fun itemVarsAt(root: DocNode, h: Handle): Set<String> {
  * document reads as a List (a Repeat's items) or a String (bound to a text
  * or numeric prop, or tested for emptiness/blankness); `isBlank()` on a List. The use
  * being checked ([skip]: node, key — null = a Condition's own) is not
- * evidence. Fields a project component types are left alone.
+ * evidence. Fields a project component types are left alone. K4: a template
+ * reading the field is evidence only when the contract ([fields]) does not
+ * declare it `Boolean` — a template prints a declared Boolean.
  */
-private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, skip: Pair<Handle, String?>, where: String): String? {
+private fun conditionTypeMisfit(
+  root: DocNode,
+  field: String,
+  test: CondTest,
+  skip: Pair<Handle, String?>,
+  where: String,
+  fields: Map<String, String>,
+): String? {
   if (test != CondTest.Bool && test != CondTest.Blank) return null
   var list = false
   var notBoolean = false
@@ -553,9 +562,10 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
     }
     val spec = widgetSpec(n.type)
     n.props.forEach { (k, v) ->
-      // K4: a template prints its fields into text and a list holds Ints or Strings: neither is a Boolean.
-      if (field in refFields(v)) notBoolean = true
       if (skip == (n.handle to k)) return@forEach
+      // K4: a template prints its fields into text and a list holds Ints or Strings: neither is
+      // a Boolean the contract does not declare (a list never binds a declared Boolean).
+      if (field in refFields(v) && !isBooleanType(fields[field])) notBoolean = true
       if (v is PropValue.Conditional) cond(v.field, CondTest.fromWire(v.test))
       val kind = spec?.props?.firstOrNull { it.name == k }?.kind
       val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
@@ -587,6 +597,9 @@ private fun refTypeWhy(field: String, type: String): String = when {
     "`$field` is declared $type: the device (Kotlin/JS) prints 1.0 as \"1\", the preview (wasm) as \"1.0\""
   else -> "`$field` is declared $type, which a template does not read (only String, Int, Long and Boolean print alike on the device and in the preview)"
 }
+
+/** K4: whether the contract type [type] is `Boolean` (also spelled `kotlin.Boolean`). */
+private fun isBooleanType(type: String?): Boolean = type?.replace(" ", "")?.removePrefix("kotlin.") == "Boolean"
 
 /** K4: the plain fields (and item fields) a template's parts or a list's elements read — also in a conditional's branches. */
 private fun refFields(v: PropValue?): List<String> = when (v) {
@@ -645,7 +658,7 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue, fields: 
       }
       is PropValue.Bind -> {
         if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
-        fields[e.field]?.let { t -> if (t.replace(" ", "") != element) return "list $where: `${e.field}` is declared $t, not $element" }
+        fields[e.field]?.let { t -> if (t.replace(" ", "").removePrefix("kotlin.") != element) return "list $where: `${e.field}` is declared $t, not $element" }
       }
       else -> return "list $where: an element is a literal, a design token or a binding"
     }
@@ -664,12 +677,14 @@ private fun refValueMisfit(n: DocNode, fields: Map<String, String>): String? {
 /**
  * K4: a screen field the template or the list at wire key [key] of node [h]
  * reads that the screen tests as a Boolean elsewhere (a `Condition`, or a
- * conditional value) — the contract cannot type it both. Null = none.
+ * conditional value) — the contract cannot type it both. A field the
+ * contract ([fields]) declares `Boolean` is both tested and printed (a list
+ * binding one is refused by its element type). Null = none.
  */
-private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String): String? {
+private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String, fields: Map<String, String>): String? {
   val w = findIn(root, h) as? DocNode.Widget ?: return null
   val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
-  val read = refFields(v).filter { '.' !in it }.toSet()
+  val read = refFields(v).filter { '.' !in it && !isBooleanType(fields[it]) }.toSet()
   if (read.isEmpty()) return null
   fun tested(n: DocNode): String? {
     if (n !is DocNode.Widget) return null

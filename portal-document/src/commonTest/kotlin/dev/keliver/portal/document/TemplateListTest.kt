@@ -100,7 +100,7 @@ class TemplateListTest {
     val d = UiDocument(
       "t",
       DocNode.Widget(Handle(1), "Column", children = listOf(text(2), box(3), DocNode.Widget(Handle(4), "SegmentedButtonRow"))),
-      Contract(fields = mapOf("score" to "Double", "ratio" to "Float", "nick" to "String?", "n" to "Int", "big" to "Long", "on" to "Boolean", "s" to "String")),
+      Contract(fields = mapOf("score" to "Double", "ratio" to "Float", "nick" to "String?", "n" to "Int", "big" to "Long", "on" to "Boolean", "s" to "String", "qn" to "kotlin.Int", "qs" to "kotlin.String")),
       0, 10,
     )
     assertTrue("Double" in refused(d, DocOp.SetProp(Handle(2), "text", PropValue.Template(listOf(lit("x "), ratio)))))
@@ -110,7 +110,7 @@ class TemplateListTest {
       assertTrue(field in msg && "declared" in msg, msg)
       assertTrue(field in refused(d, DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to PropValue.Template(listOf(PropValue.Bind(field))))))))
     }
-    for (field in listOf("n", "big", "on", "s", "undeclared")) {
+    for (field in listOf("n", "big", "on", "s", "qn", "qs", "undeclared")) {
       assertNull(d.tryApply(DocOp.SetProp(Handle(2), "text", PropValue.Template(listOf(lit("x "), PropValue.Bind(field))))).error, field)
     }
     // A bound list element is declared as the element type, if at all.
@@ -118,6 +118,9 @@ class TemplateListTest {
     assertTrue("score" in refused(d, DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("score"))))))
     assertNull(d.tryApply(DocOp.SetProp(Handle(4), "options", PropValue.ListOf("ls", listOf(lit("a"), PropValue.Bind("s"))))).error)
     assertNull(d.tryApply(DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("n"))))).error)
+    // A fully qualified spelling is the same type.
+    assertNull(d.tryApply(DocOp.SetProp(Handle(4), "options", PropValue.ListOf("ls", listOf(PropValue.Bind("qs"))))).error)
+    assertNull(d.tryApply(DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("qn"))))).error)
   }
 
   @Test fun aFieldATemplateOrAListReadsIsNotABoolean() {
@@ -152,6 +155,44 @@ class TemplateListTest {
     // An emptiness test reads a String: no conflict.
     val empty = doc(DocNode.Widget(Handle(2), "Condition", props = mapOf("field" to lit("accent"), "test" to lit("empty")), children = listOf(text(5))), text(3))
     assertNull(empty.tryApply(DocOp.SetProp(Handle(3), "text", accent)).error)
+  }
+
+  @Test fun aDeclaredBooleanIsTestedAndPrintedByATemplate() {
+    // `val on: Boolean`: `if (b.on) { … }` and `"on: ${'$'}{b.on}"` compile together.
+    val onText = PropValue.Template(listOf(lit("on: "), PropValue.Bind("on")))
+    fun d(fields: Map<String, String>) = UiDocument(
+      "t",
+      DocNode.Widget(Handle(1), "Column", children = listOf(
+        DocNode.Widget(Handle(2), "Condition", props = mapOf("field" to lit("on")), children = listOf(text(5))),
+        DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to onText)),
+        box(4),
+        text(6),
+      )),
+      Contract(fields = fields),
+      0, 10,
+    )
+    val newCondition = DocNode.Widget(Handle(0), "Condition", props = mapOf("field" to lit("on")), children = listOf(text(0)))
+    val selfReading = PropValue.Conditional("on", whenTrue = onText, whenFalse = lit("-"))
+    val ops = listOf(
+      DocOp.SetProp(Handle(3), "text", PropValue.Template(listOf(lit("now "), PropValue.Bind("on")))),
+      DocOp.MoveNode(Handle(3), Handle(4), null),
+      DocOp.MoveNode(Handle(3), Handle(2), Handle(5)),
+      DocOp.SetProp(Handle(2), "negate", lit(true)),
+      DocOp.InsertNode(Handle(1), null, newCondition),
+      DocOp.SetProp(Handle(6), "text", selfReading),
+    )
+    for (type in listOf("Boolean", "kotlin.Boolean")) {
+      val declared = d(mapOf("on" to type))
+      for (op in ops) assertNull(declared.tryApply(op).error, "$type: $op")
+      // The conditional's own template is no evidence against its test (also alone on the screen).
+      val alone = UiDocument("t", DocNode.Widget(Handle(1), "Column", children = listOf(text(6))), Contract(fields = mapOf("on" to type)), 0, 10)
+      assertNull(alone.tryApply(DocOp.SetProp(Handle(6), "text", selfReading)).error, type)
+    }
+    // Undeclared, the contract would have to type `on` both a Boolean and text: refused as before.
+    val undeclared = d(emptyMap())
+    for (op in ops.filter { it !is DocOp.MoveNode }) assertTrue("as a Boolean" in refused(undeclared, op), "$op")
+    // Declared as text, a Boolean test on it is still refused.
+    assertTrue("as a Boolean" in refused(d(mapOf("on" to "String")), DocOp.InsertNode(Handle(1), null, newCondition)))
   }
 
   @Test fun aReferenceIsBracedWhereWhatFollowsWouldContinueItsName() {
