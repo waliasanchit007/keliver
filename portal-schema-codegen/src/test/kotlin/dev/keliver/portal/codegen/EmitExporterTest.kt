@@ -113,4 +113,14 @@ class EmitExporterTest {
     // An emptiness test never retypes a Repeat's List items (review S2).
     assertContains(src, "if (c.test == CondTest.Bool || out[c.field]?.startsWith(\"List<\") != true) out[c.field] = c.fieldType")
   }
+
+  @Test fun templatesAndListsWithReferencesExportWithTheirTokensImports() {
+    val box = box.copy(props = box.props + MappedProp("gradientColorsArgb", MappedKind.INT_LIST, required = false, defaultExpr = "emptyList()"))
+    val src = emitExporter(listOf(text, box))
+    // K4: a template is written as one; each list element in its kind.
+    assertContains(src, "v is Template -> fmtTemplate(v, ::bindRef)")
+    assertContains(src, "listItems(v).joinToString(\", \") { fmtInt(it) }")
+    assertContains(src, "imports.addTokenImport(node.props[\"gradientColorsArgb\"], \"List<Int>\")")
+    assertContains(src, "is Template -> fmtTemplate(x, ::bindRef)")
+  }
 }

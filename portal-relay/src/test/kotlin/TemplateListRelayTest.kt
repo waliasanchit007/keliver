@@ -183,4 +183,24 @@ class TemplateListRelayTest {
     assertEquals(lit("Rating: {rating} pts"), text(mapOf("tokens" to "1", "conditionals" to "1")))
     assertFalse(list(mapOf("tokens" to "1")) is PropValue.ListOf)
   }
+
+  @Test fun aRedoReReadsATokenPartsValueAndIsBlockedWhenItIsGone() {
+    val (screens, components) = app()
+    val svc = service(screens, components)
+    val node = child(svc, 0)
+    val t = node.props["text"] as PropValue.Template
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "text", t.copy(parts = t.parts + lit("/") + token("C.Max", 0))))).ok)
+    assertTrue(svc.undo("t").ok)
+    val tokensKt = File(components, "Tokens.kt")
+    tokensKt.writeText(tokensKt.readText().replace("Max = 5", "Max = 6"))
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
+    assertTrue(svc.redo("t").ok)
+    assertEquals(token("C.Max", 6), (child(svc, 0).props["text"] as PropValue.Template).parts.last())
+    assertTrue(svc.undo("t").ok)
+    tokensKt.writeText(tokensKt.readText().replace("  const val Max = 6\n", ""))
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
+    val redo = svc.redo("t")
+    assertFalse(redo.ok)
+    assertTrue("C.Max no longer exists" in redo.error!!, redo.error)
+  }
 }
