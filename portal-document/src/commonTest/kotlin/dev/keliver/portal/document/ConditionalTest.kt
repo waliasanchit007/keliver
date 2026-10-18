@@ -178,4 +178,47 @@ class ConditionalTest {
     val plain = exportKotlin(doc(emptyText).toWidgetTree(), functionName = "Home")
     assertTrue("  val items: String\n" in plain, plain)
   }
+
+  // Review S3: an op never creates a condition that cannot compile (or would re-ingest as RawCode).
+  @Test fun aConditionThatCouldNotCompileIsRefusedWhereverItComesFrom() {
+    val repeat = DocNode.Widget(
+      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
+    )
+    val d = doc(repeat, DocNode.Widget(Handle(4), "StyledText", props = mapOf("text" to PropValue.Bind("title"))), DocNode.Widget(Handle(5), "Condition", mapOf("field" to lit("open"))))
+    fun refused(op: DocOp) = assertNotNull(d.tryApply(op).error, op.toString())
+    fun accepted(op: DocOp) = assertNull(d.tryApply(op).error, op.toString())
+    fun styled(v: PropValue) = DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to v))
+    val itemFlag = PropValue.Conditional("item.flag", whenTrue = lit("a"), whenFalse = lit("b"))
+
+    // P7: a Condition's field is a screen binding — never dotted (ingest reads `if (item.x)` as RawCode).
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("item.flag")))))
+    refused(DocOp.InsertNode(Handle(2), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("item.flag")))))
+    refused(DocOp.SetProp(Handle(5), "field", lit("item.flag")))
+    // P7b: a conditional value reads an item field only inside a Repeat over that item.
+    refused(DocOp.SetProp(Handle(4), "text", itemFlag))
+    refused(DocOp.InsertNode(Handle(1), null, styled(itemFlag)))
+    accepted(DocOp.SetProp(Handle(3), "text", itemFlag))
+    accepted(DocOp.InsertNode(Handle(2), null, styled(itemFlag)))
+    accepted(DocOp.InsertNode(Handle(1), null, repeat.copy(handle = Handle(0), children = listOf(styled(itemFlag)))))
+    refused(DocOp.InsertNode(Handle(1), null, repeat.copy(handle = Handle(0), props = mapOf("items" to lit("rows"), "item" to lit("row")), children = listOf(styled(itemFlag)))))
+    val inside = d.apply(DocOp.SetProp(Handle(3), "text", itemFlag)).doc
+    assertNotNull(inside.tryApply(DocOp.MoveNode(Handle(3), Handle(1), null)).error, "moved out of its Repeat")
+    // P7c: a Boolean test on a field the document reads as a List or a String.
+    refused(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.InsertNode(Handle(1), null, styled(PropValue.Conditional("title", whenTrue = lit("a"), whenFalse = lit("b")))))
+    // The use being replaced is not evidence: `text = b.title` becoming `if (b.title) …` is judged without it.
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("title", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("items")))))
+    refused(DocOp.SetProp(Handle(5), "field", lit("title")))
+    // A List has isEmpty() but no isBlank().
+    refused(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", test = "blank", whenTrue = lit("a"), whenFalse = lit("b"))))
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", test = "empty", whenTrue = lit("a"), whenFalse = lit("b"))))
+    accepted(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("title"), "test" to lit("blank")))))
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("open", whenTrue = lit("a"), whenFalse = lit("b"))))
+    // P7d: an inserted Condition's own props are checked as a SetProp would check them.
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "test" to lit("null")))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "negate" to lit("yes")))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Column", children = listOf(DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "test" to lit("long")))))))
+  }
 }

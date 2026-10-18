@@ -36,11 +36,18 @@ import kotlinx.serialization.Serializable
  *
  * K3: a conditional value ([PropValue.Conditional]) sits only where each of its
  * branches could ([conditionalMisfit]): never nested, never on a list prop, a
- * `null` or an Action branch only on an event; the condition is a screen
- * binding tested as a Boolean or for String emptiness/blankness (a screen's
- * contract cannot type a nullable field, so no null test). An `Else` node
- * (a `Condition`'s else branch) sits only directly under a `Condition`, at
- * most one per Condition.
+ * `null` or an Action branch only on an event (every catalog event is
+ * nullable), at least one branch a value; the condition is a screen binding
+ * tested as a Boolean or for String emptiness/blankness (a screen's contract
+ * cannot type a nullable field, so no null test). Every op that places a
+ * condition — SetProp/SetModifier, and Insert/Move for every condition in the
+ * subtree ([conditionsMisfit]) — also refuses: a `Condition` field that is not
+ * a plain screen binding name; an item field (`item.flag`) outside a Repeat
+ * over that item; a Boolean test on a field the document reads as a List (a
+ * Repeat's items) or a String (bound to a non-Boolean prop, or tested for
+ * emptiness); `isBlank()` on a Repeat's List. An `Else` node (a `Condition`'s
+ * else branch) sits only directly under a `Condition`, at most one per
+ * Condition.
  */
 @Serializable
 public data class UiDocument(
@@ -85,7 +92,9 @@ public data class UiDocument(
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
-        TryResult(ApplyResult(replaced(newParent).copy(nextHandle = next), DocOp.DeleteNode(renumbered.handle)), null)
+        val inserted = replaced(newParent).copy(nextHandle = next)
+        conditionsMisfit(inserted.root, renumbered.handle)?.let { return err(it) }
+        TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
       is InsertExisting -> { // internal: undo of Delete/Move reinserts with ORIGINAL handles
@@ -121,6 +130,8 @@ public data class UiDocument(
         val stripped = LinkedHashMap<Long, Map<String, PropValue>>()
         val moved = sanitize(node, deleted.childScope(target), deep = false, stripped = stripped)
         val res = deleted.apply(InsertExisting(op.newParent, op.after, moved))
+        // K3: an item-scoped condition stays inside a Repeat over its item.
+        conditionsMisfit(res.doc.root, op.target)?.let { return err(it) }
         val inverse = if (stripped.isEmpty()) {
           DocOp.MoveNode(op.target, oldParent.handle, oldAfter)
         } else {
@@ -166,7 +177,9 @@ public data class UiDocument(
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(op.value) else op.value
-        TryResult(ApplyResult(replaced(w.copy(props = w.props + (op.name to value))), inv), null)
+        val set = replaced(w.copy(props = w.props + (op.name to value)))
+        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name)?.let { return err(it) }
+        TryResult(ApplyResult(set, inv), null)
       }
 
       is DocOp.RemoveProp -> withWidget(op.target) { w ->
@@ -187,7 +200,9 @@ public data class UiDocument(
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(op.value) else op.value
-        TryResult(ApplyResult(replaced(w.copy(modifiers = w.modifiers + (op.name to value))), inv), null)
+        val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
+        conditionMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        TryResult(ApplyResult(set, inv), null)
       }
 
       is DocOp.RemoveModifier -> withWidget(op.target) { w ->
@@ -387,7 +402,9 @@ private fun conditionPropMisfit(nodeType: String, key: String, v: PropValue): St
     }
     "negate" -> if (v is PropValue.Lit && v.tag == "b") null else "Condition.negate is a Boolean"
     // Empty while an editor's field is being retyped (exported as a placeholder until named).
-    "field" -> if (v is PropValue.Lit && v.tag == "s" && (v.s.isNullOrEmpty() || CONDITION_FIELD.matches(v.s))) null else "Condition.field is a field name"
+    // Never dotted: `if (item.x) { … }` is not grammar (an item field is read by a conditional value).
+    "field" -> if (v is PropValue.Lit && v.tag == "s" && (v.s.isNullOrEmpty() || SCREEN_FIELD.matches(v.s))) null
+      else "Condition.field is a screen binding's name (an item field fits only a conditional value)"
     else -> null
   }
 }
@@ -414,6 +431,106 @@ private fun elseMisfit(parent: DocNode.Widget, node: DocNode, moving: Handle?): 
     return n.children.firstNotNullOfOrNull(::inner)
   }
   return inner(node)
+}
+
+private val SCREEN_FIELD = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
+
+/** A `Condition` node's own props — together, its condition. */
+private val CONDITION_PROPS = setOf("field", "test", "negate")
+
+/**
+ * K3: why a condition somewhere in the subtree at [h] (already placed in
+ * [root]) could not compile: a `Condition`'s own props ([conditionPropMisfit]
+ * — an inserted node skips SetProp), an item field read outside a Repeat
+ * over that item, or a test the field's other uses contradict
+ * ([conditionTypeMisfit]). Null = every condition fits.
+ */
+private fun conditionsMisfit(root: DocNode, h: Handle): String? {
+  val top = findIn(root, h) as? DocNode.Widget ?: return null
+  fun walk(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition") {
+      n.props.forEach { (k, v) -> conditionPropMisfit(n.type, k, v)?.let { return it } }
+      conditionMisfitAt(root, n.handle, null)?.let { return it }
+    }
+    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k -> conditionMisfitAt(root, n.handle, k)?.let { return it } }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return walk(top)
+}
+
+/**
+ * K3: why the condition at node [h] of [root] could not compile — its own
+ * condition when [key] is null (a `Condition`), else the conditional value at
+ * wire key [key] ("mod.X.p" for a modifier). Null when it fits (or is none).
+ */
+private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val (field, test, where) = if (key == null) {
+    val field = (w.props["field"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
+    Triple(field, CondTest.fromWire((w.props["test"] as? PropValue.Lit)?.s) ?: return null, "Condition")
+  } else {
+    val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional ?: return null
+    Triple(v.field, CondTest.fromWire(v.test) ?: return null, "conditional ${w.type}.$key")
+  }
+  if ('.' in field) {
+    val item = field.substringBefore('.')
+    return if (item in itemVarsAt(root, h)) null
+    else "$where reads `$field` outside a Repeat over `$item` (an item field is read only inside its Repeat)"
+  }
+  return conditionTypeMisfit(root, field, test, skip = h to key, where = where)
+}
+
+/** The item variables in scope at node [h]: each enclosing Repeat's `item`. */
+private fun itemVarsAt(root: DocNode, h: Handle): Set<String> {
+  val out = HashSet<String>()
+  var p = parentOf(root, h)
+  while (p != null) {
+    if (p.type == "Repeat") out += (p.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
+    p = parentOf(root, p.handle)
+  }
+  return out
+}
+
+/**
+ * K3: a [test] on screen field [field] that its other uses in [root]
+ * contradict, where that is cheaply known: a Boolean test on a field the
+ * document reads as a List (a Repeat's items) or a String (bound to a text
+ * or numeric prop, or tested for emptiness/blankness); `isBlank()` on a List. The use
+ * being checked ([skip]: node, key — null = a Condition's own) is not
+ * evidence. Fields a project component types are left alone.
+ */
+private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, skip: Pair<Handle, String?>, where: String): String? {
+  if (test != CondTest.Bool && test != CondTest.Blank) return null
+  var list = false
+  var notBoolean = false
+  fun cond(f: String, t: CondTest?) {
+    if (f == field && t != null && t != CondTest.Bool) notBoolean = true
+  }
+  fun walk(n: DocNode) {
+    if (n !is DocNode.Widget) return
+    if (n.type == "Repeat" && (n.props["items"] as? PropValue.Lit)?.s == field) list = true
+    if (n.type == "Condition" && skip != (n.handle to null)) {
+      cond((n.props["field"] as? PropValue.Lit)?.s.orEmpty(), CondTest.fromWire((n.props["test"] as? PropValue.Lit)?.s))
+    }
+    val spec = widgetSpec(n.type)
+    n.props.forEach { (k, v) ->
+      if (skip == (n.handle to k)) return@forEach
+      if (v is PropValue.Conditional) cond(v.field, CondTest.fromWire(v.test))
+      val kind = spec?.props?.firstOrNull { it.name == k }?.kind
+      val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
+      if (kind != null && kind != PropKind.Bool && binds.any { it is PropValue.Bind && it.field == field }) notBoolean = true
+    }
+    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) cond(v.field, CondTest.fromWire(v.test)) }
+    n.children.forEach(::walk)
+  }
+  walk(root)
+  return when {
+    test == CondTest.Bool && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
+    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere"
+    test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
+    else -> null
+  }
 }
 
 /** [tokenMisfit] for every prop and modifier of an inserted subtree. */
