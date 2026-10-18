@@ -60,11 +60,17 @@ internal class BrowserFetchFetcher(
   }
 }
 
-/** The browser's AbortController (kotlinx-browser does not declare it). */
-internal external class AbortController() : JsAny {
+/**
+ * The browser's AbortController (kotlinx-browser does not declare it). An
+ * interface made by [newAbortController], not an external class: a class
+ * would add a compiler-generated symbol to the module's API.
+ */
+internal external interface AbortController : JsAny {
   val signal: AbortSignal
   fun abort()
 }
+
+private fun newAbortController(): AbortController = js("new AbortController()")
 
 /** The browser's AbortSignal: the part of it this file reads. */
 internal external interface AbortSignal : JsAny {
@@ -83,7 +89,7 @@ private fun fetchWithSignal(url: String, signal: AbortSignal): Promise<Response>
  * until the server answers, though its permit was already released.
  */
 internal suspend fun <T> withAbortSignal(block: suspend (signal: AbortSignal) -> T): T {
-  val controller = AbortController()
+  val controller = newAbortController()
   var finished = false
   try {
     return block(controller.signal).also { finished = true }
