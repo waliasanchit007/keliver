@@ -63,6 +63,31 @@ public sealed interface PropValue {
     val whenTrue: PropValue? = null,
     val whenFalse: PropValue? = null,
   ) : PropValue
+
+  /**
+   * K4: a String template — `"Rating: $rating"`, `"${b.count} items"` in
+   * source. Each of [parts] is a literal text segment (a [Lit] tagged "s",
+   * its decoded value) or a reference: a [Bind] (a screen binding field, an
+   * item field `item.x` inside a Repeat over `item`, or — in a component
+   * body — a parameter) or a [Token] of any literal kind. Canonical form
+   * ([canonical]): no empty or adjacent literal segments, at least one
+   * reference (a template without one is a plain [Lit]). The author's
+   * spelling (`$x` / `${x}`, escapes) is not modelled: write-back keeps it
+   * for every part an edit does not change. Fits a String prop or parameter.
+   */
+  @Serializable
+  public data class Template(val parts: List<PropValue>) : PropValue
+
+  /**
+   * K4: a list whose elements may be references — `listOf(C.Start, C.End)`
+   * in source. [tag] is the element kind as a [Lit] list tag: "li" (a
+   * `List<Int>` prop) or "ls" (a `List<String>` prop). Each of [items] is a
+   * [Lit] of that kind ("i"/"s"), a [Token] of that kind, or a [Bind].
+   * Canonical form ([canonical]): at least one element is not a literal (a
+   * list of literals is a plain [Lit]).
+   */
+  @Serializable
+  public data class ListOf(val tag: String, val items: List<PropValue>) : PropValue
 }
 
 /**

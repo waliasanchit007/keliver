@@ -6,6 +6,8 @@ import dev.keliver.portal.LOGIC_NODE_TYPES
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
+import dev.keliver.portal.listElementType
+import dev.keliver.portal.listKindOf
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
 import dev.keliver.portal.tokenFits
@@ -51,6 +53,17 @@ import kotlinx.serialization.Serializable
  * refused for conditions already placed — the compile reports those. An
  * `Else` node (a `Condition`'s else branch) sits only directly under a
  * `Condition`, at most one per Condition.
+ *
+ * K4: a template ([PropValue.Template]) sits only on a String prop (a
+ * component instance's String parameter: the server checks the signature),
+ * also as a conditional's branch; its parts are text, bindings (a plain
+ * screen field, or an item field `item.x` inside a Repeat over `item`) and
+ * design tokens of any literal kind. A list with references
+ * ([PropValue.ListOf]) sits only on a `List<Int>`/`List<String>` prop of a
+ * catalogued widget, its tag that prop's, each element a literal or a token
+ * of the element kind or a binding — never conditional. Every op stores
+ * both in canonical form ([canonicalValue]); an item reference outside a
+ * Repeat over its item is refused where it is placed (as for K3).
  */
 @Serializable
 public data class UiDocument(
@@ -90,6 +103,7 @@ public data class UiDocument(
         }
         tokenMisfit(op.node)?.let { return err(it) }
         conditionalMisfit(op.node)?.let { return err(it) }
+        refValueMisfit(op.node)?.let { return err(it) }
         elseMisfit(parent, op.node, moving = null)?.let { return err(it) }
         val (allocated, next) = allocate(op.node, nextHandle)
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
@@ -174,14 +188,17 @@ public data class UiDocument(
 
       is DocOp.SetProp -> {
         val w = find(op.target) as? DocNode.Widget ?: return err("unknown handle ${op.target.v}")
-        tokenMisfit(w.type, op.name, op.value)?.let { return err(it) }
-        conditionalMisfit(w.type, op.name, op.value)?.let { return err(it) }
-        conditionPropMisfit(w.type, op.name, op.value)?.let { return err(it) }
+        val canonical = canonicalValue(op.value)
+        tokenMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        refValueMisfit(w.type, op.name, canonical)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
-        val value = if (isDpProp(w.type, op.name)) clampDp(op.value) else op.value
+        val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
         conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name)?.let { return err(it) }
+        itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -198,13 +215,16 @@ public data class UiDocument(
         if (spec != null && !spec.isValidUnder(scope)) {
           return err("${spec.name} is only valid inside ${spec.scopes.joinToString("/")} (this node's parent is ${scope ?: "none"})")
         }
-        tokenMisfit(w.type, "mod.${op.name}", op.value)?.let { return err(it) }
-        conditionalMisfit(w.type, "mod.${op.name}", op.value)?.let { return err(it) }
+        val canonical = canonicalValue(op.value)
+        tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
+        conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
+        refValueMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
-        val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(op.value) else op.value
+        val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
         conditionMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -314,9 +334,9 @@ private fun sanitize(
     modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) ?: true
   }
   if (removed.isNotEmpty()) stripped?.put(n.handle.v, removed.associate { it.key to it.value })
-  val modifiers = kept.associate { it.key to it.value }
+  val modifiers = kept.associate { it.key to canonicalValue(it.value) }
     .mapValues { (key, v) -> if (isDpProp(n.type, "mod.$key")) clampDp(v) else v }
-  val props = n.props.mapValues { (key, v) -> if (isDpProp(n.type, key)) clampDp(v) else v }
+  val props = n.props.mapValues { (key, v) -> canonicalValue(v).let { c -> if (isDpProp(n.type, key)) clampDp(c) else c } }
   val children = n.children.map { c ->
     when {
       n.type in LOGIC_TYPES -> sanitize(c, scope, deep, stripped)
@@ -456,7 +476,10 @@ private fun conditionsMisfit(root: DocNode, h: Handle): String? {
       n.props.forEach { (k, v) -> conditionPropMisfit(n.type, k, v)?.let { return it } }
       conditionMisfitAt(root, n.handle, null)?.let { return it }
     }
-    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k -> conditionMisfitAt(root, n.handle, k)?.let { return it } }
+    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
+      conditionMisfitAt(root, n.handle, k)?.let { return it }
+      itemRefMisfitAt(root, n.handle, k)?.let { return it }
+    }
     return n.children.firstNotNullOfOrNull(::walk)
   }
   return walk(top)
@@ -534,6 +557,85 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
     test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
     else -> null
   }
+}
+
+private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "d", "b")
+
+/**
+ * K4: why the template or list-with-references [v] (also as a conditional's
+ * branch) may not sit at wire key [key] on a node of [nodeType], or null
+ * when it may (or [v] is neither). [v] is canonical ([canonicalValue]). A
+ * template on a project component's parameter is left to the server, which
+ * knows the signature; a component parameter is never a list.
+ */
+private fun refValueMisfit(nodeType: String, key: String, v: PropValue): String? {
+  val where = "$nodeType.$key"
+  if (v is PropValue.Conditional) {
+    if (listOfNotNull(v.whenTrue, v.whenFalse).any { it is PropValue.ListOf }) return "conditional $where: a list prop cannot be conditional"
+    return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { refValueMisfit(nodeType, key, it) }
+  }
+  if (v is PropValue.Template) {
+    if (key.startsWith("mod.")) return "template $where: a template fits only a String prop"
+    if (widgetSpec(nodeType) != null) {
+      val type = propSourceType(nodeType, key)
+      if (type != "String") return "template $where: a template fits only a String prop (this one is ${type ?: "not a prop"})"
+    }
+    for (p in v.parts) {
+      when (p) {
+        is PropValue.Lit -> if (p.tag != "s") return "template $where: a text part is a String"
+        is PropValue.Bind -> if (!CONDITION_FIELD.matches(p.field)) return "template $where: '${p.field}' is not a field name"
+        is PropValue.Token -> if (p.value.tag !in TEMPLATE_TOKEN_TAGS) return "template $where: token ${p.ref} is not a String, Int, Double or Boolean"
+        else -> return "template $where: a part is text, a binding or a design token"
+      }
+    }
+    return null
+  }
+  if (v !is PropValue.ListOf) return null
+  if (key.startsWith("mod.") || widgetSpec(nodeType) == null) return "list $where: a list with references fits only a widget's list prop"
+  val type = propSourceType(nodeType, key)
+  val tag = listKindOf(type) ?: return "list $where: a list with references fits only a List<Int> or List<String> prop (this one is ${type ?: "not a prop"})"
+  if (v.tag != tag) return "list $where: the list's tag is ${v.tag}, the prop's is $tag"
+  val element = listElementType(tag)
+  for (e in v.items) {
+    when (e) {
+      is PropValue.Lit -> if (e.tag != (if (tag == "ls") "s" else "i")) return "list $where: a literal element is a${if (tag == "ls") " String" else "n Int"}"
+      is PropValue.Token -> if (!tokenFits(element, e.value.toAny())) {
+        return "list $where: token ${e.ref} (${tokenKindOf(e.value.toAny()) ?: e.value.tag}) does not fit a $type element"
+      }
+      is PropValue.Bind -> if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
+      else -> return "list $where: an element is a literal, a design token or a binding"
+    }
+  }
+  return null
+}
+
+/** [refValueMisfit] for every prop and modifier of an inserted subtree. */
+private fun refValueMisfit(n: DocNode): String? {
+  if (n !is DocNode.Widget) return null
+  n.props.forEach { (k, v) -> refValueMisfit(n.type, k, canonicalValue(v))?.let { return it } }
+  n.modifiers.forEach { (k, v) -> refValueMisfit(n.type, "mod.$k", canonicalValue(v))?.let { return it } }
+  return n.children.firstNotNullOfOrNull { refValueMisfit(it) }
+}
+
+/**
+ * K4: an item field (`item.city`) a template part or a list element at wire
+ * key [key] of node [h] reads outside a Repeat over that item — null when
+ * every such reference is in scope.
+ */
+private fun itemRefMisfitAt(root: DocNode, h: Handle, key: String): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  fun refs(x: PropValue?): List<String> = when (x) {
+    is PropValue.Conditional -> refs(x.whenTrue) + refs(x.whenFalse)
+    is PropValue.Template -> x.parts.filterIsInstance<PropValue.Bind>().map { it.field }
+    is PropValue.ListOf -> x.items.filterIsInstance<PropValue.Bind>().map { it.field }
+    else -> emptyList()
+  }
+  val dotted = refs(v).filter { '.' in it }
+  if (dotted.isEmpty()) return null
+  val inScope = itemVarsAt(root, h)
+  val outside = dotted.firstOrNull { it.substringBefore('.') !in inScope } ?: return null
+  return "${w.type}.$key reads `$outside` outside a Repeat over `${outside.substringBefore('.')}` (an item field is read only inside its Repeat)"
 }
 
 /** [tokenMisfit] for every prop and modifier of an inserted subtree. */
