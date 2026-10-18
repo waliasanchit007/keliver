@@ -158,7 +158,8 @@ class DocumentService(
       else "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
     }
     fun refuseToken(type: String, key: String, v: PropValue): String? =
-      conditionalRefusal(registry, type, key, v) ?: v.leaves().firstNotNullOfOrNull { refuseLeaf(type, key, it) }
+      conditionalRefusal(registry, type, key, v) ?: templateRefusal(registry, type, key, v)
+        ?: scalarLeaves(v).firstNotNullOfOrNull { refuseLeaf(type, key, it) }
     fun walkTokens(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
       w.props.entries.firstNotNullOfOrNull { (k, v) -> refuseToken(w.type, k, v) }
         ?: w.children.firstNotNullOfOrNull(::walkTokens)
@@ -228,6 +229,32 @@ class DocumentService(
     if (branches.any { it is PropValue.Action }) return "conditional $type.$key: an action fits only an event parameter"
     if (branches.any { it == null } && !nullable) return "conditional $type.$key: null fits only a nullable parameter"
     return null
+  }
+
+  /**
+   * K4: a template on a project-component instance fits only a parameter
+   * declared `String` (the document checks catalogued widgets); a list with
+   * references never fits one (component parameters are scalars). Null =
+   * acceptable.
+   */
+  /**
+   * The scalar values of [v] a parameter's type must fit: itself, or a
+   * conditional's branches — not a template's token parts (any literal kind
+   * prints into the String) nor a list's elements (refused on a component).
+   */
+  private fun scalarLeaves(v: PropValue): List<PropValue> = when (v) {
+    is PropValue.Conditional -> listOfNotNull(v.whenTrue, v.whenFalse).flatMap(::scalarLeaves)
+    is PropValue.Template, is PropValue.ListOf -> emptyList()
+    else -> listOf(v)
+  }
+
+  private fun templateRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
+    if (!registry.isComponent(type)) return null
+    val values = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
+    if (values.any { it is PropValue.ListOf }) return "list $type.$key: a component parameter is never a list"
+    if (values.none { it is PropValue.Template }) return null
+    val sourceType = propSourceType(type, key, registry)
+    return if (sourceType == "String") null else "template $type.$key: a template fits only a String parameter (${sourceType ?: "not a scalar parameter"})"
   }
 
   /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */
@@ -637,14 +664,12 @@ class DocumentService(
         props = n.props.filterKeys { !it.startsWith("mod.") }
           .mapValues { (_, v) ->
             when (v) {
-              is dev.keliver.portal.Bind -> dev.keliver.portal.document.PropValue.Bind(v.field)
               is dev.keliver.portal.Action -> dev.keliver.portal.document.PropValue.Action(v.name)
-              is dev.keliver.portal.Token -> v.toPropValue()
-              else -> lit(v)
+              else -> dev.keliver.portal.document.treeToPropValue(v)
             }
           },
         modifiers = n.props.filterKeys { it.startsWith("mod.") }
-          .map { (k, v) -> k.removePrefix("mod.") to if (v is dev.keliver.portal.Token) v.toPropValue() else lit(v) }.toMap(),
+          .map { (k, v) -> k.removePrefix("mod.") to dev.keliver.portal.document.treeToPropValue(v) }.toMap(),
         children = n.children.map { lift(it) },
       )
       val root = treeJson?.takeIf { it.isNotBlank() && it != "{}" }

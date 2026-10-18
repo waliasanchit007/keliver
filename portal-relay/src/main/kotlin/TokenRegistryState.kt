@@ -3,6 +3,8 @@ import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.OpBatch
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.atoms
+import dev.keliver.portal.document.mapAtoms
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.ingest.TokenEntry
 import dev.keliver.portal.ingest.TokenFileScan
@@ -23,13 +25,15 @@ import java.util.concurrent.atomic.AtomicLong
  * RawCode) only when it must. A file is re-parsed only when its content
  * changed (a SHA-256 of its bytes; reading is cheap, parsing is not).
  */
-/** K3: [this] with [f] applied to each branch of a conditional value, or to the value itself. */
-internal fun PropValue.mapLeaves(f: (PropValue) -> PropValue): PropValue =
-  if (this is PropValue.Conditional) copy(whenTrue = whenTrue?.let(f), whenFalse = whenFalse?.let(f)) else f(this)
+/**
+ * K3: [this] with [f] applied to each branch of a conditional value, or to the
+ * value itself; K4: also to each part of a template and each element of a list
+ * (put back in canonical form).
+ */
+internal fun PropValue.mapLeaves(f: (PropValue) -> PropValue): PropValue = mapAtoms(f)
 
-/** K3: a conditional value's branches, or the value itself. */
-internal fun PropValue.leaves(): List<PropValue> =
-  if (this is PropValue.Conditional) listOfNotNull(whenTrue, whenFalse) else listOf(this)
+/** K3: a conditional value's branches, or the value itself; K4: a template's parts, a list's elements. */
+internal fun PropValue.leaves(): List<PropValue> = atoms()
 
 object Tokens {
   private val byProject = ConcurrentHashMap<String, TokenTable>()
@@ -220,7 +224,7 @@ object Tokens {
     var error: String? = null
     val restored = ArrayList<PropValue.Token>()
     val kept = LinkedHashSet<String>()
-    fun fix(type: String, key: String, value: PropValue, was: PropValue?): PropValue {
+    fun fix(type: String, key: String, value: PropValue, was: PropValue?, sourceType: String? = null): PropValue {
       // K3: each branch of a conditional is checked against the same branch before.
       if (value is PropValue.Conditional) {
         val prev = was as? PropValue.Conditional
@@ -229,12 +233,28 @@ object Tokens {
           whenFalse = value.whenFalse?.let { fix(type, key, it, prev?.whenFalse) },
         )
       }
+      // K4: a template's token parts (any literal kind prints) and a list's
+      // elements (its element kind), each against the same position before.
+      if (value is PropValue.Template) {
+        val prev = (was as? PropValue.Template)?.parts
+        return value.copy(parts = value.parts.mapIndexed { i, p -> fix(type, key, p, prev?.getOrNull(i), sourceType = "*") })
+      }
+      if (value is PropValue.ListOf) {
+        val prev = (was as? PropValue.ListOf)?.items
+        val element = dev.keliver.portal.listElementType(value.tag)
+        return value.copy(items = value.items.mapIndexed { i, p -> fix(type, key, p, prev?.getOrNull(i), sourceType = element) })
+      }
       val v = value
       if (v !is PropValue.Token || error != null) return v
       if (v == was) return v.also { t -> t.import?.let(kept::add) }
       val entry = table.usable(v.ref, v.import, fileId)
         ?: return v.also { error = "design token ${v.ref} no longer exists" }
-      if (!dev.keliver.portal.tokenFits(dev.keliver.portal.propSourceType(type, key, components), entry.value)) {
+      val fits = when (sourceType) {
+        "*" -> dev.keliver.portal.tokenKindOf(entry.value) in setOf("String", "Int", "Double", "Boolean")
+        null -> dev.keliver.portal.tokenFits(dev.keliver.portal.propSourceType(type, key, components), entry.value)
+        else -> dev.keliver.portal.tokenFits(sourceType, entry.value)
+      }
+      if (!fits) {
         error = "design token ${v.ref} is now a ${entry.kind} and no longer fits $type.$key"
         return v
       }
