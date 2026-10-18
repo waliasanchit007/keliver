@@ -401,7 +401,9 @@ public final class dev/keliver/portal/TemplatesListsKt {
 	public static final fun listKindOf (Ljava/lang/String;)Ljava/lang/String;
 	public static final fun referencedBinds (Ljava/lang/Object;)Ljava/util/List;
 	public static final fun templateRef (Ljava/lang/String;Ljava/lang/Character;)Ljava/lang/String;
+	public static final fun templateRefTypeFits (Ljava/lang/String;)Z
 	public static final fun templateText (Ldev/keliver/portal/Template;Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public static final fun templateTokenFits (Ljava/lang/Object;)Z
 	public static final fun templateValueText (Ljava/lang/Object;)Ljava/lang/String;
 }
 
