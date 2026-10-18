@@ -150,7 +150,7 @@ class DocumentService(
     if (v !is PropValue.Conditional) return null
     val spec = registry.spec(type) ?: return null
     val branches = listOf(v.whenTrue, v.whenFalse)
-    val nullable = spec.paramTypes[key]?.trim()?.endsWith("?") == true
+    val nullable = dev.keliver.portal.ingest.isNullableType(spec.paramTypes[key])
     if (spec.events.any { it.name == key }) {
       if (branches.any { it != null && it !is PropValue.Action }) return "conditional $type.$key: an event's branches are actions or null"
       // `onGo = if (b.x) b::go else null` compiles only where onGo is `(() -> Unit)?`.

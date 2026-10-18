@@ -196,4 +196,26 @@ class ConditionalRelayTest {
     val cleared = DocOp.SetProp(placed.handle, "onGo", PropValue.Conditional("open", whenTrue = go, whenFalse = null))
     assertFalse(svc.dryRun(batch(svc, cleared)).ok)
   }
+
+  // Review nit: `() -> Unit?` is a non-null function returning `Unit?` — null does not fit it.
+  @Test fun aFunctionTypeReturningANullableTakesNoNullBranch() {
+    val (screens, components) = app()
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
+    val tappy = ComponentSpec(
+      "Tappy",
+      props = emptyList(),
+      events = listOf(ComponentEventSpec("onGo", required = false), ComponentEventSpec("onPick", required = false)),
+      paramTypes = mapOf("onGo" to "() -> Unit?", "onPick" to "(() -> Unit)?"),
+    )
+    val svc = DocumentService.fromFileOrTree(
+      "$project/home", null, {}, File(screens, "home.kt"), "HomeScreen", "app.screens",
+      components = { MapComponentRegistry(listOf(tappy)) }, tokens = { Tokens.table(project) }, tokenFileId = "screens/home.kt",
+    )
+    fun insert(key: String) = DocOp.InsertNode(
+      svc.doc.root.handle, null,
+      DocNode.Widget(Handle(0), "Tappy", mapOf(key to PropValue.Conditional("open", whenTrue = PropValue.Action("go"), whenFalse = null))),
+    )
+    assertFalse(svc.dryRun(batch(svc, insert("onGo"))).ok)
+    assertTrue(svc.dryRun(batch(svc, insert("onPick"))).ok, svc.dryRun(batch(svc, insert("onPick"))).error)
+  }
 }

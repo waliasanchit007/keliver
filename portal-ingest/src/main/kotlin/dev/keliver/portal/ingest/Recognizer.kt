@@ -518,7 +518,7 @@ object Recognizer {
      */
     private fun nullFits(type: String, name: String): Boolean {
       widgetSpec(type)?.let { return name in it.events }
-      return components.spec(type)?.paramTypes?.get(name)?.trim()?.endsWith("?") == true
+      return isNullableType(components.spec(type)?.paramTypes?.get(name))
     }
 
     /** Why [expr] — not a widget, component or grammar construct — is RawCode. */

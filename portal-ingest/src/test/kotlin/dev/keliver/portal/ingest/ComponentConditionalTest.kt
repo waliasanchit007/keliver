@@ -237,4 +237,38 @@ class ComponentConditionalTest {
     assertTrue(arg("onTap = if (b.open) b::tap else null") is dev.keliver.portal.document.DocNode.RawCode)
     assertTrue(arg("onTap = if (b.open) b::tap else b::go") is dev.keliver.portal.document.DocNode.Widget)
   }
+
+  // Review nit: `() -> Unit?` is a non-null function (returning Unit?) — no null branch.
+  @Test fun aFunctionTypeReturningANullableTakesNoNullBranch() {
+    val spec = dev.keliver.portal.ComponentSpec(
+      "Pill",
+      props = emptyList(),
+      events = listOf(dev.keliver.portal.ComponentEventSpec("onGo", required = false), dev.keliver.portal.ComponentEventSpec("onPick", required = false)),
+      paramTypes = mapOf("onGo" to "() -> Unit?", "onPick" to "(() -> Unit)?"),
+    )
+    fun arg(a: String): dev.keliver.portal.document.DocNode {
+      val text = """
+        package app.screens
+
+        import androidx.compose.runtime.Composable
+        import dev.keliver.layout.compose.Column
+
+        @Composable
+        fun HomeScreen(b: HomeScreenBindings) {
+          Column {
+            Pill($a)
+          }
+        }
+
+        interface HomeScreenBindings {
+          val open: Boolean
+          fun go()
+        }
+      """.trimIndent()
+      val rec = Recognizer.recognize("app/screens/HomeScreen.kt", text, dev.keliver.portal.MapComponentRegistry(listOf(spec)))!!
+      return (rec.root as dev.keliver.portal.document.DocNode.Widget).children.single()
+    }
+    assertTrue(arg("onGo = if (b.open) b::go else null") is dev.keliver.portal.document.DocNode.RawCode)
+    assertTrue(arg("onPick = if (b.open) b::go else null") is dev.keliver.portal.document.DocNode.Widget)
+  }
 }
