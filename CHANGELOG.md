@@ -41,7 +41,13 @@
   sends the new values only to a client asking `GET /doc?…&templates=1` / `lists=1` (this release's
   editor and MCP server); older editors get the text and the resolved list. The editor edits a
   template as text with `{field}`/`{item.x}`/`{◆C.Name}` references (validated before sending) and
-  a list as its elements (`16777215, #FF8800, ◆C.Start, @accent`), with a token picker.
+  a list as its elements (`16777215, #FF8800, ◆C.Start, @accent`; in a String list `\@`, `\◆`,
+  `\|`, `\\`, `\"` escape and `" a "` / `""` quote, so every list reads back as itself), with a
+  token picker. A template never reads a Double or a nullable value (a Double token, a parameter
+  declared `Double` or nullable, a field the Bindings interface declares `Double`/`Float`/nullable):
+  the device (Kotlin/JS) prints `1.0` as `1` and a null as `null`, the preview `1.0` and nothing,
+  so such a call stays RawCode and the document, the relay and the editor refuse one. A field a
+  template or a list reads is never also tested as a Boolean.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
   portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
   parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters

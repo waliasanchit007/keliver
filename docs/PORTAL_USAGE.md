@@ -411,8 +411,8 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
 
 - A template's embedded expressions must each be a reference: a screen
   binding (`b.x`), an item field inside its Repeat (`item.x`), a component
-  parameter (`$label` in a component body) or a design token of a literal
-  kind (`${C.Brand}`, `${C.Max}`). Anything else (`${a + b}`,
+  parameter (`$label` in a component body) or a design token of a String,
+  Int or Boolean kind (`${C.Brand}`, `${C.Max}`). Anything else (`${a + b}`,
   `${x.uppercase()}`, `"""…"""`) keeps the call RawCode. A template fits a
   String prop or a component's String parameter (also as a conditional's
   branch).
@@ -424,20 +424,32 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   `{{` and `}}` are literal braces. **◆** inserts a token; **{}** on a text
   prop starts a template. A list is its elements: `16777215, #FF8800,
   ◆C.Start, @accent` for an Int list (`|`-separated for a String list), and
-  **◆** adds a token element. Text that is not valid is marked red (the
-  tooltip says why) and is not sent.
+  **◆** adds a token element. In a String list a backslash takes the next
+  character literally (`\@at` is the text `@at`, not a binding; `\◆`, `\|`,
+  `\\`, `\"`), and an element in double quotes keeps its spaces (`" a "`;
+  `""` is the empty text) — the panel writes every list so that it reads
+  back as itself. Text that is not valid (an empty element between
+  separators, a lone trailing `\`) is marked red (the tooltip says why) and
+  is not sent. A list prop bound as a whole (`options = b.options`) keeps
+  its binding field.
 - The preview evaluates templates with the binding mocks (an unmocked one
-  shows `{field}`) and token values; a Double prints in plain decimal
-  notation (the device's `toString()` uses exponent notation outside
-  1e-3..1e7).
+  shows `{field}`) and token values.
+- A template never reads a Double or a nullable value: the device (Kotlin/JS)
+  prints `1.0` as `1` and a null as `null`, the preview (wasm) `1.0` and
+  nothing, so no preview of one is faithful. A Double token, a component
+  parameter declared `Double` or nullable, and a screen field declared
+  `Double`/`Float`/nullable in the Bindings interface keep the call code
+  (RawCode), the editor offers no Double token in a template, and the server
+  refuses one. Format such a value in the presenter into a `String` field.
 - Write-back is surgical: editing one text segment or reference rewrites only
   it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
   `${'$'}`) elsewhere in the string stay as written; editing one list
   element rewrites only that element. A token added inside a template or a
   list adds its import.
 - A binding read only by a template is typed `String` in the derived
-  contract (a field the Bindings interface already declares keeps its type —
-  any type prints into a template).
+  contract (a field the Bindings interface already declares keeps its type:
+  `String`, `Int`, `Long` or `Boolean`). A field a template or a list reads
+  cannot also be tested as a Boolean.
 - An editor built before this release is served a template's text (bindings
   as `{field}`) and a list's resolved values (it does not ask with
   `templates=1` / `lists=1`); its edits to other props leave both in the file.

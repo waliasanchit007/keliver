@@ -583,20 +583,38 @@ fun SectionCard(content: @Composable () -> Unit) {
     (`$x` or `${…}`) are each ONE reference: a screen binding (`b.x`, spelled
     through the file's bindings parameter), an item field inside a Repeat
     over that item (`note.title`), a component parameter (in a component
-    body), or a design token of a literal kind (String, Int, Double,
-    Boolean — `${C.Max}`, a bare top-level `$Brand`), resolved exactly as
-    K2 resolves a token argument. The text between references is decoded
+    body), or a design token of a String, Int or Boolean kind
+    (`${C.Max}`, a bare top-level `$Brand`), resolved exactly as K2
+    resolves a token argument. The text between references is decoded
     with the plain-literal rules (`\n`, `\"`, `\$`, `\uXXXX`, `${'$'}` keep
     their meaning). Anything else — `${a + b}`, `${x.uppercase()}`,
-    `${1}`, an unknown name, a raw string — keeps the call RawCode. A
-    template fits only where source takes a `String`: a widget's String
+    `${1}`, an unknown name, a raw string — keeps the call RawCode.
+  - *What a template never reads: a Double or a nullable value.* The device
+    guest is Kotlin/JS, the preview wasm (the relay the JVM), and they print
+    these differently: Kotlin/JS prints `1.0` as `1` (`1.5` as `1.5`),
+    wasm/JVM print `1.0`; a null prints `null` on the device and nothing in
+    the preview. No preview of such a template could be faithful, so — as
+    K2 refuses a Double inside a String token's own template — a Double
+    token, a component parameter declared `Double` or nullable (`String?`,
+    `Int?`…), and a screen field the Bindings interface declares other than
+    `String`/`Int`/`Long`/`Boolean` (`Double`, `Float`, any nullable type)
+    keep the call RawCode (the component opaque); the document refuses the
+    same (a Double token part, a part reading a field the contract declares
+    so), the relay re-resolves a token part on undo/redo only as String,
+    Int or Boolean, and the editor offers no Double token in a template.
+    String, Int, Long and Boolean print alike on every target (a common
+    `portal-render` test runs on both js and wasm and asserts it, Long past
+    2^53 included). Format such a value in the presenter (a `String` field
+    the presenter fills) to show it.
+  - A template fits only where source takes a `String`: a widget's String
     prop, a component's String parameter, or a conditional value's branch on
     one (`if (b.on) "Hi ${b.n}" else "-"`).
   - *What a list is.* `listOf(…)` on a widget's `List<Int>` or
     `List<String>` prop whose elements are literals of the element kind,
     design tokens of the element kind (`listOf(C.Start, C.End)`,
     `listOf(16777215, C.A, C.B)`) or bindings (`b.x`, `item.x`, a component
-    parameter). A `List<Float>` stays literal-only (no token is a Float), a
+    parameter; one the Bindings interface or the signature declares is
+    declared as the element type). A `List<Float>` stays literal-only (no token is a Float), a
     list prop is never conditional, and a component parameter is never a
     list. A list of literals is the plain literal it always was.
   - *On the wire.* `PropValue.Template(parts)` — each part a `Lit` (tag
@@ -619,8 +637,7 @@ fun SectionCard(content: @Composable () -> Unit) {
     `{field}`), a token its value, an item field its row's mock; preview
     expansion substitutes a component's parameters with the instance's
     arguments (a template argument is evaluated inside the body's
-    template). A Double prints in plain decimal notation — the device's
-    `toString()` uses exponent notation outside 1e-3..1e7. A compiled
+    template). A compiled
     fixture (`ParityTemplates.kt`) renders the same value tree as the
     interpreted golden (`portal-render` `TemplateListParityTest`).
   - *Write-back.* A no-op is byte-identical. An edit compares the old and
@@ -639,17 +656,23 @@ fun SectionCard(content: @Composable () -> Unit) {
     (structural, from the token).
   - *Contract.* A screen field read only by templates is typed `String` in
     the derived contract (and an item field only in templates is a
-    `String` item member) — any value prints into a template, so a field
-    the Bindings interface already declares keeps its declared type, and
-    another use (a Boolean condition, an Int prop) types it first. A bound
-    list element is the list's element type.
+    `String` item member); a field the Bindings interface already declares
+    keeps its declared type (a `String`, `Int`, `Long` or `Boolean` — see
+    above), and another use (an Int prop) types it first. A field a
+    template or a list reads is never a Boolean: the document refuses a
+    Boolean test on it, and placing a template or a list that reads a field
+    the screen already tests as one. A bound list element is the list's
+    element type.
   - *What an op may not create.* The document refuses a template on a
     non-String prop or a modifier, a list with references on anything but a
     `List<Int>`/`List<String>` widget prop or with the other prop's tag, a
     part or an element that is not a reference of the right kind (an
-    action, a nested template, a Long or wrong-kind token, a non-field
-    name), a conditional list, and — where it is placed (set, insert,
-    move) — an item field read outside a Repeat over its item. The relay
+    action, a nested template, a Double, Long or wrong-kind token, a
+    non-field name, a field the contract declares Double/Float/nullable or —
+    for an element — other than the element type), a conditional list, a
+    Boolean test on a field a template or list reads (either order), and —
+    where it is placed (set, insert, move) — an item field read outside a
+    Repeat over its item. The relay
     refuses a template on a component parameter not declared `String`, a
     list on any component parameter, and runs every token part and element
     through the K2 gate (the server's value, the binding check in the target
