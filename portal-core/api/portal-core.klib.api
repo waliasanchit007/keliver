@@ -261,6 +261,22 @@ final class dev.keliver.portal/FlowEdge { // dev.keliver.portal/FlowEdge|null[0]
     final fun toString(): kotlin/String // dev.keliver.portal/FlowEdge.toString|toString(){}[0]
 }
 
+final class dev.keliver.portal/ListOf { // dev.keliver.portal/ListOf|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/List<kotlin/Any?>) // dev.keliver.portal/ListOf.<init>|<init>(kotlin.String;kotlin.collections.List<kotlin.Any?>){}[0]
+
+    final val items // dev.keliver.portal/ListOf.items|{}items[0]
+        final fun <get-items>(): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/ListOf.items.<get-items>|<get-items>(){}[0]
+    final val kind // dev.keliver.portal/ListOf.kind|{}kind[0]
+        final fun <get-kind>(): kotlin/String // dev.keliver.portal/ListOf.kind.<get-kind>|<get-kind>(){}[0]
+
+    final fun component1(): kotlin/String // dev.keliver.portal/ListOf.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/ListOf.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/List<kotlin/Any?> = ...): dev.keliver.portal/ListOf // dev.keliver.portal/ListOf.copy|copy(kotlin.String;kotlin.collections.List<kotlin.Any?>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/ListOf.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal/ListOf.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal/ListOf.toString|toString(){}[0]
+}
+
 final class dev.keliver.portal/MapComponentRegistry : dev.keliver.portal/ComponentRegistry { // dev.keliver.portal/MapComponentRegistry|null[0]
     constructor <init>(kotlin.collections/Collection<dev.keliver.portal/ComponentSpec>) // dev.keliver.portal/MapComponentRegistry.<init>|<init>(kotlin.collections.Collection<dev.keliver.portal.ComponentSpec>){}[0]
 
@@ -329,6 +345,19 @@ final class dev.keliver.portal/ScreenContract { // dev.keliver.portal/ScreenCont
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/ScreenContract.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.portal/ScreenContract.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.portal/ScreenContract.toString|toString(){}[0]
+}
+
+final class dev.keliver.portal/Template { // dev.keliver.portal/Template|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/Any?>) // dev.keliver.portal/Template.<init>|<init>(kotlin.collections.List<kotlin.Any?>){}[0]
+
+    final val parts // dev.keliver.portal/Template.parts|{}parts[0]
+        final fun <get-parts>(): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/Template.parts.<get-parts>|<get-parts>(){}[0]
+
+    final fun component1(): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/Template.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<kotlin/Any?> = ...): dev.keliver.portal/Template // dev.keliver.portal/Template.copy|copy(kotlin.collections.List<kotlin.Any?>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/Template.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal/Template.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal/Template.toString|toString(){}[0]
 }
 
 final class dev.keliver.portal/Token { // dev.keliver.portal/Token|null[0]
@@ -464,21 +493,30 @@ final fun dev.keliver.portal/editableProps(kotlin/String): kotlin.collections/Li
 final fun dev.keliver.portal/ensureNodeIdsAbove(kotlin/Int) // dev.keliver.portal/ensureNodeIdsAbove|ensureNodeIdsAbove(kotlin.Int){}[0]
 final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev.keliver.portal/ComponentRegistry, kotlin.collections/List<kotlin/String> = ...): dev.keliver.portal/Expansion // dev.keliver.portal/expandForPreview|expandForPreview(dev.keliver.portal.WidgetNode;dev.keliver.portal.ComponentRegistry;kotlin.collections.List<kotlin.String>){}[0]
 final fun dev.keliver.portal/exportKotlin(dev.keliver.portal/WidgetNode, kotlin/String = ..., dev.keliver.portal/ComponentRegistry = ...): kotlin/String // dev.keliver.portal/exportKotlin|exportKotlin(dev.keliver.portal.WidgetNode;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
+final fun dev.keliver.portal/fmtTemplate(dev.keliver.portal/Template, kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/fmtTemplate|fmtTemplate(dev.keliver.portal.Template;kotlin.Function1<kotlin.String,kotlin.String>){}[0]
 final fun dev.keliver.portal/isDpProp(kotlin/String, kotlin/String): kotlin/Boolean // dev.keliver.portal/isDpProp|isDpProp(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/isKnownWidgetType(kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/Boolean // dev.keliver.portal/isKnownWidgetType|isKnownWidgetType(kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/isModifierType(kotlin/String): kotlin/Boolean // dev.keliver.portal/isModifierType|isModifierType(kotlin.String){}[0]
 final fun dev.keliver.portal/kotlinDoubleLiteral(kotlin/Double): kotlin/String // dev.keliver.portal/kotlinDoubleLiteral|kotlinDoubleLiteral(kotlin.Double){}[0]
 final fun dev.keliver.portal/kotlinDpLiteral(kotlin/Double): kotlin/String // dev.keliver.portal/kotlinDpLiteral|kotlinDpLiteral(kotlin.Double){}[0]
+final fun dev.keliver.portal/kotlinStringContent(kotlin/String): kotlin/String // dev.keliver.portal/kotlinStringContent|kotlinStringContent(kotlin.String){}[0]
 final fun dev.keliver.portal/kotlinStringLiteral(kotlin/String): kotlin/String // dev.keliver.portal/kotlinStringLiteral|kotlinStringLiteral(kotlin.String){}[0]
 final fun dev.keliver.portal/kotlinTypeOf(dev.keliver.portal/PropKind): kotlin/String // dev.keliver.portal/kotlinTypeOf|kotlinTypeOf(dev.keliver.portal.PropKind){}[0]
+final fun dev.keliver.portal/listElementType(kotlin/String): kotlin/String? // dev.keliver.portal/listElementType|listElementType(kotlin.String){}[0]
+final fun dev.keliver.portal/listItems(kotlin/Any?): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/listItems|listItems(kotlin.Any?){}[0]
+final fun dev.keliver.portal/listKindOf(kotlin/String?): kotlin/String? // dev.keliver.portal/listKindOf|listKindOf(kotlin.String?){}[0]
 final fun dev.keliver.portal/marginProps(kotlin.collections/List<dev.keliver.portal/PropSpec>): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/marginProps|marginProps(kotlin.collections.List<dev.keliver.portal.PropSpec>){}[0]
 final fun dev.keliver.portal/nextNodeId(): kotlin/Int // dev.keliver.portal/nextNodeId|nextNodeId(){}[0]
 final fun dev.keliver.portal/parseKotlinStringLiteral(kotlin/String): kotlin/String? // dev.keliver.portal/parseKotlinStringLiteral|parseKotlinStringLiteral(kotlin.String){}[0]
 final fun dev.keliver.portal/placeholder(kotlin/String, kotlin/String): dev.keliver.portal/WidgetNode // dev.keliver.portal/placeholder|placeholder(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/propSourceType(kotlin/String, kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/String? // dev.keliver.portal/propSourceType|propSourceType(kotlin.String;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
+final fun dev.keliver.portal/referencedBinds(kotlin/Any?): kotlin.collections/List<dev.keliver.portal/Bind> // dev.keliver.portal/referencedBinds|referencedBinds(kotlin.Any?){}[0]
 final fun dev.keliver.portal/resolveItemRow(dev.keliver.portal/WidgetNode, kotlin/String, kotlin/String, kotlin/Int, kotlin/Function1<kotlin/String, kotlin/String?>): dev.keliver.portal/WidgetNode // dev.keliver.portal/resolveItemRow|resolveItemRow(dev.keliver.portal.WidgetNode;kotlin.String;kotlin.String;kotlin.Int;kotlin.Function1<kotlin.String,kotlin.String?>){}[0]
 final fun dev.keliver.portal/sampleTree(kotlin/Int): dev.keliver.portal/WidgetNode // dev.keliver.portal/sampleTree|sampleTree(kotlin.Int){}[0]
 final fun dev.keliver.portal/serializeTree(dev.keliver.portal/WidgetNode): kotlin/String // dev.keliver.portal/serializeTree|serializeTree(dev.keliver.portal.WidgetNode){}[0]
+final fun dev.keliver.portal/templateRef(kotlin/String, kotlin/Char?): kotlin/String // dev.keliver.portal/templateRef|templateRef(kotlin.String;kotlin.Char?){}[0]
+final fun dev.keliver.portal/templateText(dev.keliver.portal/Template, kotlin/Function1<kotlin/Any?, kotlin/String?>): kotlin/String // dev.keliver.portal/templateText|templateText(dev.keliver.portal.Template;kotlin.Function1<kotlin.Any?,kotlin.String?>){}[0]
+final fun dev.keliver.portal/templateValueText(kotlin/Any?): kotlin/String? // dev.keliver.portal/templateValueText|templateValueText(kotlin.Any?){}[0]
 final fun dev.keliver.portal/tokenFits(kotlin/String?, kotlin/Any?): kotlin/Boolean // dev.keliver.portal/tokenFits|tokenFits(kotlin.String?;kotlin.Any?){}[0]
 final fun dev.keliver.portal/tokenKindOf(kotlin/Any?): kotlin/String? // dev.keliver.portal/tokenKindOf|tokenKindOf(kotlin.Any?){}[0]
 final fun dev.keliver.portal/tokenValue(kotlin/Any?): kotlin/Any? // dev.keliver.portal/tokenValue|tokenValue(kotlin.Any?){}[0]
