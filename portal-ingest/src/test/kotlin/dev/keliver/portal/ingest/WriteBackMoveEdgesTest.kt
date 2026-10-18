@@ -199,4 +199,89 @@ class WriteBackMoveEdgesTest {
     )
     assertReingests(target, out)
   }
+
+  // ── S3: multi-line code moved to another depth ─────────────────────────────
+
+  private val multiLine = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.layout.compose.Row
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column {
+        Legacy(
+          1,
+          2,
+        )
+        Legacy(""${'"'}
+      keep
+          this""${'"'})
+        Row {
+          StyledText(text = "r")
+        }
+        Column {
+          Legacy(
+            3,
+          )
+        }
+      }
+    }
+
+    interface HomeScreenBindings
+  """.trimIndent() + "\n"
+
+  @Test fun multiLineCodeMovesDeeperReindentedOutsideItsStrings() {
+    val d = doc(multiLine)
+    val row = widget(d, 2)
+    val target = d.apply(DocOp.MoveNode(child(d, 0).handle, row.handle, row.children[0].handle)).doc
+      .let { t -> t.apply(DocOp.MoveNode(child(t, 0).handle, widget(t, 1).handle, widget(t, 1).children[1].handle)).doc }
+    val out = merge(multiLine, target, d)
+    assertEquals(
+      multiLine
+        .replace("    Legacy(\n      1,\n      2,\n    )\n", "")
+        .replace("    Legacy(\"\"\"\n  keep\n      this\"\"\")\n", "")
+        .replace(
+          "      StyledText(text = \"r\")\n",
+          "      StyledText(text = \"r\")\n      Legacy(\n        1,\n        2,\n      )\n      Legacy(\"\"\"\n  keep\n      this\"\"\")\n",
+        ),
+      out,
+    )
+    // The document keeps the code as it was spelled; the next write leaves the re-indented lines alone.
+    assertEquals(out, WriteBack.merge(out, target, fileName = file, base = target))
+  }
+
+  @Test fun aWidgetHoldingMultiLineCodeMovesShallower() {
+    val d = doc(multiLine)
+    val inner = widget(d, 3)
+    val target = d.apply(DocOp.MoveNode(inner.children[0].handle, d.root.handle, null)).doc
+    val out = merge(multiLine, target, d)
+    assertEquals(
+      multiLine
+        .replace("      Legacy(\n        3,\n      )\n", "")
+        .replace("  Column {\n    Legacy(\n      1,", "  Column {\n    Legacy(\n      3,\n    )\n    Legacy(\n      1,"),
+      out,
+    )
+    // The whole inner Column (holding multi-line code) to the top as well.
+    val t2 = d.apply(DocOp.MoveNode(inner.handle, d.root.handle, null)).doc
+    val out2 = merge(multiLine, t2, d)
+    assertEquals(
+      multiLine
+        .replace("    Column {\n      Legacy(\n        3,\n      )\n    }\n", "")
+        .replace("  Column {\n    Legacy(\n      1,", "  Column {\n    Column {\n      Legacy(\n        3,\n      )\n    }\n    Legacy(\n      1,"),
+      out2,
+    )
+  }
+
+  @Test fun aWhitespaceOnlyDifferenceIsSaidAsSuch() {
+    val diff = WriteBack.firstDifference(DocNode.RawCode(Handle(1), "Legacy(1,  2)"), DocNode.RawCode(Handle(2), "Legacy(1, 2)"))
+    kotlin.test.assertNotNull(diff)
+    kotlin.test.assertTrue("whitespace" in diff && "1,  2" in diff, diff)
+    // Indentation of code lines (outside strings) is not a difference; inside a string it is.
+    kotlin.test.assertNull(WriteBack.firstDifference(DocNode.RawCode(Handle(1), "A(\n  1)"), DocNode.RawCode(Handle(2), "A(\n      1)")))
+    kotlin.test.assertNotNull(WriteBack.firstDifference(DocNode.RawCode(Handle(1), "A(\"\"\"\n  1\"\"\")"), DocNode.RawCode(Handle(2), "A(\"\"\"\n      1\"\"\")")))
+  }
 }

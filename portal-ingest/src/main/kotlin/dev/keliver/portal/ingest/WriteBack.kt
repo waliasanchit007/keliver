@@ -163,6 +163,14 @@ object WriteBack {
       is DocNode.Widget -> n.type
     }
     val here = if (path.isEmpty()) name(b) else "$path › ${name(b)}"
+    if (a is DocNode.RawCode && b is DocNode.RawCode && !sameTree(a, b) && name(a) == name(b)) {
+      // Only whitespace differs: say so, and show it (the names collapse it).
+      val x = a.text.trim()
+      val y = b.text.trim()
+      val at = x.zip(y).indexOfFirst { (p, q) -> p != q }.let { if (it < 0) minOf(x.length, y.length) else it }
+      fun snip(t: String) = t.substring(maxOf(0, at - 20)).take(60).replace("\n", "\\n").replace("\t", "\\t")
+      return "$here would read back with different whitespace: `${snip(x)}` instead of `${snip(y)}`"
+    }
     if (a is DocNode.RawCode || b is DocNode.RawCode || (a as DocNode.Widget).type != (b as DocNode.Widget).type) {
       return if (sameTree(a, b)) null else "$here would read as ${name(a)}"
     }
@@ -178,21 +186,51 @@ object WriteBack {
 
   /**
    * The same document tree, handles aside: widget type, props, modifiers,
-   * explicit id and children, in order; RawCode by its text (trimmed — the
-   * recognizer keeps a statement's text without surrounding whitespace). A
+   * explicit id and children, in order; RawCode by its text ([sameCode]:
+   * trimmed — the recognizer keeps a statement's text without surrounding
+   * whitespace — and code-line indentation aside). A
    * Condition's props compare as its condition ([condKey]: an absent `test`
    * is the Boolean one, an absent `negate` is false). Modifiers compare in
    * ORDER too ([sameModifiers]) — `background().padding()` is not
    * `padding().background()`.
    */
   internal fun sameTree(a: DocNode, b: DocNode): Boolean = when {
-    a is DocNode.RawCode && b is DocNode.RawCode -> a.text.trim() == b.text.trim()
+    a is DocNode.RawCode && b is DocNode.RawCode -> sameCode(a.text, b.text)
     a is DocNode.Widget && b is DocNode.Widget ->
       a.type == b.type &&
         (if (a.type == "Condition") condKey(a) == condKey(b) else a.props == b.props) &&
         sameModifiers(a.modifiers, b.modifiers) && a.explicitId == b.explicitId &&
         a.children.size == b.children.size && a.children.indices.all { sameTree(a.children[it], b.children[it]) }
     else -> false
+  }
+
+  /**
+   * The same code statement: the same text (trimmed), or — S3 — the same
+   * lines with only the indentation of code lines different (a multi-line
+   * statement moved to another depth is re-indented). A line that starts
+   * inside a string literal keeps its leading whitespace: that is content.
+   */
+  internal fun sameCode(a: String, b: String): Boolean {
+    val x = a.trim()
+    val y = b.trim()
+    if (x == y) return true
+    if ('\n' !in x || '\n' !in y || x.count { it == '\n' } != y.count { it == '\n' }) return false
+    return codeLines(x) == codeLines(y)
+  }
+
+  /** [text]'s lines, code lines without their leading whitespace (lines starting in a string kept whole). */
+  private fun codeLines(text: String): List<String> {
+    val prefix = "fun __keliverCode() {\n"
+    val file = PsiEnv.parse("Code.kt", prefix + text + "\n}")
+    val strings = org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
+      .collectElementsOfType(file, org.jetbrains.kotlin.psi.KtStringTemplateExpression::class.java)
+      .map { it.textRange.shiftLeft(prefix.length) }
+    var offset = 0
+    return text.split('\n').map { line ->
+      val inString = strings.any { offset > it.startOffset && offset < it.endOffset }
+      offset += line.length + 1
+      if (inString) line else line.trimStart()
+    }
   }
 
   /**
@@ -327,7 +365,8 @@ object WriteBack {
     if (parsed::class != target::class) return bail("a node changed between code and widget")
 
     if (parsed is DocNode.RawCode && target is DocNode.RawCode) {
-      if (parsed.text != target.text) {
+      // The same code re-indented (S3: moved to another depth) is not rewritten.
+      if (!sameCode(parsed.text, target.text)) {
         val stmt = psi[parsed.handle.v] ?: return bail("the code's statement was not found")
         // One statement, parsed in a block (it may be a declaration, which is no expression).
         val replacement = statementOf(factory, target.text)
