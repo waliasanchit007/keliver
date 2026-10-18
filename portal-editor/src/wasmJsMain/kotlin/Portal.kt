@@ -342,33 +342,90 @@ private fun pumpOps() {
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER/ops?project=$currentProject&screen=$currentScreen")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
-  xhr.addEventListener("load", { _ ->
+  xhr.timeout = 15_000
+  var settled = false
+  fun settle(reply: OpsReply) {
+    if (settled) return // load and error/timeout never both count
+    settled = true
     opInFlight = false
-    val ack = runCatching { DocJson.decodeFromString<OpAck>(xhr.responseText) }.getOrNull()
-    when {
-      ack?.ok == true -> {
-        docVersion = ack.version
+    saveDotEl.className = "dot"
+    saveTextEl.textContent = "Saved"
+    when (reply) {
+      is OpsReply.Accepted -> {
+        docVersion = reply.version
         q.onResult?.invoke(true)
         refetchDoc(refreshPanels)
         pumpOps()
       }
-      xhr.status.toInt() == 409 -> { // raced an external edit — rebase on server state
+      OpsReply.Rebase -> { // raced an external edit — rebase on server state
         q.onResult?.invoke(false)
         dropQueuedOps()
         Ui.toast("Rebased on newer document")
         refetchDoc(true)
       }
-      else -> {
+      is OpsReply.Rejected -> {
         q.onResult?.invoke(false)
         dropQueuedOps()
-        Ui.toast(ack?.error ?: "edit rejected")
+        Ui.toast(reply.error ?: "edit rejected")
+        refetchDoc(true)
+      }
+      OpsReply.Unknown -> {
+        // The relay answered 200 but the editor cannot read it: the edit may
+        // be in. Not rolled back — the document decides; the queue resumes on it.
+        saveTextEl.textContent = "Unconfirmed"
+        refetchDoc(true) { pumpOps() }
+      }
+      OpsReply.NetworkError -> {
+        // No answer at all: never leave the edit "in flight" (the queue would wedge).
+        q.onResult?.invoke(false)
+        dropQueuedOps()
+        saveDotEl.className = "dot error"
+        saveTextEl.textContent = "Not saved"
+        Ui.toast("The relay did not answer; the edit was not saved")
         refetchDoc(true)
       }
     }
-    saveDotEl.className = "dot"
-    saveTextEl.textContent = "Saved"
-  })
+  }
+  xhr.addEventListener("load", { _ -> settle(opsReply(xhr.status.toInt(), xhr.responseText)) })
+  xhr.addEventListener("error", { _ -> settle(OpsReply.NetworkError) })
+  xhr.addEventListener("timeout", { _ -> settle(OpsReply.NetworkError) })
+  xhr.addEventListener("abort", { _ -> settle(OpsReply.NetworkError) })
   xhr.send(DocJson.encodeToString(batch))
+}
+
+/** K3: refused / failed write-backs of the open screen, shown once per version. */
+private var writeBackWarnings = WriteBackWarnings()
+private var writeBackBanner: HTMLElement? = null
+private var writeBackScreen = ""
+
+/**
+ * Shows the change stream's write-back status: a refused or failed one as a
+ * visible, non-blocking banner (the edit is in the document but NOT in the
+ * .kt file); a later write that lands removes it.
+ */
+private fun showWriteBack(n: WriteBackNotice?) {
+  val warning = writeBackWarnings.next(n)
+  if (!writeBackWarnings.showing) {
+    writeBackBanner?.remove()
+    writeBackBanner = null
+    if (n != null) { saveDotEl.className = "dot"; saveTextEl.textContent = "Saved" }
+    return
+  }
+  saveDotEl.className = "dot error"
+  saveTextEl.textContent = "Not written"
+  if (warning == null) return
+  writeBackBanner?.remove()
+  val banner = Ui.el("div", "", "")
+  banner.setAttribute(
+    "style",
+    "position:fixed; top:54px; left:50%; transform:translateX(-50%); z-index:98; max-width:640px; " +
+      "background:var(--panel, #222); color:var(--text, #eee); border:1px solid var(--danger, #e5534b); " +
+      "border-radius:8px; padding:8px 12px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.4); display:flex; gap:10px;",
+  )
+  banner.appendChild(Ui.el("span", "", "⚠ $warning"))
+  banner.appendChild(Ui.button("×", "btn icon") { banner.remove(); if (writeBackBanner == banner) writeBackBanner = null })
+  kotlinx.browser.document.body?.appendChild(banner)
+  writeBackBanner = banner
 }
 
 /** Pull the authoritative document; ids in the projected tree ARE handles. */
@@ -402,6 +459,12 @@ private fun subscribeDocEvents() {
   eventSource?.close()
   val project = currentProject
   val screen = currentScreen
+  if (writeBackScreen != "$project/$screen") { // another screen: its own write-back status
+    writeBackScreen = "$project/$screen"
+    writeBackWarnings = WriteBackWarnings()
+    writeBackBanner?.remove()
+    writeBackBanner = null
+  }
   eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
     es.onmessage = { ev ->
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
@@ -411,6 +474,8 @@ private fun subscribeDocEvents() {
       val t = (ev.data as? String)?.let { Regex("\"tokens\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       val tokensChanged = t != null && t != tokensVersionSeen
       if (t != null) tokensVersionSeen = t
+      // K3: the screen's write-back status — a refused or failed write is shown, never silent.
+      (ev.data as? String)?.let { showWriteBack(writeBackOf(it)) }
       when {
         v != null && v != docVersion -> fetchComponents { refetchDoc(true) }
         tokensChanged -> fetchComponents { refresh() } // tokens changed, the document did not: refresh the picker

@@ -68,6 +68,7 @@ internal object Ui {
       border-radius: 99px; background: var(--panel2); border: 1px solid var(--border); color: var(--muted); }
     .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--good); display: inline-block; }
     .dot.saving { background: var(--warn); }
+    .dot.error { background: var(--danger); }
     .mod-chip { display: flex; flex-direction: column; gap: 2px; background: var(--bg);
       border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; margin: 5px 0; }
     .mod-head { display: flex; align-items: center; }
