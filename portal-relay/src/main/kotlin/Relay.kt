@@ -25,6 +25,7 @@ import com.sun.net.httpserver.HttpServer
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.document.withoutConditionals
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
 import kotlinx.serialization.encodeToString
@@ -1241,8 +1242,9 @@ fun main(args: Array<String>) {
     handle(ex) {
       // K2 (review S5): only a client that advertises design tokens (`tokens=1`)
       // gets PropValue.Token; an older editor gets their literal values.
+      // K3: likewise PropValue.Conditional (`conditionals=1`); an older one gets the true branch.
       val q = query(ex)
-      val doc = docFor(q).doc
+      val doc = docFor(q).doc.let { if (q["conditionals"] == "1") it else it.withoutConditionals() }
       respond(ex, 200, DocJson.encodeToString(if (q["tokens"] == "1") doc else Tokens.withoutTokens(doc)))
     }
   }
