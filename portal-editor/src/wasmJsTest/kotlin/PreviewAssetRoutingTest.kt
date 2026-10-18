@@ -1,6 +1,9 @@
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -76,35 +79,97 @@ class PreviewAssetRoutingTest {
     assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", gate.route("https://img.example.com/x.png", relay))
   }
 
-  @Test fun atMostTwoRelayFetchesRunAtOnceAndDirectUrlsAreNotHeld() = runTest {
+  @Test fun aHangingHostQueuesOnlyItsOwnImages() = runTest {
     val gate = PreviewAssetHostGate()
-    gate.loaded(hosts)
+    gate.loaded(setOf("slow-a.example.com", "slow-b.example.com", "img.example.com"))
+    val hang = CompletableDeferred<String>()
+    val started = mutableListOf<String>()
+    suspend fun hangingFetch(target: String): String {
+      started += target
+      return hang.await()
+    }
+    // Two tarpit hosts, five images each: each host runs one, the other four
+    // wait on that host's permit, not on a shared one.
+    val stuck = listOf("slow-a", "slow-b").flatMap { h ->
+      (1..5).map { launch { gate.load("https://$h.example.com/$it.png", relay, ::hangingFetch) } }
+    }
+    runCurrent()
+    assertEquals(2, started.size, "one fetch per hanging host")
+    assertEquals(2, gate.hostsInUse())
+    // Another host's image still loads at once, on the third shared permit.
+    val before = currentTime
+    val got = gate.load("https://img.example.com/x.png", relay) { delay(100); it }
+    assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", got)
+    assertEquals(100L, currentTime - before, "not held up by the ten stuck images")
+    hang.complete("done")
+    stuck.joinAll()
+    assertEquals(10, started.size, "every stuck image ran once its host was free")
+    assertEquals(0, gate.hostsInUse(), "idle hosts leave no entry behind")
+  }
+
+  @Test fun atMostThreeRelayFetchesRunAtOnceOnePerHost() = runTest {
+    val gate = PreviewAssetHostGate()
+    val hostNames = (1..5).map { "h$it.example.com" }
+    gate.loaded(hostNames.toSet())
     var running = 0
     var most = 0
-    val targets = mutableListOf<String>()
+    val perHost = mutableMapOf<String, Int>()
+    var mostPerHost = 0
     suspend fun slowFetch(target: String): String {
-      targets += target
+      val host = target.substringAfter("%2F%2F").substringBefore("%2F")
       running++
+      perHost[host] = (perHost[host] ?: 0) + 1
       most = maxOf(most, running)
+      mostPerHost = maxOf(mostPerHost, perHost.getValue(host))
       delay(100)
+      perHost[host] = perHost.getValue(host) - 1
       running--
       return target
     }
-    val relayed = (1..5).map { launch { gate.load("https://img.example.com/$it.png", relay, ::slowFetch) } }
-    relayed.forEach { it.join() }
-    assertEquals(RELAY_IMAGE_FETCHES, most)
-    assertEquals(300L, currentTime, "five 100 ms fetches, two at a time")
-    assertEquals(5, targets.count { it.startsWith("$relay/preview-asset?url=") })
-    // Direct URLs are not capped, and do not wait behind relay fetches.
-    most = 0
-    targets.clear()
+    val loads = hostNames.flatMap { h -> (1..3).map { launch { gate.load("https://$h/$it.png", relay, ::slowFetch) } } }
+    loads.joinAll()
+    assertEquals(RELAY_IMAGE_FETCHES, most, "the shared cap")
+    assertEquals(RELAY_FETCHES_PER_HOST, mostPerHost, "the per-host cap")
+    assertEquals(500L, currentTime, "fifteen 100 ms fetches, three at a time")
+    assertEquals(0, gate.hostsInUse())
+  }
+
+  @Test fun directUrlsAreNotHeldBehindRelayFetches() = runTest {
+    val gate = PreviewAssetHostGate()
+    gate.loaded(hosts)
+    val targets = mutableListOf<String>()
+    suspend fun slowFetch(target: String): String {
+      targets += target
+      delay(100)
+      return target
+    }
     val held = (1..4).map { launch { gate.load("https://img.example.com/held$it.png", relay, ::slowFetch) } }
     val direct = (1..5).map { launch { gate.load("https://elsewhere.example/$it.png", relay, ::slowFetch) } }
-    direct.forEach { it.join() }
-    assertEquals(400L, currentTime, "the direct fetches ran beside the relay's first two")
+    direct.joinAll()
+    assertEquals(100L, currentTime, "the direct fetches ran beside the relay's first")
     assertEquals(5, targets.count { it.startsWith("https://elsewhere.example/") })
-    held.forEach { it.join() }
-    assertEquals(500L, currentTime)
+    held.joinAll()
+    assertEquals(400L, currentTime, "one host's four relay fetches, one at a time")
+  }
+
+  @Test fun aCancelledWaitLeavesNoHostEntry() = runTest {
+    val gate = PreviewAssetHostGate()
+    gate.loaded(hosts)
+    val hang = CompletableDeferred<String>()
+    val loads = (1..3).map { launch { gate.load("https://img.example.com/$it.png", relay) { hang.await() } } }
+    runCurrent()
+    assertEquals(1, gate.hostsInUse())
+    loads.forEach { it.cancel() }
+    loads.joinAll()
+    assertEquals(0, gate.hostsInUse())
+    // The permits came back: the host loads again at once.
+    assertEquals("ok", gate.load("https://img.example.com/next.png", relay) { "ok" })
+  }
+
+  @Test fun theHostKeyIsSchemeAndHost() {
+    assertEquals("https://img.example.com", previewAssetHostKey("HTTPS://IMG.example.com:443/a.png"))
+    assertEquals("http://img.example.com", previewAssetHostKey("http://img.example.com/a.png"))
+    assertNull(previewAssetHostKey("https://img.example.com:8443/a.png"))
   }
 
   @Test fun encodingMatchesEncodeUriComponent() {
