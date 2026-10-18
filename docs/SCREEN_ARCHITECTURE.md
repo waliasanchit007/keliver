@@ -423,15 +423,15 @@ fun SectionCard(content: @Composable () -> Unit) {
     `C`, exactly or as an alias) drops the step ("undo failed (step
     dropped)"): surgical write-back only adds imports, so usually only a hand
     edit clears it, and that arrives as an external change that clears both
-    stacks anyway. A whole-file export (the fallback when a surgical merge
-    is not possible) rebuilds the imports and can remove an unused one, so a
-    dropped step might have applied later; dropping is the deliberate trade
-    against a stack wedged behind a step that may never apply. A step the
-    tree can no longer take is dropped the same way. The gate and undo/redo
-    are what keep two owners of one simple name out of a document; if two
-    *missing* exact imports are forced past them, write-back (surgical or
-    the full-export fallback) writes both and the result is a
-    conflicting-import compile error. Write-back does not guard every other
+    stacks anyway. A whole-file export (written only when it is lossless —
+    see "The write-back guarantee" below) rebuilds the imports and can
+    remove an unused one, so a dropped step might have applied later;
+    dropping is the deliberate trade against a stack wedged behind a step
+    that may never apply. A step the tree can no longer take is dropped the
+    same way. The gate and undo/redo are what keep two owners of one simple
+    name out of a document; if two *missing* exact imports are forced past
+    them, write-back (surgical or a lossless full export) writes both and
+    the result is a conflicting-import compile error. Write-back does not guard every other
     shape (an owner covered by a star import or the package beside an
     explicit one); the gate does. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
@@ -500,19 +500,16 @@ fun SectionCard(content: @Composable () -> Unit) {
     Adding an `else` inserts just ` else {` … `}` after the then block (its
     children go in as inserts); removing one deletes just the text from
     `else` through its block's `}` — comments and formatting in the then
-    block are untouched. A `Condition` is matched to an existing `if` by
-    identity: the relay passes write-back the document it last wrote the
-    file from (or ingested it as), so an edited condition rewrites its own
-    `if` in place (comments kept), a new `Condition` is an insert and a
-    deleted one a delete, however they sit together. Without that base (it
-    no longer reads as the file, or another caller), position decides: a
-    `Condition` with the same condition is the same `if`, and an edited one
-    rewrites in place only when it is the only changed `Condition` between
-    the same kept siblings — so a delete plus an unrelated insert there pair
-    as an edit (the text is right; the deleted `if`'s comments stay). A run
-    of inserts keeps the document's order. Every surgical result is read
-    back once more and compared with the document; if it differs, the full
-    export is written instead (the relay logs one line naming the file).
+    block are untouched. A `Condition` — like every node — is matched to
+    its statement by identity (see "The write-back guarantee" below), so an
+    edited condition rewrites its own `if` in place (comments kept), a new
+    `Condition` is an insert and a deleted one a delete, however they sit
+    together. Without that base (it no longer reads as the file, or another
+    caller), position decides: a `Condition` with the same condition is the
+    same `if`, and an edited one rewrites in place only when it is the only
+    changed `Condition` between the same kept siblings — so a delete plus an
+    unrelated insert there pair as an edit (the text is right; the deleted
+    `if`'s comments stay). A run of inserts keeps the document's order.
     The exporter writes every form (`colorArgb = if
     (b.selected) C.Ink else -1`, `Margin(top = if (b.raised) 8.dp else
     0.dp)`, `if (!b.x) { … } else { … }`) and types each condition's field in
@@ -574,6 +571,58 @@ Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionCard}.kt` +
 `screens/settings.kt` (3 SectionCard containers + 4 editable MenuRow children,
 **0 RawCode**). Stashfin Profile uses the same slot capability for its five
 canonical white card wrappers and is verified in its editor, Android, and iOS.
+
+## 7a. The write-back guarantee — what the editor does to your .kt file
+
+**Write-back never silently destroys author code.** Every edit made in the
+editor (or through MCP) is written to the screen's `.kt` file in one of three
+ways, and the editor is told which:
+
+1. **Surgically, when possible** (`surgical`). Only the statements and
+   arguments that changed are rewritten; comments, blank lines, formatting,
+   helper functions, RawCode and the Bindings interface elsewhere stay byte
+   for byte. What is written is first read back and compared with the
+   document; it is written only if it reads back as exactly that document.
+   - Every node is paired with its statement by **identity**: the relay
+     passes write-back the document it last wrote the file from (or ingested
+     it as), so an insert or delete beside a same-type sibling, with code
+     between, touches just that statement.
+   - A **move** (within a block, or into/out of an `if`, `else`, `forEach` or
+     container) cuts the node with its exact source text — including the
+     comment lines directly above it and a comment after it on its line —
+     and places it after its new previous sibling, re-indented (string and
+     comment contents untouched). Without the base document a reorder is not
+     surgical.
+   - Inserted nodes and changed values are spelled as the file spells them:
+     its own bindings parameter name (`bindings.title`, not `b.title`), and a
+     RawCode node as its own text.
+   - A modifier reorder is written as the reordered chain.
+2. **As the full export, only when that is lossless** (`export`). The whole
+   file is rewritten from the document only if the file as it is IS the
+   export of its own tree (a trailing newline aside) — it holds nothing the
+   exporter would drop — and the export reads back as the document.
+3. **Otherwise refused** (`refused`): nothing is written and the file is
+   left exactly as it is. The relay logs one line, the screen's write-back
+   status (`writeBack` on the `/doc-events` stream and in `/devstate`) says
+   why, and the editor shows a non-blocking banner — "this change could not
+   be written to `<file>` without losing code: `<reason>`; undo it or make it
+   in code" — and marks the save pill "Not written". The document is then
+   ahead of the file; undoing the change (or making it in code) brings them
+   together again. A write that fails with an error is reported the same way
+   (`failed`), never swallowed.
+
+A new screen (no file yet) is created from the export. Some edits are refused
+up front, as ops, because they could never read back: a RawCode replacement
+that is not exactly one statement (several, a parse error, or a comment
+after it — `Legacy(2) // c`) or that reads as something the editor models (a
+widget, `if` or `forEach`: insert that as a widget instead). A bound value,
+condition or list inserted into a screen function that takes no bindings
+parameter is refused with that reason (add the parameter in code first).
+
+Line endings: a CRLF file stays CRLF. In any other file every line the edit
+does not touch keeps its own ending (an LF file's raw string with a `\r\n`
+keeps it); an edit that would rewrite or drop a CRLF line of a file that
+mixes endings is refused.
 
 ## 8. Live-presenter preview — P3-12
 

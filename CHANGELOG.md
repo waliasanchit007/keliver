@@ -169,10 +169,29 @@
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
 - **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept
   statement, at a block start, into a new else) were written back in reverse order. Write-back
-  now also checks every surgical result: it is read back and compared with the document, and
-  when they differ the full export is written instead (one log line names the file). The relay
+  now also checks every surgical result: it is read back and compared with the document, and is
+  written only when they match (otherwise see the write-back guarantee above). The relay
   passes write-back the document it last wrote the file from, so an edited `Condition` keeps its
   own `if` (and comments) and a deleted one plus a new one beside it are a delete and an insert.
+- **portal-ingest, portal-relay, portal (editor):** write-back no longer silently destroys author
+  code. When a change could not be made in place it used to fall back to the full export
+  unchecked — dropping comments, helper functions and the file's bindings parameter name, and
+  writing RawCode as a `RawCode(text = …)` call that does not compile. Now the full export is
+  written only when it is lossless (the file is exactly the export of its own tree) and reads
+  back as the document; otherwise the change is **refused**: the file is left as it is, the
+  relay logs it, and the screen's write-back status (`writeBack` on `/doc-events` and
+  `/devstate`: `surgical`, `export`, `created`, `refused` or `failed`) says why — the editor shows
+  it as a banner. A write error is reported the same way instead of being swallowed. The common
+  reasons for the fallback are gone: every node (not only a `Condition`) is matched by identity,
+  so an insert or delete beside a same-type sibling is surgical; a moved node is cut with its
+  own comments and placed surgically (within a block or between blocks); inserts and changed
+  values use the file's bindings parameter name and write RawCode as its text; a modifier
+  reorder is written (read-back now compares modifier order). A `ReplaceRaw` that is not exactly
+  one statement (`Legacy(2) // c` threw and left the document silently ahead of the file) or
+  that reads as a widget is refused as an op. A CRLF line of a mixed-ending file is never
+  rewritten as LF (that edit is refused), and an LF file's raw-string `\r\n` survives. The
+  editor no longer wedges when an ops request gets no answer (error/timeout), and treats an
+  unreadable 200 reply as unknown (refetches) instead of rolling the edit back.
 - **portal-ingest, portal-relay:** a CRLF screen or component was not recognized (the parser
   drops a `@Composable` before `\r\n`), so the relay's next write replaced it with an LF full
   export; it is now read as its LF text and written back CRLF. A component parameter typed
