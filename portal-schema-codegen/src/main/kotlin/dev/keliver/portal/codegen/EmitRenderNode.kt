@@ -75,7 +75,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("@Composable")
   appendLine("public fun RenderNode(node: WidgetNode, scope: Any?) {")
   appendLine("  when (node.type) {")
-  // M5/P2: Condition honors a boolean mock (default shown); Repeat renders
+  // M5/P2: Condition honors its field's mock (an unmocked Boolean shows); Repeat renders
   // rowCount() mock rows with item binds resolved per row.
   //
   // FIDELITY: neither emits a wrapper container. On a DEVICE these logic nodes
@@ -86,12 +86,9 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   // while filling on Android/iOS). Emitting straight into the parent slot keeps
   // the preview structurally identical to the device — including the parent's
   // scope, which passes straight through.
-  appendLine("    \"Condition\" -> {")
-  appendLine("      val field = (node.props[\"field\"] as? String) ?: \"\"")
-  appendLine("      if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {")
-  appendLine("        node.children.forEach { RenderNode(it, scope) }")
-  appendLine("      }")
-  appendLine("    }")
+  // K3: the condition (negation, String emptiness/blankness) is decided against
+  // the mocks, and its `else` branch renders when it does not hold.
+  appendLine("    \"Condition\" -> node.previewBranch().forEach { RenderNode(it, scope) }")
   appendLine("    \"Repeat\" -> {")
   appendLine("      val itemVar = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val itemsField = (node.props[\"items\"] as? String) ?: \"items\"")

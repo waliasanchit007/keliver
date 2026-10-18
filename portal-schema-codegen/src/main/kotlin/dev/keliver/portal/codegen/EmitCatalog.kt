@@ -69,7 +69,8 @@ fun emitCatalog(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = em
     appendLine("),")
   }
   // M5: logic nodes (not schema widgets) — portal-editable control flow.
-  appendLine("""  WidgetSpec("Condition", "Logic", listOf(PropSpec("field", PropKind.Text, "If field (Boolean)")), acceptsChildren = true, sampleProps = mapOf("field" to "showThis")),""")
+  // K3: `negate` (`!b.x`, `isNot…`) and `test` ("" = Boolean, "empty"/"blank" = a String field).
+  appendLine("""  WidgetSpec("Condition", "Logic", listOf(PropSpec("field", PropKind.Text, "If field"), PropSpec("test", PropKind.Text, "Test (empty|blank; none = Boolean)"), PropSpec("negate", PropKind.Bool, "Negate")), acceptsChildren = true, sampleProps = mapOf("field" to "showThis")),""")
   appendLine("""  WidgetSpec("Repeat", "Logic", listOf(PropSpec("items", PropKind.Text, "Items field (List)"), PropSpec("item", PropKind.Text, "Item name")), acceptsChildren = true, sampleProps = mapOf("items" to "items", "item" to "item")),""")
   appendLine(")")
   appendLine()

@@ -303,7 +303,7 @@ public val widgetSpecs: List<WidgetSpec> = listOf(
     PropSpec("thickness", PropKind.Int, "Thickness"),
   ), acceptsChildren = false, sampleProps = emptyMap()),
   WidgetSpec("VerticalPager", "Material", listOf(), acceptsChildren = true, sampleProps = emptyMap()),
-  WidgetSpec("Condition", "Logic", listOf(PropSpec("field", PropKind.Text, "If field (Boolean)")), acceptsChildren = true, sampleProps = mapOf("field" to "showThis")),
+  WidgetSpec("Condition", "Logic", listOf(PropSpec("field", PropKind.Text, "If field"), PropSpec("test", PropKind.Text, "Test (empty|blank; none = Boolean)"), PropSpec("negate", PropKind.Bool, "Negate")), acceptsChildren = true, sampleProps = mapOf("field" to "showThis")),
   WidgetSpec("Repeat", "Logic", listOf(PropSpec("items", PropKind.Text, "Items field (List)"), PropSpec("item", PropKind.Text, "Item name")), acceptsChildren = true, sampleProps = mapOf("items" to "items", "item" to "item")),
 )
 

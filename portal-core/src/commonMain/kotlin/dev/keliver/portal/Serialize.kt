@@ -23,11 +23,26 @@ import kotlinx.serialization.json.put
  * K2: a design-token value carries its RESOLVED literal under the usual tag plus
  * `"token"` (the source reference) and `"tokenImport"`: a reader that predates
  * tokens (an installed device guest) sees — and renders — the plain literal.
+ *
+ * K3: a conditional value carries its TRUE branch under that branch's usual
+ * keys, plus `"cond"` (`{"field", "test"?, "negate"?}`) and `"else"` (the
+ * false branch, absent = Kotlin `null`); a null true branch is `{"null":true}`.
+ * A reader that predates conditionals decodes the true branch.
  */
 
 private val JSON = Json { }
 
 private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
+  if (v is Conditional) {
+    encodeBranch(v.whenTrue).forEach { (k, e) -> put(k, e) }
+    put("cond", buildJsonObject {
+      put("field", v.cond.field)
+      v.cond.test.wire?.let { put("test", it) }
+      if (v.cond.negate) put("negate", true)
+    })
+    v.whenFalse?.let { put("else", encodeValue(it)) }
+    return@buildJsonObject
+  }
   if (v is Token) {
     encodeValue(v.value).forEach { (k, e) -> put(k, e) }
     put("token", v.ref)
@@ -53,7 +68,22 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
   }
 }
 
+/** A conditional branch: Kotlin `null` is `{"null":true}` (a plain null prop stays as it always was). */
+private fun encodeBranch(v: Any?): JsonObject = if (v == null) buildJsonObject { put("null", true) } else encodeValue(v)
+
 private fun decodeValue(o: JsonObject): Any? = when {
+  "cond" in o -> o.getValue("cond").jsonObject.let { c ->
+    Conditional(
+      Cond(
+        c.getValue("field").jsonPrimitive.content,
+        CondTest.fromWire(c["test"]?.jsonPrimitive?.content) ?: CondTest.Bool,
+        c["negate"]?.jsonPrimitive?.boolean == true,
+      ),
+      decodeValue(JsonObject(o - "cond" - "else")),
+      o["else"]?.jsonObject?.let(::decodeValue),
+    )
+  }
+  "null" in o -> null
   "token" in o -> Token(
     o.getValue("token").jsonPrimitive.content,
     decodeValue(JsonObject(o - "token" - "tokenImport")),

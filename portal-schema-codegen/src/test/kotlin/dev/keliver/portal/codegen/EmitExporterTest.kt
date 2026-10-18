@@ -93,8 +93,23 @@ class EmitExporterTest {
     // …an enum (Constraint) or list prop never takes a token: no import, the value is unwrapped.
     assertFalse("addTokenImport(node.props[\"width\"]" in src)
     assertFalse("addTokenImport(node.props[\"gradientStops\"]" in src)
-    assertContains(src, "private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1)")
+    assertContains(src, "else if (((tokenValue(v) as? Int) ?: 0) == 1) \"Constraint.Fill\"")
     // A component argument is a reference only where it fits the parameter's type.
     assertContains(src, "tokenFits(propSourceType(node.type, k, components), it.value)")
+  }
+
+  @Test fun conditionalValuesExportAsIfExpressionsInEveryKind() {
+    val src = emitExporter(listOf(text, box))
+    // K3: every literal formatter writes a conditional as `if (cond) T else F`, each branch in its kind.
+    for (fmt in listOf("fmtString", "fmtInt", "fmtBool", "fmtDouble", "fmtFloat", "fmtDp", "fmtConstraint", "fmtCrossAxis", "fmtOverflow", "fmtMainAxis", "fmtDpValue")) {
+      assertContains(src, "fmtConditional(v, ::$fmt)")
+    }
+    // Events go through fmtEvent (a conditional action is a reference or a parenthesized lambda).
+    assertContains(src, "private fun fmtEvent(v: Any?, paramCount: Int): String?")
+    assertContains(src, "a.arg == null && paramCount == 0 -> \"b::${'$'}{a.name}\"")
+    // A Condition writes its own condition and its else block.
+    assertContains(src, "sb.append(\"${'$'}{indent}if (${'$'}{cond.kotlin(::bindRef)}) {\\n\")")
+    assertContains(src, "node.elseNode()?.let { e ->")
+    assertContains(src, "\"Condition\" -> condOf(node)?.let { out[it.field] = it.fieldType }")
   }
 }

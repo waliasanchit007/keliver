@@ -133,13 +133,32 @@ private fun fmtAction(a: Action, paramCount: Int): String {
     else -> "{ $underscores -> b.${a.name}() }"
   }
 }
+// K3: an event's value — an Action's lambda, or a conditional one
+// (`if (b.enabled) b::tap else null`).
+private fun fmtEvent(v: Any?, paramCount: Int): String? = when (v) {
+  is Action -> fmtAction(v, paramCount)
+  is Conditional -> fmtConditional(v) { x -> if (x is Action) fmtActionBranch(x, paramCount) else "null" }
+  else -> null
+}
+// In an `if` branch a bare lambda would read as the branch's block: write a
+// function reference where one fits, else a parenthesized lambda.
+private fun fmtActionBranch(a: Action, paramCount: Int): String = when {
+  a.arg == null && paramCount == 0 -> "b::${a.name}"
+  a.arg == "it" && paramCount == 1 -> "b::${a.name}"
+  else -> "(${fmtAction(a, paramCount)})"
+}
 
 // M5/P1-B: logic nodes contribute typed contract fields. Repeat with per-item
 // binds (item.title) generates List<ItemType> + a typed item interface.
 // P2: item-scoped Action args (item.id) contribute item fields too.
 private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap<String, String>) {
   if (node.type != "Repeat") { // a nested Repeat opens its own item scope
-    for ((prop, v) in node.props) {
+    for ((prop, value) in node.props) {
+      // K3: an item-scoped condition is an item field; each branch counts.
+      if (value is Conditional && value.cond.field.startsWith("$itemVar.")) {
+        iface[value.cond.field.substringAfter('.')] = value.cond.fieldType
+      }
+      for (v in if (value is Conditional) listOf(value.whenTrue, value.whenFalse) else listOf(value)) {
       if (v is Bind && v.field.startsWith("$itemVar.")) {
         val sub = v.field.substringAfter('.')
         iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -149,13 +168,15 @@ private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap
         val sub = arg.substringAfter('.')
         if (sub !in iface) iface[sub] = "String"
       }
+      }
     }
     node.children.forEach { itemFieldsOf(it, itemVar, iface) }
   }
 }
 private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, String>, ifaces: LinkedHashMap<String, LinkedHashMap<String, String>>) {
   when (node.type) {
-    "Condition" -> (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let { out[it] = "Boolean" }
+    // K3: the field's type follows the condition's test (Boolean, or String for isEmpty/isBlank).
+    "Condition" -> condOf(node)?.let { out[it.field] = it.fieldType }
     "Repeat" -> {
       val items = (node.props["items"] as? String)?.takeIf { it.isNotBlank() }
       val itemVar = (node.props["item"] as? String)?.takeIf { it.isNotBlank() } ?: "item"
@@ -181,44 +202,55 @@ private fun bindRef(field: String): String = if ('.' in field) field else "b.$fi
 // K2: a design-token reference (`C.Ink`) is written back as its REFERENCE where
 // the token's kind is the literal's kind; anywhere else (never produced by
 // ingest or the document) its resolved value is written, so saved code compiles.
+// K3: a conditional value writes `if (cond) T else F`, each branch in its kind.
 private fun fmtString(v: Any?): String = when {
+  v is Conditional -> fmtConditional(v, ::fmtString)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is String -> v.ref
   else -> kotlinStringLiteral(tokenValue(v).toString())
 }
 private fun fmtInt(v: Any?): String = when {
+  v is Conditional -> fmtConditional(v, ::fmtInt)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is Int -> v.ref
   else -> ((tokenValue(v) as? Int) ?: 0).toString()
 }
 private fun fmtBool(v: Any?): String = when {
+  v is Conditional -> fmtConditional(v, ::fmtBool)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is Boolean -> v.ref
   else -> ((tokenValue(v) as? Boolean) ?: false).toString()
 }
 private fun fmtDouble(v: Any?): String = when {
+  v is Conditional -> fmtConditional(v, ::fmtDouble)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is Double -> v.ref
   else -> tokenValue(v).let { x -> kotlinDoubleLiteral((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0) }
 }
-private fun fmtFloat(v: Any?): String = "${fmtDouble(tokenValue(v))}f"
+private fun fmtFloat(v: Any?): String =
+  if (v is Conditional) fmtConditional(v, ::fmtFloat) else "${fmtDouble(tokenValue(v))}f"
 // Dp is non-negative (its init requires it): clamp, as the document and the preview do.
 private fun fmtDp(v: Any?): String =
-  if (v is Bind) "Dp(${bindRef(v.field)})"
+  if (v is Conditional) fmtConditional(v, ::fmtDp)
+  else if (v is Bind) "Dp(${bindRef(v.field)})"
   else tokenValue(v).let { x -> "Dp(${kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
 private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
 private fun fmtStringList(v: Any?): String =
   "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
 private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${it}f" } ?: "") + ")"
-private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
-private fun fmtCrossAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
+private fun fmtConstraint(v: Any?): String =
+  if (v is Conditional) fmtConditional(v, ::fmtConstraint)
+  else if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
+private fun fmtCrossAxis(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtCrossAxis) else when ((tokenValue(v) as? Int) ?: 0) {
   1 -> "CrossAxisAlignment.Center"
   2 -> "CrossAxisAlignment.End"
   3 -> "CrossAxisAlignment.Stretch"
   else -> "CrossAxisAlignment.Start"
 }
-private fun fmtOverflow(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
-private fun fmtMainAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
+private fun fmtOverflow(v: Any?): String =
+  if (v is Conditional) fmtConditional(v, ::fmtOverflow)
+  else if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
+private fun fmtMainAxis(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtMainAxis) else when ((tokenValue(v) as? Int) ?: 0) {
   1 -> "MainAxisAlignment.Center"
   2 -> "MainAxisAlignment.End"
   3 -> "MainAxisAlignment.SpaceBetween"
@@ -230,9 +262,13 @@ private fun fmtMainAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
 // K1: a Margin value rides as four Double sides "<prefix>.start/.end/.top/.bottom"
 // (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
 // so a negative side is written as 0.
-private fun marginSide(node: WidgetNode, key: String): Double =
-  tokenValue(node.props[key]).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
-private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
+// K3: a side may be conditional (`top = if (raised) 8.dp else 0.dp`): it is then
+// never zero, and two sides are equal only when their conditionals are.
+private fun marginSide(node: WidgetNode, key: String): Any = marginSideValue(node.props[key])
+private fun marginSideValue(v: Any?): Any =
+  if (v is Conditional) v.copy(whenTrue = marginSideValue(v.whenTrue), whenFalse = marginSideValue(v.whenFalse))
+  else tokenValue(v).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
+private fun fmtDpValue(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtDpValue) else kotlinDpLiteral(v as Double)
 private fun fmtMargin(node: WidgetNode, prefix: String): String {
   val s = marginSide(node, "$prefix.start")
   val e = marginSide(node, "$prefix.end")
@@ -339,11 +375,16 @@ private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<
 private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?, imports: MutableSet<String>) {
   when (node.type) {
     "Condition" -> {
-      val cond = (node.props["field"] as? String) ?: "cond"
-      sb.append("${indent}if (b.$cond) {\n")
-      node.children.forEach { emitNode(sb, it, "$indent  ", components, parent, imports) }
+      val cond = condOf(node) ?: Cond((node.props["field"] as? String)?.takeIf { it.isNotBlank() } ?: "cond")
+      sb.append("${indent}if (${cond.kotlin(::bindRef)}) {\n")
+      node.thenChildren().forEach { emitNode(sb, it, "$indent  ", components, parent, imports) }
+      node.elseNode()?.let { e ->
+        sb.append("$indent} else {\n")
+        e.children.forEach { emitNode(sb, it, "$indent  ", components, parent, imports) }
+      }
       sb.append("$indent}\n")
     }
+    ELSE_TYPE -> {}
     "Repeat" -> {
       val item = (node.props["item"] as? String) ?: "item"
       val items = (node.props["items"] as? String) ?: "items"
@@ -359,8 +400,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("confirmText" in node.props) { sb.append("${indent}  confirmText = ${fmtString(node.props["confirmText"] ?: "")},\n"); imports.addTokenImport(node.props["confirmText"], "String") }
       if ("dismissText" in node.props) { sb.append("${indent}  dismissText = ${fmtString(node.props["dismissText"] ?: "")},\n"); imports.addTokenImport(node.props["dismissText"], "String") }
-      (node.props["onConfirm"] as? Action)?.let { a -> sb.append("${indent}  onConfirm = ${fmtAction(a, 0)},\n") }
-      (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onConfirm"], 0)?.let { e -> sb.append("${indent}  onConfirm = $e,\n") }
+      fmtEvent(node.props["onDismiss"], 0)?.let { e -> sb.append("${indent}  onDismiss = $e,\n") }
       sb.append("$indent)\n")
     }
     "AnimatedBorder" -> {
@@ -375,7 +416,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("segmentLenDp" in node.props) { sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n"); imports.addTokenImport(node.props["segmentLenDp"], "Int") }
       if ("effect" in node.props) { sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n"); imports.addTokenImport(node.props["effect"], "Int") }
       if ("colorsArgb" in node.props) { sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedBorder", imports) }
       sb.append("$indent}\n")
@@ -400,7 +441,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("blurDp" in node.props) { sb.append("${indent}  blurDp = ${fmtInt(node.props["blurDp"])},\n"); imports.addTokenImport(node.props["blurDp"], "Int") }
       if ("fillWidth" in node.props) { sb.append("${indent}  fillWidth = ${fmtBool(node.props["fillWidth"])},\n"); imports.addTokenImport(node.props["fillWidth"], "Boolean") }
       if ("tintArgb" in node.props) { sb.append("${indent}  tintArgb = ${fmtInt(node.props["tintArgb"])},\n"); imports.addTokenImport(node.props["tintArgb"], "Int") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "Badge" -> {
@@ -424,7 +465,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  visible = ${fmtBool(node.props["visible"])},\n"); imports.addTokenImport(node.props["visible"], "Boolean")
       if ("contentPaddingDp" in node.props) { sb.append("${indent}  contentPaddingDp = ${fmtInt(node.props["contentPaddingDp"])},\n"); imports.addTokenImport(node.props["contentPaddingDp"], "Int") }
-      (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onDismiss"], 0)?.let { e -> sb.append("${indent}  onDismiss = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "BottomSheet", imports) }
       sb.append("$indent}\n")
@@ -451,7 +492,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("containerArgb" in node.props) { sb.append("${indent}  containerArgb = ${fmtInt(node.props["containerArgb"])},\n"); imports.addTokenImport(node.props["containerArgb"], "Int") }
       if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n"); imports.addTokenImport(node.props["contentArgb"], "Int") }
       if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "Card" -> {
@@ -468,7 +509,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n"); imports.addTokenImport(node.props["checked"], "Boolean")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onCheckedChange"], 1)?.let { e -> sb.append("${indent}  onCheckedChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "Chip" -> {
@@ -476,7 +517,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}Chip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "CircularProgressIndicator" -> {
@@ -490,7 +531,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Clickable"
       sb.append("${indent}Clickable(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Clickable", imports) }
       sb.append("$indent}\n")
@@ -505,7 +546,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n"); imports += listOf("dev.keliver.layout.api.Overflow") }
       if ("horizontalAlignment" in node.props) { sb.append("${indent}  horizontalAlignment = ${fmtCrossAxis(node.props["horizontalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
       if ("verticalAlignment" in node.props) { sb.append("${indent}  verticalAlignment = ${fmtMainAxis(node.props["verticalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.MainAxisAlignment") }
-      (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onScroll"], 1)?.let { e -> sb.append("${indent}  onScroll = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Column", imports) }
       sb.append("$indent}\n")
@@ -514,7 +555,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.Dialog"
       sb.append("${indent}Dialog(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onDismiss"], 0)?.let { e -> sb.append("${indent}  onDismiss = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Dialog", imports) }
       sb.append("$indent}\n")
@@ -532,8 +573,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("expanded" in node.props) { sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n"); imports.addTokenImport(node.props["expanded"], "Boolean") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
-      (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
-      (node.props["onDismiss"] as? Action)?.let { a -> sb.append("${indent}  onDismiss = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onSelect"], 1)?.let { e -> sb.append("${indent}  onSelect = $e,\n") }
+      fmtEvent(node.props["onDismiss"], 0)?.let { e -> sb.append("${indent}  onDismiss = $e,\n") }
       sb.append("$indent)\n")
     }
     "ElevatedButton" -> {
@@ -542,7 +583,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "ElevatedCard" -> {
@@ -558,7 +599,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}ExtendedFloatingActionButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "FilledTonalButton" -> {
@@ -567,7 +608,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "FilterChip" -> {
@@ -576,7 +617,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
       if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "FloatingActionButton" -> {
@@ -584,7 +625,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}FloatingActionButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("text" in node.props) { sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "FlowColumn" -> {
@@ -631,7 +672,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}IconButton(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  imageUrl = ${fmtString(node.props["imageUrl"] ?: "")},\n"); imports.addTokenImport(node.props["imageUrl"], "String")
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "Image" -> {
@@ -639,7 +680,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}Image(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  url = ${fmtString(node.props["url"] ?: "")},\n"); imports.addTokenImport(node.props["url"], "String")
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "InputChip" -> {
@@ -648,7 +689,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
       if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "LazyHorizontalGrid" -> {
@@ -685,7 +726,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("overline" in node.props) { sb.append("${indent}  overline = ${fmtString(node.props["overline"] ?: "")},\n"); imports.addTokenImport(node.props["overline"], "String") }
       if ("leadingIcon" in node.props) { sb.append("${indent}  leadingIcon = ${fmtString(node.props["leadingIcon"] ?: "")},\n"); imports.addTokenImport(node.props["leadingIcon"], "String") }
       if ("trailingIcon" in node.props) { sb.append("${indent}  trailingIcon = ${fmtString(node.props["trailingIcon"] ?: "")},\n"); imports.addTokenImport(node.props["trailingIcon"], "String") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "NavigationBar" -> {
@@ -716,7 +757,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("contentArgb" in node.props) { sb.append("${indent}  contentArgb = ${fmtInt(node.props["contentArgb"])},\n"); imports.addTokenImport(node.props["contentArgb"], "Int") }
       if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n"); imports.addTokenImport(node.props["borderArgb"], "Int") }
       if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "OutlinedCard" -> {
@@ -743,7 +784,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("borderArgb" in node.props) { sb.append("${indent}  borderArgb = ${fmtInt(node.props["borderArgb"])},\n"); imports.addTokenImport(node.props["borderArgb"], "Int") }
       if ("cornerRadiusDp" in node.props) { sb.append("${indent}  cornerRadiusDp = ${fmtInt(node.props["cornerRadiusDp"])},\n"); imports.addTokenImport(node.props["cornerRadiusDp"], "Int") }
       if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n"); imports.addTokenImport(node.props["align"], "Int") }
-      (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onValueChange"], 1)?.let { e -> sb.append("${indent}  onValueChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "RadioButton" -> {
@@ -752,7 +793,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "Row" -> {
@@ -765,7 +806,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("overflow" in node.props) { sb.append("${indent}  overflow = ${fmtOverflow(node.props["overflow"])},\n"); imports += listOf("dev.keliver.layout.api.Overflow") }
       if ("horizontalAlignment" in node.props) { sb.append("${indent}  horizontalAlignment = ${fmtMainAxis(node.props["horizontalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.MainAxisAlignment") }
       if ("verticalAlignment" in node.props) { sb.append("${indent}  verticalAlignment = ${fmtCrossAxis(node.props["verticalAlignment"])},\n"); imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
-      (node.props["onScroll"] as? Action)?.let { a -> sb.append("${indent}  onScroll = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onScroll"], 1)?.let { e -> sb.append("${indent}  onScroll = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "Row", imports) }
       sb.append("$indent}\n")
@@ -784,7 +825,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
       if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n"); imports.addTokenImport(node.props["selectedIndex"], "Int") }
-      (node.props["onSelect"] as? Action)?.let { a -> sb.append("${indent}  onSelect = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onSelect"], 1)?.let { e -> sb.append("${indent}  onSelect = $e,\n") }
       sb.append("$indent)\n")
     }
     "Shimmer" -> {
@@ -802,7 +843,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("position" in node.props) { sb.append("${indent}  position = ${fmtFloat(node.props["position"])},\n") }
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onValueChange"], 1)?.let { e -> sb.append("${indent}  onValueChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "Snackbar" -> {
@@ -845,7 +886,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("cornerTopEndDp" in node.props) { sb.append("${indent}  cornerTopEndDp = ${fmtInt(node.props["cornerTopEndDp"])},\n"); imports.addTokenImport(node.props["cornerTopEndDp"], "Int") }
       if ("cornerBottomStartDp" in node.props) { sb.append("${indent}  cornerBottomStartDp = ${fmtInt(node.props["cornerBottomStartDp"])},\n"); imports.addTokenImport(node.props["cornerBottomStartDp"], "Int") }
       if ("cornerBottomEndDp" in node.props) { sb.append("${indent}  cornerBottomEndDp = ${fmtInt(node.props["cornerBottomEndDp"])},\n"); imports.addTokenImport(node.props["cornerBottomEndDp"], "Int") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "StyledBox", imports) }
       sb.append("$indent}\n")
@@ -875,7 +916,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}SuggestionChip(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  label = ${fmtString(node.props["label"] ?: "")},\n"); imports.addTokenImport(node.props["label"], "String")
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "Surface" -> {
@@ -892,7 +933,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  checked = ${fmtBool(node.props["checked"])},\n"); imports.addTokenImport(node.props["checked"], "Boolean")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onCheckedChange"] as? Action)?.let { a -> sb.append("${indent}  onCheckedChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onCheckedChange"], 1)?.let { e -> sb.append("${indent}  onCheckedChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "Tab" -> {
@@ -901,7 +942,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("selected" in node.props) { sb.append("${indent}  selected = ${fmtBool(node.props["selected"])},\n"); imports.addTokenImport(node.props["selected"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "TabRow" -> {
@@ -926,7 +967,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("enabled" in node.props) { sb.append("${indent}  enabled = ${fmtBool(node.props["enabled"])},\n"); imports.addTokenImport(node.props["enabled"], "Boolean") }
-      (node.props["onClick"] as? Action)?.let { a -> sb.append("${indent}  onClick = ${fmtAction(a, 0)},\n") }
+      fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent)\n")
     }
     "TextField" -> {
@@ -936,7 +977,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}  text = ${fmtString(node.props["text"] ?: "")},\n"); imports.addTokenImport(node.props["text"], "String")
       if ("placeholder" in node.props) { sb.append("${indent}  placeholder = ${fmtString(node.props["placeholder"] ?: "")},\n"); imports.addTokenImport(node.props["placeholder"], "String") }
       if ("align" in node.props) { sb.append("${indent}  align = ${fmtInt(node.props["align"])},\n"); imports.addTokenImport(node.props["align"], "Int") }
-      (node.props["onValueChange"] as? Action)?.let { a -> sb.append("${indent}  onValueChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onValueChange"], 1)?.let { e -> sb.append("${indent}  onValueChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "TextInput" -> {
@@ -944,7 +985,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}TextInput(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("hint" in node.props) { sb.append("${indent}  hint = ${fmtString(node.props["hint"] ?: "")},\n"); imports.addTokenImport(node.props["hint"], "String") }
-      (node.props["onChange"] as? Action)?.let { a -> sb.append("${indent}  onChange = ${fmtAction(a, 1)},\n") }
+      fmtEvent(node.props["onChange"], 1)?.let { e -> sb.append("${indent}  onChange = $e,\n") }
       sb.append("$indent)\n")
     }
     "Theme" -> {
@@ -1022,9 +1063,10 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       // K2: a token is written as its reference where it fits the parameter's type.
       val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
       token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
-      val rendered = when (val x = if (token != null) token else tokenValue(v)) {
+      fun render(x: Any?, branch: Boolean): String = when (x) {
         is Token -> x.ref
-        is Action -> fmtAction(x, if (x.arg == "it") 1 else 0)
+        // K3: in an `if` branch an action is a reference or a parenthesized lambda.
+        is Action -> if (branch) fmtActionBranch(x, if (x.arg == "it") 1 else 0) else fmtAction(x, if (x.arg == "it") 1 else 0)
         is Bind -> bindRef(x.field)
         is String -> kotlinStringLiteral(x)
         is Boolean -> x.toString()
@@ -1032,6 +1074,18 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
         is Double -> kotlinDoubleLiteral(x)
         is List<*> -> "listOf(" + x.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
         else -> x.toString()
+      }
+      // A branch token is written as its reference where it fits, like a plain one.
+      fun branchValue(x: Any?): Any? =
+        if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
+          imports.addTokenImport(x, tokenKindOf(x.value)); x
+        } else {
+          tokenValue(x)
+        }
+      val rendered = when {
+        v is Conditional -> fmtConditional(v) { x -> render(branchValue(x), branch = true) }
+        token != null -> render(token, branch = false)
+        else -> render(tokenValue(v), branch = false)
       }
       sb.append("$indent  $k = $rendered,\n")
     }

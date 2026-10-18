@@ -77,7 +77,7 @@ public class MapComponentRegistry(specs: Collection<ComponentSpec>) : ComponentR
 }
 
 /** Names reserved by the grammar — a component may not shadow them. */
-public val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", "RawCode", "Slot")
+public val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", "RawCode", "Slot", ELSE_TYPE)
 
 /** Internal expansion provenance consumed by the editor's selection tagging. */
 public const val COMPONENT_SOURCE_HANDLE_PROP: String = "portal.componentSourceHandle"
