@@ -1774,7 +1774,8 @@ private fun propRowInner(
   // K4: a template — its text with {references}; an edit is validated before it is sent.
   (props[key] as? Template)?.let { t -> return templateRow(rowEl, nodeId, key, t, picker) }
   // K4: an Int or String list — its elements, each a literal, a ◆token or an @binding.
-  if ((kind == PropKind.IntList || kind == PropKind.StringList) && keyPrefix.isEmpty()) {
+  // A list bound as a whole (`options = b.options`) keeps the binding row below.
+  if (editsAsList(kind, props[key]) && keyPrefix.isEmpty()) {
     return listRow(rowEl, nodeId, key, props[key], kind, picker)
   }
 
@@ -1907,7 +1908,8 @@ private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Templat
   if (knownTokens(t).isNotEmpty()) {
     rowEl.appendChild(
       Ui.button("◆", "btn icon") {
-        if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, { true }) { ref -> append("{◆$ref}") }
+        // A template reads String, Int and Boolean tokens — never a Double (the device prints 1.0 as "1").
+        if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, ::templateTokenOffered) { ref -> append("{◆$ref}") }
       }.also { it.setAttribute("title", "insert a design token") },
     )
   }

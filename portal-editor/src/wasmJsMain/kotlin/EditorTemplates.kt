@@ -9,7 +9,7 @@ import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.listElementType
 import dev.keliver.portal.tokenFits
-import dev.keliver.portal.tokenKindOf
+import dev.keliver.portal.templateTokenFits
 import org.w3c.dom.HTMLElement
 
 // K4: the properties panel for a string template and a list with references.
@@ -17,10 +17,15 @@ import org.w3c.dom.HTMLElement
 // A template is edited as text with its references in braces:
 //   Rating: {rating}/{◆C.Max} for {item.city}
 // `{field}` is a screen binding, `{item.x}` an item field, `{◆Owner.Name}` a
-// design token; `{{` and `}}` are literal braces. A list is edited as its
-// elements — `, `-separated for an Int list (`16777215, ◆C.Start, @accent`,
-// `#RRGGBB` for a colour), `|`-separated for a String list — `◆Ref` a token,
-// `@field` a binding. Invalid text is shown, never sent.
+// design token (String, Int or Boolean — never a Double, which the device
+// prints as `1` where the preview prints `1.0`); `{{` and `}}` are literal
+// braces. A list is edited as its elements — `, `-separated for an Int list
+// (`16777215, ◆C.Start, @accent`, `#RRGGBB` for a colour), `|`-separated for
+// a String list — `◆Ref` a token, `@field` a binding. In a String list a
+// backslash takes the next character literally (`\@at`, `\◆`, `\|`, `\\`,
+// `\"`), and an element in double quotes keeps its spaces (`" a "`, `""` the
+// empty text): every list is spelled so it reads back as itself. Invalid
+// text is shown, never sent.
 
 private val FIELD = Regex("^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$")
 
@@ -78,6 +83,39 @@ internal fun parseTemplateSource(text: String, known: Map<String, PropValue.Toke
   return Parsed(canonicalValue(PropValue.Template(parts)), null)
 }
 
+/**
+ * Whether a prop of [kind] holding [value] is edited as list elements
+ * ([listRow]): an Int or String list holding a literal list, a list with
+ * references, or nothing yet — not a list bound as a whole (`options =
+ * b.options`), which keeps its binding row.
+ */
+internal fun editsAsList(kind: PropKind, value: Any?): Boolean =
+  (kind == PropKind.IntList || kind == PropKind.StringList) && (value == null || value is List<*> || value is ListOf)
+
+/** Whether the panel offers [t] inside a template: a String, Int or Boolean token (never a Double). */
+internal fun templateTokenOffered(t: EditorToken): Boolean = !t.ambiguous && templateTokenFits(t.value)
+
+/**
+ * A String list element's literal [s] as the panel spells it, so it reads
+ * back as itself: `\` and `|` escaped; a leading `@`, `◆` or `"` escaped
+ * (else it would read as a binding, a token or a quote); an empty text or one
+ * with spaces at either end in double quotes (else they would be trimmed).
+ */
+private fun listLiteralSource(s: String): String {
+  val quoted = s.isEmpty() || s.first().isWhitespace() || s.last().isWhitespace()
+  val body = buildString {
+    s.forEachIndexed { i, c ->
+      when {
+        c == '\\' || c == '|' -> append('\\').append(c)
+        c == '"' && (quoted || i == 0) -> append("\\\"")
+        !quoted && i == 0 && (c == '@' || c == '◆') -> append('\\').append(c)
+        else -> append(c)
+      }
+    }
+  }
+  return if (quoted) "\"$body\"" else body
+}
+
 /** [v]'s elements as the panel shows them ([kind] says the separator and the literal spelling). */
 internal fun listSource(v: Any?, kind: PropKind): String {
   val items = when (v) {
@@ -89,10 +127,47 @@ internal fun listSource(v: Any?, kind: PropKind): String {
     when (e) {
       is Token -> "◆${e.ref}"
       is Bind -> "@${e.field}"
+      is String -> if (kind == PropKind.StringList) listLiteralSource(e) else e
       else -> e?.toString().orEmpty()
     }
   }
 }
+
+/** One character of list text: [escaped] when a backslash took it literally. */
+private data class ListChar(val c: Char, val escaped: Boolean)
+
+/**
+ * [text] split at each unescaped [sep] into elements, each trimmed of the
+ * unescaped whitespace at its ends — or the reason it cannot be (a lone
+ * trailing backslash). Blank text is no element.
+ */
+private fun listElements(text: String, sep: Char): Pair<List<List<ListChar>>?, String?> {
+  if (text.isBlank()) return emptyList<List<ListChar>>() to null
+  val out = mutableListOf<List<ListChar>>()
+  var cur = mutableListOf<ListChar>()
+  var i = 0
+  while (i < text.length) {
+    val c = text[i]
+    when {
+      c == '\\' -> {
+        if (i + 1 >= text.length) return null to "a lone \\ at the end (write \\\\ for a backslash)"
+        cur += ListChar(text[i + 1], escaped = true)
+        i += 2
+        continue
+      }
+      c == sep -> { out += cur; cur = mutableListOf() }
+      else -> cur += ListChar(c, escaped = false)
+    }
+    i++
+  }
+  out += cur
+  return out.map { e ->
+    val start = e.indexOfFirst { it.escaped || !it.c.isWhitespace() }
+    if (start < 0) emptyList() else e.subList(start, e.indexOfLast { it.escaped || !it.c.isWhitespace() } + 1)
+  } to null
+}
+
+private fun List<ListChar>.text(): String = joinToString("") { it.c.toString() }
 
 /**
  * The panel's list text as a document value of [kind] (an Int or a String
@@ -102,17 +177,23 @@ internal fun listSource(v: Any?, kind: PropKind): String {
 internal fun parseListSource(text: String, kind: PropKind, known: Map<String, PropValue.Token>): Parsed {
   val strings = kind == PropKind.StringList
   val tag = if (strings) "ls" else "li"
-  val raw = text.split(if (strings) '|' else ',').map { it.trim() }.filter { it.isNotEmpty() }
-  val items = raw.map { e ->
+  val (elements, why) = listElements(text, if (strings) '|' else ',')
+  if (elements == null) return Parsed(null, why)
+  val items = elements.map { chars ->
+    if (chars.isEmpty()) return Parsed(null, "an empty element (${if (strings) "write \"\" for an empty text" else "remove the extra ,"})")
+    val e = chars.text()
+    val head = chars.first().takeIf { !it.escaped }?.c
     when {
-      e.startsWith("◆") -> {
+      // A quoted String element: its text as written, spaces included.
+      strings && head == '"' && chars.size >= 2 && chars.last() == ListChar('"', false) -> lit(chars.subList(1, chars.size - 1).text())
+      head == '◆' -> {
         val t = known[e.removePrefix("◆").trim()] ?: return Parsed(null, "no design token ${e.removePrefix("◆").trim()}")
         if (!tokenFits(listElementType(tag), t.value.let { v -> v.s ?: v.i ?: v.d ?: v.b })) {
           return Parsed(null, "${t.ref} is not ${if (strings) "a String" else "an Int"}")
         }
         t
       }
-      e.startsWith("@") -> e.removePrefix("@").trim().takeIf { FIELD.matches(it) }?.let { PropValue.Bind(it) }
+      head == '@' -> e.removePrefix("@").trim().takeIf { FIELD.matches(it) }?.let { PropValue.Bind(it) }
         ?: return Parsed(null, "$e is not a field name")
       strings -> lit(e)
       e.startsWith("#") -> hexArgb(e)?.let { lit(it) } ?: return Parsed(null, "$e is not a #RRGGBB or #AARRGGBB colour")
@@ -136,10 +217,13 @@ internal fun tokensIn(v: Any?): Map<String, PropValue.Token> = when (v) {
   else -> emptyMap()
 }
 
-/** Every token the panel may name: the token list's (not ambiguous) and [current]'s. */
+/**
+ * Every token the panel may name: the token list's (not ambiguous; a
+ * String, Int or Boolean — never a Double, [templateTokenOffered]) and
+ * [current]'s.
+ */
 internal fun knownTokens(current: Any?, tokens: List<EditorToken> = editorTokens): Map<String, PropValue.Token> =
-  tokens.filter { !it.ambiguous && tokenKindOf(it.value) in setOf("String", "Int", "Double", "Boolean") }
-    .associate { it.ref to it.toPropValue() } + tokensIn(current)
+  tokens.filter(::templateTokenOffered).associate { it.ref to it.toPropValue() } + tokensIn(current)
 
 /**
  * A text field for a template or a list: it shows [source], sends each valid
