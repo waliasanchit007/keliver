@@ -630,10 +630,12 @@ object WriteBack {
     /** [node]'s statement as the file had it, with its comments and its subtree's offsets in it. */
     fun source(node: DocNode): MovedSource? {
       val range = ranges[node.handle.v] ?: return null
-      val stmt = org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil.findElementOfClassAtRange(
-        pristine, range.startOffset, range.endOffset, KtExpression::class.java,
-      )?.let { e -> generateSequence(e as org.jetbrains.kotlin.com.intellij.psi.PsiElement) { it.parent }
-        .takeWhile { it.textRange == range }.lastOrNull { it is KtExpression && it.parent is KtBlockExpression } as? KtExpression }
+      // The statement: the deepest expression spanning exactly [range] that stands
+      // in a block. (Up from the first leaf: the only statement of a lambda body
+      // spans what its block spans, so the block itself is not it.)
+      val stmt = generateSequence(pristine.findElementAt(range.startOffset)) { it.parent }
+        .takeWhile { it.textRange.startOffset == range.startOffset && it.textRange.endOffset <= range.endOffset }
+        .firstOrNull { it.textRange == range && it is KtExpression && it.parent is KtBlockExpression } as? KtExpression
         ?: return null
       // Each subtree node's place among the statement's expressions in pre-order:
       // re-indenting changes only whitespace, so the copy's structure is the same.
@@ -942,7 +944,8 @@ object WriteBack {
     val braceIndent = block.text.substringAfterLast('\n')
       .takeWhile { it == ' ' || it == '\t' }
       .takeIf { '\n' in block.text }
-      ?: owningCall(block)?.let(::indentOf)
+      // The line the call starts on (`b.rows.forEach { row ->` starts after `b.rows.`).
+      ?: owningCall(block)?.let(::lineLeadingIndent)
       ?: lineLeadingIndent(block)
     val indent = "$braceIndent  "
     val stmt = make(indent) ?: return null
