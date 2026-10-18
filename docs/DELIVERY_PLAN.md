@@ -872,19 +872,29 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 | **libraries 0.3.4 RELEASED** (adoption item 1: the host widget gaps) | **released 2026-10-16** on the owner's go.<br>• **PRs** #103 (keyed container children, `2b89e1c8`), #105 (the widget fixes, `8b547f2b`) and #107 (version, CHANGELOG, docs; merged as `502416e9` after main was merged in and CI went green on the identical tree `b0a2c25e`).<br>• **Tag** `v0.3.4` (annotated) → `502416e9`.<br>• **Maven Central:** `publish-maven-central.yml` run `38814070981`: preflight and upload green, automatic release; all 378 artifacts of the local pre-gate publish and the Gradle plugin markers resolve from `repo1.maven.org` (`maven-metadata.xml` latest = 0.3.4). GitHub Packages: `publish.yml` `38814046945` green.<br>• **Device:** rendered on a Samsung S25 Ultra before the release (BottomSheet open/close/reopen, Theme, scroll column, lazy list after list changes, pager, text align); text-field `align` was not exercised on a device (the proof guest is built on 0.3.3).<br>• **Not in 0.3.4:** U33 (#112, merged after the tag). Tools still scaffold 0.3.3 until the next tools release. | `CHANGELOG.md` [0.3.4], PR #107 |
 | adoption item 6, row 3: debug hosts update on resume | **merged 2026-10-17** (#114, `f659f280`). `keliver.updates` / `UPDATES` empty by default: `on-resume` in debug builds, `next-launch` otherwise. A debug "check now": `adb shell am broadcast -a dev.keliver.debug.CHECK_FOR_UPDATE -p <appId>` (a run-time receiver, `DUMP`-guarded) and the Darwin notification `<bundle id>.keliver.check-for-update`. Reference CI pins `next-launch` where it relied on it. CI: reference-app prepare 31/0, device 164/0 (U0, U1 on the default, U2); ios-host `ios.sh` 152/0 (U1 on the default, U2). Samsung S25 Ultra, a debug template host: going home and back applied v2 in the same process, and the adb broadcast applied v3 without leaving the app (logs; the screenshots caught the owner's own screen) | PR #114 |
 | adoption item 6, row 1b: the first-publish compiler error | **worked around 2026-10-17** (#115, `7a7eef3f`): a relay publish that fails with "Internal compiler error" is built once more, both logs kept. Six reproduction attempts on the proof app did not reproduce it; KNOWN_BUGS U34 records them and what is still open | PR #115 |
-| adoption item 2, M0: timing marks | **#116**: `process`/`open`/`code`/`first-frame`/`content` in debug builds and a new benchmark build type (Android) / `Benchmark` configuration (iOS); none of it in a store build. `first-frame` wraps the guest UI's change sink in the template (no library change). Rows T0–T2 on both platforms. S25 (debug template host): process→open 389 ms, →code 1315 ms, →first-frame and content 1437 ms on a cold start | PR #116 |
+| adoption item 2, M0: timing marks | **#116**: `process`/`open`/`code`/`first-frame`/`content` in debug builds and a new benchmark build type (Android) / `Benchmark` configuration (iOS); none of it in a store build. `first-frame` wraps the guest UI's change sink in the template (no library change). Rows T0–T2 on both platforms. S25 (debug template host, Development bundle over plain HTTP, the FIRST launch after install, not a cold start): process→open 389 ms, →code 1315 ms, →first-frame and content 1437 ms | PR #116 |
 | **tools 0.3.10 RELEASED** | **released 2026-10-17** on the owner's go (candidate 3; 1 and 2 superseded by the review's fixes).<br>• **Tag** `portal-tools-v0.3.10` → `78bcfa0ad`; zip `0ba5c07b…` from artifact `12087402781` (build 38996395407).<br>• **Verified:** device job 38997931981 (19/0, 28/0); local acceptance 25/0, identity 6/0, 61 files identical; `ios.sh` on the zip 158/0; device-verify on an S25 18/18 (its acceptance 27/28: the bundled host's dev loop is emulator-only).<br>• New apps get the 0.3.4 libraries; scaffolders follow an app's `appRuntime.keliverVersion`. Record: `RELEASE_NOTES_TOOLS_0.3.10.md` | #117 |
+| reference app on the published tools 0.3.10 | **#118**: bootstrap, `ios.sh` and both workflows pin the 0.3.10 zip `0ba5c07b…`; the app stays on libraries 0.3.3 and every scaffolder is told so (`KELIVER_VERSION` from the app's `keliver.portal.json`). Published-only proof from GitHub runners: `reference-app.yml` dispatch 39015039884 (prepare 34/0, device 171/0), `ios-host.yml` dispatch 39030961195 (71/0, 159/0); both checked the public asset | #118 |
+| adoption item 2, M2 (Android) | **#119**: `reference/inventory/m2/` on a Samsung S25 Ultra, the published 0.3.10 host's benchmark build and a Production bundle: first launch 1024 ms, cold 243 ms, warm 35 ms (medians of 5); PSS 89–111 MB. iOS M2 waits on the owner (signing team) | #119 |
 
 ## Next action
 
-**2026-10-17.** Item 6's update default (#114) and the compiler-error workaround
-(#115) are merged; M0 (#116) is merged; tools 0.3.10 is released (rows above).
-Next: the reference app on the published 0.3.10 (its dispatch checks the
-public download from a GitHub runner); the Bonds relay restarted from the
-released tools; then M2's release-build
-numbers (cold, warm, first launch, memory) on the benchmark build, on both
-phones, and a proposal for M3. The iPhone needs the owner: the only signing
-identity on this Mac is a company team.
+**2026-10-17, later.** Tools 0.3.10 is released (#117), the reference app is on
+it (#118), M2 on Android is done (#119). The owner then found that the editor
+draws every component of the product-proof app as an opaque placeholder: the
+app followed D9 for screens (0 RawCode) but no gate checked components, and the
+grammar lacked layout modifiers, Margin values and design tokens. Owner's
+decision: fix both halves, Keliver first. In order:
+- **K1** layout modifiers and Margin values in the grammar: **merged (#120)**.
+- **K2** design-token references (`C.Ink`, `Assets.Logo`): PR #121, in review.
+- **K5** canvas fidelity (images through the relay for declared hosts, Theme,
+  component instance modifiers, the opaque label): in progress, stacked on K2.
+- **K3/K4** one component per file stays the rule; the editor names why a
+  component is opaque, and the D14 bar and a check fail on opaque components.
+- Then the product-proof app's components move into the grammar, checked by
+  before/after device screenshots; tools release on the owner's go.
+M3 is proposed in `reference/inventory/m2/results-2026-10-17/README.md`
+("where the time goes"); iOS M2 needs the owner (signing team).
 
 **2026-10-16.** Libraries **0.3.4** are on Maven Central (row above). Next, from
 `ADOPTION_PLAN_2026-10.md`: debug hosts defaulting to `on-resume` updates,

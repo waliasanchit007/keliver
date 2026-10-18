@@ -1,8 +1,8 @@
 # The reference app — what the published route costs an adopter
 
-**2026-09-22/24; moved to tools 0.3.7 on 2026-10-08 (PR #92).** An inventory
+**2026-09-22/24; on the newest published tools since PR #92 (0.3.7, 2026-10-08); tools 0.3.10 since PR #118 (2026-10-17).** An inventory
 app built outside this checkout from the **published** `keliver-portal-tools`
-release (0.3.5 until PR #92, 0.3.7 since) and `dev.keliver:*:0.3.3` on
+release (0.3.5 until PR #92, then each published release; 0.3.10 now) and `dev.keliver:*:0.3.3` on
 Maven Central, following [`PORTAL_ADOPTER_GUIDE.md`](PORTAL_ADOPTER_GUIDE.md),
 then checked against
 [`reference/inventory/EXPECTATIONS.md`](../reference/inventory/EXPECTATIONS.md) —
@@ -26,7 +26,7 @@ apart from the CI harness.**
   into the app by `keliver-new-production-host.sh` and built by the app's Gradle
   against Maven Central 0.3.3 (54 `dev.keliver` artifacts). The host's own
   Kotlin is that scaffolder's template. **Since PR #92 both come from the
-  published 0.3.7 zip's `bin/` and `templates/`**: `reference-app.yml` run
+  published zip's `bin/` and `templates/`** (0.3.7 then; 0.3.10 now): `reference-app.yml` run
   `37673830830` (prepare 15/0, device 37/0) and the iOS host, via
   `ios-host.yml` run `37673830745` (48/0, 30/0). Before that, runs 8 to 13 took
   the scaffolders from this repository, because the app was built from the
