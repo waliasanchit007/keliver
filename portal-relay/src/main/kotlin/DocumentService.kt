@@ -52,6 +52,15 @@ class DocumentService(
   @Volatile var doc: UiDocument = initial
     private set
 
+  /**
+   * K3 review S-c: the document the file on disk was last written from or
+   * ingested as — its handles are the ones ops target, so write-back can tell
+   * an edited node from a new one ([dev.keliver.portal.ingest.WriteBack.merge]'s
+   * `base`). Null until known; a base that no longer reads as the file is
+   * ignored there.
+   */
+  @Volatile private var fileDoc: UiDocument? = null
+
   private val undoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val redoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val listeners = CopyOnWriteArrayList<OutputStream>()
@@ -249,6 +258,7 @@ class DocumentService(
   @Synchronized
   fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument) {
     doc = newDoc
+    fileDoc = newDoc
     undoStacks.clear()
     redoStacks.clear()
     changed(writeBack = false)
@@ -269,7 +279,7 @@ class DocumentService(
     val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
-    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next)
+    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next) else fileDoc = doc
     return true
   }
 
@@ -306,6 +316,8 @@ class DocumentService(
 
   private fun writeKotlin() {
     runCatching {
+      // One snapshot: what is merged, exported and recorded as the file's base is the same document.
+      val doc = this.doc
       kotlinFile.parentFile.mkdirs()
       // M4: surgical PSI write-back preserves comments/formatting/RawCode when
       // the file already exists; fall back to a full export on first write or
@@ -315,7 +327,7 @@ class DocumentService(
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
       // C1: component-aware surgical merge so a screen using a component isn't
       // forced into a whole-file regen (its call stays byte-stable in place).
-      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry, tokens(), tokenFileId) }
+      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry, tokens(), tokenFileId, base = fileDoc) }
       // P0: the file's OWN package wins over the configured default — a full-
       // export fallback must never rewrite a foreign-package screen (e.g.
       // com.stashfin.*) into dev.keliver.portalpublished.screens.
@@ -331,6 +343,7 @@ class DocumentService(
       }.getOrDefault(merged)
       lastWrittenText = text
       kotlinFile.writeText(text)
+      fileDoc = doc
       // M9 versioned catch-up: bake the doc version this screen was written at
       // into a sibling const. Rebuilding the dev bundle (serve --continuous)
       // picks it up; the device router compares it to the live doc version.
@@ -373,6 +386,7 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+            .also { it.fileDoc = doc } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

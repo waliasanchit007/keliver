@@ -29,6 +29,12 @@ object WriteBack {
     tokens: TokenTable = TokenTable.EMPTY,
     /** The file's name as the token table knows it (a private top-level constant is file-scoped). */
     fileName: String = "Screen.kt",
+    /**
+     * The document the file was last written from (or ingested as), with the
+     * handles [target] shares. When its tree is the file's, a Condition pairs
+     * with an `if` only by identity (S-c); null = position decides.
+     */
+    base: UiDocument? = null,
   ): String? {
     val rec = Recognizer.recognize(fileName, fileText, components, tokens) ?: return null
     val file = rec.file ?: return null
@@ -42,6 +48,7 @@ object WriteBack {
     needed.set(written)
     lookup.set(rec.tokenLookup)
     conds.set(rec.condParser)
+    identities.set(base?.let { identitiesOf(rec.root, it.root) })
     try {
       // Mutable: a replaced statement's handle is re-pointed at its replacement,
       // so a later insert anchored on it never lands relative to dead PSI.
@@ -50,6 +57,7 @@ object WriteBack {
       needed.remove()
       lookup.remove()
       conds.remove()
+      identities.remove()
     }
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
@@ -94,6 +102,25 @@ object WriteBack {
 
   /** K3: condition reading for the file being merged; per thread, per merge. */
   private val conds = ThreadLocal<CondParser?>()
+
+  /** S-c: parsed (temp) handle -> the base document's handle, when known; per thread, per merge. */
+  private val identities = ThreadLocal<Map<Long, Long>?>()
+
+  /**
+   * Each parsed node's handle in [base] — by position, and only when [base]'s
+   * tree IS the parsed one ([sameTree]); otherwise null (no identities: the
+   * file changed since [base] was written, or the export read back otherwise).
+   */
+  private fun identitiesOf(parsed: DocNode, base: DocNode): Map<Long, Long>? {
+    if (!sameTree(parsed, base)) return null
+    val out = HashMap<Long, Long>()
+    fun zip(p: DocNode, b: DocNode) {
+      out[p.handle.v] = b.handle.v
+      if (p is DocNode.Widget && b is DocNode.Widget) p.children.indices.forEach { zip(p.children[it], b.children[it]) }
+    }
+    zip(parsed, base)
+    return out
+  }
 
   private fun need(imports: Set<String>) {
     needed.get()?.addAll(imports)
@@ -300,14 +327,22 @@ object WriteBack {
     parentType: String?,
   ): Boolean {
     // Greedy in-order match by shape; require matched parsed indices strictly
-    // increasing (else it's a reorder → bail).
+    // increasing (else it's a reorder → bail). S-c: with identities, a
+    // Condition matches only the `if` the target says it is (same handle).
     val consumed = BooleanArray(parsedChildren.size)
     val matchOf = arrayOfNulls<Int>(targetChildren.size) // targetIdx -> parsedIdx
+    val ids = identities.get()
     var lastParsed = -1
     for ((ti, tc) in targetChildren.withIndex()) {
       var pi = -1
       for (i in parsedChildren.indices) {
-        if (!consumed[i] && sameShape(parsedChildren[i], tc)) { pi = i; break }
+        if (consumed[i]) continue
+        val matches = if (ids != null && isCondition(tc)) {
+          isCondition(parsedChildren[i]) && ids[parsedChildren[i].handle.v] == tc.handle.v
+        } else {
+          sameShape(parsedChildren[i], tc)
+        }
+        if (matches) { pi = i; break }
       }
       if (pi >= 0) {
         if (pi < lastParsed) return false // reorder — not surgical
@@ -316,7 +351,7 @@ object WriteBack {
         lastParsed = pi
       }
     }
-    pairEditedConditions(parsedChildren, targetChildren, consumed, matchOf)
+    if (ids == null) pairEditedConditions(parsedChildren, targetChildren, consumed, matchOf)
 
     // Recurse matched pairs first (prop/child edits within kept nodes).
     for ((ti, tc) in targetChildren.withIndex()) {
@@ -364,13 +399,21 @@ object WriteBack {
     return Triple(s("field"), dev.keliver.portal.CondTest.fromWire(s("test")), negate)
   }
 
+  private fun isCondition(n: DocNode) = n is DocNode.Widget && n.type == "Condition"
+
   /**
-   * K3: a Condition whose CONDITION was edited matches no parsed `if` by
+   * K3, WITHOUT identities (no `base`, or a base that is not the file's tree):
+   * a Condition whose CONDITION was edited matches no parsed `if` by
    * [sameShape]. Between two kept neighbours (a "gap"), when the unmatched
-   * Conditions on both sides are equally many they are the same nodes, in
-   * order — the edit stays a surgical condition rewrite. Any other gap
-   * (a new Condition, or an insert and an edit together) leaves them
-   * unmatched: inserts and deletes, never a rewrite of the wrong `if`.
+   * Conditions on both sides are equally many they are taken to be the same
+   * nodes, in order — the edit stays a surgical condition rewrite. Any other
+   * gap (a new Condition, or an insert and an edit together) leaves them
+   * unmatched: inserts and deletes. Position is all this knows, so a delete
+   * plus an unrelated insert in one gap pairs as an edit (the deleted `if`'s
+   * comments stay, under the new condition), and an edit to a deleted
+   * neighbour's condition keeps that neighbour's `if`. The text compiles and
+   * reads back as the target either way; with identities (the relay always
+   * passes its base) neither happens.
    */
   private fun pairEditedConditions(
     parsedChildren: List<DocNode>,
@@ -378,7 +421,6 @@ object WriteBack {
     consumed: BooleanArray,
     matchOf: Array<Int?>,
   ) {
-    fun isCondition(n: DocNode) = n is DocNode.Widget && n.type == "Condition"
     var ti = 0
     var pi = 0
     while (ti <= targetChildren.size) {
