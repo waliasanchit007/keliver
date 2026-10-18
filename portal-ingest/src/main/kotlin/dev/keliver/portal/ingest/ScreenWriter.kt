@@ -77,6 +77,8 @@ object ScreenWriter {
     // document does not hold — so it is re-read, never merged onto.
     if (base == null) return Reread("the file has not been read since it was created or changed")
     if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
+    // S5 (the relay refuses such a move as an op; this holds for any other way here, e.g. an undo).
+    DeclarationScope.problem(base, doc)?.let { return Refuse(it) }
 
     val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, base)
     if (surgical is WriteBack.Outcome.Merged) return restored(contract(surgical.text, tree, functionName, components), How.SURGICAL)

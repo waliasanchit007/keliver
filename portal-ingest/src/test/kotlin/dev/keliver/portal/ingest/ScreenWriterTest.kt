@@ -164,6 +164,15 @@ class ScreenWriterTest {
     assertIs<WriteBack.Outcome.NotSurgical>(o)
   }
 
+  /** S5: a declaration moved past its use is refused however it got into the document (e.g. an undo). */
+  @Test fun aDeclarationMovedPastItsUseIsRefused() {
+    val text = withLegacy.replace("    StyledText(text = \"a\")\n", "    val one = 1\n").replace("Legacy(1)", "Legacy(one)")
+    val d = doc(text)
+    val kids = (d.root as DocNode.Widget).children
+    val r = assertIs<ScreenWriter.Refuse>(plan(text, d.apply(DocOp.MoveNode(kids[0].handle, d.root.handle, kids[1].handle)).doc, d))
+    assertTrue("`one`" in r.reason, r.reason)
+  }
+
   // ── 5: line endings ────────────────────────────────────────────────────────
 
   private val withRawString = "package app.screens\n\nimport androidx.compose.runtime.Composable\nimport dev.keliver.layout.compose.Column\n" +

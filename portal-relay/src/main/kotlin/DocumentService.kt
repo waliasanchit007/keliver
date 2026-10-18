@@ -115,6 +115,12 @@ class DocumentService(
     if (normalized == null) return null to refused
     refusal(normalized)?.let { return null to it }
     rawRefusal(normalized)?.let { return null to it }
+    // S5: a move that would leave a local declaration's use where it is not declared.
+    if (normalized.ops.any { it is DocOp.MoveNode }) {
+      doc.applyBatch(normalized.ops).result?.doc?.let { after ->
+        dev.keliver.portal.ingest.DeclarationScope.problem(doc, after)?.let { return null to "move refused: $it" }
+      }
+    }
     val chosen = Tokens.tokensIn(normalized)
     if (chosen.isNotEmpty() && kotlinFile.exists()) {
       // One scope through the whole batch, seeded with the imports the

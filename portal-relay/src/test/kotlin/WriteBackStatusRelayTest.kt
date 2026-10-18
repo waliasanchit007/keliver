@@ -163,6 +163,20 @@ class WriteBackStatusRelayTest {
     assertFalse("earlier change" in third.message, third.message)
   }
 
+  /** S5: moving a declaration after its use is refused as an op (it would read back but not compile). */
+  @Test fun aDeclarationMovedAfterItsUseIsRefusedAsAnOp() {
+    val text = home.replace("    // keep me\n", "    val label = \"hi\"\n    // keep me\n")
+      .replace("Legacy(bindings.title)", "Legacy(label)")
+    assertTrue("val label" in text && "Legacy(label)" in text)
+    val f = fixture(text)
+    val (decl, use) = f.svc.children()
+    val ack = f.svc.submit(f.svc.batch(DocOp.MoveNode(decl.handle, f.svc.doc.root.handle, use.handle)))
+    assertFalse(ack.ok)
+    assertTrue("`label`" in ack.error.orEmpty(), ack.error)
+    assertFalse(f.svc.dryRun(f.svc.batch(DocOp.MoveNode(decl.handle, f.svc.doc.root.handle, use.handle))).ok)
+    assertEquals(text, f.file.readText())
+  }
+
   @Test fun aWriteFailureIsReportedNotSwallowed() {
     val f = fixture()
     assertTrue(f.file.setWritable(false))
