@@ -102,6 +102,17 @@ class ParityGoldenTest {
     assertGolden("parity-conditionals-body", toggle.spec.body!!)
   }
 
+  /** K4: templates and lists with references recognize transparently. */
+  @Test
+  fun templateFixtureMatchesItsGolden() {
+    val text = source("ParityTemplates")
+    val tokens = TokenTable.scan(listOf("ParityTemplates.kt" to text))
+    val score = Recognizer.recognizeComponent("ParityTemplates.kt", text, tokens = tokens)!!
+    assertTrue(score.spec.transparent, score.spec.diagnostic)
+    assertEquals("ParityScore", score.spec.name)
+    assertGolden("parity-templates-body", score.spec.body!!)
+  }
+
   private fun WidgetNode.canonicalIds(): WidgetNode =
     copy(id = 0, children = children.map { it.canonicalIds() })
 }

@@ -101,7 +101,7 @@ private fun PreviewBindings.partText(p: Any?): String? = when (val v = tokenValu
 /** K4: an Int list prop — a token element its value, a bound element its mock (else 0). */
 public fun WidgetNode.intListB(key: String): List<Int> = when (val v = props[key]) {
   is ListOf -> v.items.map { e ->
-    when (val x = tokenValue(e)) {
+    when (val x = tokenValue(PreviewBindings.chosen(e))) {
       is Int -> x
       is Bind -> PreviewBindings.mocks[x.field]?.trim()?.toIntOrNull() ?: 0
       is String -> x.trim().toIntOrNull() ?: 0 // an item field's row value
@@ -113,12 +113,8 @@ public fun WidgetNode.intListB(key: String): List<Int> = when (val v = props[key
 
 /** K4: a String list prop — a token element its value, a bound element its mock (else a placeholder). */
 public fun WidgetNode.strListB(key: String): List<String> = when (val v = props[key]) {
-  is ListOf -> v.items.map { e ->
-    when (val x = tokenValue(e)) {
-      is Bind -> PreviewBindings.mocks[x.field] ?: "{${x.field}}"
-      else -> templateValueText(x) ?: ""
-    }
-  }
+  // An element a component argument substituted may be a template (or a conditional): evaluated like a part.
+  is ListOf -> v.items.map { e -> PreviewBindings.partText(e) ?: (tokenValue(PreviewBindings.chosen(e)) as? Bind)?.let { "{${it.field}}" } ?: "" }
   else -> strList(key)
 }
 
