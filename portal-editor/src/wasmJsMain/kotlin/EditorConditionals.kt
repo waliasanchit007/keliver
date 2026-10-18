@@ -29,14 +29,34 @@ internal fun testLabel(t: CondTest): String = when (t) {
 }
 
 /** [cur] as a document value with its true ([whenTrue]) or false branch replaced by [value]. */
-internal fun withBranch(cur: Conditional, whenTrue: Boolean, value: PropValue?): PropValue.Conditional {
-  val pv = cur.toPropValue()
-  return if (whenTrue) pv.copy(whenTrue = value) else pv.copy(whenFalse = value)
-}
+internal fun withBranch(cur: Conditional, whenTrue: Boolean, value: PropValue?): PropValue.Conditional =
+  withBranch(cur.toPropValue(), whenTrue, value)
+
+internal fun withBranch(cur: PropValue.Conditional, whenTrue: Boolean, value: PropValue?): PropValue.Conditional =
+  if (whenTrue) cur.copy(whenTrue = value) else cur.copy(whenFalse = value)
 
 /** [cur] as a document value with a new condition. */
 internal fun withCondition(cur: Conditional, field: String, test: CondTest, negate: Boolean): PropValue.Conditional =
-  cur.toPropValue().copy(field = field, test = test.wire, negate = negate)
+  withCondition(cur.toPropValue(), field, test, negate)
+
+internal fun withCondition(cur: PropValue.Conditional, field: String, test: CondTest, negate: Boolean): PropValue.Conditional =
+  cur.copy(field = field, test = test.wire, negate = negate)
+
+/**
+ * The value a conditional panel edits: the one it was rendered with, then
+ * each value it sent. The panel is not re-rendered after its own edits
+ * (that would steal the input's focus), so every op builds on the previous
+ * one — editing "then" and then "else" keeps both.
+ */
+private class Latest(cur: Conditional) {
+  var value: PropValue.Conditional = cur.toPropValue()
+    private set
+
+  fun send(next: PropValue.Conditional, op: (PropValue.Conditional) -> Unit) {
+    value = next
+    op(next)
+  }
+}
 
 /** The op setting wire key [key] (a prop, or "mod.X.p") of node [id] to [value]. */
 internal fun valueOp(id: Int, key: String, value: PropValue): DocOp =
@@ -58,17 +78,19 @@ internal fun conditionalRow(
   send: (DocOp, Boolean) -> Unit,
 ): HTMLElement {
   val wrap = Ui.el("div", "card")
-  wrap.appendChild(conditionHeader(label, cur) { field, test, negate -> send(valueOp(nodeId, key, withCondition(cur, field, test, negate)), false) })
+  val latest = Latest(cur)
+  fun sendValue(v: PropValue.Conditional) = latest.send(v) { send(valueOp(nodeId, key, it), false) }
+  wrap.appendChild(conditionHeader(label, cur) { field, test, negate -> sendValue(withCondition(latest.value, field, test, negate)) })
   for (branch in listOf(true, false)) {
     val row = Ui.el("div", "row")
     row.appendChild(Ui.el("label", "", if (branch) "then" else "else"))
     val value = if (branch) cur.whenTrue else cur.whenFalse
-    row.appendChild(branchEditor(nodeType, key, kind, value) { v -> send(valueOp(nodeId, key, withBranch(cur, branch, v)), false) })
+    row.appendChild(branchEditor(nodeType, key, kind, value) { v -> sendValue(withBranch(latest.value, branch, v)) })
     wrap.appendChild(row)
   }
   if (cur.whenTrue != null) {
     wrap.appendChild(
-      Ui.button("keep then", "btn") { send(valueOp(nodeId, key, cur.toPropValue().whenTrue ?: return@button), true) }
+      Ui.button("keep then", "btn") { send(valueOp(nodeId, key, latest.value.whenTrue ?: return@button), true) }
         .also { it.setAttribute("title", "replace the condition with its true branch") },
     )
   }
@@ -81,7 +103,9 @@ internal fun conditionalRow(
  */
 internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, send: (DocOp, Boolean) -> Unit): HTMLElement {
   val wrap = Ui.el("div", "card")
-  wrap.appendChild(conditionHeader(evName, cur) { field, test, negate -> send(valueOp(nodeId, evName, withCondition(cur, field, test, negate)), false) })
+  val latest = Latest(cur)
+  fun sendValue(v: PropValue.Conditional) = latest.send(v) { send(valueOp(nodeId, evName, it), false) }
+  wrap.appendChild(conditionHeader(evName, cur) { field, test, negate -> sendValue(withCondition(latest.value, field, test, negate)) })
   for (branch in listOf(true, false)) {
     val row = Ui.el("div", "row")
     row.appendChild(Ui.el("label", "", if (branch) "then" else "else"))
@@ -93,7 +117,7 @@ internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, 
     input.addEventListener("input", { _ ->
       val name = input.value.trim()
       val v = if (name.isEmpty()) null else PropValue.Action(name, action?.arg)
-      send(valueOp(nodeId, evName, withBranch(cur, branch, v)), false)
+      sendValue(withBranch(latest.value, branch, v))
     })
     row.appendChild(input)
     wrap.appendChild(row)
@@ -153,7 +177,8 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
     input.setAttribute("type", "text")
     input.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
     input.value = value.field
-    input.addEventListener("input", { _ -> onChange(PropValue.Bind(input.value.trim())) })
+    // An empty field name is no binding: wait for one (never `Bind("")`).
+    input.addEventListener("input", { _ -> input.value.trim().takeIf { it.isNotEmpty() }?.let { onChange(PropValue.Bind(it)) } })
     return input
   }
   when (kind) {

@@ -1,4 +1,5 @@
 import dev.keliver.portal.Action
+import dev.keliver.portal.Bind
 import dev.keliver.portal.Cond
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
@@ -62,6 +63,49 @@ class EditorConditionalsTest {
     thenInput.value = ""
     thenInput.dispatchEvent(Event("input"))
     assertEquals(DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled")), sent.single())
+  }
+
+  // Review S4: the panel is not re-rendered between edits — each op builds on the previous one.
+  @Test fun successiveEditsWithoutAReRenderKeepEachOther() {
+    val sent = mutableListOf<DocOp>()
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), "Open", "Closed")) { op, _ -> sent += op }
+    val inputs = row.querySelectorAll("input")
+    fun type(i: Int, v: String) = (inputs.item(i) as HTMLInputElement).let { it.value = v; it.dispatchEvent(Event("input")) }
+    type(2, "Yes")
+    type(3, "No")
+    assertEquals(
+      DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = lit("Yes"), whenFalse = lit("No"))),
+      sent.last(),
+    )
+    type(0, "shown")
+    assertEquals(
+      DocOp.SetProp(Handle(7), "text", PropValue.Conditional("shown", whenTrue = lit("Yes"), whenFalse = lit("No"))),
+      sent.last(),
+    )
+    // The same for a conditional event.
+    val events = mutableListOf<DocOp>()
+    val ev = conditionalEventRow(5, "onClick", Conditional(Cond("enabled"), Action("tap"), null)) { op, _ -> events += op }
+    val evInputs = ev.querySelectorAll("input")
+    (evInputs.item(3) as HTMLInputElement).let { it.value = "stop"; it.dispatchEvent(Event("input")) }
+    (evInputs.item(2) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")) }
+    assertEquals(
+      DocOp.SetProp(Handle(5), "onClick", PropValue.Conditional("enabled", whenTrue = PropValue.Action("go"), whenFalse = PropValue.Action("stop"))),
+      events.last(),
+    )
+  }
+
+  // Review nit: clearing a bound branch's field name sends nothing (never `Bind("")`).
+  @Test fun clearingABoundBranchSendsNothing() {
+    val sent = mutableListOf<DocOp>()
+    val row = conditionalRow(7, "StyledText", "text", "Text", PropKind.Text, Conditional(Cond("open"), Bind("title"), "-")) { op, _ -> sent += op }
+    val bound = row.querySelectorAll("input").item(2) as HTMLInputElement
+    assertEquals("title", bound.value)
+    bound.value = "  "
+    bound.dispatchEvent(Event("input"))
+    assertTrue(sent.isEmpty(), sent.toString())
+    bound.value = "name"
+    bound.dispatchEvent(Event("input"))
+    assertEquals(DocOp.SetProp(Handle(7), "text", PropValue.Conditional("open", whenTrue = PropValue.Bind("name"), whenFalse = lit("-"))), sent.single())
   }
 
   @Test fun anElseBranchIsLookedThroughForTheScopeParent() {
