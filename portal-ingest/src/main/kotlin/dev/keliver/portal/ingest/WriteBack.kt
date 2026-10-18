@@ -301,12 +301,14 @@ object WriteBack {
       }
     }
 
-    // Inserts: target children with no match, placed after the preceding kept sibling.
+    // Inserts: each target child with no match goes right after the statement
+    // before it in the TARGET — a kept one, or the one just inserted — so a run
+    // of inserts after one kept sibling (or at the block start) keeps its order.
+    var previous: KtExpression? = null
     for ((ti, tc) in targetChildren.withIndex()) {
-      if (matchOf[ti] != null) continue
-      val anchorTargetIdx = (ti - 1 downTo 0).firstOrNull { matchOf[it] != null }
-      val anchorPsi = anchorTargetIdx?.let { psi[parsedChildren[matchOf[it]!!].handle.v] }
-      insertStatement(block, tc, anchorPsi, factory, components, parentType)
+      val pi = matchOf[ti]
+      previous = if (pi != null) psi[parsedChildren[pi].handle.v] ?: return false
+      else insertStatement(block, tc, previous, factory, components, parentType) ?: return false
     }
     return true
   }
@@ -378,7 +380,7 @@ object WriteBack {
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
     parentType: String?,
-  ) {
+  ): KtExpression? {
     fun text(indent: String) = NodeEmitter.statement(node, indent, components, parentType).also { need(it.imports) }.text
     // P0 indent fix: every insertion carries "\n" + the destination indent, and
     // the statement text itself is emitted re-indented to that depth (the old
@@ -391,6 +393,7 @@ object WriteBack {
       // added next to it merges with it (the statement then landed after `}`).
       val inserted = block.addAfter(stmt, after)
       block.addBefore(factory.createWhiteSpace("\n$indent"), inserted)
+      return inserted as? KtExpression
     } else {
       val first = block.statements.firstOrNull()
       if (first != null) {
@@ -398,6 +401,7 @@ object WriteBack {
         val stmt = factory.createExpression(text(indent))
         val inserted = block.addBefore(stmt, first)
         block.addAfter(factory.createWhiteSpace("\n$indent"), inserted)
+        return inserted as? KtExpression
       } else {
         // An inline lambda block starts at the `{`, so indentOf(block) is empty:
         // the text before it also contains the component call. Derive the closing
@@ -420,6 +424,7 @@ object WriteBack {
         val next = inserted.nextSibling
         if (next is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace) next.replace(trailing)
         else block.addAfter(trailing, inserted)
+        return inserted as? KtExpression
       }
     }
   }
