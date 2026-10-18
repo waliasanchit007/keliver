@@ -13,6 +13,8 @@ import dev.keliver.portal.Bind
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
+import dev.keliver.portal.ListOf
+import dev.keliver.portal.Template
 import dev.keliver.portal.Token
 import dev.keliver.portal.tokenValue
 import dev.keliver.portal.WidgetNode
@@ -437,7 +439,8 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   val xhr = XMLHttpRequest()
   // K2: `tokens=1` — this editor understands PropValue.Token (an older one is served literals).
   // K3: `conditionals=1` — and PropValue.Conditional (an older one is served the true branch).
-  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
+  // K4: `templates=1&lists=1` — and PropValue.Template / PropValue.ListOf (else text / a resolved list).
+  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
@@ -501,7 +504,7 @@ private fun startVersionPoll() {
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
       val xhr = XMLHttpRequest()
-      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
+      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
       xhr.addEventListener("load", { _ ->
         val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
         if (v != null && v != docVersion) refetchDoc(true)
@@ -1768,6 +1771,13 @@ private fun propRowInner(
     return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() }
   }
 
+  // K4: a template — its text with {references}; an edit is validated before it is sent.
+  (props[key] as? Template)?.let { t -> return templateRow(rowEl, nodeId, key, t, picker) }
+  // K4: an Int or String list — its elements, each a literal, a ◆token or an @binding.
+  if ((kind == PropKind.IntList || kind == PropKind.StringList) && keyPrefix.isEmpty()) {
+    return listRow(rowEl, nodeId, key, props[key], kind, picker)
+  }
+
   // P3: bound props show a field-name input instead of a literal editor.
   val bound = props[key] as? Bind
   if (bound != null) {
@@ -1799,7 +1809,16 @@ private fun propRowInner(
     area.addEventListener("input", { _ -> editProp(nodeId, key, area.value) })
     rowEl.appendChild(area)
     tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
-    if (keyPrefix.isEmpty()) rowEl.appendChild(bindButton(nodeId, key, name))
+    if (keyPrefix.isEmpty()) {
+      rowEl.appendChild(bindButton(nodeId, key, name))
+      // K4: start a template — the text so far, then a binding named like the prop.
+      rowEl.appendChild(
+        Ui.button("{}", "btn icon") {
+          val parts = listOfNotNull(text.takeIf { it.isNotEmpty() }?.let { lit(it) }, PropValue.Bind(name))
+          sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Template(parts))))
+        }.also { it.setAttribute("title", "template: text with {bindings} and {◆tokens}") },
+      )
+    }
     return rowEl
   }
 
@@ -1869,6 +1888,90 @@ private fun propRowInner(
   // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
   if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
+}
+
+/** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
+private const val DOC_FEATURES = "tokens=1&conditionals=1&templates=1&lists=1"
+
+/** K4: a template prop row — the template's text, and ◆ to insert a design token. */
+private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
+  val (field, append) = refValueEditor(
+    templateSource(t), multiline = true,
+    placeholder = "text with {field}, {item.x}, {◆C.Name}; {{ and }} are braces",
+    parse = { parseTemplateSource(it, knownTokens(t)) },
+  ) { v ->
+    sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
+    renderBindings()
+  }
+  rowEl.appendChild(field)
+  if (knownTokens(t).isNotEmpty()) {
+    rowEl.appendChild(
+      Ui.button("◆", "btn icon") {
+        if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, { true }) { ref -> append("{◆$ref}") }
+      }.also { it.setAttribute("title", "insert a design token") },
+    )
+  }
+  return rowEl
+}
+
+/** K4: an Int / String list prop row — its elements, and ◆ to add a design token of the element kind. */
+private fun listRow(rowEl: HTMLElement, nodeId: Int, key: String, value: Any?, kind: PropKind, picker: HTMLElement): HTMLElement {
+  val strings = kind == PropKind.StringList
+  val (field, append) = refValueEditor(
+    listSource(value, kind), multiline = false,
+    placeholder = if (strings) "a|b|◆C.Name|@field" else "16777215, #FF8800, ◆C.Name, @field",
+    parse = { parseListSource(it, kind, knownTokens(value)) },
+  ) { v ->
+    sendOps(listOf(valueOp(nodeId, key, v)), refreshPanels = false)
+    renderBindings()
+  }
+  rowEl.appendChild(field)
+  val fits = { t: EditorToken -> t.kind == if (strings) "String" else "Int" }
+  if (editorTokens.any { !it.ambiguous && fits(it) }) {
+    rowEl.appendChild(
+      Ui.button("◆", "btn icon") {
+        if (picker.firstChild != null) Ui.clear(picker) else renderInsertTokenPicker(picker, fits, colours = true) { ref ->
+          append((if (listSource(value, kind).isEmpty() && (field as? HTMLInputElement)?.value.isNullOrBlank()) "" else if (strings) "|" else ", ") + "◆$ref")
+        }
+      }.also { it.setAttribute("title", "add a design token element") },
+    )
+  }
+  return rowEl
+}
+
+/** K4: a searchable list of the tokens [fits] accepts; choosing one hands its reference to [onPick]. */
+private fun renderInsertTokenPicker(picker: HTMLElement, fits: (EditorToken) -> Boolean, colours: Boolean = false, onPick: (String) -> Unit) {
+  Ui.clear(picker)
+  val box = Ui.el("div", "card")
+  val search = Ui.input()
+  search.setAttribute("type", "text")
+  search.setAttribute("placeholder", "search tokens")
+  search.setAttribute("style", "width:100%; margin-bottom:4px;")
+  val list = Ui.el("div")
+  list.setAttribute("style", "max-height:180px; overflow:auto;")
+  fun fill() {
+    Ui.clear(list)
+    val q = search.value.trim().lowercase()
+    val shown = editorTokens.filter { !it.ambiguous && fits(it) }
+      .filter { q.isEmpty() || q in it.ref.lowercase() || q in it.value.toString().lowercase() }
+      .sortedBy { it.ref }
+    if (shown.isEmpty()) list.appendChild(Ui.el("div", "muted", "no matching token"))
+    shown.forEach { t ->
+      val row = Ui.el("div", "pal-row")
+      row.appendChild(tokenChip(t.ref, t.value, if (colours && t.kind == "Int") PropKind.Color else PropKind.Text))
+      row.addEventListener("click", { _ ->
+        Ui.clear(picker)
+        onPick(t.ref)
+      })
+      list.appendChild(row)
+    }
+  }
+  search.addEventListener("input", { _ -> fill() })
+  box.appendChild(search)
+  box.appendChild(list)
+  picker.appendChild(box)
+  fill()
+  search.focus()
 }
 
 /** K2: a token's chip — a colour swatch for a colour, its reference, and its value. */
