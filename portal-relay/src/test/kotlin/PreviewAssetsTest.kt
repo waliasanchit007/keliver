@@ -635,6 +635,21 @@ class PreviewAssetsTest {
     assertFalse("failed less than" in later.reason, later.reason)
   }
 
+  @Test fun aRememberedHostIsNotContactedThroughARedirectEither() {
+    val closed = java.net.ServerSocket(0, 0, InetAddress.getLoopbackAddress()).use { it.localPort }
+    val a = assets(extraPorts = setOf(closed))
+    assertTrue("ConnectException" in assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/a.png")).reason)
+    upstream.createContext("/to-closed") { ex ->
+      ex.responseHeaders.add("Location", "http://localhost:$closed/b.png"); ex.sendResponseHeaders(302, -1); ex.close()
+    }
+    try {
+      val viaRedirect = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/to-closed"))
+      assertTrue("failed less than" in viaRedirect.reason, viaRedirect.reason)
+    } finally {
+      upstream.removeContext("/to-closed")
+    }
+  }
+
   @Test fun aNameThatDoesNotResolveIsRememberedForEveryUrlOnIt() {
     val lookups = AtomicInteger()
     val noDns = PreviewAssets.defaultClient().newBuilder()

@@ -16,7 +16,6 @@ import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
-import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlin.js.Promise
 import okio.Buffer

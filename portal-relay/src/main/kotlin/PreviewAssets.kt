@@ -83,7 +83,8 @@ import okhttp3.Request
  *    cannot stall the relay's handling of `/ops`, `/doc` or write-back. (The
  *    browser's few connections to the relay are the editor's to share: it
  *    runs at most three image fetches through here at once, one per image
- *    host.) A full pool answers 503;
+ *    host; a load it cancels is aborted in the browser, but the fetch here
+ *    runs on to its end or deadline.) A full pool answers 503;
  *  - the response carries `nosniff` and a sandbox CSP; CORS headers are the
  *    relay's access gate's (RelayAccess: a loopback origin is echoed, any
  *    other is refused before this runs);
@@ -212,6 +213,8 @@ class PreviewAssets(
             if (uri.scheme.equals("https", ignoreCase = true) && next.scheme.equals("http", ignoreCase = true)) {
               return failed(key, uri, unreachable = false, 403, "redirect from https down to http")
             }
+            // A redirect target remembered as failed is not contacted again either.
+            recentFailure(next.toString(), hostKey(next))?.let { return it }
             uri = next
             return@repeat
           }

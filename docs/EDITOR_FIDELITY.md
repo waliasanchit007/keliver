@@ -81,11 +81,17 @@ be read there. For hosts the app lists, the relay fetches instead:
   turn first and a shared one second, and holds both until its body is
   read: the images queued behind a hanging host wait for that host only and
   hold none of the three shared turns, so other hosts' images still load.
-  A host's entry is dropped once nothing runs or waits on it.
+  A host's entry is dropped once nothing runs or waits on it. The cost: an
+  app whose images all come from one host loads them through the relay one
+  at a time (each is then cached, below); allowing two per host would let
+  two slow hosts take every shared turn.
 - When an image load is cancelled (the canvas no longer needs it), its
   browser request is aborted (`AbortController`), so the connection is
   freed together with its turn rather than staying open until the relay
-  answers. A fetch that fails before reading its body is aborted too.
+  answers. A fetch that fails before reading its body is aborted too. The
+  relay does not see the abort: its own fetch runs on until it finishes or
+  its 10 s deadline, on the relay's image pool (so a burst of cancelled
+  loads can fill that pool and get `503` for images, never for edits).
 - The relay checks the caller's address is loopback. The relay listens on
   loopback by default; with `KELIVER_RELAY_BIND=all` (KNOWN_BUGS U35) this
   check still keeps other machines on the network off the endpoint. It does
@@ -109,7 +115,8 @@ be read there. For hosts the app lists, the relay fetches instead:
   again. The host (with its port) is remembered too only when no connection
   to it could be made: the name did not resolve, the connection was refused
   or had no route, the connect timed out, or the TLS handshake failed; for
-  30 s no other URL on it is tried. A host that accepted the connection is
+  30 s no other URL on it is tried, nor is it contacted as a redirect
+  target. A host that accepted the connection is
   marked only for a run of deadlines: when the 10 s deadline runs out
   (while waiting or while reading the body) on an accepted connection to
   the same host:port three times in a row, the third within 30 s of the
