@@ -65,11 +65,14 @@ class DocumentService(
    * [outcome] `surgical` (in place), `export` (the whole file, which held
    * nothing the export drops), `created`, `refused` (NOT written: it would
    * have lost code; the file is untouched) or `failed` (an error) — for the
-   * document [version] it tried to write. Sent on the change stream
+   * document [version] it tried to write. Or what replaced it (S4): the file
+   * was read (`external`: the document is the file again), or read while the
+   * document was ahead of it (`discarded`: that change is gone). Sent on the change stream
    * ([subscribe]) and in `/devstate`; the editor shows a refusal or failure.
    */
   data class WriteBackStatus(val version: Long, val outcome: String, val message: String) {
-    val written: Boolean get() = outcome != "refused" && outcome != "failed"
+    /** Whether the change is in the file: not `refused`, `failed` or `discarded`. */
+    val written: Boolean get() = outcome != "refused" && outcome != "failed" && outcome != "discarded"
 
     fun json(): String = "{\"version\":$version,\"outcome\":\"$outcome\",\"written\":$written,\"message\":${jsonString(message)}}"
 
@@ -86,7 +89,7 @@ class DocumentService(
     }
   }
 
-  /** The last write-back's status (null = none since the file was last read). */
+  /** The last write-back's status (null = none yet). */
   @Volatile var writeBack: WriteBackStatus? = null
     private set
 
@@ -303,13 +306,38 @@ class DocumentService(
     runCatching { sendEvent(out, doc.version) }
   }
 
-  /** V2 M3: a file-originated document (recognize+reconcile done by the caller).
-   * No undo entry, no .kt rewrite — the file IS the new baseline. */
+  /**
+   * V2 M3: a file-originated document (recognize+reconcile done by the
+   * caller). No undo entry, no .kt rewrite — the file IS the new baseline:
+   * it is what the next write-back merges onto ([fileDoc]), the self-write
+   * text is forgotten (B1: a later file equal to an OLD relay write — an IDE
+   * undo — is the author's edit, not ours), and a write still pending is
+   * dropped (the document is the file; there is nothing to write).
+   *
+   * The write-back status says so explicitly (S4): `external` — the file was
+   * read, nothing was lost — or `discarded` when the document was ahead of the
+   * file (an edit not yet written, or one that could not be written): that
+   * change is not in the file, and is now gone from the document too. [why]
+   * completes "<file> was re-read (…)".
+   */
   @Synchronized
-  fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument) {
+  fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument, why: String = "it changed in code") {
+    val ahead = doc.version != (fileDoc?.version ?: 0L)
+    val refused = writeBack?.takeIf { it.outcome == "refused" || it.outcome == "failed" }
+    val name = kotlinFile.name
     doc = newDoc
     fileDoc = newDoc
-    writeBack = null // the file is the document again: nothing is pending or refused
+    lastWrittenText = null
+    pendingWrite?.cancel(false)
+    writeBack = if (!ahead) {
+      WriteBackStatus(newDoc.version, "external", "$name was re-read ($why); the editor shows it as it is")
+    } else {
+      val which = if (refused != null) "the change that could not be written" else "the editor's latest change, not yet written,"
+      WriteBackStatus(
+        newDoc.version, "discarded",
+        "$name was re-read ($why), so $which is not in the file and has been discarded: the editor now shows the file as it is — make the change again if you still want it",
+      )
+    }
     undoStacks.clear()
     redoStacks.clear()
     changed(writeBack = false)
@@ -330,13 +358,32 @@ class DocumentService(
     val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
-    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next) else fileDoc = doc
+    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next, "a component or design token it uses changed") else fileDoc = doc
     return true
   }
 
   /** Self-write suppression for the file watcher. */
   @Volatile private var lastWrittenText: String? = null
   fun wasSelfWrite(text: String): Boolean = text == lastWrittenText
+
+  /** What the file watcher's [fileChanged] made of the file's new text. */
+  enum class FileChange { SELF_WRITE, NOT_A_SCREEN, INGESTED }
+
+  /**
+   * The file watcher: the screen's file now reads [text]. The relay's own
+   * write is skipped; anything else is read as the document (V2 M3: the file
+   * is the source of truth).
+   */
+  @Synchronized
+  fun fileChanged(text: String): FileChange {
+    if (wasSelfWrite(text)) return FileChange.SELF_WRITE
+    // C1: recognize with the project's component registry so component calls
+    // become editable Widget nodes instead of RawCode.
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+      ?: return FileChange.NOT_A_SCREEN
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized))
+    return FileChange.INGESTED
+  }
 
   private fun changed(writeBack: Boolean = true) {
     onProjected(doc.toWidgetTree())
@@ -375,12 +422,12 @@ class DocumentService(
    */
   private fun writeKotlin() {
     // One snapshot: what is merged, exported and recorded as the file's base is the same document.
-    val doc = this.doc
+    val (doc, base) = synchronized(this) { this.doc to fileDoc }
     val status = try {
       kotlinFile.parentFile.mkdirs()
       val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
       val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
-        onDisk = onDisk, doc = doc, base = fileDoc, components = components(), tokens = tokens(),
+        onDisk = onDisk, doc = doc, base = base, components = components(), tokens = tokens(),
         fileName = tokenFileId, functionName = functionName, packageName = packageName,
       )
       when (plan) {
@@ -391,30 +438,72 @@ class DocumentService(
             "this change could not be written to ${kotlinFile.name} without losing code: ${plan.reason}; undo it or make it in code",
           )
         }
-        is dev.keliver.portal.ingest.ScreenWriter.Write -> {
-          lastWrittenText = plan.text
-          kotlinFile.writeText(plan.text)
-          fileDoc = doc
-          // M9 versioned catch-up: bake the doc version this screen was written at
-          // into a sibling const. Rebuilding the dev bundle (serve --continuous)
-          // picks it up; the device router compares it to the live doc version.
-          (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
-            val screen = kotlinFile.nameWithoutExtension
-            File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
-              "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
-            )
-          }
-          val how = plan.how.name.lowercase()
-          WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
-        }
+        // B1: the file is not what the relay last wrote or read — never merged onto: read it.
+        is dev.keliver.portal.ingest.ScreenWriter.Reread -> reread(plan.reason, base)
+        is dev.keliver.portal.ingest.ScreenWriter.Write -> written(plan, doc, base, onDisk)
       }
     } catch (t: Throwable) {
       if (t is VirtualMachineError) throw t
       println("writeKotlin failed for $screenKey: $t")
       WriteBackStatus(doc.version, "failed", "writing ${kotlinFile.name} failed: $t; the change is not in the file")
     }
-    writeBack = status
-    announce()
+    if (status != null) {
+      writeBack = status
+      announce()
+    }
+  }
+
+  /**
+   * Writes [plan] — only if, at this moment, the file is still [onDisk] and
+   * nothing read it since [base] was taken (else the plan is for a file that
+   * is gone: re-read, or let the read that happened stand). Null = no status
+   * of its own.
+   */
+  @Synchronized
+  private fun written(
+    plan: dev.keliver.portal.ingest.ScreenWriter.Write,
+    doc: UiDocument,
+    base: UiDocument?,
+    onDisk: String?,
+  ): WriteBackStatus? {
+    if (fileDoc !== base) return null // the file was read meanwhile: that read set the status
+    val now = if (kotlinFile.exists()) kotlinFile.readText() else null
+    if (now != onDisk) return reread("the file changed while the change was being written", base)
+    lastWrittenText = plan.text
+    kotlinFile.writeText(plan.text)
+    fileDoc = doc
+    // M9 versioned catch-up: bake the doc version this screen was written at
+    // into a sibling const. Rebuilding the dev bundle (serve --continuous)
+    // picks it up; the device router compares it to the live doc version.
+    (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
+      val screen = kotlinFile.nameWithoutExtension
+      File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
+        "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
+      )
+    }
+    val how = plan.how.name.lowercase()
+    return WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
+  }
+
+  /**
+   * B1: the file is not the document it was last written from or read as
+   * ([reason]) — read it now, as the file watcher would ([acceptExternal]: the
+   * document becomes the file, and the status says the editor's unwritten
+   * change was discarded). Null = the read set the status.
+   */
+  @Synchronized
+  private fun reread(reason: String, base: UiDocument?): WriteBackStatus? {
+    if (fileDoc !== base) return null // already read meanwhile
+    val text = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val rec = text?.let {
+      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens()) }.getOrNull()
+    } ?: return WriteBackStatus(
+      doc.version, "refused",
+      "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
+    )
+    println("write-back of $screenKey (v${doc.version}): $reason — ${kotlinFile.name} re-read, not written")
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec), reason)
+    return null
   }
 
   companion object {

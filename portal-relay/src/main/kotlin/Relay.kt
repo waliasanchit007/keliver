@@ -853,16 +853,11 @@ private fun ingestFile(f: File) {
     val screen = f.nameWithoutExtension
     val text = f.readText()
     val svc = docFor(mapOf("project" to project, "screen" to screen))
-    if (svc.wasSelfWrite(text)) return
-    // C1: recognize with the project's component registry so component calls
-    // become editable Widget nodes instead of RawCode.
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(
-      tokenFileId(f), text, Components.registry(project), Tokens.table(project),
-    )
-      ?: return println("ingest: ${f.name}: no @Composable screen function — skipped")
-    val newDoc = dev.keliver.portal.ingest.Reconciler.reconcile(svc.doc, recognized)
-    svc.acceptExternal(newDoc)
-    println("ingest: $project/$screen -> v${newDoc.version} (file edit)")
+    when (svc.fileChanged(text)) {
+      DocumentService.FileChange.SELF_WRITE -> {}
+      DocumentService.FileChange.NOT_A_SCREEN -> println("ingest: ${f.name}: no @Composable screen function — skipped")
+      DocumentService.FileChange.INGESTED -> println("ingest: $project/$screen -> v${svc.doc.version} (file edit)")
+    }
   }.onFailure { println("ingest failed for $f: $it") }
 }
 
