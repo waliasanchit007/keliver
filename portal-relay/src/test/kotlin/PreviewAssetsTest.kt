@@ -313,7 +313,11 @@ class PreviewAssetsTest {
 
   @Test fun configAcceptsHostNamesOnly() {
     assertEquals(listOf("img.example.com"), PortalConfig(previewAssetHosts = listOf("img.example.com")).previewAssetHosts)
-    for (good in listOf("img.example.com", "a.co", "xn--bcher-kva.example", "0xab.example.com", "img2.example.com", "1a.example.com")) {
+    for (good in listOf(
+      "img.example.com", "a.co", "xn--bcher-kva.example", "0xab.example.com", "img2.example.com", "1a.example.com",
+      // A numeric label that is not the last one is a name (WHATWG: only the last label decides).
+      "1.bp.blogspot.com", "0.gravatar.com", "123.example.com", "0x7f.example.com", "1.2.3.example",
+    )) {
       assertTrue(isPreviewAssetHost(good), good)
     }
     for (bad in listOf(
@@ -324,8 +328,8 @@ class PreviewAssetsTest {
       // IPv4 in every form a URL parser accepts
       "10.0.0.1", "127.0.0.1", "127.1", "127.0.1", "2130706433", "0177.0.0.1", "017700000001",
       "0x7f.0.0.1", "0x7f000001", "0x7f.0x0.0x0.0x1", "1.2.3.4.5",
-      // any all-numeric label, and a hex last label
-      "123.example.com", "img.123", "img.example.0x1f",
+      // a numeric or hex last label, whatever comes before it
+      "img.123", "img.example.0x1f", "img.example.0x", "0x7f.0.0.0x1", "img.0177",
       // IPv6
       "::1", "[::1]", "fe80::1", "::ffff:127.0.0.1",
     )) {

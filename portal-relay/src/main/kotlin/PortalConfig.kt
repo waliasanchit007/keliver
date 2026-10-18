@@ -239,9 +239,10 @@ data class PortalConfig(
    * load images themselves.
    *
    * Refused: `localhost` and `*.localhost`, single-label names, IP literals in
-   * any form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex — any
-   * all-numeric label, or a hex last label), so no entry names the relay's
-   * own machine or network by address. What a listed name resolves to in DNS
+   * any form (IPv6; IPv4 dotted, short-dotted, decimal, octal or hex — by the
+   * WHATWG URL rule, any name whose last label is all digits or `0x` hex), so
+   * no entry names the relay's own machine or network by address. A numeric
+   * label elsewhere is fine (`1.bp.blogspot.com`, `0.gravatar.com`). What a listed name resolves to in DNS
    * is trusted, not checked: listing a host says its DNS is trusted.
    */
   val previewAssetHosts: List<String> = emptyList(),
@@ -250,7 +251,7 @@ data class PortalConfig(
     previewAssetHosts.forEach { host ->
       require(isPreviewAssetHost(host)) {
         "previewAssetHosts entries must be lowercase multi-label DNS host names (no scheme, port, path, " +
-          "wildcard, IP literal, numeric label or localhost): $host"
+          "wildcard, IP literal, numeric or hex last label, or localhost): $host"
       }
     }
     require(previewAssetHosts.distinct().size == previewAssetHosts.size) { "previewAssetHosts must be unique" }
@@ -264,17 +265,20 @@ private val HEX_LABEL = Regex("^0x[0-9a-f]*$")
 /**
  * A [PortalConfig.previewAssetHosts] entry: a lowercase DNS name of at least
  * two labels that no URL parser reads as an IP address and that is not
- * `localhost`. Any all-numeric label is refused (`127.1`, `2130706433`,
- * `0177.0.0.1`), as is a hex last label (`0x7f.0.0.0x1`): browsers and
- * resolvers read those as IPv4. `:`/`[` (IPv6) never match [PREVIEW_ASSET_HOST].
+ * `localhost`. The IPv4 test is the WHATWG URL standard's ("ends in a
+ * number"): a host whose last label is all digits (`127.1`, `2130706433`,
+ * `0177.0.0.1`) or `0x` hex (`0x7f.0.0.0x1`) is parsed as IPv4 by browsers
+ * and refused here; one with a numeric label anywhere else is a name
+ * (`1.bp.blogspot.com`, `0.gravatar.com`). An all-numeric name (`10.0.0.1`)
+ * fails on its last label. `:`/`[` (IPv6) never match [PREVIEW_ASSET_HOST].
  */
 internal fun isPreviewAssetHost(host: String): Boolean {
   if (!PREVIEW_ASSET_HOST.matches(host) || ':' in host) return false
   val labels = host.split('.')
   if (labels.size < 2) return false
   if (host == "localhost" || host.endsWith(".localhost")) return false
-  if (labels.any { label -> label.all { it.isDigit() } }) return false
-  if (HEX_LABEL.matches(labels.last())) return false
+  val last = labels.last()
+  if (last.all { it.isDigit() } || HEX_LABEL.matches(last)) return false
   return true
 }
 
