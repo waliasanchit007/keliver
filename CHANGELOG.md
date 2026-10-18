@@ -33,7 +33,7 @@
     never https to http, one raster type from a fixed list (no SVG) served under its canonical
     name, 10 MB cap, one deadline per request, its own bounded thread pool (503 when full) so a
     slow host never delays other relay endpoints, an in-memory LRU cache and a short memory of
-    failures, the caller's origin allowed only when loopback. Host entries refuse `localhost`,
+    failures; CORS comes from the relay's access gate (U36). Host entries refuse `localhost`,
     single labels and IP literals in any form; DNS for a listed name is trusted. `GET
     /preview-assets` lists the hosts; the editor's image fetcher rewrites only those URLs.
   - **Theme:** `AppPreviewEntry` gains `screenWrapper` (the app's guest-side wrapper around

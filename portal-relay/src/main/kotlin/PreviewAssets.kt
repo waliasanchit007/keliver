@@ -67,8 +67,9 @@ import okhttp3.Request
  *  - requests run on this endpoint's own small pool ([threads] threads,
  *    [queue] waiting), never on the relay's shared dispatcher: a slow host
  *    cannot stall `/ops`, `/doc` or write-back. A full pool answers 503;
- *  - the response names the caller's origin in Access-Control-Allow-Origin
- *    only when that origin is loopback, and carries `nosniff` and a sandbox CSP;
+ *  - the response carries `nosniff` and a sandbox CSP; CORS headers are the
+ *    relay's access gate's (RelayAccess: a loopback origin is echoed, any
+ *    other is refused before this runs);
  *  - refusals are logged with the host and reason, never the URL's path or query.
  *
  * Preview only: devices load images themselves and never use this.
@@ -321,11 +322,6 @@ class PreviewAssets(
         ex.sendResponseHeaders(405, -1)
         return
       }
-      val origin = ex.requestHeaders.getFirst("Origin")
-      if (origin != null && isLoopbackOrigin(origin)) {
-        ex.responseHeaders.add("Access-Control-Allow-Origin", origin)
-      }
-      ex.responseHeaders.add("Vary", "Origin")
       ex.responseHeaders.add("X-Content-Type-Options", "nosniff")
       ex.responseHeaders.add("Content-Security-Policy", "default-src 'none'; sandbox")
       val url = urlParam(ex.requestURI.rawQuery)
@@ -403,13 +399,5 @@ class PreviewAssets(
       (rawQuery ?: "").split('&').firstOrNull { it.startsWith("url=") }
         ?.removePrefix("url=")
         ?.let { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrNull() }
-
-    /** `http(s)://localhost|127.0.0.1|[::1][:port]` — the editor's own pages. */
-    fun isLoopbackOrigin(origin: String): Boolean {
-      val uri = runCatching { URI(origin) }.getOrNull() ?: return false
-      return uri.scheme in setOf("http", "https") &&
-        uri.host in setOf("localhost", "127.0.0.1", "[::1]", "::1") &&
-        uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawUserInfo == null
-    }
   }
 }

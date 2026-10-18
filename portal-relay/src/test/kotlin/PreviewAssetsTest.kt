@@ -205,10 +205,11 @@ class PreviewAssetsTest {
 
   // ── the HTTP contract, through a real server like the relay's ─────────────
 
-  // Like the relay: the default executor (one dispatcher thread for every
-  // endpoint) and another endpoint beside /preview-asset.
+  // Like the relay: behind its access gate (which owns CORS), the default
+  // executor (one dispatcher thread for every endpoint) and another endpoint
+  // beside /preview-asset.
   private fun relay(a: PreviewAssets): HttpServer =
-    HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0).apply {
+    RelayAccess.gate(HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)).apply {
       createContext("/preview-asset") { ex -> a.serve(ex) }
       createContext("/ping") { ex ->
         ex.sendResponseHeaders(200, 2); ex.responseBody.use { it.write("ok".encodeToByteArray()) }; ex.close()
@@ -256,7 +257,9 @@ class PreviewAssetsTest {
       )
       assertEquals(200, conn.code)
       assertEquals("image/png", conn.contentType)
-      assertEquals("http://localhost:8096", conn.getHeaderField("Access-Control-Allow-Origin"))
+      // Exactly one: two Access-Control-Allow-Origin values fail every browser fetch.
+      assertEquals(listOf("http://localhost:8096"), conn.headers.values("Access-Control-Allow-Origin"))
+      assertEquals(listOf("Origin"), conn.headers.values("Vary"))
       assertEquals("nosniff", conn.getHeaderField("X-Content-Type-Options"))
       assertContentEquals(png, conn.body)
       val seen = seenHeaders.single()
@@ -267,12 +270,13 @@ class PreviewAssetsTest {
     }
   }
 
-  @Test fun aForeignOriginGetsNoCorsGrant() {
+  @Test fun aForeignOriginIsRefusedByTheGate() {
     val server = relay(assets())
     try {
       val conn = call(server, "$base/img.png", headers = mapOf("Origin" to "https://evil.example"))
-      assertEquals(200, conn.code)
+      assertEquals(403, conn.code)
       assertNull(conn.getHeaderField("Access-Control-Allow-Origin"))
+      assertEquals(0, hits.get())
     } finally {
       server.stop(0)
     }
@@ -291,13 +295,6 @@ class PreviewAssetsTest {
       server.stop(0)
       off.stop(0)
     }
-  }
-
-  @Test fun loopbackOrigins() {
-    assertTrue(PreviewAssets.isLoopbackOrigin("http://localhost:8096"))
-    assertTrue(PreviewAssets.isLoopbackOrigin("http://127.0.0.1:18096"))
-    assertFalse(PreviewAssets.isLoopbackOrigin("http://localhost.evil.test"))
-    assertFalse(PreviewAssets.isLoopbackOrigin("null"))
   }
 
   @Test fun configAcceptsHostNamesOnly() {

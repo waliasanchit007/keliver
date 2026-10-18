@@ -257,7 +257,7 @@ class RelayAccessTest {
    */
   private val readOnlyContexts = setOf(
     "/devstate", "/capabilities", "/runtime-metadata", "/preview-build", "/components", "/flow",
-    "/doc", "/doc-events", "/publickey", "/bundles", "/reports", "/tokens",
+    "/doc", "/doc-events", "/publickey", "/bundles", "/reports", "/tokens", "/preview-assets",
   )
 
   @Test

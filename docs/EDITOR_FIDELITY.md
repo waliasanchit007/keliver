@@ -70,11 +70,12 @@ be read there. For hosts the app lists, the relay fetches instead:
   `GET /preview-asset?url=<encoded URL>`; any other URL loads directly as
   before. If the list never arrives, the first image waits for it at most 3 s
   and later images do not wait.
-- The relay checks the caller's address is loopback: its listening socket
-  accepts every interface, so this keeps other machines on the network off
-  the endpoint. It does not stop a web page in the developer's own browser,
-  which also connects from loopback; the relay's Host/Origin gate is what
-  refuses those (KNOWN_BUGS U36).
+- The relay checks the caller's address is loopback. The relay listens on
+  loopback by default; with `KELIVER_RELAY_BIND=all` (KNOWN_BUGS U35) this
+  check still keeps other machines on the network off the endpoint. It does
+  not stop a web page in the developer's own browser, which also connects
+  from loopback; the relay's Host/Origin gate is what refuses those
+  (KNOWN_BUGS U36).
 - GET only, for `http`/`https` URLs without user-info, on the scheme's default
   port (80/443; another port is refused, an invalid one is a 400). It forwards
   nothing from the caller (no cookies, no `Authorization`, no other header)
@@ -97,8 +98,9 @@ be read there. For hosts the app lists, the relay fetches instead:
   active document that could call the relay's write endpoints (the canvas
   could not decode it anyway). Responses carry `X-Content-Type-Options:
   nosniff` and a sandbox `Content-Security-Policy`.
-- `Access-Control-Allow-Origin` names the caller's origin only when that origin
-  is loopback (`http://localhost:8096`, `http://127.0.0.1:…`).
+- CORS is the relay's access gate's, as for every endpoint: a loopback origin
+  (`http://localhost:8096`, `http://127.0.0.1:…`) is echoed in
+  `Access-Control-Allow-Origin`; any other origin is refused before the fetch.
 - Images are cached in memory (LRU, 256 entries / 64 MB, ten minutes).
 - Refusals are logged with the host and the reason, never the URL's path or
   query.
