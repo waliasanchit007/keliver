@@ -622,8 +622,9 @@ fun SectionCard(content: @Composable () -> Unit) {
     says so). Limits: an item type declared in another file is not read (an
     item field in a template stays grammar, as before), and the document
     checks only what the contract carries — not item field types, nor fields
-    of a screen whose interface it does not list; the next ingest reads such
-    an edit back as RawCode.
+    of a screen whose interface it does not list. Such an edit is never
+    written silently wrong: write-back refuses it, because the file would
+    not read back as the document.
   - A template fits only where source takes a `String`: a widget's String
     prop, a component's String parameter, or a conditional value's branch on
     one (`if (b.on) "Hi ${b.n}" else "-"`).

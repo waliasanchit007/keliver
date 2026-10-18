@@ -109,6 +109,18 @@ class TemplateTypeReadingTest {
     }
   }
 
+  @Test fun anEditTheDocumentCannotCheckIsRefusedAtWriteBack() {
+    // The contract carries no item types: the document lets a template read `row.price`
+    // (a Double), but the written file would not read back as the document — refused.
+    val src = screen("StyledText(text = \"x\")", "StyledText(text = \"a §{row.name}\")", BINDINGS + "\n" + ROW_INTERFACE)
+    val r = rec(src)
+    val base = UiDocument("s", r.root, r.contract, 0, 1000)
+    val text = (r.root.children[1] as DocNode.Widget).children.single().handle
+    val edited = base.apply(DocOp.SetProp(text, "text", PropValue.Template(listOf(PropValue.Bind("row.price"))))).doc
+    val plan = ScreenWriter.plan(src, edited, base, src, fileName = "app/screens/S.kt", functionName = "S", packageName = "app.screens")
+    assertIs<ScreenWriter.Refuse>(plan, plan.toString())
+  }
+
   @Test fun aFullyQualifiedTypeIsTheSameType() {
     val tail = BINDINGS.replace("  val name: String\n", "  val name: String\n  val qs: kotlin.String\n  val qi: kotlin.Int\n  val ql: kotlin.Long\n  val qb: kotlin.Boolean\n") + "\n" + ROW_INTERFACE
     assertIs<DocNode.Widget>(first(screen("StyledText(text = \"§{b.qs} §{b.qi} §{b.ql} §{b.qb}\")", tail = tail)))

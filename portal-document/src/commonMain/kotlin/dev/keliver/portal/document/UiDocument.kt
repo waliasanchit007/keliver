@@ -80,7 +80,8 @@ import kotlinx.serialization.Serializable
  * (ingest could not read its type) is no template's reference. Not checked
  * here: an item field's type (the contract does not carry item types), and
  * a field the contract does not list (the screen's interface not in its
- * file, or inherited from another file) — ingest reads those as RawCode.
+ * file, or inherited from another file) — ingest reads those as RawCode, so
+ * write-back refuses such an edit (the file would not read back as the document).
  */
 @Serializable
 public data class UiDocument(
