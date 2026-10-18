@@ -42,6 +42,8 @@ public fun listKindOf(sourceType: String?): String? = when (sourceType?.replace(
  * K4: the token kinds a template reads — those the device (Kotlin/JS) and
  * the preview (wasm, JVM) print alike. Never a Double: `1.0` prints `1` on
  * the device and `1.0` in the preview, so no preview of one is faithful.
+ * Decide it on the JVM or wasm: on Kotlin/JS every number is `is Int`, so a
+ * Double value reads as an Int there.
  */
 public fun templateTokenFits(value: Any?): Boolean = tokenKindOf(value) in TEMPLATE_TOKEN_KINDS
 

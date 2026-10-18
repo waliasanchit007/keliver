@@ -92,8 +92,14 @@ internal fun parseTemplateSource(text: String, known: Map<String, PropValue.Toke
 internal fun editsAsList(kind: PropKind, value: Any?): Boolean =
   (kind == PropKind.IntList || kind == PropKind.StringList) && (value == null || value is List<*> || value is ListOf)
 
-/** Whether the panel offers [t] inside a template: a String, Int or Boolean token (never a Double). */
-internal fun templateTokenOffered(t: EditorToken): Boolean = !t.ambiguous && templateTokenFits(t.value)
+/**
+ * Whether the panel offers [t] inside a template: a String, Int or Boolean
+ * token (never a Double) — by the kind the server declared, which every
+ * target reads alike (Kotlin/JS cannot tell a Double value from an Int).
+ */
+internal fun templateTokenOffered(t: EditorToken): Boolean = !t.ambiguous && t.kind in TEMPLATE_TOKEN_KINDS && templateTokenFits(t.value)
+
+private val TEMPLATE_TOKEN_KINDS = setOf("String", "Int", "Boolean")
 
 /**
  * A String list element's literal [s] as the panel spells it, so it reads
