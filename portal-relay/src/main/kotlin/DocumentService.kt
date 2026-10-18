@@ -134,19 +134,21 @@ class DocumentService(
   /**
    * K3: a conditional value on a project-component instance — the document
    * checks catalogued widgets; here the signature decides: an event parameter
-   * takes actions or null, a value parameter takes values in both branches
-   * (null only where its declared type is nullable). Null = acceptable.
+   * takes actions, a value parameter takes values; either takes a `null`
+   * branch only where its declared type is nullable. Null = acceptable.
    */
   private fun conditionalRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
     if (v !is PropValue.Conditional) return null
     val spec = registry.spec(type) ?: return null
     val branches = listOf(v.whenTrue, v.whenFalse)
+    val nullable = spec.paramTypes[key]?.trim()?.endsWith("?") == true
     if (spec.events.any { it.name == key }) {
-      return if (branches.all { it == null || it is PropValue.Action }) null
-      else "conditional $type.$key: an event's branches are actions or null"
+      if (branches.any { it != null && it !is PropValue.Action }) return "conditional $type.$key: an event's branches are actions or null"
+      // `onGo = if (b.x) b::go else null` compiles only where onGo is `(() -> Unit)?`.
+      if (branches.any { it == null } && !nullable) return "conditional $type.$key: null fits only a nullable event (${spec.paramTypes[key] ?: "undeclared"})"
+      return null
     }
     if (branches.any { it is PropValue.Action }) return "conditional $type.$key: an action fits only an event parameter"
-    val nullable = spec.paramTypes[key]?.trim()?.endsWith("?") == true
     if (branches.any { it == null } && !nullable) return "conditional $type.$key: null fits only a nullable parameter"
     return null
   }

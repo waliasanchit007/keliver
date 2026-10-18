@@ -72,6 +72,14 @@ class ConditionalRelayTest {
     paramTypes = mapOf("label" to "String", "note" to "String?", "onTap" to "(() -> Unit)?"),
   )
 
+  // A non-nullable event (`onGo: () -> Unit`) and a nullable one with a payload.
+  private val pill = ComponentSpec(
+    "Pill",
+    props = listOf(PropSpec("label", PropKind.Text, "Label")),
+    events = listOf(ComponentEventSpec("onGo"), ComponentEventSpec("onPick", paramType = "Int", required = false)),
+    paramTypes = mapOf("label" to "String", "onGo" to "() -> Unit", "onPick" to "((Int) -> Unit)?"),
+  )
+
   private fun service(screens: File, components: File): DocumentService {
     Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
     return DocumentService.fromFileOrTree(
@@ -81,7 +89,7 @@ class ConditionalRelayTest {
       kotlinFile = File(screens, "home.kt"),
       functionName = "HomeScreen",
       packageName = "app.screens",
-      components = { MapComponentRegistry(listOf(toggleRow)) },
+      components = { MapComponentRegistry(listOf(toggleRow, pill)) },
       tokens = { Tokens.table(project) },
       tokenFileId = "screens/home.kt",
       tokensVersion = { Tokens.version(project) },
@@ -166,5 +174,26 @@ class ConditionalRelayTest {
     val elseText = ((cond.children[1] as DocNode.Widget).children.single() as DocNode.Widget)
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(elseText.handle, "text", lit("gone")))).ok)
     assertEquals(home.replace("StyledText(text = \"hidden\")", "StyledText(text = \"gone\")"), awaitFile(file) { "gone" in it })
+  }
+
+  // Review B3: `onGo = if (b.x) b::go else null` does not compile when onGo is `() -> Unit`.
+  @Test fun aNullBranchFitsOnlyANullableEvent() {
+    val (screens, components) = app()
+    val svc = service(screens, components)
+    val go = PropValue.Action("go")
+    fun insert(props: Map<String, PropValue>) =
+      DocOp.InsertNode(svc.doc.root.handle, null, DocNode.Widget(Handle(0), "Pill", mapOf("label" to lit("L")) + props))
+    assertFalse(svc.dryRun(batch(svc, insert(mapOf("onGo" to PropValue.Conditional("open", whenTrue = go, whenFalse = null))))).ok)
+    assertFalse(svc.dryRun(batch(svc, insert(mapOf("onGo" to PropValue.Conditional("open", whenTrue = null, whenFalse = go))))).ok)
+    val both = insert(mapOf("onGo" to PropValue.Conditional("open", whenTrue = go, whenFalse = PropValue.Action("stop"))))
+    assertTrue(svc.dryRun(batch(svc, both)).ok, svc.dryRun(batch(svc, both)).error)
+    val nullable = insert(mapOf("onGo" to go, "onPick" to PropValue.Conditional("open", whenTrue = PropValue.Action("pick"), whenFalse = null)))
+    assertTrue(svc.dryRun(batch(svc, nullable)).ok, svc.dryRun(batch(svc, nullable)).error)
+    // The same through SetProp — what clearing one action name in the editor sends.
+    assertTrue(svc.submit(batch(svc, insert(mapOf("onGo" to go)))).ok)
+    val placed = (svc.doc.root as DocNode.Widget).children.first() as DocNode.Widget
+    assertEquals("Pill", placed.type)
+    val cleared = DocOp.SetProp(placed.handle, "onGo", PropValue.Conditional("open", whenTrue = go, whenFalse = null))
+    assertFalse(svc.dryRun(batch(svc, cleared)).ok)
   }
 }

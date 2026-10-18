@@ -202,4 +202,39 @@ class ComponentConditionalTest {
     )!!.spec
     assertTrue(c.diagnostic!!.contains("condition `count > 0` is outside the portal grammar"), c.diagnostic)
   }
+
+  // Review nit: ingest and edits agree — a null branch only where the parameter is nullable.
+  @Test fun aScreenPassesANullBranchOnlyToANullableParameter() {
+    fun arg(a: String): dev.keliver.portal.document.DocNode {
+      val text = """
+        package app.screens
+
+        import androidx.compose.runtime.Composable
+        import app.components.ToggleRow
+        import dev.keliver.layout.compose.Column
+
+        @Composable
+        fun HomeScreen(b: HomeScreenBindings) {
+          Column {
+            ToggleRow(label = "L", selected = true, $a)
+          }
+        }
+
+        interface HomeScreenBindings {
+          val open: Boolean
+          fun tap()
+          fun go()
+        }
+      """.trimIndent()
+      val rec = Recognizer.recognize("app/screens/HomeScreen.kt", text, registry, tokens)!!
+      return (rec.root as dev.keliver.portal.document.DocNode.Widget).children.single()
+    }
+    // onLongTap: (() -> Unit)? and note: String? take null; subtitle: String does not.
+    assertTrue(arg("onTap = b::tap, onLongTap = if (b.open) b::go else null") is dev.keliver.portal.document.DocNode.Widget)
+    assertTrue(arg("onTap = b::tap, note = if (b.open) \"n\" else null") is dev.keliver.portal.document.DocNode.Widget)
+    assertTrue(arg("onTap = b::tap, subtitle = if (b.open) \"s\" else null") is dev.keliver.portal.document.DocNode.RawCode)
+    // onTap: () -> Unit is not nullable.
+    assertTrue(arg("onTap = if (b.open) b::tap else null") is dev.keliver.portal.document.DocNode.RawCode)
+    assertTrue(arg("onTap = if (b.open) b::tap else b::go") is dev.keliver.portal.document.DocNode.Widget)
+  }
 }

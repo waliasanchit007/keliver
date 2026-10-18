@@ -457,7 +457,18 @@ object Recognizer {
       val (okT, whenTrue) = branch(ifExpr.then)
       val (okF, whenFalse) = branch(ifExpr.`else`)
       if (!okT || !okF || (whenTrue == null && whenFalse == null)) return null
+      if ((whenTrue == null || whenFalse == null) && !nullFits(type, name)) return null
       return PropValue.Conditional(cond.field, cond.test.wire, cond.negate, whenTrue, whenFalse)
+    }
+
+    /**
+     * K3: whether `null` is a value of [type]'s [name] — the rule edits apply
+     * too: a catalog widget's event (every catalog event is nullable), or a
+     * project component parameter whose declared type is nullable.
+     */
+    private fun nullFits(type: String, name: String): Boolean {
+      widgetSpec(type)?.let { return name in it.events }
+      return components.spec(type)?.paramTypes?.get(name)?.trim()?.endsWith("?") == true
     }
 
     /** Why [expr] — not a widget, component or grammar construct — is RawCode. */

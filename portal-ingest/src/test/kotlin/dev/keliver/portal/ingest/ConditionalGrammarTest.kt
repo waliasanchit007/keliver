@@ -260,6 +260,8 @@ class ConditionalGrammarTest {
     assertIs<DocNode.RawCode>(rawOf("if (b.hidden) {\n      StyledText(text = \"a\")\n    } else if (b.open) {\n      StyledText(text = \"b\")\n    }"))
     assertIs<DocNode.RawCode>(rawOf("StyledText(text = if (b.open) if (b.hidden) \"a\" else \"b\" else \"c\")"))
     assertIs<DocNode.RawCode>(rawOf("StyledText(text = if (b.subtitle.length > 3) \"a\" else \"b\")"))
+    // A null branch fits only a nullable parameter: never a catalog value prop (the editor refuses it too).
+    assertIs<DocNode.RawCode>(rawOf("StyledText(text = if (b.open) \"a\" else null)"))
     // A branch may be any value the prop takes by itself — here a binding.
     assertIs<DocNode.Widget>(rawOf("StyledText(text = if (b.open) \"a\" else b.subtitle)"))
   }

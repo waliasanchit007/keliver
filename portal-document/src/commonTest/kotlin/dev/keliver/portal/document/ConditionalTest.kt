@@ -87,6 +87,9 @@ class ConditionalTest {
     refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("b.x", whenTrue = lit("a"), whenFalse = lit("b")).copy(field = "1x")))
     // A token branch that does not fit (an Int token on a Text prop).
     refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", whenTrue = ink, whenFalse = lit("b"))))
+    // Review B3: no branch at all is `if (c) null else null` — never written, never ingested.
+    refused(DocOp.SetProp(Handle(3), "onClick", PropValue.Conditional("x")))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Button", props = mapOf("text" to lit("a"), "onClick" to PropValue.Conditional("x")))))
     // A modifier argument takes values in both branches.
     refused(DocOp.SetModifier(Handle(2), "Padding.allDp", PropValue.Conditional("x", whenTrue = lit(4), whenFalse = null)))
     // Accepted where every branch fits; a negative Dp branch clamps at 0.

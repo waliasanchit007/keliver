@@ -345,6 +345,7 @@ private fun conditionalMisfit(nodeType: String, key: String, v: PropValue): Stri
     else -> {}
   }
   val branches = listOf(v.whenTrue, v.whenFalse)
+  if (branches.all { it == null }) return "conditional $where: at least one branch has a value"
   if (branches.any { it is PropValue.Conditional }) return "conditional $where: branches do not nest"
   val spec = widgetSpec(nodeType)
   if (key.startsWith("mod.")) {

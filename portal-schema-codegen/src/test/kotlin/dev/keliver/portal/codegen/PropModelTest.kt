@@ -67,6 +67,16 @@ class PropModelTest {
     val evReq = FakeWidget(fq("dev.keliver.material", "Weird"),
       listOf(FakeEvent("onThing", isNullable = false, defaultExpression = null)))
     assertIs<WidgetPlan.Exclude>(plan(evReq))
+
+    // K3 review B3: a catalog event is nullable (a conditional event may have a `null` branch);
+    // a non-nullable event with a default is left out of calls like an unsupported optional prop.
+    val evDefault = FakeWidget(fq("dev.keliver.material", "Pager"), listOf(
+      FakeEvent("onTurn", isNullable = false, defaultExpression = "{}"),
+      FakeEvent("onClick", isNullable = true),
+    ))
+    val withDefault = assertIs<WidgetPlan.Include>(plan(evDefault))
+    assertEquals(listOf(EventPlan("onClick", 0)), withDefault.events)
+    assertEquals(listOf("onTurn"), withDefault.skippedProps)
   }
 
   @Test fun modifierPlanning() {
