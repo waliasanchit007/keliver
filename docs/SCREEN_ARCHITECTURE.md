@@ -608,7 +608,9 @@ ways, and the editor is told which:
      starts inside a string literal compares whole.
    - A node placed **first** in a block goes at the very top, right after
      `{`, at the depth of the block's first line — above any comments there
-     (the first statement's own, or a section header).
+     (the first statement's own, or a section header). A comment on the `{`
+     line itself (`Column { // header`, `forEach { row -> // why`) stays on
+     that line; the statement goes on the line below it.
    - Inserted nodes and changed values are spelled as the file spells them:
      its own bindings parameter name (`bindings.title`, not `b.title`), and a
      RawCode node as its own text.

@@ -765,10 +765,9 @@ object WriteBack {
         ws is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && ws.text.count { it == '\n' } == 1 -> ws.prevSibling
         else -> null
       } as? org.jetbrains.kotlin.com.intellij.psi.PsiComment ?: break
-      // The comment must start its own line (not trail the statement before it).
-      val before = c.prevSibling
-      val ownLine = before == null || (before is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && '\n' in before.text)
-      if (!ownLine) break
+      // The comment must start its own line (not trail the statement before it,
+      // nor the `{` of a lambda whose body starts with it — S-b).
+      if (!startsItsLine(c)) break
       out.add(0, c)
       cur = c
     }
@@ -949,7 +948,8 @@ object WriteBack {
    * after [after] — and after its same-line trailing comment — or, with no
    * [after], first: at the top of the block, above any comments there (the
    * first statement's own, a section header), or after the comments of a
-   * block that has only comments.
+   * block that has only comments. A comment on the `{` line itself stays
+   * there; the statement goes on the line below it.
    * Every placement carries "\n" + the destination indent.
    */
   private fun place(
@@ -973,8 +973,10 @@ object WriteBack {
       // At the very top of the block: right after `{` and its line break, at the
       // depth of the block's first line — above every comment there (its own,
       // and a section header set off by a blank line), never glued to one.
+      // A comment on the `{` line (`Column { // header`) stays there (S-b).
       val top = generateSequence(block.lBrace?.nextSibling ?: block.firstChild) { it.nextSibling }
-        .firstOrNull { it !is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace } ?: first
+        .firstOrNull { it !is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && !(it is org.jetbrains.kotlin.com.intellij.psi.PsiComment && !startsItsLine(it)) }
+        ?: first
       val indent = indentOf(top)
       val stmt = make(indent) ?: return null
       // Raw tree inserts: PSI addBefore re-anchors next to comments and merges
@@ -984,7 +986,7 @@ object WriteBack {
       return inserted as? KtExpression
     }
     val lastComment = generateSequence(block.lastChild) { it.prevSibling }
-      .firstOrNull { it is org.jetbrains.kotlin.com.intellij.psi.PsiComment }
+      .firstOrNull { it is org.jetbrains.kotlin.com.intellij.psi.PsiComment && startsItsLine(it) }
     if (lastComment != null) {
       val indent = indentOf(lastComment)
       val stmt = make(indent) ?: return null
@@ -1003,6 +1005,26 @@ object WriteBack {
       ?: lineLeadingIndent(block)
     val indent = "$braceIndent  "
     val stmt = make(indent) ?: return null
+    // A comment on the `{` line (`Row { // later`) stays there: the statement goes on the next line (S-b).
+    val braceComment = generateSequence(block.lBrace?.nextSibling ?: block.firstChild) { it.nextSibling }
+      .takeWhile {
+        (it is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && '\n' !in it.text) ||
+          (it is org.jetbrains.kotlin.com.intellij.psi.PsiComment && !startsItsLine(it))
+      }
+      .lastOrNull { it is org.jetbrains.kotlin.com.intellij.psi.PsiComment }
+    if (braceComment != null) {
+      // Raw tree inserts (PSI addAfter adds a line break of its own): comment, "\n" + indent, the statement, then
+      // the line break before `}` that follows the comment.
+      val after = braceComment.nextSibling
+      val inserted = if (after != null) rawAddBefore(block, stmt, after) else block.addAfter(stmt, braceComment)
+      rawAddBefore(block, factory.createWhiteSpace("\n$indent"), inserted)
+      // A lambda body's last line break lives outside the block.
+      val below = inserted.nextSibling ?: block.nextSibling
+      if (below !is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace || '\n' !in below.text) {
+        block.addAfter(factory.createWhiteSpace("\n$braceIndent"), inserted)
+      }
+      return inserted as? KtExpression
+    }
     val inserted = block.addAfter(stmt, block.lBrace)
     val leading = factory.createWhiteSpace("\n$indent")
     val trailing = factory.createWhiteSpace("\n$braceIndent")
@@ -1120,6 +1142,14 @@ object WriteBack {
     val off = element.textRange.startOffset
     val lineStart = text.lastIndexOf('\n', off - 1) + 1
     return text.substring(lineStart, off).takeIf { it.isBlank() } ?: ""
+  }
+
+  /** Whether nothing but whitespace stands before [element] on its line. */
+  private fun startsItsLine(element: org.jetbrains.kotlin.com.intellij.psi.PsiElement): Boolean {
+    val text = element.containingFile.text
+    val off = element.textRange.startOffset
+    val lineStart = text.lastIndexOf('\n', off - 1) + 1
+    return text.substring(lineStart, off).isBlank()
   }
 
   private fun lineLeadingIndent(element: org.jetbrains.kotlin.com.intellij.psi.PsiElement): String {

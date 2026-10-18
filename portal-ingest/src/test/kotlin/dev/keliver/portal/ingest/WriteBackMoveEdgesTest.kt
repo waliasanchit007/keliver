@@ -333,4 +333,100 @@ class WriteBackMoveEdgesTest {
     )
     assertReingests(target, out)
   }
+
+  // ── K3 fifth review, S-b: a `{` line that ends with a comment ──────────────
+
+  private val braceComments = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.layout.compose.Row
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column { // header
+        StyledText(text = "a")
+        b.rows.forEach { row -> // c
+          StyledText(text = row)
+        }
+        Row { // nothing yet
+        }
+      }
+    }
+
+    interface HomeScreenBindings {
+      val rows: List<String>
+    }
+  """.trimIndent() + "\n"
+
+  private fun styled(text: String) = DocNode.Widget(Handle(900), "StyledText", mapOf("text" to dev.keliver.portal.document.lit(text)))
+
+  @Test fun aStatementInsertedFirstUnderABraceLineCommentGoesBelowIt() {
+    val d = doc(braceComments)
+    val target = d.apply(DocOp.InsertNode(d.root.handle, null, styled("new"))).doc
+    val out = merge(braceComments, target, d)
+    assertEquals(
+      braceComments.replace(
+        "  Column { // header\n",
+        "  Column { // header\n    StyledText(\n      text = \"new\",\n    )\n",
+      ),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun aStatementMovedFirstUnderABraceLineCommentGoesBelowIt() {
+    val d = doc(braceComments)
+    val each = widget(d, 1)
+    val target = d.apply(DocOp.MoveNode(child(d, 0).handle, d.root.handle, child(d, 1).handle)).doc
+      .let { it.apply(DocOp.MoveNode(child(d, 0).handle, each.handle, null)).doc }
+    val out = merge(braceComments, target, d)
+    assertEquals(
+      braceComments
+        .replace("    StyledText(text = \"a\")\n    b.rows", "    b.rows")
+        .replace("forEach { row -> // c\n", "forEach { row -> // c\n      StyledText(text = \"a\")\n"),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun aStatementInsertedFirstInAForEachUnderABraceLineCommentGoesBelowIt() {
+    val d = doc(braceComments)
+    val target = d.apply(DocOp.InsertNode(widget(d, 1).handle, null, styled("new"))).doc
+    val out = merge(braceComments, target, d)
+    assertEquals(
+      braceComments.replace(
+        "forEach { row -> // c\n",
+        "forEach { row -> // c\n      StyledText(\n        text = \"new\",\n      )\n",
+      ),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun aStatementPlacedInABlockWithOnlyABraceLineCommentGoesBelowIt() {
+    val d = doc(braceComments)
+    val row = widget(d, 2)
+    val inserted = d.apply(DocOp.InsertNode(row.handle, null, styled("new"))).doc
+    val out = merge(braceComments, inserted, d)
+    assertEquals(
+      braceComments.replace(
+        "    Row { // nothing yet\n    }\n",
+        "    Row { // nothing yet\n      StyledText(\n        text = \"new\",\n      )\n    }\n",
+      ),
+      out,
+    )
+    assertReingests(inserted, out)
+    val moved = d.apply(DocOp.MoveNode(child(d, 0).handle, row.handle, null)).doc
+    val out2 = merge(braceComments, moved, d)
+    assertEquals(
+      braceComments
+        .replace("    StyledText(text = \"a\")\n    b.rows", "    b.rows")
+        .replace("    Row { // nothing yet\n    }\n", "    Row { // nothing yet\n      StyledText(text = \"a\")\n    }\n"),
+      out2,
+    )
+    assertReingests(moved, out2)
+  }
 }
