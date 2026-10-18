@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -267,18 +268,92 @@ class RelayAccessTest {
     val seen = mutableSetOf<String>()
     for (f in relaySources.filter { it.name != "RelayAccess.kt" }) { // the gate's own forwarding
       val text = f.readText()
-      val starts = Regex("""\b\w+\.createContext\(\s*"([^"]+)"""").findAll(text).toList()
-      // Any other form (a path in a variable, another call shape) would hide a context from this scan.
+      val starts = Regex("""\b\w+\.createContext\(\s*"([^"]+)"\s*\)""").findAll(text).toList()
+      // Any other form (a path in a variable, a handler argument) would hide a context from this scan.
       assertEquals(Regex("""\.createContext\(""").findAll(text).count(), starts.size, "${f.name}: a context this scan cannot read")
-      for ((i, m) in starts.withIndex()) {
+      for (m in starts) {
         val path = m.groupValues[1]
         seen += path
-        val body = text.substring(m.range.first, starts.getOrNull(i + 1)?.range?.first ?: text.length)
+        val body = handlerBody(text, m.range.last + 1) ?: error("${f.name}: $path has no handler lambda this scan can read")
         if (path in readOnlyContexts) continue
         assertTrue("requestMethod" in body, "${f.name}: $path changes state? then check the method, or list it as read-only")
       }
     }
     for (p in listOf("/ops", "/undo", "/redo", "/publish")) assertTrue(p in seen, "the scan found $p")
     assertTrue(seen.containsAll(readOnlyContexts), "a read-only context was removed: ${readOnlyContexts - seen}")
+  }
+
+  @Test
+  fun theMethodScanReadsOnlyTheHandlersOwnBody() {
+    // The last context in a file used to run to end-of-file, so a later
+    // function naming requestMethod could stand in for a missing check.
+    val text = """
+      fun install(server: HttpServer) {
+        server.createContext("/x") { ex -> // a { in a comment
+          val s = "}" + '}' + "${'$'}{ex.requestURI}" + ""${'"'}}""${'"'}
+          if (s.isEmpty()) { serve(ex) }
+        }
+      }
+      fun respond(ex: HttpExchange) { if (ex.requestMethod != "GET") return }
+    """.trimIndent()
+    val start = text.indexOf(")", text.indexOf("createContext(")) + 1
+    val body = assertNotNull(handlerBody(text, start))
+    assertTrue(body.trimEnd().endsWith("serve(ex) }\n  }"), body)
+    assertFalse("requestMethod" in body, body)
+    assertNull(handlerBody("server.createContext(\"/y\", handler)", "server.createContext(\"/y\"".length))
+  }
+
+  /**
+   * The trailing lambda of a `createContext("...")` call whose argument list
+   * ends just before [from]: from its `{` to the matching `}`, or null if no
+   * `{` follows. Braces in comments, string, char and raw-string literals
+   * are skipped; a string's `${...}` template is code again.
+   */
+  private fun handlerBody(text: String, from: Int): String? {
+    var i = from
+    while (i < text.length && text[i].isWhitespace()) i++
+    if (i >= text.length || text[i] != '{') return null
+    return text.substring(i, skipBlock(text, i + 1))
+  }
+
+  /** From just inside a `{`, the index after its matching `}`. */
+  private fun skipBlock(t: String, start: Int): Int {
+    var i = start
+    while (i < t.length) {
+      when {
+        t.startsWith("//", i) -> i = t.indexOf('\n', i).let { if (it < 0) t.length else it }
+        t.startsWith("/*", i) -> i = t.indexOf("*/", i + 2).let { if (it < 0) t.length else it + 2 }
+        t.startsWith("\"\"\"", i) -> i = skipString(t, i + 3, raw = true)
+        t[i] == '"' -> i = skipString(t, i + 1, raw = false)
+        t[i] == '\'' -> {
+          i++
+          while (i < t.length && t[i] != '\'') i += if (t[i] == '\\') 2 else 1
+          i++
+        }
+        t[i] == '{' -> i = skipBlock(t, i + 1)
+        t[i] == '}' -> return i + 1
+        else -> i++
+      }
+    }
+    return t.length
+  }
+
+  /** From just inside a string literal, the index after its closing quote(s). */
+  private fun skipString(t: String, start: Int, raw: Boolean): Int {
+    var i = start
+    while (i < t.length) {
+      when {
+        t.startsWith("${'$'}{", i) -> i = skipBlock(t, i + 2)
+        raw && t.startsWith("\"\"\"", i) -> {
+          i += 3
+          while (i < t.length && t[i] == '"') i++
+          return i
+        }
+        !raw && t[i] == '\\' -> i += 2
+        !raw && t[i] == '"' -> return i + 1
+        else -> i++
+      }
+    }
+    return t.length
   }
 }
