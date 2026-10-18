@@ -7,8 +7,15 @@
  * in `previewAssetHosts` (GET /preview-assets says which). A URL on one of
  * those hosts, on its scheme's default port, is rewritten to the relay; every
  * other URL loads as before.
+ *
+ * At most [RELAY_IMAGE_FETCHES] of the rewritten fetches run at once. The
+ * browser opens about six HTTP/1.1 connections to one origin and the editor
+ * already holds one for its event stream; images waiting on a slow host must
+ * leave the rest for /ops, /doc and write-back. Direct URLs are not limited.
  */
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -19,10 +26,17 @@ internal object PreviewAssetRouting : PreviewAssetHostGate() {
   fun route(url: String): String = route(url, SERVER)
 }
 
-/** The relay's host list, and the one wait for it. */
-internal open class PreviewAssetHostGate(private val waitMillis: Long = 3_000) {
+/** Relay image fetches the editor runs at once (see the file comment). */
+internal const val RELAY_IMAGE_FETCHES = 2
+
+/** The relay's host list, the one wait for it, and the cap on relay fetches. */
+internal open class PreviewAssetHostGate(
+  private val waitMillis: Long = 3_000,
+  relayFetches: Int = RELAY_IMAGE_FETCHES,
+) {
   private var hosts: Set<String> = emptySet()
   private val loaded = CompletableDeferred<Unit>()
+  private val relayPermits = Semaphore(relayFetches)
 
   /** The relay's list (or none: an older relay, playground mode, an error). */
   fun loaded(hosts: Set<String>) {
@@ -42,6 +56,17 @@ internal open class PreviewAssetHostGate(private val waitMillis: Long = 3_000) {
   }
 
   fun route(url: String, server: String): String = previewAssetUrl(url, hosts, server) ?: url
+
+  /**
+   * Load [url] with [fetch], given the URL to request: the relay's when its
+   * host is listed, under the cap on concurrent relay fetches (held until
+   * [fetch] returns, body read included), else [url] itself, uncapped.
+   */
+  suspend fun <T> load(url: String, server: String, fetch: suspend (target: String) -> T): T {
+    awaitLoaded()
+    val target = route(url, server)
+    return if (target == url) fetch(url) else relayPermits.withPermit { fetch(target) }
+  }
 }
 
 /** The host list from `GET /preview-assets`; empty when absent or malformed. */

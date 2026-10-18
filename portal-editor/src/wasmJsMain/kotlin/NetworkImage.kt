@@ -30,14 +30,15 @@ internal class BrowserFetchFetcher(
   private val options: Options,
 ) : Fetcher {
   override suspend fun fetch(): FetchResult {
-    // K5: an image on one of the app's declared hosts comes through the relay.
-    PreviewAssetRouting.awaitLoaded()
-    val target = PreviewAssetRouting.route(url)
-    val response: Response = window.fetch(target).await()
-    check(response.ok) { "HTTP ${response.status} fetching $url" + if (target != url) " (through the relay)" else "" }
-    val arrayBuffer: ArrayBuffer = response.arrayBuffer().await()
-    val view = Int8Array(arrayBuffer)
-    val bytes = ByteArray(view.length) { view[it] }
+    // K5: an image on one of the app's declared hosts comes through the relay,
+    // at most RELAY_IMAGE_FETCHES at a time (the body read included).
+    val bytes = PreviewAssetRouting.load(url, SERVER) { target ->
+      val response: Response = window.fetch(target).await()
+      check(response.ok) { "HTTP ${response.status} fetching $url" + if (target != url) " (through the relay)" else "" }
+      val arrayBuffer: ArrayBuffer = response.arrayBuffer().await()
+      val view = Int8Array(arrayBuffer)
+      ByteArray(view.length) { view[it] }
+    }
     return SourceFetchResult(
       source = ImageSource(Buffer().apply { write(bytes) }, options.fileSystem),
       mimeType = null,

@@ -76,6 +76,37 @@ class PreviewAssetRoutingTest {
     assertEquals("$relay/preview-asset?url=https%3A%2F%2Fimg.example.com%2Fx.png", gate.route("https://img.example.com/x.png", relay))
   }
 
+  @Test fun atMostTwoRelayFetchesRunAtOnceAndDirectUrlsAreNotHeld() = runTest {
+    val gate = PreviewAssetHostGate()
+    gate.loaded(hosts)
+    var running = 0
+    var most = 0
+    val targets = mutableListOf<String>()
+    suspend fun slowFetch(target: String): String {
+      targets += target
+      running++
+      most = maxOf(most, running)
+      delay(100)
+      running--
+      return target
+    }
+    val relayed = (1..5).map { launch { gate.load("https://img.example.com/$it.png", relay, ::slowFetch) } }
+    relayed.forEach { it.join() }
+    assertEquals(RELAY_IMAGE_FETCHES, most)
+    assertEquals(300L, currentTime, "five 100 ms fetches, two at a time")
+    assertEquals(5, targets.count { it.startsWith("$relay/preview-asset?url=") })
+    // Direct URLs are not capped, and do not wait behind relay fetches.
+    most = 0
+    targets.clear()
+    val held = (1..4).map { launch { gate.load("https://img.example.com/held$it.png", relay, ::slowFetch) } }
+    val direct = (1..5).map { launch { gate.load("https://elsewhere.example/$it.png", relay, ::slowFetch) } }
+    direct.forEach { it.join() }
+    assertEquals(400L, currentTime, "the direct fetches ran beside the relay's first two")
+    assertEquals(5, targets.count { it.startsWith("https://elsewhere.example/") })
+    held.forEach { it.join() }
+    assertEquals(500L, currentTime)
+  }
+
   @Test fun encodingMatchesEncodeUriComponent() {
     assertEquals("%C3%A9%20%2B%26%3D-_.!~*'()", encodeUriComponent("é +&=-_.!~*'()"))
   }
