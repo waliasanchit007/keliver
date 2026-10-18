@@ -69,7 +69,10 @@ public sealed interface PropValue {
    * source. Each of [parts] is a literal text segment (a [Lit] tagged "s",
    * its decoded value) or a reference: a [Bind] (a screen binding field, an
    * item field `item.x` inside a Repeat over `item`, or — in a component
-   * body — a parameter) or a [Token] of any literal kind. Canonical form
+   * body — a parameter) or a [Token] of a String, Int or Boolean kind —
+   * never a Double, nor a field or parameter declared `Double`/`Float` or
+   * nullable (the device, Kotlin/JS, prints `1.0` as `1` and a null as
+   * `null`; the preview prints `1.0` and nothing). Canonical form
    * ([canonical]): no empty or adjacent literal segments, at least one
    * reference (a template without one is a plain [Lit]). The author's
    * spelling (`$x` / `${x}`, escapes) is not modelled: write-back keeps it

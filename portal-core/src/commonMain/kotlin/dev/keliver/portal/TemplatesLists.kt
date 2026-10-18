@@ -39,11 +39,34 @@ public fun listKindOf(sourceType: String?): String? = when (sourceType?.replace(
 }
 
 /**
- * A scalar value as a template prints it: a String as itself, an Int or a
- * Boolean as Kotlin prints them, a Double in plain decimal notation (the
- * preview approximates the device, whose `toString()` uses exponent
- * notation outside 1e-3..1e7), a [Token] as its value. Null for anything
- * else (a reference without a value).
+ * K4: the token kinds a template reads — those the device (Kotlin/JS) and
+ * the preview (wasm, JVM) print alike. Never a Double: `1.0` prints `1` on
+ * the device and `1.0` in the preview, so no preview of one is faithful.
+ */
+public fun templateTokenFits(value: Any?): Boolean = tokenKindOf(value) in TEMPLATE_TOKEN_KINDS
+
+private val TEMPLATE_TOKEN_KINDS = setOf("String", "Int", "Boolean")
+
+/**
+ * K4: whether a template may read a reference (a screen field, a component
+ * parameter) whose declared Kotlin type is [type] — null when undeclared
+ * (the derived contract then types it `String`). Only a type the device
+ * (Kotlin/JS) and the preview (wasm, JVM) print alike: `String`, `Int`,
+ * `Long`, `Boolean`. A `Double` or `Float` prints `1` on the device and
+ * `1.0` in the preview; a nullable value prints `null` on the device and
+ * nothing in the preview.
+ */
+public fun templateRefTypeFits(type: String?): Boolean = type == null || type.replace(" ", "") in TEMPLATE_REF_TYPES
+
+private val TEMPLATE_REF_TYPES = setOf("String", "Int", "Long", "Boolean")
+
+/**
+ * A scalar value as a template prints it: a String as itself, an Int, a Long
+ * or a Boolean as Kotlin prints them (alike on every target), a [Token] as
+ * its value. A Double is never a template reference ([templateTokenFits],
+ * [templateRefTypeFits]); one here is a literal a document op folds into
+ * text, printed in plain decimal notation. Null for anything else (a
+ * reference without a value).
  */
 public fun templateValueText(v: Any?): String? = when (val x = tokenValue(v)) {
   is String -> x

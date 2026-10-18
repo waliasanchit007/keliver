@@ -10,6 +10,7 @@ import dev.keliver.portal.listElementType
 import dev.keliver.portal.listKindOf
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
+import dev.keliver.portal.templateRefTypeFits
 import dev.keliver.portal.tokenFits
 import dev.keliver.portal.tokenKindOf
 import dev.keliver.portal.widgetSpec
@@ -58,12 +59,21 @@ import kotlinx.serialization.Serializable
  * component instance's String parameter: the server checks the signature),
  * also as a conditional's branch; its parts are text, bindings (a plain
  * screen field, or an item field `item.x` inside a Repeat over `item`) and
- * design tokens of any literal kind. A list with references
- * ([PropValue.ListOf]) sits only on a `List<Int>`/`List<String>` prop of a
- * catalogued widget, its tag that prop's, each element a literal or a token
- * of the element kind or a binding — never conditional. Every op stores
- * both in canonical form ([canonicalValue]); an item reference outside a
- * Repeat over its item is refused where it is placed (as for K3).
+ * design tokens of a String, Int or Boolean kind. Never a Double token, nor
+ * a field the contract declares other than `String`/`Int`/`Long`/`Boolean`
+ * (a `Double`/`Float`, a nullable type): the device (Kotlin/JS) prints `1.0`
+ * as `1` and a null as `null`, the preview `1.0` and nothing, so no preview
+ * of one is faithful ([dev.keliver.portal.templateRefTypeFits]). A list with
+ * references ([PropValue.ListOf]) sits only on a `List<Int>`/`List<String>`
+ * prop of a catalogued widget, its tag that prop's, each element a literal
+ * or a token of the element kind or a binding (a field the contract
+ * declares is declared as the element type) — never conditional. Every op
+ * stores both in canonical form ([canonicalValue]); an item reference
+ * outside a Repeat over its item is refused where it is placed (as for K3).
+ * A field a template or a list reads is not a Boolean: a Boolean test on it
+ * is refused (as for a field bound to a text prop), and — unlike a plain
+ * binding — so is placing a template or a list that reads a field the
+ * screen already tests as a Boolean.
  */
 @Serializable
 public data class UiDocument(
@@ -103,7 +113,7 @@ public data class UiDocument(
         }
         tokenMisfit(op.node)?.let { return err(it) }
         conditionalMisfit(op.node)?.let { return err(it) }
-        refValueMisfit(op.node)?.let { return err(it) }
+        refValueMisfit(op.node, contract.fields)?.let { return err(it) }
         elseMisfit(parent, op.node, moving = null)?.let { return err(it) }
         val (allocated, next) = allocate(op.node, nextHandle)
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
@@ -192,13 +202,14 @@ public data class UiDocument(
         tokenMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
-        refValueMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        refValueMisfit(w.type, op.name, canonical, contract.fields)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
         conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
+        refBooleanMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -218,7 +229,7 @@ public data class UiDocument(
         val canonical = canonicalValue(op.value)
         tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
-        refValueMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
+        refValueMisfit(w.type, "mod.${op.name}", canonical, contract.fields)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
@@ -479,6 +490,7 @@ private fun conditionsMisfit(root: DocNode, h: Handle): String? {
     (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
       conditionMisfitAt(root, n.handle, k)?.let { return it }
       itemRefMisfitAt(root, n.handle, k)?.let { return it }
+      refBooleanMisfitAt(root, n.handle, k)?.let { return it }
     }
     return n.children.firstNotNullOfOrNull(::walk)
   }
@@ -541,6 +553,8 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
     }
     val spec = widgetSpec(n.type)
     n.props.forEach { (k, v) ->
+      // K4: a template prints its fields into text and a list holds Ints or Strings: neither is a Boolean.
+      if (field in refFields(v)) notBoolean = true
       if (skip == (n.handle to k)) return@forEach
       if (v is PropValue.Conditional) cond(v.field, CondTest.fromWire(v.test))
       val kind = spec?.props?.firstOrNull { it.name == k }?.kind
@@ -553,13 +567,34 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
   walk(root)
   return when {
     test == CondTest.Bool && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
-    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere"
+    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template or a list element)"
     test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
     else -> null
   }
 }
 
-private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "d", "b")
+/**
+ * K4: the token tags a template part may hold — String, Int, Boolean; never
+ * a Double, which the device (Kotlin/JS: `1.0` prints `1`) and the preview
+ * (wasm/JVM: `1.0`) print differently ([dev.keliver.portal.templateTokenFits]).
+ */
+private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "b")
+
+/** Why a template may not read the field [field] declared [type] (see [templateRefTypeFits]). */
+private fun refTypeWhy(field: String, type: String): String = when {
+  type.trim().endsWith("?") -> "`$field` is declared $type: the device prints a null as \"null\", the preview as nothing"
+  type.trim() == "Double" || type.trim() == "Float" ->
+    "`$field` is declared $type: the device (Kotlin/JS) prints 1.0 as \"1\", the preview (wasm) as \"1.0\""
+  else -> "`$field` is declared $type, which a template does not read (only String, Int, Long and Boolean print alike on the device and in the preview)"
+}
+
+/** K4: the plain fields (and item fields) a template's parts or a list's elements read — also in a conditional's branches. */
+private fun refFields(v: PropValue?): List<String> = when (v) {
+  is PropValue.Conditional -> refFields(v.whenTrue) + refFields(v.whenFalse)
+  is PropValue.Template -> v.parts.filterIsInstance<PropValue.Bind>().map { it.field }
+  is PropValue.ListOf -> v.items.filterIsInstance<PropValue.Bind>().map { it.field }
+  else -> emptyList()
+}
 
 /**
  * K4: why the template or list-with-references [v] (also as a conditional's
@@ -568,11 +603,11 @@ private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "d", "b")
  * template on a project component's parameter is left to the server, which
  * knows the signature; a component parameter is never a list.
  */
-private fun refValueMisfit(nodeType: String, key: String, v: PropValue): String? {
+private fun refValueMisfit(nodeType: String, key: String, v: PropValue, fields: Map<String, String>): String? {
   val where = "$nodeType.$key"
   if (v is PropValue.Conditional) {
     if (listOfNotNull(v.whenTrue, v.whenFalse).any { it is PropValue.ListOf }) return "conditional $where: a list prop cannot be conditional"
-    return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { refValueMisfit(nodeType, key, it) }
+    return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { refValueMisfit(nodeType, key, it, fields) }
   }
   if (v is PropValue.Template) {
     if (key.startsWith("mod.")) return "template $where: a template fits only a String prop"
@@ -583,8 +618,14 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue): String?
     for (p in v.parts) {
       when (p) {
         is PropValue.Lit -> if (p.tag != "s") return "template $where: a text part is a String"
-        is PropValue.Bind -> if (!CONDITION_FIELD.matches(p.field)) return "template $where: '${p.field}' is not a field name"
-        is PropValue.Token -> if (p.value.tag !in TEMPLATE_TOKEN_TAGS) return "template $where: token ${p.ref} is not a String, Int, Double or Boolean"
+        is PropValue.Bind -> {
+          if (!CONDITION_FIELD.matches(p.field)) return "template $where: '${p.field}' is not a field name"
+          fields[p.field]?.let { t -> if (!templateRefTypeFits(t)) return "template $where: ${refTypeWhy(p.field, t)}" }
+        }
+        is PropValue.Token -> if (p.value.tag !in TEMPLATE_TOKEN_TAGS) {
+          return if (p.value.tag == "d") "template $where: token ${p.ref} is a Double, which the device (Kotlin/JS) prints as \"1\" where the preview prints \"1.0\" (a template reads String, Int and Boolean tokens)"
+          else "template $where: token ${p.ref} is not a String, Int or Boolean"
+        }
         else -> return "template $where: a part is text, a binding or a design token"
       }
     }
@@ -602,7 +643,10 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue): String?
       is PropValue.Token -> if (!tokenFits(element, e.value.toAny())) {
         return "list $where: token ${e.ref} (${tokenKindOf(e.value.toAny()) ?: e.value.tag}) does not fit a $type element"
       }
-      is PropValue.Bind -> if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
+      is PropValue.Bind -> {
+        if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
+        fields[e.field]?.let { t -> if (t.replace(" ", "") != element) return "list $where: `${e.field}` is declared $t, not $element" }
+      }
       else -> return "list $where: an element is a literal, a design token or a binding"
     }
   }
@@ -610,11 +654,35 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue): String?
 }
 
 /** [refValueMisfit] for every prop and modifier of an inserted subtree. */
-private fun refValueMisfit(n: DocNode): String? {
+private fun refValueMisfit(n: DocNode, fields: Map<String, String>): String? {
   if (n !is DocNode.Widget) return null
-  n.props.forEach { (k, v) -> refValueMisfit(n.type, k, canonicalValue(v))?.let { return it } }
-  n.modifiers.forEach { (k, v) -> refValueMisfit(n.type, "mod.$k", canonicalValue(v))?.let { return it } }
-  return n.children.firstNotNullOfOrNull { refValueMisfit(it) }
+  n.props.forEach { (k, v) -> refValueMisfit(n.type, k, canonicalValue(v), fields)?.let { return it } }
+  n.modifiers.forEach { (k, v) -> refValueMisfit(n.type, "mod.$k", canonicalValue(v), fields)?.let { return it } }
+  return n.children.firstNotNullOfOrNull { refValueMisfit(it, fields) }
+}
+
+/**
+ * K4: a screen field the template or the list at wire key [key] of node [h]
+ * reads that the screen tests as a Boolean elsewhere (a `Condition`, or a
+ * conditional value) — the contract cannot type it both. Null = none.
+ */
+private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  val read = refFields(v).filter { '.' !in it }.toSet()
+  if (read.isEmpty()) return null
+  fun tested(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition" && CondTest.fromWire((n.props["test"] as? PropValue.Lit)?.s) == CondTest.Bool) {
+      (n.props["field"] as? PropValue.Lit)?.s?.takeIf { it in read }?.let { return it }
+    }
+    (n.props.values + n.modifiers.values).forEach { x ->
+      if (x is PropValue.Conditional && x.field in read && CondTest.fromWire(x.test) == CondTest.Bool) return x.field
+    }
+    return n.children.firstNotNullOfOrNull(::tested)
+  }
+  val f = tested(root) ?: return null
+  return "${w.type}.$key reads `$f` as text or a list element, but the screen tests it as a Boolean elsewhere (the contract cannot type it both)"
 }
 
 /**
