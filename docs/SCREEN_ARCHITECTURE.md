@@ -444,6 +444,78 @@ fun SectionCard(content: @Composable () -> Unit) {
     and the file (a prop it rewrites becomes a literal). Libraries (the
     per-app editor) and the tools bundle (relay) release independently: a new
     editor against an old relay simply sees no tokens.
+- **Conditions are grammar (D9, K3).** A value or a block chosen by a
+  parameter keeps a component transparent (and a screen editable):
+
+  ```kotlin
+  @Composable
+  fun ToggleRow(label: String, selected: Boolean, subtitle: String = "", note: String? = null,
+                raised: Boolean = false, onTap: () -> Unit, onLongTap: (() -> Unit)? = null) {
+    Column {
+      StyledText(text = label, colorArgb = if (selected) C.Ink else C.Muted,
+        modifier = Modifier.margin(Margin(top = if (raised) 8.dp else 0.dp)))
+      Icon(name = if (selected) "KeyboardArrowUp" else "KeyboardArrowDown")
+      Clickable(onClick = if (selected) onTap else null) { StyledText(text = "tap") }
+      if (!selected) { StyledText(text = "off") } else { StyledText(text = "on") }
+      if (subtitle.isNotEmpty()) { StyledText(text = subtitle) }
+      if (note != null) { StyledText(text = "note") }
+    }
+  }
+  ```
+
+  - *One condition model.* A condition reads ONE field — a screen binding
+    (`b.selected`) or, in a component body, a parameter (`selected`) — with
+    one test, optionally negated, each form spelled exactly one way: `x` /
+    `!x` (Boolean), `x.isEmpty()` / `x.isNotEmpty()`, `x.isBlank()` /
+    `x.isNotBlank()` (String), and — only on a component parameter whose
+    declared type is nullable — `x == null` / `x != null`. A screen has no
+    null test: its contract is derived from its tree and cannot declare a
+    nullable field. Anything else (`count > 0`, `a && b`, `else if`) keeps the
+    call or block RawCode, and an opaque component's diagnostic names it.
+  - *Conditional children.* `if (c) { … }` with an optional `else { … }` is a
+    `Condition` node (props `field`, `test`, `negate`) whose last child may be
+    one `Else` node holding the else block. `if`/`else` add no layout: the
+    branches' children sit in the enclosing layout (scoped modifiers resolve
+    against it).
+  - *Conditional values.* `if (c) A else B` as an argument — a widget prop, a
+    component argument, a modifier argument, a `Margin` side — is a
+    `PropValue.Conditional(field, test, negate, whenTrue, whenFalse)`. Each
+    branch is a value the argument takes by itself: a literal, a design
+    token, a binding, an action, or `null` (only where the parameter is
+    nullable, e.g. an event: `onClick = if (enabled) onTap else null`). In a
+    screen an action branch is a reference or a parenthesized lambda
+    (`if (b.enabled) b::tap else null` — a bare `{ … }` would be the if's
+    block). Branches never nest; a list prop is never conditional.
+  - *Preview.* Expanding an instance decides each condition over a parameter
+    against the instance's argument (its default when omitted, else the
+    editor's sample value), splicing the chosen branch; when the argument is a
+    screen binding, the condition is re-pointed at that binding and decided
+    by its preview mock (an unmocked Boolean reads true, an unmocked String as
+    a non-empty placeholder, anything unmocked as non-null). A compiled
+    fixture (`ParityConditionals.kt`) renders the same value tree as the
+    interpreted golden (`portal-render` `ConditionalParityTest`).
+  - *Write-back.* A no-op is byte-identical. Editing one branch rewrites only
+    that branch's text (a Dp keeps its spelling); editing the condition
+    rewrites only the condition; edits inside an else block stay in it.
+    Adding or removing an `else` re-emits just that `if` statement. The
+    exporter writes every form (`colorArgb = if (b.selected) C.Ink else -1`,
+    `Margin(top = if (b.raised) 8.dp else 0.dp)`, `if (!b.x) { … } else { … }`)
+    and types each condition's field in the derived contract (`Boolean`, or
+    `String` for an emptiness/blankness test).
+  - *On the wire.* The device tree carries a conditional value's TRUE branch
+    under its usual keys plus `"cond"` and `"else"`, so an older reader
+    renders the true branch. The relay sends `PropValue.Conditional` only to a
+    client asking `GET /doc?…&conditionals=1` (this release's editor and MCP
+    server); an older editor gets each conditional's true branch, and — as
+    with tokens — its edits to other props leave the conditional in the
+    document and the file. The document refuses a conditional that could not
+    compile (a null or action branch on a value prop, a value on an event, a
+    nested branch, a null test, a misfit token); the relay checks a
+    component instance's against its signature.
+  - *Signatures.* A nullable function parameter (`onLongTap: (() -> Unit)? =
+    null`) is an optional event. A nullable content slot (`footer:
+    (@Composable () -> Unit)?`) is not supported and says so in the
+    component's diagnostic.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add

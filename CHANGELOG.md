@@ -9,6 +9,35 @@
 ## [Unreleased]
 
 ### Added
+- **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
+  portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
+  parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters
+  declared nullable) for null, optionally negated, each form spelled one way — serves both
+  conditional children (`if (!b.x) { … } else { … }`: a `Condition` node with props
+  `field`/`test`/`negate` whose last child may be an `Else` node) and conditional values
+  (`colorArgb = if (selected) C.Ink else C.Muted`, `onClick = if (enabled) onTap else null`,
+  `Margin(top = if (raised) 8.dp else 0.dp)`): `PropValue.Conditional(field, test, negate,
+  whenTrue, whenFalse)` (new wire variant) whose branches are literals, tokens, binds, actions or
+  null (events and nullable parameters only). Components using these stay transparent; preview
+  expansion decides each condition against the instance's arguments (or re-points it at the
+  screen binding an argument is, decided by its mock); write-back rewrites only the changed
+  condition or branch (a no-op is byte-identical); the exporter writes every form and types each
+  condition's field in the contract. The device tree carries the true branch under its usual
+  keys plus `"cond"`/`"else"`; the relay serves conditionals only to clients asking
+  `conditionals=1` (older editors get the true branch) and checks a component instance's against
+  its signature. The editor edits the condition and both branches; the MCP op schema documents
+  it. A nullable function parameter is now an optional event; a nullable content slot and any
+  non-grammar argument or condition are named in the component's diagnostic (it no longer
+  reports "content slot … invoked exactly once (found 0)" when the slot call is hidden by
+  RawCode). New portal-core API: `Cond`, `CondTest`, `Conditional`, `condOf`, `chooseBranch`,
+  `thenChildren`, `elseNode`, `ELSE_TYPE`, `LOGIC_NODE_TYPES`; portal-document:
+  `PropValue.Conditional`, `cond()`, `toPropValue()`, `treeToPropValue`,
+  `withoutConditionals`; portal-render: `PreviewBindings.holds`/`chosen`. **Behaviour changes:**
+  a WidgetNode prop may hold a `Conditional` (the preview's `*B` getters and `actionOf` resolve
+  it against the mocks; code reading `props[key]` directly sees it); `PropValue` has a fifth
+  subclass (an exhaustive `when` over it needs a branch); `"Else"` is a reserved component name;
+  the catalog's `Condition` spec gains `test`/`negate` props.
+
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** design tokens are
   portal grammar (D9, K2). An argument referencing a constant in the app's own sources —
   `colorArgb = C.Ink`, `url = Assets.Logo`, `Modifier.background(C.White)` — no longer makes a
@@ -88,6 +117,8 @@
   while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
 ### Fixed
+- **portal-ingest:** a statement inserted after the last statement of an `if` block was written
+  after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
 - **portal (ingest, exporter, editor, relay):** a text with an escape or a `$` keeps its meaning
   through an editor edit (KNOWN_BUGS U33). Ingest decoded only `\"` and `\\`, so `"A\nB"` showed a
   literal `\n` in the editor and an edit wrote `\\n` back (the device then showed a backslash and

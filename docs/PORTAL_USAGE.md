@@ -101,7 +101,9 @@ by default. In the Bindings panel:
 - the items field's mock (`notes`) sets the **row count** (`2` → two rows),
 - an item field's mock (`note.title`) holds **per-row values**: `First|Second`
   (rows past the list clamp to the last; unmocked shows `{note.title} N`),
-- a `Condition` field mocked `false` hides its branch in the preview.
+- a `Condition` field mocked `false` hides its branch in the preview (and
+  shows its `else` branch, if any); a String field tested with `isEmpty()`/
+  `isBlank()` is decided by its mock text.
 
 The compiled device path always runs the real `forEach`/`if` — mocks are
 preview-only.
@@ -340,6 +342,43 @@ numbers.
   the call that used it becomes RawCode until you fix the reference.
 - Endpoint: `GET /tokens?project=<p>`; agents: the MCP `list_tokens` tool.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Design tokens are grammar".
+
+## Conditions and conditional values
+
+A value or a block chosen by a field is portal grammar — in a component by its
+parameters, in a screen by its bindings:
+
+```kotlin
+StyledText(text = title, colorArgb = if (b.selected) C.Ink else C.Muted)
+Icon(name = if (b.open) "KeyboardArrowUp" else "KeyboardArrowDown")
+StyledText(text = "x", modifier = Modifier.margin(Margin(top = if (b.raised) 8.dp else 0.dp)))
+Button(text = "Go", onClick = if (b.enabled) b::tap else null)
+if (!b.hidden) { … } else { … }
+if (b.subtitle.isNotEmpty()) { … }
+```
+
+- Conditions: `x`, `!x`, `x.isEmpty()`/`isNotEmpty()`, `x.isBlank()`/
+  `isNotBlank()`; in a component also `p == null`/`p != null` on a parameter
+  declared nullable. Anything else (`count > 0`, `a && b`, `else if`) stays
+  RawCode — and an opaque component's diagnostic names the expression.
+- A conditional prop shows in the property panel as **if** `field` `test`
+  **not** with a **then** and an **else** row, each edited like the prop
+  itself (a token branch shows `◆ C.Ink` and can be detached; a binding shows
+  its field). **keep then** replaces the conditional with its true branch. A
+  conditional event edits each branch's action; an empty name is `null`.
+- A `Condition` node's panel edits its `field`, `test` (`empty`/`blank`, or
+  empty for a Boolean) and `negate`, and offers **+ else branch**; the else
+  branch is an `Else` node in the outline (delete it to remove the branch).
+- Edits write back surgically: only the changed condition or branch.
+- In a screen, an action branch is a reference (`b::tap`) or parenthesized
+  (`({ b.open("X") })`); a screen condition has no null test (its contract
+  cannot declare a nullable field).
+- A component's nullable function parameter is an optional event; a nullable
+  content slot is reported as unsupported.
+- An editor built before this release is served each conditional's true
+  branch (it does not ask with `conditionals=1`).
+- Agents: the MCP op schema documents `PropValue.Conditional`.
+  Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Conditions are grammar".
 
 ## Live-presenter preview (P3-12)
 
