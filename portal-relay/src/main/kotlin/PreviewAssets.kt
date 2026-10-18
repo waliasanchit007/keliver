@@ -28,10 +28,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.SSLHandshakeException
-import okhttp3.Call
-import okhttp3.Connection
 import okhttp3.CookieJar
-import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -129,17 +126,20 @@ class PreviewAssets(
   private val failedUrls = boundedMap<Failure>(FAILURES_MAX)
   private val failedHosts = boundedMap<Failure>(FAILURES_MAX)
 
-  // Each call reports whether it got a connection: a [Reach] rides as the request's tag.
+  // Each call reports whether it got a connection: a [Reach] rides as the
+  // request's tag, set by a network interceptor (which runs only once a
+  // connection, new or pooled, is in hand, TLS included). An interceptor
+  // keeps whatever event listener an injected client already has.
   private val tracked: OkHttpClient = client.newBuilder()
-    .eventListenerFactory { call -> call.request().tag(Reach::class.java) ?: EventListener.NONE }
+    .addNetworkInterceptor { chain ->
+      chain.request().tag(Reach::class.java)?.connected = true
+      chain.proceed(chain.request())
+    }
     .build()
 
-  /** Whether a call got a connection (new or pooled) to its host. */
-  private class Reach : EventListener() {
+  /** Whether a call got a connection to its host. */
+  private class Reach {
     @Volatile var connected = false
-    override fun connectionAcquired(call: Call, connection: Connection) {
-      connected = true
-    }
   }
 
   private val threadIds = AtomicInteger()

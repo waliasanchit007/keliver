@@ -557,6 +557,20 @@ class PreviewAssetsTest {
     assertEquals(3, hits.get())
   }
 
+  @Test fun anInjectedClientsEventListenerStillHearsItsCalls() {
+    val started = AtomicInteger()
+    val client = PreviewAssets.defaultClient().newBuilder()
+      .eventListener(object : okhttp3.EventListener() {
+        override fun callStart(call: okhttp3.Call) {
+          started.incrementAndGet()
+        }
+      })
+      .build()
+    val a = assets(client = client)
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    assertEquals(1, started.get())
+  }
+
   @Test fun aBodyThatStallsCostsOnlyThatUrl() {
     val a = assets(deadlineMillis = 300)
     assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/slow-body")).status)
