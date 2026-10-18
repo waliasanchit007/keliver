@@ -93,7 +93,8 @@ internal fun writeBackOf(data: String): WriteBackNotice? {
  * once per document version. [showing] = the document is ahead of its file
  * (refused / failed); a write that lands, a read of the file, or an event
  * with no status (the relay sends its current one with every event) clears
- * it. A discard is told, but the document is the file again.
+ * it. A discard is told (banner, and the pill reads "Discarded"), but the
+ * document is the file again.
  */
 internal class WriteBackWarnings {
   private var warned = -1L
@@ -102,14 +103,33 @@ internal class WriteBackWarnings {
   var showing: Boolean = false
     private set
 
+  /** The pill to show after the last [next] (null = leave it as it is). */
+  var pill: Pill? = null
+    private set
+
+  companion object {
+    val IDLE = Pill("dot", "Saved")
+  }
+
   /** The warning text to show now for [n], or null (nothing new). */
   fun next(n: WriteBackNotice?): String? {
+    val was = showing
     if (n == null || n.written) {
       showing = false
+      // Cleared: a write landed, the file was read, or no status is current.
+      pill = if (was || n != null) IDLE else null
       return null
     }
     showing = n.outcome != "discarded"
-    if (n.version == warned) return null
+    val fresh = n.version != warned
+    // A discard: the change is not in the file — never "Saved". Told once; a
+    // later event re-sending it leaves the pill to whatever came since.
+    pill = when {
+      showing -> Pill("dot error", "Not written")
+      fresh -> Pill("dot error", "Discarded")
+      else -> null
+    }
+    if (!fresh) return null
     warned = n.version
     return n.message
   }

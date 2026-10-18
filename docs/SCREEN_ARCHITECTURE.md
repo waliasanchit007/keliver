@@ -654,7 +654,9 @@ ways, and the editor is told which:
 Every read of the file is reported too: `external` (the file was read; the
 editor's warning clears) or `discarded` (read while the document was ahead
 of it — an unwritten or refused change is gone; this includes the re-read
-after a component or design token the screen uses changed). An event with no
+after a component or design token the screen uses changed, when that change
+made the screen read differently; the editor's pill reads "Discarded", never
+"Saved"). Switching screens resets the pill to the new screen's status. An event with no
 status means none is current.
 
 A new screen (no file yet) is created from the export — RawCode as its own

@@ -398,19 +398,14 @@ private var writeBackScreen = ""
 /**
  * Shows the change stream's write-back status: a refused or failed one as a
  * visible, non-blocking banner (the edit is in the document but NOT in the
- * .kt file) and the pill "Not written"; a discarded one as a banner (the file
- * was read, the change is gone). A later write that lands, a read of the
- * file, or an event with no status removes it.
+ * .kt file) and the pill "Not written"; a discarded one as a banner and the
+ * pill "Discarded" (the file was read, the change is gone). A later write
+ * that lands, a read of the file, or an event with no status removes it.
  */
 private fun showWriteBack(n: WriteBackNotice?) {
-  val wasShowing = writeBackWarnings.showing
   val warning = writeBackWarnings.next(n)
-  if (writeBackWarnings.showing) {
-    saveDotEl.className = "dot error"
-    saveTextEl.textContent = "Not written"
-  } else {
-    // Cleared: a write landed, the file was read, or no status is current.
-    if (wasShowing || n != null) { saveDotEl.className = "dot"; saveTextEl.textContent = "Saved" }
+  writeBackWarnings.pill?.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+  if (!writeBackWarnings.showing) {
     // A discard's banner stays until dismissed or a later write / read replaces it.
     if (n == null || n.written) {
       writeBackBanner?.remove()
@@ -468,6 +463,8 @@ private fun subscribeDocEvents() {
     writeBackWarnings = WriteBackWarnings()
     writeBackBanner?.remove()
     writeBackBanner = null
+    // The pill was the other screen's: start this one idle (its first event sets its own).
+    WriteBackWarnings.IDLE.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
   }
   eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
     es.onmessage = { ev ->

@@ -63,6 +63,22 @@ class EditorWriteBackTest {
     assertNull(w.next(WriteBackNotice(7, "discarded", false, "discarded it")))
   }
 
+  /** K3 fifth review: after a discard the pill does not read "Saved" — the change is not in the file. */
+  @Test fun aDiscardMarksThePillDiscardedNotSaved() {
+    val w = WriteBackWarnings()
+    w.next(WriteBackNotice(6, "refused", false, "could not be written"))
+    assertEquals(Pill("dot error", "Not written"), w.pill)
+    w.next(WriteBackNotice(7, "discarded", false, "discarded it"))
+    assertEquals(Pill("dot error", "Discarded"), w.pill)
+    // The same discard, re-sent with a later event (e.g. the next edit's version): the pill is left as it is.
+    w.next(WriteBackNotice(7, "discarded", false, "discarded it"))
+    assertNull(w.pill)
+    w.next(WriteBackNotice(8, "surgical", true, "written"))
+    assertEquals(Pill("dot", "Saved"), w.pill)
+    // A fresh screen's warnings start from the idle pill.
+    assertEquals(Pill("dot", "Saved"), WriteBackWarnings.IDLE)
+  }
+
   @Test fun anUnknownReplyOrATimeoutKeepsTheEditAndRefetches() {
     // A timeout may have been applied: unknown (keep, refetch), never a rollback.
     assertEquals(OpsReply.Unknown, replyWithoutLoad("timeout"))
