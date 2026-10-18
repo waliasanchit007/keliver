@@ -164,6 +164,16 @@
 ### Fixed
 - **portal-ingest:** a statement inserted after the last statement of an `if` block was written
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
+- **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept
+  statement, at a block start, into a new else) were written back in reverse order. Write-back
+  now also checks every surgical result: it is read back and compared with the document, and
+  when they differ the full export is written instead (one log line names the file). The relay
+  passes write-back the document it last wrote the file from, so an edited `Condition` keeps its
+  own `if` (and comments) and a deleted one plus a new one beside it are a delete and an insert.
+- **portal-ingest, portal-relay:** a CRLF screen or component was not recognized (the parser
+  drops a `@Composable` before `\r\n`), so the relay's next write replaced it with an LF full
+  export; it is now read as its LF text and written back CRLF. A component parameter typed
+  `() -> Unit?` (a non-null function) no longer takes a `null` branch; `(() -> Unit)?` does.
 - **portal (core):** an opaque component's placeholder drew its name over the "opaque" reason;
   the name now sits above the reason, each ellipsized.
 - **portal (editor):** the editor parsed project components without parameter types, so every
