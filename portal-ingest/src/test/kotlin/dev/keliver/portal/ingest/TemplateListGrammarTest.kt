@@ -215,6 +215,18 @@ class TemplateListGrammarTest {
       tokens = withTop, fileName = file, base = d,
     )
     assertEquals(text.replace("\"\$top items\"", "\"\${top}items\""), edited)
+    // A letter outside the BMP (U+20000, a surrogate pair) continues the name too.
+    val cjk = "\uD840\uDC00"
+    val edited2 = WriteBack.merge(
+      text, d.apply(DocOp.SetProp(child(d, 2).handle, "text", t.copy(parts = listOf(t.parts[0], lit(cjk))))).doc,
+      tokens = withTop, fileName = file, base = d,
+    )
+    assertEquals(text.replace("\"\$top items\"", "\"\${top}$cjk\""), edited2)
+    // …in the surgical rewrite itself, not only in the canonical fallback.
+    assertEquals(
+      "\"\${top}$cjk A\"",
+      TemplateSyntax.surgical("\"\$top items \\u0041\"", listOf(t.parts[0], lit(" items A")), listOf(t.parts[0], lit("$cjk A"))) { (it as? PropValue.Token)?.ref },
+    )
   }
 
   @Test fun turningAPlainStringIntoATemplateAndBack() {

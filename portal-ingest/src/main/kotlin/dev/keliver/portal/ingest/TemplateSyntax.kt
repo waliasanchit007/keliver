@@ -138,7 +138,7 @@ internal object TemplateSyntax {
     val prev = src.getOrNull(p - 1)
     val first = text.firstOrNull()
     if (prev != null && !prev.isLiteral && !source.startsWith("\${", prev.start) &&
-      first != null && (first.isLetterOrDigit() || first == '_')
+      first != null && (first.isLetterOrDigit() || first == '_' || first.isHighSurrogate()) // U+10000+ letters are surrogate pairs
     ) {
       text = "\${" + prev.ref!!.text + "}" + text
       start = prev.start

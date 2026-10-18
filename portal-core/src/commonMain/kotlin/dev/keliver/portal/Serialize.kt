@@ -32,8 +32,8 @@ import kotlinx.serialization.json.put
  * K4: a template carries its text — literal parts, token values, and a
  * `{field}` placeholder for each binding — under `"s"`, plus `"template"`
  * (each part encoded as a value). A list with references carries its
- * resolved elements under its usual tag (`"li"`/`"lst"`; a binding as 0 or
- * its placeholder) plus `"items"` (each element encoded as a value). A reader
+ * resolved elements under its usual tag (`"li"`/`"lst"`; a mocked binding
+ * as its mock, an unmocked one as 0 or its placeholder) plus `"items"` (each element encoded as a value). A reader
  * that predates K4 decodes the text / the resolved list.
  */
 
@@ -59,7 +59,8 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
     if (v.kind == "ls") {
       put("lst", buildJsonArray { v.items.forEach { add(JsonPrimitive(templateValueText(it) ?: (it as? Bind)?.let { b -> "{${b.field}}" } ?: "")) } })
     } else {
-      put("li", buildJsonArray { v.items.forEach { add(JsonPrimitive((tokenValue(it) as? Int) ?: 0)) } })
+      // A bound element the preview mocked carries the mock (a String from the mock editor).
+      put("li", buildJsonArray { v.items.forEach { add(JsonPrimitive((tokenValue(it) as? Int) ?: (it as? String)?.trim()?.toIntOrNull() ?: 0)) } })
     }
     put("items", buildJsonArray { v.items.forEach { add(encodeValue(it)) } })
     return@buildJsonObject

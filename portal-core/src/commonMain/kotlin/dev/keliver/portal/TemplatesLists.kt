@@ -101,8 +101,12 @@ public fun listItems(v: Any?): List<Any?> = when (v) {
   else -> emptyList()
 }
 
-/** True when [c] may follow a `$name` reference without becoming part of the name. */
-private fun continuesIdentifier(c: Char?): Boolean = c != null && (c.isLetterOrDigit() || c == '_')
+/**
+ * True when [c] would continue a `$name` reference's name — a letter, a
+ * digit, `_`, or a high surrogate (a letter outside the BMP, such as U+20000,
+ * is a surrogate pair; as [parseKotlinStringLiteral] reads one).
+ */
+private fun continuesIdentifier(c: Char?): Boolean = c != null && (c.isLetterOrDigit() || c == '_' || c.isHighSurrogate())
 
 private val SIMPLE_NAME = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -123,18 +127,28 @@ public fun kotlinStringContent(value: String): String = kotlinStringLiteral(valu
  * reference. A part that is neither (a value preview expansion substituted)
  * is written as its text.
  */
-public fun fmtTemplate(t: Template, ref: (String) -> String): String = buildString {
-  append('"')
-  t.parts.forEachIndexed { i, p ->
-    val next = (t.parts.getOrNull(i + 1) as? String)?.firstOrNull()
+public fun fmtTemplate(t: Template, ref: (String) -> String): String {
+  // Each non-reference part's source text (null = a reference); a reference
+  // is braced when the source that follows it would continue its name.
+  val texts = t.parts.map { p ->
     when (p) {
-      is String -> append(kotlinStringContent(p))
-      is Bind -> append(templateRef(ref(p.field), next))
-      is Token -> append(templateRef(p.ref, next))
-      else -> append(kotlinStringContent(templateValueText(p) ?: ""))
+      is Bind, is Token -> null
+      is String -> kotlinStringContent(p)
+      else -> kotlinStringContent(templateValueText(p) ?: "")
     }
   }
-  append('"')
+  fun next(i: Int): Char? = (i + 1 until t.parts.size).firstNotNullOfOrNull { j -> texts[j]?.firstOrNull() ?: if (texts[j] == null) '$' else null }
+  return buildString {
+    append('"')
+    t.parts.forEachIndexed { i, p ->
+      when (p) {
+        is Bind -> append(templateRef(ref(p.field), next(i)))
+        is Token -> append(templateRef(p.ref, next(i)))
+        else -> append(texts[i])
+      }
+    }
+    append('"')
+  }
 }
 
 /** K4: the screen-binding fields a template's or a list's references read (dotted item fields included). */

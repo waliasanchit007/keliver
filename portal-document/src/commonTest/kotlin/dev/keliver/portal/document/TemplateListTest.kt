@@ -154,6 +154,28 @@ class TemplateListTest {
     assertNull(empty.tryApply(DocOp.SetProp(Handle(3), "text", accent)).error)
   }
 
+  @Test fun aReferenceIsBracedWhereWhatFollowsWouldContinueItsName() {
+    // U+20000 is a letter outside the BMP: a surrogate pair continues a Kotlin identifier.
+    val cjk = "\uD840\uDC00"
+    assertEquals("\${x}", dev.keliver.portal.templateRef("x", '\uD840'))
+    assertEquals("\"\${x}$cjk\"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), cjk))) { it })
+    assertEquals("\"\$x \"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), " "))) { it })
+    // A value preview expansion substituted is written as its text: a name before it is braced too.
+    assertEquals("\"\${x}5\"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), 5))) { it })
+    assertEquals("\"\${x}ab!\"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), Template(listOf("ab")), "!"))) { it })
+    assertEquals("\"\$x-1\"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), -1))) { it })
+    // An empty text part is no boundary: what follows it decides.
+    assertEquals("\"\${x}y\"", dev.keliver.portal.fmtTemplate(Template(listOf(Bind("x"), "", "y"))) { it })
+  }
+
+  @Test fun aMockedIntListElementReachesTheDeviceWire() {
+    val d = doc(DocNode.Widget(Handle(3), "StyledBox", props = mapOf("gradientColorsArgb" to colors)))
+    for (mock in listOf<Any?>("255", 255, " 255 ")) {
+      val json = serializeTree(d.toWidgetTree(mocks = mapOf("accent" to mock)))
+      assertTrue("{\"li\":[16777215,-2840,255],\"items\":" in json, json)
+    }
+  }
+
   @Test fun theExporterWritesCompilingKotlin() {
     val d = doc(
       DocNode.Widget(Handle(2), "StyledText", props = mapOf("text" to rating)),
