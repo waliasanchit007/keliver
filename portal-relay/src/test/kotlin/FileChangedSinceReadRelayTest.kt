@@ -1,3 +1,9 @@
+import dev.keliver.portal.ComponentRegistry
+import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.EmptyComponentRegistry
+import dev.keliver.portal.MapComponentRegistry
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropSpec
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.OpBatch
@@ -158,5 +164,49 @@ class FileChangedSinceReadRelayTest {
     assertEquals("discarded", status.outcome, status.toString())
     assertEquals(home, file.readText())
     assertEquals(listOf("a", "Legacy(1)", "b"), svc.texts())
+  }
+
+  // A component appearing after the screen was read: the screen's text is the
+  // text already read, so the watcher path skips it; the relay's component
+  // ingest re-reads every screen with reingest() (Relay.ingestComponentFile),
+  // and the next edit is written, not discarded.
+  @Test fun aComponentThatAppearsAfterTheScreenWasReadIsReReadNotSkipped() {
+    val text = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun HomeScreen(b: HomeScreenBindings) {
+        Column {
+          MenuRow(title = "x")
+          StyledText(text = "a")
+        }
+      }
+
+      interface HomeScreenBindings
+    """.trimIndent() + "\n"
+    val file = tempFile(text)
+    var registry: ComponentRegistry = EmptyComponentRegistry
+    val svc = DocumentService.fromFileOrTree(
+      screenKey = "b1-${System.nanoTime()}/home",
+      treeJson = null,
+      onProjected = {},
+      kotlinFile = file,
+      functionName = "HomeScreen",
+      packageName = "app.screens",
+      components = { registry },
+    )
+    assertTrue(svc.children()[0] is DocNode.RawCode)
+    registry = MapComponentRegistry(
+      listOf(ComponentSpec("MenuRow", props = listOf(PropSpec("title", PropKind.Text, "Title")), events = emptyList(), paramTypes = mapOf("title" to "String"))),
+    )
+    assertEquals(DocumentService.FileChange.ALREADY_READ, svc.fileChanged(file.readText()))
+    assertTrue(svc.reingest())
+    assertEquals("MenuRow", (svc.children()[0] as DocNode.Widget).type)
+    assertEquals("surgical", awaitStatus(svc, setText(svc, 1, "A")).outcome)
+    assertTrue("StyledText(text = \"A\")" in file.readText(), file.readText())
   }
 }

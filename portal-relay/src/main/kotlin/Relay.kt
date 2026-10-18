@@ -932,7 +932,9 @@ private fun ingestComponentFile(f: File) {
     val tokensChanged = rebuildTokens(project)
     val reg = Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
-    reingestScreens(project, force = tokensChanged)
+    // Always forced: a screen's text is unchanged, so the watcher path would
+    // skip it as already read, and its tree would stay read under the old registry.
+    reingestScreens(project, force = true)
     if (tokensChanged) documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
   }.onFailure { println("component ingest failed for $f: $it") }
 }
