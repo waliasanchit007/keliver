@@ -76,8 +76,10 @@ class StringLiteralRoundTripTest {
   }
 
   @Test fun templatesAndConcatenationsAreNotLiterals() {
-    // Not in the grammar -> preserved as code, never misread as text.
-    for (expr in listOf(""""Hi ${'$'}name"""", """"Hi ${'$'}{b.name}"""", """"a" + "b"""", "\"\"\"raw\"\"\"")) {
+    // Not in the grammar -> preserved as code, never misread as text. (K4: a
+    // template over grammar references — `"Hi ${'$'}{b.name}"` — is grammar:
+    // TemplateListGrammarTest; one over an unknown name or an expression is not.)
+    for (expr in listOf(""""Hi ${'$'}name"""", """"Hi ${'$'}{b.name.trim()}"""", """"a" + "b"""", "\"\"\"raw\"\"\"")) {
       val node = text(doc(screen(expr)))
       assertIs<DocNode.RawCode>(node, "$expr -> $node")
     }

@@ -14,6 +14,8 @@ import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.isModifierType
+import dev.keliver.portal.listElementType
+import dev.keliver.portal.listKindOf
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
@@ -458,6 +460,8 @@ object Recognizer {
         }
         val value = parseValue(ve, ctx, itemScope, componentNames)
           ?: tokenArg(type, name, ve.text)
+          ?: templateArg(type, name, ve, itemScope)
+          ?: listArg(type, name, ve, itemScope)
           ?: conditionalArg(type, name, ve, itemScope)
           ?: return offending()
         props[name] = value
@@ -493,6 +497,46 @@ object Recognizer {
     }
 
     /**
+     * K4: a string template as the value of [type]'s [name] — only on a String
+     * prop or parameter, and only when every embedded expression is a grammar
+     * reference ([templateRef]); otherwise null (the call stays RawCode).
+     */
+    private fun templateArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue.Template? {
+      if (propSourceType(type, name, components) != "String") return null
+      return TemplateSyntax.parse(ve) { templateRef(it, itemScope) }
+    }
+
+    /**
+     * K4: a reference inside a template — a binding (a screen field `b.x`, an
+     * item field `item.x`, a component parameter) or a design token of a
+     * literal kind. Anything else (`${a + b}`, `${x.uppercase()}`, a literal)
+     * is not grammar.
+     */
+    private fun templateRef(e: KtExpression, itemScope: Set<String>): PropValue? =
+      parseValue(e, ctx, itemScope, componentNames) as? PropValue.Bind ?: tokens.lookup(e.text)
+
+    /**
+     * K4: `listOf(…)` as the value of a catalogued widget's `List<Int>` /
+     * `List<String>` prop — each element a literal or a design token of the
+     * element kind, or a binding. A list of literals is the plain literal.
+     */
+    private fun listArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue? {
+      if (widgetSpec(type) == null) return null
+      val tag = listKindOf(propSourceType(type, name, components)) ?: return null
+      val element = listElementType(tag)
+      val items = ListSyntax.elements(ve)?.map { e ->
+        val lit = parseLiteral(e.text.trim())
+        when {
+          lit != null -> lit.takeIf { it.tag == (if (tag == "ls") "s" else "i") } ?: return null
+          else -> (parseValue(e, ctx, itemScope, componentNames) as? PropValue.Bind)
+            ?: tokens.lookup(e.text)?.takeIf { tokenFits(element, litValue(it.value)) }
+            ?: return null
+        }
+      } ?: return null
+      return dev.keliver.portal.document.canonicalValue(PropValue.ListOf(tag, items))
+    }
+
+    /**
      * K3: `if (<condition>) A else B` as the value of [type]'s [name] — the
      * condition in the grammar ([parseCond]) and each branch a value the
      * argument takes by itself (a literal, token, bind or action) or `null`.
@@ -506,7 +550,8 @@ object Recognizer {
         val x = (e as? KtParenthesizedExpression)?.expression ?: e ?: return false to null
         if (x is KtIfExpression || x is KtBlockExpression) return false to null
         if (x.text.trim() == "null") return true to null
-        val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text) ?: return false to null
+        val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text)
+          ?: templateArg(type, name, x, itemScope) ?: return false to null
         return true to v
       }
       val (okT, whenTrue) = branch(ifExpr.then)
