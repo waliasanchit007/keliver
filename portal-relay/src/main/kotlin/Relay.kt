@@ -854,7 +854,7 @@ private fun ingestFile(f: File) {
     val text = f.readText()
     val svc = docFor(mapOf("project" to project, "screen" to screen))
     when (svc.fileChanged(text)) {
-      DocumentService.FileChange.SELF_WRITE -> {}
+      DocumentService.FileChange.SELF_WRITE, DocumentService.FileChange.ALREADY_READ -> {}
       DocumentService.FileChange.NOT_A_SCREEN -> println("ingest: ${f.name}: no @Composable screen function — skipped")
       DocumentService.FileChange.INGESTED -> println("ingest: $project/$screen -> v${svc.doc.version} (file edit)")
     }

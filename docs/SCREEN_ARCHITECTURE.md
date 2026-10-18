@@ -589,6 +589,25 @@ ways, and the editor is told which:
    never paired with nodes by position. Any read of the file forgets the
    relay's last written text, so a later file equal to it is the author's
    edit, not the relay's own write.
+   - The file is compared as **text** with what the base was read from or
+     written as. The same text is the same file even when it reads
+     differently now (a design token's value or a component's signature
+     changed meanwhile): the base is re-read from it under the current
+     tables, the document's tokens take their current values, and the edit
+     is written. Another text that still reads as the base (only comments or
+     formatting changed) is merged onto as well.
+   - The file watcher's read of a text the relay just wrote or read is not a
+     change: the writer re-reading an IDE save before the watcher gets to it
+     reports `discarded` once, and the watcher's read of the same text does
+     not turn it into `external`. Neither does a read of a file that is the
+     document a discard left (nothing new happened).
+   - "Ahead" is by content, not version: a document whose edits were undone
+     back to the file discards nothing when the file is read.
+   - The check and the write are one step for the relay's own threads, not
+     for other processes: an IDE save landing in the microseconds between the
+     relay's last read of the file and its write is overwritten (the IDE
+     usually reports the file changed on disk). The window is the gap
+     between two system calls, not the 400 ms debounce.
 1. **Surgically, when possible** (`surgical`). Only the statements and
    arguments that changed are rewritten; comments, blank lines, formatting,
    helper functions, RawCode and the Bindings interface elsewhere stay byte

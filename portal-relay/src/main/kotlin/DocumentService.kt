@@ -61,6 +61,15 @@ class DocumentService(
   @Volatile private var fileDoc: UiDocument? = null
 
   /**
+   * K3 fifth review: the exact text [fileDoc] was read from or written as
+   * (null = unknown). The file watcher's read of this same text is not a
+   * change (B-1: the writer already read it), and write-back compares the
+   * file with it as text before anything else (S-c: a token or component
+   * changing does not make the file another file).
+   */
+  @Volatile private var fileText: String? = null
+
+  /**
    * K3 last review round: what the last write-back of this screen did —
    * [outcome] `surgical` (in place), `export` (the whole file, which held
    * nothing the export drops), `created`, `refused` (NOT written: it would
@@ -327,16 +336,30 @@ class DocumentService(
    * completes "<file> was re-read (…)".
    */
   @Synchronized
-  fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument, why: String = "it changed in code") {
-    val ahead = doc.version != (fileDoc?.version ?: 0L)
+  fun acceptExternal(
+    newDoc: dev.keliver.portal.document.UiDocument,
+    why: String = "it changed in code",
+    /** The text [newDoc] was read from (null = unknown). */
+    text: String? = null,
+  ) {
+    // The document is ahead of the file when it holds what the file last
+    // written or read does not — by content, not version (an undo can bring
+    // it back) — and the file now read does not hold it either.
+    val same = sameDocument(doc, newDoc)
+    val ahead = !same && (fileDoc?.let { !sameDocument(doc, it) } ?: (doc.version != 0L))
     val refused = writeBack?.takeIf { it.outcome == "refused" || it.outcome == "failed" }
+    // Read as the very document a discard left (B-1): nothing new happened — the discard stays what is told.
+    val keep = writeBack?.takeIf { same && it.outcome == "discarded" }
     val name = kotlinFile.name
     doc = newDoc
     fileDoc = newDoc
+    fileText = text
     lastWrittenText = null
     pendingWrite?.cancel(false)
     firstRefused = null
-    writeBack = if (!ahead) {
+    writeBack = if (keep != null) {
+      keep
+    } else if (!ahead) {
       WriteBackStatus(newDoc.version, "external", "$name was re-read ($why); the editor shows it as it is")
     } else {
       val which = if (refused != null) "the change that could not be written" else "the editor's latest change, not yet written,"
@@ -362,10 +385,16 @@ class DocumentService(
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
     if (!kotlinFile.exists()) return true
-    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
+    val text = kotlinFile.readText()
+    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
-    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next, "a component or design token it uses changed") else fileDoc = doc
+    if (next.root != doc.root || next.contract != doc.contract) {
+      acceptExternal(next, "a component or design token it uses changed", text)
+    } else {
+      fileDoc = doc
+      fileText = text
+    }
     return true
   }
 
@@ -374,21 +403,24 @@ class DocumentService(
   fun wasSelfWrite(text: String): Boolean = text == lastWrittenText
 
   /** What the file watcher's [fileChanged] made of the file's new text. */
-  enum class FileChange { SELF_WRITE, NOT_A_SCREEN, INGESTED }
+  enum class FileChange { SELF_WRITE, ALREADY_READ, NOT_A_SCREEN, INGESTED }
 
   /**
    * The file watcher: the screen's file now reads [text]. The relay's own
-   * write is skipped; anything else is read as the document (V2 M3: the file
-   * is the source of truth).
+   * write is skipped, and so is the text the relay last read (B-1: the writer
+   * re-read an author's save before the watcher got to it — reading it again
+   * would turn the discard it reported into "external"); anything else is
+   * read as the document (V2 M3: the file is the source of truth).
    */
   @Synchronized
   fun fileChanged(text: String): FileChange {
     if (wasSelfWrite(text)) return FileChange.SELF_WRITE
+    if (text == fileText) return FileChange.ALREADY_READ
     // C1: recognize with the project's component registry so component calls
     // become editable Widget nodes instead of RawCode.
     val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
       ?: return FileChange.NOT_A_SCREEN
-    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized))
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized), text = text)
     return FileChange.INGESTED
   }
 
@@ -429,12 +461,12 @@ class DocumentService(
    */
   private fun writeKotlin() {
     // One snapshot: what is merged, exported and recorded as the file's base is the same document.
-    val (doc, base) = synchronized(this) { this.doc to fileDoc }
+    val (doc, base, baseText) = synchronized(this) { Triple(this.doc, fileDoc, fileText) }
     val status = try {
       kotlinFile.parentFile.mkdirs()
       val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
       val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
-        onDisk = onDisk, doc = doc, base = base, components = components(), tokens = tokens(),
+        onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
         fileName = tokenFileId, functionName = functionName, packageName = packageName,
       )
       when (plan) {
@@ -498,6 +530,7 @@ class DocumentService(
     lastWrittenText = plan.text
     kotlinFile.writeText(plan.text)
     fileDoc = doc
+    fileText = plan.text
     firstRefused = null
     // M9 versioned catch-up: bake the doc version this screen was written at
     // into a sibling const. Rebuilding the dev bundle (serve --continuous)
@@ -540,9 +573,11 @@ class DocumentService(
       "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
     )
     println("write-back of $screenKey (v${doc.version}): $reason — ${kotlinFile.name} re-read, not written")
-    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec), reason)
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec), reason, text)
     return null
   }
+
+  private fun sameDocument(a: UiDocument, b: UiDocument) = dev.keliver.portal.ingest.WriteBack.sameDocument(a, b)
 
   companion object {
     private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
@@ -561,8 +596,9 @@ class DocumentService(
       tokensVersion: () -> Long = { 0L },
     ): DocumentService {
       if (kotlinFile.exists()) {
+        val text = kotlinFile.readText()
         val rec = runCatching {
-          dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
+          dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
         }.getOrNull()
         if (rec != null) {
           var next = 1L
@@ -574,7 +610,7 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
-            .also { it.fileDoc = doc } // the file IS this document
+            .also { it.fileDoc = doc; it.fileText = text } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

@@ -136,6 +136,34 @@ class DesignTokenRelayTest {
     assertIs<DocNode.RawCode>(text(svc))
   }
 
+  /**
+   * K3 fifth review, S-c: a token value changing while an edit waits for its
+   * write leaves the FILE as it was: the edit is written onto it, not
+   * discarded as if the file had changed.
+   */
+  @Test fun aTokenValueChangedBetweenAnEditAndItsWriteDoesNotDiscardTheEdit() {
+    val (_, screens, components) = app()
+    val svc = service(screens, components)
+    val file = File(screens, "home.kt")
+    val node = text(svc) as DocNode.Widget
+    val ack = svc.submit(batch(svc, DocOp.SetProp(node.handle, "fontSize", lit(14))))
+    assertTrue(ack.ok, ack.error)
+    // Within the write's 400 ms: the declaration changes (the relay's re-read waits for the write).
+    File(components, "Tokens.kt").writeText(tokens(ink = "-16777216"))
+    assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
+    val deadline = System.currentTimeMillis() + 5_000
+    while (svc.writeBack == null && System.currentTimeMillis() < deadline) Thread.sleep(25)
+    val status = assertNotNull(svc.writeBack)
+    assertEquals("surgical", status.outcome, status.toString())
+    assertEquals(home.replace("fontSize = 12", "fontSize = 14"), file.readText())
+    // The re-read that follows takes the new value and loses nothing.
+    assertTrue(svc.reingest())
+    val now = text(svc) as DocNode.Widget
+    assertEquals(lit(14), now.props["fontSize"])
+    assertEquals(PropValue.Token("C.Ink", lit(-16777216), "app.components.C"), now.props["colorArgb"])
+    assertTrue(assertNotNull(svc.writeBack).written, svc.writeBack.toString())
+  }
+
   @Test fun anEditBesideATokenWritesBackSurgicallyAndATokenInsertAddsItsImport() {
     val (_, screens, components) = app()
     val svc = service(screens, components)

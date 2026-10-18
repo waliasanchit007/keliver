@@ -114,9 +114,38 @@ class FileChangedSinceReadRelayTest {
     assertTrue("home.kt" in status.message && "changed" in status.message, status.message)
     assertEquals(authored, file.readText(), "the author's file is left exactly as it is")
     assertEquals(listOf("Legacy(1)", "b"), svc.texts(), "the editor now shows the file")
+    // K3 fifth review, B-1: ~300 ms later the watcher reads the same author text. The writer read it
+    // already: that is not a change, and the discard is still what the editor is told.
+    val version = svc.doc.version
+    assertEquals(DocumentService.FileChange.ALREADY_READ, svc.fileChanged(authored))
+    assertEquals(version, svc.doc.version)
+    assertEquals("discarded", svc.writeBack?.outcome, svc.writeBack.toString())
+    // A read of the file as the same document (only whitespace changed) is nothing new either.
+    file.writeText("$authored\n")
+    assertEquals(DocumentService.FileChange.INGESTED, svc.fileChanged("$authored\n"))
+    assertEquals("discarded", svc.writeBack?.outcome, "nothing new happened: the discard stays current")
+    file.writeText(authored)
+    assertEquals(DocumentService.FileChange.INGESTED, svc.fileChanged(authored))
     // And the next edit is written onto it.
     assertEquals("surgical", awaitStatus(svc, setText(svc, 1, "B")).outcome)
     assertEquals(authored.replace("\"b\"", "\"B\""), file.readText())
+  }
+
+  /**
+   * K3 fifth review: an editor edit undone before its write leaves the document
+   * equal to the file — an author edit read then discards nothing.
+   */
+  @Test fun aReadAfterAnEditWasUndoneDiscardsNothing() {
+    val file = tempFile(home)
+    val svc = service(file)
+    setText(svc, 2, "B")
+    assertTrue(svc.undo("t").ok)
+    val authored = home.replace("\"a\"", "\"A\"")
+    file.writeText(authored)
+    assertEquals(DocumentService.FileChange.INGESTED, svc.fileChanged(authored))
+    val status = assertNotNull(svc.writeBack)
+    assertEquals("external", status.outcome, status.toString())
+    assertTrue(status.written)
   }
 
   @Test fun aFileThatAppearedUnreadIsReadNotMergedOnto() {

@@ -3,7 +3,10 @@ package dev.keliver.portal.ingest
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.document.DocNode
+import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toWidgetTree
 
 /**
@@ -60,11 +63,35 @@ object ScreenWriter {
     doc: UiDocument,
     /** The document the file was last written from or ingested as (identities; see [WriteBack.attempt]). */
     base: UiDocument?,
+    /**
+     * The exact text [base] was read from or written as (null = unknown). A
+     * file that is still this text did not change, however it reads now —
+     * a component or design token it uses may have changed since (S-c).
+     */
+    baseText: String? = null,
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
     fileName: String,
     functionName: String,
     /** The package a NEW file declares (an existing file keeps its own). */
+    packageName: String?,
+  ): Plan = planFor(
+    onDisk,
+    // The document as the CURRENT token table values it: a value that changed
+    // since it was read or chosen is the one the file now reads as (S-c).
+    withCurrentTokens(doc, tokens, fileName),
+    base, baseText, components, tokens, fileName, functionName, packageName,
+  )
+
+  private fun planFor(
+    onDisk: String?,
+    doc: UiDocument,
+    base: UiDocument?,
+    baseText: String?,
+    components: ComponentRegistry,
+    tokens: TokenTable,
+    fileName: String,
+    functionName: String,
     packageName: String?,
   ): Plan {
     val tree = doc.toWidgetTree()
@@ -92,11 +119,23 @@ object ScreenWriter {
     // with the document only by position — which deletes whatever the
     // document does not hold — so it is re-read, never merged onto.
     if (base == null) return Reread("the file has not been read since it was created or changed")
-    if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
+    // S-c: the file is compared as TEXT with what the base was read from or
+    // written as. The same text is the same file: if it reads differently now,
+    // a component or token it uses changed — the base is re-read from it under
+    // the current tables (same shape, same handles). Another text is an
+    // external change unless it still reads as the base (a comment-only edit).
+    val fileBase = if (baseText != null && LineEndings.toLf(baseText) == lf) {
+      if (WriteBack.sameTree(asIs.root, base.root)) base
+      else rehandled(asIs.root, base.root)?.let { base.copy(root = it) }
+        ?: return Reread("a component or design token the screen uses changed since it was last read")
+    } else {
+      if (!WriteBack.sameTree(asIs.root, base.root)) return Reread("the file changed since it was last read")
+      base
+    }
     // S5 (the relay refuses such a move as an op; this holds for any other way here, e.g. an undo).
-    DeclarationScope.problem(base, doc)?.let { return Refuse(it) }
+    DeclarationScope.problem(fileBase, doc)?.let { return Refuse(it) }
 
-    val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, base)
+    val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, fileBase)
     if (surgical is WriteBack.Outcome.Merged) {
       val text = contract(surgical.text, tree, functionName, components)
       readsBack(text)?.let { return Refuse("the file with its Bindings interface updated would not read back as the document: $it") }
@@ -111,6 +150,35 @@ object ScreenWriter {
     val text = export(doc, pkg, functionName, components)
     readsBack(text)?.let { return Refuse("$why, and the full export would not read back as the document either: $it") }
     return restored(text, How.EXPORT)
+  }
+
+  /** [fresh] (the file as it reads now) with [old]'s handles, node for node — null when their shapes differ. */
+  private fun rehandled(fresh: DocNode, old: DocNode): DocNode? = when {
+    fresh is DocNode.RawCode && old is DocNode.RawCode -> fresh.copy(handle = old.handle)
+    fresh is DocNode.Widget && old is DocNode.Widget && fresh.type == old.type && fresh.children.size == old.children.size ->
+      fresh.copy(handle = old.handle, children = fresh.children.indices.map { rehandled(fresh.children[it], old.children[it]) ?: return null })
+    else -> null
+  }
+
+  /** [doc] with every design token valued as [tokens] values it now (one it no longer offers is left as it is). */
+  private fun withCurrentTokens(doc: UiDocument, tokens: TokenTable, fileName: String): UiDocument {
+    fun value(v: PropValue): PropValue = when (v) {
+      is PropValue.Token -> tokens.usable(v.ref, v.import, fileName)
+        ?.let { e -> runCatching { lit(e.value) }.getOrNull() }
+        ?.let { v.copy(value = it) } ?: v
+      is PropValue.Conditional -> v.copy(whenTrue = v.whenTrue?.let(::value), whenFalse = v.whenFalse?.let(::value))
+      else -> v
+    }
+    fun node(n: DocNode): DocNode = when (n) {
+      is DocNode.RawCode -> n
+      is DocNode.Widget -> n.copy(
+        props = n.props.mapValues { (_, v) -> value(v) },
+        modifiers = n.modifiers.mapValues { (_, v) -> value(v) },
+        children = n.children.map(::node),
+      )
+    }
+    val root = node(doc.root)
+    return if (root == doc.root) doc else doc.copy(root = root)
   }
 
   /**

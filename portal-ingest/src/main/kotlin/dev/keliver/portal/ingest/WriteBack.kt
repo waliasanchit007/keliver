@@ -194,6 +194,9 @@ object WriteBack {
    * ORDER too ([sameModifiers]) — `background().padding()` is not
    * `padding().background()`.
    */
+  /** The same document ([sameTree], handles aside) with the same contract. */
+  fun sameDocument(a: UiDocument, b: UiDocument): Boolean = sameTree(a.root, b.root) && a.contract == b.contract
+
   internal fun sameTree(a: DocNode, b: DocNode): Boolean = when {
     a is DocNode.RawCode && b is DocNode.RawCode -> sameCode(a.text, b.text)
     a is DocNode.Widget && b is DocNode.Widget ->
