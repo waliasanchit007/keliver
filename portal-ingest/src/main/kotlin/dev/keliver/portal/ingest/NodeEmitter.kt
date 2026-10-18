@@ -75,6 +75,19 @@ object NodeEmitter {
     return Emitted(out, imports)
   }
 
+  /**
+   * The full export of [doc] as a screen function — each RawCode in it
+   * written as its own source text, not the exporter's `RawCode(text = …)`
+   * placeholder (which does not compile, and does not read back as code).
+   */
+  fun screen(doc: UiDocument, functionName: String, components: ComponentRegistry = EmptyComponentRegistry): String {
+    val raws = mutableListOf<String>()
+    val marked = doc.copy(root = markRaw(doc.root, raws))
+    var out = exportKotlin(marked.toWidgetTree(), functionName = functionName, components = components)
+    raws.forEachIndexed { i, raw -> out = out.replace("${marker(i)}()", raw) }
+    return out
+  }
+
   private fun marker(i: Int) = "__KeliverRawCode${i}__"
 
   /** [n] with each RawCode in it replaced by a marker call (`__KeliverRawCode0__()`); [raws] collects their texts. */

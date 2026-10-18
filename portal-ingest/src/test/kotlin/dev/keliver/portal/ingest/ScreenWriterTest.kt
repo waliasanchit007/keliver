@@ -100,10 +100,50 @@ class ScreenWriterTest {
   @Test fun anExportThatDoesNotReadBackIsRefused() {
     val text = exported(simple)
     val d = doc(text)
-    // The exporter cannot write a RawCode node: its export does not read back.
-    val target = d.apply(DocOp.InsertNode(d.root.handle, null, DocNode.RawCode(Handle(0), "Legacy(1)"))).doc
+    // A widget type nothing knows exports as a call that reads back as code.
+    val target = d.apply(DocOp.InsertNode(d.root.handle, null, DocNode.Widget(Handle(0), "NotAWidget"))).doc
     val r = assertIs<ScreenWriter.Refuse>(diverging { plan(text, target, d) })
     assertTrue("export" in r.reason, r.reason)
+  }
+
+  @Test fun anExportWritesCodeAsItsOwnText() {
+    val text = exported(simple)
+    val d = doc(text)
+    val target = d.apply(DocOp.InsertNode(d.root.handle, null, DocNode.RawCode(Handle(0), "Legacy(1)"))).doc
+    val w = assertIs<ScreenWriter.Write>(diverging { plan(text, target, d) })
+    assertEquals(ScreenWriter.How.EXPORT, w.how)
+    assertTrue("    Legacy(1)\n" in w.text && "RawCode(" !in w.text, w.text)
+  }
+
+  // ── nits: a new file, and the text after the Bindings pass, read back ─────
+
+  @Test fun aNewFileWritesCodeAsItsOwnTextAndReadsBack() {
+    val d = UiDocument(
+      "home",
+      DocNode.Widget(Handle(1), "Column", children = listOf(DocNode.RawCode(Handle(2), "Legacy(\n  1,\n)"), DocNode.Widget(Handle(3), "StyledText", mapOf("text" to lit("x"))))),
+      dev.keliver.portal.document.Contract(), 0, 10,
+    )
+    val w = assertIs<ScreenWriter.Write>(plan(null, d, null))
+    assertEquals(ScreenWriter.How.CREATED, w.how)
+    assertTrue("    Legacy(\n  1,\n)\n" in w.text && "RawCode(" !in w.text, w.text)
+    assertTrue(WriteBack.sameTree(Recognizer.recognize(file, w.text)!!.root, d.root), w.text)
+  }
+
+  @Test fun aNewFileThatWouldNotReadBackIsRefused() {
+    val d = UiDocument("home", DocNode.Widget(Handle(1), "Column", children = listOf(DocNode.Widget(Handle(2), "NotAWidget"))), dev.keliver.portal.document.Contract(), 0, 10)
+    val r = assertIs<ScreenWriter.Refuse>(plan(null, d, null))
+    assertTrue("read back" in r.reason && "NotAWidget" in r.reason, r.reason)
+  }
+
+  @Test fun theTextAfterTheBindingsPassIsWhatIsReadBack() {
+    val d = doc(reviewer)
+    ScreenWriter.afterContractForTest.set { it.replace("Legacy(bindings.title)", "Legacy(bindings.title, 2)") }
+    try {
+      val r = assertIs<ScreenWriter.Refuse>(plan(reviewer, insertTitle(d), d))
+      assertTrue("read back" in r.reason, r.reason)
+    } finally {
+      ScreenWriter.afterContractForTest.remove()
+    }
   }
 
   @Test fun aChangeOutsideTheExportersShapeIsSurgicalNotExported() {

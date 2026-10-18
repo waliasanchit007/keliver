@@ -5,7 +5,6 @@ import dev.keliver.portal.EmptyComponentRegistry
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toWidgetTree
-import dev.keliver.portal.exportKotlin
 
 /**
  * What writing a screen document to its `.kt` file does — the write-back
@@ -23,7 +22,10 @@ import dev.keliver.portal.exportKotlin
  *  3. Otherwise the change is REFUSED: nothing is written, the file stays as
  *     it is, and [Refuse.reason] says why (the relay surfaces it).
  *
- * A new file (nothing on disk) is the export. Line endings: a CRLF file stays
+ * Every text written — after the Bindings interface pass — reads back as
+ * the document. The file is written only when it is still what the relay
+ * last wrote or read ([Reread] otherwise). A new file (nothing on disk) is
+ * the export (RawCode as its own text). Line endings: a CRLF file stays
  * CRLF; a file that mixes endings keeps every line ending the change does not
  * touch, and a change that would rewrite a CRLF line of such a file is
  * refused ([LineEndings.restore]).
@@ -47,6 +49,9 @@ object ScreenWriter {
 
   enum class How { SURGICAL, EXPORT, CREATED }
 
+  /** Test seam: rewrites a text after the Bindings pass (forces a divergence). Per thread. */
+  internal val afterContractForTest = ThreadLocal<((String) -> String)?>()
+
   private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
 
   fun plan(
@@ -63,7 +68,18 @@ object ScreenWriter {
     packageName: String?,
   ): Plan {
     val tree = doc.toWidgetTree()
-    if (onDisk == null) return Write(export(tree, packageName, functionName, components), How.CREATED)
+    // Every text written is read back — after the Bindings pass — as the document.
+    fun readsBack(text: String): String? {
+      val back = runCatching { Recognizer.recognize(fileName, text, components, tokens) }.getOrNull()
+        ?: return "it does not read as a screen"
+      return if (WriteBack.sameTree(back.root, doc.root)) null
+      else WriteBack.firstDifference(back.root, doc.root) ?: "it reads back differently"
+    }
+    if (onDisk == null) {
+      val text = export(doc, packageName, functionName, components)
+      readsBack(text)?.let { return Refuse("a new file written from the document would not read back as it: $it") }
+      return Write(text, How.CREATED)
+    }
     // Everything below works on LF text; the file keeps its own line endings.
     val lf = LineEndings.toLf(onDisk)
     fun restored(text: String, how: How): Plan = LineEndings.restore(onDisk, text)?.let { Write(it, how) }
@@ -81,26 +97,29 @@ object ScreenWriter {
     DeclarationScope.problem(base, doc)?.let { return Refuse(it) }
 
     val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, base)
-    if (surgical is WriteBack.Outcome.Merged) return restored(contract(surgical.text, tree, functionName, components), How.SURGICAL)
+    if (surgical is WriteBack.Outcome.Merged) {
+      val text = contract(surgical.text, tree, functionName, components)
+      readsBack(text)?.let { return Refuse("the file with its Bindings interface updated would not read back as the document: $it") }
+      return restored(text, How.SURGICAL)
+    }
     val why = (surgical as WriteBack.Outcome.NotSurgical).reason
 
     // The full export only when it is lossless: the file is the export of its own tree.
     val pkg = PKG_RE.find(lf)?.groupValues?.get(1) ?: packageName
-    val asIsExport = export(UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0).toWidgetTree(), pkg, functionName, components)
+    val asIsExport = export(UiDocument(doc.screen, asIs.root, asIs.contract, 0, 0), pkg, functionName, components)
     if (asIsExport.trimEnd('\n') != lf.trimEnd('\n')) return Refuse(why)
-    val text = export(tree, pkg, functionName, components)
-    val back = runCatching { Recognizer.recognize(fileName, text, components, tokens) }.getOrNull()
-    if (back == null || !WriteBack.sameTree(back.root, doc.root)) {
-      val diff = back?.let { WriteBack.firstDifference(it.root, doc.root) } ?: "it does not read as a screen"
-      return Refuse("$why, and the full export would not read back as the document either: $diff")
-    }
+    val text = export(doc, pkg, functionName, components)
+    readsBack(text)?.let { return Refuse("$why, and the full export would not read back as the document either: $it") }
     return restored(text, How.EXPORT)
   }
 
-  /** The full export of [tree] as a screen file (package line, Bindings interface kept in sync). */
-  private fun export(tree: WidgetNode, pkg: String?, functionName: String, components: ComponentRegistry): String {
+  /**
+   * The full export of [doc] as a screen file (package line, Bindings
+   * interface kept in sync; RawCode as its own text — [NodeEmitter.screen]).
+   */
+  private fun export(doc: UiDocument, pkg: String?, functionName: String, components: ComponentRegistry): String {
     val header = pkg?.let { "package $it\n\n" } ?: ""
-    return contract(header + exportKotlin(tree, functionName = functionName, components = components), tree, functionName, components)
+    return contract(header + NodeEmitter.screen(doc, functionName, components), doc.toWidgetTree(), functionName, components)
   }
 
   /**
@@ -110,4 +129,5 @@ object ScreenWriter {
    */
   private fun contract(text: String, tree: WidgetNode, functionName: String, components: ComponentRegistry): String =
     runCatching { ContractWriteBack.ensure(text, tree, functionName, components) }.getOrDefault(text)
+      .let { afterContractForTest.get()?.invoke(it) ?: it }
 }
