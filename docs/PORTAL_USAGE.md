@@ -441,6 +441,15 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   `Double`/`Float`/nullable in the Bindings interface keep the call code
   (RawCode), the editor offers no Double token in a template, and the server
   refuses one. Format such a value in the presenter into a `String` field.
+- So ingest must read the type: a screen field's in the screen's Bindings
+  interface in the same file (with its supertypes declared there), an item
+  field's in its item type when that is declared in the same file
+  (`interface Row { val price: Double }` keeps `"${row.price}"` code). A
+  type it cannot read is unknown and a template does not read it: a
+  property without a type (`val x get() = 1.5`), a field inherited from a
+  type in another file, and every binding of a screen whose Bindings
+  interface is not in its file. `kotlin.Int` etc. are fine. An item type in
+  another file is not read (such an item field still reads as grammar).
 - Write-back is surgical: editing one text segment or reference rewrites only
   it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
   `${'$'}`) elsewhere in the string stay as written; editing one list
@@ -449,7 +458,12 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
 - A binding read only by a template is typed `String` in the derived
   contract (a field the Bindings interface already declares keeps its type:
   `String`, `Int`, `Long` or `Boolean`). A field a template or a list reads
-  cannot also be tested as a Boolean.
+  cannot also be tested as a Boolean, unless the Bindings interface declares
+  it `Boolean`. A field a Repeat iterates is a list: a template, a list
+  element or a text prop cannot read it whole.
+- A mocked element of an Int list takes a decimal or a colour (`#RRGGBB`,
+  `#AARRGGBB`); any other mock leaves the element out of the preview and
+  the device push (an unmocked or blank one is 0).
 - An editor built before this release is served a template's text (bindings
   as `{field}`) and a list's resolved values (it does not ask with
   `templates=1` / `lists=1`); its edits to other props leave both in the file.

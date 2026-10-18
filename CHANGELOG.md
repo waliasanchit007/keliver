@@ -46,8 +46,15 @@
   token picker. A template never reads a Double or a nullable value (a Double token, a parameter
   declared `Double` or nullable, a field the Bindings interface declares `Double`/`Float`/nullable):
   the device (Kotlin/JS) prints `1.0` as `1` and a null as `null`, the preview `1.0` and nothing,
-  so such a call stays RawCode and the document, the relay and the editor refuse one. A field a
-  template or a list reads is never also tested as a Boolean.
+  so such a call stays RawCode and the document, the relay and the editor refuse one. Ingest reads
+  a screen field's type in the screen's Bindings interface in the same file (and its same-file
+  supertypes) and an item field's in its item type when declared in the same file; a type it
+  cannot read (a property without a type, a field inherited from another file, any binding of a
+  screen whose interface is not in its file) is unknown, and a template does not read it
+  (`kotlin.Int` etc. are the plain types). A field a template or a list reads is never also tested
+  as a Boolean, unless the Bindings interface declares it `Boolean`; a field a Repeat iterates is
+  read whole by no template, list element or text prop. A mocked Int list element is a decimal or
+  a `#RRGGBB`/`#AARRGGBB` colour (else left out). `portal-core` adds `mockedIntElement`.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
   portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
   parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters

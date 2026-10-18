@@ -606,6 +606,24 @@ fun SectionCard(content: @Composable () -> Unit) {
     `portal-render` test runs on both js and wasm and asserts it, Long past
     2^53 included). Format such a value in the presenter (a `String` field
     the presenter fills) to show it.
+  - *Where ingest reads a reference's type.* A screen field's in the
+    Bindings interface the screen takes, declared in the same file, with the
+    members of its supertypes declared in that file; `kotlin.String`,
+    `kotlin.Int`, `kotlin.Long` and `kotlin.Boolean` are those types. An
+    item field's (`row.price`) in the Repeat's element type (`List<Row>`)
+    when `Row` — an interface, or a class with `val`/`var` constructor
+    parameters — is declared in the same file: a `Double`, `Float` or
+    nullable member keeps the call RawCode. A type ingest cannot read is
+    *unknown*, and a template never reads it: a property without a declared
+    type (`val x get() = 1.5`, typed `<unknown>` in the contract, never
+    silently `String`), a field a supertype declared in another file may
+    hold, and every screen field when the screen's Bindings interface is
+    not in its file or the screen takes another type (the RawCode reason
+    says so). Limits: an item type declared in another file is not read (an
+    item field in a template stays grammar, as before), and the document
+    checks only what the contract carries — not item field types, nor fields
+    of a screen whose interface it does not list; the next ingest reads such
+    an edit back as RawCode.
   - A template fits only where source takes a `String`: a widget's String
     prop, a component's String parameter, or a conditional value's branch on
     one (`if (b.on) "Hi ${b.n}" else "-"`).
@@ -659,10 +677,16 @@ fun SectionCard(content: @Composable () -> Unit) {
     `String` item member); a field the Bindings interface already declares
     keeps its declared type (a `String`, `Int`, `Long` or `Boolean` — see
     above), and another use (an Int prop) types it first. A field a
-    template or a list reads is never a Boolean: the document refuses a
+    template or a list reads is never a Boolean — unless the Bindings
+    interface declares it `Boolean` (a template prints one: `"on: ${b.on}"`
+    beside `if (b.on) { … }` compiles): otherwise the document refuses a
     Boolean test on it, and placing a template or a list that reads a field
-    the screen already tests as one. A bound list element is the list's
-    element type.
+    the screen already tests as one; the conditional value being placed is
+    not evidence against itself (`if (b.on) "on: ${b.on}" else "-"` with
+    `on` declared `Boolean`). A field a Repeat iterates is a List: no
+    template, no list element and no binding on a prop that is not a List
+    reads it (either order; a `List<String>` prop may bind the same list). A
+    bound list element is the list's element type.
   - *What an op may not create.* The document refuses a template on a
     non-String prop or a modifier, a list with references on anything but a
     `List<Int>`/`List<String>` widget prop or with the other prop's tag, a
@@ -670,7 +694,9 @@ fun SectionCard(content: @Composable () -> Unit) {
     action, a nested template, a Double, Long or wrong-kind token, a
     non-field name, a field the contract declares Double/Float/nullable or —
     for an element — other than the element type), a conditional list, a
-    Boolean test on a field a template or list reads (either order), and —
+    Boolean test on a field a template or list reads unless declared
+    `Boolean` (either order), a Repeat's field read as one value (either
+    order), and —
     where it is placed (set, insert, move) — an item field read outside a
     Repeat over its item. The relay
     refuses a template on a component parameter not declared `String`, a
