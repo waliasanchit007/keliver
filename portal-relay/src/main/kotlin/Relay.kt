@@ -1041,11 +1041,15 @@ fun main(args: Array<String>) {
 
   // M9: the overlay dev runtime polls this for the active screen's live doc
   // version — if it's ahead of the bundle's baked COMPILED_VERSION, overlay.
+  // K3: `writeBack` is that screen's last write-back status (null = none yet):
+  // a `refused` or `failed` one means the document is ahead of its .kt file.
   server.createContext("/devstate") { ex ->
     handle(ex) {
       val (p, s) = activeScreen()
-      val version = documents["$p/$s"]?.doc?.version ?: 0L
-      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version}")
+      val svc = documents["$p/$s"]
+      val version = svc?.doc?.version ?: 0L
+      val writeBack = svc?.writeBack?.json() ?: "null"
+      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version,\"writeBack\":$writeBack}")
     }
   }
 
@@ -1302,7 +1306,7 @@ fun main(args: Array<String>) {
       respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex))))
     }
   }
-  server.createContext("/doc-events") { ex -> // SSE: {"version":N} on every change
+  server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)

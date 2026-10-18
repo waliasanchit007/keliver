@@ -7,6 +7,7 @@ import dev.keliver.portal.document.lit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -54,8 +55,13 @@ class CrlfTest {
   @Test fun lineEndingsHelper() {
     assertEquals("a\r\nb\r\n", LineEndings.restore("a\r\nb\r\n", "a\nb\n"))
     assertEquals("a\nb\n", LineEndings.restore("a\nb\n", "a\nb\n"))
-    // Mixed: written as LF (there is no one ending to keep).
-    assertEquals("a\nb\n", LineEndings.restore("a\r\nb\n", "a\nb\n"))
+    // Mixed: each line the edit keeps keeps its ending; new lines are LF ...
+    assertEquals("a\r\nb\n", LineEndings.restore("a\r\nb\n", "a\nb\n"))
+    assertEquals("a\r\nx\nb\n", LineEndings.restore("a\r\nb\n", "a\nx\nb\n"))
+    assertEquals("a\r\n", LineEndings.restore("a\r\nb\n", "a\n"))
+    // ... and a CRLF line the edit rewrites or drops is not silently made LF.
+    assertNull(LineEndings.restore("a\r\nb\n", "A\nb\n"))
+    assertNull(LineEndings.restore("a\nb\r\nc\n", "a\nc\n"))
     assertEquals("a\nb", LineEndings.toLf("a\r\nb"))
   }
 }
