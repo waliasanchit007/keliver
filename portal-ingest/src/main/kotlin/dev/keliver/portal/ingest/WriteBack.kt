@@ -70,6 +70,12 @@ object WriteBack {
     // maintains the Bindings interface as a separate pass after every write.
 
     val targetRoot = target.root as? DocNode.Widget ?: return no("the document's root is not a widget")
+    if (rec.bindingsParam == null && needsBindings(targetRoot)) {
+      return no(
+        "`${rec.screenName}` takes no bindings parameter, which a bound value, action, condition or list needs " +
+          "(add `b: ${rec.screenName}Bindings` to it, and that interface, in code first)",
+      )
+    }
     val written = LinkedHashSet<String>()
     val ids = base?.let { identitiesOf(rec.root, it.root) }
     needed.set(written)
@@ -114,6 +120,24 @@ object WriteBack {
     val restored = LineEndings.restore(fileText, out)
       ?: return no("the file mixes CRLF and LF line endings and the edit touches a CRLF line")
     return Outcome.Merged(restored)
+  }
+
+  /** Whether [n] reads a screen field or calls a screen action (through the bindings parameter). */
+  private fun needsBindings(n: DocNode): Boolean {
+    if (n !is DocNode.Widget) return false
+    fun screenField(f: String?) = f != null && '.' !in f
+    fun value(v: PropValue?): Boolean = when (v) {
+      is PropValue.Bind -> screenField(v.field)
+      is PropValue.Action -> true
+      is PropValue.Conditional -> screenField(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      else -> false
+    }
+    val own = when (n.type) {
+      "Condition" -> screenField((n.props["field"] as? PropValue.Lit)?.s)
+      "Repeat" -> true
+      else -> n.props.values.any(::value) || n.modifiers.values.any(::value)
+    }
+    return own || n.children.any(::needsBindings)
   }
 
   /** Why the current merge is not surgical (the first reason recorded); per thread, per merge. */

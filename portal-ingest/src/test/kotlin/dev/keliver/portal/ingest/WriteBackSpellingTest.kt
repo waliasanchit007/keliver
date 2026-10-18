@@ -126,6 +126,17 @@ class WriteBackSpellingTest {
     assertReingests(target, out)
   }
 
+  @Test fun aBoundInsertIntoAScreenWithoutABindingsParameterSaysWhy() {
+    val src = reviewer.replace("fun HomeScreen(bindings: HomeScreenBindings)", "fun HomeScreen()").replace("Legacy(bindings.title)", "Legacy(1)")
+    val d = doc(src)
+    val node = DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open")))
+    val o = WriteBack.attempt(src, d.apply(DocOp.InsertNode(d.root.handle, null, node)).doc, fileName = file, base = d)
+    assertTrue(o is WriteBack.Outcome.NotSurgical && "takes no bindings parameter" in o.reason, o.toString())
+    // A literal insert needs no parameter and is written in place.
+    val text = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to lit("x")))
+    assertTrue(WriteBack.attempt(src, d.apply(DocOp.InsertNode(d.root.handle, null, text)).doc, fileName = file, base = d) is WriteBack.Outcome.Merged)
+  }
+
   // ── 2d: modifier order ─────────────────────────────────────────────────────
 
   @Test fun sameTreeComparesModifierOrder() {
