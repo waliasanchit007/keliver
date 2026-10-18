@@ -51,7 +51,10 @@
   a WidgetNode prop may hold a `Conditional` (the preview's `*B` getters and `actionOf` resolve
   it against the mocks; code reading `props[key]` directly sees it); `PropValue` has a fifth
   subclass (an exhaustive `when` over it needs a branch); `"Else"` is a reserved component name;
-  the catalog's `Condition` spec gains `test`/`negate` props.
+  the catalog's `Condition` spec gains `test`/`negate` props; codegen leaves a non-nullable
+  catalog event that has a default out of the catalog (every catalog event is nullable); a
+  project-component event whose signature takes a payload exports an action that ignores it as
+  `{ _ -> b.x() }` (was `{ b.x() }`), which ingest reads back as the action.
 
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** design tokens are
   portal grammar (D9, K2). An argument referencing a constant in the app's own sources —

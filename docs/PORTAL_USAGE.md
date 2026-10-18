@@ -369,14 +369,23 @@ if (b.subtitle.isNotEmpty()) { … }
 - A `Condition` node's panel edits its `field`, `test` (`empty`/`blank`, or
   empty for a Boolean) and `negate`, and offers **+ else branch**; the else
   branch is an `Else` node in the outline (delete it to remove the branch).
-- Edits write back surgically: only the changed condition or branch.
+- Edits write back surgically: only the changed condition or branch; adding or
+  removing the else branch touches only the ` else { … }` text.
+- The relay refuses an edit whose result could not compile (and says why): for
+  example a `null` branch on a parameter not declared nullable, an `item.x`
+  condition outside its Repeat, or a Boolean test on a field the screen uses
+  as a list or text. Change the test before the field when switching a
+  `Condition` from a Boolean field to a list/text one.
 - In a screen, an action branch is a reference (`b::tap`) or parenthesized
   (`({ b.open("X") })`); a screen condition has no null test (its contract
   cannot declare a nullable field).
 - A component's nullable function parameter is an optional event; a nullable
   content slot is reported as unsupported.
-- An editor built before this release is served each conditional's true
-  branch (it does not ask with `conditionals=1`).
+- An editor built before this release is served each conditional VALUE's true
+  branch (it does not ask with `conditionals=1`). `Condition` nodes reach it
+  unchanged: it previews them as a plain Boolean (ignoring `test`/`negate`)
+  and shows an `Else` node as an unknown widget — upgrade the editor to edit
+  them.
 - Agents: the MCP op schema documents `PropValue.Conditional`.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Conditions are grammar".
 

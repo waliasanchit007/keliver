@@ -497,21 +497,52 @@ fun SectionCard(content: @Composable () -> Unit) {
   - *Write-back.* A no-op is byte-identical. Editing one branch rewrites only
     that branch's text (a Dp keeps its spelling); editing the condition
     rewrites only the condition; edits inside an else block stay in it.
-    Adding or removing an `else` re-emits just that `if` statement. The
-    exporter writes every form (`colorArgb = if (b.selected) C.Ink else -1`,
-    `Margin(top = if (b.raised) 8.dp else 0.dp)`, `if (!b.x) { … } else { … }`)
-    and types each condition's field in the derived contract (`Boolean`, or
-    `String` for an emptiness/blankness test).
+    Adding an `else` inserts just ` else {` … `}` after the then block (its
+    children go in as inserts); removing one deletes just the text from
+    `else` through its block's `}` — comments and formatting in the then
+    block are untouched. A new `Condition` is matched to an existing `if`
+    only when its condition is the same, so inserting one beside another is
+    an insert, never a rewrite of its neighbour (an edited condition still
+    rewrites in place when it is the only changed `Condition` between the
+    same kept siblings). The exporter writes every form (`colorArgb = if
+    (b.selected) C.Ink else -1`, `Margin(top = if (b.raised) 8.dp else
+    0.dp)`, `if (!b.x) { … } else { … }`) and types each condition's field in
+    the derived contract (`Boolean`, or `String` for an emptiness/blankness
+    test — except a Repeat's items field, which stays `List<…>`: a List has
+    `isEmpty()` too). A component event's branch matches the event's
+    signature: `onSelect: ((Int) -> Unit)?` with an action that ignores the
+    payload is `if (b.x) ({ _ -> b.pick() }) else null` against `fun pick()`.
   - *On the wire.* The device tree carries a conditional value's TRUE branch
     under its usual keys plus `"cond"` and `"else"`, so an older reader
     renders the true branch. The relay sends `PropValue.Conditional` only to a
     client asking `GET /doc?…&conditionals=1` (this release's editor and MCP
     server); an older editor gets each conditional's true branch, and — as
     with tokens — its edits to other props leave the conditional in the
-    document and the file. The document refuses a conditional that could not
-    compile (a null or action branch on a value prop, a value on an event, a
-    nested branch, a null test, a misfit token); the relay checks a
-    component instance's against its signature.
+    document and the file. That compatibility covers conditional VALUES
+    only: `Condition` nodes reach an older editor unchanged, with their
+    `test`/`negate` props and any `Else` child. It shows only the `field`
+    prop, previews the Condition as a plain Boolean (ignoring `test` and
+    `negate`), and renders an `Else` node as an unknown widget inside the
+    then branch; its edits keep `test`/`negate` (a SetProp of `field` leaves
+    them), and deleting the `Else` node removes the else block.
+  - *What an op may not create.* The document refuses, on SetProp/
+    SetModifier and for every condition in an inserted or moved subtree: a
+    `null` or action branch on a catalog value prop, a value branch on an
+    event, a conditional with no value in either branch, a nested branch, a
+    list prop, a null test, an unknown test, a token that does not fit; a
+    `Condition` whose `field` is not a plain screen binding name (`if
+    (item.x) { … }` is not grammar) or whose `test`/`negate` source cannot
+    spell; an item field (`item.flag`) read by a conditional value outside a
+    Repeat over that item; a Boolean test on a field the document reads
+    elsewhere as a Repeat's List or as a String/number (bound to such a
+    prop, or tested for emptiness); `isBlank()` on a Repeat's List. It does
+    not know a project component's signature: the relay refuses a component
+    instance's conditional whose branch the parameter cannot take (an
+    action on a value parameter, a value on an event, `null` on a
+    parameter — event or value — not declared nullable). Every catalog event
+    is nullable (codegen leaves a non-nullable event with a default out of
+    the catalog). Ingest applies the same null rule: `null` in a branch of
+    a non-nullable parameter keeps the call RawCode.
   - *Signatures.* A nullable function parameter (`onLongTap: (() -> Unit)? =
     null`) is an optional event. A nullable content slot (`footer:
     (@Composable () -> Unit)?`) is not supported and says so in the
