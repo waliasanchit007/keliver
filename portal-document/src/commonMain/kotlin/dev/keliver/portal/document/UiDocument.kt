@@ -45,9 +45,12 @@ import kotlinx.serialization.Serializable
  * a plain screen binding name; an item field (`item.flag`) outside a Repeat
  * over that item; a Boolean test on a field the document reads as a List (a
  * Repeat's items) or a String (bound to a non-Boolean prop, or tested for
- * emptiness); `isBlank()` on a Repeat's List. An `Else` node (a `Condition`'s
- * else branch) sits only directly under a `Condition`, at most one per
- * Condition.
+ * emptiness); `isBlank()` on a Repeat's List. Only the op placing a condition
+ * is checked: a later op that changes how the document reads its field
+ * (binding it to a text prop, renaming the enclosing Repeat's `item`) is not
+ * refused for conditions already placed — the compile reports those. An
+ * `Else` node (a `Condition`'s else branch) sits only directly under a
+ * `Condition`, at most one per Condition.
  */
 @Serializable
 public data class UiDocument(

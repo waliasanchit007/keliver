@@ -500,11 +500,20 @@ fun SectionCard(content: @Composable () -> Unit) {
     Adding an `else` inserts just ` else {` … `}` after the then block (its
     children go in as inserts); removing one deletes just the text from
     `else` through its block's `}` — comments and formatting in the then
-    block are untouched. A new `Condition` is matched to an existing `if`
-    only when its condition is the same, so inserting one beside another is
-    an insert, never a rewrite of its neighbour (an edited condition still
-    rewrites in place when it is the only changed `Condition` between the
-    same kept siblings). The exporter writes every form (`colorArgb = if
+    block are untouched. A `Condition` is matched to an existing `if` by
+    identity: the relay passes write-back the document it last wrote the
+    file from (or ingested it as), so an edited condition rewrites its own
+    `if` in place (comments kept), a new `Condition` is an insert and a
+    deleted one a delete, however they sit together. Without that base (it
+    no longer reads as the file, or another caller), position decides: a
+    `Condition` with the same condition is the same `if`, and an edited one
+    rewrites in place only when it is the only changed `Condition` between
+    the same kept siblings — so a delete plus an unrelated insert there pair
+    as an edit (the text is right; the deleted `if`'s comments stay). A run
+    of inserts keeps the document's order. Every surgical result is read
+    back once more and compared with the document; if it differs, the full
+    export is written instead (the relay logs one line naming the file).
+    The exporter writes every form (`colorArgb = if
     (b.selected) C.Ink else -1`, `Margin(top = if (b.raised) 8.dp else
     0.dp)`, `if (!b.x) { … } else { … }`) and types each condition's field in
     the derived contract (`Boolean`, or `String` for an emptiness/blankness
@@ -539,7 +548,13 @@ fun SectionCard(content: @Composable () -> Unit) {
     not know a project component's signature: the relay refuses a component
     instance's conditional whose branch the parameter cannot take (an
     action on a value parameter, a value on an event, `null` on a
-    parameter — event or value — not declared nullable). Every catalog event
+    parameter — event or value — not declared nullable; `() -> Unit?` is a
+    non-null function, the nullable one is `(() -> Unit)?`). These checks
+    run when an op PLACES a condition: an op that later changes how the
+    document reads a field already tested — binding it to a text prop,
+    renaming a Repeat's `item` around an `item.x` conditional — is not
+    refused for the conditions already there; the guest compile reports
+    it. Every catalog event
     is nullable (codegen leaves a non-nullable event with a default out of
     the catalog). Ingest applies the same null rule: `null` in a branch of
     a non-nullable parameter keeps the call RawCode.
