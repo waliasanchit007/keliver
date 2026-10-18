@@ -110,6 +110,7 @@ class EmitExporterTest {
     // A Condition writes its own condition and its else block.
     assertContains(src, "sb.append(\"${'$'}{indent}if (${'$'}{cond.kotlin(::bindRef)}) {\\n\")")
     assertContains(src, "node.elseNode()?.let { e ->")
-    assertContains(src, "\"Condition\" -> condOf(node)?.let { out[it.field] = it.fieldType }")
+    // An emptiness test never retypes a Repeat's List items (review S2).
+    assertContains(src, "if (c.test == CondTest.Bool || out[c.field]?.startsWith(\"List<\") != true) out[c.field] = c.fieldType")
   }
 }

@@ -54,12 +54,21 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
   /** For an Action on a component instance event, the handler's param type. */
   fun componentEventParamType(nodeType: String, propKey: String): String? =
     components.spec(nodeType)?.events?.firstOrNull { it.name == propKey }?.paramType
+  // K3: a Repeat's items field is a List (the exporter types it); an emptiness
+  // test reads a List as well as a String, so it never makes that field a String.
+  val listFields = HashSet<String>()
+  fun lists(n: WidgetNode) {
+    if (n.type == "Repeat") (n.props["items"] as? String)?.takeIf { it.isNotBlank() }?.let(listFields::add)
+    n.children.forEach(::lists)
+  }
+  lists(tree)
   fun walk(n: WidgetNode) {
     for ((key, prop) in n.props) {
       // K3: a conditional value contributes its condition's field and each branch.
       val values = if (prop is Conditional) {
         val c = prop.cond
-        if ('.' !in c.field && c.field !in fields) {
+        val readsList = c.test != CondTest.Bool && c.field in listFields
+        if ('.' !in c.field && c.field !in fields && !readsList) {
           fields[c.field] = if (c.test == CondTest.Bool) PropKind.Bool else PropKind.Text
         }
         listOf(prop.whenTrue, prop.whenFalse)

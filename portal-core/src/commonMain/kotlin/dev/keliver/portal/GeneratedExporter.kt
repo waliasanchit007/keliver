@@ -176,7 +176,10 @@ private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap
 private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, String>, ifaces: LinkedHashMap<String, LinkedHashMap<String, String>>) {
   when (node.type) {
     // K3: the field's type follows the condition's test (Boolean, or String for isEmpty/isBlank).
-    "Condition" -> condOf(node)?.let { out[it.field] = it.fieldType }
+    // An emptiness test reads a List too: it never retypes a Repeat's items (in any node order).
+    "Condition" -> condOf(node)?.let { c ->
+      if (c.test == CondTest.Bool || out[c.field]?.startsWith("List<") != true) out[c.field] = c.fieldType
+    }
     "Repeat" -> {
       val items = (node.props["items"] as? String)?.takeIf { it.isNotBlank() }
       val itemVar = (node.props["item"] as? String)?.takeIf { it.isNotBlank() } ?: "item"

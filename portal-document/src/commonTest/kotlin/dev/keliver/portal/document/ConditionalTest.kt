@@ -153,4 +153,29 @@ class ConditionalTest {
     val plain = export(PropValue.Action("pick"))
     assertTrue("onSelect = { _ -> b.pick() }," in plain, plain)
   }
+
+  // Review S2: an emptiness test reads a List as well as a String — it never retypes a Repeat's list.
+  @Test fun anEmptinessTestKeepsARepeatsListType() {
+    val repeat = DocNode.Widget(
+      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
+    )
+    val emptyText = DocNode.Widget(
+      Handle(4), "StyledText",
+      props = mapOf("text" to PropValue.Conditional("items", test = "empty", whenTrue = lit("none"), whenFalse = lit("some"))),
+    )
+    val emptyIf = DocNode.Widget(
+      Handle(5), "Condition", mapOf("field" to lit("items"), "test" to lit("empty")),
+      children = listOf(text(6)),
+    )
+    // Every order of the Repeat and the tests reads the same type.
+    for (children in listOf(listOf(repeat, emptyText), listOf(emptyText, repeat), listOf(repeat, emptyIf), listOf(emptyIf, repeat))) {
+      val src = exportKotlin(doc(*children.toTypedArray()).toWidgetTree(), functionName = "Home")
+      assertTrue("  val items: List<Item>\n" in src, src)
+      assertTrue("val items: String" !in src, src)
+    }
+    // Without a Repeat the field is a String, as before.
+    val plain = exportKotlin(doc(emptyText).toWidgetTree(), functionName = "Home")
+    assertTrue("  val items: String\n" in plain, plain)
+  }
 }
