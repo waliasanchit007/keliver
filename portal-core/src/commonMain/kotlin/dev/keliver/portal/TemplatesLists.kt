@@ -39,6 +39,25 @@ public fun listKindOf(sourceType: String?): String? = when (sourceType?.replace(
 }
 
 /**
+ * K4: a mocked value (a preview mock, a row value) of an Int list element as
+ * its Int: a decimal Int, or a colour as the editor spells one — `#RRGGBB`
+ * (opaque) or `#AARRGGBB`; a blank one (none typed yet) is 0, as an
+ * unmocked binding is. Null for anything else: the element is left out
+ * rather than read as 0 (transparent black). The preview and the device
+ * wire read a mock alike.
+ */
+public fun mockedIntElement(text: String): Int? {
+  val t = text.trim()
+  if (t.isEmpty()) return 0
+  t.toIntOrNull()?.let { return it }
+  if (!t.startsWith("#")) return null
+  val h = t.substring(1)
+  if ((h.length != 6 && h.length != 8) || !h.all { it in '0'..'9' || it.lowercaseChar() in 'a'..'f' }) return null
+  val v = h.toLong(16)
+  return (if (h.length == 6) v or 0xFF000000L else v).toInt()
+}
+
+/**
  * K4: the token kinds a template reads — those the device (Kotlin/JS) and
  * the preview (wasm, JVM) print alike. Never a Double: `1.0` prints `1` on
  * the device and `1.0` in the preview, so no preview of one is faithful.

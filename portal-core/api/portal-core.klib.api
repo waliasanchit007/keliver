@@ -506,6 +506,7 @@ final fun dev.keliver.portal/listElementType(kotlin/String): kotlin/String? // d
 final fun dev.keliver.portal/listItems(kotlin/Any?): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/listItems|listItems(kotlin.Any?){}[0]
 final fun dev.keliver.portal/listKindOf(kotlin/String?): kotlin/String? // dev.keliver.portal/listKindOf|listKindOf(kotlin.String?){}[0]
 final fun dev.keliver.portal/marginProps(kotlin.collections/List<dev.keliver.portal/PropSpec>): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/marginProps|marginProps(kotlin.collections.List<dev.keliver.portal.PropSpec>){}[0]
+final fun dev.keliver.portal/mockedIntElement(kotlin/String): kotlin/Int? // dev.keliver.portal/mockedIntElement|mockedIntElement(kotlin.String){}[0]
 final fun dev.keliver.portal/nextNodeId(): kotlin/Int // dev.keliver.portal/nextNodeId|nextNodeId(){}[0]
 final fun dev.keliver.portal/parseKotlinStringLiteral(kotlin/String): kotlin/String? // dev.keliver.portal/parseKotlinStringLiteral|parseKotlinStringLiteral(kotlin.String){}[0]
 final fun dev.keliver.portal/placeholder(kotlin/String, kotlin/String): dev.keliver.portal/WidgetNode // dev.keliver.portal/placeholder|placeholder(kotlin.String;kotlin.String){}[0]

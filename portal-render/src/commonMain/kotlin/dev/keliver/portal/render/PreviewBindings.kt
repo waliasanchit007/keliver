@@ -17,6 +17,7 @@ import dev.keliver.portal.condOf
 import dev.keliver.portal.elseNode
 import dev.keliver.portal.thenChildren
 import dev.keliver.portal.resolveItemRow
+import dev.keliver.portal.mockedIntElement
 import dev.keliver.portal.tokenValue
 
 /**
@@ -98,14 +99,18 @@ private fun PreviewBindings.partText(p: Any?): String? = when (val v = tokenValu
   else -> templateValueText(v)
 }
 
-/** K4: an Int list prop — a token element its value, a bound element its mock (else 0). */
+/**
+ * K4: an Int list prop — a token element its value, a bound element its mock
+ * (else 0). A mock is a decimal or a colour ([mockedIntElement]); any other
+ * mock leaves its element out, as the device wire does.
+ */
 public fun WidgetNode.intListB(key: String): List<Int> = when (val v = props[key]) {
-  is ListOf -> v.items.map { e ->
+  is ListOf -> v.items.mapNotNull { e ->
     when (val x = tokenValue(PreviewBindings.chosen(e))) {
       is Int -> x
-      is Bind -> PreviewBindings.mocks[x.field]?.trim()?.toIntOrNull() ?: 0
-      is String -> x.trim().toIntOrNull() ?: 0 // an item field's row value
-      else -> 0
+      is Bind -> PreviewBindings.mocks[x.field].let { m -> if (m == null) 0 else mockedIntElement(m) }
+      is String -> mockedIntElement(x) // an item field's row value
+      else -> null
     }
   }
   else -> intList(key)

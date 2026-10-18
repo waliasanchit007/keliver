@@ -252,9 +252,21 @@ class TemplateListTest {
 
   @Test fun aMockedIntListElementReachesTheDeviceWire() {
     val d = doc(DocNode.Widget(Handle(3), "StyledBox", props = mapOf("gradientColorsArgb" to colors)))
+    // A blank mock (none typed yet) is 0, as an unmocked binding is.
+    assertTrue("{\"li\":[16777215,-2840,0],\"items\":" in serializeTree(d.toWidgetTree(mocks = mapOf("accent" to " "))))
     for (mock in listOf<Any?>("255", 255, " 255 ")) {
       val json = serializeTree(d.toWidgetTree(mocks = mapOf("accent" to mock)))
       assertTrue("{\"li\":[16777215,-2840,255],\"items\":" in json, json)
+    }
+    // A colour as the editor spells one: #RRGGBB (opaque) or #AARRGGBB.
+    for ((mock, argb) in listOf("#FF0000" to 0xFFFF0000.toInt(), " #80ff0000 " to 0x80FF0000.toInt())) {
+      val json = serializeTree(d.toWidgetTree(mocks = mapOf("accent" to mock)))
+      assertTrue("{\"li\":[16777215,-2840,$argb],\"items\":" in json, json)
+    }
+    // Anything else is no Int: the element is left out, not sent as 0 (transparent black).
+    for (mock in listOf("red", "#F00", "1.5")) {
+      val json = serializeTree(d.toWidgetTree(mocks = mapOf("accent" to mock)))
+      assertTrue("{\"li\":[16777215,-2840],\"items\":" in json, json)
     }
   }
 

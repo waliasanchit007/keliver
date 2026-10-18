@@ -10,6 +10,7 @@ import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.listElementType
 import dev.keliver.portal.tokenFits
 import dev.keliver.portal.templateTokenFits
+import dev.keliver.portal.mockedIntElement
 import org.w3c.dom.HTMLElement
 
 // K4: the properties panel for a string template and a list with references.
@@ -209,12 +210,8 @@ internal fun parseListSource(text: String, kind: PropKind, known: Map<String, Pr
   return Parsed(canonicalValue(PropValue.ListOf(tag, items)), null)
 }
 
-private fun hexArgb(s: String): Int? {
-  val h = s.removePrefix("#")
-  if (h.length != 6 && h.length != 8) return null
-  val v = h.toLongOrNull(16) ?: return null
-  return (if (h.length == 6) v or 0xFF000000L else v).toInt()
-}
+/** `#RRGGBB` (opaque) or `#AARRGGBB` — the rule a mocked element follows on the wire and in the preview too. */
+private fun hexArgb(s: String): Int? = s.takeIf { it.trim().startsWith("#") }?.let(::mockedIntElement)
 
 /** The tokens [v] already holds (also those the token list no longer offers), by reference. */
 internal fun tokensIn(v: Any?): Map<String, PropValue.Token> = when (v) {

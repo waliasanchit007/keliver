@@ -33,7 +33,8 @@ import kotlinx.serialization.json.put
  * `{field}` placeholder for each binding — under `"s"`, plus `"template"`
  * (each part encoded as a value). A list with references carries its
  * resolved elements under its usual tag (`"li"`/`"lst"`; a mocked binding
- * as its mock, an unmocked one as 0 or its placeholder) plus `"items"` (each element encoded as a value). A reader
+ * as its mock — an Int element's mock a decimal or a `#RRGGBB`/`#AARRGGBB`
+ * colour, else left out — an unmocked one as 0 or its placeholder) plus `"items"` (each element encoded as a value). A reader
  * that predates K4 decodes the text / the resolved list.
  */
 
@@ -59,8 +60,18 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
     if (v.kind == "ls") {
       put("lst", buildJsonArray { v.items.forEach { add(JsonPrimitive(templateValueText(it) ?: (it as? Bind)?.let { b -> "{${b.field}}" } ?: "")) } })
     } else {
-      // A bound element the preview mocked carries the mock (a String from the mock editor).
-      put("li", buildJsonArray { v.items.forEach { add(JsonPrimitive((tokenValue(it) as? Int) ?: (it as? String)?.trim()?.toIntOrNull() ?: 0)) } })
+      // A bound element the preview mocked carries the mock (a String from the mock editor) —
+      // a decimal or a colour (mockedIntElement); any other mock is left out. Unmocked: 0.
+      put("li", buildJsonArray {
+        v.items.forEach { e ->
+          when (val x = tokenValue(e)) {
+            is Int -> add(JsonPrimitive(x))
+            is String -> mockedIntElement(x)?.let { add(JsonPrimitive(it)) }
+            is Bind -> add(JsonPrimitive(0))
+            else -> {}
+          }
+        }
+      })
     }
     put("items", buildJsonArray { v.items.forEach { add(encodeValue(it)) } })
     return@buildJsonObject

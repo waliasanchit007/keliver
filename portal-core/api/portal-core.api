@@ -399,6 +399,7 @@ public final class dev/keliver/portal/TemplatesListsKt {
 	public static final fun listElementType (Ljava/lang/String;)Ljava/lang/String;
 	public static final fun listItems (Ljava/lang/Object;)Ljava/util/List;
 	public static final fun listKindOf (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun mockedIntElement (Ljava/lang/String;)Ljava/lang/Integer;
 	public static final fun referencedBinds (Ljava/lang/Object;)Ljava/util/List;
 	public static final fun templateRef (Ljava/lang/String;Ljava/lang/Character;)Ljava/lang/String;
 	public static final fun templateRefTypeFits (Ljava/lang/String;)Z
