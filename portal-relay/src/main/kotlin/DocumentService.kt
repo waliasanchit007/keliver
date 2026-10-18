@@ -309,7 +309,8 @@ class DocumentService(
       kotlinFile.parentFile.mkdirs()
       // M4: surgical PSI write-back preserves comments/formatting/RawCode when
       // the file already exists; fall back to a full export on first write or
-      // when the change isn't safely surgical (type change, reorder, contract).
+      // when the change isn't safely surgical (type change, reorder, contract)
+      // or the surgical text would not read back as the document (merge checks).
       val registry = components()
       val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
       // C1: component-aware surgical merge so a screen using a component isn't

@@ -17,6 +17,8 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
  * touch just those statements. Comments, formatting, and RawCode elsewhere
  * survive byte-exact. Returns null when the change isn't safely surgical
  * (type change, reorder, contract change) — caller falls back to full export.
+ * Also null when the merged text would not read back as [target] (the safety
+ * net — [sameTree]): a surgical result is written only once it is checked.
  */
 object WriteBack {
   fun merge(
@@ -52,7 +54,36 @@ object WriteBack {
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
     // Each splice reports its imports STRUCTURALLY (exporter / grammar).
-    return ensureImports(file.text, written)
+    val out = ensureImports(file.text, written).let { afterSpliceForTest.get()?.invoke(it) ?: it }
+    // Safety net (K3 review): the surgical text is written only when it reads
+    // back as the target — one more parse per write. Otherwise null: the caller
+    // writes the full export, which is never re-checked (no loop).
+    val back = runCatching { Recognizer.recognize(fileName, out, components, tokens) }.getOrNull()
+    if (back == null || !sameTree(back.root, targetRoot)) {
+      println("write-back: surgical merge of $fileName does not read back as the document; writing the full export")
+      return null
+    }
+    return out
+  }
+
+  /** Test seam: rewrites a merge's text before it is checked (forces a divergence). Per thread. */
+  internal val afterSpliceForTest = ThreadLocal<((String) -> String)?>()
+
+  /**
+   * The same document tree, handles aside: widget type, props, modifiers,
+   * explicit id and children, in order; RawCode by its text (trimmed — the
+   * recognizer keeps a statement's text without surrounding whitespace). A
+   * Condition's props compare as its condition ([condKey]: an absent `test`
+   * is the Boolean one, an absent `negate` is false).
+   */
+  internal fun sameTree(a: DocNode, b: DocNode): Boolean = when {
+    a is DocNode.RawCode && b is DocNode.RawCode -> a.text.trim() == b.text.trim()
+    a is DocNode.Widget && b is DocNode.Widget ->
+      a.type == b.type &&
+        (if (a.type == "Condition") condKey(a) == condKey(b) else a.props == b.props) &&
+        a.modifiers == b.modifiers && a.explicitId == b.explicitId &&
+        a.children.size == b.children.size && a.children.indices.all { sameTree(a.children[it], b.children[it]) }
+    else -> false
   }
 
   /** The imports this merge's splices need (for [ensureImports]); per thread, per merge. */
