@@ -33,14 +33,17 @@
     never https to http, one raster type from a fixed list (no SVG) served under its canonical
     name, 10 MB cap, one deadline per request, its own bounded thread pool (503 when full) so a
     slow host does not hold up the relay's other endpoints, an in-memory LRU cache, and a 30 s
-    memory of failures: per URL, and per host:port only when no connection to the host could be
-    made (DNS, refused, no route, connect timeout, TLS handshake) — a slow or broken answer
-    costs that URL only. CORS comes from the relay's access gate (U36). Host entries refuse
+    memory of failures: per URL, and per host:port when no connection to the host could be
+    made (DNS, refused, no route, connect timeout, TLS handshake) or when it accepted the
+    connection and let the deadline run out three times in a row within 30 s (an image served
+    from it ends the run) — any other slow or broken answer costs that URL only. CORS comes from the relay's access gate (U36). Host entries refuse
     `localhost`, single labels and IP literals in any form (IPv4 by the WHATWG rule: a last
     label all digits or `0x` hex; `1.bp.blogspot.com` is a name); DNS for a listed name is
     trusted. `GET /preview-assets` lists the hosts; the editor's image fetcher rewrites only
-    those URLs and runs at most two of them at once, so in the browser slow images leave
-    connections to the relay free for edits and write-back.
+    those URLs and runs at most one of them at once per image host and three in all, taking
+    the host's turn before a shared one, so one hanging host cannot starve the others' images
+    and slow images leave connections to the relay free for edits and write-back. A cancelled
+    image load aborts its browser request, so its connection is freed with its turn.
   - **Theme:** `AppPreviewEntry` gains `screenWrapper` (the app's guest-side wrapper around
     every screen, e.g. its `Theme`) and `hostWrapper` (the native host's `MaterialTheme`, whose
     scheme a guest `Theme` starts from); the canvas renders inside both. New portal-render API:
