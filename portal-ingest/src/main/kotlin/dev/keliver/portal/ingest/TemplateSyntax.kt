@@ -34,7 +34,12 @@ internal object TemplateSyntax {
     val isLiteral: Boolean get() = ref == null
   }
 
-  private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "d", "b")
+  /**
+   * The token tags a template reads: String, Int, Boolean. Never a Double — the
+   * device (Kotlin/JS) prints `1.0` as `1`, the preview as `1.0`; as K2 refuses
+   * a Double inside a String token's own template.
+   */
+  private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "b")
 
   /**
    * The parts of [e] — literal runs (decoded) and references — or null when
@@ -81,8 +86,8 @@ internal object TemplateSyntax {
   /**
    * [text] as a template: a [PropValue.Template] when it holds at least one
    * reference and each one resolves through [ref] to a [PropValue.Bind] or a
-   * [PropValue.Token] of a literal kind; null otherwise (a plain literal, or
-   * not grammar).
+   * [PropValue.Token] of a String, Int or Boolean kind; null otherwise (a
+   * plain literal, or not grammar).
    */
   fun parse(e: KtExpression, ref: (KtExpression) -> PropValue?): PropValue.Template? {
     val str = e as? KtStringTemplateExpression ?: return null

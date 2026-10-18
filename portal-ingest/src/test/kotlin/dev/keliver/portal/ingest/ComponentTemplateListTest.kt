@@ -61,6 +61,41 @@ class ComponentTemplateListTest {
     assertEquals(ListOf("li", listOf(Bind("start"), Token("C.End", -5674, "app.components.C"))), score.body!!.children[1].props["gradientColorsArgb"])
   }
 
+  @Test fun aDoubleOrNullableParameterInATemplateKeepsTheComponentOpaque() {
+    // The device (Kotlin/JS) prints 1.0 as "1" and a null as "null"; the
+    // preview prints "1.0" and nothing — no faithful preview, so not grammar.
+    for ((param, use) in listOf(
+      "ratio: Double" to "§ratio", "nick: String?" to "§{nick}", "n: Int?" to "x §n", "ok: Boolean?" to "§ok",
+    )) {
+      val kt = """
+        package app.components
+
+        import androidx.compose.runtime.Composable
+        import dev.keliver.material.compose.StyledText
+
+        @Composable
+        fun Odd(label: String, $param) {
+          StyledText(text = "$use")
+        }
+      """.trimIndent().replace('§', '$')
+      val spec = Recognizer.recognizeComponent("app/components/Odd.kt", kt, tokens = tokens)!!.spec
+      assertTrue(!spec.transparent, "$param: ${spec.body}")
+    }
+    // A non-null String / Int / Boolean parameter is grammar.
+    val fine = """
+      package app.components
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun Fine(label: String, n: Int, on: Boolean) {
+        StyledText(text = "§label §n §on")
+      }
+    """.trimIndent().replace('§', '$')
+    assertTrue(Recognizer.recognizeComponent("app/components/Fine.kt", fine, tokens = tokens)!!.spec.transparent)
+  }
+
   private val screenKt = """
     package app.screens
 

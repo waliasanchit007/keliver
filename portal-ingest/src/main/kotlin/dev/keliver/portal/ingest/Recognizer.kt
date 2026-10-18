@@ -73,7 +73,11 @@ data class Recognized(
  * `onClick` -> Action). Shared by both recognition modes.
  */
 internal sealed interface NameCtx {
-  data class Screen(val bindingsParam: String?) : NameCtx
+  data class Screen(
+    val bindingsParam: String?,
+    /** K4: each field the screen's Bindings interface declares → its declared type text. */
+    val fieldTypes: Map<String, String> = emptyMap(),
+  ) : NameCtx
   data class Component(
     val valueParams: Set<String>,
     val eventParams: Set<String>,
@@ -86,6 +90,8 @@ internal sealed interface NameCtx {
      * a caller's modifiers does.
      */
     val modifierParam: Boolean = false,
+    /** K4: each parameter → its declared type text (a template reads only some types). */
+    val paramTypes: Map<String, String> = emptyMap(),
   ) : NameCtx
 }
 
@@ -118,11 +124,13 @@ object Recognizer {
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
     val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
-    val walk = Walker(NameCtx.Screen(bindingsParam), components, lookup)
-    val root = walk.rootOf(body)
-
     val ifaceClass = file.declarations.filterIsInstance<KtClass>()
       .firstOrNull { it.isInterface() && it.name?.endsWith("Bindings") == true }
+    val fieldTypes = ifaceClass?.declarations?.filterIsInstance<KtProperty>()
+      ?.mapNotNull { p -> (p.name ?: return@mapNotNull null) to (p.typeReference?.text ?: return@mapNotNull null) }
+      ?.toMap().orEmpty()
+    val walk = Walker(NameCtx.Screen(bindingsParam, fieldTypes), components, lookup)
+    val root = walk.rootOf(body)
     val contract = ifaceClass?.let { iface ->
       Contract(
         fields = iface.declarations.filterIsInstance<KtProperty>()
@@ -262,6 +270,7 @@ object Recognizer {
       NameCtx.Component(
         valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
         modifierParam = acceptsModifier,
+        paramTypes = paramTypes,
       ),
       components,
       lookup,
@@ -513,7 +522,21 @@ object Recognizer {
      * is not grammar.
      */
     private fun templateRef(e: KtExpression, itemScope: Set<String>): PropValue? =
-      parseValue(e, ctx, itemScope, componentNames) as? PropValue.Bind ?: tokens.lookup(e.text)
+      when (val v = parseValue(e, ctx, itemScope, componentNames)) {
+        // K4: only a type the device (Kotlin/JS) and the preview print alike — never a
+        // Double/Float (`1` vs `1.0`) or a nullable value (`null` vs nothing).
+        is PropValue.Bind -> v.takeIf { dev.keliver.portal.templateRefTypeFits(declaredType(it)) }
+        null -> tokens.lookup(e.text)
+        else -> null
+      }
+
+    /** K4: the declared type of a binding — a screen field's in the Bindings interface, a component parameter's; null when unknown (an item field). */
+    private fun declaredType(b: PropValue.Bind): String? = when {
+      '.' in b.field -> null
+      ctx is NameCtx.Screen -> ctx.fieldTypes[b.field]
+      ctx is NameCtx.Component -> ctx.paramTypes[b.field]
+      else -> null
+    }
 
     /**
      * K4: `listOf(…)` as the value of a catalogued widget's `List<Int>` /
@@ -528,7 +551,9 @@ object Recognizer {
         val lit = parseLiteral(e.text.trim())
         when {
           lit != null -> lit.takeIf { it.tag == (if (tag == "ls") "s" else "i") } ?: return null
+          // A bound element is declared as the element type, if at all.
           else -> (parseValue(e, ctx, itemScope, componentNames) as? PropValue.Bind)
+            ?.let { b -> b.takeIf { declaredType(b)?.replace(" ", "")?.let { it == element } ?: true } ?: return null }
             ?: tokens.lookup(e.text)?.takeIf { tokenFits(element, litValue(it.value)) }
             ?: return null
         }

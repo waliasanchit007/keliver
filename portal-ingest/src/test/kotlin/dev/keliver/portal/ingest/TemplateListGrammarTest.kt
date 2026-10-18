@@ -77,7 +77,7 @@ class TemplateListGrammarTest {
     }
 
     interface HomeScreenBindings {
-      val rating: Double
+      val rating: String
       val city: String
       val count: Int
       val extra: String
@@ -150,6 +150,25 @@ class TemplateListGrammarTest {
     assertIs<DocNode.RawCode>(one("StyledBox(gradientColorsArgb = listOf(C.Brand, C.End))"))
     assertIs<DocNode.RawCode>(one("StyledBox(gradientColorsArgb = listOf(C.Ratio))"))
     assertIs<DocNode.RawCode>(one("StyledBox(gradientColorsArgb = listOf(b.a + 1))"))
+  }
+
+  @Test fun aDoubleOrNullableReferenceInATemplateStaysRawCode() {
+    // The device (Kotlin/JS) prints 1.0 as "1" and a null as "null"; the
+    // preview prints "1.0" and nothing — no faithful preview, so not grammar.
+    val typed = src.replace("  val extra: String\n", "  val extra: String\n  val score: Double\n  val ratio: Float\n  val nick: String?\n  val big: Long\n")
+    assertTrue("val score: Double" in typed)
+    fun one(stmt: String): DocNode = column(doc(typed.replace("StyledText(text = \", \${b.city}\")", stmt))).children[1]
+    assertIs<DocNode.RawCode>(one("StyledText(text = \"\${C.Ratio}\")"))
+    assertIs<DocNode.RawCode>(one("StyledText(text = \"x \${b.score}\")"))
+    assertIs<DocNode.RawCode>(one("StyledText(text = \"x \${b.ratio}\")"))
+    assertIs<DocNode.RawCode>(one("StyledText(text = \"x \${b.nick}\")"))
+    assertIs<DocNode.RawCode>(one("StyledText(text = if (b.on) \"x \${b.score}\" else \"-\")"))
+    // A bound list element is declared as the element type.
+    assertIs<DocNode.RawCode>(one("SegmentedButtonRow(options = listOf(\"a\", b.nick))"))
+    assertIs<DocNode.RawCode>(one("StyledBox(gradientColorsArgb = listOf(b.score))"))
+    // String, Int, Long, Boolean and undeclared fields print alike: grammar.
+    assertIs<DocNode.Widget>(one("StyledText(text = \"x \${b.big} \${b.count} \${b.undeclared}\")"))
+    assertIs<DocNode.Widget>(one("SegmentedButtonRow(options = listOf(\"a\", b.city))"))
   }
 
   @Test fun aNoOpWriteBackIsByteIdentical() {
