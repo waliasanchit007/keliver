@@ -91,6 +91,17 @@ class ParityGoldenTest {
     assertGolden("parity-tokens-body", card.spec.body!!)
   }
 
+  /** K3: conditional values and children recognize transparently. */
+  @Test
+  fun conditionalFixtureMatchesItsGolden() {
+    val text = source("ParityConditionals")
+    val tokens = TokenTable.scan(listOf("ParityConditionals.kt" to text))
+    val toggle = Recognizer.recognizeComponent("ParityConditionals.kt", text, tokens = tokens)!!
+    assertTrue(toggle.spec.transparent, toggle.spec.diagnostic)
+    assertEquals("ParityToggle", toggle.spec.name)
+    assertGolden("parity-conditionals-body", toggle.spec.body!!)
+  }
+
   private fun WidgetNode.canonicalIds(): WidgetNode =
     copy(id = 0, children = children.map { it.canonicalIds() })
 }
