@@ -401,18 +401,25 @@ private var writeBackScreen = ""
 /**
  * Shows the change stream's write-back status: a refused or failed one as a
  * visible, non-blocking banner (the edit is in the document but NOT in the
- * .kt file); a later write that lands removes it.
+ * .kt file) and the pill "Not written"; a discarded one as a banner (the file
+ * was read, the change is gone). A later write that lands, a read of the
+ * file, or an event with no status removes it.
  */
 private fun showWriteBack(n: WriteBackNotice?) {
+  val wasShowing = writeBackWarnings.showing
   val warning = writeBackWarnings.next(n)
-  if (!writeBackWarnings.showing) {
-    writeBackBanner?.remove()
-    writeBackBanner = null
-    if (n != null) { saveDotEl.className = "dot"; saveTextEl.textContent = "Saved" }
-    return
+  if (writeBackWarnings.showing) {
+    saveDotEl.className = "dot error"
+    saveTextEl.textContent = "Not written"
+  } else {
+    // Cleared: a write landed, the file was read, or no status is current.
+    if (wasShowing || n != null) { saveDotEl.className = "dot"; saveTextEl.textContent = "Saved" }
+    // A discard's banner stays until dismissed or a later write / read replaces it.
+    if (n == null || n.written) {
+      writeBackBanner?.remove()
+      writeBackBanner = null
+    }
   }
-  saveDotEl.className = "dot error"
-  saveTextEl.textContent = "Not written"
   if (warning == null) return
   writeBackBanner?.remove()
   val banner = Ui.el("div", "", "")

@@ -42,7 +42,9 @@ internal fun opsReply(status: Int?, body: String?): OpsReply {
  * K3 last review round: the relay's last write-back of the screen
  * (`writeBack` on the change stream): [outcome] `surgical`, `export`,
  * `created` — or `refused` (the change would have lost code in the .kt file,
- * which is left as it is) / `failed`, when [written] is false.
+ * which is left as it is) / `failed`, when [written] is false. S4: or the
+ * file was read — `external` (the document is the file again) or
+ * `discarded` (read while the document was ahead of it: that change is gone).
  */
 internal data class WriteBackNotice(val version: Long, val outcome: String, val written: Boolean, val message: String)
 
@@ -61,8 +63,11 @@ internal fun writeBackOf(data: String): WriteBackNotice? {
 }
 
 /**
- * Which write-back warnings to show: a refused or failed write-back once per
- * document version; a later successful one clears it ([showing] false).
+ * Which write-back warnings to show: a refused, failed or discarded change
+ * once per document version. [showing] = the document is ahead of its file
+ * (refused / failed); a write that lands, a read of the file, or an event
+ * with no status (the relay sends its current one with every event) clears
+ * it. A discard is told, but the document is the file again.
  */
 internal class WriteBackWarnings {
   private var warned = -1L
@@ -73,12 +78,11 @@ internal class WriteBackWarnings {
 
   /** The warning text to show now for [n], or null (nothing new). */
   fun next(n: WriteBackNotice?): String? {
-    if (n == null) return null
-    if (n.written) {
+    if (n == null || n.written) {
       showing = false
       return null
     }
-    showing = true
+    showing = n.outcome != "discarded"
     if (n.version == warned) return null
     warned = n.version
     return n.message

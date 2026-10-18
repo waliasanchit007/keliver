@@ -44,7 +44,22 @@ class EditorWriteBackTest {
     assertNull(w.next(WriteBackNotice(5, "surgical", true, "written")))
     assertTrue(!w.showing, "a later write clears the warning")
     assertEquals("failed", w.next(WriteBackNotice(6, "failed", false, "failed")))
+    // The relay sends its current status with every event: none means none is current.
     assertNull(w.next(null))
-    assertTrue(w.showing, "an event without a status keeps the warning")
+    assertTrue(!w.showing, "an event without a status clears the warning")
+  }
+
+  @Test fun aReadOfTheFileClearsTheWarningAndADiscardIsToldOnce() {
+    val w = WriteBackWarnings()
+    w.next(WriteBackNotice(4, "refused", false, "could not be written"))
+    assertTrue(w.showing)
+    // The file was read with nothing unwritten: cleared, nothing to say.
+    assertNull(w.next(WriteBackNotice(5, "external", true, "home.kt was re-read")))
+    assertTrue(!w.showing)
+    w.next(WriteBackNotice(6, "refused", false, "could not be written"))
+    // Read while the document was ahead: said once — but the document IS the file now (no "Not written").
+    assertEquals("discarded it", w.next(WriteBackNotice(7, "discarded", false, "discarded it")))
+    assertTrue(!w.showing, "after a discard the document is the file")
+    assertNull(w.next(WriteBackNotice(7, "discarded", false, "discarded it")))
   }
 }

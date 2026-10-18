@@ -110,6 +110,32 @@ class WriteBackStatusRelayTest {
     assertEquals(listOf(a.handle, b.handle), f.svc.children().drop(1).map { it.handle })
   }
 
+  /**
+   * S4: reading the file again (here: a component or token changed, so the
+   * relay re-reads it) replaces a refused change with the file — and says so,
+   * explicitly, on the stream; an ordinary read says the file was read.
+   */
+  @Test fun aReReadThatDiscardsARefusedChangeSaysSo() {
+    val f = fixture()
+    val (_, _, b) = f.svc.children()
+    val ack = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
+    assertEquals("refused", awaitStatus(f.svc, ack.version).outcome)
+    assertTrue(f.svc.reingest())
+    val status = assertNotNull(f.svc.writeBack)
+    assertEquals("discarded", status.outcome, status.toString())
+    assertFalse(status.written)
+    assertTrue("could not be written" in status.message && "discarded" in status.message, status.message)
+    assertTrue("\"outcome\":\"discarded\"" in f.events.toString(), f.events.toString())
+    assertEquals(home, f.file.readText())
+    // An IDE edit with nothing unwritten: the status says the file was read (it clears the editor's warning).
+    val edited = home.replace("\"a\"", "\"A\"")
+    f.file.writeText(edited)
+    assertEquals(DocumentService.FileChange.INGESTED, f.svc.fileChanged(edited))
+    val read = assertNotNull(f.svc.writeBack)
+    assertEquals("external", read.outcome, read.toString())
+    assertTrue(read.written)
+  }
+
   @Test fun aWriteFailureIsReportedNotSwallowed() {
     val f = fixture()
     assertTrue(f.file.setWritable(false))
