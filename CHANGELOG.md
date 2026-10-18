@@ -24,6 +24,24 @@
   POST only.
 
 ### Added
+- **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** string templates
+  and lists with references are portal grammar (K4). `text = "Rating: ${b.rating}/${C.Max}"`,
+  `"${b.count} items"`, `"$label: $count"` in a component body, and a component argument
+  `title = "Hi ${b.name}"` are recognized when each embedded expression is a binding, an item
+  field, a component parameter or a design token (`${a + b}`, `${x.uppercase()}` stay RawCode);
+  `gradientColorsArgb = listOf(C.Start, C.End)`, `colorsArgb = listOf(16777215, C.A, b.c)` and
+  `options = listOf("All", C.Brand)` are recognized on `List<Int>`/`List<String>` props.
+  New `PropValue.Template(parts)` and `PropValue.ListOf(tag, items)`, stored canonical, validated by
+  the document (fit, reference kinds, item fields in scope) and the relay (component signatures,
+  the K2 token gate for every part and element). Write-back rewrites only the changed template part
+  (the author's `$x`/`${x}` and escapes kept elsewhere) or list element; a no-op is byte-identical.
+  The exporter writes both (with token imports); a template-only field is a `String` in the
+  derived contract. The preview evaluates templates with the mocks and token values and resolves
+  list elements; the device wire carries the text / resolved list under the usual keys. The relay
+  sends the new values only to a client asking `GET /doc?…&templates=1` / `lists=1` (this release's
+  editor and MCP server); older editors get the text and the resolved list. The editor edits a
+  template as text with `{field}`/`{item.x}`/`{◆C.Name}` references (validated before sending) and
+  a list as its elements (`16777215, #FF8800, ◆C.Start, @accent`), with a token picker.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
   portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
   parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters

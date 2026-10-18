@@ -396,6 +396,55 @@ if (b.subtitle.isNotEmpty()) { … }
 - Agents: the MCP op schema documents `PropValue.Conditional`.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Conditions are grammar".
 
+## String templates and lists with references
+
+Text built from bindings, parameters and design tokens, and lists of tokens,
+are portal grammar (K4):
+
+```kotlin
+StyledText(text = "Rating: ${b.rating}/${C.MaxStars}")
+StyledText(text = "${b.count} items")
+MenuRow(title = "Hi ${b.name}", subtitle = ", ${b.city}")
+StyledBox(gradientColorsArgb = listOf(C.Start, C.End))
+AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
+```
+
+- A template's embedded expressions must each be a reference: a screen
+  binding (`b.x`), an item field inside its Repeat (`item.x`), a component
+  parameter (`$label` in a component body) or a design token of a literal
+  kind (`${C.Brand}`, `${C.Max}`). Anything else (`${a + b}`,
+  `${x.uppercase()}`, `"""…"""`) keeps the call RawCode. A template fits a
+  String prop or a component's String parameter (also as a conditional's
+  branch).
+- A list's elements are literals, tokens of the element kind (an Int token
+  in a `List<Int>`, a String token in a `List<String>`) or bindings; a
+  `Float` list stays literal-only, and a list is never conditional.
+- In the property panel a template is one text field: literal text with its
+  references in braces — `Rating: {rating}/{◆C.MaxStars}`, `{item.city}`;
+  `{{` and `}}` are literal braces. **◆** inserts a token; **{}** on a text
+  prop starts a template. A list is its elements: `16777215, #FF8800,
+  ◆C.Start, @accent` for an Int list (`|`-separated for a String list), and
+  **◆** adds a token element. Text that is not valid is marked red (the
+  tooltip says why) and is not sent.
+- The preview evaluates templates with the binding mocks (an unmocked one
+  shows `{field}`) and token values; a Double prints in plain decimal
+  notation (the device's `toString()` uses exponent notation outside
+  1e-3..1e7).
+- Write-back is surgical: editing one text segment or reference rewrites only
+  it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
+  `${'$'}`) elsewhere in the string stay as written; editing one list
+  element rewrites only that element. A token added inside a template or a
+  list adds its import.
+- A binding read only by a template is typed `String` in the derived
+  contract (a field the Bindings interface already declares keeps its type —
+  any type prints into a template).
+- An editor built before this release is served a template's text (bindings
+  as `{field}`) and a list's resolved values (it does not ask with
+  `templates=1` / `lists=1`); its edits to other props leave both in the file.
+- Agents: the MCP op schema documents `PropValue.Template` and
+  `PropValue.ListOf`. Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Templates
+  and lists are grammar".
+
 ## Live-presenter preview (P3-12)
 
 Press **▶ Live** on a screen whose project registered an `AppPreviewEntry`: the
