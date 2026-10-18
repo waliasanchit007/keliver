@@ -70,10 +70,17 @@ import kotlinx.serialization.Serializable
  * declares is declared as the element type) — never conditional. Every op
  * stores both in canonical form ([canonicalValue]); an item reference
  * outside a Repeat over its item is refused where it is placed (as for K3).
- * A field a template or a list reads is not a Boolean: a Boolean test on it
- * is refused (as for a field bound to a text prop), and — unlike a plain
+ * A field a template or a list reads is not a Boolean unless the contract
+ * declares it `Boolean` (a template prints one): otherwise a Boolean test on
+ * it is refused (as for a field bound to a text prop), and — unlike a plain
  * binding — so is placing a template or a list that reads a field the
- * screen already tests as a Boolean.
+ * screen already tests as a Boolean. A field a Repeat iterates (a List) is
+ * read by no template, no list element and no binding on a prop that is not
+ * a List — refused both ways round. A field the contract types `<unknown>`
+ * (ingest could not read its type) is no template's reference. Not checked
+ * here: an item field's type (the contract does not carry item types), and
+ * a field the contract does not list (the screen's interface not in its
+ * file, or inherited from another file) — ingest reads those as RawCode.
  */
 @Serializable
 public data class UiDocument(
@@ -593,8 +600,16 @@ private fun conditionTypeMisfit(
  */
 private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "b")
 
+/**
+ * The contract type ingest gives a field whose type it cannot read (a
+ * property without a declared type, `val x get() = 1.5`): a template never
+ * reads it; a list element of it is left to the compile.
+ */
+private const val UNKNOWN_TYPE = "<unknown>"
+
 /** Why a template may not read the field [field] declared [type] (see [templateRefTypeFits]). */
 private fun refTypeWhy(field: String, type: String): String = when {
+  type == UNKNOWN_TYPE -> "`$field` has no type the portal can read (declare it in the Bindings interface): only a String, Int, Long or Boolean prints alike on the device and in the preview"
   type.trim().endsWith("?") -> "`$field` is declared $type: the device prints a null as \"null\", the preview as nothing"
   type.trim() == "Double" || type.trim() == "Float" ->
     "`$field` is declared $type: the device (Kotlin/JS) prints 1.0 as \"1\", the preview (wasm) as \"1.0\""
@@ -661,7 +676,7 @@ private fun refValueMisfit(nodeType: String, key: String, v: PropValue, fields: 
       }
       is PropValue.Bind -> {
         if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
-        fields[e.field]?.let { t -> if (t.replace(" ", "").removePrefix("kotlin.") != element) return "list $where: `${e.field}` is declared $t, not $element" }
+        fields[e.field]?.takeIf { it != UNKNOWN_TYPE }?.let { t -> if (t.replace(" ", "").removePrefix("kotlin.") != element) return "list $where: `${e.field}` is declared $t, not $element" }
       }
       else -> return "list $where: an element is a literal, a design token or a binding"
     }

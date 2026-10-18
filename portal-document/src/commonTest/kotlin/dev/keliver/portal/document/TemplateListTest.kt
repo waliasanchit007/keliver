@@ -118,6 +118,12 @@ class TemplateListTest {
     assertTrue("score" in refused(d, DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("score"))))))
     assertNull(d.tryApply(DocOp.SetProp(Handle(4), "options", PropValue.ListOf("ls", listOf(lit("a"), PropValue.Bind("s"))))).error)
     assertNull(d.tryApply(DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("n"))))).error)
+    // A field whose type ingest could not read (`val x get() = 1.5`) is no template's reference;
+    // a list element of it is left to the compile (a wrong element type does not compile).
+    val unknown = d.copy(contract = Contract(fields = mapOf("x" to "<unknown>")))
+    val msg = refused(unknown, DocOp.SetProp(Handle(2), "text", PropValue.Template(listOf(PropValue.Bind("x")))))
+    assertTrue("`x`" in msg && "no type" in msg, msg)
+    assertNull(unknown.tryApply(DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("x"))))).error)
     // A fully qualified spelling is the same type.
     assertNull(d.tryApply(DocOp.SetProp(Handle(4), "options", PropValue.ListOf("ls", listOf(PropValue.Bind("qs"))))).error)
     assertNull(d.tryApply(DocOp.SetProp(Handle(3), "gradientColorsArgb", PropValue.ListOf("li", listOf(PropValue.Bind("qn"))))).error)
