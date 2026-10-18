@@ -426,11 +426,20 @@ object Recognizer {
           // K5: a component forwarding its own `modifier` parameter to its root.
           // The root is marked so preview expansion puts the instance's
           // modifiers first, then the body's own chain (`modifier.padding(8)`).
-          if (isRoot && ctx is NameCtx.Component && ctx.modifierParam) {
-            forwardedModifier(ve.text)?.let { own ->
+          if (ctx is NameCtx.Component && ctx.modifierParam) {
+            val own = forwardedModifier(ve.text, conds)
+            if (own != null && isRoot) {
               props[COMPONENT_FORWARDS_MODIFIER_PROP] = PropValue.Lit("b", b = true)
               modifiers += own
               continue
+            }
+            // Forwarding anywhere else is opaque (correct) — say that is why.
+            if (own != null) {
+              return raw(
+                expr,
+                "`$type(modifier = ${ve.text.oneLine()})`: a component's `modifier` parameter is forwarded only at " +
+                  "the body's single root call (not under `if`/`forEach`, in a nested call, or beside other statements)",
+              )
             }
           }
           val mods = parseModifierChain(ve.text, parentType, tokens, conds) ?: return offending()
@@ -459,11 +468,12 @@ object Recognizer {
      * chain after the caller's). The root has no layout parent in the body, so
      * a scoped modifier in that chain is not grammar. Null = neither.
      */
-    private fun forwardedModifier(text: String): Map<String, PropValue>? {
+    private fun forwardedModifier(text: String, conds: CondParser): Map<String, PropValue>? {
       val t = text.trim()
       if (t == "modifier") return emptyMap()
       val rest = Regex("^modifier\\s*(\\..*)$", RegexOption.DOT_MATCHES_ALL).find(t)?.groupValues?.get(1) ?: return null
-      return parseModifierChain("Modifier$rest", null, tokens)
+      // K3: the own chain takes a conditional value as a `Modifier.…` chain does.
+      return parseModifierChain("Modifier$rest", null, tokens, conds)
     }
 
     /**
