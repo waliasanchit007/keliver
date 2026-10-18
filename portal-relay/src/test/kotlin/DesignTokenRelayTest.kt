@@ -119,7 +119,7 @@ class DesignTokenRelayTest {
     // The declaration changes; the screen file does not.
     File(components, "Tokens.kt").writeText(tokens(ink = "-16777216"))
     assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     val updated = text(svc) as DocNode.Widget
     assertEquals(node.handle, updated.handle, "the node keeps its identity")
     assertEquals(PropValue.Token("C.Ink", lit(-16777216), "app.components.C"), updated.props["colorArgb"])
@@ -128,11 +128,11 @@ class DesignTokenRelayTest {
     // A token that changes kind (or disappears) makes the argument RawCode — never silently wrong.
     File(components, "Tokens.kt").writeText(tokens(ink = "\"#1F1F1F\""))
     assertTrue(Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile))
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     assertIs<DocNode.RawCode>(text(svc))
     File(components, "Tokens.kt").delete()
     Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     assertIs<DocNode.RawCode>(text(svc))
   }
 
@@ -157,7 +157,7 @@ class DesignTokenRelayTest {
     assertEquals("surgical", status.outcome, status.toString())
     assertEquals(home.replace("fontSize = 12", "fontSize = 14"), file.readText())
     // The re-read that follows takes the new value and loses nothing.
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     val now = text(svc) as DocNode.Widget
     assertEquals(lit(14), now.props["fontSize"])
     assertEquals(PropValue.Token("C.Ink", lit(-16777216), "app.components.C"), now.props["colorArgb"])
@@ -176,7 +176,7 @@ class DesignTokenRelayTest {
     // A token inserted into a file that lacks its import gets it.
     val bare = home.replace("import app.components.C\n", "").replace("text = C.Title, colorArgb = C.Ink, ", "text = \"t\", ")
     file.writeText(bare)
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     val plain = text(svc) as DocNode.Widget
     val client = PropValue.Token("C.Ink", lit(0), "app.components.C") // a stale client value
     assertTrue(svc.submit(batch(svc, DocOp.SetProp(plain.handle, "colorArgb", client))).ok)

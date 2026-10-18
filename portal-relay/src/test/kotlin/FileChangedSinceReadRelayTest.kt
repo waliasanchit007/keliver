@@ -204,7 +204,7 @@ class FileChangedSinceReadRelayTest {
       listOf(ComponentSpec("MenuRow", props = listOf(PropSpec("title", PropKind.Text, "Title")), events = emptyList(), paramTypes = mapOf("title" to "String"))),
     )
     assertEquals(DocumentService.FileChange.ALREADY_READ, svc.fileChanged(file.readText()))
-    assertTrue(svc.reingest())
+    assertTrue(reingestWhenIdle(svc))
     assertEquals("MenuRow", (svc.children()[0] as DocNode.Widget).type)
     assertEquals("surgical", awaitStatus(svc, setText(svc, 1, "A")).outcome)
     assertTrue("StyledText(text = \"A\")" in file.readText(), file.readText())

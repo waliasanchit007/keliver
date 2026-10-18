@@ -152,7 +152,7 @@ class WriteBackStatusRelayTest {
     val (_, _, b) = f.svc.children()
     val ack = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
     assertEquals("refused", awaitStatus(f.svc, ack.version).outcome)
-    assertTrue(f.svc.reingest())
+    assertTrue(reingestWhenIdle(f.svc))
     val status = assertNotNull(f.svc.writeBack)
     assertEquals("discarded", status.outcome, status.toString())
     assertFalse(status.written)
