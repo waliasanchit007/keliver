@@ -232,15 +232,10 @@ class DocumentService(
   }
 
   /**
-   * K4: a template on a project-component instance fits only a parameter
-   * declared `String` (the document checks catalogued widgets); a list with
-   * references never fits one (component parameters are scalars). Null =
-   * acceptable.
-   */
-  /**
    * The scalar values of [v] a parameter's type must fit: itself, or a
-   * conditional's branches — not a template's token parts (any literal kind
-   * prints into the String) nor a list's elements (refused on a component).
+   * conditional's branches — not a template's token parts (a String, Int or
+   * Boolean token prints into the String; the document refuses a Double one)
+   * nor a list's elements (refused on a component).
    */
   private fun scalarLeaves(v: PropValue): List<PropValue> = when (v) {
     is PropValue.Conditional -> listOfNotNull(v.whenTrue, v.whenFalse).flatMap(::scalarLeaves)
@@ -248,6 +243,12 @@ class DocumentService(
     else -> listOf(v)
   }
 
+  /**
+   * K4: a template on a project-component instance fits only a parameter
+   * declared `String` (the document checks catalogued widgets, and every
+   * template's parts); a list with references never fits one (component
+   * parameters are scalars). Null = acceptable.
+   */
   private fun templateRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
     if (!registry.isComponent(type)) return null
     val values = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)

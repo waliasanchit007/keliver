@@ -233,7 +233,7 @@ object Tokens {
           whenFalse = value.whenFalse?.let { fix(type, key, it, prev?.whenFalse) },
         )
       }
-      // K4: a template's token parts (any literal kind prints) and a list's
+      // K4: a template's token parts (a String, Int or Boolean prints) and a list's
       // elements (its element kind), each against the same position before.
       if (value is PropValue.Template) {
         val prev = (was as? PropValue.Template)?.parts
@@ -250,7 +250,8 @@ object Tokens {
       val entry = table.usable(v.ref, v.import, fileId)
         ?: return v.also { error = "design token ${v.ref} no longer exists" }
       val fits = when (sourceType) {
-        "*" -> dev.keliver.portal.tokenKindOf(entry.value) in setOf("String", "Int", "Double", "Boolean")
+        // A template part: String, Int or Boolean — never a Double (the device prints 1.0 as "1").
+        "*" -> dev.keliver.portal.templateTokenFits(entry.value)
         null -> dev.keliver.portal.tokenFits(dev.keliver.portal.propSourceType(type, key, components), entry.value)
         else -> dev.keliver.portal.tokenFits(sourceType, entry.value)
       }

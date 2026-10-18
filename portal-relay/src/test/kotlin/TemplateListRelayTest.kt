@@ -141,6 +141,37 @@ class TemplateListRelayTest {
     assertTrue(err2 != null && "imports a different C" in err2, err2)
   }
 
+  @Test fun aDoubleOrNullableReferenceIsRefused() {
+    val (screens, components) = app()
+    File(components, "Tokens.kt").let { it.writeText(it.readText().replace("  const val Max = 5\n", "  const val Max = 5\n  const val Ratio = 1.5\n")) }
+    File(screens, "home.kt").writeText(home.replace("  val rating: String\n", "  val rating: String\n  val score: Double\n  val nick: String?\n"))
+    val svc = service(screens, components)
+    val node = child(svc, 0)
+    val t = node.props["text"] as PropValue.Template
+    // The server's value decides: a Double token is refused whatever the client says it is.
+    val err = svc.dryRun(batch(svc, DocOp.SetProp(node.handle, "text", t.copy(parts = t.parts + token("C.Ratio", 0))))).error
+    assertTrue(err != null && "Double" in err, err)
+    for (field in listOf("score", "nick")) {
+      val e = svc.dryRun(batch(svc, DocOp.SetProp(node.handle, "text", t.copy(parts = t.parts + PropValue.Bind(field))))).error
+      assertTrue(e != null && "declared" in e && field in e, e)
+    }
+  }
+
+  @Test fun aRedoIsBlockedWhenATokenPartBecameADouble() {
+    val (screens, components) = app()
+    val svc = service(screens, components)
+    val node = child(svc, 0)
+    val t = node.props["text"] as PropValue.Template
+    assertTrue(svc.submit(batch(svc, DocOp.SetProp(node.handle, "text", t.copy(parts = t.parts + lit("/") + token("C.Max", 0))))).ok)
+    assertTrue(svc.undo("t").ok)
+    val tokensKt = File(components, "Tokens.kt")
+    tokensKt.writeText(tokensKt.readText().replace("Max = 5", "Max = 5.5"))
+    Tokens.rebuild(project, listOf(screens, components), root = screens.parentFile)
+    val redo = svc.redo("t")
+    assertFalse(redo.ok)
+    assertTrue("C.Max is now a Double" in redo.error!!, redo.error)
+  }
+
   @Test fun aComponentTakesATemplateOnlyOnAStringParameter() {
     val (screens, components) = app()
     val svc = service(screens, components)
