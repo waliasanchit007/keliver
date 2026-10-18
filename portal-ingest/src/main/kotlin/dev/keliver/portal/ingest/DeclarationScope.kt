@@ -19,6 +19,8 @@ import org.jetbrains.kotlin.psi.KtNamedDeclaration
  *    from where the declaration can see it (after it, in its block or
  *    deeper) to where it cannot.
  *
+ *  - Nothing that uses a `forEach`'s item leaves that forEach.
+ *
  * Text matching is deliberately simple: a shadowing local or a name in a
  * string also counts as a use (the move is refused; it can be made in code).
  * What it does not see — a use through a binding or a reference the editor
@@ -49,7 +51,50 @@ object DeclarationScope {
           "`$name` is not declared yet (move it in code)"
       }
     }
+    return itemProblem(was, now)
+  }
+
+  /**
+   * A `forEach`'s item (`note` in `b.notes.forEach { note -> … }`) is declared
+   * by the forEach: nothing inside it that uses the item — a bound value
+   * (`note.title`), an action argument, an item condition, or code naming it —
+   * moves out of it (it would read back as code, and not compile).
+   */
+  private fun itemProblem(was: Places, now: Places): String? {
+    for ((h, each) in was.nodes) {
+      if (each !is DocNode.Widget || each.type != "Repeat") continue
+      val item = (each.props["item"] as? PropValue.Lit)?.s ?: continue
+      if (h !in now.nodes) continue // the forEach itself is deleted (or replaced): not a move out of it
+      val word = Regex("(?<![\\w`])${Regex.escape(item)}(?![\\w`])")
+      val inside = now.subtree(h)
+      for (n in each.children.flatMap { all(it) }) {
+        if (n.handle.v !in now.nodes || n.handle.v in inside) continue
+        if (!usesItem(n, item, word)) continue
+        return "${label(n)} uses the forEach item `$item`; it cannot leave that forEach (move it in code)"
+      }
+    }
     return null
+  }
+
+  private fun all(n: DocNode): List<DocNode> = listOf(n) + ((n as? DocNode.Widget)?.children?.flatMap { all(it) } ?: emptyList())
+
+  /** Whether [n] or anything in it reads the item [item]. */
+  private fun usesItem(n: DocNode, item: String, word: Regex): Boolean {
+    fun field(f: String?) = f != null && (f == item || f.startsWith("$item."))
+    fun value(v: PropValue?): Boolean = when (v) {
+      is PropValue.Bind -> field(v.field)
+      is PropValue.Action -> v.arg?.let { field(it) } == true
+      is PropValue.Conditional -> field(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      else -> false
+    }
+    return when (n) {
+      is DocNode.RawCode -> word.containsMatchIn(n.text)
+      is DocNode.Widget ->
+        (n.type == "Condition" && field((n.props["field"] as? PropValue.Lit)?.s)) ||
+          (n.type == "Repeat" && field((n.props["items"] as? PropValue.Lit)?.s)) ||
+          (n.props.values + n.modifiers.values).any(::value) ||
+          n.children.any { usesItem(it, item, word) }
+    }
   }
 
   private fun short(text: String): String = text.trim().replace(Regex("\\s+"), " ").let { if (it.length > 50) it.take(47) + "…" else it }
@@ -97,6 +142,17 @@ object DeclarationScope {
         if (n is DocNode.Widget) n.children.forEach { walk(it, n) }
       }
       walk(root, null)
+    }
+
+    /** [h] and everything in it. */
+    fun subtree(h: Long): Set<Long> {
+      val out = HashSet<Long>()
+      fun add(n: DocNode) {
+        out += n.handle.v
+        if (n is DocNode.Widget) n.children.forEach(::add)
+      }
+      nodes[h]?.let(::add)
+      return out
     }
 
     /**

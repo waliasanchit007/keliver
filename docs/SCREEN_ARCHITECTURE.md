@@ -646,15 +646,20 @@ instead); a bound value, condition or list inserted into a screen function
 that takes no bindings parameter (add the parameter in code first); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
-to another block, and nothing that mentions the declared name (a whole-word
-text match) moves to before it or out of its block.
+to another block, nothing that mentions the declared name (a whole-word
+text match) moves to before it or out of its block, and nothing that uses a
+`forEach`'s item (a bound `note.title`, an item condition, code naming
+`note`) moves out of that `forEach`.
 
 **What "reads back" does not cover.** The read-back check proves the file
 reads as the document, not that it compiles. Beyond the declaration rule
-above, a change can still leave code that does not compile — e.g. RawCode
-moved out of the block that declares a name it uses, when that name is not
-a code node's declaration (a `forEach` item, a lambda parameter). The app's
-build is the check for that.
+above, a change can still leave code that does not compile — e.g. code
+using a name declared by something the editor does not model as a
+declaration (a lambda parameter of a container's content lambda, a
+`remember`ed local hidden in a helper), moved where that name is not in
+scope; or a name matched only by text (a shadowing local) letting a move
+through that the compiler then rejects. The app's build is the check for
+that.
 
 Line endings: a CRLF file stays CRLF. In any other file every line the edit
 does not touch keeps its own ending (an LF file's raw string with a `\r\n`

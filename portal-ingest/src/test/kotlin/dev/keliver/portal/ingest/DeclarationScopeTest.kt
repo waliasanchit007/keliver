@@ -71,4 +71,50 @@ class DeclarationScopeTest {
     val k = (noUses.root as DocNode.Widget).children
     assertNull(DeclarationScope.problem(noUses, noUses.apply(DocOp.MoveNode(k[0].handle, noUses.root.handle, k.last().handle)).doc))
   }
+
+  // A forEach's item is declared by the forEach: what uses it stays inside.
+  private val items = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.layout.compose.Row
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column {
+        b.notes.forEach { note ->
+          Row {
+            StyledText(text = note.title)
+          }
+          StyledText(text = "plain")
+          Legacy(note)
+        }
+      }
+    }
+
+    interface HomeScreenBindings {
+      val notes: List<Note>
+    }
+
+    interface Note {
+      val title: String
+    }
+  """.trimIndent() + "\n"
+
+  @Test fun whatUsesAForEachItemDoesNotMoveOutOfTheForEach() {
+    val d = Recognizer.recognize("app/screens/HomeScreen.kt", items)!!.let { UiDocument("home", it.root, it.contract, 0, 1000) }
+    val each = (d.root as DocNode.Widget).children[0] as DocNode.Widget
+    val row = each.children[0] as DocNode.Widget
+    // A bound widget (inside a Row) out to the top level.
+    val why = assertNotNull(DeclarationScope.problem(d, d.apply(DocOp.MoveNode(row.children[0].handle, d.root.handle, null)).doc))
+    assertTrue("note" in why && "forEach" in why, why)
+    // The Row holding it, and code using the item, too.
+    assertNotNull(DeclarationScope.problem(d, d.apply(DocOp.MoveNode(row.handle, d.root.handle, null)).doc))
+    assertNotNull(DeclarationScope.problem(d, d.apply(DocOp.MoveNode(each.children[2].handle, d.root.handle, null)).doc))
+    // What does not use it moves freely; what does moves within the forEach.
+    assertNull(DeclarationScope.problem(d, d.apply(DocOp.MoveNode(each.children[1].handle, d.root.handle, null)).doc))
+    assertNull(DeclarationScope.problem(d, d.apply(DocOp.MoveNode(row.children[0].handle, each.handle, null)).doc))
+  }
 }
