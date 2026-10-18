@@ -82,5 +82,15 @@ internal fun MutableSet<String>.addTokenImport(v: Any?, sourceType: String?) {
     addTokenImport(v.whenFalse, sourceType)
     return
   }
+  // K4: a template writes every token part as its reference (any literal kind
+  // prints into a String); a list writes each element token of its element kind.
+  if (v is Template) {
+    v.parts.forEach { p -> if (p is Token) p.importFq?.let { add(it) } else if (p is Template) addTokenImport(p, sourceType) }
+    return
+  }
+  if (v is ListOf) {
+    v.items.forEach { addTokenImport(it, listElementType(v.kind)) }
+    return
+  }
   if (v is Token && tokenKindOf(v.value) == sourceType) v.importFq?.let { add(it) }
 }

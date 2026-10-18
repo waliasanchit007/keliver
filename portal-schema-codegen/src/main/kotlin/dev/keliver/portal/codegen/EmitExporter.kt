@@ -34,6 +34,8 @@ private fun importStmt(kind: MappedKind, key: String): String? = when {
   kindImports(kind).isNotEmpty() -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }})"
   // K2: a design-token reference written for this literal needs its declaring object imported.
   tokenSourceType(kind) != null -> "imports.addTokenImport(node.props[\"$key\"], \"${tokenSourceType(kind)}\")"
+  // K4: so does each token element of a list written as references.
+  kind == MappedKind.INT_LIST || kind == MappedKind.STRING_LIST -> "imports.addTokenImport(node.props[\"$key\"], \"${sourceType(kind)}\")"
   else -> null
 }
 
@@ -149,6 +151,15 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |        iface[value.cond.field.substringAfter('.')] = value.cond.fieldType
     |      }
     |      for (v in if (value is Conditional) listOf(value.whenTrue, value.whenFalse) else listOf(value)) {
+    |      // K4: a template's item references are String fields (unless typed elsewhere);
+    |      // a list's are elements of its kind.
+    |      if (v is Template) referencedBinds(v).filter { it.field.startsWith("${'$'}itemVar.") }.forEach { r ->
+    |        val sub = r.field.substringAfter('.')
+    |        if (sub !in iface) iface[sub] = "String"
+    |      }
+    |      if (v is ListOf) v.items.filterIsInstance<Bind>().filter { it.field.startsWith("${'$'}itemVar.") }.forEach { r ->
+    |        iface[r.field.substringAfter('.')] = listElementType(v.kind) ?: "String"
+    |      }
     |      if (v is Bind && v.field.startsWith("${'$'}itemVar.")) {
     |        val sub = v.field.substringAfter('.')
     |        iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -196,8 +207,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// the token's kind is the literal's kind; anywhere else (never produced by
     |// ingest or the document) its resolved value is written, so saved code compiles.
     |// K3: a conditional value writes `if (cond) T else F`, each branch in its kind.
+    |// K4: a template writes its literal parts and references (`"${'$'}{b.n} items"`).
     |private fun fmtString(v: Any?): String = when {
     |  v is Conditional -> fmtConditional(v, ::fmtString)
+    |  v is Template -> fmtTemplate(v, ::bindRef)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is String -> v.ref
     |  else -> kotlinStringLiteral(tokenValue(v).toString())
@@ -227,10 +240,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  if (v is Conditional) fmtConditional(v, ::fmtDp)
     |  else if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
     |  else tokenValue(v).let { x -> "Dp(${'$'}{kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
-    |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
-    |private fun fmtStringList(v: Any?): String =
-    |  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
-    |private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${'$'}{it}f" } ?: "") + ")"
+    |// K4: each element of a list in its kind — a literal, a token's reference, a binding.
+    |private fun fmtIntList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { fmtInt(it) } + ")"
+    |private fun fmtStringList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { fmtString(it ?: "") } + ")"
+    |private fun fmtFloatList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { "${'$'}{it}f" } + ")"
     |private fun fmtConstraint(v: Any?): String =
     |  if (v is Conditional) fmtConditional(v, ::fmtConstraint)
     |  else if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
@@ -446,6 +459,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      // K2: a token is written as its reference where it fits the parameter's type.
     |      val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
     |      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
+    |      // K4: a template argument writes each token part as its reference.
+    |      if (v is Template) imports.addTokenImport(v, "String")
     |      // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
     |      val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
     |      fun render(x: Any?, branch: Boolean): String = when (x) {
@@ -453,6 +468,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |        // K3: in an `if` branch an action is a reference or a parenthesized lambda.
     |        is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
     |        is Bind -> bindRef(x.field)
+    |        is Template -> fmtTemplate(x, ::bindRef)
     |        is String -> kotlinStringLiteral(x)
     |        is Boolean -> x.toString()
     |        is Int -> x.toString()
@@ -464,6 +480,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      fun branchValue(x: Any?): Any? =
     |        if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
     |          imports.addTokenImport(x, tokenKindOf(x.value)); x
+    |        } else if (x is Template) {
+    |          imports.addTokenImport(x, "String"); x
     |        } else {
     |          tokenValue(x)
     |        }

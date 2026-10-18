@@ -28,6 +28,13 @@ import kotlinx.serialization.json.put
  * keys, plus `"cond"` (`{"field", "test"?, "negate"?}`) and `"else"` (the
  * false branch, absent = Kotlin `null`); a null true branch is `{"null":true}`.
  * A reader that predates conditionals decodes the true branch.
+ *
+ * K4: a template carries its text — literal parts, token values, and a
+ * `{field}` placeholder for each binding — under `"s"`, plus `"template"`
+ * (each part encoded as a value). A list with references carries its
+ * resolved elements under its usual tag (`"li"`/`"lst"`; a binding as 0 or
+ * its placeholder) plus `"items"` (each element encoded as a value). A reader
+ * that predates K4 decodes the text / the resolved list.
  */
 
 private val JSON = Json { }
@@ -41,6 +48,20 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
       if (v.cond.negate) put("negate", true)
     })
     v.whenFalse?.let { put("else", encodeValue(it)) }
+    return@buildJsonObject
+  }
+  if (v is Template) {
+    put("s", templateText(v) { null })
+    put("template", buildJsonArray { v.parts.forEach { add(encodeValue(it)) } })
+    return@buildJsonObject
+  }
+  if (v is ListOf) {
+    if (v.kind == "ls") {
+      put("lst", buildJsonArray { v.items.forEach { add(JsonPrimitive(templateValueText(it) ?: (it as? Bind)?.let { b -> "{${b.field}}" } ?: "")) } })
+    } else {
+      put("li", buildJsonArray { v.items.forEach { add(JsonPrimitive((tokenValue(it) as? Int) ?: 0)) } })
+    }
+    put("items", buildJsonArray { v.items.forEach { add(encodeValue(it)) } })
     return@buildJsonObject
   }
   if (v is Token) {
@@ -84,6 +105,8 @@ private fun decodeValue(o: JsonObject): Any? = when {
     )
   }
   "null" in o -> null
+  "template" in o -> Template(o.getValue("template").jsonArray.map { decodeValue(it.jsonObject) })
+  "items" in o -> ListOf(if ("lst" in o) "ls" else "li", o.getValue("items").jsonArray.map { decodeValue(it.jsonObject) })
   "token" in o -> Token(
     o.getValue("token").jsonPrimitive.content,
     decodeValue(JsonObject(o - "token" - "tokenImport")),

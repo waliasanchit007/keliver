@@ -43,6 +43,9 @@ public fun resolveItemRow(
     v is Conditional && v.cond.field.startsWith("$itemVar.") ->
       resolve(key, chooseBranch(v) { c -> rowValue(c.field).let { c.holds(it, present = it != null) } })
     v is Conditional -> v.copy(whenTrue = resolve(key, v.whenTrue), whenFalse = resolve(key, v.whenFalse))
+    // K4: a template's and a list's item references take the row's value.
+    v is Template -> Template(v.parts.map { resolve(key, it) })
+    v is ListOf -> ListOf(v.kind, v.items.map { resolve(key, it) })
     else -> v
   }
   val props = node.props.mapValues { (key, v) -> resolve(key, v) }

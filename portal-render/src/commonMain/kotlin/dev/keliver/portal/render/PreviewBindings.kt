@@ -5,8 +5,14 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.Cond
+import dev.keliver.portal.ListOf
+import dev.keliver.portal.Template
+import dev.keliver.portal.templateText
+import dev.keliver.portal.templateValueText
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.chooseBranch
+import dev.keliver.portal.intList
+import dev.keliver.portal.strList
 import dev.keliver.portal.condOf
 import dev.keliver.portal.elseNode
 import dev.keliver.portal.thenChildren
@@ -75,7 +81,45 @@ private fun String.decodePreviewLiteral(): String {
 public fun WidgetNode.strB(key: String, default: String = ""): String = when (val v = tokenValue(PreviewBindings.chosen(props[key]))) {
   is Bind -> PreviewBindings.mocks[v.field] ?: "{${v.field}}"
   is String -> v
+  is Template -> PreviewBindings.text(v)
   else -> default
+}
+
+/**
+ * K4: a template's text in the preview — each binding its mock (else a
+ * `{field}` placeholder), each token its value, a conditional part its
+ * chosen branch, a nested template (a component argument) its own text.
+ */
+public fun PreviewBindings.text(t: Template): String = templateText(t, ::partText)
+
+private fun PreviewBindings.partText(p: Any?): String? = when (val v = tokenValue(chosen(p))) {
+  is Bind -> mocks[v.field]
+  is Template -> text(v)
+  else -> templateValueText(v)
+}
+
+/** K4: an Int list prop — a token element its value, a bound element its mock (else 0). */
+public fun WidgetNode.intListB(key: String): List<Int> = when (val v = props[key]) {
+  is ListOf -> v.items.map { e ->
+    when (val x = tokenValue(e)) {
+      is Int -> x
+      is Bind -> PreviewBindings.mocks[x.field]?.trim()?.toIntOrNull() ?: 0
+      is String -> x.trim().toIntOrNull() ?: 0 // an item field's row value
+      else -> 0
+    }
+  }
+  else -> intList(key)
+}
+
+/** K4: a String list prop — a token element its value, a bound element its mock (else a placeholder). */
+public fun WidgetNode.strListB(key: String): List<String> = when (val v = props[key]) {
+  is ListOf -> v.items.map { e ->
+    when (val x = tokenValue(e)) {
+      is Bind -> PreviewBindings.mocks[x.field] ?: "{${x.field}}"
+      else -> templateValueText(x) ?: ""
+    }
+  }
+  else -> strList(key)
 }
 
 public fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = tokenValue(PreviewBindings.chosen(props[key]))) {
