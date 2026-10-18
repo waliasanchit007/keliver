@@ -74,6 +74,19 @@ class PreviewAssetsTest {
       runCatching { ex.sendResponseHeaders(200, png.size.toLong()); ex.responseBody.use { it.write(png) } }
       ex.close()
     }
+    // Sends the headers and part of the image, then waits until the test releases it.
+    upstream.createContext("/slow-body") { ex ->
+      hits.incrementAndGet()
+      ex.responseHeaders.add("Content-Type", "image/png")
+      runCatching {
+        ex.sendResponseHeaders(200, png.size.toLong())
+        ex.responseBody.write(png, 0, 2)
+        ex.responseBody.flush()
+        release.await(20, TimeUnit.SECONDS)
+        ex.responseBody.use { it.write(png, 2, png.size - 2) }
+      }
+      ex.close()
+    }
     // /hop/N: 400 ms, then a redirect to /hop/N+1; /hop/5 is the image.
     upstream.createContext("/hop/") { ex ->
       hits.incrementAndGet()
@@ -103,9 +116,10 @@ class PreviewAssetsTest {
     threads: Int = 4,
     queue: Int = 16,
     client: OkHttpClient = PreviewAssets.defaultClient(),
+    extraPorts: Set<Int> = emptySet(),
   ) = PreviewAssets(
     hosts, client = client, maxBytes = 1_000, cacheMaxEntries = entries, deadlineMillis = deadlineMillis,
-    threads = threads, queue = queue, extraPorts = setOf(port), clock = { now }, log = { logs += it },
+    threads = threads, queue = queue, extraPorts = setOf(port) + extraPorts, clock = { now }, log = { logs += it },
   ).also { created += it }
 
   /** A client that never touches the network: [answer] maps each request to a response. */
@@ -205,12 +219,12 @@ class PreviewAssetsTest {
 
   // ── the HTTP contract, through a real server like the relay's ─────────────
 
-  // Like the relay: behind its access gate (which owns CORS), the default
-  // executor (one dispatcher thread for every endpoint) and another endpoint
-  // beside /preview-asset.
+  // Like the relay: behind its access gate (which owns CORS), mounted by the
+  // relay's own wiring (install), on the default executor (one dispatcher
+  // thread for every endpoint) and with another endpoint beside it.
   private fun relay(a: PreviewAssets): HttpServer =
     RelayAccess.gate(HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)).apply {
-      createContext("/preview-asset") { ex -> a.serve(ex) }
+      a.install(this)
       createContext("/ping") { ex ->
         ex.sendResponseHeaders(200, 2); ex.responseBody.use { it.write("ok".encodeToByteArray()) }; ex.close()
       }
@@ -358,11 +372,13 @@ class PreviewAssetsTest {
     assertEquals(listOf("http://img.example.com/a"), fakeSeen.toList())
   }
 
-  @Test fun anInvalidPortIsA400ThroughTheServer() {
+  @Test fun aMalformedPortIsRefusedThroughTheServer() {
     val server = relay(PreviewAssets(listOf("img.example.com"), client = fake { image("image/png") }).also { created += it })
     try {
+      // Out of range: 400. Not a number at all: no host parses, so 403.
       assertEquals(400, call(server, "http://img.example.com:99999/x").code)
       assertEquals(400, call(server, "http://img.example.com:0/x").code)
+      assertEquals(403, call(server, "http://img.example.com:8x/x").code)
       assertTrue(fakeSeen.isEmpty())
     } finally {
       server.stop(0)
@@ -476,6 +492,10 @@ class PreviewAssetsTest {
       val third = call(server, "$base/hang", timeoutMillis = 2_000)
       assertEquals(503, third.code)
       assertEquals("1", third.getHeaderField("Retry-After"))
+      // The relay's wiring refuses another method before the pool: 405, not 503.
+      val post = call(server, "$base/hang", method = "POST", timeoutMillis = 2_000)
+      assertEquals(405, post.code)
+      assertEquals("GET", post.getHeaderField("Allow"))
       // The other endpoints still answer.
       assertEquals(200, call(server, "", path = "/ping", timeoutMillis = 2_000).code)
       release.countDown()
@@ -495,6 +515,8 @@ class PreviewAssetsTest {
     assertEquals(504, r.status)
     assertTrue(tookMillis < 2_000, "took $tookMillis ms")
     assertTrue(hits.get() < 6, "${hits.get()} hops")
+    // The deadline is that URL's failure, not the host's.
+    assertIs<PreviewAssets.Result.Image>(slow.fetch("$base/img.png"))
     // With room for all six, the same chain is an image.
     hits.set(0)
     assertIs<PreviewAssets.Result.Image>(assets(deadlineMillis = 10_000).fetch("$base/hop/0"))
@@ -515,16 +537,86 @@ class PreviewAssetsTest {
     assertEquals(3, hits.get())
   }
 
-  @Test fun anUnreachableHostIsRememberedForEveryUrlOnIt() {
+  @Test fun aSlowHostCostsOnlyTheSlowUrl() {
     val a = assets(deadlineMillis = 300)
+    // Accepted the connection, then answered nothing within the deadline.
     assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/hang")).status)
     assertEquals(1, hits.get())
-    // The host timed out: another image on it is not tried for 30 s.
-    assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/img.png")).status)
-    assertEquals(1, hits.get())
-    now += 31_000
+    // Every other image on the host still loads.
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img2.png"))
+    assertEquals(3, hits.get())
+    // The slow URL itself is not asked again for 30 s.
+    val again = assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/hang"))
+    assertEquals(504, again.status)
+    assertTrue("failed less than" in again.reason, again.reason)
+    assertEquals(3, hits.get())
+  }
+
+  @Test fun aBodyThatStallsCostsOnlyThatUrl() {
+    val a = assets(deadlineMillis = 300)
+    assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("$base/slow-body")).status)
     assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
     assertEquals(2, hits.get())
+  }
+
+  @Test fun aHostNothingConnectsToIsRememberedForEveryUrlOnIt() {
+    // A loopback port nothing listens on: the connect is refused.
+    val closed = java.net.ServerSocket(0, 0, InetAddress.getLoopbackAddress()).use { it.localPort }
+    val a = assets(extraPorts = setOf(closed))
+    val first = assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/a.png"))
+    assertEquals(504, first.status)
+    assertTrue("ConnectException" in first.reason, first.reason)
+    // Another URL on that host is answered from memory, without a connect.
+    val other = assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/b.png"))
+    assertEquals(504, other.status)
+    assertTrue("failed less than" in other.reason, other.reason)
+    // The host is remembered with its port: the same name on another port is untouched.
+    assertIs<PreviewAssets.Result.Image>(a.fetch("$base/img.png"))
+    now += 31_000
+    val later = assertIs<PreviewAssets.Result.Refused>(a.fetch("http://localhost:$closed/b.png"))
+    assertFalse("failed less than" in later.reason, later.reason)
+  }
+
+  @Test fun aNameThatDoesNotResolveIsRememberedForEveryUrlOnIt() {
+    val lookups = AtomicInteger()
+    val noDns = PreviewAssets.defaultClient().newBuilder()
+      .dns { name -> lookups.incrementAndGet(); throw java.net.UnknownHostException(name) }
+      .build()
+    val a = assets(hosts = listOf("img.example.com"), client = noDns)
+    assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("https://img.example.com/a.png")).status)
+    assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("https://img.example.com/b.png")).status)
+    assertEquals(1, lookups.get())
+    // Its http port is another host:port, tried on its own.
+    a.fetch("http://img.example.com/c.png")
+    assertEquals(2, lookups.get())
+  }
+
+  @Test fun theDeadlineRunningOutWhileConnectingCostsOnlyThatUrl() {
+    val lookups = AtomicInteger()
+    val slowDns = PreviewAssets.defaultClient().newBuilder()
+      .dns { name -> lookups.incrementAndGet(); Thread.sleep(500); throw java.net.UnknownHostException(name) }
+      .build()
+    val a = assets(hosts = listOf("img.example.com"), deadlineMillis = 200, client = slowDns)
+    assertEquals(504, assertIs<PreviewAssets.Result.Refused>(a.fetch("https://img.example.com/a.png")).status)
+    a.fetch("https://img.example.com/b.png")
+    assertEquals(2, lookups.get(), "the host was not marked")
+  }
+
+  @Test fun connectFailuresAreToldFromOthers() {
+    val connect = listOf(
+      java.net.ConnectException("refused"),
+      java.net.NoRouteToHostException("no route"),
+      java.net.UnknownHostException("x"),
+      java.net.SocketTimeoutException("Connect timed out"),
+      javax.net.ssl.SSLHandshakeException("bad cert"),
+      java.io.IOException("wrapped", java.net.ConnectException("refused")),
+      java.io.IOException("last attempt").apply { addSuppressed(javax.net.ssl.SSLHandshakeException("bad cert")) },
+    )
+    for (e in connect) assertTrue(PreviewAssets.isConnectFailure(e), "$e")
+    for (e in listOf(java.io.IOException("unexpected end of stream"), java.net.ProtocolException("bad"), java.io.InterruptedIOException("timeout"))) {
+      assertFalse(PreviewAssets.isConnectFailure(e), "$e")
+    }
   }
 
   private fun waitFor(condition: () -> Boolean) {

@@ -14,15 +14,24 @@
  * limitations under the License.
  */
 import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URLDecoder
+import java.net.UnknownHostException
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.SSLHandshakeException
+import okhttp3.Call
+import okhttp3.Connection
 import okhttp3.CookieJar
+import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -62,8 +71,15 @@ import okhttp3.Request
  *  - at most [maxBytes] per image;
  *  - successful images are kept in an in-memory LRU cache bounded by entries
  *    and bytes, for [ttlMillis]; a failure is remembered for
- *    [failureTtlMillis] (per URL, and per host when the host could not be
- *    reached), so a re-render does not wait on a dead host again;
+ *    [failureTtlMillis] per URL, so a re-render does not ask again. The
+ *    host (with its port) is remembered as well only when no connection to
+ *    it could be made: DNS failed, the connection was refused or had no
+ *    route, the connect itself timed out, or the TLS handshake failed. A
+ *    host that accepted the connection is never marked, however slowly it
+ *    answered: the deadline running out, a body that broke off or a
+ *    protocol error costs that URL only, so one slow image does not fail
+ *    every other image on its host. A redirect target the deadline left no
+ *    time to contact is not marked either;
  *  - requests run on this endpoint's own small pool ([threads] threads,
  *    [queue] waiting), never on the relay's shared dispatcher: a slow host
  *    cannot stall `/ops`, `/doc` or write-back. A full pool answers 503;
@@ -106,9 +122,22 @@ class PreviewAssets(
   private val cache = object : LinkedHashMap<String, Entry>(16, 0.75f, true) {}
   private var cachedBytes = 0L
 
-  // Remembered failures, keyed by URL and (unreachable hosts) by host name.
+  // Remembered failures, keyed by URL and (hosts no connection reached) by host:port.
   private val failedUrls = boundedMap<Failure>(FAILURES_MAX)
   private val failedHosts = boundedMap<Failure>(FAILURES_MAX)
+
+  // Each call reports whether it got a connection: a [Reach] rides as the request's tag.
+  private val tracked: OkHttpClient = client.newBuilder()
+    .eventListenerFactory { call -> call.request().tag(Reach::class.java) ?: EventListener.NONE }
+    .build()
+
+  /** Whether a call got a connection (new or pooled) to its host. */
+  private class Reach : EventListener() {
+    @Volatile var connected = false
+    override fun connectionAcquired(call: Call, connection: Connection) {
+      connected = true
+    }
+  }
 
   private val threadIds = AtomicInteger()
   private val pool = ThreadPoolExecutor(
@@ -133,7 +162,7 @@ class PreviewAssets(
     }
     val key = start.toString()
     cached(key)?.let { return it }
-    recentFailure(key, start.host.lowercase())?.let { return it }
+    recentFailure(key, hostKey(start))?.let { return it }
     return download(start, key)
   }
 
@@ -142,18 +171,21 @@ class PreviewAssets(
     var uri = start
     repeat(MAX_REDIRECTS + 1) {
       val remaining = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
-      if (remaining <= 0) return failed(key, uri, unreachable = true, 504, "no image within $deadlineMillis ms")
+      // Out of time before this hop: its host was never contacted, so only the URL is remembered.
+      if (remaining <= 0) return failed(key, uri, unreachable = false, 504, "no image within $deadlineMillis ms")
+      val reach = Reach()
       val request = try {
         Request.Builder()
           .url(uri.toString())
           .get()
           .header("User-Agent", USER_AGENT)
           .header("Accept", "image/*")
+          .tag(Reach::class.java, reach)
           .build()
       } catch (e: IllegalArgumentException) {
         return failed(key, uri, unreachable = false, 400, "not a valid http(s) URL")
       }
-      val call = client.newCall(request)
+      val call = tracked.newCall(request)
       // One deadline for the whole request: this hop gets what is left of it.
       call.timeout().timeout(remaining, TimeUnit.MILLISECONDS)
       try {
@@ -186,14 +218,19 @@ class PreviewAssets(
           return image
         }
       } catch (e: IOException) {
-        if (deadline - System.nanoTime() <= 0) {
-          return failed(key, uri, unreachable = true, 504, "no image within $deadlineMillis ms")
+        // The deadline (OkHttp's call timeout cancels the call): this URL only,
+        // whether it ran out while connecting, waiting or reading the body.
+        if (call.isCanceled() || deadline - System.nanoTime() <= 0) {
+          return failed(key, uri, unreachable = false, 504, "no image within $deadlineMillis ms")
         }
         // OkHttp tries a host's addresses in parallel and throws the LAST
         // failure; the others ride as suppressed. Name them all: an IPv6
         // "no route" can hide the TLS failure that actually mattered.
         val causes = (listOf(e) + e.suppressed).map { it.javaClass.simpleName }.distinct()
-        return failed(key, uri, unreachable = true, 504, "upstream failed (${causes.joinToString("; ")})")
+        // The host is marked only if no connection to it was made and the
+        // failure is one of connecting; after a connection, it is this URL's.
+        val unreachable = !reach.connected && isConnectFailure(e)
+        return failed(key, uri, unreachable, 504, "upstream failed (${causes.joinToString("; ")})")
       }
     }
     return failed(key, uri, unreachable = false, 502, "more than $MAX_REDIRECTS redirects")
@@ -258,15 +295,24 @@ class PreviewAssets(
     return null
   }
 
-  /** Log and remember a failed download; [unreachable] also marks [at]'s host. */
+  /**
+   * Log and remember a failed download for [key]; [unreachable] (no
+   * connection to [at]'s host could be made) also marks that host and port.
+   */
   private fun failed(key: String, at: URI, unreachable: Boolean, status: Int, reason: String): Result.Refused {
     val refused = refuse(at, status, reason)
     synchronized(this) {
       val f = Failure(refused, clock())
       failedUrls[key] = f
-      if (unreachable) at.host?.lowercase()?.let { failedHosts[it] = f }
+      if (unreachable) failedHosts[hostKey(at)] = f
     }
     return refused
+  }
+
+  /** `host:port`, the port defaulted from the scheme: one host's http and https are told apart. */
+  private fun hostKey(uri: URI): String {
+    val port = if (uri.port != -1) uri.port else if (uri.scheme.equals("https", ignoreCase = true)) 443 else 80
+    return "${uri.host?.lowercase()}:$port"
   }
 
   /** Number of cached images (tests). */
@@ -275,15 +321,40 @@ class PreviewAssets(
   /** Requests running or waiting on the pool (tests). */
   fun pending(): Int = pool.activeCount + pool.queue.size
 
-  /** Stop the pool (tests; the relay keeps it for its lifetime). */
+  /**
+   * Stop taking requests (tests; the relay keeps the pool for its lifetime).
+   * Requests already running or queued still finish and close their exchanges.
+   */
   fun close() {
-    pool.shutdownNow()
+    pool.shutdown()
   }
 
   private fun refuse(url: Any, status: Int, reason: String): Result.Refused {
     val host = runCatching { URI(url.toString()).host }.getOrNull() ?: "?"
     log("portal-server: preview-asset refused for host $host: $reason")
     return Result.Refused(status, reason)
+  }
+
+  /**
+   * Mount `/preview-asset` on [server]: the relay's wiring, which the tests
+   * use too. GET only, checked here on the dispatcher thread before the pool
+   * (and again in [respond]); a refused method's exchange is closed even if
+   * sending its 405 fails.
+   */
+  fun install(server: HttpServer) {
+    server.createContext("/preview-asset") { ex ->
+      if (ex.requestMethod != "GET") {
+        try {
+          ex.responseHeaders.add("Allow", "GET")
+          ex.sendResponseHeaders(405, -1)
+        } catch (_: IOException) {
+        } finally {
+          ex.close()
+        }
+      } else {
+        serve(ex)
+      }
+    }
   }
 
   /**
@@ -380,6 +451,28 @@ class PreviewAssets(
     private fun describeTypes(values: List<String>): String = when {
       values.isEmpty() -> "no content type"
       else -> values.joinToString(" | ").take(80)
+    }
+
+    /**
+     * A failure to reach the host at all: DNS, a refused or unroutable
+     * connect, a connect timeout, a failed TLS handshake — anywhere in the
+     * exception, its causes or (OkHttp's parallel attempts) its suppressed.
+     * Called only when the call got no connection, so a [SocketTimeoutException]
+     * here is the connect's own timeout, not a read; the call deadline is
+     * handled before this.
+     */
+    internal fun isConnectFailure(e: Throwable): Boolean {
+      val seen = HashSet<Throwable>()
+      fun walk(t: Throwable?): Boolean {
+        if (t == null || !seen.add(t)) return false
+        if (t is UnknownHostException || t is ConnectException || t is NoRouteToHostException ||
+          t is SocketTimeoutException || t is SSLHandshakeException
+        ) {
+          return true
+        }
+        return walk(t.cause) || t.suppressed.any { walk(it) }
+      }
+      return walk(e)
     }
 
     private fun <V> boundedMap(max: Int): MutableMap<String, V> = object : LinkedHashMap<String, V>(16, 0.75f, false) {

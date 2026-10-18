@@ -1167,16 +1167,8 @@ fun main(args: Array<String>) {
   // (PreviewAssets.kt holds every rule), and the host list the editor reads.
   val previewAssets = PreviewAssets(config.previewAssetHosts)
   if (previewAssets.enabled) println("portal-server: preview images via /preview-asset for ${previewAssets.hosts.joinToString()}")
-  server.createContext("/preview-asset") { ex ->
-    // GET only, checked here as well as in serve(): a fetch is the one thing it does.
-    if (ex.requestMethod != "GET") {
-      ex.responseHeaders.add("Allow", "GET")
-      ex.sendResponseHeaders(405, -1)
-      ex.close()
-    } else {
-      previewAssets.serve(ex)
-    }
-  }
+  // GET only, checked before its pool as well as in serve(): a fetch is the one thing it does.
+  previewAssets.install(server)
   server.createContext("/preview-assets") { ex ->
     handle(ex) { respond(ex, 200, previewAssets.describeJson()) }
   }
