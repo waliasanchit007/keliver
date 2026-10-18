@@ -1,7 +1,7 @@
 # Inventory — the reference app
 
 A small stock-keeping app built from what an adopter gets: the published
-[`keliver-portal-tools` 0.3.7](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.7)
+[`keliver-portal-tools` 0.3.10](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.10)
 release and the `dev.keliver:*:0.3.3` libraries on Maven Central. The app itself
 is never compiled against this checkout. Neither of its routes uses anything
 else: development, and production. Production means signed publishing plus
@@ -40,7 +40,7 @@ Needs JDK 17+, python3, curl, git — the adopter guide's prerequisites.
 reference/inventory/bootstrap.sh /some/empty/dir
 ```
 
-That downloads the public 0.3.7 zip, checks it against the release's `.sha256`
+That downloads the public 0.3.10 zip, checks it against the release's `.sha256`
 **and** the hash pinned in the script, runs `keliver-init`, copies in `app/`'s
 screens and logic, runs `keliver-new-device-target.sh` and `keliver-new-editor.sh`,
 and then overlays the files the scaffolders cannot write. What it overlays is
@@ -50,7 +50,7 @@ skip the download; it must have the same hash.
 Then, from `/some/empty/dir/inventory`:
 
 ```bash
-export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.7/bin
+export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.10/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
 $KP/keliver-new-publish-target.sh         # publishing + signing
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
@@ -104,7 +104,7 @@ Each of these was hit building this app; see
 * **Publishing was not scaffolded.** `POST /publish` runs `publishTask`, whose
   default is Keliver's own `:portal-published-guest:…`, so on a scaffolded app it
   failed, and nothing signed. This app used to carry both settings and a
-  hand-written signing block in its overlay. CI now runs the 0.3.7 zip's
+  hand-written signing block in its overlay. CI now runs the published zip's
   `bin/keliver-new-publish-target.sh` instead, whose block is the U31-fixed
   one.
 * **The device scaffolder wires one screen.** With two screens it asks for
