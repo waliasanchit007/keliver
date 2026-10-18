@@ -578,21 +578,37 @@ canonical white card wrappers and is verified in its editor, Android, and iOS.
 editor (or through MCP) is written to the screen's `.kt` file in one of three
 ways, and the editor is told which:
 
+0. **Only onto the file the relay last wrote or read.** Write-back merges
+   onto the file only when it still reads as the document the relay last
+   wrote it from (or read it as) — the *base*. If it does not (an IDE save
+   landed between an editor edit and its write, an IDE undo took the file
+   back to a text the relay once wrote, a file appeared that was never read),
+   nothing is written: the relay reads the file instead, the document
+   becomes the file, and the status is `discarded` — the editor's unwritten
+   change is not in the file and is gone (make it again). Statements are
+   never paired with nodes by position. Any read of the file forgets the
+   relay's last written text, so a later file equal to it is the author's
+   edit, not the relay's own write.
 1. **Surgically, when possible** (`surgical`). Only the statements and
    arguments that changed are rewritten; comments, blank lines, formatting,
    helper functions, RawCode and the Bindings interface elsewhere stay byte
-   for byte. What is written is first read back and compared with the
-   document; it is written only if it reads back as exactly that document.
-   - Every node is paired with its statement by **identity**: the relay
-     passes write-back the document it last wrote the file from (or ingested
-     it as), so an insert or delete beside a same-type sibling, with code
+   for byte. What is written — after the Bindings interface pass — is first
+   read back and compared with the document; it is written only if it reads
+   back as exactly that document.
+   - Every node is paired with its statement by **identity** (its handle in
+     the base), so an insert or delete beside a same-type sibling, with code
      between, touches just that statement.
    - A **move** (within a block, or into/out of an `if`, `else`, `forEach` or
-     container) cuts the node with its exact source text — including the
-     comment lines directly above it and a comment after it on its line —
-     and places it after its new previous sibling, re-indented (string and
-     comment contents untouched). Without the base document a reorder is not
-     surgical.
+     container — including the only statement of a block) cuts the node with
+     its exact source text — including the comment lines directly above it
+     and a comment after it on its line — and places it after its new
+     previous sibling, re-indented (string and comment contents untouched).
+     A multi-line code statement moved to another depth reads back as the
+     same code: code lines compare without their indentation; a line that
+     starts inside a string literal compares whole.
+   - A node placed **first** in a block goes at the very top, right after
+     `{`, at the depth of the block's first line — above any comments there
+     (the first statement's own, or a section header).
    - Inserted nodes and changed values are spelled as the file spells them:
      its own bindings parameter name (`bindings.title`, not `b.title`), and a
      RawCode node as its own text.
@@ -604,20 +620,41 @@ ways, and the editor is told which:
 3. **Otherwise refused** (`refused`): nothing is written and the file is
    left exactly as it is. The relay logs one line, the screen's write-back
    status (`writeBack` on the `/doc-events` stream and in `/devstate`) says
-   why, and the editor shows a non-blocking banner — "this change could not
-   be written to `<file>` without losing code: `<reason>`; undo it or make it
-   in code" — and marks the save pill "Not written". The document is then
-   ahead of the file; undoing the change (or making it in code) brings them
-   together again. A write that fails with an error is reported the same way
-   (`failed`), never swallowed.
+   why, and the editor shows a non-blocking banner and marks the save pill
+   "Not written". **The document keeps the change that could not be written,
+   so every later edit of this screen is refused with it** (the banner says
+   so, and names the version that first failed): "this change could not be
+   written to `<file>` without losing code: `<reason>`; undo it (from the
+   session that made it) or make it in code — until then no edit to this
+   screen is written". Undo is per session: only the session that made the
+   change can undo it. A write that fails with an error is reported the same
+   way (`failed`), never swallowed.
 
-A new screen (no file yet) is created from the export. Some edits are refused
-up front, as ops, because they could never read back: a RawCode replacement
-that is not exactly one statement (several, a parse error, or a comment
-after it — `Legacy(2) // c`) or that reads as something the editor models (a
-widget, `if` or `forEach`: insert that as a widget instead). A bound value,
-condition or list inserted into a screen function that takes no bindings
-parameter is refused with that reason (add the parameter in code first).
+Every read of the file is reported too: `external` (the file was read; the
+editor's warning clears) or `discarded` (read while the document was ahead
+of it — an unwritten or refused change is gone; this includes the re-read
+after a component or design token the screen uses changed). An event with no
+status means none is current.
+
+A new screen (no file yet) is created from the export — RawCode as its own
+text — and only if that reads back as the document. Some edits are refused
+up front, as ops, because they could never read back or would not compile:
+a RawCode replacement that is not exactly one statement (several, a parse
+error, or a comment after it — `Legacy(2) // c`) or that reads as something
+the editor models (a widget, `if` or `forEach`: insert that as a widget
+instead); a bound value, condition or list inserted into a screen function
+that takes no bindings parameter (add the parameter in code first); and a
+move that takes a local declaration away from its uses — a code node that
+declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
+to another block, and nothing that mentions the declared name (a whole-word
+text match) moves to before it or out of its block.
+
+**What "reads back" does not cover.** The read-back check proves the file
+reads as the document, not that it compiles. Beyond the declaration rule
+above, a change can still leave code that does not compile — e.g. RawCode
+moved out of the block that declares a name it uses, when that name is not
+a code node's declaration (a `forEach` item, a lambda parameter). The app's
+build is the check for that.
 
 Line endings: a CRLF file stays CRLF. In any other file every line the edit
 does not touch keeps its own ending (an LF file's raw string with a `\r\n`

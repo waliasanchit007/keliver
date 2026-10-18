@@ -192,6 +192,19 @@
   rewritten as LF (that edit is refused), and an LF file's raw-string `\r\n` survives. The
   editor no longer wedges when an ops request gets no answer (error/timeout), and treats an
   unreadable 200 reply as unknown (refetches) instead of rolling the edit back.
+- **portal-ingest, portal-relay, portal (editor):** write-back merged onto a file that had
+  changed since the relay last wrote or read it (an IDE undo back to a text the relay once wrote
+  was skipped as the relay's own write; an IDE save landed between an edit and its write) by
+  pairing statements by position — deleting the author's statement and writing it as surgical.
+  Write-back now only merges onto the file it last wrote or read; otherwise the relay reads the
+  file and reports the editor's unwritten change as `discarded`. Every read of the file is
+  reported (`external`/`discarded`, which clears the editor's warning), a refusal says that
+  later edits of the screen are blocked too and which version first failed, the only statement
+  of a block can move out and back, a statement placed first in a block no longer glues onto a
+  comment above it, multi-line code can move to another depth, a move that takes a local
+  declaration away from its uses is refused as an op, the text after the Bindings interface pass
+  (and a new file, whose RawCode is now its own text) is what is read back, and a timeout or an
+  unreadable reply keeps the editor's edit (the refetch confirms).
 - **portal-ingest, portal-relay:** a CRLF screen or component was not recognized (the parser
   drops a `@Composable` before `\r\n`), so the relay's next write replaced it with an LF full
   export; it is now read as its LF text and written back CRLF. A component parameter typed
