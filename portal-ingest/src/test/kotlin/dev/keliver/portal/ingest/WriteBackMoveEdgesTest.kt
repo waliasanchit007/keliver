@@ -108,4 +108,95 @@ class WriteBackMoveEdgesTest {
     assertEquals(onlyChildren, out2)
     assertReingests(back, out2)
   }
+
+  // ── S2: first in a block whose first statement has comments above it ──────
+
+  private val commented = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.layout.compose.Row
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column {
+        if (b.open) {
+          // then comment
+          StyledText(text = "t")
+        } else {
+          StyledText(text = "e")
+        }
+        Row {
+          // section A header
+
+          // own comment
+          Legacy(1)
+        }
+      }
+    }
+
+    interface HomeScreenBindings {
+      val open: Boolean
+    }
+  """.trimIndent() + "\n"
+
+  private val newText = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to dev.keliver.portal.document.lit("n")))
+
+  private fun elseOf(d: UiDocument) = widget(d, 0).children.last() as DocNode.Widget
+
+  @Test fun anElseChildMovedFirstIntoTheThenBlockGoesAboveItsComment() {
+    val d = doc(commented)
+    val target = d.apply(DocOp.MoveNode(elseOf(d).children[0].handle, widget(d, 0).handle, null)).doc
+    val out = merge(commented, target, d)
+    assertEquals(
+      commented
+        .replace("    if (b.open) {\n      // then comment\n", "    if (b.open) {\n      StyledText(text = \"e\")\n      // then comment\n")
+        .replace("    } else {\n      StyledText(text = \"e\")\n    }\n", "    } else {\n    }\n"),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun anInsertFirstIntoAThenBlockGoesAboveItsComment() {
+    val d = doc(commented)
+    val target = d.apply(DocOp.InsertNode(widget(d, 0).handle, null, newText)).doc
+    val out = merge(commented, target, d)
+    assertEquals(
+      commented.replace(
+        "    if (b.open) {\n      // then comment\n",
+        "    if (b.open) {\n      StyledText(\n        text = \"n\",\n      )\n      // then comment\n",
+      ),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun anInsertFirstIntoALambdaGoesAboveASectionHeaderAndABlankLine() {
+    val d = doc(commented)
+    val target = d.apply(DocOp.InsertNode(widget(d, 1).handle, null, newText)).doc
+    val out = merge(commented, target, d)
+    assertEquals(
+      commented.replace(
+        "    Row {\n      // section A header\n",
+        "    Row {\n      StyledText(\n        text = \"n\",\n      )\n      // section A header\n",
+      ),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun aMoveFirstIntoALambdaGoesAboveASectionHeaderAndABlankLine() {
+    val d = doc(commented)
+    val target = d.apply(DocOp.MoveNode(elseOf(d).children[0].handle, widget(d, 1).handle, null)).doc
+    val out = merge(commented, target, d)
+    assertEquals(
+      commented
+        .replace("    } else {\n      StyledText(text = \"e\")\n    }\n", "    } else {\n    }\n")
+        .replace("    Row {\n      // section A header\n", "    Row {\n      StyledText(text = \"e\")\n      // section A header\n"),
+      out,
+    )
+    assertReingests(target, out)
+  }
 }

@@ -901,8 +901,9 @@ object WriteBack {
   /**
    * Adds the statement [make] builds (given its line's indent) to [block]:
    * after [after] — and after its same-line trailing comment — or, with no
-   * [after], first: before the first statement's own leading comments (they
-   * stay with it), or after the comments of a block that has only comments.
+   * [after], first: at the top of the block, above any comments there (the
+   * first statement's own, a section header), or after the comments of a
+   * block that has only comments.
    * Every placement carries "\n" + the destination indent.
    */
   private fun place(
@@ -923,10 +924,17 @@ object WriteBack {
     }
     val first = block.statements.firstOrNull()
     if (first != null) {
-      val indent = indentOf(first)
+      // At the very top of the block: right after `{` and its line break, at the
+      // depth of the block's first line — above every comment there (its own,
+      // and a section header set off by a blank line), never glued to one.
+      val top = generateSequence(block.lBrace?.nextSibling ?: block.firstChild) { it.nextSibling }
+        .firstOrNull { it !is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace } ?: first
+      val indent = indentOf(top)
       val stmt = make(indent) ?: return null
-      val inserted = block.addBefore(stmt, leadingComments(first).firstOrNull() ?: first)
-      block.addAfter(factory.createWhiteSpace("\n$indent"), inserted)
+      // Raw tree inserts: PSI addBefore re-anchors next to comments and merges
+      // whitespace (the statement landed on the `{` line, or after a comment).
+      val inserted = rawAddBefore(block, stmt, top)
+      rawAddBefore(block, factory.createWhiteSpace("\n$indent"), top)
       return inserted as? KtExpression
     }
     val lastComment = generateSequence(block.lastChild) { it.prevSibling }
@@ -1073,6 +1081,17 @@ object WriteBack {
     val off = element.textRange.startOffset
     val lineStart = text.lastIndexOf('\n', off - 1) + 1
     return text.substring(lineStart, off).takeWhile { it == ' ' || it == '\t' }
+  }
+
+  /** Adds [element] (detached from wherever it was made) to [parent] before [anchor], as is; returns it in place. */
+  private fun rawAddBefore(
+    parent: org.jetbrains.kotlin.com.intellij.psi.PsiElement,
+    element: org.jetbrains.kotlin.com.intellij.psi.PsiElement,
+    anchor: org.jetbrains.kotlin.com.intellij.psi.PsiElement,
+  ): org.jetbrains.kotlin.com.intellij.psi.PsiElement {
+    val node = element.node
+    parent.node.addChild(node, anchor.node)
+    return node.psi
   }
 
   private fun owningCall(block: KtBlockExpression): KtCallExpression? {
