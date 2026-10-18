@@ -52,7 +52,9 @@ class EmitRenderNodeTest {
     assertContains(src, "\"Column\" -> Column(\n      width = constraintOf(node.intB(\"width\", 0)),\n      horizontalAlignment = crossAxisOf(node.intB(\"horizontalAlignment\", 0)),\n    ) { node.children.forEach { RenderNode(it, this) } }")
     assertContains(src, "\"Card\" -> Card(\n    ) { node.children.forEach { RenderNode(it, null) } }")
     // Logic nodes emit no wrapper on device, so the parent's scope passes through.
-    assertContains(src, "node.children.forEach { RenderNode(it, scope) }")
+    // K3: a Condition renders the branch its condition picks (its else branch included).
+    assertContains(src, "\"Condition\" -> node.previewBranch().forEach { RenderNode(it, scope) }")
+    assertContains(src, "node.children.forEach { RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i), scope) }")
     assertContains(src, "RenderNode(PreviewBindings.mockItemRow(it, itemVar, itemsField, i), scope)")
     // C1: unknown type (project component) routes to the settable preview hook,
     // falling back to the unknown-widget marker when unset.

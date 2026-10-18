@@ -76,5 +76,11 @@ public fun propSourceType(nodeType: String, key: String, components: ComponentRe
  * literal of [sourceType] (the exporter writes the resolved value otherwise).
  */
 internal fun MutableSet<String>.addTokenImport(v: Any?, sourceType: String?) {
+  // K3: a conditional value writes each branch.
+  if (v is Conditional) {
+    addTokenImport(v.whenTrue, sourceType)
+    addTokenImport(v.whenFalse, sourceType)
+    return
+  }
   if (v is Token && tokenKindOf(v.value) == sourceType) v.importFq?.let { add(it) }
 }

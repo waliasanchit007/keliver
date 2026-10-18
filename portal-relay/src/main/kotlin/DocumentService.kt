@@ -18,7 +18,6 @@ import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toAny
 import dev.keliver.portal.document.toPropValue
 import dev.keliver.portal.document.toWidgetTree
-import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.ingest.TokenTable
 import dev.keliver.portal.propSourceType
@@ -52,6 +51,57 @@ class DocumentService(
   @Volatile var doc: UiDocument = initial
     private set
 
+  /**
+   * K3 review S-c: the document the file on disk was last written from or
+   * ingested as — its handles are the ones ops target, so write-back can tell
+   * an edited node from a new one ([dev.keliver.portal.ingest.WriteBack.merge]'s
+   * `base`). Null until known; a base that no longer reads as the file is
+   * ignored there.
+   */
+  @Volatile private var fileDoc: UiDocument? = null
+
+  /**
+   * K3 fifth review: the exact text [fileDoc] was read from or written as
+   * (null = unknown). The file watcher's read of this same text is not a
+   * change (B-1: the writer already read it), and write-back compares the
+   * file with it as text before anything else (S-c: a token or component
+   * changing does not make the file another file).
+   */
+  @Volatile private var fileText: String? = null
+
+  /**
+   * K3 last review round: what the last write-back of this screen did —
+   * [outcome] `surgical` (in place), `export` (the whole file, which held
+   * nothing the export drops), `created`, `refused` (NOT written: it would
+   * have lost code; the file is untouched) or `failed` (an error) — for the
+   * document [version] it tried to write. Or what replaced it (S4): the file
+   * was read (`external`: the document is the file again), or read while the
+   * document was ahead of it (`discarded`: that change is gone). Sent on the change stream
+   * ([subscribe]) and in `/devstate`; the editor shows a refusal or failure.
+   */
+  data class WriteBackStatus(val version: Long, val outcome: String, val message: String) {
+    /** Whether the change is in the file: not `refused`, `failed` or `discarded`. */
+    val written: Boolean get() = outcome != "refused" && outcome != "failed" && outcome != "discarded"
+
+    fun json(): String = "{\"version\":$version,\"outcome\":\"$outcome\",\"written\":$written,\"message\":${jsonString(message)}}"
+
+    private fun jsonString(v: String): String = buildString {
+      append('"')
+      for (c in v) when {
+        c == '"' -> append("\\\"")
+        c == '\\' -> append("\\\\")
+        c == '\n' -> append("\\n")
+        c < ' ' -> append("\\u%04x".format(c.code))
+        else -> append(c)
+      }
+      append('"')
+    }
+  }
+
+  /** The last write-back's status (null = none yet). */
+  @Volatile var writeBack: WriteBackStatus? = null
+    private set
+
   private val undoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val redoStacks = ConcurrentHashMap<String, ArrayDeque<List<DocOp>>>()
   private val listeners = CopyOnWriteArrayList<OutputStream>()
@@ -73,6 +123,13 @@ class DocumentService(
     val (normalized, refused) = Tokens.normalize(batch, table, tokenFileId)
     if (normalized == null) return null to refused
     refusal(normalized)?.let { return null to it }
+    rawRefusal(normalized)?.let { return null to it }
+    // S5: a move that would leave a local declaration's use where it is not declared.
+    if (normalized.ops.any { it is DocOp.MoveNode }) {
+      doc.applyBatch(normalized.ops).result?.doc?.let { after ->
+        dev.keliver.portal.ingest.DeclarationScope.problem(doc, after)?.let { return null to "move refused: $it" }
+      }
+    }
     val chosen = Tokens.tokensIn(normalized)
     if (chosen.isNotEmpty() && kotlinFile.exists()) {
       // One scope through the whole batch, seeded with the imports the
@@ -94,12 +151,14 @@ class DocumentService(
   private fun refusal(batch: OpBatch): String? {
     if (batch.ops.any { !it.isClientOp() }) return "internal op not accepted"
     val registry = components()
-    fun refuseToken(type: String, key: String, v: PropValue): String? {
+    fun refuseLeaf(type: String, key: String, v: PropValue): String? {
       if (v !is PropValue.Token || !registry.isComponent(type)) return null
       val sourceType = propSourceType(type, key, registry)
       return if (tokenFits(sourceType, v.value.toAny())) null
       else "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
     }
+    fun refuseToken(type: String, key: String, v: PropValue): String? =
+      conditionalRefusal(registry, type, key, v) ?: v.leaves().firstNotNullOfOrNull { refuseLeaf(type, key, it) }
     fun walkTokens(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
       w.props.entries.firstNotNullOfOrNull { (k, v) -> refuseToken(w.type, k, v) }
         ?: w.children.firstNotNullOfOrNull(::walkTokens)
@@ -126,6 +185,48 @@ class DocumentService(
         else -> {}
       }
     }
+    return null
+  }
+
+  /**
+   * K3 last review round: a RawCode replacement must stand in the file as
+   * exactly that one code statement ([dev.keliver.portal.ingest.RawCodeEdit]):
+   * not several statements, no comment outside it, not grammar the editor
+   * models. Checked against the document as the batch's earlier ops leave it.
+   */
+  private fun rawRefusal(batch: OpBatch): String? {
+    if (batch.ops.none { it is DocOp.ReplaceRaw }) return null
+    val fileText = if (kotlinFile.exists()) kotlinFile.readText() else null
+    var d = doc
+    for (op in batch.ops) {
+      if (op is DocOp.ReplaceRaw) {
+        dev.keliver.portal.ingest.RawCodeEdit.problem(op.text, d, op.target, fileText, tokenFileId, components(), tokens())
+          ?.let { return "code edit refused: $it" }
+      }
+      d = d.tryApply(op).result?.doc ?: return null // the batch itself fails later, with its own error
+    }
+    return null
+  }
+
+  /**
+   * K3: a conditional value on a project-component instance — the document
+   * checks catalogued widgets; here the signature decides: an event parameter
+   * takes actions, a value parameter takes values; either takes a `null`
+   * branch only where its declared type is nullable. Null = acceptable.
+   */
+  private fun conditionalRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
+    if (v !is PropValue.Conditional) return null
+    val spec = registry.spec(type) ?: return null
+    val branches = listOf(v.whenTrue, v.whenFalse)
+    val nullable = dev.keliver.portal.ingest.isNullableType(spec.paramTypes[key])
+    if (spec.events.any { it.name == key }) {
+      if (branches.any { it != null && it !is PropValue.Action }) return "conditional $type.$key: an event's branches are actions or null"
+      // `onGo = if (b.x) b::go else null` compiles only where onGo is `(() -> Unit)?`.
+      if (branches.any { it == null } && !nullable) return "conditional $type.$key: null fits only a nullable event (${spec.paramTypes[key] ?: "undeclared"})"
+      return null
+    }
+    if (branches.any { it is PropValue.Action }) return "conditional $type.$key: an action fits only an event parameter"
+    if (branches.any { it == null } && !nullable) return "conditional $type.$key: null fits only a nullable parameter"
     return null
   }
 
@@ -220,11 +321,53 @@ class DocumentService(
     runCatching { sendEvent(out, doc.version) }
   }
 
-  /** V2 M3: a file-originated document (recognize+reconcile done by the caller).
-   * No undo entry, no .kt rewrite — the file IS the new baseline. */
+  /**
+   * V2 M3: a file-originated document (recognize+reconcile done by the
+   * caller). No undo entry, no .kt rewrite — the file IS the new baseline:
+   * it is what the next write-back merges onto ([fileDoc]), the self-write
+   * text is forgotten (B1: a later file equal to an OLD relay write — an IDE
+   * undo — is the author's edit, not ours), and a write still pending is
+   * dropped (the document is the file; there is nothing to write).
+   *
+   * The write-back status says so explicitly (S4): `external` — the file was
+   * read, nothing was lost — or `discarded` when the document was ahead of the
+   * file (an edit not yet written, or one that could not be written): that
+   * change is not in the file, and is now gone from the document too. [why]
+   * completes "<file> was re-read (…)".
+   */
   @Synchronized
-  fun acceptExternal(newDoc: dev.keliver.portal.document.UiDocument) {
+  fun acceptExternal(
+    newDoc: dev.keliver.portal.document.UiDocument,
+    why: String = "it changed in code",
+    /** The text [newDoc] was read from (null = unknown). */
+    text: String? = null,
+  ) {
+    // The document is ahead of the file when it holds what the file last
+    // written or read does not — by content, not version (an undo can bring
+    // it back) — and the file now read does not hold it either.
+    val same = sameDocument(doc, newDoc)
+    val ahead = !same && (fileDoc?.let { !sameDocument(doc, it) } ?: (doc.version != 0L))
+    val refused = writeBack?.takeIf { it.outcome == "refused" || it.outcome == "failed" }
+    // Read as the very document a discard left (B-1): nothing new happened — the discard stays what is told.
+    val keep = writeBack?.takeIf { same && it.outcome == "discarded" }
+    val name = kotlinFile.name
     doc = newDoc
+    fileDoc = newDoc
+    fileText = text
+    lastWrittenText = null
+    pendingWrite?.cancel(false)
+    firstRefused = null
+    writeBack = if (keep != null) {
+      keep
+    } else if (!ahead) {
+      WriteBackStatus(newDoc.version, "external", "$name was re-read ($why); the editor shows it as it is")
+    } else {
+      val which = if (refused != null) "the change that could not be written" else "the editor's latest change, not yet written,"
+      WriteBackStatus(
+        newDoc.version, "discarded",
+        "$name was re-read ($why), so $which is not in the file and has been discarded: the editor now shows the file as it is — make the change again if you still want it",
+      )
+    }
     undoStacks.clear()
     redoStacks.clear()
     changed(writeBack = false)
@@ -242,16 +385,44 @@ class DocumentService(
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
     if (!kotlinFile.exists()) return true
-    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
+    val text = kotlinFile.readText()
+    val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
-    if (next.root != doc.root || next.contract != doc.contract) acceptExternal(next)
+    if (next.root != doc.root || next.contract != doc.contract) {
+      acceptExternal(next, "a component or design token it uses changed", text)
+    } else {
+      fileDoc = doc
+      fileText = text
+    }
     return true
   }
 
   /** Self-write suppression for the file watcher. */
   @Volatile private var lastWrittenText: String? = null
   fun wasSelfWrite(text: String): Boolean = text == lastWrittenText
+
+  /** What the file watcher's [fileChanged] made of the file's new text. */
+  enum class FileChange { SELF_WRITE, ALREADY_READ, NOT_A_SCREEN, INGESTED }
+
+  /**
+   * The file watcher: the screen's file now reads [text]. The relay's own
+   * write is skipped, and so is the text the relay last read (B-1: the writer
+   * re-read an author's save before the watcher got to it — reading it again
+   * would turn the discard it reported into "external"); anything else is
+   * read as the document (V2 M3: the file is the source of truth).
+   */
+  @Synchronized
+  fun fileChanged(text: String): FileChange {
+    if (wasSelfWrite(text)) return FileChange.SELF_WRITE
+    if (text == fileText) return FileChange.ALREADY_READ
+    // C1: recognize with the project's component registry so component calls
+    // become editable Widget nodes instead of RawCode.
+    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
+      ?: return FileChange.NOT_A_SCREEN
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, recognized), text = text)
+    return FileChange.INGESTED
+  }
 
   private fun changed(writeBack: Boolean = true) {
     onProjected(doc.toWidgetTree())
@@ -271,7 +442,8 @@ class DocumentService(
   }
 
   private fun sendEvent(out: OutputStream, version: Long) {
-    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()}}\n\n".toByteArray())
+    val wb = writeBack?.let { ",\"writeBack\":${it.json()}" } ?: ""
+    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()}$wb}\n\n".toByteArray())
     out.flush()
   }
 
@@ -280,43 +452,132 @@ class DocumentService(
     if (!kotlinFile.exists()) writer.schedule({ writeKotlin() }, 100, TimeUnit.MILLISECONDS)
   }
 
+  /**
+   * Writes the document to its .kt file — the write-back guarantee
+   * ([dev.keliver.portal.ingest.ScreenWriter]): surgically when possible; the
+   * full export only when that is lossless; otherwise REFUSED (the file is
+   * untouched) and reported. Every outcome, including a failure, becomes the
+   * screen's [writeBack] status and is sent to subscribers — never silent.
+   */
   private fun writeKotlin() {
-    runCatching {
+    // One snapshot: what is merged, exported and recorded as the file's base is the same document.
+    val (doc, base, baseText) = synchronized(this) { Triple(this.doc, fileDoc, fileText) }
+    val status = try {
       kotlinFile.parentFile.mkdirs()
-      // M4: surgical PSI write-back preserves comments/formatting/RawCode when
-      // the file already exists; fall back to a full export on first write or
-      // when the change isn't safely surgical (type change, reorder, contract).
-      val registry = components()
-      val existing = if (kotlinFile.exists()) kotlinFile.readText() else null
-      // C1: component-aware surgical merge so a screen using a component isn't
-      // forced into a whole-file regen (its call stays byte-stable in place).
-      val surgical = existing?.let { dev.keliver.portal.ingest.WriteBack.merge(it, doc, registry, tokens(), tokenFileId) }
-      // P0: the file's OWN package wins over the configured default — a full-
-      // export fallback must never rewrite a foreign-package screen (e.g.
-      // com.stashfin.*) into dev.keliver.portalpublished.screens.
-      val pkgName = existing?.let { PKG_RE.find(it)?.groupValues?.get(1) } ?: packageName
-      val pkg = pkgName?.let { "package $it\n\n" } ?: ""
-      val merged = surgical ?: (pkg + exportKotlin(doc.toWidgetTree(), functionName = functionName, components = registry))
-      // P2b-a: keep the Bindings interface in sync with the tree — new binds
-      // gain defaulted, TODO(portal)-marked members so the guest keeps
-      // compiling; marker-carrying members that ops un-required are removed.
-      val tree = doc.toWidgetTree()
-      val text = runCatching {
-        dev.keliver.portal.ingest.ContractWriteBack.ensure(merged, tree, functionName, registry)
-      }.getOrDefault(merged)
-      lastWrittenText = text
-      kotlinFile.writeText(text)
-      // M9 versioned catch-up: bake the doc version this screen was written at
-      // into a sibling const. Rebuilding the dev bundle (serve --continuous)
-      // picks it up; the device router compares it to the live doc version.
-      pkgName?.let { p ->
+      val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
+      val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+        onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
+        fileName = tokenFileId, functionName = functionName, packageName = packageName,
+      )
+      when (plan) {
+        is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
+          println("write-back REFUSED for $screenKey (v${doc.version}): ${plan.reason} — ${kotlinFile.name} left as it is")
+          refusedStatus(doc.version, plan.reason)
+        }
+        // B1: the file is not what the relay last wrote or read — never merged onto: read it.
+        is dev.keliver.portal.ingest.ScreenWriter.Reread -> reread(plan.reason, base)
+        is dev.keliver.portal.ingest.ScreenWriter.Write -> written(plan, doc, base, onDisk)
+      }
+    } catch (t: Throwable) {
+      if (t is VirtualMachineError) throw t
+      println("writeKotlin failed for $screenKey: $t")
+      WriteBackStatus(doc.version, "failed", "writing ${kotlinFile.name} failed: $t; the change is not in the file")
+    }
+    if (status != null) {
+      writeBack = status
+      announce()
+    }
+  }
+
+  /**
+   * S6: a refusal, worded for what it means. The document keeps the change
+   * that cannot be written, so every later edit of this screen is refused
+   * with it until that change is undone (by the session that made it: undo
+   * is per session) or made in code; a later refusal names the version that
+   * first failed.
+   */
+  @Synchronized
+  private fun refusedStatus(version: Long, reason: String): WriteBackStatus {
+    val first = firstRefused ?: version.also { firstRefused = it }
+    val until = "undo it (from the session that made it) or make it in code — until then no edit to this screen is written"
+    val name = kotlinFile.name
+    return WriteBackStatus(
+      version, "refused",
+      if (first == version) "this change could not be written to $name without losing code: $reason; $until"
+      else "this edit (v$version) is not written to $name either: an earlier change in this screen (v$first) can't be written without losing code — $reason; $until",
+    )
+  }
+
+  /** The document version whose write-back was first refused since the file last matched the document (null = none). */
+  @Volatile private var firstRefused: Long? = null
+
+  /**
+   * Writes [plan] — only if, at this moment, the file is still [onDisk] and
+   * nothing read it since [base] was taken (else the plan is for a file that
+   * is gone: re-read, or let the read that happened stand). Null = no status
+   * of its own.
+   */
+  @Synchronized
+  private fun written(
+    plan: dev.keliver.portal.ingest.ScreenWriter.Write,
+    doc: UiDocument,
+    base: UiDocument?,
+    onDisk: String?,
+  ): WriteBackStatus? {
+    if (fileDoc !== base) return null // the file was read meanwhile: that read set the status
+    val now = if (kotlinFile.exists()) kotlinFile.readText() else null
+    if (now != onDisk) return reread("the file changed while the change was being written", base)
+    lastWrittenText = plan.text
+    kotlinFile.writeText(plan.text)
+    fileDoc = doc
+    fileText = plan.text
+    firstRefused = null
+    // M9 versioned catch-up: bake the doc version this screen was written at
+    // into a sibling const. Rebuilding the dev bundle (serve --continuous)
+    // picks it up; the device router compares it to the live doc version.
+    val how = plan.how.name.lowercase()
+    val compiled = File(kotlinFile.parentFile, "Compiled_${kotlinFile.nameWithoutExtension}.kt")
+    // The screen IS written now: a failure below is reported as that, never as "not in the file".
+    val versionFailure = runCatching {
+      (PKG_RE.find(plan.text)?.groupValues?.get(1) ?: packageName)?.let { p ->
         val screen = kotlinFile.nameWithoutExtension
-        File(kotlinFile.parentFile, "Compiled_$screen.kt").writeText(
+        compiled.writeText(
           "package $p\n\n// GENERATED (M9) — the doc version this compiled screen reflects.\nconst val COMPILED_VERSION_$screen: Int = ${doc.version}\n",
         )
       }
-    }.onFailure { println("writeKotlin failed for $screenKey: $it") }
+    }.exceptionOrNull()
+    if (versionFailure != null) {
+      println("write-back of $screenKey: ${kotlinFile.name} written, ${compiled.name} not: $versionFailure")
+      return WriteBackStatus(
+        doc.version, how,
+        "written to ${kotlinFile.name} ($how); but ${compiled.name} (the version a device build compares) could not be written: $versionFailure",
+      )
+    }
+    return WriteBackStatus(doc.version, how, "written to ${kotlinFile.name} ($how)")
   }
+
+  /**
+   * B1: the file is not the document it was last written from or read as
+   * ([reason]) — read it now, as the file watcher would ([acceptExternal]: the
+   * document becomes the file, and the status says the editor's unwritten
+   * change was discarded). Null = the read set the status.
+   */
+  @Synchronized
+  private fun reread(reason: String, base: UiDocument?): WriteBackStatus? {
+    if (fileDoc !== base) return null // already read meanwhile
+    val text = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val rec = text?.let {
+      runCatching { dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, it, components(), tokens()) }.getOrNull()
+    } ?: return WriteBackStatus(
+      doc.version, "refused",
+      "this change could not be written to ${kotlinFile.name}: $reason, and it does not read as a screen; it is left as it is",
+    )
+    println("write-back of $screenKey (v${doc.version}): $reason — ${kotlinFile.name} re-read, not written")
+    acceptExternal(dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec), reason, text)
+    return null
+  }
+
+  private fun sameDocument(a: UiDocument, b: UiDocument) = dev.keliver.portal.ingest.WriteBack.sameDocument(a, b)
 
   companion object {
     private val PKG_RE = Regex("""^package\s+([\w.]+)""", RegexOption.MULTILINE)
@@ -335,8 +596,9 @@ class DocumentService(
       tokensVersion: () -> Long = { 0L },
     ): DocumentService {
       if (kotlinFile.exists()) {
+        val text = kotlinFile.readText()
         val rec = runCatching {
-          dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, kotlinFile.readText(), components(), tokens())
+          dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
         }.getOrNull()
         if (rec != null) {
           var next = 1L
@@ -348,6 +610,7 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+            .also { it.fileDoc = doc; it.fileText = text } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

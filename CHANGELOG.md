@@ -24,6 +24,37 @@
   POST only.
 
 ### Added
+- **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
+  portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
+  parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters
+  declared nullable) for null, optionally negated, each form spelled one way — serves both
+  conditional children (`if (!b.x) { … } else { … }`: a `Condition` node with props
+  `field`/`test`/`negate` whose last child may be an `Else` node) and conditional values
+  (`colorArgb = if (selected) C.Ink else C.Muted`, `onClick = if (enabled) onTap else null`,
+  `Margin(top = if (raised) 8.dp else 0.dp)`): `PropValue.Conditional(field, test, negate,
+  whenTrue, whenFalse)` (new wire variant) whose branches are literals, tokens, binds, actions or
+  null (events and nullable parameters only). Components using these stay transparent; preview
+  expansion decides each condition against the instance's arguments (or re-points it at the
+  screen binding an argument is, decided by its mock); write-back rewrites only the changed
+  condition or branch (a no-op is byte-identical); the exporter writes every form and types each
+  condition's field in the contract. The device tree carries the true branch under its usual
+  keys plus `"cond"`/`"else"`; the relay serves conditionals only to clients asking
+  `conditionals=1` (older editors get the true branch) and checks a component instance's against
+  its signature. The editor edits the condition and both branches; the MCP op schema documents
+  it. A nullable function parameter is now an optional event; a nullable content slot and any
+  non-grammar argument or condition are named in the component's diagnostic (it no longer
+  reports "content slot … invoked exactly once (found 0)" when the slot call is hidden by
+  RawCode). New portal-core API: `Cond`, `CondTest`, `Conditional`, `condOf`, `chooseBranch`,
+  `thenChildren`, `elseNode`, `ELSE_TYPE`, `LOGIC_NODE_TYPES`; portal-document:
+  `PropValue.Conditional`, `cond()`, `toPropValue()`, `treeToPropValue`,
+  `withoutConditionals`; portal-render: `PreviewBindings.holds`/`chosen`. **Behaviour changes:**
+  a WidgetNode prop may hold a `Conditional` (the preview's `*B` getters and `actionOf` resolve
+  it against the mocks; code reading `props[key]` directly sees it); `PropValue` has a fifth
+  subclass (an exhaustive `when` over it needs a branch); `"Else"` is a reserved component name;
+  the catalog's `Condition` spec gains `test`/`negate` props; codegen leaves a non-nullable
+  catalog event that has a default out of the catalog (every catalog event is nullable); a
+  project-component event whose signature takes a payload exports an action that ignores it as
+  `{ _ -> b.x() }` (was `{ b.x() }`), which ingest reads back as the action.
 - **portal (relay, editor, render, ingest, core):** the editor canvas shows more of what the
   phone shows (K5; see `docs/EDITOR_FIDELITY.md`).
   - **Images:** a new keliver.portal.json `previewAssetHosts` (exact host names; empty = off)
@@ -134,6 +165,50 @@
   while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
 ### Fixed
+- **portal-ingest:** a statement inserted after the last statement of an `if` block was written
+  after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
+- **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept
+  statement, at a block start, into a new else) were written back in reverse order. Write-back
+  now also checks every surgical result: it is read back and compared with the document, and is
+  written only when they match (otherwise see the write-back guarantee above). The relay
+  passes write-back the document it last wrote the file from, so an edited `Condition` keeps its
+  own `if` (and comments) and a deleted one plus a new one beside it are a delete and an insert.
+- **portal-ingest, portal-relay, portal (editor):** write-back no longer silently destroys author
+  code. When a change could not be made in place it used to fall back to the full export
+  unchecked — dropping comments, helper functions and the file's bindings parameter name, and
+  writing RawCode as a `RawCode(text = …)` call that does not compile. Now the full export is
+  written only when it is lossless (the file is exactly the export of its own tree) and reads
+  back as the document; otherwise the change is **refused**: the file is left as it is, the
+  relay logs it, and the screen's write-back status (`writeBack` on `/doc-events` and
+  `/devstate`: `surgical`, `export`, `created`, `refused` or `failed`) says why — the editor shows
+  it as a banner. A write error is reported the same way instead of being swallowed. The common
+  reasons for the fallback are gone: every node (not only a `Condition`) is matched by identity,
+  so an insert or delete beside a same-type sibling is surgical; a moved node is cut with its
+  own comments and placed surgically (within a block or between blocks); inserts and changed
+  values use the file's bindings parameter name and write RawCode as its text; a modifier
+  reorder is written (read-back now compares modifier order). A `ReplaceRaw` that is not exactly
+  one statement (`Legacy(2) // c` threw and left the document silently ahead of the file) or
+  that reads as a widget is refused as an op. A CRLF line of a mixed-ending file is never
+  rewritten as LF (that edit is refused), and an LF file's raw-string `\r\n` survives. The
+  editor no longer wedges when an ops request gets no answer (error/timeout), and treats an
+  unreadable 200 reply as unknown (refetches) instead of rolling the edit back.
+- **portal-ingest, portal-relay, portal (editor):** write-back merged onto a file that had
+  changed since the relay last wrote or read it (an IDE undo back to a text the relay once wrote
+  was skipped as the relay's own write; an IDE save landed between an edit and its write) by
+  pairing statements by position — deleting the author's statement and writing it as surgical.
+  Write-back now only merges onto the file it last wrote or read; otherwise the relay reads the
+  file and reports the editor's unwritten change as `discarded`. Every read of the file is
+  reported (`external`/`discarded`, which clears the editor's warning), a refusal says that
+  later edits of the screen are blocked too and which version first failed, the only statement
+  of a block can move out and back, a statement placed first in a block no longer glues onto a
+  comment above it, multi-line code can move to another depth, a move that takes a local
+  declaration away from its uses is refused as an op, the text after the Bindings interface pass
+  (and a new file, whose RawCode is now its own text) is what is read back, and a timeout or an
+  unreadable reply keeps the editor's edit (the refetch confirms).
+- **portal-ingest, portal-relay:** a CRLF screen or component was not recognized (the parser
+  drops a `@Composable` before `\r\n`), so the relay's next write replaced it with an LF full
+  export; it is now read as its LF text and written back CRLF. A component parameter typed
+  `() -> Unit?` (a non-null function) no longer takes a `null` branch; `(() -> Unit)?` does.
 - **portal (core):** an opaque component's placeholder drew its name over the "opaque" reason;
   the name now sits above the reason, each ellipsized.
 - **portal (editor):** the editor parsed project components without parameter types, so every

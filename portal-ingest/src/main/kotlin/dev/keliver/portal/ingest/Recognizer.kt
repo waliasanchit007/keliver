@@ -1,11 +1,14 @@
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.COMPONENT_FORWARDS_MODIFIER_PROP
+import dev.keliver.portal.Cond
+import dev.keliver.portal.CondTest
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.ComponentSpec
 import dev.keliver.portal.EmptyComponentRegistry
+import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
@@ -32,6 +35,8 @@ import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtLambdaArgument
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtNullableType
+import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 
@@ -54,6 +59,10 @@ data class Recognized(
   val bindingsInterface: KtClass? = null,
   /** K2: design-token resolution in this file (shadowing honoured), for write-back. Transient. */
   internal val tokenLookup: TokenLookup? = null,
+  /** K3: condition reading in this file's screen context, for write-back. Transient. */
+  internal val condParser: CondParser? = null,
+  /** The screen function's bindings parameter (`b` by convention) — write-back spells a new condition with it. */
+  internal val bindingsParam: String? = null,
 )
 
 /**
@@ -67,6 +76,8 @@ internal sealed interface NameCtx {
     val valueParams: Set<String>,
     val eventParams: Set<String>,
     val slotParams: Set<String>,
+    /** K3: parameters whose declared type is nullable (a `== null` / `!= null` condition reads them). */
+    val nullableParams: Set<String> = emptySet(),
     /**
      * K5: the signature declares `modifier: Modifier`, so the body's root may
      * forward it (`Column(modifier = modifier)`), as a component built to take
@@ -98,7 +109,7 @@ object Recognizer {
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
   ): Recognized? {
-    val file = PsiEnv.parse(fileName, source)
+    val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
       ?: return null
@@ -123,7 +134,10 @@ object Recognizer {
       )
     } ?: Contract()
 
-    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup)
+    return Recognized(
+      root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup,
+      CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) }, bindingsParam,
+    )
   }
 
   /**
@@ -141,7 +155,7 @@ object Recognizer {
     components: ComponentRegistry = EmptyComponentRegistry,
     tokens: TokenTable = TokenTable.EMPTY,
   ): RecognizedComponent? {
-    val file = PsiEnv.parse(fileName, source)
+    val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
     val pkg = file.packageFqName.asString().takeIf { it.isNotEmpty() }
     val fn = file.declarations.filterIsInstance<KtNamedFunction>()
       .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
@@ -164,6 +178,8 @@ object Recognizer {
     val eventParams = LinkedHashSet<String>()
     val slots = mutableListOf<ComponentSlotSpec>()
     val optionalSlots = mutableListOf<String>()
+    val nullableSlots = mutableListOf<String>()
+    val nullableParams = LinkedHashSet<String>()
     for (p in fn.valueParameters) {
       val pName = p.name ?: continue
       val typeRef = p.typeReference
@@ -173,11 +189,19 @@ object Recognizer {
       p.defaultValue?.let {
         defaults[pName] = (parseLiteral(it.text.trim()) ?: lookup.lookup(it.text)?.value)?.let { l -> litValue(l) }
       }
+      // K3: a nullable function type — `(() -> Unit)?` — is an optional event;
+      // a nullable content slot is reported, never silently dropped.
+      val nullable = typeRef.typeElement is KtNullableType
+      if (nullable) nullableParams += pName
       val fnType = typeRef.typeElement as? KtFunctionType
+        ?: (typeRef.typeElement as? KtNullableType)?.innerType as? KtFunctionType
       if (fnType != null) {
         if (typeText.contains("@Composable")) {
-          if (p.defaultValue == null) slots += ComponentSlotSpec(pName)
-          else optionalSlots += pName
+          when {
+            nullable -> nullableSlots += pName
+            p.defaultValue == null -> slots += ComponentSlotSpec(pName)
+            else -> optionalSlots += pName
+          }
           continue
         }
         val ret = fnType.returnTypeReference?.text
@@ -193,6 +217,16 @@ object Recognizer {
         props += PropSpec(pName, kind, pName.replaceFirstChar { it.uppercaseChar() })
         valueParams += pName
       }
+    }
+
+    if (nullableSlots.isNotEmpty()) {
+      return RecognizedComponent(
+        ComponentSpec(name, props, events, paramTypes, defaults = defaults,
+          diagnostic = "nullable content slots are not supported (found: ${nullableSlots.joinToString()}): " +
+            "declare a required `@Composable () -> Unit` slot, or keep the component opaque",
+          transparent = false, packageName = pkg),
+        null, name, emptyMap(), file,
+      )
     }
 
     if (optionalSlots.isNotEmpty()) {
@@ -223,20 +257,27 @@ object Recognizer {
     }
     val acceptsModifier = paramTypes["modifier"]?.let(::isModifierType) == true
     val walk = Walker(
-      NameCtx.Component(valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, modifierParam = acceptsModifier),
+      NameCtx.Component(
+        valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
+        modifierParam = acceptsModifier,
+      ),
       components,
       lookup,
     )
     val root = walk.rootOf(body)
     val hasRaw = containsRawCode(root)
     val slotCalls = countSlotCalls(root)
-    val invalidSlotUse = slots.singleOrNull()?.let { slot ->
+    // K3: when code outside the grammar hides the slot call, say what that code
+    // is — "invoked exactly once (found 0)" would blame the slot instead.
+    val invalidSlotUse = if (hasRaw) null else slots.singleOrNull()?.let { slot ->
       when {
         slotCalls != 1 -> "content slot '${slot.name}' must be invoked exactly once (found $slotCalls)"
         root.type == "Slot" -> "content slot '${slot.name}' must be nested inside a grammar container"
         else -> null
       }
     }
+    val rawDiagnostic = "body contains code outside the portal grammar (opaque)" +
+      (walk.rawReasons.firstOrNull()?.let { ": $it" } ?: "")
     val deps = collectComponentDeps(root, components.names())
     val spec = ComponentSpec(
       name = name,
@@ -248,7 +289,7 @@ object Recognizer {
       body = if (hasRaw || invalidSlotUse != null) null else docNodeToWidget(root),
       transparent = !hasRaw && invalidSlotUse == null,
       dependencies = deps,
-      diagnostic = invalidSlotUse ?: if (hasRaw) "body contains code outside the portal grammar (opaque)" else null,
+      diagnostic = invalidSlotUse ?: if (hasRaw) rawDiagnostic else null,
       packageName = pkg,
     )
     return RecognizedComponent(spec, root, name, walk.psiByHandle, file)
@@ -301,8 +342,16 @@ object Recognizer {
     private val componentNames = components.names()
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
+    /** K3: why each RawCode node is not grammar, in source order (component diagnostics). */
+    val rawReasons = mutableListOf<String>()
     private fun nextTemp() = Handle(temp--)
     private fun track(h: Handle, e: KtExpression): Handle { psiByHandle[h.v] = e; return h }
+
+    /** [expr] verbatim as RawCode, recording [reason]. */
+    private fun raw(expr: KtExpression, reason: String): DocNode.RawCode {
+      rawReasons += reason
+      return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+    }
 
     fun rootOf(body: KtBlockExpression): DocNode.Widget {
       // Top-level statements have no layout parent: no scope receiver in source.
@@ -323,9 +372,20 @@ object Recognizer {
       parentType: String?,
       isRoot: Boolean = false,
     ): DocNode {
-      recognizeCondition(expr, ctx)?.let { (field, thenStmts) ->
-        return DocNode.Widget(track(nextTemp(), expr), "Condition", mapOf("field" to PropValue.Lit("s", s = field)),
-          children = thenStmts.map { statementToNode(it, itemScope, parentType) })
+      recognizeCondition(expr, ctx)?.let { (cond, thenStmts, elseBlock) ->
+        val handle = track(nextTemp(), expr)
+        val props = buildMap {
+          put("field", PropValue.Lit("s", s = cond.field))
+          cond.test.wire?.let { put("test", PropValue.Lit("s", s = it)) }
+          if (cond.negate) put("negate", PropValue.Lit("b", b = true))
+        }
+        val thenNodes = thenStmts.map { statementToNode(it, itemScope, parentType) }
+        // K3: `else { … }` is the Condition's last child, an Else node holding its statements.
+        val elseNode = elseBlock?.let { block ->
+          DocNode.Widget(track(nextTemp(), block), ELSE_TYPE,
+            children = block.statements.map { statementToNode(it, itemScope, parentType) })
+        }
+        return DocNode.Widget(handle, "Condition", props, children = thenNodes + listOfNotNull(elseNode))
       }
       recognizeRepeat(expr, ctx)?.let { (items, itemVar, bodyStmts) ->
         return DocNode.Widget(track(nextTemp(), expr), "Repeat",
@@ -346,50 +406,60 @@ object Recognizer {
       }
       // Primitive widget OR a known project component → editable Widget node.
       val known = type != null && (widgetSpec(type) != null || type in componentNames)
-      if (call == null || !known) return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+      if (call == null || !known) return raw(expr, rawReason(expr, call, type))
 
       val component = type?.let(components::spec)
       if (component != null) {
         val hasTrailingContent = call.lambdaArguments.isNotEmpty()
         val slot = component.slots.singleOrNull()
-        if ((hasTrailingContent && slot == null) || (!hasTrailingContent && slot?.required == true)) {
-          return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-        }
+        if (hasTrailingContent && slot == null) return raw(expr, "`$type` takes no content, but is called with a trailing lambda")
+        if (!hasTrailingContent && slot?.required == true) return raw(expr, "`$type` needs its content slot '${slot.name}' as a trailing lambda")
       }
 
       val props = mutableMapOf<String, PropValue>()
       val modifiers = mutableMapOf<String, PropValue>()
       // K1: Margin-valued widget props (Row/Column/Box `margin`) ride as four sides.
       val margins = widgetSpec(type!!)?.let { marginProps(it.props) }.orEmpty()
+      val conds = CondParser { parseCond(it, ctx, itemScope) }
       for (arg in call.valueArguments) {
         if (arg is KtLambdaArgument) continue
-        val name = arg.getArgumentName()?.asName?.asString() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-        val ve = arg.getArgumentExpression() ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+        val name = arg.getArgumentName()?.asName?.asString()
+          ?: return raw(expr, "`$type(…)` has a positional argument `${arg.text.oneLine()}`; grammar arguments are named")
+        val ve = arg.getArgumentExpression() ?: return raw(expr, "`$type(…)` has an empty argument `$name`")
+        fun offending() = raw(expr, "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar")
         if (name == "modifier") {
           // K5: a component forwarding its own `modifier` parameter to its root.
           // The root is marked so preview expansion puts the instance's
           // modifiers first, then the body's own chain (`modifier.padding(8)`).
-          if (isRoot && ctx is NameCtx.Component && ctx.modifierParam) {
-            forwardedModifier(ve.text)?.let { own ->
+          if (ctx is NameCtx.Component && ctx.modifierParam) {
+            val own = forwardedModifier(ve.text, conds)
+            if (own != null && isRoot) {
               props[COMPONENT_FORWARDS_MODIFIER_PROP] = PropValue.Lit("b", b = true)
               modifiers += own
               continue
             }
+            // Forwarding anywhere else is opaque (correct) — say that is why.
+            if (own != null) {
+              return raw(
+                expr,
+                "`$type(modifier = ${ve.text.oneLine()})`: a component's `modifier` parameter is forwarded only at " +
+                  "the body's single root call (not under `if`/`forEach`, in a nested call, or beside other statements)",
+              )
+            }
           }
-          val mods = parseModifierChain(ve.text, parentType, tokens)
-            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+          val mods = parseModifierChain(ve.text, parentType, tokens, conds) ?: return offending()
           modifiers += mods
           continue
         }
         if (name in margins) {
-          val sides = MarginSyntax.parse(ve.text)
-            ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
-          dev.keliver.portal.MARGIN_SIDES.forEachIndexed { i, side -> props["$name.$side"] = PropValue.Lit("d", d = sides[i]) }
+          val sides = MarginSyntax.parseValues(ve.text, conds) ?: return offending()
+          dev.keliver.portal.MARGIN_SIDES.forEachIndexed { i, side -> props["$name.$side"] = sides[i] }
           continue
         }
         val value = parseValue(ve, ctx, itemScope, componentNames)
           ?: tokenArg(type, name, ve.text)
-          ?: return rawNode(expr, ::nextTemp).let { it.copy(handle = track(it.handle, expr)) }
+          ?: conditionalArg(type, name, ve, itemScope)
+          ?: return offending()
         props[name] = value
       }
       val children = call.lambdaArguments.firstOrNull()
@@ -403,11 +473,12 @@ object Recognizer {
      * chain after the caller's). The root has no layout parent in the body, so
      * a scoped modifier in that chain is not grammar. Null = neither.
      */
-    private fun forwardedModifier(text: String): Map<String, PropValue>? {
+    private fun forwardedModifier(text: String, conds: CondParser): Map<String, PropValue>? {
       val t = text.trim()
       if (t == "modifier") return emptyMap()
       val rest = Regex("^modifier\\s*(\\..*)$", RegexOption.DOT_MATCHES_ALL).find(t)?.groupValues?.get(1) ?: return null
-      return parseModifierChain("Modifier$rest", null, tokens)
+      // K3: the own chain takes a conditional value as a `Modifier.…` chain does.
+      return parseModifierChain("Modifier$rest", null, tokens, conds)
     }
 
     /**
@@ -420,21 +491,130 @@ object Recognizer {
       val token = tokens.lookup(text) ?: return null
       return token.takeIf { tokenFits(propSourceType(type, name, components), litValue(it.value)) }
     }
+
+    /**
+     * K3: `if (<condition>) A else B` as the value of [type]'s [name] — the
+     * condition in the grammar ([parseCond]) and each branch a value the
+     * argument takes by itself (a literal, token, bind or action) or `null`.
+     * A branch never nests another `if`; a lambda branch is written in
+     * parentheses or as a reference (a bare `{ … }` would be the if's block).
+     */
+    private fun conditionalArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue.Conditional? {
+      val ifExpr = ve as? KtIfExpression ?: return null
+      val cond = parseCond(ifExpr.condition?.text ?: return null, ctx, itemScope) ?: return null
+      fun branch(e: KtExpression?): Pair<Boolean, PropValue?> {
+        val x = (e as? KtParenthesizedExpression)?.expression ?: e ?: return false to null
+        if (x is KtIfExpression || x is KtBlockExpression) return false to null
+        if (x.text.trim() == "null") return true to null
+        val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text) ?: return false to null
+        return true to v
+      }
+      val (okT, whenTrue) = branch(ifExpr.then)
+      val (okF, whenFalse) = branch(ifExpr.`else`)
+      if (!okT || !okF || (whenTrue == null && whenFalse == null)) return null
+      if ((whenTrue == null || whenFalse == null) && !nullFits(type, name)) return null
+      return PropValue.Conditional(cond.field, cond.test.wire, cond.negate, whenTrue, whenFalse)
+    }
+
+    /**
+     * K3: whether `null` is a value of [type]'s [name] — the rule edits apply
+     * too: a catalog widget's event (every catalog event is nullable), or a
+     * project component parameter whose declared type is nullable.
+     */
+    private fun nullFits(type: String, name: String): Boolean {
+      widgetSpec(type)?.let { return name in it.events }
+      return isNullableType(components.spec(type)?.paramTypes?.get(name))
+    }
+
+    /** Why [expr] — not a widget, component or grammar construct — is RawCode. */
+    private fun rawReason(expr: KtExpression, call: KtCallExpression?, type: String?): String = when {
+      expr is KtIfExpression -> {
+        val c = expr.condition?.text?.oneLine()
+        when {
+          c != null && parseCond(c, ctx) == null -> "condition `$c` is outside the portal grammar (a Boolean field, `!field`, " +
+            "`field.isEmpty()`/`isNotEmpty()`/`isBlank()`/`isNotBlank()`" +
+            (if (ctx is NameCtx.Component) ", or `param == null`/`!= null` on a nullable parameter)" else ")")
+          expr.`else` is KtIfExpression -> "`else if` chains are outside the portal grammar (nest an `if` in the else block)"
+          else -> "`if (${c ?: "…"})` needs block branches `{ … }`"
+        }
+      }
+      call != null && type != null -> "`$type(…)` is not a widget or project component"
+      else -> "`${expr.text.oneLine()}` is not a widget call or grammar construct"
+    }
   }
 
-  /** Extracts the bound field from `b.field` (screen) or a bare Boolean param (component). */
-  private fun recognizeCondition(expr: KtExpression, ctx: NameCtx): Pair<String, List<KtExpression>>? {
-    val ifExpr = expr as? KtIfExpression ?: return null
-    if (ifExpr.`else` != null) return null
-    val cond = ifExpr.condition?.text?.trim() ?: return null
-    val field = when (ctx) {
-      is NameCtx.Screen -> ctx.bindingsParam?.let {
-        Regex("^${Regex.escape(it)}\\.([A-Za-z_][A-Za-z0-9_]*)$").find(cond)?.groupValues?.get(1)
+  /** One line, shortened, for a diagnostic. */
+  private fun String.oneLine(): String = replace(Regex("\\s+"), " ").trim().let { if (it.length > 80) it.take(77) + "…" else it }
+
+  /**
+   * K3: a condition's source text as a [Cond] in [ctx]: the field is a screen
+   * binding `b.x` (or, for a conditional VALUE inside a Repeat, an item field
+   * `item.x`) or a component parameter. Forms (each spelled one way):
+   * `x`, `!x`, `x.isEmpty()`, `x.isNotEmpty()`, `x.isBlank()`, `x.isNotBlank()`,
+   * and — on a component parameter declared nullable — `x == null`, `x != null`.
+   */
+  internal fun parseCond(text: String, ctx: NameCtx, itemScope: Set<String> = emptySet()): Cond? {
+    val t = text.trim()
+    val id = "[A-Za-z_][A-Za-z0-9_]*"
+    val ref = when (ctx) {
+      is NameCtx.Screen -> ctx.bindingsParam?.let { "${Regex.escape(it)}\\.$id" + if (itemScope.isEmpty()) "" else "|$id\\.$id" } ?: return null
+      is NameCtx.Component -> "$id(?:\\.$id)?"
+    }
+    fun field(r: String): String? = when (ctx) {
+      is NameCtx.Screen -> {
+        val head = r.substringBefore('.')
+        when {
+          head == ctx.bindingsParam -> r.substringAfter('.')
+          head in itemScope -> r
+          else -> null
+        }
       }
-      is NameCtx.Component -> cond.takeIf { it in ctx.valueParams }
-    } ?: return null
+      is NameCtx.Component -> when {
+        '.' !in r -> r.takeIf { it in ctx.valueParams || it in ctx.eventParams }
+        r.substringBefore('.') in itemScope -> r
+        else -> null
+      }
+    }
+    Regex("^($ref)\\.(isEmpty|isNotEmpty|isBlank|isNotBlank)\\(\\)$").find(t)?.let { m ->
+      val f = field(m.groupValues[1]) ?: return null
+      return when (m.groupValues[2]) {
+        "isEmpty" -> Cond(f, CondTest.Empty)
+        "isNotEmpty" -> Cond(f, CondTest.Empty, negate = true)
+        "isBlank" -> Cond(f, CondTest.Blank)
+        else -> Cond(f, CondTest.Blank, negate = true)
+      }
+    }
+    Regex("^($ref)\\s*(==|!=)\\s*null$").find(t)?.let { m ->
+      // A screen contract cannot declare a nullable field; a parameter must be declared nullable.
+      if (ctx !is NameCtx.Component || m.groupValues[1] !in ctx.nullableParams) return null
+      return Cond(m.groupValues[1], CondTest.Null, negate = m.groupValues[2] == "!=")
+    }
+    Regex("^(!\\s*)?($ref)$").find(t)?.let { m ->
+      val f = field(m.groupValues[2]) ?: return null
+      // An event parameter is a function: only a null test reads it.
+      if (ctx is NameCtx.Component && f in ctx.eventParams) return null
+      return Cond(f, negate = m.groupValues[1].isNotEmpty())
+    }
+    return null
+  }
+
+  /**
+   * `if (<condition>) { … }` with an optional `else { … }` (K3) — the
+   * condition over a screen binding `b.x` or a component parameter (never an
+   * item field: a Condition's field is a screen contract member). An
+   * `else if` chain is not grammar.
+   */
+  private fun recognizeCondition(expr: KtExpression, ctx: NameCtx): Triple<Cond, List<KtExpression>, KtBlockExpression?>? {
+    val ifExpr = expr as? KtIfExpression ?: return null
+    val cond = parseCond(ifExpr.condition?.text ?: return null, ctx) ?: return null
+    if ('.' in cond.field) return null
     val block = ifExpr.then as? KtBlockExpression ?: return null
-    return field to block.statements
+    val elseBlock = when (val e = ifExpr.`else`) {
+      null -> null
+      is KtBlockExpression -> e
+      else -> return null
+    }
+    return Triple(cond, block.statements, elseBlock)
   }
 
   /** Extracts (items, itemVar, body) from `b.items.forEach {..}` or a bare `items.forEach {..}`. */
@@ -504,7 +684,8 @@ object Recognizer {
         ?.let { return PropValue.Bind(it.groupValues[1]) }
       Regex("^${Regex.escape(bindingsParam)}::([A-Za-z_][A-Za-z0-9_]*)$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
-      Regex("^\\{\\s*${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
+      // `{ _ -> b.x() }`: the exporter's form for an event whose payload the action ignores.
+      Regex("^\\{\\s*(?:_\\s*->\\s*)?${Regex.escape(bindingsParam)}\\.([A-Za-z_][A-Za-z0-9_]*)\\(\\)\\s*}$").find(t)
         ?.let { return PropValue.Action(it.groupValues[1]) }
       // P2: single-arg actions — { b.name(it) } (event payload) and
       // { b.name(item.field) } (item-scoped data, e.g. a row id).
@@ -580,9 +761,14 @@ object Recognizer {
    * modifiers (`flex`, `margin`, `size(Dp, Dp)`, …) only resolve under a
    * parent that is one of their scopes. Null = not in the grammar.
    */
-  internal fun parseModifierChain(text: String, parentType: String? = null, tokens: TokenLookup? = null): Map<String, PropValue>? {
+  internal fun parseModifierChain(
+    text: String,
+    parentType: String? = null,
+    tokens: TokenLookup? = null,
+    conds: CondParser? = null,
+  ): Map<String, PropValue>? {
     val segments = ModifierChain.segments(text) ?: return null
-    val resolved = ModifierChain.resolve(segments, parentType, tokens) ?: return null
+    val resolved = ModifierChain.resolve(segments, parentType, tokens, conds) ?: return null
     val out = LinkedHashMap<String, PropValue>()
     resolved.forEach { out += it.props }
     return out

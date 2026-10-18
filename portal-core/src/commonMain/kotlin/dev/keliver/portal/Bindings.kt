@@ -54,9 +54,28 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
   /** For an Action on a component instance event, the handler's param type. */
   fun componentEventParamType(nodeType: String, propKey: String): String? =
     components.spec(nodeType)?.events?.firstOrNull { it.name == propKey }?.paramType
+  // K3: a Repeat's items field is a List (the exporter types it); an emptiness
+  // test reads a List as well as a String, so it never makes that field a String.
+  val listFields = HashSet<String>()
+  fun lists(n: WidgetNode) {
+    if (n.type == "Repeat") (n.props["items"] as? String)?.takeIf { it.isNotBlank() }?.let(listFields::add)
+    n.children.forEach(::lists)
+  }
+  lists(tree)
   fun walk(n: WidgetNode) {
-    for ((key, value) in n.props) {
-      when (value) {
+    for ((key, prop) in n.props) {
+      // K3: a conditional value contributes its condition's field and each branch.
+      val values = if (prop is Conditional) {
+        val c = prop.cond
+        val readsList = c.test != CondTest.Bool && c.field in listFields
+        if ('.' !in c.field && c.field !in fields && !readsList) {
+          fields[c.field] = if (c.test == CondTest.Bool) PropKind.Bool else PropKind.Text
+        }
+        listOf(prop.whenTrue, prop.whenFalse)
+      } else {
+        listOf(prop)
+      }
+      for (value in values) when (value) {
         // Item-scoped binds ("item.label") belong to the Repeat's item interface
         // (collectLogicFields), NOT the screen contract — a dotted name here
         // would emit invalid Kotlin (`val item.label: String`).
@@ -103,7 +122,11 @@ public fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
     if (node.type == "Condition") {
       (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
     }
-    node.props.values.filterIsInstance<Bind>().forEach { bind ->
+    // K3: a conditional value reads its condition's field and its branches' binds.
+    val values = node.props.values.flatMap { v ->
+      if (v is Conditional) listOf(Bind(v.cond.field), v.whenTrue, v.whenFalse) else listOf(v)
+    }
+    values.filterIsInstance<Bind>().forEach { bind ->
       val (items, item) = scope ?: ("" to "")
       if (items.isNotEmpty() && bind.field.startsWith("$item.")) {
         keys += "$items.${bind.field}"

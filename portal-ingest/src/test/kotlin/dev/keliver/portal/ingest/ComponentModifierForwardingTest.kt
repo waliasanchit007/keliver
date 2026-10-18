@@ -120,6 +120,39 @@ class ComponentModifierForwardingTest {
     assertTrue(root.props.keys.none { it.startsWith("mod.") }, "${root.props}")
   }
 
+  // K3 review S-a: the body's own chain after the forwarded parameter takes a
+  // conditional value as `Modifier.…` does; the instance's modifiers go first,
+  // then the own conditional, decided by the instance's argument.
+  @Test fun theBodysOwnChainMayHoldAConditionalValue() {
+    val raised = component(
+      "Raised",
+      "raised: Boolean = false, modifier: Modifier = Modifier",
+      "Column(modifier = modifier.padding(if (raised) 8 else 0)) { StyledText(text = \"x\") }",
+    )
+    assertTrue(raised.transparent, raised.diagnostic)
+    assertEquals(true, raised.body!!.props[COMPONENT_FORWARDS_MODIFIER_PROP])
+    val reg = MapComponentRegistry(listOf(raised))
+    val up = tree(expandForPreview(WidgetNode("Raised", mapOf("raised" to true, "mod.Alpha.pct" to 50)), reg))
+    assertEquals(listOf("mod.Alpha.pct", "mod.Padding.allDp"), up.props.keys.filter { it.startsWith("mod.") })
+    assertEquals(50, up.props["mod.Alpha.pct"])
+    assertEquals(8, up.props["mod.Padding.allDp"])
+    val flat = tree(expandForPreview(WidgetNode("Raised", mapOf("mod.Alpha.pct" to 50)), reg))
+    assertEquals(0, flat.props["mod.Padding.allDp"])
+  }
+
+  // K3 review S-b: forwarding under an `if` stays opaque, and says why.
+  @Test fun forwardingUnderAnIfSaysForwardingIsOnlyAtTheRoot() {
+    val shown = component(
+      "Shown",
+      "shown: Boolean = true, modifier: Modifier = Modifier",
+      "if (shown) { Column(modifier = modifier) { StyledText(text = \"x\") } }",
+    )
+    assertFalse(shown.transparent)
+    val diagnostic = shown.diagnostic.orEmpty()
+    assertTrue("only at the body's single root call" in diagnostic, diagnostic)
+    assertFalse("outside the portal grammar: `Column(…)` argument" in diagnostic, diagnostic)
+  }
+
   @Test fun forwardingThroughANestedComponentReachesItsRoot() {
     val outer = Recognizer.recognizeComponent(
       "Outer.kt",

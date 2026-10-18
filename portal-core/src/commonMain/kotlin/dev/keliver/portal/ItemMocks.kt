@@ -30,16 +30,22 @@ public fun resolveItemRow(
       val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
       return if (rows.isNullOrEmpty()) defaultMock(field, key, node.type, index) else rows[minOf(index, rows.size - 1)]
   }
-  val props = node.props.mapValues { (key, v) ->
-    when {
-      v is Bind && v.field.startsWith("$itemVar.") -> resolved(v.field, key)
-      v is Action && v.arg?.startsWith("$itemVar.") == true -> {
-        val sourceArg = v.arg ?: return@mapValues v
-        v.copy(arg = resolved(sourceArg, key))
-      }
-      else -> v
-    }
+  /** The row's mocked value of item field [field], or null when it has none. */
+  fun rowValue(field: String): String? {
+    val raw = mockOf("$itemsField.$field") ?: mockOf(field)
+    val rows = raw?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }
+    return if (rows.isNullOrEmpty()) null else rows[minOf(index, rows.size - 1)]
   }
+  fun resolve(key: String, v: Any?): Any? = when {
+    v is Bind && v.field.startsWith("$itemVar.") -> resolved(v.field, key)
+    v is Action && v.arg?.startsWith("$itemVar.") == true -> v.copy(arg = resolved(v.arg, key))
+    // K3: an item-scoped condition is decided per row; otherwise each branch resolves.
+    v is Conditional && v.cond.field.startsWith("$itemVar.") ->
+      resolve(key, chooseBranch(v) { c -> rowValue(c.field).let { c.holds(it, present = it != null) } })
+    v is Conditional -> v.copy(whenTrue = resolve(key, v.whenTrue), whenFalse = resolve(key, v.whenFalse))
+    else -> v
+  }
+  val props = node.props.mapValues { (key, v) -> resolve(key, v) }
   return node.copy(props = props, children = node.children.map { resolveItemRow(it, itemVar, itemsField, index, mockOf) })
 }
 

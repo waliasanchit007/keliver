@@ -43,6 +43,26 @@ public sealed interface PropValue {
    */
   @Serializable
   public data class Token(val ref: String, val value: Lit, val import: String? = null) : PropValue
+
+  /**
+   * K3: a value chosen by a condition — `if (<condition>) whenTrue else
+   * whenFalse` in source. The condition reads the screen binding [field]
+   * with [test] (null = the Boolean itself; "empty"/"blank" = a String's
+   * `isEmpty()`/`isBlank()`), negated by [negate] (`!b.x`,
+   * `b.s.isNotEmpty()`) — the model a `Condition` node's props
+   * (`field`/`test`/`negate`) use for conditional children
+   * (`dev.keliver.portal.Cond`). Each branch is a [Lit], [Token], [Bind] or
+   * [Action] of the prop's kind; null is Kotlin `null` and fits only an
+   * event. Branches never nest.
+   */
+  @Serializable
+  public data class Conditional(
+    val field: String,
+    val test: String? = null,
+    val negate: Boolean = false,
+    val whenTrue: PropValue? = null,
+    val whenFalse: PropValue? = null,
+  ) : PropValue
 }
 
 /**

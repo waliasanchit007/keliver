@@ -82,7 +82,7 @@ object Tools {
           })
         }
       })
-      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token>; Lit tags: s/i/d/b/li/lf; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
+      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional>; Lit tags: s/i/d/b/li/lf; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), negate = `!`/isNot…; a Boolean test never reads a field the screen uses as a list or text), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; a Condition node takes props field (a plain binding name)/test/negate and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates)")
     }.toString()
   }
 
@@ -96,7 +96,7 @@ object Tools {
     val screens = Regex("\"([^\"]+)\"").findAll(get("/screens?project=$project")).map { it.groupValues[1] }
     val hits = StringBuilder()
     screens.forEach { screen ->
-      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1")) }.getOrNull()
+      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1")) }.getOrNull()
         ?: return@forEach
       usagesIn(screen, doc, name).forEach { hits.appendLine(it) }
     }
@@ -113,6 +113,11 @@ object Tools {
     val hits = mutableListOf<String>()
     fun check(n: DocNode.Widget, key: String, v: PropValue) {
       when (v) {
+        // K3: a conditional reads its condition's field and holds its branches.
+        is PropValue.Conditional -> {
+          if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key is chosen by field '$name'"
+          listOfNotNull(v.whenTrue, v.whenFalse).forEach { check(n, key, it) }
+        }
         is PropValue.Bind -> if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key binds field '$name'"
         is PropValue.Action -> if (v.name == name) hits += "$screen: ${n.type}#${n.handle.v}.$key wires action '$name'"
         is PropValue.Token -> {
@@ -124,6 +129,9 @@ object Tools {
     }
     fun walk(n: DocNode) {
       if (n is DocNode.Widget) {
+        if (n.type == "Condition" && (n.props["field"] as? PropValue.Lit)?.s == name) {
+          hits += "$screen: Condition#${n.handle.v} tests field '$name'"
+        }
         n.props.forEach { (prop, v) -> check(n, prop, v) }
         n.modifiers.forEach { (key, v) -> check(n, "mod.$key", v) }
         n.children.forEach(::walk)
@@ -218,13 +226,13 @@ object Tools {
 
     Tool(
       "get_document",
-      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action/Token), modifiers, version. Ops target these handles.",
+      "The screen's semantic document, by the BARE screen name list_screens returns (`home`, not `default/home`): nodes with stable handles, props (Lit/Bind/Action/Token/Conditional), modifiers, version. Ops target these handles.",
       mapOf("project" to "project (default 'default')", "screen" to "screen (default 'main')"),
     ) { args ->
       val project = args.str("project", "default")
       val screen = normalizeScreen(project, args.str("screen", "main"))
       rejectUnknownScreen(project, screen)
-        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1"))
+        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1"))
     },
 
     Tool(

@@ -1,9 +1,12 @@
 package dev.keliver.portal.ingest
 
+import dev.keliver.portal.Cond
 import dev.keliver.portal.MARGIN_SIDES
 import dev.keliver.portal.ModifierSpec
 import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.cond
 import dev.keliver.portal.document.toAny
+import org.jetbrains.kotlin.psi.KtIfExpression
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.parseKotlinStringLiteral
 
@@ -69,6 +72,71 @@ private fun skipString(t: String, open: Int): Int? {
 }
 
 /**
+ * K3: reads a condition's source text (`b.selected`, `!open`,
+ * `title.isNotEmpty()`, `footer != null`) as a [Cond] in the context it
+ * appears in (a screen's bindings, a component's parameters); null = not grammar.
+ */
+fun interface CondParser {
+  fun parse(text: String): Cond?
+}
+
+/** A slice of a text: [start, end) and what it holds. */
+internal data class Span(val start: Int, val end: Int, val text: String)
+
+/** K3: `if (c) T else F` as an expression's text, split into its three parts (PSI, one parse). */
+internal object IfSyntax {
+  data class Parts(val cond: Span, val then: Span, val els: Span)
+
+  /** The parts of [text] when it is exactly one `if … else …` expression with both branches; else null. */
+  fun split(text: String): Parts? {
+    if (!text.trimStart().startsWith("if")) return null
+    val e = runCatching { PsiEnv.factory.createExpression(text) }.getOrNull() as? KtIfExpression ?: return null
+    if (e.text != text) return null
+    val base = e.textRange.startOffset
+    fun span(x: org.jetbrains.kotlin.com.intellij.psi.PsiElement) =
+      Span(x.textRange.startOffset - base, x.textRange.endOffset - base, x.text)
+    val c = e.condition ?: return null
+    val t = e.then ?: return null
+    val f = e.`else` ?: return null
+    return Parts(span(c), span(t), span(f))
+  }
+}
+
+/**
+ * K3: surgical edit of a conditional value's source: only the parts whose
+ * value changed are rewritten — the condition, the true branch, the false
+ * branch — each from the CANONICAL text of the new value (a Dp branch keeps
+ * the author's spelling). Null when either text is not an `if … else …`.
+ */
+internal object ConditionalSyntax {
+  /** [condText] spells a changed condition (the file's bindings parameter); null = [canonical]'s text. */
+  fun surgical(
+    source: String,
+    old: PropValue.Conditional,
+    new: PropValue.Conditional,
+    canonical: String?,
+    condText: ((Cond) -> String)? = null,
+  ): String? {
+    val src = IfSyntax.split(source) ?: return null
+    val can = canonical?.let(IfSyntax::split) ?: return null
+    val edits = mutableListOf<Pair<Span, String>>()
+    if (old.cond() != new.cond()) edits += src.cond to (condText?.invoke(new.cond()) ?: can.cond.text)
+    fun branch(at: Span, canonicalBranch: Span, o: PropValue?, n: PropValue?) {
+      if (o == n) return
+      val d = (n as? PropValue.Lit)?.d
+      edits += at to if (d != null && MarginSyntax.parseDp(at.text) != null) MarginSyntax.dpLike(at.text, d) else canonicalBranch.text
+    }
+    branch(src.then, can.then, old.whenTrue, new.whenTrue)
+    branch(src.els, can.els, old.whenFalse, new.whenFalse)
+    var out = source
+    for ((span, text) in edits.sortedByDescending { it.first.start }) {
+      out = out.substring(0, span.start) + text + out.substring(span.end)
+    }
+    return out
+  }
+}
+
+/**
  * K1: `dev.keliver.ui.Margin` values in source. Accepted (all exact):
  * `Margin.Zero`, `Margin()`, `Margin(all = X)`, `Margin(horizontal = X,
  * vertical = Y)` (either alone), any named subset of `start`/`end`/`top`/
@@ -79,10 +147,28 @@ private fun skipString(t: String, open: Int): Int? {
  * bottom (its only candidate). A compiled fixture (ParityLayout.kt) pins each
  * reading. X is `N.dp`, `N.M.dp` or `Dp(N.M)` (`Dp(N)` with an Int literal
  * does not compile: Dp takes a Double). Mixed positional + named is not grammar.
+ * K3: X may also be a conditional Dp (`if (raised) 8.dp else 0.dp`), given a
+ * [CondParser] for the context the Margin appears in.
  */
 internal object MarginSyntax {
-  /** start, end, top, bottom (dp) — null when [text] is not a Margin in the grammar. */
-  fun parse(text: String): DoubleArray? = parseArgs(text.trim())?.let { (form, args) -> sides(form, args) }
+  /** start, end, top, bottom (dp) — null when [text] is not a Margin in the grammar (or has a conditional side). */
+  fun parse(text: String): DoubleArray? =
+    parseValues(text)?.map { (it as? PropValue.Lit)?.d ?: return null }?.toDoubleArray()
+
+  /** start, end, top, bottom as wire values — a Dp literal, or (K3) a conditional of two. */
+  fun parseValues(text: String, conds: CondParser? = null): List<PropValue>? =
+    parseArgs(text.trim(), conds)?.let { (form, args) -> sides(form, args, conds) }
+
+  /** One side's value: `N.dp`/`Dp(N.M)`, or (K3) `if (c) A else B` of two of those. */
+  fun sideValue(text: String, conds: CondParser?): PropValue? {
+    parseDp(text)?.let { return PropValue.Lit("d", d = it) }
+    if (conds == null) return null
+    val parts = IfSyntax.split(text.trim()) ?: return null
+    val c = conds.parse(parts.cond.text) ?: return null
+    val t = parseDp(parts.then.text) ?: return null
+    val f = parseDp(parts.els.text) ?: return null
+    return PropValue.Conditional(c.field, c.test.wire, c.negate, PropValue.Lit("d", d = t), PropValue.Lit("d", d = f))
+  }
 
   /** A Dp literal's value: `16.dp`, `16.5.dp`, `Dp(16.0)`. Never negative. */
   fun parseDp(text: String): Double? {
@@ -95,12 +181,12 @@ internal object MarginSyntax {
   private enum class Form { ZERO, ALL, AXES, SIDES }
 
   /** The recognized form + its args keyed by LOGICAL name ("all", "horizontal", "start", …). */
-  private fun parseArgs(t: String): Pair<Form, List<Pair<String, SourceArg>>>? {
+  private fun parseArgs(t: String, conds: CondParser? = null): Pair<Form, List<Pair<String, SourceArg>>>? {
     if (t == "Margin.Zero") return Form.ZERO to emptyList()
     if (!t.startsWith("Margin(") || !t.endsWith(")")) return null
     val args = splitArgs(t.substring(7, t.length - 1), 7) ?: return null
     if (args.isEmpty()) return Form.ZERO to emptyList()
-    if (args.any { parseDp(it.value) == null }) return null
+    if (args.any { sideValue(it.value, conds) == null }) return null
     if (args.all { it.name == null }) {
       return when (args.size) {
         1 -> Form.ALL to listOf("all" to args[0])
@@ -121,17 +207,19 @@ internal object MarginSyntax {
     }
   }
 
-  private fun sides(form: Form, args: List<Pair<String, SourceArg>>): DoubleArray {
-    val v = args.associate { (name, arg) -> name to parseDp(arg.value)!! }
+  private val ZERO_SIDE = PropValue.Lit("d", d = 0.0)
+
+  private fun sides(form: Form, args: List<Pair<String, SourceArg>>, conds: CondParser?): List<PropValue> {
+    val v = args.associate { (name, arg) -> name to sideValue(arg.value, conds)!! }
     return when (form) {
-      Form.ZERO -> DoubleArray(4)
-      Form.ALL -> DoubleArray(4) { v.getValue("all") }
+      Form.ZERO -> List(4) { ZERO_SIDE }
+      Form.ALL -> List(4) { v.getValue("all") }
       Form.AXES -> {
-        val h = v["horizontal"] ?: 0.0
-        val vv = v["vertical"] ?: 0.0
-        doubleArrayOf(h, h, vv, vv)
+        val h = v["horizontal"] ?: ZERO_SIDE
+        val vv = v["vertical"] ?: ZERO_SIDE
+        listOf(h, h, vv, vv)
       }
-      Form.SIDES -> DoubleArray(4) { v[MARGIN_SIDES[it]] ?: 0.0 }
+      Form.SIDES -> List(4) { v[MARGIN_SIDES[it]] ?: ZERO_SIDE }
     }
   }
 
@@ -142,35 +230,62 @@ internal object MarginSyntax {
    * not written, `Margin.Zero`, or `all = X` with now-unequal sides) — the
    * caller then replaces the whole expression with the canonical one.
    */
-  fun surgical(text: String, old: DoubleArray, new: DoubleArray): String? {
-    val (form, args) = parseArgs(text) ?: return null
+  fun surgical(text: String, old: DoubleArray, new: DoubleArray): String? =
+    surgical(text, old.map { PropValue.Lit("d", d = it) }, new.map { PropValue.Lit("d", d = it) }, null)
+
+  /**
+   * [surgical] over wire values (K3: a side may be conditional — only the
+   * changed part of its `if` is rewritten, [condText] spelling a new
+   * condition). [conds] reads the source's own conditional sides.
+   */
+  fun surgical(
+    text: String,
+    old: List<PropValue>,
+    new: List<PropValue>,
+    conds: CondParser?,
+    condText: (Cond) -> String = { it.kotlin { f -> if ('.' in f) f else "b.$f" } },
+  ): String? {
+    val (form, args) = parseArgs(text, conds) ?: return null
     fun arg(name: String) = args.firstOrNull { it.first == name }?.second
-    val edits = mutableListOf<Pair<SourceArg, Double>>()
+    val edits = mutableListOf<Triple<SourceArg, PropValue, PropValue>>()
     when (form) {
       Form.ZERO -> return null
       Form.ALL -> {
         if (new.any { it != new[0] }) return null
-        edits += arg("all")!! to new[0]
+        edits += Triple(arg("all")!!, old[0], new[0])
       }
       Form.AXES -> {
         if (new[0] != new[1] || new[2] != new[3]) return null
         for ((axis, idx) in listOf("horizontal" to 0, "vertical" to 2)) {
           if (old[idx] == new[idx]) continue
-          edits += (arg(axis) ?: return null) to new[idx]
+          edits += Triple(arg(axis) ?: return null, old[idx], new[idx])
         }
       }
       Form.SIDES -> {
         for ((idx, side) in MARGIN_SIDES.withIndex()) {
           if (old[idx] == new[idx]) continue
-          edits += (arg(side) ?: return null) to new[idx]
+          edits += Triple(arg(side) ?: return null, old[idx], new[idx])
         }
       }
     }
     var out = text
-    for ((a, v) in edits.sortedByDescending { it.first.start }) {
-      out = out.substring(0, a.start) + dpLike(a.value, v) + out.substring(a.end)
+    for ((a, o, n) in edits.sortedByDescending { it.first.start }) {
+      out = out.substring(0, a.start) + (sideText(a.value, o, n, condText) ?: return null) + out.substring(a.end)
     }
     return out
+  }
+
+  /** A side's new source in place of [previous] (its value was [old]); the author's Dp spelling is kept. */
+  private fun sideText(previous: String, old: PropValue, new: PropValue, condText: (Cond) -> String): String? {
+    fun dp(v: PropValue?, like: String): String? = (v as? PropValue.Lit)?.d?.let { dpLike(like, it) }
+    return when (new) {
+      is PropValue.Lit -> dp(new, if (IfSyntax.split(previous) != null) "0.dp" else previous)
+      is PropValue.Conditional -> {
+        val canonical = "if (${condText(new.cond())}) ${dp(new.whenTrue, "0.dp") ?: return null} else ${dp(new.whenFalse, "0.dp") ?: return null}"
+        if (old is PropValue.Conditional) ConditionalSyntax.surgical(previous, old, new, canonical) ?: canonical else canonical
+      }
+      else -> null
+    }
   }
 
   /**
@@ -232,17 +347,17 @@ internal object ModifierChain {
    * Resolve every segment; null when any is outside the grammar or a modifier
    * repeats. [tokens] (K2) resolves design-token arguments (`background(C.Ink)`).
    */
-  fun resolve(segments: List<ChainSegment>, parentType: String?, tokens: TokenLookup? = null): List<ResolvedSegment>? {
-    val out = segments.map { resolveSegment(it, parentType, tokens) ?: return null }
+  fun resolve(segments: List<ChainSegment>, parentType: String?, tokens: TokenLookup? = null, conds: CondParser? = null): List<ResolvedSegment>? {
+    val out = segments.map { resolveSegment(it, parentType, tokens, conds) ?: return null }
     if (out.map { it.spec.name }.toSet().size != out.size) return null // a repeat would be lossy
     return out
   }
 
-  fun resolveSegment(seg: ChainSegment, parentType: String?, tokens: TokenLookup? = null): ResolvedSegment? {
+  fun resolveSegment(seg: ChainSegment, parentType: String?, tokens: TokenLookup? = null, conds: CondParser? = null): ResolvedSegment? {
     val candidates = modifierSpecs.filter { it.extension == seg.ext }
     val scoped = candidates.filter { it.scopes.isNotEmpty() && parentType != null && parentType in it.scopes }
     for (spec in scoped + candidates.filter { it.scopes.isEmpty() }) {
-      parseArgs(spec, seg.args, tokens)?.let { return ResolvedSegment(seg, spec, it) }
+      parseArgs(spec, seg.args, tokens, conds)?.let { return ResolvedSegment(seg, spec, it) }
     }
     return null
   }
@@ -265,7 +380,7 @@ internal object ModifierChain {
     return out
   }
 
-  private fun parseArgs(spec: ModifierSpec, args: List<SourceArg>, tokens: TokenLookup?): Map<String, PropValue>? {
+  private fun parseArgs(spec: ModifierSpec, args: List<SourceArg>, tokens: TokenLookup?, conds: CondParser?): Map<String, PropValue>? {
     if (spec.props.isEmpty()) return if (args.isEmpty()) mapOf(spec.name to PropValue.Lit("b", b = true)) else null
     if (args.any { it.name != null }) return null // positional only (what the exporter writes)
     val keys = argKeys(spec)
@@ -274,16 +389,30 @@ internal object ModifierChain {
     for ((j, arg) in args.withIndex()) {
       val type = spec.argTypes.getOrNull(j)
       if (type == "Margin") {
-        val sides = MarginSyntax.parse(arg.value) ?: return null
-        keys[j].forEachIndexed { s, k -> out[k] = PropValue.Lit("d", d = sides[s]) }
+        val sides = MarginSyntax.parseValues(arg.value, conds) ?: return null
+        keys[j].forEachIndexed { s, k -> out[k] = sides[s] }
       } else {
-        out[keys[j].single()] = typedLiteral(type, arg.value)
-          // K2: a design token of exactly the argument's plain literal type.
-          ?: tokens?.lookup(arg.value)?.takeIf { dev.keliver.portal.tokenFits(type, it.value.toAny()) }
+        out[keys[j].single()] = typedValue(type, arg.value, tokens)
+          // K3: `if (c) A else B` of two values of the argument's type.
+          ?: conditionalValue(type, arg.value, tokens, conds)
           ?: return null
       }
     }
     return out
+  }
+
+  /** A literal of [type], or (K2) a design token of exactly that plain literal type. */
+  private fun typedValue(type: String?, t: String, tokens: TokenLookup?): PropValue? =
+    typedLiteral(type, t) ?: tokens?.lookup(t)?.takeIf { dev.keliver.portal.tokenFits(type, it.value.toAny()) }
+
+  /** K3: `if (c) A else B` whose branches are both [typedValue]s of [type]. */
+  private fun conditionalValue(type: String?, t: String, tokens: TokenLookup?, conds: CondParser?): PropValue.Conditional? {
+    if (conds == null) return null
+    val parts = IfSyntax.split(t) ?: return null
+    val c = conds.parse(parts.cond.text) ?: return null
+    val whenTrue = typedValue(type, parts.then.text, tokens) ?: return null
+    val whenFalse = typedValue(type, parts.els.text, tokens) ?: return null
+    return PropValue.Conditional(c.field, c.test.wire, c.negate, whenTrue, whenFalse)
   }
 
   /** An argument literal of Kotlin source type [type] (null type = legacy untyped catalog). */
@@ -309,10 +438,10 @@ internal object ModifierChain {
   }
 
   /**
-   * Surgical edit of a chain whose modifier SET is unchanged: only the
-   * arguments whose values changed are rewritten (a Margin argument keeps its
-   * form where it can). Null when the set changed or the text does not
-   * resolve — the caller then replaces the whole chain with [canonical].
+   * Surgical edit of a chain whose modifiers are unchanged in name and order:
+   * only the arguments whose values changed are rewritten (a Margin argument
+   * keeps its form where it can). [canonical] when the set or the order
+   * changed or the text does not resolve (the whole chain is rewritten).
    */
   fun surgical(
     text: String,
@@ -321,11 +450,15 @@ internal object ModifierChain {
     parentType: String?,
     canonical: String?,
     tokens: TokenLookup? = null,
+    conds: CondParser? = null,
+    /** Spells a changed condition (the file's bindings parameter); null = the canonical text's. */
+    condText: ((Cond) -> String)? = null,
   ): String? {
-    val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.toSet() }
+    // The chain's modifier names in order: a changed set OR a changed order is the canonical chain.
+    val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.distinct() }
     if (names(old) != names(new)) return canonical
-    val source = segments(text)?.let { resolve(it, parentType, tokens) } ?: return canonical
-    val canon = canonical?.let { c -> segments(c)?.let { resolve(it, parentType, tokens) } }
+    val source = segments(text)?.let { resolve(it, parentType, tokens, conds) } ?: return canonical
+    val canon = canonical?.let { c -> segments(c)?.let { resolve(it, parentType, tokens, conds) } }
     val edits = mutableListOf<Pair<SourceArg, String>>()
     for (seg in source) {
       val spec = seg.spec
@@ -335,11 +468,17 @@ internal object ModifierChain {
         val arg = seg.segment.args[j]
         val canonArg = canon?.firstOrNull { it.spec.name == spec.name }?.segment?.args?.getOrNull(j)?.value
         val newDp = if (spec.argTypes.getOrNull(j) == "Dp") (new[argKeys.single()] as? PropValue.Lit)?.d else null
+        val oldValue = old[argKeys.first()]
+        val newValue = new[argKeys.first()]
         val replacement = when {
           spec.argTypes.getOrNull(j) == "Margin" ->
-            MarginSyntax.surgical(arg.value, sidesOf(old, argKeys), sidesOf(new, argKeys)) ?: canonArg
+            (if (condText == null) MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds)
+            else MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds, condText)) ?: canonArg
           // A Dp keeps the author's spelling (`12.dp` stays `.dp`).
-          newDp != null -> MarginSyntax.dpLike(arg.value, newDp)
+          newDp != null && IfSyntax.split(arg.value) == null -> MarginSyntax.dpLike(arg.value, newDp)
+          // K3: only the changed part of a conditional argument.
+          oldValue is PropValue.Conditional && newValue is PropValue.Conditional ->
+            ConditionalSyntax.surgical(arg.value, oldValue, newValue, canonArg, condText) ?: canonArg
           else -> canonArg
         } ?: return null
         edits += arg to replacement
@@ -385,6 +524,15 @@ internal object ModifierChain {
 internal fun sidesOf(props: Map<String, PropValue>, keys: List<String>): DoubleArray =
   DoubleArray(4) { (props[keys[it]] as? PropValue.Lit)?.let { l -> l.d ?: l.i?.toDouble() } ?: 0.0 }
 
+/** K3: start/end/top/bottom wire values from [keys] (a Lit side as a Double, absent = 0; a conditional side as is). */
+internal fun sideValues(props: Map<String, PropValue>, keys: List<String>): List<PropValue> = List(4) {
+  when (val v = props[keys[it]]) {
+    is PropValue.Conditional -> v
+    is PropValue.Lit -> PropValue.Lit("d", d = v.d ?: v.i?.toDouble() ?: 0.0)
+    else -> PropValue.Lit("d", d = 0.0)
+  }
+}
+
 /**
  * K1: the imports a write-back FRAGMENT needs, derived from the grammar that
  * produced it (the modifier spec / argument type / Margin form) — never by
@@ -396,8 +544,11 @@ internal object FragmentImports {
   private const val LAYOUT_API = "dev.keliver.layout.api"
   private val layoutEnums = setOf("Constraint", "CrossAxisAlignment", "MainAxisAlignment", "Overflow")
 
-  /** A Dp literal: `N.dp` needs `dp`, `Dp(N.0)` needs `Dp`. */
-  fun dp(text: String): Set<String> = when {
+  /** K3: each branch of an `if … else …` text, or null when [text] is not one. */
+  private fun branches(text: String): List<String>? = IfSyntax.split(text.trim())?.let { listOf(it.then.text, it.els.text) }
+
+  /** A Dp literal: `N.dp` needs `dp`, `Dp(N.0)` needs `Dp` (K3: a conditional one, each branch's). */
+  fun dp(text: String): Set<String> = branches(text)?.flatMap(::dp)?.toSet() ?: when {
     text.trim().startsWith("Dp(") -> setOf("$UI.Dp")
     text.trim().endsWith(".dp") -> setOf("$UI.dp")
     else -> emptySet()
@@ -412,7 +563,7 @@ internal object FragmentImports {
   }
 
   /** One argument of declared source type [type] (ModifierSpec.argTypes). */
-  fun arg(type: String?, text: String): Set<String> = when (type) {
+  fun arg(type: String?, text: String): Set<String> = branches(text)?.flatMap { arg(type, it) }?.toSet() ?: when (type) {
     "Dp" -> dp(text)
     "Margin" -> margin(text)
     in layoutEnums -> setOf("$LAYOUT_API.$type")
@@ -421,6 +572,7 @@ internal object FragmentImports {
 
   /** A widget prop value as the exporter writes it (Dp, Margin, layout enum, or a plain literal). */
   fun value(text: String): Set<String> {
+    branches(text)?.let { b -> return b.flatMap(::value).toSet() }
     val t = text.trim()
     return when {
       t.startsWith("Margin") -> margin(t)
@@ -435,8 +587,8 @@ internal object FragmentImports {
    * (unscoped only) + its args — a design-token argument (K2) needs its
    * declaring object, taken from the resolved token, never from the text.
    */
-  fun chain(text: String, parentType: String?, tokens: TokenLookup? = null): Set<String> {
-    val resolved = ModifierChain.segments(text)?.let { ModifierChain.resolve(it, parentType, tokens) } ?: return emptySet()
+  fun chain(text: String, parentType: String?, tokens: TokenLookup? = null, conds: CondParser? = null): Set<String> {
+    val resolved = ModifierChain.segments(text)?.let { ModifierChain.resolve(it, parentType, tokens, conds) } ?: return emptySet()
     val out = linkedSetOf("dev.keliver.Modifier")
     for (seg in resolved) {
       if (seg.spec.scopes.isEmpty()) dev.keliver.portal.modifierImport[seg.spec.name]?.let { out += it }
@@ -447,5 +599,9 @@ internal object FragmentImports {
   }
 
   /** What a design-token value written as its reference imports (K2). */
-  fun token(v: PropValue?): Set<String> = (v as? PropValue.Token)?.import?.let { setOf(it) }.orEmpty()
+  fun token(v: PropValue?): Set<String> = when (v) {
+    is PropValue.Conditional -> token(v.whenTrue) + token(v.whenFalse) // K3: each branch
+    is PropValue.Token -> v.import?.let { setOf(it) }.orEmpty()
+    else -> emptySet()
+  }
 }

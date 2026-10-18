@@ -111,12 +111,7 @@ public fun RenderNode(node: WidgetNode) {
 @Composable
 public fun RenderNode(node: WidgetNode, scope: Any?) {
   when (node.type) {
-    "Condition" -> {
-      val field = (node.props["field"] as? String) ?: ""
-      if (PreviewBindings.mocks[field]?.toBooleanStrictOrNull() != false) {
-        node.children.forEach { RenderNode(it, scope) }
-      }
-    }
+    "Condition" -> node.previewBranch().forEach { RenderNode(it, scope) }
     "Repeat" -> {
       val itemVar = (node.props["item"] as? String) ?: "item"
       val itemsField = (node.props["items"] as? String) ?: "items"

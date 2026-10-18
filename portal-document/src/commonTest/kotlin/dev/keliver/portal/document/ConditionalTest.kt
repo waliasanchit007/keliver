@@ -1,0 +1,224 @@
+package dev.keliver.portal.document
+
+import dev.keliver.portal.Action
+import dev.keliver.portal.Cond
+import dev.keliver.portal.CondTest
+import dev.keliver.portal.Conditional
+import dev.keliver.portal.Token
+import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.exportKotlin
+import dev.keliver.portal.serializeTree
+import kotlinx.serialization.encodeToString
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/** K3: conditional values and else branches through the document, both wires and the exporter. */
+class ConditionalTest {
+  private val ink = PropValue.Token("C.Ink", lit(-14737633), "app.components.C")
+  private val color = PropValue.Conditional("selected", whenTrue = ink, whenFalse = lit(-1))
+  private val onClick = PropValue.Conditional("enabled", whenTrue = PropValue.Action("tap"), whenFalse = null)
+
+  private fun doc(vararg children: DocNode): UiDocument =
+    UiDocument("t", DocNode.Widget(Handle(1), "Column", children = children.toList()), Contract(), 0, 10)
+
+  private fun text(h: Long) = DocNode.Widget(Handle(h), "StyledText", props = mapOf("text" to lit("x")))
+
+  @Test fun aConditionalRoundTripsOnTheDocumentWire() {
+    val node: DocNode = DocNode.Widget(
+      Handle(2), "Button",
+      props = mapOf("text" to PropValue.Conditional("note", test = "blank", negate = true, whenTrue = lit("A"), whenFalse = PropValue.Bind("note")), "onClick" to onClick),
+    )
+    val json = DocJson.encodeToString(node)
+    assertEquals(node, DocJson.decodeFromString<DocNode>(json))
+    // Defaults are not written: a Boolean, un-negated condition is just its field and branches.
+    assertTrue("\"field\":\"enabled\",\"whenTrue\":" in json && "\"whenFalse\"" !in json.substringAfter("\"enabled\""), json)
+    val batch = OpBatch(1, OpEnvelope("s", 0), listOf(DocOp.SetProp(Handle(2), "colorArgb", color)))
+    assertEquals(batch, DocJson.decodeFromString<OpBatch>(DocJson.encodeToString(batch)))
+  }
+
+  @Test fun theTreeAndTheDeviceWireCarryTheTrueBranchForOlderReaders() {
+    val d = doc(DocNode.Widget(Handle(2), "Button", props = mapOf("text" to lit("Go"), "containerArgb" to color, "onClick" to onClick)))
+    val tree = d.toWidgetTree()
+    val button = tree.children.single()
+    assertEquals(Conditional(Cond("selected"), Token("C.Ink", -14737633, "app.components.C"), -1), button.props["containerArgb"])
+    assertEquals(Conditional(Cond("enabled"), Action("tap"), null), button.props["onClick"])
+    val json = serializeTree(tree)
+    // The true branch rides under its usual keys (an older reader renders it), the rest beside it.
+    assertTrue("{\"i\":-14737633,\"token\":\"C.Ink\",\"tokenImport\":\"app.components.C\",\"cond\":{\"field\":\"selected\"},\"else\":{\"i\":-1}}" in json, json)
+    assertTrue("{\"action\":\"tap\",\"cond\":{\"field\":\"enabled\"}}" in json, json)
+    assertEquals(tree, deserializeTree(json))
+    // Editor -> server (duplicate) lifts it back unchanged.
+    assertEquals(color, button.toDocNode().props["containerArgb"])
+    assertEquals(onClick, button.toDocNode().props["onClick"])
+  }
+
+  @Test fun aBindBranchResolvesThroughTheMocksLikeAnyBind() {
+    val d = doc(DocNode.Widget(Handle(2), "StyledText", props = mapOf("text" to PropValue.Conditional("open", whenTrue = PropValue.Bind("title"), whenFalse = lit("-")))))
+    assertEquals(Conditional(Cond("open"), "Hi", "-"), d.toWidgetTree(mocks = mapOf("title" to "Hi")).children.single().props["text"])
+  }
+
+  @Test fun theExporterWritesEachBranchAndTheElseBlock() {
+    val cond = DocNode.Widget(
+      Handle(3), "Condition", mapOf("field" to lit("note"), "test" to lit("empty"), "negate" to lit(true)),
+      children = listOf(text(4), DocNode.Widget(Handle(5), "Else", children = listOf(text(6)))),
+    )
+    val d = doc(DocNode.Widget(Handle(2), "Button", props = mapOf("text" to lit("Go"), "containerArgb" to color, "onClick" to onClick)), cond)
+    val src = exportKotlin(d.toWidgetTree(), functionName = "Home")
+    assertTrue("containerArgb = if (b.selected) C.Ink else -1," in src, src)
+    assertTrue("onClick = if (b.enabled) b::tap else null," in src, src)
+    assertTrue("import app.components.C\n" in src, src)
+    assertTrue("  if (b.note.isNotEmpty()) {\n" in src && "  } else {\n" in src, src)
+    assertTrue("  val selected: Boolean\n" in src && "  val note: String\n" in src && "  fun tap()\n" in src, src)
+  }
+
+  @Test fun aConditionalThatCouldNotCompileIsRefused() {
+    val d = doc(text(2), DocNode.Widget(Handle(3), "Button", props = mapOf("text" to lit("Go"))), DocNode.Widget(Handle(4), "Row"))
+    fun refused(op: DocOp) = assertNotNull(d.tryApply(op).error, op.toString())
+    // A null or action branch on a value prop; a value branch on an event.
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", whenTrue = lit("a"), whenFalse = null)))
+    refused(DocOp.SetProp(Handle(3), "onClick", PropValue.Conditional("x", whenTrue = lit("a"), whenFalse = null)))
+    // Nested, a null test (a screen contract cannot type it), an unknown test, a bad field.
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", whenTrue = lit("a"), whenFalse = PropValue.Conditional("y", whenTrue = lit("b"), whenFalse = lit("c")))))
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", test = "null", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", test = "long", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("b.x", whenTrue = lit("a"), whenFalse = lit("b")).copy(field = "1x")))
+    // A token branch that does not fit (an Int token on a Text prop).
+    refused(DocOp.SetProp(Handle(2), "text", PropValue.Conditional("x", whenTrue = ink, whenFalse = lit("b"))))
+    // Review B3: no branch at all is `if (c) null else null` — never written, never ingested.
+    refused(DocOp.SetProp(Handle(3), "onClick", PropValue.Conditional("x")))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Button", props = mapOf("text" to lit("a"), "onClick" to PropValue.Conditional("x")))))
+    // A modifier argument takes values in both branches.
+    refused(DocOp.SetModifier(Handle(2), "Padding.allDp", PropValue.Conditional("x", whenTrue = lit(4), whenFalse = null)))
+    // Accepted where every branch fits; a negative Dp branch clamps at 0.
+    assertNull(d.tryApply(DocOp.SetProp(Handle(3), "onClick", onClick)).error)
+    assertNull(d.tryApply(DocOp.SetProp(Handle(3), "containerArgb", color)).error)
+    val margin = d.apply(DocOp.SetProp(Handle(4), "margin.top", PropValue.Conditional("x", whenTrue = lit(-3.0), whenFalse = lit(2.0)))).doc
+    assertEquals(PropValue.Conditional("x", whenTrue = lit(0.0), whenFalse = lit(2.0)), (margin.find(Handle(4)) as DocNode.Widget).props["margin.top"])
+    // A Condition's own test/negate take only what source can spell.
+    val c = doc(DocNode.Widget(Handle(2), "Condition", mapOf("field" to lit("x"))))
+    assertNotNull(c.tryApply(DocOp.SetProp(Handle(2), "test", lit("null"))).error)
+    assertNull(c.tryApply(DocOp.SetProp(Handle(2), "test", lit("blank"))).error)
+    assertNotNull(c.tryApply(DocOp.SetProp(Handle(2), "negate", lit("yes"))).error)
+  }
+
+  @Test fun anElseSitsOnlyDirectlyUnderAConditionOncePerCondition() {
+    val d = doc(
+      DocNode.Widget(Handle(2), "Condition", mapOf("field" to lit("x")), children = listOf(text(3), DocNode.Widget(Handle(4), "Else"))),
+      DocNode.Widget(Handle(5), "Condition", mapOf("field" to lit("y")), children = listOf(text(6))),
+    )
+    assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Else"))).error)
+    assertNotNull(d.tryApply(DocOp.InsertNode(Handle(2), null, DocNode.Widget(Handle(0), "Else"))).error)
+    assertNotNull(d.tryApply(DocOp.MoveNode(Handle(4), Handle(1), null)).error)
+    // Moving the Else to the Condition that has none, or within its own, is fine; undo restores it.
+    val moved = d.apply(DocOp.MoveNode(Handle(4), Handle(5), Handle(6)))
+    assertEquals(listOf(6L, 4L), (moved.doc.find(Handle(5)) as DocNode.Widget).children.map { it.handle.v })
+    assertEquals(d.root, moved.doc.apply(assertNotNull(moved.inverse)).doc.root)
+    assertNull(d.tryApply(DocOp.InsertNode(Handle(5), Handle(6), DocNode.Widget(Handle(0), "Else"))).error)
+  }
+
+  @Test fun anEditorThatPredatesConditionalsIsServedTheTrueBranch() {
+    val d = doc(DocNode.Widget(Handle(2), "Button", props = mapOf("text" to lit("Go"), "containerArgb" to color, "onClick" to onClick.copy(whenTrue = null, whenFalse = PropValue.Action("tap")))))
+    val old = d.withoutConditionals()
+    val button = old.find(Handle(2)) as DocNode.Widget
+    assertEquals(ink, button.props["containerArgb"])
+    assertEquals(setOf("text", "containerArgb"), button.props.keys) // a null true branch: the prop is left out
+    assertTrue("Conditional" !in DocJson.encodeToString(old))
+    // CondTest wire names are what the document carries.
+    assertEquals(listOf(null, "empty", "blank", "null"), CondTest.entries.map { it.wire })
+  }
+
+  // Review S1: a component event's arity comes from its signature, not from the action's arg.
+  @Test fun aComponentEventBranchMatchesTheEventsSignature() {
+    val picker = dev.keliver.portal.ComponentSpec(
+      "Picker",
+      props = emptyList(),
+      events = listOf(dev.keliver.portal.ComponentEventSpec("onSelect", paramType = "Int", required = false)),
+      paramTypes = mapOf("onSelect" to "((Int) -> Unit)?"),
+    )
+    val registry = dev.keliver.portal.MapComponentRegistry(listOf(picker))
+    fun export(onSelect: PropValue): String =
+      exportKotlin(doc(DocNode.Widget(Handle(2), "Picker", props = mapOf("onSelect" to onSelect))).toWidgetTree(), "Home", registry)
+    // `fun pick()` cannot be `b::pick` for a `(Int) -> Unit`: the branch ignores the payload.
+    val ignoring = export(PropValue.Conditional("open", whenTrue = PropValue.Action("pick"), whenFalse = null))
+    assertTrue("onSelect = if (b.open) ({ _ -> b.pick() }) else null," in ignoring, ignoring)
+    assertTrue("  fun pick()\n" in ignoring, ignoring)
+    // The payload passed on: a reference, and the contract takes it.
+    val passing = export(PropValue.Conditional("open", whenTrue = PropValue.Action("pick", "it"), whenFalse = null))
+    assertTrue("onSelect = if (b.open) b::pick else null," in passing, passing)
+    assertTrue("  fun pick(value: Int)\n" in passing, passing)
+    // A plain (unconditional) action keeps compiling either way.
+    val plain = export(PropValue.Action("pick"))
+    assertTrue("onSelect = { _ -> b.pick() }," in plain, plain)
+  }
+
+  // Review S2: an emptiness test reads a List as well as a String — it never retypes a Repeat's list.
+  @Test fun anEmptinessTestKeepsARepeatsListType() {
+    val repeat = DocNode.Widget(
+      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
+    )
+    val emptyText = DocNode.Widget(
+      Handle(4), "StyledText",
+      props = mapOf("text" to PropValue.Conditional("items", test = "empty", whenTrue = lit("none"), whenFalse = lit("some"))),
+    )
+    val emptyIf = DocNode.Widget(
+      Handle(5), "Condition", mapOf("field" to lit("items"), "test" to lit("empty")),
+      children = listOf(text(6)),
+    )
+    // Every order of the Repeat and the tests reads the same type.
+    for (children in listOf(listOf(repeat, emptyText), listOf(emptyText, repeat), listOf(repeat, emptyIf), listOf(emptyIf, repeat))) {
+      val src = exportKotlin(doc(*children.toTypedArray()).toWidgetTree(), functionName = "Home")
+      assertTrue("  val items: List<Item>\n" in src, src)
+      assertTrue("val items: String" !in src, src)
+    }
+    // Without a Repeat the field is a String, as before.
+    val plain = exportKotlin(doc(emptyText).toWidgetTree(), functionName = "Home")
+    assertTrue("  val items: String\n" in plain, plain)
+  }
+
+  // Review S3: an op never creates a condition that cannot compile (or would re-ingest as RawCode).
+  @Test fun aConditionThatCouldNotCompileIsRefusedWhereverItComesFrom() {
+    val repeat = DocNode.Widget(
+      Handle(2), "Repeat", mapOf("items" to lit("items"), "item" to lit("item")),
+      children = listOf(DocNode.Widget(Handle(3), "StyledText", props = mapOf("text" to PropValue.Bind("item.title")))),
+    )
+    val d = doc(repeat, DocNode.Widget(Handle(4), "StyledText", props = mapOf("text" to PropValue.Bind("title"))), DocNode.Widget(Handle(5), "Condition", mapOf("field" to lit("open"))))
+    fun refused(op: DocOp) = assertNotNull(d.tryApply(op).error, op.toString())
+    fun accepted(op: DocOp) = assertNull(d.tryApply(op).error, op.toString())
+    fun styled(v: PropValue) = DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to v))
+    val itemFlag = PropValue.Conditional("item.flag", whenTrue = lit("a"), whenFalse = lit("b"))
+
+    // P7: a Condition's field is a screen binding — never dotted (ingest reads `if (item.x)` as RawCode).
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("item.flag")))))
+    refused(DocOp.InsertNode(Handle(2), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("item.flag")))))
+    refused(DocOp.SetProp(Handle(5), "field", lit("item.flag")))
+    // P7b: a conditional value reads an item field only inside a Repeat over that item.
+    refused(DocOp.SetProp(Handle(4), "text", itemFlag))
+    refused(DocOp.InsertNode(Handle(1), null, styled(itemFlag)))
+    accepted(DocOp.SetProp(Handle(3), "text", itemFlag))
+    accepted(DocOp.InsertNode(Handle(2), null, styled(itemFlag)))
+    accepted(DocOp.InsertNode(Handle(1), null, repeat.copy(handle = Handle(0), children = listOf(styled(itemFlag)))))
+    refused(DocOp.InsertNode(Handle(1), null, repeat.copy(handle = Handle(0), props = mapOf("items" to lit("rows"), "item" to lit("row")), children = listOf(styled(itemFlag)))))
+    val inside = d.apply(DocOp.SetProp(Handle(3), "text", itemFlag)).doc
+    assertNotNull(inside.tryApply(DocOp.MoveNode(Handle(3), Handle(1), null)).error, "moved out of its Repeat")
+    // P7c: a Boolean test on a field the document reads as a List or a String.
+    refused(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.InsertNode(Handle(1), null, styled(PropValue.Conditional("title", whenTrue = lit("a"), whenFalse = lit("b")))))
+    // The use being replaced is not evidence: `text = b.title` becoming `if (b.title) …` is judged without it.
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("title", whenTrue = lit("a"), whenFalse = lit("b"))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("items")))))
+    refused(DocOp.SetProp(Handle(5), "field", lit("title")))
+    // A List has isEmpty() but no isBlank().
+    refused(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", test = "blank", whenTrue = lit("a"), whenFalse = lit("b"))))
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("items", test = "empty", whenTrue = lit("a"), whenFalse = lit("b"))))
+    accepted(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("title"), "test" to lit("blank")))))
+    accepted(DocOp.SetProp(Handle(4), "text", PropValue.Conditional("open", whenTrue = lit("a"), whenFalse = lit("b"))))
+    // P7d: an inserted Condition's own props are checked as a SetProp would check them.
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "test" to lit("null")))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "negate" to lit("yes")))))
+    refused(DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Column", children = listOf(DocNode.Widget(Handle(0), "Condition", mapOf("field" to lit("open"), "test" to lit("long")))))))
+  }
+}

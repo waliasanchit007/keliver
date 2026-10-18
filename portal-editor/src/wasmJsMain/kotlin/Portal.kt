@@ -10,6 +10,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.Conditional
+import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.Token
 import dev.keliver.portal.tokenValue
@@ -94,7 +96,16 @@ private var docVersion: Long = -1
 /** K2: the relay's design-token table version last seen on the change stream. */
 private var tokensVersionSeen: Long = -1
 private var eventSource: EventSource? = null
-private val opQueue = ArrayDeque<Pair<List<DocOp>, Boolean>>() // ops to refreshPanels
+/** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
+private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?)
+private val opQueue = ArrayDeque<QueuedOps>()
+
+/** Drops every queued edit, telling each sender it was not applied. */
+private fun dropQueuedOps() {
+  val dropped = opQueue.toList()
+  opQueue.clear()
+  dropped.forEach { it.onResult?.invoke(false) }
+}
 private var opInFlight = false
 
 // The relay defaults to :8077, overridable via `?relay=<port>` so several per-app
@@ -296,16 +307,17 @@ private lateinit var flowGraphBody: HTMLElement
 // V2 M1 ops client — every edit is a transactional op batch against the
 // server document; the tree state here is only a projection of the ack'd doc.
 
-private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true) {
-  opQueue.addLast(ops to refreshPanels)
+/** Queues [ops]; [onResult] (if any) hears whether the document accepted them. */
+private fun sendOps(ops: List<DocOp>, refreshPanels: Boolean = true, onResult: ((Boolean) -> Unit)? = null) {
+  opQueue.addLast(QueuedOps(ops, refreshPanels, onResult))
   pumpOps()
 }
 
 private fun pumpOps() {
   if (playground) {
     while (true) {
-      val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: break
-      val t = localDoc.applyBatch(ops)
+      val q = opQueue.removeFirstOrNull() ?: break
+      val t = localDoc.applyBatch(q.ops)
       val r = t.result
       if (r == null) {
         Ui.toast(t.error ?: "edit rejected")
@@ -314,12 +326,15 @@ private fun pumpOps() {
         localUndo.addLast(r.inverseBatch)
         localRedo.clear()
       }
-      localRefresh(refreshPanels)
+      q.onResult?.invoke(r != null)
+      localRefresh(q.refreshPanels)
     }
     return
   }
   if (opInFlight) return
-  val (ops, refreshPanels) = opQueue.removeFirstOrNull() ?: return
+  val q = opQueue.removeFirstOrNull() ?: return
+  val ops = q.ops
+  val refreshPanels = q.refreshPanels
   opInFlight = true
   saveDotEl.className = "dot saving"
   saveTextEl.textContent = "Saving…"
@@ -327,30 +342,89 @@ private fun pumpOps() {
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER/ops?project=$currentProject&screen=$currentScreen")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
-  xhr.addEventListener("load", { _ ->
+  xhr.timeout = 15_000
+  var settled = false
+  fun settle(reply: OpsReply) {
+    if (settled) return // load and error/timeout never both count
+    settled = true
     opInFlight = false
-    val ack = runCatching { DocJson.decodeFromString<OpAck>(xhr.responseText) }.getOrNull()
-    when {
-      ack?.ok == true -> {
-        docVersion = ack.version
+    // A refusal that is still current keeps the pill "Not written" (settling never hides it).
+    pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+    when (reply) {
+      is OpsReply.Accepted -> {
+        docVersion = reply.version
+        q.onResult?.invoke(true)
         refetchDoc(refreshPanels)
         pumpOps()
       }
-      xhr.status.toInt() == 409 -> { // raced an external edit — rebase on server state
-        opQueue.clear()
+      OpsReply.Rebase -> { // raced an external edit — rebase on server state
+        q.onResult?.invoke(false)
+        dropQueuedOps()
         Ui.toast("Rebased on newer document")
         refetchDoc(true)
       }
-      else -> {
-        opQueue.clear()
-        Ui.toast(ack?.error ?: "edit rejected")
+      is OpsReply.Rejected -> {
+        q.onResult?.invoke(false)
+        dropQueuedOps()
+        Ui.toast(reply.error ?: "edit rejected")
+        refetchDoc(true)
+      }
+      OpsReply.Unknown -> {
+        // A 200 the editor cannot read, or no answer in 15 s: the edit may be
+        // in. Kept (not rolled back) — the refetched document decides; the
+        // queue resumes on it.
+        q.onResult?.invoke(keepsEdit(reply))
+        refetchDoc(true) { pumpOps() }
+      }
+      OpsReply.NetworkError -> {
+        // No answer at all: never leave the edit "in flight" (the queue would wedge).
+        q.onResult?.invoke(keepsEdit(reply))
+        dropQueuedOps()
+        Ui.toast("The relay did not answer; the edit was not saved")
         refetchDoc(true)
       }
     }
-    saveDotEl.className = "dot"
-    saveTextEl.textContent = "Saved"
-  })
+  }
+  xhr.addEventListener("load", { _ -> settle(opsReply(xhr.status.toInt(), xhr.responseText)) })
+  for (event in listOf("error", "timeout", "abort")) xhr.addEventListener(event, { _ -> settle(replyWithoutLoad(event)) })
   xhr.send(DocJson.encodeToString(batch))
+}
+
+/** K3: refused / failed write-backs of the open screen, shown once per version. */
+private var writeBackWarnings = WriteBackWarnings()
+private var writeBackBanner: HTMLElement? = null
+private var writeBackScreen = ""
+
+/**
+ * Shows the change stream's write-back status: a refused or failed one as a
+ * visible, non-blocking banner (the edit is in the document but NOT in the
+ * .kt file) and the pill "Not written"; a discarded one as a banner and the
+ * pill "Discarded" (the file was read, the change is gone). A later write
+ * that lands, a read of the file, or an event with no status removes it.
+ */
+private fun showWriteBack(n: WriteBackNotice?) {
+  val warning = writeBackWarnings.next(n)
+  writeBackWarnings.pill?.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+  if (!writeBackWarnings.showing) {
+    // A discard's banner stays until dismissed or a later write / read replaces it.
+    if (n == null || n.written) {
+      writeBackBanner?.remove()
+      writeBackBanner = null
+    }
+  }
+  if (warning == null) return
+  writeBackBanner?.remove()
+  val banner = Ui.el("div", "", "")
+  banner.setAttribute(
+    "style",
+    "position:fixed; top:54px; left:50%; transform:translateX(-50%); z-index:98; max-width:640px; " +
+      "background:var(--panel, #222); color:var(--text, #eee); border:1px solid var(--danger, #e5534b); " +
+      "border-radius:8px; padding:8px 12px; font-size:12px; box-shadow:0 4px 14px rgba(0,0,0,.4); display:flex; gap:10px;",
+  )
+  banner.appendChild(Ui.el("span", "", "⚠ $warning"))
+  banner.appendChild(Ui.button("×", "btn icon") { banner.remove(); if (writeBackBanner == banner) writeBackBanner = null })
+  kotlinx.browser.document.body?.appendChild(banner)
+  writeBackBanner = banner
 }
 
 /** Pull the authoritative document; ids in the projected tree ARE handles. */
@@ -362,7 +436,8 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   }
   val xhr = XMLHttpRequest()
   // K2: `tokens=1` — this editor understands PropValue.Token (an older one is served literals).
-  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
+  // K3: `conditionals=1` — and PropValue.Conditional (an older one is served the true branch).
+  xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
@@ -383,6 +458,14 @@ private fun subscribeDocEvents() {
   eventSource?.close()
   val project = currentProject
   val screen = currentScreen
+  if (writeBackScreen != "$project/$screen") { // another screen: its own write-back status
+    writeBackScreen = "$project/$screen"
+    writeBackWarnings = WriteBackWarnings()
+    writeBackBanner?.remove()
+    writeBackBanner = null
+    // The pill was the other screen's: start this one idle (its first event sets its own).
+    WriteBackWarnings.IDLE.let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
+  }
   eventSource = EventSource("$SERVER/doc-events?project=$project&screen=$screen").also { es ->
     es.onmessage = { ev ->
       val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
@@ -392,6 +475,8 @@ private fun subscribeDocEvents() {
       val t = (ev.data as? String)?.let { Regex("\"tokens\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       val tokensChanged = t != null && t != tokensVersionSeen
       if (t != null) tokensVersionSeen = t
+      // K3: the screen's write-back status — a refused or failed write is shown, never silent.
+      (ev.data as? String)?.let { showWriteBack(writeBackOf(it)) }
       when {
         v != null && v != docVersion -> fetchComponents { refetchDoc(true) }
         tokensChanged -> fetchComponents { refresh() } // tokens changed, the document did not: refresh the picker
@@ -416,7 +501,7 @@ private fun startVersionPoll() {
   window.setInterval({
     if (!opInFlight && opQueue.isEmpty()) {
       val xhr = XMLHttpRequest()
-      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1")
+      xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&tokens=1&conditionals=1")
       xhr.addEventListener("load", { _ ->
         val v = Regex("\"version\":(\\d+)").find(xhr.responseText)?.groupValues?.get(1)?.toLongOrNull()
         if (v != null && v != docVersion) refetchDoc(true)
@@ -494,7 +579,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
   val sel = selectedId
   val selType = sel?.let { portalTree.value.findNode(it)?.type }
   val acceptsChildren = selType?.let { type ->
-    widgetSpec(type)?.acceptsChildren == true || editorComponents.spec(type)?.slots?.size == 1
+    widgetSpec(type)?.acceptsChildren == true || type == ELSE_TYPE || editorComponents.spec(type)?.slots?.size == 1
   } == true
   val parentId = if (sel != null && acceptsChildren) {
     sel
@@ -1360,7 +1445,7 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
-  opQueue.clear()
+  dropQueuedOps()
   refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
   updateUndoButtons()
 }
@@ -1521,6 +1606,15 @@ private fun renderProps() {
   } else {
     propsEl.appendChild(Ui.el("div", "muted", "${node.type} #${node.id}"))
   }
+  // K3: a Condition without an else branch can gain one (its last child, an Else node).
+  if (node.type == "Condition" && node.children.none { it.type == ELSE_TYPE }) {
+    propsEl.appendChild(
+      Ui.button("+ else branch", "btn") {
+        sendOps(listOf(DocOp.InsertNode(Handle(node.id.toLong()), lastChildHandle(node.id), WidgetNode(ELSE_TYPE).toDocNode())))
+      },
+    )
+  }
+  if (node.type == ELSE_TYPE) propsEl.appendChild(Ui.el("div", "muted", "else branch: its children render when the Condition does not hold"))
   val spec = widgetSpec(node.type)
   val specs = comp?.props ?: editableProps(node.type)
   if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
@@ -1536,6 +1630,11 @@ private fun renderProps() {
       val lab = Ui.el("label", "", evName)
       lab.setAttribute("title", evName)
       rowEl.appendChild(lab)
+      // K3: a conditional event — `if (b.enabled) b::tap else null`.
+      (node.props[evName] as? Conditional)?.let { c ->
+        propsEl.appendChild(conditionalEventRow(node.id, evName, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() })
+        return@forEach
+      }
       val current = node.props[evName] as? Action
       val nameIn = Ui.input()
       nameIn.setAttribute("type", "text")
@@ -1662,6 +1761,11 @@ private fun propRowInner(
     )
     if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
     return rowEl
+  }
+
+  // K3: a conditional value: its condition and both branches, each edited in place.
+  (props[key] as? Conditional)?.let { c ->
+    return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() }
   }
 
   // P3: bound props show a field-name input instead of a literal editor.

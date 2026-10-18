@@ -204,6 +204,12 @@ fun planWidget(composePackage: String, category: String, widget: Widget): Widget
         if (!trait.isNullable && trait.defaultExpression == null) {
           return WidgetPlan.Exclude(name, "required non-nullable event '${trait.name}'")
         }
+        // K3: every catalog event is nullable (a conditional event may have a `null`
+        // branch); a non-nullable one with a default is omitted from calls instead.
+        if (!trait.isNullable) {
+          skipped += trait.name
+          continue
+        }
         events += EventPlan(
           trait.name,
           trait.parameters.size,

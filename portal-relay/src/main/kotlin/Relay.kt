@@ -25,6 +25,7 @@ import com.sun.net.httpserver.HttpServer
 import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.OpBatch
+import dev.keliver.portal.document.withoutConditionals
 import dev.keliver.portal.exportKotlin
 import dev.keliver.portal.serializeTree
 import kotlinx.serialization.encodeToString
@@ -852,16 +853,11 @@ private fun ingestFile(f: File) {
     val screen = f.nameWithoutExtension
     val text = f.readText()
     val svc = docFor(mapOf("project" to project, "screen" to screen))
-    if (svc.wasSelfWrite(text)) return
-    // C1: recognize with the project's component registry so component calls
-    // become editable Widget nodes instead of RawCode.
-    val recognized = dev.keliver.portal.ingest.Recognizer.recognize(
-      tokenFileId(f), text, Components.registry(project), Tokens.table(project),
-    )
-      ?: return println("ingest: ${f.name}: no @Composable screen function — skipped")
-    val newDoc = dev.keliver.portal.ingest.Reconciler.reconcile(svc.doc, recognized)
-    svc.acceptExternal(newDoc)
-    println("ingest: $project/$screen -> v${newDoc.version} (file edit)")
+    when (svc.fileChanged(text)) {
+      DocumentService.FileChange.SELF_WRITE, DocumentService.FileChange.ALREADY_READ -> {}
+      DocumentService.FileChange.NOT_A_SCREEN -> println("ingest: ${f.name}: no @Composable screen function — skipped")
+      DocumentService.FileChange.INGESTED -> println("ingest: $project/$screen -> v${svc.doc.version} (file edit)")
+    }
   }.onFailure { println("ingest failed for $f: $it") }
 }
 
@@ -936,7 +932,9 @@ private fun ingestComponentFile(f: File) {
     val tokensChanged = rebuildTokens(project)
     val reg = Components.rebuild(project, dir, Tokens.table(project), ::tokenFileId)
     println("ingest(component): $project -> ${reg.names().sorted()} (${f.name} changed)")
-    reingestScreens(project, force = tokensChanged)
+    // Always forced: a screen's text is unchanged, so the watcher path would
+    // skip it as already read, and its tree would stay read under the old registry.
+    reingestScreens(project, force = true)
     if (tokensChanged) documents.filterKeys { it.startsWith("$project/") }.values.forEach { it.announce() }
   }.onFailure { println("component ingest failed for $f: $it") }
 }
@@ -1040,11 +1038,15 @@ fun main(args: Array<String>) {
 
   // M9: the overlay dev runtime polls this for the active screen's live doc
   // version — if it's ahead of the bundle's baked COMPILED_VERSION, overlay.
+  // K3: `writeBack` is that screen's last write-back status (null = none yet):
+  // a `refused` or `failed` one means the document is ahead of its .kt file.
   server.createContext("/devstate") { ex ->
     handle(ex) {
       val (p, s) = activeScreen()
-      val version = documents["$p/$s"]?.doc?.version ?: 0L
-      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version}")
+      val svc = documents["$p/$s"]
+      val version = svc?.doc?.version ?: 0L
+      val writeBack = svc?.writeBack?.json() ?: "null"
+      respond(ex, 200, "{\"project\":\"$p\",\"screen\":\"$s\",\"version\":$version,\"writeBack\":$writeBack}")
     }
   }
 
@@ -1271,8 +1273,9 @@ fun main(args: Array<String>) {
     handle(ex) {
       // K2 (review S5): only a client that advertises design tokens (`tokens=1`)
       // gets PropValue.Token; an older editor gets their literal values.
+      // K3: likewise PropValue.Conditional (`conditionals=1`); an older one gets the true branch.
       val q = query(ex)
-      val doc = docFor(q).doc
+      val doc = docFor(q).doc.let { if (q["conditionals"] == "1") it else it.withoutConditionals() }
       respond(ex, 200, DocJson.encodeToString(if (q["tokens"] == "1") doc else Tokens.withoutTokens(doc)))
     }
   }
@@ -1300,7 +1303,7 @@ fun main(args: Array<String>) {
       respond(ex, 200, DocJson.encodeToString(docFor(query(ex)).redo(session(ex))))
     }
   }
-  server.createContext("/doc-events") { ex -> // SSE: {"version":N} on every change
+  server.createContext("/doc-events") { ex -> // SSE: {"version":N,"tokens":T[,"writeBack":{…}]} on every change and write-back
     ex.responseHeaders.add("Content-Type", "text/event-stream")
     ex.responseHeaders.add("Cache-Control", "no-cache")
     ex.sendResponseHeaders(200, 0)

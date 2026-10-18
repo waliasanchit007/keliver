@@ -530,11 +530,15 @@ public final class dev/keliver/portal/document/OpEnvelope$Companion {
 }
 
 public final class dev/keliver/portal/document/ProjectKt {
+	public static final fun cond (Ldev/keliver/portal/document/PropValue$Conditional;)Ldev/keliver/portal/Cond;
 	public static final fun toDocNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/document/DocNode$Widget;
+	public static final fun toPropValue (Ldev/keliver/portal/Conditional;)Ldev/keliver/portal/document/PropValue$Conditional;
 	public static final fun toPropValue (Ldev/keliver/portal/Token;)Ldev/keliver/portal/document/PropValue$Token;
 	public static final fun toTreeValue (Ldev/keliver/portal/document/PropValue$Token;)Ldev/keliver/portal/Token;
 	public static final fun toWidgetTree (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;Z)Ldev/keliver/portal/WidgetNode;
 	public static synthetic fun toWidgetTree$default (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;ZILjava/lang/Object;)Ldev/keliver/portal/WidgetNode;
+	public static final fun treeToPropValue (Ljava/lang/Object;)Ldev/keliver/portal/document/PropValue;
+	public static final fun withoutConditionals (Ldev/keliver/portal/document/UiDocument;)Ldev/keliver/portal/document/UiDocument;
 }
 
 public abstract interface class dev/keliver/portal/document/PropValue {
@@ -597,6 +601,41 @@ public final class dev/keliver/portal/document/PropValue$Bind$Companion {
 }
 
 public final class dev/keliver/portal/document/PropValue$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Conditional : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Conditional$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Ldev/keliver/portal/document/PropValue;
+	public final fun component5 ()Ldev/keliver/portal/document/PropValue;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Conditional;Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getField ()Ljava/lang/String;
+	public final fun getNegate ()Z
+	public final fun getTest ()Ljava/lang/String;
+	public final fun getWhenFalse ()Ldev/keliver/portal/document/PropValue;
+	public final fun getWhenTrue ()Ldev/keliver/portal/document/PropValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Conditional$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Conditional$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Conditional;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Conditional$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 

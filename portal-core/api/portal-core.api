@@ -123,6 +123,66 @@ public final class dev/keliver/portal/ComponentSpec {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/portal/Cond {
+	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/keliver/portal/CondTest;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/CondTest;Z)Ldev/keliver/portal/Cond;
+	public static synthetic fun copy$default (Ldev/keliver/portal/Cond;Ljava/lang/String;Ldev/keliver/portal/CondTest;ZILjava/lang/Object;)Ldev/keliver/portal/Cond;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getField ()Ljava/lang/String;
+	public final fun getFieldType ()Ljava/lang/String;
+	public final fun getNegate ()Z
+	public final fun getTest ()Ldev/keliver/portal/CondTest;
+	public fun hashCode ()I
+	public final fun holds (Ljava/lang/Object;Z)Z
+	public static synthetic fun holds$default (Ldev/keliver/portal/Cond;Ljava/lang/Object;ZILjava/lang/Object;)Z
+	public final fun kotlin (Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/CondTest : java/lang/Enum {
+	public static final field Blank Ldev/keliver/portal/CondTest;
+	public static final field Bool Ldev/keliver/portal/CondTest;
+	public static final field Companion Ldev/keliver/portal/CondTest$Companion;
+	public static final field Empty Ldev/keliver/portal/CondTest;
+	public static final field Null Ldev/keliver/portal/CondTest;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getWire ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/portal/CondTest;
+	public static fun values ()[Ldev/keliver/portal/CondTest;
+}
+
+public final class dev/keliver/portal/CondTest$Companion {
+	public final fun fromWire (Ljava/lang/String;)Ldev/keliver/portal/CondTest;
+}
+
+public final class dev/keliver/portal/Conditional {
+	public fun <init> (Ldev/keliver/portal/Cond;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ldev/keliver/portal/Cond;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun copy (Ldev/keliver/portal/Cond;Ljava/lang/Object;Ljava/lang/Object;)Ldev/keliver/portal/Conditional;
+	public static synthetic fun copy$default (Ldev/keliver/portal/Conditional;Ldev/keliver/portal/Cond;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ldev/keliver/portal/Conditional;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCond ()Ldev/keliver/portal/Cond;
+	public final fun getWhenFalse ()Ljava/lang/Object;
+	public final fun getWhenTrue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/ConditionalsKt {
+	public static final field ELSE_TYPE Ljava/lang/String;
+	public static final fun chooseBranch (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+	public static final fun condOf (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/Cond;
+	public static final fun elseNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/WidgetNode;
+	public static final fun getLOGIC_NODE_TYPES ()Ljava/util/Set;
+	public static final fun thenChildren (Ldev/keliver/portal/WidgetNode;)Ljava/util/List;
+}
+
 public final class dev/keliver/portal/DesignTokensKt {
 	public static final fun propSourceType (Ljava/lang/String;Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;)Ljava/lang/String;
 	public static synthetic fun propSourceType$default (Ljava/lang/String;Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;ILjava/lang/Object;)Ljava/lang/String;

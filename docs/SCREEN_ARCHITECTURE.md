@@ -423,15 +423,15 @@ fun SectionCard(content: @Composable () -> Unit) {
     `C`, exactly or as an alias) drops the step ("undo failed (step
     dropped)"): surgical write-back only adds imports, so usually only a hand
     edit clears it, and that arrives as an external change that clears both
-    stacks anyway. A whole-file export (the fallback when a surgical merge
-    is not possible) rebuilds the imports and can remove an unused one, so a
-    dropped step might have applied later; dropping is the deliberate trade
-    against a stack wedged behind a step that may never apply. A step the
-    tree can no longer take is dropped the same way. The gate and undo/redo
-    are what keep two owners of one simple name out of a document; if two
-    *missing* exact imports are forced past them, write-back (surgical or
-    the full-export fallback) writes both and the result is a
-    conflicting-import compile error. Write-back does not guard every other
+    stacks anyway. A whole-file export (written only when it is lossless —
+    see "The write-back guarantee" below) rebuilds the imports and can
+    remove an unused one, so a dropped step might have applied later;
+    dropping is the deliberate trade against a stack wedged behind a step
+    that may never apply. A step the tree can no longer take is dropped the
+    same way. The gate and undo/redo are what keep two owners of one simple
+    name out of a document; if two *missing* exact imports are forced past
+    them, write-back (surgical or a lossless full export) writes both and
+    the result is a conflicting-import compile error. Write-back does not guard every other
     shape (an owner covered by a star import or the package beside an
     explicit one); the gate does. (`portal-relay`
     `DesignTokenRelayTest`, `DesignTokenGateTest`.) A compiled fixture
@@ -444,6 +444,121 @@ fun SectionCard(content: @Composable () -> Unit) {
     and the file (a prop it rewrites becomes a literal). Libraries (the
     per-app editor) and the tools bundle (relay) release independently: a new
     editor against an old relay simply sees no tokens.
+- **Conditions are grammar (D9, K3).** A value or a block chosen by a
+  parameter keeps a component transparent (and a screen editable):
+
+  ```kotlin
+  @Composable
+  fun ToggleRow(label: String, selected: Boolean, subtitle: String = "", note: String? = null,
+                raised: Boolean = false, onTap: () -> Unit, onLongTap: (() -> Unit)? = null) {
+    Column {
+      StyledText(text = label, colorArgb = if (selected) C.Ink else C.Muted,
+        modifier = Modifier.margin(Margin(top = if (raised) 8.dp else 0.dp)))
+      Icon(name = if (selected) "KeyboardArrowUp" else "KeyboardArrowDown")
+      Clickable(onClick = if (selected) onTap else null) { StyledText(text = "tap") }
+      if (!selected) { StyledText(text = "off") } else { StyledText(text = "on") }
+      if (subtitle.isNotEmpty()) { StyledText(text = subtitle) }
+      if (note != null) { StyledText(text = "note") }
+    }
+  }
+  ```
+
+  - *One condition model.* A condition reads ONE field — a screen binding
+    (`b.selected`) or, in a component body, a parameter (`selected`) — with
+    one test, optionally negated, each form spelled exactly one way: `x` /
+    `!x` (Boolean), `x.isEmpty()` / `x.isNotEmpty()`, `x.isBlank()` /
+    `x.isNotBlank()` (String), and — only on a component parameter whose
+    declared type is nullable — `x == null` / `x != null`. A screen has no
+    null test: its contract is derived from its tree and cannot declare a
+    nullable field. Anything else (`count > 0`, `a && b`, `else if`) keeps the
+    call or block RawCode, and an opaque component's diagnostic names it.
+  - *Conditional children.* `if (c) { … }` with an optional `else { … }` is a
+    `Condition` node (props `field`, `test`, `negate`) whose last child may be
+    one `Else` node holding the else block. `if`/`else` add no layout: the
+    branches' children sit in the enclosing layout (scoped modifiers resolve
+    against it).
+  - *Conditional values.* `if (c) A else B` as an argument — a widget prop, a
+    component argument, a modifier argument, a `Margin` side — is a
+    `PropValue.Conditional(field, test, negate, whenTrue, whenFalse)`. Each
+    branch is a value the argument takes by itself: a literal, a design
+    token, a binding, an action, or `null` (only where the parameter is
+    nullable, e.g. an event: `onClick = if (enabled) onTap else null`). In a
+    screen an action branch is a reference or a parenthesized lambda
+    (`if (b.enabled) b::tap else null` — a bare `{ … }` would be the if's
+    block). Branches never nest; a list prop is never conditional.
+  - *Preview.* Expanding an instance decides each condition over a parameter
+    against the instance's argument (its default when omitted, else the
+    editor's sample value), splicing the chosen branch; when the argument is a
+    screen binding, the condition is re-pointed at that binding and decided
+    by its preview mock (an unmocked Boolean reads true, an unmocked String as
+    a non-empty placeholder, anything unmocked as non-null). A compiled
+    fixture (`ParityConditionals.kt`) renders the same value tree as the
+    interpreted golden (`portal-render` `ConditionalParityTest`).
+  - *Write-back.* A no-op is byte-identical. Editing one branch rewrites only
+    that branch's text (a Dp keeps its spelling); editing the condition
+    rewrites only the condition; edits inside an else block stay in it.
+    Adding an `else` inserts just ` else {` … `}` after the then block (its
+    children go in as inserts); removing one deletes just the text from
+    `else` through its block's `}` — comments and formatting in the then
+    block are untouched. A `Condition` — like every node — is matched to
+    its statement by identity (see "The write-back guarantee" below), so an
+    edited condition rewrites its own `if` in place (comments kept), a new
+    `Condition` is an insert and a deleted one a delete, however they sit
+    together. Without that base (it no longer reads as the file, or another
+    caller), position decides: a `Condition` with the same condition is the
+    same `if`, and an edited one rewrites in place only when it is the only
+    changed `Condition` between the same kept siblings — so a delete plus an
+    unrelated insert there pair as an edit (the text is right; the deleted
+    `if`'s comments stay). A run of inserts keeps the document's order.
+    The exporter writes every form (`colorArgb = if
+    (b.selected) C.Ink else -1`, `Margin(top = if (b.raised) 8.dp else
+    0.dp)`, `if (!b.x) { … } else { … }`) and types each condition's field in
+    the derived contract (`Boolean`, or `String` for an emptiness/blankness
+    test — except a Repeat's items field, which stays `List<…>`: a List has
+    `isEmpty()` too). A component event's branch matches the event's
+    signature: `onSelect: ((Int) -> Unit)?` with an action that ignores the
+    payload is `if (b.x) ({ _ -> b.pick() }) else null` against `fun pick()`.
+  - *On the wire.* The device tree carries a conditional value's TRUE branch
+    under its usual keys plus `"cond"` and `"else"`, so an older reader
+    renders the true branch. The relay sends `PropValue.Conditional` only to a
+    client asking `GET /doc?…&conditionals=1` (this release's editor and MCP
+    server); an older editor gets each conditional's true branch, and — as
+    with tokens — its edits to other props leave the conditional in the
+    document and the file. That compatibility covers conditional VALUES
+    only: `Condition` nodes reach an older editor unchanged, with their
+    `test`/`negate` props and any `Else` child. It shows only the `field`
+    prop, previews the Condition as a plain Boolean (ignoring `test` and
+    `negate`), and renders an `Else` node as an unknown widget inside the
+    then branch; its edits keep `test`/`negate` (a SetProp of `field` leaves
+    them), and deleting the `Else` node removes the else block.
+  - *What an op may not create.* The document refuses, on SetProp/
+    SetModifier and for every condition in an inserted or moved subtree: a
+    `null` or action branch on a catalog value prop, a value branch on an
+    event, a conditional with no value in either branch, a nested branch, a
+    list prop, a null test, an unknown test, a token that does not fit; a
+    `Condition` whose `field` is not a plain screen binding name (`if
+    (item.x) { … }` is not grammar) or whose `test`/`negate` source cannot
+    spell; an item field (`item.flag`) read by a conditional value outside a
+    Repeat over that item; a Boolean test on a field the document reads
+    elsewhere as a Repeat's List or as a String/number (bound to such a
+    prop, or tested for emptiness); `isBlank()` on a Repeat's List. It does
+    not know a project component's signature: the relay refuses a component
+    instance's conditional whose branch the parameter cannot take (an
+    action on a value parameter, a value on an event, `null` on a
+    parameter — event or value — not declared nullable; `() -> Unit?` is a
+    non-null function, the nullable one is `(() -> Unit)?`). These checks
+    run when an op PLACES a condition: an op that later changes how the
+    document reads a field already tested — binding it to a text prop,
+    renaming a Repeat's `item` around an `item.x` conditional — is not
+    refused for the conditions already there; the guest compile reports
+    it. Every catalog event
+    is nullable (codegen leaves a non-nullable event with a default out of
+    the catalog). Ingest applies the same null rule: `null` in a branch of
+    a non-nullable parameter keeps the call RawCode.
+  - *Signatures.* A nullable function parameter (`onLongTap: (() -> Unit)? =
+    null`) is an optional event. A nullable content slot (`footer:
+    (@Composable () -> Unit)?`) is not supported and says so in the
+    component's diagnostic.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add
@@ -456,6 +571,124 @@ Worked dogfood: `portal-app-lib/.../components/{MenuRow,SectionCard}.kt` +
 `screens/settings.kt` (3 SectionCard containers + 4 editable MenuRow children,
 **0 RawCode**). Stashfin Profile uses the same slot capability for its five
 canonical white card wrappers and is verified in its editor, Android, and iOS.
+
+## 7a. The write-back guarantee — what the editor does to your .kt file
+
+**Write-back never silently destroys author code.** Every edit made in the
+editor (or through MCP) is written to the screen's `.kt` file in one of three
+ways, and the editor is told which:
+
+0. **Only onto the file the relay last wrote or read.** Write-back merges
+   onto the file only when it still reads as the document the relay last
+   wrote it from (or read it as) — the *base*. If it does not (an IDE save
+   landed between an editor edit and its write, an IDE undo took the file
+   back to a text the relay once wrote, a file appeared that was never read),
+   nothing is written: the relay reads the file instead, the document
+   becomes the file, and the status is `discarded` — the editor's unwritten
+   change is not in the file and is gone (make it again). Statements are
+   never paired with nodes by position. Any read of the file forgets the
+   relay's last written text, so a later file equal to it is the author's
+   edit, not the relay's own write.
+   - The file is compared as **text** with what the base was read from or
+     written as. The same text is the same file even when it reads
+     differently now (a design token's value or a component's signature
+     changed meanwhile): the base is re-read from it under the current
+     tables, the document's tokens take their current values, and the edit
+     is written. Another text that still reads as the base (only comments or
+     formatting changed) is merged onto as well.
+   - The file watcher's read of a text the relay just wrote or read is not a
+     change: the writer re-reading an IDE save before the watcher gets to it
+     reports `discarded` once, and the watcher's read of the same text does
+     not turn it into `external`. Neither does a read of a file that is the
+     document a discard left (nothing new happened).
+   - "Ahead" is by content, not version: a document whose edits were undone
+     back to the file discards nothing when the file is read.
+   - The check and the write are one step for the relay's own threads, not
+     for other processes: an IDE save landing in the microseconds between the
+     relay's last read of the file and its write is overwritten (the IDE
+     usually reports the file changed on disk). The window is the gap
+     between two system calls, not the 400 ms debounce.
+1. **Surgically, when possible** (`surgical`). Only the statements and
+   arguments that changed are rewritten; comments, blank lines, formatting,
+   helper functions, RawCode and the Bindings interface elsewhere stay byte
+   for byte. What is written — after the Bindings interface pass — is first
+   read back and compared with the document; it is written only if it reads
+   back as exactly that document.
+   - Every node is paired with its statement by **identity** (its handle in
+     the base), so an insert or delete beside a same-type sibling, with code
+     between, touches just that statement.
+   - A **move** (within a block, or into/out of an `if`, `else`, `forEach` or
+     container — including the only statement of a block) cuts the node with
+     its exact source text — including the comment lines directly above it
+     and a comment after it on its line — and places it after its new
+     previous sibling, re-indented (string and comment contents untouched).
+     A multi-line code statement moved to another depth reads back as the
+     same code: code lines compare without their indentation; a line that
+     starts inside a string literal compares whole.
+   - A node placed **first** in a block goes at the very top, right after
+     `{`, at the depth of the block's first line — above any comments there
+     (the first statement's own, or a section header). A comment on the `{`
+     line itself (`Column { // header`, `forEach { row -> // why`) stays on
+     that line; the statement goes on the line below it.
+   - Inserted nodes and changed values are spelled as the file spells them:
+     its own bindings parameter name (`bindings.title`, not `b.title`), and a
+     RawCode node as its own text.
+   - A modifier reorder is written as the reordered chain.
+2. **As the full export, only when that is lossless** (`export`). The whole
+   file is rewritten from the document only if the file as it is IS the
+   export of its own tree (a trailing newline aside) — it holds nothing the
+   exporter would drop — and the export reads back as the document.
+3. **Otherwise refused** (`refused`): nothing is written and the file is
+   left exactly as it is. The relay logs one line, the screen's write-back
+   status (`writeBack` on the `/doc-events` stream and in `/devstate`) says
+   why, and the editor shows a non-blocking banner and marks the save pill
+   "Not written". **The document keeps the change that could not be written,
+   so every later edit of this screen is refused with it** (the banner says
+   so, and names the version that first failed): "this change could not be
+   written to `<file>` without losing code: `<reason>`; undo it (from the
+   session that made it) or make it in code — until then no edit to this
+   screen is written". Undo is per session: only the session that made the
+   change can undo it. A write that fails with an error is reported the same
+   way (`failed`), never swallowed.
+
+Every read of the file is reported too: `external` (the file was read; the
+editor's warning clears) or `discarded` (read while the document was ahead
+of it — an unwritten or refused change is gone; this includes the re-read
+after a component or design token the screen uses changed, when that change
+made the screen read differently; the editor's pill reads "Discarded", never
+"Saved"). Switching screens resets the pill to the new screen's status. An event with no
+status means none is current.
+
+A new screen (no file yet) is created from the export — RawCode as its own
+text — and only if that reads back as the document. Some edits are refused
+up front, as ops, because they could never read back or would not compile:
+a RawCode replacement that is not exactly one statement (several, a parse
+error, or a comment after it — `Legacy(2) // c`) or that reads as something
+the editor models (a widget, `if` or `forEach`: insert that as a widget
+instead); a bound value, condition or list inserted into a screen function
+that takes no bindings parameter (add the parameter in code first); and a
+move that takes a local declaration away from its uses — a code node that
+declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
+to another block, nothing that mentions the declared name (a whole-word
+text match, or the name in backticks) moves to before it or out of its
+block, and nothing that uses a `forEach`'s item (a bound `note.title`, an
+item condition, code naming `note`) moves out of that `forEach`. Deleting a
+use is not moving it: it is written.
+
+**What "reads back" does not cover.** The read-back check proves the file
+reads as the document, not that it compiles. Beyond the declaration rule
+above, a change can still leave code that does not compile — e.g. code
+using a name declared by something the editor does not model as a
+declaration (a lambda parameter of a container's content lambda, a
+`remember`ed local hidden in a helper), moved where that name is not in
+scope; or a name matched only by text (a shadowing local) letting a move
+through that the compiler then rejects. The app's build is the check for
+that.
+
+Line endings: a CRLF file stays CRLF. In any other file every line the edit
+does not touch keeps its own ending (an LF file's raw string with a `\r\n`
+keeps it); an edit that would rewrite or drop a CRLF line of a file that
+mixes endings is refused.
 
 ## 8. Live-presenter preview — P3-12
 

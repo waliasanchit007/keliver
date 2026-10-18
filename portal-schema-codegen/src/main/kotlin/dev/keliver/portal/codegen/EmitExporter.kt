@@ -123,13 +123,32 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |    else -> "{ ${'$'}underscores -> b.${'$'}{a.name}() }"
     |  }
     |}
+    |// K3: an event's value — an Action's lambda, or a conditional one
+    |// (`if (b.enabled) b::tap else null`).
+    |private fun fmtEvent(v: Any?, paramCount: Int): String? = when (v) {
+    |  is Action -> fmtAction(v, paramCount)
+    |  is Conditional -> fmtConditional(v) { x -> if (x is Action) fmtActionBranch(x, paramCount) else "null" }
+    |  else -> null
+    |}
+    |// In an `if` branch a bare lambda would read as the branch's block: write a
+    |// function reference where one fits, else a parenthesized lambda.
+    |private fun fmtActionBranch(a: Action, paramCount: Int): String = when {
+    |  a.arg == null && paramCount == 0 -> "b::${'$'}{a.name}"
+    |  a.arg == "it" && paramCount == 1 -> "b::${'$'}{a.name}"
+    |  else -> "(${'$'}{fmtAction(a, paramCount)})"
+    |}
     |
     |// M5/P1-B: logic nodes contribute typed contract fields. Repeat with per-item
     |// binds (item.title) generates List<ItemType> + a typed item interface.
     |// P2: item-scoped Action args (item.id) contribute item fields too.
     |private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap<String, String>) {
     |  if (node.type != "Repeat") { // a nested Repeat opens its own item scope
-    |    for ((prop, v) in node.props) {
+    |    for ((prop, value) in node.props) {
+    |      // K3: an item-scoped condition is an item field; each branch counts.
+    |      if (value is Conditional && value.cond.field.startsWith("${'$'}itemVar.")) {
+    |        iface[value.cond.field.substringAfter('.')] = value.cond.fieldType
+    |      }
+    |      for (v in if (value is Conditional) listOf(value.whenTrue, value.whenFalse) else listOf(value)) {
     |      if (v is Bind && v.field.startsWith("${'$'}itemVar.")) {
     |        val sub = v.field.substringAfter('.')
     |        iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -139,13 +158,18 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |        val sub = arg.substringAfter('.')
     |        if (sub !in iface) iface[sub] = "String"
     |      }
+    |      }
     |    }
     |    node.children.forEach { itemFieldsOf(it, itemVar, iface) }
     |  }
     |}
     |private fun collectLogicFields(node: WidgetNode, out: LinkedHashMap<String, String>, ifaces: LinkedHashMap<String, LinkedHashMap<String, String>>) {
     |  when (node.type) {
-    |    "Condition" -> (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let { out[it] = "Boolean" }
+    |    // K3: the field's type follows the condition's test (Boolean, or String for isEmpty/isBlank).
+    |    // An emptiness test reads a List too: it never retypes a Repeat's items (in any node order).
+    |    "Condition" -> condOf(node)?.let { c ->
+    |      if (c.test == CondTest.Bool || out[c.field]?.startsWith("List<") != true) out[c.field] = c.fieldType
+    |    }
     |    "Repeat" -> {
     |      val items = (node.props["items"] as? String)?.takeIf { it.isNotBlank() }
     |      val itemVar = (node.props["item"] as? String)?.takeIf { it.isNotBlank() } ?: "item"
@@ -171,44 +195,55 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// K2: a design-token reference (`C.Ink`) is written back as its REFERENCE where
     |// the token's kind is the literal's kind; anywhere else (never produced by
     |// ingest or the document) its resolved value is written, so saved code compiles.
+    |// K3: a conditional value writes `if (cond) T else F`, each branch in its kind.
     |private fun fmtString(v: Any?): String = when {
+    |  v is Conditional -> fmtConditional(v, ::fmtString)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is String -> v.ref
     |  else -> kotlinStringLiteral(tokenValue(v).toString())
     |}
     |private fun fmtInt(v: Any?): String = when {
+    |  v is Conditional -> fmtConditional(v, ::fmtInt)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is Int -> v.ref
     |  else -> ((tokenValue(v) as? Int) ?: 0).toString()
     |}
     |private fun fmtBool(v: Any?): String = when {
+    |  v is Conditional -> fmtConditional(v, ::fmtBool)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is Boolean -> v.ref
     |  else -> ((tokenValue(v) as? Boolean) ?: false).toString()
     |}
     |private fun fmtDouble(v: Any?): String = when {
+    |  v is Conditional -> fmtConditional(v, ::fmtDouble)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is Double -> v.ref
     |  else -> tokenValue(v).let { x -> kotlinDoubleLiteral((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0) }
     |}
-    |private fun fmtFloat(v: Any?): String = "${'$'}{fmtDouble(tokenValue(v))}f"
+    |private fun fmtFloat(v: Any?): String =
+    |  if (v is Conditional) fmtConditional(v, ::fmtFloat) else "${'$'}{fmtDouble(tokenValue(v))}f"
     |// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
     |private fun fmtDp(v: Any?): String =
-    |  if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
+    |  if (v is Conditional) fmtConditional(v, ::fmtDp)
+    |  else if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
     |  else tokenValue(v).let { x -> "Dp(${'$'}{kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
     |private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
     |private fun fmtStringList(v: Any?): String =
     |  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
     |private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${'$'}{it}f" } ?: "") + ")"
-    |private fun fmtConstraint(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
-    |private fun fmtCrossAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
+    |private fun fmtConstraint(v: Any?): String =
+    |  if (v is Conditional) fmtConditional(v, ::fmtConstraint)
+    |  else if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
+    |private fun fmtCrossAxis(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtCrossAxis) else when ((tokenValue(v) as? Int) ?: 0) {
     |  1 -> "CrossAxisAlignment.Center"
     |  2 -> "CrossAxisAlignment.End"
     |  3 -> "CrossAxisAlignment.Stretch"
     |  else -> "CrossAxisAlignment.Start"
     |}
-    |private fun fmtOverflow(v: Any?): String = if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
-    |private fun fmtMainAxis(v: Any?): String = when ((tokenValue(v) as? Int) ?: 0) {
+    |private fun fmtOverflow(v: Any?): String =
+    |  if (v is Conditional) fmtConditional(v, ::fmtOverflow)
+    |  else if (((tokenValue(v) as? Int) ?: 0) == 1) "Overflow.Scroll" else "Overflow.Clip"
+    |private fun fmtMainAxis(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtMainAxis) else when ((tokenValue(v) as? Int) ?: 0) {
     |  1 -> "MainAxisAlignment.Center"
     |  2 -> "MainAxisAlignment.End"
     |  3 -> "MainAxisAlignment.SpaceBetween"
@@ -220,9 +255,13 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |// K1: a Margin value rides as four Double sides "<prefix>.start/.end/.top/.bottom"
     |// (absent = 0). Printed in the SHORTEST exact source form; Dp is non-negative,
     |// so a negative side is written as 0.
-    |private fun marginSide(node: WidgetNode, key: String): Double =
-    |  tokenValue(node.props[key]).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
-    |private fun fmtDpValue(v: Double): String = kotlinDpLiteral(v)
+    |// K3: a side may be conditional (`top = if (raised) 8.dp else 0.dp`): it is then
+    |// never zero, and two sides are equal only when their conditionals are.
+    |private fun marginSide(node: WidgetNode, key: String): Any = marginSideValue(node.props[key])
+    |private fun marginSideValue(v: Any?): Any =
+    |  if (v is Conditional) v.copy(whenTrue = marginSideValue(v.whenTrue), whenFalse = marginSideValue(v.whenFalse))
+    |  else tokenValue(v).let { x -> ((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0) }
+    |private fun fmtDpValue(v: Any?): String = if (v is Conditional) fmtConditional(v, ::fmtDpValue) else kotlinDpLiteral(v as Double)
     |private fun fmtMargin(node: WidgetNode, prefix: String): String {
     |  val s = marginSide(node, "${'$'}prefix.start")
     |  val e = marginSide(node, "${'$'}prefix.end")
@@ -329,12 +368,19 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, components: ComponentRegistry, parent: String?, imports: MutableSet<String>) {")
   appendLine("  when (node.type) {")
   // M5: logic nodes export as real control flow, not composable calls.
+  // K3: the condition's own spelling (`!b.x`, `b.s.isNotEmpty()`), and an `else` branch.
   appendLine("    \"Condition\" -> {")
-  appendLine("      val cond = (node.props[\"field\"] as? String) ?: \"cond\"")
-  appendLine("      sb.append(\"\${indent}if (b.\$cond) {\\n\")")
-  appendLine("      node.children.forEach { emitNode(sb, it, \"\$indent  \", components, parent, imports) }")
+  appendLine("      val cond = condOf(node) ?: Cond((node.props[\"field\"] as? String)?.takeIf { it.isNotBlank() } ?: \"cond\")")
+  appendLine("      sb.append(\"\${indent}if (\${cond.kotlin(::bindRef)}) {\\n\")")
+  appendLine("      node.thenChildren().forEach { emitNode(sb, it, \"\$indent  \", components, parent, imports) }")
+  appendLine("      node.elseNode()?.let { e ->")
+  appendLine("        sb.append(\"\$indent} else {\\n\")")
+  appendLine("        e.children.forEach { emitNode(sb, it, \"\$indent  \", components, parent, imports) }")
+  appendLine("      }")
   appendLine("      sb.append(\"\$indent}\\n\")")
   appendLine("    }")
+  // An Else outside a Condition is refused by the document; never written as a call.
+  appendLine("    ELSE_TYPE -> {}")
   appendLine("    \"Repeat\" -> {")
   appendLine("      val item = (node.props[\"item\"] as? String) ?: \"item\"")
   appendLine("      val items = (node.props[\"items\"] as? String) ?: \"items\"")
@@ -359,7 +405,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
       }
     }
     for (e in w.events) {
-      appendLine("      (node.props[\"${e.name}\"] as? Action)?.let { a -> sb.append(\"\${indent}  ${e.name} = \${fmtAction(a, ${e.paramCount})},\\n\") }")
+      appendLine("      fmtEvent(node.props[\"${e.name}\"], ${e.paramCount})?.let { e -> sb.append(\"\${indent}  ${e.name} = \$e,\\n\") }")
     }
     if (w.hasChildren) {
       appendLine("      sb.append(\"\$indent) {\\n\")")
@@ -400,9 +446,12 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      // K2: a token is written as its reference where it fits the parameter's type.
     |      val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
     |      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
-    |      val rendered = when (val x = if (token != null) token else tokenValue(v)) {
+    |      // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
+    |      val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
+    |      fun render(x: Any?, branch: Boolean): String = when (x) {
     |        is Token -> x.ref
-    |        is Action -> fmtAction(x, if (x.arg == "it") 1 else 0)
+    |        // K3: in an `if` branch an action is a reference or a parenthesized lambda.
+    |        is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
     |        is Bind -> bindRef(x.field)
     |        is String -> kotlinStringLiteral(x)
     |        is Boolean -> x.toString()
@@ -410,6 +459,18 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |        is Double -> kotlinDoubleLiteral(x)
     |        is List<*> -> "listOf(" + x.joinToString(", ") { if (it is String) kotlinStringLiteral(it) else it.toString() } + ")"
     |        else -> x.toString()
+    |      }
+    |      // A branch token is written as its reference where it fits, like a plain one.
+    |      fun branchValue(x: Any?): Any? =
+    |        if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
+    |          imports.addTokenImport(x, tokenKindOf(x.value)); x
+    |        } else {
+    |          tokenValue(x)
+    |        }
+    |      val rendered = when {
+    |        v is Conditional -> fmtConditional(v) { x -> render(branchValue(x), branch = true) }
+    |        token != null -> render(token, branch = false)
+    |        else -> render(tokenValue(v), branch = false)
     |      }
     |      sb.append("${'$'}indent  ${'$'}k = ${'$'}rendered,\n")
     |    }

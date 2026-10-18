@@ -23,6 +23,14 @@ import java.util.concurrent.atomic.AtomicLong
  * RawCode) only when it must. A file is re-parsed only when its content
  * changed (a SHA-256 of its bytes; reading is cheap, parsing is not).
  */
+/** K3: [this] with [f] applied to each branch of a conditional value, or to the value itself. */
+internal fun PropValue.mapLeaves(f: (PropValue) -> PropValue): PropValue =
+  if (this is PropValue.Conditional) copy(whenTrue = whenTrue?.let(f), whenFalse = whenFalse?.let(f)) else f(this)
+
+/** K3: a conditional value's branches, or the value itself. */
+internal fun PropValue.leaves(): List<PropValue> =
+  if (this is PropValue.Conditional) listOfNotNull(whenTrue, whenFalse) else listOf(this)
+
 object Tokens {
   private val byProject = ConcurrentHashMap<String, TokenTable>()
   private val versions = ConcurrentHashMap<String, AtomicLong>()
@@ -119,14 +127,14 @@ object Tokens {
    */
   fun normalize(batch: OpBatch, table: TokenTable, fileId: String): Pair<OpBatch?, String?> {
     var error: String? = null
-    fun fix(v: PropValue): PropValue {
-      if (v !is PropValue.Token || error != null) return v
+    fun fix(value: PropValue): PropValue = value.mapLeaves { v ->
+      if (v !is PropValue.Token || error != null) return@mapLeaves v
       val entry = table.usable(v.ref, v.import, fileId)
       if (entry == null) {
         error = "unknown design token ${v.ref}" + (v.import?.let { " ($it)" } ?: "")
-        return v
+        return@mapLeaves v
       }
-      return v.copy(value = lit(entry.value))
+      v.copy(value = lit(entry.value))
     }
     fun fixNode(n: DocNode): DocNode = when (n) {
       is DocNode.RawCode -> n
@@ -152,13 +160,13 @@ object Tokens {
     val out = LinkedHashSet<PropValue.Token>()
     fun node(n: DocNode) {
       if (n !is DocNode.Widget) return
-      (n.props.values + n.modifiers.values).filterIsInstance<PropValue.Token>().forEach(out::add)
+      (n.props.values + n.modifiers.values).flatMap { it.leaves() }.filterIsInstance<PropValue.Token>().forEach(out::add)
       n.children.forEach(::node)
     }
     for (op in batch.ops) {
       when (op) {
-        is DocOp.SetProp -> (op.value as? PropValue.Token)?.let(out::add)
-        is DocOp.SetModifier -> (op.value as? PropValue.Token)?.let(out::add)
+        is DocOp.SetProp -> op.value.leaves().filterIsInstance<PropValue.Token>().forEach(out::add)
+        is DocOp.SetModifier -> op.value.leaves().filterIsInstance<PropValue.Token>().forEach(out::add)
         is DocOp.InsertNode -> node(op.node)
         else -> {}
       }
@@ -171,7 +179,7 @@ object Tokens {
     val out = LinkedHashSet<String>()
     fun node(n: DocNode) {
       if (n !is DocNode.Widget) return
-      (n.props.values + n.modifiers.values).filterIsInstance<PropValue.Token>().forEach { t -> t.import?.let(out::add) }
+      (n.props.values + n.modifiers.values).flatMap { it.leaves() }.filterIsInstance<PropValue.Token>().forEach { t -> t.import?.let(out::add) }
       n.children.forEach(::node)
     }
     node(doc.root)
@@ -212,7 +220,16 @@ object Tokens {
     var error: String? = null
     val restored = ArrayList<PropValue.Token>()
     val kept = LinkedHashSet<String>()
-    fun fix(type: String, key: String, v: PropValue, was: PropValue?): PropValue {
+    fun fix(type: String, key: String, value: PropValue, was: PropValue?): PropValue {
+      // K3: each branch of a conditional is checked against the same branch before.
+      if (value is PropValue.Conditional) {
+        val prev = was as? PropValue.Conditional
+        return value.copy(
+          whenTrue = value.whenTrue?.let { fix(type, key, it, prev?.whenTrue) },
+          whenFalse = value.whenFalse?.let { fix(type, key, it, prev?.whenFalse) },
+        )
+      }
+      val v = value
       if (v !is PropValue.Token || error != null) return v
       if (v == was) return v.also { t -> t.import?.let(kept::add) }
       val entry = table.usable(v.ref, v.import, fileId)
@@ -247,7 +264,7 @@ object Tokens {
    * alone (only a prop it rewrites becomes a literal — a detach).
    */
   fun withoutTokens(doc: UiDocument): UiDocument {
-    fun v(x: PropValue): PropValue = if (x is PropValue.Token) x.value else x
+    fun v(x: PropValue): PropValue = x.mapLeaves { if (it is PropValue.Token) it.value else it }
     fun node(n: DocNode): DocNode = when (n) {
       is DocNode.RawCode -> n
       is DocNode.Widget -> n.copy(

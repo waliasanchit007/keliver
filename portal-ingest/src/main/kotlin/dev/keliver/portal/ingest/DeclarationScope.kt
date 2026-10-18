@@ -1,0 +1,188 @@
+package dev.keliver.portal.ingest
+
+import dev.keliver.portal.document.DocNode
+import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.UiDocument
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
+import org.jetbrains.kotlin.psi.KtNamedDeclaration
+
+/**
+ * K3 fourth review, S5: a move that would write code which reads back as the
+ * document but no longer compiles because of a local declaration — a code
+ * node `val label = "hi"` moved after a statement that uses `label`, or into
+ * another block (where what follows it can no longer see it).
+ *
+ *  - A code node that DECLARES something (`val`, `var`, `fun`, `class`,
+ *    `object`, …) never moves to another block.
+ *  - Nothing that mentions a declared name (a code node, or a widget holding
+ *    one, or a token reference — matched as a whole word in its text) moves
+ *    from where the declaration can see it (after it, in its block or
+ *    deeper) to where it cannot.
+ *
+ *  - Nothing that uses a `forEach`'s item leaves that forEach.
+ *
+ * A node that is gone (deleted) is not a use that moved. Text matching is
+ * deliberately simple (a whole word, or the name in backticks): a shadowing
+ * local or a name in a string also counts as a use (the move is refused; it can be made in code).
+ * What it does not see — a use through a binding or a reference the editor
+ * models without text — cannot mention a local declaration anyway.
+ */
+object DeclarationScope {
+  /** Null = the change from [before] to [after] keeps every local declaration's uses in its scope; else why not. */
+  fun problem(before: UiDocument, after: UiDocument): String? {
+    val was = Places(before.root)
+    val now = Places(after.root)
+    for ((h, node) in now.nodes) {
+      if (node !is DocNode.RawCode) continue
+      val names = declaredNames(node.text).ifEmpty { continue }
+      if (h !in was.nodes) continue // new code: not a move
+      val code = "`${short(node.text)}`"
+      if (was.parent[h] != now.parent[h]) {
+        return "the code $code declares ${names.joinToString { "`$it`" }}; putting it in another block can leave code that " +
+          "uses it unable to see it (make this change in code)"
+      }
+      val seenBefore = was.visibleAfter(h)
+      val seenNow = now.visibleAfter(h)
+      for (name in names) {
+        val word = wordOf(name)
+        // A user that is gone (deleted, S-a) has not moved anywhere.
+        val lost = seenBefore.firstOrNull { u -> u !in seenNow && u != h && u in now.nodes && mentions(was.nodes.getValue(u), word) }
+          ?: continue
+        val user = was.nodes.getValue(lost)
+        return "${label(user)} uses `$name`, which the code $code declares; this change would leave it where " +
+          "`$name` is not declared yet (make this change in code)"
+      }
+    }
+    return itemProblem(was, now)
+  }
+
+  /**
+   * A `forEach`'s item (`note` in `b.notes.forEach { note -> … }`) is declared
+   * by the forEach: nothing inside it that uses the item — a bound value
+   * (`note.title`), an action argument, an item condition, or code naming it —
+   * moves out of it (it would read back as code, and not compile).
+   */
+  private fun itemProblem(was: Places, now: Places): String? {
+    for ((h, each) in was.nodes) {
+      if (each !is DocNode.Widget || each.type != "Repeat") continue
+      val item = (each.props["item"] as? PropValue.Lit)?.s ?: continue
+      if (h !in now.nodes) continue // the forEach itself is deleted (or replaced): not a move out of it
+      val word = wordOf(item)
+      val inside = now.subtree(h)
+      for (n in each.children.flatMap { all(it) }) {
+        if (n.handle.v !in now.nodes || n.handle.v in inside) continue
+        if (!usesItem(n, item, word)) continue
+        return "${label(n)} uses the forEach item `$item`; it cannot leave that forEach (make this change in code)"
+      }
+    }
+    return null
+  }
+
+  private fun all(n: DocNode): List<DocNode> = listOf(n) + ((n as? DocNode.Widget)?.children?.flatMap { all(it) } ?: emptyList())
+
+  /** Whether [n] or anything in it reads the item [item]. */
+  private fun usesItem(n: DocNode, item: String, word: Regex): Boolean {
+    fun field(f: String?) = f != null && (f == item || f.startsWith("$item."))
+    fun value(v: PropValue?): Boolean = when (v) {
+      is PropValue.Bind -> field(v.field)
+      is PropValue.Action -> v.arg?.let { field(it) } == true
+      is PropValue.Conditional -> field(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      else -> false
+    }
+    return when (n) {
+      is DocNode.RawCode -> word.containsMatchIn(n.text)
+      is DocNode.Widget ->
+        (n.type == "Condition" && field((n.props["field"] as? PropValue.Lit)?.s)) ||
+          (n.type == "Repeat" && field((n.props["items"] as? PropValue.Lit)?.s)) ||
+          (n.props.values + n.modifiers.values).any(::value) ||
+          n.children.any { usesItem(it, item, word) }
+    }
+  }
+
+  /**
+   * [name] used in code: as a whole word, or quoted in backticks (S-d: a
+   * name such as `` `my x` `` only ever appears quoted).
+   */
+  private fun wordOf(name: String): Regex {
+    val quoted = "`${Regex.escape(name)}`"
+    val plain = name.isNotEmpty() && name.all { it == '_' || it.isLetterOrDigit() }
+    return Regex(if (plain) "$quoted|(?<![\\w`])${Regex.escape(name)}(?![\\w`])" else quoted)
+  }
+
+  private fun short(text: String): String = text.trim().replace(Regex("\\s+"), " ").let { if (it.length > 50) it.take(47) + "…" else it }
+
+  private fun label(n: DocNode): String = when (n) {
+    is DocNode.RawCode -> "the code `${short(n.text)}`"
+    is DocNode.Widget -> n.type
+  }
+
+  /** The names [text] declares as one statement (none = not a declaration). */
+  internal fun declaredNames(text: String): List<String> {
+    val stmt = runCatching { PsiEnv.factory.createBlock(text).statements.singleOrNull() }.getOrNull() ?: return emptyList()
+    return when (stmt) {
+      is KtDestructuringDeclaration -> stmt.entries.mapNotNull { it.name }.filter { it != "_" }
+      is KtNamedDeclaration -> listOfNotNull(stmt.name)
+      else -> emptyList()
+    }
+  }
+
+  /** Whether [n] (or anything in it) mentions [word]: its code text, or a token reference. */
+  private fun mentions(n: DocNode, word: Regex): Boolean = when (n) {
+    is DocNode.RawCode -> word.containsMatchIn(n.text)
+    is DocNode.Widget -> (n.props.values + n.modifiers.values).any { refMentions(it, word) } || n.children.any { mentions(it, word) }
+  }
+
+  private fun refMentions(v: PropValue?, word: Regex): Boolean = when (v) {
+    is PropValue.Token -> word.containsMatchIn(v.ref)
+    is PropValue.Conditional -> refMentions(v.whenTrue, word) || refMentions(v.whenFalse, word)
+    else -> false
+  }
+
+  /** Each node by handle, its parent, and its block's children. */
+  private class Places(root: DocNode) {
+    val nodes = HashMap<Long, DocNode>()
+    val parent = HashMap<Long, Long>()
+    private val siblings = HashMap<Long, List<DocNode>>()
+
+    init {
+      fun walk(n: DocNode, p: DocNode.Widget?) {
+        nodes[n.handle.v] = n
+        if (p != null) {
+          parent[n.handle.v] = p.handle.v
+          siblings[n.handle.v] = p.children
+        }
+        if (n is DocNode.Widget) n.children.forEach { walk(it, n) }
+      }
+      walk(root, null)
+    }
+
+    /** [h] and everything in it. */
+    fun subtree(h: Long): Set<Long> {
+      val out = HashSet<Long>()
+      fun add(n: DocNode) {
+        out += n.handle.v
+        if (n is DocNode.Widget) n.children.forEach(::add)
+      }
+      nodes[h]?.let(::add)
+      return out
+    }
+
+    /**
+     * Every node a declaration [h] can be seen from: the later siblings in its
+     * block and everything in them — not an `else` beside a then block (the
+     * else block does not see the then block's declarations).
+     */
+    fun visibleAfter(h: Long): Set<Long> {
+      val sibs = siblings[h] ?: return emptySet()
+      val out = HashSet<Long>()
+      fun add(n: DocNode) {
+        out += n.handle.v
+        if (n is DocNode.Widget) n.children.forEach(::add)
+      }
+      sibs.drop(sibs.indexOfFirst { it.handle.v == h } + 1)
+        .filterNot { it is DocNode.Widget && it.type == dev.keliver.portal.ELSE_TYPE }
+        .forEach(::add)
+      return out
+    }
+  }
+}
