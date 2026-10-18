@@ -61,6 +61,8 @@ data class Recognized(
   internal val tokenLookup: TokenLookup? = null,
   /** K3: condition reading in this file's screen context, for write-back. Transient. */
   internal val condParser: CondParser? = null,
+  /** The screen function's bindings parameter (`b` by convention) — write-back spells a new condition with it. */
+  internal val bindingsParam: String? = null,
 )
 
 /**
@@ -132,7 +134,10 @@ object Recognizer {
       )
     } ?: Contract()
 
-    return Recognized(root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup, CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) })
+    return Recognized(
+      root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup,
+      CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) }, bindingsParam,
+    )
   }
 
   /**

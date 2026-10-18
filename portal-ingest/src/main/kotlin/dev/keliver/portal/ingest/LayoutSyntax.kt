@@ -109,11 +109,18 @@ internal object IfSyntax {
  * the author's spelling). Null when either text is not an `if … else …`.
  */
 internal object ConditionalSyntax {
-  fun surgical(source: String, old: PropValue.Conditional, new: PropValue.Conditional, canonical: String?): String? {
+  /** [condText] spells a changed condition (the file's bindings parameter); null = [canonical]'s text. */
+  fun surgical(
+    source: String,
+    old: PropValue.Conditional,
+    new: PropValue.Conditional,
+    canonical: String?,
+    condText: ((Cond) -> String)? = null,
+  ): String? {
     val src = IfSyntax.split(source) ?: return null
     val can = canonical?.let(IfSyntax::split) ?: return null
     val edits = mutableListOf<Pair<Span, String>>()
-    if (old.cond() != new.cond()) edits += src.cond to can.cond.text
+    if (old.cond() != new.cond()) edits += src.cond to (condText?.invoke(new.cond()) ?: can.cond.text)
     fun branch(at: Span, canonicalBranch: Span, o: PropValue?, n: PropValue?) {
       if (o == n) return
       val d = (n as? PropValue.Lit)?.d
@@ -444,6 +451,8 @@ internal object ModifierChain {
     canonical: String?,
     tokens: TokenLookup? = null,
     conds: CondParser? = null,
+    /** Spells a changed condition (the file's bindings parameter); null = the canonical text's. */
+    condText: ((Cond) -> String)? = null,
   ): String? {
     val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.toSet() }
     if (names(old) != names(new)) return canonical
@@ -462,12 +471,13 @@ internal object ModifierChain {
         val newValue = new[argKeys.first()]
         val replacement = when {
           spec.argTypes.getOrNull(j) == "Margin" ->
-            MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds) ?: canonArg
+            (if (condText == null) MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds)
+            else MarginSyntax.surgical(arg.value, sideValues(old, argKeys), sideValues(new, argKeys), conds, condText)) ?: canonArg
           // A Dp keeps the author's spelling (`12.dp` stays `.dp`).
           newDp != null && IfSyntax.split(arg.value) == null -> MarginSyntax.dpLike(arg.value, newDp)
           // K3: only the changed part of a conditional argument.
           oldValue is PropValue.Conditional && newValue is PropValue.Conditional ->
-            ConditionalSyntax.surgical(arg.value, oldValue, newValue, canonArg) ?: canonArg
+            ConditionalSyntax.surgical(arg.value, oldValue, newValue, canonArg, condText) ?: canonArg
           else -> canonArg
         } ?: return null
         edits += arg to replacement

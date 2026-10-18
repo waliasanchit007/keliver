@@ -49,6 +49,7 @@ object WriteBack {
     lookup.set(rec.tokenLookup)
     conds.set(rec.condParser)
     identities.set(base?.let { identitiesOf(rec.root, it.root) })
+    bindings.set(rec.bindingsParam)
     try {
       // Mutable: a replaced statement's handle is re-pointed at its replacement,
       // so a later insert anchored on it never lands relative to dead PSI.
@@ -58,6 +59,7 @@ object WriteBack {
       lookup.remove()
       conds.remove()
       identities.remove()
+      bindings.remove()
     }
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
@@ -103,6 +105,22 @@ object WriteBack {
 
   /** K3: condition reading for the file being merged; per thread, per merge. */
   private val conds = ThreadLocal<CondParser?>()
+
+  /** The screen's bindings parameter name (null = none, `b` assumed); per thread, per merge. */
+  private val bindings = ThreadLocal<String?>()
+
+  /**
+   * A condition as the file spells it: a screen field through the file's own
+   * bindings parameter (`bindings.open`), an item field as it is. (Inserted
+   * nodes and changed values come from the exporter, which spells the
+   * parameter `b`: in a file that names it otherwise, such a merge does not
+   * read back as the document and the full export — which writes `b` — is
+   * written instead.)
+   */
+  private fun condText(c: dev.keliver.portal.Cond): String {
+    val param = bindings.get() ?: "b"
+    return c.kotlin { if ('.' in it) it else "$param.$it" }
+  }
 
   /** S-c: parsed (temp) handle -> the base document's handle, when known; per thread, per merge. */
   private val identities = ThreadLocal<Map<Long, Long>?>()
@@ -277,7 +295,7 @@ object WriteBack {
       val tree = UiDocument("_", target.copy(children = emptyList()), dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
       val cond = dev.keliver.portal.condOf(tree) ?: return false
       val condition = ifExpr.condition ?: return false
-      condition.replace(factory.createExpression(cond.kotlin { if ('.' in it) it else "b.$it" }))
+      condition.replace(factory.createExpression(condText(cond)))
     }
     val thenBlock = ifExpr.then as? KtBlockExpression ?: return false
     // Else first: it sits after the then block, so its edits move no offset the then block needs.
@@ -550,13 +568,13 @@ object WriteBack {
       val newValue = target.props[name]
       val text = (if (name in margins) {
         val sideKeys = dev.keliver.portal.MARGIN_SIDES.map { "$name.$it" }
-        MarginSyntax.surgical(oldExpr.text, sideValues(parsed.props, sideKeys), sideValues(target.props, sideKeys), conds.get())
+        MarginSyntax.surgical(oldExpr.text, sideValues(parsed.props, sideKeys), sideValues(target.props, sideKeys), conds.get(), ::condText)
           ?: canonicalText
       } else if (oldValue is dev.keliver.portal.document.PropValue.Conditional &&
         newValue is dev.keliver.portal.document.PropValue.Conditional
       ) {
         // K3: only the changed part — the condition, or one branch.
-        ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText) ?: canonicalText
+        ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText, ::condText) ?: canonicalText
       } else {
         // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
         val v = (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d
@@ -573,7 +591,7 @@ object WriteBack {
       // (its import is added below), so the target's own tokens resolve first.
       val tokens = targetTokens(target.modifiers.values, lookup.get())
       val text = ModifierChain.surgical(
-        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens, conds.get(),
+        oldExpr.text, parsed.modifiers, target.modifiers, parentType, newByName["modifier"]?.text, tokens, conds.get(), ::condText,
       ) ?: return false
       edits += oldExpr to text
       imports += FragmentImports.chain(text, parentType, tokens, conds.get())
