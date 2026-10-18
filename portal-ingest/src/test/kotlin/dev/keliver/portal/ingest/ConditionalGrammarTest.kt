@@ -219,14 +219,10 @@ class ConditionalGrammarTest {
     )
   }
 
-  @Test fun removingAnElseReEmitsOnlyThatStatement() {
+  @Test fun removingAnElseDeletesOnlyTheElseText() {
     val d = doc()
     val elseNode = child(d, 5).children[1] as DocNode.Widget
-    val out = merge(d.apply(DocOp.DeleteNode(elseNode.handle)).doc)
-    val before = src.substringBefore("    if (!b.hidden) {")
-    val after = src.substringAfter("      StyledText(text = \"hidden\")\n    }\n")
-    assertTrue(out.startsWith(before) && out.endsWith(after), out)
-    assertTrue("if (!b.hidden) {" in out && "else" !in out.substringAfter("if (!b.hidden)").substringBefore("if (b.subtitle"), out)
+    assertOnly(merge(d.apply(DocOp.DeleteNode(elseNode.handle)).doc), "    } else {\n      StyledText(text = \"hidden\")\n    }\n", "    }\n")
   }
 
   @Test fun theFullExportCompilesAndReIngestsToTheSameTree() {

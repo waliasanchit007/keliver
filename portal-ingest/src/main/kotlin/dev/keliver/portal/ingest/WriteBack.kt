@@ -41,7 +41,9 @@ object WriteBack {
     lookup.set(rec.tokenLookup)
     conds.set(rec.condParser)
     try {
-      if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle, factory, components, parentType = null)) return null
+      // Mutable: a replaced statement's handle is re-pointed at its replacement,
+      // so a later insert anchored on it never lands relative to dead PSI.
+      if (!mergeWidget(rec.root, targetRoot, rec.psiByHandle.toMutableMap(), factory, components, parentType = null)) return null
     } finally {
       needed.remove()
       lookup.remove()
@@ -134,7 +136,7 @@ object WriteBack {
   private fun mergeWidget(
     parsed: DocNode,
     target: DocNode,
-    psi: Map<Long, KtExpression>,
+    psi: MutableMap<Long, KtExpression>,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
     /** The layout parent scoped modifiers resolve against (see Recognizer.parseModifierChain). */
@@ -146,7 +148,8 @@ object WriteBack {
     if (parsed is DocNode.RawCode && target is DocNode.RawCode) {
       if (parsed.text != target.text) {
         val call = psi[parsed.handle.v] ?: return false
-        call.replace(factory.createExpression(target.text.let { normalizeExpr(it) }))
+        val replaced = call.replace(factory.createExpression(target.text.let { normalizeExpr(it) }))
+        (replaced as? KtExpression)?.let { psi[parsed.handle.v] = it }
       }
       return true
     }
@@ -194,26 +197,23 @@ object WriteBack {
   /**
    * K3: a `Condition` (`if (c) { … } else { … }`). A changed condition
    * rewrites only the condition's text; each branch merges like any children
-   * block. Adding or removing the `else` branch re-emits just this `if`
-   * statement (its contents in canonical form); everything around it stays.
+   * block. Adding an `else` inserts just ` else {\n<indent>}` after the then
+   * block (its children then go in as inserts); removing one deletes just the
+   * text from the `else` keyword through its block's `}`. The `if` itself is
+   * never replaced — its PSI stays valid as an anchor for its siblings.
    */
   private fun mergeCondition(
     parsed: DocNode.Widget,
     target: DocNode.Widget,
-    psi: Map<Long, KtExpression>,
+    psi: MutableMap<Long, KtExpression>,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
     parentType: String?,
   ): Boolean {
     val ifExpr = psi[parsed.handle.v] as? KtIfExpression ?: return false
-    val parsedElse = parsed.children.firstOrNull { it is DocNode.Widget && it.type == dev.keliver.portal.ELSE_TYPE } as DocNode.Widget?
-    val targetElse = target.children.firstOrNull { it is DocNode.Widget && it.type == dev.keliver.portal.ELSE_TYPE } as DocNode.Widget?
-    if ((parsedElse == null) != (targetElse == null)) {
-      val emitted = NodeEmitter.statement(target, indentOf(ifExpr), components, parentType)
-      ifExpr.replace(factory.createExpression(emitted.text))
-      need(emitted.imports)
-      return true
-    }
+    val isElse = { n: DocNode -> n is DocNode.Widget && n.type == dev.keliver.portal.ELSE_TYPE }
+    val parsedElse = parsed.children.firstOrNull(isElse) as DocNode.Widget?
+    val targetElse = target.children.firstOrNull(isElse) as DocNode.Widget?
     if (parsed.props != target.props) {
       val tree = UiDocument("_", target.copy(children = emptyList()), dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
       val cond = dev.keliver.portal.condOf(tree) ?: return false
@@ -221,22 +221,49 @@ object WriteBack {
       condition.replace(factory.createExpression(cond.kotlin { if ('.' in it) it else "b.$it" }))
     }
     val thenBlock = ifExpr.then as? KtBlockExpression ?: return false
-    val isElse = { n: DocNode -> n is DocNode.Widget && n.type == dev.keliver.portal.ELSE_TYPE }
     // Else first: it sits after the then block, so its edits move no offset the then block needs.
-    if (parsedElse != null && targetElse != null) {
-      val elseBlock = ifExpr.`else` as? KtBlockExpression ?: return false
-      if (!mergeChildren(parsedElse.children, targetElse.children, elseBlock, psi, factory, components, parentType)) return false
+    when {
+      parsedElse != null && targetElse != null -> {
+        val elseBlock = ifExpr.`else` as? KtBlockExpression ?: return false
+        if (!mergeChildren(parsedElse.children, targetElse.children, elseBlock, psi, factory, components, parentType)) return false
+      }
+      parsedElse != null -> if (!removeElse(ifExpr)) return false
+      targetElse != null -> {
+        val elseBlock = addElse(ifExpr, factory) ?: return false
+        if (!mergeChildren(emptyList(), targetElse.children, elseBlock, psi, factory, components, parentType)) return false
+      }
     }
     return mergeChildren(
       parsed.children.filterNot(isElse), target.children.filterNot(isElse), thenBlock, psi, factory, components, parentType,
     )
   }
 
+  /** Deletes `else { … }` (and the whitespace before `else`) from [ifExpr]; nothing else moves. */
+  private fun removeElse(ifExpr: KtIfExpression): Boolean {
+    val keyword = ifExpr.elseKeyword ?: return false
+    val body = ifExpr.`else`?.parent?.takeIf { it.parent == ifExpr } ?: return false
+    val first = keyword.prevSibling?.takeIf { it is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace } ?: keyword
+    ifExpr.node.removeRange(first.node, body.node.treeNext)
+    return true
+  }
+
+  /** Appends ` else {\n<indent>}` to [ifExpr] (which has no else); returns the new else block. */
+  private fun addElse(ifExpr: KtIfExpression, factory: KtPsiFactory): KtBlockExpression? {
+    if (ifExpr.elseKeyword != null) return null
+    val thenBody = ifExpr.then?.parent?.takeIf { it.parent == ifExpr } ?: return null
+    val template = factory.createExpression("if (x) {\n} else {\n${indentOf(ifExpr)}}") as? KtIfExpression ?: return null
+    val keyword = template.elseKeyword ?: return null
+    val body = template.`else`?.parent ?: return null
+    val first = keyword.prevSibling ?: return null
+    ifExpr.node.addChildren(first.node, body.node.treeNext, thenBody.node.treeNext)
+    return ifExpr.`else` as? KtBlockExpression
+  }
+
   private fun mergeChildren(
     parsedChildren: List<DocNode>,
     targetChildren: List<DocNode>,
     block: KtBlockExpression,
-    psi: Map<Long, KtExpression>,
+    psi: MutableMap<Long, KtExpression>,
     factory: KtPsiFactory,
     components: dev.keliver.portal.ComponentRegistry,
     parentType: String?,
@@ -258,6 +285,7 @@ object WriteBack {
         lastParsed = pi
       }
     }
+    pairEditedConditions(parsedChildren, targetChildren, consumed, matchOf)
 
     // Recurse matched pairs first (prop/child edits within kept nodes).
     for ((ti, tc) in targetChildren.withIndex()) {
@@ -283,10 +311,55 @@ object WriteBack {
     return true
   }
 
+  /**
+   * Same node for in-order matching: the same widget type — and, for a K3
+   * `Condition`, the same condition (a Condition with another condition is
+   * another `if`, inserted beside it, never a rewrite of it). Else-ness may
+   * differ: adding/removing the else branch merges surgically.
+   */
   private fun sameShape(a: DocNode, b: DocNode): Boolean = when {
-    a is DocNode.Widget && b is DocNode.Widget -> a.type == b.type
+    a is DocNode.Widget && b is DocNode.Widget ->
+      a.type == b.type && (a.type != "Condition" || condKey(a) == condKey(b))
     a is DocNode.RawCode && b is DocNode.RawCode -> true
     else -> false
+  }
+
+  /** A Condition's (field, test, negate), normalized (an absent test is the Boolean one, absent negate is false). */
+  private fun condKey(w: DocNode.Widget): Triple<String?, dev.keliver.portal.CondTest?, Boolean> {
+    fun s(k: String) = (w.props[k] as? dev.keliver.portal.document.PropValue.Lit)?.s
+    val negate = (w.props["negate"] as? dev.keliver.portal.document.PropValue.Lit)?.b == true
+    return Triple(s("field"), dev.keliver.portal.CondTest.fromWire(s("test")), negate)
+  }
+
+  /**
+   * K3: a Condition whose CONDITION was edited matches no parsed `if` by
+   * [sameShape]. Between two kept neighbours (a "gap"), when the unmatched
+   * Conditions on both sides are equally many they are the same nodes, in
+   * order — the edit stays a surgical condition rewrite. Any other gap
+   * (a new Condition, or an insert and an edit together) leaves them
+   * unmatched: inserts and deletes, never a rewrite of the wrong `if`.
+   */
+  private fun pairEditedConditions(
+    parsedChildren: List<DocNode>,
+    targetChildren: List<DocNode>,
+    consumed: BooleanArray,
+    matchOf: Array<Int?>,
+  ) {
+    fun isCondition(n: DocNode) = n is DocNode.Widget && n.type == "Condition"
+    var ti = 0
+    var pi = 0
+    while (ti <= targetChildren.size) {
+      // The gap ends at the next matched target (or the end); its parsed side ends at that match.
+      val tEnd = (ti until targetChildren.size).firstOrNull { matchOf[it] != null } ?: targetChildren.size
+      val pEnd = if (tEnd < targetChildren.size) matchOf[tEnd]!! else parsedChildren.size
+      val ts = (ti until tEnd).filter { isCondition(targetChildren[it]) }
+      val ps = (pi until pEnd).filter { !consumed[it] && isCondition(parsedChildren[it]) }
+      if (ts.isNotEmpty() && ts.size == ps.size) {
+        ts.zip(ps).forEach { (t, p) -> matchOf[t] = p; consumed[p] = true }
+      }
+      ti = tEnd + 1
+      pi = pEnd + 1
+    }
   }
 
   /** The children block of a logic node's PSI (if-then block / forEach lambda body). */
