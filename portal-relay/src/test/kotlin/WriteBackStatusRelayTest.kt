@@ -77,6 +77,38 @@ class WriteBackStatusRelayTest {
     return assertNotNull(svc.writeBack?.takeIf { it.version == version }, "write-back of v$version reported")
   }
 
+  /**
+   * K3 fifth review, S-a: deleting a use of a local declaration is not moving
+   * it out of scope — the delete is accepted AND written in place (it was
+   * refused at write-back, wedging the screen).
+   */
+  @Test fun deletingAUseOfALocalDeclarationIsWrittenInPlace() {
+    val text = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun HomeScreen(bindings: HomeScreenBindings) {
+        Column {
+          val label = "x"
+          Legacy(label)
+          StyledText(text = "a")
+        }
+      }
+
+      interface HomeScreenBindings
+    """.trimIndent() + "\n"
+    val f = fixture(text)
+    val ack = f.svc.submit(f.svc.batch(DocOp.DeleteNode(f.svc.children()[1].handle)))
+    assertTrue(ack.ok, ack.error)
+    val status = awaitStatus(f.svc, ack.version)
+    assertEquals("surgical", status.outcome, status.toString())
+    assertEquals(text.replace("    Legacy(label)\n", ""), f.file.readText())
+  }
+
   @Test fun theReviewersInsertIsWrittenInPlace() {
     val f = fixture()
     val node = DocNode.Widget(Handle(0), "StyledText", mapOf("text" to PropValue.Bind("title")))

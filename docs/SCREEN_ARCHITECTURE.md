@@ -647,9 +647,10 @@ that takes no bindings parameter (add the parameter in code first); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
 to another block, nothing that mentions the declared name (a whole-word
-text match) moves to before it or out of its block, and nothing that uses a
-`forEach`'s item (a bound `note.title`, an item condition, code naming
-`note`) moves out of that `forEach`.
+text match, or the name in backticks) moves to before it or out of its
+block, and nothing that uses a `forEach`'s item (a bound `note.title`, an
+item condition, code naming `note`) moves out of that `forEach`. Deleting a
+use is not moving it: it is written.
 
 **What "reads back" does not cover.** The read-back check proves the file
 reads as the document, not that it compiles. Beyond the declaration rule

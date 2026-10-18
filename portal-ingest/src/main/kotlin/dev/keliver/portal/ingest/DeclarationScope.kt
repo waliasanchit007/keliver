@@ -21,8 +21,9 @@ import org.jetbrains.kotlin.psi.KtNamedDeclaration
  *
  *  - Nothing that uses a `forEach`'s item leaves that forEach.
  *
- * Text matching is deliberately simple: a shadowing local or a name in a
- * string also counts as a use (the move is refused; it can be made in code).
+ * A node that is gone (deleted) is not a use that moved. Text matching is
+ * deliberately simple (a whole word, or the name in backticks): a shadowing
+ * local or a name in a string also counts as a use (the move is refused; it can be made in code).
  * What it does not see — a use through a binding or a reference the editor
  * models without text — cannot mention a local declaration anyway.
  */
@@ -37,18 +38,19 @@ object DeclarationScope {
       if (h !in was.nodes) continue // new code: not a move
       val code = "`${short(node.text)}`"
       if (was.parent[h] != now.parent[h]) {
-        return "the code $code declares ${names.joinToString { "`$it`" }}; moving it to another block can leave code that " +
-          "uses it unable to see it (move it in code)"
+        return "the code $code declares ${names.joinToString { "`$it`" }}; putting it in another block can leave code that " +
+          "uses it unable to see it (make this change in code)"
       }
       val seenBefore = was.visibleAfter(h)
       val seenNow = now.visibleAfter(h)
       for (name in names) {
-        val word = Regex("(?<![\\w`])${Regex.escape(name)}(?![\\w`])")
-        val lost = seenBefore.firstOrNull { u -> u !in seenNow && u != h && mentions(was.nodes.getValue(u), word) }
+        val word = wordOf(name)
+        // A user that is gone (deleted, S-a) has not moved anywhere.
+        val lost = seenBefore.firstOrNull { u -> u !in seenNow && u != h && u in now.nodes && mentions(was.nodes.getValue(u), word) }
           ?: continue
         val user = was.nodes.getValue(lost)
-        return "${label(user)} uses `$name`, which the code $code declares; after this move it would stand where " +
-          "`$name` is not declared yet (move it in code)"
+        return "${label(user)} uses `$name`, which the code $code declares; this change would leave it where " +
+          "`$name` is not declared yet (make this change in code)"
       }
     }
     return itemProblem(was, now)
@@ -65,12 +67,12 @@ object DeclarationScope {
       if (each !is DocNode.Widget || each.type != "Repeat") continue
       val item = (each.props["item"] as? PropValue.Lit)?.s ?: continue
       if (h !in now.nodes) continue // the forEach itself is deleted (or replaced): not a move out of it
-      val word = Regex("(?<![\\w`])${Regex.escape(item)}(?![\\w`])")
+      val word = wordOf(item)
       val inside = now.subtree(h)
       for (n in each.children.flatMap { all(it) }) {
         if (n.handle.v !in now.nodes || n.handle.v in inside) continue
         if (!usesItem(n, item, word)) continue
-        return "${label(n)} uses the forEach item `$item`; it cannot leave that forEach (move it in code)"
+        return "${label(n)} uses the forEach item `$item`; it cannot leave that forEach (make this change in code)"
       }
     }
     return null
@@ -95,6 +97,16 @@ object DeclarationScope {
           (n.props.values + n.modifiers.values).any(::value) ||
           n.children.any { usesItem(it, item, word) }
     }
+  }
+
+  /**
+   * [name] used in code: as a whole word, or quoted in backticks (S-d: a
+   * name such as `` `my x` `` only ever appears quoted).
+   */
+  private fun wordOf(name: String): Regex {
+    val quoted = "`${Regex.escape(name)}`"
+    val plain = name.isNotEmpty() && name.all { it == '_' || it.isLetterOrDigit() }
+    return Regex(if (plain) "$quoted|(?<![\\w`])${Regex.escape(name)}(?![\\w`])" else quoted)
   }
 
   private fun short(text: String): String = text.trim().replace(Regex("\\s+"), " ").let { if (it.length > 50) it.take(47) + "…" else it }

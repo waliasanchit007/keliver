@@ -72,6 +72,48 @@ class DeclarationScopeTest {
     assertNull(DeclarationScope.problem(noUses, noUses.apply(DocOp.MoveNode(k[0].handle, noUses.root.handle, k.last().handle)).doc))
   }
 
+  @Test fun deletingAUseIsNotAMoveOutOfScope() {
+    // K3 fifth review, S-a: `Legacy(label)` deleted is gone, not moved where `label` is not declared.
+    assertNull(DeclarationScope.problem(d, after(DocOp.DeleteNode(kids()[2].handle))))
+    // A widget holding a use, deleted, and the declaration deleted with its uses.
+    assertNull(DeclarationScope.problem(d, after(DocOp.DeleteNode(row.handle))))
+    assertNull(DeclarationScope.problem(d, after(DocOp.DeleteNode(decl.handle)).let { it.apply(DocOp.DeleteNode(kids()[2].handle)).doc }))
+  }
+
+  @Test fun aRefusalOfAChangeThatIsNotAMoveDoesNotSayMove() {
+    // The write-back backstop sees any change: one that is not a move (an undo, a wrap) is not called a move.
+    val why = assertNotNull(DeclarationScope.problem(d, after(DocOp.MoveNode(decl.handle, d.root.handle, kids()[2].handle))))
+    assertTrue("move " !in why && "moving" !in why, why)
+  }
+
+  @Test fun aBacktickQuotedNameIsMatchedAsAUse() {
+    // K3 fifth review, S-d: `my x` is declared and used with backticks.
+    val src = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun HomeScreen(b: HomeScreenBindings) {
+        Column {
+          val `my x` = "hi"
+          StyledText(text = "a")
+          Legacy(`my x`)
+        }
+      }
+
+      interface HomeScreenBindings
+    """.trimIndent() + "\n"
+    val q = Recognizer.recognize("app/screens/HomeScreen.kt", src)!!.let { UiDocument("home", it.root, it.contract, 0, 1000) }
+    val k = (q.root as DocNode.Widget).children
+    assertTrue(DeclarationScope.declaredNames((k[0] as DocNode.RawCode).text).isNotEmpty())
+    val why = assertNotNull(DeclarationScope.problem(q, q.apply(DocOp.MoveNode(k[0].handle, q.root.handle, k[2].handle)).doc))
+    assertTrue("my x" in why, why)
+    assertNotNull(DeclarationScope.problem(q, q.apply(DocOp.MoveNode(k[2].handle, q.root.handle, null)).doc))
+  }
+
   // A forEach's item is declared by the forEach: what uses it stays inside.
   private val items = """
     package app.screens
