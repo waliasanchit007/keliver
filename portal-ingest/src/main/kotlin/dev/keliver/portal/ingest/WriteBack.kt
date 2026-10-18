@@ -784,7 +784,8 @@ object WriteBack {
 
   /**
    * Removes [stmt] with its own comments and the line break before them, so
-   * the lines it stood on are gone. False when it shares a line with other
+   * the lines it stood on are gone (blank lines around it: one stays where
+   * there were blank lines on both sides, and a blank line above it stays). False when it shares a line with other
    * code (it is not cut).
    */
   private fun cutStatement(stmt: KtExpression): Boolean {
@@ -797,7 +798,13 @@ object WriteBack {
     val startsLine = prev == null || (prev is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && '\n' in prev.text)
     val endsLine = next == null || (next is org.jetbrains.kotlin.com.intellij.psi.PsiWhiteSpace && '\n' in next.text)
     if (!startsLine || !endsLine) return false
+    // A blank line above it and none below, with more of the block after it: the
+    // blank line stays (it sets off what is above — a section header — from
+    // what follows); the line break below goes instead.
+    val newlines = { e: org.jetbrains.kotlin.com.intellij.psi.PsiElement? -> e?.text?.count { it == '\n' } ?: 0 }
+    val followed = next?.nextSibling?.let { it.node.elementType != org.jetbrains.kotlin.lexer.KtTokens.RBRACE } == true
     when {
+      prev != null && newlines(prev) >= 2 && newlines(next) == 1 && followed -> parent.node.removeRange(first.node, next!!.node.treeNext)
       prev != null -> parent.node.removeRange(prev.node, last.node.treeNext)
       next != null -> parent.node.removeRange(first.node, next.node.treeNext)
       else -> {

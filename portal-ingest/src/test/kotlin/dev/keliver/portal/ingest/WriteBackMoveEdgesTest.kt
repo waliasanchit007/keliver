@@ -284,4 +284,53 @@ class WriteBackMoveEdgesTest {
     kotlin.test.assertNull(WriteBack.firstDifference(DocNode.RawCode(Handle(1), "A(\n  1)"), DocNode.RawCode(Handle(2), "A(\n      1)")))
     kotlin.test.assertNotNull(WriteBack.firstDifference(DocNode.RawCode(Handle(1), "A(\"\"\"\n  1\"\"\")"), DocNode.RawCode(Handle(2), "A(\"\"\"\n      1\"\"\")")))
   }
+
+  // ── a moved statement leaves the blank-line structure around it ────────────
+
+  private val sections = """
+    package app.screens
+
+    import androidx.compose.runtime.Composable
+    import dev.keliver.layout.compose.Column
+    import dev.keliver.material.compose.StyledText
+
+    @Composable
+    fun HomeScreen(b: HomeScreenBindings) {
+      Column {
+        // section header
+
+        Legacy(1)
+        StyledText(text = "x")
+
+        StyledText(text = "y")
+      }
+    }
+
+    interface HomeScreenBindings
+  """.trimIndent() + "\n"
+
+  @Test fun aStatementMovedFromUnderASectionHeaderKeepsTheBlankLineBelowIt() {
+    val d = doc(sections)
+    val target = d.apply(DocOp.MoveNode(child(d, 0).handle, d.root.handle, child(d, 1).handle)).doc
+    val out = merge(sections, target, d)
+    assertEquals(
+      sections.replace("    Legacy(1)\n    StyledText(text = \"x\")\n", "    StyledText(text = \"x\")\n    Legacy(1)\n"),
+      out,
+    )
+    assertReingests(target, out)
+  }
+
+  @Test fun aStatementWithBlankLinesOnBothSidesLeavesOne() {
+    val d = doc(sections)
+    val target = d.apply(DocOp.MoveNode(child(d, 2).handle, d.root.handle, null)).doc
+    val out = merge(sections, target, d)
+    // `y` had a blank line above (and the block end below): its place closes up; it goes first.
+    assertEquals(
+      sections
+        .replace("    StyledText(text = \"x\")\n\n    StyledText(text = \"y\")\n", "    StyledText(text = \"x\")\n")
+        .replace("  Column {\n    // section header\n", "  Column {\n    StyledText(text = \"y\")\n    // section header\n"),
+      out,
+    )
+    assertReingests(target, out)
+  }
 }
