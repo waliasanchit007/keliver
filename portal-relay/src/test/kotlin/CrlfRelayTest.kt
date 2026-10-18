@@ -9,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** K3 review nit: a CRLF screen is ingested and written back surgically, staying CRLF. */
+/** K3 review nit: a CRLF screen is ingested and written back surgically (edits and moves), staying CRLF. */
 class CrlfRelayTest {
   private val home = (
     "package app.screens\n\nimport androidx.compose.runtime.Composable\nimport dev.keliver.layout.compose.Column\n" +
@@ -44,13 +44,16 @@ class CrlfRelayTest {
     val ack = svc.submit(OpBatch(svc.doc.version, OpEnvelope("t", 0L), listOf(DocOp.SetProp(top.handle, "text", lit("TOP")))))
     assertTrue(ack.ok, ack.error)
     assertEquals(home.replace("\"top\"", "\"TOP\""), awaitFile(file) { "TOP" in it })
-    // A change the surgical merge cannot make (a reorder) is a full export — CRLF too.
+    // A reorder is a surgical move (the comment stays with its statement) — CRLF too.
     val cond = (svc.doc.root as DocNode.Widget).children[1]
     val ack2 = svc.submit(OpBatch(svc.doc.version, OpEnvelope("t", 0L), listOf(DocOp.MoveNode(cond.handle, svc.doc.root.handle, null))))
     assertTrue(ack2.ok, ack2.error)
-    val out = awaitFile(file) { "// keep me" !in it }
-    assertTrue("// keep me" !in out, "a reorder is written as the full export")
-    assertTrue(out.indexOf("if (b.open)") < out.indexOf("\"TOP\""), out)
+    val out = awaitFile(file) { it.indexOf("if (b.open)") in 0 until it.indexOf("// keep me") }
+    val ifLines = "    if (b.open) {\r\n      StyledText(text = \"o\")\r\n    }\r\n"
+    assertEquals(
+      home.replace("\"top\"", "\"TOP\"").replace(ifLines, "").replace("    // keep me\r\n", ifLines + "    // keep me\r\n"),
+      out,
+    )
     assertTrue(allCrlf(out), out.replace("\r", "\\r"))
   }
 

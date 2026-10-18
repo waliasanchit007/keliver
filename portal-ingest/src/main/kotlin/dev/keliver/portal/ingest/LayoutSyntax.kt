@@ -438,10 +438,10 @@ internal object ModifierChain {
   }
 
   /**
-   * Surgical edit of a chain whose modifier SET is unchanged: only the
-   * arguments whose values changed are rewritten (a Margin argument keeps its
-   * form where it can). Null when the set changed or the text does not
-   * resolve — the caller then replaces the whole chain with [canonical].
+   * Surgical edit of a chain whose modifiers are unchanged in name and order:
+   * only the arguments whose values changed are rewritten (a Margin argument
+   * keeps its form where it can). [canonical] when the set or the order
+   * changed or the text does not resolve (the whole chain is rewritten).
    */
   fun surgical(
     text: String,
@@ -454,7 +454,8 @@ internal object ModifierChain {
     /** Spells a changed condition (the file's bindings parameter); null = the canonical text's. */
     condText: ((Cond) -> String)? = null,
   ): String? {
-    val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.toSet() }
+    // The chain's modifier names in order: a changed set OR a changed order is the canonical chain.
+    val names = { m: Map<String, PropValue> -> m.keys.map { it.substringBefore('.') }.distinct() }
     if (names(old) != names(new)) return canonical
     val source = segments(text)?.let { resolve(it, parentType, tokens, conds) } ?: return canonical
     val canon = canonical?.let { c -> segments(c)?.let { resolve(it, parentType, tokens, conds) } }
