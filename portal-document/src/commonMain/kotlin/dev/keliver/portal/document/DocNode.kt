@@ -147,7 +147,27 @@ public sealed interface DocNode {
 
 @Serializable
 public data class Contract(
-  val fields: Map<String, String> = emptyMap(), // name -> Kotlin type
+  val fields: Map<String, String> = emptyMap(), // name -> Kotlin type ("<unknown>": declared without one)
   val actions: List<String> = emptyList(),
   val actionParams: Map<String, String> = emptyMap(), // action name -> single param Kotlin type
-)
+  /**
+   * K4: why a field [fields] does not list has a type the portal cannot read
+   * in the screen's file — or null (the default, and what JSON without it
+   * decodes as) when the screen's Bindings interface is read whole there, so
+   * an unlisted field is new and contract write-back declares it. Set by
+   * ingest when the screen has no Bindings parameter, takes a type not
+   * declared in its file, or takes an interface extending a type declared in
+   * another file (an unlisted field may be inherited from it, with any type).
+   * The document then refuses a template reading an unlisted field, as it
+   * refuses one reading a field [fields] types `<unknown>`. The file decides
+   * it: [DocOp.ContractEdit] keeps it.
+   */
+  val unlistedFieldsUnknown: String? = null,
+) {
+  /** The three-argument form older callers use (binary compatible). */
+  public constructor(
+    fields: Map<String, String>,
+    actions: List<String>,
+    actionParams: Map<String, String>,
+  ) : this(fields, actions, actionParams, null)
+}

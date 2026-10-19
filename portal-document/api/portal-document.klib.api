@@ -643,7 +643,8 @@ sealed interface dev.keliver.portal.document/PropValue { // dev.keliver.portal.d
 }
 
 final class dev.keliver.portal.document/Contract { // dev.keliver.portal.document/Contract|null[0]
-    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // dev.keliver.portal.document/Contract.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...) // dev.keliver.portal.document/Contract.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>) // dev.keliver.portal.document/Contract.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
     final val actionParams // dev.keliver.portal.document/Contract.actionParams|{}actionParams[0]
         final fun <get-actionParams>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.actionParams.<get-actionParams>|<get-actionParams>(){}[0]
@@ -651,11 +652,14 @@ final class dev.keliver.portal.document/Contract { // dev.keliver.portal.documen
         final fun <get-actions>(): kotlin.collections/List<kotlin/String> // dev.keliver.portal.document/Contract.actions.<get-actions>|<get-actions>(){}[0]
     final val fields // dev.keliver.portal.document/Contract.fields|{}fields[0]
         final fun <get-fields>(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.fields.<get-fields>|<get-fields>(){}[0]
+    final val unlistedFieldsUnknown // dev.keliver.portal.document/Contract.unlistedFieldsUnknown|{}unlistedFieldsUnknown[0]
+        final fun <get-unlistedFieldsUnknown>(): kotlin/String? // dev.keliver.portal.document/Contract.unlistedFieldsUnknown.<get-unlistedFieldsUnknown>|<get-unlistedFieldsUnknown>(){}[0]
 
     final fun component1(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.component1|component1(){}[0]
     final fun component2(): kotlin.collections/List<kotlin/String> // dev.keliver.portal.document/Contract.component2|component2(){}[0]
     final fun component3(): kotlin.collections/Map<kotlin/String, kotlin/String> // dev.keliver.portal.document/Contract.component3|component3(){}[0]
-    final fun copy(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): dev.keliver.portal.document/Contract // dev.keliver.portal.document/Contract.copy|copy(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    final fun component4(): kotlin/String? // dev.keliver.portal.document/Contract.component4|component4(){}[0]
+    final fun copy(kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin/String? = ...): dev.keliver.portal.document/Contract // dev.keliver.portal.document/Contract.copy|copy(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/Contract.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.portal.document/Contract.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.portal.document/Contract.toString|toString(){}[0]
