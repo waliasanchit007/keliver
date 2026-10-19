@@ -102,7 +102,8 @@ class TemplateTypeReadingTest {
 
   @Test fun withoutTheBindingsInterfaceInTheFileATemplateReadsNoBinding() {
     // The interface is the one the screen takes: another one in the file is not it (K4 last review, case C).
-    for ((tail, param) in listOf(ROW_INTERFACE to "SBindings", BINDINGS + "\n" + ROW_INTERFACE to "SModel")) {
+    // A `…Bindings` name not declared here names another interface: the one here is not taken in its place.
+    for ((tail, param) in listOf(ROW_INTERFACE to "SBindings", BINDINGS + "\n" + ROW_INTERFACE to "OtherBindings")) {
       val src = screen("StyledText(text = \"a §{b.name}\")", tail = tail, param = param)
       assertIs<DocNode.RawCode>(first(src), param)
       assertTrue(rec(src).rawReasons.any { "the screen takes `$param`, which is not declared in this file" in it && "b.name" in it }, rec(src).rawReasons.toString())
@@ -228,6 +229,56 @@ class TemplateTypeReadingTest {
     assertEquals("String", r.contract.fields["name"])
     assertEquals(null, r.contract.unlistedFieldsUnknown)
     assertEquals(null, templateVerdict(src, "name"))
+  }
+
+  // ── K4 final review: the parameter's type as Kotlin reads it, not its text. ──
+
+  private fun why(param: String, tail: String): String? = rec(screen(stmt, tail = tail, param = param)).contract.unlistedFieldsUnknown
+  private fun ifaceOf(param: String, tail: String): String? = rec(screen(stmt, tail = tail, param = param)).bindingsInterface?.name
+
+  @Test fun typealiasesAnnotationsAndNestingResolveToTheInterface() {
+    val decoy = "interface AOtherBindings {\n  val name: Double\n}\n"
+    val tail = decoy + BINDINGS + "\n" + ROW_INTERFACE
+    for (param in listOf("SBindings", "@Suppress(\"x\") SBindings", "@Suppress(\"x\") SBindings?", "app.screens.SBindings", "SBindings<Int>")) {
+      assertEquals("SBindings", ifaceOf(param, tail), param)
+      assertEquals(null, why(param, tail), param)
+    }
+    assertEquals("SBindings", ifaceOf("HB", "typealias HB = SBindings\n$tail"))
+    assertEquals("SBindings", ifaceOf("HB?", "typealias HB = HB2\ntypealias HB2 = SBindings?\n$tail"))
+    val aliased = screen(stmt, tail = tail, param = "HB").replace("import androidx", "import app.screens.SBindings as HB\nimport androidx")
+    assertEquals("SBindings", rec(aliased).bindingsInterface?.name, "an import alias")
+    val nested = decoy + "object Screens {\n  interface SBindings {\n    val name: String\n  }\n}\n" + ROW_INTERFACE
+    assertEquals("SBindings", ifaceOf("Screens.SBindings", nested))
+    assertEquals(mapOf("name" to "String"), rec(screen(stmt, tail = nested, param = "Screens.SBindings")).contract.fields)
+    assertEquals(null, why("Screens.SBindings", nested))
+  }
+
+  @Test fun whatTheParameterNamesIsSaidAccurately() {
+    val nested = "object Screens {\n  interface Other\n}\n" + ROW_INTERFACE
+    val w1 = assertNotNull(why("Screens.SBindings", nested))
+    assertTrue("`Screens.SBindings`" in w1 && "`Screens` in this file declares no `SBindings`" in w1 && "not declared in this file" !in w1, w1)
+    val w2 = assertNotNull(why("@Suppress(\"x\") SBindings?", ROW_INTERFACE))
+    assertEquals("the screen takes `SBindings`, which is not declared in this file", w2)
+    val w3 = assertNotNull(why("HB", "typealias HB = () -> Unit\n" + BINDINGS + ROW_INTERFACE))
+    assertTrue("`HB`" in w3 && "not an interface" in w3, w3)
+    val w4 = assertNotNull(why("HB", "typealias HB = other.SBindings\n" + ROW_INTERFACE))
+    assertTrue("`HB`" in w4 && "typealias of `other.SBindings`" in w4 && "not declared in this file" in w4, w4)
+    val w5 = assertNotNull(why("HB", "typealias HB = HB2\ntypealias HB2 = HB\n" + BINDINGS + ROW_INTERFACE))
+    assertTrue("cycle" in w5, w5)
+  }
+
+  @Test fun aNameNotDeclaredHereFallsBackToTheOnlyBindingsInterface() {
+    // `SModel` may be a typealias in another file: with one `…Bindings` interface here it is that one (the 0.3.x rule).
+    assertEquals("SBindings", ifaceOf("SModel", BINDINGS + ROW_INTERFACE))
+    assertEquals(null, why("SModel", BINDINGS + ROW_INTERFACE))
+    // Two of them: ambiguous — none is taken, and the reason says so.
+    val two = "interface AOtherBindings {\n  val name: Double\n}\n" + BINDINGS + ROW_INTERFACE
+    assertEquals(null, ifaceOf("SModel", two))
+    val w = assertNotNull(why("SModel", two))
+    assertTrue("`SModel`" in w && "not declared in this file" in w && "`AOtherBindings`" in w && "`SBindings`" in w, w)
+    // A `…Bindings` name, or a qualified one from another package, names an interface elsewhere: no fallback.
+    assertEquals(null, ifaceOf("OtherBindings", BINDINGS + ROW_INTERFACE))
+    assertEquals(null, ifaceOf("other.SModel", BINDINGS + ROW_INTERFACE))
   }
 
   @Test fun aScreenWithoutAParameterSaysSo() {
