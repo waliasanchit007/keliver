@@ -294,6 +294,9 @@ class DocumentService(
    *
    * The debounced write is unchanged: it plans again when it runs (the file
    * may have changed in between) — those refusals and I/O failures remain.
+   * Its plan runs outside the lock, so it may overlap this one: both only
+   * read (each parses its own text), and the writer writes under the lock
+   * after checking the file is still what it planned against.
    */
   private fun writeBackRefusal(after: UiDocument): String? {
     if (sameDocument(after, doc) || fileDoc?.let { sameDocument(after, it) } == true) return null
@@ -386,6 +389,8 @@ class DocumentService(
    *    chosen trade against a stack wedged behind it.)
    *  - DROPPED too when write-back would refuse the step (K4 §7a preflight:
    *    [writeBackRefusal]).
+   * A dropped step's change is not reversed: the next step of [from] applies
+   * on top of it (an older undo over a change that was not undone).
    */
   private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: () -> ArrayDeque<List<DocOp>>): OpAck {
     val inverses = from?.lastOrNull()

@@ -821,7 +821,12 @@ ways, and the editor is told which:
    code, which only an edit of the file changes — and that edit, read,
    clears both stacks; a component or token changing back might have let
    it apply later, but a kept step that never applies would wedge the
-   stack behind it). This covers what the document cannot check: a template
+   stack behind it). Dropping a step does not reverse its change: the
+   change a dropped undo step would have undone stays in the document, and
+   the next undo applies the older step below it on top of that change
+   (the tree must still take it, or that step is dropped too); likewise a
+   redo after a dropped redo step re-applies a later change without the
+   dropped one. This covers what the document cannot check: a template
    reading a list item's field the file types `Double` or nullable (the
    contract carries no item types), a plain binding set in a screen
    function that takes no bindings parameter, and any reason the writer
@@ -850,10 +855,32 @@ ways, and the editor is told which:
      — never an error out of the request.
 
    The write itself is unchanged: it plans again when it runs (400 ms
-   later; the file may have changed). Cost: one plan per edit — 6.0 ms
-   median, 6.7 ms p95, 8.4 ms max on this repo's largest screen
-   (`layout_evidence.kt`, 230 lines, 49 nodes), about 1.5 ms on the
-   reference app's screens, while the edit holds the screen's lock.
+   later; the file may have changed). Cost, while the edit holds the
+   screen's lock: one plan for an accepted edit; two for a refused one (the
+   edit's, then the document's as it is, to tell whether the edit is why);
+   a third, against the last-read text, only when the document's plan
+   refuses too and the file on disk is not that text. Measured as a whole
+   dry run (gate, apply and plans; 200 runs after 30 warm-up) inside the
+   full `:portal-relay:test` suite while the ingest, MCP and codegen
+   suites ran in parallel: on this repo's largest screen
+   (`layout_evidence.kt`, 230 lines, 49 nodes) an accepted edit 6.6 ms
+   median, 7.9 ms p95, 9.7 ms max, and a refused one (two plans) 9.0 ms
+   median, 10.6 ms p95, 12.8 ms max; on the reference app's screens
+   (`item.kt`, `inventory.kt`) an accepted edit 1.5 ms median, 2.3 ms
+   p95, 3.8 ms max.
+
+   Two plans for one screen may run at once: the edit's plan runs under
+   the screen's lock, the debounced writer's outside it (it snapshots the
+   document, base and base text under the lock, plans, then takes the lock
+   again to write). That is safe because a plan has no effect: it reads
+   the file once into its own text, parses its own PSI file from it (the
+   shared PSI environment only creates files, as it already does for
+   several screens at once), and decides from its inputs alone. Only the
+   writer writes, and only under the lock, after checking that the file
+   is still the text it planned against and that nothing read it since its
+   snapshot. A write planned before the edit writes the document as it was
+   at its snapshot (or is dropped for a re-read), and the edit schedules a
+   write of its own, which plans again.
 
    **What is still refused at write time** (`refused`) is what the plan at
    the edit could not see: the file changed between the edit and its write

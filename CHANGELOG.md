@@ -212,7 +212,10 @@
   constructor and `copy`, with their defaulted forms (`copy$default`, the synthetic defaulted
   constructor), are kept as hidden declarations: JVM code compiled against 0.3.x still links (the
   old `copy` keeps `unlistedFieldsUnknown`), Kotlin source resolves to the new ones, and Java
-  source, which sees the old ones as synthetic, uses the four-argument forms.
+  source, which sees the old ones as synthetic, uses the four-argument forms. The klib ABI dump
+  (`portal-document.klib.api`) changes additively too: the four-argument constructor and `copy`,
+  `component4` and `unlistedFieldsUnknown` are added; the three-argument constructor and `copy`
+  are still there.
 
 ### Fixed
 - **portal-relay:** an edit the document accepted but write-back then refused blocked every later
@@ -222,8 +225,11 @@
   it is made — the writer's own plan, against the file as it is — and refuses the edit (an undo or
   redo step is dropped) with the reason and "make this change in code". The write itself still
   plans again: a file that changes between the edit and its write, or an I/O failure, is still
-  reported as a write-back status. Cost: one plan per edit, about 6 ms on this repo's largest
-  screen (SCREEN_ARCHITECTURE §7a).
+  reported as a write-back status. An edit made while the file on disk is not the text last read
+  (the author mid-edit, the file not a screen) must also be writable against that text: the author
+  may save it back unchanged, which the watcher skips. Cost: one plan per accepted edit (about
+  6.6 ms median on this repo's largest screen), two per refused one (about 9 ms), measured under
+  the full test load (SCREEN_ARCHITECTURE §7a).
 - **portal-ingest:** a statement inserted after the last statement of an `if` block was written
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
 - **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept
