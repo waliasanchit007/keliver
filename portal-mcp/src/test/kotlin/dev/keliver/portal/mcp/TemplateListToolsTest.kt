@@ -18,6 +18,7 @@ class TemplateListToolsTest {
     assertTrue("PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf>" in catalog, catalog)
     assertTrue("Template = {parts}" in catalog, catalog)
     assertTrue("ListOf = {tag, items}" in catalog, catalog)
+    assertTrue("unlistedFieldsUnknown" in catalog, catalog)
     assertTrue("Template/ListOf" in Tools.registry.single { it.name == "get_document" }.descriptor.toString())
   }
 
