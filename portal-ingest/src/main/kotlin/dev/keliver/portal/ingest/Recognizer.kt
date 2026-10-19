@@ -136,15 +136,17 @@ object Recognizer {
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
     val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
-    // K4: the contract is the interface the screen TAKES (its parameter's type, `?`
-    // stripped), declared in this file — never another one the file declares first.
-    val ifaceClass = screenInterface(fn, file)
+    // K4: the contract is the interface the screen TAKES — its parameter's type as
+    // Kotlin reads it (through a same-file typealias, past an annotation or `?`, into a
+    // nested declaration; [screenBindings]) — never another one the file declares first.
+    val target = screenBindings(fn, file)
+    val ifaceClass = target.iface
     // A template reads a field only of a type it can read — in that interface, with
     // its same-file supertypes; a field it does not list is unknown when the interface
     // is not here or extends one declared elsewhere ([unknownWhy] says which).
     val decls = typeDecls(file)
     val ifaceTypes = ifaceClass?.let { memberTypes(it, decls) }
-    val unknownWhy = unlistedFieldsWhy(fn, file, ifaceClass, ifaceTypes)
+    val unknownWhy = unlistedFieldsWhy(target, ifaceTypes)
     val screenCtx = NameCtx.Screen(
       bindingsParam,
       fieldTypes = ifaceTypes?.types.orEmpty(),

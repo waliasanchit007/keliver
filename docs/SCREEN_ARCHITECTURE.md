@@ -607,11 +607,18 @@ fun SectionCard(content: @Composable () -> Unit) {
     2^53 included). Format such a value in the presenter (a `String` field
     the presenter fills) to show it.
   - *Where ingest reads a reference's type.* A screen field's in the
-    Bindings interface the screen takes — the interface its parameter's type
-    names (`?`, type arguments and a package qualifier stripped; never
-    another `…Bindings` interface the file declares first, here or in
-    contract write-back) — declared in the same file, with the
-    members of its supertypes declared in that file; `kotlin.String`,
+    Bindings interface the screen takes, declared in the same file, with
+    the members of its supertypes declared in that file. That interface is
+    the one its parameter's type names as Kotlin reads it — past an
+    annotation, `?` and type arguments, through a same-file `typealias`
+    (chained too) or an import alias, into a nested declaration
+    (`Outer.HomeBindings`), the file's own package qualifier dropped —
+    never another `…Bindings` interface the file declares first, here or
+    in contract write-back. A plain name the file does not declare (perhaps
+    a typealias in another file) takes the file's only `…Bindings`
+    interface, as 0.3.x did; not when the name is itself a `…Bindings` one,
+    is qualified by another package, or the file declares several (the
+    contract's reason then says which). `kotlin.String`,
     `kotlin.Int`, `kotlin.Long` and `kotlin.Boolean` are those types. An
     item field's (`row.price`) in the Repeat's element type (`List<Row>`)
     when `Row` — an interface, or a class with `val`/`var` constructor

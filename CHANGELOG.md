@@ -48,7 +48,9 @@
   the device (Kotlin/JS) prints `1.0` as `1` and a null as `null`, the preview `1.0` and nothing,
   so such a call stays RawCode and the document, the relay and the editor refuse one. Ingest reads
   a screen field's type in the screen's Bindings interface in the same file (and its same-file
-  supertypes) — the interface the screen's parameter names (`b: X` or `b: X?`), never the first
+  supertypes) — the interface the screen's parameter type names as Kotlin reads it (`b: X`, `b: X?`,
+  `b: @Ann X`, a same-file `typealias` or an import alias of it, `b: Outer.X` nested; a plain name
+  the file does not declare takes the file's only `…Bindings` interface, as before), never the first
   `…Bindings` interface in the file, in ingest and in contract write-back alike — and an item
   field's in its item type when declared in the same file; a type it cannot read (a property
   without a type; any field the interface does not declare in the file when the screen has no

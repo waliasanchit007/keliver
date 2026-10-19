@@ -1,9 +1,15 @@
 package dev.keliver.portal.ingest
 
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtTypeElement
+import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtUserType
 
 /**
  * K4: the type text of a reference whose declared type ingest cannot read —
@@ -72,39 +78,131 @@ internal fun screenFunction(file: KtFile): KtNamedFunction? = file.declarations.
   .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
 
 /**
- * The simple name of the type the screen [fn] takes as its bindings
- * parameter (its first) — `?`, type arguments and a package qualifier
- * stripped (`app.SBindings?` is `SBindings`); null without a parameter.
+ * K4: what the screen's bindings parameter (its first) names, read from its
+ * PSI type — never its text: annotations, modifiers, `?` and type arguments
+ * are not part of the name; a same-file typealias (chained too) and an
+ * import alias are followed to their target; `Outer.XBindings` is the
+ * interface nested in `Outer` declared in this file; a qualifier that is the
+ * file's own package is dropped. [iface] is the interface (null when there is
+ * none to read), [why] says why when it is null.
+ *
+ * A plain name this file does not declare may be a typealias declared in
+ * another file: the screen then takes the file's ONLY `…Bindings` interface
+ * (the 0.3.x rule) — unless the name itself is a `…Bindings` one or is
+ * qualified by another package (it names an interface declared elsewhere) or
+ * the file declares more than one (ambiguous: none is taken).
  */
-internal fun bindingsTypeName(fn: KtNamedFunction): String? =
-  fn.valueParameters.firstOrNull()?.typeReference?.text?.replace(" ", "")
-    ?.removeSuffix("?")?.substringBefore('<')?.substringAfterLast('.')?.takeIf { it.isNotEmpty() }
+internal class ScreenBindings(val iface: KtClass?, val why: String?)
 
-/**
- * K4: the Bindings interface the screen [fn] takes — the interface its
- * parameter's type names, declared in [file]; never another interface the
- * file declares first. Null when there is no parameter or that type is not
- * an interface declared there.
- */
-internal fun screenInterface(fn: KtNamedFunction, file: KtFile): KtClass? {
-  val name = bindingsTypeName(fn) ?: return null
-  return file.declarations.filterIsInstance<KtClass>().firstOrNull { it.isInterface() && it.name == name }
+/** What a type reference names in its file. */
+private sealed interface Named {
+  /** [decl], declared in the file; [shown] is how the parameter writes it. */
+  class InFile(val decl: KtClassOrObject, val shown: String) : Named
+  /** Not declared in the file: [shown] and [detail] (the reason's tail); [simple] is its last segment. */
+  class Elsewhere(val shown: String, val simple: String, val qualified: Boolean, val detail: String) : Named
+  /** Not a name ingest reads ([detail] says what it is instead). */
+  class Unreadable(val shown: String, val detail: String) : Named
+}
+
+internal fun screenBindings(fn: KtNamedFunction, file: KtFile): ScreenBindings {
+  val param = fn.valueParameters.firstOrNull() ?: return ScreenBindings(null, "the screen has no Bindings parameter")
+  val named = nameOf(param.typeReference, file, HashSet(), via = null)
+  return when (named) {
+    is Named.InFile -> {
+      val cls = named.decl as? KtClass
+      if (cls != null && cls.isInterface()) ScreenBindings(cls, null)
+      else ScreenBindings(null, "the screen takes ${named.shown}, which this file declares, but not as an interface")
+    }
+    is Named.Elsewhere -> {
+      val all = file.declarations.filterIsInstance<KtClass>().filter { it.isInterface() && it.name?.endsWith("Bindings") == true }
+      val namesElsewhere = named.qualified || named.simple.endsWith("Bindings")
+      when {
+        !namesElsewhere && all.size == 1 -> ScreenBindings(all.single(), null)
+        !namesElsewhere && all.size > 1 -> ScreenBindings(
+          null,
+          "the screen takes ${named.shown}, ${named.detail}, and this file declares more than one …Bindings interface " +
+            "(${all.joinToString { "`${it.name}`" }}) — none is taken for it",
+        )
+        else -> ScreenBindings(null, "the screen takes ${named.shown}, ${named.detail}")
+      }
+    }
+    is Named.Unreadable -> ScreenBindings(null, "the screen takes ${named.shown}, ${named.detail}")
+  }
+}
+
+/** K4: the Bindings interface the screen [fn] takes ([screenBindings]); null when there is none to read. */
+internal fun screenInterface(fn: KtNamedFunction, file: KtFile): KtClass? = screenBindings(fn, file).iface
+
+/** The segments of the user type [ref] names (`a.B.C` is [a, B, C]) — past annotations, modifiers, `?` and type arguments; null when it names none. */
+private fun segmentsOf(ref: KtTypeReference?): List<String>? {
+  var el: KtTypeElement? = ref?.typeElement
+  while (el is KtNullableType) el = el.innerType
+  var user: KtUserType? = el as? KtUserType ?: return null
+  val out = ArrayList<String>()
+  while (user != null) {
+    out += user.referencedName ?: return null
+    user = user.qualifier
+  }
+  return out.asReversed()
+}
+
+private fun nameOf(ref: KtTypeReference?, file: KtFile, aliases: MutableSet<String>, via: String?): Named {
+  val segs = segmentsOf(ref)
+  val text = ref?.typeElement?.text ?: ref?.text ?: "?"
+  if (segs == null) {
+    return if (via == null) Named.Unreadable("`$text`", "which is not an interface")
+    else Named.Unreadable(via, "a typealias of `$text`, which is not an interface")
+  }
+  val dotted = segs.joinToString(".")
+  val shown = via ?: "`$dotted`"
+  val aliasNote = if (via == null) "which" else "a typealias of `$dotted`, which"
+  val top = file.declarations.filterIsInstance<KtClassOrObject>().asReversed().associateBy { it.name } // the first of a name wins
+  val pkg = file.packageFqName.asString()
+  val path = when {
+    segs.size > 1 && segs.dropLast(1).joinToString(".") == pkg -> listOf(segs.last())
+    else -> segs
+  }
+  if (path.size == 1) {
+    val name = path.single()
+    top[name]?.let { return Named.InFile(it, shown) }
+    file.declarations.filterIsInstance<KtTypeAlias>().firstOrNull { it.name == name }?.let { alias ->
+      if (!aliases.add(name)) return Named.Unreadable(via ?: "`$name`", "a typealias cycle through `$name`")
+      return nameOf(alias.getTypeReference(), file, aliases, via ?: "`$name`")
+    }
+    file.importDirectives.firstOrNull { it.aliasName == name }?.importedFqName?.let { fq ->
+      val target = fq.asString()
+      return if (fq.parent().asString() == pkg) {
+        top[fq.shortName().asString()]?.let { Named.InFile(it, shown) }
+          ?: Named.Elsewhere(shown, fq.shortName().asString(), qualified = false, detail = "an import alias of `$target`, which is not declared in this file")
+      } else {
+        Named.Elsewhere(shown, fq.shortName().asString(), qualified = true, detail = "an import alias of `$target`, declared in another package")
+      }
+    }
+    return Named.Elsewhere(shown, name, qualified = false, detail = "$aliasNote is not declared in this file")
+  }
+  // A qualified name: a declaration nested in one this file declares, else one declared elsewhere.
+  val root = top[path.first()]
+    ?: return Named.Elsewhere(shown, path.last(), qualified = true, detail = "$aliasNote is not declared in this file")
+  var cur: KtClassOrObject = root
+  for (i in 1 until path.size) {
+    cur = cur.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.name == path[i] }
+      ?: return Named.Elsewhere(
+        shown, path.last(), qualified = true,
+        detail = "$aliasNote is not found: `${path.take(i).joinToString(".")}` in this file declares no `${path[i]}`",
+      )
+  }
+  return Named.InFile(cur, shown)
 }
 
 /**
  * K4: why a screen field the screen's interface does not list has a type
  * ingest cannot read (the contract's
  * [dev.keliver.portal.document.Contract.unlistedFieldsUnknown]) — null when
- * the interface [iface] the screen [fn] takes is read whole in [file] (an
+ * the interface the screen takes ([target]) is read whole in its file (an
  * unlisted field is new: contract write-back declares it).
  */
-internal fun unlistedFieldsWhy(fn: KtNamedFunction, file: KtFile, iface: KtClass?, types: MemberTypes?): String? {
-  val name = bindingsTypeName(fn) ?: return "the screen has no Bindings parameter"
-  if (iface == null) {
-    val declared = file.declarations.filterIsInstance<KtClass>().any { it.name == name }
-    return if (declared) "the screen takes `$name`, which this file declares, but not as an interface"
-    else "the screen takes `$name`, which is not declared in this file"
-  }
+internal fun unlistedFieldsWhy(target: ScreenBindings, types: MemberTypes?): String? {
+  val iface = target.iface ?: return target.why
   val outside = types?.outside ?: return null
   return "`${iface.name}` extends `$outside`, declared in another file — a field it does not declare here may be inherited, with any type"
 }

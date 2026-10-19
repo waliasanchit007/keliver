@@ -442,8 +442,10 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   (RawCode), the editor offers no Double token in a template, and the server
   refuses one. Format such a value in the presenter into a `String` field.
 - So ingest must read the type: a screen field's in the Bindings interface
-  the screen TAKES — the one its parameter's type names (`b: HomeBindings`
-  or `b: HomeBindings?`), declared in the same file, with its supertypes
+  the screen TAKES — the one its parameter's type names (`b: HomeBindings`,
+  `b: HomeBindings?`, `b: @Ann HomeBindings`, `b: HB` with a same-file
+  `typealias HB = HomeBindings`, `b: Outer.HomeBindings`; a name the file
+  does not declare takes its only `…Bindings` interface), declared in the same file, with its supertypes
   declared there; never another `…Bindings` interface the file declares
   first — and an item field's in its item type when that is declared in the
   same file (`interface Row { val price: Double }` keeps `"${row.price}"`
