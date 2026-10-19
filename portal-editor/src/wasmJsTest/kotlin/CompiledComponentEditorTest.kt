@@ -1,0 +1,161 @@
+import dev.keliver.material.modifier.SelectionTag
+import dev.keliver.material.testing.KeliverMaterialTester
+import dev.keliver.material.testing.StyledBoxValue
+import dev.keliver.material.testing.StyledTextValue
+import dev.keliver.portal.Bind
+import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.EmptyComponentRegistry
+import dev.keliver.portal.MapComponentRegistry
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropSpec
+import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.render.AppPreviewEntry
+import dev.keliver.portal.render.CompiledComponent
+import dev.keliver.portal.render.PreviewBindings
+import dev.keliver.portal.render.RenderNode
+import dev.keliver.portal.render.ScreenPreview
+import dev.keliver.portal.render.compiledComponentProbe
+import dev.keliver.portal.render.componentPreview
+import dev.keliver.portal.render.componentPreviewInScope
+import dev.keliver.portal.render.fixture.ParityCompiledComponents
+import dev.keliver.portal.render.fixture.ParityOpaqueInitials
+import dev.keliver.testing.WidgetValue
+import dev.keliver.testing.flatten
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
+
+/**
+ * Compiled component preview through the EDITOR's own hook
+ * (installComponentPreview, as runPortalEditor installs it): the failure probe,
+ * selection tagging, nesting inside a transparent component, and precedence.
+ */
+class CompiledComponentEditorTest {
+  @AfterTest fun reset() {
+    PreviewBindings.mocks.clear()
+    componentPreviewInScope = null
+    componentPreview = null
+    compiledComponentProbe = null
+    setEditorComponents(EmptyComponentRegistry)
+  }
+
+  private fun entry(compiled: Map<String, CompiledComponent> = ParityCompiledComponents) = object : AppPreviewEntry {
+    override val screens: Map<String, ScreenPreview> = emptyMap()
+    override val compiledComponents = compiled
+  }
+
+  private fun opaque(name: String, vararg props: String) =
+    ComponentSpec(name, props.map { PropSpec(it, PropKind.Text, it) }, emptyList(), emptyMap(), transparent = false, diagnostic = "body contains code outside the portal grammar (opaque)")
+
+  private fun texts(values: List<WidgetValue>) = values.filterIsInstance<StyledTextValue>().map { it.text }
+
+  private fun tags(v: WidgetValue): List<Int> = buildList { v.modifier.forEach { if (it is SelectionTag) add(it.handle) } }
+
+  @Test fun theProbeIsInstalledOnlyForAnEntryWithAdapters() {
+    installComponentPreview(entry(emptyMap()))
+    assertNull(compiledComponentProbe)
+    installComponentPreview(entry())
+    assertSame(DiscardingCompiledProbe, compiledComponentProbe)
+  }
+
+  /** (b) a compiled component that THROWS while composing → its placeholder; the canvas keeps rendering. */
+  @Test fun aComponentThatThrowsWhileComposingFallsBackAndTheCanvasStillRenders() = runTest {
+    setEditorComponents(MapComponentRegistry(listOf(opaque("ParityOpaqueInitials", "name"))))
+    installComponentPreview(entry())
+    val values = KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(
+          selectionTagged(
+            WidgetNode(
+              "Column", emptyMap(),
+              listOf(
+                WidgetNode("ParityOpaqueInitials", mapOf("name" to ""), id = 3),
+                WidgetNode("ParityOpaqueInitials", mapOf("name" to "ada"), id = 4),
+                WidgetNode("StyledText", mapOf("text" to "after"), id = 5),
+              ),
+              id = 1,
+            ),
+          ),
+        )
+      }
+    }.flatten().toList()
+    val t = texts(values)
+    assertTrue(t.any { it == "▢ ParityOpaqueInitials" }, "placeholder title: $t")
+    assertTrue(t.any { it.startsWith("compiled preview failed: NoSuchElementException") }, "placeholder reason: $t")
+    assertTrue("A" in t, "the passing instance renders compiled: $t")
+    assertTrue("after" in t, "the canvas still renders: $t")
+    // The placeholder is the instance's: selecting it selects the instance.
+    val placeholderBox = values.filterIsInstance<StyledBoxValue>().single()
+    assertEquals(listOf(3), tags(placeholderBox))
+  }
+
+  @Test fun theDiscardingProbeReportsWhatTheCallThrowsAndNothingWhenItComposes() {
+    assertTrue(DiscardingCompiledProbe.failureOf { ParityOpaqueInitials(name = "") } is NoSuchElementException)
+    assertNull(DiscardingCompiledProbe.failureOf { ParityOpaqueInitials(name = "ada") })
+  }
+
+  /** (c) one selectable unit: the compiled root carries the instance handle; slot children keep their own. */
+  @Test fun theInstanceIsOneSelectableUnitAndItsSlotChildrenStaySelectable() = runTest {
+    setEditorComponents(MapComponentRegistry(listOf(opaque("ParityOpaqueFrame", "title"))))
+    installComponentPreview(entry())
+    val values = KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(
+          selectionTagged(
+            WidgetNode("ParityOpaqueFrame", mapOf("title" to "Plan"), listOf(WidgetNode("StyledText", mapOf("text" to "child"), id = 8)), id = 7),
+          ),
+        )
+      }
+    }.flatten().toList()
+    val byText = values.filterIsInstance<StyledTextValue>().associate { it.text to tags(it) }
+    assertEquals(listOf(7), tags(values.first()), "compiled root: $values")
+    assertEquals(emptyList(), byText.getValue("Plan"), "a compiled internal is not separately selectable")
+    assertEquals(listOf(8), byText.getValue("child"), "slot content stays an ordinary document node")
+  }
+
+  /** An opaque component used INSIDE a transparent one draws compiled, tagged with the outer instance. */
+  @Test fun anOpaqueComponentNestedInATransparentOneDrawsCompiled() = runTest {
+    val outer = ComponentSpec(
+      "Outer", listOf(PropSpec("title", PropKind.Text, "Title")), emptyList(), mapOf("title" to "String"),
+      body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("ParityOpaqueBadge", mapOf("label" to Bind("title"), "count" to 1), id = 101)), id = 100),
+      dependencies = setOf("ParityOpaqueBadge"),
+    )
+    setEditorComponents(MapComponentRegistry(listOf(outer, opaque("ParityOpaqueBadge", "label"))))
+    installComponentPreview(entry())
+    val values = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(selectionTagged(WidgetNode("Outer", mapOf("title" to "Funds"), id = 5))) }
+    }.flatten().toList()
+    assertTrue("FUNDS" in texts(values), "the compiled body ran (uppercase): ${texts(values)}")
+    val box = values.filterIsInstance<StyledBoxValue>().single()
+    assertEquals(listOf(5), tags(box), "nested compiled root carries the OUTER instance handle")
+
+    // Without an adapter the nested instance stays a placeholder, as before.
+    installComponentPreview(entry(emptyMap()))
+    val before = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(selectionTagged(WidgetNode("Outer", mapOf("title" to "Funds"), id = 5))) }
+    }.flatten().toList()
+    assertTrue(texts(before).any { it == "▢ ParityOpaqueBadge" }, "${texts(before)}")
+  }
+
+  /** Precedence: a TRANSPARENT component keeps its editable grammar view even when an adapter exists. */
+  @Test fun aTransparentComponentIsExpandedNotCompiled() = runTest {
+    val leaf = ComponentSpec(
+      "ParityLeaf", listOf(PropSpec("label", PropKind.Text, "Label")), emptyList(), mapOf("label" to "String"),
+      body = WidgetNode("StyledText", mapOf("text" to Bind("label"), "fontSize" to 99), id = 200),
+    )
+    setEditorComponents(MapComponentRegistry(listOf(leaf)))
+    var called = 0
+    val spy = ParityCompiledComponents + ("ParityLeaf" to CompiledComponent { call -> called++; ParityCompiledComponents.getValue("ParityLeaf").bind(call) })
+    installComponentPreview(entry(spy))
+    val values = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(selectionTagged(WidgetNode("ParityLeaf", mapOf("label" to "x"), id = 9))) }
+    }.flatten().toList()
+    assertEquals(0, called)
+    // The registry's body (fontSize 99) is what drew — not the compiled function.
+    assertEquals(99, values.filterIsInstance<StyledTextValue>().single().fontSize)
+  }
+}

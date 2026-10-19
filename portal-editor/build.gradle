@@ -49,8 +49,13 @@ kotlin {
       }
     }
     wasmJsTest {
+      // Compiled component preview: the opaque fixture components and their
+      // generated adapters (portal-ingest CompiledAdapterGeneratorTest keeps
+      // ParityCompiledComponents.kt current) run through the editor's hook.
+      kotlin.srcDir(rootProject.file('portal-parity-fixtures/kotlin'))
       dependencies {
         implementation libs.kotlin.test
+        implementation projects.keliverMaterialTesting
         // U19 regression drives a real composition on a controlled clock.
         implementation libs.kotlinx.coroutines.test
       }
