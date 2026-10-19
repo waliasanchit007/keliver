@@ -17,8 +17,10 @@ import kotlin.test.assertTrue
 /**
  * K3 last review round, through the relay: write-back never silently
  * destroys author code. A change that cannot be written without losing code
- * is refused — the file is untouched — and the refusal (or any write
- * failure) is the screen's write-back status, sent on the change stream the
+ * is refused — the file is untouched. K4 §7a: when the relay can tell at the
+ * edit (it plans the write then), the edit itself is refused; when only the
+ * write can (the file changed in between), or the write fails, the refusal
+ * or failure is the screen's write-back status, sent on the change stream the
  * editor listens to. A RawCode replacement that could not stand as that one
  * statement is refused as an op, up front.
  */
@@ -122,13 +124,52 @@ class WriteBackStatusRelayTest {
     )
   }
 
-  @Test fun aChangeThatWouldLoseCodeIsRefusedAndTheFileIsUntouched() {
+  /**
+   * K4 §7a preflight: a change write-back would refuse is refused when it is
+   * made — the document never takes it, so nothing blocks the next edit.
+   */
+  @Test fun aChangeThatWouldLoseCodeIsRefusedAsAnOp() {
     val f = fixture()
     // `b` shares a line with `a`: it cannot be cut on its own, and a full export would drop the comment, RawCode and helper.
     val (_, a, b) = f.svc.children()
+    val move = DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)
+    val dry = f.svc.dryRun(f.svc.batch(move))
+    val ack = f.svc.submit(f.svc.batch(move))
+    assertFalse(ack.ok)
+    assertEquals(dry.error, ack.error)
+    assertTrue("without losing code" in ack.error!! && "home.kt" in ack.error!! && "make this change in code" in ack.error!!, ack.error)
+    assertEquals(0L, f.svc.doc.version)
+    assertEquals(listOf(a.handle, b.handle), f.svc.children().drop(1).map { it.handle })
+    // Nothing is wedged: the next edit is written.
+    val next = f.svc.submit(f.svc.batch(DocOp.SetProp(a.handle, "text", lit("A"))))
+    assertTrue(next.ok, next.error)
+    assertEquals("surgical", awaitStatus(f.svc, next.version).outcome)
+    assertEquals(home.replace("\"a\"", "\"A\""), f.file.readText())
+  }
+
+  /** [home] with `a` and `b` on lines of their own: moving `b` is written in place. */
+  private val separate = home.replace("StyledText(text = \"a\"); StyledText(text = \"b\")", "StyledText(text = \"a\")\n    StyledText(text = \"b\")")
+
+  /**
+   * What the op-time plan cannot see: the file changes between the edit and
+   * its write. Moving `b` is accepted against [separate]; before the write
+   * runs, an IDE save puts `a` and `b` back on one line ([home] — it still
+   * reads as the same document, so the writer merges onto it) and the move
+   * can no longer be written: refused at write time. The fixture's file is
+   * [home] after this.
+   */
+  private fun refusedAtWrite(f: Fixture): Pair<Long, DocumentService.WriteBackStatus> {
+    val (_, _, b) = f.svc.children()
     val ack = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
     assertTrue(ack.ok, ack.error)
-    val status = awaitStatus(f.svc, ack.version)
+    f.file.writeText(home) // well inside the 400 ms debounce
+    return ack.version to awaitStatus(f.svc, ack.version)
+  }
+
+  @Test fun aChangeTheFileCannotTakeByTheTimeItIsWrittenIsRefusedAndTheFileIsUntouched() {
+    val f = fixture(separate)
+    val (_, a, b) = f.svc.children()
+    val (_, status) = refusedAtWrite(f)
     assertEquals("refused", status.outcome, status.toString())
     assertTrue("without losing code" in status.message && "home.kt" in status.message, status.message)
     assertEquals(home, f.file.readText(), "the file is untouched")
@@ -148,10 +189,8 @@ class WriteBackStatusRelayTest {
    * explicitly, on the stream; an ordinary read says the file was read.
    */
   @Test fun aReReadThatDiscardsARefusedChangeSaysSo() {
-    val f = fixture()
-    val (_, _, b) = f.svc.children()
-    val ack = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
-    assertEquals("refused", awaitStatus(f.svc, ack.version).outcome)
+    val f = fixture(separate)
+    assertEquals("refused", refusedAtWrite(f).second.outcome)
     assertTrue(reingestWhenIdle(f.svc))
     val status = assertNotNull(f.svc.writeBack)
     assertEquals("discarded", status.outcome, status.toString())
@@ -169,30 +208,33 @@ class WriteBackStatusRelayTest {
   }
 
   /**
-   * S6: after a refusal every later edit is refused too (the document keeps
-   * the change that cannot be written). The status says so, names the
-   * version that first failed, and how to get out of it.
+   * S6: after a refusal at write time every later edit is refused too (the
+   * document keeps the change that cannot be written; the preflight lets an
+   * edit through when the document before it could not be written either —
+   * this edit is not why). The status says so, names the version that first
+   * failed, and how to get out of it.
    */
   @Test fun aRefusalBlocksLaterEditsAndSaysWhichChangeFirstFailed() {
-    val f = fixture()
+    val f = fixture(separate)
     val (_, a, b) = f.svc.children()
-    val first = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
-    val refused = awaitStatus(f.svc, first.version)
+    val (firstVersion, refused) = refusedAtWrite(f)
     assertEquals("refused", refused.outcome)
     assertTrue("undo it (from the session that made it) or make it in code" in refused.message, refused.message)
     assertTrue("until then no edit to this screen is written" in refused.message, refused.message)
     val later = f.svc.submit(f.svc.batch(DocOp.SetProp(a.handle, "text", lit("A"))))
+    assertTrue(later.ok, later.error)
     val blocked = awaitStatus(f.svc, later.version)
     assertEquals("refused", blocked.outcome)
-    assertTrue("v${first.version}" in blocked.message && "earlier change" in blocked.message, blocked.message)
+    assertTrue("v$firstVersion" in blocked.message && "earlier change" in blocked.message, blocked.message)
     assertEquals(home, f.file.readText())
-    // Undoing both writes the file again; a later refusal names its own version.
+    // Undoing both writes the file again; the same move made now is refused as an op (the file is [home]).
     assertTrue(f.svc.undo("t").ok)
     assertTrue(f.svc.undo("t").ok)
     assertEquals("surgical", awaitStatus(f.svc, f.svc.doc.version).outcome)
     val again = f.svc.submit(f.svc.batch(DocOp.MoveNode(b.handle, f.svc.doc.root.handle, f.svc.children()[0].handle)))
-    val third = awaitStatus(f.svc, again.version)
-    assertFalse("earlier change" in third.message, third.message)
+    assertFalse(again.ok)
+    assertFalse("earlier change" in again.error!!, again.error)
+    assertTrue("make this change in code" in again.error!!, again.error)
   }
 
   /** S5: moving a declaration after its use is refused as an op (it would read back but not compile). */

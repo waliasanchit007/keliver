@@ -258,6 +258,57 @@ class DocumentService(
     return if (sourceType == "String") null else "template $type.$key: a template fits only a String parameter (${sourceType ?: "not a scalar parameter"})"
   }
 
+  /**
+   * K4 §7a, the write-back preflight: the refusal (null = accept) of a change
+   * that takes the document to [after] — when write-back would refuse to write
+   * it. The plan is the one the debounced writer runs ([ScreenWriter.plan],
+   * same tables, same base), against the file as it is now, read once; the
+   * caller holds this service's lock, as the writer does to snapshot and to
+   * write. So an edit the document accepts but the file cannot take (a
+   * template on an item field typed Double or nullable — the contract carries
+   * no item types; a binding in a screen that takes no bindings parameter; or
+   * any reason the writer has) is refused when it is made, and never blocks
+   * the screen's later edits.
+   *
+   * Accepted without a refusal of its own:
+   *  - a change that leaves the document as it is or brings it back to the
+   *    file (nothing new to write; an undo out of a wedge is never refused);
+   *  - [ScreenWriter.Reread]: the file changed since it was last read, so no
+   *    plan for it exists yet. The change is accepted as before and the
+   *    writer re-reads the file, reporting the change `discarded` (§7a 0) —
+   *    reading the file here instead would replace the document the client's
+   *    batch was made against, under its feet;
+   *  - a document the file cannot take already: the plan for the document as
+   *    it is now refuses too, so this change is not why (a change the plan
+   *    could not see — the file reformatted between an edit and its write —
+   *    or a file that does not read as a screen). The writer reports it as
+   *    before; an undo of that change is never refused here.
+   *
+   * The debounced write is unchanged: it plans again when it runs (the file
+   * may have changed in between) — those refusals and I/O failures remain.
+   */
+  private fun writeBackRefusal(after: UiDocument): String? {
+    if (sameDocument(after, doc) || fileDoc?.let { sameDocument(after, it) } == true) return null
+    val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val components = components()
+    val tokens = tokens()
+    fun refusal(d: UiDocument): String? = try {
+      when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+        onDisk = onDisk, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
+        fileName = tokenFileId, functionName = functionName, packageName = packageName,
+      )) {
+        is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
+        else -> null
+      }
+    } catch (t: Throwable) {
+      if (t is VirtualMachineError) throw t
+      "writing it would fail: $t"
+    }
+    val reason = refusal(after) ?: return null
+    if (refusal(doc) != null) return null
+    return "this change could not be written to ${kotlinFile.name} without losing code: $reason — make this change in code"
+  }
+
   /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */
   @Synchronized
   fun dryRun(batch: OpBatch): OpAck {
@@ -267,7 +318,9 @@ class DocumentService(
     val (gated, refused) = gate(batch)
     if (gated == null) return OpAck(false, doc.version, refused)
     val res = doc.applyBatch(gated.ops)
-    return if (res.result == null) OpAck(false, doc.version, res.error) else OpAck(true, doc.version)
+    val ok = res.result ?: return OpAck(false, doc.version, res.error)
+    writeBackRefusal(ok.doc)?.let { return OpAck(false, doc.version, it) }
+    return OpAck(true, doc.version)
   }
 
   @Synchronized
@@ -279,6 +332,7 @@ class DocumentService(
     if (gated == null) return OpAck(false, doc.version, refused)
     val res = doc.applyBatch(gated.ops)
     val ok = res.result ?: return OpAck(false, doc.version, res.error)
+    writeBackRefusal(ok.doc)?.let { return OpAck(false, doc.version, it) }
     doc = ok.doc.copy(version = doc.version + 1)
     undoStacks.getOrPut(batch.envelope.session) { ArrayDeque() }.apply {
       addLast(ok.inverseBatch)
@@ -337,6 +391,11 @@ class DocumentService(
         else OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
       }
     }
+    // K4 §7a: a step write-back would refuse is never applied (it would block
+    // every later edit of the screen). Dropped, not kept: what refuses it is
+    // the file's own code, which only an edit of the file changes — and that
+    // edit, read, clears both stacks anyway.
+    writeBackRefusal(fresh.doc)?.let { return dropped(it) }
     from.removeLastOrNull()
     to().addLast(ok.inverseBatch)
     doc = fresh.doc.copy(version = doc.version + 1)
