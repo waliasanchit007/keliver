@@ -13,8 +13,21 @@
 How the stored asset was checked: before publishing, the draft zip asset was
 downloaded back in full and its sha256 was identical to the verified file
 (`ae84cb2c…`); GitHub's server `digest` and `size` for the zip matched it
-too. The public download is to be checked from a GitHub-hosted runner by the
-reference app's move to 0.3.11 (not yet run when this record was written).
+too. After publishing, the public download was checked from GitHub-hosted
+runners by the reference app's move to 0.3.11 (#128, merged as `5d75b0bf9`):
+each run's first step downloads the public asset, checks it with `sha256sum -c`
+against the release's own `.sha256`, against the pinned hash and against
+`VERSION.json`'s source commit.
+
+| run (#128 head `cf986751c`) | scaffolders from | result |
+|---|---|---|
+| reference-app 39234198214 (pull request) | this checkout | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39234198413 (pull request) | this checkout | self-test 71/0, `ios.sh` 159/0 |
+| reference-app 39255263700 (by hand) | the published zip's `bin/` | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39255268701 (by hand) | the published zip's `bin/` | self-test 71/0, `ios.sh` 159/0 |
+
+The runs started by hand are the published-only proof: every scaffolder came
+from the released zip.
 
 What is in it since 0.3.10 (`78bcfa0ad`): PRs #120 (K1), #121 (K2), #122
 (U35/U36), #123 (K5), #124 (K3), #125 (K5 follow-up) and #126 (K4). #118 (the
