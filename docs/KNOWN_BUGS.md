@@ -878,7 +878,7 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U36. Any web page open in the developer's browser could drive the relay — FIXED (unreleased; found 2026-10-17)
+### U36. Any web page open in the developer's browser could drive the relay — FIXED in tools 0.3.11 (found 2026-10-17)
 
 **What happened.** Every relay endpoint answered `Access-Control-Allow-Origin: *`,
 allowed GET, POST, PUT and any header, and nothing checked the `Host` header.
@@ -914,11 +914,11 @@ because a browser marks only some cross-site GETs (see `RelayAccess.admit`);
 listed as read-only. The `/http-record*` endpoints keep their own stricter
 checks (loopback peer, configured origin, token) after this one.
 
-**Affects** every released tools bundle up to and including 0.3.10. Until a
-release carries the fix, don't keep the relay running while browsing other
-sites.
+**Affects** every tools bundle up to and including 0.3.10; **fixed in tools
+0.3.11** (2026-10-19). On an older bundle, don't keep the relay running while
+browsing other sites.
 
-### U35. The relay and the editor's file server listened on every network interface — FIXED (unreleased; found 2026-10-17)
+### U35. The relay and the editor's file server listened on every network interface — FIXED in tools 0.3.11 (found 2026-10-17)
 
 **What happened.** `portal-relay` created its server with `InetSocketAddress(PORT)`,
 which listens on all interfaces, and `keliver-portal` / `keliver-dev.sh` served the
@@ -944,11 +944,11 @@ That is Zipline's own development server: it serves the read-only development
 guest JavaScript and a directory listing of it, and where it listens cannot be
 set from here.
 
-**Affects** every released tools bundle up to and including 0.3.10. Until a
-release carries the fix, run the relay on a trusted network or with the macOS
-firewall on.
+**Affects** every tools bundle up to and including 0.3.10; **fixed in tools
+0.3.11** (2026-10-19). On an older bundle, run the relay on a trusted network or
+with the macOS firewall on.
 
-### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND (unreleased; found 2026-10-14, cause not known)
+### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND in tools 0.3.10 (found 2026-10-14, cause not known)
 
 Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").
 
@@ -981,7 +981,7 @@ to the console, and a CI job is rerun as a whole.
 **Still open.** The cause, and the two-second `BUILD FAILED`. When it happens again, attach
 the publish log to this entry.
 
-### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED (unreleased; found 2026-10-16)
+### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED in tools 0.3.10 (found 2026-10-16)
 
 Found changing a real app's screen through the web editor (the D14 round-trip on a
 product-proof app's guest, 13 screens; see `ADOPTION_RETRO_2026-10.md`).

@@ -69,6 +69,15 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   at launch; timing marks in debug builds and a benchmark build
   (`DEVICE_HOST.md`, "Timing marks"); the relay keeps every publish's full
   Gradle output and rereads `keliver.portal.json` per publish.
+- **From 0.3.11:** the relay and the editor's file server listen on this
+  machine only (`KELIVER_RELAY_BIND=all` opts the relay in to every interface),
+  and the relay refuses requests from other sites' pages; the editor treats
+  layout modifiers and `Margin`, design tokens, conditions and conditional
+  values, string templates and lists with references as editable grammar
+  instead of RawCode; the canvas can load app images through the relay
+  (`previewAssetHosts`) and forwards a component's `modifier`; write-back
+  refuses a change it cannot make in place (or as a lossless export) instead
+  of overwriting the author's code.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 

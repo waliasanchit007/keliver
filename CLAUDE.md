@@ -100,15 +100,16 @@ the asset is attached **by hand from the named retained artifact that was
 verified**, never from a rebuild at the tag. Full procedure, including checking
 what an older tagged commit's workflow would do:
 [`docs/PORTAL_TOOLS_RELEASE.md`](docs/PORTAL_TOOLS_RELEASE.md). Current
-PUBLISHED release: tools **0.3.10** (Maven dependency **0.3.4** for new apps;
-scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-17
-from `78bcfa0a`: Production bundles by default, debug hosts updating on resume
-with a "check now" hook, the debug bundle server at launch, M0 timing marks and
-a benchmark build, full publish logs, U33 and U34, on top of 0.3.9's key
-rotation (W8) and 0.3.8's W2–W6. Its identities and how the stored asset was
-checked are in
-[`docs/RELEASE_NOTES_TOOLS_0.3.10.md`](docs/RELEASE_NOTES_TOOLS_0.3.10.md).
-0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
+PUBLISHED release: tools **0.3.11** (Maven dependency **0.3.4** for new apps;
+scaffolders follow an app's `appRuntime.keliverVersion`), released 2026-10-19
+from `ebbb24c9`: the relay and editor file server on loopback only and the
+relay's request check (U35, U36), refused instead of lossy write-backs, layout
+modifiers, design tokens, conditionals, string templates and lists in the
+portal grammar (K1–K4) and canvas fidelity (K5), on top of 0.3.10's Production
+bundles by default, on-resume debug updates and M0 timing marks. Its identities
+and how the stored asset was checked are in
+[`docs/RELEASE_NOTES_TOOLS_0.3.11.md`](docs/RELEASE_NOTES_TOOLS_0.3.11.md).
+0.3.10 (`78bcfa0a`), 0.3.9 (`6069da99`), 0.3.8 (`731ebfce`), 0.3.7 (`aaa03478`), 0.3.6 (`d52e2eca`), 0.3.5 (`b5615637`) and 0.3.4 stay published and unchanged. A tools tag push DOES run portal-tools.yml's
 read-only rebuild; that is expected, and its artifact is never attached.
 
 Pre-gate locally: `scripts/build-portal-tools.sh`, then
