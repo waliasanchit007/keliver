@@ -56,7 +56,9 @@ public final class dev/keliver/portal/ComponentEventSpec {
 public final class dev/keliver/portal/ComponentExpansionKt {
 	public static final fun cycleChip (Ljava/util/List;)Ldev/keliver/portal/WidgetNode;
 	public static final fun expandForPreview (Ldev/keliver/portal/WidgetNode;Ldev/keliver/portal/ComponentRegistry;Ljava/util/List;)Ldev/keliver/portal/Expansion;
+	public static final fun expandForPreview (Ldev/keliver/portal/WidgetNode;Ldev/keliver/portal/ComponentRegistry;Ljava/util/Set;Ljava/util/List;)Ldev/keliver/portal/Expansion;
 	public static synthetic fun expandForPreview$default (Ldev/keliver/portal/WidgetNode;Ldev/keliver/portal/ComponentRegistry;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/Expansion;
+	public static synthetic fun expandForPreview$default (Ldev/keliver/portal/WidgetNode;Ldev/keliver/portal/ComponentRegistry;Ljava/util/Set;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/Expansion;
 	public static final fun placeholder (Ljava/lang/String;Ljava/lang/String;)Ldev/keliver/portal/WidgetNode;
 }
 
