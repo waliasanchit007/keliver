@@ -19,6 +19,9 @@ class TemplateListToolsTest {
     assertTrue("Template = {parts}" in catalog, catalog)
     assertTrue("ListOf = {tag, items}" in catalog, catalog)
     assertTrue("unlistedFieldsUnknown" in catalog, catalog)
+    // K4 §7a: the relay refuses an op its write-back would refuse; agents are told, and told the item-field case.
+    assertTrue("an item field its item type declares Double or nullable" in catalog, catalog)
+    assertTrue("an op whose write-back to the screen's file would be refused is refused when it is made" in catalog, catalog)
     assertTrue("Template/ListOf" in Tools.registry.single { it.name == "get_document" }.descriptor.toString())
   }
 
