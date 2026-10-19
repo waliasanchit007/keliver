@@ -884,7 +884,8 @@ allow. Releases go 0.3.7 (iOS host), 0.3.8 (CLI + static), and so on, each
 **2026-10-19.** K1–K5 are merged (#120–#126) and tools **0.3.11** is released
 (row above), with U35/U36. The reference app is on the published 0.3.11
 (#128, its public download checked from GitHub runners, by hand from the zip's
-own scaffolders too). Next: the product-proof app's components move into the
+own scaffolders too, except the iOS host scaffolder's self-test, which runs
+this checkout's identical script). Next: the product-proof app's components move into the
 grammar, checked by before/after device screenshots; the next library release
 (0.4.0: portal-document's API changed in K2–K4) on the owner's go. The 2026-10-17 entry below is kept as written.
 
