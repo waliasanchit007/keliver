@@ -282,19 +282,31 @@ class DocumentService(
    *    it is now refuses too, so this change is not why (a change the plan
    *    could not see — the file reformatted between an edit and its write —
    *    or a file that does not read as a screen). The writer reports it as
-   *    before; an undo of that change is never refused here.
+   *    before; an undo of that change is never refused here. But when the
+   *    file on disk is not the text last read ([fileText]), the change is
+   *    planned against that text too, and refused if that plan refuses: the
+   *    author may save the last-read text back (the watcher skips it as
+   *    already read), and a change only that file could have refused would
+   *    then stay in the document, refused at every write;
+   *  - a file that cannot be read at all here (gone, or not a file, since
+   *    `exists()`): as for [ScreenWriter.Reread] — accepted, and the writer
+   *    reports what it finds. Never an exception out of the op.
    *
    * The debounced write is unchanged: it plans again when it runs (the file
    * may have changed in between) — those refusals and I/O failures remain.
    */
   private fun writeBackRefusal(after: UiDocument): String? {
     if (sameDocument(after, doc) || fileDoc?.let { sameDocument(after, it) } == true) return null
-    val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val onDisk = try {
+      if (kotlinFile.exists()) kotlinFile.readText() else null
+    } catch (e: java.io.IOException) {
+      return null // gone or unreadable since exists(): as for a file changed since it was read (above)
+    }
     val components = components()
     val tokens = tokens()
-    fun refusal(d: UiDocument): String? = try {
+    fun refusal(d: UiDocument, file: String?): String? = try {
       when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
-        onDisk = onDisk, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
+        onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
         fileName = tokenFileId, functionName = functionName, packageName = packageName,
       )) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
@@ -304,9 +316,17 @@ class DocumentService(
       if (t is VirtualMachineError) throw t
       "writing it would fail: $t"
     }
-    val reason = refusal(after) ?: return null
-    if (refusal(doc) != null) return null
-    return "this change could not be written to ${kotlinFile.name} without losing code: $reason — make this change in code"
+    fun refused(reason: String) = "this change could not be written to ${kotlinFile.name} without losing code: $reason — make this change in code"
+    val reason = refusal(after, onDisk) ?: return null
+    if (refusal(doc, onDisk) == null) return refused(reason)
+    // The document as it is refuses too, against the file as it is now. When that
+    // file is not the one last read (the author mid-edit: it is not a screen), the
+    // author may yet save the exact text last read back — which the watcher skips —
+    // so the change must also be writable against that text, or it would stay in
+    // the document refused at every write.
+    val lastRead = fileText ?: return null
+    if (onDisk == lastRead) return null
+    return refusal(after, lastRead)?.let(::refused)
   }
 
   /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */

@@ -837,7 +837,17 @@ ways, and the editor is told which:
    - the document could not be written before the edit either (a change
      refused at write time, below, or a file that does not read as a
      screen): the edit is not why, so it is accepted and the writer reports
-     as before.
+     as before — but only if the edit is writable against the text the
+     relay last read, when the file on disk is not that text. The author
+     mid-edit (the file momentarily not a screen) may save the last-read
+     text back, which the watcher skips as already read; an edit only the
+     mid-edit file could have refused would then stay in the document,
+     refused at every write. So it is planned against the last-read text
+     too, and refused if that plan refuses;
+   - the file cannot be read at all when the edit is made (deleted, or not
+     a file, between the check that it exists and the read): as for
+     "re-read" — the edit is accepted and the writer reports what it finds
+     — never an error out of the request.
 
    The write itself is unchanged: it plans again when it runs (400 ms
    later; the file may have changed). Cost: one plan per edit — 6.0 ms
