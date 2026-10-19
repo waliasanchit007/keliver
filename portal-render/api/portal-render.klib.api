@@ -6,6 +6,14 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:portal-render>
+abstract fun interface dev.keliver.portal.render/CompiledComponent { // dev.keliver.portal.render/CompiledComponent|null[0]
+    abstract fun bind(dev.keliver.portal.render/CompiledCall): kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit> // dev.keliver.portal.render/CompiledComponent.bind|bind(dev.keliver.portal.render.CompiledCall){}[0]
+}
+
+abstract fun interface dev.keliver.portal.render/CompiledComponentProbe { // dev.keliver.portal.render/CompiledComponentProbe|null[0]
+    abstract fun failureOf(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>): kotlin/Throwable? // dev.keliver.portal.render/CompiledComponentProbe.failureOf|failureOf(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>){}[0]
+}
+
 abstract fun interface dev.keliver.portal.render/FlowPreview { // dev.keliver.portal.render/FlowPreview|null[0]
     abstract fun present(dev.keliver.portal.render/PreviewEnv, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.portal.render/FlowFrame // dev.keliver.portal.render/FlowPreview.present|present(dev.keliver.portal.render.PreviewEnv;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
@@ -28,6 +36,8 @@ abstract interface dev.keliver.portal.render/AppFlowEntry { // dev.keliver.porta
 abstract interface dev.keliver.portal.render/AppPreviewEntry { // dev.keliver.portal.render/AppPreviewEntry|null[0]
     abstract val screens // dev.keliver.portal.render/AppPreviewEntry.screens|{}screens[0]
         abstract fun <get-screens>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.render/ScreenPreview> // dev.keliver.portal.render/AppPreviewEntry.screens.<get-screens>|<get-screens>(){}[0]
+    open val compiledComponents // dev.keliver.portal.render/AppPreviewEntry.compiledComponents|{}compiledComponents[0]
+        open fun <get-compiledComponents>(): kotlin.collections/Map<kotlin/String, dev.keliver.portal.render/CompiledComponent> // dev.keliver.portal.render/AppPreviewEntry.compiledComponents.<get-compiledComponents>|<get-compiledComponents>(){}[0]
     open val defaultPersonaId // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId|{}defaultPersonaId[0]
         open fun <get-defaultPersonaId>(): kotlin/String? // dev.keliver.portal.render/AppPreviewEntry.defaultPersonaId.<get-defaultPersonaId>|<get-defaultPersonaId>(){}[0]
     open val hostWrapper // dev.keliver.portal.render/AppPreviewEntry.hostWrapper|{}hostWrapper[0]
@@ -51,6 +61,37 @@ final class <#A: kotlin/Any?> dev.keliver.portal.render/FlowNav { // dev.keliver
         final fun <get-current>(): #A // dev.keliver.portal.render/FlowNav.current.<get-current>|<get-current>(){}[0]
     final val navigate // dev.keliver.portal.render/FlowNav.navigate|{}navigate[0]
         final fun <get-navigate>(): kotlin/Function1<#A, kotlin/Unit> // dev.keliver.portal.render/FlowNav.navigate.<get-navigate>|<get-navigate>(){}[0]
+}
+
+final class dev.keliver.portal.render/CompiledArgException : kotlin/IllegalArgumentException { // dev.keliver.portal.render/CompiledArgException|null[0]
+    constructor <init>(kotlin/String) // dev.keliver.portal.render/CompiledArgException.<init>|<init>(kotlin.String){}[0]
+}
+
+final class dev.keliver.portal.render/CompiledCall { // dev.keliver.portal.render/CompiledCall|null[0]
+    final val modifier // dev.keliver.portal.render/CompiledCall.modifier|{}modifier[0]
+        final fun <get-modifier>(): dev.keliver/Modifier // dev.keliver.portal.render/CompiledCall.modifier.<get-modifier>|<get-modifier>(){}[0]
+
+    final fun <#A1: kotlin/Any?> event1(kotlin/String): kotlin/Function1<#A1, kotlin/Unit> // dev.keliver.portal.render/CompiledCall.event1|event1(kotlin.String){0§<kotlin.Any?>}[0]
+    final fun <#A1: kotlin/Any?> event1OrNull(kotlin/String): kotlin/Function1<#A1, kotlin/Unit>? // dev.keliver.portal.render/CompiledCall.event1OrNull|event1OrNull(kotlin.String){0§<kotlin.Any?>}[0]
+    final fun bool(kotlin/String): kotlin/Boolean // dev.keliver.portal.render/CompiledCall.bool|bool(kotlin.String){}[0]
+    final fun bool(kotlin/String, kotlin/Boolean): kotlin/Boolean // dev.keliver.portal.render/CompiledCall.bool|bool(kotlin.String;kotlin.Boolean){}[0]
+    final fun boolOrNull(kotlin/String, kotlin/Boolean?): kotlin/Boolean? // dev.keliver.portal.render/CompiledCall.boolOrNull|boolOrNull(kotlin.String;kotlin.Boolean?){}[0]
+    final fun compose(kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>): kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit> // dev.keliver.portal.render/CompiledCall.compose|compose(kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>){}[0]
+    final fun content(): kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit> // dev.keliver.portal.render/CompiledCall.content|content(){}[0]
+    final fun double(kotlin/String): kotlin/Double // dev.keliver.portal.render/CompiledCall.double|double(kotlin.String){}[0]
+    final fun double(kotlin/String, kotlin/Double): kotlin/Double // dev.keliver.portal.render/CompiledCall.double|double(kotlin.String;kotlin.Double){}[0]
+    final fun doubleOrNull(kotlin/String, kotlin/Double?): kotlin/Double? // dev.keliver.portal.render/CompiledCall.doubleOrNull|doubleOrNull(kotlin.String;kotlin.Double?){}[0]
+    final fun event(kotlin/String): kotlin/Function0<kotlin/Unit> // dev.keliver.portal.render/CompiledCall.event|event(kotlin.String){}[0]
+    final fun eventOrNull(kotlin/String): kotlin/Function0<kotlin/Unit>? // dev.keliver.portal.render/CompiledCall.eventOrNull|eventOrNull(kotlin.String){}[0]
+    final fun has(kotlin/String): kotlin/Boolean // dev.keliver.portal.render/CompiledCall.has|has(kotlin.String){}[0]
+    final fun int(kotlin/String): kotlin/Int // dev.keliver.portal.render/CompiledCall.int|int(kotlin.String){}[0]
+    final fun int(kotlin/String, kotlin/Int): kotlin/Int // dev.keliver.portal.render/CompiledCall.int|int(kotlin.String;kotlin.Int){}[0]
+    final fun intOrNull(kotlin/String, kotlin/Int?): kotlin/Int? // dev.keliver.portal.render/CompiledCall.intOrNull|intOrNull(kotlin.String;kotlin.Int?){}[0]
+    final fun noContent() // dev.keliver.portal.render/CompiledCall.noContent|noContent(){}[0]
+    final fun requireSet(kotlin/String, kotlin/String) // dev.keliver.portal.render/CompiledCall.requireSet|requireSet(kotlin.String;kotlin.String){}[0]
+    final fun string(kotlin/String): kotlin/String // dev.keliver.portal.render/CompiledCall.string|string(kotlin.String){}[0]
+    final fun string(kotlin/String, kotlin/String): kotlin/String // dev.keliver.portal.render/CompiledCall.string|string(kotlin.String;kotlin.String){}[0]
+    final fun stringOrNull(kotlin/String, kotlin/String?): kotlin/String? // dev.keliver.portal.render/CompiledCall.stringOrNull|stringOrNull(kotlin.String;kotlin.String?){}[0]
 }
 
 final class dev.keliver.portal.render/FlowFrame { // dev.keliver.portal.render/FlowFrame|null[0]
@@ -132,6 +173,8 @@ final object dev.keliver.portal.render/PreviewBindings { // dev.keliver.portal.r
     final fun rowCount(kotlin/String): kotlin/Int // dev.keliver.portal.render/PreviewBindings.rowCount|rowCount(kotlin.String){}[0]
 }
 
+final val dev.keliver.portal.render/dev_keliver_portal_render_CompiledArgException$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_CompiledArgException$stableprop|#static{}dev_keliver_portal_render_CompiledArgException$stableprop[0]
+final val dev.keliver.portal.render/dev_keliver_portal_render_CompiledCall$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_CompiledCall$stableprop|#static{}dev_keliver_portal_render_CompiledCall$stableprop[0]
 final val dev.keliver.portal.render/dev_keliver_portal_render_FlowFrame$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_FlowFrame$stableprop|#static{}dev_keliver_portal_render_FlowFrame$stableprop[0]
 final val dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop|#static{}dev_keliver_portal_render_FlowNav$stableprop[0]
 final val dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop // dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop|#static{}dev_keliver_portal_render_PreviewBindings$stableprop[0]
@@ -145,6 +188,9 @@ final var dev.keliver.portal.render/appFlowEntry // dev.keliver.portal.render/ap
 final var dev.keliver.portal.render/appPreviewEntry // dev.keliver.portal.render/appPreviewEntry|{}appPreviewEntry[0]
     final fun <get-appPreviewEntry>(): dev.keliver.portal.render/AppPreviewEntry? // dev.keliver.portal.render/appPreviewEntry.<get-appPreviewEntry>|<get-appPreviewEntry>(){}[0]
     final fun <set-appPreviewEntry>(dev.keliver.portal.render/AppPreviewEntry?) // dev.keliver.portal.render/appPreviewEntry.<set-appPreviewEntry>|<set-appPreviewEntry>(dev.keliver.portal.render.AppPreviewEntry?){}[0]
+final var dev.keliver.portal.render/compiledComponentProbe // dev.keliver.portal.render/compiledComponentProbe|{}compiledComponentProbe[0]
+    final fun <get-compiledComponentProbe>(): dev.keliver.portal.render/CompiledComponentProbe? // dev.keliver.portal.render/compiledComponentProbe.<get-compiledComponentProbe>|<get-compiledComponentProbe>(){}[0]
+    final fun <set-compiledComponentProbe>(dev.keliver.portal.render/CompiledComponentProbe?) // dev.keliver.portal.render/compiledComponentProbe.<set-compiledComponentProbe>|<set-compiledComponentProbe>(dev.keliver.portal.render.CompiledComponentProbe?){}[0]
 final var dev.keliver.portal.render/componentPreview // dev.keliver.portal.render/componentPreview|{}componentPreview[0]
     final fun <get-componentPreview>(): kotlin/Function3<dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>? // dev.keliver.portal.render/componentPreview.<get-componentPreview>|<get-componentPreview>(){}[0]
     final fun <set-componentPreview>(kotlin/Function3<dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?) // dev.keliver.portal.render/componentPreview.<set-componentPreview>|<set-componentPreview>(kotlin.Function3<dev.keliver.portal.WidgetNode,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?){}[0]
@@ -168,10 +214,13 @@ final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.render/strListB(kot
 final fun (kotlin.collections/MutableMap<kotlin/String, kotlin/String>).dev.keliver.portal.render/putRows(kotlin/String, kotlin/String, kotlin.collections/List<kotlin.collections/Map<kotlin/String, kotlin/String>>) // dev.keliver.portal.render/putRows|putRows@kotlin.collections.MutableMap<kotlin.String,kotlin.String>(kotlin.String;kotlin.String;kotlin.collections.List<kotlin.collections.Map<kotlin.String,kotlin.String>>){}[0]
 final fun <#A: kotlin/Any?> dev.keliver.portal.render/rememberFlowNav(#A, androidx.compose.runtime/Composer?, kotlin/Int): dev.keliver.portal.render/FlowNav<#A> // dev.keliver.portal.render/rememberFlowNav|rememberFlowNav(0:0;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any?>}[0]
 final fun dev.keliver.portal.render/AppScreenFrame(dev.keliver.portal.render/AppPreviewEntry?, kotlin/Function2<androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/AppScreenFrame|AppScreenFrame(dev.keliver.portal.render.AppPreviewEntry?;kotlin.Function2<androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun dev.keliver.portal.render/RenderCompiledComponent(dev.keliver.portal/WidgetNode, kotlin/Any?, dev.keliver.portal.render/CompiledComponent, kotlin/Function3<kotlin/String, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/RenderCompiledComponent|RenderCompiledComponent(dev.keliver.portal.WidgetNode;kotlin.Any?;dev.keliver.portal.render.CompiledComponent;kotlin.Function3<kotlin.String,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/RenderNode(dev.keliver.portal/WidgetNode, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/RenderNode|RenderNode(dev.keliver.portal.WidgetNode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/RenderNode(dev.keliver.portal/WidgetNode, kotlin/Any?, androidx.compose.runtime/Composer?, kotlin/Int) // dev.keliver.portal.render/RenderNode|RenderNode(dev.keliver.portal.WidgetNode;kotlin.Any?;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun dev.keliver.portal.render/constraintOf(kotlin/Int): dev.keliver.layout.api/Constraint // dev.keliver.portal.render/constraintOf|constraintOf(kotlin.Int){}[0]
 final fun dev.keliver.portal.render/crossAxisOf(kotlin/Int): dev.keliver.layout.api/CrossAxisAlignment // dev.keliver.portal.render/crossAxisOf|crossAxisOf(kotlin.Int){}[0]
+final fun dev.keliver.portal.render/dev_keliver_portal_render_CompiledArgException$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_CompiledArgException$stableprop_getter|dev_keliver_portal_render_CompiledArgException$stableprop_getter(){}[0]
+final fun dev.keliver.portal.render/dev_keliver_portal_render_CompiledCall$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_CompiledCall$stableprop_getter|dev_keliver_portal_render_CompiledCall$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/dev_keliver_portal_render_FlowFrame$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_FlowFrame$stableprop_getter|dev_keliver_portal_render_FlowFrame$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_FlowNav$stableprop_getter|dev_keliver_portal_render_FlowNav$stableprop_getter(){}[0]
 final fun dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop_getter(): kotlin/Int // dev.keliver.portal.render/dev_keliver_portal_render_PreviewBindings$stableprop_getter|dev_keliver_portal_render_PreviewBindings$stableprop_getter(){}[0]
