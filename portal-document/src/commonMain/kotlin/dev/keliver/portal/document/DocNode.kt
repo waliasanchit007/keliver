@@ -164,10 +164,27 @@ public data class Contract(
    */
   val unlistedFieldsUnknown: String? = null,
 ) {
-  /** The three-argument form older callers use (binary compatible). */
+  /**
+   * The 0.3.x constructor, kept for callers compiled against it (binary
+   * compatible: its plain and defaulted JVM signatures). Hidden from source:
+   * a call with three arguments is the primary constructor's.
+   */
+  @Deprecated("The 0.3.x signature, kept for compiled callers", level = DeprecationLevel.HIDDEN)
   public constructor(
-    fields: Map<String, String>,
-    actions: List<String>,
-    actionParams: Map<String, String>,
+    fields: Map<String, String> = emptyMap(),
+    actions: List<String> = emptyList(),
+    actionParams: Map<String, String> = emptyMap(),
   ) : this(fields, actions, actionParams, null)
+
+  /**
+   * The 0.3.x `copy`, kept for callers compiled against it (its plain and
+   * `copy$default` JVM signatures). It keeps [unlistedFieldsUnknown], as the
+   * `copy` a recompiled caller gets does. Hidden from source.
+   */
+  @Deprecated("The 0.3.x signature, kept for compiled callers", level = DeprecationLevel.HIDDEN)
+  public fun copy(
+    fields: Map<String, String> = this.fields,
+    actions: List<String> = this.actions,
+    actionParams: Map<String, String> = this.actionParams,
+  ): Contract = Contract(fields, actions, actionParams, unlistedFieldsUnknown)
 }
