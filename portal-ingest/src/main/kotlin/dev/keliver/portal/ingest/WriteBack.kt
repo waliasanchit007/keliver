@@ -134,6 +134,8 @@ object WriteBack {
       is PropValue.Bind -> screenField(v.field)
       is PropValue.Action -> true
       is PropValue.Conditional -> screenField(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      is PropValue.Template -> v.parts.any(::value) // K4: a template's / a list's references
+      is PropValue.ListOf -> v.items.any(::value)
       else -> false
     }
     val own = when (n.type) {
@@ -268,6 +270,17 @@ object WriteBack {
   private fun condText(c: dev.keliver.portal.Cond): String {
     val param = bindings.get() ?: "b"
     return c.kotlin { if ('.' in it) it else "$param.$it" }
+  }
+
+  /**
+   * K4: a reference inside a template or a list as the file spells it — a
+   * screen field through the file's bindings parameter, an item field as it
+   * is, a design token by its reference; null for anything else.
+   */
+  private fun refText(v: PropValue): String? = when (v) {
+    is PropValue.Bind -> if ('.' in v.field) v.field else "${bindings.get() ?: "b"}.${v.field}"
+    is PropValue.Token -> v.ref
+    else -> null
   }
 
   /**
@@ -1096,6 +1109,16 @@ object WriteBack {
       ) {
         // K3: only the changed part — the condition, or one branch.
         ConditionalSyntax.surgical(oldExpr.text, oldValue, newValue, canonicalText, ::condText) ?: canonicalText
+      } else if ((oldValue is dev.keliver.portal.document.PropValue.Template || newValue is dev.keliver.portal.document.PropValue.Template) &&
+        TemplateSyntax.partsOf(oldValue) != null && TemplateSyntax.partsOf(newValue) != null
+      ) {
+        // K4: only the template parts that changed; the rest keeps its spelling.
+        TemplateSyntax.surgical(oldExpr.text, TemplateSyntax.partsOf(oldValue)!!, TemplateSyntax.partsOf(newValue)!!, ::refText) ?: canonicalText
+      } else if ((oldValue is dev.keliver.portal.document.PropValue.ListOf || newValue is dev.keliver.portal.document.PropValue.ListOf) &&
+        ListSyntax.itemsOf(oldValue) != null && ListSyntax.itemsOf(newValue) != null
+      ) {
+        // K4: only the list elements that changed (the list keeps its length), else the whole list.
+        ListSyntax.surgical(oldExpr.text, ListSyntax.itemsOf(oldValue)!!, ListSyntax.itemsOf(newValue)!!, ::refText) ?: canonicalText
       } else {
         // A Dp keeps the author's spelling (`16.dp` stays `.dp`, `Dp(16.0)` stays Dp()).
         val v = (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d

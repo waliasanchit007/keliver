@@ -602,6 +602,8 @@ internal object FragmentImports {
   fun token(v: PropValue?): Set<String> = when (v) {
     is PropValue.Conditional -> token(v.whenTrue) + token(v.whenFalse) // K3: each branch
     is PropValue.Token -> v.import?.let { setOf(it) }.orEmpty()
+    is PropValue.Template -> v.parts.flatMap(::token).toSet() // K4: each token part / element
+    is PropValue.ListOf -> v.items.flatMap(::token).toSet()
     else -> emptySet()
   }
 }

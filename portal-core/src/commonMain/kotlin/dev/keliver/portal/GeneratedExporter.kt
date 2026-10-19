@@ -159,6 +159,15 @@ private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap
         iface[value.cond.field.substringAfter('.')] = value.cond.fieldType
       }
       for (v in if (value is Conditional) listOf(value.whenTrue, value.whenFalse) else listOf(value)) {
+      // K4: a template's item references are String fields (unless typed elsewhere);
+      // a list's are elements of its kind.
+      if (v is Template) referencedBinds(v).filter { it.field.startsWith("$itemVar.") }.forEach { r ->
+        val sub = r.field.substringAfter('.')
+        if (sub !in iface) iface[sub] = "String"
+      }
+      if (v is ListOf) v.items.filterIsInstance<Bind>().filter { it.field.startsWith("$itemVar.") }.forEach { r ->
+        iface[r.field.substringAfter('.')] = listElementType(v.kind) ?: "String"
+      }
       if (v is Bind && v.field.startsWith("$itemVar.")) {
         val sub = v.field.substringAfter('.')
         iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -206,8 +215,10 @@ private fun bindRef(field: String): String = if ('.' in field) field else "b.$fi
 // the token's kind is the literal's kind; anywhere else (never produced by
 // ingest or the document) its resolved value is written, so saved code compiles.
 // K3: a conditional value writes `if (cond) T else F`, each branch in its kind.
+// K4: a template writes its literal parts and references (`"${b.n} items"`).
 private fun fmtString(v: Any?): String = when {
   v is Conditional -> fmtConditional(v, ::fmtString)
+  v is Template -> fmtTemplate(v, ::bindRef)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is String -> v.ref
   else -> kotlinStringLiteral(tokenValue(v).toString())
@@ -237,10 +248,10 @@ private fun fmtDp(v: Any?): String =
   if (v is Conditional) fmtConditional(v, ::fmtDp)
   else if (v is Bind) "Dp(${bindRef(v.field)})"
   else tokenValue(v).let { x -> "Dp(${kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
-private fun fmtIntList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") ?: "") + ")"
-private fun fmtStringList(v: Any?): String =
-  "listOf(" + ((v as? List<*>)?.joinToString(", ") { kotlinStringLiteral(it.toString()) } ?: "") + ")"
-private fun fmtFloatList(v: Any?): String = "listOf(" + ((v as? List<*>)?.joinToString(", ") { "${it}f" } ?: "") + ")"
+// K4: each element of a list in its kind — a literal, a token's reference, a binding.
+private fun fmtIntList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { fmtInt(it) } + ")"
+private fun fmtStringList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { fmtString(it ?: "") } + ")"
+private fun fmtFloatList(v: Any?): String = "listOf(" + listItems(v).joinToString(", ") { "${it}f" } + ")"
 private fun fmtConstraint(v: Any?): String =
   if (v is Conditional) fmtConditional(v, ::fmtConstraint)
   else if (((tokenValue(v) as? Int) ?: 0) == 1) "Constraint.Fill" else "Constraint.Wrap"
@@ -418,7 +429,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("durationMs" in node.props) { sb.append("${indent}  durationMs = ${fmtInt(node.props["durationMs"])},\n"); imports.addTokenImport(node.props["durationMs"], "Int") }
       if ("segmentLenDp" in node.props) { sb.append("${indent}  segmentLenDp = ${fmtInt(node.props["segmentLenDp"])},\n"); imports.addTokenImport(node.props["segmentLenDp"], "Int") }
       if ("effect" in node.props) { sb.append("${indent}  effect = ${fmtInt(node.props["effect"])},\n"); imports.addTokenImport(node.props["effect"], "Int") }
-      if ("colorsArgb" in node.props) { sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n") }
+      if ("colorsArgb" in node.props) { sb.append("${indent}  colorsArgb = ${fmtIntList(node.props["colorsArgb"])},\n"); imports.addTokenImport(node.props["colorsArgb"], "List<Int>") }
       fmtEvent(node.props["onClick"], 0)?.let { e -> sb.append("${indent}  onClick = $e,\n") }
       sb.append("$indent) {\n")
       node.children.forEach { emitNode(sb, it, "$indent  ", components, "AnimatedBorder", imports) }
@@ -575,7 +586,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       sb.append("${indent}DropdownMenu(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
       if ("expanded" in node.props) { sb.append("${indent}  expanded = ${fmtBool(node.props["expanded"])},\n"); imports.addTokenImport(node.props["expanded"], "Boolean") }
-      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
+      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n"); imports.addTokenImport(node.props["options"], "List<String>")
       fmtEvent(node.props["onSelect"], 1)?.let { e -> sb.append("${indent}  onSelect = $e,\n") }
       fmtEvent(node.props["onDismiss"], 0)?.let { e -> sb.append("${indent}  onDismiss = $e,\n") }
       sb.append("$indent)\n")
@@ -826,7 +837,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.material.compose.SegmentedButtonRow"
       sb.append("${indent}SegmentedButtonRow(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n")
+      sb.append("${indent}  options = ${fmtStringList(node.props["options"])},\n"); imports.addTokenImport(node.props["options"], "List<String>")
       if ("selectedIndex" in node.props) { sb.append("${indent}  selectedIndex = ${fmtInt(node.props["selectedIndex"])},\n"); imports.addTokenImport(node.props["selectedIndex"], "Int") }
       fmtEvent(node.props["onSelect"], 1)?.let { e -> sb.append("${indent}  onSelect = $e,\n") }
       sb.append("$indent)\n")
@@ -882,7 +893,7 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       if ("borderColorArgb" in node.props) { sb.append("${indent}  borderColorArgb = ${fmtInt(node.props["borderColorArgb"])},\n"); imports.addTokenImport(node.props["borderColorArgb"], "Int") }
       if ("borderWidthDp" in node.props) { sb.append("${indent}  borderWidthDp = ${fmtInt(node.props["borderWidthDp"])},\n"); imports.addTokenImport(node.props["borderWidthDp"], "Int") }
       if ("gradientVertical" in node.props) { sb.append("${indent}  gradientVertical = ${fmtBool(node.props["gradientVertical"])},\n"); imports.addTokenImport(node.props["gradientVertical"], "Boolean") }
-      if ("gradientColorsArgb" in node.props) { sb.append("${indent}  gradientColorsArgb = ${fmtIntList(node.props["gradientColorsArgb"])},\n") }
+      if ("gradientColorsArgb" in node.props) { sb.append("${indent}  gradientColorsArgb = ${fmtIntList(node.props["gradientColorsArgb"])},\n"); imports.addTokenImport(node.props["gradientColorsArgb"], "List<Int>") }
       if ("gradientStops" in node.props) { sb.append("${indent}  gradientStops = ${fmtFloatList(node.props["gradientStops"])},\n") }
       if ("gradientDirection" in node.props) { sb.append("${indent}  gradientDirection = ${fmtInt(node.props["gradientDirection"])},\n"); imports.addTokenImport(node.props["gradientDirection"], "Int") }
       if ("cornerTopStartDp" in node.props) { sb.append("${indent}  cornerTopStartDp = ${fmtInt(node.props["cornerTopStartDp"])},\n"); imports.addTokenImport(node.props["cornerTopStartDp"], "Int") }
@@ -1066,6 +1077,8 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       // K2: a token is written as its reference where it fits the parameter's type.
       val token = (v as? Token)?.takeIf { spec == null || tokenFits(propSourceType(node.type, k, components), it.value) }
       token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
+      // K4: a template argument writes each token part as its reference.
+      if (v is Template) imports.addTokenImport(v, "String")
       // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
       val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
       fun render(x: Any?, branch: Boolean): String = when (x) {
@@ -1073,6 +1086,7 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
         // K3: in an `if` branch an action is a reference or a parenthesized lambda.
         is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
         is Bind -> bindRef(x.field)
+        is Template -> fmtTemplate(x, ::bindRef)
         is String -> kotlinStringLiteral(x)
         is Boolean -> x.toString()
         is Int -> x.toString()
@@ -1084,6 +1098,8 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       fun branchValue(x: Any?): Any? =
         if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
           imports.addTokenImport(x, tokenKindOf(x.value)); x
+        } else if (x is Template) {
+          imports.addTokenImport(x, "String"); x
         } else {
           tokenValue(x)
         }

@@ -24,6 +24,45 @@
   POST only.
 
 ### Added
+- **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** string templates
+  and lists with references are portal grammar (K4). `text = "Rating: ${b.rating}/${C.Max}"`,
+  `"${b.count} items"`, `"$label: $count"` in a component body, and a component argument
+  `title = "Hi ${b.name}"` are recognized when each embedded expression is a binding, an item
+  field, a component parameter or a design token (`${a + b}`, `${x.uppercase()}` stay RawCode);
+  `gradientColorsArgb = listOf(C.Start, C.End)`, `colorsArgb = listOf(16777215, C.A, b.c)` and
+  `options = listOf("All", C.Brand)` are recognized on `List<Int>`/`List<String>` props.
+  New `PropValue.Template(parts)` and `PropValue.ListOf(tag, items)`, stored canonical, validated by
+  the document (fit, reference kinds, item fields in scope) and the relay (component signatures,
+  the K2 token gate for every part and element). Write-back rewrites only the changed template part
+  (the author's `$x`/`${x}` and escapes kept elsewhere) or list element; a no-op is byte-identical.
+  The exporter writes both (with token imports); a template-only field is a `String` in the
+  derived contract. The preview evaluates templates with the mocks and token values and resolves
+  list elements; the device wire carries the text / resolved list under the usual keys. The relay
+  sends the new values only to a client asking `GET /doc?…&templates=1` / `lists=1` (this release's
+  editor and MCP server); older editors get the text and the resolved list. The editor edits a
+  template as text with `{field}`/`{item.x}`/`{◆C.Name}` references (validated before sending) and
+  a list as its elements (`16777215, #FF8800, ◆C.Start, @accent`; in a String list `\@`, `\◆`,
+  `\|`, `\\`, `\"` escape and `" a "` / `""` quote, so every list reads back as itself), with a
+  token picker. A template never reads a Double or a nullable value (a Double token, a parameter
+  declared `Double` or nullable, a field the Bindings interface declares `Double`/`Float`/nullable):
+  the device (Kotlin/JS) prints `1.0` as `1` and a null as `null`, the preview `1.0` and nothing,
+  so such a call stays RawCode and the document, the relay and the editor refuse one. Ingest reads
+  a screen field's type in the screen's Bindings interface in the same file (and its same-file
+  supertypes) — the interface the screen's parameter type names as Kotlin reads it (`b: X`, `b: X?`,
+  `b: @Ann X`, a same-file `typealias` or an import alias of it, `b: Outer.X` nested; a plain name
+  the file does not declare takes the file's only `…Bindings` interface, as before), never the first
+  `…Bindings` interface in the file, in ingest and in contract write-back alike — and an item
+  field's in its item type when declared in the same file; a type it cannot read (a property
+  without a type; any field the interface does not declare in the file when the screen has no
+  Bindings parameter, its interface is not in its file, or it extends one declared in another
+  file) is unknown, and a template does not read it (`kotlin.Int` etc. are the plain types). The
+  contract says so (`Contract.unlistedFieldsUnknown`, a new optional field: absent = the interface
+  is read whole), and the document refuses such a template when the op is made, with the reason —
+  it was accepted and then refused at write-back, which blocked every later edit of the screen. A
+  plain binding of such a field is still allowed. A field a template or a list reads is never also tested
+  as a Boolean, unless the Bindings interface declares it `Boolean`; a field a Repeat iterates is
+  read whole by no template, list element or text prop. A mocked Int list element is a decimal or
+  a `#RRGGBB`/`#AARRGGBB` colour (else left out). `portal-core` adds `mockedIntElement`.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** conditions are
   portal grammar (D9, K3). One condition model — a field (a screen binding, or a component
   parameter) tested as a Boolean, for String emptiness/blankness, or (component parameters
@@ -164,7 +203,33 @@
   modifier argument written as an integer (`flex(1)`) are now RawCode instead of being coerced,
   while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
+### Library compatibility
+- **portal-document** (published): `PropValue` gained a subclass in K2 (`Token`), in K3
+  (`Conditional`) and two in K4 (`Template`, `ListOf`). Consumer code with an exhaustive `when`
+  over `PropValue` needs a branch for each (a source break; compiled code that meets one it does
+  not know throws `NoWhenBranchMatchedException`). K4 also added `Contract.unlistedFieldsUnknown`,
+  a fourth constructor parameter (`copy` argument, `component4`). The 0.3.x three-argument
+  constructor and `copy`, with their defaulted forms (`copy$default`, the synthetic defaulted
+  constructor), are kept as hidden declarations: JVM code compiled against 0.3.x still links (the
+  old `copy` keeps `unlistedFieldsUnknown`), Kotlin source resolves to the new ones, and Java
+  source, which sees the old ones as synthetic, uses the four-argument forms. The klib ABI dump
+  (`portal-document.klib.api`) changes additively too: the four-argument constructor and `copy`,
+  `component4` and `unlistedFieldsUnknown` are added; the three-argument constructor and `copy`
+  are still there.
+
 ### Fixed
+- **portal-relay:** an edit the document accepted but write-back then refused blocked every later
+  edit of the screen until undone (§7a) — e.g. a template on a list item's field typed `Double` or
+  nullable (the contract carries no item types), or a plain binding set on a screen that takes no
+  bindings parameter. The relay now plans the write-back of every edit, dry run, undo and redo when
+  it is made — the writer's own plan, against the file as it is — and refuses the edit (an undo or
+  redo step is dropped) with the reason and "make this change in code". The write itself still
+  plans again: a file that changes between the edit and its write, or an I/O failure, is still
+  reported as a write-back status. An edit made while the file on disk is not the text last read
+  (the author mid-edit, the file not a screen) must also be writable against that text: the author
+  may save it back unchanged, which the watcher skips. Cost: one plan per accepted edit (about
+  6.6 ms median on this repo's largest screen), two per refused one (about 9 ms), measured under
+  the full test load (SCREEN_ARCHITECTURE §7a).
 - **portal-ingest:** a statement inserted after the last statement of an `if` block was written
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
 - **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept

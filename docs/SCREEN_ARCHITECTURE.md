@@ -361,7 +361,7 @@ fun SectionCard(content: @Composable () -> Unit) {
     arguments (`background(C.Ink)`), scoped Double arguments (`flex(C.W)`)
     and project-component parameters. Never a `Dp` (`Spacer(height = …)`,
     Margin sides, `width(…)`), a `Float`, an enum (`Constraint`, alignments), a
-    list, or a Long (no portal prop holds one) — Kotlin converts none of them,
+    whole list (an element of one is — K4, below), or a Long (no portal prop holds one) — Kotlin converts none of them,
     so those stay literals; a token there, or an unknown, private, cyclic or
     wrong-kind reference, keeps the call RawCode rather than becoming silently
     wrong. Event-action arguments and component signature defaults are not
@@ -485,7 +485,8 @@ fun SectionCard(content: @Composable () -> Unit) {
     nullable, e.g. an event: `onClick = if (enabled) onTap else null`). In a
     screen an action branch is a reference or a parenthesized lambda
     (`if (b.enabled) b::tap else null` — a bare `{ … }` would be the if's
-    block). Branches never nest; a list prop is never conditional.
+    block). Branches never nest; a list prop is never conditional. (K4: a branch may also
+    be a string template, below.)
   - *Preview.* Expanding an instance decides each condition over a parameter
     against the instance's argument (its default when omitted, else the
     editor's sample value), splicing the chosen branch; when the argument is a
@@ -559,6 +560,175 @@ fun SectionCard(content: @Composable () -> Unit) {
     null`) is an optional event. A nullable content slot (`footer:
     (@Composable () -> Unit)?`) is not supported and says so in the
     component's diagnostic.
+- **Templates and lists are grammar (D9, K4).** A string built from
+  references, and a list of tokens, keep a component transparent (and a
+  screen editable):
+
+  ```kotlin
+  @Composable
+  fun ScoreRow(label: String, count: Int, start: Int = C.Start) {
+    Column {
+      StyledText(text = "$label: $count ${C.Unit}")
+      StyledBox(gradientColorsArgb = listOf(start, C.End)) { … }
+    }
+  }
+  // in a screen
+  StyledText(text = "Rating: ${b.rating}/${C.Max}")
+  ScoreRow(label = "Hi ${b.name}", count = 3)
+  SegmentedButtonRow(options = listOf("All", C.Brand, b.extra))
+  b.notes.forEach { note -> StyledText(text = "${note.title} (${note.count})") }
+  ```
+
+  - *What a template is.* A double-quoted string whose embedded expressions
+    (`$x` or `${…}`) are each ONE reference: a screen binding (`b.x`, spelled
+    through the file's bindings parameter), an item field inside a Repeat
+    over that item (`note.title`), a component parameter (in a component
+    body), or a design token of a String, Int or Boolean kind
+    (`${C.Max}`, a bare top-level `$Brand`), resolved exactly as K2
+    resolves a token argument. The text between references is decoded
+    with the plain-literal rules (`\n`, `\"`, `\$`, `\uXXXX`, `${'$'}` keep
+    their meaning). Anything else — `${a + b}`, `${x.uppercase()}`,
+    `${1}`, an unknown name, a raw string — keeps the call RawCode.
+  - *What a template never reads: a Double or a nullable value.* The device
+    guest is Kotlin/JS, the preview wasm (the relay the JVM), and they print
+    these differently: Kotlin/JS prints `1.0` as `1` (`1.5` as `1.5`),
+    wasm/JVM print `1.0`; a null prints `null` on the device and nothing in
+    the preview. No preview of such a template could be faithful, so — as
+    K2 refuses a Double inside a String token's own template — a Double
+    token, a component parameter declared `Double` or nullable (`String?`,
+    `Int?`…), and a screen field the Bindings interface declares other than
+    `String`/`Int`/`Long`/`Boolean` (`Double`, `Float`, any nullable type)
+    keep the call RawCode (the component opaque); the document refuses the
+    same (a Double token part, a part reading a field the contract declares
+    so), the relay re-resolves a token part on undo/redo only as String,
+    Int or Boolean, and the editor offers no Double token in a template.
+    String, Int, Long and Boolean print alike on every target (a common
+    `portal-render` test runs on both js and wasm and asserts it, Long past
+    2^53 included). Format such a value in the presenter (a `String` field
+    the presenter fills) to show it.
+  - *Where ingest reads a reference's type.* A screen field's in the
+    Bindings interface the screen takes, declared in the same file, with
+    the members of its supertypes declared in that file. That interface is
+    the one its parameter's type names as Kotlin reads it — past an
+    annotation, `?` and type arguments, through a same-file `typealias`
+    (chained too) or an import alias, into a nested declaration
+    (`Outer.HomeBindings`), the file's own package qualifier dropped —
+    never another `…Bindings` interface the file declares first, here or
+    in contract write-back. A plain name the file does not declare (perhaps
+    a typealias in another file) takes the file's only `…Bindings`
+    interface, as 0.3.x did; not when the name is itself a `…Bindings` one,
+    is qualified by another package, or the file declares several (the
+    contract's reason then says which). `kotlin.String`,
+    `kotlin.Int`, `kotlin.Long` and `kotlin.Boolean` are those types. An
+    item field's (`row.price`) in the Repeat's element type (`List<Row>`)
+    when `Row` — an interface, or a class with `val`/`var` constructor
+    parameters — is declared in the same file: a `Double`, `Float` or
+    nullable member keeps the call RawCode. A type ingest cannot read is
+    *unknown*, and a template never reads it: a property without a declared
+    type (`val x get() = 1.5`, typed `<unknown>` in the contract, never
+    silently `String`), and every field the interface does not declare in
+    the file — inherited or brand new — when the screen has no Bindings
+    parameter, takes a type not declared in its file, or takes an interface
+    extending one declared in another file (the RawCode reason says which).
+    The contract carries that reason as `unlistedFieldsUnknown` (null —
+    absent on the wire, and what older JSON decodes as — when the interface
+    is read whole: an unlisted field is then new, and contract write-back
+    declares it). The document refuses, when the op is made (set, insert,
+    a conditional's branch, an undo reinserting it; the editor's and an
+    agent's ops alike), a template reading a field the contract cannot
+    type — "the screen's Bindings type for `title` is not readable here
+    (…); bind it directly or make this change in code" — because ingest
+    reads such a template as RawCode, so write-back would refuse it and
+    block every later edit of the screen (§7a). A plain binding and a list
+    element of such a field are allowed: nothing is printed, the compile
+    types them, and they read back. A `ContractEdit` cannot clear the
+    signal (the file decides it). Limit: an item type declared in another
+    file is not read (an item field in a template stays grammar, as
+    before), and the contract carries no item types, so the document does
+    not check an item field's type: a template reading an item field ingest
+    types `Double` or nullable is refused by the relay's write-back
+    preflight (§7a) when the op is made — the file would not read back as
+    the document.
+  - A template fits only where source takes a `String`: a widget's String
+    prop, a component's String parameter, or a conditional value's branch on
+    one (`if (b.on) "Hi ${b.n}" else "-"`).
+  - *What a list is.* `listOf(…)` on a widget's `List<Int>` or
+    `List<String>` prop whose elements are literals of the element kind,
+    design tokens of the element kind (`listOf(C.Start, C.End)`,
+    `listOf(16777215, C.A, C.B)`) or bindings (`b.x`, `item.x`, a component
+    parameter; one the Bindings interface or the signature declares is
+    declared as the element type). A `List<Float>` stays literal-only (no token is a Float), a
+    list prop is never conditional, and a component parameter is never a
+    list. A list of literals is the plain literal it always was.
+  - *On the wire.* `PropValue.Template(parts)` — each part a `Lit` (tag
+    `s`, the decoded text), a `Bind` or a `Token` — and
+    `PropValue.ListOf(tag, items)` (`li`/`ls`, each item a `Lit` of the
+    element kind, a `Token` or a `Bind`). Both are stored CANONICAL: no
+    empty or adjacent text parts, and a template with no reference left (or
+    a list with only literals) is the plain `Lit`, which is what the
+    recognizer reads back. The author's spelling (`$x` vs `${x}`, escapes)
+    is not in the model; write-back keeps it. The device tree carries a
+    template's text (token values, `{field}` for a binding) under `"s"`
+    plus `"template"`, and a list's resolved values under `"li"`/`"lst"`
+    plus `"items"`, so an older device guest renders them. The relay sends
+    `PropValue.Template` only to a client asking `GET /doc?…&templates=1`
+    and `PropValue.ListOf` only to one asking `lists=1` (this release's
+    editor and MCP server); an older editor gets the text / the resolved
+    list, and — as with tokens — its edits to other props leave both in the
+    document and the file (a prop it rewrites becomes a literal).
+  - *Preview.* A binding part takes its mock (an unmocked one shows
+    `{field}`), a token its value, an item field its row's mock; preview
+    expansion substitutes a component's parameters with the instance's
+    arguments (a template argument is evaluated inside the body's
+    template). A compiled
+    fixture (`ParityTemplates.kt`) renders the same value tree as the
+    interpreted golden (`portal-render` `TemplateListParityTest`).
+  - *Write-back.* A no-op is byte-identical. An edit compares the old and
+    new parts and rewrites only the run between the unchanged leading and
+    trailing parts: changing one text segment rewrites that segment's
+    source, changing one reference rewrites `${…}` alone, and every other
+    part keeps its bytes (`$x` stays `$x`, an escape stays as written). A
+    rewritten part is spelled canonically: text escaped (`\$`, `\"`,
+    controls), a reference as `$name` where that reads back (a simple name
+    not followed by an identifier character) else `${ref}` — and a kept
+    `$name` that new text would extend is re-spelled `${name}`. The result
+    must parse back as the new parts, else the whole string is written
+    canonically (still only that argument). A list edit that keeps the
+    length rewrites only the changed elements; otherwise the argument is
+    written whole. A token added in a template or a list adds its import
+    (structural, from the token).
+  - *Contract.* A screen field read only by templates is typed `String` in
+    the derived contract (and an item field only in templates is a
+    `String` item member); a field the Bindings interface already declares
+    keeps its declared type (a `String`, `Int`, `Long` or `Boolean` — see
+    above), and another use (an Int prop) types it first. A field a
+    template or a list reads is never a Boolean — unless the Bindings
+    interface declares it `Boolean` (a template prints one: `"on: ${b.on}"`
+    beside `if (b.on) { … }` compiles): otherwise the document refuses a
+    Boolean test on it, and placing a template or a list that reads a field
+    the screen already tests as one; the conditional value being placed is
+    not evidence against itself (`if (b.on) "on: ${b.on}" else "-"` with
+    `on` declared `Boolean`). A field a Repeat iterates is a List: no
+    template, no list element and no binding on a prop that is not a List
+    reads it (either order; a `List<String>` prop may bind the same list). A
+    bound list element is the list's element type.
+  - *What an op may not create.* The document refuses a template on a
+    non-String prop or a modifier, a list with references on anything but a
+    `List<Int>`/`List<String>` widget prop or with the other prop's tag, a
+    part or an element that is not a reference of the right kind (an
+    action, a nested template, a Double, Long or wrong-kind token, a
+    non-field name, a field the contract declares Double/Float/nullable or —
+    for an element — other than the element type, a template part reading a
+    field the contract cannot type), a conditional list, a
+    Boolean test on a field a template or list reads unless declared
+    `Boolean` (either order), a Repeat's field read as one value (either
+    order), and —
+    where it is placed (set, insert, move) — an item field read outside a
+    Repeat over its item. The relay
+    refuses a template on a component parameter not declared `String`, a
+    list on any component parameter, and runs every token part and element
+    through the K2 gate (the server's value, the binding check in the target
+    file, re-resolution on undo/redo).
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add
@@ -638,10 +808,89 @@ ways, and the editor is told which:
    file is rewritten from the document only if the file as it is IS the
    export of its own tree (a trailing newline aside) — it holds nothing the
    exporter would drop — and the export reads back as the document.
-3. **Otherwise refused** (`refused`): nothing is written and the file is
-   left exactly as it is. The relay logs one line, the screen's write-back
-   status (`writeBack` on the `/doc-events` stream and in `/devstate`) says
-   why, and the editor shows a non-blocking banner and marks the save pill
+3. **Otherwise refused** — and **an edit write-back would refuse is
+   refused when it is made**. The relay plans the write-back of every edit
+   it is asked to make — submit, dry run (same answer), undo and redo —
+   exactly as the writer will: `ScreenWriter.plan` of the document the
+   edit leaves, against the file as it is now (read once, under the
+   screen's lock), with the same base and component and token tables. If
+   the plan is a refusal, so is the op: "this change could not be written
+   to `<file>` without losing code: `<reason>` — make this change in code";
+   the document never takes it, and nothing is blocked. An undo or redo
+   step the plan refuses is dropped (what refuses it is usually the file's
+   code, which only an edit of the file changes — and that edit, read,
+   clears both stacks; a component or token changing back might have let
+   it apply later, but a kept step that never applies would wedge the
+   stack behind it). Dropping a step does not reverse its change: the
+   change a dropped undo step would have undone stays in the document, and
+   the next undo applies the older step below it on top of that change
+   (the tree must still take it, or that step is dropped too); likewise a
+   redo after a dropped redo step re-applies a later change without the
+   dropped one. This covers what the document cannot check: a template
+   reading a list item's field the file types `Double` or nullable (the
+   contract carries no item types), a plain binding set in a screen
+   function that takes no bindings parameter, and any reason the writer
+   has. The preflight lets an edit through when
+   - it changes nothing, or brings the document back to the file (nothing
+     new to write; an undo out of a refusal is never refused);
+   - the plan is "re-read" (the file changed since the relay last read
+     it, and the watcher has not read it yet): the edit is accepted and the
+     writer re-reads the file and reports it `discarded` (0. above).
+     Reading the file at the edit instead would swap the document the
+     client's batch was made against under its feet — and the change would
+     be lost all the same;
+   - the document could not be written before the edit either (a change
+     refused at write time, below, or a file that does not read as a
+     screen): the edit is not why, so it is accepted and the writer reports
+     as before — but only if the edit is writable against the text the
+     relay last read, when the file on disk is not that text. The author
+     mid-edit (the file momentarily not a screen) may save the last-read
+     text back, which the watcher skips as already read; an edit only the
+     mid-edit file could have refused would then stay in the document,
+     refused at every write. So it is planned against the last-read text
+     too, and refused if that plan refuses;
+   - the file cannot be read at all when the edit is made (deleted, or not
+     a file, between the check that it exists and the read): as for
+     "re-read" — the edit is accepted and the writer reports what it finds
+     — never an error out of the request.
+
+   The write itself is unchanged: it plans again when it runs (400 ms
+   later; the file may have changed). Cost, while the edit holds the
+   screen's lock: one plan for an accepted edit; two for a refused one (the
+   edit's, then the document's as it is, to tell whether the edit is why);
+   a third, against the last-read text, only when the document's plan
+   refuses too and the file on disk is not that text. Measured as a whole
+   dry run (gate, apply and plans; 200 runs after 30 warm-up) inside the
+   full `:portal-relay:test` suite while the ingest, MCP and codegen
+   suites ran in parallel: on this repo's largest screen
+   (`layout_evidence.kt`, 230 lines, 49 nodes) an accepted edit 6.6 ms
+   median, 7.9 ms p95, 9.7 ms max, and a refused one (two plans) 9.0 ms
+   median, 10.6 ms p95, 12.8 ms max; on the reference app's screens
+   (`item.kt`, `inventory.kt`) an accepted edit 1.5 ms median, 2.3 ms
+   p95, 3.8 ms max.
+
+   Two plans for one screen may run at once: the edit's plan runs under
+   the screen's lock, the debounced writer's outside it (it snapshots the
+   document, base and base text under the lock, plans, then takes the lock
+   again to write). That is safe because a plan has no effect: it reads
+   the file once into its own text, parses its own PSI file from it (the
+   shared PSI environment only creates files, as it already does for
+   several screens at once), and decides from its inputs alone. Only the
+   writer writes, and only under the lock, after checking that the file
+   is still the text it planned against and that nothing read it since its
+   snapshot. A write planned before the edit writes the document as it was
+   at its snapshot (or is dropped for a re-read), and the edit schedules a
+   write of its own, which plans again.
+
+   **What is still refused at write time** (`refused`) is what the plan at
+   the edit could not see: the file changed between the edit and its write
+   in a way that still reads as the base (a reformat, a comment), so the
+   write merges onto a text the edit's plan never saw and cannot make the
+   change in place; or a component or design token the screen uses
+   changed in between. A write that fails (I/O) is `failed`. Then nothing
+   is written and the file is left exactly as it is. The relay logs one
+   line, the screen's write-back status (`writeBack` on the `/doc-events`
+   stream and in `/devstate`) says why, and the editor shows a non-blocking banner and marks the save pill
    "Not written". **The document keeps the change that could not be written,
    so every later edit of this screen is refused with it** (the banner says
    so, and names the version that first failed): "this change could not be
@@ -666,7 +915,12 @@ a RawCode replacement that is not exactly one statement (several, a parse
 error, or a comment after it — `Legacy(2) // c`) or that reads as something
 the editor models (a widget, `if` or `forEach`: insert that as a widget
 instead); a bound value, condition or list inserted into a screen function
-that takes no bindings parameter (add the parameter in code first); and a
+that takes no bindings parameter (add the parameter in code first); a
+template reading a screen field whose type the screen's file does not show
+(the interface the screen takes is not in the file or extends one declared
+elsewhere, or the field has no declared type — §7, "Where ingest reads a
+reference's type": bind it directly, or make the change in code); any
+edit write-back would refuse (the preflight in 3. above); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
 to another block, nothing that mentions the declared name (a whole-word

@@ -61,6 +61,8 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
     return when (v) {
       is Bind -> c.copy(field = v.field)
       is Conditional -> c.holds(null, present = false) // a value chosen at render time: read as unknown
+      // K4: a template reading a binding is known only at render time; otherwise its text.
+      is Template -> if (referencedBinds(v).isEmpty() && v.parts.none { it is Conditional }) c.holds(templateText(v) { null }, present) else c.holds(null, present = false)
       else -> c.holds(v, present)
     }
   }
@@ -73,6 +75,10 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
       is Boolean -> resolveValue(if (d) v.whenTrue else v.whenFalse)
       else -> Conditional(d as Cond, resolveValue(v.whenTrue), resolveValue(v.whenFalse))
     }
+    // K4: a template's / a list's parameter references take the instance's
+    // values (a required parameter with no argument previews its sample value).
+    is Template -> Template(v.parts.map { p -> if (p is Bind && '.' !in p.field && p.field in paramNames) argOf(p.field).second else resolveValue(p) })
+    is ListOf -> ListOf(v.kind, v.items.map { p -> if (p is Bind && '.' !in p.field && p.field in paramNames) argOf(p.field).second else resolveValue(p) })
     else -> v
   }
 

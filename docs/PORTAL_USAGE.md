@@ -396,6 +396,100 @@ if (b.subtitle.isNotEmpty()) { … }
 - Agents: the MCP op schema documents `PropValue.Conditional`.
   Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Conditions are grammar".
 
+## String templates and lists with references
+
+Text built from bindings, parameters and design tokens, and lists of tokens,
+are portal grammar (K4):
+
+```kotlin
+StyledText(text = "Rating: ${b.rating}/${C.MaxStars}")
+StyledText(text = "${b.count} items")
+MenuRow(title = "Hi ${b.name}", subtitle = ", ${b.city}")
+StyledBox(gradientColorsArgb = listOf(C.Start, C.End))
+AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
+```
+
+- A template's embedded expressions must each be a reference: a screen
+  binding (`b.x`), an item field inside its Repeat (`item.x`), a component
+  parameter (`$label` in a component body) or a design token of a String,
+  Int or Boolean kind (`${C.Brand}`, `${C.Max}`). Anything else (`${a + b}`,
+  `${x.uppercase()}`, `"""…"""`) keeps the call RawCode. A template fits a
+  String prop or a component's String parameter (also as a conditional's
+  branch).
+- A list's elements are literals, tokens of the element kind (an Int token
+  in a `List<Int>`, a String token in a `List<String>`) or bindings; a
+  `Float` list stays literal-only, and a list is never conditional.
+- In the property panel a template is one text field: literal text with its
+  references in braces — `Rating: {rating}/{◆C.MaxStars}`, `{item.city}`;
+  `{{` and `}}` are literal braces. **◆** inserts a token; **{}** on a text
+  prop starts a template. A list is its elements: `16777215, #FF8800,
+  ◆C.Start, @accent` for an Int list (`|`-separated for a String list), and
+  **◆** adds a token element. In a String list a backslash takes the next
+  character literally (`\@at` is the text `@at`, not a binding; `\◆`, `\|`,
+  `\\`, `\"`), and an element in double quotes keeps its spaces (`" a "`;
+  `""` is the empty text) — the panel writes every list so that it reads
+  back as itself. Text that is not valid (an empty element between
+  separators, a lone trailing `\`) is marked red (the tooltip says why) and
+  is not sent. A list prop bound as a whole (`options = b.options`) keeps
+  its binding field.
+- The preview evaluates templates with the binding mocks (an unmocked one
+  shows `{field}`) and token values.
+- A template never reads a Double or a nullable value: the device (Kotlin/JS)
+  prints `1.0` as `1` and a null as `null`, the preview (wasm) `1.0` and
+  nothing, so no preview of one is faithful. A Double token, a component
+  parameter declared `Double` or nullable, and a screen field declared
+  `Double`/`Float`/nullable in the Bindings interface keep the call code
+  (RawCode), the editor offers no Double token in a template, and the server
+  refuses one. Format such a value in the presenter into a `String` field.
+- So ingest must read the type: a screen field's in the Bindings interface
+  the screen TAKES — the one its parameter's type names (`b: HomeBindings`,
+  `b: HomeBindings?`, `b: @Ann HomeBindings`, `b: HB` with a same-file
+  `typealias HB = HomeBindings`, `b: Outer.HomeBindings`; a name the file
+  does not declare takes its only `…Bindings` interface), declared in the same file, with its supertypes
+  declared there; never another `…Bindings` interface the file declares
+  first — and an item field's in its item type when that is declared in the
+  same file (`interface Row { val price: Double }` keeps `"${row.price}"`
+  code). A type it cannot read is unknown and a template does not read it:
+  a property without a type (`val x get() = 1.5`); and every field the
+  interface does not declare in the file — inherited or brand new — when
+  the screen has no Bindings parameter, its interface is not in the file,
+  or the interface extends one declared in another file.
+  `kotlin.Int` etc. are fine. An item type in another file is not read
+  (such an item field still reads as grammar).
+- **The rule for edits:** the editor (and an agent) cannot place a
+  template reading such a field. The edit is refused when you make it —
+  "the screen's Bindings type for `title` is not readable here (…); bind it
+  directly or make this change in code" — because the file would not read
+  back as the template, and a change refused at write-back blocks every
+  later edit of the screen until it is undone. Bind the field directly
+  (`text = b.title`), declare it in the screen's own interface in the same
+  file, or make the change in code. A NEW field of an interface read whole
+  is fine: write-back declares it (`val fresh: String`). The document's
+  contract carries the reason as `unlistedFieldsUnknown` (absent = read
+  whole). The same holds for a list item's field the item type declares
+  `Double` or nullable (`row.price`): the relay plans the write-back of
+  every edit when you make it, and refuses one the write would refuse.
+- Write-back is surgical: editing one text segment or reference rewrites only
+  it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
+  `${'$'}`) elsewhere in the string stay as written; editing one list
+  element rewrites only that element. A token added inside a template or a
+  list adds its import.
+- A binding read only by a template is typed `String` in the derived
+  contract (a field the Bindings interface already declares keeps its type:
+  `String`, `Int`, `Long` or `Boolean`). A field a template or a list reads
+  cannot also be tested as a Boolean, unless the Bindings interface declares
+  it `Boolean`. A field a Repeat iterates is a list: a template, a list
+  element or a text prop cannot read it whole.
+- A mocked element of an Int list takes a decimal or a colour (`#RRGGBB`,
+  `#AARRGGBB`); any other mock leaves the element out of the preview and
+  the device push (an unmocked or blank one is 0).
+- An editor built before this release is served a template's text (bindings
+  as `{field}`) and a list's resolved values (it does not ask with
+  `templates=1` / `lists=1`); its edits to other props leave both in the file.
+- Agents: the MCP op schema documents `PropValue.Template` and
+  `PropValue.ListOf`. Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Templates
+  and lists are grammar".
+
 ## Live-presenter preview (P3-12)
 
 Press **▶ Live** on a screen whose project registered an `AppPreviewEntry`: the

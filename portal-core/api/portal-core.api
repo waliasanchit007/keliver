@@ -294,6 +294,19 @@ public final class dev/keliver/portal/KotlinStringLiteralKt {
 	public static final fun parseKotlinStringLiteral (Ljava/lang/String;)Ljava/lang/String;
 }
 
+public final class dev/keliver/portal/ListOf {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Ldev/keliver/portal/ListOf;
+	public static synthetic fun copy$default (Ldev/keliver/portal/ListOf;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/ListOf;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getItems ()Ljava/util/List;
+	public final fun getKind ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class dev/keliver/portal/MapComponentRegistry : dev/keliver/portal/ComponentRegistry {
 	public fun <init> (Ljava/util/Collection;)V
 	public fun names ()Ljava/util/Set;
@@ -367,6 +380,32 @@ public final class dev/keliver/portal/ScreenContract {
 public final class dev/keliver/portal/SerializeKt {
 	public static final fun deserializeTree (Ljava/lang/String;)Ldev/keliver/portal/WidgetNode;
 	public static final fun serializeTree (Ldev/keliver/portal/WidgetNode;)Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/Template {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Ldev/keliver/portal/Template;
+	public static synthetic fun copy$default (Ldev/keliver/portal/Template;Ljava/util/List;ILjava/lang/Object;)Ldev/keliver/portal/Template;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getParts ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/TemplatesListsKt {
+	public static final fun fmtTemplate (Ldev/keliver/portal/Template;Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public static final fun kotlinStringContent (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun listElementType (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun listItems (Ljava/lang/Object;)Ljava/util/List;
+	public static final fun listKindOf (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun mockedIntElement (Ljava/lang/String;)Ljava/lang/Integer;
+	public static final fun referencedBinds (Ljava/lang/Object;)Ljava/util/List;
+	public static final fun templateRef (Ljava/lang/String;Ljava/lang/Character;)Ljava/lang/String;
+	public static final fun templateRefTypeFits (Ljava/lang/String;)Z
+	public static final fun templateText (Ldev/keliver/portal/Template;Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public static final fun templateTokenFits (Ljava/lang/Object;)Z
+	public static final fun templateValueText (Ljava/lang/Object;)Ljava/lang/String;
 }
 
 public final class dev/keliver/portal/Token {

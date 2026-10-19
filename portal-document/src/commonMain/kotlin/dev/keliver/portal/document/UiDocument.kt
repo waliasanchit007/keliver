@@ -6,8 +6,11 @@ import dev.keliver.portal.LOGIC_NODE_TYPES
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
+import dev.keliver.portal.listElementType
+import dev.keliver.portal.listKindOf
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.propSourceType
+import dev.keliver.portal.templateRefTypeFits
 import dev.keliver.portal.tokenFits
 import dev.keliver.portal.tokenKindOf
 import dev.keliver.portal.widgetSpec
@@ -51,6 +54,41 @@ import kotlinx.serialization.Serializable
  * refused for conditions already placed — the compile reports those. An
  * `Else` node (a `Condition`'s else branch) sits only directly under a
  * `Condition`, at most one per Condition.
+ *
+ * K4: a template ([PropValue.Template]) sits only on a String prop (a
+ * component instance's String parameter: the server checks the signature),
+ * also as a conditional's branch; its parts are text, bindings (a plain
+ * screen field, or an item field `item.x` inside a Repeat over `item`) and
+ * design tokens of a String, Int or Boolean kind. Never a Double token, nor
+ * a field the contract declares other than `String`/`Int`/`Long`/`Boolean`
+ * (a `Double`/`Float`, a nullable type): the device (Kotlin/JS) prints `1.0`
+ * as `1` and a null as `null`, the preview `1.0` and nothing, so no preview
+ * of one is faithful ([dev.keliver.portal.templateRefTypeFits]). A list with
+ * references ([PropValue.ListOf]) sits only on a `List<Int>`/`List<String>`
+ * prop of a catalogued widget, its tag that prop's, each element a literal
+ * or a token of the element kind or a binding (a field the contract
+ * declares is declared as the element type) — never conditional. Every op
+ * stores both in canonical form ([canonicalValue]); an item reference
+ * outside a Repeat over its item is refused where it is placed (as for K3).
+ * A field a template or a list reads is not a Boolean unless the contract
+ * declares it `Boolean` (a template prints one): otherwise a Boolean test on
+ * it is refused (as for a field bound to a text prop), and — unlike a plain
+ * binding — so is placing a template or a list that reads a field the
+ * screen already tests as a Boolean. A field a Repeat iterates (a List) is
+ * read by no template, no list element and no binding on a prop that is not
+ * a List — refused both ways round. A field whose type the contract cannot
+ * give is no template's reference ([unreadableWhy]): one it types
+ * `<unknown>` (declared with no type), and one it does not list when
+ * [Contract.unlistedFieldsUnknown] says an unlisted field's type is not
+ * readable in the screen's file (no Bindings parameter, an interface not in
+ * the file or extending one declared elsewhere) — refused where it is placed
+ * (set, insert, a conditional's branch, an undo reinserting it), because
+ * ingest reads such a template as RawCode and write-back would refuse it,
+ * blocking every later edit of the screen. A plain binding of such a field
+ * and a list element of it are allowed (nothing is printed: the compile
+ * types them, and ingest reads them back). Not checked here: an item field's
+ * type (the contract does not carry item types) — write-back refuses such an
+ * edit (the file would not read back as the document).
  */
 @Serializable
 public data class UiDocument(
@@ -90,18 +128,21 @@ public data class UiDocument(
         }
         tokenMisfit(op.node)?.let { return err(it) }
         conditionalMisfit(op.node)?.let { return err(it) }
+        refValueMisfit(op.node, contract)?.let { return err(it) }
         elseMisfit(parent, op.node, moving = null)?.let { return err(it) }
         val (allocated, next) = allocate(op.node, nextHandle)
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         val inserted = replaced(newParent).copy(nextHandle = next)
-        conditionsMisfit(inserted.root, renumbered.handle)?.let { return err(it) }
+        conditionsMisfit(inserted.root, renumbered.handle, contract.fields)?.let { return err(it) }
         TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
       is InsertExisting -> { // internal: undo of Delete/Move reinserts with ORIGINAL handles
         val parent = find(op.parent) as? DocNode.Widget ?: return err("unknown handle ${op.parent.v}")
+        // K4: a template the contract can no longer type would not be written either.
+        unreadableRefMisfit(op.node, contract)?.let { return err(it) }
         val idx = if (op.after == null) 0 else parent.children.indexOfFirst { it.handle == op.after } + 1
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, op.node) })
         TryResult(ApplyResult(replaced(newParent), DocOp.DeleteNode(op.node.handle)), null)
@@ -134,7 +175,7 @@ public data class UiDocument(
         val moved = sanitize(node, deleted.childScope(target), deep = false, stripped = stripped)
         val res = deleted.apply(InsertExisting(op.newParent, op.after, moved))
         // K3: an item-scoped condition stays inside a Repeat over its item.
-        conditionsMisfit(res.doc.root, op.target)?.let { return err(it) }
+        conditionsMisfit(res.doc.root, op.target, contract.fields)?.let { return err(it) }
         val inverse = if (stripped.isEmpty()) {
           DocOp.MoveNode(op.target, oldParent.handle, oldAfter)
         } else {
@@ -174,14 +215,19 @@ public data class UiDocument(
 
       is DocOp.SetProp -> {
         val w = find(op.target) as? DocNode.Widget ?: return err("unknown handle ${op.target.v}")
-        tokenMisfit(w.type, op.name, op.value)?.let { return err(it) }
-        conditionalMisfit(w.type, op.name, op.value)?.let { return err(it) }
-        conditionPropMisfit(w.type, op.name, op.value)?.let { return err(it) }
+        val canonical = canonicalValue(op.value)
+        tokenMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        refValueMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
-        val value = if (isDpProp(w.type, op.name)) clampDp(op.value) else op.value
+        val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name)?.let { return err(it) }
+        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name, contract.fields)?.let { return err(it) }
+        itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
+        refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
+        repeatListMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -198,13 +244,17 @@ public data class UiDocument(
         if (spec != null && !spec.isValidUnder(scope)) {
           return err("${spec.name} is only valid inside ${spec.scopes.joinToString("/")} (this node's parent is ${scope ?: "none"})")
         }
-        tokenMisfit(w.type, "mod.${op.name}", op.value)?.let { return err(it) }
-        conditionalMisfit(w.type, "mod.${op.name}", op.value)?.let { return err(it) }
+        val canonical = canonicalValue(op.value)
+        tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
+        conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
+        refValueMisfit(w.type, "mod.${op.name}", canonical, contract)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
-        val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(op.value) else op.value
+        val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        conditionMisfitAt(set.root, op.target, "mod.${op.name}", contract.fields)?.let { return err(it) }
+        itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
+        repeatListMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -223,8 +273,9 @@ public data class UiDocument(
         TryResult(ApplyResult(replaced(raw.copy(text = op.text)), DocOp.ReplaceRaw(op.target, raw.text)), null)
       }
 
+      // K4: whether an unlisted field's type is readable is the file's to say, not an op's.
       is DocOp.ContractEdit ->
-        TryResult(ApplyResult(copy(contract = op.contract), DocOp.ContractEdit(contract)), null)
+        TryResult(ApplyResult(copy(contract = op.contract.copy(unlistedFieldsUnknown = contract.unlistedFieldsUnknown)), DocOp.ContractEdit(contract)), null)
     }
   }
 
@@ -314,9 +365,9 @@ private fun sanitize(
     modifierSpecs.firstOrNull { it.name == key.substringBefore('.') }?.isValidUnder(scope) ?: true
   }
   if (removed.isNotEmpty()) stripped?.put(n.handle.v, removed.associate { it.key to it.value })
-  val modifiers = kept.associate { it.key to it.value }
+  val modifiers = kept.associate { it.key to canonicalValue(it.value) }
     .mapValues { (key, v) -> if (isDpProp(n.type, "mod.$key")) clampDp(v) else v }
-  val props = n.props.mapValues { (key, v) -> if (isDpProp(n.type, key)) clampDp(v) else v }
+  val props = n.props.mapValues { (key, v) -> canonicalValue(v).let { c -> if (isDpProp(n.type, key)) clampDp(c) else c } }
   val children = n.children.map { c ->
     when {
       n.type in LOGIC_TYPES -> sanitize(c, scope, deep, stripped)
@@ -448,15 +499,20 @@ private val CONDITION_PROPS = setOf("field", "test", "negate")
  * over that item, or a test the field's other uses contradict
  * ([conditionTypeMisfit]). Null = every condition fits.
  */
-private fun conditionsMisfit(root: DocNode, h: Handle): String? {
+private fun conditionsMisfit(root: DocNode, h: Handle, fields: Map<String, String>): String? {
   val top = findIn(root, h) as? DocNode.Widget ?: return null
   fun walk(n: DocNode): String? {
     if (n !is DocNode.Widget) return null
     if (n.type == "Condition") {
       n.props.forEach { (k, v) -> conditionPropMisfit(n.type, k, v)?.let { return it } }
-      conditionMisfitAt(root, n.handle, null)?.let { return it }
+      conditionMisfitAt(root, n.handle, null, fields)?.let { return it }
     }
-    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k -> conditionMisfitAt(root, n.handle, k)?.let { return it } }
+    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
+      conditionMisfitAt(root, n.handle, k, fields)?.let { return it }
+      itemRefMisfitAt(root, n.handle, k)?.let { return it }
+      refBooleanMisfitAt(root, n.handle, k, fields)?.let { return it }
+      repeatListMisfitAt(root, n.handle, k)?.let { return it }
+    }
     return n.children.firstNotNullOfOrNull(::walk)
   }
   return walk(top)
@@ -467,7 +523,7 @@ private fun conditionsMisfit(root: DocNode, h: Handle): String? {
  * condition when [key] is null (a `Condition`), else the conditional value at
  * wire key [key] ("mod.X.p" for a modifier). Null when it fits (or is none).
  */
-private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?): String? {
+private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?, fields: Map<String, String>): String? {
   val w = findIn(root, h) as? DocNode.Widget ?: return null
   val (field, test, where) = if (key == null) {
     val field = (w.props["field"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
@@ -481,7 +537,7 @@ private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?): String? {
     return if (item in itemVarsAt(root, h)) null
     else "$where reads `$field` outside a Repeat over `$item` (an item field is read only inside its Repeat)"
   }
-  return conditionTypeMisfit(root, field, test, skip = h to key, where = where)
+  return conditionTypeMisfit(root, field, test, skip = h to key, where = where, fields = fields)
 }
 
 /** The item variables in scope at node [h]: each enclosing Repeat's `item`. */
@@ -501,9 +557,18 @@ private fun itemVarsAt(root: DocNode, h: Handle): Set<String> {
  * document reads as a List (a Repeat's items) or a String (bound to a text
  * or numeric prop, or tested for emptiness/blankness); `isBlank()` on a List. The use
  * being checked ([skip]: node, key — null = a Condition's own) is not
- * evidence. Fields a project component types are left alone.
+ * evidence. Fields a project component types are left alone. K4: a template
+ * reading the field is evidence only when the contract ([fields]) does not
+ * declare it `Boolean` — a template prints a declared Boolean.
  */
-private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, skip: Pair<Handle, String?>, where: String): String? {
+private fun conditionTypeMisfit(
+  root: DocNode,
+  field: String,
+  test: CondTest,
+  skip: Pair<Handle, String?>,
+  where: String,
+  fields: Map<String, String>,
+): String? {
   if (test != CondTest.Bool && test != CondTest.Blank) return null
   var list = false
   var notBoolean = false
@@ -519,6 +584,9 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
     val spec = widgetSpec(n.type)
     n.props.forEach { (k, v) ->
       if (skip == (n.handle to k)) return@forEach
+      // K4: a template prints its fields into text and a list holds Ints or Strings: neither is
+      // a Boolean the contract does not declare (a list never binds a declared Boolean).
+      if (field in refFields(v) && !isBooleanType(fields[field])) notBoolean = true
       if (v is PropValue.Conditional) cond(v.field, CondTest.fromWire(v.test))
       val kind = spec?.props?.firstOrNull { it.name == k }?.kind
       val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
@@ -530,10 +598,249 @@ private fun conditionTypeMisfit(root: DocNode, field: String, test: CondTest, sk
   walk(root)
   return when {
     test == CondTest.Bool && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
-    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere"
+    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template or a list element)"
     test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
     else -> null
   }
+}
+
+/**
+ * K4: the token tags a template part may hold — String, Int, Boolean; never
+ * a Double, which the device (Kotlin/JS: `1.0` prints `1`) and the preview
+ * (wasm/JVM: `1.0`) print differently ([dev.keliver.portal.templateTokenFits]).
+ */
+private val TEMPLATE_TOKEN_TAGS = setOf("s", "i", "b")
+
+/**
+ * The contract type ingest gives a field whose type it cannot read (a
+ * property without a declared type, `val x get() = 1.5`): a template never
+ * reads it ([unreadableWhy]); a list element of it is left to the compile.
+ */
+private const val UNKNOWN_TYPE = "<unknown>"
+
+/** Why a template may not read the field [field] declared [type] (see [templateRefTypeFits]). */
+private fun refTypeWhy(field: String, type: String): String = when {
+  type.trim().endsWith("?") -> "`$field` is declared $type: the device prints a null as \"null\", the preview as nothing"
+  type.trim() == "Double" || type.trim() == "Float" ->
+    "`$field` is declared $type: the device (Kotlin/JS) prints 1.0 as \"1\", the preview (wasm) as \"1.0\""
+  else -> "`$field` is declared $type, which a template does not read (only String, Int, Long and Boolean print alike on the device and in the preview)"
+}
+
+/**
+ * K4: why a template may not read the screen field [field] because [contract]
+ * cannot type it — declared with no type (`<unknown>`), or not listed where
+ * an unlisted field's type is not readable ([Contract.unlistedFieldsUnknown]:
+ * the interface is not in the screen's file, or extends one declared
+ * elsewhere). Ingest reads such a template as RawCode, so it would not be
+ * written back as the document: refused when placed, never at write-back
+ * (which would block every later edit of the screen). An item field
+ * (`row.x`) is typed by its item, not the contract. Null = it may.
+ */
+private fun unreadableWhy(field: String, contract: Contract): String? {
+  if ('.' in field) return null
+  val type = contract.fields[field]
+  val why = when {
+    type == UNKNOWN_TYPE -> "`$field` is declared with no type"
+    type == null -> contract.unlistedFieldsUnknown ?: return null
+    else -> return null
+  }
+  return "the screen's Bindings type for `$field` is not readable here ($why); " +
+    (if (type == UNKNOWN_TYPE) "declare its type, " else "") + "bind it directly or make this change in code"
+}
+
+/** [unreadableWhy] for every template part in the subtree [n] (also in conditionals' branches). */
+private fun unreadableRefMisfit(n: DocNode, contract: Contract): String? {
+  if (n !is DocNode.Widget) return null
+  fun templates(v: PropValue?): List<PropValue.Template> = when (v) {
+    is PropValue.Conditional -> templates(v.whenTrue) + templates(v.whenFalse)
+    is PropValue.Template -> listOf(v)
+    else -> emptyList()
+  }
+  (n.props + n.modifiers.mapKeys { "mod.${it.key}" }).forEach { (k, v) ->
+    templates(v).forEach { t ->
+      t.parts.filterIsInstance<PropValue.Bind>().forEach { p ->
+        unreadableWhy(p.field, contract)?.let { return "template ${n.type}.$k: $it" }
+      }
+    }
+  }
+  return n.children.firstNotNullOfOrNull { unreadableRefMisfit(it, contract) }
+}
+
+/** K4: whether the contract type [type] is `Boolean` (also spelled `kotlin.Boolean`). */
+private fun isBooleanType(type: String?): Boolean = type?.replace(" ", "")?.removePrefix("kotlin.") == "Boolean"
+
+/** K4: the plain fields (and item fields) a template's parts or a list's elements read — also in a conditional's branches. */
+private fun refFields(v: PropValue?): List<String> = when (v) {
+  is PropValue.Conditional -> refFields(v.whenTrue) + refFields(v.whenFalse)
+  is PropValue.Template -> v.parts.filterIsInstance<PropValue.Bind>().map { it.field }
+  is PropValue.ListOf -> v.items.filterIsInstance<PropValue.Bind>().map { it.field }
+  else -> emptyList()
+}
+
+/**
+ * K4: why the template or list-with-references [v] (also as a conditional's
+ * branch) may not sit at wire key [key] on a node of [nodeType], or null
+ * when it may (or [v] is neither). [v] is canonical ([canonicalValue]). A
+ * template on a project component's parameter is left to the server, which
+ * knows the signature; a component parameter is never a list.
+ */
+private fun refValueMisfit(nodeType: String, key: String, v: PropValue, contract: Contract): String? {
+  val fields = contract.fields
+  val where = "$nodeType.$key"
+  if (v is PropValue.Conditional) {
+    if (listOfNotNull(v.whenTrue, v.whenFalse).any { it is PropValue.ListOf }) return "conditional $where: a list prop cannot be conditional"
+    return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { refValueMisfit(nodeType, key, it, contract) }
+  }
+  if (v is PropValue.Template) {
+    if (key.startsWith("mod.")) return "template $where: a template fits only a String prop"
+    if (widgetSpec(nodeType) != null) {
+      val type = propSourceType(nodeType, key)
+      if (type != "String") return "template $where: a template fits only a String prop (this one is ${type ?: "not a prop"})"
+    }
+    for (p in v.parts) {
+      when (p) {
+        is PropValue.Lit -> if (p.tag != "s") return "template $where: a text part is a String"
+        is PropValue.Bind -> {
+          if (!CONDITION_FIELD.matches(p.field)) return "template $where: '${p.field}' is not a field name"
+          unreadableWhy(p.field, contract)?.let { return "template $where: $it" }
+          fields[p.field]?.let { t -> if (!templateRefTypeFits(t)) return "template $where: ${refTypeWhy(p.field, t)}" }
+        }
+        is PropValue.Token -> if (p.value.tag !in TEMPLATE_TOKEN_TAGS) {
+          return if (p.value.tag == "d") "template $where: token ${p.ref} is a Double, which the device (Kotlin/JS) prints as \"1\" where the preview prints \"1.0\" (a template reads String, Int and Boolean tokens)"
+          else "template $where: token ${p.ref} is not a String, Int or Boolean"
+        }
+        else -> return "template $where: a part is text, a binding or a design token"
+      }
+    }
+    return null
+  }
+  if (v !is PropValue.ListOf) return null
+  if (key.startsWith("mod.") || widgetSpec(nodeType) == null) return "list $where: a list with references fits only a widget's list prop"
+  val type = propSourceType(nodeType, key)
+  val tag = listKindOf(type) ?: return "list $where: a list with references fits only a List<Int> or List<String> prop (this one is ${type ?: "not a prop"})"
+  if (v.tag != tag) return "list $where: the list's tag is ${v.tag}, the prop's is $tag"
+  val element = listElementType(tag)
+  for (e in v.items) {
+    when (e) {
+      is PropValue.Lit -> if (e.tag != (if (tag == "ls") "s" else "i")) return "list $where: a literal element is a${if (tag == "ls") " String" else "n Int"}"
+      is PropValue.Token -> if (!tokenFits(element, e.value.toAny())) {
+        return "list $where: token ${e.ref} (${tokenKindOf(e.value.toAny()) ?: e.value.tag}) does not fit a $type element"
+      }
+      is PropValue.Bind -> {
+        if (!CONDITION_FIELD.matches(e.field)) return "list $where: '${e.field}' is not a field name"
+        fields[e.field]?.takeIf { it != UNKNOWN_TYPE }?.let { t -> if (t.replace(" ", "").removePrefix("kotlin.") != element) return "list $where: `${e.field}` is declared $t, not $element" }
+      }
+      else -> return "list $where: an element is a literal, a design token or a binding"
+    }
+  }
+  return null
+}
+
+/** [refValueMisfit] for every prop and modifier of an inserted subtree. */
+private fun refValueMisfit(n: DocNode, contract: Contract): String? {
+  if (n !is DocNode.Widget) return null
+  n.props.forEach { (k, v) -> refValueMisfit(n.type, k, canonicalValue(v), contract)?.let { return it } }
+  n.modifiers.forEach { (k, v) -> refValueMisfit(n.type, "mod.$k", canonicalValue(v), contract)?.let { return it } }
+  return n.children.firstNotNullOfOrNull { refValueMisfit(it, contract) }
+}
+
+/**
+ * K4: a screen field the template or the list at wire key [key] of node [h]
+ * reads that the screen tests as a Boolean elsewhere (a `Condition`, or a
+ * conditional value) — the contract cannot type it both. A field the
+ * contract ([fields]) declares `Boolean` is both tested and printed (a list
+ * binding one is refused by its element type). Null = none.
+ */
+private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String, fields: Map<String, String>): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  val read = refFields(v).filter { '.' !in it && !isBooleanType(fields[it]) }.toSet()
+  if (read.isEmpty()) return null
+  fun tested(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition" && CondTest.fromWire((n.props["test"] as? PropValue.Lit)?.s) == CondTest.Bool) {
+      (n.props["field"] as? PropValue.Lit)?.s?.takeIf { it in read }?.let { return it }
+    }
+    (n.props.values + n.modifiers.values).forEach { x ->
+      if (x is PropValue.Conditional && x.field in read && CondTest.fromWire(x.test) == CondTest.Bool) return x.field
+    }
+    return n.children.firstNotNullOfOrNull(::tested)
+  }
+  val f = tested(root) ?: return null
+  return "${w.type}.$key reads `$f` as text or a list element, but the screen tests it as a Boolean elsewhere (the contract cannot type it both)"
+}
+
+/**
+ * K4: the plain screen fields the value [v] at wire key [key] of a node of
+ * [nodeType] reads as ONE value — a template part, a list element, or a
+ * binding on a prop or modifier argument whose source type is not a List
+ * (also in a conditional's branches). A binding on a project component's
+ * parameter is left out (the server knows its type).
+ */
+private fun scalarReads(nodeType: String, key: String, v: PropValue?): Set<String> {
+  val out = refFields(v).filterTo(LinkedHashSet()) { '.' !in it }
+  val binds = (if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOfNotNull(v))
+    .filterIsInstance<PropValue.Bind>().filter { '.' !in it.field }
+  if (binds.isNotEmpty()) {
+    val type = propSourceType(nodeType, key)?.replace(" ", "")
+    if (type != null && !type.startsWith("List<")) binds.forEach { out += it.field }
+  }
+  return out
+}
+
+/**
+ * K4: a screen field a Repeat iterates (its `items`, a List) that the screen
+ * also reads as one value ([scalarReads]) — a template would print the
+ * list, and neither a list element nor a text or number prop holds one. At
+ * wire key `items` of a Repeat [h], the Repeat's field against every such
+ * read in [root]; at any other key, the fields that value reads against
+ * every Repeat. Null = none. Whatever the contract declares: no type is both
+ * a List and what a template, a list element or a scalar prop reads.
+ */
+private fun repeatListMisfitAt(root: DocNode, h: Handle, key: String): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  fun why(field: String) =
+    "`$field` is a Repeat's List: a template, a list element or a prop that is not a List does not read the whole list (read its items inside the Repeat)"
+  if (w.type == "Repeat" && key == "items") {
+    val field = (w.props["items"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
+    fun reads(n: DocNode): Boolean {
+      if (n !is DocNode.Widget) return false
+      if (n.props.any { (k, v) -> field in scalarReads(n.type, k, v) }) return true
+      if (n.modifiers.any { (k, v) -> field in scalarReads(n.type, "mod.$k", v) }) return true
+      return n.children.any(::reads)
+    }
+    return if (reads(root)) why(field) else null
+  }
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  val read = scalarReads(w.type, key, v)
+  if (read.isEmpty()) return null
+  fun iterated(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Repeat") (n.props["items"] as? PropValue.Lit)?.s?.takeIf { it in read }?.let { return it }
+    return n.children.firstNotNullOfOrNull(::iterated)
+  }
+  return iterated(root)?.let(::why)
+}
+
+/**
+ * K4: an item field (`item.city`) a template part or a list element at wire
+ * key [key] of node [h] reads outside a Repeat over that item — null when
+ * every such reference is in scope.
+ */
+private fun itemRefMisfitAt(root: DocNode, h: Handle, key: String): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  fun refs(x: PropValue?): List<String> = when (x) {
+    is PropValue.Conditional -> refs(x.whenTrue) + refs(x.whenFalse)
+    is PropValue.Template -> x.parts.filterIsInstance<PropValue.Bind>().map { it.field }
+    is PropValue.ListOf -> x.items.filterIsInstance<PropValue.Bind>().map { it.field }
+    else -> emptyList()
+  }
+  val dotted = refs(v).filter { '.' in it }
+  if (dotted.isEmpty()) return null
+  val inScope = itemVarsAt(root, h)
+  val outside = dotted.firstOrNull { it.substringBefore('.') !in inScope } ?: return null
+  return "${w.type}.$key reads `$outside` outside a Repeat over `${outside.substringBefore('.')}` (an item field is read only inside its Repeat)"
 }
 
 /** [tokenMisfit] for every prop and modifier of an inserted subtree. */

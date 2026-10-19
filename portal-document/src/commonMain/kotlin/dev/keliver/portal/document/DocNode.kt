@@ -63,6 +63,34 @@ public sealed interface PropValue {
     val whenTrue: PropValue? = null,
     val whenFalse: PropValue? = null,
   ) : PropValue
+
+  /**
+   * K4: a String template — `"Rating: $rating"`, `"${b.count} items"` in
+   * source. Each of [parts] is a literal text segment (a [Lit] tagged "s",
+   * its decoded value) or a reference: a [Bind] (a screen binding field, an
+   * item field `item.x` inside a Repeat over `item`, or — in a component
+   * body — a parameter) or a [Token] of a String, Int or Boolean kind —
+   * never a Double, nor a field or parameter declared `Double`/`Float` or
+   * nullable (the device, Kotlin/JS, prints `1.0` as `1` and a null as
+   * `null`; the preview prints `1.0` and nothing). Canonical form
+   * ([canonical]): no empty or adjacent literal segments, at least one
+   * reference (a template without one is a plain [Lit]). The author's
+   * spelling (`$x` / `${x}`, escapes) is not modelled: write-back keeps it
+   * for every part an edit does not change. Fits a String prop or parameter.
+   */
+  @Serializable
+  public data class Template(val parts: List<PropValue>) : PropValue
+
+  /**
+   * K4: a list whose elements may be references — `listOf(C.Start, C.End)`
+   * in source. [tag] is the element kind as a [Lit] list tag: "li" (a
+   * `List<Int>` prop) or "ls" (a `List<String>` prop). Each of [items] is a
+   * [Lit] of that kind ("i"/"s"), a [Token] of that kind, or a [Bind].
+   * Canonical form ([canonical]): at least one element is not a literal (a
+   * list of literals is a plain [Lit]).
+   */
+  @Serializable
+  public data class ListOf(val tag: String, val items: List<PropValue>) : PropValue
 }
 
 /**
@@ -119,7 +147,44 @@ public sealed interface DocNode {
 
 @Serializable
 public data class Contract(
-  val fields: Map<String, String> = emptyMap(), // name -> Kotlin type
+  val fields: Map<String, String> = emptyMap(), // name -> Kotlin type ("<unknown>": declared without one)
   val actions: List<String> = emptyList(),
   val actionParams: Map<String, String> = emptyMap(), // action name -> single param Kotlin type
-)
+  /**
+   * K4: why a field [fields] does not list has a type the portal cannot read
+   * in the screen's file — or null (the default, and what JSON without it
+   * decodes as) when the screen's Bindings interface is read whole there, so
+   * an unlisted field is new and contract write-back declares it. Set by
+   * ingest when the screen has no Bindings parameter, takes a type not
+   * declared in its file, or takes an interface extending a type declared in
+   * another file (an unlisted field may be inherited from it, with any type).
+   * The document then refuses a template reading an unlisted field, as it
+   * refuses one reading a field [fields] types `<unknown>`. The file decides
+   * it: [DocOp.ContractEdit] keeps it.
+   */
+  val unlistedFieldsUnknown: String? = null,
+) {
+  /**
+   * The 0.3.x constructor, kept for callers compiled against it (binary
+   * compatible: its plain and defaulted JVM signatures). Hidden from source:
+   * a call with three arguments is the primary constructor's.
+   */
+  @Deprecated("The 0.3.x signature, kept for compiled callers", level = DeprecationLevel.HIDDEN)
+  public constructor(
+    fields: Map<String, String> = emptyMap(),
+    actions: List<String> = emptyList(),
+    actionParams: Map<String, String> = emptyMap(),
+  ) : this(fields, actions, actionParams, null)
+
+  /**
+   * The 0.3.x `copy`, kept for callers compiled against it (its plain and
+   * `copy$default` JVM signatures). It keeps [unlistedFieldsUnknown], as the
+   * `copy` a recompiled caller gets does. Hidden from source.
+   */
+  @Deprecated("The 0.3.x signature, kept for compiled callers", level = DeprecationLevel.HIDDEN)
+  public fun copy(
+    fields: Map<String, String> = this.fields,
+    actions: List<String> = this.actions,
+    actionParams: Map<String, String> = this.actionParams,
+  ): Contract = Contract(fields, actions, actionParams, unlistedFieldsUnknown)
+}

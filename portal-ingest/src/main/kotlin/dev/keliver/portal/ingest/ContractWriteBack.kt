@@ -102,7 +102,8 @@ object ContractWriteBack {
 
     val file = PsiEnv.parse("Screen.kt", fileText)
     val ifaces = file.declarations.filterIsInstance<KtClass>().filter { it.isInterface() }
-    val bindings = ifaces.firstOrNull { it.name?.endsWith("Bindings") == true }
+    // K4: the interface the screen TAKES (as the recognizer reads it), not the first in the file.
+    val bindings = screenFunction(file)?.let { screenInterface(it, file) }
       ?: return fileText // no contract seam in this file — nothing to maintain
 
     val requiredMembers = LinkedHashMap<String, String>() // name -> defaulted decl text
@@ -135,7 +136,7 @@ object ContractWriteBack {
     }
 
     // ── 2. Item interfaces: remove/resync marked ones; append missing. ──
-    val fileItemIfaces = ifaces.filter { it.name?.endsWith("Bindings") == false }
+    val fileItemIfaces = ifaces.filter { it !== bindings && it.name?.endsWith("Bindings") == false }
     fileItemIfaces.forEach { iface ->
       if (!markedIface(fileText, iface)) return@forEach
       val req = requiredItems.firstOrNull { it.name == iface.name }

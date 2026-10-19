@@ -87,6 +87,8 @@ object DeclarationScope {
       is PropValue.Bind -> field(v.field)
       is PropValue.Action -> v.arg?.let { field(it) } == true
       is PropValue.Conditional -> field(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      is PropValue.Template -> v.parts.any(::value) // K4: an item reference in a template / a list
+      is PropValue.ListOf -> v.items.any(::value)
       else -> false
     }
     return when (n) {
@@ -135,6 +137,8 @@ object DeclarationScope {
   private fun refMentions(v: PropValue?, word: Regex): Boolean = when (v) {
     is PropValue.Token -> word.containsMatchIn(v.ref)
     is PropValue.Conditional -> refMentions(v.whenTrue, word) || refMentions(v.whenFalse, word)
+    is PropValue.Template -> v.parts.any { refMentions(it, word) }
+    is PropValue.ListOf -> v.items.any { refMentions(it, word) }
     else -> false
   }
 

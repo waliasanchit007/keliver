@@ -2,6 +2,7 @@ package dev.keliver.portal.codegen
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -110,5 +111,11 @@ class EmitRenderNodeTest {
     val row = column.copy(name = "Row", props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")))
     val src = emitRenderNode(listOf(row))
     assertContains(src, "margin = marginOf(node, \"margin\"),")
+  }
+
+  @Test fun listPropsResolveTheirReferencesInThePreview() {
+    // K4: a list's token / bound elements resolve like a scalar prop's.
+    assertEquals("node.intListB(\"c\")", getterExpr(MappedProp("c", MappedKind.INT_LIST, required = false, defaultExpr = null)))
+    assertEquals("node.strListB(\"o\")", getterExpr(MappedProp("o", MappedKind.STRING_LIST, required = false, defaultExpr = null)))
   }
 }

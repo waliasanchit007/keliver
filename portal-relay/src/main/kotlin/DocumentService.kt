@@ -131,11 +131,12 @@ class DocumentService(
       }
     }
     val chosen = Tokens.tokensIn(normalized)
-    if (chosen.isNotEmpty() && kotlinFile.exists()) {
+    val text = if (chosen.isNotEmpty()) fileTextOrNull() else null
+    if (text != null) {
       // One scope through the whole batch, seeded with the imports the
       // document's tokens already imply (it may be ahead of the file).
       val pending = Tokens.importsIn(doc)
-      table.bindingProblem(kotlinFile.readText(), tokenFileId, chosen.toList(), pending)?.let { return null to it }
+      table.bindingProblem(text, tokenFileId, chosen.toList(), pending)?.let { return null to it }
     }
     return normalized to null
   }
@@ -158,7 +159,8 @@ class DocumentService(
       else "token ${v.ref} does not fit $type.$key (${sourceType ?: "not a scalar parameter"})"
     }
     fun refuseToken(type: String, key: String, v: PropValue): String? =
-      conditionalRefusal(registry, type, key, v) ?: v.leaves().firstNotNullOfOrNull { refuseLeaf(type, key, it) }
+      conditionalRefusal(registry, type, key, v) ?: templateRefusal(registry, type, key, v)
+        ?: scalarLeaves(v).firstNotNullOfOrNull { refuseLeaf(type, key, it) }
     fun walkTokens(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
       w.props.entries.firstNotNullOfOrNull { (k, v) -> refuseToken(w.type, k, v) }
         ?: w.children.firstNotNullOfOrNull(::walkTokens)
@@ -196,7 +198,7 @@ class DocumentService(
    */
   private fun rawRefusal(batch: OpBatch): String? {
     if (batch.ops.none { it is DocOp.ReplaceRaw }) return null
-    val fileText = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val fileText = fileTextOrNull()
     var d = doc
     for (op in batch.ops) {
       if (op is DocOp.ReplaceRaw) {
@@ -230,6 +232,107 @@ class DocumentService(
     return null
   }
 
+  /**
+   * The scalar values of [v] a parameter's type must fit: itself, or a
+   * conditional's branches — not a template's token parts (a String, Int or
+   * Boolean token prints into the String; the document refuses a Double one)
+   * nor a list's elements (refused on a component).
+   */
+  private fun scalarLeaves(v: PropValue): List<PropValue> = when (v) {
+    is PropValue.Conditional -> listOfNotNull(v.whenTrue, v.whenFalse).flatMap(::scalarLeaves)
+    is PropValue.Template, is PropValue.ListOf -> emptyList()
+    else -> listOf(v)
+  }
+
+  /**
+   * K4: a template on a project-component instance fits only a parameter
+   * declared `String` (the document checks catalogued widgets, and every
+   * template's parts); a list with references never fits one (component
+   * parameters are scalars). Null = acceptable.
+   */
+  private fun templateRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
+    if (!registry.isComponent(type)) return null
+    val values = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
+    if (values.any { it is PropValue.ListOf }) return "list $type.$key: a component parameter is never a list"
+    if (values.none { it is PropValue.Template }) return null
+    val sourceType = propSourceType(type, key, registry)
+    return if (sourceType == "String") null else "template $type.$key: a template fits only a String parameter (${sourceType ?: "not a scalar parameter"})"
+  }
+
+  /**
+   * K4 §7a, the write-back preflight: the refusal (null = accept) of a change
+   * that takes the document to [after] — when write-back would refuse to write
+   * it. The plan is the one the debounced writer runs ([ScreenWriter.plan],
+   * same tables, same base), against the file as it is now, read once; the
+   * caller holds this service's lock, as the writer does to snapshot and to
+   * write. So an edit the document accepts but the file cannot take (a
+   * template on an item field typed Double or nullable — the contract carries
+   * no item types; a binding in a screen that takes no bindings parameter; or
+   * any reason the writer has) is refused when it is made, and never blocks
+   * the screen's later edits.
+   *
+   * Accepted without a refusal of its own:
+   *  - a change that leaves the document as it is or brings it back to the
+   *    file (nothing new to write; an undo out of a wedge is never refused);
+   *  - [ScreenWriter.Reread]: the file changed since it was last read, so no
+   *    plan for it exists yet. The change is accepted as before and the
+   *    writer re-reads the file, reporting the change `discarded` (§7a 0) —
+   *    reading the file here instead would replace the document the client's
+   *    batch was made against, under its feet;
+   *  - a document the file cannot take already: the plan for the document as
+   *    it is now refuses too, so this change is not why (a change the plan
+   *    could not see — the file reformatted between an edit and its write —
+   *    or a file that does not read as a screen). The writer reports it as
+   *    before; an undo of that change is never refused here. But when the
+   *    file on disk is not the text last read ([fileText]), the change is
+   *    planned against that text too, and refused if that plan refuses: the
+   *    author may save the last-read text back (the watcher skips it as
+   *    already read), and a change only that file could have refused would
+   *    then stay in the document, refused at every write;
+   *  - a file that cannot be read at all here (gone, or not a file, since
+   *    `exists()`): as for [ScreenWriter.Reread] — accepted, and the writer
+   *    reports what it finds. Never an exception out of the op.
+   *
+   * The debounced write is unchanged: it plans again when it runs (the file
+   * may have changed in between) — those refusals and I/O failures remain.
+   * Its plan runs outside the lock, so it may overlap this one: both only
+   * read (each parses its own text), and the writer writes under the lock
+   * after checking the file is still what it planned against.
+   */
+  private fun writeBackRefusal(after: UiDocument): String? {
+    if (sameDocument(after, doc) || fileDoc?.let { sameDocument(after, it) } == true) return null
+    val onDisk = try {
+      if (kotlinFile.exists()) kotlinFile.readText() else null
+    } catch (e: java.io.IOException) {
+      return null // gone or unreadable since exists(): as for a file changed since it was read (above)
+    }
+    val components = components()
+    val tokens = tokens()
+    fun refusal(d: UiDocument, file: String?): String? = try {
+      when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
+        onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
+        fileName = tokenFileId, functionName = functionName, packageName = packageName,
+      )) {
+        is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
+        else -> null
+      }
+    } catch (t: Throwable) {
+      if (t is VirtualMachineError) throw t
+      "writing it would fail: $t"
+    }
+    fun refused(reason: String) = "this change could not be written to ${kotlinFile.name} without losing code: $reason — make this change in code"
+    val reason = refusal(after, onDisk) ?: return null
+    if (refusal(doc, onDisk) == null) return refused(reason)
+    // The document as it is refuses too, against the file as it is now. When that
+    // file is not the one last read (the author mid-edit: it is not a screen), the
+    // author may yet save the exact text last read back — which the watcher skips —
+    // so the change must also be writable against that text, or it would stay in
+    // the document refused at every write.
+    val lastRead = fileText ?: return null
+    if (onDisk == lastRead) return null
+    return refusal(after, lastRead)?.let(::refused)
+  }
+
   /** M2: validate + report WITHOUT committing — the agent's safe exploration path. */
   @Synchronized
   fun dryRun(batch: OpBatch): OpAck {
@@ -239,7 +342,9 @@ class DocumentService(
     val (gated, refused) = gate(batch)
     if (gated == null) return OpAck(false, doc.version, refused)
     val res = doc.applyBatch(gated.ops)
-    return if (res.result == null) OpAck(false, doc.version, res.error) else OpAck(true, doc.version)
+    val ok = res.result ?: return OpAck(false, doc.version, res.error)
+    writeBackRefusal(ok.doc)?.let { return OpAck(false, doc.version, it) }
+    return OpAck(true, doc.version)
   }
 
   @Synchronized
@@ -251,6 +356,7 @@ class DocumentService(
     if (gated == null) return OpAck(false, doc.version, refused)
     val res = doc.applyBatch(gated.ops)
     val ok = res.result ?: return OpAck(false, doc.version, res.error)
+    writeBackRefusal(ok.doc)?.let { return OpAck(false, doc.version, it) }
     doc = ok.doc.copy(version = doc.version + 1)
     undoStacks.getOrPut(batch.envelope.session) { ArrayDeque() }.apply {
       addLast(ok.inverseBatch)
@@ -282,6 +388,10 @@ class DocumentService(
    *    clears both stacks anyway. (A whole-file export can drop an unused
    *    import, so such a step might have applied later: dropping is the
    *    chosen trade against a stack wedged behind it.)
+   *  - DROPPED too when write-back would refuse the step (K4 §7a preflight:
+   *    [writeBackRefusal]).
+   * A dropped step's change is not reversed: the next step of [from] applies
+   * on top of it (an older undo over a change that was not undone).
    */
   private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: () -> ArrayDeque<List<DocOp>>): OpAck {
     val inverses = from?.lastOrNull()
@@ -303,12 +413,20 @@ class DocumentService(
     // another session may have added a different owner of the same simple
     // name. One scope, seeded with the imports of every token the step did NOT
     // restore — the restored ones are checked, not assumed.
-    if (fresh.restored.isNotEmpty() && kotlinFile.exists()) {
-      table.bindingIssue(kotlinFile.readText(), tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
+    val onDisk = if (fresh.restored.isNotEmpty()) fileTextOrNull() else null
+    if (onDisk != null) {
+      table.bindingIssue(onDisk, tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
         return if (issue.cause == TokenTable.BindingCause.FILE_IMPORT) dropped(issue.message)
         else OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
       }
     }
+    // K4 §7a: a step write-back would refuse is never applied (it would block
+    // every later edit of the screen). Dropped, not kept: what refuses it is
+    // usually the file's own code, which only an edit of the file changes —
+    // and that edit, read, clears both stacks anyway. (A component or token
+    // changing back might have let it apply later: dropping is the chosen
+    // trade against a stack wedged behind it, as for a FILE_IMPORT clash.)
+    writeBackRefusal(fresh.doc)?.let { return dropped(it) }
     from.removeLastOrNull()
     to().addLast(ok.inverseBatch)
     doc = fresh.doc.copy(version = doc.version + 1)
@@ -381,11 +499,24 @@ class DocumentService(
    * RawCode. False when a write-back is still pending (the document is ahead
    * of the file — the caller retries after it lands).
    */
+  /**
+   * The screen file's text for an op-time check, or null when it is missing or
+   * cannot be read just now (e.g. replaced mid-save): a check skips, as with no
+   * file, and the writer reports what it finds when it runs.
+   */
+  private fun fileTextOrNull(): String? =
+    try {
+      if (kotlinFile.isFile) kotlinFile.readText() else null
+    } catch (_: java.io.IOException) {
+      null
+    }
+
   @Synchronized
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
-    if (!kotlinFile.exists()) return true
-    val text = kotlinFile.readText()
+    if (!kotlinFile.isFile) return true
+    // Unreadable for a moment (an IDE's atomic save): not done, the caller retries.
+    val text = fileTextOrNull() ?: return false
     val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
@@ -637,14 +768,12 @@ class DocumentService(
         props = n.props.filterKeys { !it.startsWith("mod.") }
           .mapValues { (_, v) ->
             when (v) {
-              is dev.keliver.portal.Bind -> dev.keliver.portal.document.PropValue.Bind(v.field)
               is dev.keliver.portal.Action -> dev.keliver.portal.document.PropValue.Action(v.name)
-              is dev.keliver.portal.Token -> v.toPropValue()
-              else -> lit(v)
+              else -> dev.keliver.portal.document.treeToPropValue(v)
             }
           },
         modifiers = n.props.filterKeys { it.startsWith("mod.") }
-          .map { (k, v) -> k.removePrefix("mod.") to if (v is dev.keliver.portal.Token) v.toPropValue() else lit(v) }.toMap(),
+          .map { (k, v) -> k.removePrefix("mod.") to dev.keliver.portal.document.treeToPropValue(v) }.toMap(),
         children = n.children.map { lift(it) },
       )
       val root = treeJson?.takeIf { it.isNotBlank() && it != "{}" }

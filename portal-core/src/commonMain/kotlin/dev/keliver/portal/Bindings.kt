@@ -62,6 +62,9 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
     n.children.forEach(::lists)
   }
   lists(tree)
+  // K4: a field read only by a template is a String (any value prints into one,
+  // so a hand-declared type is kept); it is typed after every other site.
+  val templateFields = LinkedHashSet<String>()
   fun walk(n: WidgetNode) {
     for ((key, prop) in n.props) {
       // K3: a conditional value contributes its condition's field and each branch.
@@ -82,6 +85,12 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
         is Bind -> kindOf(n.type, key)?.let { k ->
           if ('.' !in value.field && value.field !in fields) fields[value.field] = k
         }
+        is Template -> referencedBinds(value).forEach { b -> if ('.' !in b.field) templateFields += b.field }
+        // K4: a list element bound to a field is one element of the list's kind.
+        is ListOf -> value.items.filterIsInstance<Bind>().forEach { b ->
+          val k = if (value.kind == "ls") PropKind.Text else PropKind.Int
+          if ('.' !in b.field && b.field !in fields) fields[b.field] = k
+        }
         is Action -> {
           actions += value.name
           when {
@@ -96,6 +105,7 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
     n.children.forEach(::walk)
   }
   walk(tree)
+  templateFields.forEach { f -> if (f !in fields) fields[f] = PropKind.Text }
   return ScreenContract(fields, actions.toList(), actionParams)
 }
 
@@ -126,7 +136,8 @@ public fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
     val values = node.props.values.flatMap { v ->
       if (v is Conditional) listOf(Bind(v.cond.field), v.whenTrue, v.whenFalse) else listOf(v)
     }
-    values.filterIsInstance<Bind>().forEach { bind ->
+    // K4: a template's and a list's references read their fields too.
+    (values.filterIsInstance<Bind>() + values.flatMap(::referencedBinds)).forEach { bind ->
       val (items, item) = scope ?: ("" to "")
       if (items.isNotEmpty() && bind.field.startsWith("$item.")) {
         keys += "$items.${bind.field}"

@@ -22,20 +22,30 @@ public data class WidgetNode(
   val id: Int = nextNodeId(),
 )
 
-// A design-token value (K2) reads as its resolved literal.
-public fun WidgetNode.str(key: String, default: String = ""): String = tokenValue(props[key]) as? String ?: default
+// A design-token value (K2) reads as its resolved literal; a template (K4) as its text.
+public fun WidgetNode.str(key: String, default: String = ""): String = when (val v = tokenValue(props[key])) {
+  is Template -> templateText(v) { null }
+  else -> v as? String ?: default
+}
 public fun WidgetNode.int(key: String, default: Int = 0): Int = tokenValue(props[key]) as? Int ?: default
 public fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = tokenValue(props[key]) as? Boolean ?: default
 public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = tokenValue(props[key]) as? Double ?: default
 
+// K4: a list whose elements are references reads each token as its value (an unresolved binding as 0 / its placeholder).
 @Suppress("UNCHECKED_CAST")
-public fun WidgetNode.intList(key: String): List<Int> = props[key] as? List<Int> ?: emptyList()
+public fun WidgetNode.intList(key: String): List<Int> = when (val v = props[key]) {
+  is ListOf -> v.items.map { (tokenValue(it) as? Int) ?: 0 }
+  else -> v as? List<Int> ?: emptyList()
+}
 
 @Suppress("UNCHECKED_CAST")
 public fun WidgetNode.floatList(key: String): List<Float> = props[key] as? List<Float> ?: emptyList()
 
 @Suppress("UNCHECKED_CAST")
-public fun WidgetNode.strList(key: String): List<String> = props[key] as? List<String> ?: emptyList()
+public fun WidgetNode.strList(key: String): List<String> = when (val v = props[key]) {
+  is ListOf -> v.items.map { templateValueText(it) ?: (it as? Bind)?.let { b -> "{${b.field}}" } ?: "" }
+  else -> v as? List<String> ?: emptyList()
+}
 
 /** The shared sample tree: a card whose item count is data-driven. */
 public fun sampleTree(items: Int): WidgetNode = WidgetNode(

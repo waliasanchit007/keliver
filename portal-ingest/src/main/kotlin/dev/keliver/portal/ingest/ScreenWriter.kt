@@ -167,6 +167,8 @@ object ScreenWriter {
         ?.let { e -> runCatching { lit(e.value) }.getOrNull() }
         ?.let { v.copy(value = it) } ?: v
       is PropValue.Conditional -> v.copy(whenTrue = v.whenTrue?.let(::value), whenFalse = v.whenFalse?.let(::value))
+      is PropValue.Template -> v.copy(parts = v.parts.map(::value)) // K4: token parts / elements too
+      is PropValue.ListOf -> v.copy(items = v.items.map(::value))
       else -> v
     }
     fun node(n: DocNode): DocNode = when (n) {

@@ -11,9 +11,10 @@ internal fun getterExpr(p: MappedProp): String = when (p.kind) {
   MappedKind.BOOL -> "node.boolB(\"${p.name}\", ${defaultBool(p.defaultExpr)})"
   MappedKind.DOUBLE -> "node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr)})"
   MappedKind.FLOAT -> "node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr)}).toFloat()"
-  MappedKind.INT_LIST -> "node.intList(\"${p.name}\")"
+  // K4: a list's element tokens/bindings resolve like a scalar prop's.
+  MappedKind.INT_LIST -> "node.intListB(\"${p.name}\")"
   MappedKind.FLOAT_LIST -> "node.floatList(\"${p.name}\")"
-  MappedKind.STRING_LIST -> "node.strList(\"${p.name}\")"
+  MappedKind.STRING_LIST -> "node.strListB(\"${p.name}\")"
   // Dp rejects negatives (init require): clamp so a mid-edit "-" can't crash the preview.
   MappedKind.DP -> "Dp(node.dblB(\"${p.name}\", ${defaultDouble(p.defaultExpr?.removePrefix("Dp(")?.removeSuffix(")"))}).coerceAtLeast(0.0))"
   MappedKind.CONSTRAINT -> "constraintOf(node.intB(\"${p.name}\", ${constraintDefault(p.defaultExpr)}))"
@@ -52,8 +53,6 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
   appendLine("import dev.keliver.portal.WidgetNode")
   appendLine("import dev.keliver.portal.bool")
   appendLine("import dev.keliver.portal.floatList")
-  appendLine("import dev.keliver.portal.intList")
-  appendLine("import dev.keliver.portal.strList")
   val usesDp = sorted.any { w -> w.props.any { it.kind == MappedKind.DP } } ||
     mods.any { m -> m.props.any { it.kind == MappedKind.DP } }
   if (usesDp) appendLine("import dev.keliver.ui.Dp")

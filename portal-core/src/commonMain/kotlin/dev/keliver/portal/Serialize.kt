@@ -28,6 +28,14 @@ import kotlinx.serialization.json.put
  * keys, plus `"cond"` (`{"field", "test"?, "negate"?}`) and `"else"` (the
  * false branch, absent = Kotlin `null`); a null true branch is `{"null":true}`.
  * A reader that predates conditionals decodes the true branch.
+ *
+ * K4: a template carries its text — literal parts, token values, and a
+ * `{field}` placeholder for each binding — under `"s"`, plus `"template"`
+ * (each part encoded as a value). A list with references carries its
+ * resolved elements under its usual tag (`"li"`/`"lst"`; a mocked binding
+ * as its mock — an Int element's mock a decimal or a `#RRGGBB`/`#AARRGGBB`
+ * colour, else left out — an unmocked one as 0 or its placeholder) plus `"items"` (each element encoded as a value). A reader
+ * that predates K4 decodes the text / the resolved list.
  */
 
 private val JSON = Json { }
@@ -41,6 +49,31 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
       if (v.cond.negate) put("negate", true)
     })
     v.whenFalse?.let { put("else", encodeValue(it)) }
+    return@buildJsonObject
+  }
+  if (v is Template) {
+    put("s", templateText(v) { null })
+    put("template", buildJsonArray { v.parts.forEach { add(encodeValue(it)) } })
+    return@buildJsonObject
+  }
+  if (v is ListOf) {
+    if (v.kind == "ls") {
+      put("lst", buildJsonArray { v.items.forEach { add(JsonPrimitive(templateValueText(it) ?: (it as? Bind)?.let { b -> "{${b.field}}" } ?: "")) } })
+    } else {
+      // A bound element the preview mocked carries the mock (a String from the mock editor) —
+      // a decimal or a colour (mockedIntElement); any other mock is left out. Unmocked: 0.
+      put("li", buildJsonArray {
+        v.items.forEach { e ->
+          when (val x = tokenValue(e)) {
+            is Int -> add(JsonPrimitive(x))
+            is String -> mockedIntElement(x)?.let { add(JsonPrimitive(it)) }
+            is Bind -> add(JsonPrimitive(0))
+            else -> {}
+          }
+        }
+      })
+    }
+    put("items", buildJsonArray { v.items.forEach { add(encodeValue(it)) } })
     return@buildJsonObject
   }
   if (v is Token) {
@@ -84,6 +117,8 @@ private fun decodeValue(o: JsonObject): Any? = when {
     )
   }
   "null" in o -> null
+  "template" in o -> Template(o.getValue("template").jsonArray.map { decodeValue(it.jsonObject) })
+  "items" in o -> ListOf(if ("lst" in o) "ls" else "li", o.getValue("items").jsonArray.map { decodeValue(it.jsonObject) })
   "token" in o -> Token(
     o.getValue("token").jsonPrimitive.content,
     decodeValue(JsonObject(o - "token" - "tokenImport")),

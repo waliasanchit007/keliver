@@ -178,6 +178,14 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
     box.appendChild(Ui.button("detach", "btn icon") { onChange(lit(value.value)) })
     return box
   }
+  // K4: a template branch — its text with {references}, validated before it is sent.
+  if (value is dev.keliver.portal.Template) {
+    return refValueEditor(
+      templateSource(value), multiline = false,
+      placeholder = "text with {field}, {◆C.Name}",
+      parse = { parseTemplateSource(it, knownTokens(value)) },
+    ) { v -> onChange(v) }.first
+  }
   val input = Ui.input()
   if (value is Bind) {
     input.setAttribute("type", "text")

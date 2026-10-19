@@ -14,6 +14,8 @@ import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.isModifierType
+import dev.keliver.portal.listElementType
+import dev.keliver.portal.listKindOf
 import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
@@ -38,7 +40,6 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtParameter
-import org.jetbrains.kotlin.psi.KtProperty
 
 /**
  * The Portal Compose recognizer (design §3/§5): turns a screen .kt into a
@@ -63,6 +64,8 @@ data class Recognized(
   internal val condParser: CondParser? = null,
   /** The screen function's bindings parameter (`b` by convention) — write-back spells a new condition with it. */
   internal val bindingsParam: String? = null,
+  /** Why each RawCode node is not grammar, in source order — the screen's diagnostics. */
+  val rawReasons: List<String> = emptyList(),
 )
 
 /**
@@ -71,7 +74,24 @@ data class Recognized(
  * `onClick` -> Action). Shared by both recognition modes.
  */
 internal sealed interface NameCtx {
-  data class Screen(val bindingsParam: String?) : NameCtx
+  data class Screen(
+    val bindingsParam: String?,
+    /** K4: each field the screen's Bindings interface declares → its declared type text. */
+    val fieldTypes: Map<String, String> = emptyMap(),
+    /**
+     * K4: the type of a field [fieldTypes] does not list — null (an undeclared
+     * field; contract write-back adds it) when the interface is read whole,
+     * [UNKNOWN_TYPE] when it is not in the file or inherits from elsewhere.
+     */
+    val undeclared: String? = null,
+    /**
+     * K4: why a field [fieldTypes] does not list has a type that cannot be read
+     * (no Bindings parameter, its interface not in the file or extending one
+     * declared elsewhere) — a diagnostic, and the contract's
+     * `unlistedFieldsUnknown`. Null = the interface is read whole.
+     */
+    val unknownWhy: String? = null,
+  ) : NameCtx
   data class Component(
     val valueParams: Set<String>,
     val eventParams: Set<String>,
@@ -84,6 +104,8 @@ internal sealed interface NameCtx {
      * a caller's modifiers does.
      */
     val modifierParam: Boolean = false,
+    /** K4: each parameter → its declared type text (a template reads only some types). */
+    val paramTypes: Map<String, String> = emptyMap(),
   ) : NameCtx
 }
 
@@ -110,33 +132,46 @@ object Recognizer {
     tokens: TokenTable = TokenTable.EMPTY,
   ): Recognized? {
     val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
-    val fn = file.declarations.filterIsInstance<KtNamedFunction>()
-      .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
-      ?: return null
+    val fn = screenFunction(file) ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
     val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
-    val walk = Walker(NameCtx.Screen(bindingsParam), components, lookup)
+    // K4: the contract is the interface the screen TAKES — its parameter's type as
+    // Kotlin reads it (through a same-file typealias, past an annotation or `?`, into a
+    // nested declaration; [screenBindings]) — never another one the file declares first.
+    val target = screenBindings(fn, file)
+    val ifaceClass = target.iface
+    // A template reads a field only of a type it can read — in that interface, with
+    // its same-file supertypes; a field it does not list is unknown when the interface
+    // is not here or extends one declared elsewhere ([unknownWhy] says which).
+    val decls = typeDecls(file)
+    val ifaceTypes = ifaceClass?.let { memberTypes(it, decls) }
+    val unknownWhy = unlistedFieldsWhy(target, ifaceTypes)
+    val screenCtx = NameCtx.Screen(
+      bindingsParam,
+      fieldTypes = ifaceTypes?.types.orEmpty(),
+      undeclared = if (unknownWhy != null) UNKNOWN_TYPE else null,
+      unknownWhy = unknownWhy,
+    )
+    val walk = Walker(screenCtx, components, lookup, decls)
     val root = walk.rootOf(body)
-
-    val ifaceClass = file.declarations.filterIsInstance<KtClass>()
-      .firstOrNull { it.isInterface() && it.name?.endsWith("Bindings") == true }
     val contract = ifaceClass?.let { iface ->
       Contract(
-        fields = iface.declarations.filterIsInstance<KtProperty>()
-          .associate { (it.name ?: "?") to (it.typeReference?.text ?: "String") },
+        // A property without a declared type is not silently a String: its type is unknown.
+        fields = ifaceTypes?.types.orEmpty(),
         actions = iface.declarations.filterIsInstance<KtNamedFunction>().mapNotNull { it.name },
         actionParams = iface.declarations.filterIsInstance<KtNamedFunction>()
           .mapNotNull { f ->
             val p = f.valueParameters.firstOrNull()?.typeReference?.text ?: return@mapNotNull null
             (f.name ?: return@mapNotNull null) to p
           }.toMap(),
+        unlistedFieldsUnknown = unknownWhy,
       )
-    } ?: Contract()
+    } ?: Contract(unlistedFieldsUnknown = unknownWhy)
 
     return Recognized(
       root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup,
-      CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) }, bindingsParam,
+      CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) }, bindingsParam, walk.rawReasons.toList(),
     )
   }
 
@@ -260,9 +295,11 @@ object Recognizer {
       NameCtx.Component(
         valueParams, eventParams, slots.mapTo(linkedSetOf()) { it.name }, nullableParams,
         modifierParam = acceptsModifier,
+        paramTypes = paramTypes,
       ),
       components,
       lookup,
+      typeDecls(file),
     )
     val root = walk.rootOf(body)
     val hasRaw = containsRawCode(root)
@@ -338,8 +375,17 @@ object Recognizer {
     private val ctx: NameCtx,
     private val components: ComponentRegistry,
     private val tokens: TokenLookup = TokenLookup { null },
+    /** K4: the file's top-level classes and interfaces — a Repeat's item type is read here. */
+    private val typeDecls: Map<String, KtClass> = emptyMap(),
   ) {
     private val componentNames = components.names()
+    /**
+     * K4: each item variable in scope → its item type's members (null when the
+     * type is not declared in this file: its members' types are not read).
+     */
+    private val itemTypes = HashMap<String, MemberTypes?>()
+    /** K4: why the last template was refused for a reference's type — the argument's RawCode reason. */
+    private var templateWhy: String? = null
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
     /** K3: why each RawCode node is not grammar, in source order (component diagnostics). */
@@ -388,9 +434,18 @@ object Recognizer {
         return DocNode.Widget(handle, "Condition", props, children = thenNodes + listOfNotNull(elseNode))
       }
       recognizeRepeat(expr, ctx)?.let { (items, itemVar, bodyStmts) ->
+        // K4: the item's members are typed by the list's element type, if it is declared here.
+        val had = itemVar in itemTypes
+        val outer = itemTypes[itemVar]
+        itemTypes[itemVar] = itemMemberTypes(items)
+        val children = try {
+          bodyStmts.map { statementToNode(it, itemScope + itemVar, parentType) }
+        } finally {
+          if (had) itemTypes[itemVar] = outer else itemTypes.remove(itemVar)
+        }
         return DocNode.Widget(track(nextTemp(), expr), "Repeat",
           mapOf("items" to PropValue.Lit("s", s = items), "item" to PropValue.Lit("s", s = itemVar)),
-          children = bodyStmts.map { statementToNode(it, itemScope + itemVar, parentType) })
+          children = children)
       }
 
       val call = expr as? KtCallExpression
@@ -426,7 +481,12 @@ object Recognizer {
         val name = arg.getArgumentName()?.asName?.asString()
           ?: return raw(expr, "`$type(…)` has a positional argument `${arg.text.oneLine()}`; grammar arguments are named")
         val ve = arg.getArgumentExpression() ?: return raw(expr, "`$type(…)` has an empty argument `$name`")
-        fun offending() = raw(expr, "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar")
+        templateWhy = null
+        fun offending() = raw(
+          expr,
+          templateWhy?.let { "`$type(…)` argument `$name`: $it" }
+            ?: "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar",
+        )
         if (name == "modifier") {
           // K5: a component forwarding its own `modifier` parameter to its root.
           // The root is marked so preview expansion puts the instance's
@@ -458,6 +518,8 @@ object Recognizer {
         }
         val value = parseValue(ve, ctx, itemScope, componentNames)
           ?: tokenArg(type, name, ve.text)
+          ?: templateArg(type, name, ve, itemScope)
+          ?: listArg(type, name, ve, itemScope)
           ?: conditionalArg(type, name, ve, itemScope)
           ?: return offending()
         props[name] = value
@@ -493,6 +555,96 @@ object Recognizer {
     }
 
     /**
+     * K4: a string template as the value of [type]'s [name] — only on a String
+     * prop or parameter, and only when every embedded expression is a grammar
+     * reference ([templateRef]); otherwise null (the call stays RawCode).
+     */
+    private fun templateArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue.Template? {
+      if (propSourceType(type, name, components) != "String") return null
+      return TemplateSyntax.parse(ve) { templateRef(it, itemScope) }
+    }
+
+    /**
+     * K4: a reference inside a template — a binding (a screen field `b.x`, an
+     * item field `item.x`, a component parameter) or a design token of a
+     * literal kind. Anything else (`${a + b}`, `${x.uppercase()}`, a literal)
+     * is not grammar.
+     */
+    private fun templateRef(e: KtExpression, itemScope: Set<String>): PropValue? =
+      when (val v = parseValue(e, ctx, itemScope, componentNames)) {
+        // K4: only a type the device (Kotlin/JS) and the preview print alike — never a
+        // Double/Float (`1` vs `1.0`) or a nullable value (`null` vs nothing).
+        is PropValue.Bind -> {
+          val type = declaredType(v)
+          if (dev.keliver.portal.templateRefTypeFits(type)) v
+          else null.also { templateWhy = refusedRefWhy(e.text.trim(), type!!) }
+        }
+        null -> tokens.lookup(e.text)
+        else -> null
+      }
+
+    /** K4: why a screen field spelled [ref] (`b.x`) has no readable type, when the screen's interface does not list it. */
+    private fun screenUnknownWhy(ref: String): String? {
+      val screen = ctx as? NameCtx.Screen ?: return null
+      if (ref.substringBefore('.') != screen.bindingsParam || ref.substringAfter('.') in screen.fieldTypes) return null
+      return screen.unknownWhy
+    }
+
+    /** K4: why a template does not read the reference spelled [ref], declared [type]. */
+    private fun refusedRefWhy(ref: String, type: String): String = when {
+      type == UNKNOWN_TYPE -> "a template does not read `$ref`: " +
+        (screenUnknownWhy(ref) ?: "its type is not declared where ingest reads it (a property without a type, or inherited from a type in another file)") +
+        " — only a String, Int, Long or Boolean prints alike on the device and in the preview"
+      else -> "a template does not read `$ref`, declared $type — only a String, Int, Long or Boolean prints alike on the device and in the preview"
+    }
+
+    /**
+     * K4: the declared type of a binding — a screen field's in the Bindings
+     * interface, a component parameter's, an item field's in its item type;
+     * [UNKNOWN_TYPE] when it cannot be read; null when undeclared (an item
+     * type not declared in this file, a field contract write-back adds).
+     */
+    private fun declaredType(b: PropValue.Bind): String? = when {
+      '.' in b.field -> itemTypes[b.field.substringBefore('.')]?.typeOf(b.field.substringAfter('.'))
+      ctx is NameCtx.Screen -> ctx.fieldTypes[b.field] ?: ctx.undeclared
+      ctx is NameCtx.Component -> ctx.paramTypes[b.field]
+      else -> null
+    }
+
+    /** K4: the members of the element type of the list field [items], when that type is declared in this file. */
+    private fun itemMemberTypes(items: String): MemberTypes? {
+      val listType = when (ctx) {
+        is NameCtx.Screen -> ctx.fieldTypes[items]
+        is NameCtx.Component -> ctx.paramTypes[items]
+      }
+      val cls = listElementName(listType)?.let(typeDecls::get) ?: return null
+      return memberTypes(cls, typeDecls)
+    }
+
+    /**
+     * K4: `listOf(…)` as the value of a catalogued widget's `List<Int>` /
+     * `List<String>` prop — each element a literal or a design token of the
+     * element kind, or a binding. A list of literals is the plain literal.
+     */
+    private fun listArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue? {
+      if (widgetSpec(type) == null) return null
+      val tag = listKindOf(propSourceType(type, name, components)) ?: return null
+      val element = listElementType(tag)
+      val items = ListSyntax.elements(ve)?.map { e ->
+        val lit = parseLiteral(e.text.trim())
+        when {
+          lit != null -> lit.takeIf { it.tag == (if (tag == "ls") "s" else "i") } ?: return null
+          // A bound element is declared as the element type, if at all.
+          else -> (parseValue(e, ctx, itemScope, componentNames) as? PropValue.Bind)
+            ?.let { b -> b.takeIf { declaredType(b)?.takeIf { it != UNKNOWN_TYPE }?.let { plainType(it) == element } ?: true } ?: return null }
+            ?: tokens.lookup(e.text)?.takeIf { tokenFits(element, litValue(it.value)) }
+            ?: return null
+        }
+      } ?: return null
+      return dev.keliver.portal.document.canonicalValue(PropValue.ListOf(tag, items))
+    }
+
+    /**
      * K3: `if (<condition>) A else B` as the value of [type]'s [name] — the
      * condition in the grammar ([parseCond]) and each branch a value the
      * argument takes by itself (a literal, token, bind or action) or `null`.
@@ -506,7 +658,8 @@ object Recognizer {
         val x = (e as? KtParenthesizedExpression)?.expression ?: e ?: return false to null
         if (x is KtIfExpression || x is KtBlockExpression) return false to null
         if (x.text.trim() == "null") return true to null
-        val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text) ?: return false to null
+        val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text)
+          ?: templateArg(type, name, x, itemScope) ?: return false to null
         return true to v
       }
       val (okT, whenTrue) = branch(ifExpr.then)

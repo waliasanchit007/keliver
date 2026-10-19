@@ -9,8 +9,6 @@ import dev.keliver.layout.compose.RowScope
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.bool
 import dev.keliver.portal.floatList
-import dev.keliver.portal.intList
-import dev.keliver.portal.strList
 import dev.keliver.ui.Dp
 import dev.keliver.material.compose.AlertDialog
 import dev.keliver.material.compose.AnimatedBorder
@@ -137,7 +135,7 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
       durationMs = node.intB("durationMs", 1800),
       segmentLenDp = node.intB("segmentLenDp", 50),
       effect = node.intB("effect", 0),
-      colorsArgb = node.intList("colorsArgb"),
+      colorsArgb = node.intListB("colorsArgb"),
       onClick = node.actionOf("onClick")?.let { a -> { PreviewBindings.fire(a) } },
     ) { node.children.forEach { RenderNode(it, null) } }
     "AnimatedVisibility" -> AnimatedVisibility(
@@ -228,7 +226,7 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
     "DropdownMenu" -> DropdownMenu(
       modifier = nodeModifier(node, scope),
       expanded = node.boolB("expanded", false),
-      options = node.strList("options"),
+      options = node.strListB("options"),
       onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
       onDismiss = node.actionOf("onDismiss")?.let { a -> { PreviewBindings.fire(a) } },
     )
@@ -379,7 +377,7 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
     ) { node.children.forEach { RenderNode(it, null) } }
     "SegmentedButtonRow" -> SegmentedButtonRow(
       modifier = nodeModifier(node, scope),
-      options = node.strList("options"),
+      options = node.strListB("options"),
       selectedIndex = node.intB("selectedIndex", 0),
       onSelect = node.actionOf("onSelect")?.let { a -> { value -> PreviewBindings.fire(a, value) } },
     )
@@ -420,7 +418,7 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
       borderColorArgb = node.intB("borderColorArgb", 0),
       borderWidthDp = node.intB("borderWidthDp", 0),
       gradientVertical = node.boolB("gradientVertical", false),
-      gradientColorsArgb = node.intList("gradientColorsArgb"),
+      gradientColorsArgb = node.intListB("gradientColorsArgb"),
       gradientStops = node.floatList("gradientStops"),
       gradientDirection = node.intB("gradientDirection", 0),
       cornerTopStartDp = node.intB("cornerTopStartDp", -1),

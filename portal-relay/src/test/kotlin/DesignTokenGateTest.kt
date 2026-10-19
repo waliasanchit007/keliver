@@ -502,4 +502,53 @@ fun HomeScreen() {
     assertTrue(undone.error!!.startsWith("undo failed (step dropped): "), undone.error)
     assertEquals("nothing to undo", svc.undo("S").error, "the step was dropped")
   }
+
+  @Test fun aLongTokenThroughTheGateAndUndoRedoIsARefusalNeverAThrow() {
+    // K4 last review: a Long (C.Big, or a token that becomes one) reaches the client as a
+    // refusal with a reason — through the gate (a prop, a template part, an inserted subtree)
+    // and through undo/redo re-resolving a restored token — never as an exception (a 500).
+    val svc = service(home(body = "StyledText(text = \"a\")\n    StyledText(text = \"b\")"))
+    val (a, b) = widgets(svc)
+    val big = token("C.Big", 1)
+    for (op in listOf(
+      DocOp.SetProp(a.handle, "colorArgb", big),
+      DocOp.SetProp(a.handle, "text", PropValue.Template(listOf(lit("n: "), big))),
+      DocOp.SetProp(a.handle, "text", PropValue.Conditional("on", whenTrue = PropValue.Template(listOf(big, lit("!"))), whenFalse = lit("-"))),
+      DocOp.InsertNode(svc.doc.root.handle, null, DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to PropValue.Template(listOf(lit("n: "), big))))),
+    )) {
+      val version = svc.doc.version
+      val dry = runCatching { svc.dryRun(batch(svc, op)) }.getOrElse { throw AssertionError("dryRun threw on $op", it) }
+      val sub = runCatching { svc.submit(batch(svc, op)) }.getOrElse { throw AssertionError("submit threw on $op", it) }
+      assertFalse(dry.ok, "$op")
+      assertFalse(sub.ok, "$op")
+      assertTrue("C.Big" in sub.error!!, sub.error)
+      assertEquals(version, svc.doc.version)
+    }
+    // Undo/redo: S places C.Ink (an Int) as a prop and as a template part, then C.Ink becomes a Long.
+    assertTrue(asSession(svc, "S", DocOp.SetProp(a.handle, "colorArgb", token("C.Ink", 0))).ok)
+    assertTrue(asSession(svc, "S", DocOp.SetProp(a.handle, "colorArgb", lit(5))).ok)
+    assertTrue(asSession(svc, "S", DocOp.SetProp(b.handle, "text", PropValue.Template(listOf(lit("n: "), token("C.Ink", 0))))).ok)
+    assertTrue(svc.undo("S").ok, "the template is undone while C.Ink is an Int")
+    File(components, "Tokens.kt").writeText(tokens(ink = "0xFFFFFFFF"))
+    rebuild()
+    val version = svc.doc.version
+    val redone = runCatching { svc.redo("S") }.getOrElse { throw AssertionError("redo threw", it) }
+    assertFalse(redone.ok)
+    assertTrue(redone.error!!.startsWith("redo blocked (step kept): ") && "C.Ink" in redone.error!!, redone.error)
+    // Undoing colorArgb = 5 would restore C.Ink, now a Long.
+    val undone = runCatching { svc.undo("S") }.getOrElse { throw AssertionError("undo threw", it) }
+    assertFalse(undone.ok, "restoring C.Ink, now a Long, is refused")
+    assertTrue(undone.error!!.startsWith("undo blocked (step kept): ") && "C.Ink" in undone.error!!, undone.error)
+    assertEquals(version, svc.doc.version, "the document is untouched")
+    assertEquals(lit(5), widgets(svc)[0].props["colorArgb"])
+  }
+
+  @Test fun aLongTokenValueIsRefusedNotThrown() {
+    // A Long fits no portal prop (lit(Long) throws): the gate's conversion says no instead.
+    assertEquals(null, Tokens.tokenLit(5L))
+    assertEquals(lit(5), Tokens.tokenLit(5))
+    assertEquals(lit("a"), Tokens.tokenLit("a"))
+    assertEquals(lit(1.5), Tokens.tokenLit(1.5))
+    assertEquals(lit(true), Tokens.tokenLit(true))
+  }
 }
