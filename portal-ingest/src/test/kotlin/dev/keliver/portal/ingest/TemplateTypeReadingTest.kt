@@ -1,5 +1,6 @@
 package dev.keliver.portal.ingest
 
+import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.PropValue
@@ -100,10 +101,11 @@ class TemplateTypeReadingTest {
   }
 
   @Test fun withoutTheBindingsInterfaceInTheFileATemplateReadsNoBinding() {
-    for ((tail, param) in listOf(ROW_INTERFACE to "SBindings", BINDINGS.replace("SBindings", "SModel") + "\n" + ROW_INTERFACE to "SModel")) {
+    // The interface is the one the screen takes: another one in the file is not it (K4 last review, case C).
+    for ((tail, param) in listOf(ROW_INTERFACE to "SBindings", BINDINGS + "\n" + ROW_INTERFACE to "SModel")) {
       val src = screen("StyledText(text = \"a §{b.name}\")", tail = tail, param = param)
       assertIs<DocNode.RawCode>(first(src), param)
-      assertTrue(rec(src).rawReasons.any { "no `" in it && "Bindings" in it && "b.name" in it }, rec(src).rawReasons.toString())
+      assertTrue(rec(src).rawReasons.any { "the screen takes `$param`, which is not declared in this file" in it && "b.name" in it }, rec(src).rawReasons.toString())
       // A plain binding is still grammar; only a template prints the value.
       assertIs<DocNode.Widget>(first(screen("StyledText(text = b.name)", tail = tail, param = param)), param)
     }
@@ -126,6 +128,126 @@ class TemplateTypeReadingTest {
     assertIs<DocNode.Widget>(first(screen("StyledText(text = \"§{b.qs} §{b.qi} §{b.ql} §{b.qb}\")", tail = tail)))
     assertIs<DocNode.Widget>(first(screen("SegmentedButtonRow(options = listOf(b.qs))", tail = tail)))
     assertIs<DocNode.Widget>(first(screen("StyledBox(gradientColorsArgb = listOf(b.qi))", tail = tail)))
+  }
+
+  // ── K4 last review: what the document accepts, write-back writes (a refusal there blocks the screen). ──
+
+  private fun doc(src: String): UiDocument = rec(src).let { UiDocument("s", it.root, it.contract, 0, 1000) }
+
+  /** The document's verdict on `StyledText(text = "Hi ${b.<field>}")` as the first statement — null = accepted. */
+  private fun templateVerdict(src: String, field: String): String? =
+    doc(src).let { d -> d.tryApply(DocOp.SetProp((d.root as DocNode.Widget).children[0].handle, "text", hi(field))).error }
+
+  /**
+   * What write-back makes of that edit, made whatever the document says (its
+   * checks bypassed) — so a refusal there is what op time must prevent.
+   */
+  private fun writeBack(src: String, value: PropValue): ScreenWriter.Plan {
+    val base = doc(src)
+    val edited = base.copy(contract = Contract()).apply(DocOp.SetProp((base.root as DocNode.Widget).children[0].handle, "text", value)).doc
+      .copy(contract = base.contract)
+    return ScreenWriter.plan(src, edited, base, src, fileName = "app/screens/S.kt", functionName = "S", packageName = "app.screens")
+  }
+
+  private fun hi(field: String) = PropValue.Template(listOf(PropValue.Lit("s", s = "Hi "), PropValue.Bind(field)))
+
+  /** Refused by the document exactly when write-back would refuse it. */
+  private fun assertConsistent(src: String, field: String, accepted: Boolean) {
+    val verdict = templateVerdict(src, field)
+    val plan = writeBack(src, hi(field))
+    if (accepted) {
+      assertEquals(null, verdict, field)
+      assertIs<ScreenWriter.Write>(plan, "$field: $plan")
+    } else {
+      assertTrue(verdict != null && "`$field`" in verdict && "not readable here" in verdict, "$field: $verdict")
+      assertIs<ScreenWriter.Refuse>(plan, "$field: $plan")
+    }
+  }
+
+  private val stmt = "StyledText(text = \"x\")"
+
+  @Test fun caseA_noBindingsInterfaceInTheFile() {
+    val src = screen(stmt, tail = ROW_INTERFACE)
+    val contract = rec(src).contract
+    val why = assertNotNull(contract.unlistedFieldsUnknown)
+    assertTrue("`SBindings`" in why && "not declared in this file" in why, why)
+    assertConsistent(src, "name", accepted = false)
+    // A plain binding is still written.
+    assertIs<ScreenWriter.Write>(writeBack(src, PropValue.Bind("name")))
+  }
+
+  @Test fun caseB_aFieldInheritedFromAnotherFile() {
+    val src = screen(stmt, tail = BINDINGS.replace("interface SBindings {", "interface SBindings : ExternalBase {") + "\n" + ROW_INTERFACE)
+    val why = assertNotNull(rec(src).contract.unlistedFieldsUnknown)
+    assertTrue("`ExternalBase`" in why && "another file" in why, why)
+    assertConsistent(src, "title", accepted = false)
+    // A field the interface declares in the file keeps its type.
+    assertConsistent(src, "name", accepted = true)
+    assertIs<ScreenWriter.Write>(writeBack(src, PropValue.Bind("title")))
+  }
+
+  @Test fun caseE_aNewFieldBesideASupertypeFromAnotherFile() {
+    // Contract write-back would declare `fresh`, but the read-back before it cannot type it.
+    val src = screen(stmt, tail = BINDINGS.replace("interface SBindings {", "interface SBindings : ExternalBase {") + "\n" + ROW_INTERFACE)
+    assertConsistent(src, "fresh", accepted = false)
+  }
+
+  @Test fun caseD_aNewFieldOfAnInterfaceReadWholeIsWrittenAndDeclared() {
+    val src = screen(stmt, tail = BINDINGS + "\n" + ROW_INTERFACE)
+    assertEquals(null, rec(src).contract.unlistedFieldsUnknown)
+    assertConsistent(src, "fresh", accepted = true)
+    val written = (writeBack(src, hi("fresh")) as ScreenWriter.Write).text
+    assertTrue("val fresh: String" in written.substringAfter("interface SBindings").substringBefore("}"), written)
+    // A same-file supertype is read too: the interface is still read whole.
+    val sameFile = screen(stmt, tail = BINDINGS.replace("interface SBindings {", "interface SBindings : Base {") + "\n" + ROW_INTERFACE + "\ninterface Base {\n  val label: String\n}\n")
+    assertEquals(null, rec(sameFile).contract.unlistedFieldsUnknown)
+    assertConsistent(sameFile, "label", accepted = true)
+    assertConsistent(sameFile, "fresh", accepted = true)
+  }
+
+  @Test fun caseC_theInterfaceIsTheOneTheScreenTakesNotTheFirstInTheFile() {
+    val other = "interface AOtherBindings {\n  val name: Double\n  val extra: String\n}\n"
+    val src = screen("StyledText(text = \"a §{b.name}\")", tail = other + BINDINGS + "\n" + ROW_INTERFACE)
+    val r = rec(src)
+    assertIs<DocNode.Widget>(r.root.children[0], r.rawReasons.toString())
+    assertEquals(mapOf("name" to "String", "on" to "Boolean", "rows" to "List<Row>"), r.contract.fields)
+    assertEquals("SBindings", r.bindingsInterface?.name)
+    assertEquals(null, r.contract.unlistedFieldsUnknown)
+    // A new field is declared in the screen's interface, not the first one.
+    val written = (writeBack(src, hi("fresh")) as ScreenWriter.Write).text
+    assertTrue("val fresh: String" in written.substringAfter("interface SBindings").substringBefore("}"), written)
+    assertTrue("fresh" !in written.substringAfter("interface AOtherBindings").substringBefore("}"), written)
+    assertConsistent(src, "fresh", accepted = true)
+  }
+
+  @Test fun caseH_aNullableParameterTakesTheSameInterface() {
+    val src = screen("StyledText(text = \"a §{b.name}\")", tail = BINDINGS + "\n" + ROW_INTERFACE, param = "SBindings?")
+    val r = rec(src)
+    assertIs<DocNode.Widget>(r.root.children[0], r.rawReasons.toString())
+    assertEquals("SBindings", r.bindingsInterface?.name)
+    assertEquals("String", r.contract.fields["name"])
+    assertEquals(null, r.contract.unlistedFieldsUnknown)
+    assertEquals(null, templateVerdict(src, "name"))
+  }
+
+  @Test fun aScreenWithoutAParameterSaysSo() {
+    val src = """
+      package app.screens
+
+      import androidx.compose.runtime.Composable
+      import dev.keliver.layout.compose.Column
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun S() {
+        Column {
+          StyledText(text = "x")
+        }
+      }
+    """.trimIndent() + "\n\n" + BINDINGS.trimIndent() + "\n"
+    val r = rec(src)
+    assertEquals("the screen has no Bindings parameter", r.contract.unlistedFieldsUnknown)
+    assertConsistent(src, "name", accepted = false)
   }
 
   private companion object {

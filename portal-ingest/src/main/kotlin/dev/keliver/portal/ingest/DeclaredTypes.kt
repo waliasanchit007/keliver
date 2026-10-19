@@ -2,6 +2,7 @@ package dev.keliver.portal.ingest
 
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
 
 /**
@@ -19,11 +20,13 @@ internal const val UNKNOWN_TYPE = "<unknown>"
 /**
  * The declared member types of a class or interface: each property (and
  * `val`/`var` constructor parameter) → its type text, or [UNKNOWN_TYPE]
- * when it declares none. [complete] is false when a supertype is not
- * declared in the same file — a member not listed may then be inherited
- * from it, with a type ingest cannot read.
+ * when it declares none. [outside] names a supertype not declared in the
+ * same file (the first one met), or is null — a member not listed may then
+ * be inherited from it, with a type ingest cannot read ([complete] false).
  */
-internal class MemberTypes(val types: Map<String, String>, val complete: Boolean) {
+internal class MemberTypes(val types: Map<String, String>, val outside: String?) {
+  val complete: Boolean get() = outside == null
+
   /** The type of member [name]: its declared type; unknown when it may be inherited from elsewhere; null when none is declared. */
   fun typeOf(name: String): String? = types[name] ?: if (complete) null else UNKNOWN_TYPE
 }
@@ -49,19 +52,61 @@ internal fun memberTypes(cls: KtClass, decls: Map<String, KtClass>, seen: Mutabl
   cls.declarations.filterIsInstance<KtProperty>().forEach { p ->
     p.name?.let { types.putIfAbsent(it, p.typeReference?.text ?: UNKNOWN_TYPE) }
   }
-  var complete = true
+  var outside: String? = null
   for (entry in cls.superTypeListEntries) {
     val name = entry.typeReference?.text?.substringBefore('<')?.trim()
     val sup = name?.let(decls::get)
     if (sup == null || sup in seen) {
-      if (sup == null) complete = false
+      if (sup == null && outside == null) outside = name ?: entry.text
       continue
     }
     val inherited = memberTypes(sup, decls, seen)
     inherited.types.forEach { (k, v) -> types.putIfAbsent(k, v) }
-    if (!inherited.complete) complete = false
+    if (outside == null) outside = inherited.outside
   }
-  return MemberTypes(types, complete)
+  return MemberTypes(types, outside)
+}
+
+/** A screen file's screen function: its first `@Composable` function (null = not a screen). */
+internal fun screenFunction(file: KtFile): KtNamedFunction? = file.declarations.filterIsInstance<KtNamedFunction>()
+  .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
+
+/**
+ * The simple name of the type the screen [fn] takes as its bindings
+ * parameter (its first) — `?`, type arguments and a package qualifier
+ * stripped (`app.SBindings?` is `SBindings`); null without a parameter.
+ */
+internal fun bindingsTypeName(fn: KtNamedFunction): String? =
+  fn.valueParameters.firstOrNull()?.typeReference?.text?.replace(" ", "")
+    ?.removeSuffix("?")?.substringBefore('<')?.substringAfterLast('.')?.takeIf { it.isNotEmpty() }
+
+/**
+ * K4: the Bindings interface the screen [fn] takes — the interface its
+ * parameter's type names, declared in [file]; never another interface the
+ * file declares first. Null when there is no parameter or that type is not
+ * an interface declared there.
+ */
+internal fun screenInterface(fn: KtNamedFunction, file: KtFile): KtClass? {
+  val name = bindingsTypeName(fn) ?: return null
+  return file.declarations.filterIsInstance<KtClass>().firstOrNull { it.isInterface() && it.name == name }
+}
+
+/**
+ * K4: why a screen field the screen's interface does not list has a type
+ * ingest cannot read (the contract's
+ * [dev.keliver.portal.document.Contract.unlistedFieldsUnknown]) — null when
+ * the interface [iface] the screen [fn] takes is read whole in [file] (an
+ * unlisted field is new: contract write-back declares it).
+ */
+internal fun unlistedFieldsWhy(fn: KtNamedFunction, file: KtFile, iface: KtClass?, types: MemberTypes?): String? {
+  val name = bindingsTypeName(fn) ?: return "the screen has no Bindings parameter"
+  if (iface == null) {
+    val declared = file.declarations.filterIsInstance<KtClass>().any { it.name == name }
+    return if (declared) "the screen takes `$name`, which this file declares, but not as an interface"
+    else "the screen takes `$name`, which is not declared in this file"
+  }
+  val outside = types?.outside ?: return null
+  return "`${iface.name}` extends `$outside`, declared in another file — a field it does not declare here may be inherited, with any type"
 }
 
 /** The element type's simple name of a `List<X>` type text — null for anything else (a nullable or generic element too). */

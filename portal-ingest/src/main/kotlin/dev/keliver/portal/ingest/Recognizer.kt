@@ -84,7 +84,12 @@ internal sealed interface NameCtx {
      * [UNKNOWN_TYPE] when it is not in the file or inherits from elsewhere.
      */
     val undeclared: String? = null,
-    /** K4: why the screen's field types cannot be read (no Bindings interface in the file), for a diagnostic. */
+    /**
+     * K4: why a field [fieldTypes] does not list has a type that cannot be read
+     * (no Bindings parameter, its interface not in the file or extending one
+     * declared elsewhere) — a diagnostic, and the contract's
+     * `unlistedFieldsUnknown`. Null = the interface is read whole.
+     */
     val unknownWhy: String? = null,
   ) : NameCtx
   data class Component(
@@ -127,28 +132,23 @@ object Recognizer {
     tokens: TokenTable = TokenTable.EMPTY,
   ): Recognized? {
     val file = PsiEnv.parse(fileName, LineEndings.toLf(source))
-    val fn = file.declarations.filterIsInstance<KtNamedFunction>()
-      .firstOrNull { f -> f.annotationEntries.any { it.shortName?.asString() == "Composable" } }
-      ?: return null
+    val fn = screenFunction(file) ?: return null
     val bindingsParam = fn.valueParameters.firstOrNull()?.name // "b" by convention
     val body = fn.bodyExpression as? KtBlockExpression ?: return null
     val lookup = tokens.lookupFor(file, fileName, TokenTable.shadowedNames(fn))
-    val ifaceClass = file.declarations.filterIsInstance<KtClass>()
-      .firstOrNull { it.isInterface() && it.name?.endsWith("Bindings") == true }
-    // K4: a template reads a field only of a type it can read — in the interface the
-    // screen takes, declared in this file (with its same-file supertypes).
+    // K4: the contract is the interface the screen TAKES (its parameter's type, `?`
+    // stripped), declared in this file — never another one the file declares first.
+    val ifaceClass = screenInterface(fn, file)
+    // A template reads a field only of a type it can read — in that interface, with
+    // its same-file supertypes; a field it does not list is unknown when the interface
+    // is not here or extends one declared elsewhere ([unknownWhy] says which).
     val decls = typeDecls(file)
     val ifaceTypes = ifaceClass?.let { memberTypes(it, decls) }
-    val paramType = fn.valueParameters.firstOrNull()?.typeReference?.text?.trim()
-    val unknownWhy = when {
-      ifaceClass == null -> "no `…Bindings` interface in this file declares its type" + (paramType?.let { " (the screen takes `$it`)" } ?: "")
-      paramType?.substringAfterLast('.') != ifaceClass.name -> "the screen takes `$paramType`, not the `${ifaceClass.name}` interface this file declares"
-      else -> null
-    }
+    val unknownWhy = unlistedFieldsWhy(fn, file, ifaceClass, ifaceTypes)
     val screenCtx = NameCtx.Screen(
       bindingsParam,
-      fieldTypes = if (unknownWhy == null) ifaceTypes?.types.orEmpty() else emptyMap(),
-      undeclared = if (unknownWhy != null || ifaceTypes?.complete == false) UNKNOWN_TYPE else null,
+      fieldTypes = ifaceTypes?.types.orEmpty(),
+      undeclared = if (unknownWhy != null) UNKNOWN_TYPE else null,
       unknownWhy = unknownWhy,
     )
     val walk = Walker(screenCtx, components, lookup, decls)
@@ -163,8 +163,9 @@ object Recognizer {
             val p = f.valueParameters.firstOrNull()?.typeReference?.text ?: return@mapNotNull null
             (f.name ?: return@mapNotNull null) to p
           }.toMap(),
+        unlistedFieldsUnknown = unknownWhy,
       )
-    } ?: Contract()
+    } ?: Contract(unlistedFieldsUnknown = unknownWhy)
 
     return Recognized(
       root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup,
@@ -580,10 +581,11 @@ object Recognizer {
         else -> null
       }
 
-    /** K4: why a screen field spelled [ref] (`b.x`) has no readable type, when the screen's interface is not read. */
+    /** K4: why a screen field spelled [ref] (`b.x`) has no readable type, when the screen's interface does not list it. */
     private fun screenUnknownWhy(ref: String): String? {
       val screen = ctx as? NameCtx.Screen ?: return null
-      return screen.unknownWhy?.takeIf { ref.substringBefore('.') == screen.bindingsParam }
+      if (ref.substringBefore('.') != screen.bindingsParam || ref.substringAfter('.') in screen.fieldTypes) return null
+      return screen.unknownWhy
     }
 
     /** K4: why a template does not read the reference spelled [ref], declared [type]. */
