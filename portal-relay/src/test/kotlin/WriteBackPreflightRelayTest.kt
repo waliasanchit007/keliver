@@ -159,6 +159,43 @@ class WriteBackPreflightRelayTest {
   }
 
   /**
+   * K4 final review: the file on disk momentarily not a screen (the author
+   * mid-edit) refuses every plan, the document's as it is too — so a change
+   * write-back would refuse was accepted "as not why". The author then saved
+   * the exact text the relay last read (the watcher skips it: already read),
+   * and the change stayed in the document, refused at every write — the
+   * screen wedged. Such a change is now checked against the file as last
+   * read, and refused there.
+   */
+  @Test fun aChangeMadeWhileTheFileIsNotAScreenIsCheckedAgainstTheFileLastRead() {
+    val f = fixture(rows)
+    val read = f.file.readText()
+    f.file.writeText("// mid-edit\n")
+    assertEquals(DocumentService.FileChange.NOT_A_SCREEN, f.svc.fileChanged("// mid-edit\n"))
+    val bad = DocOp.SetProp(f.svc.rowText(), "text", PropValue.Template(listOf(lit("a "), PropValue.Bind("row.price"))))
+    val dry = f.svc.dryRun(f.svc.batch(bad))
+    val sub = f.svc.submit(f.svc.batch(bad))
+    assertFalse(sub.ok, "accepted a change the file as last read cannot take")
+    assertEquals(dry.error, sub.error)
+    assertTrue("row.price" in sub.error!! && "make this change in code" in sub.error!!, sub.error)
+    // A change the file as last read takes is accepted, as before.
+    val fine = DocOp.SetProp((f.svc.child(0) as DocNode.Widget).handle, "text", lit("z"))
+    assertTrue(f.svc.dryRun(f.svc.batch(fine)).ok)
+    // The author restores the text last read: nothing is wedged, the next edit is written.
+    f.file.writeText(read)
+    assertEquals(DocumentService.FileChange.ALREADY_READ, f.svc.fileChanged(read))
+    assertTrue("StyledText(text = \"z\")" in written(f, fine), f.file.readText())
+  }
+
+  /** A file that cannot be read when the change is made (gone, or not a file): accepted as for a file changed since it was read — the writer reports what it finds. */
+  @Test fun aFileThatCannotBeReadAtOpTimeIsNotAnHttpError() {
+    val f = fixture(unbound)
+    assertTrue(f.file.delete() && f.file.mkdir(), "the screen's path is now a directory")
+    val ack = f.svc.dryRun(f.svc.batch(DocOp.SetProp((f.svc.child(0) as DocNode.Widget).handle, "text", lit("A"))))
+    assertTrue(ack.ok, ack.error)
+  }
+
+  /**
    * Undo and redo go through the same check: a step write-back would refuse
    * (here: the component it restores is no longer one, so the file would not
    * read back as the document) is refused and dropped, never applied, and
