@@ -13,8 +13,8 @@
 How the stored asset was checked: before publishing, the draft zip asset was
 downloaded back in full and its sha256 was identical to the verified file
 (`ae84cb2c…`); GitHub's server `digest` and `size` for the zip matched it
-too. The public download is checked from a GitHub-hosted runner by the
-reference app's move to 0.3.11.
+too. The public download is to be checked from a GitHub-hosted runner by the
+reference app's move to 0.3.11 (not yet run when this record was written).
 
 What is in it since 0.3.10 (`78bcfa0ad`): PRs #120 (K1), #121 (K2), #122
 (U35/U36), #123 (K5), #124 (K3), #125 (K5 follow-up) and #126 (K4). #118 (the
@@ -179,9 +179,10 @@ Local pre-gates on the releasing machine (not run on the attached bytes; the
 build is not byte-reproducible):
 
 - `keliver-store-identity-repro.sh`: 11/0;
-- `keliver-store-recovery-check.sh`: 134 passed, 1 failed. The failure, C5,
-  needed port 8096, which a portal already running on that machine held; the
-  same check passed 144/0 in the build job above;
+- `keliver-store-recovery-check.sh`: 134 passed, 1 failed (135 checks). The
+  failure, C5, needed port 8096, which a portal already running on that
+  machine held. The same script passed 144/0 in the build job above (Linux,
+  144 checks);
 - `keliver-adopter-acceptance.sh` and `keliver-acceptance-identity-check.sh`
   were not run locally (a running portal held 8077 and 8096); they ran in the
   build job (25/0, 6/0).

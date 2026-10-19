@@ -948,7 +948,7 @@ set from here.
 0.3.11** (2026-10-19). On an older bundle, run the relay on a trusted network or
 with the macOS firewall on.
 
-### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND (unreleased; found 2026-10-14, cause not known)
+### U34. The first relay publish after another Gradle build failed in the Kotlin/JS compiler — WORKED AROUND in tools 0.3.10 (found 2026-10-14, cause not known)
 
 Found in the 2026-10 adoption proof (`ADOPTION_RETRO_2026-10.md`, "Dev-loop friction").
 
@@ -981,7 +981,7 @@ to the console, and a CI job is rerun as a whole.
 **Still open.** The cause, and the two-second `BUILD FAILED`. When it happens again, attach
 the publish log to this entry.
 
-### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED (unreleased; found 2026-10-16)
+### U33. Editing a text with an escape or a `$` changed what the screen says — FIXED in tools 0.3.10 (found 2026-10-16)
 
 Found changing a real app's screen through the web editor (the D14 round-trip on a
 product-proof app's guest, 13 screens; see `ADOPTION_RETRO_2026-10.md`).
