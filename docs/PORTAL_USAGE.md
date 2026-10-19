@@ -464,7 +464,9 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   file, or make the change in code. A NEW field of an interface read whole
   is fine: write-back declares it (`val fresh: String`). The document's
   contract carries the reason as `unlistedFieldsUnknown` (absent = read
-  whole).
+  whole). The same holds for a list item's field the item type declares
+  `Double` or nullable (`row.price`): the relay plans the write-back of
+  every edit when you make it, and refuses one the write would refuse.
 - Write-back is surgical: editing one text segment or reference rewrites only
   it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
   `${'$'}`) elsewhere in the string stay as written; editing one list

@@ -639,8 +639,9 @@ fun SectionCard(content: @Composable () -> Unit) {
     file is not read (an item field in a template stays grammar, as
     before), and the contract carries no item types, so the document does
     not check an item field's type: a template reading an item field ingest
-    types `Double` or nullable is refused at write-back (the file would not
-    read back as the document).
+    types `Double` or nullable is refused by the relay's write-back
+    preflight (§7a) when the op is made — the file would not read back as
+    the document.
   - A template fits only where source takes a `String`: a widget's String
     prop, a component's String parameter, or a conditional value's branch on
     one (`if (b.on) "Hi ${b.n}" else "-"`).
@@ -800,10 +801,50 @@ ways, and the editor is told which:
    file is rewritten from the document only if the file as it is IS the
    export of its own tree (a trailing newline aside) — it holds nothing the
    exporter would drop — and the export reads back as the document.
-3. **Otherwise refused** (`refused`): nothing is written and the file is
-   left exactly as it is. The relay logs one line, the screen's write-back
-   status (`writeBack` on the `/doc-events` stream and in `/devstate`) says
-   why, and the editor shows a non-blocking banner and marks the save pill
+3. **Otherwise refused** — and **an edit write-back would refuse is
+   refused when it is made**. The relay plans the write-back of every edit
+   it is asked to make — submit, dry run (same answer), undo and redo —
+   exactly as the writer will: `ScreenWriter.plan` of the document the
+   edit leaves, against the file as it is now (read once, under the
+   screen's lock), with the same base and component and token tables. If
+   the plan is a refusal, so is the op: "this change could not be written
+   to `<file>` without losing code: `<reason>` — make this change in code";
+   the document never takes it, and nothing is blocked. An undo or redo
+   step the plan refuses is dropped (what refuses it is the file's code,
+   which only an edit of the file changes — and that edit, read, clears
+   both stacks). This covers what the document cannot check: a template
+   reading a list item's field the file types `Double` or nullable (the
+   contract carries no item types), a plain binding set in a screen
+   function that takes no bindings parameter, and any reason the writer
+   has. The preflight lets an edit through when
+   - it changes nothing, or brings the document back to the file (nothing
+     new to write; an undo out of a refusal is never refused);
+   - the plan is "re-read" (the file changed since the relay last read
+     it, and the watcher has not read it yet): the edit is accepted and the
+     writer re-reads the file and reports it `discarded` (0. above).
+     Reading the file at the edit instead would swap the document the
+     client's batch was made against under its feet — and the change would
+     be lost all the same;
+   - the document could not be written before the edit either (a change
+     refused at write time, below, or a file that does not read as a
+     screen): the edit is not why, so it is accepted and the writer reports
+     as before.
+
+   The write itself is unchanged: it plans again when it runs (400 ms
+   later; the file may have changed). Cost: one plan per edit — 6.0 ms
+   median, 6.7 ms p95, 8.4 ms max on this repo's largest screen
+   (`layout_evidence.kt`, 230 lines, 49 nodes), about 1.5 ms on the
+   reference app's screens, while the edit holds the screen's lock.
+
+   **What is still refused at write time** (`refused`) is what the plan at
+   the edit could not see: the file changed between the edit and its write
+   in a way that still reads as the base (a reformat, a comment), so the
+   write merges onto a text the edit's plan never saw and cannot make the
+   change in place; or a component or design token the screen uses
+   changed in between. A write that fails (I/O) is `failed`. Then nothing
+   is written and the file is left exactly as it is. The relay logs one
+   line, the screen's write-back status (`writeBack` on the `/doc-events`
+   stream and in `/devstate`) says why, and the editor shows a non-blocking banner and marks the save pill
    "Not written". **The document keeps the change that could not be written,
    so every later edit of this screen is refused with it** (the banner says
    so, and names the version that first failed): "this change could not be
@@ -832,7 +873,8 @@ that takes no bindings parameter (add the parameter in code first); a
 template reading a screen field whose type the screen's file does not show
 (the interface the screen takes is not in the file or extends one declared
 elsewhere, or the field has no declared type — §7, "Where ingest reads a
-reference's type": bind it directly, or make the change in code); and a
+reference's type": bind it directly, or make the change in code); any
+edit write-back would refuse (the preflight in 3. above); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
 to another block, nothing that mentions the declared name (a whole-word

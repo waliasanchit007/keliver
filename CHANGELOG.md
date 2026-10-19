@@ -201,7 +201,27 @@
   modifier argument written as an integer (`flex(1)`) are now RawCode instead of being coerced,
   while `aspectRatio(1.5f)` — the exporter's own output — is now recognized instead of RawCode.
 
+### Library compatibility
+- **portal-document** (published): `PropValue` gained a subclass in K2 (`Token`), in K3
+  (`Conditional`) and two in K4 (`Template`, `ListOf`). Consumer code with an exhaustive `when`
+  over `PropValue` needs a branch for each (a source break; compiled code that meets one it does
+  not know throws `NoWhenBranchMatchedException`). K4 also added `Contract.unlistedFieldsUnknown`,
+  a fourth constructor parameter (`copy` argument, `component4`). The 0.3.x three-argument
+  constructor and `copy`, with their defaulted forms (`copy$default`, the synthetic defaulted
+  constructor), are kept as hidden declarations: JVM code compiled against 0.3.x still links (the
+  old `copy` keeps `unlistedFieldsUnknown`), Kotlin source resolves to the new ones, and Java
+  source, which sees the old ones as synthetic, uses the four-argument forms.
+
 ### Fixed
+- **portal-relay:** an edit the document accepted but write-back then refused blocked every later
+  edit of the screen until undone (§7a) — e.g. a template on a list item's field typed `Double` or
+  nullable (the contract carries no item types), or a plain binding set on a screen that takes no
+  bindings parameter. The relay now plans the write-back of every edit, dry run, undo and redo when
+  it is made — the writer's own plan, against the file as it is — and refuses the edit (an undo or
+  redo step is dropped) with the reason and "make this change in code". The write itself still
+  plans again: a file that changes between the edit and its write, or an I/O failure, is still
+  reported as a write-back status. Cost: one plan per edit, about 6 ms on this repo's largest
+  screen (SCREEN_ARCHITECTURE §7a).
 - **portal-ingest:** a statement inserted after the last statement of an `if` block was written
   after the block's closing brace (an `if` block owns its trailing whitespace, unlike a lambda).
 - **portal-ingest, portal-relay:** two or more statements inserted in a row (after one kept
