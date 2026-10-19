@@ -364,6 +364,8 @@ class DocumentService(
    *    clears both stacks anyway. (A whole-file export can drop an unused
    *    import, so such a step might have applied later: dropping is the
    *    chosen trade against a stack wedged behind it.)
+   *  - DROPPED too when write-back would refuse the step (K4 §7a preflight:
+   *    [writeBackRefusal]).
    */
   private fun step(verb: String, from: ArrayDeque<List<DocOp>>?, to: () -> ArrayDeque<List<DocOp>>): OpAck {
     val inverses = from?.lastOrNull()
@@ -393,8 +395,10 @@ class DocumentService(
     }
     // K4 §7a: a step write-back would refuse is never applied (it would block
     // every later edit of the screen). Dropped, not kept: what refuses it is
-    // the file's own code, which only an edit of the file changes — and that
-    // edit, read, clears both stacks anyway.
+    // usually the file's own code, which only an edit of the file changes —
+    // and that edit, read, clears both stacks anyway. (A component or token
+    // changing back might have let it apply later: dropping is the chosen
+    // trade against a stack wedged behind it, as for a FILE_IMPORT clash.)
     writeBackRefusal(fresh.doc)?.let { return dropped(it) }
     from.removeLastOrNull()
     to().addLast(ok.inverseBatch)

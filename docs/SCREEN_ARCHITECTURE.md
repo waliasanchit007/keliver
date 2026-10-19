@@ -810,9 +810,11 @@ ways, and the editor is told which:
    the plan is a refusal, so is the op: "this change could not be written
    to `<file>` without losing code: `<reason>` — make this change in code";
    the document never takes it, and nothing is blocked. An undo or redo
-   step the plan refuses is dropped (what refuses it is the file's code,
-   which only an edit of the file changes — and that edit, read, clears
-   both stacks). This covers what the document cannot check: a template
+   step the plan refuses is dropped (what refuses it is usually the file's
+   code, which only an edit of the file changes — and that edit, read,
+   clears both stacks; a component or token changing back might have let
+   it apply later, but a kept step that never applies would wedge the
+   stack behind it). This covers what the document cannot check: a template
    reading a list item's field the file types `Double` or nullable (the
    contract carries no item types), a plain binding set in a screen
    function that takes no bindings parameter, and any reason the writer
