@@ -131,11 +131,12 @@ class DocumentService(
       }
     }
     val chosen = Tokens.tokensIn(normalized)
-    if (chosen.isNotEmpty() && kotlinFile.exists()) {
+    val text = if (chosen.isNotEmpty()) fileTextOrNull() else null
+    if (text != null) {
       // One scope through the whole batch, seeded with the imports the
       // document's tokens already imply (it may be ahead of the file).
       val pending = Tokens.importsIn(doc)
-      table.bindingProblem(kotlinFile.readText(), tokenFileId, chosen.toList(), pending)?.let { return null to it }
+      table.bindingProblem(text, tokenFileId, chosen.toList(), pending)?.let { return null to it }
     }
     return normalized to null
   }
@@ -197,7 +198,7 @@ class DocumentService(
    */
   private fun rawRefusal(batch: OpBatch): String? {
     if (batch.ops.none { it is DocOp.ReplaceRaw }) return null
-    val fileText = if (kotlinFile.exists()) kotlinFile.readText() else null
+    val fileText = fileTextOrNull()
     var d = doc
     for (op in batch.ops) {
       if (op is DocOp.ReplaceRaw) {
@@ -412,8 +413,9 @@ class DocumentService(
     // another session may have added a different owner of the same simple
     // name. One scope, seeded with the imports of every token the step did NOT
     // restore — the restored ones are checked, not assumed.
-    if (fresh.restored.isNotEmpty() && kotlinFile.exists()) {
-      table.bindingIssue(kotlinFile.readText(), tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
+    val onDisk = if (fresh.restored.isNotEmpty()) fileTextOrNull() else null
+    if (onDisk != null) {
+      table.bindingIssue(onDisk, tokenFileId, fresh.restored, fresh.keptImports)?.let { issue ->
         return if (issue.cause == TokenTable.BindingCause.FILE_IMPORT) dropped(issue.message)
         else OpAck(false, doc.version, "$verb blocked (step kept): ${issue.message}")
       }
@@ -497,11 +499,24 @@ class DocumentService(
    * RawCode. False when a write-back is still pending (the document is ahead
    * of the file — the caller retries after it lands).
    */
+  /**
+   * The screen file's text for an op-time check, or null when it is missing or
+   * cannot be read just now (e.g. replaced mid-save): a check skips, as with no
+   * file, and the writer reports what it finds when it runs.
+   */
+  private fun fileTextOrNull(): String? =
+    try {
+      if (kotlinFile.isFile) kotlinFile.readText() else null
+    } catch (_: java.io.IOException) {
+      null
+    }
+
   @Synchronized
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
-    if (!kotlinFile.exists()) return true
-    val text = kotlinFile.readText()
+    if (!kotlinFile.isFile) return true
+    // Unreadable for a moment (an IDE's atomic save): not done, the caller retries.
+    val text = fileTextOrNull() ?: return false
     val rec = dev.keliver.portal.ingest.Recognizer.recognize(tokenFileId, text, components(), tokens())
       ?: return true
     val next = dev.keliver.portal.ingest.Reconciler.reconcile(doc, rec)
