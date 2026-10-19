@@ -441,15 +441,30 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   `Double`/`Float`/nullable in the Bindings interface keep the call code
   (RawCode), the editor offers no Double token in a template, and the server
   refuses one. Format such a value in the presenter into a `String` field.
-- So ingest must read the type: a screen field's in the screen's Bindings
-  interface in the same file (with its supertypes declared there), an item
-  field's in its item type when that is declared in the same file
-  (`interface Row { val price: Double }` keeps `"${row.price}"` code). A
-  type it cannot read is unknown and a template does not read it: a
-  property without a type (`val x get() = 1.5`), a field inherited from a
-  type in another file, and every binding of a screen whose Bindings
-  interface is not in its file. `kotlin.Int` etc. are fine. An item type in
-  another file is not read (such an item field still reads as grammar).
+- So ingest must read the type: a screen field's in the Bindings interface
+  the screen TAKES — the one its parameter's type names (`b: HomeBindings`
+  or `b: HomeBindings?`), declared in the same file, with its supertypes
+  declared there; never another `…Bindings` interface the file declares
+  first — and an item field's in its item type when that is declared in the
+  same file (`interface Row { val price: Double }` keeps `"${row.price}"`
+  code). A type it cannot read is unknown and a template does not read it:
+  a property without a type (`val x get() = 1.5`); and every field the
+  interface does not declare in the file — inherited or brand new — when
+  the screen has no Bindings parameter, its interface is not in the file,
+  or the interface extends one declared in another file.
+  `kotlin.Int` etc. are fine. An item type in another file is not read
+  (such an item field still reads as grammar).
+- **The rule for edits:** the editor (and an agent) cannot place a
+  template reading such a field. The edit is refused when you make it —
+  "the screen's Bindings type for `title` is not readable here (…); bind it
+  directly or make this change in code" — because the file would not read
+  back as the template, and a change refused at write-back blocks every
+  later edit of the screen until it is undone. Bind the field directly
+  (`text = b.title`), declare it in the screen's own interface in the same
+  file, or make the change in code. A NEW field of an interface read whole
+  is fine: write-back declares it (`val fresh: String`). The document's
+  contract carries the reason as `unlistedFieldsUnknown` (absent = read
+  whole).
 - Write-back is surgical: editing one text segment or reference rewrites only
   it, and the author's `$x` / `${x}` spelling and escapes (`\n`, `\"`, `\$`,
   `${'$'}`) elsewhere in the string stay as written; editing one list

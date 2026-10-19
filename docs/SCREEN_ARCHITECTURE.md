@@ -607,7 +607,10 @@ fun SectionCard(content: @Composable () -> Unit) {
     2^53 included). Format such a value in the presenter (a `String` field
     the presenter fills) to show it.
   - *Where ingest reads a reference's type.* A screen field's in the
-    Bindings interface the screen takes, declared in the same file, with the
+    Bindings interface the screen takes — the interface its parameter's type
+    names (`?`, type arguments and a package qualifier stripped; never
+    another `…Bindings` interface the file declares first, here or in
+    contract write-back) — declared in the same file, with the
     members of its supertypes declared in that file; `kotlin.String`,
     `kotlin.Int`, `kotlin.Long` and `kotlin.Boolean` are those types. An
     item field's (`row.price`) in the Repeat's element type (`List<Row>`)
@@ -616,15 +619,28 @@ fun SectionCard(content: @Composable () -> Unit) {
     nullable member keeps the call RawCode. A type ingest cannot read is
     *unknown*, and a template never reads it: a property without a declared
     type (`val x get() = 1.5`, typed `<unknown>` in the contract, never
-    silently `String`), a field a supertype declared in another file may
-    hold, and every screen field when the screen's Bindings interface is
-    not in its file or the screen takes another type (the RawCode reason
-    says so). Limits: an item type declared in another file is not read (an
-    item field in a template stays grammar, as before), and the document
-    checks only what the contract carries — not item field types, nor fields
-    of a screen whose interface it does not list. Such an edit is never
-    written silently wrong: write-back refuses it, because the file would
-    not read back as the document.
+    silently `String`), and every field the interface does not declare in
+    the file — inherited or brand new — when the screen has no Bindings
+    parameter, takes a type not declared in its file, or takes an interface
+    extending one declared in another file (the RawCode reason says which).
+    The contract carries that reason as `unlistedFieldsUnknown` (null —
+    absent on the wire, and what older JSON decodes as — when the interface
+    is read whole: an unlisted field is then new, and contract write-back
+    declares it). The document refuses, when the op is made (set, insert,
+    a conditional's branch, an undo reinserting it; the editor's and an
+    agent's ops alike), a template reading a field the contract cannot
+    type — "the screen's Bindings type for `title` is not readable here
+    (…); bind it directly or make this change in code" — because ingest
+    reads such a template as RawCode, so write-back would refuse it and
+    block every later edit of the screen (§7a). A plain binding and a list
+    element of such a field are allowed: nothing is printed, the compile
+    types them, and they read back. A `ContractEdit` cannot clear the
+    signal (the file decides it). Limit: an item type declared in another
+    file is not read (an item field in a template stays grammar, as
+    before), and the contract carries no item types, so the document does
+    not check an item field's type: a template reading an item field ingest
+    types `Double` or nullable is refused at write-back (the file would not
+    read back as the document).
   - A template fits only where source takes a `String`: a widget's String
     prop, a component's String parameter, or a conditional value's branch on
     one (`if (b.on) "Hi ${b.n}" else "-"`).
@@ -694,7 +710,8 @@ fun SectionCard(content: @Composable () -> Unit) {
     part or an element that is not a reference of the right kind (an
     action, a nested template, a Double, Long or wrong-kind token, a
     non-field name, a field the contract declares Double/Float/nullable or —
-    for an element — other than the element type), a conditional list, a
+    for an element — other than the element type, a template part reading a
+    field the contract cannot type), a conditional list, a
     Boolean test on a field a template or list reads unless declared
     `Boolean` (either order), a Repeat's field read as one value (either
     order), and —
@@ -811,7 +828,11 @@ a RawCode replacement that is not exactly one statement (several, a parse
 error, or a comment after it — `Legacy(2) // c`) or that reads as something
 the editor models (a widget, `if` or `forEach`: insert that as a widget
 instead); a bound value, condition or list inserted into a screen function
-that takes no bindings parameter (add the parameter in code first); and a
+that takes no bindings parameter (add the parameter in code first); a
+template reading a screen field whose type the screen's file does not show
+(the interface the screen takes is not in the file or extends one declared
+elsewhere, or the field has no declared type — §7, "Where ingest reads a
+reference's type": bind it directly, or make the change in code); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves
 to another block, nothing that mentions the declared name (a whole-word

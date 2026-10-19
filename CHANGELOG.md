@@ -48,10 +48,16 @@
   the device (Kotlin/JS) prints `1.0` as `1` and a null as `null`, the preview `1.0` and nothing,
   so such a call stays RawCode and the document, the relay and the editor refuse one. Ingest reads
   a screen field's type in the screen's Bindings interface in the same file (and its same-file
-  supertypes) and an item field's in its item type when declared in the same file; a type it
-  cannot read (a property without a type, a field inherited from another file, any binding of a
-  screen whose interface is not in its file) is unknown, and a template does not read it
-  (`kotlin.Int` etc. are the plain types). A field a template or a list reads is never also tested
+  supertypes) — the interface the screen's parameter names (`b: X` or `b: X?`), never the first
+  `…Bindings` interface in the file, in ingest and in contract write-back alike — and an item
+  field's in its item type when declared in the same file; a type it cannot read (a property
+  without a type; any field the interface does not declare in the file when the screen has no
+  Bindings parameter, its interface is not in its file, or it extends one declared in another
+  file) is unknown, and a template does not read it (`kotlin.Int` etc. are the plain types). The
+  contract says so (`Contract.unlistedFieldsUnknown`, a new optional field: absent = the interface
+  is read whole), and the document refuses such a template when the op is made, with the reason —
+  it was accepted and then refused at write-back, which blocked every later edit of the screen. A
+  plain binding of such a field is still allowed. A field a template or a list reads is never also tested
   as a Boolean, unless the Bindings interface declares it `Boolean`; a field a Repeat iterates is
   read whole by no template, list element or text prop. A mocked Int list element is a decimal or
   a `#RRGGBB`/`#AARRGGBB` colour (else left out). `portal-core` adds `mockedIntElement`.
