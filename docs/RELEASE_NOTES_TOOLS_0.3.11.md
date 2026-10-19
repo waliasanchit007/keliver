@@ -1,14 +1,20 @@
 # keliver-portal-tools 0.3.11 — release notes
 
-**Status: CANDIDATE — not released.** Tag and publish only on the owner's
-explicit go, following [`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md).
+**Status: RELEASED 2026-10-19**, on the owner's explicit go.
 
 | | |
 |---|---|
-| tag | `portal-tools-v0.3.11` → *(the verified candidate's `VERSION.json` `sourceCommit`; not tagged)* |
-| release | *(none yet)* |
-| zip asset | `keliver-portal-tools-0.3.11.zip` *(the retained, verified CI artifact; not uploaded)* |
-| `.sha256` asset | *(not uploaded)* |
+| tag | `portal-tools-v0.3.11` (annotated, object `072e8507`) → **`ebbb24c9649d42d7f15d11165031dbe733905056`** |
+| release | [portal-tools-v0.3.11](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.11), published 2026-10-19T08:29:35Z, `--latest=false` |
+| zip asset | `keliver-portal-tools-0.3.11.zip`, 91,311,273 bytes, sha256 **`ae84cb2c5442948dbd8272a5a9f0d1f0d9bf42377475168d3f9c31ab1f26bddf`**, uploaded from the retained artifact `12170000839` of build run 39214066995 |
+| `.sha256` asset | 98 bytes, sha256 `0b8d8d72bbf69805331eee4aa52622baff05e63b00c8ee04779020a3e4763c00` |
+| tag push | ran only `portal-tools.yml` (run 39222008390, the read-only rebuild; its artifact is not attached) |
+
+How the stored asset was checked: before publishing, the draft zip asset was
+downloaded back in full and its sha256 was identical to the verified file
+(`ae84cb2c…`); GitHub's server `digest` and `size` for the zip matched it
+too. The public download is checked from a GitHub-hosted runner by the
+reference app's move to 0.3.11.
 
 What is in it since 0.3.10 (`78bcfa0ad`): PRs #120 (K1), #121 (K2), #122
 (U35/U36), #123 (K5), #124 (K3), #125 (K5 follow-up) and #126 (K4). #118 (the
@@ -148,17 +154,38 @@ on a later library release).
 
 ## Candidate verification
 
-*(to be filled from the verified CI build, as for 0.3.10)*
-
 | | |
 |---|---|
-| Source commit | |
-| Zip | `keliver-portal-tools-0.3.11.zip`, sha256 |
-| Bundled host APK | sha256 , no `assets/portal_ed25519.pub` |
-| Build | run , retained artifact |
-| Device job | run |
+| Source commit | `ebbb24c9649d42d7f15d11165031dbe733905056` |
+| Zip | `keliver-portal-tools-0.3.11.zip`, sha256 `ae84cb2c5442948dbd8272a5a9f0d1f0d9bf42377475168d3f9c31ab1f26bddf` |
+| `VERSION.json` | tools 0.3.11, source commit as above, 0 dirty files, Maven dependency 0.3.4 |
+| Bundled host APK | sha256 `a3a7743e20c63a67a72351f0f2297037f4ef6029c92232e03f053390f58ca285`, no `assets/portal_ed25519.pub` |
+| Build | run 39214066995 (dispatched from `release/portal-tools-0.3.11`), retained artifact `12170000839` (`keliver-portal-tools-0.3.11-ebbb24c96…`, artifact digest `sha256:0edc4a8b…`, expires 2026-11-18) |
+| Device job | run 39216352757 (dispatched from `release/portal-tools-0.3.11`, pinned to the build's APK `a3a7743e…`): 19/0 and 28/0, on GitHub's emulator |
 
-Local pre-gates on a local build of the candidate commit (a local build is
-not the bytes to attach; the build is not byte-reproducible):
+The build job's checks, on the packaged bundle (Linux): adopter acceptance
+25/0, the identity gate (foreign-relay refusal, U21) 6/0, store identity 11/0,
+store recovery through the packaged commands 144/0, device-host packaging
+hygiene (U22) 10/0, guest bundle signing 4/0, `keliver-publish` 41/0, private
+key permissions (U27) 63/0, and the production-host (68/0, 62/0), iOS host
+(65/0, 65/0) and publish (51/0, 33/0) scaffolders from `scripts/` and from the
+package.
 
-- see the release branch's commit log and the preparation report.
+Step 3 at the source commit: a `portal-tools-v0.3.11` tag runs only
+`portal-tools.yml`, which has no write permission; `publish.yml` takes `v*`
+only. No workflow was disabled, so step 5 restored nothing.
+
+Local pre-gates on the releasing machine (not run on the attached bytes; the
+build is not byte-reproducible):
+
+- `keliver-store-identity-repro.sh`: 11/0;
+- `keliver-store-recovery-check.sh`: 134 passed, 1 failed. The failure, C5,
+  needed port 8096, which a portal already running on that machine held; the
+  same check passed 144/0 in the build job above;
+- `keliver-adopter-acceptance.sh` and `keliver-acceptance-identity-check.sh`
+  were not run locally (a running portal held 8077 and 8096); they ran in the
+  build job (25/0, 6/0).
+
+**Not run for this release:** `keliver-device-verify.sh` on a physical phone.
+The production refusals and the development route were checked on GitHub's
+emulator only (the device job above).

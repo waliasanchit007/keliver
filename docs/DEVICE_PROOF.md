@@ -197,8 +197,8 @@ The harness installs debug builds, plus one R8 release signed with the debug key
   - The iPhone has no `adb reverse`, so `localhost` on the phone is the phone
     itself.
   - Use the §3 real-certificate server (recommended), or for a Debug build
-    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. From the first tools
-    release that carries KNOWN_BUGS U35/U36, the relay listens on this Mac only
+    `http://<this Mac's LAN IP>:8077` on the same Wi-Fi. From tools 0.3.11
+    (KNOWN_BUGS U35/U36), the relay listens on this Mac only
     unless started with `KELIVER_RELAY_BIND=all` (tools 0.3.10 and earlier
     listen on every interface anyway). With it, anyone on that Wi-Fi can reach
     the relay's edit and publish endpoints, so use it only on a network you
