@@ -67,14 +67,29 @@ kotlin {
     wasmJsTest {
       kotlin.srcDir(new File(parityFixtureRoot, 'kotlin'))
       kotlin.srcDir(generatedParityFixtureDir)
+      kotlin.srcDir('src/parityShared/kotlin')
       dependencies {
         implementation projects.keliverMaterialTesting
         implementation libs.kotlinx.coroutines.test
+      }
+    }
+    // K7: the arithmetic parity gate also runs on js — the device guest's
+    // target — without kotlinx-coroutines-test: a js test returns a Promise
+    // (GlobalScope.promise), and KeliverMaterialTester needs only a scope.
+    jsTest {
+      kotlin.srcDir(new File(parityFixtureRoot, 'kotlin'))
+      kotlin.srcDir(generatedParityFixtureDir)
+      kotlin.srcDir('src/parityShared/kotlin')
+      dependencies {
+        implementation projects.keliverMaterialTesting
       }
     }
   }
 }
 
 tasks.named('compileTestKotlinWasmJs').configure {
+  dependsOn(generateParityFixtureSources)
+}
+tasks.named('compileTestKotlinJs').configure {
   dependsOn(generateParityFixtureSources)
 }
