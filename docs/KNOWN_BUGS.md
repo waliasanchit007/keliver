@@ -917,15 +917,28 @@ member is refused when it is made, through the relay's write-back preflight
 (§7a), with the reason: "the screen would read `fresh`, which this file neither
 declares nor reads yet, so the editor cannot tell whether it exists: … — make
 this change in code". A member the file already reads through its bindings
-parameter (anywhere in the screen function, RawCode included) is vouched for, and
-so is one the file read when the relay last read it: the undo of deleting a
-screen's only `b.title` is written. A component with a required event inserted
-into such a screen starts bound to a new action and is refused the same way.
+parameter (anywhere in the screen function, RawCode included: `b.x`, `b.go()`,
+`b::go`) is vouched for, and so is one the file read when the relay last read it:
+the undo of deleting a screen's only `b.title` is written. A `b` that names
+something else where it is read — a lambda's or local function's parameter, a
+loop variable, a local `val` — vouches for nothing (`forEach { b -> b.length }`
+does not make `length` a bindings member). A component with a required event
+inserted into such a screen starts bound to a new action and is refused the same
+way. A supertype nested in a declaration of the same file (`: Outer.Base`) is
+read as declared in the file.
 
 This changes what K4 allowed on a screen whose interface is not in its file: a
 plain binding of a field the file does not read was written, and compiled only
 if the other file declared it; it is now refused. A screen that takes no
 bindings parameter is refused as before.
+
+**Follow-up (not done).** The editor still refuses an inherited member the file
+does not read yet, although the supertype's declaration is usually in the same
+project. Reading the supertype from the other source files the relay already
+knows (the screens and components directories) would let write-back tell
+inherited from new and accept those edits; it needs the relay to resolve a name
+across files and to re-read a screen when that other file changes, so it is left
+for a later change.
 
 **Affects** contract write-back since it was added (P2b-a, 2026-07-16): every
 tools bundle up to and including 0.3.11. Libraries are not affected

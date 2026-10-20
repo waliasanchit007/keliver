@@ -609,7 +609,8 @@ fun SectionCard(content: @Composable () -> Unit) {
     the presenter fills) to show it.
   - *Where ingest reads a reference's type.* A screen field's in the
     Bindings interface the screen takes, declared in the same file, with
-    the members of its supertypes declared in that file. That interface is
+    the members of its supertypes declared in that file (one nested in a
+    declaration of the file, `: Outer.Base`, too). That interface is
     the one its parameter's type names as Kotlin reads it — past an
     annotation, `?` and type arguments, through a same-file `typealias`
     (chained too) or an import alias, into a nested declaration
@@ -644,8 +645,11 @@ fun SectionCard(content: @Composable () -> Unit) {
     element of such a field are allowed when the file already reads it
     through its bindings parameter (or did when the relay last read the
     file): nothing is printed, the compile types them, and they read back.
-    One the file neither declares nor reads is refused by the write-back
-    preflight (§7a; KNOWN_BUGS U37): it may be inherited or new, and the
+    (A `b` that names something else where it is read — a lambda's or
+    local function's parameter, a loop variable, a local `val` — reads
+    nothing through the bindings.) One the file neither declares nor reads
+    is refused by the write-back preflight (§7a; KNOWN_BUGS U37): it may
+    be inherited or new, and the
     editor cannot tell which — declaring it could redeclare an inherited
     member without `override`, and a bare reference may not compile — so
     contract write-back declares nothing in an interface extending a type
