@@ -4,6 +4,8 @@ import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.condition
+import dev.keliver.portal.document.operands
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.widgetSpecs
 import kotlinx.serialization.json.Json
@@ -82,7 +84,7 @@ object Tools {
           })
         }
       })
-      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf>; Lit tags: s/i/d/b/li/lf/ls; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), negate = `!`/isNot…; a Boolean test never reads a field the screen uses as a list or text, unless the Bindings interface declares it Boolean), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; Template = {parts} is a String template (`\"Rating: ${'$'}{b.rating}\"`) and fits only a String prop or a component's String parameter (also as a Conditional branch): each part is a Lit s (text, its decoded value), a Bind (a screen field, or item.x inside a Repeat over item; never a field the Bindings interface declares Double, Float, nullable or without a type, nor an item field its item type declares Double or nullable, nor a field a Repeat iterates, nor one the screen's file cannot type — the document's contract.unlistedFieldsUnknown says why: no Bindings parameter, an interface not in the file or extending one declared elsewhere — bind such a field directly instead) or a Token of a String, Int or Boolean kind (never a Double: the device, Kotlin/JS, prints 1.0 as 1 where the preview prints 1.0, and a null as null where the preview prints nothing) — never an expression; the server stores it canonical (adjacent text merged, no reference left = a plain Lit); ListOf = {tag, items} is a list prop's value with references (`listOf(C.Start, -1)`): tag li (a List<Int> prop) or ls (a List<String> prop), each item a Lit of that kind (tag i/s), a Token of that kind or a Bind, never conditional, never on a component; a Condition node takes props field (a plain binding name)/test/negate and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates); an op whose write-back to the screen's file would be refused is refused when it is made (its error gives the reason: make that change in code), as are undo/redo steps")
+      put("opSchema", "ops use kind=dev.keliver.portal.document.DocOp.<InsertNode|DeleteNode|MoveNode|SetProp|RemoveProp|SetModifier|RemoveModifier|RenameId|ReplaceRaw>; prop values kind=...PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf>; Lit tags: s/i/d/b/li/lf/ls; Token = {ref, value: Lit, import} names a design-token constant from list_tokens (ref + import exactly as listed; the server supplies the value) and fits only a prop/modifier argument of its kind (Int token on an Int/Color prop, String on Text, Double on Double, Boolean on Bool — never Dp, Float or enum props); Conditional = {field, test?, negate?, whenTrue?, whenFalse?, operand?, more?, join?} is `if (<condition>) whenTrue else whenFalse` on the screen binding `field` (or `item.x` inside a Repeat over `item`; test omitted = the Boolean itself, \"empty\"/\"blank\" = String isEmpty()/isBlank(), \"eq\" = `field == operand` where operand is a Lit s/i/b or a Token of a String, Int or Boolean kind — never a Double, a binding or Int.MIN_VALUE — and the field's type is the operand's; negate = `!`/isNot…/`!=`; a Boolean test never reads a field the screen uses as a list or text, unless the Bindings interface declares it Boolean; more = further terms [{field, test?, negate?, operand?}] joined by join: omitted = `&&`, \"or\" = `||` — never mixed, never nested), each branch a Lit/Bind/Action/Token of the prop's kind, an omitted branch = null (only on a nullable event or component parameter; at least one branch), never nested, never on a list prop; Template = {parts} is a String template (`\"Rating: ${'$'}{b.rating}\"`) and fits only a String prop or a component's String parameter (also as a Conditional branch): each part is a Lit s (text, its decoded value), a Bind (a screen field, or item.x inside a Repeat over item; never a field the Bindings interface declares Double, Float, nullable or without a type, nor an item field its item type declares Double or nullable, nor a field a Repeat iterates, nor one the screen's file cannot type — the document's contract.unlistedFieldsUnknown says why: no Bindings parameter, an interface not in the file or extending one declared elsewhere — bind such a field directly instead) or a Token of a String, Int or Boolean kind (never a Double: the device, Kotlin/JS, prints 1.0 as 1 where the preview prints 1.0, and a null as null where the preview prints nothing) — never an expression; the server stores it canonical (adjacent text merged, no reference left = a plain Lit); ListOf = {tag, items} is a list prop's value with references (`listOf(C.Start, -1)`): tag li (a List<Int> prop) or ls (a List<String> prop), each item a Lit of that kind (tag i/s), a Token of that kind or a Bind, never conditional, never on a component; a Condition node takes props field (a plain binding name)/test/negate/operand, its further terms as field.1/test.1/negate.1/operand.1, field.2/… and join (\"or\"; omitted = `&&`) — a compound or equality Condition is inserted whole, after which single SetProps change only a field, a negation or an operand — and its last child may be one Else node (its else branch); positions are sibling-anchored ('after' handle or null=first); new nodes use handle 0 (server allocates); an op whose write-back to the screen's file would be refused is refused when it is made (its error gives the reason: make that change in code), as are undo/redo steps")
     }.toString()
   }
 
@@ -96,7 +98,7 @@ object Tools {
     val screens = Regex("\"([^\"]+)\"").findAll(get("/screens?project=$project")).map { it.groupValues[1] }
     val hits = StringBuilder()
     screens.forEach { screen ->
-      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&templates=1&lists=1")) }.getOrNull()
+      val doc = runCatching { DocJson.decodeFromString<UiDocument>(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1")) }.getOrNull()
         ?: return@forEach
       usagesIn(screen, doc, name).forEach { hits.appendLine(it) }
     }
@@ -114,8 +116,10 @@ object Tools {
     fun check(n: DocNode.Widget, key: String, v: PropValue) {
       when (v) {
         // K3: a conditional reads its condition's field and holds its branches.
+        // K6: every term's field, and each equality operand (a token is a usage).
         is PropValue.Conditional -> {
-          if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key is chosen by field '$name'"
+          if (name in (listOf(v.field) + v.more.map { it.field })) hits += "$screen: ${n.type}#${n.handle.v}.$key is chosen by field '$name'"
+          v.operands().forEach { check(n, key, it) }
           listOfNotNull(v.whenTrue, v.whenFalse).forEach { check(n, key, it) }
         }
         is PropValue.Bind -> if (v.field == name) hits += "$screen: ${n.type}#${n.handle.v}.$key binds field '$name'"
@@ -132,7 +136,8 @@ object Tools {
     }
     fun walk(n: DocNode) {
       if (n is DocNode.Widget) {
-        if (n.type == "Condition" && (n.props["field"] as? PropValue.Lit)?.s == name) {
+        val fields = if (n.type == "Condition") n.condition()?.terms?.map { it.field } ?: listOfNotNull((n.props["field"] as? PropValue.Lit)?.s) else emptyList()
+        if (name in fields) {
           hits += "$screen: Condition#${n.handle.v} tests field '$name'"
         }
         n.props.forEach { (prop, v) -> check(n, prop, v) }
@@ -235,7 +240,7 @@ object Tools {
       val project = args.str("project", "default")
       val screen = normalizeScreen(project, args.str("screen", "main"))
       rejectUnknownScreen(project, screen)
-        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&templates=1&lists=1"))
+        ?: toolText(get("/doc?project=$project&screen=$screen&tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1"))
     },
 
     Tool(

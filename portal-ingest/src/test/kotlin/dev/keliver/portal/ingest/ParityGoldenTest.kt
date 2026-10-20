@@ -102,6 +102,17 @@ class ParityGoldenTest {
     assertGolden("parity-conditionals-body", toggle.spec.body!!)
   }
 
+  /** K6: equality terms, compound conditions and a derived local recognize transparently (the local inlined). */
+  @Test
+  fun compoundFixtureMatchesItsGolden() {
+    val text = source("ParityCompound")
+    val tokens = TokenTable.scan(listOf("ParityCompound.kt" to text))
+    val compound = Recognizer.recognizeComponent("ParityCompound.kt", text, tokens = tokens)!!
+    assertTrue(compound.spec.transparent, compound.spec.diagnostic)
+    assertEquals("ParityCompound", compound.spec.name)
+    assertGolden("parity-compound-body", compound.spec.body!!)
+  }
+
   /** K4: templates and lists with references recognize transparently. */
   @Test
   fun templateFixtureMatchesItsGolden() {

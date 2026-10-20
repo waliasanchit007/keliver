@@ -3,12 +3,16 @@ package dev.keliver.portal.document
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.Cond
+import dev.keliver.portal.CondJoin
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
 import dev.keliver.portal.Token
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.condOfTerms
+import dev.keliver.portal.conditionProps
+import dev.keliver.portal.isConditionKey
 
 /**
  * Projects the Document onto the V1 interchange tree the whole existing
@@ -84,17 +88,76 @@ public fun treeToPropValue(v: Any?): PropValue = when (v) {
   else -> lit(v)
 }
 
-/** K3: the condition a conditional value tests (an unknown test name reads as the Boolean field itself). */
-public fun PropValue.Conditional.cond(): Cond = Cond(field, CondTest.fromWire(test) ?: CondTest.Bool, negate)
+/**
+ * K3: the condition a conditional value tests (an unknown test name reads as
+ * the Boolean field itself; K6: an unknown join as `&&`). K6: every term, an
+ * equality's operand as a tree value.
+ */
+public fun PropValue.Conditional.cond(): Cond {
+  fun term(field: String, test: String?, negate: Boolean, operand: PropValue?): Cond {
+    val t = CondTest.fromWire(test) ?: CondTest.Bool
+    return Cond(field, t, negate, if (t == CondTest.Eq) operand?.toTreeValue(emptyMap()) else null)
+  }
+  val terms = listOf(term(field, test, negate, operand)) + more.map { term(it.field, it.test, it.negate, it.operand) }
+  return condOfTerms(terms, CondJoin.fromWire(join) ?: CondJoin.And)
+}
+
+/** K6: the document's form of [this] condition with the branches [whenTrue] and [whenFalse]. */
+public fun Cond.toConditional(whenTrue: PropValue?, whenFalse: PropValue?): PropValue.Conditional = PropValue.Conditional(
+  field,
+  test.wire,
+  negate,
+  whenTrue,
+  whenFalse,
+  operand = operand?.takeIf { test == CondTest.Eq }?.let(::treeToPropValue),
+  more = more.map { t -> CondTerm(t.field, t.test.wire, t.negate, t.operand?.takeIf { t.test == CondTest.Eq }?.let(::treeToPropValue)) },
+  join = if (more.isEmpty()) null else join.wire,
+)
 
 /** K3: a V1 [Conditional] lifted back into the document's [PropValue.Conditional]. */
-public fun Conditional.toPropValue(): PropValue.Conditional = PropValue.Conditional(
-  cond.field,
-  cond.test.wire,
-  cond.negate,
-  whenTrue?.let(::treeToPropValue),
-  whenFalse?.let(::treeToPropValue),
-)
+public fun Conditional.toPropValue(): PropValue.Conditional =
+  cond.toConditional(whenTrue?.let(::treeToPropValue), whenFalse?.let(::treeToPropValue))
+
+/**
+ * K6: the [Cond] a `Condition` node tests — its condition props
+ * ([dev.keliver.portal.conditionKey]) read as [dev.keliver.portal.condOf]
+ * reads them in the tree — or null when it has no field or a part this build
+ * cannot read.
+ */
+public fun DocNode.Widget.condition(): Cond? =
+  dev.keliver.portal.condOf(WidgetNode(type, props.filterKeys(::isConditionKey).mapValues { it.value.toTreeValue(emptyMap()) }))
+
+/** K6: a `Condition` node's props for [cond] (defaults left out) — what [condition] reads. */
+public fun conditionNodeProps(cond: Cond): Map<String, PropValue> = conditionProps(cond) { v -> treeToPropValue(v) }
+
+/** K6: whether [this] uses a K6 form — an equality, or more than one term — which a K3 reader cannot decode. */
+public fun PropValue.Conditional.isExtended(): Boolean = test == CondTest.Eq.wire || more.isNotEmpty() || join != null || operand != null
+
+/**
+ * K6 compatibility: [doc] as an editor that knows K3 conditionals but not
+ * their K6 forms can decode it — every conditional VALUE with an equality or
+ * several terms ([isExtended]) replaced by its true branch (a prop whose true
+ * branch is `null` is left out), as an editor that predates conditionals is
+ * served. The relay serves this unless the client advertises them
+ * (`extendedConditions=1`); an edit such a client makes to another prop
+ * leaves the conditional in the document and the file (only a prop it
+ * rewrites loses it). A `Condition` NODE reaches it unchanged: it sees the
+ * first term's `field`/`test`/`negate`, and its edits of those are checked
+ * by the document as any other client's.
+ */
+public fun UiDocument.withoutExtendedConditions(): UiDocument {
+  fun values(m: Map<String, PropValue>): Map<String, PropValue> = buildMap {
+    m.forEach { (k, v) ->
+      val plain = if (v is PropValue.Conditional && v.isExtended()) v.whenTrue else v
+      if (plain != null) put(k, plain)
+    }
+  }
+  fun node(n: DocNode): DocNode = when (n) {
+    is DocNode.RawCode -> n
+    is DocNode.Widget -> n.copy(props = values(n.props), modifiers = values(n.modifiers), children = n.children.map(::node))
+  }
+  return copy(root = node(root))
+}
 
 /**
  * K3 compatibility: [doc] as an editor that predates conditional values can

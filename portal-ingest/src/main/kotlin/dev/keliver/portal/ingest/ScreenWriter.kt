@@ -7,6 +7,7 @@ import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.lit
+import dev.keliver.portal.document.mapOperands
 import dev.keliver.portal.document.toWidgetTree
 
 /**
@@ -166,7 +167,7 @@ object ScreenWriter {
       is PropValue.Token -> tokens.usable(v.ref, v.import, fileName)
         ?.let { e -> runCatching { lit(e.value) }.getOrNull() }
         ?.let { v.copy(value = it) } ?: v
-      is PropValue.Conditional -> v.copy(whenTrue = v.whenTrue?.let(::value), whenFalse = v.whenFalse?.let(::value))
+      is PropValue.Conditional -> v.mapOperands(::value).copy(whenTrue = v.whenTrue?.let(::value), whenFalse = v.whenFalse?.let(::value))
       is PropValue.Template -> v.copy(parts = v.parts.map(::value)) // K4: token parts / elements too
       is PropValue.ListOf -> v.copy(items = v.items.map(::value))
       else -> v

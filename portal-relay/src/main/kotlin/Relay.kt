@@ -26,6 +26,7 @@ import dev.keliver.portal.deserializeTree
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.OpBatch
 import dev.keliver.portal.document.withoutConditionals
+import dev.keliver.portal.document.withoutExtendedConditions
 import dev.keliver.portal.document.withoutLists
 import dev.keliver.portal.document.withoutTemplates
 import dev.keliver.portal.exportKotlin
@@ -1276,6 +1277,7 @@ fun main(args: Array<String>) {
       // K2 (review S5): only a client that advertises design tokens (`tokens=1`)
       // gets PropValue.Token; an older editor gets their literal values.
       // K3: likewise PropValue.Conditional (`conditionals=1`); an older one gets the true branch.
+      // K6: an equality or compound one only with `extendedConditions=1`; a K3 editor gets its true branch.
       // K4: PropValue.Template (`templates=1`; else its text) and PropValue.ListOf (`lists=1`;
       // else the resolved list) — applied first, so a template in a branch is text there too.
       val q = query(ex)
@@ -1408,11 +1410,13 @@ fun main(args: Array<String>) {
  * kind it does not advertise is replaced by what it predates — K4 templates
  * (`templates=1`) by their text and lists with references (`lists=1`) by the
  * resolved list (first, so one in a conditional's branch is converted too),
+ * K6 equality and compound conditional values (`extendedConditions=1`) and
  * K3 conditionals (`conditionals=1`) by their true branch, K2 tokens
  * (`tokens=1`) by their literal.
  */
 internal fun docView(doc: dev.keliver.portal.document.UiDocument, q: Map<String, String>): dev.keliver.portal.document.UiDocument = doc
   .let { if (q["templates"] == "1") it else it.withoutTemplates() }
   .let { if (q["lists"] == "1") it else it.withoutLists() }
+  .let { if (q["extendedConditions"] == "1") it else it.withoutExtendedConditions() }
   .let { if (q["conditionals"] == "1") it else it.withoutConditionals() }
   .let { if (q["tokens"] == "1") it else Tokens.withoutTokens(it) }

@@ -2,7 +2,6 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.COMPONENT_FORWARDS_MODIFIER_PROP
 import dev.keliver.portal.Cond
-import dev.keliver.portal.CondTest
 import dev.keliver.portal.ComponentEventSpec
 import dev.keliver.portal.ComponentRegistry
 import dev.keliver.portal.ComponentSlotSpec
@@ -21,6 +20,7 @@ import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
+import dev.keliver.portal.document.toConditional
 import dev.keliver.portal.document.toWidgetTree
 import dev.keliver.portal.marginProps
 import dev.keliver.portal.propSourceType
@@ -40,6 +40,8 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
+import org.jetbrains.kotlin.psi.KtProperty
 
 /**
  * The Portal Compose recognizer (design §3/§5): turns a screen .kt into a
@@ -171,7 +173,11 @@ object Recognizer {
 
     return Recognized(
       root, contract, fn.name, walk.psiByHandle, file, ifaceClass, lookup,
-      CondParser { parseCond(it, NameCtx.Screen(bindingsParam)) }, bindingsParam, walk.rawReasons.toList(),
+      // K6: as the walker reads a condition (an equality operand may be a token; a field's declared type decides it).
+      CondParser { t ->
+        (CondReader(screenCtx, lookup, { f -> if ('.' in f) null else screenCtx.fieldTypes[f] ?: screenCtx.undeclared }).read(t) as? CondRead.Ok)?.cond
+      },
+      bindingsParam, walk.rawReasons.toList(),
     )
   }
 
@@ -386,6 +392,26 @@ object Recognizer {
     private val itemTypes = HashMap<String, MemberTypes?>()
     /** K4: why the last template was refused for a reference's type — the argument's RawCode reason. */
     private var templateWhy: String? = null
+    /** K6: why the last condition read was not grammar — the argument's RawCode reason. */
+    private var condWhy: String? = null
+
+    /**
+     * K6: the derived Boolean locals of a component body read so far (name →
+     * the condition each stands for), and those declared later in the body
+     * (a use before the definition reads something else in Kotlin).
+     */
+    private val locals = LinkedHashMap<String, Cond>()
+    private val pendingLocals = LinkedHashSet<String>()
+
+    /** K6: a condition in this body's context — null when it is not grammar ([condWhy] says why). */
+    private fun cond(text: String, itemScope: Set<String>): Cond? =
+      when (val r = reader().read(text, itemScope)) {
+        is CondRead.Ok -> r.cond
+        is CondRead.No -> null.also { condWhy = r.why }
+      }
+
+    private fun reader(readOnly: Set<String> = emptySet(), known: Map<String, Cond> = locals) =
+      CondReader(ctx, tokens, { f -> declaredType(PropValue.Bind(f)) }, known, pendingLocals, readOnly)
     private var temp = -1L
     val psiByHandle = mutableMapOf<Long, KtExpression>()
     /** K3: why each RawCode node is not grammar, in source order (component diagnostics). */
@@ -400,11 +426,45 @@ object Recognizer {
     }
 
     fun rootOf(body: KtBlockExpression): DocNode.Widget {
+      // K6: a component body's top-level `val x = <condition>` is a derived local — no node.
+      val isLocal = { st: KtExpression -> ctx is NameCtx.Component && (st is KtProperty || st is KtDestructuringDeclaration) }
+      if (ctx is NameCtx.Component) body.statements.filterIsInstance<KtProperty>().mapNotNullTo(pendingLocals) { it.name }
       // Top-level statements have no layout parent: no scope receiver in source.
-      val single = body.statements.size == 1
-      val statements = body.statements.map { statementToNode(it, emptySet(), null, isRoot = single) }
+      val single = body.statements.count { !isLocal(it) } == 1
+      val statements = body.statements.mapNotNull { st ->
+        if (isLocal(st)) localWhy(st)?.let { raw(st, it) } else statementToNode(st, emptySet(), null, isRoot = single)
+      }
       return statements.singleOrNull() as? DocNode.Widget
         ?: DocNode.Widget(nextTemp(), "Column", children = statements)
+    }
+
+    /**
+     * K6: reads the component-body statement [st] as a derived Boolean local
+     * — `val name = <condition>` or `val name: Boolean = <condition>`, the
+     * condition reading only parameters (never another local: locals stay
+     * flat), [name] shadowing no parameter — and records it; null when it is
+     * one, else why it is not (the component is then opaque).
+     */
+    private fun localWhy(st: KtExpression): String? {
+      if (st is KtDestructuringDeclaration) return "`${st.text.oneLine()}`: a destructuring declaration is not a derived local (a local is `val x = <condition>`)"
+      val p = st as KtProperty
+      val name = p.name ?: return "`${p.text.oneLine()}` is not a derived local"
+      pendingLocals -= name
+      val shown = "`${p.text.oneLine()}`"
+      val c = ctx as NameCtx.Component
+      return when {
+        p.isVar -> "`var $name` is not a derived local (a local is `val $name = <condition>`)"
+        p.hasDelegate() -> "$shown is delegated; a derived local is `val $name = <condition>`"
+        p.modifierList != null -> "$shown has modifiers or annotations; a derived local is `val $name = <condition>`"
+        name in c.valueParams || name in c.eventParams || name in c.slotParams -> "$shown shadows the parameter `$name`"
+        name in locals -> "$shown declares `$name` twice"
+        p.typeReference != null && plainType(p.typeReference!!.text) != "Boolean" -> "$shown is typed ${p.typeReference!!.text}, not a Boolean condition"
+        p.initializer == null -> "$shown has no initializer"
+        else -> when (val r = reader(readOnly = locals.keys.toSet(), known = emptyMap()).read(p.initializer!!.text)) {
+          is CondRead.Ok -> null.also { locals[name] = r.cond }
+          is CondRead.No -> "$shown is not a derived Boolean local: ${r.why}"
+        }
+      }
     }
 
     /**
@@ -418,13 +478,9 @@ object Recognizer {
       parentType: String?,
       isRoot: Boolean = false,
     ): DocNode {
-      recognizeCondition(expr, ctx)?.let { (cond, thenStmts, elseBlock) ->
+      recognizeCondition(expr)?.let { (cond, thenStmts, elseBlock) ->
         val handle = track(nextTemp(), expr)
-        val props = buildMap {
-          put("field", PropValue.Lit("s", s = cond.field))
-          cond.test.wire?.let { put("test", PropValue.Lit("s", s = it)) }
-          if (cond.negate) put("negate", PropValue.Lit("b", b = true))
-        }
+        val props = dev.keliver.portal.document.conditionNodeProps(cond)
         val thenNodes = thenStmts.map { statementToNode(it, itemScope, parentType) }
         // K3: `else { … }` is the Condition's last child, an Else node holding its statements.
         val elseNode = elseBlock?.let { block ->
@@ -475,16 +531,17 @@ object Recognizer {
       val modifiers = mutableMapOf<String, PropValue>()
       // K1: Margin-valued widget props (Row/Column/Box `margin`) ride as four sides.
       val margins = widgetSpec(type!!)?.let { marginProps(it.props) }.orEmpty()
-      val conds = CondParser { parseCond(it, ctx, itemScope) }
+      val conds = CondParser { cond(it, itemScope) }
       for (arg in call.valueArguments) {
         if (arg is KtLambdaArgument) continue
         val name = arg.getArgumentName()?.asName?.asString()
           ?: return raw(expr, "`$type(…)` has a positional argument `${arg.text.oneLine()}`; grammar arguments are named")
         val ve = arg.getArgumentExpression() ?: return raw(expr, "`$type(…)` has an empty argument `$name`")
         templateWhy = null
+        condWhy = null
         fun offending() = raw(
           expr,
-          templateWhy?.let { "`$type(…)` argument `$name`: $it" }
+          (templateWhy ?: condWhy ?: localValueWhy(ve.text))?.let { "`$type(…)` argument `$name`: $it" }
             ?: "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar",
         )
         if (name == "modifier") {
@@ -653,7 +710,7 @@ object Recognizer {
      */
     private fun conditionalArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue.Conditional? {
       val ifExpr = ve as? KtIfExpression ?: return null
-      val cond = parseCond(ifExpr.condition?.text ?: return null, ctx, itemScope) ?: return null
+      val cond = cond(ifExpr.condition?.text ?: return null, itemScope) ?: return null
       fun branch(e: KtExpression?): Pair<Boolean, PropValue?> {
         val x = (e as? KtParenthesizedExpression)?.expression ?: e ?: return false to null
         if (x is KtIfExpression || x is KtBlockExpression) return false to null
@@ -666,7 +723,33 @@ object Recognizer {
       val (okF, whenFalse) = branch(ifExpr.`else`)
       if (!okT || !okF || (whenTrue == null && whenFalse == null)) return null
       if ((whenTrue == null || whenFalse == null) && !nullFits(type, name)) return null
-      return PropValue.Conditional(cond.field, cond.test.wire, cond.negate, whenTrue, whenFalse)
+      return cond.toConditional(whenTrue, whenFalse)
+    }
+
+    /** K6: why a derived local (`active`, `!active`) is not an argument's value by itself. */
+    private fun localValueWhy(text: String): String? {
+      val n = text.trim().removePrefix("!").trim()
+      if (n !in locals && n !in pendingLocals) return null
+      return "a derived local is read only in a condition (`if ($n) A else B`, or `if ($n) { … }`), not as a value"
+    }
+
+    /**
+     * `if (<condition>) { … }` with an optional `else { … }` (K3) — the
+     * condition's every term over a screen binding `b.x` or a component
+     * parameter (never an item field: a Condition's fields are screen
+     * contract members). An `else if` chain is not grammar.
+     */
+    private fun recognizeCondition(expr: KtExpression): Triple<Cond, List<KtExpression>, KtBlockExpression?>? {
+      val ifExpr = expr as? KtIfExpression ?: return null
+      val cond = cond(ifExpr.condition?.text ?: return null, emptySet()) ?: return null
+      if (cond.terms.any { '.' in it.field }) return null
+      val block = ifExpr.then as? KtBlockExpression ?: return null
+      val elseBlock = when (val e = ifExpr.`else`) {
+        null -> null
+        is KtBlockExpression -> e
+        else -> return null
+      }
+      return Triple(cond, block.statements, elseBlock)
     }
 
     /**
@@ -683,10 +766,9 @@ object Recognizer {
     private fun rawReason(expr: KtExpression, call: KtCallExpression?, type: String?): String = when {
       expr is KtIfExpression -> {
         val c = expr.condition?.text?.oneLine()
+        val why = expr.condition?.text?.let { (reader().read(it) as? CondRead.No)?.why }
         when {
-          c != null && parseCond(c, ctx) == null -> "condition `$c` is outside the portal grammar (a Boolean field, `!field`, " +
-            "`field.isEmpty()`/`isNotEmpty()`/`isBlank()`/`isNotBlank()`" +
-            (if (ctx is NameCtx.Component) ", or `param == null`/`!= null` on a nullable parameter)" else ")")
+          why != null -> why
           expr.`else` is KtIfExpression -> "`else if` chains are outside the portal grammar (nest an `if` in the else block)"
           else -> "`if (${c ?: "…"})` needs block branches `{ … }`"
         }
@@ -694,80 +776,6 @@ object Recognizer {
       call != null && type != null -> "`$type(…)` is not a widget or project component"
       else -> "`${expr.text.oneLine()}` is not a widget call or grammar construct"
     }
-  }
-
-  /** One line, shortened, for a diagnostic. */
-  private fun String.oneLine(): String = replace(Regex("\\s+"), " ").trim().let { if (it.length > 80) it.take(77) + "…" else it }
-
-  /**
-   * K3: a condition's source text as a [Cond] in [ctx]: the field is a screen
-   * binding `b.x` (or, for a conditional VALUE inside a Repeat, an item field
-   * `item.x`) or a component parameter. Forms (each spelled one way):
-   * `x`, `!x`, `x.isEmpty()`, `x.isNotEmpty()`, `x.isBlank()`, `x.isNotBlank()`,
-   * and — on a component parameter declared nullable — `x == null`, `x != null`.
-   */
-  internal fun parseCond(text: String, ctx: NameCtx, itemScope: Set<String> = emptySet()): Cond? {
-    val t = text.trim()
-    val id = "[A-Za-z_][A-Za-z0-9_]*"
-    val ref = when (ctx) {
-      is NameCtx.Screen -> ctx.bindingsParam?.let { "${Regex.escape(it)}\\.$id" + if (itemScope.isEmpty()) "" else "|$id\\.$id" } ?: return null
-      is NameCtx.Component -> "$id(?:\\.$id)?"
-    }
-    fun field(r: String): String? = when (ctx) {
-      is NameCtx.Screen -> {
-        val head = r.substringBefore('.')
-        when {
-          head == ctx.bindingsParam -> r.substringAfter('.')
-          head in itemScope -> r
-          else -> null
-        }
-      }
-      is NameCtx.Component -> when {
-        '.' !in r -> r.takeIf { it in ctx.valueParams || it in ctx.eventParams }
-        r.substringBefore('.') in itemScope -> r
-        else -> null
-      }
-    }
-    Regex("^($ref)\\.(isEmpty|isNotEmpty|isBlank|isNotBlank)\\(\\)$").find(t)?.let { m ->
-      val f = field(m.groupValues[1]) ?: return null
-      return when (m.groupValues[2]) {
-        "isEmpty" -> Cond(f, CondTest.Empty)
-        "isNotEmpty" -> Cond(f, CondTest.Empty, negate = true)
-        "isBlank" -> Cond(f, CondTest.Blank)
-        else -> Cond(f, CondTest.Blank, negate = true)
-      }
-    }
-    Regex("^($ref)\\s*(==|!=)\\s*null$").find(t)?.let { m ->
-      // A screen contract cannot declare a nullable field; a parameter must be declared nullable.
-      if (ctx !is NameCtx.Component || m.groupValues[1] !in ctx.nullableParams) return null
-      return Cond(m.groupValues[1], CondTest.Null, negate = m.groupValues[2] == "!=")
-    }
-    Regex("^(!\\s*)?($ref)$").find(t)?.let { m ->
-      val f = field(m.groupValues[2]) ?: return null
-      // An event parameter is a function: only a null test reads it.
-      if (ctx is NameCtx.Component && f in ctx.eventParams) return null
-      return Cond(f, negate = m.groupValues[1].isNotEmpty())
-    }
-    return null
-  }
-
-  /**
-   * `if (<condition>) { … }` with an optional `else { … }` (K3) — the
-   * condition over a screen binding `b.x` or a component parameter (never an
-   * item field: a Condition's field is a screen contract member). An
-   * `else if` chain is not grammar.
-   */
-  private fun recognizeCondition(expr: KtExpression, ctx: NameCtx): Triple<Cond, List<KtExpression>, KtBlockExpression?>? {
-    val ifExpr = expr as? KtIfExpression ?: return null
-    val cond = parseCond(ifExpr.condition?.text ?: return null, ctx) ?: return null
-    if ('.' in cond.field) return null
-    val block = ifExpr.then as? KtBlockExpression ?: return null
-    val elseBlock = when (val e = ifExpr.`else`) {
-      null -> null
-      is KtBlockExpression -> e
-      else -> return null
-    }
-    return Triple(cond, block.statements, elseBlock)
   }
 
   /** Extracts (items, itemVar, body) from `b.items.forEach {..}` or a bare `items.forEach {..}`. */

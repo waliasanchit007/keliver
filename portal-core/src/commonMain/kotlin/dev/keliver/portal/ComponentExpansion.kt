@@ -55,7 +55,7 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
    * render time against the preview's mocks). A condition over anything else
    * is returned unchanged.
    */
-  fun decide(c: Cond): Any {
+  fun decideTerm(c: Cond): Any {
     if (c.field !in paramNames && c.field !in eventNames) return c
     val (present, v) = argOf(c.field)
     return when (v) {
@@ -66,6 +66,16 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
       else -> c.holds(v, present)
     }
   }
+
+  /**
+   * K6: each term decided on its own ([decideTerm]); a compound condition is
+   * then decided as a whole (`false && …`), or keeps the terms left —
+   * re-pointed at the bindings their arguments are. A derived local
+   * (`val active = enabled && !loading`) was inlined into every condition
+   * that reads it when the body was recognized, so it is evaluated here
+   * with this instance's arguments like any other term.
+   */
+  fun decide(c: Cond): Any = c.reduce(::decideTerm)
 
   fun resolveValue(v: Any?): Any? = when (v) {
     is Bind -> if ('.' in v.field) v // item.field pass-through
@@ -85,14 +95,20 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
   /**
    * K3: a `Condition` over a parameter is decided here (its chosen branch's
    * nodes are spliced in place — `if` adds no layout of its own) or re-pointed
-   * at the screen binding its argument is; null for any other node.
+   * at the screen binding its argument is (K6: every term left, each at its
+   * own binding); null for any other node.
    */
   fun conditionBranch(n: WidgetNode, recurse: (WidgetNode) -> List<WidgetNode>): List<WidgetNode>? {
     if (n.type != "Condition") return null
     val c = condOf(n) ?: return null
     return when (val d = decide(c)) {
       is Boolean -> (if (d) n.thenChildren() else n.elseNode()?.children.orEmpty()).flatMap(recurse)
-      else -> listOf(n.copy(props = n.props + ("field" to (d as Cond).field), children = n.children.flatMap(recurse)))
+      else -> listOf(
+        n.copy(
+          props = n.props.filterKeys { !isConditionKey(it) } + conditionProps(d as Cond) { it },
+          children = n.children.flatMap(recurse),
+        ),
+      )
     }
   }
 

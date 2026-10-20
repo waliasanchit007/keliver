@@ -2,6 +2,7 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.condition
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.toWidgetTree
 import org.jetbrains.kotlin.psi.KtBlockExpression
@@ -133,13 +134,13 @@ object WriteBack {
     fun value(v: PropValue?): Boolean = when (v) {
       is PropValue.Bind -> screenField(v.field)
       is PropValue.Action -> true
-      is PropValue.Conditional -> screenField(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      is PropValue.Conditional -> v.docFields().any(::screenField) || value(v.whenTrue) || value(v.whenFalse)
       is PropValue.Template -> v.parts.any(::value) // K4: a template's / a list's references
       is PropValue.ListOf -> v.items.any(::value)
       else -> false
     }
     val own = when (n.type) {
-      "Condition" -> screenField((n.props["field"] as? PropValue.Lit)?.s)
+      "Condition" -> n.condition()?.terms?.any { screenField(it.field) } ?: screenField((n.props["field"] as? PropValue.Lit)?.s)
       "Repeat" -> true
       else -> n.props.values.any(::value) || n.modifiers.values.any(::value)
     }
@@ -455,10 +456,12 @@ object WriteBack {
     val parsedElse = parsed.children.firstOrNull(isElse) as DocNode.Widget?
     val targetElse = target.children.firstOrNull(isElse) as DocNode.Widget?
     if (parsed.props != target.props) {
-      val tree = UiDocument("_", target.copy(children = emptyList()), dev.keliver.portal.document.Contract(), 0, 0).toWidgetTree()
-      val cond = dev.keliver.portal.condOf(tree) ?: return false
+      val cond = target.condition() ?: return false
       val condition = ifExpr.condition ?: return false
-      condition.replace(factory.createExpression(condText(cond)))
+      // K6: only the terms that changed, when the shape (term count, join) is the same.
+      val text = parsed.condition()?.let { old -> CondSyntax.rewrite(condition.text, old, cond, ::condText) } ?: condText(cond)
+      if (text != condition.text) condition.replace(factory.createExpression(text))
+      need(CondSyntax.imports(cond))
     }
     val thenBlock = ifExpr.then as? KtBlockExpression ?: return false
     // Else first: it sits after the then block, so its edits move no offset the then block needs.
@@ -891,12 +894,9 @@ object WriteBack {
    * build does not know compares by its wire string — two different unknown
    * tests are different conditions.
    */
-  private fun condKey(w: DocNode.Widget): Triple<String?, String?, Boolean> {
-    fun s(k: String) = (w.props[k] as? PropValue.Lit)?.s
-    val negate = (w.props["negate"] as? PropValue.Lit)?.b == true
-    val test = s("test")
-    return Triple(s("field"), dev.keliver.portal.CondTest.fromWire(test)?.name ?: "?$test", negate)
-  }
+  private fun condKey(w: DocNode.Widget): Any =
+    // K6: every term and the join; a condition this build cannot read compares by its props.
+    w.condition() ?: w.props.filterKeys { dev.keliver.portal.isConditionKey(it) }
 
   private fun isCondition(n: DocNode) = n is DocNode.Widget && n.type == "Condition"
 

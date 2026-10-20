@@ -1,3 +1,36 @@
+public final class dev/keliver/portal/document/CondTerm {
+	public static final field Companion Ldev/keliver/portal/document/CondTerm$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Ldev/keliver/portal/document/PropValue;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/CondTerm;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/CondTerm;Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/CondTerm;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getField ()Ljava/lang/String;
+	public final fun getNegate ()Z
+	public final fun getOperand ()Ldev/keliver/portal/document/PropValue;
+	public final fun getTest ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/CondTerm$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/CondTerm$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/CondTerm;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/CondTerm;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/CondTerm$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
 public final class dev/keliver/portal/document/Contract {
 	public static final field Companion Ldev/keliver/portal/document/Contract$Companion;
 	public fun <init> ()V
@@ -537,6 +570,10 @@ public final class dev/keliver/portal/document/OpEnvelope$Companion {
 
 public final class dev/keliver/portal/document/ProjectKt {
 	public static final fun cond (Ldev/keliver/portal/document/PropValue$Conditional;)Ldev/keliver/portal/Cond;
+	public static final fun condition (Ldev/keliver/portal/document/DocNode$Widget;)Ldev/keliver/portal/Cond;
+	public static final fun conditionNodeProps (Ldev/keliver/portal/Cond;)Ljava/util/Map;
+	public static final fun isExtended (Ldev/keliver/portal/document/PropValue$Conditional;)Z
+	public static final fun toConditional (Ldev/keliver/portal/Cond;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/PropValue$Conditional;
 	public static final fun toDocNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/document/DocNode$Widget;
 	public static final fun toPropValue (Ldev/keliver/portal/Conditional;)Ldev/keliver/portal/document/PropValue$Conditional;
 	public static final fun toPropValue (Ldev/keliver/portal/Token;)Ldev/keliver/portal/document/PropValue$Token;
@@ -545,6 +582,7 @@ public final class dev/keliver/portal/document/ProjectKt {
 	public static synthetic fun toWidgetTree$default (Ldev/keliver/portal/document/UiDocument;Ljava/util/Map;ZILjava/lang/Object;)Ldev/keliver/portal/WidgetNode;
 	public static final fun treeToPropValue (Ljava/lang/Object;)Ldev/keliver/portal/document/PropValue;
 	public static final fun withoutConditionals (Ldev/keliver/portal/document/UiDocument;)Ldev/keliver/portal/document/UiDocument;
+	public static final fun withoutExtendedConditions (Ldev/keliver/portal/document/UiDocument;)Ldev/keliver/portal/document/UiDocument;
 }
 
 public abstract interface class dev/keliver/portal/document/PropValue {
@@ -612,18 +650,24 @@ public final class dev/keliver/portal/document/PropValue$Companion {
 
 public final class dev/keliver/portal/document/PropValue$Conditional : dev/keliver/portal/document/PropValue {
 	public static final field Companion Ldev/keliver/portal/document/PropValue$Conditional$Companion;
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ljava/util/List;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Z
 	public final fun component4 ()Ldev/keliver/portal/document/PropValue;
 	public final fun component5 ()Ldev/keliver/portal/document/PropValue;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/PropValue$Conditional;
-	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Conditional;Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public final fun component6 ()Ldev/keliver/portal/document/PropValue;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ljava/util/List;Ljava/lang/String;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Conditional;Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Conditional;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getField ()Ljava/lang/String;
+	public final fun getJoin ()Ljava/lang/String;
+	public final fun getMore ()Ljava/util/List;
 	public final fun getNegate ()Z
+	public final fun getOperand ()Ldev/keliver/portal/document/PropValue;
 	public final fun getTest ()Ljava/lang/String;
 	public final fun getWhenFalse ()Ldev/keliver/portal/document/PropValue;
 	public final fun getWhenTrue ()Ldev/keliver/portal/document/PropValue;
@@ -777,6 +821,8 @@ public final class dev/keliver/portal/document/TemplatesListsKt {
 	public static final fun canonical (Ldev/keliver/portal/document/PropValue$Template;)Ldev/keliver/portal/document/PropValue;
 	public static final fun canonicalValue (Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/PropValue;
 	public static final fun mapAtoms (Ldev/keliver/portal/document/PropValue;Lkotlin/jvm/functions/Function1;)Ldev/keliver/portal/document/PropValue;
+	public static final fun mapOperands (Ldev/keliver/portal/document/PropValue$Conditional;Lkotlin/jvm/functions/Function1;)Ldev/keliver/portal/document/PropValue$Conditional;
+	public static final fun operands (Ldev/keliver/portal/document/PropValue$Conditional;)Ljava/util/List;
 	public static final fun resolved (Ldev/keliver/portal/document/PropValue$ListOf;)Ldev/keliver/portal/document/PropValue$Lit;
 	public static final fun text (Ldev/keliver/portal/document/PropValue$Template;)Ljava/lang/String;
 	public static final fun withoutLists (Ldev/keliver/portal/document/UiDocument;)Ldev/keliver/portal/document/UiDocument;

@@ -40,8 +40,13 @@ public fun resolveItemRow(
     v is Bind && v.field.startsWith("$itemVar.") -> resolved(v.field, key)
     v is Action && v.arg?.startsWith("$itemVar.") == true -> v.copy(arg = resolved(v.arg, key))
     // K3: an item-scoped condition is decided per row; otherwise each branch resolves.
-    v is Conditional && v.cond.field.startsWith("$itemVar.") ->
-      resolve(key, chooseBranch(v) { c -> rowValue(c.field).let { c.holds(it, present = it != null) } })
+    // K6: a compound one decides its item terms per row and keeps the others (screen
+    // bindings, decided by the mocks); decided as a whole, it picks its branch here.
+    v is Conditional && v.cond.terms.any { it.field.startsWith("$itemVar.") } ->
+      when (val d = v.cond.reduce { t -> if (t.field.startsWith("$itemVar.")) rowValue(t.field).let { t.holds(it, present = it != null) } else t }) {
+        is Boolean -> resolve(key, if (d) v.whenTrue else v.whenFalse)
+        else -> Conditional(d as Cond, resolve(key, v.whenTrue), resolve(key, v.whenFalse))
+      }
     v is Conditional -> v.copy(whenTrue = resolve(key, v.whenTrue), whenFalse = resolve(key, v.whenFalse))
     // K4: a template's and a list's item references take the row's value.
     v is Template -> Template(v.parts.map { resolve(key, it) })

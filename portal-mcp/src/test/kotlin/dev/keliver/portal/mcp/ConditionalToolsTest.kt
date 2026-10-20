@@ -16,7 +16,7 @@ class ConditionalToolsTest {
   @Test fun theOpSchemaDescribesConditionals() {
     val catalog = Tools.registry.single { it.name == "get_catalog" }.call(JsonObject(emptyMap())).toString()
     assertTrue("PropValue.<Lit|Bind|Action|Token|Conditional|" in catalog, catalog)
-    assertTrue("Conditional = {field, test?, negate?, whenTrue?, whenFalse?}" in catalog, catalog)
+    assertTrue("Conditional = {field, test?, negate?, whenTrue?, whenFalse?" in catalog, catalog)
     assertTrue("Lit/Bind/Action/Token/Conditional" in Tools.registry.single { it.name == "get_document" }.descriptor.toString())
   }
 

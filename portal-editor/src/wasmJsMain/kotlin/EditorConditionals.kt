@@ -26,7 +26,18 @@ internal fun testLabel(t: CondTest): String = when (t) {
   CondTest.Empty -> "isEmpty()"
   CondTest.Blank -> "isBlank()"
   CondTest.Null -> "== null"
+  CondTest.Eq -> "== value"
 }
+
+/**
+ * K6: whether the panel shows [c] read-only — an equality or a compound
+ * condition (several terms joined by `&&` or `||`) is edited in code; its
+ * branches stay editable.
+ */
+internal fun isReadOnlyCondition(c: dev.keliver.portal.Cond): Boolean = c.isExtended
+
+/** K6: [c] as the screen's source spells it (`b.kind == "card" && b.open`), for a read-only condition. */
+internal fun conditionSource(c: dev.keliver.portal.Cond): String = c.kotlin { if ('.' in it) it else "b.$it" }
 
 /** [cur] as a document value with its true ([whenTrue]) or false branch replaced by [value]. */
 internal fun withBranch(cur: Conditional, whenTrue: Boolean, value: PropValue?): PropValue.Conditional =
@@ -131,13 +142,20 @@ internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, 
   return wrap
 }
 
-/** `label  if [field] [test] [not]` — the condition's editor. */
+/** `label  if [field] [test] [not]` — the condition's editor (K6: read-only text for an equality or compound condition). */
 private fun conditionHeader(label: String, cur: Conditional, onChange: (String, CondTest, Boolean) -> Unit): HTMLElement {
   val row = Ui.el("div", "row")
   val lab = Ui.el("label", "", label)
-  lab.setAttribute("title", "$label = if (${cur.cond.kotlin { "b.$it" }}) … else …")
+  lab.setAttribute("title", "$label = if (${conditionSource(cur.cond)}) … else …")
   row.appendChild(lab)
   row.appendChild(Ui.el("span", "muted", "if"))
+  if (isReadOnlyCondition(cur.cond)) {
+    row.appendChild(
+      Ui.el("code", "", conditionSource(cur.cond))
+        .also { it.setAttribute("title", "an equality or compound condition is edited in code; each branch is edited here") },
+    )
+    return row
+  }
   val field = Ui.input()
   field.setAttribute("type", "text")
   field.setAttribute("placeholder", "field")

@@ -470,8 +470,9 @@ fun SectionCard(content: @Composable () -> Unit) {
     `x.isNotBlank()` (String), and — only on a component parameter whose
     declared type is nullable — `x == null` / `x != null`. A screen has no
     null test: its contract is derived from its tree and cannot declare a
-    nullable field. Anything else (`count > 0`, `a && b`, `else if`) keeps the
-    call or block RawCode, and an opaque component's diagnostic names it.
+    nullable field. K6 adds equality terms and `&&`/`||` joins (below);
+    anything else (`count > 0`, `else if`) keeps the call or block RawCode,
+    and an opaque component's diagnostic names it.
   - *Conditional children.* `if (c) { … }` with an optional `else { … }` is a
     `Condition` node (props `field`, `test`, `negate`) whose last child may be
     one `Else` node holding the else block. `if`/`else` add no layout: the
@@ -729,6 +730,111 @@ fun SectionCard(content: @Composable () -> Unit) {
     list on any component parameter, and runs every token part and element
     through the K2 gate (the server's value, the binding check in the target
     file, re-resolution on undo/redo).
+- **Equality, compound conditions and derived locals are grammar (D9, K6).**
+  A condition may compare a field with a value, join several terms, and — in
+  a component body — read a Boolean the body derives once:
+
+  ```kotlin
+  @Composable
+  fun ActionButton(text: String, enabled: Boolean, loading: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val active = enabled && !loading
+    StyledBox(colorArgb = if (active) C.Ink else C.Faint, onClick = if (active) onClick else null, modifier = modifier) {
+      StyledText(text = if (loading) "Loading…" else text, colorArgb = if (!active) C.Muted else C.White)
+    }
+  }
+  // in a screen
+  StyledText(text = "Card", colorArgb = if (b.kind == "card" && b.open) C.Ink else C.Muted)
+  if (b.tier == C.Top || b.flagged) { … }
+  ```
+
+  - *Equality.* `x == <operand>` / `x != <operand>` is one more test (`eq`):
+    the field on the LEFT (its one spelling), the operand a String literal
+    (no template), an Int literal (negative too — never one Kotlin reads as a
+    Long, so not `-2147483648`), `true`/`false`, or a design token of one of
+    those kinds. The field is a screen binding, a component parameter or (in
+    a conditional value inside its Repeat) an item field; where its type is
+    declared — the Bindings interface, the signature, the item type — it is
+    exactly the operand's kind, never nullable (only K3's `== null` reads a
+    nullable parameter). A Double or Float (literal, token or field), a Long,
+    `===`, a field compared with a field, and the operand on the left keep
+    the call RawCode, each with its own diagnostic. In a screen, the derived
+    contract types the field as the operand's kind (`String`, `Int`,
+    `Boolean`).
+  - *Compound conditions.* Two or more terms joined by `&&` only, or by `||`
+    only, each term any K3 form or an equality. No mixing (`a && b || c`), no
+    parentheses (`a && (b || c)`), no negated group (`!(a && b)`), no comment
+    inside the condition. Whitespace between terms is the author's (a
+    condition may span lines); a rewritten term is spelled ` && ` / ` || `.
+  - *Derived locals (components only).* A top-level statement `val name =
+    <condition>` (or `val name: Boolean = …`) in a component body, before its
+    first use, makes `name` / `!name` a term of the body's later conditions
+    (values and `if` blocks). The condition reads only parameters: a local
+    never reads another local (locals stay flat). Ingest INLINES it: each
+    condition reading `name` holds the local's terms in its place, and
+    `!name` its negation by De Morgan (`!(enabled && !loading)` is
+    `!enabled || loading`) — exact, because a term is a pure read of a
+    parameter, so the device computes the same value. Hence the body tree
+    never names a local, the canvas evaluates it with each instance's
+    arguments, and nothing downstream knows locals exist. A local of several
+    terms is read only where the result is still one join (`active && x`
+    with `active = a && b`, or `!active || x`; not `active || x`). A `var`, a
+    delegated or annotated local, a local typed other than `Boolean`, one
+    shadowing a parameter, a use before the definition, a local reading
+    another local, a local whose initializer is not a condition, and a local
+    used as a value (`fillWidth = active`) keep the component opaque, and the
+    diagnostic says which. Screens have no derived locals (a `val` in a
+    screen is code, as before). The portal never writes a component file, so
+    a local's text is never touched; it is edited in code.
+  - *One model.* A condition is its first term (`field`, `test`, `negate`,
+    K6 `operand`) plus `more` terms and a `join` (`dev.keliver.portal.Cond`;
+    `terms`, `holdsIn`, `negated`, `reduce`). On the wire,
+    `PropValue.Conditional` gains `operand` (a `Lit` s/i/b or a `Token`),
+    `more` (`CondTerm(field, test, negate, operand)`) and `join` (`"or"`;
+    absent = `&&`), all defaulted and left out of the JSON when default — K3
+    JSON decodes to the identical value. A `Condition` node keeps its first
+    term in `field`/`test`/`negate`/`operand` and term *i* ≥ 1 in
+    `field.i`/`test.i`/`negate.i`/`operand.i`, with `join`. The device tree's
+    `"cond"` gains `"operand"`, `"more"` and `"join"`; a K3 reader still
+    renders the true branch.
+  - *Preview.* Each term is decided on its own: a parameter by the instance's
+    argument (re-pointed at the binding an argument is), a binding by its
+    mock, an item field by its row — then the condition as a whole. Unknown
+    values read as K3 reads them: an unknown Boolean is true; an unknown
+    String or Int — or a mock of an Int field that is not a decimal — equals
+    NO operand (`==` false, `!=` true); a String mock of an Int field is
+    compared as an Int (`"3"` equals `3`). Every term is evaluated: terms are
+    pure reads, so `&&`/`||` short-circuiting on a device cannot change the
+    result. A compiled fixture (`ParityCompound.kt`) renders the same value
+    tree as the interpreted golden for every combination of its arguments
+    (`portal-render` `CompoundParityTest`).
+  - *Write-back.* A no-op is byte-identical (CRLF kept). A branch edit
+    rewrites that branch only. A changed condition with the same shape (as
+    many terms, the same join) rewrites only its changed terms — the other
+    terms, and the author's line breaks between them, keep their bytes;
+    another shape rewrites the condition's text alone. A token operand adds
+    its import (structural, from the token). The exporter writes every form
+    and imports a compared token wherever the condition sits.
+  - *What an op may not create.* The document refuses an equality without
+    an operand, with a Double operand, a binding, an expression or
+    `Int.MIN_VALUE` as a literal; an operand on any other test; a null term;
+    an unknown join; one condition reading a field as two types; and — with
+    the K3 checks per term — a field the screen reads elsewhere as another
+    type (an Int compared where it is bound to a text prop or tested for
+    emptiness, a String compared where it is a Boolean, a Repeat's List, a
+    declared type the operand does not match). A `Condition`'s SHAPE — how
+    many terms, which is an equality, the join — is set by inserting the
+    node whole; single SetProps change only a field, a negation or an
+    operand (so no sequence of ops passes through a condition that could not
+    be written, and every inverse is valid too). An item field's type is not
+    in the contract: an equality the file's item type contradicts is refused
+    by the relay's write-back preflight (§7a) when the op is made.
+  - *Editors.* The relay sends an equality or compound conditional value
+    only to a client asking `GET /doc?…&extendedConditions=1` (this
+    release's editor and MCP server); a K3 editor gets its true branch, as an
+    editor that predates conditionals does. `Condition` nodes reach it
+    unchanged (it sees the first term; the document checks its edits). This
+    release's editor shows an equality or compound condition read-only, as
+    its source text, and edits each branch; the op keeps every term.
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add

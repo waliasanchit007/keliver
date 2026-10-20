@@ -6,6 +6,7 @@ import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.atoms
 import dev.keliver.portal.document.mapAtoms
 import dev.keliver.portal.document.lit
+import dev.keliver.portal.document.toAny
 import dev.keliver.portal.ingest.TokenEntry
 import dev.keliver.portal.ingest.TokenFileScan
 import dev.keliver.portal.ingest.TokenTable
@@ -242,7 +243,14 @@ object Tokens {
       // K3: each branch of a conditional is checked against the same branch before.
       if (value is PropValue.Conditional) {
         val prev = was as? PropValue.Conditional
-        return value.copy(
+        // K6: each equality operand against the same term's before; it stays a String, Int or Boolean of its kind.
+        val prevOps = listOf(prev?.operand) + prev?.more?.map { it.operand }.orEmpty()
+        fun operandOf(i: Int) = prevOps.getOrNull(i)
+        val withOperands = value.copy(
+          operand = value.operand?.let { fix(type, key, it, operandOf(0), sourceType = OPERAND) },
+          more = value.more.mapIndexed { j, t -> t.operand?.let { t.copy(operand = fix(type, key, it, operandOf(j + 1), sourceType = OPERAND)) } ?: t },
+        )
+        return withOperands.copy(
           whenTrue = value.whenTrue?.let { fix(type, key, it, prev?.whenTrue) },
           whenFalse = value.whenFalse?.let { fix(type, key, it, prev?.whenFalse) },
         )
@@ -263,11 +271,16 @@ object Tokens {
       if (v == was) return v.also { t -> t.import?.let(kept::add) }
       val entry = table.usable(v.ref, v.import, fileId)
         ?: return v.also { error = "design token ${v.ref} no longer exists" }
-      val fits = when (sourceType) {
+      // K6: a Condition node's equality operand is an operand.
+      val source = if (sourceType == null && type == "Condition" && dev.keliver.portal.isConditionKey(key)) OPERAND else sourceType
+      val fits = when (source) {
         // A template part: String, Int or Boolean — never a Double (the device prints 1.0 as "1").
         "*" -> dev.keliver.portal.templateTokenFits(entry.value)
+        // K6: an equality operand keeps its kind (the field's type follows it).
+        OPERAND -> dev.keliver.portal.tokenKindOf(entry.value) in OPERAND_KINDS &&
+          dev.keliver.portal.tokenKindOf(entry.value) == dev.keliver.portal.tokenKindOf(v.value.toAny())
         null -> dev.keliver.portal.tokenFits(dev.keliver.portal.propSourceType(type, key, components), entry.value)
-        else -> dev.keliver.portal.tokenFits(sourceType, entry.value)
+        else -> dev.keliver.portal.tokenFits(source, entry.value)
       }
       if (!fits) {
         error = "design token ${v.ref} is now a ${entry.kind} and no longer fits $type.$key"
@@ -291,6 +304,10 @@ object Tokens {
     val root = node(after.root)
     return if (error != null) null to error else Refreshed(after.copy(root = root), restored, kept) to null
   }
+
+  /** K6: the source type [refresh] gives an equality operand. */
+  private const val OPERAND = "=="
+  private val OPERAND_KINDS = setOf("String", "Int", "Boolean")
 
   /**
    * K2 compatibility: [doc] as an editor that predates design tokens can

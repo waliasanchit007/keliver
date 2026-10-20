@@ -69,10 +69,20 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
     for ((key, prop) in n.props) {
       // K3: a conditional value contributes its condition's field and each branch.
       val values = if (prop is Conditional) {
-        val c = prop.cond
-        val readsList = c.test != CondTest.Bool && c.field in listFields
-        if ('.' !in c.field && c.field !in fields && !readsList) {
-          fields[c.field] = if (c.test == CondTest.Bool) PropKind.Bool else PropKind.Text
+        // K6: every term of a compound condition; an equality types its field as its operand's kind.
+        for (c in prop.cond.terms) {
+          val readsList = (c.test == CondTest.Empty || c.test == CondTest.Blank) && c.field in listFields
+          if ('.' !in c.field && c.field !in fields && !readsList) {
+            fields[c.field] = when (c.test) {
+              CondTest.Bool -> PropKind.Bool
+              CondTest.Eq -> when (operandType(c.operand)) {
+                "Int" -> PropKind.Int
+                "Boolean" -> PropKind.Bool
+                else -> PropKind.Text
+              }
+              else -> PropKind.Text
+            }
+          }
         }
         listOf(prop.whenTrue, prop.whenFalse)
       } else {
@@ -130,11 +140,14 @@ public fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
       itemScope
     }
     if (node.type == "Condition") {
-      (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
+      // K6: every term's field.
+      val c = condOf(node)
+      if (c != null) c.terms.forEach { keys += it.field }
+      else (node.props["field"] as? String)?.takeIf { it.isNotBlank() }?.let(keys::add)
     }
-    // K3: a conditional value reads its condition's field and its branches' binds.
+    // K3: a conditional value reads its condition's fields (K6: every term's) and its branches' binds.
     val values = node.props.values.flatMap { v ->
-      if (v is Conditional) listOf(Bind(v.cond.field), v.whenTrue, v.whenFalse) else listOf(v)
+      if (v is Conditional) v.cond.terms.map { Bind(it.field) } + listOf(v.whenTrue, v.whenFalse) else listOf(v)
     }
     // K4: a template's and a list's references read their fields too.
     (values.filterIsInstance<Bind>() + values.flatMap(::referencedBinds)).forEach { bind ->
