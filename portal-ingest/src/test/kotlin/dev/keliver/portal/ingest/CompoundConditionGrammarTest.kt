@@ -306,6 +306,27 @@ class CompoundConditionGrammarTest {
     assertNull(reasonOf("if (b.tags.isEmpty() && b.note.isNotBlank() && b.open) {\n      StyledText(text = \"x\")\n    }"))
   }
 
+  // K6 review round 2: a type ingest does not recognize is not known NOT to fit — valid K3 code stays grammar.
+  @Test fun aDeclaredTypeNotKnownNotToFitStaysGrammar() {
+    val text = src.replace(Regex("(?s)  Column \\{.*\\n  }\\n}")) {
+      "  Column {\n" +
+        "    if (b.rowsI.isEmpty()) {\n      StyledText(text = \"a\")\n    }\n" +
+        "    if (b.rowsP.isNotEmpty() && b.open) {\n      StyledText(text = \"b\")\n    }\n" +
+        "    StyledText(text = if (b.nums.isEmpty()) \"c\" else \"d\")\n" +
+        "    StyledText(text = if (b.names.isEmpty() || b.open) \"e\" else \"f\")\n" +
+        "    if (b.sb.isBlank()) {\n      StyledText(text = \"g\")\n    }\n" +
+        "    if (b.flag && !b.busy) {\n      StyledText(text = \"h\")\n    }\n" +
+        "  }\n}"
+    }.replace(
+      "  val note: String\n",
+      "  val note: String\n  val rowsI: ImmutableList<Row>\n  val rowsP: kotlinx.collections.immutable.PersistentList<Row>\n" +
+        "  val nums: IntArray\n  val names: ArrayList<String>\n  val sb: StringBuilder\n  val flag: Flag\n",
+    ) + "\ntypealias Flag = Boolean\n"
+    val r = recognize(text)
+    assertTrue(!containsRaw(r.root), r.rawReasons.toString())
+    assertEquals(6, (r.root as DocNode.Widget).children.size)
+  }
+
   // K6 review: a Condition's token operand, written where the file has no import of its owner, adds it.
   @Test fun aConditionsTokenOperandAddsItsImport() {
     val plain = src.replace("import app.components.C\n", "")

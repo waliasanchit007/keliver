@@ -169,6 +169,17 @@ class DerivedLocalTest {
     assertOpaque("StyledText(text = if (onClick == null) \"a\" else \"b\")", "outside the portal grammar")
   }
 
+  // K6 review round 2: a nullable parameter is read only BEHIND its guard — the guard first, in the join that smart-casts.
+  @Test fun aNullableParameterIsReadOnlyBehindItsGuard() {
+    fun transparent(cond: String) = spec(component("StyledText(text = if ($cond) \"a\" else \"b\")", "text: String, note: String? = null")).transparent
+    assertTrue(transparent("note != null && note.isNotEmpty()"))
+    assertTrue(transparent("note == null || note.isEmpty()"))
+    assertFalse(transparent("note != null || note.isEmpty()"), "|| needs `note == null` first")
+    assertFalse(transparent("note == null && note.isEmpty()"), "&& needs `note != null` first")
+    assertFalse(transparent("note.isNotEmpty() && note != null"), "the guard comes first")
+    assertFalse(transparent("note.isEmpty()"), "no guard")
+  }
+
   @Test fun aLocalWhoseJoinFitsTheConditionIsFlattened() {
     val s = spec(
       component(

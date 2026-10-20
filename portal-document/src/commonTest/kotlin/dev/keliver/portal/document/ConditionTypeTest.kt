@@ -98,6 +98,43 @@ class ConditionTypeTest {
     assertNull(readable.tryApply(DocOp.SetProp(Handle(2), "text", eq.copy(field = "fresh", operand = lit(1)))).error)
   }
 
+  // K6 review round 2: only a type KNOWN not to fit is refused; anything else is the compile's.
+  @Test fun aDeclaredTypeNotKnownNotToFitTakesItsTest() {
+    val c = Contract(fields = mapOf(
+      "rowsI" to "ImmutableList<Row>", "rowsP" to "kotlinx.collections.immutable.PersistentList<Row>", "nums" to "IntArray",
+      "names" to "ArrayList<String>", "sb" to "StringBuilder", "flag" to "Flag", "count" to "Int", "tags" to "List<String>",
+    ))
+    val d = doc(text(2), c = c)
+    fun set(field: String, test: String?) = DocOp.SetProp(Handle(2), "text", PropValue.Conditional(field, test, whenTrue = lit("a"), whenFalse = lit("b")))
+    for ((field, test) in listOf("rowsI" to "empty", "rowsP" to "empty", "nums" to "empty", "names" to "empty", "sb" to "blank", "flag" to null)) {
+      assertNull(d.tryApply(set(field, test)).error, "$field $test")
+    }
+    // Known not to fit stays refused.
+    for ((field, test) in listOf("count" to null, "count" to "empty", "tags" to "blank", "tags" to null, "nums" to "blank", "nums" to null)) {
+      assertNotNull(d.tryApply(set(field, test)).error, "$field $test")
+    }
+  }
+
+  // K6 review round 2: a NEW equality on a field whose type the document cannot read needs a comparison it already has.
+  @Test fun aNewEqualityOnAnUnreadableFieldNeedsTheSameKindAlready() {
+    val unreadable = Contract(unlistedFieldsUnknown = "it extends a type declared in another file")
+    val repeat = DocNode.Widget(Handle(4), "Repeat", mapOf("items" to lit("rows"), "item" to lit("row")), children = listOf(text(5)))
+    val d = doc(text(2), repeat, c = unreadable)
+    fun eq(field: String, op: PropValue) = PropValue.Conditional(field, "eq", operand = op, whenTrue = lit("A"), whenFalse = lit("B"))
+    // A new Condition `if (b.kind == 1)`, a plain value become `if (row.kind == 1) "A" else "B"`: refused.
+    assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, cond(0, Cond("kind", CondTest.Eq, operand = 1)).copy(handle = Handle(0), children = emptyList()))).error)
+    assertNotNull(d.tryApply(DocOp.SetProp(Handle(5), "text", eq("row.kind", lit(1)))).error)
+    assertNotNull(d.tryApply(DocOp.SetProp(Handle(2), "text", eq("kind", lit(1)))).error)
+    // Where the screen already compares the field with that kind, the new equality follows it.
+    val compared = doc(text(2, eq("kind", lit("card"))), text(3), repeat.copy(children = listOf(text(5, eq("row.kind", lit("a"))), text(6))), c = unreadable)
+    assertNull(compared.tryApply(DocOp.SetProp(Handle(3), "text", eq("kind", lit("cash")))).error)
+    assertNotNull(compared.tryApply(DocOp.SetProp(Handle(3), "text", eq("kind", lit(1)))).error)
+    assertNull(compared.tryApply(DocOp.SetProp(Handle(6), "text", eq("row.kind", lit("b")))).error)
+    assertNotNull(compared.tryApply(DocOp.SetProp(Handle(6), "text", eq("row.kind", lit(2)))).error)
+    // A field the document reads (or derives) needs no evidence.
+    assertNull(doc(text(2)).tryApply(DocOp.SetProp(Handle(2), "text", eq("fresh", lit(1)))).error)
+  }
+
   @Test fun aConditionsJoinIsSetLikeAValuesAndUndone() {
     val d = doc(cond(3, condOfTerms(listOf(Cond("open"), Cond("note", CondTest.Empty)))), cond(5, Cond("open")))
     val or = d.apply(DocOp.SetProp(Handle(3), "join", lit("or")))
