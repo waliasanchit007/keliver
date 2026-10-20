@@ -146,9 +146,9 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap<String, String>) {
     |  if (node.type != "Repeat") { // a nested Repeat opens its own item scope
     |    for ((prop, value) in node.props) {
-    |      // K3: an item-scoped condition is an item field; each branch counts.
-    |      if (value is Conditional && value.cond.field.startsWith("${'$'}itemVar.")) {
-    |        iface[value.cond.field.substringAfter('.')] = value.cond.fieldType
+    |      // K3: an item-scoped condition is an item field; each branch counts. K6: each term.
+    |      if (value is Conditional) value.cond.terms.filter { it.field.startsWith("${'$'}itemVar.") }.forEach { t ->
+    |        iface[t.field.substringAfter('.')] = t.fieldType
     |      }
     |      for (v in if (value is Conditional) listOf(value.whenTrue, value.whenFalse) else listOf(value)) {
     |      // K4: a template's item references are String fields (unless typed elsewhere);
@@ -178,8 +178,9 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  when (node.type) {
     |    // K3: the field's type follows the condition's test (Boolean, or String for isEmpty/isBlank).
     |    // An emptiness test reads a List too: it never retypes a Repeat's items (in any node order).
-    |    "Condition" -> condOf(node)?.let { c ->
-    |      if (c.test == CondTest.Bool || out[c.field]?.startsWith("List<") != true) out[c.field] = c.fieldType
+    |    // K6: each term; an equality types its field as its operand's kind.
+    |    "Condition" -> condOf(node)?.terms?.forEach { c ->
+    |      if (c.test == CondTest.Bool || c.test == CondTest.Eq || out[c.field]?.startsWith("List<") != true) out[c.field] = c.fieldType
     |    }
     |    "Repeat" -> {
     |      val items = (node.props["items"] as? String)?.takeIf { it.isNotBlank() }
@@ -311,6 +312,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
   appendLine("  val body = StringBuilder()")
   appendLine("  val imports = mutableSetOf<String>()")
   appendLine("  emitNode(body, tree, \"  \", components, null, imports)")
+  // K6: a design token an equality compares with is written as its reference.
+  appendLine("  imports += conditionImports(tree)")
   appendLine("  sb.append(\"import androidx.compose.runtime.Composable\\n\")")
   appendLine("  imports.sorted().forEach { sb.append(\"import \$it\\n\") }")
   appendLine("  val param = if (!hasContract) \"\" else \"b: \${functionName}Bindings\"")

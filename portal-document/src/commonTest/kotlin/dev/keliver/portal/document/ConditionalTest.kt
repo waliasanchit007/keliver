@@ -127,7 +127,7 @@ class ConditionalTest {
     assertEquals(setOf("text", "containerArgb"), button.props.keys) // a null true branch: the prop is left out
     assertTrue("Conditional" !in DocJson.encodeToString(old))
     // CondTest wire names are what the document carries.
-    assertEquals(listOf(null, "empty", "blank", "null"), CondTest.entries.map { it.wire })
+    assertEquals(listOf(null, "empty", "blank", "null", "eq"), CondTest.entries.map { it.wire })
   }
 
   // Review S1: a component event's arity comes from its signature, not from the action's arg.

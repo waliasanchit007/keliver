@@ -128,23 +128,49 @@ public final class dev/keliver/portal/ComponentSpec {
 }
 
 public final class dev/keliver/portal/Cond {
-	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;Z)V
-	public synthetic fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;ZLjava/lang/Object;Ljava/util/List;Ldev/keliver/portal/CondJoin;)V
+	public synthetic fun <init> (Ljava/lang/String;Ldev/keliver/portal/CondTest;ZLjava/lang/Object;Ljava/util/List;Ldev/keliver/portal/CondJoin;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ldev/keliver/portal/CondTest;
 	public final fun component3 ()Z
-	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/CondTest;Z)Ldev/keliver/portal/Cond;
-	public static synthetic fun copy$default (Ldev/keliver/portal/Cond;Ljava/lang/String;Ldev/keliver/portal/CondTest;ZILjava/lang/Object;)Ldev/keliver/portal/Cond;
+	public final fun component4 ()Ljava/lang/Object;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ldev/keliver/portal/CondJoin;
+	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/CondTest;ZLjava/lang/Object;Ljava/util/List;Ldev/keliver/portal/CondJoin;)Ldev/keliver/portal/Cond;
+	public static synthetic fun copy$default (Ldev/keliver/portal/Cond;Ljava/lang/String;Ldev/keliver/portal/CondTest;ZLjava/lang/Object;Ljava/util/List;Ldev/keliver/portal/CondJoin;ILjava/lang/Object;)Ldev/keliver/portal/Cond;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getField ()Ljava/lang/String;
 	public final fun getFieldType ()Ljava/lang/String;
+	public final fun getJoin ()Ldev/keliver/portal/CondJoin;
+	public final fun getMore ()Ljava/util/List;
 	public final fun getNegate ()Z
+	public final fun getOperand ()Ljava/lang/Object;
+	public final fun getTerms ()Ljava/util/List;
 	public final fun getTest ()Ldev/keliver/portal/CondTest;
 	public fun hashCode ()I
 	public final fun holds (Ljava/lang/Object;Z)Z
 	public static synthetic fun holds$default (Ldev/keliver/portal/Cond;Ljava/lang/Object;ZILjava/lang/Object;)Z
+	public final fun holdsIn (Ljava/util/Map;)Z
+	public final fun isExtended ()Z
 	public final fun kotlin (Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public final fun negated ()Ldev/keliver/portal/Cond;
+	public final fun reduce (Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/CondJoin : java/lang/Enum {
+	public static final field And Ldev/keliver/portal/CondJoin;
+	public static final field Companion Ldev/keliver/portal/CondJoin$Companion;
+	public static final field Or Ldev/keliver/portal/CondJoin;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getKotlin ()Ljava/lang/String;
+	public final fun getWire ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/portal/CondJoin;
+	public static fun values ()[Ldev/keliver/portal/CondJoin;
+}
+
+public final class dev/keliver/portal/CondJoin$Companion {
+	public final fun fromWire (Ljava/lang/String;)Ldev/keliver/portal/CondJoin;
 }
 
 public final class dev/keliver/portal/CondTest : java/lang/Enum {
@@ -152,6 +178,7 @@ public final class dev/keliver/portal/CondTest : java/lang/Enum {
 	public static final field Bool Ldev/keliver/portal/CondTest;
 	public static final field Companion Ldev/keliver/portal/CondTest$Companion;
 	public static final field Empty Ldev/keliver/portal/CondTest;
+	public static final field Eq Ldev/keliver/portal/CondTest;
 	public static final field Null Ldev/keliver/portal/CondTest;
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public final fun getWire ()Ljava/lang/String;
@@ -179,11 +206,21 @@ public final class dev/keliver/portal/Conditional {
 }
 
 public final class dev/keliver/portal/ConditionalsKt {
+	public static final field CONDITION_JOIN_PROP Ljava/lang/String;
 	public static final field ELSE_TYPE Ljava/lang/String;
 	public static final fun chooseBranch (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
 	public static final fun condOf (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/Cond;
+	public static final fun condOfTerms (Ljava/util/List;Ldev/keliver/portal/CondJoin;)Ldev/keliver/portal/Cond;
+	public static synthetic fun condOfTerms$default (Ljava/util/List;Ldev/keliver/portal/CondJoin;ILjava/lang/Object;)Ldev/keliver/portal/Cond;
+	public static final fun conditionImports (Ldev/keliver/portal/WidgetNode;)Ljava/util/Set;
+	public static final fun conditionKey (Ljava/lang/String;I)Ljava/lang/String;
+	public static final fun conditionProps (Ldev/keliver/portal/Cond;Lkotlin/jvm/functions/Function1;)Ljava/util/Map;
 	public static final fun elseNode (Ldev/keliver/portal/WidgetNode;)Ldev/keliver/portal/WidgetNode;
 	public static final fun getLOGIC_NODE_TYPES ()Ljava/util/Set;
+	public static final fun isConditionKey (Ljava/lang/String;)Z
+	public static final fun operandKotlin (Ljava/lang/Object;)Ljava/lang/String;
+	public static final fun operandType (Ljava/lang/Object;)Ljava/lang/String;
+	public static final fun termTypeMisfit (Ldev/keliver/portal/CondTest;Ljava/lang/String;)Ljava/lang/String;
 	public static final fun thenChildren (Ldev/keliver/portal/WidgetNode;)Ljava/util/List;
 }
 

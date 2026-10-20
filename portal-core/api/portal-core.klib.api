@@ -6,10 +6,30 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:portal-core>
+final enum class dev.keliver.portal/CondJoin : kotlin/Enum<dev.keliver.portal/CondJoin> { // dev.keliver.portal/CondJoin|null[0]
+    enum entry And // dev.keliver.portal/CondJoin.And|null[0]
+    enum entry Or // dev.keliver.portal/CondJoin.Or|null[0]
+
+    final val entries // dev.keliver.portal/CondJoin.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.portal/CondJoin> // dev.keliver.portal/CondJoin.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val kotlin // dev.keliver.portal/CondJoin.kotlin|{}kotlin[0]
+        final fun <get-kotlin>(): kotlin/String // dev.keliver.portal/CondJoin.kotlin.<get-kotlin>|<get-kotlin>(){}[0]
+    final val wire // dev.keliver.portal/CondJoin.wire|{}wire[0]
+        final fun <get-wire>(): kotlin/String? // dev.keliver.portal/CondJoin.wire.<get-wire>|<get-wire>(){}[0]
+
+    final fun valueOf(kotlin/String): dev.keliver.portal/CondJoin // dev.keliver.portal/CondJoin.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.portal/CondJoin> // dev.keliver.portal/CondJoin.values|values#static(){}[0]
+
+    final object Companion { // dev.keliver.portal/CondJoin.Companion|null[0]
+        final fun fromWire(kotlin/String?): dev.keliver.portal/CondJoin? // dev.keliver.portal/CondJoin.Companion.fromWire|fromWire(kotlin.String?){}[0]
+    }
+}
+
 final enum class dev.keliver.portal/CondTest : kotlin/Enum<dev.keliver.portal/CondTest> { // dev.keliver.portal/CondTest|null[0]
     enum entry Blank // dev.keliver.portal/CondTest.Blank|null[0]
     enum entry Bool // dev.keliver.portal/CondTest.Bool|null[0]
     enum entry Empty // dev.keliver.portal/CondTest.Empty|null[0]
+    enum entry Eq // dev.keliver.portal/CondTest.Eq|null[0]
     enum entry Null // dev.keliver.portal/CondTest.Null|null[0]
 
     final val entries // dev.keliver.portal/CondTest.entries|#static{}entries[0]
@@ -201,25 +221,41 @@ final class dev.keliver.portal/ComponentSpec { // dev.keliver.portal/ComponentSp
 }
 
 final class dev.keliver.portal/Cond { // dev.keliver.portal/Cond|null[0]
-    constructor <init>(kotlin/String, dev.keliver.portal/CondTest = ..., kotlin/Boolean = ...) // dev.keliver.portal/Cond.<init>|<init>(kotlin.String;dev.keliver.portal.CondTest;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/String, dev.keliver.portal/CondTest = ..., kotlin/Boolean = ..., kotlin/Any? = ..., kotlin.collections/List<dev.keliver.portal/Cond> = ..., dev.keliver.portal/CondJoin = ...) // dev.keliver.portal/Cond.<init>|<init>(kotlin.String;dev.keliver.portal.CondTest;kotlin.Boolean;kotlin.Any?;kotlin.collections.List<dev.keliver.portal.Cond>;dev.keliver.portal.CondJoin){}[0]
 
     final val field // dev.keliver.portal/Cond.field|{}field[0]
         final fun <get-field>(): kotlin/String // dev.keliver.portal/Cond.field.<get-field>|<get-field>(){}[0]
     final val fieldType // dev.keliver.portal/Cond.fieldType|{}fieldType[0]
         final fun <get-fieldType>(): kotlin/String // dev.keliver.portal/Cond.fieldType.<get-fieldType>|<get-fieldType>(){}[0]
+    final val isExtended // dev.keliver.portal/Cond.isExtended|{}isExtended[0]
+        final fun <get-isExtended>(): kotlin/Boolean // dev.keliver.portal/Cond.isExtended.<get-isExtended>|<get-isExtended>(){}[0]
+    final val join // dev.keliver.portal/Cond.join|{}join[0]
+        final fun <get-join>(): dev.keliver.portal/CondJoin // dev.keliver.portal/Cond.join.<get-join>|<get-join>(){}[0]
+    final val more // dev.keliver.portal/Cond.more|{}more[0]
+        final fun <get-more>(): kotlin.collections/List<dev.keliver.portal/Cond> // dev.keliver.portal/Cond.more.<get-more>|<get-more>(){}[0]
     final val negate // dev.keliver.portal/Cond.negate|{}negate[0]
         final fun <get-negate>(): kotlin/Boolean // dev.keliver.portal/Cond.negate.<get-negate>|<get-negate>(){}[0]
+    final val operand // dev.keliver.portal/Cond.operand|{}operand[0]
+        final fun <get-operand>(): kotlin/Any? // dev.keliver.portal/Cond.operand.<get-operand>|<get-operand>(){}[0]
+    final val terms // dev.keliver.portal/Cond.terms|{}terms[0]
+        final fun <get-terms>(): kotlin.collections/List<dev.keliver.portal/Cond> // dev.keliver.portal/Cond.terms.<get-terms>|<get-terms>(){}[0]
     final val test // dev.keliver.portal/Cond.test|{}test[0]
         final fun <get-test>(): dev.keliver.portal/CondTest // dev.keliver.portal/Cond.test.<get-test>|<get-test>(){}[0]
 
     final fun component1(): kotlin/String // dev.keliver.portal/Cond.component1|component1(){}[0]
     final fun component2(): dev.keliver.portal/CondTest // dev.keliver.portal/Cond.component2|component2(){}[0]
     final fun component3(): kotlin/Boolean // dev.keliver.portal/Cond.component3|component3(){}[0]
-    final fun copy(kotlin/String = ..., dev.keliver.portal/CondTest = ..., kotlin/Boolean = ...): dev.keliver.portal/Cond // dev.keliver.portal/Cond.copy|copy(kotlin.String;dev.keliver.portal.CondTest;kotlin.Boolean){}[0]
+    final fun component4(): kotlin/Any? // dev.keliver.portal/Cond.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<dev.keliver.portal/Cond> // dev.keliver.portal/Cond.component5|component5(){}[0]
+    final fun component6(): dev.keliver.portal/CondJoin // dev.keliver.portal/Cond.component6|component6(){}[0]
+    final fun copy(kotlin/String = ..., dev.keliver.portal/CondTest = ..., kotlin/Boolean = ..., kotlin/Any? = ..., kotlin.collections/List<dev.keliver.portal/Cond> = ..., dev.keliver.portal/CondJoin = ...): dev.keliver.portal/Cond // dev.keliver.portal/Cond.copy|copy(kotlin.String;dev.keliver.portal.CondTest;kotlin.Boolean;kotlin.Any?;kotlin.collections.List<dev.keliver.portal.Cond>;dev.keliver.portal.CondJoin){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/Cond.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.portal/Cond.hashCode|hashCode(){}[0]
     final fun holds(kotlin/Any?, kotlin/Boolean = ...): kotlin/Boolean // dev.keliver.portal/Cond.holds|holds(kotlin.Any?;kotlin.Boolean){}[0]
+    final fun holdsIn(kotlin.collections/Map<kotlin/String, kotlin/Any?>): kotlin/Boolean // dev.keliver.portal/Cond.holdsIn|holdsIn(kotlin.collections.Map<kotlin.String,kotlin.Any?>){}[0]
     final fun kotlin(kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/Cond.kotlin|kotlin(kotlin.Function1<kotlin.String,kotlin.String>){}[0]
+    final fun negated(): dev.keliver.portal/Cond // dev.keliver.portal/Cond.negated|negated(){}[0]
+    final fun reduce(kotlin/Function1<dev.keliver.portal/Cond, kotlin/Any>): kotlin/Any // dev.keliver.portal/Cond.reduce|reduce(kotlin.Function1<dev.keliver.portal.Cond,kotlin.Any>){}[0]
     final fun toString(): kotlin/String // dev.keliver.portal/Cond.toString|toString(){}[0]
 }
 
@@ -438,6 +474,8 @@ final const val dev.keliver.portal/COMPONENT_FORWARDS_MODIFIER_PROP // dev.keliv
     final fun <get-COMPONENT_FORWARDS_MODIFIER_PROP>(): kotlin/String // dev.keliver.portal/COMPONENT_FORWARDS_MODIFIER_PROP.<get-COMPONENT_FORWARDS_MODIFIER_PROP>|<get-COMPONENT_FORWARDS_MODIFIER_PROP>(){}[0]
 final const val dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP // dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP|{}COMPONENT_SOURCE_HANDLE_PROP[0]
     final fun <get-COMPONENT_SOURCE_HANDLE_PROP>(): kotlin/String // dev.keliver.portal/COMPONENT_SOURCE_HANDLE_PROP.<get-COMPONENT_SOURCE_HANDLE_PROP>|<get-COMPONENT_SOURCE_HANDLE_PROP>(){}[0]
+final const val dev.keliver.portal/CONDITION_JOIN_PROP // dev.keliver.portal/CONDITION_JOIN_PROP|{}CONDITION_JOIN_PROP[0]
+    final fun <get-CONDITION_JOIN_PROP>(): kotlin/String // dev.keliver.portal/CONDITION_JOIN_PROP.<get-CONDITION_JOIN_PROP>|<get-CONDITION_JOIN_PROP>(){}[0]
 final const val dev.keliver.portal/ELSE_TYPE // dev.keliver.portal/ELSE_TYPE|{}ELSE_TYPE[0]
     final fun <get-ELSE_TYPE>(): kotlin/String // dev.keliver.portal/ELSE_TYPE.<get-ELSE_TYPE>|<get-ELSE_TYPE>(){}[0]
 
@@ -484,10 +522,14 @@ final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/str(kotlin/String, 
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/strList(kotlin/String): kotlin.collections/List<kotlin/String> // dev.keliver.portal/strList|strList@dev.keliver.portal.WidgetNode(kotlin.String){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/thenChildren(): kotlin.collections/List<dev.keliver.portal/WidgetNode> // dev.keliver.portal/thenChildren|thenChildren@dev.keliver.portal.WidgetNode(){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/updateProps(kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin/Any?>): dev.keliver.portal/WidgetNode // dev.keliver.portal/updateProps|updateProps@dev.keliver.portal.WidgetNode(kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.Any?>){}[0]
+final fun <#A: kotlin/Any?> dev.keliver.portal/conditionProps(dev.keliver.portal/Cond, kotlin/Function1<kotlin/Any, #A>): kotlin.collections/Map<kotlin/String, #A> // dev.keliver.portal/conditionProps|conditionProps(dev.keliver.portal.Cond;kotlin.Function1<kotlin.Any,0:0>){0§<kotlin.Any?>}[0]
 final fun dev.keliver.portal/chooseBranch(kotlin/Any?, kotlin/Function1<dev.keliver.portal/Cond, kotlin/Boolean>): kotlin/Any? // dev.keliver.portal/chooseBranch|chooseBranch(kotlin.Any?;kotlin.Function1<dev.keliver.portal.Cond,kotlin.Boolean>){}[0]
 final fun dev.keliver.portal/collectContract(dev.keliver.portal/WidgetNode, dev.keliver.portal/ComponentRegistry = ...): dev.keliver.portal/ScreenContract // dev.keliver.portal/collectContract|collectContract(dev.keliver.portal.WidgetNode;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/collectPreviewBindingKeys(dev.keliver.portal/WidgetNode): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/collectPreviewBindingKeys|collectPreviewBindingKeys(dev.keliver.portal.WidgetNode){}[0]
 final fun dev.keliver.portal/condOf(dev.keliver.portal/WidgetNode): dev.keliver.portal/Cond? // dev.keliver.portal/condOf|condOf(dev.keliver.portal.WidgetNode){}[0]
+final fun dev.keliver.portal/condOfTerms(kotlin.collections/List<dev.keliver.portal/Cond>, dev.keliver.portal/CondJoin = ...): dev.keliver.portal/Cond // dev.keliver.portal/condOfTerms|condOfTerms(kotlin.collections.List<dev.keliver.portal.Cond>;dev.keliver.portal.CondJoin){}[0]
+final fun dev.keliver.portal/conditionImports(dev.keliver.portal/WidgetNode): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/conditionImports|conditionImports(dev.keliver.portal.WidgetNode){}[0]
+final fun dev.keliver.portal/conditionKey(kotlin/String, kotlin/Int): kotlin/String // dev.keliver.portal/conditionKey|conditionKey(kotlin.String;kotlin.Int){}[0]
 final fun dev.keliver.portal/cycleChip(kotlin.collections/List<kotlin/String>): dev.keliver.portal/WidgetNode // dev.keliver.portal/cycleChip|cycleChip(kotlin.collections.List<kotlin.String>){}[0]
 final fun dev.keliver.portal/cycleDiagnostic(kotlin/String): kotlin/String // dev.keliver.portal/cycleDiagnostic|cycleDiagnostic(kotlin.String){}[0]
 final fun dev.keliver.portal/deriveFlowEdges(kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, dev.keliver.portal/WidgetNode>): kotlin.collections/List<dev.keliver.portal/FlowEdge> // dev.keliver.portal/deriveFlowEdges|deriveFlowEdges(kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,dev.keliver.portal.WidgetNode>){}[0]
@@ -498,6 +540,7 @@ final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev
 final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev.keliver.portal/ComponentRegistry, kotlin.collections/Set<kotlin/String>, kotlin.collections/List<kotlin/String> = ...): dev.keliver.portal/Expansion // dev.keliver.portal/expandForPreview|expandForPreview(dev.keliver.portal.WidgetNode;dev.keliver.portal.ComponentRegistry;kotlin.collections.Set<kotlin.String>;kotlin.collections.List<kotlin.String>){}[0]
 final fun dev.keliver.portal/exportKotlin(dev.keliver.portal/WidgetNode, kotlin/String = ..., dev.keliver.portal/ComponentRegistry = ...): kotlin/String // dev.keliver.portal/exportKotlin|exportKotlin(dev.keliver.portal.WidgetNode;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/fmtTemplate(dev.keliver.portal/Template, kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/fmtTemplate|fmtTemplate(dev.keliver.portal.Template;kotlin.Function1<kotlin.String,kotlin.String>){}[0]
+final fun dev.keliver.portal/isConditionKey(kotlin/String): kotlin/Boolean // dev.keliver.portal/isConditionKey|isConditionKey(kotlin.String){}[0]
 final fun dev.keliver.portal/isDpProp(kotlin/String, kotlin/String): kotlin/Boolean // dev.keliver.portal/isDpProp|isDpProp(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/isKnownWidgetType(kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/Boolean // dev.keliver.portal/isKnownWidgetType|isKnownWidgetType(kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/isModifierType(kotlin/String): kotlin/Boolean // dev.keliver.portal/isModifierType|isModifierType(kotlin.String){}[0]
@@ -512,6 +555,8 @@ final fun dev.keliver.portal/listKindOf(kotlin/String?): kotlin/String? // dev.k
 final fun dev.keliver.portal/marginProps(kotlin.collections/List<dev.keliver.portal/PropSpec>): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/marginProps|marginProps(kotlin.collections.List<dev.keliver.portal.PropSpec>){}[0]
 final fun dev.keliver.portal/mockedIntElement(kotlin/String): kotlin/Int? // dev.keliver.portal/mockedIntElement|mockedIntElement(kotlin.String){}[0]
 final fun dev.keliver.portal/nextNodeId(): kotlin/Int // dev.keliver.portal/nextNodeId|nextNodeId(){}[0]
+final fun dev.keliver.portal/operandKotlin(kotlin/Any?): kotlin/String // dev.keliver.portal/operandKotlin|operandKotlin(kotlin.Any?){}[0]
+final fun dev.keliver.portal/operandType(kotlin/Any?): kotlin/String? // dev.keliver.portal/operandType|operandType(kotlin.Any?){}[0]
 final fun dev.keliver.portal/parseKotlinStringLiteral(kotlin/String): kotlin/String? // dev.keliver.portal/parseKotlinStringLiteral|parseKotlinStringLiteral(kotlin.String){}[0]
 final fun dev.keliver.portal/placeholder(kotlin/String, kotlin/String): dev.keliver.portal/WidgetNode // dev.keliver.portal/placeholder|placeholder(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/propSourceType(kotlin/String, kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/String? // dev.keliver.portal/propSourceType|propSourceType(kotlin.String;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
@@ -524,6 +569,7 @@ final fun dev.keliver.portal/templateRefTypeFits(kotlin/String?): kotlin/Boolean
 final fun dev.keliver.portal/templateText(dev.keliver.portal/Template, kotlin/Function1<kotlin/Any?, kotlin/String?>): kotlin/String // dev.keliver.portal/templateText|templateText(dev.keliver.portal.Template;kotlin.Function1<kotlin.Any?,kotlin.String?>){}[0]
 final fun dev.keliver.portal/templateTokenFits(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/templateTokenFits|templateTokenFits(kotlin.Any?){}[0]
 final fun dev.keliver.portal/templateValueText(kotlin/Any?): kotlin/String? // dev.keliver.portal/templateValueText|templateValueText(kotlin.Any?){}[0]
+final fun dev.keliver.portal/termTypeMisfit(dev.keliver.portal/CondTest, kotlin/String): kotlin/String? // dev.keliver.portal/termTypeMisfit|termTypeMisfit(dev.keliver.portal.CondTest;kotlin.String){}[0]
 final fun dev.keliver.portal/tokenFits(kotlin/String?, kotlin/Any?): kotlin/Boolean // dev.keliver.portal/tokenFits|tokenFits(kotlin.String?;kotlin.Any?){}[0]
 final fun dev.keliver.portal/tokenKindOf(kotlin/Any?): kotlin/String? // dev.keliver.portal/tokenKindOf|tokenKindOf(kotlin.Any?){}[0]
 final fun dev.keliver.portal/tokenValue(kotlin/Any?): kotlin/Any? // dev.keliver.portal/tokenValue|tokenValue(kotlin.Any?){}[0]

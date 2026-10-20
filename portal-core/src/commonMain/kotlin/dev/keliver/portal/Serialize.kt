@@ -2,6 +2,7 @@ package dev.keliver.portal
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.boolean
@@ -29,6 +30,17 @@ import kotlinx.serialization.json.put
  * false branch, absent = Kotlin `null`); a null true branch is `{"null":true}`.
  * A reader that predates conditionals decodes the true branch.
  *
+ * K6: an EXTENDED condition (an equality, or several terms — [Cond.isExtended])
+ * is carried under `"condition"` instead of `"cond"`, in the same shape plus an
+ * equality's `"operand"` (an encoded value), the further terms `"more"` and
+ * `"join"` (`"or"`, absent = `&&`). A reader that predates K6 does not know
+ * that key, so it decodes the TRUE branch as a plain value — as a reader that
+ * predates conditionals does — rather than deciding the condition by its
+ * first term with an unknown test read as a Boolean. Likewise an extended
+ * `Condition` NODE carries its condition in a node-level `"condition"` and
+ * none of its condition props: such a reader finds no `field` and renders its
+ * then-branch. A K3 condition is encoded exactly as before.
+ *
  * K4: a template carries its text — literal parts, token values, and a
  * `{field}` placeholder for each binding — under `"s"`, plus `"template"`
  * (each part encoded as a value). A list with references carries its
@@ -43,11 +55,7 @@ private val JSON = Json { }
 private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
   if (v is Conditional) {
     encodeBranch(v.whenTrue).forEach { (k, e) -> put(k, e) }
-    put("cond", buildJsonObject {
-      put("field", v.cond.field)
-      v.cond.test.wire?.let { put("test", it) }
-      if (v.cond.negate) put("negate", true)
-    })
+    put(if (v.cond.isExtended) "condition" else "cond", encodeCond(v.cond))
     v.whenFalse?.let { put("else", encodeValue(it)) }
     return@buildJsonObject
   }
@@ -101,18 +109,45 @@ private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
   }
 }
 
+/**
+ * K3/K6: a condition — its first term's `field`/`test`/`negate`/`operand`
+ * (an encoded value), then `more` (the further terms, each the same shape)
+ * and `join` (`"or"`; absent = `&&`). Defaults are left out, so a K3
+ * condition encodes exactly as before.
+ */
+private fun encodeCond(c: Cond): JsonObject = buildJsonObject {
+  fun JsonObjectBuilder.term(t: Cond) {
+    put("field", t.field)
+    t.test.wire?.let { put("test", it) }
+    if (t.negate) put("negate", true)
+    if (t.test == CondTest.Eq) t.operand?.let { put("operand", encodeValue(it)) }
+  }
+  term(c)
+  if (c.more.isNotEmpty()) {
+    put("more", buildJsonArray { c.more.forEach { t -> add(buildJsonObject { term(t) }) } })
+    c.join.wire?.let { put("join", it) }
+  }
+}
+
+private fun decodeCond(c: JsonObject): Cond {
+  fun term(o: JsonObject) = Cond(
+    o.getValue("field").jsonPrimitive.content,
+    CondTest.fromWire(o["test"]?.jsonPrimitive?.content) ?: CondTest.Bool,
+    o["negate"]?.jsonPrimitive?.boolean == true,
+    o["operand"]?.jsonObject?.let(::decodeValue),
+  )
+  val more = c["more"]?.jsonArray?.map { term(it.jsonObject) }.orEmpty()
+  return condOfTerms(listOf(term(c)) + more, CondJoin.fromWire(c["join"]?.jsonPrimitive?.content) ?: CondJoin.And)
+}
+
 /** A conditional branch: Kotlin `null` is `{"null":true}` (a plain null prop stays as it always was). */
 private fun encodeBranch(v: Any?): JsonObject = if (v == null) buildJsonObject { put("null", true) } else encodeValue(v)
 
 private fun decodeValue(o: JsonObject): Any? = when {
-  "cond" in o -> o.getValue("cond").jsonObject.let { c ->
+  "cond" in o || "condition" in o -> (o["condition"] ?: o.getValue("cond")).jsonObject.let { c ->
     Conditional(
-      Cond(
-        c.getValue("field").jsonPrimitive.content,
-        CondTest.fromWire(c["test"]?.jsonPrimitive?.content) ?: CondTest.Bool,
-        c["negate"]?.jsonPrimitive?.boolean == true,
-      ),
-      decodeValue(JsonObject(o - "cond" - "else")),
+      decodeCond(c),
+      decodeValue(JsonObject(o - "cond" - "condition" - "else")),
       o["else"]?.jsonObject?.let(::decodeValue),
     )
   }
@@ -139,13 +174,18 @@ private fun decodeValue(o: JsonObject): Any? = when {
 private fun nodeToJson(node: WidgetNode): JsonObject = buildJsonObject {
   put("type", node.type)
   put("id", node.id)
-  put("props", buildJsonObject { node.props.forEach { (k, v) -> put(k, encodeValue(v)) } })
+  // K6: an extended Condition's condition rides beside its props, where a K3 reader does not look.
+  val extended = if (node.type == "Condition") condOf(node)?.takeIf { it.isExtended } else null
+  val props = if (extended == null) node.props else node.props.filterKeys { !isConditionKey(it) }
+  put("props", buildJsonObject { props.forEach { (k, v) -> put(k, encodeValue(v)) } })
+  extended?.let { put("condition", encodeCond(it)) }
   put("children", buildJsonArray { node.children.forEach { add(nodeToJson(it)) } })
 }
 
 private fun jsonToNode(o: JsonObject): WidgetNode = WidgetNode(
   type = o.getValue("type").jsonPrimitive.content,
-  props = o.getValue("props").jsonObject.mapValues { decodeValue(it.value.jsonObject) },
+  props = o.getValue("props").jsonObject.mapValues { decodeValue(it.value.jsonObject) } +
+    (o["condition"]?.jsonObject?.let { conditionProps(decodeCond(it)) { v -> v } } ?: emptyMap()),
   children = o.getValue("children").jsonArray.map { jsonToNode(it.jsonObject) },
   id = o.getValue("id").jsonPrimitive.int,
 )

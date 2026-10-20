@@ -366,8 +366,14 @@ if (b.subtitle.isNotEmpty()) { … }
 
 - Conditions: `x`, `!x`, `x.isEmpty()`/`isNotEmpty()`, `x.isBlank()`/
   `isNotBlank()`; in a component also `p == null`/`p != null` on a parameter
-  declared nullable. Anything else (`count > 0`, `a && b`, `else if`) stays
-  RawCode — and an opaque component's diagnostic names the expression.
+  declared nullable. K6: `x == <value>`/`x != <value>` (a String, Int or
+  Boolean literal or design token, the field on the left, of the field's
+  declared kind), and terms joined by `&&` only or `||` only
+  (`if (b.kind == "card" && b.open)`). In a component body, a derived local
+  `val active = enabled && !loading` is read as `active`/`!active`. Anything
+  else (`count > 0`, `a && b || c`, parentheses, `else if`) stays RawCode —
+  and an opaque component's diagnostic names the expression. The editor
+  shows an equality or compound condition read-only and edits its branches.
 - A conditional prop shows in the property panel as **if** `field` `test`
   **not** with a **then** and an **else** row, each edited like the prop
   itself (a token branch shows `◆ C.Ink` and can be detached; a binding shows

@@ -43,17 +43,22 @@ public fun PropValue.ListOf.canonical(): PropValue {
 public fun canonicalValue(v: PropValue): PropValue = when (v) {
   is PropValue.Template -> v.canonical()
   is PropValue.ListOf -> v.canonical()
-  is PropValue.Conditional -> v.copy(whenTrue = v.whenTrue?.let(::canonicalValue), whenFalse = v.whenFalse?.let(::canonicalValue))
+  // K6: a single term is joined by nothing (the recognizer reads no join for it).
+  is PropValue.Conditional -> v.copy(
+    whenTrue = v.whenTrue?.let(::canonicalValue),
+    whenFalse = v.whenFalse?.let(::canonicalValue),
+    join = v.join?.takeIf { v.more.isNotEmpty() },
+  )
   else -> v
 }
 
 /**
  * Every ATOMIC value [v] holds: itself, or — recursively — a conditional's
- * branches, a template's parts and a list's elements. (A Kotlin `null`
- * branch holds none.)
+ * branches (K6: and its equality operands, first), a template's parts and a
+ * list's elements. (A Kotlin `null` branch holds none.)
  */
 public fun PropValue.atoms(): List<PropValue> = when (this) {
-  is PropValue.Conditional -> listOfNotNull(whenTrue, whenFalse).flatMap { it.atoms() }
+  is PropValue.Conditional -> operands() + listOfNotNull(whenTrue, whenFalse).flatMap { it.atoms() }
   is PropValue.Template -> parts.flatMap { it.atoms() }
   is PropValue.ListOf -> items.flatMap { it.atoms() }
   else -> listOf(this)
@@ -65,11 +70,19 @@ public fun PropValue.atoms(): List<PropValue> = when (this) {
  * value becomes text).
  */
 public fun PropValue.mapAtoms(f: (PropValue) -> PropValue): PropValue = when (this) {
-  is PropValue.Conditional -> copy(whenTrue = whenTrue?.mapAtoms(f), whenFalse = whenFalse?.mapAtoms(f))
+  is PropValue.Conditional -> mapOperands(f).copy(whenTrue = whenTrue?.mapAtoms(f), whenFalse = whenFalse?.mapAtoms(f))
   is PropValue.Template -> PropValue.Template(parts.map { it.mapAtoms(f) }).canonical()
   is PropValue.ListOf -> PropValue.ListOf(tag, items.map { it.mapAtoms(f) }).canonical()
   else -> f(this)
 }
+
+/** K6: a conditional's equality operands, term by term (a term without one has none). */
+public fun PropValue.Conditional.operands(): List<PropValue> = listOfNotNull(operand) + more.mapNotNull { it.operand }
+
+/** K6: [this] with [f] applied to each equality operand ([operands]); the branches unchanged. */
+public fun PropValue.Conditional.mapOperands(f: (PropValue) -> PropValue): PropValue.Conditional =
+  if (operand == null && more.none { it.operand != null }) this
+  else copy(operand = operand?.let(f), more = more.map { t -> t.operand?.let { t.copy(operand = f(it)) } ?: t })
 
 /**
  * A template's text with what the document knows: literal parts, token

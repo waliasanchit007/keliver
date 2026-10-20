@@ -54,6 +54,14 @@ public sealed interface PropValue {
    * (`dev.keliver.portal.Cond`). Each branch is a [Lit], [Token], [Bind] or
    * [Action] of the prop's kind; null is Kotlin `null` and fits only an
    * event. Branches never nest.
+   *
+   * K6: [field]/[test]/[negate]/[operand] are the condition's FIRST term.
+   * An equality (`test = "eq"`: `b.kind == "card"`, `!=` negated) compares
+   * the field with [operand] — a [Lit] of tag s/i/b or a [Token] of one of
+   * those kinds. A compound condition's further terms are [more], all joined
+   * by [join] (`"or"` = `||`; null = `&&`). Every new field defaults (and is
+   * left out of the JSON) to what a K3 condition is, so K3 JSON decodes to
+   * the identical value.
    */
   @Serializable
   public data class Conditional(
@@ -62,6 +70,12 @@ public sealed interface PropValue {
     val negate: Boolean = false,
     val whenTrue: PropValue? = null,
     val whenFalse: PropValue? = null,
+    /** K6: an equality's operand (the first term's); null for any other test. */
+    val operand: PropValue? = null,
+    /** K6: the terms after the first; empty = a single-term condition. */
+    val more: List<CondTerm> = emptyList(),
+    /** K6: `"or"` (`||`) or null (`&&`) — how [more] joins the terms; null for a single term. */
+    val join: String? = null,
   ) : PropValue
 
   /**
@@ -92,6 +106,19 @@ public sealed interface PropValue {
   @Serializable
   public data class ListOf(val tag: String, val items: List<PropValue>) : PropValue
 }
+
+/**
+ * K6: one further term of a compound condition ([PropValue.Conditional.more]):
+ * the same shape as the first term — a field, a test (null = the Boolean
+ * itself, "empty", "blank", "eq"), a negation and an equality's [operand].
+ */
+@Serializable
+public data class CondTerm(
+  val field: String,
+  val test: String? = null,
+  val negate: Boolean = false,
+  val operand: PropValue? = null,
+)
 
 /**
  * Convenience constructor mirroring the V1 tree's prop kinds. A Long has no

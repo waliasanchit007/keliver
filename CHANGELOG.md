@@ -24,6 +24,40 @@
   POST only.
 
 ### Added
+- **portal (core, document, ingest, exporter, render, relay, editor, mcp):** equality conditions,
+  compound conditions and derived Boolean locals are portal grammar (K6).
+  `colorArgb = if (b.kind == "card" && b.open) C.Ink else C.Muted`, `if (b.tier == C.Top || b.flagged)
+  { … }`, and in a component body `val active = enabled && !loading` read as `if (active)` / `if (!active)`
+  are recognized in conditional values (props, events, modifier arguments, Margin sides) and
+  conditional children. An equality is `field == <operand>` / `!=` with the field on the left and a
+  String, Int or Boolean literal or design token of the field's declared kind; terms join with `&&`
+  only or `||` only (no mixing, parentheses or negated groups). A derived local reads only
+  parameters and is inlined into each condition reading it (`!active` by De Morgan), so preview
+  expansion evaluates it with the instance's arguments. `Cond` gains `operand`, `more` and `join`
+  (`terms`, `holdsIn`, `negated`, `reduce`; new `CondJoin`, `CondTest.Eq`); `PropValue.Conditional`
+  gains `operand`, `more` (`CondTerm`) and `join`, defaulted and omitted from the JSON, so K3 JSON
+  decodes unchanged; a `Condition` node holds term *i* ≥ 1 as `field.i`/`test.i`/`negate.i`/
+  `operand.i` plus `join`. Write-back rewrites only a changed branch or term (the author's layout
+  between terms kept), adds a compared token's import, and a no-op is byte-identical. The preview
+  compares by the operand's kind (a String mock of an Int field as an Int; an unknown String/Int
+  equals nothing, an unknown Boolean reads true). The relay sends these values only to a client
+  asking `extendedConditions=1` (this release's editor and MCP server); a K3 editor gets the true
+  branch. The editor shows such a condition read-only and edits its branches. Mixed joins, a
+  Double/Long/template operand, a nullable or mismatched field, field-vs-field, a `var` or
+  non-Boolean or shadowing local, a local used before its definition, as a value or reading another
+  local stay RawCode (the component opaque) with a diagnostic naming why. `ParityCompound.kt` pins
+  compiled-vs-interpreted parity. A condition term, K3 single terms included, whose field's declared
+  type is known not to take it (a Boolean test on an `Int`, `String` or `List<…>`, `isEmpty()` on an
+  `Int` or `Boolean`, `isBlank()` on a collection, any test on a nullable type) is refused as an op
+  (also when removing a Condition's `test`) and read as code by ingest — before, `if (b.count)` with
+  `count: Int` could be written; a type the portal does not recognize (an alias, a user or library
+  collection) is left to the compile. An equality on a field whose type the document cannot read
+  (an item field, an interface declared elsewhere) is placed only where the screen already compares
+  that field with the same kind.
+  Compatibility: on the device tree an extended condition is carried under `"condition"` (a
+  Condition node's at node level, without its condition props), so a device guest or per-app
+  editor that predates K6 renders the true branch / then-branch instead of deciding it by the
+  first term.
 - **portal-render, portal-core, portal-editor, portal-ingest, portal-relay:** compiled component
   preview (docs/COMPILED_COMPONENT_PREVIEW.md). An OPAQUE project component (body outside the
   portal grammar) used to preview as a placeholder; a per-app editor can now draw it with the

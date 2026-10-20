@@ -2,6 +2,8 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.condition
+import dev.keliver.portal.document.operands
 import dev.keliver.portal.document.UiDocument
 import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
 import org.jetbrains.kotlin.psi.KtNamedDeclaration
@@ -86,7 +88,7 @@ object DeclarationScope {
     fun value(v: PropValue?): Boolean = when (v) {
       is PropValue.Bind -> field(v.field)
       is PropValue.Action -> v.arg?.let { field(it) } == true
-      is PropValue.Conditional -> field(v.field) || value(v.whenTrue) || value(v.whenFalse)
+      is PropValue.Conditional -> v.docFields().any(::field) || value(v.whenTrue) || value(v.whenFalse)
       is PropValue.Template -> v.parts.any(::value) // K4: an item reference in a template / a list
       is PropValue.ListOf -> v.items.any(::value)
       else -> false
@@ -94,7 +96,7 @@ object DeclarationScope {
     return when (n) {
       is DocNode.RawCode -> word.containsMatchIn(n.text)
       is DocNode.Widget ->
-        (n.type == "Condition" && field((n.props["field"] as? PropValue.Lit)?.s)) ||
+        (n.type == "Condition" && (n.condition()?.terms?.any { field(it.field) } ?: field((n.props["field"] as? PropValue.Lit)?.s))) ||
           (n.type == "Repeat" && field((n.props["items"] as? PropValue.Lit)?.s)) ||
           (n.props.values + n.modifiers.values).any(::value) ||
           n.children.any { usesItem(it, item, word) }
@@ -136,7 +138,7 @@ object DeclarationScope {
 
   private fun refMentions(v: PropValue?, word: Regex): Boolean = when (v) {
     is PropValue.Token -> word.containsMatchIn(v.ref)
-    is PropValue.Conditional -> refMentions(v.whenTrue, word) || refMentions(v.whenFalse, word)
+    is PropValue.Conditional -> refMentions(v.whenTrue, word) || refMentions(v.whenFalse, word) || v.operands().any { refMentions(it, word) }
     is PropValue.Template -> v.parts.any { refMentions(it, word) }
     is PropValue.ListOf -> v.items.any { refMentions(it, word) }
     else -> false

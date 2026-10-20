@@ -1,6 +1,11 @@
 package dev.keliver.portal.document
 
+import dev.keliver.portal.CONDITION_JOIN_PROP
+import dev.keliver.portal.CondJoin
 import dev.keliver.portal.CondTest
+import dev.keliver.portal.conditionKey
+import dev.keliver.portal.isConditionKey
+import dev.keliver.portal.termTypeMisfit
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.LOGIC_NODE_TYPES
 import dev.keliver.portal.PropKind
@@ -136,6 +141,7 @@ public data class UiDocument(
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         val inserted = replaced(newParent).copy(nextHandle = next)
         conditionsMisfit(inserted.root, renumbered.handle, contract.fields)?.let { return err(it) }
+        insertedEqualityMisfit(inserted.root, renumbered.handle, contract)?.let { return err(it) }
         TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
@@ -219,22 +225,32 @@ public data class UiDocument(
         tokenMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
+        conditionPropOpMisfit(w, op.name, canonical)?.let { return err(it) }
         refValueMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && op.name in CONDITION_PROPS) null else op.name, contract.fields)?.let { return err(it) }
+        val condKey = if (w.type == "Condition" && isConditionKey(op.name)) null else op.name
+        conditionMisfitAt(set.root, op.target, condKey, contract.fields)?.let { return err(it) }
+        // K6 review: an equality on a field whose type the document cannot read follows a comparison it has.
+        val previous = if (condKey == null) w.conditionTerms() else (old as? PropValue.Conditional)?.docTerms().orEmpty()
+        unreadableEqualityMisfit(set.root, op.target, condKey, previous, contract)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
         repeatListMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
-      is DocOp.RemoveProp -> withWidget(op.target) { w ->
+      is DocOp.RemoveProp -> {
+        val w = find(op.target) as? DocNode.Widget ?: return err("unknown handle ${op.target.v}")
+        conditionPropOpMisfit(w, op.name, null)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) null else DocOp.SetProp(op.target, op.name, old)
-        ApplyResult(replaced(w.copy(props = w.props - op.name)), inv)
+        val removed = replaced(w.copy(props = w.props - op.name))
+        // K6 review: a Condition with a prop removed is still a condition the field's type takes.
+        if (w.type == "Condition" && isConditionKey(op.name)) conditionMisfitAt(removed.root, op.target, null, contract.fields)?.let { return err(it) }
+        TryResult(ApplyResult(removed, inv), null)
       }
 
       is DocOp.SetModifier -> {
@@ -253,6 +269,7 @@ public data class UiDocument(
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
         conditionMisfitAt(set.root, op.target, "mod.${op.name}", contract.fields)?.let { return err(it) }
+        unreadableEqualityMisfit(set.root, op.target, "mod.${op.name}", (old as? PropValue.Conditional)?.docTerms().orEmpty(), contract)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         repeatListMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
@@ -389,6 +406,8 @@ private fun tokenMisfit(nodeType: String, key: String, v: PropValue): String? {
     return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { tokenMisfit(nodeType, key, it) }
   }
   if (v !is PropValue.Token) return null
+  // K6: a Condition's equality operand is checked as an operand ([operandMisfit]).
+  if (nodeType == "Condition" && isConditionKey(key)) return null
   if (!key.startsWith("mod.") && widgetSpec(nodeType) == null) return null
   val type = propSourceType(nodeType, key)
   val value = v.value.toAny()
@@ -407,12 +426,9 @@ private val CONDITION_FIELD = Regex("^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z
 private fun conditionalMisfit(nodeType: String, key: String, v: PropValue): String? {
   if (v !is PropValue.Conditional) return null
   val where = "$nodeType.$key"
-  if (!CONDITION_FIELD.matches(v.field)) return "conditional $where: '${v.field}' is not a field name"
-  when (CondTest.fromWire(v.test)) {
-    null -> return "conditional $where: unknown test '${v.test}' (none, \"empty\" or \"blank\")"
-    CondTest.Null -> return "conditional $where: a null test needs a nullable field, which a screen contract cannot declare"
-    else -> {}
-  }
+  // K6: every term of a compound condition, each as the first one is checked.
+  for (t in v.docTerms()) termMisfit(t, "conditional $where")?.let { return it }
+  if (CondJoin.fromWire(v.join) == null) return "conditional $where: unknown join '${v.join}' (none for &&, \"or\" for ||)"
   val branches = listOf(v.whenTrue, v.whenFalse)
   if (branches.all { it == null }) return "conditional $where: at least one branch has a value"
   if (branches.any { it is PropValue.Conditional }) return "conditional $where: branches do not nest"
@@ -450,8 +466,8 @@ private fun conditionPropMisfit(nodeType: String, key: String, v: PropValue): St
     "test" -> {
       val t = (v as? PropValue.Lit)?.s
       when (if (v is PropValue.Lit && v.tag == "s") CondTest.fromWire(t) else null) {
-        CondTest.Bool, CondTest.Empty, CondTest.Blank -> null
-        else -> "Condition.test is \"\" (Boolean), \"empty\" or \"blank\""
+        CondTest.Bool, CondTest.Empty, CondTest.Blank, CondTest.Eq -> null
+        else -> "Condition.test is \"\" (Boolean), \"empty\", \"blank\" or \"eq\""
       }
     }
     "negate" -> if (v is PropValue.Lit && v.tag == "b") null else "Condition.negate is a Boolean"
@@ -489,9 +505,6 @@ private fun elseMisfit(parent: DocNode.Widget, node: DocNode, moving: Handle?): 
 
 private val SCREEN_FIELD = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
-/** A `Condition` node's own props — together, its condition. */
-private val CONDITION_PROPS = setOf("field", "test", "negate")
-
 /**
  * K3: why a condition somewhere in the subtree at [h] (already placed in
  * [root]) could not compile: a `Condition`'s own props ([conditionPropMisfit]
@@ -505,6 +518,7 @@ private fun conditionsMisfit(root: DocNode, h: Handle, fields: Map<String, Strin
     if (n !is DocNode.Widget) return null
     if (n.type == "Condition") {
       n.props.forEach { (k, v) -> conditionPropMisfit(n.type, k, v)?.let { return it } }
+      conditionShapeMisfit(n)?.let { return it }
       conditionMisfitAt(root, n.handle, null, fields)?.let { return it }
     }
     (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
@@ -525,19 +539,27 @@ private fun conditionsMisfit(root: DocNode, h: Handle, fields: Map<String, Strin
  */
 private fun conditionMisfitAt(root: DocNode, h: Handle, key: String?, fields: Map<String, String>): String? {
   val w = findIn(root, h) as? DocNode.Widget ?: return null
-  val (field, test, where) = if (key == null) {
-    val field = (w.props["field"] as? PropValue.Lit)?.s?.takeIf { it.isNotEmpty() } ?: return null
-    Triple(field, CondTest.fromWire((w.props["test"] as? PropValue.Lit)?.s) ?: return null, "Condition")
+  val (terms, where) = if (key == null) {
+    w.conditionTerms().filter { it.field.isNotEmpty() } to "Condition"
   } else {
     val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional ?: return null
-    Triple(v.field, CondTest.fromWire(v.test) ?: return null, "conditional ${w.type}.$key")
+    v.docTerms() to "conditional ${w.type}.$key"
   }
-  if ('.' in field) {
-    val item = field.substringBefore('.')
-    return if (item in itemVarsAt(root, h)) null
-    else "$where reads `$field` outside a Repeat over `$item` (an item field is read only inside its Repeat)"
+  // K6: two terms of one condition must agree on what their field is.
+  terms.groupBy { it.field }.forEach { (field, same) ->
+    val kinds = same.mapNotNull { termKind(it) }.toSet()
+    if (kinds.size > 1) return "$where reads `$field` as ${kinds.sorted().joinToString(" and as ")} (one field has one type)"
   }
-  return conditionTypeMisfit(root, field, test, skip = h to key, where = where, fields = fields)
+  for (t in terms) {
+    val test = CondTest.fromWire(t.test) ?: return null
+    if ('.' in t.field) {
+      val item = t.field.substringBefore('.')
+      if (item !in itemVarsAt(root, h)) return "$where reads `${t.field}` outside a Repeat over `$item` (an item field is read only inside its Repeat)"
+      continue
+    }
+    conditionTypeMisfit(root, t.field, test, operandKind(t.operand), skip = h to key, where = where, fields = fields)?.let { return it }
+  }
+  return null
 }
 
 /** The item variables in scope at node [h]: each enclosing Repeat's `item`. */
@@ -565,41 +587,342 @@ private fun conditionTypeMisfit(
   root: DocNode,
   field: String,
   test: CondTest,
+  operand: String?,
   skip: Pair<Handle, String?>,
   where: String,
   fields: Map<String, String>,
 ): String? {
-  if (test != CondTest.Bool && test != CondTest.Blank) return null
+  // K6: an equality with a Boolean is a Boolean test; with a String or an Int, a test of that type.
+  val boolean = test == CondTest.Bool || (test == CondTest.Eq && operand == "Boolean")
+  val eqType = operand.takeIf { test == CondTest.Eq && it != "Boolean" }
+  if (!boolean && eqType == null && test != CondTest.Blank && test != CondTest.Empty) return null
   var list = false
   var notBoolean = false
-  fun cond(f: String, t: CondTest?) {
-    if (f == field && t != null && t != CondTest.Bool) notBoolean = true
+  var testedBoolean = false
+  var testedText = false
+  val eqTypes = LinkedHashSet<String>()
+  val boundKinds = LinkedHashSet<PropKind>()
+  fun cond(terms: List<DocTerm>) {
+    for (t in terms) {
+      if (t.field != field) continue
+      val tt = CondTest.fromWire(t.test) ?: continue
+      when {
+        tt == CondTest.Bool -> testedBoolean = true
+        tt == CondTest.Eq -> operandKind(t.operand)?.let { k -> if (k == "Boolean") testedBoolean = true else { eqTypes += k; notBoolean = true } }
+        else -> { notBoolean = true; if (tt == CondTest.Empty || tt == CondTest.Blank) testedText = true }
+      }
+    }
   }
   fun walk(n: DocNode) {
     if (n !is DocNode.Widget) return
     if (n.type == "Repeat" && (n.props["items"] as? PropValue.Lit)?.s == field) list = true
-    if (n.type == "Condition" && skip != (n.handle to null)) {
-      cond((n.props["field"] as? PropValue.Lit)?.s.orEmpty(), CondTest.fromWire((n.props["test"] as? PropValue.Lit)?.s))
-    }
+    if (n.type == "Condition" && skip != (n.handle to null)) cond(n.conditionTerms())
     val spec = widgetSpec(n.type)
     n.props.forEach { (k, v) ->
       if (skip == (n.handle to k)) return@forEach
+      if (n.type == "Condition" && isConditionKey(k)) return@forEach
       // K4: a template prints its fields into text and a list holds Ints or Strings: neither is
       // a Boolean the contract does not declare (a list never binds a declared Boolean).
       if (field in refFields(v) && !isBooleanType(fields[field])) notBoolean = true
-      if (v is PropValue.Conditional) cond(v.field, CondTest.fromWire(v.test))
+      if (v is PropValue.Conditional) cond(v.docTerms())
       val kind = spec?.props?.firstOrNull { it.name == k }?.kind
       val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
-      if (kind != null && kind != PropKind.Bool && binds.any { it is PropValue.Bind && it.field == field }) notBoolean = true
+      if (kind != null && binds.any { it is PropValue.Bind && it.field == field }) {
+        boundKinds += kind
+        if (kind != PropKind.Bool) notBoolean = true
+      }
     }
-    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) cond(v.field, CondTest.fromWire(v.test)) }
+    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) cond(v.docTerms()) }
     n.children.forEach(::walk)
   }
   walk(root)
+  val declared = fields[field]?.replace(" ", "")?.removePrefix("kotlin.")?.takeIf { it != UNKNOWN_TYPE }
   return when {
-    test == CondTest.Bool && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
-    test == CondTest.Bool && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template or a list element)"
+    // K6 review: the declared type decides first — K3 single terms too.
+    // Only a type KNOWN not to fit (termTypeMisfit), or a nullable one (a Bindings property is never smart-cast).
+    boolean && declared != null && (declared.endsWith("?") || termTypeMisfit(CondTest.Bool, declared) != null) ->
+      "$where tests `$field` as a Boolean, but the Bindings interface declares it $declared"
+    (test == CondTest.Empty || test == CondTest.Blank) && declared != null && (declared.endsWith("?") || termTypeMisfit(test, declared) != null) ->
+      "$where tests `$field` with ${if (test == CondTest.Empty) "isEmpty()" else "isBlank()"}, but the Bindings interface declares it $declared"
+    boolean && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
+    boolean && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template, a list element or another test)"
     test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
+    (test == CondTest.Empty || test == CondTest.Blank) && (testedBoolean || "Int" in eqTypes) ->
+      "$where tests `$field` as a String, but the screen tests it as a ${if (testedBoolean) "Boolean" else "Int"} elsewhere"
+    eqType != null && declared != null && declared != eqType -> "$where compares `$field` with $eqType, but the Bindings interface declares it $declared"
+    eqType != null && list -> "$where compares `$field` with $eqType, but it is a Repeat's List"
+    eqType != null && testedBoolean -> "$where compares `$field` with $eqType, but the screen tests it as a Boolean elsewhere"
+    eqType != null && (eqTypes - eqType).isNotEmpty() -> "$where compares `$field` with $eqType, but the screen compares it with ${(eqTypes - eqType).first()} elsewhere"
+    eqType == "Int" && testedText -> "$where compares `$field` with Int, but the screen tests it as a String elsewhere (isEmpty()/isBlank())"
+    eqType != null && boundKinds.any { kotlinTypeOfKind(it) != eqType } ->
+      "$where compares `$field` with $eqType, but the screen binds it to a ${kotlinTypeOfKind(boundKinds.first { kotlinTypeOfKind(it) != eqType })} prop elsewhere"
+    else -> null
+  }
+}
+
+/** The Kotlin type a field bound to a prop of [kind] is declared with (a Color is an Int). */
+private fun kotlinTypeOfKind(kind: PropKind): String = dev.keliver.portal.kotlinTypeOf(kind)
+
+/**
+ * K6: one term of a condition as the document holds it — the first term of a
+ * [PropValue.Conditional] or a `Condition` node, or one of its further terms.
+ */
+internal data class DocTerm(val field: String, val test: String?, val negate: Boolean, val operand: PropValue?)
+
+/** K6: every term of a conditional value, in source order. */
+internal fun PropValue.Conditional.docTerms(): List<DocTerm> =
+  listOf(DocTerm(field, test, negate, operand)) + more.map { DocTerm(it.field, it.test, it.negate, it.operand) }
+
+/** K6: every term of a `Condition` node (its condition props, [conditionKey]), in index order. */
+internal fun DocNode.Widget.conditionTerms(): List<DocTerm> {
+  val out = ArrayList<DocTerm>()
+  var i = 0
+  while (i == 0 || conditionKey("field", i) in props) {
+    out += DocTerm(
+      (props[conditionKey("field", i)] as? PropValue.Lit)?.s.orEmpty(),
+      (props[conditionKey("test", i)] as? PropValue.Lit)?.s,
+      (props[conditionKey("negate", i)] as? PropValue.Lit)?.b == true,
+      props[conditionKey("operand", i)],
+    )
+    i++
+  }
+  return out
+}
+
+/** K6: the Kotlin type of an equality operand — "String", "Int" or "Boolean"; null for anything else. */
+private fun operandKind(op: PropValue?): String? = when (op) {
+  is PropValue.Lit -> when (op.tag) { "s" -> "String"; "i" -> "Int"; "b" -> "Boolean"; else -> null }
+  is PropValue.Token -> operandKind(op.value)
+  else -> null
+}
+
+/** K6: the type a term reads its field as — an equality's operand's, "Boolean", or "String" (emptiness); null when unknown. */
+private fun termKind(t: DocTerm): String? = when (CondTest.fromWire(t.test)) {
+  CondTest.Bool -> "Boolean"
+  CondTest.Eq -> operandKind(t.operand)
+  CondTest.Empty, CondTest.Blank -> null // a String, or a Repeat's List
+  else -> null
+}
+
+/**
+ * K6: why one term may not stand in a condition [where]: a field that is not
+ * a field name, an unknown test, a null test (a screen contract cannot type
+ * a nullable field), an equality without a fitting operand, or an operand on
+ * any other test. Null = it may.
+ */
+private fun termMisfit(t: DocTerm, where: String): String? {
+  if (!CONDITION_FIELD.matches(t.field)) return "$where: '${t.field}' is not a field name"
+  return when (CondTest.fromWire(t.test)) {
+    null -> "$where: unknown test '${t.test}' (none, \"empty\", \"blank\" or \"eq\")"
+    CondTest.Null -> "$where: a null test needs a nullable field, which a screen contract cannot declare"
+    CondTest.Eq -> operandMisfit(t.operand)?.let { "$where: $it" }
+    else -> if (t.operand != null) "$where: only an equality (test \"eq\") has an operand" else null
+  }
+}
+
+/**
+ * K6: why [op] cannot be an equality's operand — it is a String, Int or
+ * Boolean literal, or a design token of one of those kinds. Never a Double
+ * (the device and the preview do not compare one alike) nor `Int.MIN_VALUE`
+ * as a literal (`-2147483648` is a Long in Kotlin source). Null = it can.
+ */
+private fun operandMisfit(op: PropValue?): String? = when {
+  op == null -> "an equality (test \"eq\") needs an operand"
+  op is PropValue.Lit && op.tag == "i" && op.i == Int.MIN_VALUE -> "-2147483648 is a Long in Kotlin source, not an Int operand"
+  op is PropValue.Lit && op.tag in OPERAND_TAGS && (op.tag != "i" || op.i != null) -> null
+  op is PropValue.Token && op.value.tag in OPERAND_TAGS -> null
+  else -> "an equality compares with a String, Int or Boolean literal or design token (never a Double, a binding or an expression)"
+}
+
+private val OPERAND_TAGS = setOf("s", "i", "b")
+
+/**
+ * K6: why a `Condition` node's condition props, as a whole, are not one
+ * condition source can spell: its terms numbered 0, 1, 2, … with nothing
+ * after the last ([conditionKey]), every further term naming a field, an
+ * equality's operand present (and only an equality's), a join only on two or
+ * more terms. Null = they are (or the node is no Condition).
+ */
+private fun conditionShapeMisfit(n: DocNode.Widget): String? {
+  if (n.type != "Condition") return null
+  val terms = n.conditionTerms()
+  for ((k, v) in n.props) {
+    if (!isConditionKey(k)) continue
+    when (k.substringBefore('.')) {
+      "negate" -> if (v !is PropValue.Lit || v.tag != "b") return "Condition.$k is a Boolean"
+      "field", "test", CONDITION_JOIN_PROP -> if (v !is PropValue.Lit || v.tag != "s") return "Condition.$k is a String"
+    }
+    if ('.' !in k) continue
+    val i = k.substringAfter('.').toInt()
+    if (i >= terms.size) return "Condition.$k belongs to no term (a term ${i} needs `${conditionKey("field", i)}`, and every term before it)"
+  }
+  terms.forEachIndexed { i, t ->
+    if (i > 0 && t.field.isEmpty()) return "Condition term $i needs a field"
+    if (i > 0 && !SCREEN_FIELD.matches(t.field)) return "Condition.${conditionKey("field", i)} is a screen binding's name"
+    if (t.field.isNotEmpty() || i > 0) termMisfit(t, "Condition")?.let { return it }
+  }
+  val join = (n.props[CONDITION_JOIN_PROP] as? PropValue.Lit)?.s
+  if (CONDITION_JOIN_PROP in n.props) {
+    if (terms.size < 2) return "Condition.join joins two or more terms"
+    if (join == null || CondJoin.fromWire(join) == null) return "Condition.join is \"or\" (||), or absent (&&)"
+  }
+  return null
+}
+
+/**
+ * K6 review: why an equality term of the condition at node [h] (its own when
+ * [key] is null, else the conditional value at [key]) of [root] compares a
+ * field whose type the document cannot read — an item field (the contract
+ * carries no item types), a field declared without a type, or an unlisted
+ * field when the screen's interface is not read whole
+ * ([Contract.unlistedFieldsUnknown]) — with a kind nothing vouches for. As K4
+ * refuses a template on such a field, such an equality is made in code:
+ * `b.kind == 1` would not compile for a `String`, and ingest cannot tell. It
+ * may when the condition there before ([previous]) or another condition in
+ * the screen already compares that field with the same kind. Null = fine.
+ */
+private fun unreadableEqualityMisfit(
+  root: DocNode,
+  h: Handle,
+  key: String?,
+  previous: List<DocTerm>,
+  contract: Contract,
+  /** A subtree being inserted: none of its conditions is evidence for another (it would vouch for itself). */
+  excluded: Handle? = null,
+): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val terms = if (key == null) {
+    if (w.type != "Condition") return null
+    w.conditionTerms()
+  } else {
+    ((if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional)?.docTerms() ?: return null
+  }
+  for (t in terms) {
+    if (CondTest.fromWire(t.test) != CondTest.Eq || typeReadable(t.field, contract)) continue
+    val kind = operandKind(t.operand) ?: continue
+    // An item field is the same field only inside a Repeat over the same list (its item type).
+    val scope = itemScopeOf(root, h, t.field)
+    fun vouches(o: DocTerm) = o.field == t.field && CondTest.fromWire(o.test) == CondTest.Eq && operandKind(o.operand) == kind
+    if (previous.any(::vouches) || otherEqualities(root, h to key, excluded).any { (o, s) -> s == scope && vouches(o) }) continue
+    return "an equality compares `${t.field}` with ${if (kind == "Int") "an" else "a"} $kind, but the type of `${t.field}` is not readable here " +
+      "(${if ('.' in t.field) "an item field's type is not in the contract" else unreadableReason(t.field, contract)}) and nothing in the screen " +
+      "compares it with ${if (kind == "Int") "an" else "a"} $kind: make this change in code"
+  }
+  return null
+}
+
+/** K6 review: [unreadableEqualityMisfit] for every condition of an inserted subtree at [h] (none was there before). */
+private fun insertedEqualityMisfit(root: DocNode, h: Handle, contract: Contract): String? {
+  val top = findIn(root, h) as? DocNode.Widget ?: return null
+  fun walk(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition") unreadableEqualityMisfit(root, n.handle, null, emptyList(), contract, excluded = h)?.let { return it }
+    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
+      unreadableEqualityMisfit(root, n.handle, k, emptyList(), contract, excluded = h)?.let { return it }
+    }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return walk(top)
+}
+
+/**
+ * Every condition term in [root] except the condition at [skip] (node, key —
+ * null = a Condition's own) and any inside the subtree [excluded], each with
+ * its item scope: the list field of the Repeat binding an item field's item
+ * variable (null for a screen field).
+ */
+private fun otherEqualities(root: DocNode, skip: Pair<Handle, String?>, excluded: Handle?): List<Pair<DocTerm, String?>> {
+  val out = ArrayList<Pair<DocTerm, String?>>()
+  fun walk(n: DocNode, items: Map<String, String>) {
+    if (n !is DocNode.Widget || n.handle == excluded) return
+    fun add(terms: List<DocTerm>) = terms.forEach { t -> out += t to (if ('.' in t.field) items[t.field.substringBefore('.')] else null) }
+    if (n.type == "Condition" && skip != (n.handle to null)) add(n.conditionTerms())
+    n.props.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to k) && !(n.type == "Condition" && isConditionKey(k))) add(v.docTerms()) }
+    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) add(v.docTerms()) }
+    val inner = if (n.type == "Repeat") {
+      val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
+      val list = (n.props["items"] as? PropValue.Lit)?.s.orEmpty()
+      items + (item to list)
+    } else items
+    n.children.forEach { walk(it, inner) }
+  }
+  walk(root, emptyMap())
+  return out
+}
+
+/** The list field of the nearest Repeat around [h] binding [field]'s item variable — null for a screen field (or none in scope). */
+private fun itemScopeOf(root: DocNode, h: Handle, field: String): String? {
+  if ('.' !in field) return null
+  val item = field.substringBefore('.')
+  var p = parentOf(root, h)
+  while (p != null) {
+    if (p.type == "Repeat" && ((p.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item") == item) {
+      return (p.props["items"] as? PropValue.Lit)?.s.orEmpty()
+    }
+    p = parentOf(root, p.handle)
+  }
+  return null
+}
+
+/** K6 review: whether the document reads [field]'s type — a screen field the contract types, or one it derives. */
+private fun typeReadable(field: String, contract: Contract): Boolean = when {
+  '.' in field -> false
+  contract.fields[field] == UNKNOWN_TYPE -> false
+  field !in contract.fields && contract.unlistedFieldsUnknown != null -> false
+  else -> true
+}
+
+private fun unreadableReason(field: String, contract: Contract): String =
+  if (contract.fields[field] == UNKNOWN_TYPE) "`$field` is declared with no type" else contract.unlistedFieldsUnknown ?: "unknown"
+
+/**
+ * K6: why an op that sets ([v]) or removes ([v] null) the `Condition` node
+ * [w]'s prop [key] would leave a condition source cannot spell. Its first
+ * term's field and negation are set as K3 set them; each further term's
+ * field and negation, and an equality's operand, may change; but the SHAPE
+ * — how many terms, which is an equality, the join — is the code's: a
+ * compound or equality condition is placed by inserting a whole `Condition`
+ * (or written in code), so no sequence of single ops passes through a
+ * condition that could not be written. Null = the op may.
+ */
+private fun conditionPropOpMisfit(w: DocNode.Widget, key: String, v: PropValue?): String? {
+  if (w.type != "Condition" || !isConditionKey(key)) return null
+  val terms = w.conditionTerms()
+  val name = key.substringBefore('.')
+  val index = if (key == CONDITION_JOIN_PROP) -1 else key.substringAfter('.', "0").toInt()
+  val shape = "a compound or equality condition's shape is edited in code (or by replacing the Condition)"
+  // K6 review: the join changes as a conditional value's does — set to "or" (`||`), removed for `&&`.
+  if (key == CONDITION_JOIN_PROP) return when {
+    terms.size < 2 -> "Condition.join joins two or more terms"
+    v == null -> null
+    v is PropValue.Lit && v.tag == "s" && v.s == CondJoin.Or.wire -> null
+    else -> "Condition.join is \"or\" (||), or absent (&&)"
+  }
+  if (index >= terms.size) return "Condition.$key: $shape"
+  val term = terms[index]
+  val isEq = CondTest.fromWire(term.test) == CondTest.Eq
+  return when (name) {
+    "field" -> when {
+      v == null && index > 0 -> "Condition.$key: $shape"
+      index > 0 && (v as? PropValue.Lit)?.s.isNullOrEmpty() -> "Condition.$key: a term needs a field"
+      index > 0 && !SCREEN_FIELD.matches((v as PropValue.Lit).s!!) -> "Condition.$key is a screen binding's name"
+      else -> null
+    }
+    "negate" -> if (v == null || (v is PropValue.Lit && v.tag == "b")) null else "Condition.$key is a Boolean"
+    "test" -> {
+      val next = if (v == null) CondTest.Bool else CondTest.fromWire((v as? PropValue.Lit)?.s)
+      when {
+        index > 0 -> "Condition.$key: $shape"
+        isEq && next != CondTest.Eq -> "Condition.test: this condition is an equality; $shape"
+        !isEq && next == CondTest.Eq -> "Condition.test: an equality needs its operand; $shape"
+        else -> null
+      }
+    }
+    "operand" -> when {
+      !isEq -> "Condition.$key: only an equality (test \"eq\") has an operand"
+      v == null -> "Condition.$key: an equality needs its operand"
+      else -> operandMisfit(v)?.let { "Condition.$key: $it" }
+    }
     else -> null
   }
 }
@@ -758,11 +1081,13 @@ private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String, fields: Ma
   if (read.isEmpty()) return null
   fun tested(n: DocNode): String? {
     if (n !is DocNode.Widget) return null
-    if (n.type == "Condition" && CondTest.fromWire((n.props["test"] as? PropValue.Lit)?.s) == CondTest.Bool) {
-      (n.props["field"] as? PropValue.Lit)?.s?.takeIf { it in read }?.let { return it }
-    }
+    // K6: every term; an equality with a Boolean tests one too.
+    fun booleanTerm(terms: List<DocTerm>): String? = terms.firstOrNull { t ->
+      t.field in read && CondTest.fromWire(t.test).let { it == CondTest.Bool || (it == CondTest.Eq && operandKind(t.operand) == "Boolean") }
+    }?.field
+    if (n.type == "Condition") booleanTerm(n.conditionTerms())?.let { return it }
     (n.props.values + n.modifiers.values).forEach { x ->
-      if (x is PropValue.Conditional && x.field in read && CondTest.fromWire(x.test) == CondTest.Bool) return x.field
+      if (x is PropValue.Conditional) booleanTerm(x.docTerms())?.let { return it }
     }
     return n.children.firstNotNullOfOrNull(::tested)
   }

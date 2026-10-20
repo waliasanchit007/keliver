@@ -43,10 +43,10 @@ public object PreviewBindings {
 
 /**
  * K3: whether [cond] holds against the preview mocks (an unmocked field reads
- * as unknown — see [Cond.holds]).
+ * as unknown — see [Cond.holds]). K6: each term reads its own field's mock
+ * ([Cond.holdsIn]).
  */
-public fun PreviewBindings.holds(cond: Cond): Boolean =
-  mocks[cond.field].let { cond.holds(it, present = it != null) }
+public fun PreviewBindings.holds(cond: Cond): Boolean = cond.holdsIn(mocks)
 
 /** K3: [v] with a conditional value replaced by the branch the mocks choose. */
 public fun PreviewBindings.chosen(v: Any?): Any? = chooseBranch(v, ::holds)

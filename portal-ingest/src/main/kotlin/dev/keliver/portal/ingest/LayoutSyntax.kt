@@ -1,6 +1,8 @@
 package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Cond
+import dev.keliver.portal.document.operands
+import dev.keliver.portal.document.toConditional
 import dev.keliver.portal.MARGIN_SIDES
 import dev.keliver.portal.ModifierSpec
 import dev.keliver.portal.document.PropValue
@@ -120,7 +122,8 @@ internal object ConditionalSyntax {
     val src = IfSyntax.split(source) ?: return null
     val can = canonical?.let(IfSyntax::split) ?: return null
     val edits = mutableListOf<Pair<Span, String>>()
-    if (old.cond() != new.cond()) edits += src.cond to (condText?.invoke(new.cond()) ?: can.cond.text)
+    // K6: a changed condition rewrites only its changed terms when its shape is the same.
+    if (old.cond() != new.cond()) edits += src.cond to (condText?.let { CondSyntax.rewrite(src.cond.text, old.cond(), new.cond(), it) } ?: can.cond.text)
     fun branch(at: Span, canonicalBranch: Span, o: PropValue?, n: PropValue?) {
       if (o == n) return
       val d = (n as? PropValue.Lit)?.d
@@ -167,7 +170,7 @@ internal object MarginSyntax {
     val c = conds.parse(parts.cond.text) ?: return null
     val t = parseDp(parts.then.text) ?: return null
     val f = parseDp(parts.els.text) ?: return null
-    return PropValue.Conditional(c.field, c.test.wire, c.negate, PropValue.Lit("d", d = t), PropValue.Lit("d", d = f))
+    return c.toConditional(PropValue.Lit("d", d = t), PropValue.Lit("d", d = f))
   }
 
   /** A Dp literal's value: `16.dp`, `16.5.dp`, `Dp(16.0)`. Never negative. */
@@ -412,7 +415,7 @@ internal object ModifierChain {
     val c = conds.parse(parts.cond.text) ?: return null
     val whenTrue = typedValue(type, parts.then.text, tokens) ?: return null
     val whenFalse = typedValue(type, parts.els.text, tokens) ?: return null
-    return PropValue.Conditional(c.field, c.test.wire, c.negate, whenTrue, whenFalse)
+    return c.toConditional(whenTrue, whenFalse)
   }
 
   /** An argument literal of Kotlin source type [type] (null type = legacy untyped catalog). */
@@ -600,7 +603,7 @@ internal object FragmentImports {
 
   /** What a design-token value written as its reference imports (K2). */
   fun token(v: PropValue?): Set<String> = when (v) {
-    is PropValue.Conditional -> token(v.whenTrue) + token(v.whenFalse) // K3: each branch
+    is PropValue.Conditional -> token(v.whenTrue) + token(v.whenFalse) + v.operands().flatMap(::token) // K3: each branch; K6: each operand
     is PropValue.Token -> v.import?.let { setOf(it) }.orEmpty()
     is PropValue.Template -> v.parts.flatMap(::token).toSet() // K4: each token part / element
     is PropValue.ListOf -> v.items.flatMap(::token).toSet()

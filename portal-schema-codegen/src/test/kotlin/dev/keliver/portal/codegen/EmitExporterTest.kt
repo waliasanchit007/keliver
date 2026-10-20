@@ -111,7 +111,12 @@ class EmitExporterTest {
     assertContains(src, "sb.append(\"${'$'}{indent}if (${'$'}{cond.kotlin(::bindRef)}) {\\n\")")
     assertContains(src, "node.elseNode()?.let { e ->")
     // An emptiness test never retypes a Repeat's List items (review S2).
-    assertContains(src, "if (c.test == CondTest.Bool || out[c.field]?.startsWith(\"List<\") != true) out[c.field] = c.fieldType")
+    // K6: every term; an equality (like a Boolean test) types its field outright.
+    assertContains(src, "\"Condition\" -> condOf(node)?.terms?.forEach { c ->")
+    assertContains(src, "if (c.test == CondTest.Bool || c.test == CondTest.Eq || out[c.field]?.startsWith(\"List<\") != true) out[c.field] = c.fieldType")
+    assertContains(src, "if (value is Conditional) value.cond.terms.filter { it.field.startsWith(\"${'$'}itemVar.\") }.forEach { t ->")
+    // K6: a design token an equality compares with is imported, wherever the condition sits.
+    assertContains(src, "imports += conditionImports(tree)")
   }
 
   @Test fun templatesAndListsWithReferencesExportWithTheirTokensImports() {

@@ -11,6 +11,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
 import dev.keliver.portal.Conditional
+import dev.keliver.portal.condOf
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.ListOf
@@ -440,6 +441,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   // K2: `tokens=1` — this editor understands PropValue.Token (an older one is served literals).
   // K3: `conditionals=1` — and PropValue.Conditional (an older one is served the true branch).
   // K4: `templates=1&lists=1` — and PropValue.Template / PropValue.ListOf (else text / a resolved list).
+  // K6: `extendedConditions=1` — and equality / compound conditionals (a K3 editor is served the true branch).
   xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
@@ -1619,8 +1621,17 @@ private fun renderProps() {
   }
   if (node.type == ELSE_TYPE) propsEl.appendChild(Ui.el("div", "muted", "else branch: its children render when the Condition does not hold"))
   val spec = widgetSpec(node.type)
-  val specs = comp?.props ?: editableProps(node.type)
-  if (specs.isEmpty()) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
+  // K6: an equality or compound Condition is shown, not edited (its shape is the code's).
+  val readOnlyCond = if (node.type == "Condition") condOf(node)?.takeIf(::isReadOnlyCondition) else null
+  if (readOnlyCond != null) {
+    propsEl.appendChild(Ui.el("div", "row").also { r ->
+      r.appendChild(Ui.el("span", "muted", "if"))
+      r.appendChild(Ui.el("code", "", conditionSource(readOnlyCond)))
+    })
+    propsEl.appendChild(Ui.el("div", "muted", "an equality or compound condition is edited in code"))
+  }
+  val specs = if (readOnlyCond != null) emptyList() else comp?.props ?: editableProps(node.type)
+  if (specs.isEmpty() && readOnlyCond == null) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
     propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = ""))
   }
@@ -1892,7 +1903,7 @@ private fun propRowInner(
 }
 
 /** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
-private const val DOC_FEATURES = "tokens=1&conditionals=1&templates=1&lists=1"
+private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1"
 
 /** K4: a template prop row — the template's text, and ◆ to insert a design token. */
 private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {
