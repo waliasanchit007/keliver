@@ -7,7 +7,7 @@ package dev.keliver.portal.render
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.currentCompositionLocalContext
 import dev.keliver.Modifier
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
@@ -57,6 +57,12 @@ public class CompiledCall internal constructor(
   private val node: WidgetNode,
   /** The instance's own modifiers, built in its parent's scope, plus its selection tag. */
   public val modifier: Modifier,
+  /**
+   * True for the failure probe's copy of the call: its events do nothing (a
+   * `SideEffect` in the probe must not reach the action console or a live
+   * presenter) and its slot composes nothing.
+   */
+  private val probing: Boolean = false,
 ) {
   private val decoded = ArrayList<Any?>()
 
@@ -131,25 +137,28 @@ public class CompiledCall internal constructor(
    * action console / live presenter exactly as a transparent instance's
    * widget would deliver it; a no-op when the instance wires none.
    */
-  public fun event(name: String): () -> Unit = action(name)?.let { a -> { PreviewBindings.fire(a) } } ?: {}
+  public fun event(name: String): () -> Unit = eventOrNull(name) ?: {}
 
   /** A nullable `(() -> Unit)?` parameter: null when the instance wires none. */
-  public fun eventOrNull(name: String): (() -> Unit)? = action(name)?.let { a -> { PreviewBindings.fire(a) } }
+  public fun eventOrNull(name: String): (() -> Unit)? = action(name)?.let { a ->
+    if (probing) ({}) else ({ PreviewBindings.fire(a) })
+  }
 
   /** A `(T) -> Unit` parameter; the value reaches the action as `it`. */
-  public fun <T> event1(name: String): (T) -> Unit = action(name)?.let { a -> { v: T -> PreviewBindings.fire(a, v) } } ?: { _: T -> }
+  public fun <T> event1(name: String): (T) -> Unit = event1OrNull(name) ?: { _: T -> }
 
   /** A nullable `((T) -> Unit)?` parameter. */
-  public fun <T> event1OrNull(name: String): ((T) -> Unit)? = action(name)?.let { a -> { v: T -> PreviewBindings.fire(a, v) } }
+  public fun <T> event1OrNull(name: String): ((T) -> Unit)? = action(name)?.let { a ->
+    if (probing) ({ _: T -> }) else ({ v: T -> PreviewBindings.fire(a, v) })
+  }
 
   /**
    * The component's content slot: the instance's children, rendered by the
    * canvas as ordinary document nodes (each stays selectable on its own). A
    * slot lambda has no layout receiver, so neither do they — as on a device.
    */
-  public fun content(): @Composable () -> Unit = {
-    if (!LocalCompiledProbe.current) node.children.forEach { RenderNode(it, null) }
-  }
+  public fun content(): @Composable () -> Unit =
+    if (probing) ({}) else ({ node.children.forEach { RenderNode(it, null) } })
 
   /** For a component with no content slot: an instance with children cannot be previewed compiled. */
   public fun noContent() {
@@ -190,17 +199,25 @@ public class CompiledCall internal constructor(
  * threw, or null. Compose cannot catch an exception thrown while composing,
  * and one thrown in the canvas composition stops the whole preview; the probe
  * finds it first, so the instance falls back to its placeholder instead.
- * Effects and later recompositions inside the component are not probed.
+ * The call it gets is a probe copy (events do nothing, the slot composes
+ * nothing) wrapped in the canvas's composition locals at the instance.
+ * Effects launched later and recompositions driven by the component's own
+ * state are not probed.
+ *
+ * Cost: one throwaway guest composition per (component, decoded arguments,
+ * modifiers, composition locals) the canvas meets — remembered, so a stable
+ * instance is probed once; each Repeat row with different values is its own.
  */
 public fun interface CompiledComponentProbe {
   public fun failureOf(content: @Composable () -> Unit): Throwable?
 }
 
-/** Set by the editor shell (a composition that discards its output); null = no probe. */
+/**
+ * EDITOR-INTERNAL hook, not for apps: the editor shell sets it (portal-editor's
+ * DiscardingCompiledProbe, installed with the entry's adapters). It is public
+ * only because the shell lives in another module. Null = no probe.
+ */
 public var compiledComponentProbe: CompiledComponentProbe? = null
-
-/** True inside a probe: the slot's document children are not composed there. */
-internal val LocalCompiledProbe = staticCompositionLocalOf { false }
 
 /**
  * Renders the component instance [node] through [adapter]: its arguments
@@ -228,12 +245,17 @@ public fun RenderCompiledComponent(
     return
   }
   val probe = compiledComponentProbe
+  // The canvas's composition locals here (the app's screen wrapper Theme,
+  // UI configuration, …): the probe composes the call inside them too, so a
+  // component that needs one is not reported as failing.
+  val locals = currentCompositionLocalContext
   val failure = if (probe == null) {
     null
   } else {
-    remember(node.type, call.decodedValues(), call.modifier) {
+    remember(node.type, call.decodedValues(), call.modifier, locals) {
       runCatching {
-        probe.failureOf { CompositionLocalProvider(LocalCompiledProbe provides true) { content() } }
+        val probeContent = adapter.bind(CompiledCall(node, call.modifier, probing = true))
+        probe.failureOf { CompositionLocalProvider(locals) { probeContent() } }
       }.getOrElse { it }
     }
   }

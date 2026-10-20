@@ -1,4 +1,10 @@
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import dev.keliver.Modifier
+import dev.keliver.material.compose.StyledText
 import dev.keliver.material.modifier.SelectionTag
+import dev.keliver.portal.Action
 import dev.keliver.material.testing.KeliverMaterialTester
 import dev.keliver.material.testing.StyledBoxValue
 import dev.keliver.material.testing.StyledTextValue
@@ -37,6 +43,7 @@ import kotlinx.coroutines.test.runTest
 class CompiledComponentEditorTest {
   @AfterTest fun reset() {
     PreviewBindings.mocks.clear()
+    PreviewBindings.actionSink = { _, _ -> }
     componentPreviewInScope = null
     componentPreview = null
     compiledComponentProbe = null
@@ -158,4 +165,87 @@ class CompiledComponentEditorTest {
     // The registry's body (fontSize 99) is what drew — not the compiled function.
     assertEquals(99, values.filterIsInstance<StyledTextValue>().single().fontSize)
   }
+
+  // ── review M2: the probe composes inside the canvas's composition locals ──
+
+  @Test fun aComponentThatNeedsALocalTheCanvasProvidesIsNotReportedAsFailing() = runTest {
+    // Before the fix the probe composed without the canvas's locals:
+    // "compiled preview failed: IllegalStateException: no theme provided".
+    setEditorComponents(MapComponentRegistry(listOf(opaque("Themed", "label"))))
+    installComponentPreview(entry(mapOf("Themed" to themedAdapter)))
+    val t = texts(
+      KeliverMaterialTester {
+        setContentAndSnapshot {
+          CompositionLocalProvider(LocalTestTheme provides 7) {
+            RenderNode(selectionTagged(WidgetNode("Themed", mapOf("label" to "x"), id = 2)))
+          }
+        }
+      }.flatten().toList(),
+    )
+    assertEquals(listOf("x 7"), t)
+  }
+
+  @Test fun aComponentWhoseLocalIsMissingStillFallsBackAndTheCanvasRenders() = runTest {
+    setEditorComponents(MapComponentRegistry(listOf(opaque("Themed", "label"))))
+    installComponentPreview(entry(mapOf("Themed" to themedAdapter)))
+    val t = texts(
+      KeliverMaterialTester {
+        setContentAndSnapshot {
+          RenderNode(
+            selectionTagged(
+              WidgetNode("Column", emptyMap(), listOf(WidgetNode("Themed", mapOf("label" to "x"), id = 2), WidgetNode("StyledText", mapOf("text" to "after"), id = 3)), id = 1),
+            ),
+          )
+        }
+      }.flatten().toList(),
+    )
+    assertTrue(t.any { "no theme provided" in it }, "$t")
+    assertTrue("after" in t, "$t")
+  }
+
+  // ── review M3: the probe never delivers the component's events ──
+
+  @Test fun aSideEffectInTheProbeDoesNotReachTheActionConsole() = runTest {
+    // Before the fix: [shown, shown] — once from the probe, once from the canvas.
+    val fired = mutableListOf<String>()
+    PreviewBindings.actionSink = { name, _ -> fired += name }
+    setEditorComponents(MapComponentRegistry(listOf(opaque("ParityOpaqueAnnounce", "label"))))
+    installComponentPreview(entry())
+    KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(selectionTagged(WidgetNode("ParityOpaqueAnnounce", mapOf("label" to "Hi", "onShown" to Action("shown")), id = 2)))
+      }
+    }
+    assertEquals(listOf("shown"), fired)
+  }
+
+  // ── review nit: a component on a dependency cycle is never drawn compiled ──
+
+  @Test fun aCycleFlaggedComponentKeepsItsPlaceholder() = runTest {
+    var called = 0
+    val spy = mapOf("Loop" to CompiledComponent { call -> called++; call.compose { StyledText(text = "loop") } })
+    setEditorComponents(
+      MapComponentRegistry(
+        listOf(ComponentSpec("Loop", emptyList(), emptyList(), emptyMap(), transparent = false, diagnostic = "cyclic component dependency involving Loop")),
+      ),
+    )
+    installComponentPreview(entry(spy))
+    val t = texts(
+      KeliverMaterialTester { setContentAndSnapshot { RenderNode(selectionTagged(WidgetNode("Loop", id = 2))) } }.flatten().toList(),
+    )
+    assertEquals(0, called)
+    assertTrue("▢ Loop" in t, "$t")
+  }
+}
+
+private val LocalTestTheme = staticCompositionLocalOf<Int> { error("no theme provided") }
+
+@Composable
+private fun Themed(label: String, modifier: Modifier = Modifier) {
+  StyledText(modifier = modifier, text = "$label ${LocalTestTheme.current}")
+}
+
+private val themedAdapter = CompiledComponent { call ->
+  val label = call.string("label")
+  call.compose { Themed(label = label, modifier = call.modifier) }
 }

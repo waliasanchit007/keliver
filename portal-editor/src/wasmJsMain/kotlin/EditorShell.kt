@@ -89,10 +89,14 @@ internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver
  * click-to-select picks the instance (one selectable unit).
  */
 internal fun installComponentPreview(entry: AppPreviewEntry?) {
-  val compiled = entry?.compiledComponents.orEmpty()
-  dev.keliver.portal.render.compiledComponentProbe = if (compiled.isEmpty()) null else DiscardingCompiledProbe
+  val adapters = entry?.compiledComponents.orEmpty()
+  dev.keliver.portal.render.compiledComponentProbe = if (adapters.isEmpty()) null else DiscardingCompiledProbe
   dev.keliver.portal.render.componentPreviewInScope = { node, scope ->
-    when (val e = dev.keliver.portal.expandForPreview(node, editorComponents, compiled.keys)) {
+    // A component the relay flagged as on a dependency cycle is never drawn
+    // compiled: the canvas keeps its placeholder rather than risk recursing.
+    val registry = editorComponents
+    val compiled = adapters.filterKeys { name -> registry.spec(name)?.diagnostic?.startsWith(CYCLE_DIAGNOSTIC) != true }
+    when (val e = dev.keliver.portal.expandForPreview(node, registry, compiled.keys)) {
       is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, node.id), scope)
       is dev.keliver.portal.Expansion.Opaque -> {
         val adapter = compiled[e.name]
@@ -111,6 +115,9 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
     }
   }
 }
+
+/** How the relay's component registry marks a component on a dependency cycle (ComponentRegistryState.flagCycles). */
+internal const val CYCLE_DIAGNOSTIC = "cyclic component dependency"
 
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
