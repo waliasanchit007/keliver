@@ -354,10 +354,12 @@ implementation("dev.keliver:keliver-host:0.4.0")    // host side
 implementation("dev.keliver:keliver-guest:0.4.0")   // guest module
 ```
 
-(`0.3.x` is the current line — `0.1.0` was the first public release, `0.2.0`
+(`0.4.x` is the current line — `0.1.0` was the first public release, `0.2.0`
 added the **`keliver-material`** batteries-included widget library (see the next
-section), and `0.3.0` added Icon + ListItem, DropdownMenu/SegmentedButtonRow in
-the portal, and `dev.keliver:portal-sql`. Pre-`1.0`, so the API may still evolve; the Zipline wire format is
+section), `0.3.0` added Icon + ListItem, DropdownMenu/SegmentedButtonRow in
+the portal, and `dev.keliver:portal-sql`, and `0.4.0` changed the portal
+document model (new `PropValue` kinds: tokens, conditions, templates, lists,
+arithmetic). Pre-`1.0`, so the API may still evolve; the Zipline wire format is
 stable within a line. Kotlin package names stay `dev.keliver.*`, so `import`
 statements don't change.)
 

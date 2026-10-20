@@ -8,25 +8,31 @@
 
 ## [Unreleased]
 
-## [0.4.0] - not yet released (candidate, held for the owner's go; dated when tagged)
+## Keliver 0.4.0 - unreleased
+
+> Release candidate, held for the owner's go. The release commit replaces this heading with
+> `## Keliver 0.4.0 - <date>` (and removes this note) before it is merged and tagged.
 
 The portal grammar and editor-canvas libraries. Hand-written sources changed only in
 `portal-core`, `portal-document`, `portal-render` and `portal-editor` (and the version in
 `build-support`); no other published module changed since 0.3.4, and no dependency versions
-moved (Kotlin 2.2.0). The relay, ingest and tools-bundle changes below ship in a tools release,
-not on Maven.
+moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven: U35,
+U36 and K1–K5 shipped in tools 0.3.10/0.3.11; K6, K7, the compiled component preview's relay
+step and U37 wait for the next tools release.
 
 **Source-incompatible with 0.3.4** for code that matches on the portal document model:
 `PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and
 `IntDp`, so an exhaustive `when` over it needs a branch for each — see *Library compatibility*.
 Everything else is additive (new types, members with defaults, `AppPreviewEntry.screenWrapper`,
-`hostWrapper` and `compiledComponents`). The Zipline wire format and compiled guests are
+`hostWrapper` and `compiledComponents`), but a canvas `WidgetNode.props` value can now also be a
+portal-core `Token`, `Conditional`, `Template`, `ListOf`, `Arith` or `IntDp`: code reading props
+directly rather than through the typed getters sees them. The Zipline wire format and compiled guests are
 unchanged; the portal document tree carries new keys that older readers ignore (see the K6 and
 K7 entries).
 
 Candidate check (local, signing off, `-Dmaven.repo.local` to a scratch repository, at
-`7c9be494f`): `publishToMavenLocal -PkeliverVersion=0.4.0` publishes 382 artifacts and `apiCheck`
-passes. A measured adopter app rebuilt against those artifacts (guest, Kotlin/JS): its Zipline
+`7c9be494f`): `publishToMavenLocal -PkeliverVersion=0.4.0` publishes 378 artifacts and 11 Gradle
+plugin markers — the same set as 0.3.4 — and `apiCheck` passes. A measured adopter app rebuilt against those artifacts (guest, Kotlin/JS): its Zipline
 bundles compile, and 101 of its 104 tests pass unchanged; the three that differ are widget-tree
 goldens whose only change is `OutlinedTextField`'s `align` property (tag 13, default 0) now being
 sent — that property is from 0.3.4, and the app's goldens were recorded on 0.3.3.
@@ -315,14 +321,39 @@ sent — that property is from 0.3.4, and the app's goldens were recorded on 0.3
   are still there.
 - **portal-document, portal-core** (published): K6 and K7 add `PropValue.Arith` and
   `PropValue.IntDp`, `CondTerm`/`CondJoin`/`CondTest.Eq`, and the shared `termTypeMisfit` rule;
-  `Cond` and `PropValue.Conditional` gained `operand`, `more` and `join` (constructor, `copy` and
-  `componentN` signatures changed — neither existed in 0.3.4). Wire JSON is additive: defaults are
+  new in 0.4.0 too: `Cond(field, test, negate, operand, more, join)` and
+  `PropValue.Conditional(…, operand, more, join)` (K3 introduced both after 0.3.4). Wire JSON is additive: defaults are
   omitted, and JSON from 0.3.4 decodes to the same values.
 - **portal-render** (published): `AppPreviewEntry` gains `screenWrapper`, `hostWrapper` and
   `compiledComponents`, all with defaults, so an existing entry compiles unchanged; new
   `PreviewWrapper`, `AppScreenFrame`, `CompiledComponent`, `CompiledCall` and
   `RenderCompiledComponent`. A per-app editor that uses `compiledComponents` needs these
-  libraries and a tools release whose relay writes the adapters file.
+  libraries and a tools release whose relay writes the adapters file. Also new:
+  `PreviewBindings.text(Template)`, `PreviewBindings.intValueOf`, `WidgetNode.intListB` /
+  `strListB` and the `RenderNode(node, scope)` overload.
+- **Hosts on 0.3.3** (from 0.3.4, restated because guests move straight from 0.3.3): a guest built
+  on 0.3.4 or later sends `TextField` / `OutlinedTextField` `align` (property tag 13 on
+  `OutlinedTextField`) for **every** field, set or not. A Treehouse host built with 0.3.3 reports
+  the unknown property to its event listener and carries on (start alignment); a host that uses
+  `HostProtocol` directly with the default `ProtocolMismatchHandler.Throwing` fails on the first
+  text field. Such a host needs 0.3.4 or later first, or a mismatch handler that ignores unknown
+  properties.
+- **Migrating an exhaustive `when` over `PropValue`:**
+  ```kotlin
+  when (v) {
+    is PropValue.Lit -> …
+    is PropValue.Bind -> …
+    is PropValue.Action -> …
+    is PropValue.Token -> …       // K2
+    is PropValue.Conditional -> … // K3, K6
+    is PropValue.Template -> …    // K4
+    is PropValue.ListOf -> …      // K4
+    is PropValue.Arith -> …       // K7
+    is PropValue.IntDp -> …       // K7
+  }
+  ```
+  The grammar keeps adding kinds: code that only needs some of them is better off with an
+  `else ->` branch than an exhaustive `when`.
 
 ### Fixed
 - **portal-ingest, portal-relay:** any edit of a screen whose Bindings interface extends a type
@@ -481,7 +512,7 @@ The tests of what 0.3.3 got wrong fail on 0.3.3's widgets; the rest pin behaviou
 - **keliver-material schema:** `TextField.align` and `OutlinedTextField.align` (0 start,
   1 center, 2 end), for the text and the placeholder. A centred or end-aligned field should be
   given a width (its placeholder fills the field); at the default, layout is unchanged. Additive
-  on the wire: a guest that sets it on a Treehouse host built with 0.3.3 gets start alignment
+  on the wire: any guest (the generated composable always sends it) on a Treehouse host built with 0.3.3 gets start alignment
   (a Treehouse host's protocol mismatch handler reports an unknown property and carries on; a host using `HostProtocol` directly defaults to the throwing handler). Like every new schema property it changes the generated `TextField` /
   `OutlinedTextField` composables' and widget interfaces' signatures: guests recompile (they
   always do, per bundle), and a host's own `TextField` / `OutlinedTextField` widget implements
