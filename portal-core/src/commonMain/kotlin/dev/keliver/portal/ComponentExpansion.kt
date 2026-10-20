@@ -147,6 +147,16 @@ public fun expandForPreview(
     children = n.children.flatMap(::resolveDefinitionChildren),
   )
 
+  /**
+   * A nested call drawn compiled: its arguments resolved against this
+   * instance's — a parameter the instance omits takes its default, else the
+   * editor's sample (as template parts do), never an explicit null the
+   * compiled call would refuse. (Its slot content is substituted by the caller.)
+   */
+  fun compiledArgs(n: WidgetNode): Map<String, Any?> = n.props.mapValues { (_, v) ->
+    if (v is Bind && '.' !in v.field && v.field in paramNames) argOf(v.field).second else resolveValue(v)
+  }
+
   fun substitute(n: WidgetNode): List<WidgetNode> {
     if (n.type == "Slot" && (n.props["name"] as? String) == slot?.name) {
       return node.children.map(::substituteSlotContent)
@@ -160,7 +170,8 @@ public fun expandForPreview(
         is Expansion.Transparent -> r.tree
         // Drawn compiled by the renderer: the call with its arguments resolved
         // against this instance's, its slot content substituted like any body node.
-        is Expansion.Opaque -> if (r.name in compiled) resolved.copy(children = n.children.flatMap { substitute(it) }) else placeholder(r.name, r.reason)
+        is Expansion.Opaque -> if (r.name in compiled) n.copy(props = compiledArgs(n), children = n.children.flatMap { substitute(it) })
+        else placeholder(r.name, r.reason)
         is Expansion.Cycle -> cycleChip(r.path)
       })
     }
