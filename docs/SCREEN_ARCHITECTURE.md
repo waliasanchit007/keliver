@@ -995,10 +995,13 @@ fun SectionCard(content: @Composable () -> Unit) {
     cannot read the field's type — an item field (the contract carries no
     item types), a field declared without a type, an unlisted field of an
     interface not read whole — an operand on it is placed only where the
-    value there before, or another use in the screen, already reads it as
-    an Int (an operand, or a binding on an Int prop, in the same item
-    scope; an inserted subtree never vouches for itself): otherwise make
-    the change in code, as K6 makes such an equality. The relay refuses an
+    value there before, or another arithmetic operand in the screen,
+    already reads it (in the same item scope; an inserted subtree never
+    vouches for itself) — never a plain binding, even on an Int prop: an op
+    places one on such a field unchecked (the compile types it), so it
+    proves nothing. Otherwise make the change in code, as K6 makes such an
+    equality. An `IntDp` never reads such a field, as ingest reads it
+    (`b.n.dp` compiles for a Double too). The relay refuses an
     `Arith` on a component parameter not declared `Int` (`Int?` takes one)
     and any `IntDp` on a component, runs every token operand through the K2
     gate (the server's value, re-read as an Int on undo/redo), and its

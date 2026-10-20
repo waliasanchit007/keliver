@@ -109,8 +109,9 @@ import kotlinx.serialization.Serializable
  * Repeat's List, a String list's element) is refused both ways round; one
  * whose type the document cannot read (an item field, a field declared
  * without a type, an unlisted field of an interface not read whole) is
- * placed only where the value there before, or another use in the screen,
- * already reads it as an Int ([arithUseMisfitAt]). Every op stores both
+ * placed only where the value there before, or another operand in the
+ * screen, already reads it as an Int — never as a Dp ([arithUseMisfitAt]).
+ * Every op stores both
  * canonical: an expression of literals is the literal it computes.
  */
 @Serializable
@@ -1302,11 +1303,16 @@ private fun arithMisfit(n: DocNode, contract: Contract): String? {
  * cannot read — an item field (the contract carries no item types), a field
  * declared without a type, an unlisted field where the interface is not read
  * whole — that nothing vouches for: the value there before ([previous]), or
- * another use in the screen reading it as an Int (an operand, or a binding
- * on an Int prop), within the same item scope and outside [excluded] (an
- * inserted subtree never vouches for itself). As K6 places an equality on
- * such a field, the change is otherwise made in code: `b.label / 2` does
- * not compile for a String, and ingest could not tell. Null = fine.
+ * another arithmetic operand in the screen reading it, within the same item
+ * scope and outside [excluded] (an inserted subtree never vouches for
+ * itself). As K6 places an equality on such a field, the change is otherwise
+ * made in code: `b.label / 2` does not compile for a String, and ingest could
+ * not tell. A plain binding is NOT evidence, even on an Int prop: an op
+ * places one on such a field unchecked (K4: the compile types it), and the
+ * document cannot tell it from one the file compiled. Every operand in the
+ * document came from the file or passed this check, so operands are. An
+ * Int used as a Dp never reads such a field (as ingest reads it: `b.n.dp`
+ * compiles for a Double too). Null = fine.
  */
 private fun arithUseMisfitAt(
   root: DocNode,
@@ -1321,9 +1327,15 @@ private fun arithUseMisfitAt(
   val read = arithFields(v).distinct()
   if (read.isEmpty()) return null
   val where = "arithmetic ${w.type}.$key"
+  val asDp = dpFields(v)
   for (field in read) {
     if ('.' !in field) otherReadMisfit(root, field, h to key)?.let { return "$where reads `$field` as an Int, but $it" }
     if (typeReadable(field, contract)) continue
+    if (field in asDp) {
+      return "$where uses `$field` as a Dp, but the type of `$field` is not readable here " +
+        "(${if ('.' in field) "an item field's type is not in the contract" else unreadableReason(field, contract)}): " +
+        "an Int used as a Dp reads only a field declared Int (`x.dp` compiles for a Double too) — make this change in code"
+    }
     val scope = itemScopeOf(root, h, field)
     if (field in arithFields(previous)) continue
     if (intReads(root, h to key, excluded).any { (f, s) -> f == field && s == scope }) continue
@@ -1372,9 +1384,16 @@ private fun termReadMisfit(field: String, terms: List<DocTerm>): String? {
   return null
 }
 
+/** K7: the fields an Int used as a Dp in [v] reads (also in a conditional's branches). */
+private fun dpFields(v: PropValue?): Set<String> = when (v) {
+  is PropValue.Conditional -> dpFields(v.whenTrue) + dpFields(v.whenFalse)
+  is PropValue.IntDp -> arithFields(v).toSet()
+  else -> emptySet()
+}
+
 /**
- * K7: every read of a field as an Int in [root] — an arithmetic operand, or a
- * binding on a catalogued Int prop — except the value at [skip] and any
+ * K7: every arithmetic operand in [root] — the reads the document can trust
+ * as an Int (see [arithUseMisfitAt]) — except the value at [skip] and any
  * inside the subtree [excluded], each with its item scope (the list field
  * of the Repeat binding an item field's item variable; null for a screen
  * field).
@@ -1384,14 +1403,9 @@ private fun intReads(root: DocNode, skip: Pair<Handle, String>, excluded: Handle
   fun walk(n: DocNode, items: Map<String, String>) {
     if (n !is DocNode.Widget || n.handle == excluded) return
     fun add(field: String) { out += field to (if ('.' in field) items[field.substringBefore('.')] else null) }
-    val spec = widgetSpec(n.type)
     n.props.forEach { (k, v) ->
       if (skip == (n.handle to k)) return@forEach
       arithFields(v).forEach(::add)
-      val kind = spec?.props?.firstOrNull { it.name == k }?.kind
-      if (kind == PropKind.Int || kind == PropKind.Color) {
-        (if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)).filterIsInstance<PropValue.Bind>().forEach { add(it.field) }
-      }
     }
     val inner = if (n.type == "Repeat") {
       val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
