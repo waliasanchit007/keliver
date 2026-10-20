@@ -135,6 +135,42 @@ class ConditionTypeTest {
     assertNull(doc(text(2)).tryApply(DocOp.SetProp(Handle(2), "text", eq("fresh", lit(1)))).error)
   }
 
+  // K6 review round 3: an inserted subtree never vouches for itself.
+  @Test fun anInsertedSubtreeDoesNotVouchForItsOwnEqualities() {
+    val unreadable = Contract(unlistedFieldsUnknown = "it extends a type declared in another file")
+    val d = doc(text(2), c = unreadable)
+    val eqOne = PropValue.Conditional("kind", "eq", operand = lit(1), whenTrue = lit("A"), whenFalse = lit("B"))
+    val column = DocNode.Widget(
+      Handle(0), "Column",
+      children = listOf(
+        cond(0, Cond("kind", CondTest.Eq, operand = 1)).copy(handle = Handle(0), children = emptyList()),
+        DocNode.Widget(Handle(0), "StyledText", props = mapOf("text" to eqOne)),
+      ),
+    )
+    assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, column)).error, "a Condition and a Text vouching for each other")
+    val two = DocNode.Widget(
+      Handle(0), "Column",
+      children = listOf(
+        cond(0, Cond("kind", CondTest.Eq, operand = 1)).copy(handle = Handle(0), children = emptyList()),
+        cond(0, Cond("kind", CondTest.Eq, negate = true, operand = 2)).copy(handle = Handle(0), children = emptyList()),
+      ),
+    )
+    assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, two)).error, "two Conditions vouching for each other")
+    // Evidence outside the inserted subtree still counts.
+    val vouched = doc(text(2, eqOne), c = unreadable)
+    assertNull(vouched.tryApply(DocOp.InsertNode(Handle(1), null, two)).error)
+  }
+
+  // K6 review round 3: an item field is vouched for only inside a Repeat over the same list.
+  @Test fun anItemFieldIsVouchedForOnlyInsideARepeatOverTheSameList() {
+    fun eq(op: PropValue) = PropValue.Conditional("row.kind", "eq", operand = op, whenTrue = lit("A"), whenFalse = lit("B"))
+    val overA = DocNode.Widget(Handle(4), "Repeat", mapOf("items" to lit("a"), "item" to lit("row")), children = listOf(text(5, eq(lit("p"))), text(6)))
+    val overB = DocNode.Widget(Handle(7), "Repeat", mapOf("items" to lit("bs"), "item" to lit("row")), children = listOf(text(8)))
+    val d = doc(overA, overB)
+    assertNotNull(d.tryApply(DocOp.SetProp(Handle(8), "text", eq(lit("q")))).error, "row.kind over b.a does not vouch for row.kind over b.bs")
+    assertNull(d.tryApply(DocOp.SetProp(Handle(6), "text", eq(lit("q")))).error, "the same Repeat vouches")
+  }
+
   @Test fun aConditionsJoinIsSetLikeAValuesAndUndone() {
     val d = doc(cond(3, condOfTerms(listOf(Cond("open"), Cond("note", CondTest.Empty)))), cond(5, Cond("open")))
     val or = d.apply(DocOp.SetProp(Handle(3), "join", lit("or")))
