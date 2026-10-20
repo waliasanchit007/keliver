@@ -9,7 +9,9 @@ package dev.keliver.portal
  * condition over a parameter (a conditional prop value, conditional children)
  * is decided against the instance's argument — or, when the argument is a
  * screen binding, left for the renderer to decide against the preview mocks. The result
- * contains NO component nodes, so the renderer never re-enters expansion.
+ * contains NO component nodes (except opaque ones the editor draws compiled — see
+ * the overload taking `compiled`), so the renderer never re-enters expansion for
+ * a transparent component.
  *
  * The SCREEN document itself is never expanded — only what the renderer asks to
  * draw for a specific instance.
@@ -24,7 +26,23 @@ public sealed interface Expansion {
 }
 
 /** Expand a single component-instance [node] against [registry]. */
-public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<String> = emptyList()): Expansion {
+public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack: List<String> = emptyList()): Expansion =
+  expandForPreview(node, registry, emptySet(), stack)
+
+/**
+ * As above. [compiled] names the components the editor can render compiled
+ * (docs/COMPILED_COMPONENT_PREVIEW.md): a nested instance of one of them that
+ * is OPAQUE stays in the expanded tree as a component node — its arguments
+ * resolved against this instance's — so the renderer draws it compiled
+ * instead of a placeholder. Only such nodes are left; every other component
+ * call is expanded (or replaced by a placeholder / cycle chip) as before.
+ */
+public fun expandForPreview(
+  node: WidgetNode,
+  registry: ComponentRegistry,
+  compiled: Set<String>,
+  stack: List<String> = emptyList(),
+): Expansion {
   val name = node.type
   if (name in stack) return Expansion.Cycle(stack + name)
   val spec = registry.spec(name) ?: return Expansion.Opaque(name, "unknown component")
@@ -105,9 +123,11 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
       // wrapper's definition. Carry the caller's definition stack, but do not
       // add the wrapper itself: Wrapper { Child() } is finite even when Child's
       // own body uses Wrapper.
-      return when (val r = expandForPreview(n, registry, stack)) {
+      return when (val r = expandForPreview(n, registry, compiled, stack)) {
         is Expansion.Transparent -> source(r.tree, n.id)
-        is Expansion.Opaque -> source(placeholder(r.name, r.reason), n.id)
+        // Drawn compiled by the renderer; its own slot content is the caller's too.
+        is Expansion.Opaque -> if (r.name in compiled) source(n.copy(children = n.children.map(::substituteSlotContent)), n.id)
+        else source(placeholder(r.name, r.reason), n.id)
         is Expansion.Cycle -> source(cycleChip(r.path), n.id)
       }
     }
@@ -127,6 +147,16 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
     children = n.children.flatMap(::resolveDefinitionChildren),
   )
 
+  /**
+   * A nested call drawn compiled: its arguments resolved against this
+   * instance's — a parameter the instance omits takes its default, else the
+   * editor's sample (as template parts do), never an explicit null the
+   * compiled call would refuse. (Its slot content is substituted by the caller.)
+   */
+  fun compiledArgs(n: WidgetNode): Map<String, Any?> = n.props.mapValues { (_, v) ->
+    if (v is Bind && '.' !in v.field && v.field in paramNames) argOf(v.field).second else resolveValue(v)
+  }
+
   fun substitute(n: WidgetNode): List<WidgetNode> {
     if (n.type == "Slot" && (n.props["name"] as? String) == slot?.name) {
       return node.children.map(::substituteSlotContent)
@@ -136,9 +166,12 @@ public fun expandForPreview(node: WidgetNode, registry: ComponentRegistry, stack
     // outer params, then expand it recursively (splicing the result).
     if (registry.isComponent(n.type)) {
       val resolved = resolveDefinitionTree(n)
-      return listOf(when (val r = expandForPreview(resolved, registry, stack + name)) {
+      return listOf(when (val r = expandForPreview(resolved, registry, compiled, stack + name)) {
         is Expansion.Transparent -> r.tree
-        is Expansion.Opaque -> placeholder(r.name, r.reason)
+        // Drawn compiled by the renderer: the call with its arguments resolved
+        // against this instance's, its slot content substituted like any body node.
+        is Expansion.Opaque -> if (r.name in compiled) n.copy(props = compiledArgs(n), children = n.children.flatMap { substitute(it) })
+        else placeholder(r.name, r.reason)
         is Expansion.Cycle -> cycleChip(r.path)
       })
     }

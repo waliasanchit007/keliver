@@ -75,6 +75,15 @@ jobs:
           :portal-schema-codegen:checkPortalCode
           -DRELEASE_SIGNING_ENABLED=false
 
+      # Compiled component preview: the dogfood editor's adapters file must be
+      # what the relay would write (docs/COMPILED_COMPONENT_PREVIEW.md).
+      - name: Compiled component adapters are fresh
+        run: >
+          ./gradlew
+          :portal-relay:compiledComponentAdapters
+          -Pcheck
+          -DRELEASE_SIGNING_ENABLED=false
+
       # Enforce the test suite + API binary-compatibility surface.
       # Previously skipped (-x test), which let a stripped test
       # fixture rot the suite undetected — see docs/KNOWN_BUGS.md U13.

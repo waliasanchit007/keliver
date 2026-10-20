@@ -123,7 +123,7 @@ fun emitRenderNode(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> =
     appendLine(" * layout modifier applies with(scope) of the parent's content lambda, and is")
     appendLine(" * skipped when [scope] is not one of its scopes (it has no meaning there).")
     appendLine(" */")
-    appendLine("private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
+    appendLine("internal fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
     appendLine("  var m: Modifier = Modifier")
     appendLine("  val names = node.props.keys.filter { it.startsWith(\"mod.\") }.map { it.removePrefix(\"mod.\").substringBefore('.') }.distinct()")
     appendLine("  for (name in names) {")

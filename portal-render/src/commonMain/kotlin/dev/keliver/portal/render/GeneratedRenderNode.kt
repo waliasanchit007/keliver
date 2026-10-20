@@ -532,7 +532,7 @@ public fun RenderNode(node: WidgetNode, scope: Any?) {
  * layout modifier applies with(scope) of the parent's content lambda, and is
  * skipped when [scope] is not one of its scopes (it has no meaning there).
  */
-private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {
+internal fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {
   var m: Modifier = Modifier
   val names = node.props.keys.filter { it.startsWith("mod.") }.map { it.removePrefix("mod.").substringBefore('.') }.distinct()
   for (name in names) {

@@ -4,11 +4,14 @@ import java.io.File
 class PreviewDistributionRunner(
   private val repoDir: File,
   private val config: PortalConfig,
+  /** Runs before each build (compiled component adapters); a non-null result fails the build. */
+  private val prepare: () -> String? = { null },
   private val execute: (List<String>, () -> Boolean) -> CommandResult = ::executeCommand,
 ) : PreviewBuilder.Runner {
   data class CommandResult(val exitCode: Int, val output: String)
 
   override fun build(cancelled: () -> Boolean): String? {
+    prepare()?.let { return it }
     val command = listOf(File(repoDir, "gradlew").absolutePath, config.previewBuildTask, "-q")
     val first = execute(command, cancelled)
     if (cancelled()) return "cancelled"

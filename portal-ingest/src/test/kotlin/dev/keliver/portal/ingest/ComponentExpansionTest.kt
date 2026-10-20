@@ -2,7 +2,10 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.ComponentSlotSpec
 import dev.keliver.portal.ComponentSpec
+import dev.keliver.portal.PropKind
+import dev.keliver.portal.PropSpec
 import dev.keliver.portal.COMPONENT_SOURCE_HANDLE_PROP
 import dev.keliver.portal.Expansion
 import dev.keliver.portal.MapComponentRegistry
@@ -219,5 +222,61 @@ class ComponentExpansionTest {
     val t = tree(expandForPreview(WidgetNode("A", emptyMap()), reg))
     assertEquals("StyledBox", t.type)
     assertTrue(labels(t).any { it.contains("cycle") })
+  }
+
+  // ── compiled component preview: expandForPreview(…, compiled, …) ──
+
+  private val pill = ComponentSpec(
+    "Pill", listOf(PropSpec("label", PropKind.Text, "Label")), emptyList(), mapOf("label" to "String"),
+    transparent = false, diagnostic = "body contains code outside the portal grammar (opaque)",
+  )
+  private val wrap = ComponentSpec(
+    "Wrap", listOf(PropSpec("title", PropKind.Text, "Title")), emptyList(), mapOf("title" to "String"),
+    body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("Pill", mapOf("label" to Bind("title"), "mod.Padding.allDp" to 4)))),
+    dependencies = setOf("Pill"),
+  )
+  private val card = ComponentSpec(
+    "Card2", emptyList(), emptyList(), emptyMap(),
+    slots = listOf(ComponentSlotSpec("content")),
+    body = WidgetNode("Column", emptyMap(), listOf(WidgetNode("Slot", mapOf("name" to "content")))),
+  )
+  private val compiledRegistry = MapComponentRegistry(listOf(pill, wrap, card))
+
+  @Test fun aNestedOpaqueCallWithAnAdapterStaysAComponentNodeWithResolvedArguments() {
+    val col = tree(expandForPreview(WidgetNode("Wrap", mapOf("title" to Bind("name"))), compiledRegistry, setOf("Pill")))
+    val kept = col.children.single()
+    assertEquals("Pill", kept.type)
+    assertEquals(Bind("name"), kept.props["label"])   // the outer argument, re-pointed at the screen binding
+    assertEquals(4, kept.props["mod.Padding.allDp"])   // the call's own modifiers ride along
+  }
+
+  @Test fun withoutAnAdapterTheNestedOpaqueCallIsStillAPlaceholder() {
+    val col = tree(expandForPreview(WidgetNode("Wrap", mapOf("title" to "x")), compiledRegistry, emptySet()))
+    assertEquals("StyledBox", col.children.single().type)
+    assertTrue(labels(col.children.single()).any { "Pill" in it })
+    // The old signature is the empty set.
+    val old = tree(expandForPreview(WidgetNode("Wrap", mapOf("title" to "x")), compiledRegistry)).children.single()
+    assertEquals(labels(col.children.single()), labels(old))
+  }
+
+  /** Review m1: an omitted required outer argument previews the sample, as template parts do — not an explicit null. */
+  @Test fun anOmittedOuterArgumentGivesTheKeptCallTheSampleNotNull() {
+    // Before the fix: label = null, which the compiled call refuses ("'label' is null …").
+    val col = tree(expandForPreview(WidgetNode("Wrap"), compiledRegistry, setOf("Pill")))
+    assertEquals("Title", col.children.single().props["label"])
+  }
+
+  /** Slot content passed to a transparent wrapper: an opaque call there with an adapter is kept too. */
+  @Test fun anOpaqueCallInSlotContentWithAnAdapterIsKeptWithItsSourceHandle() {
+    val inst = WidgetNode("Card2", emptyMap(), listOf(WidgetNode("Pill", mapOf("label" to "in slot"), id = 77)))
+    val col = tree(expandForPreview(inst, compiledRegistry, setOf("Pill")))
+    val kept = col.children.single()
+    assertEquals("Pill", kept.type)
+    assertEquals("in slot", kept.props["label"])
+    assertEquals(77, kept.props[COMPONENT_SOURCE_HANDLE_PROP])
+    // Without the adapter: the placeholder, still carrying the slot child's handle.
+    val placeholder = tree(expandForPreview(inst, compiledRegistry, emptySet())).children.single()
+    assertEquals("StyledBox", placeholder.type)
+    assertEquals(77, placeholder.props[COMPONENT_SOURCE_HANDLE_PROP])
   }
 }

@@ -87,6 +87,19 @@ public val RESERVED_COMPONENT_NAMES: Set<String> = setOf("Condition", "Repeat", 
  */
 public const val COMPONENT_FORWARDS_MODIFIER_PROP: String = "portal.forwardsModifier"
 
+/**
+ * The ONE spelling of the diagnostic the relay's component registry gives a
+ * component on a dependency cycle (it is marked opaque). The editor reads it
+ * back through [onDependencyCycle]; nothing else should match the text.
+ */
+public fun cycleDiagnostic(name: String): String = "$CYCLE_DIAGNOSTIC_PREFIX involving $name"
+
+private const val CYCLE_DIAGNOSTIC_PREFIX = "cyclic component dependency"
+
+/** True when the registry flagged this component as on a dependency cycle ([cycleDiagnostic]). */
+public val ComponentSpec.onDependencyCycle: Boolean
+  get() = !transparent && diagnostic?.startsWith("$CYCLE_DIAGNOSTIC_PREFIX involving ") == true
+
 /** Internal expansion provenance consumed by the editor's selection tagging. */
 public const val COMPONENT_SOURCE_HANDLE_PROP: String = "portal.componentSourceHandle"
 
