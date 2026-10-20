@@ -22,6 +22,16 @@ tasks.withType(Test).configureEach {
     def value = System.getProperty(key)
     if (value != null) systemProperty(key, value)
   }
+  // Tests that touch the relay's top-level state resolve its store, and this
+  // repo's keliver.portal.json names `~/.keliver-portal`: a local test run
+  // claimed the developer's real store (owner marker, pointer) and a run from
+  // another checkout then exited 70 on the ownership refusal. PORTAL_STORE is
+  // the relay's one-run override — no pointer is written and the config is
+  // otherwise unchanged — so the tests get a store under the build directory.
+  // Subprocess tests that exercise default resolution unset it themselves.
+  def testStore = layout.buildDirectory.dir("test-store/${name}").get().asFile
+  environment('PORTAL_STORE', testStore.absolutePath)
+  doFirst { testStore.deleteDir() }
 }
 
 dependencies {
