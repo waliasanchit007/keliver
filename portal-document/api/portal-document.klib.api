@@ -430,6 +430,40 @@ sealed interface dev.keliver.portal.document/PropValue { // dev.keliver.portal.d
         }
     }
 
+    final class Arith : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Arith|null[0]
+        constructor <init>(kotlin/String, dev.keliver.portal.document/PropValue, dev.keliver.portal.document/PropValue) // dev.keliver.portal.document/PropValue.Arith.<init>|<init>(kotlin.String;dev.keliver.portal.document.PropValue;dev.keliver.portal.document.PropValue){}[0]
+
+        final val left // dev.keliver.portal.document/PropValue.Arith.left|{}left[0]
+            final fun <get-left>(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.Arith.left.<get-left>|<get-left>(){}[0]
+        final val op // dev.keliver.portal.document/PropValue.Arith.op|{}op[0]
+            final fun <get-op>(): kotlin/String // dev.keliver.portal.document/PropValue.Arith.op.<get-op>|<get-op>(){}[0]
+        final val right // dev.keliver.portal.document/PropValue.Arith.right|{}right[0]
+            final fun <get-right>(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.Arith.right.<get-right>|<get-right>(){}[0]
+
+        final fun component1(): kotlin/String // dev.keliver.portal.document/PropValue.Arith.component1|component1(){}[0]
+        final fun component2(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.Arith.component2|component2(){}[0]
+        final fun component3(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.Arith.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., dev.keliver.portal.document/PropValue = ..., dev.keliver.portal.document/PropValue = ...): dev.keliver.portal.document/PropValue.Arith // dev.keliver.portal.document/PropValue.Arith.copy|copy(kotlin.String;dev.keliver.portal.document.PropValue;dev.keliver.portal.document.PropValue){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.Arith.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.Arith.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.Arith.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.Arith> { // dev.keliver.portal.document/PropValue.Arith.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.Arith.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.Arith.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.Arith.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.Arith // dev.keliver.portal.document/PropValue.Arith.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.Arith) // dev.keliver.portal.document/PropValue.Arith.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.Arith){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.Arith.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/PropValue.Arith.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Arith> // dev.keliver.portal.document/PropValue.Arith.Companion.serializer|serializer(){}[0]
+        }
+    }
+
     final class Bind : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.Bind|null[0]
         constructor <init>(kotlin/String) // dev.keliver.portal.document/PropValue.Bind.<init>|<init>(kotlin.String){}[0]
 
@@ -502,6 +536,37 @@ sealed interface dev.keliver.portal.document/PropValue { // dev.keliver.portal.d
             final val $childSerializers // dev.keliver.portal.document/PropValue.Conditional.Companion.$childSerializers|{}$childSerializers[0]
 
             final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.Conditional> // dev.keliver.portal.document/PropValue.Conditional.Companion.serializer|serializer(){}[0]
+        }
+    }
+
+    final class IntDp : dev.keliver.portal.document/PropValue { // dev.keliver.portal.document/PropValue.IntDp|null[0]
+        constructor <init>(dev.keliver.portal.document/PropValue, kotlin/String? = ...) // dev.keliver.portal.document/PropValue.IntDp.<init>|<init>(dev.keliver.portal.document.PropValue;kotlin.String?){}[0]
+
+        final val form // dev.keliver.portal.document/PropValue.IntDp.form|{}form[0]
+            final fun <get-form>(): kotlin/String? // dev.keliver.portal.document/PropValue.IntDp.form.<get-form>|<get-form>(){}[0]
+        final val value // dev.keliver.portal.document/PropValue.IntDp.value|{}value[0]
+            final fun <get-value>(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.IntDp.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/PropValue.IntDp.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // dev.keliver.portal.document/PropValue.IntDp.component2|component2(){}[0]
+        final fun copy(dev.keliver.portal.document/PropValue = ..., kotlin/String? = ...): dev.keliver.portal.document/PropValue.IntDp // dev.keliver.portal.document/PropValue.IntDp.copy|copy(dev.keliver.portal.document.PropValue;kotlin.String?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal.document/PropValue.IntDp.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // dev.keliver.portal.document/PropValue.IntDp.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // dev.keliver.portal.document/PropValue.IntDp.toString|toString(){}[0]
+
+        final object $serializer : kotlinx.serialization.internal/GeneratedSerializer<dev.keliver.portal.document/PropValue.IntDp> { // dev.keliver.portal.document/PropValue.IntDp.$serializer|null[0]
+            final val descriptor // dev.keliver.portal.document/PropValue.IntDp.$serializer.descriptor|{}descriptor[0]
+                final fun <get-descriptor>(): kotlinx.serialization.descriptors/SerialDescriptor // dev.keliver.portal.document/PropValue.IntDp.$serializer.descriptor.<get-descriptor>|<get-descriptor>(){}[0]
+
+            final fun childSerializers(): kotlin/Array<kotlinx.serialization/KSerializer<*>> // dev.keliver.portal.document/PropValue.IntDp.$serializer.childSerializers|childSerializers(){}[0]
+            final fun deserialize(kotlinx.serialization.encoding/Decoder): dev.keliver.portal.document/PropValue.IntDp // dev.keliver.portal.document/PropValue.IntDp.$serializer.deserialize|deserialize(kotlinx.serialization.encoding.Decoder){}[0]
+            final fun serialize(kotlinx.serialization.encoding/Encoder, dev.keliver.portal.document/PropValue.IntDp) // dev.keliver.portal.document/PropValue.IntDp.$serializer.serialize|serialize(kotlinx.serialization.encoding.Encoder;dev.keliver.portal.document.PropValue.IntDp){}[0]
+        }
+
+        final object Companion { // dev.keliver.portal.document/PropValue.IntDp.Companion|null[0]
+            final val $childSerializers // dev.keliver.portal.document/PropValue.IntDp.Companion.$childSerializers|{}$childSerializers[0]
+
+            final fun serializer(): kotlinx.serialization/KSerializer<dev.keliver.portal.document/PropValue.IntDp> // dev.keliver.portal.document/PropValue.IntDp.Companion.serializer|serializer(){}[0]
         }
     }
 
@@ -958,6 +1023,9 @@ final value class dev.keliver.portal.document/Handle { // dev.keliver.portal.doc
     }
 }
 
+final const val dev.keliver.portal.document/DP_CTOR_FORM // dev.keliver.portal.document/DP_CTOR_FORM|{}DP_CTOR_FORM[0]
+    final fun <get-DP_CTOR_FORM>(): kotlin/String // dev.keliver.portal.document/DP_CTOR_FORM.<get-DP_CTOR_FORM>|<get-DP_CTOR_FORM>(){}[0]
+
 final val dev.keliver.portal.document/DocJson // dev.keliver.portal.document/DocJson|{}DocJson[0]
     final fun <get-DocJson>(): kotlinx.serialization.json/Json // dev.keliver.portal.document/DocJson.<get-DocJson>|<get-DocJson>(){}[0]
 
@@ -965,10 +1033,14 @@ final fun (dev.keliver.portal.document/DocNode.Widget).dev.keliver.portal.docume
 final fun (dev.keliver.portal.document/DocOp).dev.keliver.portal.document/isClientOp(): kotlin/Boolean // dev.keliver.portal.document/isClientOp|isClientOp@dev.keliver.portal.document.DocOp(){}[0]
 final fun (dev.keliver.portal.document/PropValue).dev.keliver.portal.document/atoms(): kotlin.collections/List<dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/atoms|atoms@dev.keliver.portal.document.PropValue(){}[0]
 final fun (dev.keliver.portal.document/PropValue).dev.keliver.portal.document/mapAtoms(kotlin/Function1<dev.keliver.portal.document/PropValue, dev.keliver.portal.document/PropValue>): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/mapAtoms|mapAtoms@dev.keliver.portal.document.PropValue(kotlin.Function1<dev.keliver.portal.document.PropValue,dev.keliver.portal.document.PropValue>){}[0]
+final fun (dev.keliver.portal.document/PropValue.Arith).dev.keliver.portal.document/canonical(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/canonical|canonical@dev.keliver.portal.document.PropValue.Arith(){}[0]
+final fun (dev.keliver.portal.document/PropValue.Arith).dev.keliver.portal.document/mapOperandTree(kotlin/Function1<dev.keliver.portal.document/PropValue, dev.keliver.portal.document/PropValue>): dev.keliver.portal.document/PropValue.Arith // dev.keliver.portal.document/mapOperandTree|mapOperandTree@dev.keliver.portal.document.PropValue.Arith(kotlin.Function1<dev.keliver.portal.document.PropValue,dev.keliver.portal.document.PropValue>){}[0]
+final fun (dev.keliver.portal.document/PropValue.Arith).dev.keliver.portal.document/operandValues(): kotlin.collections/List<dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/operandValues|operandValues@dev.keliver.portal.document.PropValue.Arith(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Conditional).dev.keliver.portal.document/cond(): dev.keliver.portal/Cond // dev.keliver.portal.document/cond|cond@dev.keliver.portal.document.PropValue.Conditional(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Conditional).dev.keliver.portal.document/isExtended(): kotlin/Boolean // dev.keliver.portal.document/isExtended|isExtended@dev.keliver.portal.document.PropValue.Conditional(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Conditional).dev.keliver.portal.document/mapOperands(kotlin/Function1<dev.keliver.portal.document/PropValue, dev.keliver.portal.document/PropValue>): dev.keliver.portal.document/PropValue.Conditional // dev.keliver.portal.document/mapOperands|mapOperands@dev.keliver.portal.document.PropValue.Conditional(kotlin.Function1<dev.keliver.portal.document.PropValue,dev.keliver.portal.document.PropValue>){}[0]
 final fun (dev.keliver.portal.document/PropValue.Conditional).dev.keliver.portal.document/operands(): kotlin.collections/List<dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/operands|operands@dev.keliver.portal.document.PropValue.Conditional(){}[0]
+final fun (dev.keliver.portal.document/PropValue.IntDp).dev.keliver.portal.document/canonical(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/canonical|canonical@dev.keliver.portal.document.PropValue.IntDp(){}[0]
 final fun (dev.keliver.portal.document/PropValue.ListOf).dev.keliver.portal.document/canonical(): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/canonical|canonical@dev.keliver.portal.document.PropValue.ListOf(){}[0]
 final fun (dev.keliver.portal.document/PropValue.ListOf).dev.keliver.portal.document/resolved(): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/resolved|resolved@dev.keliver.portal.document.PropValue.ListOf(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Lit).dev.keliver.portal.document/toAny(): kotlin/Any? // dev.keliver.portal.document/toAny|toAny@dev.keliver.portal.document.PropValue.Lit(){}[0]
@@ -976,6 +1048,7 @@ final fun (dev.keliver.portal.document/PropValue.Template).dev.keliver.portal.do
 final fun (dev.keliver.portal.document/PropValue.Template).dev.keliver.portal.document/text(): kotlin/String // dev.keliver.portal.document/text|text@dev.keliver.portal.document.PropValue.Template(){}[0]
 final fun (dev.keliver.portal.document/PropValue.Token).dev.keliver.portal.document/toTreeValue(): dev.keliver.portal/Token // dev.keliver.portal.document/toTreeValue|toTreeValue@dev.keliver.portal.document.PropValue.Token(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/toWidgetTree(kotlin.collections/Map<kotlin/String, kotlin/Any?> = ..., kotlin/Boolean = ...): dev.keliver.portal/WidgetNode // dev.keliver.portal.document/toWidgetTree|toWidgetTree@dev.keliver.portal.document.UiDocument(kotlin.collections.Map<kotlin.String,kotlin.Any?>;kotlin.Boolean){}[0]
+final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/withoutArithmetic(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/withoutArithmetic|withoutArithmetic@dev.keliver.portal.document.UiDocument(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/withoutConditionals(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/withoutConditionals|withoutConditionals@dev.keliver.portal.document.UiDocument(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/withoutExtendedConditions(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/withoutExtendedConditions|withoutExtendedConditions@dev.keliver.portal.document.UiDocument(){}[0]
 final fun (dev.keliver.portal.document/UiDocument).dev.keliver.portal.document/withoutLists(): dev.keliver.portal.document/UiDocument // dev.keliver.portal.document/withoutLists|withoutLists@dev.keliver.portal.document.UiDocument(){}[0]
@@ -984,7 +1057,11 @@ final fun (dev.keliver.portal/Cond).dev.keliver.portal.document/toConditional(de
 final fun (dev.keliver.portal/Conditional).dev.keliver.portal.document/toPropValue(): dev.keliver.portal.document/PropValue.Conditional // dev.keliver.portal.document/toPropValue|toPropValue@dev.keliver.portal.Conditional(){}[0]
 final fun (dev.keliver.portal/Token).dev.keliver.portal.document/toPropValue(): dev.keliver.portal.document/PropValue.Token // dev.keliver.portal.document/toPropValue|toPropValue@dev.keliver.portal.Token(){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal.document/toDocNode(): dev.keliver.portal.document/DocNode.Widget // dev.keliver.portal.document/toDocNode|toDocNode@dev.keliver.portal.WidgetNode(){}[0]
+final fun dev.keliver.portal.document/arithFields(dev.keliver.portal.document/PropValue?): kotlin.collections/List<kotlin/String> // dev.keliver.portal.document/arithFields|arithFields(dev.keliver.portal.document.PropValue?){}[0]
+final fun dev.keliver.portal.document/arithOperandsOf(dev.keliver.portal.document/PropValue?): kotlin.collections/List<dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/arithOperandsOf|arithOperandsOf(dev.keliver.portal.document.PropValue?){}[0]
 final fun dev.keliver.portal.document/canonicalValue(dev.keliver.portal.document/PropValue): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/canonicalValue|canonicalValue(dev.keliver.portal.document.PropValue){}[0]
 final fun dev.keliver.portal.document/conditionNodeProps(dev.keliver.portal/Cond): kotlin.collections/Map<kotlin/String, dev.keliver.portal.document/PropValue> // dev.keliver.portal.document/conditionNodeProps|conditionNodeProps(dev.keliver.portal.Cond){}[0]
+final fun dev.keliver.portal.document/isArithmetic(dev.keliver.portal.document/PropValue?): kotlin/Boolean // dev.keliver.portal.document/isArithmetic|isArithmetic(dev.keliver.portal.document.PropValue?){}[0]
 final fun dev.keliver.portal.document/lit(kotlin/Any?): dev.keliver.portal.document/PropValue.Lit // dev.keliver.portal.document/lit|lit(kotlin.Any?){}[0]
+final fun dev.keliver.portal.document/staticIntValue(dev.keliver.portal.document/PropValue): kotlin/Int? // dev.keliver.portal.document/staticIntValue|staticIntValue(dev.keliver.portal.document.PropValue){}[0]
 final fun dev.keliver.portal.document/treeToPropValue(kotlin/Any?): dev.keliver.portal.document/PropValue // dev.keliver.portal.document/treeToPropValue|treeToPropValue(kotlin.Any?){}[0]
