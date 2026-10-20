@@ -1,6 +1,7 @@
 import dev.keliver.portal.ingest.CompiledAdapterGenerator
 import dev.keliver.portal.ingest.TokenTable
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -192,5 +193,23 @@ class CompiledAdaptersTest {
     val out = File(dir, "AppCompiled.kt")
     assertFalse(Files.isSymbolicLink(out.toPath()))
     assertTrue(out.readText().startsWith(CompiledAdapterGenerator.GENERATED_HEADER))
+  }
+
+  /**
+   * Round-3 nit: the exclusive temp file is created owner-only (0600), and the
+   * move kept that mode, so the generated source became unreadable to another
+   * user or a container build. A new file is 0644; a rewrite keeps the mode
+   * the file already had.
+   */
+  @Test fun theGeneratedFileIsReadableLikeAnyOtherSource() {
+    val repo = repoWith("PriceTag.kt" to badge)
+    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt")
+    assertNull(CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY))
+    assertEquals("rw-r--r--", PosixFilePermissions.toString(Files.getPosixFilePermissions(out.toPath())))
+    Files.setPosixFilePermissions(out.toPath(), PosixFilePermissions.fromString("rw-rw-r--"))
+    File(repo, "app/components/PriceTag.kt").writeText(badge.replace("label: String", "label: String, count: Int = 1"))
+    assertNull(CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY))
+    assertTrue("count" in out.readText(), "the file was rewritten")
+    assertEquals("rw-rw-r--", PosixFilePermissions.toString(Files.getPosixFilePermissions(out.toPath())))
   }
 }

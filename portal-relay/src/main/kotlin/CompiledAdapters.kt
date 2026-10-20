@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermissions
 
 /**
  * Compiled component preview (docs/COMPILED_COMPONENT_PREVIEW.md): writes the
@@ -110,6 +111,16 @@ object CompiledAdapters {
     val tmp = Files.createTempFile(out.parentFile.toPath(), ".${out.name}.", ".tmp")
     try {
       Files.write(tmp, text.toByteArray(Charsets.UTF_8))
+      // createTempFile is owner-only (0600) and the move keeps it: give the
+      // file the mode it already had, or an ordinary source file's 0644.
+      runCatching {
+        val mode = if (Files.isRegularFile(out.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+          Files.getPosixFilePermissions(out.toPath(), LinkOption.NOFOLLOW_LINKS)
+        } else {
+          PosixFilePermissions.fromString("rw-r--r--")
+        }
+        Files.setPosixFilePermissions(tmp, mode)
+      } // a file system without POSIX modes keeps its default
       try {
         Files.move(tmp, out.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
       } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
