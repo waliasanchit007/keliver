@@ -46,7 +46,14 @@
   Double/Long/template operand, a nullable or mismatched field, field-vs-field, a `var` or
   non-Boolean or shadowing local, a local used before its definition, as a value or reading another
   local stay RawCode (the component opaque) with a diagnostic naming why. `ParityCompound.kt` pins
-  compiled-vs-interpreted parity.
+  compiled-vs-interpreted parity. Every condition term, K3 single terms included, now fits its
+  field's declared type: a Boolean test on a field declared other than `Boolean` (or nullable) and
+  `isEmpty()`/`isBlank()` on one that has none are refused as ops (also when removing a Condition's
+  `test`) and read as code by ingest — before, `if (b.count)` with `count: Int` could be written.
+  Compatibility: on the device tree an extended condition is carried under `"condition"` (a
+  Condition node's at node level, without its condition props), so a device guest or per-app
+  editor that predates K6 renders the true branch / then-branch instead of deciding it by the
+  first term.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** string templates
   and lists with references are portal grammar (K4). `text = "Rating: ${b.rating}/${C.Max}"`,
   `"${b.count} items"`, `"$label: $count"` in a component body, and a component argument

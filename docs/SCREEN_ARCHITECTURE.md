@@ -793,9 +793,16 @@ fun SectionCard(content: @Composable () -> Unit) {
     absent = `&&`), all defaulted and left out of the JSON when default — K3
     JSON decodes to the identical value. A `Condition` node keeps its first
     term in `field`/`test`/`negate`/`operand` and term *i* ≥ 1 in
-    `field.i`/`test.i`/`negate.i`/`operand.i`, with `join`. The device tree's
-    `"cond"` gains `"operand"`, `"more"` and `"join"`; a K3 reader still
-    renders the true branch.
+    `field.i`/`test.i`/`negate.i`/`operand.i`, with `join`. On the device
+    tree an extended condition (an equality, or several terms) rides under
+    `"condition"` — same shape, plus `"operand"`, `"more"` and `"join"` —
+    instead of K3's `"cond"`, and an extended `Condition` node carries it in
+    a node-level `"condition"` with none of its condition props. A reader
+    that predates K6 (an installed device guest, an older per-app editor
+    reading component bodies) therefore renders a conditional value's TRUE
+    branch and a `Condition`'s then-branch, as a reader that predates
+    conditionals does — never a condition decided by its first term with
+    `eq` read as a Boolean test. A K3 condition is encoded as before.
   - *Preview.* Each term is decided on its own: a parameter by the instance's
     argument (re-pointed at the binding an argument is), a binding by its
     mock, an item field by its row — then the condition as a whole. Unknown
@@ -821,13 +828,27 @@ fun SectionCard(content: @Composable () -> Unit) {
     the K3 checks per term — a field the screen reads elsewhere as another
     type (an Int compared where it is bound to a text prop or tested for
     emptiness, a String compared where it is a Boolean, a Repeat's List, a
-    declared type the operand does not match). A `Condition`'s SHAPE — how
-    many terms, which is an equality, the join — is set by inserting the
-    node whole; single SetProps change only a field, a negation or an
-    operand (so no sequence of ops passes through a condition that could not
-    be written, and every inverse is valid too). An item field's type is not
-    in the contract: an equality the file's item type contradicts is refused
-    by the relay's write-back preflight (§7a) when the op is made.
+    declared type the operand does not match). Every term — K3 single
+    terms too — fits its field's DECLARED type: a Boolean test (or an
+    equality with a Boolean) reads a field the Bindings interface declares
+    `Boolean`, `isEmpty()` a `String`, `CharSequence`, collection or array,
+    `isBlank()` a `String` or `CharSequence`, never a nullable one — on a
+    set, an insert, and a removal of a `Condition` prop (removing `test`
+    turns `b.note.isNotBlank()` into `!b.note`); ingest reads such a term
+    as code (a component parameter declared nullable only after `p != null
+    &&`/`p == null ||` in the same condition, Kotlin's smart cast). Where
+    the document cannot read a field's type — an item field, a field
+    declared without a type, an unlisted field of an interface not read
+    whole — an equality keeps its operand's kind: changing `b.kind == "a"`
+    to compare with `1` is made in code, as K4 makes a template on such a
+    field. A `Condition`'s SHAPE — how many terms, which is an equality —
+    is set by inserting the node whole; single ops change a field, a
+    negation, an operand, and the join (SetProp `join` = `"or"`, RemoveProp
+    for `&&`, on two or more terms — as a conditional value's join changes
+    with its SetProp). So no sequence of ops passes through a condition
+    that could not be written, and every inverse is valid too. Anything
+    the document cannot see (an item type that contradicts a new equality)
+    is refused by the relay's write-back preflight (§7a) when the op is made.
   - *Editors.* The relay sends an equality or compound conditional value
     only to a client asking `GET /doc?…&extendedConditions=1` (this
     release's editor and MCP server); a K3 editor gets its true branch, as an
