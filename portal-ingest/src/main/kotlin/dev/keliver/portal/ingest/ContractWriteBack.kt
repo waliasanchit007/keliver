@@ -2,15 +2,23 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.exportKotlin
+import org.jetbrains.kotlin.com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
+import org.jetbrains.kotlin.psi.KtCatchClause
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtForExpression
+import org.jetbrains.kotlin.psi.KtFunctionLiteral
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
+import org.jetbrains.kotlin.psi.KtWhenExpression
 
 /**
  * P2b-a: contract write-back. An editor op that introduces a NEW bind or action
@@ -151,11 +159,20 @@ object ContractWriteBack {
     return "the screen would read $names, which this file neither declares nor reads yet, so the editor cannot tell whether $them: $why$redeclare"
   }
 
-  /** The names [file]'s screen function reads through its bindings parameter (`b.x`, `b.go()`, `b::go`). */
+  /**
+   * The names [file]'s screen function reads through its bindings parameter
+   * (`b.x`, `b.go()`, `b::go`). A `b` that names something else where it is
+   * read — a lambda's, local function's or loop's parameter, a destructured
+   * one, a local `val` declared before it in an enclosing block, a member or
+   * constructor property of a local class or object, a catch or `when`
+   * subject variable — reads nothing through the bindings (#135
+   * review: `forEach { b -> b.length }` vouched for `length`).
+   */
   internal fun membersRead(file: KtFile): Set<String> {
     val fn = screenFunction(file) ?: return emptySet()
     val param = fn.valueParameters.firstOrNull()?.name ?: return emptySet()
-    fun isParam(e: org.jetbrains.kotlin.psi.KtExpression?) = (e as? KtNameReferenceExpression)?.getReferencedName() == param
+    fun isParam(e: org.jetbrains.kotlin.psi.KtExpression?) =
+      e is KtNameReferenceExpression && e.getReferencedName() == param && !shadowed(e, param, fn)
     val out = LinkedHashSet<String>()
     fn.accept(object : KtTreeVisitorVoid() {
       override fun visitQualifiedExpression(expression: KtQualifiedExpression) {
@@ -176,6 +193,33 @@ object ContractWriteBack {
     return out
   }
 
+  /** Whether [name], read at [at] inside [fn], names a declaration closer than [fn]'s own parameter. */
+  private fun shadowed(at: PsiElement, name: String, fn: KtNamedFunction): Boolean {
+    fun declares(p: KtParameter) = p.name == name || p.destructuringDeclaration?.entries?.any { it.name == name } == true
+    fun declares(d: PsiElement): Boolean = when (d) {
+      is KtProperty -> d.name == name
+      is KtDestructuringDeclaration -> d.entries.any { it.name == name }
+      else -> false
+    }
+    var cur: PsiElement = at
+    while (cur !== fn) {
+      val parent = cur.parent ?: return false
+      val hides = when (parent) {
+        is KtFunctionLiteral -> parent.valueParameters.any(::declares)
+        is KtNamedFunction -> parent !== fn && parent.valueParameters.any(::declares)
+        is KtForExpression -> cur !== parent.loopRange && parent.loopParameter?.let(::declares) == true
+        is KtCatchClause -> parent.catchParameter?.let(::declares) == true
+        is KtWhenExpression -> cur !== parent.subjectExpression && parent.subjectVariable?.name == name
+        is KtBlockExpression -> parent.statements.takeWhile { it !== cur }.any { declares(it) }
+        is org.jetbrains.kotlin.psi.KtClassOrObject -> parent.declarations.any { declares(it) } || parent.primaryConstructorParameters.any(::declares)
+        else -> false
+      }
+      if (hides) return true
+      cur = parent
+    }
+    return false
+  }
+
   /** The names [cls] declares — properties and functions — with those of its supertypes declared in the same file ([decls]). */
   private fun declaredNames(cls: KtClass, decls: Map<String, KtClass>, seen: MutableSet<KtClass> = HashSet()): Set<String> {
     if (!seen.add(cls)) return emptySet()
@@ -183,7 +227,7 @@ object ContractWriteBack {
     cls.primaryConstructorParameters.filter { it.hasValOrVar() }.mapNotNullTo(out) { it.name }
     cls.declarations.filter { it is KtProperty || it is KtNamedFunction }.mapNotNullTo(out) { it.name }
     cls.superTypeListEntries.forEach { e ->
-      e.typeReference?.text?.substringBefore('<')?.trim()?.let(decls::get)?.let { out += declaredNames(it, decls, seen) }
+      sameFileClass(e.typeReference, decls)?.let { out += declaredNames(it, decls, seen) }
     }
     return out
   }
