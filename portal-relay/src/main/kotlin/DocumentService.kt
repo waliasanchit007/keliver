@@ -70,6 +70,17 @@ class DocumentService(
   @Volatile private var fileText: String? = null
 
   /**
+   * U37: the text the file was last READ as — never one the relay wrote (null
+   * = unknown). Every read but a re-ingest that changes nothing clears the
+   * undo and redo stacks, so a field or action this text reads through the
+   * bindings parameter is one the file vouched for across every step of
+   * them: write-back plans with it ([dev.keliver.portal.ingest.ScreenWriter.plan]'s
+   * `readText`), and undoing the delete of a screen's only read of an
+   * inherited field is written, not refused.
+   */
+  @Volatile private var readText: String? = null
+
+  /**
    * K3 last review round: what the last write-back of this screen did —
    * [outcome] `surgical` (in place), `export` (the whole file, which held
    * nothing the export drops), `created`, `refused` (NOT written: it would
@@ -311,7 +322,7 @@ class DocumentService(
     fun refusal(d: UiDocument, file: String?): String? = try {
       when (val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = file, doc = d, base = fileDoc, baseText = fileText, components = components, tokens = tokens,
-        fileName = tokenFileId, functionName = functionName, packageName = packageName,
+        fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
       )) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> plan.reason
         else -> null
@@ -472,6 +483,7 @@ class DocumentService(
     doc = newDoc
     fileDoc = newDoc
     fileText = text
+    readText = text
     lastWrittenText = null
     pendingWrite?.cancel(false)
     firstRefused = null
@@ -523,6 +535,7 @@ class DocumentService(
     if (next.root != doc.root || next.contract != doc.contract) {
       acceptExternal(next, "a component or design token it uses changed", text)
     } else {
+      // The same document: the stacks stay, and so does what the last read vouched for (U37).
       fileDoc = doc
       fileText = text
     }
@@ -592,13 +605,14 @@ class DocumentService(
    */
   private fun writeKotlin() {
     // One snapshot: what is merged, exported and recorded as the file's base is the same document.
-    val (doc, base, baseText) = synchronized(this) { Triple(this.doc, fileDoc, fileText) }
+    val (doc, base, texts) = synchronized(this) { Triple(this.doc, fileDoc, fileText to readText) }
+    val (baseText, readText) = texts
     val status = try {
       kotlinFile.parentFile.mkdirs()
       val onDisk = if (kotlinFile.exists()) kotlinFile.readText() else null
       val plan = dev.keliver.portal.ingest.ScreenWriter.plan(
         onDisk = onDisk, doc = doc, base = base, baseText = baseText, components = components(), tokens = tokens(),
-        fileName = tokenFileId, functionName = functionName, packageName = packageName,
+        fileName = tokenFileId, functionName = functionName, packageName = packageName, readText = readText,
       )
       when (plan) {
         is dev.keliver.portal.ingest.ScreenWriter.Refuse -> {
@@ -741,7 +755,7 @@ class DocumentService(
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = 0, nextHandle = next)
           return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
-            .also { it.fileDoc = doc; it.fileText = text } // the file IS this document
+            .also { it.fileDoc = doc; it.fileText = text; it.readText = text } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }

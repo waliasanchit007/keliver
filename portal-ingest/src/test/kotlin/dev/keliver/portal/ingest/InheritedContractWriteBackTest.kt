@@ -177,6 +177,24 @@ class InheritedContractWriteBackTest {
     assertTrue("`fresh`" in r.reason, r.reason)
   }
 
+  @Test fun aFieldTheTextLastReadReadsIsVouchedFor() {
+    // The relay read the file reading `b.title`, then wrote the delete of that read:
+    // the undo bringing it back is written (the relay passes the text it last read).
+    val read = screen("StyledText(text = b.title)\nStyledText(text = \"y\")", inheriting)
+    val now = screen("StyledText(text = \"y\")", inheriting)
+    val d = doc(now)
+    val target = insertText(d, PropValue.Bind("title"))
+    assertIs<ScreenWriter.Refuse>(plan(now, target, d))
+    val w = assertIs<ScreenWriter.Write>(
+      ScreenWriter.plan(
+        onDisk = now, doc = target, base = d, baseText = now,
+        fileName = fileName, functionName = "HomeScreen", packageName = "app.screens", readText = read,
+      ),
+    )
+    assertTrue("val title" !in w.text, w.text)
+    compiles(w.text, "BaseBindings.kt" to base)
+  }
+
   @Test fun aNewFieldOfAnInterfaceNotInTheFileIsRefused() {
     // The interface the screen takes is declared elsewhere: nothing can be declared here.
     val file = screen("StyledText(text = b.title)", "")

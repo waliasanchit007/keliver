@@ -173,8 +173,10 @@ class TemplateTypeReadingTest {
     val why = assertNotNull(contract.unlistedFieldsUnknown)
     assertTrue("`SBindings`" in why && "not declared in this file" in why, why)
     assertConsistent(src, "name", accepted = false)
-    // A plain binding is still written.
-    assertIs<ScreenWriter.Write>(writeBack(src, PropValue.Bind("name")))
+    // U37: a plain binding of a field the file does not read is refused (the editor cannot tell
+    // whether the interface declared elsewhere has it); one of a field the file reads is written.
+    assertIs<ScreenWriter.Refuse>(writeBack(src, PropValue.Bind("name")))
+    assertIs<ScreenWriter.Write>(writeBack(screen(stmt, rowStmt = "StyledText(text = b.name)", tail = ROW_INTERFACE), PropValue.Bind("name")))
   }
 
   @Test fun caseB_aFieldInheritedFromAnotherFile() {
@@ -184,7 +186,12 @@ class TemplateTypeReadingTest {
     assertConsistent(src, "title", accepted = false)
     // A field the interface declares in the file keeps its type.
     assertConsistent(src, "name", accepted = true)
-    assertIs<ScreenWriter.Write>(writeBack(src, PropValue.Bind("title")))
+    // U37: a plain binding of an inherited field the file does not read yet is refused (it may be
+    // inherited or new); one the file reads is written, and not declared again.
+    assertIs<ScreenWriter.Refuse>(writeBack(src, PropValue.Bind("title")))
+    val reads = screen(stmt, rowStmt = "StyledText(text = b.title)", tail = BINDINGS.replace("interface SBindings {", "interface SBindings : ExternalBase {") + "\n" + ROW_INTERFACE)
+    val written = assertIs<ScreenWriter.Write>(writeBack(reads, PropValue.Bind("title"))).text
+    assertTrue("val title" !in written, written)
   }
 
   @Test fun caseE_aNewFieldBesideASupertypeFromAnotherFile() {
