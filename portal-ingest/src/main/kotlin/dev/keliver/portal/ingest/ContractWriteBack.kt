@@ -11,7 +11,6 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtForExpression
-import org.jetbrains.kotlin.psi.KtFunctionLiteral
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtParameter
@@ -163,9 +162,10 @@ object ContractWriteBack {
    * The names [file]'s screen function reads through its bindings parameter
    * (`b.x`, `b.go()`, `b::go`). A `b` that names something else where it is
    * read — a lambda's, local function's or loop's parameter, a destructured
-   * one, a local `val` declared before it in an enclosing block, a member or
-   * constructor property of a local class or object, a catch or `when`
-   * subject variable — reads nothing through the bindings (#135
+   * one, a property accessor's or a constructor's parameter, a local `val`
+   * declared before it in an enclosing block, a catch or `when` subject
+   * variable — reads nothing (a local class's or object's member `b` does
+   * not: Kotlin resolves `b` to the function's parameter first) through the bindings (#135
    * review: `forEach { b -> b.length }` vouched for `length`).
    */
   internal fun membersRead(file: KtFile): Set<String> {
@@ -205,13 +205,18 @@ object ContractWriteBack {
     while (cur !== fn) {
       val parent = cur.parent ?: return false
       val hides = when (parent) {
-        is KtFunctionLiteral -> parent.valueParameters.any(::declares)
-        is KtNamedFunction -> parent !== fn && parent.valueParameters.any(::declares)
+        // Any function's parameters but the screen function's own: a lambda, a local or member
+        // function, a secondary constructor, a property accessor (`set(b)`).
+        is org.jetbrains.kotlin.psi.KtPropertyAccessor -> parent.parameter?.let(::declares) == true || parent.valueParameters.any(::declares)
+        is org.jetbrains.kotlin.psi.KtFunction -> parent !== fn && parent.valueParameters.any(::declares)
         is KtForExpression -> cur !== parent.loopRange && parent.loopParameter?.let(::declares) == true
         is KtCatchClause -> parent.catchParameter?.let(::declares) == true
         is KtWhenExpression -> cur !== parent.subjectExpression && parent.subjectVariable?.name == name
         is KtBlockExpression -> parent.statements.takeWhile { it !== cur }.any { declares(it) }
-        is org.jetbrains.kotlin.psi.KtClassOrObject -> parent.declarations.any { declares(it) } || parent.primaryConstructorParameters.any(::declares)
+        // A local class's constructor parameter (conservatively: anywhere in the class — it is in
+        // scope only in initializers). Not a member: Kotlin resolves `b` to the function's
+        // parameter before a member of the implicit receiver.
+        is org.jetbrains.kotlin.psi.KtClassOrObject -> parent.primaryConstructorParameters.any(::declares)
         else -> false
       }
       if (hides) return true
