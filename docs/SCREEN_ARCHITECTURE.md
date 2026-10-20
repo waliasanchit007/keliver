@@ -862,6 +862,161 @@ fun SectionCard(content: @Composable () -> Unit) {
     unchanged (it sees the first term; the document checks its edits). This
     release's editor shows an equality or compound condition read-only, as
     its source text, and edits each branch; the op keeps every term.
+- **Int arithmetic and Ints as Dps are grammar (D9, K7).** An Int computed
+  from Int operands, and an Int used where a Dp is taken, keep a component
+  transparent (and a screen editable):
+
+  ```kotlin
+  @Composable
+  fun Disc(size: Int, label: String, gap: Int = 8) {
+    val half = size / 2
+    Column {
+      StyledBox(cornerRadiusDp = half, widthDp = size, heightDp = size) {
+        StyledText(text = label, fontSize = size * 2 / 5)
+      }
+      Spacer(height = Dp(gap.toDouble()))
+    }
+  }
+  // in a screen
+  AsyncImage(url = b.url, widthDp = b.columns * 48 + 8)
+  Spacer(width = (b.gap + C.Gap).dp)
+  Disc(size = b.size * 2, label = "AB")
+  ```
+
+  - *What an expression is.* Operands combined with `+ - * / %` and
+    parentheses, read as Kotlin parses them (`*` `/` `%` over `+` `-`, left
+    associativity; parentheses only group). An operand is an Int literal in
+    decimal (`-3` too; never `-2147483648`, `3L`, `0x10` or `1_000` — the
+    first two are Longs in Kotlin source, the others are written out), an
+    Int design token (K2), or a binding of an Int: a screen field the
+    Bindings interface declares `Int` (or does not declare — the derived
+    contract types it `Int`), an item field inside its Repeat, a component
+    parameter declared `Int`. `/` and `%` divide only by a non-zero Int
+    LITERAL: Kotlin/JS (the device) and Kotlin/wasm (the preview) do not
+    fail alike on a zero divisor, so the portal never divides by a value it
+    cannot see. At least one operand is not a literal: `4 * 2` stays what it
+    was before K7 (not grammar — write `8`). A comment inside, a unary minus
+    on anything but a literal (`-size`; write `0 - size`), a call (`maxOf`,
+    `coerceIn`), a nullable or Long/Double/Float operand, `+` on Strings
+    (templates do that) keep the call RawCode (the component opaque) with a
+    diagnostic naming why.
+  - *Where it fits.* A widget's Int prop (`fontSize`, `cornerRadiusDp`, a
+    Color), a component's Int parameter, and a conditional value's branch on
+    one (`if (b.big) b.size - 4 else 12`). Never a modifier argument (they
+    take literals and tokens, no binding), a Margin side (it takes no
+    binding either), a template part, a list element or an equality operand.
+  - *Int → Dp.* `<Int>.dp` (`dev.keliver.ui.dp`) and `Dp(<Int>.toDouble())`,
+    each kept as the author spelled it, on a catalogued widget's Dp prop
+    (`Spacer(width/height)`), where `<Int>` is an expression or ONE Int
+    reference (`gap.dp`, `Dp(b.gap.toDouble())`, `C.Gap.dp`). A Dp literal
+    stays the Dp literal (`16.dp`). The operand must be KNOWN to be an Int:
+    `b.h.dp` compiles for a Double too, so a field whose type ingest cannot
+    read is not an Int as a Dp (it is an Int operand where the result is an
+    Int: `fontSize = b.x / 2` compiles only for an Int-like `x`). A Dp is
+    never negative: a negative value fails `Dp`'s own check on a device,
+    the preview draws 0, as for any Dp from a binding.
+  - *Semantics.* Kotlin's 32-bit Int arithmetic on every target — the
+    device's Kotlin/JS emulates it (`|0`, `Math.imul`), wasm and the JVM
+    have it: overflow wraps (`Int.MAX_VALUE + 1` is `Int.MIN_VALUE`), `/`
+    truncates toward zero (`-7 / 2` is `-3`), `%` takes the dividend's sign
+    (`-7 % 3` is `-1`), `Int.MIN_VALUE / -1` is `Int.MIN_VALUE` (no trap on
+    either target). The interpreter computes with Kotlin's own Int
+    operators. A compiled fixture (`ParityArith.kt`: every operator,
+    precedence, parentheses, negative literals and operands, overflow,
+    truncation, both Dp spellings) renders the same value tree as the
+    interpreted golden for arguments at the boundaries, on BOTH portal-render
+    targets — `jsBrowserTest` (the device's) and `wasmJsBrowserTest` (the
+    editor's) — and for screen bindings decided by their mocks
+    (`ArithParity`).
+  - *Derived Int locals (components only).* `val r = size / 2` (or
+    `val r: Int = …`), a top-level statement before its first use, reading
+    only parameters (never another local, never only literals: `val pad =
+    8` keeps the component opaque — write `8` where it is used), is INLINED
+    where it is read — as a value (`cornerRadiusDp = r`), as an operand, as
+    a Dp (`r.dp`) — exactly as K6 inlines a Boolean local; the body tree
+    never names it. K6's rules carry over (no `var`, no shadowing, no use
+    before the definition, no local reading a local). An Int local is never
+    a condition (`if (r == 2)`) or a template part.
+  - *Preview.* An operand reads its value: a token its value, a parameter
+    its instance's argument (its default, else the editor's sample, 0), a
+    binding its mock read as a decimal (`"3"` is 3, as an Int binding
+    renders), an item field its row's mock, an argument chosen by a
+    condition its chosen branch. The expression is UNKNOWN when any operand
+    is (unmocked, a mock that is not a decimal), and the prop then renders
+    as an unmocked binding does — the widget's default — never a guess. An
+    opaque component drawn compiled (#132) gets the computed Int.
+  - *On the wire.* `PropValue.Arith(op, left, right)` — `op` one of `+ - * /
+    %`, each operand a `Lit` i, an Int `Token`, a `Bind` or an `Arith` — and
+    `PropValue.IntDp(value, form)` (`form` absent = `x.dp`, `"Dp"` =
+    `Dp(x.toDouble())`). Both are stored CANONICAL: an expression whose
+    every operand is a literal is the `Lit` it computes (an `IntDp` of one,
+    the Dp `Lit`); operands are never folded (`size * (2 + 3)` reads back
+    as that tree). The device tree carries an expression's value under its
+    usual key (`"i"` / `"d"`) where it can be computed (every operand a
+    literal, a token or a mocked binding) plus `"arith"` / `"intDp"` (and
+    `"dpForm"`); where it cannot (an unmocked binding) the plain key is
+    left out — a device guest that predates K7 then renders the prop's
+    default, which is what this release renders for an unknown expression,
+    never a wrong number. The relay sends `PropValue.Arith`/`IntDp` only to a
+    client asking `GET /doc?…&arithmetic=1` (this release's editor and MCP
+    server). An editor that predates K7 is served each expression the
+    document can compute (literals and tokens) as its literal, and a prop
+    whose expression reads a binding — also through a conditional's branch
+    — LEFT OUT (it shows the prop's default). Its edits to other props leave
+    the expression in the document and the file; a prop it sets becomes what
+    it sets; a node it duplicates copies only what it was served.
+  - *Write-back.* A no-op is byte-identical (CRLF kept). An edit that keeps
+    the expression's shape (the same operators in the same tree, an `IntDp`
+    in the same spelling) rewrites only the changed operands — the author's
+    parentheses, spacing and every other operand keep their bytes; a
+    negative literal after a bare `-`/`+` is written ` -3` (`a- -3`, never
+    the decrement `a--3`). Another shape rewrites the argument alone,
+    canonically: the parentheses the tree needs (`a - (b - c)`,
+    `a * (b / c)`, and `a + (b + c)` kept as written). Replacing an `IntDp`
+    with a Dp literal keeps the author's Dp spelling. A token operand adds
+    its import, an `x.dp` adds `dev.keliver.ui.dp` (structural, from the
+    value).
+  - *Contract.* A screen field an operand reads is typed `Int` in the
+    derived contract (an item field, an `Int` member of the item type);
+    contract write-back declares a new one `val columns: Int`.
+  - *What an op may not create.* The document refuses: an `Arith` on a
+    catalogued prop that is not Int, on a modifier argument, as a template
+    part, a list element or an equality operand; an `IntDp` anywhere but a
+    catalogued widget's Dp prop (never a Margin side); an unknown operator
+    or Dp spelling; a literal operand that is not an Int or is
+    `Int.MIN_VALUE`; a token operand that is not an Int; `/` or `%` by
+    anything but a non-zero Int literal; a screen field the contract
+    declares other than `Int` (a Long, a String, `Int?`); a field the
+    screen reads elsewhere as another type — bound to a non-Int prop,
+    tested for emptiness, compared with a String or a Boolean, tested as a
+    Boolean, a Repeat's List, a String list's element — both ways round (a
+    condition placed on an operand's field is refused too); an item operand
+    outside a Repeat over its item (set, insert, move). Where the document
+    cannot read the field's type — an item field (the contract carries no
+    item types), a field declared without a type, an unlisted field of an
+    interface not read whole — an operand on it is placed only where the
+    value there before, or another use in the screen, already reads it as
+    an Int (an operand, or a binding on an Int prop, in the same item
+    scope; an inserted subtree never vouches for itself): otherwise make
+    the change in code, as K6 makes such an equality. The relay refuses an
+    `Arith` on a component parameter not declared `Int` (`Int?` takes one)
+    and any `IntDp` on a component, runs every token operand through the K2
+    gate (the server's value, re-read as an Int on undo/redo), and its
+    write-back preflight (§7a) refuses what the file would not read back.
+  - *Editors.* The editor shows an expression read-only as its source
+    (`b.size * 2 / 5`, `Dp(b.gap.toDouble())`), in a prop row or a
+    conditional's branch; **= value** replaces it with what it computes now
+    (else 0), **@** with a binding. Its shape is edited in code.
+  - *Not grammar (deliberately).* Long, Double and Float arithmetic; String
+    `+`; function calls; nullable operands; compound assignment;
+    arithmetic in a modifier argument or a Margin side (they take no
+    binding today); a division by a non-literal. `x.uppercase()` /
+    `x.lowercase()`: the two PREVIEW targets agree on a Unicode corpus
+    (`CaseMappingParityTest`, js and wasm — ß, ﬁ, the Turkish i, the Greek
+    final sigma, non-BMP letters), but the device guest is Kotlin/JS in
+    Zipline's QuickJS, whose case tables are its own and Unicode-version
+    dependent: a browser test proves nothing about it, so the form stays
+    outside the grammar (format the text in the presenter).
 - **componentsDir** (keliver.portal.json): defaults to a `components` sibling of
   `screensDir`; old configs stay valid.
 - **Scaffold:** `scripts/keliver-new-component.sh <Name>` for a leaf or add
