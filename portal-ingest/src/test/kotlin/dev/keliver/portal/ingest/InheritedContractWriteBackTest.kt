@@ -287,4 +287,30 @@ class InheritedContractWriteBackTest {
     val r = assertIs<ScreenWriter.Refuse>(plan(file, target, d))
     assertTrue("`size`" in r.reason && "declared in another file" in r.reason, r.reason)
   }
+
+  // ── #135 final review: an accessor's or a constructor's parameter shadows too; a member does not ──
+
+  @Test fun aSetterOrSecondaryConstructorParameterNamedLikeTheBindingsVouchesForNothing() {
+    val shadows = listOf(
+      "val o = object {\n  var v: String = \"\"\n    set(b) {\n      field = b\n      StyledText(text = b.length.toString())\n    }\n}",
+      "class K(val n: Int) {\n  constructor(b: String) : this(b.length) {\n    StyledText(text = b.length.toString())\n  }\n}",
+    )
+    for (code in shadows) {
+      val file = screen("StyledText(text = b.name)\n$code", inheriting)
+      compiles(file, "BaseBindings.kt" to base)
+      val d = doc(file)
+      val r = assertIs<ScreenWriter.Refuse>(plan(file, insertText(d, PropValue.Bind("length")), d), code)
+      assertTrue("`length`" in r.reason, r.reason)
+    }
+  }
+
+  @Test fun aLocalObjectsMemberNamedLikeTheBindingsDoesNotHideThem() {
+    // Kotlin resolves `b` in the member function to the screen's parameter, not the member: it reads `title`.
+    val code = "val o = object {\n  val b = 1\n  fun f() = b.title\n}\nStyledText(text = o.f())"
+    val file = screen("StyledText(text = b.name)\n$code", inheriting)
+    compiles(file, "BaseBindings.kt" to base)
+    val d = doc(file)
+    val w = assertIs<ScreenWriter.Write>(plan(file, insertText(d, PropValue.Bind("title")), d))
+    compiles(w.text, "BaseBindings.kt" to base)
+  }
 }
