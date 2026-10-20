@@ -11,6 +11,7 @@ import dev.keliver.material.compose.StyledText
 import dev.keliver.material.compose.padding
 import dev.keliver.material.modifier.SelectionTag
 import dev.keliver.material.testing.KeliverMaterialTester
+import dev.keliver.material.testing.ButtonValue
 import dev.keliver.material.testing.StyledBoxValue
 import dev.keliver.material.testing.StyledTextValue
 import dev.keliver.portal.Action
@@ -25,6 +26,9 @@ import dev.keliver.portal.render.fixture.ParityCompiledComponents
 import dev.keliver.portal.render.fixture.ParityOpaqueBadge
 import dev.keliver.portal.render.fixture.ParityOpaqueFrame
 import dev.keliver.portal.render.fixture.ParityOpaqueGap
+import dev.keliver.portal.render.fixture.ParityOpaqueMeter
+import dev.keliver.portal.render.fixture.`in`.ParityOpaqueKeywords
+import dev.keliver.portal.render.fixture.CompiledComponent as NamedCompiledComponent
 import dev.keliver.testing.WidgetValue
 import dev.keliver.testing.flatten
 import dev.keliver.ui.Margin
@@ -255,5 +259,88 @@ class CompiledComponentParityTest {
     val out = mutableListOf<Int>()
     v.modifier.forEach { if (it is SelectionTag) out += it.handle }
     return out
+  }
+
+  // ── review m8: decoding paths a mutation could break unnoticed ──
+
+  @Test
+  fun anUnmockedTextBindingPreviewsItsFieldPlaceholder() = runTest {
+    val texts = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(badge("label" to Bind("missing"), "count" to 0)) }
+    }.flatten().toList().filterIsInstance<StyledTextValue>().map { it.text }
+    assertTrue("{MISSING}" in texts, "$texts")
+  }
+
+  @Test
+  fun anIntArgumentForADoubleParameterIsWidened() = runTest {
+    val compiled = KeliverMaterialTester { setContentAndSnapshot { ParityOpaqueMeter(ratio = 1.0) } }
+    val interpreted = KeliverMaterialTester { setContentAndSnapshot { RenderNode(WidgetNode("ParityOpaqueMeter", mapOf("ratio" to 1))) } }
+    assertEquals(compiled, interpreted)
+  }
+
+  @Test
+  fun nullableScalarsSetAndOmittedMatchTheCompiledCall() = runTest {
+    val compiledSet = KeliverMaterialTester {
+      setContentAndSnapshot { ParityOpaqueMeter(ratio = 0.5, caption = "c", step = 3, shown = true) }
+    }
+    val interpretedSet = KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(WidgetNode("ParityOpaqueMeter", mapOf("ratio" to 0.5, "caption" to "c", "step" to 3, "shown" to true)))
+      }
+    }
+    assertEquals(compiledSet, interpretedSet)
+    val compiledOmitted = KeliverMaterialTester { setContentAndSnapshot { ParityOpaqueMeter(ratio = 0.5) } }
+    val interpretedOmitted = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(WidgetNode("ParityOpaqueMeter", mapOf("ratio" to 0.5, "caption" to null))) }
+    }
+    assertEquals(compiledOmitted, interpretedOmitted)
+  }
+
+  @Test
+  fun oneArgumentEventsFireTheInstancesActionsWithTheirValue() = runTest {
+    val fired = mutableListOf<String>()
+    PreviewBindings.actionSink = { name, arg -> fired += "$name:$arg" }
+    val buttons = KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(
+          WidgetNode(
+            "ParityOpaqueMeter",
+            mapOf("ratio" to 0.1, "step" to 4, "onPick" to Action("pick", "it"), "onStep" to Action("stepTo", "it")),
+          ),
+        )
+      }
+    }.flatten().toList().filterIsInstance<ButtonValue>()
+    buttons.forEach { it.onClick!!.invoke() }
+    assertEquals(listOf("pick:a", "stepTo:4"), fired)
+
+    // A nullable event the instance does not wire stays null: no "pick" button, as on a device.
+    val unwired = KeliverMaterialTester {
+      setContentAndSnapshot { RenderNode(WidgetNode("ParityOpaqueMeter", mapOf("ratio" to 0.1))) }
+    }.flatten().toList().filterIsInstance<ButtonValue>().map { it.text }
+    assertEquals(listOf("step"), unwired)
+  }
+
+  // ── review M1: generator edge cases compile AND render like the compiled call ──
+
+  @Test
+  fun keywordParametersAndAQualifiedComposableSlotMatchTheCompiledCall() = runTest {
+    val compiled = KeliverMaterialTester {
+      setContentAndSnapshot { ParityOpaqueKeywords(`in` = "abc", `object` = 3) { StyledText(text = "slot") } }
+    }
+    val interpreted = KeliverMaterialTester {
+      setContentAndSnapshot {
+        RenderNode(
+          WidgetNode("ParityOpaqueKeywords", mapOf("in" to "abc", "object" to 3), listOf(WidgetNode("StyledText", mapOf("text" to "slot")))),
+        )
+      }
+    }
+    assertEquals(compiled, interpreted)
+  }
+
+  @Test
+  fun aComponentNamedCompiledComponentMatchesTheCompiledCall() = runTest {
+    val compiled = KeliverMaterialTester { setContentAndSnapshot { NamedCompiledComponent(label = "abc") } }
+    val interpreted = KeliverMaterialTester { setContentAndSnapshot { RenderNode(WidgetNode("CompiledComponent", mapOf("label" to "abc"))) } }
+    assertEquals(compiled, interpreted)
   }
 }
