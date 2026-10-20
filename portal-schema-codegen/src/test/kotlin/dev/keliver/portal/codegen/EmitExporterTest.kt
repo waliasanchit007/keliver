@@ -76,6 +76,15 @@ class EmitExporterTest {
     assertContains(src, "\"Width\" -> if ((parent == \"Row\")) { parts += \"width(\" + fmtDp(node.props[\"mod.Width.width\"]) + \")\"; imports += listOf(\"dev.keliver.ui.Dp\") }")
   }
 
+  // K7: a widget's Dp prop records an Int-as-Dp value's imports (its token operands, `dp` or `Dp`); a modifier's does not hold one.
+  @Test fun aDpWidgetPropRecordsAnIntAsDpValuesImports() {
+    val spacer = box.copy(name = "Spacer", props = listOf(MappedProp("height", MappedKind.DP, required = false, defaultExpr = null)))
+    val src = emitExporter(listOf(spacer))
+    assertContains(src, "imports += listOf(\"dev.keliver.ui.Dp\"); imports.addTokenImport(node.props[\"height\"], \"Dp\")")
+    assertContains(src, "else if (v is IntDp) arithKotlin(v, ::bindRef)")
+    assertContains(src, "v is Arith -> arithKotlin(v, ::bindRef)")
+  }
+
   @Test fun marginWidgetPropIsPresentWhenAnySideIs() {
     val row = box.copy(name = "Row", props = listOf(MappedProp("margin", MappedKind.MARGIN, required = false, defaultExpr = "Margin.Zero")))
     val src = emitExporter(listOf(row))

@@ -12,6 +12,52 @@ public final class dev/keliver/portal/Action {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class dev/keliver/portal/Arith {
+	public fun <init> (Ldev/keliver/portal/ArithOp;Ljava/lang/Object;Ljava/lang/Object;)V
+	public final fun component1 ()Ldev/keliver/portal/ArithOp;
+	public final fun component2 ()Ljava/lang/Object;
+	public final fun component3 ()Ljava/lang/Object;
+	public final fun copy (Ldev/keliver/portal/ArithOp;Ljava/lang/Object;Ljava/lang/Object;)Ldev/keliver/portal/Arith;
+	public static synthetic fun copy$default (Ldev/keliver/portal/Arith;Ldev/keliver/portal/ArithOp;Ljava/lang/Object;Ljava/lang/Object;ILjava/lang/Object;)Ldev/keliver/portal/Arith;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLeft ()Ljava/lang/Object;
+	public final fun getOp ()Ldev/keliver/portal/ArithOp;
+	public final fun getRight ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class dev/keliver/portal/ArithOp : java/lang/Enum {
+	public static final field Companion Ldev/keliver/portal/ArithOp$Companion;
+	public static final field Div Ldev/keliver/portal/ArithOp;
+	public static final field Minus Ldev/keliver/portal/ArithOp;
+	public static final field Plus Ldev/keliver/portal/ArithOp;
+	public static final field Rem Ldev/keliver/portal/ArithOp;
+	public static final field Times Ldev/keliver/portal/ArithOp;
+	public final fun apply (II)Ljava/lang/Integer;
+	public final fun getDivides ()Z
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getPrecedence ()I
+	public final fun getSymbol ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Ldev/keliver/portal/ArithOp;
+	public static fun values ()[Ldev/keliver/portal/ArithOp;
+}
+
+public final class dev/keliver/portal/ArithOp$Companion {
+	public final fun fromSymbol (Ljava/lang/String;)Ldev/keliver/portal/ArithOp;
+}
+
+public final class dev/keliver/portal/ArithmeticKt {
+	public static final fun arithBinds (Ljava/lang/Object;)Ljava/util/List;
+	public static final fun arithKotlin (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/String;
+	public static final fun arithOperands (Ljava/lang/Object;)Ljava/util/List;
+	public static final fun arithValue (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Integer;
+	public static synthetic fun arithValue$default (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Integer;
+	public static final fun intDpValue (Ldev/keliver/portal/IntDp;Lkotlin/jvm/functions/Function1;)Ljava/lang/Double;
+	public static synthetic fun intDpValue$default (Ldev/keliver/portal/IntDp;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/lang/Double;
+	public static final fun mapArithOperands (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)Ljava/lang/Object;
+}
+
 public final class dev/keliver/portal/Bind {
 	public fun <init> (Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -319,6 +365,20 @@ public final class dev/keliver/portal/GeneratedExporterKt {
 	public static final fun getModifierImport ()Ljava/util/Map;
 	public static final fun getModifierSupportImports ()Ljava/util/Map;
 	public static final fun getSupportImports ()Ljava/util/Map;
+}
+
+public final class dev/keliver/portal/IntDp {
+	public fun <init> (Ljava/lang/Object;Z)V
+	public synthetic fun <init> (Ljava/lang/Object;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Z
+	public final fun copy (Ljava/lang/Object;Z)Ldev/keliver/portal/IntDp;
+	public static synthetic fun copy$default (Ldev/keliver/portal/IntDp;Ljava/lang/Object;ZILjava/lang/Object;)Ldev/keliver/portal/IntDp;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCtor ()Z
+	public final fun getValue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class dev/keliver/portal/ItemMocksKt {

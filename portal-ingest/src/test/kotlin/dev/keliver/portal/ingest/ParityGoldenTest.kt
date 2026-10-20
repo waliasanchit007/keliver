@@ -113,6 +113,17 @@ class ParityGoldenTest {
     assertGolden("parity-compound-body", compound.spec.body!!)
   }
 
+  /** K7: Int arithmetic and Ints used as Dps recognize transparently (the derived Int local inlined). */
+  @Test
+  fun arithmeticFixtureMatchesItsGolden() {
+    val text = source("ParityArith")
+    val tokens = TokenTable.scan(listOf("ParityArith.kt" to text))
+    val arith = Recognizer.recognizeComponent("ParityArith.kt", text, tokens = tokens)!!
+    assertTrue(arith.spec.transparent, arith.spec.diagnostic)
+    assertEquals("ParityArith", arith.spec.name)
+    assertGolden("parity-arith-body", arith.spec.body!!)
+  }
+
   /** K4: templates and lists with references recognize transparently. */
   @Test
   fun templateFixtureMatchesItsGolden() {

@@ -24,6 +24,33 @@
   POST only.
 
 ### Added
+- **portal (core, document, ingest, exporter, render, relay, editor, mcp):** Int arithmetic and Ints
+  used as Dps are portal grammar (K7). `cornerRadiusDp = size / 2`, `fontSize = b.size * 2 / 5`,
+  `widthDp = b.columns * 48 + 8`, `Spacer(height = Dp(gap.toDouble()))` and `(b.gap + 4).dp` are
+  recognized where source takes an Int (a widget's Int prop, a component's Int parameter, a
+  conditional's branch on one) or a Dp (a catalogued widget's Dp prop): operands are decimal Int
+  literals, Int design tokens and Int bindings/parameters/item fields, under `+ - * / %` and
+  parentheses, with Kotlin's precedence and 32-bit semantics; `/` and `%` divide only by a non-zero
+  Int literal (Kotlin/JS and wasm do not fail alike on zero). A component body's derived Int local
+  (`val half = size / 2`) is inlined where it is read. New `Arith`/`ArithOp`/`IntDp` (portal-core)
+  and `PropValue.Arith`/`PropValue.IntDp` (portal-document), stored canonical (an expression of
+  literals is its literal). Write-back rewrites only the changed operands (the author's parentheses
+  and Dp spelling kept); a no-op is byte-identical. The preview computes each expression (an
+  unmocked operand renders the prop's default). `ParityArith.kt` pins compiled-vs-interpreted parity
+  for every operator, precedence, negative operands, overflow and both Dp spellings on BOTH
+  portal-render targets (js, the device's, and wasm). Expressions of literals only, division by a
+  non-literal, unary minus on a reference, calls, Long/Double/Float/nullable operands, modifier
+  arguments and Margin sides stay RawCode with a diagnostic. `x.uppercase()`/`lowercase()` were
+  evaluated and are NOT grammar: the preview targets agree on a Unicode corpus, but the device runs
+  Kotlin/JS in QuickJS, whose case tables a browser test cannot vouch for.
+  **Compatibility:** the relay sends the new values only to a client asking `/doc?…&arithmetic=1`
+  (this release's editor and MCP server). An older editor is served the literal an expression
+  computes from literals and tokens, and no prop where it reads a binding; its edits to other props
+  keep the expression. The device tree carries a computable expression's value under `"i"`/`"d"`
+  plus `"arith"`/`"intDp"`, and no plain value otherwise, so an installed guest renders the value
+  or the prop's default, never a wrong number. `PropValue` gains two subtypes: an exhaustive `when`
+  over it must handle them. A K6 diagnostic changed: `val active: Int = 1` now says it is not a
+  derived Int local (a literal) instead of "not a Boolean".
 - **portal (core, document, ingest, exporter, render, relay, editor, mcp):** equality conditions,
   compound conditions and derived Boolean locals are portal grammar (K6).
   `colorArgb = if (b.kind == "card" && b.open) C.Ink else C.Muted`, `if (b.tier == C.Top || b.flagged)

@@ -607,6 +607,10 @@ internal object FragmentImports {
     is PropValue.Token -> v.import?.let { setOf(it) }.orEmpty()
     is PropValue.Template -> v.parts.flatMap(::token).toSet() // K4: each token part / element
     is PropValue.ListOf -> v.items.flatMap(::token).toSet()
+    // K7: each token operand; an Int used as a Dp also needs its spelling's `dp` / `Dp`.
+    is PropValue.Arith -> dev.keliver.portal.document.arithOperandsOf(v).flatMap(::token).toSet()
+    is PropValue.IntDp -> dev.keliver.portal.document.arithOperandsOf(v).flatMap(::token).toSet() +
+      (if (v.form == null) "$UI.dp" else "$UI.Dp")
     else -> emptySet()
   }
 }

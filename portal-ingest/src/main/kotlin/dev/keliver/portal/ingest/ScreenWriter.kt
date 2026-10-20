@@ -7,6 +7,7 @@ import dev.keliver.portal.document.DocNode
 import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.lit
+import dev.keliver.portal.document.mapOperandTree
 import dev.keliver.portal.document.mapOperands
 import dev.keliver.portal.document.toWidgetTree
 
@@ -184,6 +185,9 @@ object ScreenWriter {
       is PropValue.Conditional -> v.mapOperands(::value).copy(whenTrue = v.whenTrue?.let(::value), whenFalse = v.whenFalse?.let(::value))
       is PropValue.Template -> v.copy(parts = v.parts.map(::value)) // K4: token parts / elements too
       is PropValue.ListOf -> v.copy(items = v.items.map(::value))
+      // K7: an arithmetic value's token operands (the tree's shape kept).
+      is PropValue.Arith -> v.mapOperandTree(::value)
+      is PropValue.IntDp -> v.copy(value = if (v.value is PropValue.Arith) (v.value as PropValue.Arith).mapOperandTree(::value) else value(v.value))
       else -> v
     }
     fun node(n: DocNode): DocNode = when (n) {

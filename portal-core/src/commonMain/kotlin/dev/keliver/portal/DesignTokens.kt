@@ -93,5 +93,12 @@ internal fun MutableSet<String>.addTokenImport(v: Any?, sourceType: String?) {
     v.items.forEach { addTokenImport(it, listElementType(v.kind)) }
     return
   }
+  // K7: an arithmetic value writes each Int token operand as its reference; `x.dp` needs `dp`
+  // (`Dp(x.toDouble())` needs `Dp`, which a Dp prop always imports).
+  if (v is Arith || v is IntDp) {
+    arithOperands(v).forEach { o -> if (o is Token && o.value is Int) o.importFq?.let { add(it) } }
+    if (v is IntDp) add(if (v.ctor) "dev.keliver.ui.Dp" else "dev.keliver.ui.dp")
+    return
+  }
   if (v is Token && tokenKindOf(v.value) == sourceType) v.importFq?.let { add(it) }
 }

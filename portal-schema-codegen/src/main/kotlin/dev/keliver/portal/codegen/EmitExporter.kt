@@ -29,8 +29,11 @@ private fun presenceExpr(key: String, kind: MappedKind): String =
  * [kind] at wire key [key] needs (structural — from the spec, never from the
  * text). Null when the kind needs none.
  */
-private fun importStmt(kind: MappedKind, key: String): String? = when {
+private fun importStmt(kind: MappedKind, key: String, widgetProp: Boolean = false): String? = when {
   kind == MappedKind.MARGIN -> "imports += marginImports(node, \"$key\")"
+  // K7: a widget's Dp prop also records an Int-as-Dp value's token operands and its `dp` / `Dp`
+  // spelling (a modifier argument never holds one).
+  kind == MappedKind.DP && widgetProp -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }}); imports.addTokenImport(node.props[\"$key\"], \"Dp\")"
   kindImports(kind).isNotEmpty() -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }})"
   // K2: a design-token reference written for this literal needs its declaring object imported.
   tokenSourceType(kind) != null -> "imports.addTokenImport(node.props[\"$key\"], \"${tokenSourceType(kind)}\")"
@@ -160,6 +163,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      if (v is ListOf) v.items.filterIsInstance<Bind>().filter { it.field.startsWith("${'$'}itemVar.") }.forEach { r ->
     |        iface[r.field.substringAfter('.')] = listElementType(v.kind) ?: "String"
     |      }
+    |      // K7: an arithmetic value's item operands are Int fields.
+    |      arithBinds(v).filter { it.field.startsWith("${'$'}itemVar.") }.forEach { r -> iface[r.field.substringAfter('.')] = "Int" }
     |      if (v is Bind && v.field.startsWith("${'$'}itemVar.")) {
     |        val sub = v.field.substringAfter('.')
     |        iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -216,8 +221,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |  v is Token && v.value is String -> v.ref
     |  else -> kotlinStringLiteral(tokenValue(v).toString())
     |}
+    |// K7: an arithmetic value writes its operands with the parentheses its tree needs.
     |private fun fmtInt(v: Any?): String = when {
     |  v is Conditional -> fmtConditional(v, ::fmtInt)
+    |  v is Arith -> arithKotlin(v, ::bindRef)
     |  v is Bind -> bindRef(v.field)
     |  v is Token && v.value is Int -> v.ref
     |  else -> ((tokenValue(v) as? Int) ?: 0).toString()
@@ -237,8 +244,10 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |private fun fmtFloat(v: Any?): String =
     |  if (v is Conditional) fmtConditional(v, ::fmtFloat) else "${'$'}{fmtDouble(tokenValue(v))}f"
     |// Dp is non-negative (its init requires it): clamp, as the document and the preview do.
+    |// K7: an Int used as a Dp keeps its spelling (`x.dp` or `Dp(x.toDouble())`).
     |private fun fmtDp(v: Any?): String =
     |  if (v is Conditional) fmtConditional(v, ::fmtDp)
+    |  else if (v is IntDp) arithKotlin(v, ::bindRef)
     |  else if (v is Bind) "Dp(${'$'}{bindRef(v.field)})"
     |  else tokenValue(v).let { x -> "Dp(${'$'}{kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
     |// K4: each element of a list in its kind — a literal, a token's reference, a binding.
@@ -413,7 +422,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     }
     for (p in w.props) {
       val emit = "sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")" +
-        (importStmt(p.kind, p.name)?.let { "; $it" } ?: "")
+        (importStmt(p.kind, p.name, widgetProp = true)?.let { "; $it" } ?: "")
       if (p.required) {
         appendLine("      $emit")
       } else {
@@ -464,6 +473,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
     |      // K4: a template argument writes each token part as its reference.
     |      if (v is Template) imports.addTokenImport(v, "String")
+    |      // K7: so does an arithmetic argument, each token operand.
+    |      if (v is Arith) imports.addTokenImport(v, "Int")
     |      // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
     |      val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
     |      fun render(x: Any?, branch: Boolean): String = when (x) {
@@ -472,6 +483,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |        is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
     |        is Bind -> bindRef(x.field)
     |        is Template -> fmtTemplate(x, ::bindRef)
+    |        is Arith -> arithKotlin(x, ::bindRef)
     |        is String -> kotlinStringLiteral(x)
     |        is Boolean -> x.toString()
     |        is Int -> x.toString()
@@ -483,8 +495,8 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     |      fun branchValue(x: Any?): Any? =
     |        if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
     |          imports.addTokenImport(x, tokenKindOf(x.value)); x
-    |        } else if (x is Template) {
-    |          imports.addTokenImport(x, "String"); x
+    |        } else if (x is Template || x is Arith) {
+    |          imports.addTokenImport(x, if (x is Arith) "Int" else "String"); x
     |        } else {
     |          tokenValue(x)
     |        }

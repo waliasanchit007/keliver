@@ -91,6 +91,7 @@ object DeclarationScope {
       is PropValue.Conditional -> v.docFields().any(::field) || value(v.whenTrue) || value(v.whenFalse)
       is PropValue.Template -> v.parts.any(::value) // K4: an item reference in a template / a list
       is PropValue.ListOf -> v.items.any(::value)
+      is PropValue.Arith, is PropValue.IntDp -> dev.keliver.portal.document.arithOperandsOf(v).any(::value) // K7: an item operand
       else -> false
     }
     return when (n) {
@@ -141,6 +142,7 @@ object DeclarationScope {
     is PropValue.Conditional -> refMentions(v.whenTrue, word) || refMentions(v.whenFalse, word) || v.operands().any { refMentions(it, word) }
     is PropValue.Template -> v.parts.any { refMentions(it, word) }
     is PropValue.ListOf -> v.items.any { refMentions(it, word) }
+    is PropValue.Arith, is PropValue.IntDp -> dev.keliver.portal.document.arithOperandsOf(v).any { refMentions(it, word) } // K7
     else -> false
   }
 

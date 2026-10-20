@@ -96,6 +96,10 @@ public fun collectContract(tree: WidgetNode, components: ComponentRegistry = Emp
           if ('.' !in value.field && value.field !in fields) fields[value.field] = k
         }
         is Template -> referencedBinds(value).forEach { b -> if ('.' !in b.field) templateFields += b.field }
+        // K7: an arithmetic operand is an Int field (an Int used as a Dp too).
+        is Arith, is IntDp -> arithBinds(value).forEach { b ->
+          if ('.' !in b.field && b.field !in fields) fields[b.field] = PropKind.Int
+        }
         // K4: a list element bound to a field is one element of the list's kind.
         is ListOf -> value.items.filterIsInstance<Bind>().forEach { b ->
           val k = if (value.kind == "ls") PropKind.Text else PropKind.Int
@@ -150,7 +154,8 @@ public fun collectPreviewBindingKeys(tree: WidgetNode): Set<String> {
       if (v is Conditional) v.cond.terms.map { Bind(it.field) } + listOf(v.whenTrue, v.whenFalse) else listOf(v)
     }
     // K4: a template's and a list's references read their fields too.
-    (values.filterIsInstance<Bind>() + values.flatMap(::referencedBinds)).forEach { bind ->
+    // K7: and an arithmetic value's operands.
+    (values.filterIsInstance<Bind>() + values.flatMap(::referencedBinds) + values.flatMap(::arithBinds)).forEach { bind ->
       val (items, item) = scope ?: ("" to "")
       if (items.isNotEmpty() && bind.field.startsWith("$item.")) {
         keys += "$items.${bind.field}"

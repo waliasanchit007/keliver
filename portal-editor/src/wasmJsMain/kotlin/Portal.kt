@@ -442,6 +442,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   // K3: `conditionals=1` — and PropValue.Conditional (an older one is served the true branch).
   // K4: `templates=1&lists=1` — and PropValue.Template / PropValue.ListOf (else text / a resolved list).
   // K6: `extendedConditions=1` — and equality / compound conditionals (a K3 editor is served the true branch).
+  // K7: `arithmetic=1` — and PropValue.Arith / PropValue.IntDp (an older editor gets the computed literal, or no prop).
   xhr.open("GET", "$SERVER/doc?project=$currentProject&screen=$currentScreen&$DOC_FEATURES")
   xhr.addEventListener("load", { _ ->
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
@@ -1782,6 +1783,13 @@ private fun propRowInner(
     return conditionalRow(nodeId, nodeType, key, label, kind, c) { op, refresh, done -> sendOps(listOf(op), refreshPanels = refresh, onResult = done); renderBindings() }
   }
 
+  // K7: an arithmetic value — read-only source; replaced whole by a value, or (@) a binding.
+  if (isArithmeticValue(props[key])) {
+    rowEl.appendChild(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
+    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
+    return rowEl
+  }
+
   // K4: a template — its text with {references}; an edit is validated before it is sent.
   (props[key] as? Template)?.let { t -> return templateRow(rowEl, nodeId, key, t, picker) }
   // K4: an Int or String list — its elements, each a literal, a ◆token or an @binding.
@@ -1903,7 +1911,7 @@ private fun propRowInner(
 }
 
 /** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
-private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1"
+private const val DOC_FEATURES = "tokens=1&conditionals=1&extendedConditions=1&templates=1&lists=1&arithmetic=1"
 
 /** K4: a template prop row — the template's text, and ◆ to insert a design token. */
 private fun templateRow(rowEl: HTMLElement, nodeId: Int, key: String, t: Template, picker: HTMLElement): HTMLElement {

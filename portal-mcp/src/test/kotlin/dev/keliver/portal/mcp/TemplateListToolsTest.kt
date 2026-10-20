@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class TemplateListToolsTest {
   @Test fun theOpSchemaDescribesTemplatesAndLists() {
     val catalog = Tools.registry.single { it.name == "get_catalog" }.call(JsonObject(emptyMap())).toString()
-    assertTrue("PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf>" in catalog, catalog)
+    assertTrue("PropValue.<Lit|Bind|Action|Token|Conditional|Template|ListOf|" in catalog, catalog)
     assertTrue("Template = {parts}" in catalog, catalog)
     assertTrue("ListOf = {tag, items}" in catalog, catalog)
     assertTrue("unlistedFieldsUnknown" in catalog, catalog)

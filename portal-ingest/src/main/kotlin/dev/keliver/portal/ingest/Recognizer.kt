@@ -403,6 +403,12 @@ object Recognizer {
     private val locals = LinkedHashMap<String, Cond>()
     private val pendingLocals = LinkedHashSet<String>()
 
+    /** K7: the derived Int locals of a component body read so far (name → the expression each stands for). */
+    private val intLocals = LinkedHashMap<String, PropValue>()
+
+    /** K7: why the last arithmetic value read was not grammar — the argument's RawCode reason. */
+    private var arithWhy: String? = null
+
     /** K6: a condition in this body's context — null when it is not grammar ([condWhy] says why). */
     private fun cond(text: String, itemScope: Set<String>): Cond? =
       when (val r = reader().read(text, itemScope)) {
@@ -457,12 +463,20 @@ object Recognizer {
         p.hasDelegate() -> "$shown is delegated; a derived local is `val $name = <condition>`"
         p.modifierList != null -> "$shown has modifiers or annotations; a derived local is `val $name = <condition>`"
         name in c.valueParams || name in c.eventParams || name in c.slotParams -> "$shown shadows the parameter `$name`"
-        name in locals -> "$shown declares `$name` twice"
-        p.typeReference != null && plainType(p.typeReference!!.text) != "Boolean" -> "$shown is typed ${p.typeReference!!.text}, not a Boolean condition"
+        name in locals || name in intLocals -> "$shown declares `$name` twice"
+        p.typeReference != null && plainType(p.typeReference!!.text) !in setOf("Boolean", "Int") ->
+          "$shown is typed ${p.typeReference!!.text}, not a Boolean condition or (K7) an Int expression"
         p.initializer == null -> "$shown has no initializer"
-        else -> when (val r = reader(readOnly = locals.keys.toSet(), known = emptyMap()).read(p.initializer!!.text)) {
+        // K7: `val r = size / 2` (or `val r: Int = …`) — an Int expression over parameters.
+        p.typeReference != null && plainType(p.typeReference!!.text) == "Int" ->
+          intLocal(p.initializer!!).let { (v, why) -> if (v != null) null.also { intLocals[name] = v } else "$shown is not a derived Int local: $why" }
+        else -> when (val r = reader(readOnly = (locals.keys + intLocals.keys).toSet(), known = emptyMap()).read(p.initializer!!.text)) {
           is CondRead.Ok -> null.also { locals[name] = r.cond }
-          is CondRead.No -> "$shown is not a derived Boolean local: ${r.why}"
+          is CondRead.No -> if (p.typeReference != null) "$shown is not a derived Boolean local: ${r.why}"
+          else intLocal(p.initializer!!).let { (v, why) ->
+            if (v != null) null.also { intLocals[name] = v }
+            else "$shown is not a derived local: as a Boolean condition, ${r.why}; as an Int expression, $why"
+          }
         }
       }
     }
@@ -539,9 +553,10 @@ object Recognizer {
         val ve = arg.getArgumentExpression() ?: return raw(expr, "`$type(…)` has an empty argument `$name`")
         templateWhy = null
         condWhy = null
+        arithWhy = null
         fun offending() = raw(
           expr,
-          (templateWhy ?: condWhy ?: localValueWhy(ve.text))?.let { "`$type(…)` argument `$name`: $it" }
+          (templateWhy ?: condWhy ?: arithWhy ?: localValueWhy(ve.text))?.let { "`$type(…)` argument `$name`: $it" }
             ?: "`$type(…)` argument `$name = ${ve.text.oneLine()}` is outside the portal grammar",
         )
         if (name == "modifier") {
@@ -578,6 +593,7 @@ object Recognizer {
           ?: templateArg(type, name, ve, itemScope)
           ?: listArg(type, name, ve, itemScope)
           ?: conditionalArg(type, name, ve, itemScope)
+          ?: arithArg(type, name, ve, itemScope)
           ?: return offending()
         props[name] = value
       }
@@ -716,7 +732,7 @@ object Recognizer {
         if (x is KtIfExpression || x is KtBlockExpression) return false to null
         if (x.text.trim() == "null") return true to null
         val v = parseValue(x, ctx, itemScope, componentNames) ?: tokenArg(type, name, x.text)
-          ?: templateArg(type, name, x, itemScope) ?: return false to null
+          ?: templateArg(type, name, x, itemScope) ?: arithArg(type, name, x, itemScope) ?: return false to null
         return true to v
       }
       val (okT, whenTrue) = branch(ifExpr.then)
@@ -726,10 +742,93 @@ object Recognizer {
       return cond.toConditional(whenTrue, whenFalse)
     }
 
+    /**
+     * K7: an arithmetic value of [type]'s [name] — an Int expression where
+     * source takes an Int (a widget's Int prop, a component's Int
+     * parameter), a derived Int local read whole, or an Int used as a Dp on
+     * a catalogued widget's Dp prop. Null when it is none ([arithWhy] says
+     * why, when it is arithmetic outside the grammar).
+     */
+    private fun arithArg(type: String, name: String, ve: KtExpression, itemScope: Set<String>): PropValue? {
+      val read = when (propSourceType(type, name, components)) {
+        "Int" -> {
+          if (ctx is NameCtx.Component) intLocals[ve.text.trim()]?.let { return it }
+          ArithSyntax.readInt(ve, operands(itemScope, dp = false))
+        }
+        "Dp" -> if (widgetSpec(type) != null) ArithSyntax.readDp(ve, operands(itemScope, dp = true)) else return null
+        else -> return null
+      }
+      return when (read) {
+        is ArithRead.Ok -> read.value
+        is ArithRead.No -> null.also { arithWhy = read.why }
+        ArithRead.NotArith -> null
+      }
+    }
+
+    /**
+     * K7: an operand of an arithmetic value in this body — a binding of an
+     * Int field (a screen field the Bindings interface declares `Int`, or
+     * does not declare: the contract types it; an item field; a component
+     * parameter declared `Int`), an Int design token, or (a component) a
+     * derived Int local, inlined. A type ingest cannot read is accepted where
+     * the expression is an Int (`fontSize = b.x / 2` compiles only for an
+     * Int-like `x`) but not as a Dp (`b.x.dp` compiles for a Double too).
+     */
+    private fun operands(
+      itemScope: Set<String>,
+      dp: Boolean,
+      readOnly: Set<String> = emptySet(),
+      known: Map<String, PropValue> = intLocals,
+    ): ArithSyntax.Operands = ArithSyntax.Operands { e ->
+      val t = e.text.trim()
+      val shown = t.oneLine()
+      fun no(why: String) = ArithSyntax.Operand(null, why)
+      if (ctx is NameCtx.Component && t !in itemScope) {
+        known[t]?.let { return@Operands ArithSyntax.Operand(it, null) }
+        if (t in readOnly) return@Operands no("it reads the local `$t`: a derived local reads only parameters (locals stay flat)")
+        if (t in pendingLocals) return@Operands no("`$t` is used before its definition (its `val $t = …` comes after this use)")
+        if (t in locals) return@Operands no("`$t` is a derived Boolean local, not an Int")
+      }
+      when (val v = parseValue(e, ctx, itemScope, componentNames)) {
+        is PropValue.Bind -> {
+          val declared = declaredType(v)
+          val unreadable = declared == UNKNOWN_TYPE || (declared == null && '.' in v.field)
+          when {
+            unreadable && dp -> no("the type of `$shown` is not readable here (" +
+              (screenUnknownWhy(t) ?: "its type is not declared where ingest reads it") + "): an Int used as a Dp reads only a field declared Int")
+            unreadable || declared == null -> ArithSyntax.Operand(v, null)
+            plainType(declared) == "Int" -> ArithSyntax.Operand(v, null)
+            else -> no("`$shown` is declared $declared, not an Int (only Int arithmetic is grammar: Kotlin computes a Long, a Double or a Float otherwise, and a nullable value does not compute)")
+          }
+        }
+        null -> tokens.lookup(t)?.let { tok ->
+          if (tok.value.tag == "i") ArithSyntax.Operand(tok, null)
+          else no("design token ${tok.ref} is not an Int (an operand is an Int)")
+        } ?: no("`$shown` is not an Int operand (an Int literal, an Int binding or parameter, or an Int design token; a call or any other expression is not grammar)")
+        else -> no("`$shown` is not an Int operand")
+      }
+    }
+
+    /** K7: a derived Int local's expression — an Int expression over parameters, or one Int parameter — or why not. */
+    private fun intLocal(init: KtExpression): Pair<PropValue?, String?> {
+      val ops = operands(emptySet(), dp = false, readOnly = (locals.keys + intLocals.keys).toSet(), known = emptyMap())
+      return when (val r = ArithSyntax.readInt(init, ops)) {
+        is ArithRead.Ok -> r.value to null
+        is ArithRead.No -> null to r.why
+        ArithRead.NotArith -> if (ArithSyntax.intLiteral(init) != null) {
+          null to "a derived Int local reads a parameter (`${init.text.oneLine()}` is a literal: write it where it is used)"
+        } else {
+          val o = ops.read(init)
+          (o.value as? PropValue.Bind)?.let { it to null } ?: (null to (o.why ?: "`${init.text.oneLine()}` is not an Int expression"))
+        }
+      }
+    }
+
     /** K6: why a derived local (`active`, `!active`) is not an argument's value by itself. */
     private fun localValueWhy(text: String): String? {
       val n = text.trim().removePrefix("!").trim()
       if (n !in locals && n !in pendingLocals) return null
+      if (n in intLocals) return null
       return "a derived local is read only in a condition (`if ($n) A else B`, or `if ($n) { … }`), not as a value"
     }
 

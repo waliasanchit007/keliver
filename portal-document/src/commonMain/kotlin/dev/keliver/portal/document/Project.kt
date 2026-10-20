@@ -1,11 +1,14 @@
 package dev.keliver.portal.document
 
 import dev.keliver.portal.Action
+import dev.keliver.portal.Arith
+import dev.keliver.portal.ArithOp
 import dev.keliver.portal.Bind
 import dev.keliver.portal.Cond
 import dev.keliver.portal.CondJoin
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
+import dev.keliver.portal.IntDp
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
 import dev.keliver.portal.Token
@@ -25,6 +28,8 @@ import dev.keliver.portal.isConditionKey
  * [Conditional] whose branches are projected the same way. A template or a
  * list with references (K4) becomes a V1 [Template] / [ListOf] whose parts
  * are projected the same way (a literal text segment is a plain String).
+ * An arithmetic value or an Int used as a Dp (K7) becomes a V1 [Arith] /
+ * [IntDp] whose operands are projected the same way.
  */
 public fun UiDocument.toWidgetTree(
   mocks: Map<String, Any?> = emptyMap(),
@@ -45,7 +50,8 @@ private fun nodeToTree(n: DocNode, mocks: Map<String, Any?>, handleIds: Boolean)
       n.props.forEach { (name, v) -> put(name, v.toTreeValue(mocks)) }
       n.modifiers.forEach { (name, v) ->
         when (v) {
-          is PropValue.Lit, is PropValue.Token, is PropValue.Conditional, is PropValue.Template, is PropValue.ListOf ->
+          is PropValue.Lit, is PropValue.Token, is PropValue.Conditional, is PropValue.Template, is PropValue.ListOf,
+          is PropValue.Arith, is PropValue.IntDp ->
             put("mod.$name", v.toTreeValue(mocks))
           else -> {}
         }
@@ -65,7 +71,13 @@ private fun PropValue.toTreeValue(mocks: Map<String, Any?>): Any? = when (this) 
   is PropValue.Conditional -> Conditional(cond(), whenTrue?.toTreeValue(mocks), whenFalse?.toTreeValue(mocks))
   is PropValue.Template -> Template(parts.map { it.toTreeValue(mocks) })
   is PropValue.ListOf -> ListOf(tag, items.map { it.toTreeValue(mocks) })
+  // K7: an unknown operator (never stored: the document refuses it) projects to no value.
+  is PropValue.Arith -> ArithOp.fromSymbol(op)?.let { Arith(it, left.toTreeValue(mocks), right.toTreeValue(mocks)) }
+  is PropValue.IntDp -> IntDp(value.toTreeValue(mocks), ctor = form == DP_CTOR_FORM)
 }
+
+/** K7: [PropValue.IntDp.form] for the `Dp(x.toDouble())` spelling (null = `x.dp`). */
+public const val DP_CTOR_FORM: String = "Dp"
 
 /** Editor→server direction: lift a V1 node (palette sample / duplicate) into a DocNode for InsertNode. */
 public fun WidgetNode.toDocNode(): DocNode.Widget = DocNode.Widget(
@@ -85,6 +97,8 @@ public fun treeToPropValue(v: Any?): PropValue = when (v) {
   is Conditional -> v.toPropValue()
   is Template -> PropValue.Template(v.parts.map(::treeToPropValue))
   is ListOf -> PropValue.ListOf(v.kind, v.items.map(::treeToPropValue))
+  is Arith -> PropValue.Arith(v.op.symbol, treeToPropValue(v.left), treeToPropValue(v.right))
+  is IntDp -> PropValue.IntDp(treeToPropValue(v.value), if (v.ctor) DP_CTOR_FORM else null)
   else -> lit(v)
 }
 

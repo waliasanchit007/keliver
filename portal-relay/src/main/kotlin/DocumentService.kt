@@ -171,6 +171,7 @@ class DocumentService(
     }
     fun refuseToken(type: String, key: String, v: PropValue): String? =
       conditionalRefusal(registry, type, key, v) ?: templateRefusal(registry, type, key, v)
+        ?: arithRefusal(registry, type, key, v)
         ?: scalarLeaves(v).firstNotNullOfOrNull { refuseLeaf(type, key, it) }
     fun walkTokens(n: DocNode): String? = (n as? DocNode.Widget)?.let { w ->
       w.props.entries.firstNotNullOfOrNull { (k, v) -> refuseToken(w.type, k, v) }
@@ -268,6 +269,21 @@ class DocumentService(
     if (values.none { it is PropValue.Template }) return null
     val sourceType = propSourceType(type, key, registry)
     return if (sourceType == "String") null else "template $type.$key: a template fits only a String parameter (${sourceType ?: "not a scalar parameter"})"
+  }
+
+  /**
+   * K7: an arithmetic value on a project-component instance fits only a
+   * parameter declared `Int` (or `Int?`: an Int is one) — the document checks
+   * catalogued widgets and every expression's shape; an Int used as a Dp
+   * never fits one (a component parameter is never a Dp). Null = acceptable.
+   */
+  private fun arithRefusal(registry: dev.keliver.portal.ComponentRegistry, type: String, key: String, v: PropValue): String? {
+    if (!registry.isComponent(type)) return null
+    val values = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
+    if (values.any { it is PropValue.IntDp }) return "arithmetic $type.$key: an Int used as a Dp fits only a widget's Dp prop (a component parameter is never a Dp)"
+    if (values.none { it is PropValue.Arith }) return null
+    val sourceType = propSourceType(type, key, registry)
+    return if (sourceType == "Int") null else "arithmetic $type.$key: an arithmetic value fits only an Int parameter (${sourceType ?: "not a scalar parameter"})"
   }
 
   /**

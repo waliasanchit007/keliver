@@ -6,6 +6,31 @@
 // - Show declarations: true
 
 // Library unique name: <dev.keliver:portal-core>
+final enum class dev.keliver.portal/ArithOp : kotlin/Enum<dev.keliver.portal/ArithOp> { // dev.keliver.portal/ArithOp|null[0]
+    enum entry Div // dev.keliver.portal/ArithOp.Div|null[0]
+    enum entry Minus // dev.keliver.portal/ArithOp.Minus|null[0]
+    enum entry Plus // dev.keliver.portal/ArithOp.Plus|null[0]
+    enum entry Rem // dev.keliver.portal/ArithOp.Rem|null[0]
+    enum entry Times // dev.keliver.portal/ArithOp.Times|null[0]
+
+    final val divides // dev.keliver.portal/ArithOp.divides|{}divides[0]
+        final fun <get-divides>(): kotlin/Boolean // dev.keliver.portal/ArithOp.divides.<get-divides>|<get-divides>(){}[0]
+    final val entries // dev.keliver.portal/ArithOp.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<dev.keliver.portal/ArithOp> // dev.keliver.portal/ArithOp.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val precedence // dev.keliver.portal/ArithOp.precedence|{}precedence[0]
+        final fun <get-precedence>(): kotlin/Int // dev.keliver.portal/ArithOp.precedence.<get-precedence>|<get-precedence>(){}[0]
+    final val symbol // dev.keliver.portal/ArithOp.symbol|{}symbol[0]
+        final fun <get-symbol>(): kotlin/String // dev.keliver.portal/ArithOp.symbol.<get-symbol>|<get-symbol>(){}[0]
+
+    final fun apply(kotlin/Int, kotlin/Int): kotlin/Int? // dev.keliver.portal/ArithOp.apply|apply(kotlin.Int;kotlin.Int){}[0]
+    final fun valueOf(kotlin/String): dev.keliver.portal/ArithOp // dev.keliver.portal/ArithOp.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<dev.keliver.portal/ArithOp> // dev.keliver.portal/ArithOp.values|values#static(){}[0]
+
+    final object Companion { // dev.keliver.portal/ArithOp.Companion|null[0]
+        final fun fromSymbol(kotlin/String?): dev.keliver.portal/ArithOp? // dev.keliver.portal/ArithOp.Companion.fromSymbol|fromSymbol(kotlin.String?){}[0]
+    }
+}
+
 final enum class dev.keliver.portal/CondJoin : kotlin/Enum<dev.keliver.portal/CondJoin> { // dev.keliver.portal/CondJoin|null[0]
     enum entry And // dev.keliver.portal/CondJoin.And|null[0]
     enum entry Or // dev.keliver.portal/CondJoin.Or|null[0]
@@ -126,6 +151,25 @@ final class dev.keliver.portal/Action { // dev.keliver.portal/Action|null[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/Action.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.portal/Action.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.portal/Action.toString|toString(){}[0]
+}
+
+final class dev.keliver.portal/Arith { // dev.keliver.portal/Arith|null[0]
+    constructor <init>(dev.keliver.portal/ArithOp, kotlin/Any?, kotlin/Any?) // dev.keliver.portal/Arith.<init>|<init>(dev.keliver.portal.ArithOp;kotlin.Any?;kotlin.Any?){}[0]
+
+    final val left // dev.keliver.portal/Arith.left|{}left[0]
+        final fun <get-left>(): kotlin/Any? // dev.keliver.portal/Arith.left.<get-left>|<get-left>(){}[0]
+    final val op // dev.keliver.portal/Arith.op|{}op[0]
+        final fun <get-op>(): dev.keliver.portal/ArithOp // dev.keliver.portal/Arith.op.<get-op>|<get-op>(){}[0]
+    final val right // dev.keliver.portal/Arith.right|{}right[0]
+        final fun <get-right>(): kotlin/Any? // dev.keliver.portal/Arith.right.<get-right>|<get-right>(){}[0]
+
+    final fun component1(): dev.keliver.portal/ArithOp // dev.keliver.portal/Arith.component1|component1(){}[0]
+    final fun component2(): kotlin/Any? // dev.keliver.portal/Arith.component2|component2(){}[0]
+    final fun component3(): kotlin/Any? // dev.keliver.portal/Arith.component3|component3(){}[0]
+    final fun copy(dev.keliver.portal/ArithOp = ..., kotlin/Any? = ..., kotlin/Any? = ...): dev.keliver.portal/Arith // dev.keliver.portal/Arith.copy|copy(dev.keliver.portal.ArithOp;kotlin.Any?;kotlin.Any?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/Arith.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal/Arith.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal/Arith.toString|toString(){}[0]
 }
 
 final class dev.keliver.portal/Bind { // dev.keliver.portal/Bind|null[0]
@@ -295,6 +339,22 @@ final class dev.keliver.portal/FlowEdge { // dev.keliver.portal/FlowEdge|null[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/FlowEdge.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // dev.keliver.portal/FlowEdge.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // dev.keliver.portal/FlowEdge.toString|toString(){}[0]
+}
+
+final class dev.keliver.portal/IntDp { // dev.keliver.portal/IntDp|null[0]
+    constructor <init>(kotlin/Any?, kotlin/Boolean = ...) // dev.keliver.portal/IntDp.<init>|<init>(kotlin.Any?;kotlin.Boolean){}[0]
+
+    final val ctor // dev.keliver.portal/IntDp.ctor|{}ctor[0]
+        final fun <get-ctor>(): kotlin/Boolean // dev.keliver.portal/IntDp.ctor.<get-ctor>|<get-ctor>(){}[0]
+    final val value // dev.keliver.portal/IntDp.value|{}value[0]
+        final fun <get-value>(): kotlin/Any? // dev.keliver.portal/IntDp.value.<get-value>|<get-value>(){}[0]
+
+    final fun component1(): kotlin/Any? // dev.keliver.portal/IntDp.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // dev.keliver.portal/IntDp.component2|component2(){}[0]
+    final fun copy(kotlin/Any? = ..., kotlin/Boolean = ...): dev.keliver.portal/IntDp // dev.keliver.portal/IntDp.copy|copy(kotlin.Any?;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/IntDp.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal/IntDp.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal/IntDp.toString|toString(){}[0]
 }
 
 final class dev.keliver.portal/ListOf { // dev.keliver.portal/ListOf|null[0]
@@ -523,6 +583,10 @@ final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/strList(kotlin/Stri
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/thenChildren(): kotlin.collections/List<dev.keliver.portal/WidgetNode> // dev.keliver.portal/thenChildren|thenChildren@dev.keliver.portal.WidgetNode(){}[0]
 final fun (dev.keliver.portal/WidgetNode).dev.keliver.portal/updateProps(kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin/Any?>): dev.keliver.portal/WidgetNode // dev.keliver.portal/updateProps|updateProps@dev.keliver.portal.WidgetNode(kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.Any?>){}[0]
 final fun <#A: kotlin/Any?> dev.keliver.portal/conditionProps(dev.keliver.portal/Cond, kotlin/Function1<kotlin/Any, #A>): kotlin.collections/Map<kotlin/String, #A> // dev.keliver.portal/conditionProps|conditionProps(dev.keliver.portal.Cond;kotlin.Function1<kotlin.Any,0:0>){0§<kotlin.Any?>}[0]
+final fun dev.keliver.portal/arithBinds(kotlin/Any?): kotlin.collections/List<dev.keliver.portal/Bind> // dev.keliver.portal/arithBinds|arithBinds(kotlin.Any?){}[0]
+final fun dev.keliver.portal/arithKotlin(kotlin/Any?, kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/arithKotlin|arithKotlin(kotlin.Any?;kotlin.Function1<kotlin.String,kotlin.String>){}[0]
+final fun dev.keliver.portal/arithOperands(kotlin/Any?): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/arithOperands|arithOperands(kotlin.Any?){}[0]
+final fun dev.keliver.portal/arithValue(kotlin/Any?, kotlin/Function1<kotlin/Any?, kotlin/Int?> = ...): kotlin/Int? // dev.keliver.portal/arithValue|arithValue(kotlin.Any?;kotlin.Function1<kotlin.Any?,kotlin.Int?>){}[0]
 final fun dev.keliver.portal/chooseBranch(kotlin/Any?, kotlin/Function1<dev.keliver.portal/Cond, kotlin/Boolean>): kotlin/Any? // dev.keliver.portal/chooseBranch|chooseBranch(kotlin.Any?;kotlin.Function1<dev.keliver.portal.Cond,kotlin.Boolean>){}[0]
 final fun dev.keliver.portal/collectContract(dev.keliver.portal/WidgetNode, dev.keliver.portal/ComponentRegistry = ...): dev.keliver.portal/ScreenContract // dev.keliver.portal/collectContract|collectContract(dev.keliver.portal.WidgetNode;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/collectPreviewBindingKeys(dev.keliver.portal/WidgetNode): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/collectPreviewBindingKeys|collectPreviewBindingKeys(dev.keliver.portal.WidgetNode){}[0]
@@ -540,6 +604,7 @@ final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev
 final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev.keliver.portal/ComponentRegistry, kotlin.collections/Set<kotlin/String>, kotlin.collections/List<kotlin/String> = ...): dev.keliver.portal/Expansion // dev.keliver.portal/expandForPreview|expandForPreview(dev.keliver.portal.WidgetNode;dev.keliver.portal.ComponentRegistry;kotlin.collections.Set<kotlin.String>;kotlin.collections.List<kotlin.String>){}[0]
 final fun dev.keliver.portal/exportKotlin(dev.keliver.portal/WidgetNode, kotlin/String = ..., dev.keliver.portal/ComponentRegistry = ...): kotlin/String // dev.keliver.portal/exportKotlin|exportKotlin(dev.keliver.portal.WidgetNode;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/fmtTemplate(dev.keliver.portal/Template, kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/fmtTemplate|fmtTemplate(dev.keliver.portal.Template;kotlin.Function1<kotlin.String,kotlin.String>){}[0]
+final fun dev.keliver.portal/intDpValue(dev.keliver.portal/IntDp, kotlin/Function1<kotlin/Any?, kotlin/Int?> = ...): kotlin/Double? // dev.keliver.portal/intDpValue|intDpValue(dev.keliver.portal.IntDp;kotlin.Function1<kotlin.Any?,kotlin.Int?>){}[0]
 final fun dev.keliver.portal/isConditionKey(kotlin/String): kotlin/Boolean // dev.keliver.portal/isConditionKey|isConditionKey(kotlin.String){}[0]
 final fun dev.keliver.portal/isDpProp(kotlin/String, kotlin/String): kotlin/Boolean // dev.keliver.portal/isDpProp|isDpProp(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/isKnownWidgetType(kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/Boolean // dev.keliver.portal/isKnownWidgetType|isKnownWidgetType(kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
@@ -552,6 +617,7 @@ final fun dev.keliver.portal/kotlinTypeOf(dev.keliver.portal/PropKind): kotlin/S
 final fun dev.keliver.portal/listElementType(kotlin/String): kotlin/String? // dev.keliver.portal/listElementType|listElementType(kotlin.String){}[0]
 final fun dev.keliver.portal/listItems(kotlin/Any?): kotlin.collections/List<kotlin/Any?> // dev.keliver.portal/listItems|listItems(kotlin.Any?){}[0]
 final fun dev.keliver.portal/listKindOf(kotlin/String?): kotlin/String? // dev.keliver.portal/listKindOf|listKindOf(kotlin.String?){}[0]
+final fun dev.keliver.portal/mapArithOperands(kotlin/Any?, kotlin/Function1<kotlin/Any?, kotlin/Any?>): kotlin/Any? // dev.keliver.portal/mapArithOperands|mapArithOperands(kotlin.Any?;kotlin.Function1<kotlin.Any?,kotlin.Any?>){}[0]
 final fun dev.keliver.portal/marginProps(kotlin.collections/List<dev.keliver.portal/PropSpec>): kotlin.collections/Set<kotlin/String> // dev.keliver.portal/marginProps|marginProps(kotlin.collections.List<dev.keliver.portal.PropSpec>){}[0]
 final fun dev.keliver.portal/mockedIntElement(kotlin/String): kotlin/Int? // dev.keliver.portal/mockedIntElement|mockedIntElement(kotlin.String){}[0]
 final fun dev.keliver.portal/nextNodeId(): kotlin/Int // dev.keliver.portal/nextNodeId|nextNodeId(){}[0]
