@@ -5,6 +5,7 @@ import dev.keliver.portal.CondJoin
 import dev.keliver.portal.CondTest
 import dev.keliver.portal.conditionKey
 import dev.keliver.portal.isConditionKey
+import dev.keliver.portal.termTypeMisfit
 import dev.keliver.portal.ELSE_TYPE
 import dev.keliver.portal.LOGIC_NODE_TYPES
 import dev.keliver.portal.PropKind
@@ -140,6 +141,7 @@ public data class UiDocument(
         val newParent = parent.copy(children = parent.children.toMutableList().apply { add(idx, renumbered) })
         val inserted = replaced(newParent).copy(nextHandle = next)
         conditionsMisfit(inserted.root, renumbered.handle, contract.fields)?.let { return err(it) }
+        insertedEqualityMisfit(inserted.root, renumbered.handle, contract)?.let { return err(it) }
         TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
@@ -224,13 +226,16 @@ public data class UiDocument(
         conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropOpMisfit(w, op.name, canonical)?.let { return err(it) }
-        operandKindMisfit(w, op.name, canonical, contract)?.let { return err(it) }
         refValueMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
         val set = replaced(w.copy(props = w.props + (op.name to value)))
-        conditionMisfitAt(set.root, op.target, if (w.type == "Condition" && isConditionKey(op.name)) null else op.name, contract.fields)?.let { return err(it) }
+        val condKey = if (w.type == "Condition" && isConditionKey(op.name)) null else op.name
+        conditionMisfitAt(set.root, op.target, condKey, contract.fields)?.let { return err(it) }
+        // K6 review: an equality on a field whose type the document cannot read follows a comparison it has.
+        val previous = if (condKey == null) w.conditionTerms() else (old as? PropValue.Conditional)?.docTerms().orEmpty()
+        unreadableEqualityMisfit(set.root, op.target, condKey, previous, contract)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
         repeatListMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
@@ -259,12 +264,12 @@ public data class UiDocument(
         tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         refValueMisfit(w.type, "mod.${op.name}", canonical, contract)?.let { return err(it) }
-        operandKindMisfit(w, "mod.${op.name}", canonical, contract)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
         val set = replaced(w.copy(modifiers = w.modifiers + (op.name to value)))
         conditionMisfitAt(set.root, op.target, "mod.${op.name}", contract.fields)?.let { return err(it) }
+        unreadableEqualityMisfit(set.root, op.target, "mod.${op.name}", (old as? PropValue.Conditional)?.docTerms().orEmpty(), contract)?.let { return err(it) }
         itemRefMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         repeatListMisfitAt(set.root, op.target, "mod.${op.name}")?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
@@ -634,8 +639,10 @@ private fun conditionTypeMisfit(
   val declared = fields[field]?.replace(" ", "")?.removePrefix("kotlin.")?.takeIf { it != UNKNOWN_TYPE }
   return when {
     // K6 review: the declared type decides first — K3 single terms too.
-    boolean && declared != null && declared != "Boolean" -> "$where tests `$field` as a Boolean, but the Bindings interface declares it $declared"
-    (test == CondTest.Empty || test == CondTest.Blank) && declared != null && !emptinessFits(declared, test) ->
+    // Only a type KNOWN not to fit (termTypeMisfit), or a nullable one (a Bindings property is never smart-cast).
+    boolean && declared != null && (declared.endsWith("?") || termTypeMisfit(CondTest.Bool, declared) != null) ->
+      "$where tests `$field` as a Boolean, but the Bindings interface declares it $declared"
+    (test == CondTest.Empty || test == CondTest.Blank) && declared != null && (declared.endsWith("?") || termTypeMisfit(test, declared) != null) ->
       "$where tests `$field` with ${if (test == CondTest.Empty) "isEmpty()" else "isBlank()"}, but the Bindings interface declares it $declared"
     boolean && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
     boolean && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template, a list element or another test)"
@@ -652,21 +659,6 @@ private fun conditionTypeMisfit(
     else -> null
   }
 }
-
-/**
- * K6 review: whether a field declared [declared] (spaces and `kotlin.` gone)
- * has [test]: `isBlank()` a String (or CharSequence), `isEmpty()` also a
- * collection or an array — never a nullable type (a screen's Bindings
- * property is never smart-cast).
- */
-private fun emptinessFits(declared: String, test: CondTest): Boolean {
-  if (declared.endsWith("?")) return false
-  if (declared == "String" || declared == "CharSequence") return true
-  if (test != CondTest.Empty) return false
-  return EMPTY_COLLECTIONS.any { declared.startsWith("$it<") }
-}
-
-private val EMPTY_COLLECTIONS = listOf("List", "MutableList", "Collection", "Set", "MutableSet", "Map", "MutableMap", "Array")
 
 /** The Kotlin type a field bound to a prop of [kind] is declared with (a Color is an Int). */
 private fun kotlinTypeOfKind(kind: PropKind): String = dev.keliver.portal.kotlinTypeOf(kind)
@@ -778,38 +770,63 @@ private fun conditionShapeMisfit(n: DocNode.Widget): String? {
 }
 
 /**
- * K6 review: why setting wire key [key] of [w] to [v] would change an
- * equality's operand KIND on a field whose type the document cannot read —
- * an item field (the contract carries no item types), a field declared
- * without a type, or an unlisted field when the screen's interface is not
- * read whole ([Contract.unlistedFieldsUnknown]). The file's type would not
- * take the new kind (`b.kind == 1` for a `String`), and ingest cannot tell
- * — so, as K4 refuses a template on such a field, the change is made in
- * code. The same term (index and field) of the value before is compared;
- * null = fine.
+ * K6 review: why an equality term of the condition at node [h] (its own when
+ * [key] is null, else the conditional value at [key]) of [root] compares a
+ * field whose type the document cannot read — an item field (the contract
+ * carries no item types), a field declared without a type, or an unlisted
+ * field when the screen's interface is not read whole
+ * ([Contract.unlistedFieldsUnknown]) — with a kind nothing vouches for. As K4
+ * refuses a template on such a field, such an equality is made in code:
+ * `b.kind == 1` would not compile for a `String`, and ingest cannot tell. It
+ * may when the condition there before ([previous]) or another condition in
+ * the screen already compares that field with the same kind. Null = fine.
  */
-private fun operandKindMisfit(w: DocNode.Widget, key: String, v: PropValue, contract: Contract): String? {
-  val (before, after) = if (w.type == "Condition" && isConditionKey(key)) {
-    if (key.substringBefore('.') != "operand") return null
-    val i = key.substringAfter('.', "0").toIntOrNull() ?: return null
-    val term = w.conditionTerms().getOrNull(i) ?: return null
-    listOf(term) to listOf(term.copy(operand = v))
+private fun unreadableEqualityMisfit(root: DocNode, h: Handle, key: String?, previous: List<DocTerm>, contract: Contract): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val terms = if (key == null) {
+    if (w.type != "Condition") return null
+    w.conditionTerms()
   } else {
-    val old = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional ?: return null
-    val new = v as? PropValue.Conditional ?: return null
-    old.docTerms() to new.docTerms()
+    ((if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional)?.docTerms() ?: return null
   }
-  for (i in before.indices) {
-    val o = before[i]
-    val n = after.getOrNull(i) ?: continue
-    if (o.field != n.field || CondTest.fromWire(o.test) != CondTest.Eq || CondTest.fromWire(n.test) != CondTest.Eq) continue
-    val was = operandKind(o.operand)
-    val now = operandKind(n.operand)
-    if (was == null || now == null || was == now || typeReadable(n.field, contract)) continue
-    return "an equality on `${n.field}` compares with ${was}; the type of `${n.field}` is not readable here " +
-      "(${if ('.' in n.field) "an item field's type is not in the contract" else unreadableReason(n.field, contract)}), so comparing it with ${now} is made in code"
+  for (t in terms) {
+    if (CondTest.fromWire(t.test) != CondTest.Eq || typeReadable(t.field, contract)) continue
+    val kind = operandKind(t.operand) ?: continue
+    fun vouches(o: DocTerm) = o.field == t.field && CondTest.fromWire(o.test) == CondTest.Eq && operandKind(o.operand) == kind
+    if (previous.any(::vouches) || otherEqualities(root, h to key).any(::vouches)) continue
+    return "an equality compares `${t.field}` with ${if (kind == "Int") "an" else "a"} $kind, but the type of `${t.field}` is not readable here " +
+      "(${if ('.' in t.field) "an item field's type is not in the contract" else unreadableReason(t.field, contract)}) and nothing in the screen " +
+      "compares it with ${if (kind == "Int") "an" else "a"} $kind: make this change in code"
   }
   return null
+}
+
+/** K6 review: [unreadableEqualityMisfit] for every condition of an inserted subtree at [h] (none was there before). */
+private fun insertedEqualityMisfit(root: DocNode, h: Handle, contract: Contract): String? {
+  val top = findIn(root, h) as? DocNode.Widget ?: return null
+  fun walk(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition") unreadableEqualityMisfit(root, n.handle, null, emptyList(), contract)?.let { return it }
+    (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
+      unreadableEqualityMisfit(root, n.handle, k, emptyList(), contract)?.let { return it }
+    }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return walk(top)
+}
+
+/** K6 review: every condition term in [root] except the condition at [skip] (node, key — null = a Condition's own). */
+private fun otherEqualities(root: DocNode, skip: Pair<Handle, String?>): List<DocTerm> {
+  val out = ArrayList<DocTerm>()
+  fun walk(n: DocNode) {
+    if (n !is DocNode.Widget) return
+    if (n.type == "Condition" && skip != (n.handle to null)) out += n.conditionTerms()
+    n.props.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to k)) out += v.docTerms() }
+    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) out += v.docTerms() }
+    n.children.forEach(::walk)
+  }
+  walk(root)
+  return out
 }
 
 /** K6 review: whether the document reads [field]'s type — a screen field the contract types, or one it derives. */

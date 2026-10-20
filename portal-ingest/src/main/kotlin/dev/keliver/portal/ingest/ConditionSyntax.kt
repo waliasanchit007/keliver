@@ -99,9 +99,8 @@ internal class CondReader(
 
   /**
    * K6 review: why the Boolean or emptiness term [t] does not fit its field's
-   * declared type (where one is declared and readable): a Boolean test reads a
-   * `Boolean`; `isEmpty()` a `String`, `CharSequence`, collection or array;
-   * `isBlank()` a `String` or `CharSequence`. A nullable one only where an
+   * declared type, where one is declared and readable and KNOWN not to fit
+   * ([dev.keliver.portal.termTypeMisfit]). A nullable one only where an
    * earlier term of the same condition smart-casts it (`x != null && …`,
    * `x == null || …`) — never in a screen, whose Bindings properties are not
    * smart-cast and which has no null test. Null = it fits.
@@ -109,16 +108,8 @@ internal class CondReader(
   private fun typeWhy(t: Cond, before: List<Cond>, join: CondJoin): String? {
     if (t.test != CondTest.Bool && t.test != CondTest.Empty && t.test != CondTest.Blank) return null
     val declared = typeOf(t.field)?.takeIf { it != UNKNOWN_TYPE }?.let(::plainType) ?: return null
-    val base = declared.removeSuffix("?")
-    val fits = when (t.test) {
-      CondTest.Bool -> base == "Boolean"
-      CondTest.Blank -> base == "String" || base == "CharSequence"
-      else -> base == "String" || base == "CharSequence" || EMPTY_COLLECTIONS.any { base.startsWith("$it<") }
-    }
-    if (!fits) {
-      return if (t.test == CondTest.Bool) "`${t.field}` is declared $declared, not a Boolean"
-      else "`${t.field}` is declared $declared, which has no ${if (t.test == CondTest.Empty) "isEmpty()" else "isBlank()"}"
-    }
+    // Only a type KNOWN not to fit is refused; anything else (an alias, a user or library type) is the compile's.
+    dev.keliver.portal.termTypeMisfit(t.test, declared)?.let { return "`${t.field}` is $it" }
     if (!declared.endsWith("?")) return null
     val guarded = before.any { it.field == t.field && it.test == CondTest.Null && it.negate == (join == CondJoin.And) }
     return if (guarded) null
@@ -277,7 +268,6 @@ internal class CondReader(
   )
 
   private companion object {
-    val EMPTY_COLLECTIONS = listOf("List", "MutableList", "Collection", "Set", "MutableSet", "Map", "MutableMap", "Array")
     const val MIXED = "condition `%s` mixes `&&` and `||` (a condition joins its terms with one of them)"
   }
 }

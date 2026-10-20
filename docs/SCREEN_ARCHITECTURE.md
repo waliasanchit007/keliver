@@ -829,19 +829,25 @@ fun SectionCard(content: @Composable () -> Unit) {
     type (an Int compared where it is bound to a text prop or tested for
     emptiness, a String compared where it is a Boolean, a Repeat's List, a
     declared type the operand does not match). Every term — K3 single
-    terms too — fits its field's DECLARED type: a Boolean test (or an
-    equality with a Boolean) reads a field the Bindings interface declares
-    `Boolean`, `isEmpty()` a `String`, `CharSequence`, collection or array,
-    `isBlank()` a `String` or `CharSequence`, never a nullable one — on a
-    set, an insert, and a removal of a `Condition` prop (removing `test`
-    turns `b.note.isNotBlank()` into `!b.note`); ingest reads such a term
-    as code (a component parameter declared nullable only after `p != null
-    &&`/`p == null ||` in the same condition, Kotlin's smart cast). Where
-    the document cannot read a field's type — an item field, a field
-    declared without a type, an unlisted field of an interface not read
-    whole — an equality keeps its operand's kind: changing `b.kind == "a"`
-    to compare with `1` is made in code, as K4 makes a template on such a
-    field. A `Condition`'s SHAPE — how many terms, which is an equality —
+    terms too — is refused where its field's DECLARED type is KNOWN not
+    to take it (`dev.keliver.portal.termTypeMisfit`): a Boolean test (or an
+    equality with a Boolean) on a number, a `Char`, a `String` or
+    `CharSequence`, a primitive array or a standard collection;
+    `isEmpty()` on a number, a `Char` or a `Boolean`; `isBlank()` on those,
+    a primitive array or a standard collection; and any test on a nullable
+    type. A type it does not recognize — a typealias, a user type,
+    `ImmutableList<…>`, `ArrayList<…>`, `IntArray.isEmpty()`,
+    `StringBuilder.isBlank()` — is left to the compile, so valid code stays
+    grammar. This holds on a set, an insert, and a removal of a `Condition`
+    prop (removing `test` turns `b.note.isNotBlank()` into `!b.note`);
+    ingest reads such a term as code (a component parameter declared
+    nullable only after `p != null &&` / `p == null ||` earlier in the same
+    condition, Kotlin's smart cast). Where the document cannot read a
+    field's type — an item field, a field declared without a type, an
+    unlisted field of an interface not read whole — an equality on it is
+    placed only when the condition there before, or another one in the
+    screen, already compares that field with the same kind: `b.kind == 1`
+    is otherwise made in code, as K4 makes a template on such a field. A `Condition`'s SHAPE — how many terms, which is an equality —
     is set by inserting the node whole; single ops change a field, a
     negation, an operand, and the join (SetProp `join` = `"or"`, RemoveProp
     for `&&`, on two or more terms — as a conditional value's join changes

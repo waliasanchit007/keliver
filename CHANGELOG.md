@@ -46,10 +46,14 @@
   Double/Long/template operand, a nullable or mismatched field, field-vs-field, a `var` or
   non-Boolean or shadowing local, a local used before its definition, as a value or reading another
   local stay RawCode (the component opaque) with a diagnostic naming why. `ParityCompound.kt` pins
-  compiled-vs-interpreted parity. Every condition term, K3 single terms included, now fits its
-  field's declared type: a Boolean test on a field declared other than `Boolean` (or nullable) and
-  `isEmpty()`/`isBlank()` on one that has none are refused as ops (also when removing a Condition's
-  `test`) and read as code by ingest — before, `if (b.count)` with `count: Int` could be written.
+  compiled-vs-interpreted parity. A condition term, K3 single terms included, whose field's declared
+  type is known not to take it (a Boolean test on an `Int`, `String` or `List<…>`, `isEmpty()` on an
+  `Int` or `Boolean`, `isBlank()` on a collection, any test on a nullable type) is refused as an op
+  (also when removing a Condition's `test`) and read as code by ingest — before, `if (b.count)` with
+  `count: Int` could be written; a type the portal does not recognize (an alias, a user or library
+  collection) is left to the compile. An equality on a field whose type the document cannot read
+  (an item field, an interface declared elsewhere) is placed only where the screen already compares
+  that field with the same kind.
   Compatibility: on the device tree an extended condition is carried under `"condition"` (a
   Condition node's at node level, without its condition props), so a device guest or per-app
   editor that predates K6 renders the true branch / then-branch instead of deciding it by the

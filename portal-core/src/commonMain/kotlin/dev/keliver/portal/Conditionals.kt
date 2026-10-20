@@ -357,3 +357,38 @@ public fun conditionImports(tree: WidgetNode): Set<String> {
   walk(tree)
   return out
 }
+
+/**
+ * K6 review: why a [test] term cannot read a field whose declared Kotlin type
+ * is [declaredType] — or null when it can, or when the type is not one this
+ * KNOWS not to fit. Ingest and the document apply the same rule. Only
+ * well-known types are judged, so valid code the portal does not model
+ * stays grammar (a typealias, a user type, an immutable or other library
+ * collection: the compile is their check):
+ *  - a Boolean test never reads a number, a `Char`, a `String` or
+ *    `CharSequence`, a primitive array or a standard collection;
+ *  - `isEmpty()` never reads a number, a `Char` or a `Boolean`;
+ *  - `isBlank()` never reads those, a primitive array or a standard collection.
+ * Nullability is not judged here ([declaredType]'s trailing `?` is ignored):
+ * a nullable field is read only behind a smart cast, which callers decide.
+ */
+public fun termTypeMisfit(test: CondTest, declaredType: String): String? {
+  val t = declaredType.replace(" ", "").removeSuffix("?").removePrefix("kotlin.collections.").removePrefix("kotlin.")
+  val head = t.substringBefore('<')
+  val number = t in KNOWN_NUMBERS
+  val text = t == "String" || t == "CharSequence"
+  val collection = (t.contains('<') && head in KNOWN_COLLECTIONS) || t in KNOWN_PRIMITIVE_ARRAYS
+  return when (test) {
+    CondTest.Bool -> if (number || t == "Char" || text || collection) "declared $declaredType, not a Boolean" else null
+    CondTest.Empty -> if (number || t == "Char" || t == "Boolean") "declared $declaredType, which has no isEmpty()" else null
+    CondTest.Blank -> if (number || t == "Char" || t == "Boolean" || collection) "declared $declaredType, which has no isBlank()" else null
+    else -> null
+  }
+}
+
+private val KNOWN_NUMBERS = setOf("Int", "Long", "Short", "Byte", "Double", "Float", "UInt", "ULong", "UShort", "UByte")
+private val KNOWN_COLLECTIONS = setOf(
+  "List", "MutableList", "Collection", "MutableCollection", "Set", "MutableSet", "Map", "MutableMap", "Array",
+  "ArrayList", "HashMap", "HashSet", "LinkedHashMap", "LinkedHashSet",
+)
+private val KNOWN_PRIMITIVE_ARRAYS = setOf("IntArray", "LongArray", "ShortArray", "ByteArray", "DoubleArray", "FloatArray", "BooleanArray", "CharArray")

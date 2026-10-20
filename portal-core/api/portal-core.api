@@ -220,6 +220,7 @@ public final class dev/keliver/portal/ConditionalsKt {
 	public static final fun isConditionKey (Ljava/lang/String;)Z
 	public static final fun operandKotlin (Ljava/lang/Object;)Ljava/lang/String;
 	public static final fun operandType (Ljava/lang/Object;)Ljava/lang/String;
+	public static final fun termTypeMisfit (Ldev/keliver/portal/CondTest;Ljava/lang/String;)Ljava/lang/String;
 	public static final fun thenChildren (Ldev/keliver/portal/WidgetNode;)Ljava/util/List;
 }
 
