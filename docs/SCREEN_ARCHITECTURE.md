@@ -609,7 +609,8 @@ fun SectionCard(content: @Composable () -> Unit) {
     the presenter fills) to show it.
   - *Where ingest reads a reference's type.* A screen field's in the
     Bindings interface the screen takes, declared in the same file, with
-    the members of its supertypes declared in that file. That interface is
+    the members of its supertypes declared in that file (one nested in a
+    declaration of the file, `: Outer.Base`, too). That interface is
     the one its parameter's type names as Kotlin reads it — past an
     annotation, `?` and type arguments, through a same-file `typealias`
     (chained too) or an import alias, into a nested declaration
@@ -641,8 +642,19 @@ fun SectionCard(content: @Composable () -> Unit) {
     (…); bind it directly or make this change in code" — because ingest
     reads such a template as RawCode, so write-back would refuse it and
     block every later edit of the screen (§7a). A plain binding and a list
-    element of such a field are allowed: nothing is printed, the compile
-    types them, and they read back. A `ContractEdit` cannot clear the
+    element of such a field are allowed when the file already reads it
+    through its bindings parameter (or did when the relay last read the
+    file): nothing is printed, the compile types them, and they read back.
+    (A `b` that names something else where it is read — a lambda's or
+    local function's parameter, a loop variable, a local `val` — reads
+    nothing through the bindings.) One the file neither declares nor reads
+    is refused by the write-back preflight (§7a; KNOWN_BUGS U37): it may
+    be inherited or new, and the
+    editor cannot tell which — declaring it could redeclare an inherited
+    member without `override`, and a bare reference may not compile — so
+    contract write-back declares nothing in an interface extending a type
+    declared in another file (a member a supertype in the same file
+    declares counts as declared). A `ContractEdit` cannot clear the
     signal (the file decides it). Limit: an item type declared in another
     file is not read (an item field in a template stays grammar, as
     before), and the contract carries no item types, so the document does
@@ -1120,7 +1132,10 @@ ways, and the editor is told which:
    dropped one. This covers what the document cannot check: a template
    reading a list item's field the file types `Double` or nullable (the
    contract carries no item types), a plain binding set in a screen
-   function that takes no bindings parameter, and any reason the writer
+   function that takes no bindings parameter, a field or action the
+   screen's file neither declares nor reads when its Bindings interface is
+   not read whole there (U37: it may be inherited, so it is neither
+   declared nor written as a bare reference), and any reason the writer
    has. The preflight lets an edit through when
    - it changes nothing, or brings the document back to the file (nothing
      new to write; an undo out of a refusal is never refused);
@@ -1210,7 +1225,9 @@ that takes no bindings parameter (add the parameter in code first); a
 template reading a screen field whose type the screen's file does not show
 (the interface the screen takes is not in the file or extends one declared
 elsewhere, or the field has no declared type — §7, "Where ingest reads a
-reference's type": bind it directly, or make the change in code); any
+reference's type": bind it directly, or make the change in code); on such
+a screen, a binding or action of a field the file neither declares nor
+reads yet (it may be inherited or new: read it in code first); any
 edit write-back would refuse (the preflight in 3. above); and a
 move that takes a local declaration away from its uses — a code node that
 declares something (`val`, `var`, `fun`, `class`, `object`, …) never moves

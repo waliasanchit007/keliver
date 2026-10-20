@@ -2,9 +2,22 @@ package dev.keliver.portal.ingest
 
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.exportKotlin
+import org.jetbrains.kotlin.com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.psi.KtBlockExpression
+import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
+import org.jetbrains.kotlin.psi.KtCatchClause
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtDestructuringDeclaration
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtForExpression
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
+import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
+import org.jetbrains.kotlin.psi.KtWhenExpression
 
 /**
  * P2b-a: contract write-back. An editor op that introduces a NEW bind or action
@@ -28,6 +41,15 @@ import org.jetbrains.kotlin.psi.KtProperty
  * source of truth for contract derivation — parsed back out of the export.
  * Implementation is offset-based string surgery from ONE parse (PSI tree
  * mutation proved fragile around brace anchors).
+ *
+ * U37: a member is declared only where that cannot redeclare an inherited
+ * one. A member that a supertype declared in the same file has counts as
+ * declared (it used to be declared again, without `override`, which does not
+ * compile). When the interface extends a type declared in another file, a
+ * member it does not declare in the file may be inherited, with any type, so
+ * nothing is added to it at all (as nothing ever was to an interface not in
+ * the file); [unvouched] is the writer's refusal of a member such a screen
+ * would read that the file neither declares nor reads.
  */
 object ContractWriteBack {
   const val MARKER = "TODO(portal): implement — auto-added for a portal binding"
@@ -94,6 +116,131 @@ object ContractWriteBack {
     return lines.joinToString("\n")
   }
 
+  /**
+   * U37: why the screen [tree] reads cannot be written onto [file] (the file
+   * as it is on disk, before the change) — null when it can. When the
+   * interface the screen takes is not read whole in its file (it is not in
+   * the file, or extends a type declared in another file: the contract's
+   * `unlistedFieldsUnknown`), a field or action the tree reads that the file
+   * neither declares (in that interface or a supertype in the file) nor
+   * already reads through the bindings parameter may be inherited or may be
+   * new; the editor cannot tell which, so it writes neither a declaration
+   * (it could redeclare an inherited member) nor a bare reference (it may not
+   * compile). [readText] is a text of the file the relay last READ (not
+   * wrote): what it read is vouched for too — the file read it then, so an
+   * undo that brings a deleted read back is written.
+   *
+   * A screen with no bindings parameter is left to the writer's own refusal.
+   */
+  internal fun unvouched(
+    file: KtFile,
+    tree: WidgetNode,
+    functionName: String,
+    components: dev.keliver.portal.ComponentRegistry,
+    readText: String?,
+  ): String? {
+    val fn = screenFunction(file) ?: return null
+    if (fn.valueParameters.isEmpty()) return null
+    val target = screenBindings(fn, file)
+    val decls = typeDecls(file)
+    val why = unlistedFieldsWhy(target, target.iface?.let { memberTypes(it, decls) }) ?: return null
+    val required = requiredBindingsOf(exportKotlin(tree, functionName = functionName, components = components), functionName)
+      ?.declarations?.mapNotNull { d -> d.name?.takeIf { (d is KtProperty || d is KtNamedFunction) && '.' !in it } }
+      .orEmpty()
+    if (required.isEmpty()) return null
+    val declared = target.iface?.let { declaredNames(it, decls) }.orEmpty()
+    val read = membersRead(file) + readText?.let { runCatching { membersRead(PsiEnv.parse("Read.kt", LineEndings.toLf(it))) }.getOrNull() }.orEmpty()
+    val unknown = required.filter { it !in declared && it !in read }.distinct()
+    if (unknown.isEmpty()) return null
+    val names = unknown.joinToString { "`$it`" }
+    val them = if (unknown.size == 1) "it exists" else "they exist"
+    val redeclare = target.iface?.let { ", and declaring ${if (unknown.size == 1) "it" else "them"} in `${it.name}` could redeclare an inherited member" }.orEmpty()
+    return "the screen would read $names, which this file neither declares nor reads yet, so the editor cannot tell whether $them: $why$redeclare"
+  }
+
+  /**
+   * The names [file]'s screen function reads through its bindings parameter
+   * (`b.x`, `b.go()`, `b::go`). A `b` that names something else where it is
+   * read — a lambda's, local function's or loop's parameter, a destructured
+   * one, a property accessor's or a constructor's parameter, a local `val`
+   * declared before it in an enclosing block, a catch or `when` subject
+   * variable — reads nothing (a local class's or object's member `b` does
+   * not: Kotlin resolves `b` to the function's parameter first) through the bindings (#135
+   * review: `forEach { b -> b.length }` vouched for `length`).
+   */
+  internal fun membersRead(file: KtFile): Set<String> {
+    val fn = screenFunction(file) ?: return emptySet()
+    val param = fn.valueParameters.firstOrNull()?.name ?: return emptySet()
+    fun isParam(e: org.jetbrains.kotlin.psi.KtExpression?) =
+      e is KtNameReferenceExpression && e.getReferencedName() == param && !shadowed(e, param, fn)
+    val out = LinkedHashSet<String>()
+    fn.accept(object : KtTreeVisitorVoid() {
+      override fun visitQualifiedExpression(expression: KtQualifiedExpression) {
+        super.visitQualifiedExpression(expression)
+        if (!isParam(expression.receiverExpression)) return
+        when (val s = expression.selectorExpression) {
+          is KtNameReferenceExpression -> out += s.getReferencedName()
+          is KtCallExpression -> (s.calleeExpression as? KtNameReferenceExpression)?.let { out += it.getReferencedName() }
+          else -> {}
+        }
+      }
+
+      override fun visitCallableReferenceExpression(expression: KtCallableReferenceExpression) {
+        super.visitCallableReferenceExpression(expression)
+        if (isParam(expression.receiverExpression)) out += expression.callableReference.getReferencedName()
+      }
+    })
+    return out
+  }
+
+  /** Whether [name], read at [at] inside [fn], names a declaration closer than [fn]'s own parameter. */
+  private fun shadowed(at: PsiElement, name: String, fn: KtNamedFunction): Boolean {
+    fun declares(p: KtParameter) = p.name == name || p.destructuringDeclaration?.entries?.any { it.name == name } == true
+    fun declares(d: PsiElement): Boolean = when (d) {
+      is KtProperty -> d.name == name
+      is KtDestructuringDeclaration -> d.entries.any { it.name == name }
+      else -> false
+    }
+    var cur: PsiElement = at
+    while (cur !== fn) {
+      val parent = cur.parent ?: return false
+      val hides = when (parent) {
+        // Any function's parameters but the screen function's own: a lambda, a local or member
+        // function, a secondary constructor, a property accessor (`set(b)`).
+        is org.jetbrains.kotlin.psi.KtPropertyAccessor -> parent.parameter?.let(::declares) == true || parent.valueParameters.any(::declares)
+        is org.jetbrains.kotlin.psi.KtFunction -> parent !== fn && parent.valueParameters.any(::declares)
+        is KtForExpression -> cur !== parent.loopRange && parent.loopParameter?.let(::declares) == true
+        is KtCatchClause -> parent.catchParameter?.let(::declares) == true
+        is KtWhenExpression -> cur !== parent.subjectExpression && parent.subjectVariable?.name == name
+        is KtBlockExpression -> parent.statements.takeWhile { it !== cur }.any { declares(it) }
+        // A local class's constructor parameter (conservatively: anywhere in the class — it is in
+        // scope only in initializers). Not a member: Kotlin resolves `b` to the function's
+        // parameter before a member of the implicit receiver.
+        is org.jetbrains.kotlin.psi.KtClassOrObject -> parent.primaryConstructorParameters.any(::declares)
+        else -> false
+      }
+      if (hides) return true
+      cur = parent
+    }
+    return false
+  }
+
+  /** The names [cls] declares — properties and functions — with those of its supertypes declared in the same file ([decls]). */
+  private fun declaredNames(cls: KtClass, decls: Map<String, KtClass>, seen: MutableSet<KtClass> = HashSet()): Set<String> {
+    if (!seen.add(cls)) return emptySet()
+    val out = LinkedHashSet<String>()
+    cls.primaryConstructorParameters.filter { it.hasValOrVar() }.mapNotNullTo(out) { it.name }
+    cls.declarations.filter { it is KtProperty || it is KtNamedFunction }.mapNotNullTo(out) { it.name }
+    cls.superTypeListEntries.forEach { e ->
+      sameFileClass(e.typeReference, decls)?.let { out += declaredNames(it, decls, seen) }
+    }
+    return out
+  }
+
+  private fun requiredBindingsOf(exported: String, functionName: String): KtClass? =
+    PsiEnv.parse("Exported.kt", exported).declarations.filterIsInstance<KtClass>()
+      .firstOrNull { it.isInterface() && it.name == "${functionName}Bindings" }
+
   private fun ensureContract(fileText: String, exported: String, functionName: String): String {
     val exportFile = PsiEnv.parse("Exported.kt", exported)
     val exportIfaces = exportFile.declarations.filterIsInstance<KtClass>().filter { it.isInterface() }
@@ -105,6 +252,12 @@ object ContractWriteBack {
     // K4: the interface the screen TAKES (as the recognizer reads it), not the first in the file.
     val bindings = screenFunction(file)?.let { screenInterface(it, file) }
       ?: return fileText // no contract seam in this file — nothing to maintain
+    // U37: what the interface already has — its own members and those of its
+    // supertypes in this file (declaring one of those again, without
+    // `override`, does not compile) — and whether that is all of it.
+    val decls = typeDecls(file)
+    val declared = declaredNames(bindings, decls)
+    val readWhole = memberTypes(bindings, decls).complete
 
     val requiredMembers = LinkedHashMap<String, String>() // name -> defaulted decl text
     requiredBindings?.declarations?.forEach { d ->
@@ -119,14 +272,16 @@ object ContractWriteBack {
     val edits = mutableListOf<Edit>()
 
     // ── 1. Bindings interface: removals of marked+unrequired, additions of missing. ──
-    val existingNames = bindings.declarations.mapNotNull { it.name }.toSet()
     bindings.declarations.forEach { d ->
       val name = d.name ?: return@forEach
       if (name !in requiredMembers && isMarked(d.text)) {
         edits += lineBlockRemoval(fileText, d.textRange.startOffset, d.textRange.endOffset)
       }
     }
-    val missing = requiredMembers.filterKeys { it !in existingNames }
+    // U37: an interface extending a type declared in another file gains nothing — a
+    // member it does not declare here may be inherited (the writer refuses one the file
+    // does not read: [unvouched]).
+    val missing = if (!readWhole) emptyMap() else requiredMembers.filterKeys { it !in declared }
     if (missing.isNotEmpty()) {
       val rBrace = bindings.body?.rBrace ?: return fileText
       val insertAt = rBrace.textRange.startOffset

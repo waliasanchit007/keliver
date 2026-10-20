@@ -61,7 +61,7 @@ internal fun memberTypes(cls: KtClass, decls: Map<String, KtClass>, seen: Mutabl
   var outside: String? = null
   for (entry in cls.superTypeListEntries) {
     val name = entry.typeReference?.text?.substringBefore('<')?.trim()
-    val sup = name?.let(decls::get)
+    val sup = sameFileClass(entry.typeReference, decls)
     if (sup == null || sup in seen) {
       if (sup == null && outside == null) outside = name ?: entry.text
       continue
@@ -71,6 +71,26 @@ internal fun memberTypes(cls: KtClass, decls: Map<String, KtClass>, seen: Mutabl
     if (outside == null) outside = inherited.outside
   }
   return MemberTypes(types, outside)
+}
+
+/**
+ * The class or interface declared in this file that the type reference
+ * [ref] names — `Base`, one nested in a declaration of the file
+ * (`Outer.Base`), either qualified by the file's own package — or null when
+ * it names one declared elsewhere (#135 review: `Outer.Base` was looked up
+ * as a top-level name, so a nested supertype read as foreign).
+ */
+internal fun sameFileClass(ref: KtTypeReference?, decls: Map<String, KtClass>): KtClass? {
+  val segs = segmentsOf(ref) ?: return null
+  val file = ref?.containingKtFile ?: return null
+  val pkg = file.packageFqName.pathSegments().map { it.asString() }
+  val path = if (pkg.isNotEmpty() && segs.size > pkg.size && segs.take(pkg.size) == pkg) segs.drop(pkg.size) else segs
+  if (path.size == 1) return decls[path.single()]
+  var cur: KtClassOrObject = file.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.name == path.first() } ?: return null
+  for (seg in path.drop(1)) {
+    cur = cur.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.name == seg } ?: return null
+  }
+  return cur as? KtClass
 }
 
 /** A screen file's screen function: its first `@Composable` function (null = not a screen). */

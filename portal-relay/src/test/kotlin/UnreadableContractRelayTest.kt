@@ -98,8 +98,14 @@ class UnreadableContractRelayTest {
   @Test fun caseA_noInterfaceInTheFile() {
     val f = fixture(screen(tail = ""))
     assertRefusedThenNotWedged(f, "name", "the screen takes `HomeScreenBindings`, which is not declared in this file")
-    // A plain binding prints nothing: it is written.
-    assertTrue("text = b.name" in written(f, DocOp.SetProp(f.svc.child(0).handle, "text", PropValue.Bind("name"))))
+    // U37: a plain binding of a field the file does not read is refused too — the editor cannot
+    // tell whether the interface declared elsewhere has it, and cannot declare it there.
+    val plain = f.svc.submit(f.svc.batch(DocOp.SetProp(f.svc.child(0).handle, "text", PropValue.Bind("name"))))
+    assertFalse(plain.ok, "accepted a binding of `name`")
+    assertTrue("`name`" in plain.error!! && "not declared in this file" in plain.error!!, plain.error)
+    // One of a field the file reads prints nothing and compiles as the file does: it is written.
+    val g = fixture(screen(tail = "").replace("StyledText(text = \"y\")", "StyledText(text = b.name)"))
+    assertTrue("text = b.name" in written(g, DocOp.SetProp(g.svc.child(0).handle, "text", PropValue.Bind("name"))))
   }
 
   @Test fun caseB_aFieldInheritedFromAnotherFile() {

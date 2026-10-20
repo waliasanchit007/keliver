@@ -77,12 +77,20 @@ object ScreenWriter {
     functionName: String,
     /** The package a NEW file declares (an existing file keeps its own). */
     packageName: String?,
+    /**
+     * U37: the text the file was last READ as (not one the relay wrote; null =
+     * unknown). On a screen whose Bindings interface is not read whole in its
+     * file, a field or action this text reads is vouched for, as one the file
+     * on disk reads is ([ContractWriteBack.unvouched]) — so an undo that
+     * brings back a read the last write deleted is written.
+     */
+    readText: String? = null,
   ): Plan = planFor(
     onDisk,
     // The document as the CURRENT token table values it: a value that changed
     // since it was read or chosen is the one the file now reads as (S-c).
     withCurrentTokens(doc, tokens, fileName),
-    base, baseText, components, tokens, fileName, functionName, packageName,
+    base, baseText, components, tokens, fileName, functionName, packageName, readText,
   )
 
   private fun planFor(
@@ -95,6 +103,7 @@ object ScreenWriter {
     fileName: String,
     functionName: String,
     packageName: String?,
+    readText: String?,
   ): Plan {
     val tree = doc.toWidgetTree()
     // Every text written is read back — after the Bindings pass — as the document.
@@ -136,6 +145,11 @@ object ScreenWriter {
     }
     // S5 (the relay refuses such a move as an op; this holds for any other way here, e.g. an undo).
     DeclarationScope.problem(fileBase, doc)?.let { return Refuse(it) }
+    // U37: a member the screen would read that its file cannot vouch for — the interface
+    // is not read whole (declared elsewhere, or extending a type declared elsewhere) and
+    // the file neither declares nor reads it — is neither declared (it could redeclare an
+    // inherited member) nor written as a bare reference (it may not compile).
+    asIs.file?.let { ContractWriteBack.unvouched(it, tree, functionName, components, readText) }?.let { return Refuse(it) }
 
     val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, fileBase)
     if (surgical is WriteBack.Outcome.Merged) {
