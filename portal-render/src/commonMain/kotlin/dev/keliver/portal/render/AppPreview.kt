@@ -99,6 +99,15 @@ public interface AppPreviewEntry {
    * it). Runs in the editor's host composition around the canvas.
    */
   public val hostWrapper: PreviewWrapper? get() = null
+
+  /**
+   * Compiled component preview: component name -> an adapter that calls the
+   * app's own compiled component. The canvas uses it for an instance of an
+   * OPAQUE component (body outside the portal grammar), which otherwise
+   * previews as a placeholder; a transparent component keeps its editable
+   * grammar view. Usually generated (docs/COMPILED_COMPONENT_PREVIEW.md).
+   */
+  public val compiledComponents: Map<String, CompiledComponent> get() = emptyMap()
 }
 
 /** K5: a composable wrapper around preview content (see [AppPreviewEntry.screenWrapper]). */

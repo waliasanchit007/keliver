@@ -146,6 +146,30 @@ data class HttpRecordingConfig(
   }
 }
 
+/**
+ * Compiled component preview: the generated adapters file. [out] is a `.kt`
+ * path inside the per-app editor's wasm sources, relative to the repo (it
+ * must stay inside it); [packageName] its package ("" = the root package);
+ * [valName] the `Map<String, CompiledComponent>` the app's AppPreviewEntry
+ * returns from `compiledComponents`. [sameModule] = the components compile in
+ * the editor's own module, so `internal` ones can be called too.
+ */
+@Serializable
+data class CompiledComponentsConfig(
+  val out: String,
+  val packageName: String = "",
+  val valName: String = "AppCompiledComponents",
+  val sameModule: Boolean = false,
+) {
+  init {
+    require(out.endsWith(".kt")) { "compiledComponents.out must be a .kt file: $out" }
+    require(valName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*"))) { "compiledComponents.valName must be a Kotlin identifier: $valName" }
+    require(packageName.isEmpty() || packageName.matches(Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*"))) {
+      "compiledComponents.packageName must be a Kotlin package name: $packageName"
+    }
+  }
+}
+
 @Serializable
 private data class RuntimeMetadataResponse(
   val appRuntime: AppRuntimeMetadata?,
@@ -246,6 +270,12 @@ data class PortalConfig(
    * is trusted, not checked: listing a host says its DNS is trusted.
    */
   val previewAssetHosts: List<String> = emptyList(),
+  /**
+   * Compiled component preview (docs/COMPILED_COMPONENT_PREVIEW.md): where the
+   * relay writes the per-app editor's generated component adapters before
+   * each preview build. Null = off (opaque components preview as placeholders).
+   */
+  val compiledComponents: CompiledComponentsConfig? = null,
 ) {
   init {
     previewAssetHosts.forEach { host ->

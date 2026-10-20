@@ -1,6 +1,10 @@
 import java.nio.file.Files
 import kotlin.test.Test
+import dev.keliver.portal.cycleDiagnostic
+import dev.keliver.portal.onDependencyCycle
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -61,6 +65,41 @@ class ComponentsJsonTest {
       assertEquals("String", types.getValue("title").jsonPrimitive.content)
       assertEquals("Modifier", types.getValue("modifier").jsonPrimitive.content)
       assertEquals(true, card.getValue("transparent").jsonPrimitive.content.toBoolean())
+    } finally {
+      dir.deleteRecursively()
+    }
+  }
+
+  /** Round-2 nit 2: the cycle flag is one shared spelling (portal-core), read back structurally. */
+  @Test fun componentsOnACycleCarryTheSharedCycleFlag() {
+    val dir = Files.createTempDirectory("components-cycle").toFile()
+    try {
+      fun comp(name: String, calls: String?) = dir.resolve("$name.kt").writeText(
+        """
+        import androidx.compose.runtime.Composable
+        import dev.keliver.layout.compose.Column
+        import dev.keliver.material.compose.StyledText
+
+        @Composable
+        fun $name(label: String) {
+          Column {
+            StyledText(text = label)
+            ${calls?.let { "$it(label = label)" } ?: ""}
+          }
+        }
+        """.trimIndent(),
+      )
+      comp("Ping", "Pong")
+      comp("Pong", "Ping")
+      comp("Solo", null)
+      val reg = Components.rebuild("cycle-test", dir)
+      assertTrue(reg.spec("Ping")!!.onDependencyCycle, reg.spec("Ping").toString())
+      assertTrue(reg.spec("Pong")!!.onDependencyCycle)
+      assertFalse(reg.spec("Solo")!!.onDependencyCycle)
+      // What the editor receives in /components is the same spelling.
+      val ping = Json.parseToJsonElement(Components.toJson("cycle-test")).jsonArray
+        .single { it.jsonObject.getValue("name").jsonPrimitive.content == "Ping" }
+      assertEquals(cycleDiagnostic("Ping"), ping.jsonObject.getValue("diagnostic").jsonPrimitive.content)
     } finally {
       dir.deleteRecursively()
     }

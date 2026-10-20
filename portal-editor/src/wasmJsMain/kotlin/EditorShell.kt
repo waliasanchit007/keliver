@@ -20,6 +20,7 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.onDependencyCycle
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.portal.render.resolvePersona
@@ -78,6 +79,42 @@ internal fun tagWith(n: dev.keliver.portal.WidgetNode, handle: Int): dev.keliver
     props = if (tagged.type in UNRENDERED_TYPES) cleanProps else tagged.props,
     children = tagged.children.map { tagWith(it, sourceHandle) },
   )
+}
+
+/**
+ * C3/K1 + compiled component preview: how the canvas draws a component
+ * instance. Transparent expansion stays primary (the grammar view is the
+ * editable one); an opaque component the [entry] has a compiled adapter for is
+ * drawn by the app's own compiled composable; anything else is a placeholder
+ * or a cycle chip. Whatever is drawn carries the INSTANCE handle, so
+ * click-to-select picks the instance (one selectable unit).
+ */
+internal fun installComponentPreview(entry: AppPreviewEntry?) {
+  val adapters = entry?.compiledComponents.orEmpty()
+  dev.keliver.portal.render.compiledComponentProbe = if (adapters.isEmpty()) null else DiscardingCompiledProbe
+  dev.keliver.portal.render.componentPreviewInScope = { node, scope ->
+    // A component the relay flagged as on a dependency cycle is never drawn
+    // compiled: the canvas keeps its placeholder rather than risk recursing.
+    val registry = editorComponents
+    val compiled = adapters.filterKeys { name -> registry.spec(name)?.onDependencyCycle != true }
+    when (val e = dev.keliver.portal.expandForPreview(node, registry, compiled.keys)) {
+      is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, node.id), scope)
+      is dev.keliver.portal.Expansion.Opaque -> {
+        val adapter = compiled[e.name]
+        val handle = (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
+        if (adapter == null) {
+          RenderNode(tagWith(dev.keliver.portal.placeholder(e.name, e.reason), handle), scope)
+        } else {
+          // [node] is already tagged (selectionTagged / tagWith): the tag rides
+          // on the compiled root through the component's `modifier` parameter.
+          dev.keliver.portal.render.RenderCompiledComponent(node, scope, adapter) { reason ->
+            RenderNode(tagWith(dev.keliver.portal.placeholder(e.name, reason), handle), scope)
+          }
+        }
+      }
+      is dev.keliver.portal.Expansion.Cycle -> RenderNode(tagWith(dev.keliver.portal.cycleChip(e.path), node.id), scope)
+    }
+  }
 }
 
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
@@ -173,14 +210,10 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
       // instance (one selectable unit), never an internal expanded primitive.
       // K1: the instance's parent scope (RowScope/…) rides along, so the expanded
       // root sits in its parent exactly as the compiled component call does.
-      dev.keliver.portal.render.componentPreviewInScope = { node, scope ->
-        val expanded = when (val e = dev.keliver.portal.expandForPreview(node, editorComponents)) {
-          is dev.keliver.portal.Expansion.Transparent -> e.tree
-          is dev.keliver.portal.Expansion.Opaque -> dev.keliver.portal.placeholder(e.name, e.reason)
-          is dev.keliver.portal.Expansion.Cycle -> dev.keliver.portal.cycleChip(e.path)
-        }
-        RenderNode(tagWith(expanded, node.id), scope)
-      }
+      // Compiled component preview: an OPAQUE instance the app's editor has an
+      // adapter for draws the app's own compiled component instead of a
+      // placeholder (docs/COMPILED_COMPONENT_PREVIEW.md).
+      installComponentPreview(entry)
       // P3-12: register the per-app preview entry (the app's REAL presenters are
       // compiled in) and host the live presenter INSIDE the guest composition,
       // before RenderNode reads the mocks it feeds.

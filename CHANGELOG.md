@@ -54,6 +54,19 @@
   Condition node's at node level, without its condition props), so a device guest or per-app
   editor that predates K6 renders the true branch / then-branch instead of deciding it by the
   first term.
+- **portal-render, portal-core, portal-editor, portal-ingest, portal-relay:** compiled component
+  preview (docs/COMPILED_COMPONENT_PREVIEW.md). An OPAQUE project component (body outside the
+  portal grammar) used to preview as a placeholder; a per-app editor can now draw it with the
+  app's own compiled composable. New public API in portal-render: `AppPreviewEntry.compiledComponents`
+  (default empty), `CompiledComponent`, `CompiledCall`, `CompiledArgException`,
+  `RenderCompiledComponent`, and the editor-internal `CompiledComponentProbe` /
+  `compiledComponentProbe`; portal-core gains an `expandForPreview(node, registry, compiled, stack)`
+  overload (the existing signature is unchanged). Adapters are generated from the components'
+  signatures; `keliver.portal.json` takes an optional `compiledComponents` block (`out`,
+  `packageName`, `valName`, `sameModule`) and the relay writes that file before each preview
+  build (`:portal-relay:compiledComponentAdapters [-Pcheck]` does the same without a relay).
+  Transparent components keep their editable grammar view. A component that throws while
+  composing falls back to its placeholder. Without the block nothing changes.
 - **portal (codegen, ingest, document, exporter, render, relay, editor, mcp):** string templates
   and lists with references are portal grammar (K4). `text = "Rating: ${b.rating}/${C.Max}"`,
   `"${b.count} items"`, `"$label: $count"` in a component body, and a component argument
