@@ -99,19 +99,28 @@ object CompiledAdapters {
     return out
   }
 
-  /** Temp file in the same directory, then an atomic rename: a build never sees half a file. */
+  /**
+   * A fresh temp file in the same directory, then an atomic rename: a build
+   * never sees half a file. The temp file is created EXCLUSIVELY under a
+   * random name (never a fixed one a planted link could sit at), and the move
+   * does not follow links.
+   */
   private fun writeAtomically(out: File, text: String) {
     out.parentFile.mkdirs()
-    val tmp = File(out.parentFile, ".${out.name}.tmp")
-    tmp.writeText(text)
+    val tmp = Files.createTempFile(out.parentFile.toPath(), ".${out.name}.", ".tmp")
     try {
-      Files.move(tmp.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-    } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
-      Files.move(tmp.toPath(), out.toPath(), StandardCopyOption.REPLACE_EXISTING)
+      Files.write(tmp, text.toByteArray(Charsets.UTF_8))
+      try {
+        Files.move(tmp, out.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+      } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+        Files.move(tmp, out.toPath(), StandardCopyOption.REPLACE_EXISTING)
+      }
     } finally {
-      Files.deleteIfExists(tmp.toPath())
+      Files.deleteIfExists(tmp)
     }
-    check(!Files.isSymbolicLink(out.toPath()) && Files.isRegularFile(out.toPath(), LinkOption.NOFOLLOW_LINKS))
+    check(!Files.isSymbolicLink(out.toPath()) && Files.isRegularFile(out.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+      "compiledComponents.out is not a regular file after the write: $out"
+    }
   }
 }
 

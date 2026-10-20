@@ -176,4 +176,21 @@ class CompiledAdaptersTest {
     assertNull(CompiledAdapters.configWarning(config.copy(previewBuildTask = ":editor:wasmJsBrowserDistribution")))
     assertNull(CompiledAdapters.configWarning(PortalConfig()))
   }
+
+  /** Round-2 minor 3: a link planted at the old fixed temp name must not redirect the write. */
+  @Test fun aLinkPlantedAtTheOldTempNameIsNotWrittenThrough() {
+    // Before the fix the relay wrote `.AppCompiled.kt.tmp` (a fixed name):
+    // through a planted link the text went outside the repo and the move
+    // turned the out file into a link.
+    val repo = repoWith("PriceTag.kt" to badge)
+    val outside = createTempDirectory("compiled-adapters-outside").toFile()
+    val victim = File(outside, "victim.kt").apply { writeText("untouched\n") }
+    val dir = File(repo, "editor/src/wasmJsMain/kotlin").apply { mkdirs() }
+    Files.createSymbolicLink(File(dir, ".AppCompiled.kt.tmp").toPath(), victim.toPath())
+    assertNull(CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY))
+    assertEquals("untouched\n", victim.readText())
+    val out = File(dir, "AppCompiled.kt")
+    assertFalse(Files.isSymbolicLink(out.toPath()))
+    assertTrue(out.readText().startsWith(CompiledAdapterGenerator.GENERATED_HEADER))
+  }
 }
