@@ -167,6 +167,12 @@ object ${NAME}Preview : AppPreviewEntry {
   // device, so a Theme the app applies outside the screen file shows here too.
   // override val screenWrapper = dev.keliver.portal.render.PreviewWrapper { content -> AppTheme { content() } } // guest side: your keliver Theme
   // override val hostWrapper = dev.keliver.portal.render.PreviewWrapper { content -> MaterialTheme(appColorScheme) { content() } } // your native host's scheme
+
+  // Compiled component preview: draw OPAQUE components with your compiled code
+  // instead of a placeholder. Add to keliver.portal.json
+  //   "compiledComponents": {"out": "editor/src/wasmJsMain/kotlin/AppCompiledComponents.kt", "sameModule": true}
+  // (the relay writes that file before each preview build), then:
+  // override val compiledComponents = AppCompiledComponents
 }
 EOF
 
