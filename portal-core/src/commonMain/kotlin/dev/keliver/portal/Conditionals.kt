@@ -359,7 +359,7 @@ public fun conditionImports(tree: WidgetNode): Set<String> {
 }
 
 /**
- * K6 review: why a [test] term cannot read a field whose declared Kotlin type
+ * Why a [test] term cannot read a field whose declared Kotlin type
  * is [declaredType] — or null when it can, or when the type is not one this
  * KNOWS not to fit. Ingest and the document apply the same rule. Only
  * well-known types are judged, so valid code the portal does not model

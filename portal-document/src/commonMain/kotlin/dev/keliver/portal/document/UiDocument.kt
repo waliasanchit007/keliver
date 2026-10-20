@@ -781,7 +781,15 @@ private fun conditionShapeMisfit(n: DocNode.Widget): String? {
  * may when the condition there before ([previous]) or another condition in
  * the screen already compares that field with the same kind. Null = fine.
  */
-private fun unreadableEqualityMisfit(root: DocNode, h: Handle, key: String?, previous: List<DocTerm>, contract: Contract): String? {
+private fun unreadableEqualityMisfit(
+  root: DocNode,
+  h: Handle,
+  key: String?,
+  previous: List<DocTerm>,
+  contract: Contract,
+  /** A subtree being inserted: none of its conditions is evidence for another (it would vouch for itself). */
+  excluded: Handle? = null,
+): String? {
   val w = findIn(root, h) as? DocNode.Widget ?: return null
   val terms = if (key == null) {
     if (w.type != "Condition") return null
@@ -792,8 +800,10 @@ private fun unreadableEqualityMisfit(root: DocNode, h: Handle, key: String?, pre
   for (t in terms) {
     if (CondTest.fromWire(t.test) != CondTest.Eq || typeReadable(t.field, contract)) continue
     val kind = operandKind(t.operand) ?: continue
+    // An item field is the same field only inside a Repeat over the same list (its item type).
+    val scope = itemScopeOf(root, h, t.field)
     fun vouches(o: DocTerm) = o.field == t.field && CondTest.fromWire(o.test) == CondTest.Eq && operandKind(o.operand) == kind
-    if (previous.any(::vouches) || otherEqualities(root, h to key).any(::vouches)) continue
+    if (previous.any(::vouches) || otherEqualities(root, h to key, excluded).any { (o, s) -> s == scope && vouches(o) }) continue
     return "an equality compares `${t.field}` with ${if (kind == "Int") "an" else "a"} $kind, but the type of `${t.field}` is not readable here " +
       "(${if ('.' in t.field) "an item field's type is not in the contract" else unreadableReason(t.field, contract)}) and nothing in the screen " +
       "compares it with ${if (kind == "Int") "an" else "a"} $kind: make this change in code"
@@ -806,27 +816,52 @@ private fun insertedEqualityMisfit(root: DocNode, h: Handle, contract: Contract)
   val top = findIn(root, h) as? DocNode.Widget ?: return null
   fun walk(n: DocNode): String? {
     if (n !is DocNode.Widget) return null
-    if (n.type == "Condition") unreadableEqualityMisfit(root, n.handle, null, emptyList(), contract)?.let { return it }
+    if (n.type == "Condition") unreadableEqualityMisfit(root, n.handle, null, emptyList(), contract, excluded = h)?.let { return it }
     (n.props.keys + n.modifiers.keys.map { "mod.$it" }).forEach { k ->
-      unreadableEqualityMisfit(root, n.handle, k, emptyList(), contract)?.let { return it }
+      unreadableEqualityMisfit(root, n.handle, k, emptyList(), contract, excluded = h)?.let { return it }
     }
     return n.children.firstNotNullOfOrNull(::walk)
   }
   return walk(top)
 }
 
-/** K6 review: every condition term in [root] except the condition at [skip] (node, key — null = a Condition's own). */
-private fun otherEqualities(root: DocNode, skip: Pair<Handle, String?>): List<DocTerm> {
-  val out = ArrayList<DocTerm>()
-  fun walk(n: DocNode) {
-    if (n !is DocNode.Widget) return
-    if (n.type == "Condition" && skip != (n.handle to null)) out += n.conditionTerms()
-    n.props.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to k)) out += v.docTerms() }
-    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) out += v.docTerms() }
-    n.children.forEach(::walk)
+/**
+ * Every condition term in [root] except the condition at [skip] (node, key —
+ * null = a Condition's own) and any inside the subtree [excluded], each with
+ * its item scope: the list field of the Repeat binding an item field's item
+ * variable (null for a screen field).
+ */
+private fun otherEqualities(root: DocNode, skip: Pair<Handle, String?>, excluded: Handle?): List<Pair<DocTerm, String?>> {
+  val out = ArrayList<Pair<DocTerm, String?>>()
+  fun walk(n: DocNode, items: Map<String, String>) {
+    if (n !is DocNode.Widget || n.handle == excluded) return
+    fun add(terms: List<DocTerm>) = terms.forEach { t -> out += t to (if ('.' in t.field) items[t.field.substringBefore('.')] else null) }
+    if (n.type == "Condition" && skip != (n.handle to null)) add(n.conditionTerms())
+    n.props.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to k) && !(n.type == "Condition" && isConditionKey(k))) add(v.docTerms()) }
+    n.modifiers.forEach { (k, v) -> if (v is PropValue.Conditional && skip != (n.handle to "mod.$k")) add(v.docTerms()) }
+    val inner = if (n.type == "Repeat") {
+      val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
+      val list = (n.props["items"] as? PropValue.Lit)?.s.orEmpty()
+      items + (item to list)
+    } else items
+    n.children.forEach { walk(it, inner) }
   }
-  walk(root)
+  walk(root, emptyMap())
   return out
+}
+
+/** The list field of the nearest Repeat around [h] binding [field]'s item variable — null for a screen field (or none in scope). */
+private fun itemScopeOf(root: DocNode, h: Handle, field: String): String? {
+  if ('.' !in field) return null
+  val item = field.substringBefore('.')
+  var p = parentOf(root, h)
+  while (p != null) {
+    if (p.type == "Repeat" && ((p.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item") == item) {
+      return (p.props["items"] as? PropValue.Lit)?.s.orEmpty()
+    }
+    p = parentOf(root, p.handle)
+  }
+  return null
 }
 
 /** K6 review: whether the document reads [field]'s type — a screen field the contract types, or one it derives. */
