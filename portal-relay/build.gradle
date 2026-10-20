@@ -31,7 +31,7 @@ tasks.withType(Test).configureEach {
   // Subprocess tests that exercise default resolution unset it themselves.
   def testStore = layout.buildDirectory.dir("test-store/${name}").get().asFile
   environment('PORTAL_STORE', testStore.absolutePath)
-  doFirst { project.delete(testStore) }
+  doFirst { testStore.deleteDir() }
 }
 
 dependencies {
