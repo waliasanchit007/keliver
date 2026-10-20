@@ -323,4 +323,4 @@ selects one as a single unit (`NoteCountPill · component (opaque)`, outlined
 in the tree), and editing Count 3 → 7 in the properties panel redraws
 "7 NOTES" and writes `count = 7` back to the screen file surgically.
 
-Not yet done: a device screenshot comparison for an adopter component (D14).
+Not yet done: a device screenshot of the same screen (D14).

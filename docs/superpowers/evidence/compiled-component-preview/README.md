@@ -22,6 +22,6 @@ How (all local, loopback only; nothing published):
 | `1-drawn-compiled.png` | both instances drawn compiled: "3 NOTES", "1 ITEM"; the palette marks the component `opaque` |
 | `2-selected.png` | a click on the first pill selects it as one unit: properties say `NoteCountPill #5 · component (opaque)`, the outline highlights the instance |
 | `3-edited.png` | Count set to 7: the canvas redraws "7 NOTES" |
-| `feed-after-edit.diff` | the worktree's whole diff against `main` after the edit: the port change in `keliver.portal.json`, and in the feed screen the import and the two inserted calls, the first one's `count = 3` written back by the editor as `count = 7` (nothing else in the file changed) |
+| `feed-after-edit.diff` | the worktree's whole diff against `main` after the edit, so it shows the end state only: the harness's port change in `keliver.portal.json` (which also dropped that file's final newline), and in the feed screen the import and the two inserted calls with the first at `count = 7`. The 3 → 7 step itself is what screenshots 2 and 3 show; nothing else in the screen file changed |
 
 Not shown: a device screenshot of the same screen (D14).
