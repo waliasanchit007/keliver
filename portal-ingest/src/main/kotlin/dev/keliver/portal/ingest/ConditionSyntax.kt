@@ -77,6 +77,7 @@ internal class CondReader(
     }
     flat(e)?.let { return CondRead.No(it) }
     val terms = ArrayList<Cond>()
+    var single: Cond? = null
     for (p in parts) {
       val c = when (val r = term(p, itemScope)) {
         is CondRead.Ok -> r.cond
@@ -86,10 +87,42 @@ internal class CondReader(
       if (c.more.isNotEmpty() && parts.size > 1 && c.join != (join ?: CondJoin.And)) {
         return CondRead.No(MIXED.replace("%s", shown) + " once the local `${p.text.trim().removePrefix("!").trim()}` is read in place")
       }
-      if (parts.size == 1) return CondRead.Ok(c)
+      if (parts.size == 1) single = c
       terms += c.terms
     }
-    return CondRead.Ok(condOfTerms(terms, join ?: CondJoin.And))
+    // One part keeps its own join (a derived local of several terms, `!active` by De Morgan).
+    val cond = single ?: condOfTerms(terms, join ?: CondJoin.And)
+    // K6 review: a Boolean or emptiness term reads only a field whose declared type takes it.
+    cond.terms.forEachIndexed { i, t -> typeWhy(t, cond.terms.take(i), cond.join)?.let { return CondRead.No("condition `$shown`: $it") } }
+    return CondRead.Ok(cond)
+  }
+
+  /**
+   * K6 review: why the Boolean or emptiness term [t] does not fit its field's
+   * declared type (where one is declared and readable): a Boolean test reads a
+   * `Boolean`; `isEmpty()` a `String`, `CharSequence`, collection or array;
+   * `isBlank()` a `String` or `CharSequence`. A nullable one only where an
+   * earlier term of the same condition smart-casts it (`x != null && …`,
+   * `x == null || …`) — never in a screen, whose Bindings properties are not
+   * smart-cast and which has no null test. Null = it fits.
+   */
+  private fun typeWhy(t: Cond, before: List<Cond>, join: CondJoin): String? {
+    if (t.test != CondTest.Bool && t.test != CondTest.Empty && t.test != CondTest.Blank) return null
+    val declared = typeOf(t.field)?.takeIf { it != UNKNOWN_TYPE }?.let(::plainType) ?: return null
+    val base = declared.removeSuffix("?")
+    val fits = when (t.test) {
+      CondTest.Bool -> base == "Boolean"
+      CondTest.Blank -> base == "String" || base == "CharSequence"
+      else -> base == "String" || base == "CharSequence" || EMPTY_COLLECTIONS.any { base.startsWith("$it<") }
+    }
+    if (!fits) {
+      return if (t.test == CondTest.Bool) "`${t.field}` is declared $declared, not a Boolean"
+      else "`${t.field}` is declared $declared, which has no ${if (t.test == CondTest.Empty) "isEmpty()" else "isBlank()"}"
+    }
+    if (!declared.endsWith("?")) return null
+    val guarded = before.any { it.field == t.field && it.test == CondTest.Null && it.negate == (join == CondJoin.And) }
+    return if (guarded) null
+    else "`${t.field}` is declared $declared: it is read only after `${t.field} != null &&` (or `${t.field} == null ||`) in the same condition"
   }
 
   /** One term — or, for a derived local, the condition it stands for. */
@@ -244,6 +277,7 @@ internal class CondReader(
   )
 
   private companion object {
+    val EMPTY_COLLECTIONS = listOf("List", "MutableList", "Collection", "Set", "MutableSet", "Map", "MutableMap", "Array")
     const val MIXED = "condition `%s` mixes `&&` and `||` (a condition joins its terms with one of them)"
   }
 }

@@ -154,9 +154,16 @@ class CompoundConditionRelayTest {
     val v = text.props["text"] as PropValue.Conditional
     val ack = svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", v.copy(operand = lit(1)))))
     assertFalse(ack.ok)
-    assertTrue("could not be written" in ack.error.orEmpty(), ack.error)
+    // K6 review: the document refuses an operand kind change on an item field first (it cannot read item types);
+    // the write-back preflight would refuse it too.
+    assertTrue("not readable" in ack.error.orEmpty() || "could not be written" in ack.error.orEmpty(), ack.error)
     // The same term compared with a String is written.
     assertTrue(svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", v.copy(operand = lit("b"))))).ok)
+    // A new equality on that item field (not an operand change the document sees): the preflight refuses it.
+    val reordered = PropValue.Conditional("open", whenTrue = lit("A"), whenFalse = lit("B"), more = listOf(CondTerm("row.kind", "eq", operand = lit(1))), join = "or")
+    val pre = svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", reordered)))
+    assertFalse(pre.ok)
+    assertTrue("could not be written" in pre.error.orEmpty(), pre.error)
   }
 
   // K6 review: re-pointing a Boolean term at an Int field would write `if (b.kind != "cash" && b.count)`.

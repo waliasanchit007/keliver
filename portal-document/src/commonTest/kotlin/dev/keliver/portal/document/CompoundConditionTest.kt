@@ -136,7 +136,7 @@ class CompoundConditionTest {
     assertTrue("{\"field\":\"open\"}]" in json && "\"join\":\"or\"" in json, json)
   }
 
-  @Test fun theTreeCarriesEveryTermAndAK3ReaderTheFirst() {
+  @Test fun theTreeCarriesEveryTermWhereAK3ReaderDoesNotLook() {
     val d = doc(text(2, compound))
     val tree = d.toWidgetTree()
     val v = tree.children.single().props["text"] as Conditional
@@ -145,7 +145,7 @@ class CompoundConditionTest {
       v.cond,
     )
     val json = serializeTree(tree)
-    assertTrue("\"cond\":{\"field\":\"kind\",\"test\":\"eq\",\"operand\":{\"s\":\"card\"},\"more\":[{\"field\":\"count\",\"test\":\"eq\",\"negate\":true,\"operand\":{\"i\":0}},{\"field\":\"open\"}],\"join\":\"or\"}" in json, json)
+    assertTrue("\"condition\":{\"field\":\"kind\",\"test\":\"eq\",\"operand\":{\"s\":\"card\"},\"more\":[{\"field\":\"count\",\"test\":\"eq\",\"negate\":true,\"operand\":{\"i\":0}},{\"field\":\"open\"}],\"join\":\"or\"}" in json, json)
     assertEquals(tree, deserializeTree(json))
     assertEquals(compound, tree.children.single().toDocNode().props["text"])
     // A Condition node carries its terms as suffixed props; a K3 reader sees the first term's.
@@ -284,7 +284,7 @@ class CompoundConditionTest {
     refused(DocOp.RemoveProp(Handle(2), "operand"))
     refused(DocOp.SetProp(Handle(2), "test.1", lit("blank")))
     refused(DocOp.SetProp(Handle(2), "join", lit("and")))
-    refused(DocOp.RemoveProp(Handle(2), "join"))
+    accepted(DocOp.RemoveProp(Handle(2), "join")) // K6 review: the join changes like a value's (&& when removed)
     refused(DocOp.RemoveProp(Handle(2), "field.1"))
     refused(DocOp.SetProp(Handle(2), "field.2", lit("z")))
     refused(DocOp.SetProp(Handle(4), "test", lit("eq")))

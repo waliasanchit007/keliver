@@ -200,6 +200,10 @@ public data class Cond(
         }
         else -> {
           d as Cond
+          // Unreachable from the portal: preview expansion and item rows decide each term to a
+          // Boolean or ONE re-pointed term, and a derived local is inlined at ingest only where
+          // its join is the condition's. Kept so a future caller fails loudly, never silently
+          // splicing `a || b` into an `&&` condition.
           require(d.more.isEmpty() || d.join == join) { "a ${d.join} condition cannot be spliced into a $join one" }
           kept += d.terms
         }

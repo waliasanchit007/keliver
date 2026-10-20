@@ -224,6 +224,7 @@ public data class UiDocument(
         conditionalMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropOpMisfit(w, op.name, canonical)?.let { return err(it) }
+        operandKindMisfit(w, op.name, canonical, contract)?.let { return err(it) }
         refValueMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
@@ -241,7 +242,10 @@ public data class UiDocument(
         conditionPropOpMisfit(w, op.name, null)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) null else DocOp.SetProp(op.target, op.name, old)
-        TryResult(ApplyResult(replaced(w.copy(props = w.props - op.name)), inv), null)
+        val removed = replaced(w.copy(props = w.props - op.name))
+        // K6 review: a Condition with a prop removed is still a condition the field's type takes.
+        if (w.type == "Condition" && isConditionKey(op.name)) conditionMisfitAt(removed.root, op.target, null, contract.fields)?.let { return err(it) }
+        TryResult(ApplyResult(removed, inv), null)
       }
 
       is DocOp.SetModifier -> {
@@ -255,6 +259,7 @@ public data class UiDocument(
         tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         refValueMisfit(w.type, "mod.${op.name}", canonical, contract)?.let { return err(it) }
+        operandKindMisfit(w, "mod.${op.name}", canonical, contract)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
@@ -628,6 +633,10 @@ private fun conditionTypeMisfit(
   walk(root)
   val declared = fields[field]?.replace(" ", "")?.removePrefix("kotlin.")?.takeIf { it != UNKNOWN_TYPE }
   return when {
+    // K6 review: the declared type decides first — K3 single terms too.
+    boolean && declared != null && declared != "Boolean" -> "$where tests `$field` as a Boolean, but the Bindings interface declares it $declared"
+    (test == CondTest.Empty || test == CondTest.Blank) && declared != null && !emptinessFits(declared, test) ->
+      "$where tests `$field` with ${if (test == CondTest.Empty) "isEmpty()" else "isBlank()"}, but the Bindings interface declares it $declared"
     boolean && list -> "$where tests `$field` as a Boolean, but it is a Repeat's List (test it with isEmpty())"
     boolean && notBoolean -> "$where tests `$field` as a Boolean, but the screen reads it as a String or number elsewhere (a prop, a template, a list element or another test)"
     test == CondTest.Blank && list -> "$where: `$field` is a Repeat's List, which has isEmpty() but no isBlank()"
@@ -643,6 +652,21 @@ private fun conditionTypeMisfit(
     else -> null
   }
 }
+
+/**
+ * K6 review: whether a field declared [declared] (spaces and `kotlin.` gone)
+ * has [test]: `isBlank()` a String (or CharSequence), `isEmpty()` also a
+ * collection or an array — never a nullable type (a screen's Bindings
+ * property is never smart-cast).
+ */
+private fun emptinessFits(declared: String, test: CondTest): Boolean {
+  if (declared.endsWith("?")) return false
+  if (declared == "String" || declared == "CharSequence") return true
+  if (test != CondTest.Empty) return false
+  return EMPTY_COLLECTIONS.any { declared.startsWith("$it<") }
+}
+
+private val EMPTY_COLLECTIONS = listOf("List", "MutableList", "Collection", "Set", "MutableSet", "Map", "MutableMap", "Array")
 
 /** The Kotlin type a field bound to a prop of [kind] is declared with (a Color is an Int). */
 private fun kotlinTypeOfKind(kind: PropKind): String = dev.keliver.portal.kotlinTypeOf(kind)
@@ -754,6 +778,52 @@ private fun conditionShapeMisfit(n: DocNode.Widget): String? {
 }
 
 /**
+ * K6 review: why setting wire key [key] of [w] to [v] would change an
+ * equality's operand KIND on a field whose type the document cannot read —
+ * an item field (the contract carries no item types), a field declared
+ * without a type, or an unlisted field when the screen's interface is not
+ * read whole ([Contract.unlistedFieldsUnknown]). The file's type would not
+ * take the new kind (`b.kind == 1` for a `String`), and ingest cannot tell
+ * — so, as K4 refuses a template on such a field, the change is made in
+ * code. The same term (index and field) of the value before is compared;
+ * null = fine.
+ */
+private fun operandKindMisfit(w: DocNode.Widget, key: String, v: PropValue, contract: Contract): String? {
+  val (before, after) = if (w.type == "Condition" && isConditionKey(key)) {
+    if (key.substringBefore('.') != "operand") return null
+    val i = key.substringAfter('.', "0").toIntOrNull() ?: return null
+    val term = w.conditionTerms().getOrNull(i) ?: return null
+    listOf(term) to listOf(term.copy(operand = v))
+  } else {
+    val old = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) as? PropValue.Conditional ?: return null
+    val new = v as? PropValue.Conditional ?: return null
+    old.docTerms() to new.docTerms()
+  }
+  for (i in before.indices) {
+    val o = before[i]
+    val n = after.getOrNull(i) ?: continue
+    if (o.field != n.field || CondTest.fromWire(o.test) != CondTest.Eq || CondTest.fromWire(n.test) != CondTest.Eq) continue
+    val was = operandKind(o.operand)
+    val now = operandKind(n.operand)
+    if (was == null || now == null || was == now || typeReadable(n.field, contract)) continue
+    return "an equality on `${n.field}` compares with ${was}; the type of `${n.field}` is not readable here " +
+      "(${if ('.' in n.field) "an item field's type is not in the contract" else unreadableReason(n.field, contract)}), so comparing it with ${now} is made in code"
+  }
+  return null
+}
+
+/** K6 review: whether the document reads [field]'s type — a screen field the contract types, or one it derives. */
+private fun typeReadable(field: String, contract: Contract): Boolean = when {
+  '.' in field -> false
+  contract.fields[field] == UNKNOWN_TYPE -> false
+  field !in contract.fields && contract.unlistedFieldsUnknown != null -> false
+  else -> true
+}
+
+private fun unreadableReason(field: String, contract: Contract): String =
+  if (contract.fields[field] == UNKNOWN_TYPE) "`$field` is declared with no type" else contract.unlistedFieldsUnknown ?: "unknown"
+
+/**
  * K6: why an op that sets ([v]) or removes ([v] null) the `Condition` node
  * [w]'s prop [key] would leave a condition source cannot spell. Its first
  * term's field and negation are set as K3 set them; each further term's
@@ -769,7 +839,14 @@ private fun conditionPropOpMisfit(w: DocNode.Widget, key: String, v: PropValue?)
   val name = key.substringBefore('.')
   val index = if (key == CONDITION_JOIN_PROP) -1 else key.substringAfter('.', "0").toInt()
   val shape = "a compound or equality condition's shape is edited in code (or by replacing the Condition)"
-  if (key == CONDITION_JOIN_PROP || index >= terms.size) return "Condition.$key: $shape"
+  // K6 review: the join changes as a conditional value's does — set to "or" (`||`), removed for `&&`.
+  if (key == CONDITION_JOIN_PROP) return when {
+    terms.size < 2 -> "Condition.join joins two or more terms"
+    v == null -> null
+    v is PropValue.Lit && v.tag == "s" && v.s == CondJoin.Or.wire -> null
+    else -> "Condition.join is \"or\" (||), or absent (&&)"
+  }
+  if (index >= terms.size) return "Condition.$key: $shape"
   val term = terms[index]
   val isEq = CondTest.fromWire(term.test) == CondTest.Eq
   return when (name) {
