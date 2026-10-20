@@ -27,9 +27,16 @@ public fun WidgetNode.str(key: String, default: String = ""): String = when (val
   is Template -> templateText(v) { null }
   else -> v as? String ?: default
 }
-public fun WidgetNode.int(key: String, default: Int = 0): Int = tokenValue(props[key]) as? Int ?: default
+// K7: an arithmetic value reads as what it computes (an unknown operand: the default, as an unmocked binding).
+public fun WidgetNode.int(key: String, default: Int = 0): Int = when (val v = props[key]) {
+  is Arith -> arithValue(v) ?: default
+  else -> tokenValue(v) as? Int ?: default
+}
 public fun WidgetNode.bool(key: String, default: Boolean = false): Boolean = tokenValue(props[key]) as? Boolean ?: default
-public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = tokenValue(props[key]) as? Double ?: default
+public fun WidgetNode.dbl(key: String, default: Double = 0.0): Double = when (val v = props[key]) {
+  is IntDp -> intDpValue(v) ?: default
+  else -> tokenValue(v) as? Double ?: default
+}
 
 // K4: a list whose elements are references reads each token as its value (an unresolved binding as 0 / its placeholder).
 @Suppress("UNCHECKED_CAST")

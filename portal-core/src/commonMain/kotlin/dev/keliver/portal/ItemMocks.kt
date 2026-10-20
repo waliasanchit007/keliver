@@ -51,6 +51,11 @@ public fun resolveItemRow(
     // K4: a template's and a list's item references take the row's value.
     v is Template -> Template(v.parts.map { resolve(key, it) })
     v is ListOf -> ListOf(v.kind, v.items.map { resolve(key, it) })
+    // K7: an arithmetic operand takes the row's mock (an Int's text); an unmocked one stays
+    // unknown — never a label default, which no Int reads.
+    v is Arith || v is IntDp -> mapArithOperands(v) { o ->
+      if (o is Bind && o.field.startsWith("$itemVar.")) rowValue(o.field) ?: o else resolve(key, o)
+    }
     else -> v
   }
   val props = node.props.mapValues { (key, v) -> resolve(key, v) }

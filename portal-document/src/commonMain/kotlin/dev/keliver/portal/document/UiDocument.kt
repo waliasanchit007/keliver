@@ -94,6 +94,24 @@ import kotlinx.serialization.Serializable
  * types them, and ingest reads them back). Not checked here: an item field's
  * type (the contract does not carry item types) — write-back refuses such an
  * edit (the file would not read back as the document).
+ *
+ * K7: an arithmetic value ([PropValue.Arith]) sits only on an Int prop (a
+ * component instance's parameter: the server checks the signature), also as
+ * a conditional's branch, and an Int used as a Dp ([PropValue.IntDp]) only
+ * on a catalogued widget's Dp prop — neither on a modifier argument, a
+ * Margin side, a template part, a list element or an equality operand. Its
+ * operands are Int literals (never `Int.MIN_VALUE`), Int tokens, bindings
+ * and nested expressions; `/` and `%` divide by a non-zero Int literal only
+ * ([arithMisfit]). A screen field an operand reads is an Int: one the
+ * contract declares another type (or nullable) is refused; one the screen
+ * reads elsewhere as another type (bound to a non-Int prop, tested for
+ * emptiness, compared with a String or a Boolean, tested as a Boolean, a
+ * Repeat's List, a String list's element) is refused both ways round; one
+ * whose type the document cannot read (an item field, a field declared
+ * without a type, an unlisted field of an interface not read whole) is
+ * placed only where the value there before, or another use in the screen,
+ * already reads it as an Int ([arithUseMisfitAt]). Every op stores both
+ * canonical: an expression of literals is the literal it computes.
  */
 @Serializable
 public data class UiDocument(
@@ -134,6 +152,7 @@ public data class UiDocument(
         tokenMisfit(op.node)?.let { return err(it) }
         conditionalMisfit(op.node)?.let { return err(it) }
         refValueMisfit(op.node, contract)?.let { return err(it) }
+        arithMisfit(op.node, contract)?.let { return err(it) }
         elseMisfit(parent, op.node, moving = null)?.let { return err(it) }
         val (allocated, next) = allocate(op.node, nextHandle)
         val renumbered = sanitize(allocated, childScope(parent), deep = true, stripped = null)
@@ -142,6 +161,7 @@ public data class UiDocument(
         val inserted = replaced(newParent).copy(nextHandle = next)
         conditionsMisfit(inserted.root, renumbered.handle, contract.fields)?.let { return err(it) }
         insertedEqualityMisfit(inserted.root, renumbered.handle, contract)?.let { return err(it) }
+        insertedArithMisfit(inserted.root, renumbered.handle, contract)?.let { return err(it) }
         TryResult(ApplyResult(inserted, DocOp.DeleteNode(renumbered.handle)), null)
       }
 
@@ -227,6 +247,7 @@ public data class UiDocument(
         conditionPropMisfit(w.type, op.name, canonical)?.let { return err(it) }
         conditionPropOpMisfit(w, op.name, canonical)?.let { return err(it) }
         refValueMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
+        arithMisfit(w.type, op.name, canonical, contract)?.let { return err(it) }
         val old = w.props[op.name]
         val inv = if (old == null) DocOp.RemoveProp(op.target, op.name) else DocOp.SetProp(op.target, op.name, old)
         val value = if (isDpProp(w.type, op.name)) clampDp(canonical) else canonical
@@ -239,6 +260,7 @@ public data class UiDocument(
         itemRefMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
         refBooleanMisfitAt(set.root, op.target, op.name, contract.fields)?.let { return err(it) }
         repeatListMisfitAt(set.root, op.target, op.name)?.let { return err(it) }
+        arithUseMisfitAt(set.root, op.target, op.name, old, contract)?.let { return err(it) }
         TryResult(ApplyResult(set, inv), null)
       }
 
@@ -264,6 +286,7 @@ public data class UiDocument(
         tokenMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         conditionalMisfit(w.type, "mod.${op.name}", canonical)?.let { return err(it) }
         refValueMisfit(w.type, "mod.${op.name}", canonical, contract)?.let { return err(it) }
+        arithMisfit(w.type, "mod.${op.name}", canonical, contract)?.let { return err(it) }
         val old = w.modifiers[op.name]
         val inv = if (old == null) DocOp.RemoveModifier(op.target, op.name) else DocOp.SetModifier(op.target, op.name, old)
         val value = if (isDpProp(w.type, "mod.${op.name}")) clampDp(canonical) else canonical
@@ -602,6 +625,8 @@ private fun conditionTypeMisfit(
   var testedText = false
   val eqTypes = LinkedHashSet<String>()
   val boundKinds = LinkedHashSet<PropKind>()
+  // K7: an arithmetic operand reads the field as an Int.
+  var intRead = false
   fun cond(terms: List<DocTerm>) {
     for (t in terms) {
       if (t.field != field) continue
@@ -624,6 +649,7 @@ private fun conditionTypeMisfit(
       // K4: a template prints its fields into text and a list holds Ints or Strings: neither is
       // a Boolean the contract does not declare (a list never binds a declared Boolean).
       if (field in refFields(v) && !isBooleanType(fields[field])) notBoolean = true
+      if (field in arithFields(v)) intRead = true
       if (v is PropValue.Conditional) cond(v.docTerms())
       val kind = spec?.props?.firstOrNull { it.name == k }?.kind
       val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
@@ -654,6 +680,9 @@ private fun conditionTypeMisfit(
     eqType != null && testedBoolean -> "$where compares `$field` with $eqType, but the screen tests it as a Boolean elsewhere"
     eqType != null && (eqTypes - eqType).isNotEmpty() -> "$where compares `$field` with $eqType, but the screen compares it with ${(eqTypes - eqType).first()} elsewhere"
     eqType == "Int" && testedText -> "$where compares `$field` with Int, but the screen tests it as a String elsewhere (isEmpty()/isBlank())"
+    (test == CondTest.Empty || test == CondTest.Blank) && intRead && !list ->
+      "$where tests `$field` as a String, but the screen reads it as an Int elsewhere (an arithmetic operand)"
+    eqType != null && eqType != "Int" && intRead -> "$where compares `$field` with $eqType, but the screen reads it as an Int elsewhere (an arithmetic operand)"
     eqType != null && boundKinds.any { kotlinTypeOfKind(it) != eqType } ->
       "$where compares `$field` with $eqType, but the screen binds it to a ${kotlinTypeOfKind(boundKinds.first { kotlinTypeOfKind(it) != eqType })} prop elsewhere"
     else -> null
@@ -995,6 +1024,8 @@ private fun isBooleanType(type: String?): Boolean = type?.replace(" ", "")?.remo
 /** K4: the plain fields (and item fields) a template's parts or a list's elements read — also in a conditional's branches. */
 private fun refFields(v: PropValue?): List<String> = when (v) {
   is PropValue.Conditional -> refFields(v.whenTrue) + refFields(v.whenFalse)
+  // K7: an arithmetic operand reads its field as one Int value too.
+  is PropValue.Arith, is PropValue.IntDp -> arithFields(v)
   is PropValue.Template -> v.parts.filterIsInstance<PropValue.Bind>().map { it.field }
   is PropValue.ListOf -> v.items.filterIsInstance<PropValue.Bind>().map { it.field }
   else -> emptyList()
@@ -1092,7 +1123,7 @@ private fun refBooleanMisfitAt(root: DocNode, h: Handle, key: String, fields: Ma
     return n.children.firstNotNullOfOrNull(::tested)
   }
   val f = tested(root) ?: return null
-  return "${w.type}.$key reads `$f` as text or a list element, but the screen tests it as a Boolean elsewhere (the contract cannot type it both)"
+  return "${w.type}.$key reads `$f` as text, a list element or an Int operand, but the screen tests it as a Boolean elsewhere (the contract cannot type it both)"
 }
 
 /**
@@ -1159,6 +1190,7 @@ private fun itemRefMisfitAt(root: DocNode, h: Handle, key: String): String? {
     is PropValue.Conditional -> refs(x.whenTrue) + refs(x.whenFalse)
     is PropValue.Template -> x.parts.filterIsInstance<PropValue.Bind>().map { it.field }
     is PropValue.ListOf -> x.items.filterIsInstance<PropValue.Bind>().map { it.field }
+    is PropValue.Arith, is PropValue.IntDp -> arithFields(x) // K7
     else -> emptyList()
   }
   val dotted = refs(v).filter { '.' in it }
@@ -1174,6 +1206,213 @@ private fun tokenMisfit(n: DocNode): String? {
   n.props.forEach { (k, v) -> tokenMisfit(n.type, k, v)?.let { return it } }
   n.modifiers.forEach { (k, v) -> tokenMisfit(n.type, "mod.$k", v)?.let { return it } }
   return n.children.firstNotNullOfOrNull { tokenMisfit(it) }
+}
+
+/**
+ * K7: why the arithmetic value [v] (an [PropValue.Arith] or an
+ * [PropValue.IntDp], also as a conditional's branch) may not sit at wire key
+ * [key] on a node of [nodeType], or null when it may (or [v] is neither). [v]
+ * is canonical ([canonicalValue]). Where: an Arith on a catalogued widget's
+ * Int prop or a project component's parameter (the server checks its
+ * declared type); an IntDp on a catalogued widget's Dp prop (never a Margin
+ * side); neither on a modifier argument. Its shape: operators `+ - * / %`;
+ * each operand an Int literal (never `Int.MIN_VALUE`, a Long in source), an
+ * Int token, a binding of a field name, or another Arith; `/` and `%` by a
+ * non-zero Int literal only. A screen field an operand reads is declared
+ * `Int` where the contract declares it (never nullable, never another
+ * type).
+ */
+private fun arithMisfit(nodeType: String, key: String, v: PropValue, contract: Contract): String? {
+  if (v is PropValue.Conditional) return listOfNotNull(v.whenTrue, v.whenFalse).firstNotNullOfOrNull { arithMisfit(nodeType, key, it, contract) }
+  if (v !is PropValue.Arith && v !is PropValue.IntDp) return null
+  val where = "arithmetic $nodeType.$key"
+  if (key.startsWith("mod.")) return "$where: an arithmetic value fits a widget's Int prop or a component's Int parameter, never a modifier argument"
+  val catalogued = widgetSpec(nodeType) != null
+  val expr: PropValue = when (v) {
+    is PropValue.IntDp -> {
+      if (!catalogued) return "$where: an Int used as a Dp fits only a widget's Dp prop (a component parameter is never a Dp)"
+      val type = propSourceType(nodeType, key)
+      if (type != "Dp" || '.' in key) return "$where: an Int used as a Dp fits only a Dp prop (this one is ${if ('.' in key) "a Margin side" else type ?: "not a prop"})"
+      if (v.form != null && v.form != DP_CTOR_FORM) return "$where: unknown Dp spelling '${v.form}' (none for `x.dp`, \"$DP_CTOR_FORM\" for `Dp(x.toDouble())`)"
+      when (val x = v.value) {
+        is PropValue.Arith, is PropValue.Bind -> x
+        is PropValue.Token -> if (x.value.tag == "i") x else return "$where: token ${x.ref} is not an Int (an Int used as a Dp is an Int)"
+        else -> return "$where: an Int used as a Dp is an Int expression, an Int binding or an Int design token"
+      }
+    }
+    else -> {
+      if (catalogued) {
+        val type = propSourceType(nodeType, key)
+        if (type != "Int") return "$where: an arithmetic value fits only an Int prop (this one is ${type ?: "not a prop"})"
+      }
+      v
+    }
+  }
+  fun operand(x: PropValue, divisor: Boolean): String? = when {
+    divisor -> if (x is PropValue.Lit && x.tag == "i" && x.i != null && x.i != 0 && x.i != Int.MIN_VALUE) null
+      else "$where: `/` and `%` divide only by a non-zero Int literal (Kotlin/JS and wasm do not fail alike on a zero divisor)"
+    x is PropValue.Arith -> {
+      val op = dev.keliver.portal.ArithOp.fromSymbol(x.op)
+      if (op == null) "$where: unknown operator '${x.op}' (+, -, *, / or %)"
+      else operand(x.left, divisor = false) ?: operand(x.right, divisor = op.divides)
+    }
+    x is PropValue.Lit -> when {
+      x.tag != "i" || x.i == null -> "$where: a literal operand is an Int"
+      x.i == Int.MIN_VALUE -> "$where: -2147483648 is a Long in Kotlin source, not an Int operand"
+      else -> null
+    }
+    x is PropValue.Token -> if (x.value.tag == "i") null else "$where: token ${x.ref} is not an Int (an operand is an Int)"
+    x is PropValue.Bind -> when {
+      !CONDITION_FIELD.matches(x.field) -> "$where: '${x.field}' is not a field name"
+      else -> declaredOperandWhy(x.field, contract)?.let { "$where: $it" }
+    }
+    else -> "$where: an operand is an Int literal, an Int design token, an Int binding or an expression"
+  }
+  return operand(expr, divisor = false)
+}
+
+/** K7: why a screen field [field] the contract declares is not an Int operand (null = it is, or the contract does not declare it). */
+private fun declaredOperandWhy(field: String, contract: Contract): String? {
+  if ('.' in field) return null
+  val declared = contract.fields[field]?.replace(" ", "")?.takeIf { it != UNKNOWN_TYPE } ?: return null
+  val plain = declared.removePrefix("kotlin.")
+  return when {
+    plain == "Int" -> null
+    plain.endsWith("?") -> "`$field` is declared $declared: an operand is a non-null Int"
+    else -> "`$field` is declared $declared, not an Int (only Int arithmetic is grammar: Kotlin computes a Long, a Double or a Float otherwise)"
+  }
+}
+
+/** [arithMisfit] for every prop and modifier of an inserted subtree. */
+private fun arithMisfit(n: DocNode, contract: Contract): String? {
+  if (n !is DocNode.Widget) return null
+  n.props.forEach { (k, v) -> arithMisfit(n.type, k, canonicalValue(v), contract)?.let { return it } }
+  n.modifiers.forEach { (k, v) -> arithMisfit(n.type, "mod.$k", canonicalValue(v), contract)?.let { return it } }
+  return n.children.firstNotNullOfOrNull { arithMisfit(it, contract) }
+}
+
+/**
+ * K7: why the arithmetic value at wire key [key] of node [h] (placed in
+ * [root]) reads a field the screen cannot take as an Int there: a screen
+ * field the screen reads elsewhere as another type — bound to a prop that
+ * is not an Int, tested for emptiness or blankness (a String), compared with
+ * a String or a Boolean, a String list's element (a Boolean test, a
+ * Repeat's List and an item field outside its Repeat are refused by the K3/
+ * K4 rules, which read operands too); or a field whose type the document
+ * cannot read — an item field (the contract carries no item types), a field
+ * declared without a type, an unlisted field where the interface is not read
+ * whole — that nothing vouches for: the value there before ([previous]), or
+ * another use in the screen reading it as an Int (an operand, or a binding
+ * on an Int prop), within the same item scope and outside [excluded] (an
+ * inserted subtree never vouches for itself). As K6 places an equality on
+ * such a field, the change is otherwise made in code: `b.label / 2` does
+ * not compile for a String, and ingest could not tell. Null = fine.
+ */
+private fun arithUseMisfitAt(
+  root: DocNode,
+  h: Handle,
+  key: String,
+  previous: PropValue?,
+  contract: Contract,
+  excluded: Handle? = null,
+): String? {
+  val w = findIn(root, h) as? DocNode.Widget ?: return null
+  val v = (if (key.startsWith("mod.")) w.modifiers[key.removePrefix("mod.")] else w.props[key]) ?: return null
+  val read = arithFields(v).distinct()
+  if (read.isEmpty()) return null
+  val where = "arithmetic ${w.type}.$key"
+  for (field in read) {
+    if ('.' !in field) otherReadMisfit(root, field, h to key)?.let { return "$where reads `$field` as an Int, but $it" }
+    if (typeReadable(field, contract)) continue
+    val scope = itemScopeOf(root, h, field)
+    if (field in arithFields(previous)) continue
+    if (intReads(root, h to key, excluded).any { (f, s) -> f == field && s == scope }) continue
+    return "$where reads `$field` as an Int, but the type of `$field` is not readable here " +
+      "(${if ('.' in field) "an item field's type is not in the contract" else unreadableReason(field, contract)}) and nothing in the screen " +
+      "reads it as an Int: make this change in code"
+  }
+  return null
+}
+
+/** K7: how the screen reads the screen field [field] other than as an Int (null = only as an Int, or not at all), the use at [skip] aside. */
+private fun otherReadMisfit(root: DocNode, field: String, skip: Pair<Handle, String>): String? {
+  fun walk(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    if (n.type == "Condition") termReadMisfit(field, n.conditionTerms())?.let { return it }
+    val spec = widgetSpec(n.type)
+    n.props.forEach { (k, v) ->
+      if (n.type == "Condition" && isConditionKey(k)) return@forEach
+      if (v is PropValue.Conditional) termReadMisfit(field, v.docTerms())?.let { return it }
+      if (skip == (n.handle to k)) return@forEach
+      val kind = spec?.props?.firstOrNull { it.name == k }?.kind
+      val binds = if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)
+      if (kind != null && kind != PropKind.Int && kind != PropKind.Color && binds.any { it is PropValue.Bind && it.field == field }) {
+        return "the screen binds it to a ${kotlinTypeOfKind(kind)} prop elsewhere (${n.type}.$k)"
+      }
+      if (binds.any { it is PropValue.ListOf && it.tag == "ls" && it.items.any { e -> e is PropValue.Bind && e.field == field } }) {
+        return "the screen reads it as a String list's element elsewhere (${n.type}.$k)"
+      }
+    }
+    n.modifiers.values.forEach { v -> if (v is PropValue.Conditional) termReadMisfit(field, v.docTerms())?.let { return it } }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return walk(root)
+}
+
+/** K7: a condition term reading [field] as something no Int is — emptiness, blankness, a String or a Boolean equality. */
+private fun termReadMisfit(field: String, terms: List<DocTerm>): String? {
+  for (t in terms) {
+    if (t.field != field) continue
+    when (CondTest.fromWire(t.test)) {
+      CondTest.Empty, CondTest.Blank -> return "the screen tests it as a String elsewhere (isEmpty()/isBlank())"
+      CondTest.Eq -> operandKind(t.operand)?.takeIf { it != "Int" }?.let { return "the screen compares it with a $it elsewhere" }
+      else -> {}
+    }
+  }
+  return null
+}
+
+/**
+ * K7: every read of a field as an Int in [root] — an arithmetic operand, or a
+ * binding on a catalogued Int prop — except the value at [skip] and any
+ * inside the subtree [excluded], each with its item scope (the list field
+ * of the Repeat binding an item field's item variable; null for a screen
+ * field).
+ */
+private fun intReads(root: DocNode, skip: Pair<Handle, String>, excluded: Handle?): List<Pair<String, String?>> {
+  val out = ArrayList<Pair<String, String?>>()
+  fun walk(n: DocNode, items: Map<String, String>) {
+    if (n !is DocNode.Widget || n.handle == excluded) return
+    fun add(field: String) { out += field to (if ('.' in field) items[field.substringBefore('.')] else null) }
+    val spec = widgetSpec(n.type)
+    n.props.forEach { (k, v) ->
+      if (skip == (n.handle to k)) return@forEach
+      arithFields(v).forEach(::add)
+      val kind = spec?.props?.firstOrNull { it.name == k }?.kind
+      if (kind == PropKind.Int || kind == PropKind.Color) {
+        (if (v is PropValue.Conditional) listOfNotNull(v.whenTrue, v.whenFalse) else listOf(v)).filterIsInstance<PropValue.Bind>().forEach { add(it.field) }
+      }
+    }
+    val inner = if (n.type == "Repeat") {
+      val item = (n.props["item"] as? PropValue.Lit)?.s?.takeIf { it.isNotBlank() } ?: "item"
+      val list = (n.props["items"] as? PropValue.Lit)?.s.orEmpty()
+      items + (item to list)
+    } else items
+    n.children.forEach { walk(it, inner) }
+  }
+  walk(root, emptyMap())
+  return out
+}
+
+/** K7: [arithUseMisfitAt] for every prop of an inserted subtree at [h] (nothing was there before). */
+private fun insertedArithMisfit(root: DocNode, h: Handle, contract: Contract): String? {
+  val top = findIn(root, h) as? DocNode.Widget ?: return null
+  fun walk(n: DocNode): String? {
+    if (n !is DocNode.Widget) return null
+    n.props.keys.forEach { k -> arithUseMisfitAt(root, n.handle, k, null, contract, excluded = h)?.let { return it } }
+    return n.children.firstNotNullOfOrNull(::walk)
+  }
+  return walk(top)
 }
 
 /** A Dp is never negative: a negative literal becomes 0 (K3: in either branch of a conditional). */

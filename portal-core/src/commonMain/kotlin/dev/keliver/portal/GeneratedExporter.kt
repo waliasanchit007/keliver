@@ -168,6 +168,8 @@ private fun itemFieldsOf(node: WidgetNode, itemVar: String, iface: LinkedHashMap
       if (v is ListOf) v.items.filterIsInstance<Bind>().filter { it.field.startsWith("$itemVar.") }.forEach { r ->
         iface[r.field.substringAfter('.')] = listElementType(v.kind) ?: "String"
       }
+      // K7: an arithmetic value's item operands are Int fields.
+      arithBinds(v).filter { it.field.startsWith("$itemVar.") }.forEach { r -> iface[r.field.substringAfter('.')] = "Int" }
       if (v is Bind && v.field.startsWith("$itemVar.")) {
         val sub = v.field.substringAfter('.')
         iface[sub] = widgetSpec(node.type)?.props?.firstOrNull { it.name == prop }?.kind?.let { kotlinTypeOf(it) } ?: "String"
@@ -224,8 +226,10 @@ private fun fmtString(v: Any?): String = when {
   v is Token && v.value is String -> v.ref
   else -> kotlinStringLiteral(tokenValue(v).toString())
 }
+// K7: an arithmetic value writes its operands with the parentheses its tree needs.
 private fun fmtInt(v: Any?): String = when {
   v is Conditional -> fmtConditional(v, ::fmtInt)
+  v is Arith -> arithKotlin(v, ::bindRef)
   v is Bind -> bindRef(v.field)
   v is Token && v.value is Int -> v.ref
   else -> ((tokenValue(v) as? Int) ?: 0).toString()
@@ -245,8 +249,10 @@ private fun fmtDouble(v: Any?): String = when {
 private fun fmtFloat(v: Any?): String =
   if (v is Conditional) fmtConditional(v, ::fmtFloat) else "${fmtDouble(tokenValue(v))}f"
 // Dp is non-negative (its init requires it): clamp, as the document and the preview do.
+// K7: an Int used as a Dp keeps its spelling (`x.dp` or `Dp(x.toDouble())`).
 private fun fmtDp(v: Any?): String =
   if (v is Conditional) fmtConditional(v, ::fmtDp)
+  else if (v is IntDp) arithKotlin(v, ::bindRef)
   else if (v is Bind) "Dp(${bindRef(v.field)})"
   else tokenValue(v).let { x -> "Dp(${kotlinDoubleLiteral(((x as? Double) ?: (x as? Int)?.toDouble() ?: 0.0).coerceAtLeast(0.0))})" }
 // K4: each element of a list in its kind — a literal, a token's reference, a binding.
@@ -365,9 +371,9 @@ private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<
       "Flex" -> if ((parent == "Row" || parent == "Column")) { parts += "flex(" + fmtDouble(node.props["mod.Flex.value"]) + ")"; imports.addTokenImport(node.props["mod.Flex.value"], "Double") }
       "GradientBackground" -> { parts += "gradientBackground(" + fmtInt(node.props["mod.GradientBackground.startArgb"]) + ", " + fmtInt(node.props["mod.GradientBackground.endArgb"]) + ")"; imports += "dev.keliver.material.compose.gradientBackground"; imports.addTokenImport(node.props["mod.GradientBackground.startArgb"], "Int"); imports.addTokenImport(node.props["mod.GradientBackground.endArgb"], "Int") }
       "Grow" -> if ((parent == "Row" || parent == "Column")) { parts += "grow(" + fmtDouble(node.props["mod.Grow.value"]) + ")"; imports.addTokenImport(node.props["mod.Grow.value"], "Double") }
-      "Height" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
+      "Height" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "height(" + fmtDp(node.props["mod.Height.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["mod.Height.height"], "Dp") }
       "HorizontalAlignment" -> if ((parent == "Column" || parent == "Box")) { parts += "horizontalAlignment(" + fmtCrossAxis(node.props["mod.HorizontalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
-      "LayoutSize" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports += listOf("dev.keliver.ui.Dp") }
+      "LayoutSize" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "size(" + fmtDp(node.props["mod.LayoutSize.width"]) + ", " + fmtDp(node.props["mod.LayoutSize.height"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["mod.LayoutSize.width"], "Dp"); imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["mod.LayoutSize.height"], "Dp") }
       "Margin" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "margin(" + fmtMargin(node, "mod.Margin.margin") + ")"; imports += marginImports(node, "mod.Margin.margin") }
       "Offset" -> { parts += "offset(" + fmtInt(node.props["mod.Offset.xDp"]) + ", " + fmtInt(node.props["mod.Offset.yDp"]) + ")"; imports += "dev.keliver.material.compose.offset"; imports.addTokenImport(node.props["mod.Offset.xDp"], "Int"); imports.addTokenImport(node.props["mod.Offset.yDp"], "Int") }
       "Padding" -> { parts += "padding(" + fmtInt(node.props["mod.Padding.allDp"]) + ")"; imports += "dev.keliver.material.compose.padding"; imports.addTokenImport(node.props["mod.Padding.allDp"], "Int") }
@@ -378,7 +384,7 @@ private fun modifierExpr(node: WidgetNode, parent: String?, imports: MutableSet<
       "Shrink" -> if ((parent == "Row" || parent == "Column")) { parts += "shrink(" + fmtDouble(node.props["mod.Shrink.value"]) + ")"; imports.addTokenImport(node.props["mod.Shrink.value"], "Double") }
       "Size" -> { parts += "size(" + fmtInt(node.props["mod.Size.widthDp"]) + ", " + fmtInt(node.props["mod.Size.heightDp"]) + ")"; imports += "dev.keliver.material.compose.size"; imports.addTokenImport(node.props["mod.Size.widthDp"], "Int"); imports.addTokenImport(node.props["mod.Size.heightDp"], "Int") }
       "VerticalAlignment" -> if ((parent == "Row" || parent == "Box")) { parts += "verticalAlignment(" + fmtCrossAxis(node.props["mod.VerticalAlignment.alignment"]) + ")"; imports += listOf("dev.keliver.layout.api.CrossAxisAlignment") }
-      "Width" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"; imports += listOf("dev.keliver.ui.Dp") }
+      "Width" -> if ((parent == "Row" || parent == "Column" || parent == "Box")) { parts += "width(" + fmtDp(node.props["mod.Width.width"]) + ")"; imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["mod.Width.width"], "Dp") }
       else -> {}
     }
   }
@@ -873,8 +879,8 @@ private fun emitNode(sb: StringBuilder, node: WidgetNode, indent: String, compon
       imports += "dev.keliver.layout.compose.Spacer"
       sb.append("${indent}Spacer(\n")
       modifierExpr(node, parent, imports)?.let { sb.append("${indent}  modifier = $it,\n") }
-      if ("width" in node.props) { sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n"); imports += listOf("dev.keliver.ui.Dp") }
-      if ("height" in node.props) { sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n"); imports += listOf("dev.keliver.ui.Dp") }
+      if ("width" in node.props) { sb.append("${indent}  width = ${fmtDp(node.props["width"])},\n"); imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["width"], "Dp") }
+      if ("height" in node.props) { sb.append("${indent}  height = ${fmtDp(node.props["height"])},\n"); imports += listOf("dev.keliver.ui.Dp"); imports.addTokenImport(node.props["height"], "Dp") }
       sb.append("$indent)\n")
     }
     "StyledBox" -> {
@@ -1081,6 +1087,8 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       token?.let { imports.addTokenImport(it, tokenKindOf(it.value)) }
       // K4: a template argument writes each token part as its reference.
       if (v is Template) imports.addTokenImport(v, "String")
+      // K7: so does an arithmetic argument, each token operand.
+      if (v is Arith) imports.addTokenImport(v, "Int")
       // An event's arity is its signature's (`(Int) -> Unit` takes one), not the action's arg.
       val eventParams = spec?.events?.firstOrNull { it.name == k }?.let { if (it.paramType != null) 1 else 0 }
       fun render(x: Any?, branch: Boolean): String = when (x) {
@@ -1089,6 +1097,7 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
         is Action -> (eventParams ?: if (x.arg == "it") 1 else 0).let { n -> if (branch) fmtActionBranch(x, n) else fmtAction(x, n) }
         is Bind -> bindRef(x.field)
         is Template -> fmtTemplate(x, ::bindRef)
+        is Arith -> arithKotlin(x, ::bindRef)
         is String -> kotlinStringLiteral(x)
         is Boolean -> x.toString()
         is Int -> x.toString()
@@ -1100,8 +1109,8 @@ private fun emitComponentInstance(sb: StringBuilder, node: WidgetNode, indent: S
       fun branchValue(x: Any?): Any? =
         if (x is Token && (spec == null || tokenFits(propSourceType(node.type, k, components), x.value))) {
           imports.addTokenImport(x, tokenKindOf(x.value)); x
-        } else if (x is Template) {
-          imports.addTokenImport(x, "String"); x
+        } else if (x is Template || x is Arith) {
+          imports.addTokenImport(x, if (x is Arith) "Int" else "String"); x
         } else {
           tokenValue(x)
         }
