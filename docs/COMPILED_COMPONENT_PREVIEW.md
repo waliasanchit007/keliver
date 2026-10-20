@@ -209,10 +209,18 @@ segments are backtick-quoted (`` `in` = p0 ``, ``import app.`in`.ui…``);
 `@androidx.compose.runtime.Composable () -> Unit` is a slot; every component is
 imported under an alias (`import a.b.PriceTag as PriceTag__c3`) and the render types
 are written fully qualified, so a component named `CompiledComponent` or
-`mapOf` cannot clash. Each adapter is parsed before it is emitted and one that
-does not parse is refused instead — the relay rewrites the file before every
-preview build, so one bad adapter must never stop them all. The fixture set
-(`portal-parity-fixtures`) compiles such edge cases on wasm.
+`mapOf` cannot clash. Each adapter is **parsed** before it is emitted, and one
+that does not parse is refused instead. Parsing is not compiling, so the
+signatures known to parse but not compile are refused up front: a function
+annotation other than `@Composable`/`@Suppress` (an opt-in marker,
+`@Deprecated(level = ERROR)`), context parameters, annotated parameters, a
+name that looks like a generated alias (`…__c<N>`), and a name shared with a
+class/object/typealias declared in the scanned component files. What the
+generator cannot see — e.g. a same-named type declared elsewhere in the
+package — can still produce a file that does not compile; the relay's preview
+build then fails (the last-known-good editor stays served) until the
+component is renamed or the file is fixed. The fixture set
+(`portal-parity-fixtures`) compiles the supported edge cases on wasm.
 
 **Who runs it: the relay.** `keliver.portal.json` gains an optional block:
 

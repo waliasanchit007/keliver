@@ -8,6 +8,8 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtFunctionType
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtNullableType
@@ -56,6 +58,17 @@ object CompiledAdapterGenerator {
     tokens: TokenTable = TokenTable.EMPTY,
     sameModule: Boolean = false,
     regenerateHint: String = "regenerate with CompiledAdapterGenerator",
+  ): Output = generateWith(files, packageName, valName, tokens, sameModule, regenerateHint, ::syntaxErrors)
+
+  /** [generate] with the per-adapter validity check replaceable (tests exercise the refusal path). */
+  internal fun generateWith(
+    files: List<SourceFile>,
+    packageName: String,
+    valName: String,
+    tokens: TokenTable,
+    sameModule: Boolean,
+    regenerateHint: String,
+    adapterCheck: (String) -> String?,
   ): Output {
     require(isPlainIdentifier(valName)) { "valName must be a Kotlin identifier that is not a keyword: $valName" }
     require(packageName.isEmpty() || packageName.split('.').all { it.isNotEmpty() && IDENT.matches(it) }) {
@@ -63,8 +76,15 @@ object CompiledAdapterGenerator {
     }
     val adapters = sortedMapOf<String, Adapter>()
     val refused = sortedMapOf<String, String>()
-    for (f in files) {
-      val file = PsiEnv.parse(f.path, LineEndings.toLf(f.text))
+    val parsed = files.map { it to PsiEnv.parse(it.path, LineEndings.toLf(it.text)) }
+    // Types declared in the scanned files, by package: a component that shares
+    // its name with one (`class Foo` + `fun Foo()`) makes the aliased call
+    // ambiguous, so it is refused. Types outside these files are not seen.
+    val typeNames = parsed.flatMap { (_, file) ->
+      val pkg = file.packageFqName.asString()
+      file.declarations.filter { it is KtClassOrObject || it is KtTypeAlias }.mapNotNull { d -> d.name?.let { pkg to it } }
+    }.toSet()
+    for ((f, file) in parsed) {
       // The recognizer's rule: a component file's first @Composable function.
       val fn = file.declarations.filterIsInstance<KtNamedFunction>()
         .firstOrNull { d -> d.annotationEntries.any { it.shortName?.asString() == "Composable" } } ?: continue
@@ -78,6 +98,10 @@ object CompiledAdapterGenerator {
         refused[name] = "two components are named $name (portal component names must be unique)"
         continue
       }
+      if ((pkg.orEmpty() to name) in typeNames) {
+        refused[name] = "a class, object or typealias in its package is also named $name"
+        continue
+      }
       when (val r = adapterFor(fn, name, pkg, packageName, valName, spec?.defaults.orEmpty(), sameModule)) {
         is Either.Ok -> adapters[name] = r.value
         is Either.No -> refused[name] = r.reason
@@ -85,11 +109,12 @@ object CompiledAdapterGenerator {
     }
     // Aliases are assigned in name order, so the output is deterministic.
     adapters.values.forEachIndexed { i, a -> a.alias = if (a.pkg == null) quote(a.name) else "${a.name}__c$i" }
-    // Round-trip guard: an adapter whose text does not parse as Kotlin is
-    // refused, never emitted — the relay rewrites this file before EVERY
-    // preview build, so one unparseable adapter would stop all of them.
+    // Round-trip guard: an adapter whose text does not PARSE as Kotlin is
+    // refused, never emitted (the relay rewrites this file before every
+    // preview build). Parsing is not compiling: the refusals above exist for
+    // the signatures known to parse but not compile.
     for (a in adapters.values.toList()) {
-      val errors = syntaxErrors("val x = kotlin.collections.mapOf(\n${renderAdapter(a)})\n")
+      val errors = adapterCheck("val x = kotlin.collections.mapOf(\n${renderAdapter(a)})\n")
       if (errors != null) {
         adapters.remove(a.name)
         refused[a.name] = "its adapter would not be valid Kotlin ($errors)"
@@ -106,6 +131,9 @@ object CompiledAdapterGenerator {
   }
 
   private val IDENT = Regex("[A-Za-z_][A-Za-z0-9_]*")
+
+  /** Function annotations a call does not have to satisfy. */
+  private val ALLOWED_ANNOTATIONS = setOf("Composable", "Suppress")
 
   /** Kotlin's hard keywords: never usable as a bare identifier. */
   private val HARD_KEYWORDS = setOf(
@@ -166,6 +194,18 @@ object CompiledAdapterGenerator {
   ): Either {
     if (name in RESERVED_COMPONENT_NAMES || widgetSpec(name) != null) return Either.No("name collides with a reserved/primitive widget")
     if (!isPlainIdentifier(name)) return Either.No("its name is not a plain Kotlin identifier")
+    // The import-alias scheme (`Name__cN`): a component named like an alias
+    // could be called in place of the one the alias stands for.
+    if (Regex(".*__c\\d+").matches(name)) return Either.No("its name looks like a generated import alias (`…__c<N>`)")
+    // Annotations other than @Composable can make the CALL not compile
+    // (@RequiresOptIn markers, @Deprecated(level = ERROR), …): refused rather
+    // than risk a file that freezes every preview build.
+    fn.annotationEntries.map { it.shortName?.asString() }.filter { it !in ALLOWED_ANNOTATIONS }.takeIf { it.isNotEmpty() }?.let {
+      return Either.No("it carries annotation(s) ${it.joinToString { a -> "@$a" }} the adapter cannot satisfy")
+    }
+    if (fn.contextReceiverList != null || fn.modifierList?.contextReceiverLists?.isNotEmpty() == true) {
+      return Either.No("it has context parameters")
+    }
     // A root-package component is called by its bare name; it must not shadow
     // the names the generated file itself uses.
     if (pkg == null && (name in setOf("dev", "kotlin", "call", valName) || Regex("p\\d+").matches(name))) {
@@ -183,6 +223,7 @@ object CompiledAdapterGenerator {
     for (p in fn.valueParameters) {
       val pName = p.name ?: return Either.No("has an unnamed parameter")
       if (p.isVarArg) return Either.No("parameter '$pName' is a vararg")
+      if (p.annotationEntries.isNotEmpty()) return Either.No("parameter '$pName' carries annotations")
       val typeRef = p.typeReference ?: return Either.No("parameter '$pName' has no type")
       val typeText = typeRef.text.trim()
       val nullable = typeRef.typeElement is KtNullableType

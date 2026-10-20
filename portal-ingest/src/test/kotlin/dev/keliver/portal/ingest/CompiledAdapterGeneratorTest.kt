@@ -200,4 +200,70 @@ class CompiledAdapterGeneratorTest {
     assertTrue("Modifier.padding(8)" in out.refused.getValue("Padded"), out.refused.toString())
     assertEquals(listOf("Plain"), gen("$header\n@Composable\nfun Plain(t: String, modifier: Modifier = Modifier) {}").adapted)
   }
+
+  // ── review round 2: signatures that PARSE but would not COMPILE are refused ──
+
+  @Test fun optInAndErrorLevelDeprecatedComponentsAreRefused() {
+    // Before the fix both were adapted, and the emitted calls do not compile
+    // (an opt-in marker demands @OptIn at the call; level = ERROR forbids the call).
+    val out = gen(
+      "$header\n@RequiresOptIn(level = RequiresOptIn.Level.ERROR)\nannotation class Experimental\n@Experimental\n@Composable\nfun Exp(t: String) {}",
+      "$header\n@Deprecated(\"gone\", level = DeprecationLevel.ERROR)\n@Composable\nfun Old(t: String) {}",
+      "$header\n@Suppress(\"unused\")\n@androidx.compose.runtime.Composable\nfun Fine(t: String) {}",
+    )
+    assertEquals(listOf("Fine"), out.adapted, out.refused.toString())
+    assertTrue("@Experimental" in out.refused.getValue("Exp"), out.refused.toString())
+    assertTrue("@Deprecated" in out.refused.getValue("Old"), out.refused.toString())
+  }
+
+  @Test fun contextParametersAndAnnotatedParametersAreRefused() {
+    val out = gen(
+      "$header\nclass Theme\n@Composable\ncontext(t: Theme)\nfun Ctx(a: String) {}",
+      "$header\n@Composable\nfun Ann(@Suppress(\"x\") a: String) {}",
+    )
+    assertEquals(emptyList(), out.adapted, out.source)
+    assertTrue("context parameters" in out.refused.getValue("Ctx"), out.refused.toString())
+    assertTrue("annotations" in out.refused.getValue("Ann"), out.refused.toString())
+  }
+
+  @Test fun aComponentSharingItsNameWithATypeInItsPackageIsRefused() {
+    val out = gen("$header\nclass Pill(val t: String)", "$header\n@Composable\nfun Pill(t: String) {}")
+    assertEquals(emptyList(), out.adapted)
+    assertTrue("class, object or typealias" in out.refused.getValue("Pill"), out.refused.toString())
+  }
+
+  /** Round-2 nit 1: a root-package component named like an alias would be called in place of the aliased one. */
+  @Test fun aNameThatLooksLikeAnImportAliasIsRefused() {
+    // Before the fix both were adapted and both calls resolved to `Foo__c0`.
+    val out = CompiledAdapterGenerator.generate(
+      listOf(
+        CompiledAdapterGenerator.SourceFile("Foo.kt", "package app.ui\nimport androidx.compose.runtime.Composable\n@Composable\nfun Foo(t: String) {}"),
+        CompiledAdapterGenerator.SourceFile("Root.kt", "import androidx.compose.runtime.Composable\n@Composable\nfun Foo__c0(t: String) {}"),
+      ),
+      packageName = "",
+      valName = "AppCompiled",
+    )
+    assertEquals(listOf("Foo"), out.adapted, out.refused.toString())
+    assertTrue("import alias" in out.refused.getValue("Foo__c0"), out.refused.toString())
+  }
+
+  /** The per-adapter validity refusal path: an adapter the check rejects is refused, the others are emitted. */
+  @Test fun anAdapterThatFailsTheValidityCheckIsRefusedAndTheRestEmitted() {
+    val out = CompiledAdapterGenerator.generateWith(
+      listOf(
+        CompiledAdapterGenerator.SourceFile("Good.kt", "$header\n@Composable\nfun Good(t: String) {}"),
+        CompiledAdapterGenerator.SourceFile("Bad.kt", "$header\n@Composable\nfun Bad(t: String) {}"),
+      ),
+      packageName = "app.preview",
+      valName = "AppCompiled",
+      tokens = TokenTable.EMPTY,
+      sameModule = false,
+      regenerateHint = "test",
+      adapterCheck = { text -> if ("\"Bad\"" in text) "simulated error" else CompiledAdapterGenerator.syntaxErrors(text) },
+    )
+    assertEquals(listOf("Good"), out.adapted)
+    assertTrue("would not be valid Kotlin (simulated error)" in out.refused.getValue("Bad"), out.refused.toString())
+    assertFalse("Bad(" in out.source.substringAfter("Refused"), out.source)
+    assertEquals(null, CompiledAdapterGenerator.syntaxErrors(out.source))
+  }
 }
