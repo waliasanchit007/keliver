@@ -196,6 +196,8 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
     box.appendChild(Ui.button("detach", "btn icon") { onChange(lit(value.value)) })
     return box
   }
+  // K7: an arithmetic branch — read-only source, replaced whole by its value.
+  if (isArithmeticValue(value)) return arithmeticEditor(value) { onChange(it) }
   // K4: a template branch — its text with {references}, validated before it is sent.
   if (value is dev.keliver.portal.Template) {
     return refValueEditor(
