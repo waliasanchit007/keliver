@@ -271,6 +271,16 @@ class CompiledComponentParityTest {
     assertTrue("{MISSING}" in texts, "$texts")
   }
 
+  /** Round-2 minor 1: a MOCKED text binding decodes to its preview value. */
+  @Test
+  fun aMockedTextBindingDecodesToItsPreviewValue() = runTest {
+    PreviewBindings.mocks["name"] = "Ada"
+    val compiled = KeliverMaterialTester { setContentAndSnapshot { ParityOpaqueBadge(label = "Ada", count = 0) } }
+    val interpreted = KeliverMaterialTester { setContentAndSnapshot { RenderNode(badge("label" to Bind("name"), "count" to 0)) } }
+    assertEquals(compiled, interpreted)
+    assertTrue("ADA" in interpreted.flatten().toList().filterIsInstance<StyledTextValue>().map { it.text })
+  }
+
   @Test
   fun anIntArgumentForADoubleParameterIsWidened() = runTest {
     val compiled = KeliverMaterialTester { setContentAndSnapshot { ParityOpaqueMeter(ratio = 1.0) } }

@@ -7,6 +7,7 @@ package dev.keliver.portal.render
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.currentCompositionLocalContext
 import dev.keliver.Modifier
 import dev.keliver.portal.Action
@@ -255,7 +256,13 @@ public fun RenderCompiledComponent(
     remember(node.type, call.decodedValues(), call.modifier, locals) {
       runCatching {
         val probeContent = adapter.bind(CompiledCall(node, call.modifier, probing = true))
-        probe.failureOf { CompositionLocalProvider(locals) { probeContent() } }
+        // …but never the canvas's saveable-state registry: the probe must
+        // neither register state into it nor consume what it restored.
+        probe.failureOf {
+          CompositionLocalProvider(locals) {
+            CompositionLocalProvider(LocalSaveableStateRegistry provides null) { probeContent() }
+          }
+        }
       }.getOrElse { it }
     }
   }

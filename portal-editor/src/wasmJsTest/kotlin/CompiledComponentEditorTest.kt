@@ -1,5 +1,8 @@
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
+import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.staticCompositionLocalOf
 import dev.keliver.Modifier
 import dev.keliver.material.compose.StyledText
@@ -219,6 +222,26 @@ class CompiledComponentEditorTest {
     assertEquals(listOf("shown"), fired)
   }
 
+  /** Round-2 nit 3: the probe neither consumes from nor registers into the canvas's saveable state. */
+  @Test fun theProbeDoesNotTouchTheCanvasSaveableStateRegistry() = runTest {
+    // Before the fix: consumed/registered twice — once by the probe.
+    val spy = SpyRegistry()
+    setEditorComponents(MapComponentRegistry(listOf(opaque("Remembering", "label"))))
+    installComponentPreview(entry(mapOf("Remembering" to rememberingAdapter)))
+    val t = texts(
+      KeliverMaterialTester {
+        setContentAndSnapshot {
+          CompositionLocalProvider(LocalSaveableStateRegistry provides spy) {
+            RenderNode(selectionTagged(WidgetNode("Remembering", mapOf("label" to "x"), id = 2)))
+          }
+        }
+      }.flatten().toList(),
+    )
+    assertEquals(listOf("X"), t)
+    assertEquals(listOf("remembering"), spy.consumed)
+    assertEquals(listOf("remembering"), spy.registered)
+  }
+
   // ── review nit: a component on a dependency cycle is never drawn compiled ──
 
   @Test fun aCycleFlaggedComponentKeepsItsPlaceholder() = runTest {
@@ -226,7 +249,7 @@ class CompiledComponentEditorTest {
     val spy = mapOf("Loop" to CompiledComponent { call -> called++; call.compose { StyledText(text = "loop") } })
     setEditorComponents(
       MapComponentRegistry(
-        listOf(ComponentSpec("Loop", emptyList(), emptyList(), emptyMap(), transparent = false, diagnostic = "cyclic component dependency involving Loop")),
+        listOf(ComponentSpec("Loop", emptyList(), emptyList(), emptyMap(), transparent = false, diagnostic = dev.keliver.portal.cycleDiagnostic("Loop"))),
       ),
     )
     installComponentPreview(entry(spy))
@@ -239,6 +262,30 @@ class CompiledComponentEditorTest {
 }
 
 private val LocalTestTheme = staticCompositionLocalOf<Int> { error("no theme provided") }
+
+/** A canvas-side saveable registry that records who consumes from / registers into it. */
+private class SpyRegistry : SaveableStateRegistry {
+  val consumed = mutableListOf<String>()
+  val registered = mutableListOf<String>()
+  override fun canBeSaved(value: Any): Boolean = true
+  override fun consumeRestored(key: String): Any? { consumed += key; return null }
+  override fun performSave(): Map<String, List<Any?>> = emptyMap()
+  override fun registerProvider(key: String, valueProvider: () -> Any?): SaveableStateRegistry.Entry {
+    registered += key
+    return object : SaveableStateRegistry.Entry { override fun unregister() {} }
+  }
+}
+
+@Composable
+private fun Remembering(label: String, modifier: Modifier = Modifier) {
+  val v = rememberSaveable(key = "remembering") { label.uppercase() }
+  StyledText(modifier = modifier, text = v)
+}
+
+private val rememberingAdapter = CompiledComponent { call ->
+  val label = call.string("label")
+  call.compose { Remembering(label = label, modifier = call.modifier) }
+}
 
 @Composable
 private fun Themed(label: String, modifier: Modifier = Modifier) {
