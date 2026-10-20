@@ -274,8 +274,8 @@ class ArithmeticTest {
     val d = doc(open, text(2), text(3))
     assertTrue("make this change in code" in refused(d, set(2, "fontSize", a("+", b("x"), lit(1)))))
     assertTrue("not readable" in refused(d, set(2, "fontSize", a("+", b("fresh"), lit(1)))))
-    // Another read of it as an Int vouches: an operand, or a binding on an Int prop.
-    val vouched = accepted(doc(open, text(2, "colorArgb" to b("fresh")), text(3)), set(3, "fontSize", a("+", b("fresh"), lit(1))))
+    // Another operand reading it vouches (the file compiled it, or an op placed it with evidence).
+    val vouched = accepted(doc(open, text(2, "colorArgb" to a("-", b("fresh"), lit(1))), text(3)), set(3, "fontSize", a("+", b("fresh"), lit(1))))
     accepted(vouched, set(2, "fontSize", a("*", b("fresh"), lit(2))))
     // The value there before vouches for an edit of another operand.
     val before = doc(open, text(2, "fontSize" to a("+", b("x"), lit(1))))
@@ -288,9 +288,42 @@ class ArithmeticTest {
     assertNotNull(d.tryApply(DocOp.InsertNode(Handle(1), null, pair)).error)
   }
 
+  // Review MINOR 1: a plain binding is not type-checked where the document cannot read the field's
+  // type (`fontSize = b.label` is accepted, the compile types it), so it never vouches for an operand.
+  @Test fun aPlainBindingNeverVouchesForAnOperand() {
+    val open = Contract(fields = emptyMap(), unlistedFieldsUnknown = "the Bindings interface extends one declared in another file")
+    val d = doc(open, text(2), text(3))
+    val bound = accepted(d, set(2, "fontSize", b("label")))
+    assertTrue("make this change in code" in refused(bound, set(2, "fontSize", a("*", b("label"), lit(2)))))
+    assertTrue("make this change in code" in refused(bound, set(3, "fontSize", a("*", b("label"), lit(2)))))
+    // Not even one the file holds: the document cannot tell a binding the file compiled from one an op placed.
+    val fromFile = doc(open, text(2, "colorArgb" to b("label")), text(3))
+    assertTrue("make this change in code" in refused(fromFile, set(3, "fontSize", a("*", b("label"), lit(2)))))
+    // In a Repeat too.
+    fun repeat(vararg kids: DocNode) = DocNode.Widget(Handle(5), "Repeat", props = mapOf("items" to lit("rows"), "item" to lit("row")), children = kids.toList())
+    val rows = doc(Contract(), repeat(text(6, "colorArgb" to b("row.count")), text(7)))
+    assertTrue("item field" in refused(rows, set(7, "fontSize", a("*", b("row.count"), lit(2)))))
+  }
+
+  // Review NIT: as ingest reads it, an Int used as a Dp reads only a field KNOWN to be an Int (`b.n.dp` compiles for a
+  // Double too), whatever else the screen does with it.
+  @Test fun anIntUsedAsADpNeverReadsAFieldWhoseTypeIsNotReadable() {
+    val open = Contract(fields = mapOf("n" to "<unknown>", "k" to "Int"), unlistedFieldsUnknown = "the Bindings interface extends one declared in another file")
+    val d = doc(open, text(2, "fontSize" to a("*", b("n"), lit(2))), spacer(3))
+    val why = refused(d, set(3, "height", PropValue.IntDp(b("n"))))
+    assertTrue("declared Int" in why, why)
+    assertTrue("declared Int" in refused(d, set(3, "height", PropValue.IntDp(a("+", b("n"), lit(1)), DP_CTOR_FORM))))
+    assertTrue("declared Int" in refused(d, DocOp.InsertNode(Handle(1), null, DocNode.Widget(Handle(0), "Spacer", props = mapOf("width" to PropValue.IntDp(b("n")))))))
+    // A field the contract declares Int, or a new one (typed Int by the derived contract), is fine.
+    accepted(d, set(3, "height", PropValue.IntDp(b("k"))))
+    accepted(doc(Contract(), spacer(3)), set(3, "height", PropValue.IntDp(b("fresh"))))
+    // The same expression as an Int (evidenced) is still grammar.
+    accepted(d, set(2, "colorArgb", a("+", b("n"), lit(1))))
+  }
+
   @Test fun anItemOperandStaysInsideItsRepeat() {
     fun repeat(vararg kids: DocNode) = DocNode.Widget(Handle(5), "Repeat", props = mapOf("items" to lit("rows"), "item" to lit("row")), children = kids.toList())
-    val d = doc(Contract(), repeat(text(6, "colorArgb" to b("row.count")), text(7)), text(3))
+    val d = doc(Contract(), repeat(text(6, "colorArgb" to a("+", b("row.count"), lit(1))), text(7)), text(3))
     accepted(d, set(7, "fontSize", a("*", b("row.count"), lit(2))))
     assertTrue("outside a Repeat" in refused(d, set(3, "fontSize", a("*", b("row.count"), lit(2)))))
     // Nothing vouches for an item field's type: made in code.
