@@ -1,0 +1,44 @@
+diff --git a/keliver.portal.json b/keliver.portal.json
+index 8b35823c5..ee9de2833 100644
+--- a/keliver.portal.json
++++ b/keliver.portal.json
+@@ -1,5 +1,5 @@
+ {
+-  "port": 8077,
++  "port": 8277,
+   "screensDir": "portal-app-lib/src/commonMain/kotlin/screens",
+   "componentsDir": "portal-app-lib/src/commonMain/kotlin/components",
+   "publishTask": ":portal-published-guest:compileDevelopmentZipline",
+@@ -16,4 +16,4 @@
+     "keliverVersion": "0.3.4",
+     "widgetVersion": 1
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/portal-app-lib/src/commonMain/kotlin/screens/feed.kt b/portal-app-lib/src/commonMain/kotlin/screens/feed.kt
+index 236cd14f7..731970540 100644
+--- a/portal-app-lib/src/commonMain/kotlin/screens/feed.kt
++++ b/portal-app-lib/src/commonMain/kotlin/screens/feed.kt
+@@ -14,6 +14,7 @@ import dev.keliver.material.compose.StyledText
+ import dev.keliver.material.compose.TextButton
+ import dev.keliver.material.compose.TextField
+ import dev.keliver.portalpublished.components.MenuRow
++import dev.keliver.portalpublished.components.NoteCountPill
+ import dev.keliver.portalpublished.components.SectionHeader
+ import dev.keliver.material.compose.padding
+ import dev.keliver.ui.Dp
+@@ -46,6 +47,13 @@ fun FeedScreen(b: FeedScreenBindings) {
+         fontSize = 13,
+         colorArgb = -8355712,
+       )
++      NoteCountPill(
++        count = 7,
++      )
++      NoteCountPill(
++        count = 1,
++        label = "items",
++      )
+       Spacer(
+         height = Dp(14.0),
+       )
