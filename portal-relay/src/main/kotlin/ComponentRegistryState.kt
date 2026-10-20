@@ -80,7 +80,7 @@ object Components {
     if (onCycle.isEmpty()) return specs
     return specs.mapValues { (n, s) ->
       if (n in onCycle) s.copy(transparent = false, body = null,
-        diagnostic = "cyclic component dependency involving $n") else s
+        diagnostic = dev.keliver.portal.cycleDiagnostic(n)) else s
     }
   }
 

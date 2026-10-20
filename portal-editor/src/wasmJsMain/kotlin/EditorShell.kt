@@ -20,6 +20,7 @@ import dev.keliver.leaks.LeakDetector
 import dev.keliver.material.composeui.ComposeUiKeliverMaterialWidgetSystem
 import dev.keliver.material.protocol.guest.KeliverMaterialProtocolWidgetSystemFactory
 import dev.keliver.material.protocol.host.KeliverMaterialHostProtocol
+import dev.keliver.portal.onDependencyCycle
 import dev.keliver.portal.render.AppPreviewEntry
 import dev.keliver.portal.render.RenderNode
 import dev.keliver.portal.render.resolvePersona
@@ -95,7 +96,7 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
     // A component the relay flagged as on a dependency cycle is never drawn
     // compiled: the canvas keeps its placeholder rather than risk recursing.
     val registry = editorComponents
-    val compiled = adapters.filterKeys { name -> registry.spec(name)?.diagnostic?.startsWith(CYCLE_DIAGNOSTIC) != true }
+    val compiled = adapters.filterKeys { name -> registry.spec(name)?.onDependencyCycle != true }
     when (val e = dev.keliver.portal.expandForPreview(node, registry, compiled.keys)) {
       is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, node.id), scope)
       is dev.keliver.portal.Expansion.Opaque -> {
@@ -115,9 +116,6 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
     }
   }
 }
-
-/** How the relay's component registry marks a component on a dependency cycle (ComponentRegistryState.flagCycles). */
-internal const val CYCLE_DIAGNOSTIC = "cyclic component dependency"
 
 /** The web has no hardware back button; a guest that never adds a callback needs nothing here. */
 private val NoBackPressedDispatcher = object : OnBackPressedDispatcher {
