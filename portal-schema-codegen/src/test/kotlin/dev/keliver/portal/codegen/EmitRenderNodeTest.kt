@@ -81,7 +81,7 @@ class EmitRenderNodeTest {
     assertContains(src, "import dev.keliver.Modifier")
     assertContains(src, "import dev.keliver.material.compose.padding")
     assertContains(src, "modifier = nodeModifier(node, scope),")
-    assertContains(src, "private fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
+    assertContains(src, "internal fun nodeModifier(node: WidgetNode, scope: Any?): Modifier {")
     // N4: applied in the node's (author) key order, one branch per modifier.
     assertContains(src, "for (name in names) {")
     assertContains(src, "\"Padding\" -> m.padding(node.intB(\"mod.Padding.allDp\", 0))")
