@@ -35,6 +35,7 @@ class InheritedContractWriteBackTest {
 
     interface BaseBindings {
       val title: String
+      val size: Int
       val rows: List<Row>
       fun open()
     }
@@ -260,5 +261,30 @@ class InheritedContractWriteBackTest {
     assertTrue("val fresh: String get() = \"\"" in iface, out)
     assertTrue("title" !in iface && "fun open" !in iface, out)
     compiles(out)
+  }
+
+  // ── K7 (Int arithmetic): an operand is a binding like any other ──
+
+  @Test fun anInheritedArithmeticOperandIsNotRedeclared() {
+    // The reviewer's K7 reproduction: write-back declared `val size: Int get() = 0`.
+    val file = screen("StyledText(text = \"a\", fontSize = b.size * 2)\nStyledText(text = \"y\")", inheriting)
+    compiles(file, "BaseBindings.kt" to base)
+    assertEquals(file, ensured(file))
+    val d = doc(file)
+    val w = assertIs<ScreenWriter.Write>(plan(file, d.apply(DocOp.SetProp(d.child(1).handle, "text", lit("z"))).doc, d))
+    assertTrue("val size" !in w.text, w.text)
+    compiles(w.text, "BaseBindings.kt" to base)
+  }
+
+  @Test fun theWriterRefusesAnArithmeticOperandTheFileNeitherDeclaresNorReads() {
+    // The document refuses it first (K7: nothing reads `size` as an Int); the writer, which the
+    // relay's preflight runs for undo and redo too, refuses it on its own.
+    val file = screen("StyledText(text = \"a\", fontSize = 4)", inheriting)
+    val d = doc(file)
+    val node = d.child(0) as DocNode.Widget
+    val arith = PropValue.Arith("*", PropValue.Bind("size"), lit(2))
+    val target = d.copy(root = (d.root as DocNode.Widget).copy(children = listOf(node.copy(props = node.props + ("fontSize" to arith)))))
+    val r = assertIs<ScreenWriter.Refuse>(plan(file, target, d))
+    assertTrue("`size`" in r.reason && "declared in another file" in r.reason, r.reason)
   }
 }

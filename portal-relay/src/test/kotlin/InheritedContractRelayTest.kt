@@ -33,6 +33,7 @@ class InheritedContractRelayTest {
 
     interface BaseBindings {
       val title: String
+      val size: Int
       fun open()
     }
   """.trimIndent() + "\n"
@@ -85,7 +86,7 @@ class InheritedContractRelayTest {
   /** [text] compiles beside the other file's `BaseBindings`, and declares none of its members again. */
   private fun compilesWithoutRedeclaring(text: String) {
     val iface = text.substringAfter("interface HomeScreenBindings")
-    assertTrue("val title" !in iface && "fun open" !in iface && "TODO(portal)" !in text, text)
+    assertTrue("val title" !in iface && "val size" !in iface && "fun open" !in iface && "TODO(portal)" !in text, text)
     assertNull(KotlinCompileCheck.errors(mapOf("home.kt" to text, "BaseBindings.kt" to base)), text)
   }
 
@@ -159,5 +160,32 @@ class InheritedContractRelayTest {
     assertFalse(sub.ok, "accepted a binding of `length`; the file would read:\n" + runCatching { awaitStatus(f.svc, sub.version); f.file.readText() }.getOrNull())
     assertTrue("`length`" in sub.error!!, sub.error)
     assertEquals(before, f.file.readText())
+  }
+
+  // ── K7 (Int arithmetic) merged: an operand is a binding like any other ──
+
+  @Test fun anArithmeticOperandOnAnInheritedFieldStillCompilesAfterAnyEdit() {
+    // The reviewer's K7 reproduction: `size` is inherited; write-back declared `val size: Int get() = 0`.
+    val f = fixture(screen("StyledText(text = \"a\", fontSize = b.size * 2)", "StyledText(text = \"y\")"))
+    compilesWithoutRedeclaring(f.file.readText())
+    compilesWithoutRedeclaring(written(f, DocOp.SetProp(f.svc.child(1).handle, "text", lit("z"))))
+    // The arithmetic itself edited: written, nothing declared.
+    val text = written(f, DocOp.SetProp(f.svc.child(0).handle, "fontSize", PropValue.Arith("*", PropValue.Bind("size"), lit(3))))
+    assertTrue("fontSize = b.size * 3" in text, text)
+    compilesWithoutRedeclaring(text)
+  }
+
+  @Test fun anArithmeticOperandOnAFieldTheFileNeitherDeclaresNorReadsIsRefused() {
+    val f = fixture(screen("StyledText(text = \"a\", fontSize = 4)", "StyledText(text = b.title)"))
+    val before = f.file.readText()
+    val op = DocOp.SetProp(f.svc.child(0).handle, "fontSize", PropValue.Arith("*", PropValue.Bind("size"), lit(2)))
+    val dry = f.svc.dryRun(f.svc.batch(op))
+    val sub = f.svc.submit(f.svc.batch(op))
+    assertFalse(sub.ok, "accepted `b.size * 2`; the file would read:\n" + runCatching { awaitStatus(f.svc, sub.version); f.file.readText() }.getOrNull())
+    assertEquals(dry.error, sub.error)
+    assertTrue("`size`" in sub.error!!, sub.error)
+    assertEquals(before, f.file.readText())
+    assertNull(f.svc.writeBack, "nothing was written or refused")
+    compilesWithoutRedeclaring(written(f, DocOp.SetProp(f.svc.child(0).handle, "fontSize", lit(6))))
   }
 }
