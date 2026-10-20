@@ -265,6 +265,20 @@
   are still there.
 
 ### Fixed
+- **portal-ingest, portal-relay:** any edit of a screen whose Bindings interface extends a type
+  declared in another file no longer breaks its compile (KNOWN_BUGS U37). Contract write-back
+  declared, in the screen's interface, each inherited field or action the screen read
+  (`/** TODO(portal) */ val title: String get() = ""`, `fun open() {}`, a list and a second item
+  type) — a redeclaration without `override`; a supertype in the same file had the same effect.
+  Write-back now counts a same-file supertype's members as declared, and adds nothing to an
+  interface extending a type from another file. A field or action the editor cannot vouch for —
+  the interface is not read whole (it extends a type from another file, or is itself declared
+  elsewhere: `Contract.unlistedFieldsUnknown`) and the file neither declares nor reads it — is
+  refused when the op is made, with the reason (declaring it could redeclare an inherited member;
+  a bare reference may not compile). A member the file reads, or read when the relay last read
+  it, is still written (an undo of deleting its only read too). On a screen whose interface is in
+  another file, this refuses a plain binding of a field the file does not read, which K4 allowed.
+  Every tools bundle up to 0.3.11 is affected since contract write-back was added.
 - **portal-relay (tests):** a local `:portal-relay:test` run no longer claims the developer's real
   store. This repo's `keliver.portal.json` names `~/.keliver-portal`, so the first test touching the
   relay's top-level state wrote that store's owner marker, and a later run from another checkout of

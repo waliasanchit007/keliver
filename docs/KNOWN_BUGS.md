@@ -878,6 +878,65 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
+### U37. Any edit of a screen whose Bindings interface extends one from another file broke its compile — FIXED (unreleased; found 2026-10-20)
+
+**What happened.** A screen whose Bindings interface extends a type declared in
+another file (`interface HomeScreenBindings : BaseBindings { … }`) and reads a
+field or action that interface inherits (`StyledText(text = b.title)`, `title`
+declared in `BaseBindings`). Any edit of the screen in the editor (or through
+MCP) — even one that touched another statement — made contract write-back
+declare that member in the screen's interface,
+`/** TODO(portal): … */ val title: String get() = ""` (or `fun open() {}`, or
+`val rows: List<Row> get() = emptyList()` plus a second `interface Row`). That
+redeclares an inherited member without `override` (and a list's item type
+beside its own), so the written file no longer compiled. Found by an
+independent reviewer and reproduced twice through the relay: on a plain binding,
+and on an arithmetic operand (a grammar still in development). A supertype
+declared in the SAME file did the same: its members were declared again too.
+
+**Why.** Contract write-back compared the members the document reads with the
+ones the screen's interface declares itself, and added each one missing. It did
+not look at the interface's supertypes, and it did not use what ingest already
+knew: the contract's `unlistedFieldsUnknown` (K4) says when the interface is not
+read whole in its file, so a member it does not declare there may be inherited,
+with any type.
+
+**Fix.** Write-back never declares a member that could be inherited:
+- a member a supertype declared in the same file declares counts as declared (a
+  field that is really new is still declared, as before);
+- an interface that extends a type declared in another file gains no member at
+  all, as an interface declared in another file never did.
+
+What the editor cannot tell — whether a field or action the file neither
+declares nor reads yet is inherited or new — it does not write, because either
+spelling may not compile: declaring it could redeclare an inherited member, and
+a bare `b.fresh` does not compile if nothing declares it. So when the contract
+says the interface is not read whole (it extends a type from another file, or is
+itself declared in another file), an edit that makes the screen read such a
+member is refused when it is made, through the relay's write-back preflight
+(§7a), with the reason: "the screen would read `fresh`, which this file neither
+declares nor reads yet, so the editor cannot tell whether it exists: … — make
+this change in code". A member the file already reads through its bindings
+parameter (anywhere in the screen function, RawCode included) is vouched for, and
+so is one the file read when the relay last read it: the undo of deleting a
+screen's only `b.title` is written. A component with a required event inserted
+into such a screen starts bound to a new action and is refused the same way.
+
+This changes what K4 allowed on a screen whose interface is not in its file: a
+plain binding of a field the file does not read was written, and compiled only
+if the other file declared it; it is now refused. A screen that takes no
+bindings parameter is refused as before.
+
+**Affects** contract write-back since it was added (P2b-a, 2026-07-16): every
+tools bundle up to and including 0.3.11. Libraries are not affected
+(`portal-ingest` and `portal-relay` ship only in the tools bundle). On an older
+bundle, declare the field in the screen's interface with `override` before
+binding it in the editor, or keep such screens' Bindings interface free of
+supertypes from other files. A file the bug already wrote keeps the members it
+added: delete each `TODO(portal)` member that redeclares an inherited one (the
+compiler names them: "'title' hides member of supertype 'BaseBindings' and needs
+an 'override' modifier").
+
 ### U36. Any web page open in the developer's browser could drive the relay — FIXED in tools 0.3.11 (found 2026-10-17)
 
 **What happened.** Every relay endpoint answered `Access-Control-Allow-Origin: *`,
