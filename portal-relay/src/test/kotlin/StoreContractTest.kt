@@ -22,8 +22,16 @@ class StoreContractTest {
   private fun tmp(name: String) =
     java.nio.file.Files.createTempDirectory(name).toFile().also { it.deleteOnExit() }
 
+  /**
+   * The shell resolver, run without the test JVM's own PORTAL_STORE (set by
+   * portal-relay/build.gradle so tests never claim the real store): a
+   * resolution test sets PORTAL_STORE itself when that is what it checks.
+   */
+  private fun resolver(vararg command: String): ProcessBuilder =
+    ProcessBuilder(*command).also { it.environment().remove("PORTAL_STORE") }
+
   private fun viaScript(app: File, home: File, env: Map<String, String> = emptyMap()): String {
-    val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath)
+    val pb = resolver(script.absolutePath, app.absolutePath, "--home", home.absolutePath)
     pb.environment().putAll(env)
     pb.redirectErrorStream(true)
     val p = pb.start()
@@ -161,7 +169,7 @@ class StoreContractTest {
     File(app, "keliver.portal.json").writeText("""{"store":"${tmp("explicit").absolutePath}"}""")
     val kotlin = withUserHome(home) { defaultStoreDir(app) }
     val viaDefault = run {
-      val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--default")
+      val pb = resolver(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--default")
       pb.redirectErrorStream(true)
       val p = pb.start()
       val out = p.inputStream.bufferedReader().readText().trim()
@@ -194,7 +202,7 @@ class StoreContractTest {
     kotlin.test.assertFailsWith<StoreOwnershipException> {
       withUserHome(home) { PortalConfig().storeDir(app) }
     }
-    val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath)
+    val pb = resolver(script.absolutePath, app.absolutePath, "--home", home.absolutePath)
     pb.redirectErrorStream(true)
     val p = pb.start()
     val out = p.inputStream.bufferedReader().readText()
@@ -212,7 +220,7 @@ class StoreContractTest {
     val home = tmp("home")
     val app = tmp("app")
     fun explain(): Pair<String, String> {
-      val pb = ProcessBuilder(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--explain")
+      val pb = resolver(script.absolutePath, app.absolutePath, "--home", home.absolutePath, "--explain")
       val p = pb.start()
       val out = p.inputStream.bufferedReader().readText().trim()
       val err = p.errorStream.bufferedReader().readText()
@@ -246,7 +254,7 @@ class StoreContractTest {
     val app2 = tmp("app2")
     val older = File(home, ".keliver-portal/apps/older-name-${withUserHome(home) { appStoreHash(app2) }}")
     older.mkdirs()
-    val pb = ProcessBuilder(script.absolutePath, app2.absolutePath, "--home", home.absolutePath, "--explain")
+    val pb = resolver(script.absolutePath, app2.absolutePath, "--home", home.absolutePath, "--explain")
     val p = pb.start()
     val out = p.inputStream.bufferedReader().readText().trim()
     p.waitFor()
