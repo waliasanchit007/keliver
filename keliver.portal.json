@@ -8,6 +8,10 @@
   "httpFixturesDir": "portal-fixtures/http",
   "previewBuildTask": ":web-spike:wasmJsBrowserDistribution",
   "previewDist": "web-spike/build/dist/wasmJs/productionExecutable",
+  "compiledComponents": {
+    "out": "web-spike/src/wasmJsMain/kotlin/AppLibCompiledComponents.kt",
+    "valName": "AppLibCompiledComponents"
+  },
   "appRuntime": {
     "keliverVersion": "0.3.4",
     "widgetVersion": 1

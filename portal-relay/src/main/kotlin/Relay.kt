@@ -629,7 +629,10 @@ private fun flowsDirFor(project: String): File =
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
 private val previewBuilder = PreviewBuilder(
-  PreviewDistributionRunner(repoDir, config),
+  PreviewDistributionRunner(repoDir, config, prepare = {
+    // Compiled component preview: the editor's adapters follow the components' signatures.
+    CompiledAdapters.emit(repoDir, config, File(repoDir, config.resolvedComponentsDir()), Tokens.table("default"))
+  }),
   enabled = config.previewBuildTask.isNotBlank(),
 )
 
