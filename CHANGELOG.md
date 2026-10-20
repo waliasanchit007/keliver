@@ -8,10 +8,7 @@
 
 ## [Unreleased]
 
-## Keliver 0.4.0 - unreleased
-
-> Release candidate, held for the owner's go. The release commit replaces this heading with
-> `## Keliver 0.4.0 - <date>` (and removes this note) before it is merged and tagged.
+## Keliver 0.4.0 - 2026-10-21
 
 The portal grammar and editor-canvas libraries. Hand-written sources changed only in
 `portal-core`, `portal-document`, `portal-render` and `portal-editor` (and the version in
