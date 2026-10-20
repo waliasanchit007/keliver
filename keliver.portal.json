@@ -13,7 +13,7 @@
     "valName": "AppLibCompiledComponents"
   },
   "appRuntime": {
-    "keliverVersion": "0.3.4",
+    "keliverVersion": "0.4.0",
     "widgetVersion": 1
   }
 }

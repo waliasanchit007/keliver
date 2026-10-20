@@ -8,6 +8,29 @@
 
 ## [Unreleased]
 
+## [0.4.0] - not yet released (candidate, held for the owner's go; dated when tagged)
+
+The portal grammar and editor-canvas libraries. Hand-written sources changed only in
+`portal-core`, `portal-document`, `portal-render` and `portal-editor` (and the version in
+`build-support`); no other published module changed since 0.3.4, and no dependency versions
+moved (Kotlin 2.2.0). The relay, ingest and tools-bundle changes below ship in a tools release,
+not on Maven.
+
+**Source-incompatible with 0.3.4** for code that matches on the portal document model:
+`PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and
+`IntDp`, so an exhaustive `when` over it needs a branch for each — see *Library compatibility*.
+Everything else is additive (new types, members with defaults, `AppPreviewEntry.screenWrapper`,
+`hostWrapper` and `compiledComponents`). The Zipline wire format and compiled guests are
+unchanged; the portal document tree carries new keys that older readers ignore (see the K6 and
+K7 entries).
+
+Candidate check (local, signing off, `-Dmaven.repo.local` to a scratch repository, at
+`7c9be494f`): `publishToMavenLocal -PkeliverVersion=0.4.0` publishes 382 artifacts and `apiCheck`
+passes. A measured adopter app rebuilt against those artifacts (guest, Kotlin/JS): its Zipline
+bundles compile, and 101 of its 104 tests pass unchanged; the three that differ are widget-tree
+goldens whose only change is `OutlinedTextField`'s `align` property (tag 13, default 0) now being
+sent — that property is from 0.3.4, and the app's goldens were recorded on 0.3.3.
+
 ### Security
 - **portal-relay, keliver-portal, keliver-dev.sh:** the relay and the editor's file server listen on
   127.0.0.1 only (KNOWN_BUGS U35). They listened on every interface, so anyone on the local network
@@ -290,6 +313,16 @@
   (`portal-document.klib.api`) changes additively too: the four-argument constructor and `copy`,
   `component4` and `unlistedFieldsUnknown` are added; the three-argument constructor and `copy`
   are still there.
+- **portal-document, portal-core** (published): K6 and K7 add `PropValue.Arith` and
+  `PropValue.IntDp`, `CondTerm`/`CondJoin`/`CondTest.Eq`, and the shared `termTypeMisfit` rule;
+  `Cond` and `PropValue.Conditional` gained `operand`, `more` and `join` (constructor, `copy` and
+  `componentN` signatures changed — neither existed in 0.3.4). Wire JSON is additive: defaults are
+  omitted, and JSON from 0.3.4 decodes to the same values.
+- **portal-render** (published): `AppPreviewEntry` gains `screenWrapper`, `hostWrapper` and
+  `compiledComponents`, all with defaults, so an existing entry compiles unchanged; new
+  `PreviewWrapper`, `AppScreenFrame`, `CompiledComponent`, `CompiledCall` and
+  `RenderCompiledComponent`. A per-app editor that uses `compiledComponents` needs these
+  libraries and a tools release whose relay writes the adapters file.
 
 ### Fixed
 - **portal-ingest, portal-relay:** any edit of a screen whose Bindings interface extends a type
