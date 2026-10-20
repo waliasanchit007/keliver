@@ -61,3 +61,16 @@ def hostTemplateTestSource = tasks.register('hostTemplateTestSource', Copy) {
   into layout.buildDirectory.dir('generated/hostTemplate/kotlin')
 }
 sourceSets.test.kotlin.srcDir(hostTemplateTestSource)
+
+// Compiled component preview (docs/COMPILED_COMPONENT_PREVIEW.md): write the
+// per-app editor's adapters file without a relay, or `-Pcheck` that the
+// checked-in one is current. Same generator and design-token table as the
+// relay's pre-build step. -PappDir=<dir> targets another app (default: this repo).
+tasks.register('compiledComponentAdapters', JavaExec) {
+  group = 'keliver'
+  description = 'Generate (or -Pcheck) the compiled component preview adapters for keliver.portal.json compiledComponents.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'CompiledAdaptersKt'
+  def appDir = providers.gradleProperty('appDir').getOrElse(rootProject.rootDir.absolutePath)
+  args = [appDir] + (providers.gradleProperty('check').isPresent() ? ['--check'] : [])
+}

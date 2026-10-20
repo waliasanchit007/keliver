@@ -1,4 +1,6 @@
+import dev.keliver.portal.ingest.CompiledAdapterGenerator
 import dev.keliver.portal.ingest.TokenTable
+import java.nio.file.Files
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
@@ -41,8 +43,8 @@ class CompiledAdaptersTest {
     val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt")
     assertNull(CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY))
     val text = out.readText()
-    assertTrue("\"PriceTag\" to CompiledComponent" in text, text)
-    assertTrue("import app.ui.PriceTag" in text, text)
+    assertTrue("\"PriceTag\" to dev.keliver.portal.render.CompiledComponent" in text, text)
+    assertTrue("import app.ui.PriceTag as PriceTag__c0" in text, text)
     out.setLastModified(1_000)
     assertNull(CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY))
     assertEquals(1_000, out.lastModified(), "unchanged adapters are not rewritten")
@@ -74,18 +76,104 @@ class CompiledAdaptersTest {
     val repo = requireNotNull(root) { "repo root not found" }
     val cfg = loadPortalConfig(repo)
     val compiled = assertNotNull(cfg.compiledComponents, "keliver.portal.json declares compiledComponents")
-    val out = File(repo, compiled.out)
-    val scratch = createTempDirectory("compiled-adapters-dogfood").toFile()
-    val copy = cfg.copy(compiledComponents = compiled.copy(out = "AppLib.kt"))
-    // portal-app-lib's components declare no design tokens, so the relay's table adds nothing here.
-    assertNull(CompiledAdapters.emit(scratch, copy, File(repo, cfg.resolvedComponentsDir()), TokenTable.EMPTY))
-    val fresh = File(scratch, "AppLib.kt").readText()
-    if (System.getenv("KELIVER_UPDATE_COMPILED_ADAPTERS") == "1") out.writeText(fresh)
-    assertEquals(fresh, out.takeIf { it.isFile }?.readText(), "stale ${compiled.out}: run the relay's preview build (or KELIVER_UPDATE_COMPILED_ADAPTERS=1 on this test) and commit it")
+    // Review m5: the SAME entry point and token table as the relay / CLI (`:portal-relay:compiledComponentAdapters -Pcheck`).
+    val components = File(repo, cfg.resolvedComponentsDir())
+    val tokens = CompiledAdapters.appTokens(repo, cfg, "compiled-adapters-dogfood-test")
+    if (System.getenv("KELIVER_UPDATE_COMPILED_ADAPTERS") == "1") assertNull(CompiledAdapters.emit(repo, cfg, components, tokens))
+    assertNull(CompiledAdapters.check(repo, cfg, components, tokens), "run ./gradlew :portal-relay:compiledComponentAdapters and commit ${compiled.out}")
     // The dogfood opaque component the editor draws compiled.
-    val pill = File(repo, cfg.resolvedComponentsDir() + "/NoteCountPill.kt")
+    val pill = File(components, "NoteCountPill.kt")
     val spec = dev.keliver.portal.ingest.Recognizer.recognizeComponent(pill.name, pill.readText())!!.spec
     assertFalse(spec.transparent, "NoteCountPill must stay opaque: ${spec.diagnostic}")
-    assertTrue("\"NoteCountPill\" to CompiledComponent" in fresh, fresh)
+    assertTrue("\"NoteCountPill\" to dev.keliver.portal.render.CompiledComponent" in File(repo, compiled.out).readText())
+  }
+
+  @Test fun checkReportsAStaleFile() {
+    val repo = repoWith("PriceTag.kt" to badge)
+    val components = File(repo, "app/components")
+    assertNull(CompiledAdapters.emit(repo, config, components, TokenTable.EMPTY))
+    assertNull(CompiledAdapters.check(repo, config, components, TokenTable.EMPTY))
+    File(components, "PriceTag.kt").writeText(badge.replace("label: String", "label: String, count: Int"))
+    assertTrue("stale" in CompiledAdapters.check(repo, config, components, TokenTable.EMPTY)!!)
+  }
+
+  // ── review m3: never clobber a hand-written file, never write through a link, write atomically ──
+
+  @Test fun aFileTheGeneratorDidNotWriteIsNeverOverwritten() {
+    // Before the fix: the relay overwrote whatever sat at `out`.
+    val repo = repoWith("PriceTag.kt" to badge)
+    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").apply { parentFile.mkdirs(); writeText("// my own code\nval x = 1\n") }
+    val err = CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY)
+    assertNotNull(err)
+    assertTrue("refusing to overwrite" in err, err)
+    assertEquals("// my own code\nval x = 1\n", out.readText())
+  }
+
+  @Test fun anOutPathThatIsASymbolicLinkIsRefused() {
+    // Before the fix: written through the link (the target inside the repo was replaced).
+    val repo = repoWith("PriceTag.kt" to badge)
+    val target = File(repo, "elsewhere/Target.kt").apply { parentFile.mkdirs(); writeText(CompiledAdapterGenerator.GENERATED_HEADER + "\n") }
+    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").apply { parentFile.mkdirs() }
+    Files.createSymbolicLink(out.toPath(), target.toPath())
+    val err = CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY)
+    assertNotNull(err)
+    assertTrue("symbolic link" in err, err)
+    assertEquals(CompiledAdapterGenerator.GENERATED_HEADER + "\n", target.readText())
+  }
+
+  @Test fun anOutPathThroughALinkedDirectoryIsRefused() {
+    val repo = repoWith("PriceTag.kt" to badge)
+    val realDir = File(repo, "real").apply { mkdirs() }
+    File(repo, "editor/src/wasmJsMain").mkdirs()
+    Files.createSymbolicLink(File(repo, "editor/src/wasmJsMain/kotlin").toPath(), realDir.toPath())
+    val err = CompiledAdapters.emit(repo, config, File(repo, "app/components"), TokenTable.EMPTY)
+    assertNotNull(err)
+    assertTrue("symbolic link" in err, err)
+    assertTrue(realDir.listFiles()!!.isEmpty())
+  }
+
+  @Test fun aCrlfFileStaysCrlfAndLeavesNoTempFile() {
+    val repo = repoWith("PriceTag.kt" to badge)
+    val components = File(repo, "app/components")
+    val out = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt")
+    assertNull(CompiledAdapters.emit(repo, config, components, TokenTable.EMPTY))
+    out.writeText(out.readText().replace("\n", "\r\n"))
+    out.setLastModified(1_000)
+    assertNull(CompiledAdapters.emit(repo, config, components, TokenTable.EMPTY))
+    assertEquals(1_000, out.lastModified(), "the CRLF copy of the same text is not rewritten")
+    File(components, "PriceTag.kt").writeText(badge.replace("label: String", "label: String, count: Int"))
+    assertNull(CompiledAdapters.emit(repo, config, components, TokenTable.EMPTY))
+    val text = out.readText()
+    assertTrue("count" in text && text.count { it == '\n' } == Regex("\r\n").findAll(text).count(), "still CRLF")
+    assertEquals(listOf("AppCompiled.kt"), out.parentFile.list()!!.toList())
+  }
+
+  // ── review m4: file-private design tokens resolve under the relay's file identity ──
+
+  @Test fun aFilePrivateTokenDefaultIsInlined() {
+    // Before the fix the generator saw the file as "PriceTag.kt" while tokens are
+    // registered under its repo-relative path, so the default fell to requireSet.
+    val repo = repoWith(
+      "PriceTag.kt" to """
+        package app.ui
+        import androidx.compose.runtime.Composable
+        import dev.keliver.Modifier
+        private const val Accent = 42
+        @Composable
+        fun PriceTag(label: String, accent: Int = Accent, modifier: Modifier = Modifier) { val x = label.uppercase() }
+      """.trimIndent(),
+    )
+    val cfg = config.copy(screensDir = "app/screens")
+    val tokens = CompiledAdapters.appTokens(repo, cfg, "compiled-adapters-private-token-test")
+    assertNull(CompiledAdapters.emit(repo, cfg, File(repo, "app/components"), tokens))
+    val text = File(repo, "editor/src/wasmJsMain/kotlin/AppCompiled.kt").readText()
+    assertTrue("call.int(\"accent\", 42)" in text, text)
+    assertFalse("requireSet" in text, text)
+  }
+
+  @Test fun aBlockWithoutAPreviewBuildIsWarnedAbout() {
+    assertNotNull(CompiledAdapters.configWarning(config))
+    assertNull(CompiledAdapters.configWarning(config.copy(previewBuildTask = ":editor:wasmJsBrowserDistribution")))
+    assertNull(CompiledAdapters.configWarning(PortalConfig()))
   }
 }

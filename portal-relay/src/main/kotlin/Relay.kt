@@ -628,6 +628,9 @@ private fun flowsDirFor(project: String): File =
   else File(screensDirFor(project).parentFile, "flows")
 // ── P3-12: live-preview rebuild orchestration ───────────────────────────────
 
+/** Compiled component preview: say so when the adapters block cannot take effect. */
+private val compiledAdaptersWarning: String? = CompiledAdapters.configWarning(config)?.also(::println)
+
 private val previewBuilder = PreviewBuilder(
   PreviewDistributionRunner(repoDir, config, prepare = {
     // Compiled component preview: the editor's adapters follow the components' signatures.
