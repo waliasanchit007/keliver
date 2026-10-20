@@ -248,6 +248,12 @@
   are still there.
 
 ### Fixed
+- **portal-relay (tests):** a local `:portal-relay:test` run no longer claims the developer's real
+  store. This repo's `keliver.portal.json` names `~/.keliver-portal`, so the first test touching the
+  relay's top-level state wrote that store's owner marker, and a later run from another checkout of
+  the repo exited 70 on the ownership refusal. The test task now sets `PORTAL_STORE` to a directory
+  under `build/` (the relay's one-run override: no pointer is written); `HermeticTestStoreTest`
+  guards it. A marker an earlier run left in `~/.keliver-portal/owner` is not removed automatically.
 - **portal-relay:** an edit the document accepted but write-back then refused blocked every later
   edit of the screen until undone (§7a) — e.g. a template on a list item's field typed `Double` or
   nullable (the contract carries no item types), or a plain binding set on a screen that takes no
