@@ -1,8 +1,8 @@
 # Compiled component preview — drawing opaque components exactly
 
-**Status:** prototype on `feat/compiled-component-preview`. Libraries: the
-next release (0.4.0). Tools: the relay emitter ships with the next tools
-release. Nothing here changes what a device runs.
+**Status:** merged to `main` (#132). Libraries: the next release (0.4.0).
+Tools: the relay emitter ships with the next tools release. Nothing here
+changes what a device runs.
 
 ## The problem
 
@@ -315,6 +315,12 @@ All library changes are additive (`apiDump`):
   stops the build, the dogfood file is current.
 - `:web-spike:wasmJsBrowserDistribution` links with the dogfood adapters.
 
-Not yet done: a browser session on the dogfood editor showing an opaque
-instance drawn compiled and selected by a tap; a device screenshot
-comparison for an adopter component (D14).
+Browser session on the dogfood editor (main `84d0447b0`, 2026-10-20;
+[`superpowers/evidence/compiled-component-preview/`](superpowers/evidence/compiled-component-preview/README.md)):
+two `NoteCountPill` instances added to the feed screen draw compiled
+("3 NOTES", "1 ITEM" — computed text the grammar cannot express), a tap
+selects one as a single unit (`NoteCountPill · component (opaque)`, outlined
+in the tree), and editing Count 3 → 7 in the properties panel redraws
+"7 NOTES" and writes `count = 7` back to the screen file surgically.
+
+Not yet done: a device screenshot of the same screen (D14).
