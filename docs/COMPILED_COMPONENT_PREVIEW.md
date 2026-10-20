@@ -40,14 +40,14 @@ public fun interface CompiledComponent {
 A generated adapter:
 
 ```kotlin
-"Badge" to CompiledComponent { call ->
+"PriceTag" to CompiledComponent { call ->
   call.noContent()
   val p0 = call.string("label")
   val p1 = call.int("count")
   val p2 = call.bool("highlighted", false)
   val p3 = call.eventOrNull("onTap")
   call.compose {
-    Badge(label = p0, count = p1, modifier = call.modifier, highlighted = p2, onTap = p3)
+    PriceTag(label = p0, count = p1, modifier = call.modifier, highlighted = p2, onTap = p3)
   }
 }
 ```
@@ -72,8 +72,14 @@ The editor's component hook (`installComponentPreview` in portal-editor):
 Nested instances: when a transparent component's body calls an opaque
 component that has an adapter, `expandForPreview(node, registry, compiled)`
 leaves that call in the expanded tree as a component node (its arguments
-resolved against the outer instance, its slot content substituted), and the
-renderer draws it compiled. Without an adapter it is a placeholder, as before.
+resolved against the outer instance — an argument the outer instance omits
+takes its default, else the editor's sample, as template parts do — and its
+slot content substituted), and the renderer draws it compiled. The same holds
+for an opaque call passed as slot content to a transparent wrapper. Without an
+adapter it is a placeholder, as before.
+
+A component the relay flags as on a **dependency cycle** is never drawn
+compiled, even with an adapter: it keeps its placeholder.
 
 **A "device-exact" toggle?** Adapters are generated for every component whose
 signature is supported, transparent ones included, so a toggle that draws
@@ -94,7 +100,7 @@ canvas applies to widget properties — reusing the existing code, not a copy:
 |---|---|
 | literal | itself (Int → Double where a Double is expected) |
 | design token (`C.Ink`) | its resolved value (`tokenValue`) |
-| screen binding (`b.title`) | the preview value (mocks / live presenter), as `strB`/`intB`… do; an unmocked text binding previews `{field}` |
+| screen binding (`b.title`) | the preview value (mocks / live presenter), as `strB`/`intB`… do. **Unmocked:** a `String` previews `{field}`; an `Int`/`Boolean`/`Double` (or a mock that does not parse as one) silently takes the adapter's default — the component's literal/token default, else the sample `0`/`false`/`0.0` — exactly as a widget property does on the canvas. There is no visible marker for that case; give the binding a preview value (persona / live presenter) to see the real one |
 | conditional (`if (b.x) A else B`) | the branch the preview chooses (`PreviewBindings.chosen`) |
 | template (`"Hi ${b.name}"`) | its text (`PreviewBindings.text`) |
 | event (`{ b.open() }`) | a lambda firing the instance's action into the action console / live presenter — what a transparent instance's widgets do; a no-op when none is wired |
@@ -152,9 +158,20 @@ for components that take caller modifiers anyway.
   changes go nowhere (`DiscardingCompiledProbe`). Initial composition is
   synchronous, so the answer is known before the canvas composes the call;
   a throw → placeholder `compiled preview failed: <Exception>: <message>`.
-  The result is remembered per component + decoded arguments, so a stable
-  instance is probed once. Inside the probe the slot's document children are
-  not composed.
+  The probe composes a **probe copy** of the call: the adapter is bound a
+  second time with events that do nothing (a `SideEffect` that calls an
+  event must not reach the action console or a live presenter twice) and a
+  slot that composes nothing. It runs inside the **canvas's composition
+  locals at the instance** (`currentCompositionLocalContext`: the app's
+  screen-wrapper Theme, UI configuration, …), so a component that reads one
+  is not reported as failing.
+  **Cost:** each probe builds a throwaway guest protocol adapter, a
+  `Recomposer` and a composition. Results are remembered per component +
+  decoded arguments + modifiers + composition locals, so a stable instance is
+  probed once; but every distinct argument set is its own probe — a `Repeat`
+  of N rows with different values probes N times, and a changing preview
+  value re-probes. `compiledComponentProbe` is an editor-internal hook (the
+  shell installs it); apps do not set it.
 - **Not covered:** a throw from an *effect* (`LaunchedEffect`) or a later
   recomposition driven by the component's own internal state. That still
   reaches the editor's guest error handler ("live preview composition
@@ -169,7 +186,7 @@ component, with the per-parameter rule:
 
 | Parameter | Adapter |
 |---|---|
-| `modifier: Modifier` (K5) | `call.modifier` |
+| `modifier: Modifier` (K5), required or `= Modifier` | `call.modifier` |
 | `String` / `Int` / `Boolean` / `Double`, nullable too — the types an instance can set | decoded; an omitted one: literal / token default inlined (`-16_745_729`, `0x7F000000` included), `= null` for a nullable type, any other default → `call.requireSet` (refused for an instance that omits it) |
 | `() -> Unit`, `(T) -> Unit`, nullable too | `call.event…`; `(T)` passes through `{ v -> f(v) }` so `T` needs no import |
 | one required `@Composable () -> Unit` | `call.content()` |
@@ -177,11 +194,25 @@ component, with the per-parameter rule:
 | anything else **without** a default | the component is **refused** |
 
 A component is also refused when it is `private`, has a receiver
-(`RowScope.Foo`), type parameters, a `vararg`, more than one content slot,
-collides with a primitive widget name, or is `internal` while the adapters
-compile in another module (`sameModule = false`). Refusals are listed, with
-reasons, in the generated file's header; a refused component keeps its
-placeholder.
+(`RowScope.Foo`), type parameters, a `vararg`, more than one content slot, a
+`modifier` default other than `Modifier` (`= Modifier.padding(8)` would be
+lost whenever the instance passes no modifiers, so the preview would not match
+the device), collides with a primitive widget name, shares its name with
+another component (an instance names its component by simple name, so the
+two cannot both be previewed), or is `internal` while the adapters compile in
+another module (`sameModule = false`). Refusals are listed, with reasons, in
+the generated file's header; a refused component keeps its placeholder.
+
+**The emitted file always parses.** Keyword parameter names and package
+segments are backtick-quoted (`` `in` = p0 ``, ``import app.`in`.ui…``);
+`@Composable` is recognized by its annotation's short name, so
+`@androidx.compose.runtime.Composable () -> Unit` is a slot; every component is
+imported under an alias (`import a.b.PriceTag as PriceTag__c3`) and the render types
+are written fully qualified, so a component named `CompiledComponent` or
+`mapOf` cannot clash. Each adapter is parsed before it is emitted and one that
+does not parse is refused instead — the relay rewrites the file before every
+preview build, so one bad adapter must never stop them all. The fixture set
+(`portal-parity-fixtures`) compiles such edge cases on wasm.
 
 **Who runs it: the relay.** `keliver.portal.json` gains an optional block:
 
@@ -195,12 +226,23 @@ placeholder.
 ```
 
 Before every preview build the relay regenerates `out` from the app's
-components dir with the project's design-token table, writing only when the
-text changes (an unchanged signature costs no recompile). `out` must stay
-inside the repo. A generation failure fails that preview build; the
-last-known-good editor stays served. Without the block nothing changes. The
-relay already rebuilds the editor on any component edit, so a changed body
+components dir with the project's design-token table (each file under its
+repo-relative identity, so file-private token defaults resolve), writing only
+when the text changes (an unchanged signature costs no recompile). The write
+is guarded: `out` must stay inside the repo, neither it nor a directory on its
+way may be a symbolic link, an existing file whose first line is not the
+`GENERATED` header is never overwritten, the text keeps the existing file's
+line endings (CRLF stays CRLF), and it is written to a temp file and renamed
+into place. A generation failure fails that preview build; the last-known-good
+editor stays served. Without the block nothing changes; with the block but no
+`previewBuildTask` the relay warns at start, since nothing would use the file.
+The relay already rebuilds the editor on any component edit, so a changed body
 shows after the rebuild and a changed signature regenerates its adapter.
+
+**Without a relay** (CI, a hook): `./gradlew :portal-relay:compiledComponentAdapters`
+writes the file and `-Pcheck` fails when it is stale (`-PappDir=<dir>` for
+another app). It is the relay's own code path with the same token table.
+This repo's CI runs the check for the dogfood editor.
 
 The file is generated source checked into the editor's sources (it must be
 there for a build without the relay, e.g. CI). This repo's dogfood editor
@@ -220,7 +262,9 @@ by `CompiledAdaptersTest`.
    `compiledComponents` block above.
 3. `override val compiledComponents = AppCompiledComponents` in its
    `AppPreviewEntry` (the scaffold now shows the line, commented).
-4. Libraries ≥ 0.4.0 and a tools bundle with the relay emitter.
+4. Libraries ≥ 0.4.0 and a tools bundle with the relay emitter. (The tools
+   bundle does not yet ship a stand-alone generator command; the
+   `compiledComponentAdapters` task exists in this repo only.)
 
 The tools bundle's *generic* editor has no app code, so it cannot draw
 compiled components; opaque components stay placeholders there.
@@ -255,8 +299,12 @@ All library changes are additive (`apiDump`):
 - `portal-ingest` `CompiledAdapterGeneratorTest`: the rules and refusals; the
   fixture adapters are a staleness-guarded generated file
   (`KELIVER_UPDATE_COMPILED_ADAPTERS=1` regenerates).
+- `portal-ingest` `ComponentExpansionTest`: the `compiled` overload (nested,
+  slot content, omitted outer argument → sample).
 - `portal-relay` `CompiledAdaptersTest`: emission, no-op rewrite, repo
-  boundary, a failed step stops the build, the dogfood file is current.
+  boundary, symbolic links, never clobbering a hand-written file, CRLF,
+  file-private token defaults, the config warning, `check`, a failed step
+  stops the build, the dogfood file is current.
 - `:web-spike:wasmJsBrowserDistribution` links with the dogfood adapters.
 
 Not yet done: a browser session on the dogfood editor showing an opaque
