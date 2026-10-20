@@ -105,6 +105,8 @@ public class CompiledCall internal constructor(
       is Int -> v
       // A binding with no usable preview value keeps the default, as a widget property does.
       is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
+      // K7: an arithmetic argument, computed as a widget property's is (unknown keeps the default).
+      is dev.keliver.portal.Arith -> PreviewBindings.intValueOf(v) ?: default
       else -> mismatch(name, "Int", v)
     }
 
