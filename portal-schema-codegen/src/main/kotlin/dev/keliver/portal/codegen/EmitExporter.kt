@@ -29,10 +29,11 @@ private fun presenceExpr(key: String, kind: MappedKind): String =
  * [kind] at wire key [key] needs (structural — from the spec, never from the
  * text). Null when the kind needs none.
  */
-private fun importStmt(kind: MappedKind, key: String): String? = when {
+private fun importStmt(kind: MappedKind, key: String, widgetProp: Boolean = false): String? = when {
   kind == MappedKind.MARGIN -> "imports += marginImports(node, \"$key\")"
-  // K7: a Dp prop also records an Int-as-Dp value's token operands and its `dp` / `Dp` spelling.
-  kind == MappedKind.DP -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }}); imports.addTokenImport(node.props[\"$key\"], \"Dp\")"
+  // K7: a widget's Dp prop also records an Int-as-Dp value's token operands and its `dp` / `Dp`
+  // spelling (a modifier argument never holds one).
+  kind == MappedKind.DP && widgetProp -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }}); imports.addTokenImport(node.props[\"$key\"], \"Dp\")"
   kindImports(kind).isNotEmpty() -> "imports += listOf(${kindImports(kind).joinToString(", ") { "\"$it\"" }})"
   // K2: a design-token reference written for this literal needs its declaring object imported.
   tokenSourceType(kind) != null -> "imports.addTokenImport(node.props[\"$key\"], \"${tokenSourceType(kind)}\")"
@@ -421,7 +422,7 @@ fun emitExporter(widgets: List<WidgetPlan.Include>, modifiers: List<ModPlan> = e
     }
     for (p in w.props) {
       val emit = "sb.append(\"\${indent}  ${p.name} = \${${literalExpr(p)}},\\n\")" +
-        (importStmt(p.kind, p.name)?.let { "; $it" } ?: "")
+        (importStmt(p.kind, p.name, widgetProp = true)?.let { "; $it" } ?: "")
       if (p.required) {
         appendLine("      $emit")
       } else {
