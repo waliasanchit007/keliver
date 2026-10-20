@@ -81,6 +81,8 @@ public fun expandForPreview(
       is Conditional -> c.holds(null, present = false) // a value chosen at render time: read as unknown
       // K4: a template reading a binding is known only at render time; otherwise its text.
       is Template -> if (referencedBinds(v).isEmpty() && v.parts.none { it is Conditional }) c.holds(templateText(v) { null }, present) else c.holds(null, present = false)
+      // K7: an arithmetic argument is known here only when every operand is (no binding, no choice).
+      is Arith -> arithValue(v).let { x -> if (x != null) c.holds(x, present) else c.holds(null, present = false) }
       else -> c.holds(v, present)
     }
   }
@@ -107,6 +109,10 @@ public fun expandForPreview(
     // values (a required parameter with no argument previews its sample value).
     is Template -> Template(v.parts.map { p -> if (p is Bind && '.' !in p.field && p.field in paramNames) argOf(p.field).second else resolveValue(p) })
     is ListOf -> ListOf(v.kind, v.items.map { p -> if (p is Bind && '.' !in p.field && p.field in paramNames) argOf(p.field).second else resolveValue(p) })
+    // K7: an arithmetic value's parameter operands take the instance's values (a required
+    // parameter with no argument previews its sample, 0); an argument that is itself an
+    // expression, a binding or a conditional is evaluated in place when the canvas renders.
+    is Arith, is IntDp -> mapArithOperands(v) { p -> if (p is Bind && '.' !in p.field && p.field in paramNames) argOf(p.field).second else resolveValue(p) }
     else -> v
   }
 

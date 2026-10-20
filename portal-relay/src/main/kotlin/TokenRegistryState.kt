@@ -5,6 +5,7 @@ import dev.keliver.portal.document.PropValue
 import dev.keliver.portal.document.UiDocument
 import dev.keliver.portal.document.atoms
 import dev.keliver.portal.document.mapAtoms
+import dev.keliver.portal.document.mapOperandTree
 import dev.keliver.portal.document.lit
 import dev.keliver.portal.document.toAny
 import dev.keliver.portal.ingest.TokenEntry
@@ -265,6 +266,17 @@ object Tokens {
         val prev = (was as? PropValue.ListOf)?.items
         val element = dev.keliver.portal.listElementType(value.tag)
         return value.copy(items = value.items.mapIndexed { i, p -> fix(type, key, p, prev?.getOrNull(i), sourceType = element) })
+      }
+      // K7: an arithmetic value's token operands, each against the same operand before; each stays an Int.
+      if (value is PropValue.Arith || value is PropValue.IntDp) {
+        val prev = dev.keliver.portal.document.arithOperandsOf(was)
+        var i = 0
+        fun operand(o: PropValue): PropValue = fix(type, key, o, prev.getOrNull(i++), sourceType = "Int")
+        return when (value) {
+          is PropValue.Arith -> value.mapOperandTree(::operand)
+          is PropValue.IntDp -> value.copy(value = (value.value as? PropValue.Arith)?.mapOperandTree(::operand) ?: operand(value.value))
+          else -> value
+        }
       }
       val v = value
       if (v !is PropValue.Token || error != null) return v

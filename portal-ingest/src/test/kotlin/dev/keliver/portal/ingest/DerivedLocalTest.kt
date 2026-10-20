@@ -154,7 +154,8 @@ class DerivedLocalTest {
     val use = "\nStyledText(text = if (active) \"a\" else \"b\")"
     assertOpaque("var active = enabled && !loading$use", "`var active`")
     assertOpaque("val active by lazy { enabled }$use", "delegated")
-    assertOpaque("val active: Int = 1$use", "not a Boolean")
+    // K7: an Int-typed local is an Int expression over parameters — a literal is not one.
+    assertOpaque("val active: Int = 1$use", "not a derived Int local")
     assertOpaque("val enabled = !loading\nStyledText(text = if (enabled) \"a\" else \"b\")", "shadows the parameter `enabled`")
     assertOpaque("StyledText(text = if (active) \"a\" else \"b\")\nval active = enabled && !loading", "before its definition")
     assertOpaque("val ready = enabled && !loading\nval active = ready && text.isNotEmpty()$use", "reads the local `ready`")

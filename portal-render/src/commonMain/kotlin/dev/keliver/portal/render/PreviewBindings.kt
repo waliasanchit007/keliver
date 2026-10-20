@@ -3,7 +3,10 @@ package dev.keliver.portal.render
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import dev.keliver.portal.Action
+import dev.keliver.portal.Arith
 import dev.keliver.portal.Bind
+import dev.keliver.portal.IntDp
+import dev.keliver.portal.arithValue
 import dev.keliver.portal.Cond
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
@@ -123,8 +126,26 @@ public fun WidgetNode.strListB(key: String): List<String> = when (val v = props[
   else -> strList(key)
 }
 
+/**
+ * K7: an Int value in the preview — an arithmetic value computed with Kotlin's
+ * Int operators from its operands: a token its value, a binding its mock read
+ * as a decimal, an item field its row's, a conditional operand (a component
+ * argument) its chosen branch. Null = unknown (an unmocked operand, a mock
+ * that is not a decimal): the prop then renders as an unmocked binding does.
+ */
+public fun PreviewBindings.intValueOf(v: Any?): Int? = arithValue(v, ::operandInt)
+
+private fun PreviewBindings.operandInt(v: Any?): Int? = when (val x = tokenValue(chosen(v))) {
+  is Int -> x
+  is Arith -> intValueOf(x)
+  is Bind -> mocks[x.field]?.toIntOrNull()
+  is String -> x.toIntOrNull() // an item field's row value, a mock substituted for a binding
+  else -> null
+}
+
 public fun WidgetNode.intB(key: String, default: Int = 0): Int = when (val v = tokenValue(PreviewBindings.chosen(props[key]))) {
   is Bind -> PreviewBindings.mocks[v.field]?.toIntOrNull() ?: default
+  is Arith -> PreviewBindings.intValueOf(v) ?: default
   is Int -> v
   else -> default
 }
@@ -137,6 +158,8 @@ public fun WidgetNode.boolB(key: String, default: Boolean = false): Boolean = wh
 
 public fun WidgetNode.dblB(key: String, default: Double = 0.0): Double = when (val v = tokenValue(PreviewBindings.chosen(props[key]))) {
   is Bind -> PreviewBindings.mocks[v.field]?.toDoubleOrNull() ?: default
+  // K7: an Int used as a Dp, computed as an Int (see intValueOf).
+  is IntDp -> PreviewBindings.intValueOf(v.value)?.toDouble() ?: default
   is Double -> v
   is Int -> v.toDouble()
   else -> default

@@ -105,6 +105,36 @@ public sealed interface PropValue {
    */
   @Serializable
   public data class ListOf(val tag: String, val items: List<PropValue>) : PropValue
+
+  /**
+   * K7: an Int arithmetic value — `size / 2`, `b.columns * 48 + 8` in
+   * source: ONE binary operation, [op] one of `+ - * / %`, each operand a
+   * [Lit] of tag "i" (negative too; never `Int.MIN_VALUE`, which Kotlin source
+   * reads as a Long), an Int [Token], a [Bind] of an Int field (a screen
+   * binding, an item field `item.x` inside a Repeat over `item`, or — in a
+   * component body — an Int parameter) or another [Arith]. The tree is the
+   * expression as Kotlin parses it (precedence, left associativity;
+   * parentheses only group). `/` and `%` take only a non-zero Int literal on
+   * the right. Canonical form ([canonical]): at least one operand is not a
+   * literal — an expression of literals is the plain [Lit] it computes
+   * (`dev.keliver.portal.ArithOp.apply`, Kotlin's 32-bit Int arithmetic).
+   * Fits an Int prop or a component's Int parameter (also as a
+   * [Conditional]'s branch); never a modifier argument, a template part, a
+   * list element or an equality operand.
+   */
+  @Serializable
+  public data class Arith(val op: String, val left: PropValue, val right: PropValue) : PropValue
+
+  /**
+   * K7: an Int value used where a Dp is taken — `gap.dp` ([form] null) or
+   * `Dp(gap.toDouble())` ([form] `"Dp"`), the author's spelling. [value] is
+   * an [Arith], a [Bind] of an Int field or an Int [Token]; an Int literal is
+   * folded into the plain Dp [Lit] ([canonical]). Fits a catalogued widget's
+   * Dp prop (`Spacer.width`/`height`) — never a Margin side, a modifier
+   * argument or a component parameter.
+   */
+  @Serializable
+  public data class IntDp(val value: PropValue, val form: String? = null) : PropValue
 }
 
 /**

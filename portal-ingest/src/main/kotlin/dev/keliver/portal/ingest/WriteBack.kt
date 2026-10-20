@@ -137,6 +137,7 @@ object WriteBack {
       is PropValue.Conditional -> v.docFields().any(::screenField) || value(v.whenTrue) || value(v.whenFalse)
       is PropValue.Template -> v.parts.any(::value) // K4: a template's / a list's references
       is PropValue.ListOf -> v.items.any(::value)
+      is PropValue.Arith, is PropValue.IntDp -> dev.keliver.portal.document.arithOperandsOf(v).any(::value) // K7: an operand
       else -> false
     }
     val own = when (n.type) {
@@ -1114,6 +1115,12 @@ object WriteBack {
       ) {
         // K4: only the template parts that changed; the rest keeps its spelling.
         TemplateSyntax.surgical(oldExpr.text, TemplateSyntax.partsOf(oldValue)!!, TemplateSyntax.partsOf(newValue)!!, ::refText) ?: canonicalText
+      } else if (dev.keliver.portal.document.isArithmetic(oldValue) && dev.keliver.portal.document.isArithmetic(newValue)) {
+        // K7: only the operands that changed, when the expression keeps its shape; else the whole value.
+        ArithSyntax.surgical(oldExpr.text, oldValue!!, newValue!!, ::refText) ?: canonicalText
+      } else if (oldValue is dev.keliver.portal.document.PropValue.IntDp && (newValue as? dev.keliver.portal.document.PropValue.Lit)?.d != null) {
+        // K7: an Int used as a Dp replaced by a Dp literal keeps the author's Dp spelling.
+        MarginSyntax.dpLike(if (oldValue.form == null) "0.dp" else "Dp(0.0)", newValue.d!!)
       } else if ((oldValue is dev.keliver.portal.document.PropValue.ListOf || newValue is dev.keliver.portal.document.PropValue.ListOf) &&
         ListSyntax.itemsOf(oldValue) != null && ListSyntax.itemsOf(newValue) != null
       ) {

@@ -496,6 +496,49 @@ AnimatedBorder(colorsArgb = listOf(16777215, C.A, b.accent))
   `PropValue.ListOf`. Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Templates
   and lists are grammar".
 
+### Int arithmetic and Ints as Dps (K7)
+
+```kotlin
+StyledBox(cornerRadiusDp = b.size / 2, widthDp = b.columns * 48 + 8) { … }
+StyledText(text = "x", fontSize = b.size * 2 / 5)
+Spacer(height = Dp(b.gap.toDouble()))   // or (b.gap + 4).dp
+// in a component body
+val half = size / 2
+```
+
+- An Int prop (or a component's Int parameter, or a conditional's branch on
+  one) takes an expression of Int literals, Int design tokens and Int
+  bindings/parameters under `+ - * / %` and parentheses — Kotlin's
+  precedence, Kotlin's 32-bit arithmetic (overflow wraps, `/` truncates
+  toward zero). `/` and `%` divide only by a non-zero Int literal. A Dp prop
+  (`Spacer` width/height) takes `x.dp` or `Dp(x.toDouble())` of such an
+  expression or of one Int reference. A component body may derive an Int
+  once (`val half = size / 2`): it is inlined where it is read.
+- Not grammar (stays RawCode, the component opaque, with a reason): an
+  expression of literals only (`4 * 2` — write `8`), division by anything
+  but a literal, `-x` on a reference (write `0 - x`), calls (`maxOf`),
+  Long/Double/Float/nullable operands, String `+`, a comment inside,
+  arithmetic in a modifier argument or a Margin side, `x.uppercase()` /
+  `x.lowercase()` (the device's JS engine maps case with its own tables).
+- The property panel shows an expression read-only as its source; **= value**
+  replaces it with what it computes now, **@** with a binding. Edit its shape
+  in code. Write-back rewrites only the operands that changed (parentheses
+  and spacing kept); a token operand adds its import.
+- The preview computes an expression from its operands' values (a binding's
+  mock read as a decimal); with an unmocked operand it is unknown and the
+  prop shows the widget's default, as an unmocked binding does.
+- A field an operand reads is an `Int` in the derived contract. The relay
+  refuses an operand on a field the screen declares or reads as another type
+  (a String, a Boolean test, a list), and on a field whose type the screen's
+  file does not show unless the screen already reads it as an Int there.
+- An editor built before this release (no `arithmetic=1`) is served the
+  literal an expression computes from literals and tokens; a prop whose
+  expression reads a binding is left out of what it is served (it shows the
+  default). Its edits to other props leave the expression in the file.
+- Agents: the MCP op schema documents `PropValue.Arith` and
+  `PropValue.IntDp`. Details: `docs/SCREEN_ARCHITECTURE.md` §7, "Int
+  arithmetic and Ints as Dps are grammar".
+
 ## Live-presenter preview (P3-12)
 
 Press **▶ Live** on a screen whose project registered an `AppPreviewEntry`: the

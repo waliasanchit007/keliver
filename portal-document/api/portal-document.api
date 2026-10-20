@@ -1,3 +1,15 @@
+public final class dev/keliver/portal/document/ArithmeticKt {
+	public static final fun arithFields (Ldev/keliver/portal/document/PropValue;)Ljava/util/List;
+	public static final fun arithOperandsOf (Ldev/keliver/portal/document/PropValue;)Ljava/util/List;
+	public static final fun canonical (Ldev/keliver/portal/document/PropValue$Arith;)Ldev/keliver/portal/document/PropValue;
+	public static final fun canonical (Ldev/keliver/portal/document/PropValue$IntDp;)Ldev/keliver/portal/document/PropValue;
+	public static final fun isArithmetic (Ldev/keliver/portal/document/PropValue;)Z
+	public static final fun mapOperandTree (Ldev/keliver/portal/document/PropValue$Arith;Lkotlin/jvm/functions/Function1;)Ldev/keliver/portal/document/PropValue$Arith;
+	public static final fun operandValues (Ldev/keliver/portal/document/PropValue$Arith;)Ljava/util/List;
+	public static final fun staticIntValue (Ldev/keliver/portal/document/PropValue;)Ljava/lang/Integer;
+	public static final fun withoutArithmetic (Ldev/keliver/portal/document/UiDocument;)Ldev/keliver/portal/document/UiDocument;
+}
+
 public final class dev/keliver/portal/document/CondTerm {
 	public static final field Companion Ldev/keliver/portal/document/CondTerm$Companion;
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZLdev/keliver/portal/document/PropValue;)V
@@ -569,6 +581,7 @@ public final class dev/keliver/portal/document/OpEnvelope$Companion {
 }
 
 public final class dev/keliver/portal/document/ProjectKt {
+	public static final field DP_CTOR_FORM Ljava/lang/String;
 	public static final fun cond (Ldev/keliver/portal/document/PropValue$Conditional;)Ldev/keliver/portal/Cond;
 	public static final fun condition (Ldev/keliver/portal/document/DocNode$Widget;)Ldev/keliver/portal/Cond;
 	public static final fun conditionNodeProps (Ldev/keliver/portal/Cond;)Ljava/util/Map;
@@ -615,6 +628,36 @@ public final synthetic class dev/keliver/portal/document/PropValue$Action$$seria
 }
 
 public final class dev/keliver/portal/document/PropValue$Action$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$Arith : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$Arith$Companion;
+	public fun <init> (Ljava/lang/String;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ldev/keliver/portal/document/PropValue;
+	public final fun component3 ()Ldev/keliver/portal/document/PropValue;
+	public final fun copy (Ljava/lang/String;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;)Ldev/keliver/portal/document/PropValue$Arith;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$Arith;Ljava/lang/String;Ldev/keliver/portal/document/PropValue;Ldev/keliver/portal/document/PropValue;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$Arith;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLeft ()Ldev/keliver/portal/document/PropValue;
+	public final fun getOp ()Ljava/lang/String;
+	public final fun getRight ()Ldev/keliver/portal/document/PropValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$Arith$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$Arith$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$Arith;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$Arith;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$Arith$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
@@ -686,6 +729,35 @@ public final synthetic class dev/keliver/portal/document/PropValue$Conditional$$
 }
 
 public final class dev/keliver/portal/document/PropValue$Conditional$Companion {
+	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class dev/keliver/portal/document/PropValue$IntDp : dev/keliver/portal/document/PropValue {
+	public static final field Companion Ldev/keliver/portal/document/PropValue$IntDp$Companion;
+	public fun <init> (Ldev/keliver/portal/document/PropValue;Ljava/lang/String;)V
+	public synthetic fun <init> (Ldev/keliver/portal/document/PropValue;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ldev/keliver/portal/document/PropValue;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ldev/keliver/portal/document/PropValue;Ljava/lang/String;)Ldev/keliver/portal/document/PropValue$IntDp;
+	public static synthetic fun copy$default (Ldev/keliver/portal/document/PropValue$IntDp;Ldev/keliver/portal/document/PropValue;Ljava/lang/String;ILjava/lang/Object;)Ldev/keliver/portal/document/PropValue$IntDp;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getForm ()Ljava/lang/String;
+	public final fun getValue ()Ldev/keliver/portal/document/PropValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final synthetic class dev/keliver/portal/document/PropValue$IntDp$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
+	public static final field INSTANCE Ldev/keliver/portal/document/PropValue$IntDp$$serializer;
+	public final fun childSerializers ()[Lkotlinx/serialization/KSerializer;
+	public final fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ldev/keliver/portal/document/PropValue$IntDp;
+	public synthetic fun deserialize (Lkotlinx/serialization/encoding/Decoder;)Ljava/lang/Object;
+	public final fun getDescriptor ()Lkotlinx/serialization/descriptors/SerialDescriptor;
+	public final fun serialize (Lkotlinx/serialization/encoding/Encoder;Ldev/keliver/portal/document/PropValue$IntDp;)V
+	public synthetic fun serialize (Lkotlinx/serialization/encoding/Encoder;Ljava/lang/Object;)V
+}
+
+public final class dev/keliver/portal/document/PropValue$IntDp$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 

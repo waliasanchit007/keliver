@@ -48,11 +48,36 @@ import kotlinx.serialization.json.put
  * as its mock — an Int element's mock a decimal or a `#RRGGBB`/`#AARRGGBB`
  * colour, else left out — an unmocked one as 0 or its placeholder) plus `"items"` (each element encoded as a value). A reader
  * that predates K4 decodes the text / the resolved list.
+ *
+ * K7: an Int arithmetic value carries its VALUE under `"i"` where it can be
+ * computed (every operand a literal, a token or a mocked binding — see
+ * [arithValue]) plus `"arith"` (`{"op", "l", "r"}`, each operand an encoded
+ * value); an Int used as a Dp carries its value under `"d"` likewise, plus
+ * `"intDp"` (the encoded Int value) and `"dpForm": "Dp"` for the
+ * `Dp(x.toDouble())` spelling. Where the value cannot be computed (an
+ * unmocked binding) the plain key is left out: a reader that predates K7 (an
+ * installed device guest) decodes no value and renders the prop's default —
+ * what this release renders for an unknown expression, never a wrong number.
  */
 
 private val JSON = Json { }
 
 private fun encodeValue(v: Any?): JsonObject = buildJsonObject {
+  if (v is Arith) {
+    arithValue(v, ::wireOperand)?.let { put("i", it) }
+    put("arith", buildJsonObject {
+      put("op", v.op.symbol)
+      put("l", encodeValue(v.left))
+      put("r", encodeValue(v.right))
+    })
+    return@buildJsonObject
+  }
+  if (v is IntDp) {
+    intDpValue(v, ::wireOperand)?.let { put("d", it) }
+    put("intDp", encodeValue(v.value))
+    if (v.ctor) put("dpForm", "Dp")
+    return@buildJsonObject
+  }
   if (v is Conditional) {
     encodeBranch(v.whenTrue).forEach { (k, e) -> put(k, e) }
     put(if (v.cond.isExtended) "condition" else "cond", encodeCond(v.cond))
@@ -143,6 +168,9 @@ private fun decodeCond(c: JsonObject): Cond {
 /** A conditional branch: Kotlin `null` is `{"null":true}` (a plain null prop stays as it always was). */
 private fun encodeBranch(v: Any?): JsonObject = if (v == null) buildJsonObject { put("null", true) } else encodeValue(v)
 
+/** K7: an operand's value on the device wire — a mocked binding's mock read as a decimal; anything else unknown. */
+private fun wireOperand(v: Any?): Int? = (v as? String)?.toIntOrNull()
+
 private fun decodeValue(o: JsonObject): Any? = when {
   "cond" in o || "condition" in o -> (o["condition"] ?: o.getValue("cond")).jsonObject.let { c ->
     Conditional(
@@ -152,6 +180,13 @@ private fun decodeValue(o: JsonObject): Any? = when {
     )
   }
   "null" in o -> null
+  // K7: before "i"/"d" — those carry the expression's value for older readers.
+  "arith" in o -> o.getValue("arith").jsonObject.let { a ->
+    ArithOp.fromSymbol(a["op"]?.jsonPrimitive?.content)?.let { op ->
+      Arith(op, decodeValue(a.getValue("l").jsonObject), decodeValue(a.getValue("r").jsonObject))
+    }
+  }
+  "intDp" in o -> IntDp(decodeValue(o.getValue("intDp").jsonObject), ctor = o["dpForm"]?.jsonPrimitive?.content == "Dp")
   "template" in o -> Template(o.getValue("template").jsonArray.map { decodeValue(it.jsonObject) })
   "items" in o -> ListOf(if ("lst" in o) "ls" else "li", o.getValue("items").jsonArray.map { decodeValue(it.jsonObject) })
   "token" in o -> Token(

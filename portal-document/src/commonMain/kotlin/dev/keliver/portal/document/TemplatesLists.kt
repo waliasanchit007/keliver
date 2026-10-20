@@ -43,6 +43,9 @@ public fun PropValue.ListOf.canonical(): PropValue {
 public fun canonicalValue(v: PropValue): PropValue = when (v) {
   is PropValue.Template -> v.canonical()
   is PropValue.ListOf -> v.canonical()
+  // K7: an expression of literals is the literal it computes (an Int used as a Dp, its Dp).
+  is PropValue.Arith -> v.canonical()
+  is PropValue.IntDp -> v.canonical()
   // K6: a single term is joined by nothing (the recognizer reads no join for it).
   is PropValue.Conditional -> v.copy(
     whenTrue = v.whenTrue?.let(::canonicalValue),
@@ -55,12 +58,16 @@ public fun canonicalValue(v: PropValue): PropValue = when (v) {
 /**
  * Every ATOMIC value [v] holds: itself, or — recursively — a conditional's
  * branches (K6: and its equality operands, first), a template's parts and a
- * list's elements. (A Kotlin `null` branch holds none.)
+ * list's elements (K7: an arithmetic value's operands). (A Kotlin `null`
+ * branch holds none.)
  */
 public fun PropValue.atoms(): List<PropValue> = when (this) {
   is PropValue.Conditional -> operands() + listOfNotNull(whenTrue, whenFalse).flatMap { it.atoms() }
   is PropValue.Template -> parts.flatMap { it.atoms() }
   is PropValue.ListOf -> items.flatMap { it.atoms() }
+  // K7: an arithmetic value's operands (literals, tokens, bindings); an Int used as a Dp, its value's.
+  is PropValue.Arith -> left.atoms() + right.atoms()
+  is PropValue.IntDp -> value.atoms()
   else -> listOf(this)
 }
 
@@ -73,6 +80,9 @@ public fun PropValue.mapAtoms(f: (PropValue) -> PropValue): PropValue = when (th
   is PropValue.Conditional -> mapOperands(f).copy(whenTrue = whenTrue?.mapAtoms(f), whenFalse = whenFalse?.mapAtoms(f))
   is PropValue.Template -> PropValue.Template(parts.map { it.mapAtoms(f) }).canonical()
   is PropValue.ListOf -> PropValue.ListOf(tag, items.map { it.mapAtoms(f) }).canonical()
+  // K7: only the whole expression is put in canonical form — an operand tree is never folded.
+  is PropValue.Arith -> mapOperandTree(f).canonical()
+  is PropValue.IntDp -> PropValue.IntDp(if (value is PropValue.Arith) value.mapOperandTree(f) else f(value), form).canonical()
   else -> f(this)
 }
 
