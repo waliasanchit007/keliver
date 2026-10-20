@@ -16,9 +16,10 @@
 The portal grammar and editor-canvas libraries. Hand-written sources changed only in
 `portal-core`, `portal-document`, `portal-render` and `portal-editor` (and the version in
 `build-support`); no other published module changed since 0.3.4, and no dependency versions
-moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven: U35,
-U36 and K1–K5 shipped in tools 0.3.10/0.3.11; K6, K7, the compiled component preview's relay
-step and U37 wait for the next tools release.
+moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven:
+everything in this section except K6, K7, the compiled component preview's tools side (the
+adapter generator, the bundled editor's hook, the relay step) and U37 already shipped in tools
+0.3.10/0.3.11; those four wait for the next tools release.
 
 **Source-incompatible with 0.3.4** for code that matches on the portal document model:
 `PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and
@@ -332,8 +333,8 @@ sent — that property is from 0.3.4, and the app's goldens were recorded on 0.3
   `PreviewBindings.text(Template)`, `PreviewBindings.intValueOf`, `WidgetNode.intListB` /
   `strListB` and the `RenderNode(node, scope)` overload.
 - **Hosts on 0.3.3** (from 0.3.4, restated because guests move straight from 0.3.3): a guest built
-  on 0.3.4 or later sends `TextField` / `OutlinedTextField` `align` (property tag 13 on
-  `OutlinedTextField`) for **every** field, set or not. A Treehouse host built with 0.3.3 reports
+  on 0.3.4 or later sends `TextField` / `OutlinedTextField` `align` (property tag 4 on
+  `TextField`, 13 on `OutlinedTextField`) for **every** field, set or not. A Treehouse host built with 0.3.3 reports
   the unknown property to its event listener and carries on (start alignment); a host that uses
   `HostProtocol` directly with the default `ProtocolMismatchHandler.Throwing` fails on the first
   text field. Such a host needs 0.3.4 or later first, or a mismatch handler that ignores unknown
