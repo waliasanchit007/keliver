@@ -891,7 +891,8 @@ declare that member in the screen's interface,
 redeclares an inherited member without `override` (and a list's item type
 beside its own), so the written file no longer compiled. Found by an
 independent reviewer and reproduced twice through the relay: on a plain binding,
-and on an arithmetic operand (a grammar still in development). A supertype
+and on an Int arithmetic operand (K7, `fontSize = b.size * 2`: `val size: Int
+get() = 0` was added). A supertype
 declared in the SAME file did the same: its members were declared again too.
 
 **Why.** Contract write-back compared the members the document reads with the

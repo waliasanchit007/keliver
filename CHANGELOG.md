@@ -295,8 +295,8 @@
 - **portal-ingest, portal-relay:** any edit of a screen whose Bindings interface extends a type
   declared in another file no longer breaks its compile (KNOWN_BUGS U37). Contract write-back
   declared, in the screen's interface, each inherited field or action the screen read
-  (`/** TODO(portal) */ val title: String get() = ""`, `fun open() {}`, a list and a second item
-  type) — a redeclaration without `override`; a supertype in the same file had the same effect.
+  (`/** TODO(portal) */ val title: String get() = ""`, `fun open() {}`, an Int arithmetic operand's
+  `val size: Int get() = 0`, a list and a second item type) — a redeclaration without `override`; a supertype in the same file had the same effect.
   Write-back now counts a same-file supertype's members as declared, and adds nothing to an
   interface extending a type from another file. A field or action the editor cannot vouch for —
   the interface is not read whole (it extends a type from another file, or is itself declared
