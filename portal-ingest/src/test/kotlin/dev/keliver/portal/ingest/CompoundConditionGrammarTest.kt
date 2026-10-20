@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -278,6 +279,46 @@ class CompoundConditionGrammarTest {
     val title = (d.root as DocNode.Widget).children[1] as DocNode.Widget
     val edited = d.apply(DocOp.SetProp(title.handle, "text", lit("T"))).doc
     assertOnly(merge(edited, text), "StyledText(text = \"Title\",", "StyledText(text = \"T\",", base = text)
+  }
+
+  // K6 review: a Boolean or emptiness term reads only a field whose declared type takes it (K3 single terms too).
+  @Test fun aTermOfAnotherDeclaredTypeIsCode() {
+    fun reasonOf(body: String): String? {
+      val text = src.replace(Regex("(?s)  Column \\{.*\\n  }\\n}")) { "  Column {\n    $body\n  }\n}" }
+        .replace("  val note: String\n", "  val note: String\n  val maybe: Boolean?\n  val tags: List<String>\n")
+      val r = recognize(text)
+      return if ((r.root as DocNode.Widget).children.single() is DocNode.RawCode) r.rawReasons.single() else null
+    }
+    fun refused(cond: String, why: String) {
+      val asChild = assertNotNull(reasonOf("if ($cond) {\n      StyledText(text = \"x\")\n    }"), cond)
+      assertTrue(why in asChild, "`$cond`: $asChild")
+      val asValue = assertNotNull(reasonOf("StyledText(text = if ($cond) \"a\" else \"b\")"), cond)
+      assertTrue(why in asValue, "`$cond`: $asValue")
+    }
+    refused("b.kind != \"cash\" && b.count", "declared Int")
+    refused("b.count", "declared Int")
+    refused("!b.note && b.open", "declared String")
+    refused("b.maybe", "declared Boolean?")
+    refused("b.count.isEmpty()", "declared Int")
+    refused("b.open.isBlank() || b.busy", "declared Boolean")
+    refused("b.tags.isBlank()", "declared List<String>")
+    // What the declared types take stays grammar.
+    assertNull(reasonOf("if (b.tags.isEmpty() && b.note.isNotBlank() && b.open) {\n      StyledText(text = \"x\")\n    }"))
+  }
+
+  // K6 review: a Condition's token operand, written where the file has no import of its owner, adds it.
+  @Test fun aConditionsTokenOperandAddsItsImport() {
+    val plain = src.replace("import app.components.C\n", "")
+      .replace("colorArgb = if (b.kind == \"card\" && b.open) C.Ink else C.White", "colorArgb = if (b.kind == \"card\" && b.open) 1 else 2")
+      .replace("if (b.tier == C.Top) 8.dp else 0.dp", "if (b.tier == 3) 8.dp else 0.dp")
+      .replace("if (b.kind != C.Card && !b.open) 16.dp", "if (b.kind != \"card\" && !b.open) 16.dp")
+    val d = doc(plain)
+    assertTrue(!containsRaw(d.root), recognize(plain).rawReasons.toString())
+    val shown = child(d, 5)
+    assertEquals("Condition", shown.type)
+    val out = merge(d.apply(DocOp.SetProp(shown.handle, "operand", card)).doc, plain)
+    assertTrue("import app.components.C\n" in out, out)
+    assertTrue("    if (b.kind != C.Card &&\n" in out, out)
   }
 
   @Test fun aNewConditionWithEveryFormIsInsertedAndReadsBack() {

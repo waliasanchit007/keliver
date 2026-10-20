@@ -51,6 +51,7 @@ class CompoundConditionRelayTest {
       val kind: String
       val open: Boolean
       val tier: Int
+      val count: Int
       val rows: List<Row>
     }
 
@@ -156,6 +157,19 @@ class CompoundConditionRelayTest {
     assertTrue("could not be written" in ack.error.orEmpty(), ack.error)
     // The same term compared with a String is written.
     assertTrue(svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", v.copy(operand = lit("b"))))).ok)
+  }
+
+  // K6 review: re-pointing a Boolean term at an Int field would write `if (b.kind != "cash" && b.count)`.
+  @Test fun aTermOfTheWrongDeclaredTypeIsRefusedAndNothingIsWritten() {
+    val (screens, components) = app()
+    val svc = service(screens, components)
+    val file = File(screens, "home.kt")
+    val ack = svc.submit(batch(svc, DocOp.SetProp(child(svc, 1).handle, "field.1", lit("count"))))
+    assertFalse(ack.ok, "a Boolean term on `count`, declared Int")
+    assertTrue("count" in ack.error.orEmpty(), ack.error)
+    assertEquals(home, file.readText())
+    // The operand of a field the file types String keeps its kind.
+    assertFalse(svc.dryRun(batch(svc, DocOp.SetProp(child(svc, 1).handle, "operand", lit(1)))).ok)
   }
 
   @Test fun aK3EditorIsServedTheTrueBranchAndAnExtendedOneTheCondition() {
