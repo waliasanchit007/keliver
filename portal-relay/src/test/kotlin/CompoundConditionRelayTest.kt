@@ -57,6 +57,7 @@ class CompoundConditionRelayTest {
 
     interface Row {
       val kind: String
+      val n: Int
     }
   """.trimIndent() + "\n"
 
@@ -159,9 +160,9 @@ class CompoundConditionRelayTest {
     assertTrue("not readable" in ack.error.orEmpty() || "could not be written" in ack.error.orEmpty(), ack.error)
     // The same term compared with a String is written.
     assertTrue(svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", v.copy(operand = lit("b"))))).ok)
-    // A new equality on that item field (not an operand change the document sees): the preflight refuses it.
-    val reordered = PropValue.Conditional("open", whenTrue = lit("A"), whenFalse = lit("B"), more = listOf(CondTerm("row.kind", "eq", operand = lit(1))), join = "or")
-    val pre = svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", reordered)))
+    // A Boolean test on an item field the file's item type declares Int: only the preflight sees the item type.
+    val itemBool = PropValue.Conditional("open", whenTrue = lit("A"), whenFalse = lit("B"), more = listOf(CondTerm("row.n")), join = "or")
+    val pre = svc.dryRun(batch(svc, DocOp.SetProp(text.handle, "text", itemBool)))
     assertFalse(pre.ok)
     assertTrue("could not be written" in pre.error.orEmpty(), pre.error)
   }
