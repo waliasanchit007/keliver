@@ -148,4 +148,16 @@ class InheritedContractRelayTest {
     assertTrue("val title" !in iface && "fun open" !in iface, text)
     assertNull(KotlinCompileCheck.errors(mapOf("home.kt" to text)), text)
   }
+
+  @Test fun aLambdaParameterNamedLikeTheBindingsParameterVouchesForNothing() {
+    // #135 review: `b` in the lambda is a String, not the screen's bindings — `length` is not read through them.
+    val f = fixture(screen("listOf(\"x\").forEach { b -> StyledText(text = b.length.toString()) }", "StyledText(text = \"y\")"))
+    val before = f.file.readText()
+    assertNull(KotlinCompileCheck.errors(mapOf("home.kt" to before, "BaseBindings.kt" to base)), before)
+    val y = f.svc.doc.root.let { it as DocNode.Widget }.children.last().handle
+    val sub = f.svc.submit(f.svc.batch(DocOp.SetProp(y, "text", PropValue.Bind("length"))))
+    assertFalse(sub.ok, "accepted a binding of `length`; the file would read:\n" + runCatching { awaitStatus(f.svc, sub.version); f.file.readText() }.getOrNull())
+    assertTrue("`length`" in sub.error!!, sub.error)
+    assertEquals(before, f.file.readText())
+  }
 }

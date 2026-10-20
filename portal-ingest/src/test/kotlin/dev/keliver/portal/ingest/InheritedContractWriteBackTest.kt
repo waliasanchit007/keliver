@@ -204,4 +204,61 @@ class InheritedContractWriteBackTest {
     // One the file already reads is written.
     assertIs<ScreenWriter.Write>(plan(file, insertText(d, PropValue.Bind("title")), d))
   }
+
+  // ── #135 review: what counts as a read, and a nested supertype in the same file ──
+
+  @Test fun aNameThatShadowsTheBindingsParameterVouchesForNothing() {
+    // `b` here is a lambda parameter, a local val or a local function's parameter — not the screen's bindings.
+    val shadows = listOf(
+      "listOf(\"x\").forEach { b -> StyledText(text = b.length.toString()) }",
+      "listOf(\"x\" to 1).forEach { (b, _) -> StyledText(text = b.length.toString()) }",
+      "run {\n  val b = \"x\"\n  StyledText(text = b.length.toString())\n}",
+      "run {\n  fun f(b: String) = b.length\n  StyledText(text = f(\"x\").toString())\n}",
+      "for (b in listOf(\"x\")) StyledText(text = b.length.toString())",
+    )
+    for (code in shadows) {
+      val file = screen("StyledText(text = b.name)\n$code", inheriting)
+      compiles(file, "BaseBindings.kt" to base)
+      val d = doc(file)
+      val r = assertIs<ScreenWriter.Refuse>(plan(file, insertText(d, PropValue.Bind("length")), d), code)
+      assertTrue("`length`" in r.reason, r.reason)
+    }
+    // The screen's own `b` read before a shadowing local, or beside one, still vouches.
+    val file = screen("StyledText(text = b.title)\nlistOf(\"x\").forEach { b -> StyledText(text = b.length.toString()) }", inheriting)
+    val d = doc(file)
+    compiles(assertIs<ScreenWriter.Write>(plan(file, insertText(d, PropValue.Bind("title")), d)).text, "BaseBindings.kt" to base)
+  }
+
+  @Test fun anActionTheFileReadsOnlyAsACallableReferenceIsVouchedFor() {
+    val file = screen("ListItem(headline = b.name, onClick = b::open)", inheriting)
+    compiles(file, "BaseBindings.kt" to base)
+    val d = doc(file)
+    val item = DocNode.Widget(Handle(0), "ListItem", mapOf("headline" to lit("h"), "onClick" to PropValue.Action("open")))
+    val w = assertIs<ScreenWriter.Write>(plan(file, d.apply(DocOp.InsertNode(d.root.handle, d.child(0).handle, item)).doc, d))
+    assertTrue("fun open" !in w.text && "TODO(portal)" !in w.text, w.text)
+    compiles(w.text, "BaseBindings.kt" to base)
+  }
+
+  @Test fun aSupertypeNestedInADeclarationOfTheSameFileIsReadWhole() {
+    val nested = """
+      interface Outer {
+        interface Base {
+          val title: String
+          fun open()
+        }
+      }
+
+      interface HomeScreenBindings : Outer.Base {
+        val name: String
+      }
+    """
+    val file = screen("StyledText(text = b.title)\nListItem(headline = b.name, onClick = { b.open() })\nStyledText(text = b.fresh)", nested)
+    assertNull(doc(file).contract.unlistedFieldsUnknown)
+    assertEquals("String", doc(file).contract.fields["title"])
+    val out = ensured(file)
+    val iface = out.substringAfter("interface HomeScreenBindings")
+    assertTrue("val fresh: String get() = \"\"" in iface, out)
+    assertTrue("title" !in iface && "fun open" !in iface, out)
+    compiles(out)
+  }
 }
