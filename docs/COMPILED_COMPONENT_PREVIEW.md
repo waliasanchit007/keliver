@@ -1,8 +1,7 @@
 # Compiled component preview — drawing opaque components exactly
 
-**Status:** merged to `main` (#132). Libraries: the next release (0.4.0).
-Tools: the relay emitter ships with the next tools release. Nothing here
-changes what a device runs.
+**Status:** merged to `main` (#132). Libraries: 0.4.0. Tools: the relay
+emitter ships in tools 0.3.12. Nothing here changes what a device runs.
 
 ## The problem
 
@@ -270,7 +269,7 @@ by `CompiledAdaptersTest`.
    `compiledComponents` block above.
 3. `override val compiledComponents = AppCompiledComponents` in its
    `AppPreviewEntry` (the scaffold now shows the line, commented).
-4. Libraries ≥ 0.4.0 and a tools bundle with the relay emitter. (The tools
+4. Libraries ≥ 0.4.0 and tools ≥ 0.3.12 (the relay emitter). (The tools
    bundle does not yet ship a stand-alone generator command; the
    `compiledComponentAdapters` task exists in this repo only.)
 
