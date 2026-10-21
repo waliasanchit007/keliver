@@ -1,14 +1,41 @@
 # keliver-portal-tools 0.3.12 — release notes
 
-**Status: CANDIDATE — not released.** Tag and publish only on the owner's
-explicit go, following [`PORTAL_TOOLS_RELEASE.md`](PORTAL_TOOLS_RELEASE.md).
+**Status: RELEASED 2026-10-21**, on the owner's explicit go.
 
 | | |
 |---|---|
-| tag | `portal-tools-v0.3.12` → *(the verified candidate's `VERSION.json` `sourceCommit`; not tagged)* |
-| release | *(none yet)* |
-| zip asset | `keliver-portal-tools-0.3.12.zip` *(the retained, verified CI artifact; not uploaded)* |
-| `.sha256` asset | *(not uploaded)* |
+| tag | `portal-tools-v0.3.12` (annotated, object `1c6f0c31`) → **`8139a55beb77b1a874009ded5d4753c47582c1c9`** |
+| release | [portal-tools-v0.3.12](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12), published 2026-10-21T10:26:57Z, `--latest=false` |
+| zip asset | `keliver-portal-tools-0.3.12.zip`, 91,616,631 bytes, sha256 **`4c9aac7453114718dc96483de709e8dcc47e7e5dc98ba6afc82c9b1373783d42`**, uploaded from the retained artifact `12329584134` of build run 39564359560 |
+| `.sha256` asset | 98 bytes, sha256 `1c3125145f2a759eda4a9ce39609a13a8e96ac03df9c2d66bcb77db5fdec41c4` |
+| tag push | ran only `portal-tools.yml` (run 39584468151, the read-only rebuild; its artifact is not attached) |
+
+How the stored asset was checked: before publishing, both draft assets were
+downloaded back in full and their sha256 were identical to the verified files
+(zip `4c9aac74…`, `.sha256` `1c312514…`); GitHub's server `digest` and `size`
+for both matched too, and the tag was re-checked at `8139a55`. After
+publishing, the public URL was downloaded on the releasing machine and hashed
+identical (`4c9aac74…`). The public download was then checked from
+GitHub-hosted runners by the reference app's move to 0.3.12 (#139): each
+run's first step downloads the public asset and checks it against the
+release's own `.sha256`, against the pinned hash and against `VERSION.json`'s
+source commit (`keliver-portal-tools-0.3.12.zip: OK`, source `8139a55`).
+
+| run (#139 head `d02ae8f58`) | host scaffolders and `keliver-publish` from | result |
+|---|---|---|
+| reference-app 39585012146 (pull request) | this checkout | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39585012260 (pull request) | this checkout | iOS host scaffolder self-test 71/0, `ios.sh` 159/0 |
+| reference-app 39585020070 (by hand) | the published zip's `bin/` | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39585026780 (by hand) | `ios.sh`: the published zip's `bin/`; the scaffolder self-test: this checkout's | self-test 71/0, `ios.sh` 159/0 |
+
+In every run the app itself was created by the published zip's `keliver-init`,
+and the test harness (`ci/`, the isolation guard) is always this checkout's.
+The iOS host scaffolder's self-test always runs this checkout's
+`scripts/keliver-new-ios-host.sh`; at `d02ae8f58` every script is
+byte-identical to the tagged commit's (`git diff 8139a55 d02ae8f58 --
+scripts/` is empty), so the same bytes were tested. The reference app itself
+stays on libraries 0.3.3, as with 0.3.11: moving an existing app to 0.4.0 is
+a separate change.
 
 What is in it since 0.3.11 (`ebbb24c96`): PRs #130 (relay tests use their
 own store), #131 (K6), #132 (compiled component preview), #134 (K7), #135
@@ -136,18 +163,65 @@ not removed automatically.
 
 ## Candidate verification
 
-*(to be filled from the verified CI build, as for 0.3.11)*
-
 | | |
 |---|---|
-| Source commit | |
-| Zip | `keliver-portal-tools-0.3.12.zip`, sha256 |
-| `VERSION.json` | tools 0.3.12, Maven dependency 0.4.0 |
-| Bundled host APK | sha256 , no `assets/portal_ed25519.pub` |
-| Build | run , retained artifact |
-| Device job | run |
+| Source commit | `8139a55beb77b1a874009ded5d4753c47582c1c9` |
+| Zip | `keliver-portal-tools-0.3.12.zip`, sha256 `4c9aac7453114718dc96483de709e8dcc47e7e5dc98ba6afc82c9b1373783d42` |
+| `VERSION.json` | tools 0.3.12, source commit as above, 0 dirty files, Maven dependency 0.4.0 |
+| Bundled host APK | sha256 `c23e84e4fccb368e64d49464146bceb8f25d46da307a45efea2c4320b29f72cb`, no `assets/portal_ed25519.pub` |
+| Build | run 39564359560 (dispatched from `release/portal-tools-0.3.12`), retained artifact `12329584134` (`keliver-portal-tools-0.3.12-8139a55b…`, artifact digest `sha256:03762f16…`, expires 2026-11-20) |
+| Device job | run 39567056811 (dispatched from `release/portal-tools-0.3.12`, pinned to the build's APK `c23e84e4…`): 28/0 and 19/0, on GitHub's emulator |
 
-Local pre-gates on a local build of the candidate commit (a local build is
-not the bytes to attach; the build is not byte-reproducible):
+The build job's checks, on the packaged bundle (Linux): the refusal check
+134/0, store home 32/0, resolver failure 73/0, adopter acceptance 25/0, the
+identity gate (U21) 6/0, store identity 11/0, store recovery through
+the packaged commands 144/0, device-host packaging hygiene (U22) 10/0, guest
+bundle signing 4/0, `keliver-publish` 41/0, private key permissions (U27)
+63/0, and the production-host (68/0, 62/0), iOS host (65/0, 65/0) and publish
+(51/0, 33/0) scaffolders from `scripts/` and from the package. The pull
+request's CI at `8139a55`: `ci.yml` 39564363865 (full graph, including the
+generic editor's compile), reference-app 39564363859 and ios-host 39564363853,
+all green.
 
-- see the release branch's commit log and the preparation report.
+Step 3 at the source commit: a `portal-tools-v0.3.12` tag runs only
+`portal-tools.yml`, which has no write permission; `publish.yml` takes `v*`
+only; the other workflows run on pull requests, `main`, a schedule or by hand.
+No workflow was disabled, so step 5 restored nothing.
+
+**Local checks on the attached bytes** (the retained artifact above, on the
+releasing machine, macOS):
+
+- `keliver-adopter-acceptance.sh`: 25/0;
+- `keliver-acceptance-identity-check.sh`: 6/0;
+- the compiled component preview, end to end, on an app made by this zip's
+  `keliver-init` (Maven Central 0.4.0) with an opaque component of the same
+  name and signature as one of Keliver's sample components:
+  `keliver-portal --no-editor-build` (the generic editor) draws the
+  placeholder; `keliver-portal` with an editor from `keliver-new-editor.sh`
+  (components directory passed), the `compiledComponents` block and the
+  scaffold's override line, and no adapters file beforehand, writes the
+  adapters, builds the editor, and the canvas draws the app's compiled
+  component. Checked by screenshots of the canvas (headless Chrome).
+
+**Found and fixed during review** (the first candidate, `964982ef1`, was not
+released): its generic editor drew Keliver's sample components in place of
+an app's opaque components with the same names (the compiled adapters are
+looked up by name; reproduced on that candidate's CI artifact, run
+39562133883), and `keliver-portal` never wrote an app's adapters, so the
+documented route for a per-app editor failed to compile. Both are fixed in
+`2150b4fa6`; `8139a55` adds a CI compile of the generic editor and the
+scaffold's wording.
+
+**Not run for this release:** `keliver-device-verify.sh` on a physical phone.
+The production refusals and the development route were checked on GitHub's
+emulator only (the device job above).
+
+## Known follow-ups
+
+- Switching an app from the bundled editor to its own on the same port can
+  keep running the cached generic editor until a hard reload: the editor is
+  served by `python3 -m http.server` without cache headers (KNOWN_BUGS U38).
+- Adding the components directory to an existing editor's `kotlin.srcDir` by
+  hand also needs the keliver compose dependencies the scaffolder adds when it
+  is given source directories; passing the directory to
+  `keliver-new-editor.sh` is the supported route.
