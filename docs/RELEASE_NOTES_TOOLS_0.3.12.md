@@ -16,7 +16,7 @@ own store), #131 (K6), #132 (compiled component preview), #134 (K7), #135
 releases and evidence and change nothing in the bundle.
 
 **New apps get the 0.4.0 libraries** (`dev.keliver:*:0.4.0`, on Maven Central
-since 2026-10-21): `keliver-init`, `keliver-new-editor.sh`,
+since 2026-10-20 21:13 UTC): `keliver-init`, `keliver-new-editor.sh`,
 `keliver-new-device-target.sh` and the production and iOS host scaffolders
 default to 0.4.0. An existing app keeps the version its `keliver.portal.json`
 names in `appRuntime.keliverVersion`; moving it is your change to make.
@@ -45,8 +45,9 @@ model (`PropValue`) must handle the new subtypes; see the 0.4.0 entry of
 
 ## New in the editor (portal grammar)
 
-Source that made a component opaque or a call RawCode is now editable, and
-writes back surgically (only the changed part; a no-op is byte-identical):
+Source that made a component opaque or a call RawCode is now portal grammar:
+the component stays transparent, the canvas draws it, and edits around it
+write back surgically (only the changed part; a no-op is byte-identical):
 
 - **Equality and compound conditions, derived Boolean locals (K6):**
   `colorArgb = if (b.kind == "card" && b.open) C.Ink else C.Muted`,
@@ -57,9 +58,11 @@ writes back surgically (only the changed part; a no-op is byte-identical):
   kind; terms join with `&&` only or `||` only. A derived local reads only
   parameters and is inlined where it is read. Mixed joins, parentheses,
   negated groups, field-vs-field and nullable or mismatched fields stay
-  RawCode with a diagnostic. A condition test the field's declared type
-  cannot take (`if (b.count)` with `count: Int`) is now refused as an edit and
-  read as code; before, it could be written.
+  RawCode with a diagnostic. The editor shows such a condition read-only and
+  edits its branches; change the condition itself in code (or as an op, through
+  the MCP server). A condition test the field's declared type cannot take
+  (`if (b.count)` with `count: Int`) is now refused as an edit and read as
+  code; before, it could be written.
 - **Int arithmetic and Ints as Dps (K7):** `cornerRadiusDp = size / 2`,
   `fontSize = b.size * 2 / 5`, `widthDp = b.columns * 48 + 8`,
   `Spacer(height = Dp(gap.toDouble()))` and `(b.gap + 4).dp`, where source
@@ -67,15 +70,22 @@ writes back surgically (only the changed part; a no-op is byte-identical):
   and Int bindings, parameters or item fields, under `+ - * / %` and
   parentheses, with Kotlin's precedence and 32-bit overflow; `/` and `%`
   divide only by a non-zero literal. A derived Int local (`val half = size / 2`)
-  is inlined where it is read. Write-back keeps the author's parentheses and
-  Dp spelling. Expressions of literals only, division by a non-literal, calls,
-  Long/Double/Float/nullable operands and modifier arguments stay RawCode.
+  is inlined where it is read. The editor shows an expression read-only as its
+  source and can replace it whole with a value or a binding; change its shape
+  in code (an op through the MCP server can change single operands, and
+  write-back then rewrites only those, keeping the author's parentheses and Dp
+  spelling). Expressions of literals only, division by a non-literal, `-x` on
+  a reference, calls, Long/Double/Float/nullable operands, and arithmetic in a
+  modifier argument or a Margin side stay RawCode.
   `x.uppercase()` / `lowercase()` stay RawCode on purpose: a device runs
   Kotlin/JS in QuickJS, whose case tables a browser preview cannot vouch for.
 
 The canvas evaluates both with the screen's mocks and an instance's
-arguments, and the compiled-vs-interpreted parity of each form is pinned by
-tests on both preview targets.
+arguments. Compiled-vs-interpreted parity is pinned by tests: K6's on the
+editor's target (wasm), K7's on wasm and on js (the device guest's target).
+The bundled MCP server asks for both (`extendedConditions=1`,
+`arithmetic=1`), its op schema documents them, and find-usages reads an
+expression's operands.
 
 ## New on the canvas: compiled component preview
 
@@ -85,15 +95,21 @@ to preview as a placeholder. A per-app editor built on the 0.4.0 libraries
 composable: add a `compiledComponents` block to `keliver.portal.json`
 (`out`, and optionally `packageName`, `valName`, `sameModule`) and
 `override val compiledComponents = AppCompiledComponents` to the editor's
-`AppPreviewEntry` (the scaffold shows both, commented). The relay in this
-bundle then writes the adapters file before each preview build. Transparent
-components keep their editable view; a compiled component that throws while
-composing falls back to its placeholder. Without the block nothing changes.
+`AppPreviewEntry` (the scaffold shows both, commented). `keliver-portal`
+then writes the adapters file from the components' signatures just before
+it builds the app's editor; restart it after changing an opaque component's
+signature. Transparent components keep their editable view; a compiled
+component that throws while composing falls back to its placeholder.
+Without the block nothing changes.
 
-This bundle's own editor has no app code, so an adopter's opaque components
-stay placeholders there; it draws its built-in demo components this way. The
-stand-alone generator (`:portal-relay:compiledComponentAdapters`) is a task in
-the Keliver repository and is not shipped in the bundle.
+This bundle's generic editor, served for an app without its own editor,
+carries no adapters: opaque components stay placeholders there. (Adapters
+are looked up by component name; the generic editor is built with
+`-Pkeliver.genericEditor=true` so that Keliver's own sample components can
+never be drawn in place of an app's same-named ones.) The stand-alone
+generator (`:portal-relay:compiledComponentAdapters`) is a task in the
+Keliver repository; `keliver-portal` runs the same generator from the
+relay's jars.
 
 ## Older editors against this relay
 

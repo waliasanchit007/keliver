@@ -183,7 +183,7 @@ uses it for two screens out of ~10.
 ```bash
 export PATH="$PWD/keliver-portal-tools/bin:$PATH"
 keliver-init Acme && cd acme
-./gradlew compileKotlinJs     # your screens, type-checked against the keliver version the tools scaffold (0.3.4 until a tools release moves it)
+./gradlew compileKotlinJs     # your screens, type-checked against the keliver version the tools scaffold (0.4.0 until a tools release moves it)
 keliver-portal .              # visual editor + live preview → http://localhost:8096
 ```
 

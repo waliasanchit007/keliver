@@ -54,7 +54,10 @@ echo "==> gradle: relay + mcp installDist, editor wasm dist, device host APK"
 # an explicit build input — it must NOT depend on whether the build machine
 # happens to have a portal store, which is how a developer's own key ended up
 # inside a candidate bundle.
-./gradlew -q -Pkeliver.devOnlyHost=true \
+# -Pkeliver.genericEditor=true: the bundled editor is the GENERIC one, with no
+# compiled component adapters (they are looked up by name; this repo's would
+# draw its sample components in place of an app's). See web-spike/build.gradle.
+./gradlew -q -Pkeliver.devOnlyHost=true -Pkeliver.genericEditor=true \
   :portal-relay:installDist \
   :portal-mcp:installDist \
   :web-spike:wasmJsBrowserDistribution \

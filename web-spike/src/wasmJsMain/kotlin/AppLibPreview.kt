@@ -65,9 +65,10 @@ object AppLibPreview : AppPreviewEntry {
   override val defaultPersonaId: String = "field-researcher"
 
   // Compiled component preview: opaque components (NoteCountPill) draw with
-  // the app's own compiled code. The relay writes this map from the
-  // components' signatures before each preview build (keliver.portal.json).
-  override val compiledComponents = AppLibCompiledComponents
+  // the app's own compiled code. The relay writes AppLibCompiledComponents from
+  // the components' signatures before each preview build (keliver.portal.json);
+  // the tools bundle's generic editor carries none (EditorFlavor.kt).
+  override val compiledComponents = flavorCompiledComponents
 
   override val screens: Map<String, ScreenPreview> = mapOf(
     "main" to ScreenPreview { env ->

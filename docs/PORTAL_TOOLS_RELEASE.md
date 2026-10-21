@@ -25,8 +25,8 @@ step against a named, retained artifact.
 
 ## Procedure
 
-The notes for the latest published release are
-[`RELEASE_NOTES_TOOLS_0.3.12.md`](RELEASE_NOTES_TOOLS_0.3.12.md) (previous:
+The notes for the release in preparation (a candidate until it is published)
+are [`RELEASE_NOTES_TOOLS_0.3.12.md`](RELEASE_NOTES_TOOLS_0.3.12.md) (previous:
 [`RELEASE_NOTES_TOOLS_0.3.11.md`](RELEASE_NOTES_TOOLS_0.3.11.md)).
 
 Everything below was executed for 0.3.4 on 2026-09-12, for 0.3.5 on 2026-09-22,

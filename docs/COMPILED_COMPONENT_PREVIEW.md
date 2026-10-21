@@ -265,16 +265,27 @@ by `CompiledAdaptersTest`.
    (`keliver-new-editor.sh <App> <components dir>`) compiles listed source
    dirs straight into the editor's `wasmJsMain`; set `"sameModule": true`
    then. A components dir that imports app logic drags that logic in too.
-2. **A per-app editor** (`previewBuildTask`/`previewDist`) and the
-   `compiledComponents` block above.
+2. **A per-app editor** and the `compiledComponents` block above. Who
+   writes the adapters file depends on how the editor is built:
+   * `keliver-portal` (the tools bundle's launcher, which builds `<app>/editor`
+     at launch) writes it from the components' current signatures just before
+     that build, from tools 0.3.12. Restart it after changing an opaque
+     component's signature. The relay it starts then logs that it will not
+     rewrite the file itself; that is expected.
+   * A relay with `previewBuildTask`/`previewDist` (this repo's own dev loop)
+     writes it before each preview build.
 3. `override val compiledComponents = AppCompiledComponents` in its
-   `AppPreviewEntry` (the scaffold now shows the line, commented).
-4. Libraries ≥ 0.4.0 and tools ≥ 0.3.12 (the relay emitter). (The tools
-   bundle does not yet ship a stand-alone generator command; the
-   `compiledComponentAdapters` task exists in this repo only.)
+   `AppPreviewEntry` (the scaffold shows the line, commented).
+4. Libraries ≥ 0.4.0 and tools ≥ 0.3.12. (The tools bundle ships no
+   stand-alone generator command; `keliver-portal` runs the relay's
+   generator, and the `compiledComponentAdapters` task exists in this repo
+   only.)
 
-The tools bundle's *generic* editor has no app code, so it cannot draw
-compiled components; opaque components stay placeholders there.
+The tools bundle's *generic* editor (served for an app without its own
+editor) carries no adapters, so opaque components stay placeholders there.
+It is built with `-Pkeliver.genericEditor=true`: adapters are looked up by
+component name, and this repo's would draw its sample components in place
+of an app's same-named ones.
 
 ## Compatibility and API
 

@@ -64,7 +64,8 @@ object CompiledAdapters {
   fun configWarning(config: PortalConfig): String? =
     if (config.compiledComponents != null && config.previewBuildTask.isBlank()) {
       "portal-server: keliver.portal.json sets compiledComponents but no previewBuildTask — " +
-        "the adapters are written only before a per-app editor build, so nothing will use them"
+        "this relay will not rewrite the adapters; keliver-portal writes them when it builds the app's editor " +
+        "at launch, so restart it after changing a component's signature"
     } else {
       null
     }
