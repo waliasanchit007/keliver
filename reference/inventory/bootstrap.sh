@@ -2,9 +2,9 @@
 #
 # Recreate the inventory reference app from the PUBLIC tools release.
 #
-#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.11.zip]
+#   reference/inventory/bootstrap.sh <parent-dir> [keliver-portal-tools-0.3.12.zip]
 #
-# With no zip, downloads the published tools 0.3.11 release and checks it against
+# With no zip, downloads the published tools 0.3.12 release and checks it against
 # the release's own .sha256 AND the hash pinned below. With a zip, checks that
 # zip against the pinned hash, so a rebuild cannot be substituted by accident.
 #
@@ -23,8 +23,8 @@
 # isolation that run needs.
 set -euo pipefail
 
-TOOLS_VERSION=0.3.11
-TOOLS_SHA256=ae84cb2c5442948dbd8272a5a9f0d1f0d9bf42377475168d3f9c31ab1f26bddf
+TOOLS_VERSION=0.3.12
+TOOLS_SHA256=4c9aac7453114718dc96483de709e8dcc47e7e5dc98ba6afc82c9b1373783d42
 RELEASE=https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v$TOOLS_VERSION
 ZIPNAME=keliver-portal-tools-$TOOLS_VERSION.zip
 
@@ -67,7 +67,7 @@ unzip -p "$ZIP" "keliver-portal-tools-$TOOLS_VERSION/VERSION.json"
 unset KELIVER_USE_MAVEN_LOCAL
 # The app stays on its own Keliver libraries (app/keliver.portal.json's
 # appRuntime.keliverVersion), so every scaffolder wires that version, not the
-# tools bundle's newer default (tools 0.3.11 defaults to 0.3.4).
+# tools bundle's newer default (tools 0.3.12 defaults to 0.4.0).
 KELIVER_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["appRuntime"]["keliverVersion"])' "$HERE/app/keliver.portal.json")"
 export KELIVER_VERSION
 cd "$PARENT"
