@@ -15,8 +15,27 @@ downloaded back in full and their sha256 were identical to the verified files
 (zip `4c9aac74…`, `.sha256` `1c312514…`); GitHub's server `digest` and `size`
 for both matched too, and the tag was re-checked at `8139a55`. After
 publishing, the public URL was downloaded on the releasing machine and hashed
-identical (`4c9aac74…`). The public download from GitHub-hosted runners is
-checked by the reference app's move to 0.3.12 (see below).
+identical (`4c9aac74…`). The public download was then checked from
+GitHub-hosted runners by the reference app's move to 0.3.12 (#139): each
+run's first step downloads the public asset and checks it against the
+release's own `.sha256`, against the pinned hash and against `VERSION.json`'s
+source commit (`keliver-portal-tools-0.3.12.zip: OK`, source `8139a55`).
+
+| run (#139 head `d02ae8f58`) | host scaffolders and `keliver-publish` from | result |
+|---|---|---|
+| reference-app 39585012146 (pull request) | this checkout | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39585012260 (pull request) | this checkout | iOS host scaffolder self-test 71/0, `ios.sh` 159/0 |
+| reference-app 39585020070 (by hand) | the published zip's `bin/` | prepare 34/0, `keliver-publish` self-test 41/0, device 171/0 |
+| ios-host 39585026780 (by hand) | `ios.sh`: the published zip's `bin/`; the scaffolder self-test: this checkout's | self-test 71/0, `ios.sh` 159/0 |
+
+In every run the app itself was created by the published zip's `keliver-init`,
+and the test harness (`ci/`, the isolation guard) is always this checkout's.
+The iOS host scaffolder's self-test always runs this checkout's
+`scripts/keliver-new-ios-host.sh`; at `d02ae8f58` every script is
+byte-identical to the tagged commit's (`git diff 8139a55 d02ae8f58 --
+scripts/` is empty), so the same bytes were tested. The reference app itself
+stays on libraries 0.3.3, as with 0.3.11: moving an existing app to 0.4.0 is
+a separate change.
 
 What is in it since 0.3.11 (`ebbb24c96`): PRs #130 (relay tests use their
 own store), #131 (K6), #132 (compiled component preview), #134 (K7), #135
