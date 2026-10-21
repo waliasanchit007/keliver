@@ -269,8 +269,9 @@ by `CompiledAdaptersTest`.
    writes the adapters file depends on how the editor is built:
    * `keliver-portal` (the tools bundle's launcher, which builds `<app>/editor`
      at launch) writes it from the components' current signatures just before
-     that build, from tools 0.3.12. Restart it after changing an opaque
-     component's signature. The relay it starts then logs that it will not
+     that build, from tools 0.3.12. Restart it after adding, removing or
+     changing the signature of a component, or when one becomes opaque or
+     transparent. The relay it starts then logs that it will not
      rewrite the file itself; that is expected.
    * A relay with `previewBuildTask`/`previewDist` (this repo's own dev loop)
      writes it before each preview build.

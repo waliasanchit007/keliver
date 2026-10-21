@@ -170,10 +170,13 @@ object ${NAME}Preview : AppPreviewEntry {
 
   // Compiled component preview (needs Keliver libraries >= 0.4.0 and tools
   // >= 0.3.12): draw OPAQUE components with your compiled code instead of a
-  // placeholder. Add to keliver.portal.json
+  // placeholder. The components must compile into this editor: pass their dir
+  // to keliver-new-editor.sh (or add it to kotlin.srcDir in build.gradle.kts).
+  // Add to keliver.portal.json
   //   "compiledComponents": {"out": "editor/src/wasmJsMain/kotlin/AppCompiledComponents.kt", "sameModule": true}
   // (keliver-portal writes that file before it builds this editor; restart it
-  // after changing an opaque component's signature), then:
+  // after adding, removing or changing the signature of a component, or when
+  // one becomes opaque or transparent), then:
   // override val compiledComponents = AppCompiledComponents
 }
 EOF

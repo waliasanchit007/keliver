@@ -92,13 +92,15 @@ expression's operands.
 An **opaque** project component (its body is outside the portal grammar) used
 to preview as a placeholder. A per-app editor built on the 0.4.0 libraries
 (`keliver-new-editor.sh`) can now draw it with the app's own compiled
-composable: add a `compiledComponents` block to `keliver.portal.json`
-(`out`, and optionally `packageName`, `valName`, `sameModule`) and
-`override val compiledComponents = AppCompiledComponents` to the editor's
-`AppPreviewEntry` (the scaffold shows both, commented). `keliver-portal`
-then writes the adapters file from the components' signatures just before
-it builds the app's editor; restart it after changing an opaque component's
-signature. Transparent components keep their editable view; a compiled
+composable: compile the components into the editor (pass their directory to
+`keliver-new-editor.sh`), add a `compiledComponents` block to
+`keliver.portal.json` (`out`, and optionally `packageName`, `valName`,
+`sameModule`) and `override val compiledComponents = AppCompiledComponents`
+to the editor's `AppPreviewEntry` (the scaffold shows both, commented).
+`keliver-portal` then writes the adapters file from the components'
+signatures just before it builds the app's editor; restart it after adding,
+removing or changing the signature of a component, or when one becomes
+opaque or transparent. Transparent components keep their editable view; a compiled
 component that throws while composing falls back to its placeholder.
 Without the block nothing changes.
 

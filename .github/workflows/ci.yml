@@ -66,6 +66,16 @@ jobs:
           :web-spike:compileKotlinWasmJs
           -DRELEASE_SIGNING_ENABLED=false
 
+      # The tools bundle's GENERIC editor is the same module built with
+      # -Pkeliver.genericEditor=true (another source dir: no compiled component
+      # adapters). Compile it here too, so a break shows before a tools build.
+      - name: Compile the tools bundle's generic editor (Wasm)
+        run: >
+          ./gradlew
+          -Pkeliver.genericEditor=true
+          :web-spike:compileKotlinWasmJs
+          -DRELEASE_SIGNING_ENABLED=false
+
       # Portal codegen staleness: the committed GeneratedCatalog/GeneratedExporter/
       # GeneratedRenderNode must match what the schemas produce. Regenerate with
       # `./gradlew :portal-schema-codegen:generatePortalCode` and commit.
