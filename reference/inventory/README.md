@@ -1,7 +1,7 @@
 # Inventory — the reference app
 
 A small stock-keeping app built from what an adopter gets: the published
-[`keliver-portal-tools` 0.3.11](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.11)
+[`keliver-portal-tools` 0.3.12](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12)
 release and the `dev.keliver:*:0.3.3` libraries on Maven Central. The app itself
 is never compiled against this checkout. Neither of its routes uses anything
 else: development, and production. Production means signed publishing plus
@@ -40,7 +40,7 @@ Needs JDK 17+, python3, curl, git — the adopter guide's prerequisites.
 reference/inventory/bootstrap.sh /some/empty/dir
 ```
 
-That downloads the public 0.3.11 zip, checks it against the release's `.sha256`
+That downloads the public 0.3.12 zip, checks it against the release's `.sha256`
 **and** the hash pinned in the script, runs `keliver-init`, copies in `app/`'s
 screens and logic, runs `keliver-new-device-target.sh` and `keliver-new-editor.sh`,
 and then overlays the files the scaffolders cannot write. What it overlays is
@@ -50,7 +50,7 @@ skip the download; it must have the same hash.
 Then, from `/some/empty/dir/inventory`:
 
 ```bash
-export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.11/bin
+export KP=/some/empty/dir/tools/keliver-portal-tools-0.3.12/bin
 ./gradlew compileKotlinJs                 # type-check against Maven Central 0.3.3
 $KP/keliver-new-publish-target.sh         # publishing + signing
 $KP/keliver-portal .                      # relay + editor; builds editor/ first (minutes)
