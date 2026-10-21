@@ -27,7 +27,7 @@
 # keliver artifacts (2.2.0 / 1.8.2 / 9.0.0 verified).
 set -euo pipefail
 KELIVER_VERSION_GIVEN="${KELIVER_VERSION:+yes}"
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.4.0}"
 KELIVER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$(pwd)"
 # The app's own Keliver version (appRuntime.keliverVersion) unless
@@ -168,11 +168,15 @@ object ${NAME}Preview : AppPreviewEntry {
   // override val screenWrapper = dev.keliver.portal.render.PreviewWrapper { content -> AppTheme { content() } } // guest side: your keliver Theme
   // override val hostWrapper = dev.keliver.portal.render.PreviewWrapper { content -> MaterialTheme(appColorScheme) { content() } } // your native host's scheme
 
-  // Compiled component preview (needs Keliver libraries >= 0.4.0 and a tools
-  // bundle with the relay's adapters step): draw OPAQUE components with your
-  // compiled code instead of a placeholder. Add to keliver.portal.json
+  // Compiled component preview (needs Keliver libraries >= 0.4.0 and tools
+  // >= 0.3.12): draw OPAQUE components with your compiled code instead of a
+  // placeholder. The components must compile into this editor: pass their dir
+  // to keliver-new-editor.sh (or add it to kotlin.srcDir in build.gradle.kts).
+  // Add to keliver.portal.json
   //   "compiledComponents": {"out": "editor/src/wasmJsMain/kotlin/AppCompiledComponents.kt", "sameModule": true}
-  // (the relay writes that file before each preview build), then:
+  // (keliver-portal writes that file before it builds this editor; restart it
+  // after adding, removing or changing the signature of a component, or when
+  // one becomes opaque or transparent), then:
   // override val compiledComponents = AppCompiledComponents
 }
 EOF

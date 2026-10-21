@@ -48,3 +48,18 @@ kotlin {
     }
   }
 }
+
+// Which editor this is. The tools bundle ships this module's build as the
+// GENERIC editor, which keliver-portal serves for any app without its own
+// editor. Compiled component preview looks adapters up by component NAME, so
+// the generic editor must carry none: with this repo's adapters it drew this
+// repo's sample components in place of an app's opaque components that happen
+// to share a name. build-portal-tools.sh passes -Pkeliver.genericEditor=true;
+// the repo's own dev loop (the relay's preview build) passes nothing.
+// Only true/false are accepted: a value that silently meant the other editor is
+// how the device host's flag went wrong (see portal-device-android).
+def genericEditorRaw = providers.gradleProperty('keliver.genericEditor').getOrElse('false').trim().toLowerCase()
+if (!(genericEditorRaw in ['true', 'false'])) {
+  throw new GradleException("keliver: -Pkeliver.genericEditor=${genericEditorRaw} is not true or false.")
+}
+kotlin.sourceSets.wasmJsMain.kotlin.srcDir(genericEditorRaw == 'true' ? 'src/genericEditor/kotlin' : 'src/repoEditor/kotlin')

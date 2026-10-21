@@ -14,15 +14,15 @@ command here comes from that package or from your app's Gradle wrapper.
   point `JAVA_HOME` at a 17+ JDK.
 * **Python 3** — a few of the packaged scripts use it.
 * The unpacked **`keliver-portal-tools`** package. The current release is
-  **[tools 0.3.11](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.11)**:
+  **[tools 0.3.12](https://github.com/waliasanchit007/keliver/releases/tag/portal-tools-v0.3.12)**:
 
   ```bash
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.11/keliver-portal-tools-0.3.11.zip
-  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.11/keliver-portal-tools-0.3.11.zip.sha256
-  shasum -a 256 -c keliver-portal-tools-0.3.11.zip.sha256   # sha256sum -c on Linux
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.12/keliver-portal-tools-0.3.12.zip
+  curl -LO https://github.com/waliasanchit007/keliver/releases/download/portal-tools-v0.3.12/keliver-portal-tools-0.3.12.zip.sha256
+  shasum -a 256 -c keliver-portal-tools-0.3.12.zip.sha256   # sha256sum -c on Linux
 
-  unzip keliver-portal-tools-0.3.11.zip
-  export KP="$PWD/keliver-portal-tools-0.3.11/bin"
+  unzip keliver-portal-tools-0.3.12.zip
+  export KP="$PWD/keliver-portal-tools-0.3.12/bin"
   ```
 
   The `.sha256` file is published beside the zip on the release page, so the
@@ -30,8 +30,8 @@ command here comes from that package or from your app's Gradle wrapper.
   document ships *inside* the bundle, so it deliberately does not quote the
   hash of its own container.)
 
-  The tools version and the library version are **separate lines**: tools 0.3.11
-  scaffolds projects against Maven libraries **`dev.keliver:*:0.3.4`**. The
+  The tools version and the library version are **separate lines**: tools 0.3.12
+  scaffolds projects against Maven libraries **`dev.keliver:*:0.4.0`**. The
   bundle records both in its `VERSION.json`.
 
 * For the device route only: the **Android SDK platform-tools** (`adb`) and a

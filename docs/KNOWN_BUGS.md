@@ -878,7 +878,29 @@ threading bug rather than a wiring bug.
 
 ## Actionable here
 
-### U37. Any edit of a screen whose Bindings interface extends one from another file broke its compile — FIXED (unreleased; found 2026-10-20)
+### U38. After switching to an app's own editor, the browser can keep running the bundled one — OPEN (found 2026-10-21)
+
+**What happened.** `keliver-portal` serves the editor on :8096 with
+`python3 -m http.server`, which sends `Last-Modified` and no cache headers. A
+browser that opened the bundled generic editor on :8096 (an app without its
+own editor, or `--no-editor-build`) and then opens the app's own editor
+(scaffolded by `keliver-new-editor.sh`) on the same port may reuse its cached
+`index.html`, which names the generic editor's loader (`web-spike.js`), so the
+canvas keeps running the generic editor: no app presenters, and opaque
+components stay placeholders. Seen while verifying tools 0.3.12: a headless
+Chrome profile requested only `/favicon.ico` from the per-app editor's server
+(everything else from cache) and showed the placeholder; a fresh profile
+loaded the app's loader and wasm and drew the compiled component.
+
+**Workaround.** A hard reload (or a private window) after changing which
+editor `keliver-portal` serves.
+
+**Fix direction.** Serve the editor with `Cache-Control: no-cache` (a small
+server instead of `http.server`, as the relay's own promote step stamps
+`?v=<millis>` on the loader), or stamp the loader reference in the served
+`index.html` the same way.
+
+### U37. Any edit of a screen whose Bindings interface extends one from another file broke its compile — FIXED in tools 0.3.12 (found 2026-10-20)
 
 **What happened.** A screen whose Bindings interface extends a type declared in
 another file (`interface HomeScreenBindings : BaseBindings { … }`) and reads a

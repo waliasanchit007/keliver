@@ -163,6 +163,21 @@ trap cleanup EXIT
 # --- editor: build the app's own if it has one -------------------------------
 EDITOR_DIR="$BUNDLED_EDITOR"
 if $EDITOR_BUILD && [ -d "$APP_DIR/editor" ] && [ -x "$APP_DIR/editor/gradlew" ]; then
+  # Compiled component preview: an editor that draws the app's opaque components
+  # compiles the adapters file keliver.portal.json's `compiledComponents` block
+  # names. Write it from the components' current signatures before the build.
+  # The relay rewrites it only before its OWN preview builds (previewBuildTask),
+  # which this launcher does not use. Same generator as the relay's
+  # (CompiledAdaptersKt in the relay's jars); a failure is reported, not fatal.
+  if python3 -c "import json,sys;sys.exit(0 if json.load(open(sys.argv[1])).get('compiledComponents') else 1)" \
+       "$APP_DIR/keliver.portal.json" 2>/dev/null; then
+    if [ -n "${JAVA_HOME:-}" ]; then JAVA_CMD="$JAVA_HOME/bin/java"; else JAVA_CMD=java; fi
+    if ( cd "$APP_DIR" && "$JAVA_CMD" -cp "$BUNDLE/relay/lib/*" CompiledAdaptersKt "$APP_DIR" ) >"$RUN_DIR/adapters.log" 2>&1; then
+      say "compiled component adapters written (keliver.portal.json compiledComponents)"
+    else
+      warn "could not write the compiled component adapters: $(tail -n 1 "$RUN_DIR/adapters.log")"
+    fi
+  fi
   say "building $APP_DIR/editor (the app's real presenters compile into the preview)…"
   GRADLE_ARGS=(wasmJsBrowserDistribution)
   $RERUN_TASKS && GRADLE_ARGS+=(--rerun-tasks)

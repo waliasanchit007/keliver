@@ -16,7 +16,7 @@ The portal grammar and editor-canvas libraries. Hand-written sources changed onl
 moved (Kotlin 2.2.0). The relay, ingest and tools-bundle entries below are not on Maven:
 everything in this section except K6, K7, the compiled component preview's tools side (the
 adapter generator, the bundled editor's hook, the relay step) and U37 already shipped in tools
-0.3.10/0.3.11; those four wait for the next tools release.
+0.3.10/0.3.11; those four wait for the next tools release (they shipped in tools 0.3.12, 2026-10-21).
 
 **Source-incompatible with 0.3.4** for code that matches on the portal document model:
 `PropValue` (portal-document) gains `Token`, `Conditional`, `Template`, `ListOf`, `Arith` and

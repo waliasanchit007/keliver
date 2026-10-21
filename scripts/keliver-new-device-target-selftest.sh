@@ -14,7 +14,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INIT="$ROOT/scripts/keliver-init"
 DEV="$ROOT/scripts/keliver-new-device-target.sh"
-KELIVER_VERSION="${KELIVER_VERSION:-0.3.4}"
+KELIVER_VERSION="${KELIVER_VERSION:-0.4.0}"
 DO_COMPILE=0
 [ "${1:-}" = "--compile" ] && DO_COMPILE=1
 
@@ -150,8 +150,8 @@ p=sys.argv[1]; d=json.load(open(p)); d["appRuntime"]["keliverVersion"]=sys.argv[
 O="$(KELIVER_VERSION=0.3.3 scaffold Older)"   # keliver-init for an app on 0.3.3
 ( cd "$O" && env -u KELIVER_VERSION "$DEV" >/dev/null 2>&1 ); rc=$?
 chk "an app pinned to 0.3.3 scaffolds" 0 "$rc"
-grep -q 'keliver-treehouse-guest:0\.3\.3' "$O/build.gradle" && ! grep -q 'dev\.keliver:[a-z-]*:0\.3\.4' "$O/build.gradle" \
-  && ok "an app pinned to 0.3.3 gets 0.3.3 guest dependencies, none of 0.3.4" || bad "an app pinned to 0.3.3 got another version: $(grep -o 'dev\.keliver:[a-z-]*:[0-9.]*' "$O/build.gradle" | sort -u | tr '\n' ' ')"
+grep -q 'keliver-treehouse-guest:0\.3\.3' "$O/build.gradle" && ! grep -q 'dev\.keliver:[a-z-]*:0\.4\.0' "$O/build.gradle" \
+  && ok "an app pinned to 0.3.3 gets 0.3.3 guest dependencies, none of 0.4.0" || bad "an app pinned to 0.3.3 got another version: $(grep -o 'dev\.keliver:[a-z-]*:[0-9.]*' "$O/build.gradle" | sort -u | tr '\n' ' ')"
 V="$(scaffold Override)"; set_app_version "$V" 0.3.3
 ( cd "$V" && KELIVER_VERSION=0.3.4 "$DEV" >/dev/null 2>&1 ); rc=$?
 grep -q 'keliver-treehouse-guest:0\.3\.4' "$V/build.gradle" && ok "KELIVER_VERSION overrides the app's version" || bad "KELIVER_VERSION did not override the app's version (exit $rc)"

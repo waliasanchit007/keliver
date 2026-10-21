@@ -37,7 +37,7 @@ keliver-portal .                   # open http://localhost:8096
 
 `keliver-init` creates a standalone Gradle project whose screens
 (`src/jsMain/kotlin/screens/`) are real Kotlin Compose against the published
-`dev.keliver:*:0.3.4` artifacts — edit them in your IDE (native completion) or
+`dev.keliver:*:0.4.0` artifacts — edit them in your IDE (native completion) or
 visually in the browser; both stay in sync via `keliver.portal.json`.
 
 No install at all? The hosted playground: **http://keliver.me/keliver/**
@@ -78,6 +78,17 @@ No install at all? The hosted playground: **http://keliver.me/keliver/**
   (`previewAssetHosts`) and forwards a component's `modifier`; write-back
   refuses a change it cannot make in place (or as a lossless export) instead
   of overwriting the author's code.
+- **From 0.3.12:** new apps get the 0.4.0 libraries; equality and compound
+  conditions (`==`/`!=`, `&&`-only or `||`-only), derived Boolean and Int
+  locals in a component body, Int arithmetic (`size / 2`,
+  `b.columns * 48 + 8`) and Ints used as Dps (`Dp(gap.toDouble())`,
+  `(b.gap + 4).dp`) are portal grammar instead of RawCode (the editor shows
+  the condition or expression read-only and edits around it); a per-app
+  editor on the 0.4.0 libraries can draw opaque components with the app's
+  compiled code (`compiledComponents` in `keliver.portal.json`;
+  `keliver-portal` writes the adapters before it builds that editor);
+  contract write-back no longer redeclares a field or action the screen's
+  interface inherits.
 
 ### `host/` — the device host is DEVELOPMENT-ONLY
 
