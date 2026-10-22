@@ -141,6 +141,9 @@ internal object Ui {
       background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
       box-shadow: 0 16px 50px rgba(0,0,0,.6); z-index: 40; display: flex; flex-direction: column; }
     .overlay pre { margin: 0; padding: 12px; overflow: auto; font-size: 11px; color: var(--text); }
+    .overlay .head .btn { margin-left: 6px; }
+    .overlay .export-title { font-family: ui-monospace, monospace; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .overlay .export-note { padding: 6px 12px; color: var(--warn); border-bottom: 1px solid var(--border); }
     .overlay .head { display: flex; align-items: center; padding: 8px 12px;
       border-bottom: 1px solid var(--border); font-weight: 600; }
     .muted { color: var(--muted); }

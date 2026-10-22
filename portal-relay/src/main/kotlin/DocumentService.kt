@@ -546,6 +546,10 @@ class DocumentService(
       null
     }
 
+  /** E20: the document's own file, and its text as it is on disk (null = none yet) — what Export shows. */
+  val file: File get() = kotlinFile
+  fun sourceText(): String? = fileTextOrNull()
+
   @Synchronized
   fun reingest(): Boolean {
     if (pendingWrite?.isDone == false) return false
