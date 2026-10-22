@@ -215,7 +215,13 @@ private fun loadTemplate(doc: UiDocument, mocks: Map<String, String>) {
   localRedo.clear()
   PreviewBindings.mocks.clear()
   PreviewBindings.mocks.putAll(mocks)
+  seedScreenState(mocks)
   localRefresh(true)
+}
+
+/** A template's own sample values become the screen's State (what the State panel applies). */
+private fun seedScreenState(values: Map<String, String>) {
+  runCatching { localStorage.setItem("portal.state.$currentProject/$currentScreen", encodeScreenState(ScreenState(values = values))) }
 }
 
 private val demoMocks = mapOf(
@@ -239,6 +245,7 @@ private fun enterPlayground() {
   PreviewAssetRouting.loaded(emptySet())
   saveTextEl.textContent = "playground — edits are local to this tab"
   PreviewBindings.mocks.putAll(demoMocks)
+  seedScreenState(demoMocks)
   mountPlaygroundStrip()
   localRefresh(true)
   renderMockFidelity()
@@ -972,7 +979,7 @@ private fun buildRightPane() {
   pane.appendChild(Ui.section("Node"))
   opsEl = Ui.el("div", "card")
   pane.appendChild(opsEl)
-  pane.appendChild(Ui.section("Bindings"))
+  pane.appendChild(Ui.section("State"))
   bindingsEl = Ui.el("div", "card")
   pane.appendChild(bindingsEl)
   pane.appendChild(Ui.section("Preview fidelity"))
@@ -1769,55 +1776,124 @@ private fun renderProps() {
 }
 
 /** The derived contract + mock inputs, and everything bound across the screen. */
+/**
+ * E4/E6/E38: the State panel. Every value the canvas reads — the fields `if`
+ * blocks test, the fields props are bound to, the lists' row counts — with a
+ * scenario's coherent defaults and realistic samples, overridable and kept per
+ * screen in this browser (never written to the app's source).
+ */
 private fun renderBindings() {
   Ui.clear(bindingsEl)
   val contract = collectContract(portalTree.value, editorComponents)
-  if (contract.isEmpty) {
+  val fields = stateFields(portalTree.value, contract)
+  val key = "portal.state.$currentProject/$currentScreen"
+  var state = decodeScreenState(runCatching { localStorage.getItem(key) }.getOrNull())
+  fun save() { runCatching { localStorage.setItem(key, encodeScreenState(state)) } }
+  fun apply() {
+    if (LiveEngine.isRunning) return // Live feeds the real presenter's values
+    val mocks = effectiveMocks(fields, state.scenario, state.values)
+    if (PreviewBindings.mocks.toMap() != mocks) {
+      PreviewBindings.mocks.clear()
+      PreviewBindings.mocks.putAll(mocks)
+      Snapshot.sendApplyNotifications()
+    }
+  }
+  apply()
+  if (fields.isEmpty() && contract.actions.isEmpty()) {
     bindingsEl.appendChild(Ui.el("div", "muted", "Bind a prop (@) or wire an event to build the contract"))
     return
   }
-  contract.fields.forEach { (field, kind) ->
-    val rowEl = Ui.el("div", "row")
-    val lab = Ui.el("label", "", "$field: ${kotlinTypeOf(kind)}")
-    lab.setAttribute("title", field)
-    rowEl.appendChild(lab)
-    val mock = Ui.input()
-    mock.setAttribute("type", "text")
-    // P2: dotted fields are item-scoped — the mock holds per-row values.
-    mock.setAttribute("placeholder", if ('.' in field) "rows: a|b|c" else "mock value")
-    mock.value = PreviewBindings.mocks[field] ?: ""
-    mock.addEventListener("input", { _ ->
-      PreviewBindings.mocks[field] = mock.value
-      Snapshot.sendApplyNotifications()
-    })
-    rowEl.appendChild(mock)
-    bindingsEl.appendChild(rowEl)
+  if (LiveEngine.isRunning) {
+    bindingsEl.appendChild(Ui.el("div", "muted", "Live: the app's presenter supplies these values"))
   }
-  // P2: each Repeat's items field mocks its preview ROW COUNT.
-  val reps = mutableListOf<WidgetNode>()
-  fun collectRepeats(n: WidgetNode) {
-    if (n.type == "Repeat") reps += n
-    n.children.forEach { collectRepeats(it) }
+
+  val scenarios = scenariosFor(fields)
+  if (scenarios.size > 1) {
+    val chips = Ui.el("div", "state-scenarios")
+    scenarios.forEach { sc ->
+      val chip = Ui.button(sc.label, if (sc == state.scenario) "chip on" else "chip") {
+        // A scenario resets what it decides: the flags. Texts and numbers the user typed stay.
+        val flags = fields.filter { it.kind == StateKind.Bool || it.source != StateSource.Prop }.map { it.name }.toSet()
+        state = ScreenState(sc, state.values - flags)
+        save(); renderBindings()
+      }
+      chip.setAttribute("title", "Preview the screen ${sc.label.lowercase()}")
+      chips.appendChild(chip)
+    }
+    bindingsEl.appendChild(chips)
   }
-  collectRepeats(portalTree.value)
-  reps.forEach { rep ->
-    val items = (rep.props["items"] as? String)?.takeIf { it.isNotBlank() } ?: return@forEach
-    val rowEl = Ui.el("div", "row")
-    rowEl.appendChild(Ui.el("label", "", "$items: rows"))
-    val mock = Ui.input()
-    mock.setAttribute("type", "text")
-    mock.setAttribute("placeholder", "row count (3)")
-    mock.value = PreviewBindings.mocks[items] ?: ""
-    mock.addEventListener("input", { _ ->
-      PreviewBindings.mocks[items] = mock.value
-      Snapshot.sendApplyNotifications()
-    })
-    rowEl.appendChild(mock)
-    bindingsEl.appendChild(rowEl)
+
+  fun setValue(field: String, value: String?) {
+    state = state.copy(values = if (value == null) state.values - field else state.values + (field to value))
+    save(); apply()
   }
-  contract.actions.forEach { a ->
-    val p = contract.actionParams[a]
-    bindingsEl.appendChild(Ui.el("div", "muted", if (p != null) "fun $a(value: $p)" else "fun $a()"))
+
+  fun group(title: String, source: StateSource) {
+    val inGroup = fields.filter { it.source == source }
+    if (inGroup.isEmpty()) return
+    bindingsEl.appendChild(Ui.el("div", "state-group", title))
+    inGroup.forEach { f ->
+      val rowEl = Ui.el("div", "row")
+      val lab = Ui.el("label", "", f.name)
+      lab.setAttribute("title", when (f.source) {
+        StateSource.Condition -> "Tested by an if block on this screen"
+        StateSource.Prop -> "${f.name}: ${kotlinTypeOf(contract.fields[f.name] ?: PropKind.Text)}"
+        StateSource.List -> "Rows in the preview (0-10)"
+      })
+      rowEl.appendChild(lab)
+      val default = defaultValue(f, state.scenario)
+      val userSet = f.name in state.values
+      when (f.kind) {
+        StateKind.Bool -> {
+          val box = document.createElement("input") as HTMLInputElement
+          box.type = "checkbox"
+          box.checked = (state.values[f.name] ?: default) == "true"
+          box.addEventListener("change", { _ ->
+            val v = box.checked.toString()
+            setValue(f.name, if (v == default) null else v)
+          })
+          rowEl.appendChild(box)
+        }
+        else -> {
+          val input = Ui.input()
+          input.setAttribute("type", if (f.kind == StateKind.Text) "text" else "number")
+          if (f.kind == StateKind.Rows) { input.setAttribute("min", "0"); input.setAttribute("max", "10") }
+          if (f.kind == StateKind.Int) input.setAttribute("step", "1")
+          input.setAttribute("placeholder", if (default.isEmpty()) "(empty)" else default)
+          input.value = if (userSet) state.values.getValue(f.name) else ""
+          input.addEventListener("input", { _ ->
+            val v = input.value
+            val ok = when (f.kind) {
+              StateKind.Int, StateKind.Rows -> v.isEmpty() || v.trim().toIntOrNull() != null
+              StateKind.Double -> v.isEmpty() || v.trim().toDoubleOrNull() != null
+              else -> true
+            }
+            input.classList.toggle("invalid", !ok)
+            if (ok) setValue(f.name, v.takeIf { it.isNotEmpty() })
+          })
+          rowEl.appendChild(input)
+        }
+      }
+      if (userSet) {
+        val reset = Ui.button("↺", "btn icon mini") { setValue(f.name, null); renderBindings() }
+        reset.setAttribute("title", "Back to the scenario's value")
+        rowEl.appendChild(reset)
+      }
+      bindingsEl.appendChild(rowEl)
+    }
+  }
+  group("Conditions", StateSource.Condition)
+  group("Data", StateSource.Prop)
+  group("Lists", StateSource.List)
+
+  if (contract.actions.isNotEmpty()) {
+    val details = document.createElement("details") as HTMLElement
+    details.appendChild(Ui.el("summary", "state-group", "Actions (${contract.actions.size})"))
+    contract.actions.forEach { a ->
+      val p = contract.actionParams[a]
+      details.appendChild(Ui.el("div", "muted", if (p != null) "fun $a(value: $p)" else "fun $a()"))
+    }
+    bindingsEl.appendChild(details)
   }
 }
 
