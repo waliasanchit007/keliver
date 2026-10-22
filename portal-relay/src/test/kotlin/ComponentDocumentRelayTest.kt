@@ -104,4 +104,16 @@ class ComponentDocumentRelayTest {
       ),
     )
   }
+
+  @Test fun aFileWhoseComponentIsAnotherIsNotOpenedAsThisOne() {
+    val dir = Files.createTempDirectory("component-doc").toFile().apply { deleteOnExit() }
+    val f = dir.resolve("LabelPill.kt").apply { writeText(source.replace("fun LabelPill(", "fun OtherPill(")) }
+    assertNull(
+      DocumentService.forComponent(
+        "default/component:LabelPill", f, "LabelPill", { dev.keliver.portal.EmptyComponentRegistry },
+        { dev.keliver.portal.ingest.TokenTable.EMPTY }, "app/components/LabelPill.kt", { 0L },
+      ),
+      "the file's component is OtherPill: editing it as LabelPill would write another function",
+    )
+  }
 }

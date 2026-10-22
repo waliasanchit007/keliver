@@ -100,4 +100,15 @@ class WriteBackRoundTripTest {
       "Gone lost its last use; Kept is used; Idle was already unused; getValue is an operator convention",
     )
   }
+
+  @Test fun anActionPassedByReferenceKeepsItsSpellingThroughAWholeListEditAndItsUndo() {
+    val withRef = screen.replace(
+      "  Column {\n",
+      "  Column {\n    Button(text = \"Go\", onClick = b::go)\n",
+    ).replace("import dev.keliver.layout.compose.Column\n", "import dev.keliver.layout.compose.Column\nimport dev.keliver.material.compose.Button\n")
+      .replace("interface HomeScreenBindings", "interface HomeScreenBindings {\n  fun go()\n}\n\ninterface Unused")
+    val (mid, end) = roundTrip(withRef) { d -> DocOp.SetModifier(column(d).children[0].handle, "Padding.allDp", lit(8)) }
+    assertTrue("onClick = b::go" in mid, mid)
+    assertEquals(withRef, end)
+  }
 }

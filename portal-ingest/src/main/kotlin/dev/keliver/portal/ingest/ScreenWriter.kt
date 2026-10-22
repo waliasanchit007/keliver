@@ -157,6 +157,10 @@ object ScreenWriter {
     DeclarationScope.problem(fileBase, doc)?.let { return Refuse(it) }
     if (asComponent) {
       if (doc.contract != asIs.contract) return Refuse("a component's parameters are changed in code — every screen that calls it passes them")
+      // Its `content()` call is where every caller's content goes: removing or repeating it is a change to the contract.
+      if (slotCount(doc.root) != slotCount(asIs.root)) {
+        return Refuse("a component's content slot (where its callers' content goes) is added or removed in code")
+      }
       return when (val surgical = WriteBack.attempt(lf, doc, components, tokens, fileName, fileBase, asComponent = true)) {
         is WriteBack.Outcome.Merged -> readsBack(surgical.text)?.let { Refuse("the edited component would not read back as the document: $it") }
           ?: restored(surgical.text, How.SURGICAL)
@@ -185,6 +189,9 @@ object ScreenWriter {
     readsBack(text)?.let { return Refuse("$why, and the full export would not read back as the document either: $it") }
     return restored(text, How.EXPORT)
   }
+
+  private fun slotCount(n: DocNode): Int =
+    if (n !is DocNode.Widget) 0 else (if (n.type == "Slot") 1 else 0) + n.children.sumOf(::slotCount)
 
   /** [fresh] (the file as it reads now) with [old]'s handles, node for node — null when their shapes differ. */
   private fun rehandled(fresh: DocNode, old: DocNode): DocNode? = when {
