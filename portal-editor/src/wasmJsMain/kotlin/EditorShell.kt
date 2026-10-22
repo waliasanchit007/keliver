@@ -186,6 +186,8 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         ImageLoader.Builder(PlatformContext.INSTANCE)
           // wasm has no built-in Coil network stack — register the browser-fetch one.
           .components { add(BrowserFetchFetcher.Factory()) }
+          // E29: an image that did not load is drawn as one, never as empty space.
+          .error { brokenImage }
           .build(),
       )
     }
