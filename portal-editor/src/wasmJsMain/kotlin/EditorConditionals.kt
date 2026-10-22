@@ -243,15 +243,8 @@ private fun branchEditor(nodeType: String, key: String, kind: PropKind, value: A
       if (value == true) input.setAttribute("checked", "checked")
       input.addEventListener("change", { _ -> onChange(lit(input.checked)) })
     }
-    PropKind.Color -> {
-      input.setAttribute("type", "color")
-      input.setAttribute("style", "padding:1px; height:26px;")
-      val argb = value as? Int ?: 0xFF000000.toInt()
-      input.value = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
-      input.addEventListener("input", { _ ->
-        onChange(lit((0xFF shl 24) or (input.value.removePrefix("#").toIntOrNull(16) ?: 0)))
-      })
-    }
+    // E10: the same alpha-keeping colour editor as a plain colour prop.
+    PropKind.Color -> return colorControl(value as? Int ?: 0) { onChange(lit(it)) }
     PropKind.IntList, PropKind.FloatList, PropKind.StringList -> {
       input.setAttribute("type", "text")
       input.setAttribute("disabled", "disabled")

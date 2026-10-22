@@ -115,6 +115,7 @@ public final class dev/keliver/portal/ComponentModelKt {
 	public static final fun getAcceptsModifier (Ldev/keliver/portal/ComponentSpec;)Z
 	public static final fun getOnDependencyCycle (Ldev/keliver/portal/ComponentSpec;)Z
 	public static final fun getRESERVED_COMPONENT_NAMES ()Ljava/util/Set;
+	public static final fun isColorParamName (Ljava/lang/String;)Z
 	public static final fun isKnownWidgetType (Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;)Z
 	public static synthetic fun isKnownWidgetType$default (Ljava/lang/String;Ldev/keliver/portal/ComponentRegistry;ILjava/lang/Object;)Z
 	public static final fun isModifierType (Ljava/lang/String;)Z

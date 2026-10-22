@@ -624,6 +624,7 @@ final fun dev.keliver.portal/expandForPreview(dev.keliver.portal/WidgetNode, dev
 final fun dev.keliver.portal/exportKotlin(dev.keliver.portal/WidgetNode, kotlin/String = ..., dev.keliver.portal/ComponentRegistry = ...): kotlin/String // dev.keliver.portal/exportKotlin|exportKotlin(dev.keliver.portal.WidgetNode;kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]
 final fun dev.keliver.portal/fmtTemplate(dev.keliver.portal/Template, kotlin/Function1<kotlin/String, kotlin/String>): kotlin/String // dev.keliver.portal/fmtTemplate|fmtTemplate(dev.keliver.portal.Template;kotlin.Function1<kotlin.String,kotlin.String>){}[0]
 final fun dev.keliver.portal/intDpValue(dev.keliver.portal/IntDp, kotlin/Function1<kotlin/Any?, kotlin/Int?> = ...): kotlin/Double? // dev.keliver.portal/intDpValue|intDpValue(dev.keliver.portal.IntDp;kotlin.Function1<kotlin.Any?,kotlin.Int?>){}[0]
+final fun dev.keliver.portal/isColorParamName(kotlin/String): kotlin/Boolean // dev.keliver.portal/isColorParamName|isColorParamName(kotlin.String){}[0]
 final fun dev.keliver.portal/isConditionKey(kotlin/String): kotlin/Boolean // dev.keliver.portal/isConditionKey|isConditionKey(kotlin.String){}[0]
 final fun dev.keliver.portal/isDpProp(kotlin/String, kotlin/String): kotlin/Boolean // dev.keliver.portal/isDpProp|isDpProp(kotlin.String;kotlin.String){}[0]
 final fun dev.keliver.portal/isKnownWidgetType(kotlin/String, dev.keliver.portal/ComponentRegistry = ...): kotlin/Boolean // dev.keliver.portal/isKnownWidgetType|isKnownWidgetType(kotlin.String;dev.keliver.portal.ComponentRegistry){}[0]

@@ -12,6 +12,7 @@ import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.RESERVED_COMPONENT_NAMES
 import dev.keliver.portal.WidgetNode
+import dev.keliver.portal.isColorParamName
 import dev.keliver.portal.isModifierType
 import dev.keliver.portal.listElementType
 import dev.keliver.portal.listKindOf
@@ -288,7 +289,8 @@ object Recognizer {
         }
         continue
       }
-      val kind = scalarKind(typeText)
+      // E10: an Int parameter named like a colour (`tintArgb`, `borderColor`) is a Color prop.
+      val kind = scalarKind(typeText)?.let { if (it == PropKind.Int && isColorParamName(pName)) PropKind.Color else it }
       if (kind != null) {
         props += PropSpec(pName, kind, pName.replaceFirstChar { it.uppercaseChar() })
         valueParams += pName
