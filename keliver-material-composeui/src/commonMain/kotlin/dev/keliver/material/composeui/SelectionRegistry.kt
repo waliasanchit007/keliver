@@ -30,7 +30,10 @@ public object SelectionRegistry {
   /** Each handle's bounds: the union of the rects of every widget drawing it. */
   public val bounds: androidx.compose.runtime.snapshots.SnapshotStateMap<Int, Rect> = mutableStateMapOf()
 
-  private val parts = HashMap<Any, Pair<Int, Rect>>()
+  /** Each reporter's handle, its full rect, and the part of it visible on screen (what a click can hit). */
+  private class Part(val handle: Int, val rect: Rect, val visible: Rect)
+
+  private val parts = HashMap<Any, Part>()
   private val reportersOf = HashMap<Int, MutableSet<Any>>()
 
   /** One rect for [handle], replacing any other rect reported for it without a reporter. */
@@ -38,10 +41,15 @@ public object SelectionRegistry {
     report(handle, LegacyReporter(handle), rect)
   }
 
-  /** [reporter]'s current rect, drawing [handle]; one reporter draws one handle at a time. */
-  public fun report(handle: Int, reporter: Any, rect: Rect) {
-    val previous = parts.put(reporter, handle to rect)
-    if (previous != null && previous.first != handle) detach(previous.first, reporter)
+  /**
+   * [reporter]'s current [rect], drawing [handle]; one reporter draws one handle at a time.
+   * [visible] is the part of it on screen (clipped by scrolling or a clipping parent): only it
+   * answers clicks, while [rect] — also off screen — gives the handle's bounds, so the editor can
+   * scroll an off-screen node into view and outline it whole.
+   */
+  public fun report(handle: Int, reporter: Any, rect: Rect, visible: Rect = rect) {
+    val previous = parts.put(reporter, Part(handle, rect, visible))
+    if (previous != null && previous.handle != handle) detach(previous.handle, reporter)
     reportersOf.getOrPut(handle) { LinkedHashSet() }.add(reporter)
     recompute(handle)
   }
@@ -49,7 +57,7 @@ public object SelectionRegistry {
   /** [reporter] left the composition: its rect no longer draws its handle. */
   public fun remove(reporter: Any) {
     val previous = parts.remove(reporter) ?: return
-    detach(previous.first, reporter)
+    detach(previous.handle, reporter)
   }
 
   public fun clear() {
@@ -64,14 +72,14 @@ public object SelectionRegistry {
    * reported at the root's origin would stretch the handle's bounds across the screen.
    */
   public fun rectsOf(handle: Int): List<Rect> =
-    reportersOf[handle].orEmpty().mapNotNull { parts[it]?.second }.filter { !it.isEmpty }
+    reportersOf[handle].orEmpty().mapNotNull { parts[it]?.rect }.filter { !it.isEmpty }
 
   /** The innermost (smallest-area) tagged widget containing the point, or null. */
   public fun hitTest(x: Float, y: Float): Int? =
     parts.values
-      .filter { (_, r) -> !r.isEmpty && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom }
-      .minByOrNull { (_, r) -> r.width * r.height }
-      ?.first
+      .filter { p -> !p.visible.isEmpty && p.visible.contains(x, y) }
+      .minByOrNull { p -> p.rect.width * p.rect.height }
+      ?.handle
 
   private fun detach(handle: Int, reporter: Any) {
     val set = reportersOf[handle] ?: return
@@ -93,6 +101,8 @@ public object SelectionRegistry {
       if (bounds[handle] != u) bounds[handle] = u
     }
   }
+
+  private fun Rect.contains(x: Float, y: Float) = x >= left && x <= right && y >= top && y <= bottom
 
   private data class LegacyReporter(val handle: Int)
 }

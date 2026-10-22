@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -124,7 +127,10 @@ private data class SelectionTagElement(val handle: Int) : ModifierNodeElement<Se
 
 private class SelectionTagNode(private var handle: Int) : Modifier.Node(), GlobalPositionAwareModifierNode {
   override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
-    SelectionRegistry.report(handle, this, coordinates.boundsInRoot())
+    // The full rect also off screen (boundsInRoot clips to what is visible, which is empty
+    // below the fold), and the visible part separately: only that answers a click.
+    val full = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
+    SelectionRegistry.report(handle, this, full, coordinates.boundsInRoot())
   }
 
   override fun onDetach() {

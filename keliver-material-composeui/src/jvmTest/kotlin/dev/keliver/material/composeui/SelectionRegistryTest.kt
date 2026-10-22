@@ -7,6 +7,8 @@ package dev.keliver.material.composeui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -95,5 +97,18 @@ class SelectionRegistryTest {
     SelectionRegistry.report(7, "unloaded image", Rect(0f, 0f, 0f, 0f))
     assertEquals(Rect(100f, 100f, 200f, 150f), SelectionRegistry.bounds[7])
     assertNull(SelectionRegistry.hitTest(0f, 0f))
+  }
+
+  @Test fun aWidgetScrolledOffScreenKeepsItsBoundsButAnswersNoClick() = runComposeUiTest {
+    // A 300 dp tall window region; the second box sits below it, inside a scrolled column.
+    setContent {
+      Column(Modifier.size(300.dp, 300.dp).verticalScroll(rememberScrollState())) {
+        Box(Modifier.size(200.dp, 300.dp))
+        Box(Modifier.applyKeliverVisuals(tag(9)).size(200.dp, 100.dp))
+      }
+    }
+    waitForIdle()
+    assertEquals(Rect(0f, 300f, 200f, 400f), SelectionRegistry.bounds[9], "its full rect, below the fold")
+    assertNull(SelectionRegistry.hitTest(10f, 350f), "an off-screen widget answers no click")
   }
 }
