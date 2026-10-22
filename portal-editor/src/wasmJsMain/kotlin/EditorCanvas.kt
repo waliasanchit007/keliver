@@ -24,6 +24,22 @@ internal fun nextZoom(current: Double, up: Boolean): Double =
   else ZOOM_STEPS.lastOrNull { it < current - 1e-6 } ?: ZOOM_MIN
 
 /** The largest zoom (at most 100%) at which a [w]×[h] frame fits in [availW]×[availH]. */
+/**
+ * The zoom after a Cmd/Ctrl+wheel (a trackpad pinch arrives as one too): continuous, by
+ * [deltaY] (negative = in), clamped to the zoom range.
+ */
+internal fun wheelZoom(current: Double, deltaY: Double): Double =
+  (current * kotlin.math.exp(-deltaY * 0.0025)).coerceIn(ZOOM_MIN, ZOOM_MAX)
+
+/** The zoom a keyboard shortcut asks for (⌘= / ⌘−, ⇧1 fit, ⇧0 100%), or null when the keys are not one. */
+internal fun zoomForKeys(code: String, key: String, mod: Boolean, shift: Boolean, current: Double, fit: () -> Double): Double? = when {
+  mod && (key == "=" || key == "+") -> nextZoom(current, up = true)
+  mod && (key == "-" || key == "_") -> nextZoom(current, up = false)
+  shift && !mod && code == "Digit1" -> fit()
+  shift && !mod && code == "Digit0" -> 1.0
+  else -> null
+}
+
 internal fun fitZoom(w: Int, h: Int, availW: Double, availH: Double): Double {
   if (w <= 0 || h <= 0 || availW <= 0 || availH <= 0) return 1.0
   val z = minOf(1.0, availW / w, availH / h)
@@ -90,12 +106,19 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
   val zoomOut = Ui.button("−", "seg") { applyZoom(nextZoom(canvasZoom, up = false), zoomBox, frame) }
   val level = Ui.el("span", "zoom-level", "100%")
   val zoomIn = Ui.button("+", "seg") { applyZoom(nextZoom(canvasZoom, up = true), zoomBox, frame) }
-  val fit = Ui.button("Fit", "seg") {
-    applyZoom(fitZoom(frameW, frameH, center.clientWidth - 40.0, center.clientHeight - 72.0), zoomBox, frame)
-  }
-  zoomOut.setAttribute("title", "Zoom out")
-  zoomIn.setAttribute("title", "Zoom in")
-  fit.setAttribute("title", "Fit the frame in the window")
+  val fit = Ui.button("Fit", "seg") { applyZoom(currentFitZoom(), zoomBox, frame) }
+  // ⌘/Ctrl + wheel, and a trackpad pinch, zoom the frame (in capture: before the canvas scrolls).
+  center.addEventListener("wheel", { ev ->
+    val we = ev as org.w3c.dom.events.WheelEvent
+    if (we.ctrlKey || we.metaKey) {
+      ev.preventDefault()
+      ev.stopPropagation()
+      applyZoom(wheelZoom(canvasZoom, we.deltaY), zoomBox, frame)
+    }
+  }, nonPassiveCapture())
+  zoomOut.setAttribute("title", "Zoom out (⌘−)")
+  zoomIn.setAttribute("title", "Zoom in (⌘=, or ⌘/pinch + wheel)")
+  fit.setAttribute("title", "Fit the frame in the window (⇧1; ⇧0 for 100%)")
   listOf(select, interact).forEach { bar.appendChild(it) }
   bar.appendChild(Ui.el("span", "sep"))
   listOf(zoomOut, level, zoomIn, fit).forEach { bar.appendChild(it) }
@@ -118,6 +141,25 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
 }
 
 private var canvasZoomIsSet = false
+
+/** The zoom that fits the frame in the canvas area. */
+private fun currentFitZoom(): Double {
+  val center = canvasCenter ?: return 1.0
+  return fitZoom(frameW, frameH, center.clientWidth - 40.0, center.clientHeight - 72.0)
+}
+
+/** A zoom keyboard shortcut (outside text fields): true when [e] was one, and the zoom applied. */
+internal fun handleZoomKeys(e: org.w3c.dom.events.KeyboardEvent): Boolean {
+  val box = canvasZoomBox ?: return false
+  val frame = canvasFrame ?: return false
+  val z = zoomForKeys(e.code, e.key, e.metaKey || e.ctrlKey, e.shiftKey, canvasZoom, ::currentFitZoom) ?: return false
+  e.preventDefault() // ⌘= / ⌘− would otherwise zoom the whole page
+  applyZoom(z, box, frame)
+  return true
+}
+
+// A plain object: the generated AddEventListenerOptions() passes unset options as null.
+private fun nonPassiveCapture(): org.w3c.dom.AddEventListenerOptions = js("({ passive: false, capture: true })")
 
 private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement) {
   val w = frameW
