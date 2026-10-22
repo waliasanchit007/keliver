@@ -68,6 +68,8 @@ object WriteBack {
       ?: return no("the file has no @Composable screen function the editor can read")
     val file = rec.file ?: return no("the file could not be parsed")
     val factory = PsiEnv.factory
+    // The text before the splices edit the PSI in place (file.text is the edited text after them).
+    val parsedText = file.text
 
     // P2b-a: contract drift no longer forces a full regen — ContractWriteBack
     // maintains the Bindings interface as a separate pass after every write.
@@ -111,7 +113,7 @@ object WriteBack {
     // K1: text write-back added may name symbols the file never imported
     // (`Margin(all = 6.dp)` → dp, `.width(Dp(…))` → Dp, a new widget call).
     // Each splice reports its imports STRUCTURALLY (exporter / grammar).
-    val out = ensureImports(file.text, written).let { afterSpliceForTest.get()?.invoke(it) ?: it }
+    val out = pruneImports(parsedText, ensureImports(file.text, written)).let { afterSpliceForTest.get()?.invoke(it) ?: it }
     // Safety net (K3 review): the surgical text is written only when it reads
     // back as the target — one more parse per write.
     val back = runCatching { Recognizer.recognize(fileName, out, components, tokens) }.getOrNull()
@@ -317,6 +319,46 @@ object WriteBack {
    * scope bind them).
    * Each lands at its sorted position among the imports. Adds only.
    */
+  /**
+   * Removes the imports this edit left unused: one whose name (its alias, or its simple name) the
+   * code of [before] used and the code of [after] no longer mentions anywhere. An import the author
+   * already had unused stays, and so does one named like an operator convention (`getValue` for
+   * `by`, `plus` for `+`, …), which code uses without naming it. So an edit and its undo give the
+   * file back byte for byte. Names are matched as whole words over the code outside the import
+   * lines, strings and comments included — when in doubt, the import stays.
+   */
+  internal fun pruneImports(before: String, after: String): String {
+    val importLine = Regex("""^import\s+([\w.`]+?)(\.\*)?(?:\s+as\s+(`?\w+`?))?\s*;?\s*(?://.*|/\*.*)?$""")
+    fun code(text: String) = text.lines().filterNot { it.trimStart().startsWith("import ") }.joinToString("\n")
+    val beforeCode = code(before)
+    val afterCode = code(after)
+    fun uses(code: String, name: String) = Regex("""(?<![\w`])`?${Regex.escape(name)}`?(?![\w`])""").containsMatchIn(code)
+    val lines = after.lines()
+    val kept = lines.filter { line ->
+      val m = importLine.matchEntire(line.trim()) ?: return@filter true
+      if (m.groupValues[2].isNotEmpty()) return@filter true // a star import
+      val name = m.groupValues[3].replace("`", "").ifEmpty { m.groupValues[1].replace("`", "").substringAfterLast('.') }
+      name in OPERATOR_CONVENTIONS || !uses(beforeCode, name) || uses(afterCode, name)
+    }
+    if (kept.size == lines.size) return after
+    // Removing the last import also removes the blank line that set the block off.
+    val out = kept.toMutableList()
+    if (out.none { it.startsWith("import ") } && lines.any { it.startsWith("import ") }) {
+      val first = lines.indexOfFirst { it.startsWith("import ") }
+      val at = first - (lines.size - out.size).coerceAtMost(0)
+      if (at in out.indices && out[at].isBlank() && (at == 0 || out[at - 1].isBlank())) out.removeAt(at)
+    }
+    return out.joinToString("\n")
+  }
+
+  /** Functions code calls through an operator or a language convention, without naming them. */
+  private val OPERATOR_CONVENTIONS = setOf(
+    "getValue", "setValue", "provideDelegate", "invoke", "get", "set", "contains", "iterator", "next", "hasNext",
+    "plus", "minus", "times", "div", "rem", "rangeTo", "rangeUntil", "unaryPlus", "unaryMinus", "not", "inc", "dec",
+    "plusAssign", "minusAssign", "timesAssign", "divAssign", "remAssign", "compareTo", "equals",
+    "component1", "component2", "component3", "component4", "component5",
+  )
+
   internal fun ensureImports(text: String, fqs: Set<String>): String {
     if (fqs.isEmpty()) return text
     // `import a.b.C`, `import a.b.*`, `import a.b.C as D` — with backticked
@@ -419,7 +461,7 @@ object WriteBack {
         val emitted = NodeEmitter.statement(target.copy(children = emptyList()), indentOf(call), components, parentType, bindings.get())
         var callText = emitted.text
         if ('\n' !in oldList.text) callText = collapseCall(callText)
-        val newCall = factory.createExpression(callText) as? KtCallExpression ?: return false
+        val newCall = factory.createExpression(keepArgumentOrder(oldList, callText, factory)) as? KtCallExpression ?: return false
         val newList = newCall.valueArgumentList ?: return false
         oldList.replace(newList)
         need(emitted.imports)
@@ -434,6 +476,30 @@ object WriteBack {
       ?: return target.children.isEmpty() || bail("${target.type} has no `{ … }` block in the file to put children in")
 
     return mergeChildren(parsed.children, target.children, block, psi, factory, components, parsed.type)
+  }
+
+  /**
+   * [callText] (a whole-list re-emission, in the exporter's canonical order) with its named
+   * arguments in the order [oldList] had them: the arguments the author kept stay where they were,
+   * and new ones follow, in the emitter's order. Each argument keeps its emitted slot's formatting;
+   * only which argument sits in which slot changes. Unchanged when an argument is positional.
+   */
+  private fun keepArgumentOrder(oldList: org.jetbrains.kotlin.psi.KtValueArgumentList, callText: String, factory: KtPsiFactory): String {
+    val call = factory.createExpression(callText) as? KtCallExpression ?: return callText
+    val args = call.valueArgumentList?.arguments ?: return callText
+    val oldNames = oldList.arguments.map { it.getArgumentName()?.asName?.asString() ?: return callText }
+    val names = args.map { it.getArgumentName()?.asName?.asString() ?: return callText }
+    val rank = oldNames.withIndex().associate { (i, n) -> n to i }
+    val ordered = args.withIndex().sortedWith(compareBy({ rank[names[it.index]] ?: Int.MAX_VALUE }, { it.index })).map { it.value }
+    if (ordered == args) return callText
+    // Replace slot by slot from the end, so earlier offsets stay valid.
+    val base = call.textRange.startOffset
+    var out = callText
+    for (i in args.indices.reversed()) {
+      val r = args[i].textRange
+      out = out.substring(0, r.startOffset - base) + ordered[i].text + out.substring(r.endOffset - base)
+    }
+    return out
   }
 
   /**

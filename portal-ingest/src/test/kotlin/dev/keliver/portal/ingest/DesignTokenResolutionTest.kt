@@ -188,7 +188,8 @@ class DesignTokenResolutionTest {
     val d = doc()
     val target = d.apply(DocOp.SetModifier(child(d, 1).handle, "Background.colorArgb", ink)).doc
     val merged = WriteBack.merge(home, target, tokens = tokens, fileName = "app/screens/S.kt")!!
-    assertTrue("StyledText(modifier = Modifier.background(C.Ink), text = \"b\")" in merged, merged)
+    // The new argument follows the author's (an untouched argument never moves).
+    assertTrue("StyledText(text = \"b\", modifier = Modifier.background(C.Ink))" in merged, merged)
     assertTrue("import app.components.C\n" in merged, merged)
     assertTrue("// The card's body." in merged && "private val keep = 1" in merged, merged) // not a whole-file export
     // A token on a node with no modifier yet, in a file importing nothing it needs.
