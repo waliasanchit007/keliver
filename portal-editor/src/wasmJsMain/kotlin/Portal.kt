@@ -746,7 +746,7 @@ private fun runPublish() {
   publishing = true
   publishBtn.setAttribute("disabled", "")
   publishBtn.textContent = "Publishing…"
-  exportPre.textContent = "Publishing… (compiles + signs the bundle, ~1-2 min)"
+  showExportText("Publish", null, "Publishing… (compiles + signs the bundle, ~1-2 min)", "")
   exportOverlay.removeAttribute("style")
   val xhr = XMLHttpRequest()
   xhr.open("POST", "$SERVER/publish?project=$currentProject")
@@ -754,7 +754,7 @@ private fun runPublish() {
     publishing = false
     publishBtn.removeAttribute("disabled")
     publishBtn.textContent = "Publish"
-    exportPre.textContent = text
+    showExportText("Publish", null, text, "publish.log")
   }
   xhr.addEventListener("load", { _ -> done((if (xhr.status.toInt() == 200) "✅ " else "❌ ") + xhr.responseText) })
   xhr.addEventListener("error", { _ -> done("❌ The relay did not answer the publish request.") })
@@ -2021,26 +2021,88 @@ internal fun portalLiveLog(msg: String) {
   consoleEl.insertBefore(row, consoleEl.firstChild)
 }
 
+/**
+ * E40: a new screen or project, named in a dialog that says what a name may be
+ * before anything is created, and opened once the relay has created it (not
+ * after a guessed delay).
+ */
 private fun promptCreate(project: Boolean) {
-  val name = window.prompt(if (project) "New project name:" else "New screen name:")?.trim().orEmpty()
-  if (name.isEmpty()) return
-  if (project) {
-    sendBody("$SERVER/projects", "POST", name)
-    window.setTimeout({
-      currentProject = name; currentScreen = "main"
-      sendEmpty("$SERVER/active?project=$currentProject&screen=main", "POST")
-      reloadProjectList(); reloadScreenList(); loadDraft()
-      null
-    }, 200)
-  } else {
-    sendBody("$SERVER/screens?project=$currentProject", "POST", name)
-    window.setTimeout({
-      currentScreen = name
-      sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
-      reloadScreenList(); loadDraft()
-      null
-    }, 200)
+  val what = if (project) "project" else "screen"
+  val sel = if (project) projectSel else screenSel
+  val existing = (0 until sel.options.length).mapNotNull { (sel.options.item(it) as? HTMLOptionElement)?.value }
+  val back = Ui.el("div", "modal-back")
+  val box = Ui.el("div", "modal")
+  box.appendChild(Ui.el("div", "modal-title", if (project) "New project" else "New screen in “$currentProject”"))
+  box.appendChild(
+    Ui.el(
+      "div", "muted",
+      if (project) "A project holds its own screens and components."
+      else "Creates screens/<name>.kt with a <Name>Screen function, and opens it.",
+    ),
+  )
+  val input = Ui.input()
+  input.setAttribute("type", "text")
+  input.setAttribute("placeholder", if (project) "e.g. onboarding" else "e.g. order_status")
+  input.setAttribute("aria-label", "$what name")
+  box.appendChild(input)
+  val problem = Ui.el("div", "modal-problem")
+  box.appendChild(problem)
+  val actions = Ui.el("div", "modal-actions")
+  fun close() { back.remove() }
+  val cancel = Ui.button("Cancel", "btn") { close() }
+  val create = Ui.button("Create", "btn primary") {}
+  fun check(): String? {
+    val why = nameProblem(input.value, existing, what)
+    // Say why only once something was typed; an empty field just cannot be created yet.
+    problem.textContent = if (input.value.isEmpty()) "" else why.orEmpty()
+    if (why == null) create.removeAttribute("disabled") else create.setAttribute("disabled", "")
+    return why
   }
+  fun submit() {
+    if (check() != null || create.hasAttribute("disabled")) return
+    val name = input.value.trim()
+    create.setAttribute("disabled", "")
+    create.textContent = "Creating…"
+    val xhr = XMLHttpRequest()
+    xhr.open("POST", if (project) "$SERVER/projects" else "$SERVER/screens?project=$currentProject")
+    xhr.addEventListener("load", { _ ->
+      if (xhr.status.toInt() !in 200..299) {
+        problem.textContent = "The relay refused it (HTTP ${xhr.status}): ${xhr.responseText.take(160)}"
+        create.textContent = "Create"
+        create.removeAttribute("disabled")
+        return@addEventListener
+      }
+      close()
+      if (project) {
+        currentProject = name
+        currentScreen = "main"
+        sendEmpty("$SERVER/active?project=$currentProject&screen=main", "POST")
+        reloadProjectList(); reloadScreenList(); loadDraft()
+      } else {
+        currentScreen = name
+        sendEmpty("$SERVER/active?project=$currentProject&screen=$currentScreen", "POST")
+        reloadScreenList(); loadDraft()
+      }
+    })
+    xhr.addEventListener("error", { _ ->
+      problem.textContent = "The relay did not answer — is it running?"
+      create.textContent = "Create"
+      create.removeAttribute("disabled")
+    })
+    xhr.send(name)
+  }
+  input.addEventListener("input", { _ -> check() })
+  input.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Enter") { ev.preventDefault(); submit() } })
+  create.addEventListener("click", { _ -> submit() })
+  actions.appendChild(cancel)
+  actions.appendChild(create)
+  box.appendChild(actions)
+  back.appendChild(box)
+  back.addEventListener("click", { ev -> if (ev.target == back) close() })
+  back.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Escape") close() })
+  document.body?.appendChild(back)
+  check()
+  input.focus()
 }
 
 // ---------------------------------------------------------------------------

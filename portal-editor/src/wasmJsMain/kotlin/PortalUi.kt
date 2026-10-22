@@ -114,6 +114,7 @@ internal object Ui {
     .modal { width: 420px; max-width: calc(100vw - 40px); background: var(--panel); border: 1px solid var(--border);
       border-radius: 12px; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 10px; }
     .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-problem { min-height: 16px; color: var(--warn); font-size: 12px; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
     .topbar { overflow: hidden; }
     .topbar .select { min-width: 0; }
