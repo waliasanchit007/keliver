@@ -16,6 +16,7 @@ internal fun catalogKind(p: MappedProp): String = when {
 /**
  * The catalog PropSpec lines for [p]: one, or — for a MARGIN — four Double
  * specs `<prop>.start/.end/.top/.bottom` so the existing number editor works.
+ * An Int-coded prop carries its named codes (E8) as `choices`.
  */
 internal fun propSpecs(p: MappedProp): List<String> =
   if (p.kind == MappedKind.MARGIN) {
@@ -23,8 +24,14 @@ internal fun propSpecs(p: MappedProp): List<String> =
       "PropSpec(\"${p.name}.$side\", PropKind.Double, \"${humanize(p.name)} $side\")"
     }
   } else {
-    listOf("PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\")")
+    val choices = if (p.choices.isEmpty()) "" else
+      ", choices = listOf(${p.choices.joinToString(", ") { "PropChoice(${it.value}, ${kotlinString(it.label)})" }})"
+    listOf("PropSpec(\"${p.name}\", PropKind.${catalogKind(p)}, \"${humanize(p.name)}\"$choices)")
   }
+
+/** [s] as a Kotlin string literal. */
+internal fun kotlinString(s: String): String =
+  "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$") + "\""
 
 /** camelCase → "Camel case" */
 internal fun humanize(name: String): String {

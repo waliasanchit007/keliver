@@ -24,6 +24,10 @@ import dev.keliver.schema.Widget
  * Widget IDs (`@Widget(n)`) and trait tags (`@Property`/`@Children`, which share
  * one namespace per widget) are WIRE-STABLE once shipped: never renumber, only
  * append. Batch 0 = tags 1-15; later batches append toward full parity.
+ *
+ * An Int property whose KDoc lists its codes (`0 start, 1 center, 2 end.`) is
+ * offered by the portal editor as a dropdown of those names (portal-schema-codegen
+ * reads the list); keep that form when adding one.
  */
 @Schema(
   members = [
@@ -266,6 +270,7 @@ public data class IconButton(
 @Widget(13)
 public data class AsyncImage(
   @Property(1) val url: String,
+  /** 0 fit, 1 crop, 2 fillBounds. */
   @Property(2) val contentScale: Int = 0,
   @Property(3) val onClick: (() -> Unit)? = null,
   /** Fixed width in dp; 0 => unconstrained. */

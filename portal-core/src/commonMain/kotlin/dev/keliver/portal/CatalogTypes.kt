@@ -3,7 +3,55 @@ package dev.keliver.portal
 /** Editor-facing property kinds. Keep in sync with the editor's property panel. */
 public enum class PropKind { Text, Int, Bool, Color, Double, IntList, FloatList, StringList }
 
-public data class PropSpec(val name: String, val kind: PropKind, val label: String)
+/**
+ * One named value of an Int-coded prop: a layout enum (`Constraint.Fill` rides
+ * as 1) or a code a schema's KDoc lists (`0 start, 1 center, 2 end`).
+ * [value] is what the wire and the source hold; [label] is what the editor shows.
+ */
+public data class PropChoice(val value: Int, val label: String)
+
+/**
+ * One editable prop. [choices] is non-empty when the prop's Int value is one
+ * of a closed set of named codes (generated from the schemas by
+ * portal-schema-codegen): the editor offers a dropdown of the labels instead of
+ * a number.
+ */
+public class PropSpec(
+  public val name: String,
+  public val kind: PropKind,
+  public val label: String,
+  public val choices: List<PropChoice> = emptyList(),
+) {
+  // A regular class (not a data class) so the pre-choices binary surface —
+  // (name, kind, label) constructor, component1..3, copy(name, kind, label) —
+  // stays intact while [choices] is added (as ModifierSpec does for K1).
+
+  /** The pre-choices shape (no named codes). */
+  public constructor(name: String, kind: PropKind, label: String) : this(name, kind, label, emptyList())
+
+  public operator fun component1(): String = name
+  public operator fun component2(): PropKind = kind
+  public operator fun component3(): String = label
+
+  /** The pre-choices copy: a new name/kind/label, keeping [choices]. */
+  public fun copy(name: String = this.name, kind: PropKind = this.kind, label: String = this.label): PropSpec =
+    PropSpec(name, kind, label, choices)
+
+  override fun equals(other: Any?): Boolean =
+    other is PropSpec && name == other.name && kind == other.kind && label == other.label && choices == other.choices
+
+  override fun hashCode(): Int {
+    var h = name.hashCode()
+    h = 31 * h + kind.hashCode()
+    h = 31 * h + label.hashCode()
+    h = 31 * h + choices.hashCode()
+    return h
+  }
+
+  override fun toString(): String =
+    if (choices.isEmpty()) "PropSpec(name=$name, kind=$kind, label=$label)"
+    else "PropSpec(name=$name, kind=$kind, label=$label, choices=$choices)"
+}
 
 /**
  * A modifier the editor can attach to a node (props ride as "mod.<Name>.<prop>").
