@@ -377,8 +377,9 @@ private fun pumpOps() {
   saveDotEl.className = "dot saving"
   saveTextEl.textContent = "Saving…"
   val batch = OpBatch(docVersion, OpEnvelope(SESSION, 0), ops)
+  val target = editTarget()
   val xhr = XMLHttpRequest()
-  xhr.open("POST", "$SERVER/ops?${editTarget().query}")
+  xhr.open("POST", "$SERVER/ops?${target.query}")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.timeout = 15_000
   var settled = false
@@ -386,11 +387,17 @@ private fun pumpOps() {
     if (settled) return // load and error/timeout never both count
     settled = true
     opInFlight = false
+    // Another document was opened meanwhile: this reply is about the old one (its version is not this one's).
+    if (target != editTarget()) {
+      q.onResult?.invoke(reply is OpsReply.Accepted)
+      return
+    }
     // A refusal that is still current keeps the pill "Not written" (settling never hides it).
     pillAfterReply(reply, writeBackWarnings.showing).let { saveDotEl.className = it.dot; saveTextEl.textContent = it.text }
     when (reply) {
       is OpsReply.Accepted -> {
         docVersion = reply.version
+        staleUpTo = refetchSeq // a document fetched before this edit is older than it
         q.onResult?.invoke(true)
         refetchDoc(refreshPanels)
         pumpOps()
@@ -469,6 +476,11 @@ private fun showWriteBack(n: WriteBackNotice?) {
   writeBackBanner = banner
 }
 
+/** Each document fetch's number, the last one applied, and the last one an accepted edit superseded. */
+private var refetchSeq = 0
+private var appliedSeq = 0
+private var staleUpTo = 0
+
 /** Pull the authoritative document; ids in the projected tree ARE handles. */
 private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) {
   if (playground) {
@@ -483,10 +495,15 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
   // K6: `extendedConditions=1` — and equality / compound conditionals (a K3 editor is served the true branch).
   // K7: `arithmetic=1` — and PropValue.Arith / PropValue.IntDp (an older editor gets the computed literal, or no prop).
   val target = editTarget()
+  val seq = ++refetchSeq
   xhr.open("GET", "$SERVER/doc?${target.query}&$DOC_FEATURES")
   xhr.setRequestHeader("X-Portal-Session", SESSION)
   xhr.addEventListener("load", { _ ->
     if (target != editTarget()) return@addEventListener // another document was opened meanwhile
+    // Replies can arrive out of order: an older document never replaces a newer one (it would
+    // roll the canvas back and send the next edit against a stale version).
+    // Its continuation still runs (a resumed edit queue, an event subscription): a newer reply is in.
+    if (seq <= appliedSeq || seq <= staleUpTo) { cb?.invoke(); return@addEventListener }
     if (xhr.status.toInt() == 404 && target.component != null) {
       // E14: a component whose body is edited in code (or that is gone) — say why, and go back.
       val why = Regex("\"error\":\"([^\"]*)\"").find(xhr.responseText)?.groupValues?.get(1) ?: "it cannot be opened"
@@ -496,6 +513,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     }
     readStackDepths(xhr)
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
+      appliedSeq = seq
       docVersion = doc.version
       portalTree.value = doc.toWidgetTree(handleIds = true)
       // E15: select what was just inserted (its handle is the relay's to assign).
@@ -2079,6 +2097,8 @@ private fun fillSelect(sel: HTMLSelectElement, names: List<String>, current: Str
 private fun loadDraft(cb: (() -> Unit)? = null) {
   // V2 M1: the server document is the truth — fetch it and subscribe to changes.
   selectedId = null
+  pendingInsertPlace = null // an insert into the previous document selects nothing in this one
+  staleUpTo = refetchSeq // replies to fetches of the previous document are not this one's
   renderCrumbs()
   dropQueuedOps()
   refetchDoc(true) { subscribeDocEvents(); cb?.invoke() }
