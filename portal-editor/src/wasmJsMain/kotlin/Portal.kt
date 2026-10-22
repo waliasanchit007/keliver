@@ -1209,6 +1209,22 @@ internal fun revealOnCanvas(handle: Int) {
   }
 }
 
+/**
+ * [revealOnCanvas] once the canvas has drawn the document just loaded: the rects of the one
+ * before (whose handles restart at 1 too) stay until it recomposes, so a reveal right after a
+ * document swap read stale or missing bounds and said the node was not drawn.
+ */
+private fun revealWhenDrawn(handle: Int, framesLeft: Int = 60, settle: Int = 2) {
+  kotlinx.browser.window.requestAnimationFrame {
+    when {
+      selectedId != handle -> {} // the selection moved on meanwhile
+      settle > 0 -> revealWhenDrawn(handle, framesLeft, settle - 1)
+      dev.keliver.material.composeui.SelectionRegistry.bounds[handle] != null || framesLeft <= 0 -> revealOnCanvas(handle)
+      else -> revealWhenDrawn(handle, framesLeft - 1, 0)
+    }
+  }
+}
+
 /** Set by the canvas composition: scroll the canvas by compose px (null when the screen scrolls itself). */
 internal var canvasScroller: ((Float) -> Unit)? = null
 
@@ -1766,7 +1782,7 @@ private fun goToCrumb(depth: Int) {
       if (reselect != null && portalTree.value.findNode(reselect) != null) {
         selectedId = reselect
         refresh()
-        revealOnCanvas(reselect)
+        revealWhenDrawn(reselect)
       }
     }
   }
