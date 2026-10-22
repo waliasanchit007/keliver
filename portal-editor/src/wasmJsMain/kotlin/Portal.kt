@@ -594,12 +594,15 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
   val acceptsChildren = selType?.let { type ->
     widgetSpec(type)?.acceptsChildren == true || type == ELSE_TYPE || editorComponents.spec(type)?.slots?.size == 1
   } == true
-  val parentId = if (sel != null && acceptsChildren) {
-    sel
-  } else {
-    portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id
+  // E17: inside a selected container; otherwise right after the selected node
+  // (where the author is looking), and with no selection at the end of the root.
+  val place: Pair<Int, Int?> = when {
+    sel != null && acceptsChildren -> sel to lastChildHandle(sel)?.v?.toInt()
+    sel != null && sel != portalTree.value.id -> dropPlace(portalTree.value, sel, DropZone.After, ::acceptsChildrenNode)
+      ?: return
+    else -> (portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id).let { it to lastChildHandle(it)?.v?.toInt() }
   }
-  sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), lastChildHandle(parentId), node.toDocNode())))
+  sendOps(listOf(insertOp(place, node.toDocNode())))
 }
 
 // ---------------------------------------------------------------------------
@@ -934,6 +937,7 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
           downX = me.clientX.toDouble()
           downY = me.clientY.toDouble()
         }
+        "dblclick" -> hitAt(me.clientX.toDouble(), me.clientY.toDouble())?.let { editTextInline(it) }
         "pointerup" -> {
           if (!pressed) return@addEventListener
           pressed = false
@@ -963,6 +967,46 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     }
     null
   }, 120)
+}
+
+/**
+ * E35: edit a node's plain text in place, over its box on the canvas. Enter (or
+ * leaving the field) commits one SetProp; Escape cancels. A text that is not a
+ * literal (a binding, a template, a token) opens nothing.
+ */
+internal fun editTextInline(handle: Int) {
+  val node = portalTree.value.findNode(handle) ?: return
+  val current = node.props["text"] as? String ?: return
+  val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[handle] ?: return
+  val frame = document.querySelector(".frame") as? HTMLElement ?: return
+  (document.querySelector(".inline-edit") as? HTMLElement)?.remove()
+  val dpr = kotlinx.browser.window.devicePixelRatio
+  val input = document.createElement("textarea") as org.w3c.dom.HTMLTextAreaElement
+  input.className = "inline-edit"
+  input.value = current
+  input.style.left = "${rect.left / dpr}px"
+  input.style.top = "${rect.top / dpr}px"
+  input.style.width = "${maxOf(rect.width / dpr, 120.0)}px"
+  input.style.height = "${maxOf(rect.height / dpr, 28.0)}px"
+  var done = false
+  fun finish(commit: Boolean) {
+    if (done) return
+    done = true
+    val text = input.value
+    input.remove()
+    if (commit && text != current) {
+      sendOps(listOf(DocOp.SetProp(Handle(handle.toLong()), "text", PropValue.Lit("s", s = text))))
+    }
+  }
+  input.addEventListener("keydown", { ev ->
+    val k = ev as KeyboardEvent
+    if (k.key == "Enter" && !k.shiftKey) { k.preventDefault(); finish(true) }
+    if (k.key == "Escape") { k.preventDefault(); k.stopPropagation(); finish(false) }
+  })
+  input.addEventListener("blur", { _ -> finish(true) })
+  frame.appendChild(input)
+  input.focus()
+  input.select()
 }
 
 /** Select (click selects, the app does not see it) or Interact (the app gets the pointer). */
@@ -1327,6 +1371,7 @@ private fun buildExportOverlay() {
 }
 
 private fun showExport() {
+  flowGraphOverlay.setAttribute("style", "display:none;") // E36: one overlay at a time
   exportPre.textContent = exportKotlin(portalTree.value)
   exportOverlay.removeAttribute("style")
 }
@@ -1414,6 +1459,59 @@ private fun walkFlowFrom(flowName: String, node: String) {
   enableLive()
 }
 
+private var clipboardNode: WidgetNode? = null
+
+/** E36: hide the topmost open layer (modal, inline editor, picker, overlay); false when none is open. */
+private fun closeTopmostLayer(): Boolean {
+  (document.querySelector(".modal-back") as? HTMLElement)?.let { it.remove(); return true }
+  (document.querySelector(".inline-edit") as? HTMLElement)?.let { it.remove(); return true }
+  val pickers = document.querySelectorAll(".token-picker")
+  val open = (0 until pickers.length).mapNotNull { pickers.item(it) as? HTMLElement }.filter { it.firstChild != null }
+  if (open.isNotEmpty()) {
+    open.forEach { Ui.clear(it) }
+    return true
+  }
+  for (o in listOf(flowGraphOverlay, exportOverlay)) {
+    if (o.getAttribute("style") != "display:none;") { o.setAttribute("style", "display:none;"); return true }
+  }
+  return false
+}
+
+/** E21: keyboard editing on the selection (outside text fields). */
+private fun handleEditorKey(e: KeyboardEvent) {
+  val tree = portalTree.value
+  val mod = e.metaKey || e.ctrlKey
+  val sel = selectedId?.let { tree.findNode(it) }
+  fun select(id: Int?) { if (id != null) { selectedId = id; refresh(); revealOnCanvas(id) } }
+  when {
+    e.key == "ArrowDown" || e.key == "ArrowUp" -> {
+      val order = visibleOrder(tree, collapsedRows)
+      val i = order.indexOf(sel?.id ?: -1)
+      select(if (i < 0) order.firstOrNull() else order.getOrNull(if (e.key == "ArrowDown") i + 1 else i - 1) ?: order[i])
+    }
+    e.key == "ArrowLeft" && sel != null ->
+      if (sel.children.isNotEmpty() && sel.id !in collapsedRows) { collapsedRows += sel.id; renderOutline() }
+      else select(parentOf(tree, sel.id)?.id)
+    e.key == "ArrowRight" && sel != null ->
+      if (sel.id in collapsedRows) { collapsedRows -= sel.id; renderOutline() } else select(sel.children.firstOrNull()?.id)
+    (e.key == "Delete" || e.key == "Backspace") && sel != null && sel.id != tree.id -> {
+      val order = visibleOrder(tree, collapsedRows)
+      val next = parentOf(tree, sel.id)?.let { p -> p.children.getOrNull(p.children.indexOf(sel) + 1)?.id ?: p.id }
+      selectedId = next ?: order.firstOrNull()
+      sendOps(listOf(DocOp.DeleteNode(Handle(sel.id.toLong()))))
+    }
+    mod && e.key.lowercase() == "d" && sel != null && sel.id != tree.id -> {
+      val parentId = parentOf(tree, sel.id)?.id ?: return
+      sendOps(listOf(DocOp.InsertNode(Handle(parentId.toLong()), Handle(sel.id.toLong()), deepCopy(sel).toDocNode())))
+    }
+    mod && e.key.lowercase() == "c" && sel != null -> clipboardNode = sel
+    mod && e.key.lowercase() == "v" -> clipboardNode?.let { addToSelectedOrRoot(deepCopy(it)) }
+    (e.key == "Enter" || e.key == "F2") && sel != null -> editTextInline(sel.id)
+    else -> return
+  }
+  e.preventDefault()
+}
+
 private fun installKeyboard() {
   document.addEventListener("keydown", { ev ->
     val e = ev as KeyboardEvent
@@ -1422,12 +1520,15 @@ private fun installKeyboard() {
       ev.preventDefault()
       if (e.shiftKey) redo() else undo()
     }
-    // E34: Escape clears the selection (not while typing in a field).
     val typing = (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea", "select")
-    if (e.key == "Escape" && !typing && selectedId != null) {
-      selectedId = null
-      refresh()
+    if (e.key == "Escape") {
+      // E36: Escape closes the topmost popover/overlay first, then deselects.
+      if (closeTopmostLayer()) { ev.preventDefault(); return@addEventListener }
+      if (!typing && selectedId != null) { selectedId = null; refresh() }
+      return@addEventListener
     }
+    if (typing) return@addEventListener
+    handleEditorKey(e)
   })
 }
 
@@ -1708,13 +1809,28 @@ private fun renderPalette(filter: String) {
   }
 }
 
+private val collapsedRows = mutableSetOf<Int>()
+
+/** Whether [node] can hold children in the editor (a container, an Else, a one-slot component). */
+private fun acceptsChildrenNode(node: WidgetNode): Boolean =
+  widgetSpec(node.type)?.acceptsChildren == true || node.type == ELSE_TYPE || node.type == "Condition" ||
+    node.type == "Repeat" || editorComponents.spec(node.type)?.slots?.size == 1
+
 private fun renderOutline() {
   Ui.clear(outlineEl)
   fun row(node: WidgetNode, depth: Int) {
     val r = Ui.el("div", "tree-row" + if (node.id == selectedId) " selected" else "")
-    r.setAttribute("style", "padding-left:${6 + depth * 14}px;")
+    r.setAttribute("data-id", "${node.id}")
+    r.setAttribute("style", "padding-left:${4 + depth * 14}px;")
+    val twisty = Ui.el("span", "twisty", if (node.children.isEmpty()) "" else if (node.id in collapsedRows) "▸" else "▾")
+    twisty.addEventListener("click", { ev ->
+      ev.stopPropagation()
+      if (!collapsedRows.remove(node.id)) collapsedRows += node.id
+      renderOutline()
+    })
+    r.appendChild(twisty)
     r.appendChild(Ui.el("span", "t", node.type))
-    (tokenValue(node.props["text"]) as? String)?.let { r.appendChild(Ui.el("span", "hint", "“$it”")) }
+    outlineHint(node)?.let { r.appendChild(Ui.el("span", "hint", it)) }
     r.addEventListener("click", { _ ->
       selectedId = node.id
       refresh()
@@ -1722,33 +1838,48 @@ private fun renderOutline() {
     })
     r.setAttribute("draggable", "true")
     r.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}"); ev.stopPropagation() })
-    r.addEventListener("dragover", { ev -> ev.preventDefault(); r.className += " droptarget" })
-    r.addEventListener("dragleave", { _ -> r.className = r.className.replace(" droptarget", "") })
+    // E16/E17: the row's top and bottom quarters drop before/after it; its middle, inside.
+    fun zoneOf(ev: DragEvent): DropZone {
+      val b = r.getBoundingClientRect()
+      return dropZone(ev.clientY - b.top, b.height, acceptsChildrenNode(node))
+    }
+    fun clearMarks() { listOf("drop-before", "drop-after", "droptarget").forEach { r.classList.remove(it) } }
+    r.addEventListener("dragover", { ev ->
+      ev.preventDefault()
+      clearMarks()
+      r.classList.add(when (zoneOf(ev as DragEvent)) { DropZone.Before -> "drop-before"; DropZone.After -> "drop-after"; DropZone.Inside -> "droptarget" })
+    })
+    r.addEventListener("dragleave", { _ -> clearMarks() })
     r.addEventListener("drop", { ev ->
       ev.preventDefault()
-      r.className = r.className.replace(" droptarget", "")
-      handleDrop((ev as DragEvent).dataTransfer?.getData("text"), node.id)
+      clearMarks()
+      val de = ev as DragEvent
+      handleDrop(de.dataTransfer?.getData("text"), node.id, zoneOf(de))
     })
     outlineEl.appendChild(r)
-    node.children.forEach { row(it, depth + 1) }
+    if (node.id !in collapsedRows) node.children.forEach { row(it, depth + 1) }
   }
   row(portalTree.value, 0)
+  // Keep the selected row in view (keyboard navigation, a canvas click).
+  (outlineEl.querySelector(".tree-row.selected") as? HTMLElement)?.let { el ->
+    val box = el.getBoundingClientRect()
+    val pane = (outlineEl.closest(".pane") as? HTMLElement)?.getBoundingClientRect()
+    if (pane != null && (box.top < pane.top || box.bottom > pane.bottom)) el.scrollIntoView(false)
+  }
 }
 
-private fun handleDrop(payload: String?, targetId: Int) {
+private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZone.Inside) {
   if (payload == null) return
-  val targetType = portalTree.value.findNode(targetId)?.type
-  val targetComponent = targetType?.let(editorComponents::spec)
-  if (targetComponent != null && targetComponent.slots.size != 1) return
+  val tree = portalTree.value
+  val place = dropPlace(tree, targetId, zone, ::acceptsChildrenNode) ?: return
+  val parentType = tree.findNode(place.first)?.type
+  val parentComponent = parentType?.let(editorComponents::spec)
+  if (parentComponent != null && parentComponent.slots.size != 1) return
   when {
-    payload.startsWith("new:") -> sendOps(listOf(
-      DocOp.InsertNode(Handle(targetId.toLong()), lastChildHandle(targetId), newNode(payload.removePrefix("new:")).toDocNode()),
-    ))
+    payload.startsWith("new:") -> sendOps(listOf(insertOp(place, newNode(payload.removePrefix("new:")).toDocNode())))
     payload.startsWith("move:") -> {
       val id = payload.removePrefix("move:").toIntOrNull() ?: return
-      sendOps(listOf(
-        DocOp.MoveNode(Handle(id.toLong()), Handle(targetId.toLong()), lastChildHandle(targetId, excludeId = id)),
-      ))
+      moveOp(tree, id, place)?.let { sendOps(listOf(it)) }
     }
   }
 }
@@ -1968,7 +2099,7 @@ private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKin
  */
 private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
   val wrap = Ui.el("div")
-  val picker = Ui.el("div")
+  val picker = Ui.el("div", "token-picker")
   wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker))
   wrap.appendChild(picker)
   return wrap
