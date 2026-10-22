@@ -17,4 +17,12 @@ class EditorCanvasTest {
     assertEquals(0.25, fitZoom(390, 780, 10.0, 10.0), "never below the minimum")
     assertEquals(1.0, fitZoom(0, 780, 100.0, 100.0), "a degenerate frame keeps 100%")
   }
+
+  @Test fun aPresetIsTwoPositiveSizesOrNothing() {
+    assertEquals(390 to 780, parsePreset("390x780"))
+    assertEquals(null, parsePreset("390x"))
+    assertEquals(null, parsePreset("0x780"))
+    assertEquals(null, parsePreset("390x780x2"))
+    assertEquals(null, parsePreset("wide"))
+  }
 }

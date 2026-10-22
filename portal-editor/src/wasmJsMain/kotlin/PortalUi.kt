@@ -92,6 +92,21 @@ internal object Ui {
     .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--good); display: inline-block; }
     .dot.saving { background: var(--warn); }
     .dot.error { background: var(--danger); }
+    .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 60; display: flex;
+      align-items: center; justify-content: center; }
+    .modal { width: 420px; max-width: calc(100vw - 40px); background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 10px; }
+    .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+    .topbar { overflow: hidden; }
+    .topbar .select { min-width: 0; }
+    @media (max-width: 1400px) {
+      .topbar { gap: 6px; padding: 0 8px; }
+      .topbar .brand { display: none; }
+      .topbar .select { max-width: 132px; }
+      .topbar .btn { padding: 5px 7px; }
+      .topbar .pill { padding: 2px 6px; }
+    }
     .state-scenarios { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px; }
     .chip { background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 99px;
       padding: 2px 10px; cursor: pointer; font: inherit; }
