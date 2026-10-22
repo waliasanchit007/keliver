@@ -100,6 +100,7 @@ final object dev.keliver.material.composeui/SelectionRegistry { // dev.keliver.m
 
     final fun clear() // dev.keliver.material.composeui/SelectionRegistry.clear|clear(){}[0]
     final fun hitTest(kotlin/Float, kotlin/Float): kotlin/Int? // dev.keliver.material.composeui/SelectionRegistry.hitTest|hitTest(kotlin.Float;kotlin.Float){}[0]
+    final fun hitTest(kotlin/Float, kotlin/Float, kotlin/Function1<kotlin/Int, kotlin/Boolean>): kotlin/Int? // dev.keliver.material.composeui/SelectionRegistry.hitTest|hitTest(kotlin.Float;kotlin.Float;kotlin.Function1<kotlin.Int,kotlin.Boolean>){}[0]
     final fun rectsOf(kotlin/Int): kotlin.collections/List<androidx.compose.ui.geometry/Rect> // dev.keliver.material.composeui/SelectionRegistry.rectsOf|rectsOf(kotlin.Int){}[0]
     final fun remove(kotlin/Any) // dev.keliver.material.composeui/SelectionRegistry.remove|remove(kotlin.Any){}[0]
     final fun report(kotlin/Int, androidx.compose.ui.geometry/Rect) // dev.keliver.material.composeui/SelectionRegistry.report|report(kotlin.Int;androidx.compose.ui.geometry.Rect){}[0]

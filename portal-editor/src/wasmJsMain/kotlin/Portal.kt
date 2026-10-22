@@ -987,8 +987,9 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     // The frame may be zoomed (a CSS scale): the host's client rect is scaled, compose px are not.
     val x = ((clientX - r.left) / canvasZoom * dpr).toFloat()
     val y = ((clientY - r.top) / canvasZoom * dpr).toFloat()
-    val h = dev.keliver.material.composeui.SelectionRegistry.hitTest(x, y) ?: return null
-    return if (portalTree.value.findNode(h) != null) h else null // ignore stale handles
+    // E47: a stale rect (a node no longer in the tree) is passed over for the next one under the click.
+    val tree = portalTree.value
+    return dev.keliver.material.composeui.SelectionRegistry.hitTest(x, y) { tree.findNode(it) != null }
   }
 
   var downX = 0.0

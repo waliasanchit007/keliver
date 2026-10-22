@@ -86,6 +86,8 @@ class SelectionRegistryTest {
   @Test fun theInnermostWidgetWinsAndTheLegacyReportStillWorks() {
     SelectionRegistry.report(1, Rect(0f, 0f, 100f, 100f))
     SelectionRegistry.report(2, Rect(10f, 10f, 20f, 20f))
+    // E47: a handle the caller no longer has is passed over, not a dead zone.
+    assertEquals(1, SelectionRegistry.hitTest(15f, 15f) { it != 2 })
     assertEquals(2, SelectionRegistry.hitTest(15f, 15f))
     assertEquals(1, SelectionRegistry.hitTest(50f, 50f))
     SelectionRegistry.report(2, Rect(30f, 30f, 40f, 40f))

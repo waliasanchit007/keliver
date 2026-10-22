@@ -75,9 +75,15 @@ public object SelectionRegistry {
     reportersOf[handle].orEmpty().mapNotNull { parts[it]?.rect }.filter { !it.isEmpty }
 
   /** The innermost (smallest-area) tagged widget containing the point, or null. */
-  public fun hitTest(x: Float, y: Float): Int? =
+  public fun hitTest(x: Float, y: Float): Int? = hitTest(x, y) { true }
+
+  /**
+   * The innermost handle at ([x], [y]) that [accept]s — a rect whose handle the caller no longer
+   * has (a deleted node, a previous screen's) is passed over for the next one, not a dead zone.
+   */
+  public fun hitTest(x: Float, y: Float, accept: (Int) -> Boolean): Int? =
     parts.values
-      .filter { p -> !p.visible.isEmpty && p.visible.contains(x, y) }
+      .filter { p -> !p.visible.isEmpty && p.visible.contains(x, y) && accept(p.handle) }
       .minByOrNull { p -> p.rect.width * p.rect.height }
       ?.handle
 
