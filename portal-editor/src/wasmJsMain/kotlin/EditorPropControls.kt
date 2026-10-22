@@ -5,9 +5,11 @@
  */
 import dev.keliver.portal.PropChoice
 import kotlinx.browser.document
+import kotlinx.browser.window
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
+import org.w3c.dom.HTMLTextAreaElement
 import org.w3c.dom.events.KeyboardEvent
 
 /**
@@ -144,16 +146,22 @@ internal fun colorControl(argb: Int, onCommit: (Int) -> Unit): HTMLElement {
     onCommit(v)
   }
   picker.addEventListener("change", { _ -> picker.value.removePrefix("#").toIntOrNull(16)?.let { commit(withRgb(current, it)) } })
-  hex.addEventListener("change", { _ ->
+  fun commitHex() {
+    clearPending(hex)
     val v = parseArgbHex(hex.value, current)
     if (v == null) markInvalid(hex, "Not a colour: type #AARRGGBB, #RRGGBB or #RGB", err) else commit(v)
-  })
-  commitKeys(hex) { show(current) }
-  alpha.addEventListener("change", { _ ->
+  }
+  hex.addEventListener("input", { _ -> markPending(hex, ::commitHex) })
+  hex.addEventListener("change", { _ -> commitHex() })
+  commitKeys(hex) { clearPending(hex); show(current) }
+  fun commitAlpha() {
+    clearPending(alpha)
     val p = alpha.value.trim().toIntOrNull()
     if (p == null || p !in 0..100) markInvalid(alpha, "Opacity is a whole percent from 0 to 100", err) else commit(withOpacity(current, p))
-  })
-  commitKeys(alpha) { show(current) }
+  }
+  alpha.addEventListener("input", { _ -> markPending(alpha, ::commitAlpha) })
+  alpha.addEventListener("change", { _ -> commitAlpha() })
+  commitKeys(alpha) { clearPending(alpha); show(current) }
   box.appendChild(swatchWrap)
   box.appendChild(hex)
   box.appendChild(alpha)
@@ -210,4 +218,94 @@ internal fun markInvalid(input: HTMLElement, why: String?, message: HTMLElement)
     message.setAttribute("data-for", fieldKey(input))
     message.textContent = why
   }
+}
+
+/**
+ * One property row. The label and the row's action buttons (◆ @ {} detach)
+ * share the first line; the control takes the panel's full width on the line
+ * below, so a narrow panel never squeezes it. A [Layout.Compact] row (a
+ * number, a dropdown) sits on one line — label, control, actions — when the
+ * panel is wide enough (a CSS container query on the right pane); an
+ * [Layout.Inline] row (a checkbox) always does.
+ */
+internal class PropRow(label: String, layout: Layout = Layout.Stacked) {
+  enum class Layout(val css: String) { Stacked("prop"), Compact("prop compact"), Inline("prop inline") }
+
+  val root: HTMLElement = Ui.el("div", layout.css)
+  private val ctl = Ui.el("div", "prop-ctl")
+  private val actions = Ui.el("div", "prop-actions")
+
+  init {
+    val lab = Ui.el("label", "prop-label", label)
+    lab.setAttribute("title", label)
+    root.appendChild(lab)
+    root.appendChild(ctl)
+    root.appendChild(actions)
+  }
+
+  fun control(e: HTMLElement): PropRow = apply { ctl.appendChild(e) }
+
+  fun action(e: HTMLElement?): PropRow = apply { if (e != null) actions.appendChild(e) }
+}
+
+/** The field holding a typed edit not yet committed, and how to commit it. */
+private var pendingField: Pair<HTMLElement, () -> Unit>? = null
+
+/**
+ * Commits the typed edit still in a field, if any. The properties panel calls
+ * it before it re-renders: a field removed while focused never fires `change`
+ * or `blur`, so its edit would otherwise be lost.
+ */
+internal fun flushPendingField() {
+  val p = pendingField ?: return
+  pendingField = null
+  p.second()
+}
+
+internal fun markPending(field: HTMLElement, commit: () -> Unit) { pendingField = field to commit }
+
+internal fun clearPending(field: HTMLElement) { if (pendingField?.first == field) pendingField = null }
+
+/** Grows [area] to its content (up to [maxPx]); a textarea needs to be in the document to be measured. */
+internal fun fitToContent(area: HTMLTextAreaElement, maxPx: Int = 240) {
+  area.style.height = "auto"
+  val h = area.scrollHeight
+  if (h > 0) area.style.height = "${minOf(h + 2, maxPx)}px"
+}
+
+/**
+ * E9/E11: a text prop's field — full width, multi-line, growing with its text.
+ * Typing [onPreview]s each keystroke (the canvas follows; nothing is written);
+ * the edit is committed once — [onCommit] — on Enter or leaving the field, so
+ * one edit is one write and one undo step. Shift+Enter types a line break;
+ * Escape puts the committed text back.
+ */
+internal fun textField(value: String, onPreview: (String) -> Unit = {}, onCommit: (String) -> Unit): HTMLTextAreaElement {
+  var committed = value
+  val area = Ui.textarea("input grow")
+  area.rows = 1
+  area.value = value
+  area.setAttribute("spellcheck", "false")
+  area.setAttribute("title", "Enter to apply · Shift+Enter for a new line · Esc to cancel")
+  fun commit() {
+    clearPending(area)
+    if (area.value == committed) return
+    committed = area.value
+    onCommit(committed)
+  }
+  area.addEventListener("input", { _ ->
+    fitToContent(area)
+    onPreview(area.value)
+    markPending(area, ::commit)
+  })
+  area.addEventListener("change", { _ -> commit() })
+  area.addEventListener("focus", { _ -> fitToContent(area) })
+  commitKeys(area, newlineOnShiftEnter = true) {
+    clearPending(area)
+    area.value = committed
+    onPreview(committed)
+    fitToContent(area)
+  }
+  window.requestAnimationFrame { fitToContent(area) }
+  return area
 }

@@ -6,6 +6,8 @@ import dev.keliver.portal.widgetSpecs
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
+import dev.keliver.portal.document.PropValue
+import dev.keliver.portal.document.lit
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import org.w3c.dom.events.KeyboardEventInit
@@ -135,5 +137,72 @@ class EditorPropControlsTest {
       "events":[],"defaults":{},"body":null,"transparent":false,"dependencies":[]}]""",
     )
     assertEquals(listOf(PropKind.Color, PropKind.Int), reg.spec("Tag")!!.props.map { it.kind })
+  }
+
+  private fun key(k: String, shift: Boolean = false) = KeyboardEvent("keydown", KeyboardEventInit(key = k, shiftKey = shift, bubbles = true, cancelable = true))
+
+  @Test fun aTextFieldPreviewsEachKeystrokeButWritesOncePerCommit() {
+    val previews = mutableListOf<String>()
+    val commits = mutableListOf<String>()
+    val area = textField("Monthly", onPreview = { previews += it }, onCommit = { commits += it })
+    for (typed in listOf("M", "Mo", "Mon")) {
+      area.value = typed
+      area.dispatchEvent(Event("input"))
+    }
+    assertEquals(listOf("M", "Mo", "Mon"), previews)
+    assertTrue(commits.isEmpty()) // nothing written while typing
+    area.dispatchEvent(Event("change")) // leaving the field
+    assertEquals(listOf("Mon"), commits)
+    area.dispatchEvent(Event("change"))
+    assertEquals(listOf("Mon"), commits) // an unchanged field writes nothing
+
+    // Escape puts the committed text back on the field and the canvas.
+    area.value = "Monday"
+    area.dispatchEvent(Event("input"))
+    area.dispatchEvent(key("Escape"))
+    assertEquals("Mon", area.value)
+    assertEquals("Mon", previews.last())
+    assertEquals(listOf("Mon"), commits)
+  }
+
+  @Test fun aShiftEnterIsALineBreakAndAPlainEnterIsTheFieldsCommit() {
+    val area = textField("a") {}
+    val shift = key("Enter", shift = true)
+    area.dispatchEvent(shift)
+    assertTrue(!shift.defaultPrevented) // the browser types the line break
+    val enter = key("Enter")
+    area.dispatchEvent(enter)
+    assertTrue(enter.defaultPrevented)
+  }
+
+  @Test fun aFieldRemovedWhileFocusedStillCommitsItsTypedEdit() {
+    val commits = mutableListOf<String>()
+    val area = textField("a", onPreview = {}, onCommit = { commits += it })
+    area.value = "abc"
+    area.dispatchEvent(Event("input"))
+    flushPendingField() // what the panel does before it re-renders
+    assertEquals(listOf("abc"), commits)
+    flushPendingField()
+    assertEquals(listOf("abc"), commits) // once
+  }
+
+  /** E48: {} starts the template from the field's text when pressed, not the text it was rendered with. */
+  @Test fun aTemplateStartsFromTheTypedText() {
+    val area = textField("Plan") {}
+    area.value = "Plan ahead"
+    area.dispatchEvent(Event("input"))
+    assertEquals(
+      PropValue.Template(listOf(lit("Plan ahead"), PropValue.Bind("text"))),
+      startTemplate(area.value, "text"),
+    )
+    assertEquals(PropValue.Template(listOf(PropValue.Bind("text"))), startTemplate("", "text"))
+  }
+
+  @Test fun aRowPutsItsLabelAndActionsOnOneLineAndItsControlUnder() {
+    val row = PropRow("Text").control(Ui.textarea()).action(Ui.button("@") {}).action(null)
+    assertEquals(listOf("prop-label", "prop-ctl", "prop-actions"), (0 until row.root.children.length).map { row.root.children.item(it)!!.className })
+    assertEquals("prop", row.root.className)
+    assertEquals(1, row.root.querySelectorAll(".prop-actions button").length)
+    assertEquals("prop compact", PropRow("Width", PropRow.Layout.Compact).root.className)
   }
 }

@@ -90,10 +90,21 @@ internal object Ui {
       text-overflow: ellipsis; white-space: nowrap; }
     .row .input, .row .select { flex: 1; min-width: 0; }
     textarea.input { resize: vertical; line-height: 1.35; }
-    .prop-stack { margin: 6px 0 8px; }
-    .prop-stack > .row.prop-head { margin: 0 0 3px; }
-    .row.prop-head label { flex: 1; width: auto; }
-    .prop-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .pane.right { container-type: inline-size; }
+    .prop { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "label actions" "ctl ctl";
+      align-items: center; column-gap: 6px; row-gap: 3px; margin: 7px 0; min-height: 24px; }
+    .prop > .prop-label { grid-area: label; color: var(--muted); min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .prop > .prop-ctl { grid-area: ctl; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .prop > .prop-actions { grid-area: actions; display: flex; align-items: center; gap: 2px; }
+    .prop-ctl > .input, .prop-ctl > .select, .prop-ctl > .pill, .prop-ctl > .row { flex: 1; min-width: 0; width: 100%; }
+    .prop-ctl > .row { margin: 0; }
+    .prop-actions .btn.icon { min-width: 24px; height: 24px; padding: 0 5px; font-size: 12px; line-height: 1; }
+    .prop.inline { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
+    @container (min-width: 250px) {
+      .prop.compact { grid-template-columns: clamp(84px, 38%, 150px) minmax(0, 1fr) auto; grid-template-areas: "label ctl actions"; }
+    }
+    textarea.input.grow { resize: vertical; overflow-y: auto; min-height: 30px; max-height: 240px; white-space: pre-wrap; }
     .ctl-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .color-ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
     .swatch { display: inline-block; flex-shrink: 0; border-radius: 4px; border: 1px solid var(--border); box-sizing: border-box; }
