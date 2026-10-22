@@ -115,6 +115,9 @@ internal object Ui {
     .color-ctl .input.hex { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
     .color-ctl .input.alpha { width: 46px; flex: 0 0 46px; padding: 5px 4px; }
     .color-ctl .unit { margin-left: -2px; }
+    .event-ctl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .event-ctl .select, .event-ctl .input { width: 100%; }
+    .event-ctl .input[hidden] { display: none; }
     .cond-editor { display: flex; gap: 4px; flex: 1; min-width: 0; flex-wrap: wrap; }
     .cond-editor .select { flex: 1 1 90px; min-width: 0; }
     .pill.bound { border-color: var(--accent); color: var(--accent); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }

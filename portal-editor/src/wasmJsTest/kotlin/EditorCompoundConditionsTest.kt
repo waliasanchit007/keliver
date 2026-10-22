@@ -55,9 +55,11 @@ class EditorCompoundConditionsTest {
     // A conditional event too.
     val events = mutableListOf<DocOp>()
     val ev = conditionalEventRow(5, "onClick", Conditional(compound, Action("tap"), null)) { op, _, _ -> events += op }
-    val evInputs = ev.querySelectorAll("input")
-    assertEquals(2, evInputs.length)
-    (evInputs.item(0) as HTMLInputElement).let { it.value = "go"; it.dispatchEvent(Event("input")); it.dispatchEvent(Event("change")) /* E11: committed */ }
+    val evSelects = ev.querySelectorAll("select[aria-label$=action]")
+    assertEquals(2, evSelects.length) // E28: each branch's action from the contract's list
+    openContract = { dev.keliver.portal.document.Contract(actions = listOf("tap", "go")) }
+    val ev2 = conditionalEventRow(5, "onClick", Conditional(compound, Action("tap"), null)) { op, _, _ -> events += op }
+    (ev2.querySelector("select[aria-label$=action]") as org.w3c.dom.HTMLSelectElement).let { it.value = "go"; it.dispatchEvent(Event("change")) }
     assertEquals(PropValue.Action("go"), ((events.single() as DocOp.SetProp).value as PropValue.Conditional).whenTrue)
     assertEquals("or", ((events.single() as DocOp.SetProp).value as PropValue.Conditional).join)
   }
