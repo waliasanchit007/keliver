@@ -83,6 +83,10 @@ internal fun screenScrollsItself(
   return n.children.any { screenScrollsItself(it, seen) }
 }
 
+/** The selectable handle of a component instance being expanded on the canvas (see installComponentPreview). */
+internal fun instanceHandle(node: dev.keliver.portal.WidgetNode): Int =
+  (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
+
 internal fun selectionTagged(n: dev.keliver.portal.WidgetNode): dev.keliver.portal.WidgetNode {
   val tagged = if (n.type in UNRENDERED_TYPES) n
   else n.copy(props = n.props + ("mod.SelectionTag.handle" to n.id))
@@ -121,11 +125,16 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
     // compiled: the canvas keeps its placeholder rather than risk recursing.
     val registry = editorComponents
     val compiled = adapters.filterKeys { name -> registry.spec(name)?.onDependencyCycle != true }
+    // The handle the canvas selects for this instance: the one it was tagged
+    // with (its screen handle, or, nested inside another component's
+    // definition, the outer instance's). [node.id] is only right at screen
+    // level: inside a definition it is the definition's own id, which can
+    // equal an unrelated screen node's handle.
+    val handle = instanceHandle(node)
     when (val e = dev.keliver.portal.expandForPreview(node, registry, compiled.keys)) {
-      is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, node.id), scope)
+      is dev.keliver.portal.Expansion.Transparent -> RenderNode(tagWith(e.tree, handle), scope)
       is dev.keliver.portal.Expansion.Opaque -> {
         val adapter = compiled[e.name]
-        val handle = (node.props["mod.SelectionTag.handle"] as? Int) ?: node.id
         if (adapter == null) {
           RenderNode(tagWith(dev.keliver.portal.placeholder(e.name, e.reason), handle), scope)
         } else {
@@ -136,7 +145,7 @@ internal fun installComponentPreview(entry: AppPreviewEntry?) {
           }
         }
       }
-      is dev.keliver.portal.Expansion.Cycle -> RenderNode(tagWith(dev.keliver.portal.cycleChip(e.path), node.id), scope)
+      is dev.keliver.portal.Expansion.Cycle -> RenderNode(tagWith(dev.keliver.portal.cycleChip(e.path), handle), scope)
     }
   }
 }
