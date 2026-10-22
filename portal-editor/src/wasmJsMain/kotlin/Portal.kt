@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
 import dev.keliver.portal.Action
 import dev.keliver.portal.Bind
+import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.condOf
 import dev.keliver.portal.ELSE_TYPE
@@ -717,6 +718,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
 // Chrome
 
 internal fun mountPortalChrome() {
+  openContract = { docContract } // E27: conditional values pick their field from it
   Ui.installStylesheet()
   if (evidenceMode()) installEvidenceStylesheet()
   buildTopbar()
@@ -2412,8 +2414,21 @@ private fun renderProps() {
     })
     propsEl.appendChild(Ui.el("div", "muted", "an equality or compound condition is edited in code"))
   }
-  val specs = if (readOnlyCond != null) emptyList() else comp?.props ?: editableProps(node.type)
-  if (specs.isEmpty() && readOnlyCond == null) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
+  // E27: a Condition reads "Show when [field] [is true]": both chosen from lists, no free text.
+  if (node.type == "Condition" && readOnlyCond == null) {
+    val c = condOf(node)
+    val slot = Ui.el("div", "token-picker")
+    propsEl.appendChild(
+      PropRow("Show when").control(
+        conditionEditor(docContract, c?.field ?: "", c?.test ?: CondTest.Bool, c?.negate ?: false, newFieldSlot = slot) { f, t, n ->
+          sendOps(conditionOps(node.id, c, f, t, n))
+        },
+      ).root,
+    )
+    propsEl.appendChild(slot)
+  }
+  val specs = if (readOnlyCond != null || node.type == "Condition") emptyList() else comp?.props ?: editableProps(node.type)
+  if (specs.isEmpty() && readOnlyCond == null && node.type != "Condition") propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
     propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = s.choices))
   }
@@ -2459,6 +2474,16 @@ private fun renderProps() {
       rowEl.appendChild(argIn)
       propsEl.appendChild(rowEl)
     }
+  }
+}
+
+/** E27: the ops turning Condition [id]'s [cur] condition into `field`/`test`/`negate` — only what changed. */
+private fun conditionOps(id: Int, cur: dev.keliver.portal.Cond?, field: String, test: CondTest, negate: Boolean): List<DocOp> {
+  val h = Handle(id.toLong())
+  return buildList {
+    if (cur?.field != field) add(DocOp.SetProp(h, "field", lit(field)))
+    if (cur?.test != test) add(DocOp.SetProp(h, "test", lit(test.wire ?: "")))
+    if ((cur?.negate ?: false) != negate) add(DocOp.SetProp(h, "negate", lit(negate)))
   }
 }
 
@@ -2972,6 +2997,12 @@ private fun renderMods() {
   val node = selectedId?.let { portalTree.value.findNode(it) }
   if (node == null) {
     modsEl.appendChild(Ui.el("div", "muted", "—"))
+    return
+  }
+
+  // E27: a logic node (an `if`, an else branch, a Repeat) draws nothing — a modifier has nothing to apply to.
+  if (node.type == "Condition" || node.type == ELSE_TYPE || node.type == "Repeat") {
+    modsEl.appendChild(Ui.el("div", "muted", "${if (node.type == "Repeat") "A Repeat" else "A condition"} draws nothing itself: put modifiers on the widgets inside it."))
     return
   }
 
