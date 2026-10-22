@@ -202,21 +202,28 @@ export class Editor {
   /** The properties field labelled [label] (its value and centre), or null. */
   async propField(label) {
     return this.page.eval(`(() => {
-      const row = [...document.querySelectorAll('.pane.right .row')].find(r => r.querySelector('label')?.textContent === ${JSON.stringify(label)});
-      const f = row?.querySelector('textarea, input');
+      // A property row (.prop: label, control, actions) or an older label-and-field .row.
+      const rows = [...document.querySelectorAll('.pane.right .prop, .pane.right .row')];
+      const row = rows.find(r => r.querySelector('.prop-label, label')?.textContent === ${JSON.stringify(label)});
+      const f = row?.querySelector('textarea, input:not([type=color]):not([hidden])');
       if (!f) return null;
       const b = f.getBoundingClientRect();
       return { value: f.value, x: b.x + Math.min(b.width / 2, 40), y: b.y + b.height / 2, tag: f.tagName };
     })()`);
   }
 
-  /** Real-clicks into the field labelled [label], moves the caret to its end and types [text]. */
-  async appendToField(label, text) {
+  /**
+   * Real-clicks into the field labelled [label], moves the caret to its end and types [text].
+   * A typed edit is written when it is committed (E11): pass `{ commit: true }` to press Enter
+   * after typing; without it the field keeps the uncommitted text and focus.
+   */
+  async appendToField(label, text, { commit = false } = {}) {
     const f = await this.propField(label);
     if (!f) throw new Error(`no properties field labelled ${label}`);
     await this.page.click(f.x, f.y);
     await this.page.caretToEnd();
     await this.page.type(text);
+    if (commit) await this.page.press('Enter');
     return f.value;
   }
 

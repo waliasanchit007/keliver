@@ -133,7 +133,7 @@ export default [
       const field = await editor.propField('Label');
       ok(field, 'the properties panel has a Label field for ActionCard');
       equal(field.value, 'Restock the kit', "the Label field shows the instance's argument");
-      await editor.appendToField('Label', '!');
+      await editor.appendToField('Label', '!', { commit: true });
       const edited = await waitForFile(file, (t) => t !== original, { message: 'the edit was never written to overview.kt' });
       const changes = changedSources(before, snapshot(fixtureDir));
       equal(changes, [{ file: 'src/screens/overview.kt', lines: { at: changes[0]?.lines.at,
