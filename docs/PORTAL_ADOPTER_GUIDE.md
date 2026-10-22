@@ -195,8 +195,9 @@ undo gives the file back byte for byte.
 - **☝ Interact**: clicks, typing and scrolling go to the app, as on a device.
 - The wheel scrolls a screen taller than the frame, and a horizontal wheel or
   drag scrolls a carousel.
-- **− / + / Fit** zoom the frame. The device preset beside them sets its size,
-  and **⟲** rotates it.
+- **− / + / Fit** zoom the frame, as do ⌘/Ctrl + wheel, a trackpad pinch,
+  ⌘= / ⌘−, ⇧1 (fit) and ⇧0 (100%). The device preset beside them sets the
+  frame's size, and **⟲** rotates it.
 - Double-click a text to edit it in place.
 
 **Components.** Double-click an instance, press Enter on it, or use **Edit

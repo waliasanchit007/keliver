@@ -1,5 +1,6 @@
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /** Canvas zoom steps and fit-to-window. */
 class EditorCanvasTest {
@@ -29,5 +30,21 @@ class EditorCanvasTest {
   @Test fun theOverlayTagNamesTheBoxAndOnTheSelectionItsSize() {
     assertEquals("Column", overlayLabel("Column", component = false, size = null))
     assertEquals("StatTile · component  120×48", overlayLabel("StatTile", component = true, size = 119.6 to 48.2))
+  }
+
+  @Test fun aPinchOrModifiedWheelZoomsSmoothlyWithinTheRange() {
+    assertTrue(wheelZoom(1.0, -10.0) > 1.0, "a wheel up (pinch out) zooms in")
+    assertTrue(wheelZoom(1.0, 10.0) < 1.0)
+    assertEquals(ZOOM_MAX, wheelZoom(1.9, -1000.0))
+    assertEquals(ZOOM_MIN, wheelZoom(0.3, 1000.0))
+  }
+
+  @Test fun zoomShortcutsStepFitAndReset() {
+    val fit = { 0.8 }
+    assertEquals(nextZoom(1.0, up = true), zoomForKeys("Equal", "=", mod = true, shift = false, current = 1.0, fit = fit))
+    assertEquals(nextZoom(1.0, up = false), zoomForKeys("Minus", "-", mod = true, shift = false, current = 1.0, fit = fit))
+    assertEquals(0.8, zoomForKeys("Digit1", "!", mod = false, shift = true, current = 1.0, fit = fit))
+    assertEquals(1.0, zoomForKeys("Digit0", ")", mod = false, shift = true, current = 0.5, fit = fit))
+    assertEquals(null, zoomForKeys("KeyD", "d", mod = true, shift = false, current = 1.0, fit = fit), "⌘D is not a zoom")
   }
 }

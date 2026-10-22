@@ -1896,6 +1896,7 @@ private fun installKeyboard() {
       return@addEventListener
     }
     if (typing) return@addEventListener
+    if (handleZoomKeys(e)) return@addEventListener
     handleEditorKey(e)
   })
 }
