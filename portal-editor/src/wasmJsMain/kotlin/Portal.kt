@@ -461,6 +461,13 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       docVersion = doc.version
       portalTree.value = doc.toWidgetTree(handleIds = true)
+      // E15: select what was just inserted (its handle is the relay's to assign).
+      pendingInsertPlace?.let { (parent, after) ->
+        pendingInsertPlace = null
+        val siblings = portalTree.value.findNode(parent)?.children.orEmpty()
+        val i = if (after == null) 0 else siblings.indexOfFirst { it.id == after } + 1
+        siblings.getOrNull(i)?.let { selectedId = it.id }
+      }
       if (LiveEngine.isRunning) LiveEngine.prepare(collectPreviewBindingKeys(portalTree.value))
       Snapshot.sendApplyNotifications()
       if (refreshPanels) refresh()
@@ -631,6 +638,7 @@ private fun addToSelectedOrRoot(node: WidgetNode) {
       ?: return
     else -> (portalTree.value.children.firstOrNull()?.id ?: portalTree.value.id).let { it to lastChildHandle(it)?.v?.toInt() }
   }
+  pendingInsertPlace = place
   sendOps(listOf(insertOp(place, node.toDocNode())))
 }
 
@@ -986,6 +994,60 @@ private fun installClickToSelect(frame: HTMLElement, host: HTMLElement) {
     if (h == null || h == selectedId) hideOverlay(hoverOverlay) else positionOverlay(hoverOverlay, h)
   })
   host.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
+
+  // E15: drop a palette item (or an outline row) onto the canvas: before/after
+  // the node under the pointer, or inside it when it is a container and the
+  // pointer is in its middle. An insertion line (or the container's box) shows
+  // where it will land.
+  val dropLine = Ui.el("div", "drop-line")
+  dropLine.style.display = "none"
+  frame.appendChild(dropLine)
+  fun canvasDrop(ev: org.w3c.dom.events.Event): Pair<Int, DropZone>? {
+    val me = ev as org.w3c.dom.events.MouseEvent
+    val h = hitAt(me.clientX.toDouble(), me.clientY.toDouble()) ?: portalTree.value.id
+    val node = portalTree.value.findNode(h) ?: return null
+    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[h] ?: return h to DropZone.Inside
+    val dpr = kotlinx.browser.window.devicePixelRatio
+    val hr = host.getBoundingClientRect()
+    val y = (me.clientY - hr.top) / canvasZoom * dpr
+    val zone = if (h == portalTree.value.id) DropZone.Inside
+      else dropZone(y - rect.top, rect.height.toDouble(), acceptsChildrenNode(node))
+    return h to zone
+  }
+  fun showDropMark(h: Int, zone: DropZone) {
+    val rect = dev.keliver.material.composeui.SelectionRegistry.bounds[h] ?: run { dropLine.style.display = "none"; return }
+    val dpr = kotlinx.browser.window.devicePixelRatio
+    dropLine.style.display = "block"
+    dropLine.style.left = "${rect.left / dpr}px"
+    dropLine.style.width = "${rect.width / dpr}px"
+    when (zone) {
+      DropZone.Inside -> {
+        dropLine.className = "drop-line inside"
+        dropLine.style.top = "${rect.top / dpr}px"
+        dropLine.style.height = "${rect.height / dpr}px"
+      }
+      else -> {
+        dropLine.className = "drop-line"
+        dropLine.style.top = "${(if (zone == DropZone.Before) rect.top else rect.bottom) / dpr - 1}px"
+        dropLine.style.height = "3px"
+      }
+    }
+  }
+  frame.addEventListener("dragover", { ev ->
+    ev.preventDefault()
+    val (h, zone) = canvasDrop(ev) ?: return@addEventListener
+    showDropMark(h, zone)
+  }, true)
+  frame.addEventListener("dragleave", { ev ->
+    if ((ev as org.w3c.dom.events.MouseEvent).relatedTarget == null) dropLine.style.display = "none"
+  }, true)
+  frame.addEventListener("drop", { ev ->
+    ev.preventDefault()
+    ev.stopPropagation()
+    dropLine.style.display = "none"
+    val (h, zone) = canvasDrop(ev) ?: return@addEventListener
+    handleDrop((ev as DragEvent).dataTransfer?.getData("text"), h, zone)
+  }, true)
 
   // Rects move under layout/scroll; a light tick keeps the selection box glued.
   kotlinx.browser.window.setInterval({
@@ -1841,6 +1903,9 @@ private fun renderPalette(filter: String) {
 
 private val collapsedRows = mutableSetOf<Int>()
 
+/** E15: where the last insert went (parent, the sibling it follows), to select it once the document reloads. */
+private var pendingInsertPlace: Pair<Int, Int?>? = null
+
 /** Whether [node] can hold children in the editor (a container, an Else, a one-slot component). */
 private fun acceptsChildrenNode(node: WidgetNode): Boolean =
   widgetSpec(node.type)?.acceptsChildren == true || node.type == ELSE_TYPE || node.type == "Condition" ||
@@ -1906,7 +1971,10 @@ private fun handleDrop(payload: String?, targetId: Int, zone: DropZone = DropZon
   val parentComponent = parentType?.let(editorComponents::spec)
   if (parentComponent != null && parentComponent.slots.size != 1) return
   when {
-    payload.startsWith("new:") -> sendOps(listOf(insertOp(place, newNode(payload.removePrefix("new:")).toDocNode())))
+    payload.startsWith("new:") -> {
+      pendingInsertPlace = place
+      sendOps(listOf(insertOp(place, newNode(payload.removePrefix("new:")).toDocNode())))
+    }
     payload.startsWith("move:") -> {
       val id = payload.removePrefix("move:").toIntOrNull() ?: return
       moveOp(tree, id, place)?.let { sendOps(listOf(it)) }
