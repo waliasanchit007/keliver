@@ -2287,6 +2287,9 @@ private fun renderOutline() {
       refresh()
       revealOnCanvas(node.id)
     })
+    // Hovering a row outlines its node on the canvas, as hovering the canvas does.
+    r.addEventListener("mouseenter", { _ -> if (selectMode && node.id != selectedId) positionOverlay(hoverOverlay, node.id) })
+    r.addEventListener("mouseleave", { _ -> hideOverlay(hoverOverlay) })
     r.setAttribute("draggable", "true")
     r.addEventListener("dragstart", { ev -> (ev as DragEvent).dataTransfer?.setData("text", "move:${node.id}"); ev.stopPropagation() })
     // E16/E17: the row's top and bottom quarters drop before/after it; its middle, inside.
