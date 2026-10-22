@@ -92,6 +92,14 @@ internal object Ui {
     .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--good); display: inline-block; }
     .dot.saving { background: var(--warn); }
     .dot.error { background: var(--danger); }
+    .state-scenarios { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px; }
+    .chip { background: var(--bg); color: var(--muted); border: 1px solid var(--border); border-radius: 99px;
+      padding: 2px 10px; cursor: pointer; font: inherit; }
+    .chip:hover { color: var(--text); border-color: var(--accent); }
+    .chip.on { color: #fff; background: var(--accent2); border-color: var(--accent2); }
+    .state-group { font-size: 11px; color: var(--muted); margin: 8px 0 2px; text-transform: uppercase; letter-spacing: .5px; cursor: default; }
+    .input.invalid { border-color: var(--danger); }
+    .btn.mini { padding: 1px 6px; font-size: 11px; }
     .mod-chip { display: flex; flex-direction: column; gap: 2px; background: var(--bg);
       border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; margin: 5px 0; }
     .mod-head { display: flex; align-items: center; }
