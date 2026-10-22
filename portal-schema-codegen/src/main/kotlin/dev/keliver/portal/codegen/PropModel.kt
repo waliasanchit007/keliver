@@ -50,6 +50,8 @@ data class MappedProp(
   val kind: MappedKind,
   val required: Boolean,
   val defaultExpr: String?,
+  /** Named codes for an Int-coded prop (see PropChoices.kt); empty for a free value. */
+  val choices: List<ChoicePlan> = emptyList(),
 ) {
   val isColor: Boolean get() = kind == MappedKind.INT && name.endsWith("Argb")
 }

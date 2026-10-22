@@ -13,6 +13,7 @@ import dev.keliver.portal.Bind
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.condOf
 import dev.keliver.portal.ELSE_TYPE
+import dev.keliver.portal.PropChoice
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.ListOf
 import dev.keliver.portal.Template
@@ -39,6 +40,7 @@ import dev.keliver.portal.acceptsModifier
 import dev.keliver.portal.isDpProp
 import dev.keliver.portal.isValidUnder
 import dev.keliver.portal.modifierSpecs
+import dev.keliver.portal.propSourceType
 import dev.keliver.portal.kotlinTypeOf
 import dev.keliver.portal.render.PreviewBindings
 import dev.keliver.portal.render.resolvePersona
@@ -2406,7 +2408,7 @@ private fun renderProps() {
   val specs = if (readOnlyCond != null) emptyList() else comp?.props ?: editableProps(node.type)
   if (specs.isEmpty() && readOnlyCond == null) propsEl.appendChild(Ui.el("div", "muted", "No editable properties"))
   specs.forEach { s ->
-    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = ""))
+    propsEl.appendChild(propRow(node.id, node.type, node.props, s.name, s.kind, s.label, keyPrefix = "", choices = s.choices))
   }
   // P3: events — each wires to a named Action.
   val events = comp?.events?.map { it.name } ?: spec?.events ?: emptyList()
@@ -2581,10 +2583,19 @@ private val BINDABLE = setOf(PropKind.Text, PropKind.Int, PropKind.Bool, PropKin
  * One editable property row; [keyPrefix] namespaces modifier props ("mod.X.").
  * K2: wrapped with the row's design-token picker (opened from the ◆ button).
  */
-private fun propRow(nodeId: Int, nodeType: String, props: Map<String, Any?>, name: String, kind: PropKind, label: String, keyPrefix: String): HTMLElement {
+private fun propRow(
+  nodeId: Int,
+  nodeType: String,
+  props: Map<String, Any?>,
+  name: String,
+  kind: PropKind,
+  label: String,
+  keyPrefix: String,
+  choices: List<PropChoice> = emptyList(),
+): HTMLElement {
   val wrap = Ui.el("div")
   val picker = Ui.el("div", "token-picker")
-  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker))
+  wrap.appendChild(propRowInner(nodeId, nodeType, props, name, kind, label, keyPrefix, picker, choices))
   wrap.appendChild(picker)
   return wrap
 }
@@ -2598,6 +2609,7 @@ private fun propRowInner(
   label: String,
   keyPrefix: String,
   picker: HTMLElement,
+  choices: List<PropChoice>,
 ): HTMLElement {
   val key = keyPrefix + name
   val rowEl = Ui.el("div", "row")
@@ -2679,6 +2691,17 @@ private fun propRowInner(
           sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Template(parts))))
         }.also { it.setAttribute("title", "template: text with {bindings} and {◆tokens}") },
       )
+    }
+    return rowEl
+  }
+
+  // E8: an Int-coded prop (a layout enum, a KDoc-listed code) is a dropdown of its names.
+  if (kind == PropKind.Int && choices.isNotEmpty()) {
+    rowEl.appendChild(choiceSelect(choices, props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v))) })
+    tokenButtonIfAny(nodeId, nodeType, key, picker)?.let(rowEl::appendChild)
+    // A layout enum (`Constraint`, …) is no Int in source: a binding would not compile.
+    if (keyPrefix.isEmpty() && '.' !in name && propSourceType(nodeType, key, editorComponents) == "Int") {
+      rowEl.appendChild(bindButton(nodeId, key, name))
     }
     return rowEl
   }
@@ -2952,7 +2975,7 @@ private fun renderMods() {
     head.appendChild(x)
     chip.appendChild(head)
     spec?.props?.forEach { p ->
-      chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name."))
+      chip.appendChild(propRow(node.id, node.type, node.props, p.name, p.kind, p.label, keyPrefix = "mod.$name.", choices = p.choices))
     }
     modsEl.appendChild(chip)
   }
@@ -2984,9 +3007,9 @@ private fun renderMods() {
       } else {
         spec.props.associate { p ->
           "$name.${p.name}" to when {
-            // flex/grow/shrink weights start at 1; alignments at Start (0).
+            // flex/grow/shrink weights start at 1; a named code (an alignment) at its first.
             p.kind == PropKind.Double && p.name == "value" -> 1.0
-            p.kind == PropKind.Int && "Alignment" in spec.argTypes.joinToString() -> 0
+            p.choices.isNotEmpty() -> p.choices.first().value
             else -> when (p.kind) {
               PropKind.Int -> 8
               PropKind.Double -> 8.0

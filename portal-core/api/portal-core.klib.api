@@ -403,9 +403,28 @@ final class dev.keliver.portal/ModifierSpec { // dev.keliver.portal/ModifierSpec
     final fun toString(): kotlin/String // dev.keliver.portal/ModifierSpec.toString|toString(){}[0]
 }
 
+final class dev.keliver.portal/PropChoice { // dev.keliver.portal/PropChoice|null[0]
+    constructor <init>(kotlin/Int, kotlin/String) // dev.keliver.portal/PropChoice.<init>|<init>(kotlin.Int;kotlin.String){}[0]
+
+    final val label // dev.keliver.portal/PropChoice.label|{}label[0]
+        final fun <get-label>(): kotlin/String // dev.keliver.portal/PropChoice.label.<get-label>|<get-label>(){}[0]
+    final val value // dev.keliver.portal/PropChoice.value|{}value[0]
+        final fun <get-value>(): kotlin/Int // dev.keliver.portal/PropChoice.value.<get-value>|<get-value>(){}[0]
+
+    final fun component1(): kotlin/Int // dev.keliver.portal/PropChoice.component1|component1(){}[0]
+    final fun component2(): kotlin/String // dev.keliver.portal/PropChoice.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/String = ...): dev.keliver.portal/PropChoice // dev.keliver.portal/PropChoice.copy|copy(kotlin.Int;kotlin.String){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // dev.keliver.portal/PropChoice.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // dev.keliver.portal/PropChoice.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // dev.keliver.portal/PropChoice.toString|toString(){}[0]
+}
+
 final class dev.keliver.portal/PropSpec { // dev.keliver.portal/PropSpec|null[0]
     constructor <init>(kotlin/String, dev.keliver.portal/PropKind, kotlin/String) // dev.keliver.portal/PropSpec.<init>|<init>(kotlin.String;dev.keliver.portal.PropKind;kotlin.String){}[0]
+    constructor <init>(kotlin/String, dev.keliver.portal/PropKind, kotlin/String, kotlin.collections/List<dev.keliver.portal/PropChoice> = ...) // dev.keliver.portal/PropSpec.<init>|<init>(kotlin.String;dev.keliver.portal.PropKind;kotlin.String;kotlin.collections.List<dev.keliver.portal.PropChoice>){}[0]
 
+    final val choices // dev.keliver.portal/PropSpec.choices|{}choices[0]
+        final fun <get-choices>(): kotlin.collections/List<dev.keliver.portal/PropChoice> // dev.keliver.portal/PropSpec.choices.<get-choices>|<get-choices>(){}[0]
     final val kind // dev.keliver.portal/PropSpec.kind|{}kind[0]
         final fun <get-kind>(): dev.keliver.portal/PropKind // dev.keliver.portal/PropSpec.kind.<get-kind>|<get-kind>(){}[0]
     final val label // dev.keliver.portal/PropSpec.label|{}label[0]
