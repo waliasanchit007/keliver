@@ -83,6 +83,11 @@ internal object Ui {
     .tree-row .hint { color: var(--muted); margin-left: 6px; overflow: hidden;
       text-overflow: ellipsis; max-width: 120px; }
     .tree-row.droptarget { outline: 1px dashed var(--accent); }
+    .tree-row.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+    .tree-row.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+    .tree-row .twisty { width: 12px; flex-shrink: 0; color: var(--muted); font-size: 10px; text-align: center; cursor: pointer; }
+    .inline-edit { position: absolute; z-index: 7; box-sizing: border-box; resize: none; font: inherit; font-size: 14px;
+      padding: 2px 4px; border: 2px solid #4f8cff; border-radius: 3px; background: #fff; color: #111; outline: none; }
     .pal-row { display: flex; align-items: center; padding: 3px 8px; border-radius: 5px;
       cursor: grab; user-select: none; }
     .pal-row:hover { background: var(--sel); }
