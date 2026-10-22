@@ -58,16 +58,19 @@ for (const t of selected) {
   const logLines = [];
   const log = (msg) => { logLines.push(`[${((Date.now() - t0) / 1000).toFixed(1)}s] ${msg}`); };
   const t0 = Date.now();
-  let page = null, error = null;
+  let page = null, error = null, running = null;
   try {
     page = await launch({ profileDir: path.join(out, 'profiles', slug(t)), artifacts: dir });
     const editor = new Editor(page, { url: editorUrl, relay });
     const ctx = { page, editor, relay, fixtureDir, artifacts: dir, log };
     let timer;
+    running = t.run(ctx);
+    running.catch(() => {}); // after a timeout its own failure is not the runner's
     await Promise.race([
-      t.run(ctx),
+      running,
       new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`test timed out after ${testTimeout} ms`)), testTimeout); }),
     ]).finally(() => clearTimeout(timer));
+    running = null;
   } catch (e) {
     error = e;
   }
@@ -91,6 +94,12 @@ for (const t of selected) {
     fs.writeFileSync(path.join(dir, 'console.log'), consoleText + '\n');
     await page.close();
   }
+  // A test that timed out is still running: with its page closed its browser calls fail, and it
+  // is given a moment to stop before the next test, so it cannot act on that test's state.
+  if (running) await Promise.race([running.catch(() => {}), sleep(10_000)]);
+  // The relay writes an edit ~400 ms after it: let a last write land before the fixture is checked,
+  // so it is blamed on the test that made it.
+  await sleep(900);
   // Every test must leave the fixture's sources as it found them (an edit is undone).
   const dirty = changedSources(pristine, snapshot(fixtureDir));
   if (dirty.length) {
