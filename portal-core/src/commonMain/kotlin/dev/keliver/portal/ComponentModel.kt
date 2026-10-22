@@ -119,3 +119,15 @@ public val ComponentSpec.acceptsModifier: Boolean
 /** K5: true when a parameter's Kotlin type text is keliver's `Modifier` (optionally nullable). */
 public fun isModifierType(typeText: String): Boolean =
   typeText.trim().removeSuffix("?").trim().let { it == "Modifier" || it == "dev.keliver.Modifier" }
+
+/**
+ * E10: true when a component's `Int` parameter named [name] holds an ARGB
+ * colour — its name ends in `Argb`, `Color` or `Colour` (`tintArgb`,
+ * `borderColor`, `color`), the convention the widget schemas' `…Argb` props
+ * follow. Such a parameter is a [PropKind.Color] prop: the editor shows a
+ * swatch, not a signed number.
+ */
+public fun isColorParamName(name: String): Boolean {
+  val n = name.lowercase()
+  return n.endsWith("argb") || n.endsWith("color") || n.endsWith("colour")
+}

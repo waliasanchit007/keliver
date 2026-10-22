@@ -7,6 +7,7 @@ import dev.keliver.portal.MapComponentRegistry
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.PropSpec
 import dev.keliver.portal.deserializeTree
+import dev.keliver.portal.isColorParamName
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.boolean
@@ -39,11 +40,10 @@ internal fun parseComponents(json: String): ComponentRegistry = runCatching {
     val o = el.jsonObject
     val props = o["props"]!!.jsonArray.map { p ->
       val po = p.jsonObject
-      PropSpec(
-        po["name"]!!.jsonPrimitive.content,
-        PropKind.valueOf(po["kind"]!!.jsonPrimitive.content),
-        po["label"]!!.jsonPrimitive.content,
-      )
+      val name = po["name"]!!.jsonPrimitive.content
+      val kind = PropKind.valueOf(po["kind"]!!.jsonPrimitive.content)
+      // E10: a colour-named Int param is a colour (as a current relay already sends it).
+      PropSpec(name, if (kind == PropKind.Int && isColorParamName(name)) PropKind.Color else kind, po["label"]!!.jsonPrimitive.content)
     }
     val events = o["events"]!!.jsonArray.map { e ->
       val eo = e.jsonObject

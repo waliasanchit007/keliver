@@ -2621,14 +2621,14 @@ private fun propRowInner(
   // can switch token, or detach to the literal value.
   val token = props[key] as? Token
   if (token != null) {
-    rowEl.appendChild(tokenChip(token.ref, token.value, kind))
-    rowEl.appendChild(tokenButton(nodeId, nodeType, key, picker))
-    rowEl.appendChild(
+    val shown = if (kind == PropKind.Color && token.value is Int) argbHex(token.value as Int) else token.value.toString()
+    return stackedRow(
+      rowEl, tokenChip(token.ref, token.value, kind),
+      tokenButton(nodeId, nodeType, key, picker),
       Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
-        .also { it.setAttribute("title", "replace ${token.ref} with its value (${token.value})") },
+        .also { it.setAttribute("title", "replace ${token.ref} with its value ($shown)") },
+      if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) bindButton(nodeId, key, name) else null,
     )
-    if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
-    return rowEl
   }
 
   // K3: a conditional value: its condition and both branches, each edited in place.
@@ -2706,6 +2706,15 @@ private fun propRowInner(
     return rowEl
   }
 
+  // E10: a colour — swatch, #AARRGGBB and opacity; the alpha byte survives every edit.
+  if (kind == PropKind.Color) {
+    return stackedRow(
+      rowEl, colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) },
+      tokenButtonIfAny(nodeId, nodeType, key, picker),
+      if (keyPrefix.isEmpty() && '.' !in name) bindButton(nodeId, key, name) else null,
+    )
+  }
+
   val input = Ui.input()
   when (kind) {
     PropKind.Text -> {
@@ -2745,12 +2754,7 @@ private fun propRowInner(
         input.addEventListener("change", { _ -> editProp(nodeId, key, input.checked) })
       }
     }
-    PropKind.Color -> {
-      input.setAttribute("type", "color")
-      input.setAttribute("style", "padding:1px; height:26px;")
-      input.value = argbToHex(props[key] as? Int ?: 0xFF000000.toInt())
-      input.addEventListener("input", { _ -> editProp(nodeId, key, hexToArgb(input.value)) })
-    }
+    PropKind.Color -> Unit // colorControl, above
     PropKind.IntList, PropKind.FloatList -> {
       input.setAttribute("type", "text")
       input.setAttribute("disabled", "disabled")
@@ -2772,6 +2776,21 @@ private fun propRowInner(
   // A Margin side ("margin.start") is one quarter of a Margin(...) literal: not bindable.
   if (kind in BINDABLE && keyPrefix.isEmpty() && '.' !in name) rowEl.appendChild(bindButton(nodeId, key, name))
   return rowEl
+}
+
+/**
+ * E9/E10: a wide value under its label — the label row [head] carries the
+ * row's [buttons], and [control] takes the full width of the panel below it.
+ */
+private fun stackedRow(head: HTMLElement, control: HTMLElement, vararg buttons: HTMLElement?): HTMLElement {
+  val box = Ui.el("div", "prop-stack")
+  head.classList.add("prop-head")
+  buttons.filterNotNull().forEach(head::appendChild)
+  val body = Ui.el("div", "prop-ctl")
+  body.appendChild(control)
+  box.appendChild(head)
+  box.appendChild(body)
+  return box
 }
 
 /** K4: the `/doc` features this editor decodes (an older relay ignores what it does not know). */
@@ -2862,15 +2881,11 @@ private fun renderInsertTokenPicker(picker: HTMLElement, fits: (EditorToken) -> 
 /** K2: a token's chip — a colour swatch for a colour, its reference, and its value. */
 private fun tokenChip(ref: String, value: Any?, kind: PropKind): HTMLElement {
   val chip = Ui.el("span", "pill")
-  chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden;")
+  chip.setAttribute("style", "flex:1; min-width:0; border-color:var(--accent); color:var(--text); overflow:hidden; white-space:nowrap;")
   chip.setAttribute("title", "$ref = $value")
-  if (kind == PropKind.Color && value is Int) {
-    val sw = Ui.el("span")
-    sw.setAttribute("style", "width:12px; height:12px; border-radius:3px; flex-shrink:0; border:1px solid var(--border); background:${argbToHex(value)};")
-    chip.appendChild(sw)
-  }
+  if (kind == PropKind.Color && value is Int) chip.appendChild(colorSwatch(value, 12))
   chip.appendChild(Ui.el("span", "", "◆ $ref"))
-  val shown = if (kind == PropKind.Color && value is Int) argbToHex(value) else value.toString()
+  val shown = if (kind == PropKind.Color && value is Int) argbHex(value) else value.toString()
   chip.appendChild(Ui.el("span", "muted", shown).also { it.setAttribute("style", "overflow:hidden; text-overflow:ellipsis; white-space:nowrap;") })
   return chip
 }
@@ -3071,5 +3086,3 @@ private fun literalOp(id: Int, name: String, value: Any?): DocOp =
     DocOp.SetProp(Handle(id.toLong()), name, lit(value))
   }
 
-private fun argbToHex(argb: Int): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
-private fun hexToArgb(hex: String): Int = (0xFF shl 24) or (hex.removePrefix("#").toIntOrNull(16) ?: 0)

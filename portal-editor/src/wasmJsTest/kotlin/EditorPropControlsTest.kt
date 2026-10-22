@@ -1,10 +1,14 @@
 import dev.keliver.portal.PropChoice
+import dev.keliver.portal.PropKind
 import dev.keliver.portal.modifierSpecs
 import dev.keliver.portal.widgetSpec
 import dev.keliver.portal.widgetSpecs
+import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLOptionElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
+import org.w3c.dom.events.KeyboardEventInit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -55,5 +59,81 @@ class EditorPropControlsTest {
     assertEquals(listOf("Start", "End", "Other (7)"), sel.labels())
     assertEquals("7", sel.value)
     assertTrue(picked.isEmpty()) // rendering never writes
+  }
+
+  @Test fun aColourIsShownWithItsAlphaAndParsedBackExactly() {
+    val translucentWhite = 0x99FFFFFF.toInt() // a 60%-white card
+    assertEquals("#99FFFFFF", argbHex(translucentWhite))
+    assertEquals(60, opacityPercent(translucentWhite))
+    assertEquals(translucentWhite, parseArgbHex("#99FFFFFF", 0))
+    assertEquals(translucentWhite, parseArgbHex("99ffffff", 0))
+    // A 6- or 3-digit hex changes the colour and keeps the alpha …
+    assertEquals(0x99FF8800.toInt(), parseArgbHex("#FF8800", translucentWhite))
+    assertEquals(0x99FF8800.toInt(), parseArgbHex("#F80", translucentWhite))
+    // … and over a fully transparent 0 ("default") it is opaque, so it shows.
+    assertEquals(0xFFFF8800.toInt(), parseArgbHex("#FF8800", 0))
+    for (bad in listOf("", "#", "red", "#12345", "#GG0000", "#123456789")) assertEquals(null, parseArgbHex(bad, 0), bad)
+    assertEquals(0x80FFFFFF.toInt(), withOpacity(-1, 50))
+    assertEquals(0x00FFFFFF, withOpacity(-1, 0))
+    // The system picker has no alpha: its colour keeps the old alpha byte.
+    assertEquals(0x99112233.toInt(), withRgb(translucentWhite, 0x112233))
+    assertEquals(0xFF112233.toInt(), withRgb(0, 0x112233))
+  }
+
+  @Test fun theColourControlCommitsOnlyValidValuesAndKeepsAlpha() {
+    val sent = mutableListOf<Int>()
+    val ctl = colorControl(0x99FFFFFF.toInt()) { sent += it }
+    val inputs = ctl.querySelectorAll("input")
+    val picker = inputs.item(0) as HTMLInputElement
+    val hex = inputs.item(1) as HTMLInputElement
+    val alpha = inputs.item(2) as HTMLInputElement
+    assertEquals("color", picker.type)
+    assertEquals("#99FFFFFF", hex.value)
+    assertEquals("60", alpha.value)
+    assertTrue(ctl.querySelector(".swatch") != null)
+
+    picker.value = "#112233"
+    picker.dispatchEvent(Event("change"))
+    assertEquals(listOf(0x99112233.toInt()), sent) // alpha survived the picker
+    assertEquals("#99112233", hex.value)
+
+    hex.value = "nope"
+    hex.dispatchEvent(Event("change"))
+    assertEquals(1, sent.size) // nothing sent
+    assertTrue(hex.classList.contains("invalid"))
+    assertTrue((ctl.querySelector(".field-err")?.textContent ?: "").startsWith("Not a colour"))
+
+    hex.value = "#40000000"
+    hex.dispatchEvent(Event("change"))
+    assertEquals(0x40000000, sent.last())
+    assertTrue(!hex.classList.contains("invalid"))
+    assertEquals("", ctl.querySelector(".field-err")?.textContent)
+
+    alpha.value = "150"
+    alpha.dispatchEvent(Event("change"))
+    assertEquals(2, sent.size)
+    assertTrue(alpha.classList.contains("invalid"))
+    alpha.value = "100"
+    alpha.dispatchEvent(Event("change"))
+    assertEquals(0xFF000000.toInt(), sent.last())
+
+    // Escape puts the committed value back; Enter and Escape never reach the editor's shortcuts.
+    var reachedDocument = 0
+    val outer = Ui.el("div")
+    outer.appendChild(ctl)
+    outer.addEventListener("keydown", { _ -> reachedDocument++ })
+    hex.value = "#12"
+    hex.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "Escape", bubbles = true)))
+    assertEquals("#FF000000", hex.value)
+    hex.dispatchEvent(KeyboardEvent("keydown", KeyboardEventInit(key = "Enter", bubbles = true)))
+    assertEquals(0, reachedDocument)
+  }
+
+  @Test fun aComponentsColourNamedIntParamIsAColourEvenFromAnOlderRelay() {
+    val reg = parseComponents(
+      """[{"name":"Tag","props":[{"name":"tintArgb","kind":"Int","label":"TintArgb"},{"name":"count","kind":"Int","label":"Count"}],
+      "events":[],"defaults":{},"body":null,"transparent":false,"dependencies":[]}]""",
+    )
+    assertEquals(listOf(PropKind.Color, PropKind.Int), reg.spec("Tag")!!.props.map { it.kind })
   }
 }

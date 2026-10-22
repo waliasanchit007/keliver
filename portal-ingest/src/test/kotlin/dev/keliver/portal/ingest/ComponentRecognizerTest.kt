@@ -57,6 +57,30 @@ class ComponentRecognizerTest {
     assertTrue("title" !in s.defaults)
   }
 
+  /** E10: an Int parameter named like a colour is a Color prop (a swatch in the editor), and still writes as Int. */
+  @Test fun colourNamedIntParamsAreColourProps() {
+    val rc = Recognizer.recognizeComponent(
+      "Tag.kt",
+      """
+      import androidx.compose.runtime.Composable
+      import dev.keliver.material.compose.StyledText
+
+      @Composable
+      fun Tag(label: String, tintArgb: Int = 0, borderColor: Int = -1, color: Int = 0, count: Int = 0, colorRole: Int = 0) {
+        StyledText(text = label, colorArgb = tintArgb)
+      }
+      """.trimIndent(),
+    )
+    assertNotNull(rc)
+    val kinds = rc.spec.props.associate { it.name to it.kind }
+    assertEquals(PropKind.Color, kinds["tintArgb"])
+    assertEquals(PropKind.Color, kinds["borderColor"])
+    assertEquals(PropKind.Color, kinds["color"])
+    assertEquals(PropKind.Int, kinds["count"])
+    assertEquals(PropKind.Int, kinds["colorRole"]) // a role code, not a colour
+    assertEquals("Int", rc.spec.paramTypes["tintArgb"])
+  }
+
   @Test fun bodyBareParamsBecomeBindsAndActions() {
     val rc = Recognizer.recognizeComponent("MenuRow.kt", menuRow)!!
     val body = rc.root!!

@@ -90,6 +90,23 @@ internal object Ui {
       text-overflow: ellipsis; white-space: nowrap; }
     .row .input, .row .select { flex: 1; min-width: 0; }
     textarea.input { resize: vertical; line-height: 1.35; }
+    .prop-stack { margin: 6px 0 8px; }
+    .prop-stack > .row.prop-head { margin: 0 0 3px; }
+    .row.prop-head label { flex: 1; width: auto; }
+    .prop-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ctl-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .color-ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .swatch { display: inline-block; flex-shrink: 0; border-radius: 4px; border: 1px solid var(--border); box-sizing: border-box; }
+    .swatch-btn { position: relative; display: inline-flex; cursor: pointer; padding: 3px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+    .swatch-btn:hover, .swatch-btn:focus-within { border-color: var(--accent); }
+    .swatch-picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0; }
+    .color-ctl .input.hex { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    .color-ctl .input.alpha { width: 46px; flex: 0 0 46px; padding: 5px 4px; }
+    .color-ctl .unit { margin-left: -2px; }
+    .input.invalid, .select.invalid { border-color: var(--danger); }
+    .field-err { color: var(--danger); font-size: 11px; line-height: 1.3; }
+    .field-err:empty { display: none; }
     .tree-row { display: flex; align-items: center; padding: 3px 6px; border-radius: 5px;
       cursor: pointer; white-space: nowrap; user-select: none; }
     .tree-row:hover { background: var(--sel); }
