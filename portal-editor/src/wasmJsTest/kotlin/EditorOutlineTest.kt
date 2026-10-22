@@ -19,7 +19,7 @@ class EditorOutlineTest {
   @Test fun rowsSayWhatTheirNodeDoes() {
     assertEquals("if loading", outlineHint(n(9, "Condition", props = mapOf("field" to "loading"))))
     assertEquals("if !open", outlineHint(n(9, "Condition", props = mapOf("field" to "open", "negate" to true))))
-    assertEquals("for deal in deals", outlineHint(n(9, "Repeat", props = mapOf("items" to "deals", "item" to "deal"))))
+    assertEquals("for order in orders", outlineHint(n(9, "Repeat", props = mapOf("items" to "orders", "item" to "order"))))
     assertEquals("↕16", outlineHint(n(9, "Spacer", props = mapOf("height" to 16.0))))
     assertEquals("“Hello”", outlineHint(n(9, "StyledText", props = mapOf("text" to "Hello"))))
     assertEquals("else", outlineHint(n(9, "Else")))
