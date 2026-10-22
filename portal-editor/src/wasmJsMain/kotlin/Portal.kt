@@ -636,6 +636,59 @@ private fun installEvidenceStylesheet() {
   document.head?.appendChild(style)
 }
 
+private lateinit var publishBtn: HTMLElement
+private var publishing = false
+
+/**
+ * E26: Publish asks first (it builds, signs and stores a bundle every device of
+ * this app will load) and runs once: the button is disabled while a publish is
+ * in flight, so a double click cannot publish twice.
+ */
+private fun confirmPublish() {
+  if (publishing) return
+  val back = Ui.el("div", "modal-back")
+  val box = Ui.el("div", "modal")
+  box.appendChild(Ui.el("div", "modal-title", "Publish to devices?"))
+  box.appendChild(Ui.el("div", "muted", "Builds and signs project “$currentProject” (every screen, including “$currentScreen”) " +
+    "and stores it as the next bundle version. Devices running this app load it on their next update check."))
+  val actions = Ui.el("div", "modal-actions")
+  fun close() { back.remove() }
+  val cancel = Ui.button("Cancel", "btn") { close() }
+  val go = Ui.button("Publish", "btn primary") {}
+  go.addEventListener("click", { _ ->
+    if (publishing) return@addEventListener
+    close()
+    runPublish()
+  })
+  actions.appendChild(cancel)
+  actions.appendChild(go)
+  box.appendChild(actions)
+  back.appendChild(box)
+  back.addEventListener("click", { ev -> if (ev.target == back) close() })
+  back.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Escape") close() })
+  document.body?.appendChild(back)
+  go.focus()
+}
+
+private fun runPublish() {
+  publishing = true
+  publishBtn.setAttribute("disabled", "")
+  publishBtn.textContent = "Publishing…"
+  exportPre.textContent = "Publishing… (compiles + signs the bundle, ~1-2 min)"
+  exportOverlay.removeAttribute("style")
+  val xhr = XMLHttpRequest()
+  xhr.open("POST", "$SERVER/publish?project=$currentProject")
+  fun done(text: String) {
+    publishing = false
+    publishBtn.removeAttribute("disabled")
+    publishBtn.textContent = "Publish"
+    exportPre.textContent = text
+  }
+  xhr.addEventListener("load", { _ -> done((if (xhr.status.toInt() == 200) "✅ " else "❌ ") + xhr.responseText) })
+  xhr.addEventListener("error", { _ -> done("❌ The relay did not answer the publish request.") })
+  xhr.send()
+}
+
 private fun buildTopbar() {
   val bar = Ui.el("div", "topbar")
   bar.appendChild(Ui.el("span", "brand", "keliver portal"))
@@ -662,15 +715,34 @@ private fun buildTopbar() {
   // phone's default 412×915 dp next to the original presets.
   DEVICE_PRESETS.forEach { (name, dims) ->
     val o = document.createElement("option") as HTMLOptionElement
-    o.value = dims; o.textContent = name
+    o.value = dims; o.textContent = "$name · ${dims.replace("x", "×")}"
     preset.appendChild(o)
   }
   preset.value = localStorage.getItem("portal.preset") ?: "390x780"
+  preset.setAttribute("title", "Device frame (dp)")
+  // E23: the frame resizes in place (the composition follows its container):
+  // mocks, selection and Live state survive.
   preset.addEventListener("change", { _ ->
     localStorage.setItem("portal.preset", preset.value)
-    window.location.reload() // canvas re-inits at the new size; draft is persisted
+    applyFramePreset(preset.value)
   })
   bar.appendChild(preset)
+  fun ensureOption(dims: String) {
+    if ((0 until preset.options.length).none { (preset.options.item(it) as? HTMLOptionElement)?.value == dims }) {
+      val o = document.createElement("option") as HTMLOptionElement
+      o.value = dims; o.textContent = "Custom · ${dims.replace("x", "×")}"
+      preset.appendChild(o)
+    }
+    preset.value = dims
+  }
+  ensureOption(preset.value.ifEmpty { "390x780" }.let { v -> if (parsePreset(v) != null) v else "390x780" })
+  bar.appendChild(Ui.button("⟲", "btn icon") {
+    val (w, h) = currentFrameSize()
+    val rotated = "${h}x$w"
+    localStorage.setItem("portal.preset", rotated)
+    ensureOption(rotated)
+    applyFramePreset(rotated)
+  }.also { it.setAttribute("title", "Rotate the frame") })
 
   val savePill = Ui.el("span", "pill")
   saveDotEl = Ui.el("span", "dot")
@@ -735,18 +807,9 @@ private fun buildTopbar() {
   bar.appendChild(buildChip)
 
   bar.appendChild(Ui.button("Export Kotlin", "btn") { showExport() })
-  bar.appendChild(
-    Ui.button("Publish", "btn primary") {
-      exportPre.textContent = "Publishing… (compiles + signs the bundle, ~1-2 min)"
-      exportOverlay.removeAttribute("style")
-      val xhr = XMLHttpRequest()
-      xhr.open("POST", "$SERVER/publish")
-      xhr.addEventListener("load", { _ ->
-        exportPre.textContent = (if (xhr.status.toInt() == 200) "✅ " else "❌ ") + xhr.responseText
-      })
-      xhr.send()
-    },
-  )
+  publishBtn = Ui.button("Publish", "btn primary") { confirmPublish() }
+  publishBtn.setAttribute("title", "Build, sign and store a new bundle for devices")
+  bar.appendChild(publishBtn)
   document.body?.appendChild(bar)
 }
 

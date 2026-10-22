@@ -32,19 +32,59 @@ internal fun fitZoom(w: Int, h: Int, availW: Double, availH: Double): Double {
 
 private var syncToolbar: () -> Unit = {}
 
+private var frameW = 390
+private var frameH = 780
+private var canvasFrame: HTMLElement? = null
+private var canvasZoomBox: HTMLElement? = null
+private var canvasCenter: HTMLElement? = null
+
+/** The device frame's size in dp. */
+internal fun currentFrameSize(): Pair<Int, Int> = frameW to frameH
+
+/** A "WIDTHxHEIGHT" preset as (w, h), or null when it is not two positive numbers. */
+internal fun parsePreset(dims: String): Pair<Int, Int>? {
+  val parts = dims.split("x")
+  val w = parts.getOrNull(0)?.toIntOrNull() ?: return null
+  val h = parts.getOrNull(1)?.toIntOrNull() ?: return null
+  return if (parts.size == 2 && w in 120..4000 && h in 120..4000) w to h else null
+}
+
+/**
+ * E23: resize the device frame in place (the composition follows its
+ * container, so mocks, selection and Live state survive), zooming out to fit
+ * when the new frame is larger than the window.
+ */
+internal fun applyFramePreset(dims: String) {
+  val (w, h) = parsePreset(dims) ?: return
+  val frame = canvasFrame ?: return
+  val box = canvasZoomBox ?: return
+  frameW = w
+  frameH = h
+  frame.style.width = "${w}px"
+  frame.style.height = "${h}px"
+  val center = canvasCenter
+  val fits = center == null || (w * canvasZoom <= center.clientWidth - 40 && h * canvasZoom <= center.clientHeight - 72)
+  applyZoom(if (fits) canvasZoom else fitZoom(w, h, (center?.clientWidth ?: w) - 40.0, (center?.clientHeight ?: h) - 72.0), box, frame)
+}
+
 internal fun canvasToolbarSync() = syncToolbar()
 
 internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, frame: HTMLElement, w: Int, h: Int) {
+  frameW = w
+  frameH = h
+  canvasFrame = frame
+  canvasZoomBox = zoomBox
+  canvasCenter = center
   val bar = Ui.el("div", "canvas-toolbar")
   val select = Ui.button("🎯 Select", "seg") { setSelectMode(true) }
   val interact = Ui.button("☝ Interact", "seg") { setSelectMode(false) }
   select.setAttribute("title", "Click selects a node; the app does not see the click")
   interact.setAttribute("title", "Clicks go to the app (buttons, fields, scrolling lists)")
-  val zoomOut = Ui.button("−", "seg") { applyZoom(nextZoom(canvasZoom, up = false), zoomBox, frame, w, h) }
+  val zoomOut = Ui.button("−", "seg") { applyZoom(nextZoom(canvasZoom, up = false), zoomBox, frame) }
   val level = Ui.el("span", "zoom-level", "100%")
-  val zoomIn = Ui.button("+", "seg") { applyZoom(nextZoom(canvasZoom, up = true), zoomBox, frame, w, h) }
+  val zoomIn = Ui.button("+", "seg") { applyZoom(nextZoom(canvasZoom, up = true), zoomBox, frame) }
   val fit = Ui.button("Fit", "seg") {
-    applyZoom(fitZoom(w, h, center.clientWidth - 40.0, center.clientHeight - 72.0), zoomBox, frame, w, h)
+    applyZoom(fitZoom(frameW, frameH, center.clientWidth - 40.0, center.clientHeight - 72.0), zoomBox, frame)
   }
   zoomOut.setAttribute("title", "Zoom out")
   zoomIn.setAttribute("title", "Zoom in")
@@ -65,12 +105,14 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
     interact.classList.toggle("on", !selectModeOn())
   }
   val stored = runCatching { localStorage.getItem("portal.zoom")?.toDoubleOrNull() }.getOrNull()
-  applyZoom(stored?.coerceIn(ZOOM_MIN, ZOOM_MAX) ?: 1.0, zoomBox, frame, w, h)
+  applyZoom(stored?.coerceIn(ZOOM_MIN, ZOOM_MAX) ?: 1.0, zoomBox, frame)
 }
 
 private var canvasZoomIsSet = false
 
-private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement, w: Int, h: Int) {
+private fun applyZoom(z: Double, zoomBox: HTMLElement, frame: HTMLElement) {
+  val w = frameW
+  val h = frameH
   canvasZoom = z
   canvasZoomIsSet = true
   frame.style.transform = if (z == 1.0) "" else "scale($z)"
