@@ -62,6 +62,11 @@ internal object Ui {
     .crumbs .crumb.done { color: #fff; background: var(--accent2); margin-left: 6px; }
     .crumbs .crumb-sep { color: var(--muted); }
     body.editing-component .frame { box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 2px var(--accent2); }
+    .overlay-tag { position: absolute; left: -2px; top: -18px; height: 16px; padding: 0 5px; border-radius: 3px;
+      background: #2563eb; color: #fff; font: 600 10px/16px system-ui, sans-serif; white-space: nowrap; }
+    .overlay-tag:empty { display: none; }
+    .overlay-tag.hover { background: rgba(37,99,235,.85); }
+    .overlay-tag.inside { top: 0; left: 0; }
     .sel-overlay.flash { animation: sel-flash .9s ease-out; }
     @keyframes sel-flash { 0% { box-shadow: 0 0 0 6px rgba(79,140,255,.55); } 100% { box-shadow: 0 0 0 0 rgba(79,140,255,0); } }
     .frame { background: #ffffff; border-radius: 18px; overflow: hidden;

@@ -69,6 +69,11 @@ internal fun applyFramePreset(dims: String) {
 
 internal fun canvasToolbarSync() = syncToolbar()
 
+/** The canvas overlay's name tag: `Column`, `StatTile · component`, and on the selection its size in px. */
+internal fun overlayLabel(type: String, component: Boolean, size: Pair<Double, Double>?): String =
+  type + (if (component) " · component" else "") +
+    (size?.let { (w, h) -> "  ${kotlin.math.round(w).toInt()}×${kotlin.math.round(h).toInt()}" } ?: "")
+
 internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, frame: HTMLElement, w: Int, h: Int) {
   frameW = w
   frameH = h

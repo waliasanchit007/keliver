@@ -25,4 +25,9 @@ class EditorCanvasTest {
     assertEquals(null, parsePreset("390x780x2"))
     assertEquals(null, parsePreset("wide"))
   }
+
+  @Test fun theOverlayTagNamesTheBoxAndOnTheSelectionItsSize() {
+    assertEquals("Column", overlayLabel("Column", component = false, size = null))
+    assertEquals("StatTile · component  120×48", overlayLabel("StatTile", component = true, size = 119.6 to 48.2))
+  }
 }
