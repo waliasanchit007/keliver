@@ -2911,11 +2911,7 @@ private fun renderTokenPicker(nodeId: Int, nodeType: String, key: String, picker
   search.setAttribute("style", "width:100%; margin-bottom:4px;")
   val list = Ui.el("div")
   list.setAttribute("style", "max-height:180px; overflow:auto;")
-  val kind = when (key.startsWith("mod.")) {
-    true -> modifierSpecs.firstOrNull { it.name == key.removePrefix("mod.").substringBefore('.') }
-      ?.props?.firstOrNull { it.name == key.removePrefix("mod.").substringAfter('.') }?.kind
-    false -> (editorComponents.spec(nodeType)?.props ?: editableProps(nodeType)).firstOrNull { it.name == key }?.kind
-  } ?: PropKind.Text
+  val kind = propKindOf(nodeType, key, editorComponents) ?: PropKind.Text
   fun fill() {
     Ui.clear(list)
     val fits = tokensFor(nodeType, key, editorComponents, query = search.value)
