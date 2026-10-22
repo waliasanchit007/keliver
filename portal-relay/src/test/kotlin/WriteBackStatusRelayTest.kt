@@ -287,6 +287,8 @@ class WriteBackStatusRelayTest {
     assertEquals(5L, ack.version)
     awaitStatus(f.svc, ack.version)
     assertTrue("COMPILED_VERSION_home: Int = 5" in stamp.readText(), stamp.readText())
+    // Every change event carries the component-registry version (editors redraw instances when it moves).
+    assertTrue("\"components\":0" in f.events.toString(), f.events.toString())
   }
 
   @Test fun aReplaceRawWithATrailingCommentIsRefusedAsAnOp() {

@@ -260,7 +260,9 @@ public fun runPortalEditor(entry: AppPreviewEntry, flows: dev.keliver.portal.ren
         LivePresenterHost()
         // K5: inside the app's own screen wrapper (its Theme), as on a device.
         dev.keliver.portal.render.AppScreenFrame(entry) {
-          RenderNode(selectionTagged(portalTree.value))
+          androidx.compose.runtime.key(componentsGeneration.value) {
+            RenderNode(selectionTagged(portalTree.value))
+          }
         }
       }
       guestAdapter.emitChanges() // initial render

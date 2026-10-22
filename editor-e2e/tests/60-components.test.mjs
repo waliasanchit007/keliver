@@ -193,17 +193,16 @@ export default [
   },
   {
     id: 'E14x',
-    title: 'a component that cannot be opened (404) shows a hint and stays on the screen',
+    title: 'an unknown component is a 404; a component deleted on disk reads as code and Enter stays on the screen',
     async run({ page, editor, relay, fixtureDir }) {
       const r = await fetch(`${relay.base}/doc?project=default&component=Nope`);
       equal(r.status, 404, 'GET /doc?component=Nope is a 404');
       ok(/no such component/.test(await r.text()), 'the 404 says the app has no such component');
 
-      // A component deleted on disk while the editor has it open: the editor's
-      // registry still lists it, the relay no longer does. (No earlier test may
-      // open CountBadge: the relay keeps an opened component's document.)
+      // A component deleted on disk while the editor shows a screen that uses it: the
+      // change reaches the editor live, the call reads as code (nothing left to open),
+      // and Enter on it keeps the editor on the screen.
       await editor.open('overview', { readyColor: COLORS.summaryCard });
-      await editor.clickOutlineRowOf('CountBadge');
       const file = path.join(fixtureDir, 'src/components/CountBadge.kt');
       const text = fs.readFileSync(file, 'utf8');
       fs.rmSync(file);
@@ -214,13 +213,16 @@ export default [
           if (!comps.some((c) => c.name === 'CountBadge')) break;
           await sleep(200);
         }
+        await page.waitFor(`![...document.querySelectorAll('.tree-row .t')].some((t) => t.textContent === 'CountBadge')`,
+          { timeout: 8000, message: 'the editor still offers CountBadge as a component after its file was deleted' });
+        const rows = await editor.outline();
+        const i = rows.findIndex((r) => r.type === 'RawCode' && /CountBadge/.test(r.text + (r.label ?? '')));
+        await editor.clickOutlineRow(i >= 0 ? i : rows.findIndex((r) => r.type === 'RawCode'));
         await page.press('Enter');
-        await page.waitFor(`(() => { const h = document.querySelector('.canvas-hint');
-          return h && getComputedStyle(h).display !== 'none' && /cannot be opened/.test(h.textContent); })()`,
-        { timeout: 5000, message: 'no hint said the component cannot be opened' });
-        await page.screenshot('E14x-hint');
-        await waitCrumbs(page, null, 'the editor stays on (steps back to) the screen');
-        equal((await editor.outline())[0]?.type, 'Column', "the outline is the screen's again");
+        await sleep(800);
+        await page.screenshot('E14x-code');
+        await waitCrumbs(page, null, 'the editor stays on the screen');
+        equal((await editor.outline())[0]?.type, 'Column', "the outline is the screen's");
       } finally {
         fs.writeFileSync(file, text);
         await sleep(1500);

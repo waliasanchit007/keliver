@@ -49,6 +49,8 @@ class DocumentService(
   private val tokensVersion: () -> Long = { 0L },
   /** E14: the document is a component's body ([kotlinFile] is its file), not a screen ([forComponent]). */
   private val asComponent: Boolean = false,
+  /** The project's component-registry version, sent with every change event (editors redraw instances). */
+  private val componentsVersion: () -> Long = { 0L },
 ) {
   @Volatile var doc: UiDocument = initial
     private set
@@ -614,7 +616,7 @@ class DocumentService(
 
   private fun sendEvent(out: OutputStream, version: Long) {
     val wb = writeBack?.let { ",\"writeBack\":${it.json()}" } ?: ""
-    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()}$wb}\n\n".toByteArray())
+    out.write("data: {\"version\":$version,\"tokens\":${tokensVersion()},\"components\":${componentsVersion()}$wb}\n\n".toByteArray())
     out.flush()
   }
 
@@ -785,6 +787,7 @@ class DocumentService(
       tokenFileId: String,
       tokensVersion: () -> Long,
       onChanged: () -> Unit = {},
+      componentsVersion: () -> Long = { 0L },
     ): DocumentService? {
       val text = kotlinFile.takeIf { it.isFile }?.readText() ?: return null
       val rec = runCatching {
@@ -794,6 +797,7 @@ class DocumentService(
       val doc = UiDocument(key, root, rec.contract, version = 0, nextHandle = next)
       return DocumentService(
         key, doc, { onChanged() }, kotlinFile, functionName, null, components, tokens, tokenFileId, tokensVersion, asComponent = true,
+        componentsVersion = componentsVersion,
       ).also { it.fileDoc = doc; it.fileText = text; it.readText = text }
     }
 
@@ -819,6 +823,7 @@ class DocumentService(
       tokens: () -> TokenTable = { TokenTable.EMPTY },
       tokenFileId: String = kotlinFile.name,
       tokensVersion: () -> Long = { 0L },
+      componentsVersion: () -> Long = { 0L },
     ): DocumentService {
       if (kotlinFile.exists()) {
         val text = kotlinFile.readText()
@@ -834,12 +839,12 @@ class DocumentService(
           }
           val root = renumber(rec.root)
           val doc = UiDocument(screenKey, root, rec.contract, version = stampedVersion(kotlinFile), nextHandle = next)
-          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+          return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
             .also { it.fileDoc = doc; it.fileText = text; it.readText = text } // the file IS this document
             .also { it.onProjected(doc.toWidgetTree()) } // draft mirror catches up
         }
       }
-      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+      return fromTree(screenKey, treeJson, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion)
     }
 
     /** M1 bootstrap: lift an existing V1 draft tree into a Document. */
@@ -854,6 +859,7 @@ class DocumentService(
       tokens: () -> TokenTable = { TokenTable.EMPTY },
       tokenFileId: String = kotlinFile.name,
       tokensVersion: () -> Long = { 0L },
+      componentsVersion: () -> Long = { 0L },
     ): DocumentService {
       var next = 1L
       fun lift(n: WidgetNode): DocNode.Widget = DocNode.Widget(
@@ -874,7 +880,7 @@ class DocumentService(
         ?.let { lift(deserializeTree(it)) }
         ?: DocNode.Widget(Handle(next++), "Column")
       val doc = UiDocument(screenKey, root, Contract(), version = 0, nextHandle = next)
-      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion)
+      return DocumentService(screenKey, doc, onProjected, kotlinFile, functionName, packageName, components, tokens, tokenFileId, tokensVersion, componentsVersion = componentsVersion)
     }
   }
 }

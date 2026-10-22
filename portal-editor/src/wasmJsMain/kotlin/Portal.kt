@@ -112,6 +112,12 @@ private var docVersion: Long = -1
 
 /** K2: the relay's design-token table version last seen on the change stream. */
 private var tokensVersionSeen: Long = -1
+
+/** The relay's component-registry version last seen on the change stream. */
+private var componentsVersionSeen: Long = -1
+
+/** The `/components` text last applied: an unchanged registry does not redraw the canvas. */
+private var componentsJsonSeen: String? = null
 private var eventSource: EventSource? = null
 /** One queued edit: its ops, whether panels re-render after it, and who hears if the relay accepted it. */
 private class QueuedOps(val ops: List<DocOp>, val refreshPanels: Boolean, val onResult: ((Boolean) -> Unit)?)
@@ -525,18 +531,26 @@ private fun subscribeDocEvents() {
   }
   eventSource = EventSource("$SERVER/doc-events?${target.query}").also { es ->
     es.onmessage = { ev ->
-      val v = (ev.data as? String)?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+      // Kotlin/Wasm: the event's data is a JsString, never a kotlin String — `as? String` read
+      // every message as null, so changes and write-back statuses arrived only through the poll.
+      val data = (ev.data as? JsString)?.toString()
+      val v = data?.let { Regex("\"version\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       // C3 master updates: a component edit re-ingests screens (doc bumps) — refresh
       // the registry too so instance previews reflect the new definition without reload.
       // K2: the project's design-token table version rides on the same event.
-      val t = (ev.data as? String)?.let { Regex("\"tokens\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+      val t = data?.let { Regex("\"tokens\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
       val tokensChanged = t != null && t != tokensVersionSeen
       if (t != null) tokensVersionSeen = t
+      // A component changed (in the editor, another tab or the IDE): its instances are redrawn.
+      val c = data?.let { Regex("\"components\":(\\d+)").find(it)?.groupValues?.get(1)?.toLongOrNull() }
+      val componentsChanged = c != null && componentsVersionSeen != -1L && c != componentsVersionSeen
+      if (c != null) componentsVersionSeen = c
       // K3: the screen's write-back status — a refused or failed write is shown, never silent.
-      (ev.data as? String)?.let { showWriteBack(writeBackOf(it)) }
+      data?.let { showWriteBack(writeBackOf(it)) }
       when {
-        v != null && v != docVersion -> fetchComponents { refetchDoc(true) }
-        tokensChanged -> fetchComponents { refresh() } // tokens changed, the document did not: refresh the picker
+        // Our own edit's change: its reply refreshes the panels (refreshing now would rebuild the field being typed in).
+        v != null && v != docVersion -> if (!opInFlight && opQueue.isEmpty()) fetchComponents { refetchDoc(refreshPanels = !typingInAField()) }
+        tokensChanged || componentsChanged -> fetchComponents { refresh() } // the document did not change: redraw what uses them
       }
     }
     es.onerror = { _ ->
@@ -1753,10 +1767,20 @@ private fun closeTopmostLayer(): Boolean {
   return false
 }
 
+/** Whether a text field, number field or picker has the keyboard (a re-render would take it away). */
+private fun typingInAField(): Boolean =
+  (document.activeElement as? HTMLElement)?.tagName?.lowercase() in setOf("input", "textarea", "select")
+
 /** E14: double-click / Enter — open a component instance, edit a text in place. */
 private fun openOrEditInline(handle: Int) {
-  val node = portalTree.value.findNode(handle)
-  if (isComponentInstance(node, editorComponents)) openComponent(node!!.type) else editTextInline(handle)
+  val node = portalTree.value.findNode(handle) ?: return
+  when {
+    isComponentInstance(node, editorComponents) -> openComponent(node.type)
+    // An instance of a component the app no longer has (its file was deleted or renamed).
+    widgetSpec(node.type) == null && node.type !in setOf("Condition", "Repeat", "RawCode", "Slot", ELSE_TYPE) ->
+      showCanvasHint("“${node.type}” cannot be opened: the app has no such component (its file is gone or renamed)")
+    else -> editTextInline(handle)
+  }
 }
 
 /** E14: edit component [name]'s insides; the breadcrumb leads back. */
@@ -2002,6 +2026,11 @@ private fun fetchComponents(then: (() -> Unit)? = null) {
   if (playground) { then?.invoke(); return }
   serverGet("/components?project=$currentProject") { txt ->
     setEditorComponents(parseComponents(txt))
+    if (txt != componentsJsonSeen) {
+      componentsJsonSeen = txt
+      componentsGeneration.value++ // the canvas redraws every instance from the new definitions
+      Snapshot.sendApplyNotifications() // the guest composition sees state changes only once applied
+    }
     renderPalette(paletteFilter)
     serverGet("/tokens?project=$currentProject") { tokens ->
       setEditorTokens(parseTokens(tokens))
