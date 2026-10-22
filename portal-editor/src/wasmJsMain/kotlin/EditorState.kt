@@ -120,12 +120,29 @@ internal fun sampleText(name: String): String {
   }
 }
 
+/**
+ * A visible ARGB sample for a colour field (`noticeBgArgb`, `labelColor`, `ringTint`), chosen by
+ * its name — a background light, a text dark, anything else an accent — or null when the name
+ * is not a colour's. An Int colour's other default, 1, is transparent: the element vanished.
+ */
+internal fun sampleColor(name: String): Int? {
+  val w = words(name)
+  fun any(vararg k: String) = w.any { word -> k.any { word.startsWith(it) } }
+  if (!any("argb", "color", "colour", "tint")) return null
+  return when {
+    any("bg", "background", "fill", "surface", "container", "card") -> 0xFFEEF2F7.toInt()
+    any("label", "text", "title", "ink", "foreground", "content") -> 0xFF1F2937.toInt()
+    else -> 0xFF4F6BED.toInt()
+  }
+}
+
 /** The value a field shows under [scenario] when the user has not set it. */
 internal fun defaultValue(field: StateField, scenario: Scenario): String = when (field.kind) {
   StateKind.Bool -> (roleOf(field.name) in scenario.on).toString()
   // A text a condition tests (`isNotBlank()`): present when its role is on in this scenario.
   StateKind.Text -> if (field.source == StateSource.Condition && roleOf(field.name) !in scenario.on) "" else sampleText(field.name)
-  StateKind.Int -> if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3" else "1"
+  StateKind.Int -> sampleColor(field.name)?.toString()
+    ?: if (roleOf(field.name) == StateRole.Content && words(field.name).any { it.startsWith("count") || it.startsWith("total") }) "3" else "1"
   StateKind.Double -> "1.5"
   StateKind.Rows -> if (scenario == Scenario.Empty || scenario == Scenario.Loading) "0" else "3"
 }

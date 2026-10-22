@@ -92,4 +92,13 @@ class EditorStateTest {
     assertEquals(ScreenState(), decodeScreenState(null))
     assertEquals(Scenario.Loaded, decodeScreenState("""{"scenario":"Gone","values":{}}""").scenario)
   }
+
+  @Test fun aColourFieldShowsAVisibleSampleColour() {
+    assertEquals(0xFFEEF2F7.toInt(), sampleColor("noticeBgArgb"))
+    assertEquals(0xFF1F2937.toInt(), sampleColor("labelArgb"))
+    assertEquals(0xFF4F6BED.toInt(), sampleColor("ringArgb"))
+    assertEquals(null, sampleColor("count"))
+    assertEquals("${0xFF4F6BED.toInt()}", defaultValue(StateField("noticeIconArgb", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+    assertEquals("1", defaultValue(StateField("step", StateKind.Int, StateSource.Prop), Scenario.Loaded))
+  }
 }
