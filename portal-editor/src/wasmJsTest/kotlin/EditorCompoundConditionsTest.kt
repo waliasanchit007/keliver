@@ -31,7 +31,7 @@ class EditorCompoundConditionsTest {
     assertFalse(isReadOnlyCondition(Cond("open", CondTest.Blank, negate = true)))
     assertEquals("b.kind == C.Card || !b.busy", conditionSource(compound))
     assertEquals("row.kind != \"a\"", conditionSource(Cond("row.kind", CondTest.Eq, negate = true, operand = "a")))
-    assertEquals("== value", testLabel(CondTest.Eq))
+    assertEquals("equals a value", testLabel(CondTest.Eq))
   }
 
   @Test fun editingABranchKeepsEveryTerm() {

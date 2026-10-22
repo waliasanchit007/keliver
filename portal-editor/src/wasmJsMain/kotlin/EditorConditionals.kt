@@ -4,6 +4,7 @@ import dev.keliver.portal.CondTest
 import dev.keliver.portal.Conditional
 import dev.keliver.portal.PropKind
 import dev.keliver.portal.Token
+import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
 import dev.keliver.portal.document.PropValue
@@ -16,16 +17,13 @@ import org.w3c.dom.HTMLOptionElement
 // K3: the properties panel for a conditional value — `if <condition>: [when
 // true] else [when false]` — with the condition and both branches editable.
 
-/** The tests the panel offers for a screen field (a screen contract cannot type a nullable field). */
-internal val PANEL_TESTS: List<CondTest> = listOf(CondTest.Bool, CondTest.Empty, CondTest.Blank)
-
-/** How the panel names a test. */
+/** How the panel names a test (E27: words, not Kotlin). */
 internal fun testLabel(t: CondTest): String = when (t) {
   CondTest.Bool -> "is true"
-  CondTest.Empty -> "isEmpty()"
-  CondTest.Blank -> "isBlank()"
-  CondTest.Null -> "== null"
-  CondTest.Eq -> "== value"
+  CondTest.Empty -> "is empty"
+  CondTest.Blank -> "is blank"
+  CondTest.Null -> "is missing"
+  CondTest.Eq -> "equals a value"
 }
 
 /**
@@ -141,7 +139,7 @@ internal fun conditionalEventRow(nodeId: Int, evName: String, cur: Conditional, 
   return wrap
 }
 
-/** `label  if [field] [test] [not]` — the condition's editor (K6: read-only text for an equality or compound condition). */
+/** `label  if [field] [test]` — the condition's editor (K6: read-only text for an equality or compound condition). */
 private fun conditionHeader(label: String, cur: Conditional, onChange: (String, CondTest, Boolean) -> Unit): HTMLElement {
   val row = Ui.el("div", "row")
   val lab = Ui.el("label", "", label)
@@ -155,36 +153,120 @@ private fun conditionHeader(label: String, cur: Conditional, onChange: (String, 
     )
     return row
   }
-  val field = Ui.input()
-  field.setAttribute("type", "text")
-  field.setAttribute("placeholder", "field")
-  field.value = cur.cond.field
-  val test = Ui.select()
-  val tests = if (cur.cond.test in PANEL_TESTS) PANEL_TESTS else PANEL_TESTS + cur.cond.test
-  tests.forEach { t ->
+  val wrap = Ui.el("div")
+  wrap.appendChild(row)
+  row.appendChild(conditionEditor(openContract(), cur.cond.field, cur.cond.test, cur.cond.negate, newFieldSlot = null, onChange = onChange))
+  return wrap
+}
+
+// ---------------------------------------------------------------------------
+// E27: a condition in plain words — "Show when [field] [is true]" — with the
+// field chosen from the contract and the test (negation folded in) from a
+// list that fits the field's type. No free text, no `isEmpty()`.
+
+/** One entry of the condition's test dropdown: what it says, and the test and negation it means. */
+internal data class TestChoice(val label: String, val test: CondTest, val negate: Boolean)
+
+private val BOOL_CHOICES = listOf(TestChoice("is true", CondTest.Bool, false), TestChoice("is false", CondTest.Bool, true))
+private val EMPTY_CHOICES = listOf(TestChoice("is empty", CondTest.Empty, false), TestChoice("is not empty", CondTest.Empty, true))
+private val BLANK_CHOICES = listOf(TestChoice("is blank", CondTest.Blank, false), TestChoice("is not blank", CondTest.Blank, true))
+
+/**
+ * The tests a field of Kotlin type [type] can take: a Boolean is true or false,
+ * a String empty or blank (or not), a List empty (or not). An unknown type
+ * (a field the contract does not list) is offered all of them.
+ */
+internal fun testChoices(type: String?): List<TestChoice> = when {
+  type == "Boolean" -> BOOL_CHOICES
+  type == "String" -> EMPTY_CHOICES + BLANK_CHOICES
+  type != null && isListType(type) -> EMPTY_CHOICES
+  else -> BOOL_CHOICES + EMPTY_CHOICES + BLANK_CHOICES
+}
+
+private fun isListType(type: String) = type.startsWith("List<") || type.startsWith("Collection<")
+
+/** The contract's fields a condition can test (Boolean, String, List), by name, with their types. */
+internal fun conditionFields(contract: Contract): List<Pair<String, String>> =
+  contract.fields.filter { (_, t) -> t == "Boolean" || t == "String" || isListType(t) }.toList().sortedBy { it.first }
+
+/** The open document's contract (empty in a test or before the first document). */
+internal var openContract: () -> Contract = { Contract() }
+
+private const val NEW_FIELD = "\u0000new"
+
+/**
+ * The condition's two dropdowns: its field — the contract's testable fields
+ * with their types, the current one even when the contract does not list it,
+ * and, when [newFieldSlot] is given, "New field…" (the E12 picker, opened in
+ * that slot: a field is declared only on its confirm) — and its test, the
+ * [testChoices] of the field's type. [onChange] hears the field, test and
+ * negation after each choice.
+ */
+internal fun conditionEditor(
+  contract: Contract,
+  field: String,
+  test: CondTest,
+  negate: Boolean,
+  newFieldSlot: HTMLElement?,
+  onChange: (String, CondTest, Boolean) -> Unit,
+): HTMLElement {
+  val box = Ui.el("span", "cond-editor")
+  val fieldSel = Ui.select()
+  fieldSel.setAttribute("aria-label", "field")
+  val testSel = Ui.select()
+  testSel.setAttribute("aria-label", "test")
+  fun option(sel: org.w3c.dom.HTMLSelectElement, value: String, label: String) {
     val o = document.createElement("option") as HTMLOptionElement
-    o.value = t.name
-    o.textContent = testLabel(t)
-    if (t == cur.cond.test) o.selected = true
-    test.appendChild(o)
+    o.value = value
+    o.textContent = label
+    sel.appendChild(o)
   }
-  val negate = Ui.input()
-  negate.setAttribute("type", "checkbox")
-  negate.className = ""
-  negate.setAttribute("title", "not (negate the condition)")
-  if (cur.cond.negate) negate.setAttribute("checked", "checked")
-  fun changed() {
-    val f = field.value.trim().ifEmpty { return }
-    onChange(f, CondTest.valueOf(test.value), negate.checked)
+  val fields = conditionFields(contract)
+  if (field.isEmpty()) option(fieldSel, "", "choose a field…")
+  fields.forEach { (f, t) -> option(fieldSel, f, "$f · $t") }
+  if (field.isNotEmpty() && fields.none { it.first == field }) option(fieldSel, field, if ('.' in field) field else "$field · not declared")
+  if (newFieldSlot != null) option(fieldSel, NEW_FIELD, "New field…")
+  fieldSel.value = field
+
+  var current = field
+  var choices = testChoices(contract.fields[field])
+  fun fillTests(t: CondTest, n: Boolean) {
+    Ui.clear(testSel)
+    // A test the field's type does not list (an older edit) stays shown, never silently changed.
+    if (choices.none { it.test == t && it.negate == n }) choices = choices + TestChoice((if (n) "not " else "") + testLabel(t), t, n)
+    choices.forEachIndexed { i, c -> option(testSel, i.toString(), c.label) }
+    testSel.value = choices.indexOfFirst { it.test == t && it.negate == n }.toString()
   }
-  field.addEventListener("input", { _ -> changed() })
-  test.addEventListener("change", { _ -> changed() })
-  negate.addEventListener("change", { _ -> changed() })
-  row.appendChild(field)
-  row.appendChild(test)
-  row.appendChild(Ui.el("span", "muted", "not"))
-  row.appendChild(negate)
-  return row
+  fillTests(test, negate)
+
+  fun send() {
+    if (current.isEmpty()) return
+    val c = choices[testSel.value.toInt()]
+    onChange(current, c.test, c.negate)
+  }
+  fieldSel.addEventListener("change", { _ ->
+    val picked = fieldSel.value
+    if (picked == NEW_FIELD && newFieldSlot != null) {
+      fieldSel.value = current // until a field is confirmed
+      renderBindPicker(newFieldSlot, contract, "Boolean", suggest = "show", current = null, owner = "the screen's Bindings", canDeclare = true) { f, _ ->
+        current = f
+        choices = BOOL_CHOICES
+        onChange(f, CondTest.Bool, false)
+      }
+      return@addEventListener
+    }
+    current = picked
+    val prev = choices.getOrNull(testSel.value.toInt())
+    choices = testChoices(contract.fields[picked])
+    // Keep the test when the new field's type has it; else its first.
+    val keep = prev?.let { p -> choices.firstOrNull { it.test == p.test && it.negate == p.negate } } ?: choices.first()
+    fillTests(keep.test, keep.negate)
+    send()
+  })
+  testSel.addEventListener("change", { _ -> send() })
+  box.appendChild(fieldSel)
+  box.appendChild(testSel)
+  return box
 }
 
 /** One branch's editor for a prop of [kind]: a token, a binding, or a literal. */
