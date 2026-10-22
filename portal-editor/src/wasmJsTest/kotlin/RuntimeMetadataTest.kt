@@ -54,13 +54,27 @@ class RuntimeMetadataTest {
     assertEquals(RuntimeCompatibilityStatus.Match, report.status)
   }
 
-  @Test fun reportsKeliverSkewWhenWidgetProtocolMatches() {
+  @Test fun anOlderAppWithTheSameWidgetProtocolIsCompatible() {
     val report = compareRuntimeMetadata(
       editor,
       AppRuntimeMetadata("0.3.0", 1),
     )
 
-    assertEquals(RuntimeCompatibilityStatus.KeliverSkew, report.status)
+    assertEquals(RuntimeCompatibilityStatus.AppOlder, report.status)
+  }
+
+  @Test fun reportsKeliverSkewWhenTheEditorIsOlderOrAVersionIsUnreadable() {
+    assertEquals(RuntimeCompatibilityStatus.KeliverSkew, compareRuntimeMetadata(editor, AppRuntimeMetadata("0.4.0", 1)).status)
+    assertEquals(RuntimeCompatibilityStatus.KeliverSkew, compareRuntimeMetadata(editor, AppRuntimeMetadata("main-abc123", 1)).status)
+  }
+
+  @Test fun versionsCompareAsReleases() {
+    assertEquals(0, compareVersions("0.3.3", "0.3.3"))
+    assertTrue(compareVersions("0.4.0", "0.3.3")!! > 0)
+    assertTrue(compareVersions("0.3.10", "0.3.9")!! > 0)
+    assertTrue(compareVersions("0.4.0-SNAPSHOT", "0.4.0")!! < 0)
+    assertTrue(compareVersions("0.4.0-SNAPSHOT", "0.3.3")!! > 0)
+    assertEquals(null, compareVersions("dev", "0.3.3"))
   }
 
   @Test fun widgetMismatchTakesPrecedence() {
