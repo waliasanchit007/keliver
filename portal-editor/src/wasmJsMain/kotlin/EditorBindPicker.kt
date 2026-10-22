@@ -73,6 +73,7 @@ internal fun renderBindPicker(
     row.setAttribute("role", "button")
     row.setAttribute("tabindex", "0")
     row.setAttribute("data-field", f)
+    row.setAttribute("aria-label", "bind to $f")
     row.appendChild(Ui.el("span", "", "@ $f"))
     row.appendChild(Ui.el("span", "cat", type))
     row.addEventListener("click", { _ -> Ui.clear(picker); onPick(f, false) })
