@@ -279,7 +279,7 @@ private fun mountPlaygroundStrip() {
   strip.appendChild(Ui.button("Feed", "btn") { loadTemplate(demoTemplate(), demoMocks) })
   strip.appendChild(Ui.button("Form", "btn") { loadTemplate(formTemplate(), mapOf("email" to "ada@lovelace.dev")) })
   strip.appendChild(Ui.button("Profile", "btn") { loadTemplate(profileTemplate(), mapOf("displayName" to "Ada Lovelace")) })
-  strip.appendChild(Ui.button("✕", "btn icon") { strip.remove() })
+  strip.appendChild(Ui.button("✕", "btn icon") { strip.remove() }.also { it.setAttribute("title", "Dismiss") })
   kotlinx.browser.document.body?.appendChild(strip)
 }
 
@@ -687,6 +687,7 @@ internal fun mountPortalChrome() {
   buildExportOverlay()
   installKeyboard()
   watchImageFailures()
+  nameIconButtons()
   loadWorkspace()
 }
 
@@ -720,6 +721,7 @@ private fun confirmPublish() {
   if (publishing) return
   val back = Ui.el("div", "modal-back")
   val box = Ui.el("div", "modal")
+  markDialog(box)
   box.appendChild(Ui.el("div", "modal-title", "Publish to devices?"))
   box.appendChild(Ui.el("div", "muted", "Builds and signs project “$currentProject” (every screen, including “$currentScreen”) " +
     "and stores it as the next bundle version. Devices running this app load it on their next update check."))
@@ -740,6 +742,33 @@ private fun confirmPublish() {
   back.addEventListener("keydown", { ev -> if ((ev as KeyboardEvent).key == "Escape") close() })
   document.body?.appendChild(back)
   go.focus()
+}
+
+/** E41: [box] is a modal dialog, named by its title. */
+private fun markDialog(box: HTMLElement) {
+  box.setAttribute("role", "dialog")
+  box.setAttribute("aria-modal", "true")
+  box.setAttribute("aria-labelledby", "modal-title")
+  kotlinx.browser.window.setTimeout({ (box.querySelector(".modal-title") as? HTMLElement)?.id = "modal-title"; null }, 0)
+}
+
+/**
+ * E41: a button showing only a symbol (＋, ⟲, ✕, ◆, @) is named by its tooltip, for a screen
+ * reader — every one the chrome adds, whenever it is added.
+ */
+private fun nameIconButtons() {
+  fun name(root: org.w3c.dom.Element) {
+    val buttons = root.querySelectorAll("button")
+    for (i in 0 until buttons.length) {
+      val b = buttons.item(i) as? HTMLElement ?: continue
+      if (b.hasAttribute("aria-label")) continue
+      val text = b.textContent.orEmpty()
+      val title = b.getAttribute("title")
+      if (title != null && text.none { it.isLetter() }) b.setAttribute("aria-label", title)
+    }
+  }
+  document.body?.let(::name)
+  observeAdded { added -> name(added) }
 }
 
 private fun runPublish() {
@@ -770,10 +799,10 @@ private fun buildTopbar() {
   projectSel.addEventListener("change", { _ -> switchProject(projectSel.value) })
   screenSel.addEventListener("change", { _ -> switchScreen(screenSel.value) })
   bar.appendChild(projectSel)
-  bar.appendChild(Ui.button("+", "btn icon") { promptCreate(project = true) })
+  bar.appendChild(Ui.button("+", "btn icon") { promptCreate(project = true) }.also { it.setAttribute("title", "New project") })
   bar.appendChild(Ui.el("span", "crumb", "/"))
   bar.appendChild(screenSel)
-  bar.appendChild(Ui.button("+", "btn icon") { promptCreate(project = false) })
+  bar.appendChild(Ui.button("+", "btn icon") { promptCreate(project = false) }.also { it.setAttribute("title", "New screen") })
 
   bar.appendChild(Ui.el("div", "grow"))
 
@@ -882,11 +911,18 @@ private fun buildTopbar() {
   publishBtn = Ui.button("Publish", "btn primary") { confirmPublish() }
   publishBtn.setAttribute("title", "Build, sign and store a new bundle for devices")
   bar.appendChild(publishBtn)
-  document.body?.appendChild(bar)
+  // E41: the topbar is first in the tab order (it is first on screen), and says what it is.
+  bar.setAttribute("role", "toolbar")
+  bar.setAttribute("aria-label", "Editor")
+  projectSel.setAttribute("aria-label", "Project")
+  screenSel.setAttribute("aria-label", "Screen")
+  document.body?.let { it.insertBefore(bar, it.firstChild) }
 }
 
 private fun buildLeftPane() {
   val pane = Ui.el("div", "pane left")
+  pane.setAttribute("role", "region")
+  pane.setAttribute("aria-label", "Palette and outline")
 
   pane.appendChild(Ui.section("Palette"))
   val search = Ui.input()
@@ -901,6 +937,8 @@ private fun buildLeftPane() {
 
   pane.appendChild(Ui.section("Outline"))
   outlineEl = Ui.el("div", "card")
+  outlineEl.setAttribute("role", "tree")
+  outlineEl.setAttribute("aria-label", "Outline")
   pane.appendChild(outlineEl)
 
   document.body?.appendChild(pane)
@@ -1201,6 +1239,8 @@ private fun hideOverlay(el: HTMLElement) {
 
 private fun buildRightPane() {
   val pane = Ui.el("div", "pane right")
+  pane.setAttribute("role", "region")
+  pane.setAttribute("aria-label", "Properties and state")
   pane.appendChild(Ui.section("Properties"))
   propsEl = Ui.el("div", "card")
   pane.appendChild(propsEl)
@@ -1538,6 +1578,7 @@ private fun buildExportOverlay() {
   flowGraphOverlay.setAttribute("style", "display:none;")
   val gHead = Ui.el("div", "head", "Nav graph")
   val gClose = Ui.button("✕", "btn icon") { flowGraphOverlay.setAttribute("style", "display:none;") }
+  gClose.setAttribute("title", "Close (Esc)")
   gClose.setAttribute("style", "margin-left:auto;")
   gHead.appendChild(gClose)
   flowGraphOverlay.appendChild(gHead)
@@ -2032,6 +2073,7 @@ private fun promptCreate(project: Boolean) {
   val existing = (0 until sel.options.length).mapNotNull { (sel.options.item(it) as? HTMLOptionElement)?.value }
   val back = Ui.el("div", "modal-back")
   val box = Ui.el("div", "modal")
+  markDialog(box)
   box.appendChild(Ui.el("div", "modal-title", if (project) "New project" else "New screen in “$currentProject”"))
   box.appendChild(
     Ui.el(
@@ -2160,10 +2202,20 @@ private fun acceptsChildrenNode(node: WidgetNode): Boolean =
     node.type == "Repeat" || editorComponents.spec(node.type)?.slots?.size == 1
 
 private fun renderOutline() {
+  // E41: keyboard focus stays on the outline when it is re-rendered (arrow keys move the selection).
+  val hadFocus = (document.activeElement as? HTMLElement)?.classList?.contains("tree-row") == true
   Ui.clear(outlineEl)
+  val focusable = selectedId?.takeIf { portalTree.value.findNode(it) != null } ?: portalTree.value.id
   fun row(node: WidgetNode, depth: Int) {
     val r = Ui.el("div", "tree-row" + if (node.id == selectedId) " selected" else "")
     r.setAttribute("data-id", "${node.id}")
+    // E41: a tree of treeitems, reachable with Tab (one stop: the selected row) and the arrow keys.
+    r.setAttribute("role", "treeitem")
+    r.setAttribute("aria-level", "${depth + 1}")
+    r.setAttribute("aria-selected", "${node.id == selectedId}")
+    if (node.children.isNotEmpty()) r.setAttribute("aria-expanded", "${node.id !in collapsedRows}")
+    r.setAttribute("aria-label", listOfNotNull(node.type, outlineHint(node)).joinToString(" "))
+    r.tabIndex = if (node.id == focusable) 0 else -1
     r.setAttribute("style", "padding-left:${4 + depth * 14}px;")
     val twisty = Ui.el("span", "twisty", if (node.children.isEmpty()) "" else if (node.id in collapsedRows) "▸" else "▾")
     twisty.addEventListener("click", { ev ->
@@ -2203,6 +2255,7 @@ private fun renderOutline() {
     if (node.id !in collapsedRows) node.children.forEach { row(it, depth + 1) }
   }
   row(portalTree.value, 0)
+  if (hadFocus) (outlineEl.querySelector(".tree-row[tabindex='0']") as? HTMLElement)?.focus()
   // Keep the selected row in view (keyboard navigation, a canvas click).
   (outlineEl.querySelector(".tree-row.selected") as? HTMLElement)?.let { el ->
     val box = el.getBoundingClientRect()
@@ -2803,9 +2856,19 @@ private fun renderMods() {
       head.appendChild(warn)
     }
     val x = Ui.el("span", "x", "✕")
-    x.addEventListener("click", { _ ->
+    fun remove() {
       val keys = node.props.keys.filter { it == "mod.$name" || it.startsWith("mod.$name.") }
       sendOps(keys.map { DocOp.RemoveModifier(Handle(node.id.toLong()), it.removePrefix("mod.")) })
+    }
+    // E41: a button for the keyboard and a screen reader too.
+    x.setAttribute("role", "button")
+    x.setAttribute("aria-label", "Remove $name")
+    x.setAttribute("title", "Remove $name")
+    x.tabIndex = 0
+    x.addEventListener("click", { _ -> remove() })
+    x.addEventListener("keydown", { ev ->
+      val k = (ev as KeyboardEvent).key
+      if (k == "Enter" || k == " ") { ev.preventDefault(); ev.stopPropagation(); remove() }
     })
     head.appendChild(x)
     chip.appendChild(head)

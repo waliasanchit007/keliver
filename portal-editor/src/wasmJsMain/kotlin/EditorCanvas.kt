@@ -76,6 +76,8 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
   canvasZoomBox = zoomBox
   canvasCenter = center
   val bar = Ui.el("div", "canvas-toolbar")
+  bar.setAttribute("role", "toolbar")
+  bar.setAttribute("aria-label", "Canvas")
   val select = Ui.button("🎯 Select", "seg") { setSelectMode(true) }
   val interact = Ui.button("☝ Interact", "seg") { setSelectMode(false) }
   select.setAttribute("title", "Click selects a node; the app does not see the click")
@@ -103,6 +105,8 @@ internal fun installCanvasToolbar(center: HTMLElement, zoomBox: HTMLElement, fra
     if (canvasZoomIsSet) level.textContent = "${kotlin.math.round(canvasZoom * 100).toInt()}%"
     select.classList.toggle("on", selectModeOn())
     interact.classList.toggle("on", !selectModeOn())
+    select.setAttribute("aria-pressed", "${selectModeOn()}")
+    interact.setAttribute("aria-pressed", "${!selectModeOn()}")
   }
   val stored = runCatching { localStorage.getItem("portal.zoom")?.toDoubleOrNull() }.getOrNull()
   applyZoom(stored?.coerceIn(ZOOM_MIN, ZOOM_MAX) ?: 1.0, zoomBox, frame)

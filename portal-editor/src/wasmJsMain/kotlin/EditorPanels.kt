@@ -103,3 +103,17 @@ private fun installResizer(side: PanelSide) {
   document.body?.appendChild(splitter)
   apply()
 }
+
+/** E41: calls [onAdded] with each element added anywhere under the page's body. */
+internal fun observeAdded(onAdded: (org.w3c.dom.Element) -> Unit) {
+  val observer = org.w3c.dom.MutationObserver { records, _ ->
+    for (i in 0 until records.length) {
+      val added = records[i]?.addedNodes ?: continue
+      for (j in 0 until added.length) (added.item(j) as? org.w3c.dom.Element)?.let(onAdded)
+    }
+  }
+  kotlinx.browser.document.body?.let { observer.observe(it, childListSubtree()) }
+}
+
+// A plain object: the generated MutationObserverInit() passes its unset options as null, which observe() rejects.
+private fun childListSubtree(): org.w3c.dom.MutationObserverInit = js("({ childList: true, subtree: true })")
