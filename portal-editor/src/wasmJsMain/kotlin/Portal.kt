@@ -22,6 +22,7 @@ import dev.keliver.portal.tokenValue
 import dev.keliver.portal.WidgetNode
 import dev.keliver.portal.collectContract
 import dev.keliver.portal.collectPreviewBindingKeys
+import dev.keliver.portal.document.Contract
 import dev.keliver.portal.document.DocJson
 import dev.keliver.portal.document.DocOp
 import dev.keliver.portal.document.Handle
@@ -157,6 +158,9 @@ private const val SESSION = "editor"
 // The SAME UiDocument apply/invert engine runs locally; edits stay in-memory.
 private var playground = false
 private var localDoc = demoTemplate()
+
+/** E12: the open document's contract as its file declares it — what `@` offers to bind. */
+private var docContract = Contract()
 private val localUndo = ArrayDeque<List<DocOp>>()
 private val localRedo = ArrayDeque<List<DocOp>>()
 private var runtimeMetadataLoad: RuntimeMetadataLoad = RuntimeMetadataLoad.Loading
@@ -255,6 +259,7 @@ private val demoMocks = mapOf(
 
 private fun localRefresh(refreshPanels: Boolean) {
   docVersion = localDoc.version
+  docContract = localDoc.contract
   portalTree.value = localDoc.toWidgetTree(handleIds = true)
   Snapshot.sendApplyNotifications()
   if (refreshPanels) refresh() else renderOutline()
@@ -517,6 +522,7 @@ private fun refetchDoc(refreshPanels: Boolean = true, cb: (() -> Unit)? = null) 
     runCatching { DocJson.decodeFromString<UiDocument>(xhr.responseText) }.onSuccess { doc ->
       appliedSeq = seq
       docVersion = doc.version
+      docContract = doc.contract
       portalTree.value = doc.toWidgetTree(handleIds = true)
       // E15: select what was just inserted (its handle is the relay's to assign).
       pendingInsertPlace?.let { (parent, after) ->
@@ -2639,7 +2645,7 @@ private fun propRowInner(
         Ui.button("detach", "btn icon") { sendOps(listOf(literalOp(nodeId, key, token.value))) }
           .also { it.setAttribute("title", "replace ${token.ref} with its value ($shown)") },
       )
-      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
   }
 
@@ -2652,7 +2658,7 @@ private fun propRowInner(
   if (isArithmeticValue(props[key])) {
     return PropRow(label)
       .control(arithmeticEditor(props[key]) { sendOps(listOf(arithmeticLiteralOp(nodeId, key, props[key]))) })
-      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
   }
 
@@ -2664,27 +2670,19 @@ private fun propRowInner(
     return listRow(PropRow(label), nodeId, key, props[key], kind, picker)
   }
 
-  // P3: bound props show a field-name input instead of a literal editor.
+  // P3: a bound prop shows its field. E12: another field is chosen from the
+  // contract (the picker), never typed — a typed name silently declared one.
   val bound = props[key] as? Bind
   if (bound != null) {
-    val fieldInput = Ui.input()
-    fieldInput.setAttribute("type", "text")
-    fieldInput.setAttribute("style", "border-color:var(--accent); color:var(--accent);")
-    fieldInput.value = bound.field
-    fieldInput.addEventListener("change", { _ ->
-      val f = fieldInput.value.trim()
-      if (f.isNotEmpty() && f != bound.field) {
-        sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(f))), refreshPanels = false)
-        renderBindings()
-      }
-    })
-    commitKeys(fieldInput) { fieldInput.value = bound.field }
+    val chip = Ui.el("span", "pill bound", "@ ${bound.field}")
+    chip.setAttribute("title", "bound to ${bound.field}" + (docContract.fields[bound.field]?.let { ": $it" } ?: ""))
     return PropRow(label)
-      .control(fieldInput)
+      .control(chip)
+      .action(bindButton(nodeId, key, kind, label, picker, current = bound.field, glyph = "⇄", title = "bind to another field"))
       .action(
-        Ui.button("@", "btn icon") {
+        Ui.button("unbind", "btn icon") {
           sendOps(listOf(DocOp.RemoveProp(Handle(nodeId.toLong()), key))) // back to literal default
-        }.also { it.setAttribute("style", "border-color:var(--accent); color:var(--accent);"); it.setAttribute("title", "unbind (back to the literal default)") },
+        }.also { it.setAttribute("title", "unbind (back to the literal default)") },
       )
       .root
   }
@@ -2700,14 +2698,14 @@ private fun propRowInner(
     )
     val row = PropRow(label).control(area).action(tokenButtonIfAny(nodeId, nodeType, key, picker))
     if (keyPrefix.isEmpty()) {
-      row.action(bindButton(nodeId, key, name))
-      // K4: start a template — the text so far, then a binding named like the prop.
-      // E48: "so far" is the field's text now, typed or not, never the text it was rendered with.
+      row.action(bindButton(nodeId, key, kind, label, picker))
+      // K4: start a template — the text so far, then a binding picked from the contract (E12).
+      // E48: "so far" is the field's text when the field is picked, typed or not.
       row.action(
-        Ui.button("{}", "btn icon") {
+        bindButton(nodeId, key, kind, label, picker, glyph = "{}", title = "template: this text, then a field of the contract") { field ->
           clearPending(area)
-          sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, startTemplate(area.value, name))))
-        }.also { it.setAttribute("title", "template: text with {bindings} and {◆tokens}") },
+          startTemplate(area.value, field)
+        },
       )
     }
     return row.root
@@ -2720,7 +2718,7 @@ private fun propRowInner(
     return PropRow(label, PropRow.Layout.Compact)
       .control(choiceSelect(choices, props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v))) })
       .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
-      .action(if (enumBindable) bindButton(nodeId, key, name) else null)
+      .action(if (enumBindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
   }
 
@@ -2729,7 +2727,7 @@ private fun propRowInner(
     return PropRow(label)
       .control(colorControl(props[key] as? Int ?: 0) { v -> sendOps(listOf(literalOp(nodeId, key, v)), refreshPanels = false) })
       .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
-      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
   }
 
@@ -2747,7 +2745,7 @@ private fun propRowInner(
         ),
       )
       .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
-      .action(if (bindable) bindButton(nodeId, key, name) else null)
+      .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
       .root
   }
 
@@ -2793,7 +2791,7 @@ private fun propRowInner(
   return PropRow(label, layout)
     .control(input)
     .action(tokenButtonIfAny(nodeId, nodeType, key, picker))
-    .action(if (bindable) bindButton(nodeId, key, name) else null)
+    .action(if (bindable) bindButton(nodeId, key, kind, label, picker) else null)
     .root
 }
 
@@ -2946,10 +2944,31 @@ private fun renderTokenPicker(nodeId: Int, nodeType: String, key: String, picker
   search.focus()
 }
 
-private fun bindButton(nodeId: Int, key: String, name: String): HTMLElement =
-  Ui.button("@", "btn icon") {
-    sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, PropValue.Bind(name))))
-  }
+/**
+ * E12: `@` opens the binding picker in [picker] — never a write by itself.
+ * Choosing a field binds [key] to it ([bind] builds the value, a plain
+ * binding by default); a new field is declared only on its explicit confirm.
+ */
+private fun bindButton(
+  nodeId: Int,
+  key: String,
+  kind: PropKind,
+  label: String,
+  picker: HTMLElement,
+  current: String? = null,
+  glyph: String = "@",
+  title: String = "bind to a field of the screen's contract",
+  bind: (String) -> PropValue = { PropValue.Bind(it) },
+): HTMLElement =
+  Ui.button(glyph, "btn icon") {
+    if (picker.firstChild != null) { Ui.clear(picker); return@button }
+    val component = editTarget().component
+    renderBindPicker(
+      picker, docContract, kotlinTypeOf(kind), suggest = label, current = current,
+      owner = component ?: "the screen's Bindings",
+      canDeclare = component == null,
+    ) { field, _ -> sendOps(listOf(DocOp.SetProp(Handle(nodeId.toLong()), key, bind(field)))) }
+  }.also { it.setAttribute("title", title) }
 
 private fun renderMods() {
   flushPendingField()
